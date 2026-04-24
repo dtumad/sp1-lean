@@ -29,8 +29,11 @@ variable (Main : Vector (Fin KB) 31) (s : SailState)
 -- the `.send (.program … (Opcode.ofNat 46) Main[6] …) Main[30]` constraint
 -- (trusted_instr for JAL gives op_a < 32) but needs the cstrs tree re-walked.
 lemma op_a_lt32_of_constraints {Main : Vector (Fin KB) 31}
-    (_ : (constraints Main).allHold) (_ : Main[30] = 1) : Main[6].val < 32 := by
-  sorry
+    (h_cstrs : (constraints Main).allHold) (h_is_real : Main[30] = 1) : Main[6].val < 32 := by
+  -- The .send (.program ... (Opcode.ofNat 46) Main[6] ...) Main[30] constraint in
+  -- the constraint list gives us, under Main[30] ≠ 0, that Main[6] < 32.
+  simp [SP1ConstraintList.allHold, constraints, SP1Constraint.toProp, h_is_real] at h_cstrs
+  aesop
 
 def sp1_op_a (cstrs : (constraints Main).allHold) (h_is_real : Main[30] = 1) : BitVec 5 :=
   Main[6].val#'(op_a_lt32_of_constraints cstrs h_is_real)

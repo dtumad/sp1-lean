@@ -24,7 +24,7 @@ def sp1_imm_c (Main : Vector (Fin KB) 50) : BitVec 12 :=
 def sp1_sb (Main : Vector (Fin KB) 50) : SailM ExecutionResult := do
   let op_a := sp1_op_a Main
   Sail.writeReg Register.nextPC (Word.toBitVec64 #v[Main[3] + 4, Main[4], Main[5], 0])
-  let addr : BitVec 64 := Word.toBitVec64 #v[Main[26], Main[27], Main[28], 0]
+  let addr : BitVec 64 := Word.toBitVec64 #v[Main[25], Main[26], Main[27], 0]
   Sail.ConcurrencyInterfaceV1.write_ram 64 1 0#64 addr
     (Word.toBitVec64 #v[Main[7], Main[8], Main[9], Main[10]])
   return RETIRE_SUCCESS
