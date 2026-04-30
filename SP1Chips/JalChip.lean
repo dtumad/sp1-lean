@@ -32,7 +32,6 @@ noncomputable def spec_jal (imm : BitVec 21) (rd : regidx) : SailM Unit := do
   Sail.writeReg Register.nextPC ((← Sail.readReg Register.PC) + 4#64)
   let _ ← execute_JAL imm rd
 
-set_option debug.skipKernelTC true in
 theorem SP1JAL_correct
     (cstrs : (constraints Main).allHold)
     (h_is_real : Main[30] = 1)
@@ -68,7 +67,6 @@ theorem SP1JAL_correct
       simp_all only [show (Opcode.ofNat 46) = Opcode.JAL from rfl]
   have hmod  := (mul4_means_0_1_are_0 hmod4).2
   have hmod' := (mul4_means_0_1_are_0 hmod4).1
-  simp [spec_jal, sp1_jal, execute_JAL, op_a, op_b, sp1_op_b, sp1_op_a]
   have h_add_imm : List.Forall SP1Constraint.toProp (AddOperation.constraints
       #v[Main[3], Main[4], Main[5], 0]
       #v[Main[14], Main[15], Main[16], Main[17]]
