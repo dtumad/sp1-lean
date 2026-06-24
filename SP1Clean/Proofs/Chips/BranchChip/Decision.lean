@@ -1,4 +1,5 @@
 import SP1Clean.Math.Word
+import SP1Clean.Math.Gate
 
 /-! # `SP1Clean.BranchChip` — the six-way decision dispatch (shared field lemmas)
 
@@ -62,42 +63,6 @@ lemma one_hot6 {b0 b1 b2 b3 b4 b5 : ZMod p}
     · right; rw [h, ZMod.val_one]
   omega
 
-/-- A binary field element that equals `if P then 1 else 0` is `1` iff `P` holds. -/
-private lemma eq_one_iff_of_ite {x : ZMod p} {P : Prop} [Decidable P]
-    (h : x = if P then 1 else 0) : x = 1 ↔ P := by
-  by_cases hP : P
-  · simp [h, hP]
-  · simp only [h, if_neg hP]
-    exact ⟨fun he => absurd he zero_ne_one', fun hp => absurd hp hP⟩
-
-/-- A field element equal to `1 - (if P then 1 else 0)` is `1` iff `P` fails. -/
-private lemma eq_one_iff_of_one_sub_ite {x : ZMod p} {P : Prop} [Decidable P]
-    (h : x = 1 - (if P then 1 else 0)) : x = 1 ↔ ¬ P := by
-  by_cases hP : P
-  · simp only [h, if_pos hP, sub_self]
-    exact ⟨fun he => absurd he zero_ne_one', fun hp => absurd hP hp⟩
-  · simp [h, hP]
-
-omit [Fact (2 ^ 17 < p)] in
-/-- A binary `x` with `x = 1 ↔ P` is `if P then 1 else 0` (completeness direction of `eq_one_iff_of_ite`). -/
-private lemma bool_eq_ite_of_iff {x : ZMod p} (hx : x = 0 ∨ x = 1) {P : Prop} [Decidable P]
-    (h : x = 1 ↔ P) : x = if P then 1 else 0 := by
-  by_cases hP : P
-  · rw [if_pos hP]; exact h.mpr hP
-  · rw [if_neg hP]; rcases hx with h0 | h1
-    · exact h0
-    · exact absurd (h.mp h1) hP
-
-omit [Fact (2 ^ 17 < p)] in
-/-- A binary `x` with `x = 1 ↔ y = 0` (for binary `y`) is `1 - y`. -/
-private lemma bool_eq_one_sub {x y : ZMod p} (hx : x = 0 ∨ x = 1) (hy : y = 0 ∨ y = 1)
-    (h : x = 1 ↔ y = 0) : x = 1 - y := by
-  rcases hy with hy | hy
-  · rw [hy, sub_zero]; exact h.mpr hy
-  · rw [hy]; rcases hx with hx | hx
-    · rw [hx]; simp
-    · have := h.mp hx; rw [hy] at this; exact absurd this one_ne_zero
-
 omit [Fact (2 ^ 17 < p)] in
 /-- A binary `x` with `x = 1 ↔ ¬ P` (where `bit = if P then 1 else 0`) is `1 - bit`. -/
 private lemma bool_eq_one_sub_ite {x bit : ZMod p} (hx : x = 0 ∨ x = 1) {P : Prop} [Decidable P]
@@ -117,22 +82,6 @@ private lemma bool_eq_of_iff_ne {x y : ZMod p} (hx : x = 0 ∨ x = 1) (hy : y = 
     · exact hx
     · exact absurd (h.mp hx) (by rw [hy]; simp)
   · rw [hy]; exact h.mpr (by rw [hy]; exact one_ne_zero)
-
-/-- `BitVec.slt` as a `toInt` comparison. -/
-private lemma slt_true_iff (x y : BitVec 64) : x.slt y = true ↔ x.toInt < y.toInt := by
-  simp [BitVec.slt]
-
-/-- `BitVec.slt` false as the negated `toInt` comparison. -/
-private lemma slt_false_iff (x y : BitVec 64) : x.slt y = false ↔ ¬ x.toInt < y.toInt := by
-  simp [BitVec.slt]
-
-/-- `BitVec.ult` as a `toNat` comparison. -/
-private lemma ult_true_iff (x y : BitVec 64) : x.ult y = true ↔ x.toNat < y.toNat := by
-  simp [BitVec.ult]
-
-/-- `BitVec.ult` false as the negated `toNat` comparison. -/
-private lemma ult_false_iff (x y : BitVec 64) : x.ult y = false ↔ ¬ x.toNat < y.toNat := by
-  simp [BitVec.ult]
 
 /-! ## The six-way decision dispatch
 
