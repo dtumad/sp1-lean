@@ -26,11 +26,6 @@ open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- `(14 : ZMod p).val = 14` under `Fact (2^17 < p)` (for the `Range(next_pc[0]/4, 14)` send). -/
-private lemma val_14 [NeZero p] : (14 : ZMod p).val = 14 := by
-  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  exact ZMod.val_natCast_of_lt (show (14 : ℕ) < p by omega)
-
 /-- The chip-local structural meaning of BRANCH's `asserts` inline tail (everything past the composed
 `CPUState`/`ITypeReaderImmutable`/`LtOperationSigned` sub-lists): the six opcode-flag booleans, the flag
 sum bound (`E16 = Σ is_b*` boolean), the `is_branching` boolean, the `is_real`-gated decision constraint
@@ -93,7 +88,7 @@ theorem branch_interactions_faithful (cols : BranchColumns (ZMod p)) :
   -- `Range(next_pc[0]/4, 14)`, u16 `next_pc[1]`, u16 `next_pc[2]`, each gated by the flag sum `E16`.
   simp only [Extracted.BranchColumns.interactions, List.forall_append, List.Forall,
     Interaction.toProp_send_byte, ByteOpcode.ofNat_six, ByteOpcode.constrain_Range,
-    val_14, val_16] at h
+    val_14_zmod_p, val_16] at h
   obtain ⟨-, h0, h1, h2⟩ := h
   simp only [branchInteractSpec]
   refine ⟨?_, ?_, ?_⟩

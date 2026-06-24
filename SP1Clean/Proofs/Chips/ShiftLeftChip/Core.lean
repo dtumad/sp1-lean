@@ -21,10 +21,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-! ## Field constants for the shift-amount modulus -/
 
-@[simp] lemma val_64_zmod_p [NeZero p] : (64 : ZMod p).val = 64 := by
-  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  exact ZMod.val_natCast_of_lt (show (64 : ℕ) < p by omega)
-
+-- `val_64_zmod_p` now lives in `Math/Word.lean`; `val_64_ne_zero` is local.
 lemma val_64_ne_zero [NeZero p] : (64 : ZMod p) ≠ 0 := by
   have h : (64 : ZMod p).val = 64 := val_64_zmod_p
   intro hz; rw [hz] at h; simp at h

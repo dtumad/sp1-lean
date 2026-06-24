@@ -20,11 +20,6 @@ open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- `(13 : ZMod p).val = 13` under `Fact (2^17 < p)`. -/
-private lemma val_13 [NeZero p] : (13 : ZMod p).val = 13 := by
-  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  exact ZMod.val_natCast_of_lt (show (13 : ℕ) < p by omega)
-
 set_option maxHeartbeats 4000000 in
 /-- **Faithfulness anchor.** SP1's `AddressOperation` constraint lists (`asserts` + `interactions`)
 hold iff the native gadget's `RawSpec` holds. -/
@@ -41,7 +36,7 @@ theorem address_constraints_faithful (b cc : Word (ZMod p))
     List.Forall, List.cons_append, List.nil_append,
     Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ,
     Interaction.toProp_send_byte, ByteOpcode.ofNat_six,
-    ByteOpcode.constrain_Range, val_16, val_13, one_ne_zero, ne_eq, not_false_eq_true, true_implies,
+    ByteOpcode.constrain_Range, val_16, val_13_zmod_p, one_ne_zero, ne_eq, not_false_eq_true, true_implies,
     SP1Clean.AddressOperation.RawSpec, SP1Clean.AddrAddOperation.RawSpec,
     one_mul, add_zero, sub_zero, sub_self, mul_zero, true_and, and_assoc, bool_iff,
     show (2 : ℕ) ^ 16 = 65536 from by norm_num]
