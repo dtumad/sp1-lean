@@ -134,6 +134,41 @@ lemma val_65536_ne_zero [NeZero p] [Fact (2 ^ 17 < p)] : (65536 : ZMod p) ≠ 0 
 lemma val_4_ne_zero [NeZero p] [Fact (2 ^ 17 < p)] : (4 : ZMod p) ≠ 0 := by
   simp [← ZMod.val_eq_zero, val_4_zmod_p]
 
+@[simp] lemma val_8_zmod_p [NeZero p] [Fact (2 ^ 17 < p)] :
+    (8 : ZMod p).val = 8 := by
+  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  exact ZMod.val_natCast_of_lt (show (8 : ℕ) < p by omega)
+
+@[simp] lemma val_13_zmod_p [NeZero p] [Fact (2 ^ 17 < p)] :
+    (13 : ZMod p).val = 13 := by
+  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  exact ZMod.val_natCast_of_lt (show (13 : ℕ) < p by omega)
+
+@[simp] lemma val_14_zmod_p [NeZero p] [Fact (2 ^ 17 < p)] :
+    (14 : ZMod p).val = 14 := by
+  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  exact ZMod.val_natCast_of_lt (show (14 : ℕ) < p by omega)
+
+@[simp] lemma val_16_zmod_p [NeZero p] [Fact (2 ^ 17 < p)] :
+    (16 : ZMod p).val = 16 := by
+  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  exact ZMod.val_natCast_of_lt (show (16 : ℕ) < p by omega)
+
+@[simp] lemma val_32_zmod_p [NeZero p] [Fact (2 ^ 17 < p)] :
+    (32 : ZMod p).val = 32 := by
+  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  exact ZMod.val_natCast_of_lt (show (32 : ℕ) < p by omega)
+
+@[simp] lemma val_64_zmod_p [NeZero p] [Fact (2 ^ 17 < p)] :
+    (64 : ZMod p).val = 64 := by
+  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  exact ZMod.val_natCast_of_lt (show (64 : ℕ) < p by omega)
+
+@[simp] lemma val_32768_zmod_p [NeZero p] [Fact (2 ^ 17 < p)] :
+    (32768 : ZMod p).val = 32768 := by
+  have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  exact ZMod.val_natCast_of_lt (show (32768 : ℕ) < p by omega)
+
 /-- The `÷4` alignment check `(x · 4⁻¹).val < 2^14` pins `x = (x · 4⁻¹) · 4` exactly in `ℕ`: since
 `(x · 4⁻¹).val · 4 < 2^16 < p` there is no wrap, so `x.val = (x · 4⁻¹).val · 4`. The shared core of the
 two corollaries below (divisibility + the `< 2^16` bound). -/
@@ -165,6 +200,9 @@ lemma val_lt_65536_of_mul_inv_four_lt [Fact p.Prime] [Fact (2 ^ 17 < p)] {x : ZM
     (65535 : ZMod p).val = 65535 := by
   have : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
   exact ZMod.val_natCast_of_lt (show (65535 : ℕ) < p by omega)
+
+lemma val_65535_ne_zero [NeZero p] [Fact (2 ^ 17 < p)] : (65535 : ZMod p) ≠ 0 := by
+  simp [← ZMod.val_eq_zero, val_65535_zmod_p]
 
 /-- The 16-bit complement `65535 - x` has a clean `.val` (= `65535 - x.val` in `ℕ`).
 Used by the Sub borrow-chain limb lift: feeding `bbar := 65535 - b[i]` (a genuine
