@@ -14,6 +14,12 @@ For *how* to golf safely, see `proof-patterns.md` § "Golf & cleanup discipline"
 - `lake lint` (environment linters) stood up — the `sp1Lint` lintDriver (`scripts/sp1Lint.lean`) runs 11 curated
   Batteries `#lint` linters over the hand-written `SP1Clean.*` decls (auto-gen excluded by module-path filter),
   with a 21-entry `scripts/nolints.json` baseline; CI runs it in the build job.
+- The `val_N` private-lemma sweep — the scattered `(N : ZMod p).val = N` copies (`val_13`×3, `val_14`×3,
+  `val_16'`/`val_16''`×4, Shift-core `val_4/8/16/32/64`, Native `c65535_ne_zero`×2) consolidated onto the
+  `Math/Word.lean` family (now `val_2/4/8/13/14/16/32/64/256/32768/65535/65536`); plus a new `Math/Gate.lean`
+  binary-field/BitVec-compare API (`bool_val_le`, `val_ne`, `eq_one_iff_of_ite` + siblings,
+  `slt/ult_{true,false}_iff` over `BitVec w`) absorbing the Branch/Lt decision-proof private helpers. Also
+  fixed the 2 `ShiftRightMath.val_4/64` `simpNF` nolints.
 
 ## Cross-file refactors — deferred with caveats
 
@@ -61,6 +67,25 @@ Left untouched in the campaign; revisit only with a specific goal:
   2026-06-23 merge, so the pre-merge shape may have changed.
 - Mul `soundness` 5-branch tail — byte-identical block ×5, but a clean factor needs an intractable ~40-line
   `resultWord` struct type; **skip** (the duplication is cheaper than the abstraction).
+- **`vec4_eval`** — the `#v[eval e v[0],…,v[3]] = Vector.map (eval e) v` lemma recurs ×6 across chip
+  `Formal.lean` (Mul/Lt/ShiftRight/ShiftLeft/Bitwise + DivRem `Completeness/Driver`). Clean Math candidate
+  (Clean-DSL-generic), but **2 of the 6 are perf-sensitive** (DivRem Driver, Shift Formals) — fold into a
+  Shift/DivRem pass rather than a standalone touch. Not done in the val_N sweep.
+
+## Performance — what's actually actionable (investigated 2026-06-24)
+
+The "safe mechanical" perf levers were swept over the touched + fair-game heavy files and found **nothing
+actionable**:
+- **`maxHeartbeats` tightening is the wrong lever.** The heavy Shift/DivRem proofs are **kernel /
+  type-checking-bound, not heartbeat-bound** — measured `ShiftLeftChip/Soundness/Sll.soundness` at **72**
+  elaboration heartbeats against its 4M ceiling. The ceilings are non-binding safety margins; lowering them has
+  no wall-clock effect and only risks a future spike. Leave them.
+- No `simp_all` / heavy `simp [circuit_norm]` in the touched files (already targeted), and none carry
+  `unusedSimpArgs` suppressions, so the simp-tightening / redundant-arg levers are empty there too.
+- The **only** real prize is the **Shift tail-dedup** (extract the byte-identical `cpuA/msb*/aluA` tail shared
+  across the 6 Shift conjuncts, mirroring `DivRemChip/Soundness/Tail.lean`) — a structural change, deferred:
+  it overlaps the recently-golfed Shift soundness files and is a multi-hour effort. That, plus the term-intrinsic
+  DivRem cost (off-limits), is where the build time genuinely lives.
 
 ## Linters — next candidates (deferred; real fallout)
 
