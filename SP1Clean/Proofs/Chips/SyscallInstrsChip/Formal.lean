@@ -383,5 +383,9 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   channelsWithRequirements := [memoryChannel.toRaw]
   requirementsChannelsLawful := requirementsLawful
 
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
+    (circuit (p := p)).localLength x = 0 := rfl
+
 
 end SP1Clean.SyscallInstrsChip

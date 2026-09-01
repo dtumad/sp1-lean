@@ -214,4 +214,8 @@ set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithRequirements_eq :
     (circuit (p := p)).channelsWithRequirements = [] := rfl
 
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
+    (circuit (p := p)).localLength x = 0 := rfl
+
 end SP1Clean.U16toU8OperationSafe

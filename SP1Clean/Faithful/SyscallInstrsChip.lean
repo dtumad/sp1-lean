@@ -1,0 +1,454 @@
+import SP1Clean.Extracted.SystemOracle.SyscallInstrs
+import SP1Clean.Faithful.ChipOracle
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+
+/-! # Chip-level faithfulness anchor — SP1's whole `SyscallInstrs` table
+
+The whole-table Rust oracle boundary for SP1's ECALL row: the native `SyscallInstrsChip` circuit's
+complete `assertZero` list and complete interaction multiset, compared against
+`Extracted/SystemOracle/SyscallInstrs.lean` — the extracted `sp1-constraint-compiler` dump of
+upstream's `SyscallInstrsChip::eval` (`../sp1 crates/core/machine/src/syscall/instructions`).
+
+## Shape of the anchor
+
+Like `StateBump` and `MemoryBump`, this table has `localLength = 0`: all sixty-five cells are
+inputs and the physical Clean row *is* the extracted flat `values` vector, so the anchor is stated
+over the input-keyed codec rather than through the output-keyed `ChipRowCodec`. Unlike those two it
+is not flat *internally* — the row composes fourteen subcircuits (the byte split, five `IsZero`
+selectors, two `U16Compare` bounds, the `CPUState` reader, three `RegisterAccessCols` readers, and
+the five arms of `Native/Chips/SyscallInstrsChip/Arms.lean`) — but `nativeAssertZeros` flattens
+those, so the comparison is still between two flat lists.
+
+## The public-value factoring (the one structural difference from the other anchors)
+
+This is the first anchor whose Rust side reads `publicValues`. SP1 states eight of its conjuncts
+against public values directly — the two commit flags at `[145]`/`[147]`, the four selected
+committed-digest bytes out of `[32..63]`, the selected deferred byte out of `[72..79]`, and the
+halt exit code at `[87]`. Clean's flat AIR localises the public input to the verifier row
+(`Table` has no `PublicIO`, and `Ensemble.tables` cannot depend on the witness's public input), so
+a chip-level public-value assertion **must** be a channel hand-off; the native row emits each as
+one message built from columns it already carries.
+
+The anchor is therefore an iff between the extracted assertion list and *the native constraint
+system conjoined with* `PublicValueBinding` — those eight Rust conjuncts, stated verbatim over the
+Rust row and its public values. Nothing is dropped: `syscallInstrsPublicValueBinding_via_messages`
+exhibits each conjunct as the payload equation of a specific emitted message, so the binding names
+the hand-off rather than assuming it away. Until `Channels.publicValuesChannel` and
+`Channels.exitChannel` have providers in the ensemble, that is what the hand-off *is*, and
+`docs/release-audit.md`'s native-only-bus row is where it is disclosed.
+
+## Where the KoalaBear literals live
+
+Two of SP1's public-value conjuncts reduce a four-limb word with the coefficients
+`1, 65536, 33554430, 134085624` — the last two being `2 ^ 32` and `2 ^ 48` *reduced at KoalaBear's
+modulus*, not generic. That is external report Finding 7. The factoring above confines them to
+`PublicValueBinding`: the native half of the anchor stays literal-free and field-generic, and the
+companion theorem that identifies the binding with the emitted messages takes the interpretation
+`(33554430 : ZMod p) = 2 ^ 32 ∧ (134085624 : ZMod p) = 2 ^ 48` as an explicit hypothesis rather
+than assuming it silently. Instantiating it is a property of SP1's field, not of this row.
+
+## The Memory and Program polarity bridges
+
+As everywhere else: SP1 `.send`s the read-prior Memory record and the Program fetch where the
+native circuit `pullIf`s them, and `nativeAccesses` (`Faithful/ChipOracle.lean`) applies
+`LookupAccessList.negMult` to both blocks for exactly that reason. Byte and State are already
+aligned.
+-/
+
+namespace SP1Clean.Faithful
+
+open SP1Clean
+open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel exitChannel
+  syscallChannel publicValuesChannel MemoryMsg ProgramMsg)
+open scoped SP1Clean.ConstraintCoe
+open SP1Clean.SyscallInstrsChip
+
+variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
+
+/-! ## The whole-row column codec
+
+The sixty-five-cell regrouping between the native `Inputs` row and the extracted flat vector. The
+grouping is documented cell-by-cell in `FormalModel/Contracts/SyscallInstrsChip.lean`; this pair of
+maps is the machine-checked version of that table, and the two round-trips below are what make it a
+regrouping rather than a claim. -/
+
+/-- Whole-row reconfiguration: the native `SyscallInstrsChip.Inputs` row in upstream
+`SyscallInstrsCols` field order. -/
+def syscallInstrsReconfigure {F : Type} (r : SyscallInstrsChip.Inputs F) :
+    Extracted.SyscallInstrsCols F :=
+  ⟨#v[
+      r.state.clk_high, r.state.clk_16_24, r.state.clk_0_16, r.state.pc[0], r.state.pc[1],
+      r.state.pc[2], r.op_a, r.op_a_memory.prev_value[0], r.op_a_memory.prev_value[1],
+      r.op_a_memory.prev_value[2], r.op_a_memory.prev_value[3],
+      r.op_a_memory.access_timestamp.prev_low, r.op_a_memory.access_timestamp.diff_low_limb,
+      r.op_a_0, r.op_b, r.op_b_memory.prev_value[0], r.op_b_memory.prev_value[1],
+      r.op_b_memory.prev_value[2], r.op_b_memory.prev_value[3],
+      r.op_b_memory.access_timestamp.prev_low, r.op_b_memory.access_timestamp.diff_low_limb,
+      r.op_c, r.op_c_memory.prev_value[0], r.op_c_memory.prev_value[1],
+      r.op_c_memory.prev_value[2], r.op_c_memory.prev_value[3],
+      r.op_c_memory.access_timestamp.prev_low, r.op_c_memory.access_timestamp.diff_low_limb,
+      r.next_pc[0], r.next_pc[1], r.next_pc[2], r.is_halt, r.op_a_value[0], r.op_a_value[1],
+      r.op_a_value[2], r.op_a_value[3], r.syscall_id_bytes.low_bytes[0],
+      r.syscall_id_bytes.low_bytes[1], r.syscall_id_bytes.low_bytes[2],
+      r.syscall_id_bytes.low_bytes[3], r.is_enter_unconstrained.inverse,
+      r.is_enter_unconstrained.result, r.is_hint_len.inverse, r.is_hint_len.result,
+      r.is_halt_zero.inverse, r.is_halt_zero.result, r.is_commit.inverse, r.is_commit.result,
+      r.is_commit_deferred.inverse, r.is_commit_deferred.result, r.digest_index_bits[0],
+      r.digest_index_bits[1], r.digest_index_bits[2], r.digest_index_bits[3],
+      r.digest_index_bits[4], r.digest_index_bits[5], r.digest_index_bits[6],
+      r.digest_index_bits[7], r.digest_word[0], r.digest_word[1], r.digest_word[2],
+      r.digest_word[3], r.op_b_cmp.bit, r.op_c_cmp.bit, r.is_real]⟩
+
+/-- Inverse whole-row map, used to reconstruct the native proof row from an arbitrary Rust row. -/
+def syscallInstrsDeconfigure {F : Type} (cols : Extracted.SyscallInstrsCols F) :
+    SyscallInstrsChip.Inputs F :=
+  { state :=
+      { clk_high := cols.values[0], clk_16_24 := cols.values[1], clk_0_16 := cols.values[2]
+        pc := #v[cols.values[3], cols.values[4], cols.values[5]] }
+    op_a := cols.values[6]
+    op_a_memory :=
+      { prev_value := #v[cols.values[7], cols.values[8], cols.values[9], cols.values[10]]
+        access_timestamp := { prev_low := cols.values[11], diff_low_limb := cols.values[12] } }
+    op_a_0 := cols.values[13]
+    op_b := cols.values[14]
+    op_b_memory :=
+      { prev_value := #v[cols.values[15], cols.values[16], cols.values[17], cols.values[18]]
+        access_timestamp := { prev_low := cols.values[19], diff_low_limb := cols.values[20] } }
+    op_c := cols.values[21]
+    op_c_memory :=
+      { prev_value := #v[cols.values[22], cols.values[23], cols.values[24], cols.values[25]]
+        access_timestamp := { prev_low := cols.values[26], diff_low_limb := cols.values[27] } }
+    next_pc := #v[cols.values[28], cols.values[29], cols.values[30]]
+    is_halt := cols.values[31]
+    op_a_value := #v[cols.values[32], cols.values[33], cols.values[34], cols.values[35]]
+    syscall_id_bytes :=
+      { low_bytes := #v[cols.values[36], cols.values[37], cols.values[38], cols.values[39]] }
+    is_enter_unconstrained := { inverse := cols.values[40], result := cols.values[41] }
+    is_hint_len := { inverse := cols.values[42], result := cols.values[43] }
+    is_halt_zero := { inverse := cols.values[44], result := cols.values[45] }
+    is_commit := { inverse := cols.values[46], result := cols.values[47] }
+    is_commit_deferred := { inverse := cols.values[48], result := cols.values[49] }
+    digest_index_bits :=
+      #v[cols.values[50], cols.values[51], cols.values[52], cols.values[53], cols.values[54],
+         cols.values[55], cols.values[56], cols.values[57]]
+    digest_word := #v[cols.values[58], cols.values[59], cols.values[60], cols.values[61]]
+    op_b_cmp := { bit := cols.values[62] }
+    op_c_cmp := { bit := cols.values[63] }
+    is_real := cols.values[64] }
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- Vector eta at the four widths the row carries. -/
+private theorem syscallVec_eta {F : Type} :
+    (∀ w : Vector F 3, #v[w[0], w[1], w[2]] = w) ∧
+      (∀ w : Vector F 4, #v[w[0], w[1], w[2], w[3]] = w) ∧
+      (∀ w : Vector F 8, #v[w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7]] = w) :=
+  ⟨fun w => by ext i hi; interval_cases i <;> rfl,
+   fun w => by ext i hi; interval_cases i <;> rfl,
+   fun w => by ext i hi; interval_cases i <;> rfl⟩
+
+theorem syscallInstrsDeconfigure_reconfigure {F : Type} :
+    Function.LeftInverse (syscallInstrsDeconfigure (F := F)) syscallInstrsReconfigure := by
+  intro r
+  obtain ⟨⟨-, -, -, -⟩, -, ⟨-, -⟩, -, -, ⟨-, -⟩, -, ⟨-, -⟩, -, -, -, -, -, -, -, -, -, -, -, -,
+    -⟩ := r
+  obtain ⟨h3, h4, h8⟩ := syscallVec_eta (F := F)
+  simp [syscallInstrsReconfigure, syscallInstrsDeconfigure, h3, h4, h8]
+
+theorem syscallInstrsReconfigure_deconfigure {F : Type} :
+    Function.LeftInverse (syscallInstrsReconfigure (F := F)) syscallInstrsDeconfigure := by
+  intro cols
+  obtain ⟨values⟩ := cols
+  simp only [syscallInstrsDeconfigure, syscallInstrsReconfigure,
+    Extracted.SyscallInstrsCols.mk.injEq]
+  ext i hi
+  interval_cases i <;> rfl
+
+/-- SP1 Rust's complete `SyscallInstrs` oracle, viewed from the native Lean row. Unlike every other
+chip oracle in this directory the public values are genuinely *read* by `asserts`, so they are not
+merely carried along; see the module docstring for how the anchor factors them. -/
+def syscallInstrsChipOracle (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) :
+    ChipOracle (ZMod p) SyscallInstrsChip.Inputs Extracted.SyscallInstrsCols where
+  reconfigure := syscallInstrsReconfigure
+  deconfigure := syscallInstrsDeconfigure
+  reconfigure_deconfigure := syscallInstrsReconfigure_deconfigure
+  deconfigure_reconfigure := syscallInstrsDeconfigure_reconfigure
+  assertZeros cols := Extracted.SyscallInstrsCols.asserts cols preprocessed publicValues
+  interactions cols := Extracted.SyscallInstrsCols.interactions cols preprocessed publicValues
+
+/-! ## The physical row -/
+
+/-- The physical Clean row: the typed input followed by an empty witness block. -/
+def syscallInstrsPhysicalRow {F : Type} (r : SyscallInstrsChip.Inputs F) : Array F :=
+  inputFirstRow r #v[]
+
+/-- The verifier environment a Rust row induces on the native chip. -/
+def syscallInstrsEnvironment (cols : Extracted.SyscallInstrsCols (ZMod p))
+    (data : ProverData (ZMod p)) : Environment (ZMod p) :=
+  Environment.fromArray (syscallInstrsPhysicalRow (syscallInstrsDeconfigure cols)) data
+
+/-- The table's physical width: sixty-five input cells and no witness block. -/
+theorem syscallInstrsChip_size_eq :
+    (SyscallInstrsChip.circuit (p := p)).size = size SyscallInstrsChip.Inputs := by
+  rw [GeneralFormalCircuit.size_eq, SyscallInstrsChip.circuit_localLength, Nat.add_zero]
+
+/-- The reconstructed row has exactly the flat component's width. -/
+theorem syscallInstrsPhysicalRow_size (cols : Extracted.SyscallInstrsCols (ZMod p)) :
+    (syscallInstrsPhysicalRow (syscallInstrsDeconfigure cols)).size =
+      (⟨SyscallInstrsChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).width := by
+  rw [syscallInstrsPhysicalRow, inputFirstRow_size, Air.Flat.Component.width,
+    syscallInstrsChip_size_eq]
+  simp
+
+/-- The reconstructed row decodes back to the native row the codec started from. -/
+theorem syscallInstrsEnvironment_rowInput (cols : Extracted.SyscallInstrsCols (ZMod p))
+    (data : ProverData (ZMod p)) :
+    (⟨SyscallInstrsChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInput
+        (syscallInstrsEnvironment cols data) = syscallInstrsDeconfigure cols :=
+  rowInput_inputFirstRow _ _ _ _
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The component's row input *variables* evaluate to the decoded native row. -/
+theorem syscallInstrsEnvironment_eval (cols : Extracted.SyscallInstrsCols (ZMod p))
+    (data : ProverData (ZMod p)) :
+    Eval.eval (syscallInstrsEnvironment cols data)
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p)) =
+      syscallInstrsDeconfigure cols :=
+  eval_inputFirstRow _ _ _
+
+/-! ## Component-wise evaluation
+
+`Eval.eval` on a `ProvableStruct` is field-wise; these five lemmas say so at each carrier the row
+uses, and are what turn one whole-row binding into sixty-five cell equations. -/
+
+theorem eval_syscallCPUState {F : Type} [FiniteField F]
+    (env : Environment F) (c : Extracted.CPUState (Expression F)) :
+    Eval.eval env c =
+      ({ clk_high := Eval.eval env c.clk_high
+         clk_16_24 := Eval.eval env c.clk_16_24
+         clk_0_16 := Eval.eval env c.clk_0_16
+         pc := Eval.eval env c.pc } : Extracted.CPUState F) := by
+  rw [ProvableStruct.eval_eq_eval]
+  rfl
+
+theorem eval_syscallTimestamp {F : Type} [FiniteField F]
+    (env : Environment F) (t : Extracted.RegisterAccessTimestamp (Expression F)) :
+    Eval.eval env t =
+      ({ prev_low := Eval.eval env t.prev_low
+         diff_low_limb := Eval.eval env t.diff_low_limb } :
+        Extracted.RegisterAccessTimestamp F) := by
+  rw [ProvableStruct.eval_eq_eval]
+  rfl
+
+theorem eval_syscallAccess {F : Type} [FiniteField F]
+    (env : Environment F) (a : Extracted.RegisterAccessCols (Expression F)) :
+    Eval.eval env a =
+      ({ prev_value := Eval.eval env a.prev_value
+         access_timestamp := Eval.eval env a.access_timestamp } :
+        Extracted.RegisterAccessCols F) := by
+  rw [ProvableStruct.eval_eq_eval]
+  rfl
+
+theorem eval_syscallIsZero {F : Type} [FiniteField F]
+    (env : Environment F) (z : Extracted.IsZeroOperation (Expression F)) :
+    Eval.eval env z =
+      ({ inverse := Eval.eval env z.inverse
+         result := Eval.eval env z.result } : Extracted.IsZeroOperation F) := by
+  rw [ProvableStruct.eval_eq_eval]
+  rfl
+
+theorem eval_syscallU16toU8 {F : Type} [FiniteField F]
+    (env : Environment F) (u : Extracted.U16toU8Operation (Expression F)) :
+    Eval.eval env u =
+      ({ low_bytes := Eval.eval env u.low_bytes } : Extracted.U16toU8Operation F) := by
+  rw [ProvableStruct.eval_eq_eval]
+  rfl
+
+theorem eval_syscallU16Compare {F : Type} [FiniteField F]
+    (env : Environment F) (c : Extracted.U16CompareOperation (Expression F)) :
+    Eval.eval env c =
+      ({ bit := Eval.eval env c.bit } : Extracted.U16CompareOperation F) := by
+  rw [ProvableStruct.eval_eq_eval]
+  rfl
+
+theorem eval_syscallInstrsInputs {F : Type} [FiniteField F]
+    (env : Environment F) (r : SyscallInstrsChip.Inputs (Expression F)) :
+    Eval.eval env r =
+      ({ state := Eval.eval env r.state
+         op_a := Eval.eval env r.op_a
+         op_a_memory := Eval.eval env r.op_a_memory
+         op_a_0 := Eval.eval env r.op_a_0
+         op_b := Eval.eval env r.op_b
+         op_b_memory := Eval.eval env r.op_b_memory
+         op_c := Eval.eval env r.op_c
+         op_c_memory := Eval.eval env r.op_c_memory
+         next_pc := Eval.eval env r.next_pc
+         is_halt := Eval.eval env r.is_halt
+         op_a_value := Eval.eval env r.op_a_value
+         syscall_id_bytes := Eval.eval env r.syscall_id_bytes
+         is_enter_unconstrained := Eval.eval env r.is_enter_unconstrained
+         is_hint_len := Eval.eval env r.is_hint_len
+         is_halt_zero := Eval.eval env r.is_halt_zero
+         is_commit := Eval.eval env r.is_commit
+         is_commit_deferred := Eval.eval env r.is_commit_deferred
+         digest_index_bits := Eval.eval env r.digest_index_bits
+         digest_word := Eval.eval env r.digest_word
+         op_b_cmp := Eval.eval env r.op_b_cmp
+         op_c_cmp := Eval.eval env r.op_c_cmp
+         is_real := Eval.eval env r.is_real } : SyscallInstrsChip.Inputs F) := by
+  rw [ProvableStruct.eval_eq_eval]
+  rfl
+
+/-! ## The evaluated Rust row
+
+Every downstream statement is phrased over `syscallInstrsRustColumns`: the extracted flat vector
+whose cells are literally the native row's evaluated columns. One theorem — sixty-five uniform
+cases — connects it to the codec, and after that the Rust oracle's `cols.values[k]` accesses reduce
+definitionally to native expressions, so no further column bookkeeping is needed. -/
+
+/-- The extracted Rust row a native row induces under an environment. -/
+def syscallInstrsRustColumns (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) : Extracted.SyscallInstrsCols (ZMod p) :=
+  ⟨#v[
+      Expression.eval env r.state.clk_high, Expression.eval env r.state.clk_16_24,
+      Expression.eval env r.state.clk_0_16, Expression.eval env r.state.pc[0],
+      Expression.eval env r.state.pc[1], Expression.eval env r.state.pc[2],
+      Expression.eval env r.op_a, Expression.eval env r.op_a_memory.prev_value[0],
+      Expression.eval env r.op_a_memory.prev_value[1],
+      Expression.eval env r.op_a_memory.prev_value[2],
+      Expression.eval env r.op_a_memory.prev_value[3],
+      Expression.eval env r.op_a_memory.access_timestamp.prev_low,
+      Expression.eval env r.op_a_memory.access_timestamp.diff_low_limb,
+      Expression.eval env r.op_a_0, Expression.eval env r.op_b,
+      Expression.eval env r.op_b_memory.prev_value[0],
+      Expression.eval env r.op_b_memory.prev_value[1],
+      Expression.eval env r.op_b_memory.prev_value[2],
+      Expression.eval env r.op_b_memory.prev_value[3],
+      Expression.eval env r.op_b_memory.access_timestamp.prev_low,
+      Expression.eval env r.op_b_memory.access_timestamp.diff_low_limb,
+      Expression.eval env r.op_c, Expression.eval env r.op_c_memory.prev_value[0],
+      Expression.eval env r.op_c_memory.prev_value[1],
+      Expression.eval env r.op_c_memory.prev_value[2],
+      Expression.eval env r.op_c_memory.prev_value[3],
+      Expression.eval env r.op_c_memory.access_timestamp.prev_low,
+      Expression.eval env r.op_c_memory.access_timestamp.diff_low_limb,
+      Expression.eval env r.next_pc[0], Expression.eval env r.next_pc[1],
+      Expression.eval env r.next_pc[2], Expression.eval env r.is_halt,
+      Expression.eval env r.op_a_value[0], Expression.eval env r.op_a_value[1],
+      Expression.eval env r.op_a_value[2], Expression.eval env r.op_a_value[3],
+      Expression.eval env r.syscall_id_bytes.low_bytes[0],
+      Expression.eval env r.syscall_id_bytes.low_bytes[1],
+      Expression.eval env r.syscall_id_bytes.low_bytes[2],
+      Expression.eval env r.syscall_id_bytes.low_bytes[3],
+      Expression.eval env r.is_enter_unconstrained.inverse,
+      Expression.eval env r.is_enter_unconstrained.result,
+      Expression.eval env r.is_hint_len.inverse, Expression.eval env r.is_hint_len.result,
+      Expression.eval env r.is_halt_zero.inverse, Expression.eval env r.is_halt_zero.result,
+      Expression.eval env r.is_commit.inverse, Expression.eval env r.is_commit.result,
+      Expression.eval env r.is_commit_deferred.inverse,
+      Expression.eval env r.is_commit_deferred.result,
+      Expression.eval env r.digest_index_bits[0], Expression.eval env r.digest_index_bits[1],
+      Expression.eval env r.digest_index_bits[2], Expression.eval env r.digest_index_bits[3],
+      Expression.eval env r.digest_index_bits[4], Expression.eval env r.digest_index_bits[5],
+      Expression.eval env r.digest_index_bits[6], Expression.eval env r.digest_index_bits[7],
+      Expression.eval env r.digest_word[0], Expression.eval env r.digest_word[1],
+      Expression.eval env r.digest_word[2], Expression.eval env r.digest_word[3],
+      Expression.eval env r.op_b_cmp.bit, Expression.eval env r.op_c_cmp.bit,
+      Expression.eval env r.is_real]⟩
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Reconfiguring an evaluated native row is evaluating it cell by cell. -/
+theorem syscallInstrsReconfigure_eval (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) :
+    syscallInstrsReconfigure (Eval.eval env r) = syscallInstrsRustColumns env r := by
+  rw [eval_syscallInstrsInputs]
+  simp only [syscallInstrsReconfigure, syscallInstrsRustColumns,
+    eval_syscallCPUState, eval_syscallAccess, eval_syscallTimestamp, eval_syscallU16toU8,
+    eval_syscallIsZero, eval_syscallU16Compare, ProvableType.eval_field,
+    Extracted.SyscallInstrsCols.mk.injEq]
+  ext i hi
+  interval_cases i <;>
+    simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ,
+      List.getElem_cons_zero, ProvableType.getElem_eval_fields]
+
+/-! ## The native assertion system, block by block
+
+`circuit_norm` cannot be used here: it normalises the *content* of seventy-odd constraints to
+answer a question about their *arrangement*, and exceeds the elaboration budget on a row this wide.
+The structural `Operations.constraints_*` lemmas answer it directly. Every subcircuit sits at the
+same offset because the row witnesses nothing — `localLength = 0` throughout. -/
+
+/-- The row's complete evaluated `assertZero` list, split into its thirteen shallow gates and the
+sixteen composed blocks, each left folded at its own `main`. -/
+theorem syscallInstrsAssertBlocks (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((SyscallInstrsChip.main r).operations offset) =
+      [Expression.eval env (r.is_real * (r.is_real - 1)),
+       Expression.eval env (r.is_commit.result * (r.is_commit.result - 1)),
+       Expression.eval env (r.is_commit_deferred.result * (r.is_commit_deferred.result - 1)),
+       Expression.eval env (r.is_halt * (r.is_halt - 1)),
+       Expression.eval env (tableByteVar r * (tableByteVar r - 1))] ++
+      nativeAssertZeros env
+        ((SP1Clean.U16toU8OperationSafe.circuit.main ⟨r.op_a_memory.prev_value, r.syscall_id_bytes, r.is_real⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst haltCode, r.is_halt_zero, r.is_real⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst enterUnconstrainedCode, r.is_enter_unconstrained, r.is_real⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst hintLenCode, r.is_hint_len, r.is_real⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst commitCode, r.is_commit, r.is_real⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst commitDeferredCode, r.is_commit_deferred, r.is_real⟩).operations offset) ++
+      [Expression.eval env (r.is_halt - r.is_halt_zero.result * r.is_real),
+       Expression.eval env ((r.is_real - 1) * tableByteVar r),
+       Expression.eval env ((r.is_real - 1) * r.is_halt),
+       Expression.eval env ((r.is_real - 1) * r.is_commit_deferred.result)] ++
+      nativeAssertZeros env
+        ((Readers.CPUState.circuit.main ⟨r.state, r.next_pc, 264, r.is_real⟩).operations offset) ++
+      nativeAssertZeros env
+        ((Readers.RegisterAccessCols.circuit.main ⟨r.op_a_memory, r.is_real, clkLowVar r + 4⟩).operations offset) ++
+      nativeAssertZeros env
+        ((Readers.RegisterAccessCols.circuit.main ⟨r.op_b_memory, r.is_real, clkLowVar r + 3⟩).operations offset) ++
+      nativeAssertZeros env
+        ((Readers.RegisterAccessCols.circuit.main ⟨r.op_c_memory, r.is_real, clkLowVar r + 2⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SyscallInstrsChip.WriteArm.circuit.main
+          ⟨r.op_a_memory.prev_value, r.op_a_value, r.op_a_0,
+           r.is_enter_unconstrained.result, r.is_hint_len.result, r.is_real⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SyscallInstrsChip.PcArm.circuit.main ⟨r.state.pc, r.next_pc, r.is_real, r.is_halt⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SyscallInstrsChip.DispatchArm.circuit.main ⟨r.op_b_memory.prev_value, r.op_c_memory.prev_value, tableByteVar r⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SyscallInstrsChip.FieldBoundArm.circuit.main ⟨r.op_b_memory.prev_value, r.op_b_cmp.bit, r.is_halt⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SyscallInstrsChip.FieldBoundArm.circuit.main
+          ⟨r.op_c_memory.prev_value, r.op_c_cmp.bit, r.is_commit_deferred.result⟩).operations offset) ++
+      nativeAssertZeros env
+        ((SyscallInstrsChip.CommitArm.circuit.main
+          ⟨r.digest_index_bits, r.digest_word, r.op_b_memory.prev_value,
+           r.op_c_memory.prev_value, r.is_commit.result, r.is_commit_deferred.result, r.is_real⟩).operations offset) := by
+  simp only [nativeAssertZeros, SyscallInstrsChip.main, Circuit.operations, Circuit.bind_def,
+    assertZero, subcircuitWithAssertion, assertion, Channel.pullIf, Channel.pushIf,
+    Operations.constraints_assert, Operations.constraints_interact,
+    Operations.constraints_nil, Operations.constraints_subcircuit,
+    constraints_toSubcircuit_formalAssertion, constraints_toSubcircuit_generalFormalCircuit,
+    FormalAssertion.toSubcircuit_localLength, GeneralFormalCircuit.toSubcircuit_localLength,
+    Readers.CPUState.circuit_localLength, Readers.RegisterAccessCols.circuit_localLength,
+    SP1Clean.IsZeroOperation.circuit_localLength,
+    SyscallInstrsChip.PcArm.circuit_localLength,
+    SyscallInstrsChip.WriteArm.circuit_localLength,
+    SyscallInstrsChip.FieldBoundArm.circuit_localLength,
+    SyscallInstrsChip.DispatchArm.circuit_localLength,
+    SP1Clean.U16toU8OperationSafe.circuit_localLength,
+    Operations.localLength, Nat.add_zero,
+    List.map_append, List.map_cons, List.nil_append, List.append_nil,
+    List.append_assoc, List.cons_append]
+
+end SP1Clean.Faithful

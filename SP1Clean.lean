@@ -312,6 +312,7 @@ import SP1Clean.Faithful.StoreHalfChip
 import SP1Clean.Faithful.StoreWordChip
 import SP1Clean.Faithful.SubChip
 import SP1Clean.Faithful.SubwChip
+import SP1Clean.Faithful.SyscallInstrsChip
 import SP1Clean.Faithful.U16CompareOperation
 import SP1Clean.Faithful.U16MSBOperation
 import SP1Clean.Faithful.U16toU8OperationSafe
