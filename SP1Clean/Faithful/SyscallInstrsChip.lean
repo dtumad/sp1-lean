@@ -929,4 +929,123 @@ theorem syscallInstrsInteractionBlocks (r : Var SyscallInstrsChip.Inputs (ZMod p
     Operations.localLength, Nat.add_zero,
     List.append_assoc, List.cons_append, List.nil_append]
 
+/-! ## Each composed block's interaction list
+
+Again one lemma per composed circuit over an opaque input. Four of the sixteen blocks emit nothing:
+`IsZeroOperation` and three of the five arms are pure `assertZero` gadgets. -/
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The five arm selectors emit nothing: `IsZeroOperation` is a pure `assertZero` gadget, and so is
+the scalar equality gadget it composes. -/
+theorem isZeroInteractions (input : Var SP1Clean.IsZeroOperation.Inputs (ZMod p)) (offset : ℕ) :
+    Operations.interactions
+      ((SP1Clean.IsZeroOperation.circuit.main input).operations offset) = [] := by
+  simp only [SP1Clean.IsZeroOperation.circuit, SP1Clean.IsZeroOperation.main, circuit_norm,
+    FormalAssertion.toSubcircuit_interactions, Gadgets.Equality.main]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- `PcArm`, `WriteArm`, `DispatchArm` and `CommitArm` are pure `assertZero` blocks. -/
+theorem pcArmInteractions (input : Var SyscallInstrsChip.PcArm.Inputs (ZMod p)) (offset : ℕ) :
+    Operations.interactions
+      ((SyscallInstrsChip.PcArm.circuit.main input).operations offset) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+theorem writeArmInteractions (input : Var SyscallInstrsChip.WriteArm.Inputs (ZMod p)) (offset : ℕ) :
+    Operations.interactions
+      ((SyscallInstrsChip.WriteArm.circuit.main input).operations offset) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+theorem dispatchArmInteractions (input : Var SyscallInstrsChip.DispatchArm.Inputs (ZMod p))
+    (offset : ℕ) :
+    Operations.interactions
+      ((SyscallInstrsChip.DispatchArm.circuit.main input).operations offset) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+theorem commitArmInteractions (input : Var SyscallInstrsChip.CommitArm.Inputs (ZMod p))
+    (offset : ℕ) :
+    Operations.interactions
+      ((SyscallInstrsChip.CommitArm.circuit.main input).operations offset) = [] := rfl
+
+/-- SP1's `slice_range_check_u8` on the four split bytes. -/
+theorem u16toU8SafeInteractions (input : Var SP1Clean.U16toU8OperationSafe.Inputs (ZMod p))
+    (offset : ℕ) :
+    Operations.interactions
+        ((SP1Clean.U16toU8OperationSafe.circuit.main input).operations offset) =
+      [(byteChannel.pulledIf input.is_real
+          (⟨3, 0, input.cols.low_bytes[0],
+            (input.u16_values[0] - input.cols.low_bytes[0]) *
+              Expression.const (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+       (byteChannel.pulledIf input.is_real
+          (⟨3, 0, input.cols.low_bytes[1],
+            (input.u16_values[1] - input.cols.low_bytes[1]) *
+              Expression.const (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+       (byteChannel.pulledIf input.is_real
+          (⟨3, 0, input.cols.low_bytes[2],
+            (input.u16_values[2] - input.cols.low_bytes[2]) *
+              Expression.const (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+       (byteChannel.pulledIf input.is_real
+          (⟨3, 0, input.cols.low_bytes[3],
+            (input.u16_values[3] - input.cols.low_bytes[3]) *
+              Expression.const (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
+  simp only [SP1Clean.U16toU8OperationSafe.circuit, SP1Clean.U16toU8OperationSafe.main, circuit_norm]
+
+/-- The `U16Compare` bound: one range check, then a pure equality. -/
+theorem u16CompareInteractions (input : Var SP1Clean.U16CompareOperation.Inputs (ZMod p))
+    (offset : ℕ) :
+    Operations.interactions
+        ((SP1Clean.U16CompareOperation.circuit.main input).operations offset) =
+      [(byteChannel.pulledIf input.is_real
+          (⟨6, input.a - input.b + input.cols.bit * 65536, Expression.const ((16 : ℕ) : ZMod p),
+            0⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
+  simp only [SP1Clean.U16CompareOperation.circuit, SP1Clean.U16CompareOperation.main, circuit_norm,
+    FormalAssertion.toSubcircuit_interactions, Gadgets.Equality.main]
+
+/-- The `FieldBoundArm`'s only bus traffic is its `U16Compare` fragment's. -/
+theorem fieldBoundArmInteractions (input : Var SyscallInstrsChip.FieldBoundArm.Inputs (ZMod p))
+    (offset : ℕ) :
+    Operations.interactions
+        ((SyscallInstrsChip.FieldBoundArm.circuit.main input).operations offset) =
+      Operations.interactions
+        ((SP1Clean.U16CompareOperation.circuit.main
+            ⟨input.word[1], Expression.const ((fieldLimbBound : ℕ) : ZMod p), ⟨input.bit⟩,
+             input.is_real⟩).operations offset) := by
+  simp only [SyscallInstrsChip.FieldBoundArm.circuit, SyscallInstrsChip.FieldBoundArm.main,
+    circuit_norm, FormalAssertion.toSubcircuit_interactions]
+
+/-- The state reader's two clock range checks and its State edge. -/
+theorem cpuStateInteractions (input : Var Readers.CPUState.Inputs (ZMod p)) (offset : ℕ) :
+    Operations.interactions ((Readers.CPUState.circuit.main input).operations offset) =
+      [(byteChannel.pulledIf input.is_real
+          (⟨6, (input.cols.clk_0_16 - 1) * Expression.const (8 : ZMod p)⁻¹,
+            Expression.const ((13 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+       (byteChannel.pulledIf input.is_real
+          (⟨3, 0, input.cols.clk_16_24, 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+       (stateChannel.pulledIf input.is_real (Readers.CPUState.currentMsg input)).toRaw,
+       (stateChannel.pushedIf input.is_real (Readers.CPUState.nextMsg input)).toRaw] := by
+  simp only [Readers.CPUState.circuit, Readers.CPUState.main, circuit_norm]
+
+/-- The register reader's two timestamp range checks. -/
+theorem registerAccessTimestampInteractions
+    (input : Var Readers.RegisterAccessTimestamp.Inputs (ZMod p)) (offset : ℕ) :
+    Operations.interactions
+        ((Readers.RegisterAccessTimestamp.circuit.main input).operations offset) =
+      [(byteChannel.pulledIf input.is_real
+          (⟨6, input.cols.diff_low_limb, Expression.const ((16 : ℕ) : ZMod p), 0⟩ :
+            ByteRow (Expression (ZMod p)))).toRaw,
+       (byteChannel.pulledIf input.is_real
+          (⟨3, 0, (input.clk_target - input.cols.prev_low - 1 - input.cols.diff_low_limb) *
+            Expression.const (65536 : ZMod p)⁻¹, 0⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
+  simp only [Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
+    circuit_norm]
+
+theorem registerAccessColsInteractions (input : Var Readers.RegisterAccessCols.Inputs (ZMod p))
+    (offset : ℕ) :
+    Operations.interactions
+        ((Readers.RegisterAccessCols.circuit.main input).operations offset) =
+      Operations.interactions
+        ((Readers.RegisterAccessTimestamp.circuit.main
+            ⟨input.cols.access_timestamp, input.is_real, input.clk_target⟩).operations offset) := by
+  simp only [Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main, circuit_norm,
+    FormalAssertion.toSubcircuit_interactions]
+
 end SP1Clean.Faithful
