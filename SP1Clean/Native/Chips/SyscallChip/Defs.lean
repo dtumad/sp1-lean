@@ -272,4 +272,47 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   -- The generic hand-off: multiplicity is the identifier's table byte.
   syscallChannel.pushIf (hasOwnTable input) (syscallMsg input)
 
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
+  localLength _ := 0
+  output _ _ := ()
+  localLength_eq := by
+    intro input offset
+    simp only [circuit_norm, main, Readers.CPUState.circuit,
+      Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
+      U16CompareOperation.circuit, U16toU8OperationSafe.circuit]
+  -- Every bus the row touches. Byte arrives through the readers and the three gadget families;
+  -- State through `CPUState`; Program, Memory, Exit, Syscall and PublicValues directly.
+  channelsWithGuarantees :=
+    [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+     exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw]
+  channelsLawful := by
+    dsimp only [ElaboratedCircuit.ChannelsLawful]
+    intro input offset
+    dsimp only [Operations.ChannelsLawful]
+    refine ⟨by simp only [circuit_norm, main, Readers.CPUState.circuit,
+        Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
+        U16CompareOperation.circuit, U16toU8OperationSafe.circuit], ?_,
+      by simp only [circuit_norm, main, Readers.CPUState.circuit,
+        Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
+        U16CompareOperation.circuit, U16toU8OperationSafe.circuit]⟩
+    intro env
+    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
+    intro interaction h_interaction
+    simp only [circuit_norm, main, Readers.CPUState.circuit,
+      Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
+      U16CompareOperation.circuit, U16toU8OperationSafe.circuit] at h_interaction
+    refine Or.inl ?_
+    rcases h_interaction with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h <;>
+      subst h <;> simp only [circuit_norm]
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma channelsWithGuarantees_eq :
+    ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
+      = [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+         exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw] := rfl
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+    (elaborated (p := p)).localLength x = 0 := rfl
+
 end SP1Clean.SyscallChip
