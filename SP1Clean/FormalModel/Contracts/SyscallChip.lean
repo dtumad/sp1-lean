@@ -28,13 +28,13 @@ Column map, with the upstream indices each field occupies:
 | cells | field | upstream |
 |---|---|---|
 | 6 | `state` | `[0..5]` — `clk_high`, the two clock limbs, `pc` |
-| 1 + 6 | `op_a`, `op_a_memory` | `[6]`, `[7..12]` — `t0`, holding the syscall id |
-| 1 | `op_a_unchanged` | `[13]` — gates "`op_a` keeps its value" |
+| 1 + 6 | `op_a`, `op_a_memory` | `[6]`, `[7..12]` — `t0`; its *prior* value is the syscall id |
+| 1 | `op_a_0` | `[13]` — set when `op_a` is `x0`, forcing its written value to zero |
 | 1 + 6 | `op_b`, `op_b_memory` | `[14]`, `[15..20]` — `a0`: exit code, or commit index |
 | 1 + 6 | `op_c`, `op_c_memory` | `[21]`, `[22..27]` — `a1`: the commit digest word |
 | 3 | `next_pc` | `[28..30]` |
 | 1 | `is_halt` | `[31]` — already multiplied by `is_real` |
-| 4 | `op_a_value` | `[32..35]` — `op_a` *after* the syscall |
+| 4 | `op_a_value` | `[32..35]` — `op_a` *after* the syscall; unlike `a0`/`a1`, which are pure reads, `t0` is genuinely written, and this is the value the read-back re-establishes |
 | 4 | `syscall_id_bytes` | `[36..39]` — the id's byte split |
 | 2 × 5 | the five arm selectors | `[40..49]` |
 | 8 | `digest_index_bits` | `[50..57]` — one-hot over the 8 digest words |
@@ -78,7 +78,7 @@ structure Inputs (F : Type) where
   state : CPUState F
   op_a : F
   op_a_memory : RegisterAccessCols F
-  op_a_unchanged : F
+  op_a_0 : F
   op_b : F
   op_b_memory : RegisterAccessCols F
   op_c : F
