@@ -521,6 +521,7 @@ import SP1Clean.FormalModel.Contracts.SyscallChip
 import SP1Clean.Native.Chips.StateBumpChip.Defs
 import SP1Clean.Native.Chips.MemoryBumpChip.Defs
 import SP1Clean.Native.Chips.HaltChip.Defs
+import SP1Clean.Native.Chips.SyscallChip.Defs
 import SP1Clean.Proofs.Chips.StateBumpChip.Formal
 import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Formal
