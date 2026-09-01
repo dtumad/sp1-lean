@@ -1,5 +1,8 @@
 import SP1Clean.Extracted.SystemOracle.SyscallInstrs
 import SP1Clean.Faithful.ChipOracle
+import SP1Clean.Faithful.U16CompareOperation
+import SP1Clean.Faithful.IsZeroOperation
+import SP1Clean.Faithful.CPUState
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
 
 /-! # Chip-level faithfulness anchor — SP1's whole `SyscallInstrs` table
@@ -450,5 +453,163 @@ theorem syscallInstrsAssertBlocks (env : Environment (ZMod p))
     Operations.localLength, Nat.add_zero,
     List.map_append, List.map_cons, List.nil_append, List.append_nil,
     List.append_assoc, List.cons_append]
+
+/-! ## Each composed block's assertion list
+
+One lemma per composed circuit, each proved over an **opaque** input of that circuit's own row type.
+That is what keeps `circuit_norm` affordable: applied to the whole sixty-five-column row at once it
+exceeds the budget, applied to one arm at a time it is instant. Three of the blocks — the byte
+split and the two reader families — assert only their own `is_real` gate; together with the chip's
+own gate they are the six copies SP1's dump repeats. -/
+
+omit [Fact (2 ^ 17 < p)] in
+theorem pcArmAssertions (env : Environment (ZMod p))
+    (input : Var SyscallInstrsChip.PcArm.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((SyscallInstrsChip.PcArm.circuit.main input).operations offset) =
+      [(ProvableStruct.eval env input).is_real *
+        ((1 - (ProvableStruct.eval env input).is_halt) * ((ProvableStruct.eval env input).next_pc[0] - ((ProvableStruct.eval env input).pc[0] + 4))),
+       (ProvableStruct.eval env input).is_real *
+        ((1 - (ProvableStruct.eval env input).is_halt) * ((ProvableStruct.eval env input).next_pc[1] - (ProvableStruct.eval env input).pc[1])),
+       (ProvableStruct.eval env input).is_real *
+        ((1 - (ProvableStruct.eval env input).is_halt) * ((ProvableStruct.eval env input).next_pc[2] - (ProvableStruct.eval env input).pc[2])),
+       (ProvableStruct.eval env input).is_halt * ((ProvableStruct.eval env input).next_pc[0] - 1),
+       (ProvableStruct.eval env input).is_halt * (ProvableStruct.eval env input).next_pc[1],
+       (ProvableStruct.eval env input).is_halt * (ProvableStruct.eval env input).next_pc[2]] := by
+  simp only [nativeAssertZeros, SyscallInstrsChip.PcArm.circuit, SyscallInstrsChip.PcArm.main,
+    circuit_norm]
+
+omit [Fact (2 ^ 17 < p)] in
+theorem dispatchArmAssertions (env : Environment (ZMod p))
+    (input : Var SyscallInstrsChip.DispatchArm.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((SyscallInstrsChip.DispatchArm.circuit.main input).operations offset) =
+      [(ProvableStruct.eval env input).table_byte * (ProvableStruct.eval env input).op_b[3], (ProvableStruct.eval env input).table_byte * (ProvableStruct.eval env input).op_c[3]] := by
+  simp only [nativeAssertZeros, SyscallInstrsChip.DispatchArm.circuit,
+    SyscallInstrsChip.DispatchArm.main, circuit_norm]
+
+omit [Fact (2 ^ 17 < p)] in
+theorem writeArmAssertions (env : Environment (ZMod p))
+    (input : Var SyscallInstrsChip.WriteArm.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((SyscallInstrsChip.WriteArm.circuit.main input).operations offset) =
+      [(ProvableStruct.eval env input).is_real * (ProvableStruct.eval env input).op_a_0,
+       (ProvableStruct.eval env input).op_a_0 * (ProvableStruct.eval env input).op_a_value[0],
+       (ProvableStruct.eval env input).op_a_0 * (ProvableStruct.eval env input).op_a_value[1],
+       (ProvableStruct.eval env input).op_a_0 * (ProvableStruct.eval env input).op_a_value[2],
+       (ProvableStruct.eval env input).op_a_0 * (ProvableStruct.eval env input).op_a_value[3],
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).is_enter_unconstrained * (ProvableStruct.eval env input).op_a_value[0]),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).is_enter_unconstrained * (ProvableStruct.eval env input).op_a_value[1]),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).is_enter_unconstrained * (ProvableStruct.eval env input).op_a_value[2]),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).is_enter_unconstrained * (ProvableStruct.eval env input).op_a_value[3]),
+       (ProvableStruct.eval env input).is_real *
+        (((ProvableStruct.eval env input).is_enter_unconstrained + (ProvableStruct.eval env input).is_hint_len - 1) *
+          ((ProvableStruct.eval env input).op_a_value[0] - (ProvableStruct.eval env input).op_a_prev[0])),
+       (ProvableStruct.eval env input).is_real *
+        (((ProvableStruct.eval env input).is_enter_unconstrained + (ProvableStruct.eval env input).is_hint_len - 1) *
+          ((ProvableStruct.eval env input).op_a_value[1] - (ProvableStruct.eval env input).op_a_prev[1])),
+       (ProvableStruct.eval env input).is_real *
+        (((ProvableStruct.eval env input).is_enter_unconstrained + (ProvableStruct.eval env input).is_hint_len - 1) *
+          ((ProvableStruct.eval env input).op_a_value[2] - (ProvableStruct.eval env input).op_a_prev[2])),
+       (ProvableStruct.eval env input).is_real *
+        (((ProvableStruct.eval env input).is_enter_unconstrained + (ProvableStruct.eval env input).is_hint_len - 1) *
+          ((ProvableStruct.eval env input).op_a_value[3] - (ProvableStruct.eval env input).op_a_prev[3]))] := by
+  simp only [nativeAssertZeros, SyscallInstrsChip.WriteArm.circuit,
+    SyscallInstrsChip.WriteArm.main, circuit_norm]
+
+omit [Fact (2 ^ 17 < p)] in
+theorem commitArmAssertions (env : Environment (ZMod p))
+    (input : Var SyscallInstrsChip.CommitArm.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((SyscallInstrsChip.CommitArm.circuit.main input).operations offset) =
+      [(ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[0] * ((ProvableStruct.eval env input).index_bits[0] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[1] * ((ProvableStruct.eval env input).index_bits[1] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[2] * ((ProvableStruct.eval env input).index_bits[2] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[3] * ((ProvableStruct.eval env input).index_bits[3] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[4] * ((ProvableStruct.eval env input).index_bits[4] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[5] * ((ProvableStruct.eval env input).index_bits[5] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[6] * ((ProvableStruct.eval env input).index_bits[6] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[7] * ((ProvableStruct.eval env input).index_bits[7] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        (((ProvableStruct.eval env input).is_commit + (ProvableStruct.eval env input).is_commit_deferred) * ((ProvableStruct.eval env input).index_bits[0] + (ProvableStruct.eval env input).index_bits[1] + (ProvableStruct.eval env input).index_bits[2] + (ProvableStruct.eval env input).index_bits[3] + (ProvableStruct.eval env input).index_bits[4] + (ProvableStruct.eval env input).index_bits[5] + (ProvableStruct.eval env input).index_bits[6] + (ProvableStruct.eval env input).index_bits[7] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((1 - ((ProvableStruct.eval env input).is_commit + (ProvableStruct.eval env input).is_commit_deferred)) * ((ProvableStruct.eval env input).index_bits[0] + (ProvableStruct.eval env input).index_bits[1] + (ProvableStruct.eval env input).index_bits[2] + (ProvableStruct.eval env input).index_bits[3] + (ProvableStruct.eval env input).index_bits[4] + (ProvableStruct.eval env input).index_bits[5] + (ProvableStruct.eval env input).index_bits[6] + (ProvableStruct.eval env input).index_bits[7])),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[0] * ((ProvableStruct.eval env input).op_b[0] - 0)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[1] * ((ProvableStruct.eval env input).op_b[0] - 1)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[2] * ((ProvableStruct.eval env input).op_b[0] - 2)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[3] * ((ProvableStruct.eval env input).op_b[0] - 3)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[4] * ((ProvableStruct.eval env input).op_b[0] - 4)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[5] * ((ProvableStruct.eval env input).op_b[0] - 5)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[6] * ((ProvableStruct.eval env input).op_b[0] - 6)),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).index_bits[7] * ((ProvableStruct.eval env input).op_b[0] - 7)),
+       (ProvableStruct.eval env input).is_real *
+        (((ProvableStruct.eval env input).is_commit + (ProvableStruct.eval env input).is_commit_deferred) *
+          ((ProvableStruct.eval env input).op_b[1] + (ProvableStruct.eval env input).op_b[2] + (ProvableStruct.eval env input).op_b[3])),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).is_commit *
+          ((ProvableStruct.eval env input).digest_word[0] + (ProvableStruct.eval env input).digest_word[1] * 256 - (ProvableStruct.eval env input).op_c[0])),
+       (ProvableStruct.eval env input).is_real *
+        ((ProvableStruct.eval env input).is_commit *
+          ((ProvableStruct.eval env input).digest_word[2] + (ProvableStruct.eval env input).digest_word[3] * 256 - (ProvableStruct.eval env input).op_c[1])),
+       (ProvableStruct.eval env input).is_real * ((ProvableStruct.eval env input).is_commit * (ProvableStruct.eval env input).op_c[2]),
+       (ProvableStruct.eval env input).is_real * ((ProvableStruct.eval env input).is_commit * (ProvableStruct.eval env input).op_c[3])] := by
+  simp only [nativeAssertZeros, SyscallInstrsChip.CommitArm.circuit,
+    SyscallInstrsChip.CommitArm.main, SyscallInstrsChip.CommitArm.bitSumVar, circuit_norm]
+
+theorem fieldBoundArmAssertions (env : Environment (ZMod p))
+    (input : Var SyscallInstrsChip.FieldBoundArm.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((SyscallInstrsChip.FieldBoundArm.circuit.main input).operations offset) =
+      [(ProvableStruct.eval env input).is_real * (ProvableStruct.eval env input).word[2], (ProvableStruct.eval env input).is_real * (ProvableStruct.eval env input).word[3]] ++
+      Extracted.U16CompareOperation.asserts (ProvableStruct.eval env input).word[1] ((fieldLimbBound : ℕ) : ZMod p)
+        ⟨(ProvableStruct.eval env input).bit⟩ (ProvableStruct.eval env input).is_real ++
+      [(ProvableStruct.eval env input).is_real *
+        (((ProvableStruct.eval env input).bit - 1) * ((ProvableStruct.eval env input).word[1] - ((fieldLimbBound : ℕ) : ZMod p))),
+       (ProvableStruct.eval env input).is_real * (((ProvableStruct.eval env input).bit - 1) * (ProvableStruct.eval env input).word[0])] := by
+  have h : ∀ (i : Var SP1Clean.U16CompareOperation.Inputs (ZMod p)) (o : ℕ),
+      List.map (Expression.eval env)
+          (Operations.constraints ((SP1Clean.U16CompareOperation.circuit.main i) o).2) =
+        Extracted.U16CompareOperation.asserts (Expression.eval env i.a) (Expression.eval env i.b)
+          (Eval.eval env i.cols) (Expression.eval env i.is_real) :=
+    fun i o => u16compare_assertions_exact env i o
+  simp only [nativeAssertZeros, SyscallInstrsChip.FieldBoundArm.circuit,
+    SyscallInstrsChip.FieldBoundArm.main, circuit_norm, List.map_append, h]
+
+theorem u16toU8SafeAssertions (env : Environment (ZMod p))
+    (input : Var SP1Clean.U16toU8OperationSafe.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env
+        ((SP1Clean.U16toU8OperationSafe.circuit.main input).operations offset) =
+      [(ProvableStruct.eval env input).is_real * ((ProvableStruct.eval env input).is_real - 1)] := by
+  simp only [nativeAssertZeros, SP1Clean.U16toU8OperationSafe.circuit,
+    SP1Clean.U16toU8OperationSafe.main, circuit_norm]
+
+theorem cpuStateAssertList (env : Environment (ZMod p))
+    (input : Var Readers.CPUState.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((Readers.CPUState.circuit.main input).operations offset) =
+      [(ProvableStruct.eval env input).is_real * ((ProvableStruct.eval env input).is_real - 1)] := by
+  simp only [nativeAssertZeros, Readers.CPUState.circuit, Readers.CPUState.main, circuit_norm]
+
+theorem registerAccessColsAssertions (env : Environment (ZMod p))
+    (input : Var Readers.RegisterAccessCols.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((Readers.RegisterAccessCols.circuit.main input).operations offset) =
+      [(ProvableStruct.eval env input).is_real * ((ProvableStruct.eval env input).is_real - 1)] := by
+  simp only [nativeAssertZeros, Readers.RegisterAccessCols.circuit,
+    Readers.RegisterAccessCols.main, Readers.RegisterAccessTimestamp.circuit,
+    Readers.RegisterAccessTimestamp.main, circuit_norm]
 
 end SP1Clean.Faithful
