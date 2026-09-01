@@ -429,6 +429,9 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
       simp only [circuit_norm, main, U16CompareOperation.circuit] }
 
 set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithRequirements :
+    ((circuit (p := p)).channelsWithRequirements : List (RawChannel (ZMod p))) = [] := rfl
+set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
     (circuit (p := p)).localLength x = 0 := rfl
 set_option linter.unusedSectionVars false in

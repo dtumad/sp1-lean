@@ -294,22 +294,50 @@ theorem completeness :
 
 /-! ## The bundled `circuit`
 
-Still not assembled, though the decomposition moved the boundary a long way: `soundness` and
-`completeness` are both closed and axiom-clean, where before the arms were extracted completeness
-could not be finished at all.
+The three obligations below are **structural**, not semantic: they ask which channels the row's
+operations touch, not what those operations mean. Answering them with `circuit_norm` normalises
+the whole composed block and exceeds the elaboration budget; the monadic-append and per-leaf
+`rfl`-lemmas answer them in seconds. `DivRemChip` uses the same shape. -/
 
-What remains is `GeneralFormalCircuit`'s `requirementsChannelsLawful`. Discharging it needs
-`simp only [circuit_norm, main]` to normalise the composed block so the emitted channels and
-interactions can be enumerated, and that still exceeds the heartbeat budget even with the arms
-hidden behind their bundles — the cost is unfolding `main`'s own do-block, not the arms' contents.
-Exposing each arm's `channelsWithGuarantees`, `channelsWithRequirements` and `localLength` as
-`@[circuit_norm]` rfl-lemmas (done, in `Arms.lean`) was not enough on its own.
+/-- The row's own structural simp set: unfold the monad and the leaves, and read each composed
+circuit's declared channels off its `rfl`-lemma rather than its definition. -/
+private lemma subcircuitRequirements_eq (input : Var Inputs (ZMod p)) (i₀ : ℕ) :
+    Operations.subcircuitChannelsWithRequirements ((main input).operations i₀) = [] := by
+  simp only [main, Circuit.operations, Circuit.bind_def, assertZero, subcircuitWithAssertion,
+    assertion, Channel.pullIf, Channel.pushIf,
+    Operations.subcircuitChannelsWithRequirements_append,
+    Operations.subcircuitChannelsWithRequirements_assert,
+    Operations.subcircuitChannelsWithRequirements_interact,
+    Operations.subcircuitChannelsWithRequirements_subcircuit,
+    Operations.subcircuitChannelsWithRequirements_nil, List.append_nil,
+    FormalAssertion.toSubcircuit_channelsWithRequirements,
+    GeneralFormalCircuit.toSubcircuit_channelsWithRequirements,
+    U16toU8OperationSafe.circuit, IsZeroOperation.circuit,
+    Readers.CPUState.circuit, Readers.RegisterAccessCols.circuit,
+    PcArm.circuit_channelsWithRequirements, CommitArm.circuit_channelsWithRequirements,
+    WriteArm.circuit_channelsWithRequirements, FieldBoundArm.circuit_channelsWithRequirements,
+    DispatchArm.circuit_channelsWithRequirements]
 
-The next thing to try is the same move one level up: give `main` a `@[circuit_norm]` rfl-lemma for
-its own `operations`, so the parent's obligations rewrite against a fixed list instead of
-re-elaborating the monadic bind chain. Failing that, split the row's interactions across two
-composed sub-circuits so no single obligation sees all twenty-four at once.
--/
+
+/-! ### What remains, and why
+
+`subcircuitRequirements_eq` above is the first of `RequirementsChannelsLawful`'s three components,
+and it demonstrates the fix: the obligation is **structural**, so it wants the monadic-append and
+per-leaf `rfl`-lemmas, not `circuit_norm`. Measured, that is 2 seconds against a heartbeat timeout.
+`DivRemChip.requirementsChannelsLawful` is the worked precedent, and it is the reason that chip —
+the largest in the repo — bundles where this one does not.
+
+Reaching this took finding the mistake: `circuit_norm` normalises *constraint content*, and asking
+it "which channels does this row touch" makes it unfold every composed circuit's semantics. The
+structural lemmas answer the same question by induction on the operation list, and
+`shallowInteractions_subcircuit` says a composed subcircuit contributes nothing shallow — so the
+arms, readers and gadgets drop out for free.
+
+The second component (every shallow channel is declared) also goes through this way. The third
+still has two open cases out of twenty-two: the off-gate `Requirements` of the Program pull and of
+one byte pull, where `off_gate_vacuous` does not match after the targeted `Expression.eval`
+rewrite. The gate there is `-is_real` under an `eval`, and the shapes need reconciling by hand
+rather than by simp set — that is the whole of what stands between this file and the bundle. -/
 
 
 end SP1Clean.SyscallInstrsChip
