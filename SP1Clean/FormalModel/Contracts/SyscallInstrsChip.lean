@@ -312,4 +312,32 @@ theorem rowContract_toSpec {r : Inputs (ZMod p)} (h : RowContract r) : Spec r :=
   ⟨h.1.1, h.1.2.2.2.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
     fun hh => ⟨h.2.2.2.2.2.2.1.1 hh, h.2.2.2.2.2.2.2.2.2.2.2.2 hh⟩⟩
 
+/-! ## Arm contracts
+
+Each arm of the dispatch is its own proof boundary (see `Native/Chips/SyscallInstrsChip/Arms.lean`
+for why). Its `Inputs` carries only the columns it constrains, and its `Spec` states that arm's
+meaning; the row's `RowContract` above is what supplies them. -/
+
+namespace PcArm
+
+/-- The columns the program-counter arm constrains. -/
+structure Inputs (F : Type) where
+  pc : Vector F 3
+  next_pc : Vector F 3
+  is_real : F
+  is_halt : F
+deriving ProvableStruct
+
+/-- Both gates are boolean — the row asserts this ungated, so it holds on padding too. -/
+def Assumptions (r : Inputs (ZMod p)) : Prop :=
+  (r.is_real = 0 ∨ r.is_real = 1) ∧ (r.is_halt = 0 ∨ r.is_halt = 1)
+
+/-- `HALT` parks at `haltPc`; every other live arm advances one instruction. -/
+def Spec (r : Inputs (ZMod p)) : Prop :=
+  (r.is_halt = 1 → r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0) ∧
+  (r.is_real = 1 → r.is_halt = 0 →
+    r.next_pc[0] = r.pc[0] + 4 ∧ r.next_pc[1] = r.pc[1] ∧ r.next_pc[2] = r.pc[2])
+
+end PcArm
+
 end SP1Clean.SyscallInstrsChip

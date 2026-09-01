@@ -521,10 +521,12 @@ import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 import SP1Clean.Native.Chips.StateBumpChip.Defs
 import SP1Clean.Native.Chips.MemoryBumpChip.Defs
 import SP1Clean.Native.Chips.HaltChip.Defs
+import SP1Clean.Native.Chips.SyscallInstrsChip.Arms
 import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
 import SP1Clean.Proofs.Chips.StateBumpChip.Formal
 import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Formal
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.GoodnessFilter
