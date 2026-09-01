@@ -20,6 +20,22 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel ex
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
+omit [Fact (2 ^ 17 < p)] in
+/-- A gated constraint holds when the gate is boolean and the gated fact holds on a live gate. -/
+private lemma gate_zero {x y : ZMod p}
+    (hx : x = 0 ∨ x = 1) (h : x = 1 → y = 0) : x * y = 0 := by
+  rcases hx with h0 | h1
+  · rw [h0]; ring
+  · rw [h1, one_mul]; exact h h1
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The mirror shape: a constraint gated on `is_real - 1`, which vanishes on a live row. -/
+private lemma pad_zero {x y : ZMod p}
+    (hx : x = 0 ∨ x = 1) (h : x = 0 → y = 0) : (x - 1) * y = 0 := by
+  rcases hx with h0 | h1
+  · rw [h0, h h0]; ring
+  · rw [h1]; ring
+
 theorem soundness :
     GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) main
       (fun _ _ => True) (fun input _ _ => Spec input) := by
@@ -160,20 +176,139 @@ theorem soundness :
                | exact h_clk.at_three hr
                | exact h_clk.at_two hr)
 
+theorem completeness :
+    GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) main
+      (fun input _ _ => RowContract input) (fun _ _ _ => True) := by
+  circuit_proof_start
+  obtain ⟨h_gates, h_cpu, h_raca, h_racb, h_racc, h_sel,
+    h_wA, h_wS, h_pA, h_pS, h_dA, h_dS, h_bA, h_bS, h_cA, h_cS, h_mA, h_mS,
+    h_pull, h_bytes⟩ := h_assumptions
+  obtain ⟨h_rbin, h_cbin, h_dbin, h_hbin, h_tbin⟩ := h_gates
+  obtain ⟨h_split, h_res, h_inv, h_halteq, h_pad⟩ := h_sel
+  have eoa : ∀ i (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_op_a_memory_prev_value[i]
+        = input_op_a_memory_prev_value[i] := by
+    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.1.1; simpa using this
+  have esb : ∀ i (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_syscall_id_bytes_low_bytes[i]
+        = input_syscall_id_bytes_low_bytes[i] := by
+    intro i hi
+    have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.2.2.2.2.1; simpa using this
+  have eav : ∀ i (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_op_a_value[i] = input_op_a_value[i] := by
+    intro i hi
+    have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.2.2.2.1; simpa using this
+  have eob : ∀ i (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_op_b_memory_prev_value[i]
+        = input_op_b_memory_prev_value[i] := by
+    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1.1; simpa using this
+  have eoc : ∀ i (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_op_c_memory_prev_value[i]
+        = input_op_c_memory_prev_value[i] := by
+    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.1.1; simpa using this
+  have edw : ∀ i (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_digest_word[i] = input_digest_word[i] := by
+    intro i hi
+    have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+    simpa using this
+  have epc : ∀ i (hi : i < 3),
+      Expression.eval env.toEnvironment input_var_state_pc[i] = input_state_pc[i] := by
+    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1.2.2.2; simpa using this
+  simp only [epc, eoa, esb, eav, eoc, edw]
+  and_intros
+  all_goals try (first
+    | exact h_rbin
+    | exact h_split
+    | exact h_cpu
+    | exact h_raca
+    | exact h_racb
+    | exact h_racc
+    | linear_combination h_halteq
+    | exact gate_zero h_rbin (fun h => by rw [h]; ring)
+    | exact gate_zero h_cbin (fun h => by rw [h]; ring)
+    | exact gate_zero h_dbin (fun h => by rw [h]; ring)
+    | exact gate_zero h_hbin (fun h => by rw [h]; ring)
+    | exact gate_zero h_tbin (fun h => by rw [h]; ring))
+  all_goals try (first
+    | exact pad_zero h_rbin (fun h => (h_pad h).1)
+    | exact pad_zero h_rbin (fun h => (h_pad h).2.1)
+    | exact pad_zero h_rbin (fun h => (h_pad h).2.2)
+    | exact h_wA.1 | exact h_wA.2.1 | exact h_wA.2.2.1 | exact h_wA.2.2.2
+    | exact h_wS.1 | exact h_wS.2.1 | exact h_wS.2.2.1 | exact h_wS.2.2.2
+    | exact h_pA.1 | exact h_pA.2 | exact h_pS.1 | exact h_pS.2
+    | exact h_dA | exact h_dS)
+  all_goals try (first
+    | exact h_bA.1 | exact h_bA.2 | exact h_bS.1 | exact h_bS.2
+    | exact h_cA.1 | exact h_cA.2 | exact h_cS.1 | exact h_cS.2
+    | exact h_mA.1 | exact h_mA.2.1 | exact h_mA.2.2.1 | exact h_mA.2.2.2
+    | exact h_mS.1 | exact h_mS.2.1 | exact h_mS.2.2.1 | exact h_mS.2.2.2.1
+    | exact h_mS.2.2.2.2.1 | exact h_mS.2.2.2.2.2)
+  all_goals try (first
+    | (intro hr
+       exact ⟨by rw [(h_res hr).1]; simp [syscallId, sub_eq_zero], (h_inv hr).1⟩)
+    | (intro hr
+       exact ⟨by rw [(h_res hr).2.1]; simp [syscallId, sub_eq_zero], (h_inv hr).2.1⟩)
+    | (intro hr
+       exact ⟨by rw [(h_res hr).2.2.1]; simp [syscallId, sub_eq_zero], (h_inv hr).2.2.1⟩)
+    | (intro hr
+       exact ⟨by rw [(h_res hr).2.2.2.1]; simp [syscallId, sub_eq_zero], (h_inv hr).2.2.2.1⟩)
+    | (intro hr
+       exact ⟨by rw [(h_res hr).2.2.2.2]; simp [syscallId, sub_eq_zero], (h_inv hr).2.2.2.2⟩)
+    | exact h_dA
+    | exact h_dS)
+  all_goals try (first
+    | (intro hneg
+       have hr : input_is_real = 1 := neg_inj.mp hneg
+       exact ⟨(h_pull hr).1, (h_pull hr).2.1, (h_pull hr).2.2.1, (h_pull hr).2.2.2.1,
+         (h_pull hr).2.2.2.2.1⟩)
+    | (intro hneg
+       have hr : input_is_real = 1 := neg_inj.mp hneg
+       exact ⟨(h_pull hr).2.2.2.2.2.1, (h_pull hr).2.2.2.2.2.2.1⟩)
+    | (intro hneg
+       have hr : input_is_real = 1 := neg_inj.mp hneg
+       exact ⟨(h_pull hr).2.2.2.2.2.2.2.1, (h_pull hr).2.2.2.2.2.2.2.2.1⟩)
+    | (intro hneg
+       have hr : input_is_real = 1 := neg_inj.mp hneg
+       exact ⟨(h_pull hr).2.2.2.2.2.2.2.2.2.1, (h_pull hr).2.2.2.2.2.2.2.2.2.2.1⟩)
+    | exact fun _ => trivial)
+  all_goals try (first
+    | (intro hneg
+       exact (byteRowSpec_u8range_pair _ _).mpr
+         ⟨h_bytes (neg_inj.mp hneg) 0, h_bytes (neg_inj.mp hneg) 1⟩)
+    | (intro hneg
+       exact (byteRowSpec_u8range_pair _ _).mpr
+         ⟨h_bytes (neg_inj.mp hneg) 2, h_bytes (neg_inj.mp hneg) 3⟩))
+  all_goals (intro hneg
+             have hr : input_is_real = 1 := neg_inj.mp hneg
+             have h16 : (16 : ℕ) < p := by
+               have : (2 : ℕ) ^ 17 < p := Fact.out
+               omega
+             have hu : Word.isU64 input_op_a_value :=
+               (h_pull hr).2.2.2.2.2.2.2.2.2.2.2
+             first
+               | simpa [byteChannel] using (byteRowSpec_range (n := 16) _ h16).mpr (hu 0)
+               | simpa [byteChannel] using (byteRowSpec_range (n := 16) _ h16).mpr (hu 1)
+               | simpa [byteChannel] using (byteRowSpec_range (n := 16) _ h16).mpr (hu 2)
+               | simpa [byteChannel] using (byteRowSpec_range (n := 16) _ h16).mpr (hu 3))
+
+
 /-! ## The bundled `circuit`
 
-Not yet assembled. `soundness` and `completeness` are both closed above, but
-`GeneralFormalCircuit`'s `requirementsChannelsLawful` field needs the row's leading booleanity
-constraints, and reaching any constraint past the first requires `simp only [circuit_norm, main, …]`
-to normalise a sixty-assertion do-block — which exceeds the heartbeat budget, and raising it is
-gated (`scripts/check_option_escapes.sh`).
+Still not assembled, though the decomposition moved the boundary a long way: `soundness` and
+`completeness` are both closed and axiom-clean, where before the arms were extracted completeness
+could not be finished at all.
 
-The fix is structural and is the same one `localLength_eq` already needed: split the arms into
-bundled `FormalAssertion` subcircuits (`HaltArm`, `WriteArm`, `CommitArm`, `DispatchArm`,
-`SelectorBlock`), so `main` composes about six subcircuits rather than sixty inline assertions and
-each obligation is local. Clean's own guidance says as much — bundle what is a proof boundary — and
-each arm is one. The emitted constraint and interaction lists are unchanged by the regrouping, so
-the faithfulness anchor is unaffected.
+What remains is `GeneralFormalCircuit`'s `requirementsChannelsLawful`. Discharging it needs
+`simp only [circuit_norm, main]` to normalise the composed block so the emitted channels and
+interactions can be enumerated, and that still exceeds the heartbeat budget even with the arms
+hidden behind their bundles — the cost is unfolding `main`'s own do-block, not the arms' contents.
+Exposing each arm's `channelsWithGuarantees`, `channelsWithRequirements` and `localLength` as
+`@[circuit_norm]` rfl-lemmas (done, in `Arms.lean`) was not enough on its own.
+
+The next thing to try is the same move one level up: give `main` a `@[circuit_norm]` rfl-lemma for
+its own `operations`, so the parent's obligations rewrite against a fixed list instead of
+re-elaborating the monadic bind chain. Failing that, split the row's interactions across two
+composed sub-circuits so no single obligation sees all twenty-four at once.
 -/
 
 

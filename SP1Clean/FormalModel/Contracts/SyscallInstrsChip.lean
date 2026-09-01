@@ -171,13 +171,6 @@ def SelectorsValid (r : Inputs (ZMod p)) : Prop :=
       r.is_commit.inverse * (syscallId r - (commitCode : ℕ)) = 1) ∧
     (syscallId r - (commitDeferredCode : ℕ) ≠ 0 →
       r.is_commit_deferred.inverse * (syscallId r - (commitDeferredCode : ℕ)) = 1)) ∧
-  -- The two valid-field-element comparisons, whose bits the arms below read.
-  U16CompareOperation.Spec
-    { a := r.op_b_memory.prev_value[1], b := ((fieldLimbBound : ℕ) : ZMod p),
-      cols := r.op_b_cmp, is_real := r.is_halt } ∧
-  U16CompareOperation.Spec
-    { a := r.op_c_memory.prev_value[1], b := ((fieldLimbBound : ℕ) : ZMod p),
-      cols := r.op_c_cmp, is_real := r.is_commit_deferred.result } ∧
   r.is_halt = r.is_halt_zero.result * r.is_real ∧
   (r.is_real = 0 →
     tableByte r = 0 ∧ r.is_halt = 0 ∧ r.is_commit_deferred.result = 0)
@@ -377,7 +370,10 @@ def PulledFacts (r : Inputs (ZMod p)) : Prop :=
     Word.isU64 r.op_b_memory.prev_value ∧
     r.op_b_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
     Word.isU64 r.op_c_memory.prev_value ∧
-    r.op_c_memory.access_timestamp.prev_low.val < 2 ^ 24
+    r.op_c_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
+    -- The written `t0` word, which the row range-checks itself: on the `HINT_LEN` arm no
+    -- constraint determines it, so this is the only thing making the read-back pushable.
+    Word.isU64 r.op_a_value
 
 /-- **What an honest prover must supply**, and the row's full arm-by-arm contract: the gates, the
 reader blocks, arm selection, and one predicate per arm family. Every arm SP1 dispatches inline

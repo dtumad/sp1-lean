@@ -100,6 +100,9 @@ set_option linter.unusedSectionVars false in
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_channelsWithGuarantees :
     ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithRequirements :
+    ((circuit (p := p)).channelsWithRequirements : List (RawChannel (ZMod p))) = [] := rfl
 
 end PcArm
 
@@ -242,6 +245,9 @@ set_option linter.unusedSectionVars false in
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_channelsWithGuarantees :
     ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithRequirements :
+    ((circuit (p := p)).channelsWithRequirements : List (RawChannel (ZMod p))) = [] := rfl
 
 end CommitArm
 
@@ -338,6 +344,9 @@ set_option linter.unusedSectionVars false in
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_channelsWithGuarantees :
     ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithRequirements :
+    ((circuit (p := p)).channelsWithRequirements : List (RawChannel (ZMod p))) = [] := rfl
 
 end WriteArm
 
@@ -472,6 +481,9 @@ set_option linter.unusedSectionVars false in
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_channelsWithGuarantees :
     ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithRequirements :
+    ((circuit (p := p)).channelsWithRequirements : List (RawChannel (ZMod p))) = [] := rfl
 
 end DispatchArm
 
