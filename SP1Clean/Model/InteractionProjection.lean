@@ -26,7 +26,16 @@ The Byte case is deliberately explicit. Unknown channel names use the legacy `.S
 compatibility bucket rather than `.Byte`: Byte and Program are the two provider-closure kinds, so
 classifying an unrecognised channel as Byte would let a future fifth channel enter that closure by
 default. The extracted full-AIR compatibility projection uses the same `.State` bucket for its
-reserved `"SP1Raw/…"` names (`Extracted.Interaction.toAccess`). -/
+reserved `"SP1Raw/…"` names (`Extracted.Interaction.toAccess`).
+
+⚠ **The `.State` default is safe against the provider closure, not against the State ledger.**
+`Channels.syscallChannel` (`"SP1Syscall"`) and `Channels.publicValuesChannel`
+(`"SP1PublicValues"`) are declared but **not yet ensemble members**, and they land in this bucket.
+That is inert only while they stay out of `sp1Ensemble.channels`: State balance is a clock
+telescope, so folding a syscall or public-value entry into it would corrupt the grounding argument
+silently — no type error, no failing proof. Before either channel joins the ensemble,
+`InteractionKind` must gain its own constructor for it and this function a matching case (the cost
+is the ~33 `perm_filter_by_kind` sites, which move from a five-way to a seven-way partition). -/
 def kindOf (name : String) : InteractionKind :=
   if name = "SP1Memory" then .Memory
   else if name = "SP1Program" then .Program

@@ -14,7 +14,17 @@ interaction buses (`builder.send`/`receive`). Each `Channel` here is the Lean an
 grounding layer. See `docs/architecture.md`.
 
 This module carries the **State** bus and the **Byte** bus (SP1's preprocessed `ByteChip`,
-`Model/ByteTable.lean`), plus the **Program** and **Memory** channels. -/
+`Model/ByteTable.lean`), plus the **Program** and **Memory** channels, the **Exit** channel, and
+the **Syscall** and **PublicValues** channels.
+
+Not every channel here corresponds to an SP1 `InteractionKind`. `Syscall` does (its upstream
+consumer is `SyscallCore`); `Exit` and `PublicValues` do **not** — SP1 states those bindings as
+direct chip-level `public_values` access, which Clean's flat AIR reserves to the verifier row, so
+they are factored through channels instead (upstream Clean's `Air/Vm.lean` requires the same shape
+of its own verifier). `docs/release-audit.md` discloses that as a native-only bus.
+
+The last two are **declared but not yet ensemble members** — see the warning on
+`Model/InteractionProjection.lean`'s `kindOf` before adding either to `sp1Ensemble`. -/
 
 namespace SP1Clean.Channels
 
@@ -96,6 +106,33 @@ reduced `x10` word, a padding halt row pushes `⟨0⟩`, and balance alone force
 binding is a multiset fact, not a per-message predicate. -/
 def exitChannel : Channel (ZMod p) ExitMsg where
   name := "SP1Exit"
+  Guarantees _ _ := True
+
+/-- The Syscall channel — SP1's own syscall bus (`InteractionKind::Syscall`), the one new channel
+here that is *not* native-only. Its payload is the existing `SyscallMsg`, the same carrier the
+exact v6.4.0 lists project, so both models name this bus with one type.
+
+Its consumer upstream is `SyscallCore`, which the supported profile excludes, so the native
+ensemble declares the channel with **no provider**: balance then forces every send's multiplicity —
+byte 1 of the syscall id, SP1's "this handler has its own table" flag — to zero, which is exactly
+the statement that a supported shard uses only the syscalls `SyscallInstrs` handles inline.
+`Guarantees := True`: as with State and Exit, the content is the multiset fact, not a per-message
+predicate. -/
+def syscallChannel : Channel (ZMod p) SyscallMsg where
+  name := "SP1Syscall"
+  Guarantees _ _ := True
+
+/-- The public-values channel — the second native-only bus, and the general form of what
+`exitChannel` does for one cell. A chip-level assertion about `public_values` cannot be a row
+constraint in Clean's flat AIR (a `Table` carries no `PublicIO`, and `Ensemble.tables` cannot
+depend on one), so each such assertion is factored into one addressed-cell message; upstream
+Clean's `Air/Vm.lean` `VmTables` requires the same shape of its verifier.
+
+Declared with no provider for now, so balance forces the commit selectors to zero. `Guarantees :=
+True` for the same reason as `exitChannel`: the binding is established by balance against the
+verifier (or, once COMMIT is modelled, against a `PublicValues` provider), not row-locally. -/
+def publicValuesChannel : Channel (ZMod p) PublicValueMsg where
+  name := "SP1PublicValues"
   Guarantees _ _ := True
 
 open Classical in

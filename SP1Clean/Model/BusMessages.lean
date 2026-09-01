@@ -36,10 +36,12 @@ deriving ProvableStruct
 arg2[0..2])`, arity 9. `SyscallInstrs` sends this tuple when byte one of the raw syscall code says
 that the handler has its own table, and `SyscallCore` receives it.
 
-This is deliberately only a shared typed carrier, not a new Clean channel and not a row-local
-semantic predicate. Syscall meaning comes from exact cross-table balance plus the trace-level host
-handler relation; putting either fact in this structure would turn a global conclusion into an
-unjustified channel guarantee. -/
+It is the payload of `Channels.syscallChannel` on the native side too, so the exact and native
+models share one message type for this bus — the exact list proves the projection, the native
+channel emits it. What has *not* changed is that it carries no row-local semantic predicate:
+syscall meaning comes from cross-table balance plus the trace-level host handler relation, so the
+native channel's `Guarantees` is `True`. Putting either fact in this structure would turn a global
+conclusion into an unjustified channel guarantee. -/
 structure SyscallMsg (F : Type) where
   clk_high : F
   clk_low : F
@@ -309,6 +311,23 @@ row pushes its reduced word, and a padding halt row pushes `⟨0⟩` — balance
 `exit_code = reduce(word)` on halting shards, `exit_code = 0` on ordinary shards, at most one real
 halt row, and exactly one halt-table row overall. -/
 structure ExitMsg (F : Type) where
+  value : F
+deriving ProvableStruct
+
+/-- The public-values message — one addressed cell of the committed public-values vector.
+
+The second instance of the `ExitMsg` situation, and deliberately uniform where SP1 is not: SP1's
+syscall chip reads `public_values` at three differently-shaped places (the 8×4-cell
+`committed_value_digest`, the 8-cell `deferred_proofs_digest`, and two scalar commit flags), all by
+direct chip-level access that Clean's flat AIR reserves to the verifier. A single `⟨index, value⟩`
+cell covers all three without a variant type, and every message is built from columns the row
+already has — so a chip carrying these keeps its upstream column count.
+
+Like `SyscallMsg` this channel is declared with no provider, so balance forces the commit selectors
+to zero. Serving it for real is SP1's own `PublicValues` chip; that provider is what a later COMMIT
+phase adds. -/
+structure PublicValueMsg (F : Type) where
+  index : F
   value : F
 deriving ProvableStruct
 
