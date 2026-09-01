@@ -525,6 +525,7 @@ import SP1Clean.Native.Chips.SyscallChip.Defs
 import SP1Clean.Proofs.Chips.StateBumpChip.Formal
 import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Formal
+import SP1Clean.Proofs.Chips.SyscallChip.Formal
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.GoodnessFilter
 import SP1Clean.Soundness.RefreshElimination

@@ -145,6 +145,7 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
   Readers.RegisterAccessCols.Spec
     { cols := r.op_c_memory, is_real := r.is_real, clk_target := clkLow r + 2 } ∧
   (r.is_halt = 1 →
-    r.next_pc = #v[1, 0, 0] ∧ ExitCodeValid r.op_b_memory.prev_value)
+    (r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0) ∧
+      ExitCodeValid r.op_b_memory.prev_value)
 
 end SP1Clean.SyscallChip
