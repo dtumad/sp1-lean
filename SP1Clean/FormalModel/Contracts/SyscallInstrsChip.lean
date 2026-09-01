@@ -9,6 +9,15 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 The `Inputs` row struct of SP1's ECALL table (`../sp1 crates/core/machine/src/syscall/instructions`),
 the native replacement for today's single-arm `HaltChip`.
 
+**The name carries `Instrs` because SP1's does, and the distinction matters.** Upstream has *two*
+syscall types: `SyscallInstrsChip` (`syscall/instructions/mod.rs`), whose `MachineAir::name` is
+`"SyscallInstrs"` and which is the ECALL *instruction* row modelled here; and `SyscallChip`
+(`syscall/chip.rs`), whose name is `"SyscallCore"`/`"SyscallPrecompile"` and which is the handler
+table on the far side of the syscall bus. The latter is exactly what the supported profile
+excludes, and leaving `Channels.syscallChannel` unprovisioned is what forces a shard to use only
+the codes this row handles inline. Dropping `Instrs` here would name this row after the table it
+deliberately does *not* model.
+
 **Why the whole table rather than one arm.** `ChipFaithful` equates two *complete* assertion systems
 and interaction multisets, so an anchor between one arm and SP1's multi-arm dispatcher is not a
 statable theorem. Modelling the full row is also *cheaper* than the alternative: SP1's syscall id is
@@ -46,7 +55,7 @@ The five selectors are `IsZeroOperation` blocks on the identifier byte, at SP1's
 `0` HALT, `3` `ENTER_UNCONSTRAINED`, `16` `COMMIT`, `26` `COMMIT_DEFERRED_PROOFS`, `240` `HINT_LEN`.
 Every other identifier is a *generic* syscall, dispatched over the syscall bus. -/
 
-namespace SP1Clean.SyscallChip
+namespace SP1Clean.SyscallInstrsChip
 
 open SP1Clean.Extracted
 
@@ -303,4 +312,4 @@ theorem rowContract_toSpec {r : Inputs (ZMod p)} (h : RowContract r) : Spec r :=
   ⟨h.1.1, h.1.2.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
     fun hh => ⟨h.2.2.2.2.2.2.1.1 hh, h.2.2.2.2.2.2.2.2.2.2.2.2 hh⟩⟩
 
-end SP1Clean.SyscallChip
+end SP1Clean.SyscallInstrsChip

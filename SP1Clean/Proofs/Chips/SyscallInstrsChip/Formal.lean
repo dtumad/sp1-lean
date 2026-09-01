@@ -1,4 +1,4 @@
-import SP1Clean.Native.Chips.SyscallChip.Defs
+import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
 import Clean.Utils.Tactics
 
 /-! # `SyscallInstrs` soundness and completeness
@@ -12,7 +12,7 @@ below `0x7F00`, and when it is not, the two conditionals force limb 1 to *equal*
 limb 0 to vanish. Both branches keep the word's reduction under KoalaBear's modulus, which is what
 makes the committed exit code decode back to `a0`. -/
 
-namespace SP1Clean.SyscallChip
+namespace SP1Clean.SyscallInstrsChip
 
 open Circuit
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel exitChannel
@@ -128,4 +128,4 @@ theorem soundness :
                | exact h_clk.at_three hr
                | exact h_clk.at_two hr)
 
-end SP1Clean.SyscallChip
+end SP1Clean.SyscallInstrsChip

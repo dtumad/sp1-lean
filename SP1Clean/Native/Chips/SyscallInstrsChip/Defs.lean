@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.SyscallChip
+import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.RegisterAccessCols
 import SP1Clean.Proofs.Operations.IsZeroOperation.Formal
@@ -12,7 +12,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `SyscallInstrs` row as a native circuit
 
-SP1's ECALL table (contract: `FormalModel/Contracts/SyscallChip.lean`), written against the
+SP1's ECALL table (contract: `FormalModel/Contracts/SyscallInstrsChip.lean`), written against the
 complete extracted assertion and interaction lists of `Extracted/SystemOracle/SyscallInstrs.lean`
 rather than against one arm of it.
 
@@ -39,7 +39,7 @@ rows because its table is exactly one row, which is what balanced the verifier's
 syscall table has many rows, so that accounting is redesigned when this chip joins the ensemble;
 this file emits only the faithful `is_halt`-gated push. -/
 
-namespace SP1Clean.SyscallChip
+namespace SP1Clean.SyscallInstrsChip
 
 open Circuit
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel exitChannel
@@ -329,4 +329,4 @@ set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 0 := rfl
 
-end SP1Clean.SyscallChip
+end SP1Clean.SyscallInstrsChip
