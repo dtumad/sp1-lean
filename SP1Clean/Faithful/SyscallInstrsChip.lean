@@ -32,23 +32,28 @@ halt exit code at `[87]`. Clean's flat AIR localises the public input to the ver
 a chip-level public-value assertion **must** be a channel hand-off; the native row emits each as
 one message built from columns it already carries.
 
-The anchor is therefore an iff between the extracted assertion list and *the native constraint
-system conjoined with* `PublicValueBinding` — those eight Rust conjuncts, stated verbatim over the
-Rust row and its public values. Nothing is dropped: `syscallInstrsPublicValueBinding_via_messages`
-exhibits each conjunct as the payload equation of a specific emitted message, so the binding names
-the hand-off rather than assuming it away. Until `Channels.publicValuesChannel` and
-`Channels.exitChannel` have providers in the ensemble, that is what the hand-off *is*, and
-`docs/release-audit.md`'s native-only-bus row is where it is disclosed.
+`syscallInstrsChipConstraintsFaithful` is therefore an iff between the extracted assertion list and
+*the native constraint system conjoined with* `PublicValueBinding` — those eight Rust conjuncts,
+stated verbatim over the Rust row and its public values, so an auditor reads SP1's own expressions
+rather than a paraphrase. The eight messages that carry them are pinned by
+`syscallInstrsUnexpectedInteractions`. What is *not* yet proved is that each conjunct follows from
+its message's payload: that needs a provider for `Channels.publicValuesChannel` and
+`Channels.exitChannel`, which the ensemble does not have, and it is disclosed as the native-only-bus
+row in `docs/release-audit.md`.
 
-## Where the KoalaBear literals live
+## What this file proves, and what it does not
 
-Two of SP1's public-value conjuncts reduce a four-limb word with the coefficients
-`1, 65536, 33554430, 134085624` — the last two being `2 ^ 32` and `2 ^ 48` *reduced at KoalaBear's
-modulus*, not generic. That is external report Finding 7. The factoring above confines them to
-`PublicValueBinding`: the native half of the anchor stays literal-free and field-generic, and the
-companion theorem that identifies the binding with the emitted messages takes the interpretation
-`(33554430 : ZMod p) = 2 ^ 32 ∧ (134085624 : ZMod p) = 2 ^ 48` as an explicit hypothesis rather
-than assuming it silently. Instantiating it is a property of SP1's field, not of this row.
+Proved: the whole-row codec and both its round-trips; the row's complete `assertZero` list and
+complete interaction list, each decomposed into its sixteen composed blocks and pinned block by
+block; the four per-bus interaction lists and the native-only tail; and **the assertion half of the
+anchor** — SP1's generated whole-table assertion list holds exactly when the native circuit's
+complete `assertZero` list does, together with `PublicValueBinding`.
+
+Not yet proved: the interaction half. Everything it needs is here — both sides reduce to explicit
+lists — but the two are ordered differently and relating them is a `List.Perm` across the bus
+grouping, with SP1's syscall send sitting in its `InteractionKind.State` block where the native row
+keeps it on its own channel. That last mismatch is the `InteractionKind` gap named as the ensemble
+wiring's prerequisite in `docs/roadmap.md`; it turns out to bind here first.
 
 ## The Memory and Program polarity bridges
 
