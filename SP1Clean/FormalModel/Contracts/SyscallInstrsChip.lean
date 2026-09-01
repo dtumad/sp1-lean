@@ -417,4 +417,48 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
 
 end WriteArm
 
+namespace FieldBoundArm
+
+/-- The columns one valid-field-element check constrains: the word being bounded, the comparison
+bit, and the gate. The row uses this twice — on `a0` for `HALT` and on `a1` for
+`COMMIT_DEFERRED_PROOFS` — which is the reason it is its own assertion. -/
+structure Inputs (F : Type) where
+  word : Word F
+  bit : F
+  is_real : F
+deriving ProvableStruct
+
+/-- The gate is boolean, and on a live gate the word's second limb is a `u16` — it is read from a
+register, so the Memory bus already carries that. -/
+def Assumptions (r : Inputs (ZMod p)) : Prop :=
+  (r.is_real = 0 ∨ r.is_real = 1) ∧ (r.is_real = 1 → r.word[1].val < 2 ^ 16)
+
+/-- On a live gate the word is a valid field element: `ExitCodeValid`, and the comparison bit is
+the strict-less-than indicator that decides which branch of it holds. -/
+def Spec (r : Inputs (ZMod p)) : Prop :=
+  (r.bit = 0 ∨ r.bit = 1) ∧
+  (r.is_real = 1 →
+    r.bit = (if r.word[1].val < fieldLimbBound then 1 else 0) ∧ ExitCodeValid r.word)
+
+end FieldBoundArm
+
+namespace DispatchArm
+
+/-- The columns the generic-dispatch check constrains. -/
+structure Inputs (F : Type) where
+  op_b : Word F
+  op_c : Word F
+  table_byte : F
+deriving ProvableStruct
+
+/-- The identifier's table byte is boolean. -/
+def Assumptions (r : Inputs (ZMod p)) : Prop :=
+  r.table_byte = 0 ∨ r.table_byte = 1
+
+/-- A syscall dispatched over the bus carries only three operand limbs, so the fourth vanishes. -/
+def Spec (r : Inputs (ZMod p)) : Prop :=
+  r.table_byte = 1 → r.op_b[3] = 0 ∧ r.op_c[3] = 0
+
+end DispatchArm
+
 end SP1Clean.SyscallInstrsChip

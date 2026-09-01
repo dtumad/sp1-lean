@@ -1,4 +1,6 @@
 import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
+import SP1Clean.Proofs.Operations.U16CompareOperation.Formal
+import SP1Clean.Model.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
@@ -23,6 +25,7 @@ Contracts (`Inputs` and `Spec` per arm) live beside the chip's own in
 namespace SP1Clean.SyscallInstrsChip
 
 open Circuit
+open SP1Clean.Channels (byteChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -145,5 +148,49 @@ set_option linter.unusedSectionVars false in
     (elaborated (p := p)).localLength x = 0 := rfl
 
 end WriteArm
+
+namespace FieldBoundArm
+
+/-- One valid-field-element check: the upper two limbs vanish, and limb 1 is compared against
+`fieldLimbBound = 0x7F00`, the second limb of KoalaBear's modulus. The two conditionals below are
+what make the comparison bite — where the bit is not set, limb 1 must equal the bound exactly and
+limb 0 must vanish. Together they cap the word's reduction at `p - 1`, which is what makes the
+committed exit code decode back. -/
+def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
+  assertZero (input.is_real * input.word[2])
+  assertZero (input.is_real * input.word[3])
+  assertion U16CompareOperation.circuit
+    ⟨input.word[1], Expression.const ((fieldLimbBound : ℕ) : ZMod p),
+     ⟨input.bit⟩, input.is_real⟩
+  assertZero (input.is_real * ((input.bit - (1 : Expression (ZMod p))) *
+    (input.word[1] - Expression.const ((fieldLimbBound : ℕ) : ZMod p))))
+  assertZero (input.is_real * ((input.bit - (1 : Expression (ZMod p))) * input.word[0]))
+
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [byteChannel.toRaw]
+  }
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+    (elaborated (p := p)).localLength x = 0 := rfl
+
+end FieldBoundArm
+
+namespace DispatchArm
+
+/-- The generic-dispatch check: a syscall handled by its own table carries three operand limbs. -/
+def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
+  assertZero (input.table_byte * input.op_b[3])
+  assertZero (input.table_byte * input.op_c[3])
+
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+    (elaborated (p := p)).localLength x = 0 := rfl
+
+end DispatchArm
 
 end SP1Clean.SyscallInstrsChip
