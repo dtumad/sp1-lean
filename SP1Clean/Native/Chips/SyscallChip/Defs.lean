@@ -254,6 +254,19 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertZero (input.is_real * (input.is_commit.result * input.op_c_memory.prev_value[2]))
   assertZero (input.is_real * (input.is_commit.result * input.op_c_memory.prev_value[3]))
 
+  -- `op_a_value` is a valid word even on the one arm that leaves it free (`HINT_LEN`): SP1's
+  -- `slice_range_check_u16`. This is what lets the `t0` read-back push discharge the Memory bus's
+  -- `isU64` requirement without any profile restriction.
+  byteChannel.pullIf input.is_real ⟨6, input.op_a_value[0], natConst 16, 0⟩
+  byteChannel.pullIf input.is_real ⟨6, input.op_a_value[1], natConst 16, 0⟩
+  byteChannel.pullIf input.is_real ⟨6, input.op_a_value[2], natConst 16, 0⟩
+  byteChannel.pullIf input.is_real ⟨6, input.op_a_value[3], natConst 16, 0⟩
+  -- The cached digest word is four genuine bytes, checked in pairs.
+  byteChannel.pullIf input.is_commit.result
+    ⟨3, 0, input.digest_word[0], input.digest_word[1]⟩
+  byteChannel.pullIf input.is_commit.result
+    ⟨3, 0, input.digest_word[2], input.digest_word[3]⟩
+
   -- The five public-value bindings, each one message built from columns above (see the docstring).
   exitChannel.pushIf input.is_halt (exitMsg input)
   publicValuesChannel.pullIf input.is_commit.result ⟨natConst 145, 1⟩
@@ -302,7 +315,8 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
       Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
       U16CompareOperation.circuit, U16toU8OperationSafe.circuit] at h_interaction
     refine Or.inl ?_
-    rcases h_interaction with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h <;>
+    rcases h_interaction with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
+      h | h | h | h | h | h <;>
       subst h <;> simp only [circuit_norm]
 
 set_option linter.unusedSectionVars false in
