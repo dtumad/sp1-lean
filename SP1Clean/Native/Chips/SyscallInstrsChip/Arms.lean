@@ -50,6 +50,9 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma channelsWithGuarantees_eq :
+    ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
 
 end PcArm
 
@@ -114,6 +117,9 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma channelsWithGuarantees_eq :
+    ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
 
 end CommitArm
 
@@ -146,6 +152,9 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma channelsWithGuarantees_eq :
+    ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
 
 end WriteArm
 
@@ -174,6 +183,10 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma channelsWithGuarantees_eq :
+    ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
+      = [byteChannel.toRaw] := rfl
 
 end FieldBoundArm
 
@@ -190,6 +203,9 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma channelsWithGuarantees_eq :
+    ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
 
 end DispatchArm
 

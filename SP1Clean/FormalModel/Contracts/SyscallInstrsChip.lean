@@ -182,136 +182,6 @@ def SelectorsValid (r : Inputs (ZMod p)) : Prop :=
   (r.is_real = 0 →
     tableByte r = 0 ∧ r.is_halt = 0 ∧ r.is_commit_deferred.result = 0)
 
-/-- **The program-counter arms.** HALT parks the machine at SP1's terminal `haltPc = (1, 0, 0)`;
-every other arm falls through to `pc + 4`. -/
-def PcArm (r : Inputs (ZMod p)) : Prop :=
-  (r.is_halt = 1 →
-    r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0) ∧
-  (r.is_real = 1 → r.is_halt = 0 →
-    r.next_pc[0] = r.state.pc[0] + 4 ∧ r.next_pc[1] = r.state.pc[1] ∧
-      r.next_pc[2] = r.state.pc[2])
-
-/-- **The `t0` write arms.** `ENTER_UNCONSTRAINED` zeroes `t0`; `HINT_LEN` leaves it free (the
-oracled hint length); every other arm leaves it unchanged. The written word is a valid `u64`
-either way — SP1's `slice_range_check_u16`, which is what lets the read-back be pushed. A syscall
-row never targets `x0`, so the x0 zeroing is vacuous on real rows but still asserted. -/
-def WriteArm (r : Inputs (ZMod p)) : Prop :=
-  Word.isU64 r.op_a_value ∧
-  (r.is_real = 1 → r.op_a_0 = 0) ∧
-  (r.is_enter_unconstrained.result = 0 ∨ r.is_enter_unconstrained.result = 1) ∧
-  (r.is_enter_unconstrained.result + r.is_hint_len.result = 0 ∨
-    r.is_enter_unconstrained.result + r.is_hint_len.result = 1) ∧
-  (r.op_a_0 = 1 → ∀ i : Fin 4, r.op_a_value[i] = 0) ∧
-  (r.is_real = 1 → r.is_enter_unconstrained.result = 1 → ∀ i : Fin 4, r.op_a_value[i] = 0) ∧
-  (r.is_real = 1 →
-    r.is_enter_unconstrained.result + r.is_hint_len.result = 0 →
-      ∀ i : Fin 4, r.op_a_value[i] = r.op_a_memory.prev_value[i]) ∧
-  (r.is_commit.result + r.is_commit_deferred.result = 0 ∨
-    r.is_commit.result + r.is_commit_deferred.result = 1)
-
-/-- **The generic dispatch arm.** A syscall whose handler has its own table is sent on the syscall
-bus, which carries only three operand limbs — so the fourth must vanish. -/
-def DispatchArm (r : Inputs (ZMod p)) : Prop :=
-  tableByte r = 1 →
-    r.op_b_memory.prev_value[3] = 0 ∧ r.op_c_memory.prev_value[3] = 0
-
-/-- **The commit arms.** The one-hot bitmap picks a digest word, its index is `a0`'s low limb (so
-`a0`'s other limbs vanish), and `a1` carries the selected word packed two bytes to a limb.
-`COMMIT_DEFERRED` instead bounds `a1` to a valid field element, exactly as HALT bounds `a0`. -/
-def CommitArm (r : Inputs (ZMod p)) : Prop :=
-  (∀ i : Fin 8, r.is_real = 1 →
-    r.digest_index_bits[i] = 0 ∨ r.digest_index_bits[i] = 1) ∧
-  (r.is_real = 1 →
-    ∀ i : Fin 8, r.digest_index_bits[i] = 1 → r.op_b_memory.prev_value[0] = (i.val : ℕ)) ∧
-  (r.is_real = 1 →
-    r.is_commit.result + r.is_commit_deferred.result = 1 →
-      r.digest_index_bits[0] + r.digest_index_bits[1] + r.digest_index_bits[2] +
-        r.digest_index_bits[3] + r.digest_index_bits[4] + r.digest_index_bits[5] +
-        r.digest_index_bits[6] + r.digest_index_bits[7] = 1) ∧
-  (r.is_real = 1 →
-    r.is_commit.result + r.is_commit_deferred.result = 0 →
-      r.digest_index_bits[0] + r.digest_index_bits[1] + r.digest_index_bits[2] +
-        r.digest_index_bits[3] + r.digest_index_bits[4] + r.digest_index_bits[5] +
-        r.digest_index_bits[6] + r.digest_index_bits[7] = 0) ∧
-  (r.is_real = 1 →
-    r.is_commit.result + r.is_commit_deferred.result = 1 →
-      r.op_b_memory.prev_value[1] + r.op_b_memory.prev_value[2] +
-        r.op_b_memory.prev_value[3] = 0) ∧
-  (r.is_real = 1 → r.is_commit.result = 1 →
-    r.op_c_memory.prev_value[0] = r.digest_word[0] + r.digest_word[1] * 256 ∧
-      r.op_c_memory.prev_value[1] = r.digest_word[2] + r.digest_word[3] * 256 ∧
-      r.op_c_memory.prev_value[2] = 0 ∧ r.op_c_memory.prev_value[3] = 0) ∧
-  (r.is_commit_deferred.result = 1 → ExitCodeValid r.op_c_memory.prev_value) ∧
-  (r.is_commit.result = 1 → ∀ i : Fin 4, r.digest_word[i].val < 256)
-
-/-- **The facts the row's pulls carry.** A consumer of the Program and Memory buses derives these
-from the provider; the prover, running completeness in the other direction, must supply them. They
-are ordinary well-formedness of the fetched instruction and of the three prior register records. -/
-def PulledFacts (r : Inputs (ZMod p)) : Prop :=
-  r.is_real = 1 →
-    r.op_a.val < 32 ∧
-    r.state.pc[0].val < 2 ^ 16 ∧ r.state.pc[1].val < 2 ^ 16 ∧ r.state.pc[2].val < 2 ^ 16 ∧
-    (r.op_a_0 = 0 ∨ r.op_a_0 = 1) ∧
-    Word.isU64 r.op_a_memory.prev_value ∧
-    r.op_a_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
-    Word.isU64 r.op_b_memory.prev_value ∧
-    r.op_b_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
-    Word.isU64 r.op_c_memory.prev_value ∧
-    r.op_c_memory.access_timestamp.prev_low.val < 2 ^ 24
-
-/-- **What an honest prover must supply**, and the row's full arm-by-arm contract: the gates, the
-reader blocks, arm selection, and one predicate per arm family. Every arm SP1 dispatches inline
-appears here, so an arm without a contract is a missing conjunct rather than a silent gap.
-
-This is the chip's `ProverAssumptions` — the completeness precondition — and it is deliberately
-*wider* than `Spec`, the soundness conclusion. Clean keeps the two apart on purpose: soundness
-reports what a consumer may rely on, while completeness must reconstruct every constraint the row
-emits, including the arm bookkeeping no consumer reads. `rowContract_toSpec` records that the
-former follows from the latter. -/
-def RowContract (r : Inputs (ZMod p)) : Prop :=
-  GatesBoolean r ∧
-  Readers.CPUState.Spec
-    { cols := r.state, next_pc := r.next_pc, clk_inc := 264, is_real := r.is_real } ∧
-  Readers.RegisterAccessCols.Spec
-    { cols := r.op_a_memory, is_real := r.is_real, clk_target := clkLow r + 4 } ∧
-  Readers.RegisterAccessCols.Spec
-    { cols := r.op_b_memory, is_real := r.is_real, clk_target := clkLow r + 3 } ∧
-  Readers.RegisterAccessCols.Spec
-    { cols := r.op_c_memory, is_real := r.is_real, clk_target := clkLow r + 2 } ∧
-  SelectorsValid r ∧
-  PcArm r ∧
-  WriteArm r ∧
-  DispatchArm r ∧
-  CommitArm r ∧
-  PulledFacts r ∧
-  (r.op_a_0 = 0 ∨ r.op_a_0 = 1) ∧
-  (r.is_halt = 1 → ExitCodeValid r.op_b_memory.prev_value)
-
-/-- **What a consumer may rely on.** The gates, the reader blocks at the syscall edge
-(`clk_inc = 264`, access clocks `+4`/`+3`/`+2`), and the halt arm — the transition to
-`Machine.haltPc` and the exit-code word's field-element bound. This is the soundness conclusion;
-the arm bookkeeping that no consumer reads stays in `RowContract`. -/
-def Spec (r : Inputs (ZMod p)) : Prop :=
-  (r.is_real = 0 ∨ r.is_real = 1) ∧
-  (r.is_halt = 0 ∨ r.is_halt = 1) ∧
-  Readers.CPUState.Spec
-    { cols := r.state, next_pc := r.next_pc, clk_inc := 264, is_real := r.is_real } ∧
-  Readers.RegisterAccessCols.Spec
-    { cols := r.op_a_memory, is_real := r.is_real, clk_target := clkLow r + 4 } ∧
-  Readers.RegisterAccessCols.Spec
-    { cols := r.op_b_memory, is_real := r.is_real, clk_target := clkLow r + 3 } ∧
-  Readers.RegisterAccessCols.Spec
-    { cols := r.op_c_memory, is_real := r.is_real, clk_target := clkLow r + 2 } ∧
-  (r.is_halt = 1 →
-    (r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0) ∧
-      ExitCodeValid r.op_b_memory.prev_value)
-
-omit [Fact (2 ^ 17 < p)] in
-/-- The soundness conclusion follows from the prover's obligation, so the two never drift apart. -/
-theorem rowContract_toSpec {r : Inputs (ZMod p)} (h : RowContract r) : Spec r :=
-  ⟨h.1.1, h.1.2.2.2.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
-    fun hh => ⟨h.2.2.2.2.2.2.1.1 hh, h.2.2.2.2.2.2.2.2.2.2.2.2 hh⟩⟩
-
 /-! ## Arm contracts
 
 Each arm of the dispatch is its own proof boundary (see `Native/Chips/SyscallInstrsChip/Arms.lean`
@@ -360,7 +230,8 @@ def Assumptions (r : Inputs (ZMod p)) : Prop :=
   (r.is_real = 0 ∨ r.is_real = 1) ∧
   (r.is_commit = 0 ∨ r.is_commit = 1) ∧
   (r.is_commit_deferred = 0 ∨ r.is_commit_deferred = 1) ∧
-  (r.is_commit + r.is_commit_deferred = 0 ∨ r.is_commit + r.is_commit_deferred = 1)
+  (r.is_real = 1 → r.is_commit + r.is_commit_deferred = 0 ∨
+    r.is_commit + r.is_commit_deferred = 1)
 
 /-- The bitmap's sum, one on a commit arm and zero elsewhere. -/
 def bitSum (r : Inputs (ZMod p)) : ZMod p :=
@@ -401,8 +272,8 @@ boolean (the Program fetch's `RowSpec` carries it). -/
 def Assumptions (r : Inputs (ZMod p)) : Prop :=
   (r.is_real = 0 ∨ r.is_real = 1) ∧
   (r.op_a_0 = 0 ∨ r.op_a_0 = 1) ∧
-  (r.is_enter_unconstrained = 0 ∨ r.is_enter_unconstrained = 1) ∧
-  (r.is_enter_unconstrained + r.is_hint_len = 0 ∨
+  (r.is_real = 1 → r.is_enter_unconstrained = 0 ∨ r.is_enter_unconstrained = 1) ∧
+  (r.is_real = 1 → r.is_enter_unconstrained + r.is_hint_len = 0 ∨
     r.is_enter_unconstrained + r.is_hint_len = 1)
 
 /-- `ENTER_UNCONSTRAINED` zeroes `t0`; `HINT_LEN` leaves it free — the oracled hint length, which
@@ -460,5 +331,113 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
   r.table_byte = 1 → r.op_b[3] = 0 ∧ r.op_c[3] = 0
 
 end DispatchArm
+
+
+/-! ## Projections into the arms
+
+Each arm constrains a slice of the row. These name that slice once, so the row's contract and its
+`main` agree on it by construction. -/
+
+/-- The program-counter arm's slice. -/
+def toPcArm (r : Inputs (ZMod p)) : PcArm.Inputs (ZMod p) :=
+  ⟨r.state.pc, r.next_pc, r.is_real, r.is_halt⟩
+
+/-- The `t0` write arms' slice. -/
+def toWriteArm (r : Inputs (ZMod p)) : WriteArm.Inputs (ZMod p) :=
+  ⟨r.op_a_memory.prev_value, r.op_a_value, r.op_a_0,
+   r.is_enter_unconstrained.result, r.is_hint_len.result, r.is_real⟩
+
+/-- The generic-dispatch check's slice. -/
+def toDispatchArm (r : Inputs (ZMod p)) : DispatchArm.Inputs (ZMod p) :=
+  ⟨r.op_b_memory.prev_value, r.op_c_memory.prev_value, tableByte r⟩
+
+/-- The `HALT` exit-code bound's slice: `a0`, gated on `is_halt`. -/
+def toFieldBoundB (r : Inputs (ZMod p)) : FieldBoundArm.Inputs (ZMod p) :=
+  ⟨r.op_b_memory.prev_value, r.op_b_cmp.bit, r.is_halt⟩
+
+/-- The `COMMIT_DEFERRED_PROOFS` bound's slice: `a1`, gated on that selector. -/
+def toFieldBoundC (r : Inputs (ZMod p)) : FieldBoundArm.Inputs (ZMod p) :=
+  ⟨r.op_c_memory.prev_value, r.op_c_cmp.bit, r.is_commit_deferred.result⟩
+
+/-- The commit arms' slice. -/
+def toCommitArm (r : Inputs (ZMod p)) : CommitArm.Inputs (ZMod p) :=
+  ⟨r.digest_index_bits, r.digest_word, r.op_b_memory.prev_value, r.op_c_memory.prev_value,
+   r.is_commit.result, r.is_commit_deferred.result, r.is_real⟩
+
+/-- **The facts the row's pulls carry.** A consumer of the Program and Memory buses derives these
+from the provider; the prover, running completeness in the other direction, must supply them. They
+are ordinary well-formedness of the fetched instruction and of the three prior register records. -/
+def PulledFacts (r : Inputs (ZMod p)) : Prop :=
+  r.is_real = 1 →
+    r.op_a.val < 32 ∧
+    r.state.pc[0].val < 2 ^ 16 ∧ r.state.pc[1].val < 2 ^ 16 ∧ r.state.pc[2].val < 2 ^ 16 ∧
+    (r.op_a_0 = 0 ∨ r.op_a_0 = 1) ∧
+    Word.isU64 r.op_a_memory.prev_value ∧
+    r.op_a_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
+    Word.isU64 r.op_b_memory.prev_value ∧
+    r.op_b_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
+    Word.isU64 r.op_c_memory.prev_value ∧
+    r.op_c_memory.access_timestamp.prev_low.val < 2 ^ 24
+
+/-- **What an honest prover must supply**, and the row's full arm-by-arm contract: the gates, the
+reader blocks, arm selection, and one predicate per arm family. Every arm SP1 dispatches inline
+appears here, so an arm without a contract is a missing conjunct rather than a silent gap.
+
+This is the chip's `ProverAssumptions` — the completeness precondition — and it is deliberately
+*wider* than `Spec`, the soundness conclusion. Clean keeps the two apart on purpose: soundness
+reports what a consumer may rely on, while completeness must reconstruct every constraint the row
+emits, including the arm bookkeeping no consumer reads. `rowContract_toSpec` records that the
+former follows from the latter. -/
+def RowContract (r : Inputs (ZMod p)) : Prop :=
+  GatesBoolean r ∧
+  Readers.CPUState.Spec
+    { cols := r.state, next_pc := r.next_pc, clk_inc := 264, is_real := r.is_real } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_a_memory, is_real := r.is_real, clk_target := clkLow r + 4 } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_b_memory, is_real := r.is_real, clk_target := clkLow r + 3 } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_c_memory, is_real := r.is_real, clk_target := clkLow r + 2 } ∧
+  SelectorsValid r ∧
+  WriteArm.Assumptions (toWriteArm r) ∧ WriteArm.Spec (toWriteArm r) ∧
+  PcArm.Assumptions (toPcArm r) ∧ PcArm.Spec (toPcArm r) ∧
+  DispatchArm.Assumptions (toDispatchArm r) ∧ DispatchArm.Spec (toDispatchArm r) ∧
+  FieldBoundArm.Assumptions (toFieldBoundB r) ∧ FieldBoundArm.Spec (toFieldBoundB r) ∧
+  FieldBoundArm.Assumptions (toFieldBoundC r) ∧ FieldBoundArm.Spec (toFieldBoundC r) ∧
+  CommitArm.Assumptions (toCommitArm r) ∧ CommitArm.Spec (toCommitArm r) ∧
+  PulledFacts r ∧
+  (r.is_commit.result = 1 → ∀ i : Fin 4, r.digest_word[i].val < 256)
+
+/-- **What a consumer may rely on.** The gates, the reader blocks at the syscall edge
+(`clk_inc = 264`, access clocks `+4`/`+3`/`+2`), and each arm's own meaning. Assembling it from the
+arm `Spec`s rather than restating them is what keeps the row and its decomposition from drifting. -/
+def Spec (r : Inputs (ZMod p)) : Prop :=
+  GatesBoolean r ∧
+  Readers.CPUState.Spec
+    { cols := r.state, next_pc := r.next_pc, clk_inc := 264, is_real := r.is_real } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_a_memory, is_real := r.is_real, clk_target := clkLow r + 4 } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_b_memory, is_real := r.is_real, clk_target := clkLow r + 3 } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_c_memory, is_real := r.is_real, clk_target := clkLow r + 2 } ∧
+  -- `op_a_0`'s booleanity reaches this row over the Program bus, which is gated; SP1 nonetheless
+  -- asserts the x0 rule ungated, so on a padding row the prover must choose `op_a_0 = 0`. The
+  -- write arm's meaning is therefore reported under exactly that hypothesis.
+  ((r.op_a_0 = 0 ∨ r.op_a_0 = 1) → WriteArm.Spec (toWriteArm r)) ∧
+  PcArm.Spec (toPcArm r) ∧
+  DispatchArm.Spec (toDispatchArm r) ∧
+  FieldBoundArm.Spec (toFieldBoundB r) ∧
+  FieldBoundArm.Spec (toFieldBoundC r) ∧
+  CommitArm.Spec (toCommitArm r)
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The soundness conclusion follows from the prover's obligation, so the two never drift apart. -/
+theorem rowContract_toSpec {r : Inputs (ZMod p)} (h : RowContract r) : Spec r :=
+  ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
+    (fun _ => h.2.2.2.2.2.2.2.1), h.2.2.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2.2.2.2.1,
+    h.2.2.2.2.2.2.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1,
+    h.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
+
 
 end SP1Clean.SyscallInstrsChip

@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.RegisterAccessCols
 import SP1Clean.Proofs.Operations.IsZeroOperation.Formal
@@ -168,91 +168,22 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   memoryChannel.pushIf input.is_real
     (memPushMsg input input.op_c 2 input.op_c_memory.prev_value)
 
-  -- A syscall row never targets `x0`, so the x0 rule's own zeroing is vacuous but still asserted.
-  assertZero (input.is_real * input.op_a_0)
-  assertZero (input.op_a_0 * input.op_a_value[0])
-  assertZero (input.op_a_0 * input.op_a_value[1])
-  assertZero (input.op_a_0 * input.op_a_value[2])
-  assertZero (input.op_a_0 * input.op_a_value[3])
-
-  -- Every arm but HALT falls through to `pc + 4`.
-  assertZero (input.is_real * ((natConst 1 - input.is_halt) * (input.next_pc[0] - (input.state.pc[0] + natConst 4))))
-  assertZero (input.is_real * ((natConst 1 - input.is_halt) * (input.next_pc[1] - input.state.pc[1])))
-  assertZero (input.is_real * ((natConst 1 - input.is_halt) * (input.next_pc[2] - input.state.pc[2])))
-
-  -- A dispatched syscall carries only three operand limbs, so the fourth must vanish.
-  assertZero (tableByteVar input * input.op_b_memory.prev_value[3])
-  assertZero (tableByteVar input * input.op_c_memory.prev_value[3])
-
-  -- HALT: park at `haltPc`, and pin `a0` to a valid field element.
-  assertZero (input.is_halt * (input.next_pc[0] - 1))
-  assertZero (input.is_halt * input.next_pc[1])
-  assertZero (input.is_halt * input.next_pc[2])
-  assertZero (input.is_halt * input.op_b_memory.prev_value[2])
-  assertZero (input.is_halt * input.op_b_memory.prev_value[3])
-  assertion U16CompareOperation.circuit
-    ⟨input.op_b_memory.prev_value[1], natConst fieldLimbBound, input.op_b_cmp, input.is_halt⟩
-  assertZero (input.is_halt * ((input.op_b_cmp.bit - natConst 1) *
-    (input.op_b_memory.prev_value[1] - natConst fieldLimbBound)))
-  assertZero (input.is_halt * ((input.op_b_cmp.bit - natConst 1) * input.op_b_memory.prev_value[0]))
-
-  -- COMMIT_DEFERRED: the same valid-field-element bound on `a1`.
-  assertZero (input.is_commit_deferred.result * input.op_c_memory.prev_value[2])
-  assertZero (input.is_commit_deferred.result * input.op_c_memory.prev_value[3])
-  assertion U16CompareOperation.circuit
-    ⟨input.op_c_memory.prev_value[1], natConst fieldLimbBound, input.op_c_cmp,
-     input.is_commit_deferred.result⟩
-  assertZero (input.is_commit_deferred.result * ((input.op_c_cmp.bit - natConst 1) *
-    (input.op_c_memory.prev_value[1] - natConst fieldLimbBound)))
-  assertZero (input.is_commit_deferred.result * ((input.op_c_cmp.bit - natConst 1) *
-    input.op_c_memory.prev_value[0]))
-
-  -- ENTER_UNCONSTRAINED zeroes `t0`; every arm but it and HINT_LEN leaves `t0` unchanged.
-  assertZero (input.is_real * (input.is_enter_unconstrained.result * input.op_a_value[0]))
-  assertZero (input.is_real * (input.is_enter_unconstrained.result * input.op_a_value[1]))
-  assertZero (input.is_real * (input.is_enter_unconstrained.result * input.op_a_value[2]))
-  assertZero (input.is_real * (input.is_enter_unconstrained.result * input.op_a_value[3]))
-  assertZero (input.is_real * ((input.is_enter_unconstrained.result + input.is_hint_len.result - natConst 1) *
-    (input.op_a_value[0] - input.op_a_memory.prev_value[0])))
-  assertZero (input.is_real * ((input.is_enter_unconstrained.result + input.is_hint_len.result - natConst 1) *
-    (input.op_a_value[1] - input.op_a_memory.prev_value[1])))
-  assertZero (input.is_real * ((input.is_enter_unconstrained.result + input.is_hint_len.result - natConst 1) *
-    (input.op_a_value[2] - input.op_a_memory.prev_value[2])))
-  assertZero (input.is_real * ((input.is_enter_unconstrained.result + input.is_hint_len.result - natConst 1) *
-    (input.op_a_value[3] - input.op_a_memory.prev_value[3])))
-
-  -- The commit index bitmap: booleans, one-hot exactly on a commit arm, and reading `a0`'s low limb.
-  assertZero (input.is_real * (input.digest_index_bits[0] * (input.digest_index_bits[0] - 1)))
-  assertZero (input.is_real * (input.digest_index_bits[1] * (input.digest_index_bits[1] - 1)))
-  assertZero (input.is_real * (input.digest_index_bits[2] * (input.digest_index_bits[2] - 1)))
-  assertZero (input.is_real * (input.digest_index_bits[3] * (input.digest_index_bits[3] - 1)))
-  assertZero (input.is_real * (input.digest_index_bits[4] * (input.digest_index_bits[4] - 1)))
-  assertZero (input.is_real * (input.digest_index_bits[5] * (input.digest_index_bits[5] - 1)))
-  assertZero (input.is_real * (input.digest_index_bits[6] * (input.digest_index_bits[6] - 1)))
-  assertZero (input.is_real * (input.digest_index_bits[7] * (input.digest_index_bits[7] - 1)))
-  assertZero (input.is_real * ((input.is_commit.result + input.is_commit_deferred.result) *
-    (bitSum input - 1)))
-  assertZero (input.is_real * ((1 - (input.is_commit.result + input.is_commit_deferred.result)) *
-    bitSum input))
-  assertZero (input.is_real * (input.digest_index_bits[0] * (input.op_b_memory.prev_value[0] - 0)))
-  assertZero (input.is_real * (input.digest_index_bits[1] * (input.op_b_memory.prev_value[0] - 1)))
-  assertZero (input.is_real * (input.digest_index_bits[2] * (input.op_b_memory.prev_value[0] - 2)))
-  assertZero (input.is_real * (input.digest_index_bits[3] * (input.op_b_memory.prev_value[0] - 3)))
-  assertZero (input.is_real * (input.digest_index_bits[4] * (input.op_b_memory.prev_value[0] - 4)))
-  assertZero (input.is_real * (input.digest_index_bits[5] * (input.op_b_memory.prev_value[0] - 5)))
-  assertZero (input.is_real * (input.digest_index_bits[6] * (input.op_b_memory.prev_value[0] - 6)))
-  assertZero (input.is_real * (input.digest_index_bits[7] * (input.op_b_memory.prev_value[0] - 7)))
-  assertZero (input.is_real * ((input.is_commit.result + input.is_commit_deferred.result) *
-    (input.op_b_memory.prev_value[1] + input.op_b_memory.prev_value[2] +
-      input.op_b_memory.prev_value[3])))
-
-  -- COMMIT: `a1` is the selected digest word, packed two bytes to a limb.
-  assertZero (input.is_real * (input.is_commit.result *
-    ((input.digest_word[0] + input.digest_word[1] * natConst 256) - input.op_c_memory.prev_value[0])))
-  assertZero (input.is_real * (input.is_commit.result *
-    ((input.digest_word[2] + input.digest_word[3] * natConst 256) - input.op_c_memory.prev_value[1])))
-  assertZero (input.is_real * (input.is_commit.result * input.op_c_memory.prev_value[2]))
-  assertZero (input.is_real * (input.is_commit.result * input.op_c_memory.prev_value[3]))
+  -- The five arms, each a bundled assertion (`Native/Chips/SyscallInstrsChip/Arms.lean`).
+  assertion WriteArm.circuit
+    ⟨input.op_a_memory.prev_value, input.op_a_value, input.op_a_0,
+     input.is_enter_unconstrained.result, input.is_hint_len.result, input.is_real⟩
+  assertion PcArm.circuit ⟨input.state.pc, input.next_pc, input.is_real, input.is_halt⟩
+  assertion DispatchArm.circuit
+    ⟨input.op_b_memory.prev_value, input.op_c_memory.prev_value, tableByteVar input⟩
+  -- The same valid-field-element bound, on `a0` for HALT and on `a1` for COMMIT_DEFERRED.
+  assertion FieldBoundArm.circuit
+    ⟨input.op_b_memory.prev_value, input.op_b_cmp.bit, input.is_halt⟩
+  assertion FieldBoundArm.circuit
+    ⟨input.op_c_memory.prev_value, input.op_c_cmp.bit, input.is_commit_deferred.result⟩
+  assertion CommitArm.circuit
+    ⟨input.digest_index_bits, input.digest_word, input.op_b_memory.prev_value,
+     input.op_c_memory.prev_value, input.is_commit.result, input.is_commit_deferred.result,
+     input.is_real⟩
 
   -- `op_a_value` is a valid word even on the one arm that leaves it free (`HINT_LEN`): SP1's
   -- `slice_range_check_u16`. This is what lets the `t0` read-back push discharge the Memory bus's
@@ -292,7 +223,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
     intro input offset
     simp only [circuit_norm, main, Readers.CPUState.circuit,
       Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
-      U16CompareOperation.circuit, U16toU8OperationSafe.circuit]
+      U16toU8OperationSafe.circuit]
   -- Every bus the row touches. Byte arrives through the readers and the three gadget families;
   -- State through `CPUState`; Program, Memory, Exit, Syscall and PublicValues directly.
   channelsWithGuarantees :=
@@ -304,16 +235,16 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
     dsimp only [Operations.ChannelsLawful]
     refine ⟨by simp only [circuit_norm, main, Readers.CPUState.circuit,
         Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
-        U16CompareOperation.circuit, U16toU8OperationSafe.circuit], ?_,
+        U16toU8OperationSafe.circuit], ?_,
       by simp only [circuit_norm, main, Readers.CPUState.circuit,
         Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
-        U16CompareOperation.circuit, U16toU8OperationSafe.circuit]⟩
+        U16toU8OperationSafe.circuit]⟩
     intro env
     rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
     intro interaction h_interaction
     simp only [circuit_norm, main, Readers.CPUState.circuit,
       Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
-      U16CompareOperation.circuit, U16toU8OperationSafe.circuit] at h_interaction
+      U16toU8OperationSafe.circuit] at h_interaction
     refine Or.inl ?_
     rcases h_interaction with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
       h | h | h | h | h | h <;>

@@ -10,6 +10,7 @@ is the whole point of the decomposition — see the module docstring of
 namespace SP1Clean.SyscallInstrsChip
 
 open Circuit
+open SP1Clean.Channels (byteChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -92,6 +93,13 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     Spec := Spec,
     soundness := soundness,
     completeness := completeness }
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
+    (circuit (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithGuarantees :
+    ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
 
 end PcArm
 
@@ -191,9 +199,9 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   · exact gate_zero h_rbin (fun hr => gate_zero (h_bits 5 hr) (fun hb => by rw [hb]; ring))
   · exact gate_zero h_rbin (fun hr => gate_zero (h_bits 6 hr) (fun hb => by rw [hb]; ring))
   · exact gate_zero h_rbin (fun hr => gate_zero (h_bits 7 hr) (fun hb => by rw [hb]; ring))
-  · exact gate_zero h_rbin (fun hr => gate_zero h_sumbin (fun hc => by
+  · exact gate_zero h_rbin (fun hr => gate_zero (h_sumbin hr) (fun hc => by
       have := h_sum1 hr hc; simp only [bitSum] at this; linear_combination this))
-  · exact gate_zero h_rbin (fun hr => gate_zero (one_sub_bool h_sumbin) (fun hg => by
+  · exact gate_zero h_rbin (fun hr => gate_zero (one_sub_bool (h_sumbin hr)) (fun hg => by
       have := h_sum0 hr (eq_zero_of_one_sub hg); simp only [bitSum] at this
       linear_combination this))
   · exact gate_zero h_rbin (fun hr => gate_zero (h_bits 0 hr) (fun hb => by
@@ -212,7 +220,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       have := h_idx hr 6 hb; norm_num at this; linear_combination this))
   · exact gate_zero h_rbin (fun hr => gate_zero (h_bits 7 hr) (fun hb => by
       have := h_idx hr 7 hb; norm_num at this; linear_combination this))
-  · exact gate_zero h_rbin (fun hr => gate_zero h_sumbin (fun hc => h_up hr hc))
+  · exact gate_zero h_rbin (fun hr => gate_zero (h_sumbin hr) (fun hc => h_up hr hc))
   · exact gate_zero h_rbin (fun hr => gate_zero h_cbin (fun hc => by
       linear_combination -(h_pack hr hc).1))
   · exact gate_zero h_rbin (fun hr => gate_zero h_cbin (fun hc => by
@@ -227,6 +235,13 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     Spec := Spec,
     soundness := soundness,
     completeness := completeness }
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
+    (circuit (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithGuarantees :
+    ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
 
 end CommitArm
 
@@ -292,20 +307,20 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   · exact gate_zero h_a0bin (fun hz => h_x0 hz 1)
   · exact gate_zero h_a0bin (fun hz => h_x0 hz 2)
   · exact gate_zero h_a0bin (fun hz => h_x0 hz 3)
-  · exact gate_zero h_rbin (fun hr => gate_zero h_ebin (fun he => h_enter hr he 0))
-  · exact gate_zero h_rbin (fun hr => gate_zero h_ebin (fun he => h_enter hr he 1))
-  · exact gate_zero h_rbin (fun hr => gate_zero h_ebin (fun he => h_enter hr he 2))
-  · exact gate_zero h_rbin (fun hr => gate_zero h_ebin (fun he => h_enter hr he 3))
-  · exact gate_zero h_rbin (fun hr => gated_of_cases (h_sumbin.elim
+  · exact gate_zero h_rbin (fun hr => gate_zero (h_ebin hr) (fun he => h_enter hr he 0))
+  · exact gate_zero h_rbin (fun hr => gate_zero (h_ebin hr) (fun he => h_enter hr he 1))
+  · exact gate_zero h_rbin (fun hr => gate_zero (h_ebin hr) (fun he => h_enter hr he 2))
+  · exact gate_zero h_rbin (fun hr => gate_zero (h_ebin hr) (fun he => h_enter hr he 3))
+  · exact gate_zero h_rbin (fun hr => gated_of_cases ((h_sumbin hr).elim
       (fun h0 => Or.inr (sub_eq_zero_of_eq (h_unch hr h0 0)))
       (fun h1 => Or.inl (sub_eq_zero_of_eq h1))))
-  · exact gate_zero h_rbin (fun hr => gated_of_cases (h_sumbin.elim
+  · exact gate_zero h_rbin (fun hr => gated_of_cases ((h_sumbin hr).elim
       (fun h0 => Or.inr (sub_eq_zero_of_eq (h_unch hr h0 1)))
       (fun h1 => Or.inl (sub_eq_zero_of_eq h1))))
-  · exact gate_zero h_rbin (fun hr => gated_of_cases (h_sumbin.elim
+  · exact gate_zero h_rbin (fun hr => gated_of_cases ((h_sumbin hr).elim
       (fun h0 => Or.inr (sub_eq_zero_of_eq (h_unch hr h0 2)))
       (fun h1 => Or.inl (sub_eq_zero_of_eq h1))))
-  · exact gate_zero h_rbin (fun hr => gated_of_cases (h_sumbin.elim
+  · exact gate_zero h_rbin (fun hr => gated_of_cases ((h_sumbin hr).elim
       (fun h0 => Or.inr (sub_eq_zero_of_eq (h_unch hr h0 3)))
       (fun h1 => Or.inl (sub_eq_zero_of_eq h1))))
 
@@ -316,6 +331,13 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     Spec := Spec,
     soundness := soundness,
     completeness := completeness }
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
+    (circuit (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithGuarantees :
+    ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
 
 end WriteArm
 
@@ -397,6 +419,13 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     requirementsChannelsLawful := fun input_var i₀ => by
       simp only [circuit_norm, main, U16CompareOperation.circuit] }
 
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
+    (circuit (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithGuarantees :
+    ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [byteChannel.toRaw] := rfl
+
 end FieldBoundArm
 
 namespace DispatchArm
@@ -436,6 +465,13 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     Spec := Spec,
     soundness := soundness,
     completeness := completeness }
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
+    (circuit (p := p)).localLength x = 0 := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma circuit_channelsWithGuarantees :
+    ((circuit (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p))) = [] := rfl
 
 end DispatchArm
 
