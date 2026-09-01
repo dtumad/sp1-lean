@@ -121,10 +121,10 @@ cell decodes back to `a0`. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   -- Shallow booleanity gates, so every off-gate pull discharges its `Requirements`.
   assertZero (input.is_real * (input.is_real - 1))
-  assertZero (input.is_halt * (input.is_halt - 1))
-  assertZero (tableByteVar input * (tableByteVar input - 1))
   assertZero (input.is_commit.result * (input.is_commit.result - 1))
   assertZero (input.is_commit_deferred.result * (input.is_commit_deferred.result - 1))
+  assertZero (input.is_halt * (input.is_halt - 1))
+  assertZero (tableByteVar input * (tableByteVar input - 1))
 
   -- The identifier's byte split, and the five arm selectors on byte 0.
   assertion U16toU8OperationSafe.circuit

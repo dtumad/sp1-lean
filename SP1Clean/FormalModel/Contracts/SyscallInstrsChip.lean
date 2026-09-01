@@ -140,10 +140,10 @@ def tableByte (r : Inputs (ZMod p)) : ZMod p :=
 /-- The row's five booleanity gates, all asserted ungated upstream so they hold on padding too. -/
 def GatesBoolean (r : Inputs (ZMod p)) : Prop :=
   (r.is_real = 0 ∨ r.is_real = 1) ∧
-  (r.is_halt = 0 ∨ r.is_halt = 1) ∧
-  (tableByte r = 0 ∨ tableByte r = 1) ∧
   (r.is_commit.result = 0 ∨ r.is_commit.result = 1) ∧
-  (r.is_commit_deferred.result = 0 ∨ r.is_commit_deferred.result = 1)
+  (r.is_commit_deferred.result = 0 ∨ r.is_commit_deferred.result = 1) ∧
+  (r.is_halt = 0 ∨ r.is_halt = 1) ∧
+  (tableByte r = 0 ∨ tableByte r = 1)
 
 /-- **Arm selection.** Each `IsZeroOperation` result is the indicator of its canonical code, and
 `is_halt` is the HALT indicator already multiplied by `is_real` — upstream's `[31]`. A padding row
@@ -309,7 +309,7 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
 omit [Fact (2 ^ 17 < p)] in
 /-- The soundness conclusion follows from the prover's obligation, so the two never drift apart. -/
 theorem rowContract_toSpec {r : Inputs (ZMod p)} (h : RowContract r) : Spec r :=
-  ⟨h.1.1, h.1.2.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
+  ⟨h.1.1, h.1.2.2.2.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
     fun hh => ⟨h.2.2.2.2.2.2.1.1 hh, h.2.2.2.2.2.2.2.2.2.2.2.2 hh⟩⟩
 
 end SP1Clean.SyscallInstrsChip
