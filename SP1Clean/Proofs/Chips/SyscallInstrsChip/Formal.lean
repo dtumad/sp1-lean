@@ -319,25 +319,69 @@ private lemma subcircuitRequirements_eq (input : Var Inputs (ZMod p)) (i₀ : �
     DispatchArm.circuit_channelsWithRequirements]
 
 
-/-! ### What remains, and why
+/-- The row's requirement-channel law. Structural throughout: `circuit_norm` would normalise the
+composed block's *meaning* to answer a question about its metadata, and exceeds the elaboration
+budget doing so; the monadic-append and per-leaf `rfl`-lemmas answer it directly. `DivRemChip`
+uses the same shape. -/
+private theorem requirementsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ) :
+    Operations.RequirementsChannelsLawful ((main input_var).operations i₀)
+      (elaborated.channelsWithGuarantees) [memoryChannel.toRaw] := by
+  dsimp only [Operations.RequirementsChannelsLawful]
+  refine ⟨by rw [subcircuitRequirements_eq]; exact List.nil_subset _, ?_, ?_⟩
+  · intro channel h_channel
+    simp only [main, Circuit.operations, Circuit.bind_def, assertZero, subcircuitWithAssertion,
+      assertion, Channel.pullIf, Channel.pushIf,
+      Operations.shallowChannels_append, Operations.shallowChannels_nil,
+      Operations.shallowChannels_subcircuit, Operations.shallowChannels_assert,
+      Operations.shallowChannels_interact, List.nil_append,
+      List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at h_channel
+    rcases h_channel with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      exact Or.inl (by simp only [circuit_norm])
+  · intro env h_constraints
+    simp only [main, Circuit.operations, Circuit.bind_def, assertZero, subcircuitWithAssertion,
+      assertion, Channel.pullIf, Channel.pushIf,
+      constraintsHold_shallow_iff_forall_mem] at h_constraints
+    have hb0 := h_constraints.1 _ List.mem_cons_self
+    have hb1 := h_constraints.1 _ (List.mem_cons_of_mem _ List.mem_cons_self)
+    simp only [Expression.eval, eval_sub] at hb0 hb1
+    have h_bool := bool_of_mul_pred hb0
+    have h_cbool := bool_of_mul_pred hb1
+    rw [Operations.inChannelsOrRequirements_iff_forall_mem]
+    intro interaction h_interaction
+    simp only [main, Circuit.operations, Circuit.bind_def, assertZero, subcircuitWithAssertion,
+      assertion, Channel.pullIf, Channel.pushIf,
+      Operations.shallowInteractions_append, Operations.shallowInteractions_nil,
+      Operations.shallowInteractions_subcircuit, Operations.shallowInteractions_assert,
+      Operations.shallowInteractions_interact, List.nil_append,
+      List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at h_interaction
+    rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      first
+        | exact Or.inl List.mem_cons_self
+        | (right
+           rw [ChannelInteraction.toRaw_requirements]
+           intro h1 h0
+           simp only [Expression.eval, neg_one_mul] at h1 h0
+           first
+             | exact off_gate_vacuous_neg h_bool h1 h0
+             | exact off_gate_vacuous_neg h_cbool h1 h0
+             | trivial)
 
-`subcircuitRequirements_eq` above is the first of `RequirementsChannelsLawful`'s three components,
-and it demonstrates the fix: the obligation is **structural**, so it wants the monadic-append and
-per-leaf `rfl`-lemmas, not `circuit_norm`. Measured, that is 2 seconds against a heartbeat timeout.
-`DivRemChip.requirementsChannelsLawful` is the worked precedent, and it is the reason that chip —
-the largest in the repo — bundles where this one does not.
+/-- The `SyscallInstrs` row as a bundled circuit — SP1's ECALL table, all thirteen inline arms.
 
-Reaching this took finding the mistake: `circuit_norm` normalises *constraint content*, and asking
-it "which channels does this row touch" makes it unfold every composed circuit's semantics. The
-structural lemmas answer the same question by induction on the operation list, and
-`shallowInteractions_subcircuit` says a composed subcircuit contributes nothing shallow — so the
-arms, readers and gadgets drop out for free.
-
-The second component (every shallow channel is declared) also goes through this way. The third
-still has two open cases out of twenty-two: the off-gate `Requirements` of the Program pull and of
-one byte pull, where `off_gate_vacuous` does not match after the targeted `Expression.eval`
-rewrite. The gate there is `-is_real` under an `eval`, and the shapes need reconciling by hand
-rather than by simp set — that is the whole of what stands between this file and the bundle. -/
+`ProverAssumptions` is the row contract; `Spec` is the row's meaning. `memoryChannel` is the one bus
+whose guarantee the row *requires* rather than supplies: the three register accesses pull a prior
+value the memory argument owns. -/
+def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  main
+  elaborated
+  Assumptions := fun _ _ => True
+  Spec := fun input _ _ => Spec input
+  ProverAssumptions := fun input _ _ => RowContract input
+  ProverSpec := fun _ _ _ => True
+  soundness := soundness
+  completeness := completeness
+  channelsWithRequirements := [memoryChannel.toRaw]
+  requirementsChannelsLawful := requirementsLawful
 
 
 end SP1Clean.SyscallInstrsChip

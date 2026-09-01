@@ -86,6 +86,7 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.SubwChip.circuit
 #print axioms SP1Clean.SyscallInstrsChip.soundness
 #print axioms SP1Clean.SyscallInstrsChip.completeness
+#print axioms SP1Clean.SyscallInstrsChip.circuit
 #print axioms SP1Clean.UTypeChip.soundness
 #print axioms SP1Clean.UTypeChip.completeness
 #print axioms SP1Clean.UTypeChip.circuit

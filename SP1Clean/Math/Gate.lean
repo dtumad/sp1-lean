@@ -28,6 +28,14 @@ lemma off_gate_vacuous {x : ZMod p} (h : x = 0 ∨ x = 1) {P : Prop}
   · exact absurd h h0
   · exact absurd (by rw [h]) h1
 
+/-- The negated-multiplicity form of `off_gate_vacuous`. Clean's `ChannelInteraction.Requirements`
+states **both** hypotheses about the interaction's own multiplicity, so a *pull* — multiplicity
+`-x` — hands over `¬-x = -1` and `¬-x = 0`, not the mixed pair above. Same vacuity, one less
+rewrite at each of the two dozen call sites on a wide row. -/
+lemma off_gate_vacuous_neg {x : ZMod p} (h : x = 0 ∨ x = 1) {P : Prop}
+    (h1 : ¬-x = -1) (h0 : ¬-x = 0) : P :=
+  off_gate_vacuous h h1 fun hz => h0 (by rw [hz, neg_zero])
+
 /-- Distinct field elements have distinct `val`s. -/
 lemma val_ne [NeZero p] {x y : ZMod p} (h : x ≠ y) : x.val ≠ y.val := fun hv =>
   h (by rw [← ZMod.natCast_zmod_val x, ← ZMod.natCast_zmod_val y, hv])
