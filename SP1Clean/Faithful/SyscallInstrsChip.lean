@@ -1048,4 +1048,171 @@ theorem registerAccessColsInteractions (input : Var Readers.RegisterAccessCols.I
   simp only [Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main, circuit_norm,
     FormalAssertion.toSubcircuit_interactions]
 
+/-! ## The row's traffic, one bus at a time
+
+`nativeAccesses` reads the row bus by bus, so these four lists plus the native-only tail are what it
+is built from. Each follows from the block decomposition by filtering, which is why the channel
+distinctness matrix in `Model/Channels.lean` had to grow the three newer buses first. -/
+
+/-- The State edge: pull `(clk, pc)`, push `(clk + 264, next_pc)`. -/
+theorem syscallInstrsInteractionsWith_state (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    ((SyscallInstrsChip.main r).operations offset).interactionsWith (stateChannel (p := p)).toRaw =
+    [(stateChannel.pulledIf r.is_real
+        (Readers.CPUState.currentMsg ⟨r.state, r.next_pc, 264, r.is_real⟩)).toRaw,
+     (stateChannel.pushedIf r.is_real
+        (Readers.CPUState.nextMsg ⟨r.state, r.next_pc, 264, r.is_real⟩)).toRaw] := by
+  simp only [Operations.interactionsWith, syscallInstrsInteractionBlocks, isZeroInteractions,
+    pcArmInteractions, writeArmInteractions, dispatchArmInteractions, commitArmInteractions,
+    u16toU8SafeInteractions, u16CompareInteractions, fieldBoundArmInteractions,
+    cpuStateInteractions, registerAccessColsInteractions, registerAccessTimestampInteractions,
+    ChannelInteraction.toRaw_channel,
+    List.filter_cons, List.filter_nil, List.append_nil, List.nil_append,
+    List.cons_append, decide_eq_true_eq, if_true, if_false,
+    Channels.byteChannel_eq_stateChannel_false,
+    Channels.memoryChannel_eq_stateChannel_false,
+    Channels.programChannel_eq_stateChannel_false,
+    Channels.exitChannel_eq_stateChannel_false,
+    Channels.syscallChannel_eq_stateChannel_false,
+    Channels.publicValuesChannel_eq_stateChannel_false]
+
+/-- The single committed `ECALL` fetch. -/
+theorem syscallInstrsInteractionsWith_program (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    ((SyscallInstrsChip.main r).operations offset).interactionsWith (programChannel (p := p)).toRaw =
+    [
+      ({ mult := -r.is_real, msg := programMsg r,
+         assumeGuarantees := true } :
+        ChannelInteraction (programChannel (p := p))).toRaw] := by
+  simp only [Operations.interactionsWith, syscallInstrsInteractionBlocks, isZeroInteractions,
+    pcArmInteractions, writeArmInteractions, dispatchArmInteractions, commitArmInteractions,
+    u16toU8SafeInteractions, u16CompareInteractions, fieldBoundArmInteractions,
+    cpuStateInteractions, registerAccessColsInteractions, registerAccessTimestampInteractions,
+    ChannelInteraction.toRaw_channel,
+    List.filter_cons, List.filter_nil, List.append_nil, List.nil_append,
+    List.cons_append, decide_eq_true_eq, if_true, if_false,
+    Channels.byteChannel_eq_programChannel_false,
+    Channels.stateChannel_eq_programChannel_false,
+    Channels.memoryChannel_eq_programChannel_false,
+    Channels.exitChannel_eq_programChannel_false,
+    Channels.syscallChannel_eq_programChannel_false,
+    Channels.publicValuesChannel_eq_programChannel_false]
+
+/-- The three register access pairs, read-prior pulled and read-back pushed. -/
+theorem syscallInstrsInteractionsWith_memory (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    ((SyscallInstrsChip.main r).operations offset).interactionsWith (memoryChannel (p := p)).toRaw =
+    [
+      ({ mult := -r.is_real, msg := memPullMsg r r.op_a_memory r.op_a,
+         assumeGuarantees := true } :
+        ChannelInteraction (memoryChannel (p := p))).toRaw,
+      ({ mult := r.is_real, msg := memPushMsg r r.op_a 4 r.op_a_value,
+         assumeGuarantees := false } :
+        ChannelInteraction (memoryChannel (p := p))).toRaw,
+      ({ mult := -r.is_real, msg := memPullMsg r r.op_b_memory r.op_b,
+         assumeGuarantees := true } :
+        ChannelInteraction (memoryChannel (p := p))).toRaw,
+      ({ mult := r.is_real, msg := memPushMsg r r.op_b 3 r.op_b_memory.prev_value,
+         assumeGuarantees := false } :
+        ChannelInteraction (memoryChannel (p := p))).toRaw,
+      ({ mult := -r.is_real, msg := memPullMsg r r.op_c_memory r.op_c,
+         assumeGuarantees := true } :
+        ChannelInteraction (memoryChannel (p := p))).toRaw,
+      ({ mult := r.is_real, msg := memPushMsg r r.op_c 2 r.op_c_memory.prev_value,
+         assumeGuarantees := false } :
+        ChannelInteraction (memoryChannel (p := p))).toRaw] := by
+  simp only [Operations.interactionsWith, syscallInstrsInteractionBlocks, isZeroInteractions,
+    pcArmInteractions, writeArmInteractions, dispatchArmInteractions, commitArmInteractions,
+    u16toU8SafeInteractions, u16CompareInteractions, fieldBoundArmInteractions,
+    cpuStateInteractions, registerAccessColsInteractions, registerAccessTimestampInteractions,
+    ChannelInteraction.toRaw_channel,
+    List.filter_cons, List.filter_nil, List.append_nil, List.nil_append,
+    List.cons_append, decide_eq_true_eq, if_true, if_false,
+    Channels.byteChannel_eq_memoryChannel_false,
+    Channels.stateChannel_eq_memoryChannel_false,
+    Channels.programChannel_eq_memoryChannel_false,
+    Channels.exitChannel_eq_memoryChannel_false,
+    Channels.syscallChannel_eq_memoryChannel_false,
+    Channels.publicValuesChannel_eq_memoryChannel_false]
+
+/-- Twenty byte checks: the four identifier-split bytes, the state reader's two clock bounds, two timestamp bounds per register, one field-element compare per bounded operand, the four `op_a_value` range checks, and the two digest byte pairs. -/
+theorem syscallInstrsInteractionsWith_byte (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    ((SyscallInstrsChip.main r).operations offset).interactionsWith (byteChannel (p := p)).toRaw =
+    [
+      (byteChannel.pulledIf r.is_real
+        (⟨3, 0, r.syscall_id_bytes.low_bytes[0],
+          (r.op_a_memory.prev_value[0] - r.syscall_id_bytes.low_bytes[0]) *
+            Expression.const (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨3, 0, r.syscall_id_bytes.low_bytes[1],
+          (r.op_a_memory.prev_value[1] - r.syscall_id_bytes.low_bytes[1]) *
+            Expression.const (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨3, 0, r.syscall_id_bytes.low_bytes[2],
+          (r.op_a_memory.prev_value[2] - r.syscall_id_bytes.low_bytes[2]) *
+            Expression.const (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨3, 0, r.syscall_id_bytes.low_bytes[3],
+          (r.op_a_memory.prev_value[3] - r.syscall_id_bytes.low_bytes[3]) *
+            Expression.const (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨6, (r.state.clk_0_16 - 1) * Expression.const (8 : ZMod p)⁻¹,
+          Expression.const ((13 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨3, 0, r.state.clk_16_24, 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨6, r.op_a_memory.access_timestamp.diff_low_limb, Expression.const ((16 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨3, 0,
+          (clkLowVar r + 4 - r.op_a_memory.access_timestamp.prev_low - 1 -
+            r.op_a_memory.access_timestamp.diff_low_limb) * Expression.const (65536 : ZMod p)⁻¹, 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨6, r.op_b_memory.access_timestamp.diff_low_limb, Expression.const ((16 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨3, 0,
+          (clkLowVar r + 3 - r.op_b_memory.access_timestamp.prev_low - 1 -
+            r.op_b_memory.access_timestamp.diff_low_limb) * Expression.const (65536 : ZMod p)⁻¹, 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨6, r.op_c_memory.access_timestamp.diff_low_limb, Expression.const ((16 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_real
+        (⟨3, 0,
+          (clkLowVar r + 2 - r.op_c_memory.access_timestamp.prev_low - 1 -
+            r.op_c_memory.access_timestamp.diff_low_limb) * Expression.const (65536 : ZMod p)⁻¹, 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_halt
+        (⟨6, r.op_b_memory.prev_value[1] - Expression.const ((fieldLimbBound : ℕ) : ZMod p) +
+          r.op_b_cmp.bit * 65536, Expression.const ((16 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      (byteChannel.pulledIf r.is_commit_deferred.result
+        (⟨6, r.op_c_memory.prev_value[1] - Expression.const ((fieldLimbBound : ℕ) : ZMod p) +
+          r.op_c_cmp.bit * 65536, Expression.const ((16 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))).toRaw,
+      ({ mult := -r.is_real, msg := (⟨6, r.op_a_value[0], natConst 16, 0⟩ :
+          ByteRow (Expression (ZMod p))), assumeGuarantees := true } :
+        ChannelInteraction (byteChannel (p := p))).toRaw,
+      ({ mult := -r.is_real, msg := (⟨6, r.op_a_value[1], natConst 16, 0⟩ :
+          ByteRow (Expression (ZMod p))), assumeGuarantees := true } :
+        ChannelInteraction (byteChannel (p := p))).toRaw,
+      ({ mult := -r.is_real, msg := (⟨6, r.op_a_value[2], natConst 16, 0⟩ :
+          ByteRow (Expression (ZMod p))), assumeGuarantees := true } :
+        ChannelInteraction (byteChannel (p := p))).toRaw,
+      ({ mult := -r.is_real, msg := (⟨6, r.op_a_value[3], natConst 16, 0⟩ :
+          ByteRow (Expression (ZMod p))), assumeGuarantees := true } :
+        ChannelInteraction (byteChannel (p := p))).toRaw,
+      ({ mult := -r.is_commit.result,
+         msg := (⟨3, 0, r.digest_word[0], r.digest_word[1]⟩ :
+           ByteRow (Expression (ZMod p))), assumeGuarantees := true } :
+        ChannelInteraction (byteChannel (p := p))).toRaw,
+      ({ mult := -r.is_commit.result,
+         msg := (⟨3, 0, r.digest_word[2], r.digest_word[3]⟩ :
+           ByteRow (Expression (ZMod p))), assumeGuarantees := true } :
+        ChannelInteraction (byteChannel (p := p))).toRaw] := by
+  simp only [Operations.interactionsWith, syscallInstrsInteractionBlocks, isZeroInteractions,
+    pcArmInteractions, writeArmInteractions, dispatchArmInteractions, commitArmInteractions,
+    u16toU8SafeInteractions, u16CompareInteractions, fieldBoundArmInteractions,
+    cpuStateInteractions, registerAccessColsInteractions, registerAccessTimestampInteractions,
+    ChannelInteraction.toRaw_channel,
+    List.filter_cons, List.filter_nil, List.append_nil, List.nil_append,
+    List.cons_append, decide_eq_true_eq, if_true, if_false,
+    Channels.stateChannel_eq_byteChannel_false,
+    Channels.memoryChannel_eq_byteChannel_false,
+    Channels.programChannel_eq_byteChannel_false,
+    Channels.exitChannel_eq_byteChannel_false,
+    Channels.syscallChannel_eq_byteChannel_false,
+    Channels.publicValuesChannel_eq_byteChannel_false]
+
 end SP1Clean.Faithful

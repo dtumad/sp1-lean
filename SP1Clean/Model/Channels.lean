@@ -266,6 +266,98 @@ private lemma rawChannel_eq_false_of_name_ne {rc1 rc2 : RawChannel (ZMod p)}
   rawChannel_eq_false_of_name_ne (by
     simp only [Channel.toRaw_name, memoryChannel, exitChannel]; decide)
 
+-- The two native-only buses and SP1's syscall bus against every other channel: the same
+-- pre-instantiated shape, so a whole-chip `interactionsWith` filter reduces without
+-- reopening any channel record.
+@[circuit_norm] lemma syscallChannel_eq_byteChannel_false :
+    ((syscallChannel (p := p)).toRaw = (byteChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, syscallChannel, byteChannel]; decide)
+@[circuit_norm] lemma byteChannel_eq_syscallChannel_false :
+    ((byteChannel (p := p)).toRaw = (syscallChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, byteChannel, syscallChannel]; decide)
+@[circuit_norm] lemma syscallChannel_eq_stateChannel_false :
+    ((syscallChannel (p := p)).toRaw = (stateChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, syscallChannel, stateChannel]; decide)
+@[circuit_norm] lemma stateChannel_eq_syscallChannel_false :
+    ((stateChannel (p := p)).toRaw = (syscallChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, stateChannel, syscallChannel]; decide)
+@[circuit_norm] lemma syscallChannel_eq_memoryChannel_false :
+    ((syscallChannel (p := p)).toRaw = (memoryChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, syscallChannel, memoryChannel]; decide)
+@[circuit_norm] lemma memoryChannel_eq_syscallChannel_false :
+    ((memoryChannel (p := p)).toRaw = (syscallChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, memoryChannel, syscallChannel]; decide)
+@[circuit_norm] lemma syscallChannel_eq_programChannel_false :
+    ((syscallChannel (p := p)).toRaw = (programChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, syscallChannel, programChannel]; decide)
+@[circuit_norm] lemma programChannel_eq_syscallChannel_false :
+    ((programChannel (p := p)).toRaw = (syscallChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, programChannel, syscallChannel]; decide)
+@[circuit_norm] lemma syscallChannel_eq_exitChannel_false :
+    ((syscallChannel (p := p)).toRaw = (exitChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, syscallChannel, exitChannel]; decide)
+@[circuit_norm] lemma exitChannel_eq_syscallChannel_false :
+    ((exitChannel (p := p)).toRaw = (syscallChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, exitChannel, syscallChannel]; decide)
+@[circuit_norm] lemma syscallChannel_eq_publicValuesChannel_false :
+    ((syscallChannel (p := p)).toRaw = (publicValuesChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, syscallChannel, publicValuesChannel]; decide)
+@[circuit_norm] lemma publicValuesChannel_eq_syscallChannel_false :
+    ((publicValuesChannel (p := p)).toRaw = (syscallChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, publicValuesChannel, syscallChannel]; decide)
+@[circuit_norm] lemma publicValuesChannel_eq_byteChannel_false :
+    ((publicValuesChannel (p := p)).toRaw = (byteChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, publicValuesChannel, byteChannel]; decide)
+@[circuit_norm] lemma byteChannel_eq_publicValuesChannel_false :
+    ((byteChannel (p := p)).toRaw = (publicValuesChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, byteChannel, publicValuesChannel]; decide)
+@[circuit_norm] lemma publicValuesChannel_eq_stateChannel_false :
+    ((publicValuesChannel (p := p)).toRaw = (stateChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, publicValuesChannel, stateChannel]; decide)
+@[circuit_norm] lemma stateChannel_eq_publicValuesChannel_false :
+    ((stateChannel (p := p)).toRaw = (publicValuesChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, stateChannel, publicValuesChannel]; decide)
+@[circuit_norm] lemma publicValuesChannel_eq_memoryChannel_false :
+    ((publicValuesChannel (p := p)).toRaw = (memoryChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, publicValuesChannel, memoryChannel]; decide)
+@[circuit_norm] lemma memoryChannel_eq_publicValuesChannel_false :
+    ((memoryChannel (p := p)).toRaw = (publicValuesChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, memoryChannel, publicValuesChannel]; decide)
+@[circuit_norm] lemma publicValuesChannel_eq_programChannel_false :
+    ((publicValuesChannel (p := p)).toRaw = (programChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, publicValuesChannel, programChannel]; decide)
+@[circuit_norm] lemma programChannel_eq_publicValuesChannel_false :
+    ((programChannel (p := p)).toRaw = (publicValuesChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, programChannel, publicValuesChannel]; decide)
+@[circuit_norm] lemma publicValuesChannel_eq_exitChannel_false :
+    ((publicValuesChannel (p := p)).toRaw = (exitChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, publicValuesChannel, exitChannel]; decide)
+@[circuit_norm] lemma exitChannel_eq_publicValuesChannel_false :
+    ((exitChannel (p := p)).toRaw = (publicValuesChannel (p := p)).toRaw) = False :=
+  rawChannel_eq_false_of_name_ne (by
+    simp only [Channel.toRaw_name, exitChannel, publicValuesChannel]; decide)
+
 -- Reusable disequalities for the State exposure proofs.  Keeping these once at the channel boundary
 -- avoids every chip reopening the `RawChannel` record merely to filter its non-State interactions.
 lemma byteChannel_toRaw_ne_stateChannel :
