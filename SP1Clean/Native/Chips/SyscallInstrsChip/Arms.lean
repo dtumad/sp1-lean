@@ -114,4 +114,36 @@ set_option linter.unusedSectionVars false in
 
 end CommitArm
 
+namespace WriteArm
+
+/-- The `t0` write arms: `ENTER_UNCONSTRAINED` zeroes it, `HINT_LEN` leaves it free, everything
+else leaves it unchanged; and the `x0` rule, vacuous on a live syscall row but still asserted. -/
+def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
+  assertZero (input.is_real * input.op_a_0)
+  assertZero (input.op_a_0 * input.op_a_value[0])
+  assertZero (input.op_a_0 * input.op_a_value[1])
+  assertZero (input.op_a_0 * input.op_a_value[2])
+  assertZero (input.op_a_0 * input.op_a_value[3])
+  assertZero (input.is_real * (input.is_enter_unconstrained * input.op_a_value[0]))
+  assertZero (input.is_real * (input.is_enter_unconstrained * input.op_a_value[1]))
+  assertZero (input.is_real * (input.is_enter_unconstrained * input.op_a_value[2]))
+  assertZero (input.is_real * (input.is_enter_unconstrained * input.op_a_value[3]))
+  assertZero (input.is_real * ((input.is_enter_unconstrained + input.is_hint_len -
+    (1 : Expression (ZMod p))) * (input.op_a_value[0] - input.op_a_prev[0])))
+  assertZero (input.is_real * ((input.is_enter_unconstrained + input.is_hint_len -
+    (1 : Expression (ZMod p))) * (input.op_a_value[1] - input.op_a_prev[1])))
+  assertZero (input.is_real * ((input.is_enter_unconstrained + input.is_hint_len -
+    (1 : Expression (ZMod p))) * (input.op_a_value[2] - input.op_a_prev[2])))
+  assertZero (input.is_real * ((input.is_enter_unconstrained + input.is_hint_len -
+    (1 : Expression (ZMod p))) * (input.op_a_value[3] - input.op_a_prev[3])))
+
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+    (elaborated (p := p)).localLength x = 0 := rfl
+
+end WriteArm
+
 end SP1Clean.SyscallInstrsChip

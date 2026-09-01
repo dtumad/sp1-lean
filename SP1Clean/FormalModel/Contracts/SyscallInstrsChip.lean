@@ -384,4 +384,37 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
 
 end CommitArm
 
+namespace WriteArm
+
+/-- The columns the `t0` write arms constrain. -/
+structure Inputs (F : Type) where
+  op_a_prev : Word F
+  op_a_value : Word F
+  op_a_0 : F
+  is_enter_unconstrained : F
+  is_hint_len : F
+  is_real : F
+deriving ProvableStruct
+
+/-- `ENTER_UNCONSTRAINED` and `HINT_LEN` are boolean and mutually exclusive, and the `x0` flag is
+boolean (the Program fetch's `RowSpec` carries it). -/
+def Assumptions (r : Inputs (ZMod p)) : Prop :=
+  (r.is_real = 0 ∨ r.is_real = 1) ∧
+  (r.op_a_0 = 0 ∨ r.op_a_0 = 1) ∧
+  (r.is_enter_unconstrained = 0 ∨ r.is_enter_unconstrained = 1) ∧
+  (r.is_enter_unconstrained + r.is_hint_len = 0 ∨
+    r.is_enter_unconstrained + r.is_hint_len = 1)
+
+/-- `ENTER_UNCONSTRAINED` zeroes `t0`; `HINT_LEN` leaves it free — the oracled hint length, which
+is why no arm determines it there; every other arm leaves it unchanged. A syscall row never
+targets `x0`, so the x0 zeroing is vacuous on a live row but still asserted. -/
+def Spec (r : Inputs (ZMod p)) : Prop :=
+  (r.is_real = 1 → r.op_a_0 = 0) ∧
+  (r.op_a_0 = 1 → ∀ i : Fin 4, r.op_a_value[i] = 0) ∧
+  (r.is_real = 1 → r.is_enter_unconstrained = 1 → ∀ i : Fin 4, r.op_a_value[i] = 0) ∧
+  (r.is_real = 1 → r.is_enter_unconstrained + r.is_hint_len = 0 →
+    ∀ i : Fin 4, r.op_a_value[i] = r.op_a_prev[i])
+
+end WriteArm
+
 end SP1Clean.SyscallInstrsChip

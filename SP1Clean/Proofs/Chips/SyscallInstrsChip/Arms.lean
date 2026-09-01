@@ -27,6 +27,12 @@ private lemma one_sub_bool {x : ZMod p}
   rcases hx with h | h <;> rw [h] <;> simp
 
 omit [Fact (2 ^ 17 < p)] in
+omit [Fact (2 ^ 17 < p)] in
+private lemma gated_of_cases {x y : ZMod p}
+    (h : x = 0 ∨ y = 0) : x * y = 0 := by
+  rcases h with h | h <;> rw [h] <;> ring
+
+omit [Fact (2 ^ 17 < p)] in
 private lemma eq_zero_of_one_sub {x : ZMod p}
     (h : (1 : ZMod p) - x = 1) : x = 0 := by linear_combination -h
 
@@ -223,5 +229,94 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     completeness := completeness }
 
 end CommitArm
+
+namespace WriteArm
+
+omit [Fact (2 ^ 17 < p)] in
+theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
+  circuit_proof_start
+  obtain ⟨h_rbin, h_a0bin, h_ebin, h_sumbin⟩ := h_assumptions
+  have eap : ∀ i (hi : i < 4),
+      Expression.eval env input_var_op_a_prev[i] = input_op_a_prev[i] := by
+    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
+  have eav : ∀ i (hi : i < 4),
+      Expression.eval env input_var_op_a_value[i] = input_op_a_value[i] := by
+    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
+  simp only [circuit_norm, eap, eav] at h_holds
+  obtain ⟨hz, z0, z1, z2, z3, e0, e1, e2, e3, u0, u1, u2, u3⟩ := h_holds
+  have ax : ∀ (i : Fin 4), input_op_a_0 = 1 → input_op_a_value[i] = 0 := by
+    intro i h1
+    fin_cases i
+    · rw [h1, one_mul] at z0; exact z0
+    · rw [h1, one_mul] at z1; exact z1
+    · rw [h1, one_mul] at z2; exact z2
+    · rw [h1, one_mul] at z3; exact z3
+  have ae : ∀ (i : Fin 4), input_is_real = 1 → input_is_enter_unconstrained = 1 →
+      input_op_a_value[i] = 0 := by
+    intro i hr he
+    fin_cases i
+    · rw [hr, one_mul, he, one_mul] at e0; exact e0
+    · rw [hr, one_mul, he, one_mul] at e1; exact e1
+    · rw [hr, one_mul, he, one_mul] at e2; exact e2
+    · rw [hr, one_mul, he, one_mul] at e3; exact e3
+  have au : ∀ (i : Fin 4), input_is_real = 1 →
+      input_is_enter_unconstrained + input_is_hint_len = 0 →
+      input_op_a_value[i] = input_op_a_prev[i] := by
+    intro i hr hs
+    fin_cases i
+    · rw [hr, one_mul, hs] at u0; linear_combination -u0
+    · rw [hr, one_mul, hs] at u1; linear_combination -u1
+    · rw [hr, one_mul, hs] at u2; linear_combination -u2
+    · rw [hr, one_mul, hs] at u3; linear_combination -u3
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro hr; rw [hr, one_mul] at hz; exact hz
+  · intro hzo i; exact ax i hzo
+  · intro hr he i; exact ae i hr he
+  · intro hr hs i; exact au i hr hs
+
+omit [Fact (2 ^ 17 < p)] in
+theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
+  circuit_proof_start
+  obtain ⟨h_rbin, h_a0bin, h_ebin, h_sumbin⟩ := h_assumptions
+  obtain ⟨h_real0, h_x0, h_enter, h_unch⟩ := h_spec
+  have eap : ∀ i (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_op_a_prev[i] = input_op_a_prev[i] := by
+    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
+  have eav : ∀ i (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_op_a_value[i] = input_op_a_value[i] := by
+    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
+  simp only [circuit_norm, eap, eav]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact gate_zero h_rbin h_real0
+  · exact gate_zero h_a0bin (fun hz => h_x0 hz 0)
+  · exact gate_zero h_a0bin (fun hz => h_x0 hz 1)
+  · exact gate_zero h_a0bin (fun hz => h_x0 hz 2)
+  · exact gate_zero h_a0bin (fun hz => h_x0 hz 3)
+  · exact gate_zero h_rbin (fun hr => gate_zero h_ebin (fun he => h_enter hr he 0))
+  · exact gate_zero h_rbin (fun hr => gate_zero h_ebin (fun he => h_enter hr he 1))
+  · exact gate_zero h_rbin (fun hr => gate_zero h_ebin (fun he => h_enter hr he 2))
+  · exact gate_zero h_rbin (fun hr => gate_zero h_ebin (fun he => h_enter hr he 3))
+  · exact gate_zero h_rbin (fun hr => gated_of_cases (h_sumbin.elim
+      (fun h0 => Or.inr (sub_eq_zero_of_eq (h_unch hr h0 0)))
+      (fun h1 => Or.inl (sub_eq_zero_of_eq h1))))
+  · exact gate_zero h_rbin (fun hr => gated_of_cases (h_sumbin.elim
+      (fun h0 => Or.inr (sub_eq_zero_of_eq (h_unch hr h0 1)))
+      (fun h1 => Or.inl (sub_eq_zero_of_eq h1))))
+  · exact gate_zero h_rbin (fun hr => gated_of_cases (h_sumbin.elim
+      (fun h0 => Or.inr (sub_eq_zero_of_eq (h_unch hr h0 2)))
+      (fun h1 => Or.inl (sub_eq_zero_of_eq h1))))
+  · exact gate_zero h_rbin (fun hr => gated_of_cases (h_sumbin.elim
+      (fun h0 => Or.inr (sub_eq_zero_of_eq (h_unch hr h0 3)))
+      (fun h1 => Or.inl (sub_eq_zero_of_eq h1))))
+
+/-- The `t0` write arms as a Clean-native `FormalAssertion`. -/
+def circuit : FormalAssertion (ZMod p) Inputs :=
+  { main, elaborated,
+    Assumptions := Assumptions,
+    Spec := Spec,
+    soundness := soundness,
+    completeness := completeness }
+
+end WriteArm
 
 end SP1Clean.SyscallInstrsChip
