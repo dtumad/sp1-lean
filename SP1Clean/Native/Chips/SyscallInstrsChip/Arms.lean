@@ -50,4 +50,68 @@ set_option linter.unusedSectionVars false in
 
 end PcArm
 
+namespace CommitArm
+
+/-- The bitmap's sum, as a circuit expression. -/
+@[circuit_norm] def bitSumVar (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
+  input.index_bits[0] + input.index_bits[1] + input.index_bits[2] + input.index_bits[3] +
+    input.index_bits[4] + input.index_bits[5] + input.index_bits[6] + input.index_bits[7]
+
+/-- The commit arms: a one-hot index bitmap whose set position is `a0`'s low limb, and `a1`
+carrying the selected digest word packed two bytes to a limb. -/
+def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
+  assertZero (input.is_real * (input.index_bits[0] *
+    (input.index_bits[0] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[1] *
+    (input.index_bits[1] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[2] *
+    (input.index_bits[2] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[3] *
+    (input.index_bits[3] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[4] *
+    (input.index_bits[4] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[5] *
+    (input.index_bits[5] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[6] *
+    (input.index_bits[6] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[7] *
+    (input.index_bits[7] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * ((input.is_commit + input.is_commit_deferred) *
+    (bitSumVar input - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (((1 : Expression (ZMod p)) -
+    (input.is_commit + input.is_commit_deferred)) * bitSumVar input))
+  assertZero (input.is_real * (input.index_bits[0] *
+    (input.op_b[0] - (0 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[1] *
+    (input.op_b[0] - (1 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[2] *
+    (input.op_b[0] - (2 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[3] *
+    (input.op_b[0] - (3 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[4] *
+    (input.op_b[0] - (4 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[5] *
+    (input.op_b[0] - (5 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[6] *
+    (input.op_b[0] - (6 : Expression (ZMod p)))))
+  assertZero (input.is_real * (input.index_bits[7] *
+    (input.op_b[0] - (7 : Expression (ZMod p)))))
+  assertZero (input.is_real * ((input.is_commit + input.is_commit_deferred) *
+    (input.op_b[1] + input.op_b[2] + input.op_b[3])))
+  assertZero (input.is_real * (input.is_commit *
+    ((input.digest_word[0] + input.digest_word[1] * (256 : Expression (ZMod p))) - input.op_c[0])))
+  assertZero (input.is_real * (input.is_commit *
+    ((input.digest_word[2] + input.digest_word[3] * (256 : Expression (ZMod p))) - input.op_c[1])))
+  assertZero (input.is_real * (input.is_commit * input.op_c[2]))
+  assertZero (input.is_real * (input.is_commit * input.op_c[3]))
+
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+    (elaborated (p := p)).localLength x = 0 := rfl
+
+end CommitArm
+
 end SP1Clean.SyscallInstrsChip

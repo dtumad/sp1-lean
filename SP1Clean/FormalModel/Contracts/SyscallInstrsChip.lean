@@ -340,4 +340,48 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
 
 end PcArm
 
+namespace CommitArm
+
+/-- The columns the commit arms constrain: the one-hot digest-index bitmap, the cached digest
+word, the two operands, and the two commit selectors. -/
+structure Inputs (F : Type) where
+  index_bits : Vector F 8
+  digest_word : Vector F 4
+  op_b : Word F
+  op_c : Word F
+  is_commit : F
+  is_commit_deferred : F
+  is_real : F
+deriving ProvableStruct
+
+/-- The two commit selectors are boolean and mutually exclusive — a row cannot be both `COMMIT`
+and `COMMIT_DEFERRED_PROOFS`, since one identifier cannot equal two codes. -/
+def Assumptions (r : Inputs (ZMod p)) : Prop :=
+  (r.is_real = 0 ∨ r.is_real = 1) ∧
+  (r.is_commit = 0 ∨ r.is_commit = 1) ∧
+  (r.is_commit_deferred = 0 ∨ r.is_commit_deferred = 1) ∧
+  (r.is_commit + r.is_commit_deferred = 0 ∨ r.is_commit + r.is_commit_deferred = 1)
+
+/-- The bitmap's sum, one on a commit arm and zero elsewhere. -/
+def bitSum (r : Inputs (ZMod p)) : ZMod p :=
+  r.index_bits[0] + r.index_bits[1] + r.index_bits[2] + r.index_bits[3] +
+    r.index_bits[4] + r.index_bits[5] + r.index_bits[6] + r.index_bits[7]
+
+/-- On a commit arm the bitmap is one-hot and its set position is `a0`'s low limb, so `a0` names a
+digest word index; `a1` then carries that word, packed two bytes to a limb. Off a commit arm no
+bit is set. -/
+def Spec (r : Inputs (ZMod p)) : Prop :=
+  (∀ i : Fin 8, r.is_real = 1 → r.index_bits[i] = 0 ∨ r.index_bits[i] = 1) ∧
+  (r.is_real = 1 → ∀ i : Fin 8, r.index_bits[i] = 1 → r.op_b[0] = (i.val : ℕ)) ∧
+  (r.is_real = 1 → r.is_commit + r.is_commit_deferred = 1 → bitSum r = 1) ∧
+  (r.is_real = 1 → r.is_commit + r.is_commit_deferred = 0 → bitSum r = 0) ∧
+  (r.is_real = 1 → r.is_commit + r.is_commit_deferred = 1 →
+    r.op_b[1] + r.op_b[2] + r.op_b[3] = 0) ∧
+  (r.is_real = 1 → r.is_commit = 1 →
+    r.op_c[0] = r.digest_word[0] + r.digest_word[1] * 256 ∧
+      r.op_c[1] = r.digest_word[2] + r.digest_word[3] * 256 ∧
+      r.op_c[2] = 0 ∧ r.op_c[3] = 0)
+
+end CommitArm
+
 end SP1Clean.SyscallInstrsChip
