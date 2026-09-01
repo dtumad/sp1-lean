@@ -1215,4 +1215,73 @@ theorem syscallInstrsInteractionsWith_byte (r : Var SyscallInstrsChip.Inputs (ZM
     Channels.syscallChannel_eq_byteChannel_false,
     Channels.publicValuesChannel_eq_byteChannel_false]
 
+/-- The three buses SP1's four-kind `LookupAccess` projection does not know: the `Exit` push, the
+seven `PublicValues` pulls, and the generic syscall send. The first eight are the native-only
+hand-off carrying `PublicValueBinding`; the syscall send is SP1's own, and lands here only because
+`InteractionKind` has no constructor for it yet. -/
+theorem syscallInstrsUnexpectedInteractions (r : Var SyscallInstrsChip.Inputs (ZMod p))
+    (offset : ℕ) :
+    unexpectedInteractions ((SyscallInstrsChip.main r).operations offset) =
+    [
+      ({ mult := r.is_halt, msg := exitMsg r,
+         assumeGuarantees := false } :
+        ChannelInteraction (exitChannel (p := p))).toRaw,
+      ({ mult := -r.is_commit.result, msg := ⟨natConst 145, 1⟩,
+         assumeGuarantees := true } :
+        ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+      ({ mult := -r.is_commit_deferred.result, msg := ⟨natConst 147, 1⟩,
+         assumeGuarantees := true } :
+        ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+      ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 0, r.digest_word[0]⟩,
+         assumeGuarantees := true } :
+        ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+      ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 1, r.digest_word[1]⟩,
+         assumeGuarantees := true } :
+        ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+      ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 2, r.digest_word[2]⟩,
+         assumeGuarantees := true } :
+        ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+      ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 3, r.digest_word[3]⟩,
+         assumeGuarantees := true } :
+        ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+      ({ mult := -(r.is_real * r.is_commit_deferred.result), msg := ⟨selectedIndex r 72 1, reduceWord r.op_c_memory.prev_value⟩,
+         assumeGuarantees := true } :
+        ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+      ({ mult := tableByteVar r, msg := syscallMsg r,
+         assumeGuarantees := false } :
+        ChannelInteraction (syscallChannel (p := p))).toRaw] := by
+  simp only [unexpectedInteractions, syscallInstrsInteractionBlocks, isZeroInteractions,
+    pcArmInteractions, writeArmInteractions, dispatchArmInteractions, commitArmInteractions,
+    u16toU8SafeInteractions, u16CompareInteractions, fieldBoundArmInteractions,
+    cpuStateInteractions, registerAccessColsInteractions, registerAccessTimestampInteractions,
+    ChannelInteraction.toRaw_channel,
+    List.filter_cons, List.filter_nil, List.append_nil, List.nil_append,
+    List.cons_append, if_true, if_false, ne_eq,
+    Channels.byteChannel_eq_stateChannel_false,
+    Channels.byteChannel_eq_memoryChannel_false,
+    Channels.byteChannel_eq_programChannel_false,
+    Channels.stateChannel_eq_byteChannel_false,
+    Channels.stateChannel_eq_memoryChannel_false,
+    Channels.stateChannel_eq_programChannel_false,
+    Channels.memoryChannel_eq_stateChannel_false,
+    Channels.memoryChannel_eq_byteChannel_false,
+    Channels.memoryChannel_eq_programChannel_false,
+    Channels.programChannel_eq_stateChannel_false,
+    Channels.programChannel_eq_byteChannel_false,
+    Channels.programChannel_eq_memoryChannel_false,
+    Channels.exitChannel_eq_stateChannel_false,
+    Channels.exitChannel_eq_byteChannel_false,
+    Channels.exitChannel_eq_memoryChannel_false,
+    Channels.exitChannel_eq_programChannel_false,
+    Channels.syscallChannel_eq_stateChannel_false,
+    Channels.syscallChannel_eq_byteChannel_false,
+    Channels.syscallChannel_eq_memoryChannel_false,
+    Channels.syscallChannel_eq_programChannel_false,
+    Channels.publicValuesChannel_eq_stateChannel_false,
+    Channels.publicValuesChannel_eq_byteChannel_false,
+    Channels.publicValuesChannel_eq_memoryChannel_false,
+    Channels.publicValuesChannel_eq_programChannel_false,
+    not_false_eq_true, not_true_eq_false, and_self, and_true, true_and, decide_true, decide_false,
+    Bool.false_eq_true]
+
 end SP1Clean.Faithful
