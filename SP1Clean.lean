@@ -517,6 +517,7 @@ import SP1Clean.Proofs.Chips.MemoryProviderChip
 import SP1Clean.Proofs.Chips.MemoryProviderEnsemble
 import SP1Clean.Proofs.Chips.MemoryFinalizeChip
 import SP1Clean.FormalModel.Contracts.SystemChips
+import SP1Clean.FormalModel.Contracts.SyscallChip
 import SP1Clean.Native.Chips.StateBumpChip.Defs
 import SP1Clean.Native.Chips.MemoryBumpChip.Defs
 import SP1Clean.Native.Chips.HaltChip.Defs
