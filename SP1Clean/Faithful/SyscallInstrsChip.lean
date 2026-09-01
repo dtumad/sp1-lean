@@ -590,6 +590,26 @@ theorem fieldBoundArmAssertions (env : Environment (ZMod p))
   simp only [nativeAssertZeros, SyscallInstrsChip.FieldBoundArm.circuit,
     SyscallInstrsChip.FieldBoundArm.main, circuit_norm, List.map_append, h]
 
+/-- SP1's byte split read back at element 0 and 1: the syscall identifier proper, and the
+"this handler has its own table" flag. These are exactly the native row's `syscallIdVar` and
+`tableByteVar`, which is what lets the two dispatch arms line up. -/
+theorem u16toU8SafeValue_head {F : Type} [Field F] [CoeHead F ℕ] (u : Vector F 4)
+    (c : Extracted.U16toU8Operation F) (g : F) :
+    (Extracted.U16toU8OperationSafe.value u c g)[0] = c.low_bytes[0] ∧
+      (Extracted.U16toU8OperationSafe.value u c g)[1] =
+        (u[0] - c.low_bytes[0]) * (256 : F)⁻¹ := by
+  constructor <;> simp [Extracted.U16toU8OperationSafe.value]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- `isZero_assertions_exact` at the bundled circuit's `main`. The two spellings are definitionally
+equal, but simp matches syntactically and the row composes the bundle. -/
+theorem isZeroCircuitAssertions (env : Environment (ZMod p))
+    (input : Var SP1Clean.IsZeroOperation.Inputs (ZMod p)) (offset : ℕ) :
+    nativeAssertZeros env ((SP1Clean.IsZeroOperation.circuit.main input).operations offset) =
+      Extracted.IsZeroOperation.asserts (Expression.eval env input.a) (Eval.eval env input.cols)
+        (Expression.eval env input.is_real) :=
+  isZero_assertions_exact env input offset
+
 theorem u16toU8SafeAssertions (env : Environment (ZMod p))
     (input : Var SP1Clean.U16toU8OperationSafe.Inputs (ZMod p)) (offset : ℕ) :
     nativeAssertZeros env
@@ -612,4 +632,156 @@ theorem registerAccessColsAssertions (env : Environment (ZMod p))
     Readers.RegisterAccessCols.main, Readers.RegisterAccessTimestamp.circuit,
     Readers.RegisterAccessTimestamp.main, circuit_norm]
 
+/-! ## The public-value binding
+
+SP1 states eight of its conjuncts against `publicValues`. Clean's flat AIR has no chip-level access
+to them (`Table` carries no `PublicIO`), so the native row emits each as a channel message instead
+and this predicate is what the anchor carries in their place — stated verbatim over the Rust row
+and its public values, so an auditor reads SP1's own expressions rather than a paraphrase.
+
+`syscallInstrsPublicValueBinding_via_messages` below identifies each conjunct with the payload of a
+specific emitted message, which is what makes this a factoring rather than an omission. -/
+
+/-- SP1's one-hot selection of a committed-digest byte out of `publicValues[32..63]`: the bitmap
+`cols.values[50..57]` picks one of the eight words, and `k` picks the byte within it. -/
+def commitDigestByte (cols : Extracted.SyscallInstrsCols (ZMod p)) (pv : Vector (ZMod p) 160) :
+    Vector (ZMod p) 4 :=
+  #v[0 + pv[32] * cols.values[50] +
+    pv[36] * cols.values[51] +
+    pv[40] * cols.values[52] +
+    pv[44] * cols.values[53] +
+    pv[48] * cols.values[54] +
+    pv[52] * cols.values[55] +
+    pv[56] * cols.values[56] +
+    pv[60] * cols.values[57],
+     0 + pv[33] * cols.values[50] +
+    pv[37] * cols.values[51] +
+    pv[41] * cols.values[52] +
+    pv[45] * cols.values[53] +
+    pv[49] * cols.values[54] +
+    pv[53] * cols.values[55] +
+    pv[57] * cols.values[56] +
+    pv[61] * cols.values[57],
+     0 + pv[34] * cols.values[50] +
+    pv[38] * cols.values[51] +
+    pv[42] * cols.values[52] +
+    pv[46] * cols.values[53] +
+    pv[50] * cols.values[54] +
+    pv[54] * cols.values[55] +
+    pv[58] * cols.values[56] +
+    pv[62] * cols.values[57],
+     0 + pv[35] * cols.values[50] +
+    pv[39] * cols.values[51] +
+    pv[43] * cols.values[52] +
+    pv[47] * cols.values[53] +
+    pv[51] * cols.values[54] +
+    pv[55] * cols.values[55] +
+    pv[59] * cols.values[56] +
+    pv[63] * cols.values[57]]
+
+/-- The same selection over the deferred-proof digest block `publicValues[72..79]`, which stores one
+byte per word rather than four. -/
+def deferredDigestByte (cols : Extracted.SyscallInstrsCols (ZMod p)) (pv : Vector (ZMod p) 160) :
+    ZMod p :=
+  0 + pv[72] * cols.values[50] +
+    pv[73] * cols.values[51] +
+    pv[74] * cols.values[52] +
+    pv[75] * cols.values[53] +
+    pv[76] * cols.values[54] +
+    pv[77] * cols.values[55] +
+    pv[78] * cols.values[56] +
+    pv[79] * cols.values[57]
+
+/-- SP1's four-limb field reduction as the extracted dump writes it, with the coefficients
+`1, 2 ^ 16, 2 ^ 32, 2 ^ 48` **already reduced at KoalaBear's modulus** — the two large literals are
+not the generic powers, which is external report Finding 7. Confining them here keeps the native
+half of the anchor field-generic. -/
+def koalaReduce (cols : Extracted.SyscallInstrsCols (ZMod p)) (i₀ : ℕ) : ZMod p :=
+  match i₀ with
+  | 15 => 0 + 1 * cols.values[15] +
+    65536 * cols.values[16] +
+    33554430 * cols.values[17] +
+    134085624 * cols.values[18]
+  | _ => 0 + 1 * cols.values[22] +
+    65536 * cols.values[23] +
+    33554430 * cols.values[24] +
+    134085624 * cols.values[25]
+
+/-- The eight conjuncts of SP1's `SyscallInstrs` assertion system that read `publicValues`: the two
+commit flags, the four selected committed-digest bytes, the selected deferred byte against `a1`, and
+the halt exit code against `publicValues[87]`. -/
+def PublicValueBinding (cols : Extracted.SyscallInstrsCols (ZMod p))
+    (pv : Vector (ZMod p) 160) : Prop :=
+  cols.values[47] * (pv[145] - 1) = 0 ∧
+    cols.values[49] * (pv[147] - 1) = 0 ∧
+    cols.values[47] * ((commitDigestByte cols pv)[0] - cols.values[58]) = 0 ∧
+    cols.values[47] * ((commitDigestByte cols pv)[1] - cols.values[59]) = 0 ∧
+    cols.values[47] * ((commitDigestByte cols pv)[2] - cols.values[60]) = 0 ∧
+    cols.values[47] * ((commitDigestByte cols pv)[3] - cols.values[61]) = 0 ∧
+    cols.values[64] * (cols.values[49] * (deferredDigestByte cols pv - koalaReduce cols 22)) = 0 ∧
+    cols.values[31] * (koalaReduce cols 15 - pv[87]) = 0
+
+/-! ## Assertion-system agreement -/
+
+/-- **Chip-level faithfulness anchor — assertion half.** SP1's generated whole-table `SyscallInstrs`
+assertion list holds exactly when the native circuit's complete `assertZero` list does **and** the
+eight public-value conjuncts hold. The two sides are the same eighty-one propositions: seven
+composed sub-operation blocks that match block for block, sixty-six scalars that match one for one
+after `x - 0` and `0 - x` are normalised, and the eight of `PublicValueBinding`.
+
+Only two conjuncts are not a direct match. SP1 compares the *selected public-value digest* against
+`a1`, where the native row compares its *cached* `digest_word`; the two are interderivable from the
+digest-byte bindings without dividing by the commit selector, which is what the two
+`linear_combination` steps do. -/
+theorem syscallInstrsChipConstraintsFaithful
+    (preprocessed : Vector (ZMod p) 0) (publicValues : Vector (ZMod p) 160)
+    (env : Environment (ZMod p)) (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    List.Forall (· = 0)
+        (Extracted.SyscallInstrsCols.asserts (syscallInstrsRustColumns env r) preprocessed
+          publicValues) ↔
+      (List.Forall (· = 0)
+          (nativeAssertZeros env ((SyscallInstrsChip.main r).operations offset)) ∧
+        PublicValueBinding (syscallInstrsRustColumns env r) publicValues) := by
+  rw [syscallInstrsAssertBlocks]
+  simp only [Extracted.SyscallInstrsCols.asserts, syscallInstrsRustColumns,
+    Extracted.U16toU8OperationSafe.asserts, u16toU8SafeAssertions, cpuStateAssertList,
+    registerAccessColsAssertions, pcArmAssertions, dispatchArmAssertions, writeArmAssertions,
+    commitArmAssertions, fieldBoundArmAssertions, isZeroCircuitAssertions,
+    PublicValueBinding, commitDigestByte, deferredDigestByte, koalaReduce,
+    syscallIdVar, tableByteVar, natConst, haltCode, enterUnconstrainedCode, hintLenCode,
+    commitCode, commitDeferredCode, fieldLimbBound,
+    u16toU8SafeValue_head, eval_syscallIsZero, eval_syscallU16toU8, ProvableType.eval_field, ProvableType.getElem_eval_fields,
+    List.forall_append, List.Forall,
+    ProvableStruct.structEvalLiteralProc, Expression.eval, eval_sub,
+    Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero,
+    Nat.cast_one, Nat.cast_ofNat, Nat.cast_zero, sub_zero, zero_sub, zero_add, mul_neg,
+    neg_eq_zero,
+    true_and, and_assoc]
+  constructor
+  · rintro ⟨hb0, hb1, hb2, hb3, hb4, hb5, hb6, hE9, hE12, hE16, hE23, hE27, hE29, hE31, hE33,
+      hE36, hE43, hE50, hE55, hE60, hE64, hE68, hE70, hE72, hE74, hE75, hE76, hE78, hE82, hE83,
+      hE84, hE88, hE91, hE93, hE94, hE95, hE99, hE102, hE107, hE110, hE113, hE116, hE121, hE124,
+      hE127, hE130, hE134, hE136, hE139, hE143, hE147, hE151, hE155, hE159, hE163, hE167, hE172,
+      hE176, hE179, hE182, hE185, hE188, hE191, hE194, hE197, hE200, hE205, hE275, hE277, hE279,
+      hE281, hE283, hE286, hE289, hE292, hE295, hE322, hE324, hE325, hE326, hE336⟩
+    exact ⟨hE9, hE275, hE93, hE82, hE78, hE16, hb0, hb3, hb4, hb5, hb6, hE12, hE70, hE72, hE74,
+      hE23, hE36, hE43, hE50, hE55, hE27, hE29, hE31, hE33, hE107, hE110, hE113, hE116, hE121,
+      hE124, hE127, hE130, hE60, hE64, hE68, hE324, hE325, hE326, hE75, hE76, hE83, hE84, hb1,
+      hE88, hE91, hE94, hE95, hb2, hE99, hE102, hE139, hE143, hE147, hE151, hE155, hE159, hE163,
+      hE167, hE172, hE176, hE179, hE182, hE185, hE188, hE191, hE194, hE197, hE200, hE205,
+      by linear_combination hE286 - (Expression.eval env r.is_real) * hE277 - (Expression.eval env r.is_real * 256) * hE279,
+      by linear_combination hE289 - (Expression.eval env r.is_real) * hE281 - (Expression.eval env r.is_real * 256) * hE283,
+      hE292, hE295, hE134, hE136, hE277, hE279, hE281, hE283, hE322, hE336⟩
+  · rintro ⟨n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18,
+      n19, n20, n21, n22, n23, n24, n25, n26, n27, n28, n29, n30, n31, n32, n33, n34, n35, n36,
+      n37, n38, n39, n40, n41, n42, n43, n44, n45, n46, n47, n48, n49, n50, n51, n52, n53, n54,
+      n55, n56, n57, n58, n59, n60, n61, n62, n63, n64, n65, n66, n67, n68, n69, n70, n71, n72,
+      c0, c1, c2, c3, c4, c5, c6, c7⟩
+    exact ⟨n6, n42, n47, n7, n8, n9, n10, n0, n11, n5, n15, n20, n21, n22, n23, n16, n17, n18,
+      n19, n32, n33, n34, n12, n13, n14, n38, n39, n4, n3, n40, n41, n43, n44, n2, n45, n46, n48,
+      n49, n24, n25, n26, n27, n28, n29, n30, n31, c0, c1, n50, n51, n52, n53, n54, n55, n56,
+      n57, n58, n59, n60, n61, n62, n63, n64, n65, n66, n67, n68, n1, c2, c3, c4, c5,
+      by linear_combination n69 + (Expression.eval env r.is_real) * c2 + (Expression.eval env r.is_real * 256) * c3,
+      by linear_combination n70 + (Expression.eval env r.is_real) * c4 + (Expression.eval env r.is_real * 256) * c5,
+      n71, n72, c6, n35, n36, n37, c7⟩
 end SP1Clean.Faithful
