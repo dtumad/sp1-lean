@@ -784,4 +784,149 @@ theorem syscallInstrsChipConstraintsFaithful
       by linear_combination n69 + (Expression.eval env r.is_real) * c2 + (Expression.eval env r.is_real * 256) * c3,
       by linear_combination n70 + (Expression.eval env r.is_real) * c4 + (Expression.eval env r.is_real * 256) * c5,
       n71, n72, c6, n35, n36, n37, c7⟩
+/-! ## The native interaction list, block by block
+
+The interaction counterpart of `syscallInstrsAssertBlocks`, proved the same structural way and for
+the same reason. Note the group SP1 does not have: the `Exit` push and the seven `PublicValues`
+pulls are the native-only hand-off that carries `PublicValueBinding`. The generic syscall send is
+*not* in that group — SP1 emits it too, and the native channel is named so that both project to the
+same `LookupAccess` key. -/
+
+/-- The row's complete emitted interaction list, split into its sixteen composed blocks and its own
+three groups: the Program fetch with the three register Memory pairs, the six byte checks, and the
+public-value hand-off followed by the generic syscall send. -/
+theorem syscallInstrsInteractionBlocks (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    Operations.interactions ((SyscallInstrsChip.main r).operations offset) =
+      Operations.interactions
+        ((SP1Clean.U16toU8OperationSafe.circuit.main
+          ⟨r.op_a_memory.prev_value, r.syscall_id_bytes, r.is_real⟩).operations offset) ++
+      Operations.interactions
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst haltCode, r.is_halt_zero, r.is_real⟩).operations offset) ++
+      Operations.interactions
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst enterUnconstrainedCode, r.is_enter_unconstrained,
+           r.is_real⟩).operations offset) ++
+      Operations.interactions
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst hintLenCode, r.is_hint_len, r.is_real⟩).operations offset) ++
+      Operations.interactions
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst commitCode, r.is_commit, r.is_real⟩).operations offset) ++
+      Operations.interactions
+        ((SP1Clean.IsZeroOperation.circuit.main
+          ⟨syscallIdVar r - natConst commitDeferredCode, r.is_commit_deferred, r.is_real⟩).operations offset) ++
+      Operations.interactions
+        ((Readers.CPUState.circuit.main ⟨r.state, r.next_pc, 264, r.is_real⟩).operations offset) ++
+      Operations.interactions
+        ((Readers.RegisterAccessCols.circuit.main ⟨r.op_a_memory, r.is_real, clkLowVar r + 4⟩).operations offset) ++
+      Operations.interactions
+        ((Readers.RegisterAccessCols.circuit.main ⟨r.op_b_memory, r.is_real, clkLowVar r + 3⟩).operations offset) ++
+      Operations.interactions
+        ((Readers.RegisterAccessCols.circuit.main ⟨r.op_c_memory, r.is_real, clkLowVar r + 2⟩).operations offset) ++
+      [({ mult := -r.is_real, msg := programMsg r,
+          assumeGuarantees := true } :
+         ChannelInteraction (programChannel (p := p))).toRaw,
+       ({ mult := -r.is_real, msg := memPullMsg r r.op_a_memory r.op_a,
+          assumeGuarantees := true } :
+         ChannelInteraction (memoryChannel (p := p))).toRaw,
+       ({ mult := r.is_real, msg := memPushMsg r r.op_a 4 r.op_a_value,
+          assumeGuarantees := false } :
+         ChannelInteraction (memoryChannel (p := p))).toRaw,
+       ({ mult := -r.is_real, msg := memPullMsg r r.op_b_memory r.op_b,
+          assumeGuarantees := true } :
+         ChannelInteraction (memoryChannel (p := p))).toRaw,
+       ({ mult := r.is_real, msg := memPushMsg r r.op_b 3 r.op_b_memory.prev_value,
+          assumeGuarantees := false } :
+         ChannelInteraction (memoryChannel (p := p))).toRaw,
+       ({ mult := -r.is_real, msg := memPullMsg r r.op_c_memory r.op_c,
+          assumeGuarantees := true } :
+         ChannelInteraction (memoryChannel (p := p))).toRaw,
+       ({ mult := r.is_real, msg := memPushMsg r r.op_c 2 r.op_c_memory.prev_value,
+          assumeGuarantees := false } :
+         ChannelInteraction (memoryChannel (p := p))).toRaw] ++
+      Operations.interactions
+        ((SyscallInstrsChip.WriteArm.circuit.main
+          ⟨r.op_a_memory.prev_value, r.op_a_value, r.op_a_0,
+           r.is_enter_unconstrained.result, r.is_hint_len.result, r.is_real⟩).operations offset) ++
+      Operations.interactions
+        ((SyscallInstrsChip.PcArm.circuit.main ⟨r.state.pc, r.next_pc, r.is_real, r.is_halt⟩).operations offset) ++
+      Operations.interactions
+        ((SyscallInstrsChip.DispatchArm.circuit.main
+          ⟨r.op_b_memory.prev_value, r.op_c_memory.prev_value, tableByteVar r⟩).operations offset) ++
+      Operations.interactions
+        ((SyscallInstrsChip.FieldBoundArm.circuit.main
+          ⟨r.op_b_memory.prev_value, r.op_b_cmp.bit, r.is_halt⟩).operations offset) ++
+      Operations.interactions
+        ((SyscallInstrsChip.FieldBoundArm.circuit.main
+          ⟨r.op_c_memory.prev_value, r.op_c_cmp.bit, r.is_commit_deferred.result⟩).operations offset) ++
+      Operations.interactions
+        ((SyscallInstrsChip.CommitArm.circuit.main
+          ⟨r.digest_index_bits, r.digest_word, r.op_b_memory.prev_value,
+           r.op_c_memory.prev_value, r.is_commit.result, r.is_commit_deferred.result,
+           r.is_real⟩).operations offset) ++
+      [({ mult := -r.is_real, msg := (⟨6, r.op_a_value[0], natConst 16, 0⟩ : ByteRow (Expression (ZMod p))),
+          assumeGuarantees := true } :
+         ChannelInteraction (byteChannel (p := p))).toRaw,
+       ({ mult := -r.is_real, msg := (⟨6, r.op_a_value[1], natConst 16, 0⟩ : ByteRow (Expression (ZMod p))),
+          assumeGuarantees := true } :
+         ChannelInteraction (byteChannel (p := p))).toRaw,
+       ({ mult := -r.is_real, msg := (⟨6, r.op_a_value[2], natConst 16, 0⟩ : ByteRow (Expression (ZMod p))),
+          assumeGuarantees := true } :
+         ChannelInteraction (byteChannel (p := p))).toRaw,
+       ({ mult := -r.is_real, msg := (⟨6, r.op_a_value[3], natConst 16, 0⟩ : ByteRow (Expression (ZMod p))),
+          assumeGuarantees := true } :
+         ChannelInteraction (byteChannel (p := p))).toRaw,
+       ({ mult := -r.is_commit.result, msg := (⟨3, 0, r.digest_word[0], r.digest_word[1]⟩ :
+            ByteRow (Expression (ZMod p))),
+          assumeGuarantees := true } :
+         ChannelInteraction (byteChannel (p := p))).toRaw,
+       ({ mult := -r.is_commit.result, msg := (⟨3, 0, r.digest_word[2], r.digest_word[3]⟩ :
+            ByteRow (Expression (ZMod p))),
+          assumeGuarantees := true } :
+         ChannelInteraction (byteChannel (p := p))).toRaw] ++
+      [({ mult := r.is_halt, msg := exitMsg r,
+          assumeGuarantees := false } :
+         ChannelInteraction (exitChannel (p := p))).toRaw,
+       ({ mult := -r.is_commit.result, msg := ⟨natConst 145, 1⟩,
+          assumeGuarantees := true } :
+         ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+       ({ mult := -r.is_commit_deferred.result, msg := ⟨natConst 147, 1⟩,
+          assumeGuarantees := true } :
+         ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+       ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 0, r.digest_word[0]⟩,
+          assumeGuarantees := true } :
+         ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+       ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 1, r.digest_word[1]⟩,
+          assumeGuarantees := true } :
+         ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+       ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 2, r.digest_word[2]⟩,
+          assumeGuarantees := true } :
+         ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+       ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 3, r.digest_word[3]⟩,
+          assumeGuarantees := true } :
+         ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+       ({ mult := -(r.is_real * r.is_commit_deferred.result), msg := ⟨selectedIndex r 72 1, reduceWord r.op_c_memory.prev_value⟩,
+          assumeGuarantees := true } :
+         ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+       ({ mult := tableByteVar r, msg := syscallMsg r,
+          assumeGuarantees := false } :
+         ChannelInteraction (syscallChannel (p := p))).toRaw] := by
+  simp only [SyscallInstrsChip.main, Circuit.operations, Circuit.bind_def,
+    assertZero, subcircuitWithAssertion, assertion, Channel.pullIf, Channel.pushIf,
+    Operations.interactions_assert,
+    Operations.interactions_interact, Operations.interactions_nil,
+    Operations.interactions_subcircuit,
+    FormalAssertion.toSubcircuit_interactions, GeneralFormalCircuit.toSubcircuit_interactions,
+    FormalAssertion.toSubcircuit_localLength, GeneralFormalCircuit.toSubcircuit_localLength,
+    Readers.CPUState.circuit_localLength, Readers.RegisterAccessCols.circuit_localLength,
+    SP1Clean.IsZeroOperation.circuit_localLength,
+    SyscallInstrsChip.PcArm.circuit_localLength,
+    SyscallInstrsChip.WriteArm.circuit_localLength,
+    SyscallInstrsChip.FieldBoundArm.circuit_localLength,
+    SyscallInstrsChip.DispatchArm.circuit_localLength,
+    SP1Clean.U16toU8OperationSafe.circuit_localLength,
+    Operations.localLength, Nat.add_zero,
+    List.append_assoc, List.cons_append, List.nil_append]
+
 end SP1Clean.Faithful

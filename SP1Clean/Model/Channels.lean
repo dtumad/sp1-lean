@@ -117,9 +117,16 @@ ensemble declares the channel with **no provider**: balance then forces every se
 byte 1 of the syscall id, SP1's "this handler has its own table" flag — to zero, which is exactly
 the statement that a supported shard uses only the syscalls `SyscallInstrs` handles inline.
 `Guarantees := True`: as with State and Exit, the content is the multiset fact, not a per-message
-predicate. -/
+predicate.
+
+**The name is SP1's own projection key, deliberately.** `Extracted.Interaction.toAccess` sends the
+generated `.raw .syscall` send to `"SP1Raw/" ++ AirInteractionKind.lookupName .syscall`; naming the
+native channel anything else would make the two project to different `LookupAccess` keys, and the
+whole-chip faithfulness anchor compares exactly those keys. Both sides therefore also share the
+`kindOf` fallback classification (`.State`) until `InteractionKind` gains a `Syscall` constructor —
+that is the same landmine on both sides, and it is fixed for both at once. -/
 def syscallChannel : Channel (ZMod p) SyscallMsg where
-  name := "SP1Syscall"
+  name := "SP1Raw/syscall"
   Guarantees _ _ := True
 
 /-- The public-values channel — the second native-only bus, and the general form of what
