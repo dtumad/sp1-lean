@@ -120,19 +120,168 @@ def ExitCodeValid (w : Word (ZMod p)) : Prop :=
   w[2] = 0 ∧ w[3] = 0 ∧
     (w[1].val < fieldLimbBound ∨ (w[1].val = fieldLimbBound ∧ w[0] = 0))
 
-/-- The syscall row's semantic contract.
+/-- Byte 0 of the syscall identifier — the code the arms dispatch on. -/
+def syscallId (r : Inputs (ZMod p)) : ZMod p := r.syscall_id_bytes.low_bytes[0]
 
-Ungated: the two selector booleanities SP1 asserts unconditionally, the `CPUState` clock-byte
-bounds at the syscall edge (`clk_inc = 264` — eight ticks for the instruction plus SP1's flat 256
-per syscall), and the three register-access timestamp bounds at access clocks `+4`/`+3`/`+2` for
-`t0`/`a0`/`a1`.
+/-- Byte 1 — SP1's "this handler has its own table" flag, and the multiplicity of the row's
+syscall-bus send. Balance against an unprovisioned channel forces it to zero. -/
+def tableByte (r : Inputs (ZMod p)) : ZMod p :=
+  (r.op_a_memory.prev_value[0] - r.syscall_id_bytes.low_bytes[0]) * (256 : ZMod p)⁻¹
 
-Gated on `is_halt` (which upstream already carries the `is_real` factor): the halt transition
-parks the machine at `Machine.haltPc`, and the exit-code word is a valid field element.
+/-- The row's five booleanity gates, all asserted ungated upstream so they hold on padding too. -/
+def GatesBoolean (r : Inputs (ZMod p)) : Prop :=
+  (r.is_real = 0 ∨ r.is_real = 1) ∧
+  (r.is_halt = 0 ∨ r.is_halt = 1) ∧
+  (tableByte r = 0 ∨ tableByte r = 1) ∧
+  (r.is_commit.result = 0 ∨ r.is_commit.result = 1) ∧
+  (r.is_commit_deferred.result = 0 ∨ r.is_commit_deferred.result = 1)
 
-The other four arms constrain columns this milestone leaves unconstrained; they are added with
-their own conjuncts, and the anchor in `Faithful/SyscallChip.lean` is what will show the row is
-complete against upstream. -/
+/-- **Arm selection.** Each `IsZeroOperation` result is the indicator of its canonical code, and
+`is_halt` is the HALT indicator already multiplied by `is_real` — upstream's `[31]`. A padding row
+selects nothing and dispatches nothing. -/
+def SelectorsValid (r : Inputs (ZMod p)) : Prop :=
+  _root_.SP1Clean.U16toU8OperationSafe.Spec
+    { u16_values := r.op_a_memory.prev_value, cols := r.syscall_id_bytes, is_real := r.is_real } ∧
+  (r.is_real = 1 →
+    r.is_halt_zero.result = (if syscallId r = (haltCode : ℕ) then 1 else 0) ∧
+    r.is_enter_unconstrained.result =
+      (if syscallId r = (enterUnconstrainedCode : ℕ) then 1 else 0) ∧
+    r.is_hint_len.result = (if syscallId r = (hintLenCode : ℕ) then 1 else 0) ∧
+    r.is_commit.result = (if syscallId r = (commitCode : ℕ) then 1 else 0) ∧
+    r.is_commit_deferred.result =
+      (if syscallId r = (commitDeferredCode : ℕ) then 1 else 0)) ∧
+  -- The inverse witnesses each `IsZeroOperation` needs on a non-matching code.
+  (r.is_real = 1 →
+    (syscallId r - (haltCode : ℕ) ≠ 0 →
+      r.is_halt_zero.inverse * (syscallId r - (haltCode : ℕ)) = 1) ∧
+    (syscallId r - (enterUnconstrainedCode : ℕ) ≠ 0 →
+      r.is_enter_unconstrained.inverse * (syscallId r - (enterUnconstrainedCode : ℕ)) = 1) ∧
+    (syscallId r - (hintLenCode : ℕ) ≠ 0 →
+      r.is_hint_len.inverse * (syscallId r - (hintLenCode : ℕ)) = 1) ∧
+    (syscallId r - (commitCode : ℕ) ≠ 0 →
+      r.is_commit.inverse * (syscallId r - (commitCode : ℕ)) = 1) ∧
+    (syscallId r - (commitDeferredCode : ℕ) ≠ 0 →
+      r.is_commit_deferred.inverse * (syscallId r - (commitDeferredCode : ℕ)) = 1)) ∧
+  -- The two valid-field-element comparisons, whose bits the arms below read.
+  U16CompareOperation.Spec
+    { a := r.op_b_memory.prev_value[1], b := ((fieldLimbBound : ℕ) : ZMod p),
+      cols := r.op_b_cmp, is_real := r.is_halt } ∧
+  U16CompareOperation.Spec
+    { a := r.op_c_memory.prev_value[1], b := ((fieldLimbBound : ℕ) : ZMod p),
+      cols := r.op_c_cmp, is_real := r.is_commit_deferred.result } ∧
+  r.is_halt = r.is_halt_zero.result * r.is_real ∧
+  (r.is_real = 0 →
+    tableByte r = 0 ∧ r.is_halt = 0 ∧ r.is_commit_deferred.result = 0)
+
+/-- **The program-counter arms.** HALT parks the machine at SP1's terminal `haltPc = (1, 0, 0)`;
+every other arm falls through to `pc + 4`. -/
+def PcArm (r : Inputs (ZMod p)) : Prop :=
+  (r.is_halt = 1 →
+    r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0) ∧
+  (r.is_real = 1 → r.is_halt = 0 →
+    r.next_pc[0] = r.state.pc[0] + 4 ∧ r.next_pc[1] = r.state.pc[1] ∧
+      r.next_pc[2] = r.state.pc[2])
+
+/-- **The `t0` write arms.** `ENTER_UNCONSTRAINED` zeroes `t0`; `HINT_LEN` leaves it free (the
+oracled hint length); every other arm leaves it unchanged. The written word is a valid `u64`
+either way — SP1's `slice_range_check_u16`, which is what lets the read-back be pushed. A syscall
+row never targets `x0`, so the x0 zeroing is vacuous on real rows but still asserted. -/
+def WriteArm (r : Inputs (ZMod p)) : Prop :=
+  Word.isU64 r.op_a_value ∧
+  (r.is_real = 1 → r.op_a_0 = 0) ∧
+  (r.is_enter_unconstrained.result = 0 ∨ r.is_enter_unconstrained.result = 1) ∧
+  (r.is_enter_unconstrained.result + r.is_hint_len.result = 0 ∨
+    r.is_enter_unconstrained.result + r.is_hint_len.result = 1) ∧
+  (r.op_a_0 = 1 → ∀ i : Fin 4, r.op_a_value[i] = 0) ∧
+  (r.is_real = 1 → r.is_enter_unconstrained.result = 1 → ∀ i : Fin 4, r.op_a_value[i] = 0) ∧
+  (r.is_real = 1 →
+    r.is_enter_unconstrained.result + r.is_hint_len.result = 0 →
+      ∀ i : Fin 4, r.op_a_value[i] = r.op_a_memory.prev_value[i]) ∧
+  (r.is_commit.result + r.is_commit_deferred.result = 0 ∨
+    r.is_commit.result + r.is_commit_deferred.result = 1)
+
+/-- **The generic dispatch arm.** A syscall whose handler has its own table is sent on the syscall
+bus, which carries only three operand limbs — so the fourth must vanish. -/
+def DispatchArm (r : Inputs (ZMod p)) : Prop :=
+  tableByte r = 1 →
+    r.op_b_memory.prev_value[3] = 0 ∧ r.op_c_memory.prev_value[3] = 0
+
+/-- **The commit arms.** The one-hot bitmap picks a digest word, its index is `a0`'s low limb (so
+`a0`'s other limbs vanish), and `a1` carries the selected word packed two bytes to a limb.
+`COMMIT_DEFERRED` instead bounds `a1` to a valid field element, exactly as HALT bounds `a0`. -/
+def CommitArm (r : Inputs (ZMod p)) : Prop :=
+  (∀ i : Fin 8, r.is_real = 1 →
+    r.digest_index_bits[i] = 0 ∨ r.digest_index_bits[i] = 1) ∧
+  (r.is_real = 1 →
+    ∀ i : Fin 8, r.digest_index_bits[i] = 1 → r.op_b_memory.prev_value[0] = (i.val : ℕ)) ∧
+  (r.is_real = 1 →
+    r.is_commit.result + r.is_commit_deferred.result = 1 →
+      r.digest_index_bits[0] + r.digest_index_bits[1] + r.digest_index_bits[2] +
+        r.digest_index_bits[3] + r.digest_index_bits[4] + r.digest_index_bits[5] +
+        r.digest_index_bits[6] + r.digest_index_bits[7] = 1) ∧
+  (r.is_real = 1 →
+    r.is_commit.result + r.is_commit_deferred.result = 0 →
+      r.digest_index_bits[0] + r.digest_index_bits[1] + r.digest_index_bits[2] +
+        r.digest_index_bits[3] + r.digest_index_bits[4] + r.digest_index_bits[5] +
+        r.digest_index_bits[6] + r.digest_index_bits[7] = 0) ∧
+  (r.is_real = 1 →
+    r.is_commit.result + r.is_commit_deferred.result = 1 →
+      r.op_b_memory.prev_value[1] + r.op_b_memory.prev_value[2] +
+        r.op_b_memory.prev_value[3] = 0) ∧
+  (r.is_real = 1 → r.is_commit.result = 1 →
+    r.op_c_memory.prev_value[0] = r.digest_word[0] + r.digest_word[1] * 256 ∧
+      r.op_c_memory.prev_value[1] = r.digest_word[2] + r.digest_word[3] * 256 ∧
+      r.op_c_memory.prev_value[2] = 0 ∧ r.op_c_memory.prev_value[3] = 0) ∧
+  (r.is_commit_deferred.result = 1 → ExitCodeValid r.op_c_memory.prev_value) ∧
+  (r.is_commit.result = 1 → ∀ i : Fin 4, r.digest_word[i].val < 256)
+
+/-- **The facts the row's pulls carry.** A consumer of the Program and Memory buses derives these
+from the provider; the prover, running completeness in the other direction, must supply them. They
+are ordinary well-formedness of the fetched instruction and of the three prior register records. -/
+def PulledFacts (r : Inputs (ZMod p)) : Prop :=
+  r.is_real = 1 →
+    r.op_a.val < 32 ∧
+    r.state.pc[0].val < 2 ^ 16 ∧ r.state.pc[1].val < 2 ^ 16 ∧ r.state.pc[2].val < 2 ^ 16 ∧
+    (r.op_a_0 = 0 ∨ r.op_a_0 = 1) ∧
+    Word.isU64 r.op_a_memory.prev_value ∧
+    r.op_a_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
+    Word.isU64 r.op_b_memory.prev_value ∧
+    r.op_b_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
+    Word.isU64 r.op_c_memory.prev_value ∧
+    r.op_c_memory.access_timestamp.prev_low.val < 2 ^ 24
+
+/-- **What an honest prover must supply**, and the row's full arm-by-arm contract: the gates, the
+reader blocks, arm selection, and one predicate per arm family. Every arm SP1 dispatches inline
+appears here, so an arm without a contract is a missing conjunct rather than a silent gap.
+
+This is the chip's `ProverAssumptions` — the completeness precondition — and it is deliberately
+*wider* than `Spec`, the soundness conclusion. Clean keeps the two apart on purpose: soundness
+reports what a consumer may rely on, while completeness must reconstruct every constraint the row
+emits, including the arm bookkeeping no consumer reads. `rowContract_toSpec` records that the
+former follows from the latter. -/
+def RowContract (r : Inputs (ZMod p)) : Prop :=
+  GatesBoolean r ∧
+  Readers.CPUState.Spec
+    { cols := r.state, next_pc := r.next_pc, clk_inc := 264, is_real := r.is_real } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_a_memory, is_real := r.is_real, clk_target := clkLow r + 4 } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_b_memory, is_real := r.is_real, clk_target := clkLow r + 3 } ∧
+  Readers.RegisterAccessCols.Spec
+    { cols := r.op_c_memory, is_real := r.is_real, clk_target := clkLow r + 2 } ∧
+  SelectorsValid r ∧
+  PcArm r ∧
+  WriteArm r ∧
+  DispatchArm r ∧
+  CommitArm r ∧
+  PulledFacts r ∧
+  (r.op_a_0 = 0 ∨ r.op_a_0 = 1) ∧
+  (r.is_halt = 1 → ExitCodeValid r.op_b_memory.prev_value)
+
+/-- **What a consumer may rely on.** The gates, the reader blocks at the syscall edge
+(`clk_inc = 264`, access clocks `+4`/`+3`/`+2`), and the halt arm — the transition to
+`Machine.haltPc` and the exit-code word's field-element bound. This is the soundness conclusion;
+the arm bookkeeping that no consumer reads stays in `RowContract`. -/
 def Spec (r : Inputs (ZMod p)) : Prop :=
   (r.is_real = 0 ∨ r.is_real = 1) ∧
   (r.is_halt = 0 ∨ r.is_halt = 1) ∧
@@ -147,5 +296,11 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
   (r.is_halt = 1 →
     (r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0) ∧
       ExitCodeValid r.op_b_memory.prev_value)
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The soundness conclusion follows from the prover's obligation, so the two never drift apart. -/
+theorem rowContract_toSpec {r : Inputs (ZMod p)} (h : RowContract r) : Spec r :=
+  ⟨h.1.1, h.1.2.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
+    fun hh => ⟨h.2.2.2.2.2.2.1.1 hh, h.2.2.2.2.2.2.2.2.2.2.2.2 hh⟩⟩
 
 end SP1Clean.SyscallChip

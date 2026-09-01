@@ -57,12 +57,12 @@ constraints. -/
   input.state.clk_0_16 + input.state.clk_16_24 * 65536
 
 /-- Byte 0 of the syscall identifier — the code the five selectors test. -/
-@[circuit_norm] def syscallId (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
+@[circuit_norm] def syscallIdVar (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
   input.syscall_id_bytes.low_bytes[0]
 
 /-- Byte 1 of the syscall identifier — SP1's "the handler of this system call has its own table"
 flag, and the multiplicity of the `syscallChannel` send. -/
-@[circuit_norm] def hasOwnTable (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
+@[circuit_norm] def tableByteVar (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
   (input.op_a_memory.prev_value[0] - input.syscall_id_bytes.low_bytes[0]) * (256 : ZMod p)⁻¹
 
 /-- A four-limb word's field reduction, `w0 + w1·2^16 + w2·2^32 + w3·2^48` — SP1's `b().reduce()`,
@@ -89,11 +89,11 @@ the prior word for a pure read, the written word for `t0`. -/
     MemoryMsg (Expression (ZMod p)) :=
   ⟨input.state.clk_high, clkLowVar input + off, idx, 0, 0, value⟩
 
-/-- The generic-syscall hand-off, sent at multiplicity `hasOwnTable`. Its payload is the shared
+/-- The generic-syscall hand-off, sent at multiplicity `tableByteVar`. Its payload is the shared
 `SyscallMsg`, the same carrier the exact v6.4.0 lists project: the clock pair, the identifier, and
 the low three limbs of each operand. -/
 @[circuit_norm] def syscallMsg (input : Var Inputs (ZMod p)) : SyscallMsg (Expression (ZMod p)) :=
-  ⟨input.state.clk_high, clkLowVar input, syscallId input,
+  ⟨input.state.clk_high, clkLowVar input, syscallIdVar input,
    #v[input.op_b_memory.prev_value[0], input.op_b_memory.prev_value[1],
       input.op_b_memory.prev_value[2]],
    #v[input.op_c_memory.prev_value[0], input.op_c_memory.prev_value[1],
@@ -122,7 +122,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   -- Shallow booleanity gates, so every off-gate pull discharges its `Requirements`.
   assertZero (input.is_real * (input.is_real - 1))
   assertZero (input.is_halt * (input.is_halt - 1))
-  assertZero (hasOwnTable input * (hasOwnTable input - 1))
+  assertZero (tableByteVar input * (tableByteVar input - 1))
   assertZero (input.is_commit.result * (input.is_commit.result - 1))
   assertZero (input.is_commit_deferred.result * (input.is_commit_deferred.result - 1))
 
@@ -130,19 +130,19 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion U16toU8OperationSafe.circuit
     ⟨input.op_a_memory.prev_value, input.syscall_id_bytes, input.is_real⟩
   assertion IsZeroOperation.circuit
-    ⟨syscallId input - natConst haltCode, input.is_halt_zero, input.is_real⟩
+    ⟨syscallIdVar input - natConst haltCode, input.is_halt_zero, input.is_real⟩
   assertion IsZeroOperation.circuit
-    ⟨syscallId input - natConst enterUnconstrainedCode, input.is_enter_unconstrained, input.is_real⟩
+    ⟨syscallIdVar input - natConst enterUnconstrainedCode, input.is_enter_unconstrained, input.is_real⟩
   assertion IsZeroOperation.circuit
-    ⟨syscallId input - natConst hintLenCode, input.is_hint_len, input.is_real⟩
+    ⟨syscallIdVar input - natConst hintLenCode, input.is_hint_len, input.is_real⟩
   assertion IsZeroOperation.circuit
-    ⟨syscallId input - natConst commitCode, input.is_commit, input.is_real⟩
+    ⟨syscallIdVar input - natConst commitCode, input.is_commit, input.is_real⟩
   assertion IsZeroOperation.circuit
-    ⟨syscallId input - natConst commitDeferredCode, input.is_commit_deferred, input.is_real⟩
+    ⟨syscallIdVar input - natConst commitDeferredCode, input.is_commit_deferred, input.is_real⟩
   -- `is_halt` carries the `is_real` factor already.
   assertZero (input.is_halt - input.is_halt_zero.result * input.is_real)
   -- Padding rows select nothing and dispatch nothing.
-  assertZero ((input.is_real - 1) * hasOwnTable input)
+  assertZero ((input.is_real - 1) * tableByteVar input)
   assertZero ((input.is_real - 1) * input.is_halt)
   assertZero ((input.is_real - 1) * input.is_commit_deferred.result)
 
@@ -181,8 +181,8 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertZero (input.is_real * ((natConst 1 - input.is_halt) * (input.next_pc[2] - input.state.pc[2])))
 
   -- A dispatched syscall carries only three operand limbs, so the fourth must vanish.
-  assertZero (hasOwnTable input * input.op_b_memory.prev_value[3])
-  assertZero (hasOwnTable input * input.op_c_memory.prev_value[3])
+  assertZero (tableByteVar input * input.op_b_memory.prev_value[3])
+  assertZero (tableByteVar input * input.op_c_memory.prev_value[3])
 
   -- HALT: park at `haltPc`, and pin `a0` to a valid field element.
   assertZero (input.is_halt * (input.next_pc[0] - 1))
@@ -283,7 +283,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     ⟨selectedIndex input 72 1, reduceWord input.op_c_memory.prev_value⟩
 
   -- The generic hand-off: multiplicity is the identifier's table byte.
-  syscallChannel.pushIf (hasOwnTable input) (syscallMsg input)
+  syscallChannel.pushIf (tableByteVar input) (syscallMsg input)
 
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   localLength _ := 0
