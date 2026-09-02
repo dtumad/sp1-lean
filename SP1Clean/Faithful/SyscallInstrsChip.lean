@@ -1435,4 +1435,36 @@ theorem syscallInstrsProgramAccesses (preprocessed : Vector (ZMod p) 0)
     congr 1
     exact congrArg signedVal (ProvableType.eval_field env r.is_real).symm
 
+/-- **Memory.** The three register access pairs, in the row's own order — `t0`, `a0`, `a1`, each a
+read-prior followed by a read-back. Same polarity flip as Program: SP1 sends the prior record where
+the native row pulls it. -/
+theorem syscallInstrsMemoryAccesses (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    (((SyscallInstrsChip.main r).operations offset).interactionsWith
+        memoryChannel.toRaw).map (AbstractInteraction.toAccess env)
+      = (((Extracted.SyscallInstrsCols.interactions (syscallInstrsRustColumns env r) preprocessed
+          publicValues).map Extracted.Interaction.toAccess).filter
+          (fun a => a.1 = InteractionKind.Memory)).map LookupAccessList.negMult := by
+  have hp2 : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  have hs0 : (ProvableStruct.eval env r.state).clk_0_16
+      = Expression.eval env r.state.clk_0_16 := by
+    rw [← ProvableStruct.eval_eq_eval, eval_syscallCPUState]
+    simp only [ProvableType.eval_field]
+  have hs1 : (ProvableStruct.eval env r.state).clk_16_24
+      = Expression.eval env r.state.clk_16_24 := by
+    rw [← ProvableStruct.eval_eq_eval, eval_syscallCPUState]
+    simp only [ProvableType.eval_field]
+  have hir : (ProvableStruct.eval env r).is_real = Expression.eval env r.is_real := by
+    rw [← ProvableStruct.eval_eq_eval, eval_syscallInstrsInputs]
+    simp only [ProvableType.eval_field]
+  rw [syscallInstrsInteractionsWith_memory]
+  simp [toAccessPulledMemory, toAccessPushedMemory, SyscallInstrsChip.memPullMsg,
+    SyscallInstrsChip.memPushMsg, SyscallInstrsChip.clkLowVar, LookupAccessList.negMult,
+    signedVal_neg hp2, hs0, hs1, hir, Expression.eval,
+    Extracted.SyscallInstrsCols.interactions, syscallInstrsRustColumns,
+    Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
+    Extracted.U16CompareOperation.interactions,
+    Extracted.Interaction.toAccess, Extracted.Dir.sign]
+
 end SP1Clean.Faithful
