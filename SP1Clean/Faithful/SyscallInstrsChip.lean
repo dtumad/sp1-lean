@@ -1451,6 +1451,8 @@ theorem syscallInstrsStateAccesses (preprocessed : Vector (ZMod p) 0)
     Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
     Extracted.U16CompareOperation.interactions,
     Extracted.Interaction.toAccess, Extracted.Dir.sign,
+    Extracted.AirInteractionKind.lookupKind_syscall,
+    Extracted.AirInteractionKind.lookupTable_syscall,
     List.map_cons, List.map_nil, List.filter_cons,
     List.filter_nil, List.append_nil, List.nil_append, List.cons_append,
     Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero,

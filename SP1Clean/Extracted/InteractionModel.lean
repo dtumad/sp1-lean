@@ -87,6 +87,34 @@ def AirInteractionKind.lookupName : AirInteractionKind → String
   | .pageProtGlobalInitControl => "page-prot-global-init-control"
   | .pageProtGlobalFinalizeControl => "page-prot-global-finalize-control"
 
+/-- The `InteractionKind` a raw upstream bus projects to. `syscall` is a bus this project models,
+so it gets its own kind; everything else is honestly `Unmodelled` (see `Model/InteractionBus.lean`).
+
+Kept as a function on the discriminator rather than as a second `.raw` arm of
+`Interaction.toAccess`'s match, and the reason is measured. Two `.raw` arms overlap, so the
+equation compiler emits one equation whose body is a *nested* `casesOn` over all eighteen
+`AirInteractionKind` constructors. The equation count looks the same either way — `toAccess` matches
+on a projection, so it has a single equation regardless — which is what makes this easy to miss.
+The cost only shows when both sides of a goal are concrete: normalising the `SyscallInstrs` oracle's
+thirty-entry interaction list against an explicit expected block did not terminate with the split
+arms, and takes 2.3 seconds with this one. -/
+def AirInteractionKind.lookupKind : AirInteractionKind → InteractionKind
+  | .syscall => .Syscall
+  | _ => .Unmodelled
+
+/-- The table name a raw upstream bus projects to: the syscall bus shares the native channel's
+`"SP1Syscall"`, everything else keeps its exact discriminator in a reserved name. -/
+def AirInteractionKind.lookupTable (k : AirInteractionKind) : String :=
+  match k with
+  | .syscall => "SP1Syscall"
+  | _ => "SP1Raw/" ++ k.lookupName
+
+@[simp] theorem AirInteractionKind.lookupKind_syscall :
+    AirInteractionKind.lookupKind .syscall = InteractionKind.Syscall := rfl
+
+@[simp] theorem AirInteractionKind.lookupTable_syscall :
+    AirInteractionKind.lookupTable .syscall = "SP1Syscall" := rfl
+
 /-- Project one extracted interaction to its legacy `LookupAccess` compatibility representation.
 The `.byte` arm negates the direction sign (`signedVal (-(dir.sign mult))` — Clean's pull-bus
 convention, applied uniformly to sends and receives); the dynamic buses use the plain `Dir.sign`.
@@ -117,11 +145,8 @@ def Interaction.toAccess (intr : Interaction (ZMod p)) : LookupAccess :=
         [a.val, b.val, c.val, op, d.val, e.val, f.val, g.val, h.val,
          i.val, j.val, k.val, l.val, m.val, n.val, o.val],
         signedVal (intr.dir.sign intr.mult))
-  | .raw .syscall values =>
-      (InteractionKind.Syscall, "SP1Syscall", values.map ZMod.val,
-        signedVal (intr.dir.sign intr.mult))
   | .raw kind values =>
-      (InteractionKind.Unmodelled, "SP1Raw/" ++ kind.lookupName, values.map ZMod.val,
+      (kind.lookupKind, kind.lookupTable, values.map ZMod.val,
         signedVal (intr.dir.sign intr.mult))
 
 /-- The `.byte` arm of `Interaction.toAccess` at a `.send` — the form every chip interaction takes
@@ -158,7 +183,8 @@ theorem Interaction.toAccess_kind_not_native (intr : Interaction (ZMod p)) :
       (Interaction.toAccess intr).1 ≠ InteractionKind.PublicValues := by
   rcases intr with ⟨dir, payload, mult⟩
   cases payload
-  case raw kind _ => cases kind <;> simp [Interaction.toAccess]
+  case raw kind _ =>
+    cases kind <;> simp [Interaction.toAccess, AirInteractionKind.lookupKind]
   all_goals simp [Interaction.toAccess]
 
 /-- Retained under its historical name for `docs/release-audit.md`'s citation of the Exit half. -/
