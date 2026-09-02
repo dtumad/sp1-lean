@@ -1551,6 +1551,78 @@ private theorem syscallInstrsRustSyscallBlock (preprocessed : Vector (ZMod p) 0)
   rfl
 
 omit [Fact (2 ^ 17 < p)] in
+/-- The extracted oracle's `Byte` block: twenty checks. Same recipe as the `Syscall` block — unfold
+only the four `@[irreducible]` oracle definitions and let `rfl` compute, so the proof term stays
+small. -/
+private theorem syscallInstrsRustByteBlock (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (cols : Extracted.SyscallInstrsCols (ZMod p)) :
+    ((Extracted.SyscallInstrsCols.interactions cols preprocessed publicValues).map
+        Extracted.Interaction.toAccess).filter (fun a => a.1 = InteractionKind.Byte)
+      =
+      [(InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val,
+        cols.values[36].val, ((cols.values[7] - cols.values[36]) * (256 : ZMod p)⁻¹).val],
+        signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val,
+        cols.values[37].val, ((cols.values[8] - cols.values[37]) * (256 : ZMod p)⁻¹).val],
+        signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val,
+        cols.values[38].val, ((cols.values[9] - cols.values[38]) * (256 : ZMod p)⁻¹).val],
+        signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val,
+        cols.values[39].val, ((cols.values[10] - cols.values[39]) * (256 : ZMod p)⁻¹).val],
+        signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, (cols.values[16] - (32512 : ZMod p) +
+        cols.values[62] * (65536 : ZMod p)).val, (16 : ZMod p).val, (0 : ZMod p).val], signedVal
+        (-cols.values[31])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, (cols.values[23] - (32512 : ZMod p) +
+        cols.values[63] * (65536 : ZMod p)).val, (16 : ZMod p).val, (0 : ZMod p).val], signedVal
+        (-cols.values[49])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, ((cols.values[2] - (1 : ZMod p)) * (8
+        : ZMod p)⁻¹).val, (13 : ZMod p).val, (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val, cols.values[1].val,
+        (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, cols.values[12].val, (16 : ZMod
+        p).val, (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val, ((cols.values[2] +
+        cols.values[1] * (65536 : ZMod p) + (4 : ZMod p) - cols.values[11] - (1 : ZMod p) -
+        cols.values[12]) * (65536 : ZMod p)⁻¹).val, (0 : ZMod p).val], signedVal
+        (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, cols.values[20].val, (16 : ZMod
+        p).val, (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val, ((cols.values[2] +
+        cols.values[1] * (65536 : ZMod p) + (3 : ZMod p) - cols.values[19] - (1 : ZMod p) -
+        cols.values[20]) * (65536 : ZMod p)⁻¹).val, (0 : ZMod p).val], signedVal
+        (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, cols.values[27].val, (16 : ZMod
+        p).val, (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val, ((cols.values[2] +
+        cols.values[1] * (65536 : ZMod p) + (2 : ZMod p) - cols.values[26] - (1 : ZMod p) -
+        cols.values[27]) * (65536 : ZMod p)⁻¹).val, (0 : ZMod p).val], signedVal
+        (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, cols.values[32].val, (16 : ZMod
+        p).val, (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, cols.values[33].val, (16 : ZMod
+        p).val, (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, cols.values[34].val, (16 : ZMod
+        p).val, (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(6 : ZMod p).val, cols.values[35].val, (16 : ZMod
+        p).val, (0 : ZMod p).val], signedVal (-cols.values[64])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val,
+        cols.values[58].val, cols.values[59].val], signedVal (-cols.values[47])),
+       (InteractionKind.Byte, "SP1Byte", [(3 : ZMod p).val, (0 : ZMod p).val,
+        cols.values[60].val, cols.values[61].val], signedVal (-cols.values[47]))] := by
+  simp only [Extracted.SyscallInstrsCols.interactions,
+    Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
+    Extracted.U16CompareOperation.interactions,
+    Extracted.Interaction.toAccess, Extracted.Dir.sign,
+    Extracted.AirInteractionKind.lookupKind_syscall,
+    Extracted.AirInteractionKind.lookupTable_syscall,
+    List.map_append, List.map_cons, List.map_nil, List.filter_append, List.filter_cons,
+    List.filter_nil, List.append_nil, List.nil_append, List.cons_append,
+    decide_eq_true_eq, if_true, if_false, reduceCtorEq,
+    Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]
+
+omit [Fact (2 ^ 17 < p)] in
 /-- **Syscall.** The generic hand-off, sent at the identifier's table byte. This is the entry the
 bus classification was for: before `InteractionKind.Syscall` existed, SP1's send and the native
 row's push were both labelled `State`, and the comparison could not be stated as an equality. -/
