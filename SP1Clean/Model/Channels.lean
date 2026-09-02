@@ -23,8 +23,9 @@ direct chip-level `public_values` access, which Clean's flat AIR reserves to the
 they are factored through channels instead (upstream Clean's `Air/Vm.lean` requires the same shape
 of its own verifier). `docs/release-audit.md` discloses that as a native-only bus.
 
-The last two are **declared but not yet ensemble members** — see the warning on
-`Model/InteractionProjection.lean`'s `kindOf` before adding either to `sp1Ensemble`. -/
+The last two are **declared but not yet ensemble members**. `kindOf` classifies both, so adding
+either to `sp1Ensemble` no longer risks folding it into State balance — but it does now owe
+`Soundness.EnsembleChannels.channel_eq_of_kindOf_eq` a case, which is where the obligation belongs. -/
 
 namespace SP1Clean.Channels
 

@@ -50,10 +50,12 @@ anchor** — SP1's generated whole-table assertion list holds exactly when the n
 complete `assertZero` list does, together with `PublicValueBinding`.
 
 Not yet proved: the interaction half. Everything it needs is here — both sides reduce to explicit
-lists — but the two are ordered differently and relating them is a `List.Perm` across the bus
-grouping, with SP1's syscall send sitting in its `InteractionKind.State` block where the native row
-keeps it on its own channel. That last mismatch is the `InteractionKind` gap named as the ensemble
-wiring's prerequisite in `docs/roadmap.md`; it turns out to bind here first.
+lists — and what remains is a `List.Perm` across the bus grouping, since `nativeAccesses` groups by
+bus while the extracted list is in emission order.
+
+The obstacle that used to sit underneath it is gone. SP1's syscall send landed in its
+`InteractionKind.State` block where the native row kept it on a channel of its own; both sides now
+classify it `.Syscall` under the same `"SP1Syscall"` key.
 
 ## The Memory and Program polarity bridges
 
@@ -1220,10 +1222,10 @@ theorem syscallInstrsInteractionsWith_byte (r : Var SyscallInstrsChip.Inputs (ZM
     Channels.syscallChannel_eq_byteChannel_false,
     Channels.publicValuesChannel_eq_byteChannel_false]
 
-/-- The three buses SP1's four-kind `LookupAccess` projection does not know: the `Exit` push, the
-seven `PublicValues` pulls, and the generic syscall send. The first eight are the native-only
-hand-off carrying `PublicValueBinding`; the syscall send is SP1's own, and lands here only because
-`InteractionKind` has no constructor for it yet. -/
+/-- The three buses outside `nativeAccesses`'s four-way grouping: the `Exit` push, the seven
+`PublicValues` pulls, and the generic syscall send. The first eight are the native-only hand-off
+carrying `PublicValueBinding`. The ninth is SP1's own bus — `nativeAccesses` groups by *channel*
+rather than by kind, so it lands here even though `InteractionKind.Syscall` classifies it. -/
 theorem syscallInstrsUnexpectedInteractions (r : Var SyscallInstrsChip.Inputs (ZMod p))
     (offset : ℕ) :
     unexpectedInteractions ((SyscallInstrsChip.main r).operations offset) =
