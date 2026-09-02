@@ -315,6 +315,7 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Faithful.subwChip_constraints_faithful
 #print axioms SP1Clean.Faithful.subwChip_interactions_faithful
 #print axioms SP1Clean.Faithful.subwChip_faithful
+#print axioms SP1Clean.Faithful.syscallInstrsChip_faithful
 #print axioms SP1Clean.Faithful.u16compare_constraints_faithful
 #print axioms SP1Clean.Faithful.u16compare_interactions_faithful_syntactic
 #print axioms SP1Clean.Faithful.u16msb_constraints_faithful
