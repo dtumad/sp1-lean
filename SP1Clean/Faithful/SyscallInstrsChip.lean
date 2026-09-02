@@ -1677,4 +1677,89 @@ theorem syscallInstrsByteAccesses (preprocessed : Vector (ZMod p) 0)
   exact ((List.perm_append_comm (l₁ := [_, _, _, _, _, _, _, _]) (l₂ := [_, _])).append_right
     [_, _, _, _, _, _]).append_left [_, _, _, _]
 
+/-! ## Assembling the interaction half
+
+`nativeAccesses` groups the row by *channel*; the oracle's partition groups it by *kind*. Those
+agree on the four SP1 instruction buses, and differ in exactly one place: the syscall send is a
+channel of its own natively and lands in `nativeAccesses`'s unexpected tail, while on the oracle
+side it is the `Syscall` block. So the assembly is the four bus comparisons, plus one element
+moving past the eight native-only public-value messages. -/
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The oracle carries neither native-only kind, and nothing unmodelled: its only raw interaction is
+the syscall send, which is classified as a syscall. -/
+private theorem syscallInstrsRustEmptyBlocks (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (cols : Extracted.SyscallInstrsCols (ZMod p)) :
+    (((Extracted.SyscallInstrsCols.interactions cols preprocessed publicValues).map
+        Extracted.Interaction.toAccess).filter (fun a => a.1 = InteractionKind.Exit) = [] ∧
+      ((Extracted.SyscallInstrsCols.interactions cols preprocessed publicValues).map
+        Extracted.Interaction.toAccess).filter
+          (fun a => a.1 = InteractionKind.PublicValues) = []) ∧
+      ((Extracted.SyscallInstrsCols.interactions cols preprocessed publicValues).map
+        Extracted.Interaction.toAccess).filter
+          (fun a => a.1 = InteractionKind.Unmodelled) = [] := by
+  refine ⟨⟨?_, ?_⟩, ?_⟩ <;>
+    (simp only [Extracted.SyscallInstrsCols.interactions,
+       Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
+       Extracted.U16CompareOperation.interactions]
+     rfl)
+
+/-- The row's native-only hand-off, projected: the `Exit` push and the seven `PublicValues` pulls,
+in emission order. These are the messages that carry `PublicValueBinding`; SP1 states those bindings
+as row constraints against `publicValues` instead, so they have no counterpart in the oracle and the
+interaction anchor carries them explicitly rather than dropping them. -/
+noncomputable def syscallInstrsPublicValueAccesses (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) : LookupAccessList :=
+  [AbstractInteraction.toAccess env
+        ({ mult := r.is_halt, msg := exitMsg r, assumeGuarantees := false } : ChannelInteraction (exitChannel (p := p))).toRaw,
+   AbstractInteraction.toAccess env
+        ({ mult := -r.is_commit.result, msg := ⟨natConst 145, 1⟩, assumeGuarantees := true } : ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+   AbstractInteraction.toAccess env
+        ({ mult := -r.is_commit_deferred.result, msg := ⟨natConst 147, 1⟩, assumeGuarantees := true } : ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+   AbstractInteraction.toAccess env
+        ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 0, r.digest_word[0]⟩, assumeGuarantees := true } : ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+   AbstractInteraction.toAccess env
+        ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 1, r.digest_word[1]⟩, assumeGuarantees := true } : ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+   AbstractInteraction.toAccess env
+        ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 2, r.digest_word[2]⟩, assumeGuarantees := true } : ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+   AbstractInteraction.toAccess env
+        ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 3, r.digest_word[3]⟩, assumeGuarantees := true } : ChannelInteraction (publicValuesChannel (p := p))).toRaw,
+   AbstractInteraction.toAccess env
+        ({ mult := -(r.is_real * r.is_commit_deferred.result), msg := ⟨selectedIndex r 72 1, reduceWord r.op_c_memory.prev_value⟩, assumeGuarantees := true } : ChannelInteraction (publicValuesChannel (p := p))).toRaw]
+
+/-- **Chip-level faithfulness anchor — interaction half.** The native circuit's complete emitted
+interaction multiset and SP1's extracted whole-table interaction multiset agree, once the row's
+native-only public-value hand-off is added to the oracle side.
+
+Five per-bus comparisons plus one shuffle. `nativeAccesses` groups by channel and the oracle's
+partition groups by kind; they agree on the four SP1 instruction buses, and the syscall send is on
+its own channel natively while it is the `Syscall` block on the oracle side — so one element moves
+past the eight hand-off messages. Memory and Program carry the project-wide polarity flip, which is
+why `negMult` appears twice on each. -/
+theorem syscallInstrsChipInteractionsFaithful (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    List.Perm (nativeAccesses env ((SyscallInstrsChip.main r).operations offset))
+      (((Extracted.SyscallInstrsCols.interactions (syscallInstrsRustColumns env r) preprocessed
+          publicValues).map Extracted.Interaction.toAccess)
+        ++ syscallInstrsPublicValueAccesses env r) := by
+  obtain ⟨⟨hexit, hpv⟩, hother⟩ :=
+    syscallInstrsRustEmptyBlocks preprocessed publicValues (syscallInstrsRustColumns env r)
+  have hrust := LookupAccessList.perm_filter_by_kind_of_sp1_with_syscall
+    (((Extracted.SyscallInstrsCols.interactions (syscallInstrsRustColumns env r) preprocessed
+      publicValues).map Extracted.Interaction.toAccess)) hexit hpv hother
+  have hmemNeg := syscallInstrsMemoryAccesses preprocessed publicValues env r offset
+  have hprogNeg := syscallInstrsProgramAccesses preprocessed publicValues env r offset
+  simp only [nativeAccesses, syscallInstrsStateAccesses preprocessed publicValues env r offset,
+    hmemNeg, hprogNeg, LookupAccessList.map_negMult_negMult,
+    syscallInstrsUnexpectedInteractions, syscallInstrsPublicValueAccesses,
+    List.map_cons, List.map_nil]
+  refine List.Perm.trans ?_ (hrust.append_right _).symm
+  rw [← syscallInstrsSyscallAccesses preprocessed publicValues env r]
+  have hbyte := syscallInstrsByteAccesses preprocessed publicValues env r offset
+  simp only [List.append_assoc]
+  exact (hbyte.append
+    (((List.perm_append_comm (l₁ := [_, _, _, _, _, _, _, _]) (l₂ := [_])).append_left
+      _).append_left _)).append_left _
+
 end SP1Clean.Faithful

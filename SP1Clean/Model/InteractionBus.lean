@@ -534,6 +534,22 @@ theorem perm_filter_by_kind (l : LookupAccessList) :
   rcases x with ⟨k, rest⟩
   cases k <;> simp
 
+/-- The five-block partition of an access list that touches SP1's instruction buses **and** its
+syscall bus — the `SyscallInstrs` table's shape. Same three side conditions as the four-block form:
+no native-only kind, and nothing unmodelled. -/
+theorem perm_filter_by_kind_of_sp1_with_syscall (l : LookupAccessList)
+    (hexit : l.filter (fun a => a.1 = InteractionKind.Exit) = [])
+    (hpublicValues : l.filter (fun a => a.1 = InteractionKind.PublicValues) = [])
+    (hunmodelled : l.filter (fun a => a.1 = InteractionKind.Unmodelled) = []) :
+    l.Perm (l.filter (fun a => a.1 = InteractionKind.State) ++
+              l.filter (fun a => a.1 = InteractionKind.Byte) ++
+              l.filter (fun a => a.1 = InteractionKind.Memory) ++
+              l.filter (fun a => a.1 = InteractionKind.Program) ++
+              l.filter (fun a => a.1 = InteractionKind.Syscall)) := by
+  have h := perm_filter_by_kind l
+  rwa [hexit, hpublicValues, hunmodelled, List.append_nil, List.append_nil,
+    List.append_nil] at h
+
 /-- The four-block partition of an access list that touches only the four SP1 instruction buses —
 the Faithful anchors' form. An instruction chip's extracted oracle carries no native-only kind
 (`Exit`, `PublicValues`) and no raw payload (`Syscall`, `Unmodelled`), so all four side conditions
