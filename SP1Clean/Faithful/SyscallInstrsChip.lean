@@ -1323,6 +1323,18 @@ private theorem toAccessPushedState (env : Environment (ZMod p)) (mult : Express
   toAccess_pushIf_state env mult msg
 
 omit [Fact (2 ^ 17 < p)] in
+/-- The same bridge at the `pulledIf` spelling. The row's byte list carries both: entries that come
+from a composed reader arrive folded, entries the row emits itself arrive as the raw record. -/
+private theorem toAccessPulledByteMsg (env : Environment (ZMod p)) (gate : Expression (ZMod p))
+    (msg : ByteRow (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env ((byteChannel.pulledIf gate msg).toRaw) =
+      (InteractionKind.Byte, "SP1Byte",
+        [(Expression.eval env msg.opcode).val, (Expression.eval env msg.a).val,
+         (Expression.eval env msg.b).val, (Expression.eval env msg.c).val],
+        signedVal (Expression.eval env (-gate))) :=
+  toAccess_pullIf_byte env gate msg
+
+omit [Fact (2 ^ 17 < p)] in
 private theorem toAccessPulledByte (env : Environment (ZMod p)) (gate : Expression (ZMod p))
     (msg : ByteRow (Expression (ZMod p))) :
     AbstractInteraction.toAccess env
@@ -1617,7 +1629,7 @@ private theorem syscallInstrsRustByteBlock (preprocessed : Vector (ZMod p) 0)
     Extracted.Interaction.toAccess, Extracted.Dir.sign,
     Extracted.AirInteractionKind.lookupKind_syscall,
     Extracted.AirInteractionKind.lookupTable_syscall,
-    List.map_append, List.map_cons, List.map_nil, List.filter_append, List.filter_cons,
+    List.map_cons, List.map_nil, List.filter_cons,
     List.filter_nil, List.append_nil, List.nil_append, List.cons_append,
     decide_eq_true_eq, if_true, if_false, reduceCtorEq,
     Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]
@@ -1640,5 +1652,29 @@ theorem syscallInstrsSyscallAccesses (preprocessed : Vector (ZMod p) 0)
     SyscallInstrsChip.clkLowVar, SyscallInstrsChip.syscallIdVar, syscallInstrsRustColumns,
     u16toU8SafeValue_head, Expression.eval, eval_sub,
     Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]
+
+/-- **Byte.** Twenty checks. Unlike the other four buses this is a `Perm`, not an equality: SP1
+emits the two field-element compares right after the identifier's byte split, while the native row
+emits them with the arms, after the readers. Nothing else reorders, so the shuffle is one block
+swap. -/
+theorem syscallInstrsByteAccesses (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    List.Perm
+      ((((SyscallInstrsChip.main r).operations offset).interactionsWith
+        byteChannel.toRaw).map (AbstractInteraction.toAccess env))
+      (((Extracted.SyscallInstrsCols.interactions (syscallInstrsRustColumns env r) preprocessed
+          publicValues).map Extracted.Interaction.toAccess).filter
+          (fun a => a.1 = InteractionKind.Byte)) := by
+  rw [syscallInstrsInteractionsWith_byte, syscallInstrsRustByteBlock]
+  simp only [toAccessPulledByte, toAccessPulledByteMsg, syscallInstrsRustColumns,
+    SyscallInstrsChip.clkLowVar,
+    SyscallInstrsChip.natConst, SyscallInstrsChip.fieldLimbBound, Expression.eval,
+    List.map_cons, List.map_nil, neg_one_mul, eval_sub, Nat.cast_ofNat,
+    Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]
+  -- the four identifier-split bytes and the last six checks are already aligned; the eight reader
+  -- checks and the two field-element compares are the block that swaps.
+  exact ((List.perm_append_comm (l₁ := [_, _, _, _, _, _, _, _]) (l₂ := [_, _])).append_right
+    [_, _, _, _, _, _]).append_left [_, _, _, _]
 
 end SP1Clean.Faithful
