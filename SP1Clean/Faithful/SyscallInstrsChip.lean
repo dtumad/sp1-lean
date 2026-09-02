@@ -1291,4 +1291,96 @@ theorem syscallInstrsUnexpectedInteractions (r : Var SyscallInstrsChip.Inputs (Z
     not_false_eq_true, not_true_eq_false, and_self, and_true, true_and, decide_true, decide_false,
     Bool.false_eq_true]
 
+/-! ## Projecting the row's traffic to `LookupAccess`
+
+The four SP1 buses already have `toAccess` bridges in `Model/InteractionProjection.lean`, but stated
+with the channel as a named implicit; the row's own interaction lists carry it in dot-notation
+position, and simp matches syntactically. These restate them once in the shape the lists use, the
+way `Faithful/CPUState.lean` does inline. -/
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem toAccessPulledState (env : Environment (ZMod p)) (gate : Expression (ZMod p))
+    (msg : Channels.StateMsg (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env ((stateChannel.pulledIf gate msg).toRaw) =
+      (InteractionKind.State, "SP1State",
+        [(Expression.eval env msg.clk_high).val, (Expression.eval env msg.clk_low).val,
+         (Expression.eval env msg.pc0).val, (Expression.eval env msg.pc1).val,
+         (Expression.eval env msg.pc2).val],
+        signedVal (Expression.eval env (-gate))) :=
+  toAccess_pullIf_state env gate msg
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem toAccessPushedState (env : Environment (ZMod p)) (mult : Expression (ZMod p))
+    (msg : Channels.StateMsg (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env ((stateChannel.pushedIf mult msg).toRaw) =
+      (InteractionKind.State, "SP1State",
+        [(Expression.eval env msg.clk_high).val, (Expression.eval env msg.clk_low).val,
+         (Expression.eval env msg.pc0).val, (Expression.eval env msg.pc1).val,
+         (Expression.eval env msg.pc2).val],
+        signedVal (Expression.eval env mult)) :=
+  toAccess_pushIf_state env mult msg
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem toAccessPulledByte (env : Environment (ZMod p)) (gate : Expression (ZMod p))
+    (msg : ByteRow (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env ((byteChannel.pulledIf gate msg).toRaw) =
+      (InteractionKind.Byte, "SP1Byte",
+        [(Expression.eval env msg.opcode).val, (Expression.eval env msg.a).val,
+         (Expression.eval env msg.b).val, (Expression.eval env msg.c).val],
+        signedVal (Expression.eval env (-gate))) :=
+  toAccess_pullIf_byte env gate msg
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem toAccessPulledMemory (env : Environment (ZMod p)) (gate : Expression (ZMod p))
+    (msg : MemoryMsg (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env ((memoryChannel.pulledIf gate msg).toRaw) =
+      (InteractionKind.Memory, "SP1Memory",
+        [(Expression.eval env msg.clk_high).val, (Expression.eval env msg.clk_low).val,
+         (Expression.eval env msg.addr0).val, (Expression.eval env msg.addr1).val,
+         (Expression.eval env msg.addr2).val, (Expression.eval env msg.value[0]).val,
+         (Expression.eval env msg.value[1]).val, (Expression.eval env msg.value[2]).val,
+         (Expression.eval env msg.value[3]).val],
+        signedVal (Expression.eval env (-gate))) :=
+  toAccess_pullIf_memory env gate msg
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem toAccessPushedMemory (env : Environment (ZMod p)) (mult : Expression (ZMod p))
+    (msg : MemoryMsg (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env ((memoryChannel.pushedIf mult msg).toRaw) =
+      (InteractionKind.Memory, "SP1Memory",
+        [(Expression.eval env msg.clk_high).val, (Expression.eval env msg.clk_low).val,
+         (Expression.eval env msg.addr0).val, (Expression.eval env msg.addr1).val,
+         (Expression.eval env msg.addr2).val, (Expression.eval env msg.value[0]).val,
+         (Expression.eval env msg.value[1]).val, (Expression.eval env msg.value[2]).val,
+         (Expression.eval env msg.value[3]).val],
+        signedVal (Expression.eval env mult)) :=
+  toAccess_pushIf_memory env mult msg
+
+/-! ## Bus by bus, against the extracted oracle
+
+The four SP1 instruction buses, compared block for block. Memory and Program carry the project-wide
+polarity flip — SP1 `.send`s the read-prior record and the Program fetch where the native circuit
+pulls them — so `nativeAccesses` negates both, and the comparison is stated after that negation. -/
+
+/-- **State.** The row's clock/pc edge, entry for entry. -/
+theorem syscallInstrsStateAccesses (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    (((SyscallInstrsChip.main r).operations offset).interactionsWith
+        stateChannel.toRaw).map (AbstractInteraction.toAccess env)
+      = ((Extracted.SyscallInstrsCols.interactions (syscallInstrsRustColumns env r) preprocessed
+          publicValues).map Extracted.Interaction.toAccess).filter
+          (fun a => a.1 = InteractionKind.State) := by
+  rw [syscallInstrsInteractionsWith_state]
+  simp only [toAccessPulledState, toAccessPushedState, Readers.CPUState.currentMsg,
+    Readers.CPUState.nextMsg, Expression.eval, eval_neg, neg_one_mul,
+    Extracted.SyscallInstrsCols.interactions, syscallInstrsRustColumns,
+    Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
+    Extracted.U16CompareOperation.interactions,
+    Extracted.Interaction.toAccess, Extracted.Dir.sign,
+    List.map_append, List.map_cons, List.map_nil, List.filter_append, List.filter_cons,
+    List.filter_nil, List.append_nil, List.nil_append, List.cons_append,
+    Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero,
+    decide_eq_true_eq, if_true, if_false, reduceCtorEq]
+
 end SP1Clean.Faithful
