@@ -1520,10 +1520,10 @@ theorem syscallInstrsMemoryAccesses (preprocessed : Vector (ZMod p) 0)
     Extracted.U16CompareOperation.interactions,
     Extracted.Interaction.toAccess, Extracted.Dir.sign]
 
+omit [Fact (2 ^ 17 < p)] in
 /-- The extracted oracle's `Syscall` block: exactly one send, at the identifier's table byte.
 Stated over an opaque row so the thirty-entry interaction list is normalised once, against nothing
 else. -/
-omit [Fact (2 ^ 17 < p)] in
 private theorem syscallInstrsRustSyscallBlock (preprocessed : Vector (ZMod p) 0)
     (publicValues : Vector (ZMod p) 160) (cols : Extracted.SyscallInstrsCols (ZMod p)) :
     ((Extracted.SyscallInstrsCols.interactions cols preprocessed publicValues).map
@@ -1550,6 +1550,7 @@ private theorem syscallInstrsRustSyscallBlock (preprocessed : Vector (ZMod p) 0)
     Extracted.U16CompareOperation.interactions]
   rfl
 
+omit [Fact (2 ^ 17 < p)] in
 /-- **Syscall.** The generic hand-off, sent at the identifier's table byte. This is the entry the
 bus classification was for: before `InteractionKind.Syscall` existed, SP1's send and the native
 row's push were both labelled `State`, and the comparison could not be stated as an equality. -/
