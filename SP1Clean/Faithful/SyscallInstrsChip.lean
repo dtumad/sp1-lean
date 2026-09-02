@@ -1323,7 +1323,9 @@ private theorem toAccessPushedState (env : Environment (ZMod p)) (mult : Express
 omit [Fact (2 ^ 17 < p)] in
 private theorem toAccessPulledByte (env : Environment (ZMod p)) (gate : Expression (ZMod p))
     (msg : ByteRow (Expression (ZMod p))) :
-    AbstractInteraction.toAccess env ((byteChannel.pulledIf gate msg).toRaw) =
+    AbstractInteraction.toAccess env
+        (({ mult := -gate, msg := msg, assumeGuarantees := true } :
+          ChannelInteraction (byteChannel (p := p))).toRaw) =
       (InteractionKind.Byte, "SP1Byte",
         [(Expression.eval env msg.opcode).val, (Expression.eval env msg.a).val,
          (Expression.eval env msg.b).val, (Expression.eval env msg.c).val],
@@ -1331,9 +1333,29 @@ private theorem toAccessPulledByte (env : Environment (ZMod p)) (gate : Expressi
   toAccess_pullIf_byte env gate msg
 
 omit [Fact (2 ^ 17 < p)] in
+private theorem toAccessPulledProgram (env : Environment (ZMod p)) (gate : Expression (ZMod p))
+    (msg : ProgramMsg (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env
+        (({ mult := -gate, msg := msg, assumeGuarantees := true } :
+          ChannelInteraction (programChannel (p := p))).toRaw) =
+      (InteractionKind.Program, "SP1Program",
+        [(Expression.eval env msg.pc0).val, (Expression.eval env msg.pc1).val,
+         (Expression.eval env msg.pc2).val, (Expression.eval env msg.opcode).val,
+         (Expression.eval env msg.op_a).val, (Expression.eval env msg.op_b[0]).val,
+         (Expression.eval env msg.op_b[1]).val, (Expression.eval env msg.op_b[2]).val,
+         (Expression.eval env msg.op_b[3]).val, (Expression.eval env msg.op_c[0]).val,
+         (Expression.eval env msg.op_c[1]).val, (Expression.eval env msg.op_c[2]).val,
+         (Expression.eval env msg.op_c[3]).val, (Expression.eval env msg.op_a_0).val,
+         (Expression.eval env msg.imm_b).val, (Expression.eval env msg.imm_c).val],
+        signedVal (Expression.eval env (-gate))) :=
+  toAccess_pullIf_program env gate msg
+
+omit [Fact (2 ^ 17 < p)] in
 private theorem toAccessPulledMemory (env : Environment (ZMod p)) (gate : Expression (ZMod p))
     (msg : MemoryMsg (Expression (ZMod p))) :
-    AbstractInteraction.toAccess env ((memoryChannel.pulledIf gate msg).toRaw) =
+    AbstractInteraction.toAccess env
+        (({ mult := -gate, msg := msg, assumeGuarantees := true } :
+          ChannelInteraction (memoryChannel (p := p))).toRaw) =
       (InteractionKind.Memory, "SP1Memory",
         [(Expression.eval env msg.clk_high).val, (Expression.eval env msg.clk_low).val,
          (Expression.eval env msg.addr0).val, (Expression.eval env msg.addr1).val,
@@ -1346,7 +1368,9 @@ private theorem toAccessPulledMemory (env : Environment (ZMod p)) (gate : Expres
 omit [Fact (2 ^ 17 < p)] in
 private theorem toAccessPushedMemory (env : Environment (ZMod p)) (mult : Expression (ZMod p))
     (msg : MemoryMsg (Expression (ZMod p))) :
-    AbstractInteraction.toAccess env ((memoryChannel.pushedIf mult msg).toRaw) =
+    AbstractInteraction.toAccess env
+        (({ mult := mult, msg := msg, assumeGuarantees := false } :
+          ChannelInteraction (memoryChannel (p := p))).toRaw) =
       (InteractionKind.Memory, "SP1Memory",
         [(Expression.eval env msg.clk_high).val, (Expression.eval env msg.clk_low).val,
          (Expression.eval env msg.addr0).val, (Expression.eval env msg.addr1).val,
@@ -1382,5 +1406,33 @@ theorem syscallInstrsStateAccesses (preprocessed : Vector (ZMod p) 0)
     List.filter_nil, List.append_nil, List.nil_append, List.cons_append,
     Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero,
     decide_eq_true_eq, if_true, if_false, reduceCtorEq]
+
+/-- **Program.** The single committed `ECALL` fetch. SP1 sends it where the native row pulls it, so
+the comparison carries the project-wide Program polarity flip as a `negMult` on the oracle side —
+the same shape `Faithful/AddChip.lean` uses. -/
+theorem syscallInstrsProgramAccesses (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    (((SyscallInstrsChip.main r).operations offset).interactionsWith
+        programChannel.toRaw).map (AbstractInteraction.toAccess env)
+      = (((Extracted.SyscallInstrsCols.interactions (syscallInstrsRustColumns env r) preprocessed
+          publicValues).map Extracted.Interaction.toAccess).filter
+          (fun a => a.1 = InteractionKind.Program)).map LookupAccessList.negMult := by
+  have hp2 : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  rw [syscallInstrsInteractionsWith_program]
+  simp [toAccessPulledProgram, SyscallInstrsChip.programMsg, LookupAccessList.negMult,
+    signedVal_neg hp2, Opcode.ofNat,
+    Extracted.SyscallInstrsCols.interactions, syscallInstrsRustColumns,
+    Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
+    Extracted.U16CompareOperation.interactions,
+    Extracted.Interaction.toAccess, Extracted.Dir.sign]
+  refine ⟨⟨?_, rfl⟩, ?_⟩
+  · -- the committed `ECALL` discriminant is literal under the ambient field bound
+    have hp := Fact.out (p := 2 ^ 17 < p)
+    rw [show Expression.eval env (50 : Expression (ZMod p)) = ((50 : ℕ) : ZMod p) from by norm_cast,
+      ZMod.val_natCast_of_lt (show (50 : ℕ) < p by omega)]
+  · rw [eval_neg, signedVal_neg hp2]
+    congr 1
+    exact congrArg signedVal (ProvableType.eval_field env r.is_real).symm
 
 end SP1Clean.Faithful
