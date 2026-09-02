@@ -41,21 +41,25 @@ its message's payload: that needs a provider for `Channels.publicValuesChannel` 
 `Channels.exitChannel`, which the ensemble does not have, and it is disclosed as the native-only-bus
 row in `docs/release-audit.md`.
 
-## What this file proves, and what it does not
+## What this file proves
 
-Proved: the whole-row codec and both its round-trips; the row's complete `assertZero` list and
-complete interaction list, each decomposed into its sixteen composed blocks and pinned block by
-block; the four per-bus interaction lists and the native-only tail; and **the assertion half of the
-anchor** — SP1's generated whole-table assertion list holds exactly when the native circuit's
-complete `assertZero` list does, together with `PublicValueBinding`.
+`syscallInstrsChip_faithful`: the two `ChipFaithful` clauses at the input-keyed row codec this table
+needs. The extracted whole-table assertion system is equivalent to the native circuit's complete
+constraint system on the reconstructed row together with `PublicValueBinding`, and the two complete
+interaction multisets agree once the row's native-only public-value hand-off is added to the oracle
+side.
 
-Not yet proved: the interaction half. Everything it needs is here — both sides reduce to explicit
-lists — and what remains is a `List.Perm` across the bus grouping, since `nativeAccesses` groups by
-bus while the extracted list is in emission order.
+Underneath: the sixty-five-cell codec and both round-trips; both complete lists decomposed into
+their sixteen composed blocks and pinned block by block; five per-bus comparisons against the
+oracle; and the constructive boundary. The assertion half is a checked bijection over eighty-one
+propositions — the six copies of the `is_real` gate SP1's dump emits are matched by six distinct
+native sources, not collapsed.
 
-The obstacle that used to sit underneath it is gone. SP1's syscall send landed in its
-`InteractionKind.State` block where the native row kept it on a channel of its own; both sides now
-classify it `.Syscall` under the same `"SP1Syscall"` key.
+Two proof-engineering facts are worth carrying to the next anchor of this size, because both cost
+real time here. Reducing a thirty-entry oracle list inside one `simp only` builds a monolithic
+congruence term that the kernel cannot check; unfolding only the `@[irreducible]` oracle definitions
+and letting `rfl` compute keeps the term small. And an `example` is checked far more cheaply than a
+named theorem, so a probe that elaborates in seconds says nothing about the lemma it stands in for.
 
 ## The Memory and Program polarity bridges
 
@@ -1761,5 +1765,171 @@ theorem syscallInstrsChipInteractionsFaithful (preprocessed : Vector (ZMod p) 0)
   exact (hbyte.append
     (((List.perm_append_comm (l₁ := [_, _, _, _, _, _, _, _]) (l₂ := [_])).append_left
       _).append_left _)).append_left _
+
+/-! ## The constructive whole-chip boundary -/
+
+/-- The bundled circuit's `main` is the chip's `main`. -/
+theorem syscallInstrsChip_main_eq :
+    (SyscallInstrsChip.circuit (p := p)).main = SyscallInstrsChip.main := rfl
+
+/-! ### No Clean `Lookup` anywhere in the row
+
+Every SP1 byte check is a channel interaction here, so the whole row emits no Clean `Lookup` — which
+is the side condition `constraintsHold_iff_nativeAssertZeros` asks of a flat component. One `rfl`
+per composed block, then a structural walk of the row's own operations. -/
+
+private theorem u16toU8SafeLookups (input : Var SP1Clean.U16toU8OperationSafe.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((SP1Clean.U16toU8OperationSafe.circuit.main input).operations n) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem isZeroLookups (input : Var SP1Clean.IsZeroOperation.Inputs (ZMod p)) (n : ℕ) :
+    Operations.lookups ((SP1Clean.IsZeroOperation.circuit.main input).operations n) = [] := by
+  simp only [SP1Clean.IsZeroOperation.circuit, SP1Clean.IsZeroOperation.main, circuit_norm,
+    Gadgets.Equality.main]
+
+private theorem cpuStateLookups (input : Var Readers.CPUState.Inputs (ZMod p)) (n : ℕ) :
+    Operations.lookups ((Readers.CPUState.circuit.main input).operations n) = [] := rfl
+
+private theorem registerAccessColsLookups (input : Var Readers.RegisterAccessCols.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((Readers.RegisterAccessCols.circuit.main input).operations n) = [] := by
+  simp only [Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main, circuit_norm,
+    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main]
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem pcArmLookups (input : Var SyscallInstrsChip.PcArm.Inputs (ZMod p)) (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.PcArm.circuit.main input).operations n) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem commitArmLookups (input : Var SyscallInstrsChip.CommitArm.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.CommitArm.circuit.main input).operations n) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem writeArmLookups (input : Var SyscallInstrsChip.WriteArm.Inputs (ZMod p)) (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.WriteArm.circuit.main input).operations n) = [] := rfl
+
+private theorem fieldBoundArmLookups (input : Var SyscallInstrsChip.FieldBoundArm.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.FieldBoundArm.circuit.main input).operations n) = [] := by
+  simp only [SyscallInstrsChip.FieldBoundArm.circuit, SyscallInstrsChip.FieldBoundArm.main,
+    circuit_norm, Gadgets.Equality.main, SP1Clean.U16CompareOperation.circuit,
+    SP1Clean.U16CompareOperation.main]
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem dispatchArmLookups (input : Var SyscallInstrsChip.DispatchArm.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.DispatchArm.circuit.main input).operations n) = [] := rfl
+
+theorem syscallInstrsChip_lookups_empty :
+    (⟨SyscallInstrsChip.circuit (p := p)⟩ :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    syscallInstrsChip_main_eq]
+  simp only [SyscallInstrsChip.main, Circuit.operations, Circuit.bind_def, assertZero,
+    subcircuitWithAssertion, assertion, Channel.pullIf, Channel.pushIf,
+    Operations.lookups_append, Operations.lookups_assert, Operations.lookups_interact,
+    Operations.lookups_nil, Operations.lookups_subcircuit,
+    lookups_toSubcircuit_formalAssertion, lookups_toSubcircuit_generalFormalCircuit,
+    FormalAssertion.toSubcircuit_localLength, GeneralFormalCircuit.toSubcircuit_localLength,
+    Readers.CPUState.circuit_localLength, Readers.RegisterAccessCols.circuit_localLength,
+    SP1Clean.IsZeroOperation.circuit_localLength,
+    SyscallInstrsChip.PcArm.circuit_localLength,
+    SyscallInstrsChip.WriteArm.circuit_localLength,
+    SyscallInstrsChip.FieldBoundArm.circuit_localLength,
+    SyscallInstrsChip.DispatchArm.circuit_localLength,
+    SP1Clean.U16toU8OperationSafe.circuit_localLength,
+    u16toU8SafeLookups, isZeroLookups, cpuStateLookups, registerAccessColsLookups, pcArmLookups, commitArmLookups, writeArmLookups, fieldBoundArmLookups, dispatchArmLookups,
+    Operations.localLength, Nat.add_zero, List.append_nil]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The Rust row a reconstructed native row induces is the row itself. -/
+theorem syscallInstrsRustColumns_deconfigure (cols : Extracted.SyscallInstrsCols (ZMod p))
+    (data : ProverData (ZMod p)) :
+    syscallInstrsRustColumns (syscallInstrsEnvironment cols data)
+        (varFromOffset SyscallInstrsChip.Inputs 0) = cols := by
+  rw [← syscallInstrsReconfigure_eval, syscallInstrsEnvironment_eval,
+    syscallInstrsReconfigure_deconfigure]
+
+/-- **Constructive assertion agreement.** For every Rust row and prover data, the extracted
+whole-table assertion list holds exactly when Clean's full constraint predicate holds on the
+reconstructed physical row, together with the eight public-value conjuncts. -/
+theorem syscallInstrsChipConstraintsConstructive (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (rustCols : Extracted.SyscallInstrsCols (ZMod p))
+    (data : ProverData (ZMod p)) :
+    List.Forall (· = 0)
+        ((syscallInstrsChipOracle preprocessed publicValues).assertZeros rustCols) ↔
+      ((⟨SyscallInstrsChip.circuit (p := p)⟩ :
+          Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+            (syscallInstrsEnvironment rustCols data) ∧
+        PublicValueBinding rustCols publicValues) := by
+  have h := syscallInstrsChipConstraintsFaithful preprocessed publicValues
+    (syscallInstrsEnvironment rustCols data) (varFromOffset SyscallInstrsChip.Inputs 0)
+    (size SyscallInstrsChip.Inputs)
+  rw [syscallInstrsRustColumns_deconfigure] at h
+  refine h.trans (and_congr_left' ?_)
+  exact (constraintsHold_iff_nativeAssertZeros (SyscallInstrsChip.circuit (p := p))
+    (syscallInstrsEnvironment rustCols data) syscallInstrsChip_lookups_empty).symm
+
+/-- **Constructive interaction agreement.** The reconstructed native row's complete emitted
+interaction multiset agrees with the extracted whole-table multiset, once the row's native-only
+public-value hand-off is added to the oracle side. -/
+theorem syscallInstrsChipInteractionsConstructive (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (rustCols : Extracted.SyscallInstrsCols (ZMod p))
+    (data : ProverData (ZMod p)) :
+    List.Perm
+      (nativeAccesses (syscallInstrsEnvironment rustCols data)
+        (⟨SyscallInstrsChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations)
+      ((syscallInstrsChipOracle preprocessed publicValues).rustAccesses rustCols ++
+        syscallInstrsPublicValueAccesses (syscallInstrsEnvironment rustCols data)
+          (varFromOffset SyscallInstrsChip.Inputs 0)) := by
+  have h := syscallInstrsChipInteractionsFaithful preprocessed publicValues
+    (syscallInstrsEnvironment rustCols data) (varFromOffset SyscallInstrsChip.Inputs 0)
+    (size SyscallInstrsChip.Inputs)
+  rw [syscallInstrsRustColumns_deconfigure] at h
+  rw [nativeAccesses_component_eq_rowOperations (SyscallInstrsChip.circuit (p := p)),
+    Air.Flat.Component.rowOperations_mk, syscallInstrsChip_main_eq]
+  exact h
+
+/-- **Whole-table faithfulness for `SyscallInstrs`.** The two `ChipFaithful` clauses at the
+input-keyed row codec this table needs, in the factored form G5 forces.
+
+The assertion clause carries `PublicValueBinding` and the interaction clause carries
+`syscallInstrsPublicValueAccesses`, and those are the same eight facts seen from the two sides of
+the arithmetization boundary: SP1 states them as row constraints against `publicValues`, and the
+native row — which cannot reach the public input, because Clean's flat AIR reserves it to the
+verifier — states them as messages. Nothing is dropped in either clause. What is *not* claimed is
+that the messages are honoured: that needs providers for `Channels.publicValuesChannel` and
+`Channels.exitChannel`, which the ensemble does not have, and it is disclosed as the
+native-only-bus row in `docs/release-audit.md`.
+
+Both clauses are stated against `⟨SyscallInstrsChip.circuit⟩`, the flat component the ensemble will
+register. -/
+theorem syscallInstrsChip_faithful (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) :
+    (∀ (rustCols : Extracted.SyscallInstrsCols (ZMod p)) (data : ProverData (ZMod p)),
+        List.Forall (· = 0)
+            ((syscallInstrsChipOracle preprocessed publicValues).assertZeros rustCols) ↔
+          ((⟨SyscallInstrsChip.circuit (p := p)⟩ :
+              Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+                (syscallInstrsEnvironment rustCols data) ∧
+            PublicValueBinding rustCols publicValues)) ∧
+      ∀ (rustCols : Extracted.SyscallInstrsCols (ZMod p)) (data : ProverData (ZMod p)),
+        List.Forall (· = 0)
+            ((syscallInstrsChipOracle preprocessed publicValues).assertZeros rustCols) →
+          List.Perm
+            (LookupAccessList.active
+              (nativeAccesses (syscallInstrsEnvironment rustCols data)
+                (⟨SyscallInstrsChip.circuit (p := p)⟩ :
+                  Air.Flat.Component (ZMod p)).operations))
+            (LookupAccessList.active
+              ((syscallInstrsChipOracle preprocessed publicValues).rustAccesses rustCols ++
+                syscallInstrsPublicValueAccesses (syscallInstrsEnvironment rustCols data)
+                  (varFromOffset SyscallInstrsChip.Inputs 0))) :=
+  ⟨syscallInstrsChipConstraintsConstructive preprocessed publicValues,
+   fun rustCols data _ =>
+     LookupAccessList.active_perm
+       (syscallInstrsChipInteractionsConstructive preprocessed publicValues rustCols data)⟩
 
 end SP1Clean.Faithful
