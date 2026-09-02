@@ -3672,9 +3672,14 @@ private theorem mulChip_interactions_faithful
   rw [hUnexpected]
   simp only [List.map_nil, List.append_nil]
   refine List.Perm.trans ?_
-    (LookupAccessList.perm_filter_by_kind_of_exit_nil
-      (LookupAccessList.active (mulChipOracle.accesses rustCols))
-      (Extracted.active_map_toAccess_exit_filter _)).symm
+    (Extracted.active_perm_filter_by_kind_of_no_raw _
+      (by simp [ChipOracle.nativeInteractions, mulChipOracle, Extracted.Interaction.IsRaw,
+        Extracted.CPUState.interactions,
+        Extracted.MulOracle.MulCols.interactions, Extracted.MulOracle.MulOperation.interactions,
+        Extracted.MulOracle.U16MSBOperation.interactions,
+        Extracted.MulOracle.U16toU8OperationSafe.interactions,
+        Extracted.RTypeReader.interactions,
+])).symm
   simp only [LookupAccessList.active] at hStateActive
   simp only [LookupAccessList.active] at hByteActive
   simp only [LookupAccessList.active] at hMemoryActive

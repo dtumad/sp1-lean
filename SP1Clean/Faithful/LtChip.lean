@@ -1770,8 +1770,16 @@ theorem ltChip_interactions_faithful
       hDoubleNeg]
     simp
   refine List.Perm.trans ?_
-    (LookupAccessList.perm_filter_by_kind_of_exit_nil rustAccesses
-      (Extracted.map_toAccess_exit_filter _)).symm
+    (Extracted.perm_filter_by_kind_of_no_raw _
+      (by simp [Extracted.Interaction.IsRaw,
+        Extracted.ALUTypeReader.interactions, Extracted.CPUState.interactions,
+        
+        Extracted.LtOracle.LtCols.interactions,
+        Extracted.LtOracle.LtOperationSigned.interactions,
+        Extracted.LtOracle.LtOperationUnsigned.interactions,
+        Extracted.LtOracle.U16CompareOperation.interactions,
+        Extracted.LtOracle.U16MSBOperation.interactions,
+])).symm
   rw [hS, hP]
   exact ((hB.append_left _).append hM).append_right _
 

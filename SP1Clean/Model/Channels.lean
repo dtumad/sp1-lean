@@ -119,14 +119,12 @@ the statement that a supported shard uses only the syscalls `SyscallInstrs` hand
 `Guarantees := True`: as with State and Exit, the content is the multiset fact, not a per-message
 predicate.
 
-**The name is SP1's own projection key, deliberately.** `Extracted.Interaction.toAccess` sends the
-generated `.raw .syscall` send to `"SP1Raw/" ++ AirInteractionKind.lookupName .syscall`; naming the
-native channel anything else would make the two project to different `LookupAccess` keys, and the
-whole-chip faithfulness anchor compares exactly those keys. Both sides therefore also share the
-`kindOf` fallback classification (`.State`) until `InteractionKind` gains a `Syscall` constructor —
-that is the same landmine on both sides, and it is fixed for both at once. -/
+Both sides of a faithfulness anchor agree on this bus by name *and* by kind:
+`Extracted.Interaction.toAccess` gives the generated `.raw .syscall` send the same `"SP1Syscall"`
+name, and `kindOf` classifies it `InteractionKind.Syscall`. A whole-chip anchor compares exactly
+that pair, so the agreement has to be deliberate rather than incidental. -/
 def syscallChannel : Channel (ZMod p) SyscallMsg where
-  name := "SP1Raw/syscall"
+  name := "SP1Syscall"
   Guarantees _ _ := True
 
 /-- The public-values channel — the second native-only bus, and the general form of what

@@ -1551,9 +1551,13 @@ theorem loadDoubleChipInteractionsFaithful
   have hProgram :=
     loadDoubleProgramInteractionsFaithful (p := p) env input offset
   refine List.Perm.trans ?_
-    (LookupAccessList.perm_filter_by_kind_of_exit_nil rustAccesses
-      (Extracted.map_toAccess_exit_filter _)).symm
-  dsimp only [rustAccesses] at hState hByte hMemory hProgram ⊢
+    (Extracted.perm_filter_by_kind_of_no_raw _
+      (by simp [Extracted.Interaction.IsRaw,
+        
+        Extracted.CPUState.interactions, Extracted.ITypeReader.interactions,
+        Extracted.LoadDoubleOracle.AddrAddOperation.interactions,
+        Extracted.LoadDoubleOracle.AddressOperation.interactions,
+        Extracted.LoadDoubleOracle.LoadDoubleColumns.interactions])).symm
   rw [hState, hProgram]
   simpa only [List.append_assoc] using
     ((hByte.append_left _).append hMemory).append_right _

@@ -3599,6 +3599,35 @@ private theorem divRemUnexpectedInteractions
   simp only [decide_eq_true_eq] at hunexpected
   tauto
 
+omit [Fact (2 ^ 24 < p)] in
+/-- The DivRem oracle emits no raw interaction. Stated over an opaque row and proved once: this is
+the widest oracle in the repo — twenty-one composed sub-operation blocks — and inline inside
+`divRemInteractionsFaithful` the same normalisation has the whole chip in scope and exceeds the
+elaboration budget. `simp only` rather than `simp` for the same reason: the membership disjunction
+has to be expanded, but the payload field expressions underneath it never do. -/
+private theorem divRemNoRawInteractions (cols : Extracted.DivRemOracle.DivRemCols (ZMod p)) :
+    ∀ i ∈ Extracted.DivRemOracle.DivRemCols.interactions cols,
+      ¬ Extracted.Interaction.IsRaw i := by
+  simp only [Extracted.Interaction.IsRaw, List.mem_append, List.mem_cons, List.not_mem_nil,
+    or_false, or_assoc, not_exists, forall_eq_or_imp, forall_eq, reduceCtorEq,
+    not_false_eq_true, and_self, implies_true,
+    Extracted.CPUState.interactions,
+    Extracted.DivRemOracle.AddOperation.interactions,
+    Extracted.DivRemOracle.DivRemCols.interactions,
+    Extracted.DivRemOracle.IsEqualWordOperation.interactions,
+    Extracted.DivRemOracle.IsZeroOperation.interactions,
+    Extracted.DivRemOracle.IsZeroWordOperation.interactions,
+    Extracted.DivRemOracle.LtOperationUnsigned.interactions,
+    Extracted.DivRemOracle.MulOperation.interactions,
+    Extracted.DivRemOracle.U16CompareOperation.interactions,
+    Extracted.DivRemOracle.U16MSBOperation.interactions,
+    Extracted.DivRemOracle.U16toU8OperationSafe.interactions,
+    
+    
+    Extracted.RTypeReader.interactions,
+    
+    ]
+
 private theorem divRemInteractionsFaithful
     (env : Environment (ZMod p))
     (input : Var DivRemChip.Inputs (ZMod p)) (offset : ℕ)
@@ -3658,9 +3687,7 @@ private theorem divRemInteractionsFaithful
   simp only [divRemChipOracle, ChipOracle.accesses,
     ChipOracle.nativeInteractions]
   refine List.Perm.trans ?_
-    (LookupAccessList.perm_filter_by_kind_of_exit_nil
-      (LookupAccessList.active rustAccesses)
-      (Extracted.active_map_toAccess_exit_filter _)).symm
+    (Extracted.active_perm_filter_by_kind_of_no_raw _ (divRemNoRawInteractions _)).symm
   simp only [LookupAccessList.active] at hStateActive
   simp only [LookupAccessList.active] at hByteActive
   simp only [LookupAccessList.active] at hMemoryActive

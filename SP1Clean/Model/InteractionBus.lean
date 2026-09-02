@@ -23,17 +23,35 @@ ordered handoffs to execution semantics lives in the typed ranked-grounding laye
 namespace SP1Clean
 
 /-- Tag for each cross-chip interaction. Mirrors SP1's `InteractionKind`
-(`crates/hypercube/src/lookup/interaction.rs`). We carry the buses this project models; others
-are listed so the discriminator covers SP1's full topology. `Exit` is the one native-only bus:
-SP1 binds `public_values.exit_code` by direct chip-level public-values access, which Clean's
-flat-AIR reserves to the verifier, so the native ensemble routes that binding over its own
-channel (`Channels.exitChannel`). -/
+(`crates/hypercube/src/lookup/interaction.rs`) for the buses this project models, and classifies
+the rest honestly rather than aliasing them onto one that is modelled.
+
+Four kinds are SP1's own and carry an instruction row's whole traffic: `Memory`, `Byte`, `Program`,
+`State`. `Syscall` is SP1's too — `SyscallInstrs` sends on it and `SyscallCore` receives — and it
+is listed here so that a syscall is classified as a syscall on *both* sides of a faithfulness
+anchor.
+
+Two are native-only, and exist because Clean's flat AIR reserves `PublicIO` to the verifier row
+(`Air.Flat.Table` carries no public input, and `Ensemble.tables` cannot depend on one). SP1 binds
+`public_values.exit_code` and the commit digests by direct chip-level access; the native ensemble
+routes those bindings over its own channels instead — `Exit` (`Channels.exitChannel`) and
+`PublicValues` (`Channels.publicValuesChannel`).
+
+`Unmodelled` is the **fail-closed** bucket for SP1 buses this project does not model — `global`,
+`globalAccumulation`, the two `MemoryGlobal*Control`, the two `PageProtGlobal*Control`, and the
+precompile buses. It is not a compatibility alias: the point is that an unclassified entry can no
+longer be folded into `State`, whose balance is a clock telescope that would absorb it with no type
+error and no failing proof. Distinct unmodelled buses stay distinct — a `LookupKey` is
+`(kind, name, entry)`, and each keeps its own `"SP1Raw/<kind>"` name. -/
 inductive InteractionKind where
   | Memory
   | Byte
   | Program
   | State
   | Exit
+  | Syscall
+  | PublicValues
+  | Unmodelled
   deriving DecidableEq, Repr, Inhabited
 
 /-- A single interaction-bus contribution: which bus, which named table within it, the entry (the
@@ -485,11 +503,11 @@ theorem multiplicitySum_filterKind (l : LookupAccessList) {K : InteractionKind} 
 
 /-! ## Partition by interaction kind (the recombine lemma for combined faithfulness anchors)
 
-A `LookupAccessList` permutes to the concatenation of its four per-kind filters — every access
-carries exactly one of the four `InteractionKind`s. This is the bridge that assembles the four
-per-channel syntactic faithfulness facts (each an `=`/`Perm` of the channel-filtered projections)
-into one combined "full emitted = full oracle" `Perm` over a chip's whole interaction list. The bus
-is a multiset, so the order the four blocks come out in is irrelevant. -/
+A `LookupAccessList` permutes to the concatenation of its per-kind filters — every access carries
+exactly one `InteractionKind`. This is the bridge that assembles the per-channel syntactic
+faithfulness facts (each an `=`/`Perm` of the channel-filtered projections) into one combined "full
+emitted = full oracle" `Perm` over a chip's whole interaction list. The bus is a multiset, so the
+order the blocks come out in is irrelevant. -/
 
 /-- `count x` of a kind-filtered list: keeps the count iff `x`'s kind matches, else `0`. -/
 private lemma count_filter_kind (x : LookupAccess) (K : InteractionKind) (l : LookupAccessList) :
@@ -499,31 +517,41 @@ private lemma count_filter_kind (x : LookupAccess) (K : InteractionKind) (l : Lo
   · simp only [hxK, if_false]
     exact List.count_eq_zero_of_not_mem fun hmem => hxK (by simpa using (List.mem_filter.mp hmem).2)
 
-/-- A `LookupAccessList` is a permutation of `(filter State) ++ (filter Byte) ++ (filter Memory) ++
-(filter Program) ++ (filter Exit)` — its five-way partition by `InteractionKind`. -/
+/-- A `LookupAccessList` is a permutation of its eight per-kind filters: the four SP1 instruction
+buses, SP1's syscall bus, the two native-only public-value buses, and the unmodelled remainder. -/
 theorem perm_filter_by_kind (l : LookupAccessList) :
     l.Perm (l.filter (fun a => a.1 = InteractionKind.State) ++
               l.filter (fun a => a.1 = InteractionKind.Byte) ++
               l.filter (fun a => a.1 = InteractionKind.Memory) ++
               l.filter (fun a => a.1 = InteractionKind.Program) ++
-              l.filter (fun a => a.1 = InteractionKind.Exit)) := by
+              l.filter (fun a => a.1 = InteractionKind.Exit) ++
+              l.filter (fun a => a.1 = InteractionKind.Syscall) ++
+              l.filter (fun a => a.1 = InteractionKind.PublicValues) ++
+              l.filter (fun a => a.1 = InteractionKind.Unmodelled)) := by
   rw [List.perm_iff_count]
   intro x
   simp only [List.count_append, count_filter_kind]
   rcases x with ⟨k, rest⟩
   cases k <;> simp
 
-/-- The four-kind partition of an access list with no Exit entries — the Faithful anchors' form:
-extracted Rust interactions never carry the native-only Exit kind, so their Exit filter reduces to
-`[]` by `rfl` and the historical four-block partition survives. -/
-theorem perm_filter_by_kind_of_exit_nil (l : LookupAccessList)
-    (hexit : l.filter (fun a => a.1 = InteractionKind.Exit) = []) :
+/-- The four-block partition of an access list that touches only the four SP1 instruction buses —
+the Faithful anchors' form. An instruction chip's extracted oracle carries no native-only kind
+(`Exit`, `PublicValues`) and no raw payload (`Syscall`, `Unmodelled`), so all four side conditions
+reduce to `[]` and the anchors compare four blocks. The hypotheses are what make that a checked
+fact rather than an assumption: a table that *does* touch one of those buses cannot be assembled
+through this lemma. -/
+theorem perm_filter_by_kind_of_sp1_only (l : LookupAccessList)
+    (hexit : l.filter (fun a => a.1 = InteractionKind.Exit) = [])
+    (hsyscall : l.filter (fun a => a.1 = InteractionKind.Syscall) = [])
+    (hpublicValues : l.filter (fun a => a.1 = InteractionKind.PublicValues) = [])
+    (hunmodelled : l.filter (fun a => a.1 = InteractionKind.Unmodelled) = []) :
     l.Perm (l.filter (fun a => a.1 = InteractionKind.State) ++
               l.filter (fun a => a.1 = InteractionKind.Byte) ++
               l.filter (fun a => a.1 = InteractionKind.Memory) ++
               l.filter (fun a => a.1 = InteractionKind.Program)) := by
   have h := perm_filter_by_kind l
-  rwa [hexit, List.append_nil] at h
+  rwa [hexit, hsyscall, hpublicValues, hunmodelled, List.append_nil, List.append_nil,
+    List.append_nil, List.append_nil] at h
 
 
 /-- **The access at a key**, carrying a chosen multiplicity. The shared primitive of both reasons

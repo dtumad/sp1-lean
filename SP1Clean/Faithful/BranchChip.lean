@@ -2297,10 +2297,16 @@ theorem branchChip_interactions_faithful
   have hProgram :=
     branchProgramInteractions_faithful
       (p := p) env input offset hinputReal
+  have hraw : ∀ i ∈ Extracted.BranchOracle.BranchColumns.interactions
+      (branchChipReconfigure (branchChipRustColumns env input offset)), ¬ i.IsRaw := by
+    simp [Extracted.BranchOracle.BranchColumns.interactions, Extracted.BranchOracle.LtOperationSigned.interactions, Extracted.BranchOracle.LtOperationUnsigned.interactions, Extracted.BranchOracle.U16CompareOperation.interactions, Extracted.BranchOracle.U16MSBOperation.interactions, Extracted.CPUState.interactions, Extracted.ITypeReaderImmutable.interactions,
+      Extracted.Interaction.IsRaw]
   refine List.Perm.trans ?_
-    (LookupAccessList.perm_filter_by_kind_of_exit_nil rustAccesses
-      (Extracted.map_toAccess_exit_filter _)).symm
-  dsimp only [rustAccesses] at hState hByte hMemory hProgram ⊢
+    (LookupAccessList.perm_filter_by_kind_of_sp1_only (branchRustAccesses env input offset)
+      (Extracted.map_toAccess_filters_nil hraw _ (Or.inl rfl))
+      (Extracted.map_toAccess_filters_nil hraw _ (Or.inr (Or.inr (Or.inl rfl))))
+      (Extracted.map_toAccess_filters_nil hraw _ (Or.inr (Or.inl rfl)))
+      (Extracted.map_toAccess_filters_nil hraw _ (Or.inr (Or.inr (Or.inr rfl))))).symm
   rw [hState, hMemory, hProgram]
   simpa only [List.append_assoc] using
     (hByte.append_left _).append_right _

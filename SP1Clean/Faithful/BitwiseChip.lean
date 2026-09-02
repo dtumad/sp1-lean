@@ -790,6 +790,17 @@ theorem bitwiseChip_constraints_constructive
 
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 
+omit [Fact (2 ^ 17 < p)] in
+/-- The Bitwise oracle emits no raw interaction, so its access list carries none of the four kinds
+outside SP1's instruction buses. Stated over an opaque row and proved once: inline inside
+`bitwiseChip_interactions_faithful` the same `simp` has the whole chip in scope and exceeds the
+elaboration budget. -/
+private theorem bitwiseNoRawInteractions (cols : Extracted.BitwiseOracle.BitwiseCols (ZMod p)) :
+    ∀ i ∈ Extracted.BitwiseOracle.BitwiseCols.interactions cols,
+      ¬ Extracted.Interaction.IsRaw i := by
+  simp [Extracted.ALUTypeReader.interactions, Extracted.BitwiseOracle.BitwiseCols.interactions, Extracted.BitwiseOracle.BitwiseOperation.interactions, Extracted.BitwiseOracle.BitwiseU16Operation.interactions, Extracted.BitwiseOracle.U16toU8OperationUnsafe.interactions, Extracted.CPUState.interactions,
+    Extracted.Interaction.IsRaw]
+
 theorem bitwiseChip_interactions_faithful
     (env : Environment (ZMod p)) (input : Var BitwiseChip.Inputs (ZMod p))
     (offset : ℕ) (cols : BitwiseChip.Columns (ZMod p))
@@ -1117,8 +1128,7 @@ theorem bitwiseChip_interactions_faithful
       LookupAccessList.negMult, hReal]
     simp only [hDoubleNeg]
   refine List.Perm.trans ?_
-    (LookupAccessList.perm_filter_by_kind_of_exit_nil rustAccesses
-      (Extracted.map_toAccess_exit_filter _)).symm
+    (Extracted.perm_filter_by_kind_of_no_raw _ (bitwiseNoRawInteractions _)).symm
   rw [hS, hP]
   exact ((hB.append_left _).append hM).append_right _
 

@@ -121,11 +121,13 @@ close them. State and Memory are not, and `closingAccesses_not_preprocessed` rec
 closure leaves them untouched rather than quietly perturbing them.
 -/
 
-/-- The buses a provider closure is allowed to supply. -/
+/-- The buses a provider closure is allowed to supply. Written as an exhaustive match on purpose:
+a new `InteractionKind` must not join the closure by default, and this is where Lean makes that a
+decision rather than an omission. -/
 def preprocessedKey (key : LookupAccessList.LookupKey) : Bool :=
   match key.1 with
   | .Byte | .Program => true
-  | .Memory | .State | .Exit => false
+  | .Memory | .State | .Exit | .Syscall | .PublicValues | .Unmodelled => false
 
 /-- The provider ledger this trace's consumers demand: one recounted access per touched
 Byte/Program key. -/

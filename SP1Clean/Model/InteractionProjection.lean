@@ -19,46 +19,42 @@ open SP1Clean.LookupAccessList
 
 variable {p : ℕ} [NeZero p]
 
-/-- The `InteractionKind` of a channel, recovered from its `name` (the four buses this project
-models).
+/-- The `InteractionKind` of a channel, recovered from its `name`. Every bus this project declares
+has its own case; the fallback is `.Unmodelled`, which is a classification and not a bucket.
 
-The Byte case is deliberately explicit. Unknown channel names use the legacy `.State`
-compatibility bucket rather than `.Byte`: Byte and Program are the two provider-closure kinds, so
-classifying an unrecognised channel as Byte would let a future fifth channel enter that closure by
-default. The extracted full-AIR compatibility projection uses the same `.State` bucket for its
-reserved `"SP1Raw/…"` names (`Extracted.Interaction.toAccess`).
+**The fallback is fail-closed in both directions.** Byte and Program are the two provider-closure
+kinds, so an unrecognised channel must not default to either — that much was already true. What
+`.Unmodelled` adds is the other half: it must not default to `.State` either. State balance is a
+clock telescope, so an unclassified entry landing there would be absorbed with no type error and no
+failing proof, and `Soundness.EnsembleChannels.channel_eq_of_kindOf_eq` — the lemma that lets an
+access's kind identify its channel — would quietly stop being about distinct buses. With
+`.Unmodelled`, a channel that joins `sp1Ensemble.channels` without a case here *fails* that proof
+instead.
 
-⚠ **The `.State` default is safe against the provider closure, not against the State ledger.**
-`Channels.syscallChannel` (`"SP1Syscall"`) and `Channels.publicValuesChannel`
-(`"SP1PublicValues"`) are declared but **not yet ensemble members**, and they land in this bucket.
-That is inert only while they stay out of `sp1Ensemble.channels`: State balance is a clock
-telescope, so folding a syscall or public-value entry into it would corrupt the grounding argument
-silently — no type error, no failing proof. Before either channel joins the ensemble,
-`InteractionKind` must gain its own constructor for it and this function a matching case (the cost
-is the ~33 `perm_filter_by_kind` sites, which move from a five-way to a seven-way partition). -/
+**Order matters, and it is append-only.** The branches are matched in sequence and several proofs
+close `kindOf "SP1State" = .State` and friends by `rfl` through this chain
+(`Proofs.Completeness.ChipLedger`, `Soundness.AIRCompleteness`), while others count branches with
+`if_neg (by decide)`. New buses go at the end, never inserted. -/
 def kindOf (name : String) : InteractionKind :=
   if name = "SP1Memory" then .Memory
   else if name = "SP1Program" then .Program
   else if name = "SP1State" then .State
   else if name = "SP1Byte" then .Byte
   else if name = "SP1Exit" then .Exit
-  else .State
+  else if name = "SP1Syscall" then .Syscall
+  else if name = "SP1PublicValues" then .PublicValues
+  else .Unmodelled
 
 /-- A channel is classified as Byte exactly when it carries the canonical native Byte name. This
 is the fail-closed fact used by provider recounting: an unrecognised channel cannot silently become
-a preprocessed Byte demand. -/
+a preprocessed Byte demand.
+
+`split_ifs` rather than a hand-nested `split` tree, so adding a bus to `kindOf` does not cost an
+edit here. -/
 @[simp] theorem kindOf_eq_byte_iff (name : String) :
     kindOf name = .Byte ↔ name = "SP1Byte" := by
   simp only [kindOf]
-  split <;> rename_i hmemory
-  · subst name; simp
-  · split <;> rename_i hprogram
-    · subst name; simp
-    · split <;> rename_i hstate
-      · subst name; simp
-      · split
-        · simp_all
-        · split <;> simp_all
+  split_ifs <;> simp_all
 
 /-- The **signed** value of a field element: its centered representative in `(-p/2, p/2]`, as `ℤ`. For the
 `±is_real` multiplicities the buses use this is exactly `±is_real.val` (`signedVal_is_real`/`_neg_is_real`);

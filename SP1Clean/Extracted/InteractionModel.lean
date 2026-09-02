@@ -91,11 +91,15 @@ def AirInteractionKind.lookupName : AirInteractionKind → String
 The `.byte` arm negates the direction sign (`signedVal (-(dir.sign mult))` — Clean's pull-bus
 convention, applied uniformly to sends and receives); the dynamic buses use the plain `Dir.sign`.
 
-`LookupAccess` predates the full Core AIR and has only four coarse kinds. A raw system bus therefore
-uses a reserved `"SP1Raw/<kind>"` table name (which preserves its exact discriminator and cannot
-collide with `SP1State`) and the `.State` compatibility bucket. This arm only makes the legacy
-projection total; `CoreAIR.Current.Balance.Valid` compares the exact raw payload ADT and never passes
-through this encoding. -/
+The `.raw` arm splits. SP1's **syscall** bus is a bus this project models, so it projects to
+`InteractionKind.Syscall` under the same `"SP1Syscall"` name the native `Channels.syscallChannel`
+carries — that agreement on *both* components of the key is what lets a whole-chip anchor compare a
+syscall send to a syscall send. Every other raw bus (`global`, `globalAccumulation`, the two
+`MemoryGlobal*Control`, the two `PageProtGlobal*Control`, the precompile buses) is not modelled
+here, and says so: `InteractionKind.Unmodelled`, keeping its exact discriminator in a reserved
+`"SP1Raw/<kind>"` name so distinct buses stay distinct keys. Neither is a compatibility alias onto a
+bus that *is* modelled. `CoreAIR.Current.Balance.Valid` compares the exact raw payload ADT and never
+passes through this encoding. -/
 def Interaction.toAccess (intr : Interaction (ZMod p)) : LookupAccess :=
   match intr.payload with
   | .byte opcode a b c =>
@@ -113,8 +117,11 @@ def Interaction.toAccess (intr : Interaction (ZMod p)) : LookupAccess :=
         [a.val, b.val, c.val, op, d.val, e.val, f.val, g.val, h.val,
          i.val, j.val, k.val, l.val, m.val, n.val, o.val],
         signedVal (intr.dir.sign intr.mult))
+  | .raw .syscall values =>
+      (InteractionKind.Syscall, "SP1Syscall", values.map ZMod.val,
+        signedVal (intr.dir.sign intr.mult))
   | .raw kind values =>
-      (InteractionKind.State, "SP1Raw/" ++ kind.lookupName, values.map ZMod.val,
+      (InteractionKind.Unmodelled, "SP1Raw/" ++ kind.lookupName, values.map ZMod.val,
         signedVal (intr.dir.sign intr.mult))
 
 /-- The `.byte` arm of `Interaction.toAccess` at a `.send` — the form every chip interaction takes
@@ -136,15 +143,100 @@ upstream Byte/Range tables receive the lookups), recording the native push sign 
     (fun m => (InteractionKind.Byte, "SP1Byte", [opcode.val, a.val, b.val, c.val], signedVal m))
     (neg_neg mult)
 
-/-- No extracted interaction projects to the native-only Exit kind: the payload arms cover
-Byte/State/Memory/Program plus the reserved raw `.State` bucket, and SP1's oracle vocabulary has no
-exit bus (SP1 binds `exit_code` by direct public-values access instead). The Faithful anchors use
-this to keep the historical four-block kind partition
-(`LookupAccessList.perm_filter_by_kind_of_exit_nil`). -/
-theorem Interaction.toAccess_kind_ne_exit (intr : Interaction (ZMod p)) :
-    (Interaction.toAccess intr).1 ≠ InteractionKind.Exit := by
+/-- Whether an extracted interaction carries the arity-preserving raw payload. The four typed
+payloads project to the four SP1 instruction buses; only `.raw` reaches `Syscall` or `Unmodelled`,
+so this is the single side condition an instruction chip's anchor has to discharge. -/
+def Interaction.IsRaw (intr : Interaction (ZMod p)) : Prop :=
+  ∃ kind values, intr.payload = .raw kind values
+
+/-- No extracted interaction projects to either native-only kind. SP1's oracle vocabulary has no
+exit bus and no public-values bus — it binds `exit_code` and the commit digests by direct
+chip-level public-values access, which is exactly the access Clean's flat AIR reserves to the
+verifier row and the native ensemble therefore routes over channels of its own. -/
+theorem Interaction.toAccess_kind_not_native (intr : Interaction (ZMod p)) :
+    (Interaction.toAccess intr).1 ≠ InteractionKind.Exit ∧
+      (Interaction.toAccess intr).1 ≠ InteractionKind.PublicValues := by
   rcases intr with ⟨dir, payload, mult⟩
-  cases payload <;> simp [Interaction.toAccess]
+  cases payload
+  case raw kind _ => cases kind <;> simp [Interaction.toAccess]
+  all_goals simp [Interaction.toAccess]
+
+/-- Retained under its historical name for `docs/release-audit.md`'s citation of the Exit half. -/
+theorem Interaction.toAccess_kind_ne_exit (intr : Interaction (ZMod p)) :
+    (Interaction.toAccess intr).1 ≠ InteractionKind.Exit :=
+  (Interaction.toAccess_kind_not_native intr).1
+
+/-- A typed payload projects to one of the four SP1 instruction buses — never to the syscall bus
+and never to the unmodelled remainder. Both of those are reachable only through `.raw`. -/
+theorem Interaction.toAccess_kind_not_raw (intr : Interaction (ZMod p)) (h : ¬ intr.IsRaw) :
+    (Interaction.toAccess intr).1 ≠ InteractionKind.Syscall ∧
+      (Interaction.toAccess intr).1 ≠ InteractionKind.Unmodelled := by
+  rcases intr with ⟨dir, payload, mult⟩
+  cases payload
+  case raw kind values => exact absurd ⟨kind, values, rfl⟩ h
+  all_goals simp [Interaction.toAccess]
+
+/-- The four kinds an extracted oracle list cannot carry, given that it emits no raw interaction —
+which is the case for every one of the twenty-five instruction chips. -/
+theorem map_toAccess_filters_nil {l : List (Interaction (ZMod p))}
+    (hraw : ∀ i ∈ l, ¬ i.IsRaw) (K : InteractionKind)
+    (hK : K = .Exit ∨ K = .PublicValues ∨ K = .Syscall ∨ K = .Unmodelled) :
+    (l.map Interaction.toAccess).filter (fun a => a.1 = K) = [] := by
+  rw [List.filter_eq_nil_iff]
+  intro a ha
+  obtain ⟨i, hi, rfl⟩ := List.mem_map.mp ha
+  obtain ⟨hexit, hpv⟩ := Interaction.toAccess_kind_not_native i
+  obtain ⟨hsyscall, hother⟩ := Interaction.toAccess_kind_not_raw i (hraw i hi)
+  rcases hK with rfl | rfl | rfl | rfl <;> simpa using ‹_›
+
+/-! ## The four-block partition, for a table that touches only SP1's instruction buses
+
+Every one of the twenty-five instruction chips emits typed payloads exclusively — not one
+`Extracted/ChipOracle/*.lean` contains a `.raw` interaction — so its oracle's access list carries
+none of the four kinds outside the State/Byte/Memory/Program group. That single fact is what these
+two lemmas turn into the partition the whole-chip anchors assemble through, and the `IsRaw`
+hypothesis is what stops a table that *does* touch the syscall bus (`SyscallInstrs`) or a global
+bus (`Global`, `MemoryLocal`, the `MemoryGlobal*` pair) from being assembled the same way by
+accident. -/
+
+/-- The four-block kind partition of an extracted oracle's access list, for a table that emits no
+raw interaction. -/
+theorem perm_filter_by_kind_of_no_raw (l : List (Interaction (ZMod p)))
+    (hraw : ∀ i ∈ l, ¬ i.IsRaw) :
+    (l.map Interaction.toAccess).Perm
+      ((l.map Interaction.toAccess).filter (fun a => a.1 = InteractionKind.State) ++
+        (l.map Interaction.toAccess).filter (fun a => a.1 = InteractionKind.Byte) ++
+        (l.map Interaction.toAccess).filter (fun a => a.1 = InteractionKind.Memory) ++
+        (l.map Interaction.toAccess).filter (fun a => a.1 = InteractionKind.Program)) :=
+  LookupAccessList.perm_filter_by_kind_of_sp1_only _
+    (map_toAccess_filters_nil hraw _ (Or.inl rfl))
+    (map_toAccess_filters_nil hraw _ (Or.inr (Or.inr (Or.inl rfl))))
+    (map_toAccess_filters_nil hraw _ (Or.inr (Or.inl rfl)))
+    (map_toAccess_filters_nil hraw _ (Or.inr (Or.inr (Or.inr rfl))))
+
+/-- The same partition under the `active` restriction, for the two anchors that compare only
+nonzero-multiplicity accesses. -/
+theorem active_perm_filter_by_kind_of_no_raw (l : List (Interaction (ZMod p)))
+    (hraw : ∀ i ∈ l, ¬ i.IsRaw) :
+    (LookupAccessList.active (l.map Interaction.toAccess)).Perm
+      ((LookupAccessList.active (l.map Interaction.toAccess)).filter
+          (fun a => a.1 = InteractionKind.State) ++
+        (LookupAccessList.active (l.map Interaction.toAccess)).filter
+          (fun a => a.1 = InteractionKind.Byte) ++
+        (LookupAccessList.active (l.map Interaction.toAccess)).filter
+          (fun a => a.1 = InteractionKind.Memory) ++
+        (LookupAccessList.active (l.map Interaction.toAccess)).filter
+          (fun a => a.1 = InteractionKind.Program)) := by
+  refine LookupAccessList.perm_filter_by_kind_of_sp1_only _ ?_ ?_ ?_ ?_ <;>
+    (rw [List.filter_eq_nil_iff]
+     intro a ha
+     have hmem : a ∈ l.map Interaction.toAccess :=
+       List.mem_of_mem_filter (l := l.map Interaction.toAccess)
+         (p := fun access => decide (LookupAccessList.multOf access ≠ 0)) ha
+     obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hmem
+     obtain ⟨hexit, hpv⟩ := Interaction.toAccess_kind_not_native i
+     obtain ⟨hsyscall, hother⟩ := Interaction.toAccess_kind_not_raw i (hraw i hi)
+     simpa using ‹_›)
 
 /-- The Exit filter of any extracted access list is empty. -/
 theorem map_toAccess_exit_filter (l : List (Interaction (ZMod p))) :
