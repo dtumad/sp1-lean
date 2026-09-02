@@ -1373,12 +1373,12 @@ theorem syscallInstrsStateAccesses (preprocessed : Vector (ZMod p) 0)
           (fun a => a.1 = InteractionKind.State) := by
   rw [syscallInstrsInteractionsWith_state]
   simp only [toAccessPulledState, toAccessPushedState, Readers.CPUState.currentMsg,
-    Readers.CPUState.nextMsg, Expression.eval, eval_neg, neg_one_mul,
+    Readers.CPUState.nextMsg, Expression.eval, neg_one_mul,
     Extracted.SyscallInstrsCols.interactions, syscallInstrsRustColumns,
     Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
     Extracted.U16CompareOperation.interactions,
     Extracted.Interaction.toAccess, Extracted.Dir.sign,
-    List.map_append, List.map_cons, List.map_nil, List.filter_append, List.filter_cons,
+    List.map_cons, List.map_nil, List.filter_cons,
     List.filter_nil, List.append_nil, List.nil_append, List.cons_append,
     Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero,
     decide_eq_true_eq, if_true, if_false, reduceCtorEq]
