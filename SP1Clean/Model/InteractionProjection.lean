@@ -460,4 +460,41 @@ lemma toAccess_pullIf_byte (env : Environment (ZMod p)) (gate : Expression (ZMod
     List.map_nil]
   rfl
 
+open SP1Clean.Channels (syscallChannel SyscallMsg)
+
+/-- A three-wide vector as an explicit list, for the syscall message's two operand triples. -/
+private lemma vec3_toList {T : Type} (v : Vector T 3) : v.toList = [v[0], v[1], v[2]] := by
+  obtain ⟨⟨l⟩, h⟩ := v
+  match l, h with
+  | [_, _, _], _ => rfl
+
+/-- `(toElements msg).toList` of a `SyscallMsg` is its nine fields, in field order. -/
+private lemma syscallMsg_toList {T : Type} (msg : SyscallMsg T) :
+    (toElements msg).toList =
+      [msg.clk_high, msg.clk_low, msg.syscall_id,
+       msg.arg1[0], msg.arg1[1], msg.arg1[2], msg.arg2[0], msg.arg2[1], msg.arg2[2]] := by
+  change (#v[msg.clk_high] ++ (#v[msg.clk_low] ++ (#v[msg.syscall_id] ++
+    (msg.arg1 ++ (msg.arg2 ++ (#v[] : Vector T 0)))))).toList = _
+  simp only [Vector.toList_append, Vector.toList_mk, List.cons_append,
+    List.nil_append, Vector.append_empty, vec3_toList]
+
+omit [NeZero p] in
+/-- **Kernel of the syscall hand-off.** SP1's own syscall bus, at the native push: bus `.Syscall`,
+table `"SP1Syscall"`, the nine `SyscallMsg` fields val-projected, and the plain signed
+multiplicity. The extracted `.raw .syscall` send projects to the same key
+(`Extracted.Interaction.toAccess`), which is what lets a whole-chip anchor compare the two. -/
+lemma toAccess_pushIf_syscall (env : Environment (ZMod p)) (mult : Expression (ZMod p))
+    (msg : SyscallMsg (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env (pushedIf (channel := syscallChannel) mult msg).toRaw =
+      (InteractionKind.Syscall, "SP1Syscall",
+        [(Expression.eval env msg.clk_high).val, (Expression.eval env msg.clk_low).val,
+         (Expression.eval env msg.syscall_id).val, (Expression.eval env msg.arg1[0]).val,
+         (Expression.eval env msg.arg1[1]).val, (Expression.eval env msg.arg1[2]).val,
+         (Expression.eval env msg.arg2[0]).val, (Expression.eval env msg.arg2[1]).val,
+         (Expression.eval env msg.arg2[2]).val],
+        signedVal (Expression.eval env mult)) := by
+  simp only [toAccess_toRaw, pushedIf, syscallChannel, kindOf, syscallMsg_toList, List.map_cons,
+    List.map_nil]
+  rfl
+
 end SP1Clean

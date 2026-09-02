@@ -1333,6 +1333,21 @@ private theorem toAccessPulledByte (env : Environment (ZMod p)) (gate : Expressi
   toAccess_pullIf_byte env gate msg
 
 omit [Fact (2 ^ 17 < p)] in
+private theorem toAccessPushedSyscall (env : Environment (ZMod p)) (mult : Expression (ZMod p))
+    (msg : Channels.SyscallMsg (Expression (ZMod p))) :
+    AbstractInteraction.toAccess env
+        (({ mult := mult, msg := msg, assumeGuarantees := false } :
+          ChannelInteraction (syscallChannel (p := p))).toRaw) =
+      (InteractionKind.Syscall, "SP1Syscall",
+        [(Expression.eval env msg.clk_high).val, (Expression.eval env msg.clk_low).val,
+         (Expression.eval env msg.syscall_id).val, (Expression.eval env msg.arg1[0]).val,
+         (Expression.eval env msg.arg1[1]).val, (Expression.eval env msg.arg1[2]).val,
+         (Expression.eval env msg.arg2[0]).val, (Expression.eval env msg.arg2[1]).val,
+         (Expression.eval env msg.arg2[2]).val],
+        signedVal (Expression.eval env mult)) :=
+  toAccess_pushIf_syscall env mult msg
+
+omit [Fact (2 ^ 17 < p)] in
 private theorem toAccessPulledProgram (env : Environment (ZMod p)) (gate : Expression (ZMod p))
     (msg : ProgramMsg (Expression (ZMod p))) :
     AbstractInteraction.toAccess env
@@ -1379,6 +1394,40 @@ private theorem toAccessPushedMemory (env : Environment (ZMod p)) (mult : Expres
          (Expression.eval env msg.value[3]).val],
         signedVal (Expression.eval env mult)) :=
   toAccess_pushIf_memory env mult msg
+
+/-! ## `ProvableStruct.eval` at the row's carriers
+
+The oracle side of every bus comparison lands on `(ProvableStruct.eval env x).field` where the
+native side has `Expression.eval env x.field`. These are the component-wise lemmas above, restated
+at `ProvableStruct.eval` and with the scalar fields pushed through `eval_field`, so a bus comparison
+does not have to bridge each projection by hand. -/
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem structEvalCPUState (env : Environment (ZMod p))
+    (c : Var Extracted.CPUState (ZMod p)) :
+    ProvableStruct.eval env c =
+      ({ clk_high := Expression.eval env c.clk_high,
+         clk_16_24 := Expression.eval env c.clk_16_24,
+         clk_0_16 := Expression.eval env c.clk_0_16,
+         pc := Eval.eval env c.pc } : Extracted.CPUState (ZMod p)) := by
+  rw [← ProvableStruct.eval_eq_eval, eval_syscallCPUState]
+  simp only [ProvableType.eval_field]
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem structEvalAccess (env : Environment (ZMod p))
+    (a : Var Extracted.RegisterAccessCols (ZMod p)) :
+    ProvableStruct.eval env a =
+      ({ prev_value := Eval.eval env a.prev_value
+         access_timestamp := Eval.eval env a.access_timestamp } :
+        Extracted.RegisterAccessCols (ZMod p)) := by
+  rw [← ProvableStruct.eval_eq_eval, eval_syscallAccess]
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem structEvalU16toU8 (env : Environment (ZMod p))
+    (u : Var Extracted.U16toU8Operation (ZMod p)) :
+    ProvableStruct.eval env u =
+      ({ low_bytes := Eval.eval env u.low_bytes } : Extracted.U16toU8Operation (ZMod p)) := by
+  rw [← ProvableStruct.eval_eq_eval, eval_syscallU16toU8]
 
 /-! ## Bus by bus, against the extracted oracle
 
@@ -1466,5 +1515,20 @@ theorem syscallInstrsMemoryAccesses (preprocessed : Vector (ZMod p) 0)
     Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
     Extracted.U16CompareOperation.interactions,
     Extracted.Interaction.toAccess, Extracted.Dir.sign]
+
+/-! ### The Syscall bus, and what is left
+
+The remaining two comparisons are `Syscall` (one entry) and `Byte` (twenty, a `Perm` rather than an
+equality), and then the assembly: `nativeAccesses` groups by *channel*, so the syscall send sits in
+its unexpected tail while the oracle's kind-partition puts it in the `Syscall` block — one element
+moves between blocks, and the eight `Exit`/`PublicValues` messages are the native-only remainder.
+
+The Syscall entry is *matched* — `toAccess_pushIf_syscall` and the extracted `.raw .syscall` arm
+produce the same key, which is what the bus classification bought. What is not yet written is a
+proof that fits the elaboration budget: normalising the thirty-entry oracle list and the native side
+in one `simp only` thrashes, and the extraction that fixed `Bitwise`/`DivRem` needs the block's
+expected form pinned exactly before it will close. That is the next step, not a new obstacle.
+-/
+
 
 end SP1Clean.Faithful
