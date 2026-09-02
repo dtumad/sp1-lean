@@ -75,6 +75,8 @@ open SP1Clean.SyscallInstrsChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
+
+
 /-! ## The whole-row column codec
 
 The sixty-five-cell regrouping between the native `Inputs` row and the extracted flat vector. The
@@ -1518,19 +1520,52 @@ theorem syscallInstrsMemoryAccesses (preprocessed : Vector (ZMod p) 0)
     Extracted.U16CompareOperation.interactions,
     Extracted.Interaction.toAccess, Extracted.Dir.sign]
 
-/-! ### The Syscall bus, and what is left
+/-- The extracted oracle's `Syscall` block: exactly one send, at the identifier's table byte.
+Stated over an opaque row so the thirty-entry interaction list is normalised once, against nothing
+else. -/
+omit [Fact (2 ^ 17 < p)] in
+private theorem syscallInstrsRustSyscallBlock (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (cols : Extracted.SyscallInstrsCols (ZMod p)) :
+    ((Extracted.SyscallInstrsCols.interactions cols preprocessed publicValues).map
+        Extracted.Interaction.toAccess).filter (fun a => a.1 = InteractionKind.Syscall)
+      = [(InteractionKind.Syscall, "SP1Syscall",
+          [cols.values[0].val, (cols.values[2] + cols.values[1] * 65536).val,
+           (Extracted.U16toU8OperationSafe.value
+             #v[cols.values[7], cols.values[8], cols.values[9], cols.values[10]]
+             { low_bytes := #v[cols.values[36], cols.values[37], cols.values[38],
+                               cols.values[39]] } cols.values[64])[0].val,
+           cols.values[15].val, cols.values[16].val, cols.values[17].val,
+           cols.values[22].val, cols.values[23].val, cols.values[24].val],
+          signedVal (Extracted.U16toU8OperationSafe.value
+            #v[cols.values[7], cols.values[8], cols.values[9], cols.values[10]]
+            { low_bytes := #v[cols.values[36], cols.values[37], cols.values[38],
+                              cols.values[39]] } cols.values[64])[1])] := by
+  -- unfold only the four `@[irreducible]` oracle definitions, then let the kernel compute.
+  -- Doing the list/filter/kind reduction in `simp` instead builds one monolithic congruence term
+  -- and hits the kernel size cliff: the same goal does not terminate that way as a named theorem,
+  -- and takes two seconds this way. `example` hides it — an anonymous declaration is checked more
+  -- cheaply, so a probe that passes says nothing about the lemma.
+  simp only [Extracted.SyscallInstrsCols.interactions,
+    Extracted.U16toU8OperationSafe.interactions, Extracted.IsZeroOperation.interactions,
+    Extracted.U16CompareOperation.interactions]
+  rfl
 
-The remaining two comparisons are `Syscall` (one entry) and `Byte` (twenty, a `Perm` rather than an
-equality), and then the assembly: `nativeAccesses` groups by *channel*, so the syscall send sits in
-its unexpected tail while the oracle's kind-partition puts it in the `Syscall` block — one element
-moves between blocks, and the eight `Exit`/`PublicValues` messages are the native-only remainder.
-
-The Syscall entry is *matched* — `toAccess_pushIf_syscall` and the extracted `.raw .syscall` arm
-produce the same key, which is what the bus classification bought. What is not yet written is a
-proof that fits the elaboration budget: normalising the thirty-entry oracle list and the native side
-in one `simp only` thrashes, and the extraction that fixed `Bitwise`/`DivRem` needs the block's
-expected form pinned exactly before it will close. That is the next step, not a new obstacle.
--/
-
+/-- **Syscall.** The generic hand-off, sent at the identifier's table byte. This is the entry the
+bus classification was for: before `InteractionKind.Syscall` existed, SP1's send and the native
+row's push were both labelled `State`, and the comparison could not be stated as an equality. -/
+theorem syscallInstrsSyscallAccesses (preprocessed : Vector (ZMod p) 0)
+    (publicValues : Vector (ZMod p) 160) (env : Environment (ZMod p))
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) :
+    [AbstractInteraction.toAccess env
+        (({ mult := tableByteVar r, msg := syscallMsg r, assumeGuarantees := false } :
+          ChannelInteraction (syscallChannel (p := p))).toRaw)]
+      = ((Extracted.SyscallInstrsCols.interactions (syscallInstrsRustColumns env r) preprocessed
+          publicValues).map Extracted.Interaction.toAccess).filter
+          (fun a => a.1 = InteractionKind.Syscall) := by
+  rw [syscallInstrsRustSyscallBlock]
+  simp only [toAccessPushedSyscall, SyscallInstrsChip.syscallMsg, SyscallInstrsChip.tableByteVar,
+    SyscallInstrsChip.clkLowVar, SyscallInstrsChip.syscallIdVar, syscallInstrsRustColumns,
+    u16toU8SafeValue_head, Expression.eval, eval_sub,
+    Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]
 
 end SP1Clean.Faithful

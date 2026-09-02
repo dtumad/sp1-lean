@@ -91,13 +91,16 @@ def AirInteractionKind.lookupName : AirInteractionKind → String
 so it gets its own kind; everything else is honestly `Unmodelled` (see `Model/InteractionBus.lean`).
 
 Kept as a function on the discriminator rather than as a second `.raw` arm of
-`Interaction.toAccess`'s match, and the reason is measured. Two `.raw` arms overlap, so the
-equation compiler emits one equation whose body is a *nested* `casesOn` over all eighteen
-`AirInteractionKind` constructors. The equation count looks the same either way — `toAccess` matches
-on a projection, so it has a single equation regardless — which is what makes this easy to miss.
-The cost only shows when both sides of a goal are concrete: normalising the `SyscallInstrs` oracle's
-thirty-entry interaction list against an explicit expected block did not terminate with the split
-arms, and takes 2.3 seconds with this one. -/
+`Interaction.toAccess`'s match. Two `.raw` arms overlap, so the equation compiler emits one equation
+whose body is a *nested* `casesOn` over all eighteen `AirInteractionKind` constructors, and every
+interaction in a chip's list drags that behind it. The equation *count* is one either way —
+`toAccess` matches on a projection, not a parameter — so `#print equations` does not show the
+difference.
+
+This is a modelling preference, not a fix for anything: the `SyscallInstrs` oracle-block
+normalisation that motivated the investigation was slow for an unrelated reason (a monolithic `simp`
+congruence term hitting the kernel size cliff, see `Faithful/SyscallInstrsChip.lean`), and stayed
+slow after this change until that was addressed. -/
 def AirInteractionKind.lookupKind : AirInteractionKind → InteractionKind
   | .syscall => .Syscall
   | _ => .Unmodelled
