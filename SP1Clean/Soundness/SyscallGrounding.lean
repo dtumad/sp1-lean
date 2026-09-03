@@ -164,6 +164,7 @@ theorem syscallStepFact_of_advance (handler : ExecutableSyscallHandler) (prog : 
   -- `.syscall` event, so the trajectory's own successor *is* the handler's target.
   sorry
 
+omit [Fact (2 ^ 17 < p)] in
 /-- The row's shape obligations — with the two premises a 264-tick row genuinely cannot supply
 itself, which the sketch's hypothesis-free statement hid.
 
@@ -184,8 +185,16 @@ theorem syscallRowOKCore (initialClock : ℕ) (r : SyscallInstrsChip.Inputs (ZMo
     (align : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) % 8 = initialClock % 8)
     (canonicalClock : StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
       = StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 264) :
-    TimedGrounding.RowOKCore initialClock (syscallRowFacts r) := by
-  sorry
+    TimedGrounding.RowOKCore initialClock (syscallRowFacts r) where
+  timeGap := by
+    show StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 8
+      ≤ StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
+    omega
+  align8 := align
+  touches := List.Forall₂.nil
+  chain_mono := by intro loc; simp [TimedGrounding.rowTouchesAt, syscallRowFacts]
+  pushClkBound := by simp [syscallRowFacts]
+  slotOfClkBound := by simp [syscallRowFacts]
 
 /-! ## The duration generalizations
 
@@ -277,19 +286,50 @@ theorem durationAt_transcriptOf (data : ProverData (ZMod p)) (rows : List (Walke
   simp only [transcriptOf, List.getElem_map]
   cases rows[k] <;> rfl
 
-/-- The clock coupling, stated where it can be checked: a syscall row's event carries the very clock
-its State pull sits at, which is what `EventTransitionsClocked` demands and what an ordinary row gets
-for free. -/
-theorem syscallEvent_startsAt (r : SyscallInstrsChip.Inputs (ZMod p))
+/-- The two clock limbs recombine without wrapping — **and this genuinely needs `2 ^ 24 < p`**, not
+the ambient `2 ^ 17 < p`. The recombined low clock reaches `2 ^ 24`, so on a smaller field the field
+addition wraps and the equation is false. `clkBound_of_cpuState_bounds` takes the same split; the
+difference is that it can *dodge* the small-field case (every value is then `< 2 ^ 24` outright),
+while an equation between the decoded clock and the message's clock cannot. -/
+private theorem clkLow_val {clk0 clk1 : ZMod p} (hp24 : 2 ^ 24 < p)
+    (clk0Bound : ((clk0 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
+    (clk1Bound : clk1.val < 2 ^ 8) :
+    (clk0 + clk1 * 65536).val = clk0.val + clk1.val * 65536 := by
+  have h17 := Fact.out (p := 2 ^ 17 < p)
+  set scaled := (clk0 - 1) * (8 : ZMod p)⁻¹ with scaledDef
+  have reconstruct : scaled * 8 + 1 = clk0 := by
+    rw [scaledDef, mul_assoc, inv_mul_cancel₀ SP1Clean.val_8_ne_zero, mul_one,
+      sub_add_cancel]
+  have scaledMulVal : (scaled * 8).val = scaled.val * 8 := by
+    rw [ZMod.val_mul_of_lt (by rw [SP1Clean.val_8_zmod_p]; omega),
+      SP1Clean.val_8_zmod_p]
+  have clk0Val : clk0.val = scaled.val * 8 + 1 := by
+    rw [← reconstruct, ZMod.val_add_of_lt (by rw [scaledMulVal, ZMod.val_one]; omega),
+      scaledMulVal, ZMod.val_one]
+  have highLimbVal : (clk1 * 65536).val = clk1.val * 65536 := by
+    rw [ZMod.val_mul_of_lt (by rw [SP1Clean.val_65536_zmod_p]; omega),
+      SP1Clean.val_65536_zmod_p]
+  rw [ZMod.val_add_of_lt (by rw [highLimbVal]; omega), highLimbVal]
+
+/-- **The clock coupling**: a syscall row's event carries the very clock its State pull sits at,
+which is what `EventTransitionsClocked` demands and what an ordinary row gets for free.
+
+This is the first place the *semantic* transcript clock and the *bus* clock the trail walks are
+forced to be the same number, and the sketch stated it as though that were definitional. It is not.
+The decoder reads three separate limbs (`clk_high`, `clk_16_24`, `clk_0_16`) while the pulled message
+carries the two low ones already recombined as `clk_0_16 + clk_16_24 * 65536`, so the two agree only
+once that field addition is known not to wrap — hence the row's `Spec`, for the limb bounds, and the
+concrete field bound. `SyscallTrail` already runs at `Fact (2 ^ 24 < p)`, so this is the layer where
+that stronger assumption first earns its place rather than a new demand. -/
+theorem syscallEvent_startsAt (r : SyscallInstrsChip.Inputs (ZMod p)) (hp24 : 2 ^ 24 < p)
     (spec : SyscallInstrsChip.Spec r) (real : r.is_real = 1) :
     (ExecutionEvent.syscall (syscallEventOfRow r)).StartsAt
       (StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)) := by
-  -- SKETCH (L3): `decodeSyscallRow`'s `clock` field is `values[0]·2^24 + values[1]·2^16 + values[2]`,
-  -- which is `clk_high`/`clk_16_24`/`clk_0_16`. That is *not* definitionally the pulled message's
-  -- `timeNat`: the message carries the two low limbs already recombined as
-  -- `clk_0_16 + clk_16_24 * 65536`, so the two agree only once that field addition is known not to
-  -- wrap — which is what `CPUState.Spec`'s `clk_0_16 < 2 ^ 16` / `clk_16_24 < 2 ^ 8` bounds give,
-  -- and why this statement now takes the row's `Spec`.
-  sorry
+  obtain ⟨hlow, hhigh⟩ : ((r.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13
+      ∧ (r.state.clk_16_24).val < 2 ^ 8 := spec.2.1 real
+  show (r.state.clk_high).val * 2 ^ 24 + (r.state.clk_16_24).val * 2 ^ 16 + (r.state.clk_0_16).val
+      = (r.state.clk_high).val * 2 ^ 24 + (r.state.clk_0_16 + r.state.clk_16_24 * 65536).val
+  rw [clkLow_val hp24 hlow hhigh]
+  ring
 
 end SP1Clean.Soundness
