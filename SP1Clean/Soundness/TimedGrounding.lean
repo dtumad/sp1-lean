@@ -637,7 +637,7 @@ def pushesAt (rows : List (RowFacts p)) (loc : MemLoc) : Multiset (MemoryMsg (ZM
 
 /-! ## List/multiset helpers -/
 
-private lemma exists_min_by {α : Type} (f : α → ℕ) :
+lemma exists_min_by {α : Type} (f : α → ℕ) :
     ∀ (l : List α), l ≠ [] → ∃ r ∈ l, ∀ r' ∈ l, f r ≤ f r'
   | [], h => absurd rfl h
   | [a], _ => ⟨a, List.mem_singleton_self a, by simp⟩
@@ -664,7 +664,7 @@ private lemma forall₂_exists_left {α β : Type} {R : α → β → Prop} {l�
     · obtain ⟨a, ha, hab⟩ := ih b hb
       exact ⟨a, List.mem_cons_of_mem _ ha, hab⟩
 
-private lemma mem_listSum_map {α β : Type} (f : α → Multiset β) :
+lemma mem_listSum_map {α β : Type} (f : α → Multiset β) :
     ∀ (l : List α) (b : β), b ∈ (l.map f).sum ↔ ∃ a ∈ l, b ∈ f a
   | [], b => by simp
   | a :: l, b => by
@@ -678,23 +678,23 @@ private lemma mem_listSum_map {α β : Type} (f : α → Multiset β) :
       · exact Or.inl hb
       · exact Or.inr ⟨a', ha', hb⟩
 
-private lemma listSum_map_pop {α β : Type} (f : α → Multiset β) (l1 l2 : List α) (r : α) :
+lemma listSum_map_pop {α β : Type} (f : α → Multiset β) (l1 l2 : List α) (r : α) :
     ((l1 ++ r :: l2).map f).sum = f r + ((l1 ++ l2).map f).sum := by
   simp only [List.map_append, List.map_cons, List.sum_append, List.sum_cons]
   rw [add_left_comm]
 
-private lemma coe_map_pop {α β : Type} (f : α → β) (l1 l2 : List α) (r : α) :
+lemma coe_map_pop {α β : Type} (f : α → β) (l1 l2 : List α) (r : α) :
     (↑((l1 ++ r :: l2).map f) : Multiset β) = f r ::ₘ ↑((l1 ++ l2).map f) := by
   exact Multiset.coe_eq_coe.mpr (List.perm_middle.map f)
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
-private lemma pushesAt_pop (l1 l2 : List (RowFacts p)) (r : RowFacts p) (loc : MemLoc) :
+lemma pushesAt_pop (l1 l2 : List (RowFacts p)) (r : RowFacts p) (loc : MemLoc) :
     pushesAt (l1 ++ r :: l2) loc
       = (↑(rowPushesAt r loc) : Multiset (MemoryMsg (ZMod p))) + pushesAt (l1 ++ l2) loc := by
   simp only [pushesAt]; exact listSum_map_pop _ l1 l2 r
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
-private lemma pullsAt_pop (l1 l2 : List (RowFacts p)) (r : RowFacts p) (loc : MemLoc) :
+lemma pullsAt_pop (l1 l2 : List (RowFacts p)) (r : RowFacts p) (loc : MemLoc) :
     pullsAt (l1 ++ r :: l2) loc
       = (↑(rowPullsAt r loc) : Multiset (MemoryMsg (ZMod p))) + pullsAt (l1 ++ l2) loc := by
   simp only [pullsAt]; exact listSum_map_pop _ l1 l2 r
