@@ -50,23 +50,75 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 noncomputable def syscallEventOfRow (r : SyscallInstrsChip.Inputs (ZMod p)) : CoreSyscallEvent :=
   decodeSyscallRow (syscallInstrsReconfigure r)
 
+/-- Lifting one byte split from the field to `ℕ`. The two bytes are each below `256`, so their
+recombination is below `2 ^ 16` and cannot wrap the modulus — which is what `Fact (2 ^ 17 < p)` is
+for. -/
+private theorem byteSplit_val {a low high : ZMod p}
+    (hlow : low.val < 256) (hhigh : high.val < 256) (h : a = low + high * 256) :
+    a.val = low.val + high.val * 256 := by
+  have hp : 2 ^ 17 < p := Fact.out
+  have h256 : (256 : ZMod p).val = 256 := by
+    have : ((256 : ℕ) : ZMod p).val = 256 :=
+      ZMod.val_natCast_of_lt (by omega)
+    simpa using this
+  have hmul : (high * 256 : ZMod p).val = high.val * 256 := by
+    rw [ZMod.val_mul, h256]
+    exact Nat.mod_eq_of_lt (by omega)
+  rw [h, ZMod.val_add, hmul]
+  exact Nat.mod_eq_of_lt (by omega)
+
 /-- The event's syscall id is the chip's byte-0 selector input. This is the hinge of the whole
 bridge: every arm `Spec` speaks of the selectors, every semantic law speaks of `syscallId`, and
 `SelectorsValid`'s `U16toU8` decomposition is what ties them together. -/
 theorem syscallId_syscallEventOfRow (r : SyscallInstrsChip.Inputs (ZMod p))
     (sel : SyscallInstrsChip.SelectorsValid r) (real : r.is_real = 1) :
     (syscallEventOfRow r).syscallId = (SyscallInstrsChip.syscallId r).val := by
-  -- SKETCH (L2): `rawCode` is `word64` of the four `op_a_memory.prev_value` limbs; the `U16toU8`
-  -- spec gives `limb 0 = low_bytes[0] + high * 256` with both bytes `< 256`, so the word's low byte
-  -- is `low_bytes[0]`.
-  sorry
+  obtain ⟨hlow, hhigh, heq⟩ := sel.1 real 0
+  -- the decomposition spec speaks at the operation's record projection; the row's own spelling is
+  -- defeq to it, and `rw` needs the row's.
+  have hlift : (r.op_a_memory.prev_value[0]).val
+      = (SyscallInstrsChip.syscallId r).val
+        + ((r.op_a_memory.prev_value[0] - r.syscall_id_bytes.low_bytes[0]) * 256⁻¹).val * 256 :=
+    byteSplit_val hlow hhigh heq
+  have hlow' : (SyscallInstrsChip.syscallId r).val < 256 := hlow
+  show (SP1Clean.CoreAIR.Current.word64 (syscallInstrsReconfigure r).values 7 8 9 10).toNat % 256
+    = _
+  rw [SP1Clean.CoreAIR.Current.word64, BitVec.toNat_ofNat]
+  -- `256 ∣ 2 ^ 64`, so the outer truncation does not disturb the low byte; the three high limbs are
+  -- multiples of `2 ^ 16` and drop out.
+  rw [Nat.mod_mod_of_dvd _ (by norm_num : (256 : ℕ) ∣ 2 ^ 64)]
+  show (((syscallInstrsReconfigure r).values[(7 : Fin 65)]).val
+    + ((syscallInstrsReconfigure r).values[(8 : Fin 65)]).val * 2 ^ 16
+    + ((syscallInstrsReconfigure r).values[(9 : Fin 65)]).val * 2 ^ 32
+    + ((syscallInstrsReconfigure r).values[(10 : Fin 65)]).val * 2 ^ 48) % 256 = _
+  have hidx : (syscallInstrsReconfigure r).values[(7 : Fin 65)]
+      = r.op_a_memory.prev_value[0] := rfl
+  rw [hidx, hlift]
+  omega
 
 /-- The event's table byte is the chip's `tableByteVar` — the very multiplicity of the syscall-bus
 send, which is why an unprovisioned bus forces it to zero. -/
 theorem tableByte_syscallEventOfRow (r : SyscallInstrsChip.Inputs (ZMod p))
     (sel : SyscallInstrsChip.SelectorsValid r) (real : r.is_real = 1) :
     (syscallEventOfRow r).tableByte = (SyscallInstrsChip.tableByte r).val := by
-  sorry
+  obtain ⟨hlow, hhigh, heq⟩ := sel.1 real 0
+  have hlift : (r.op_a_memory.prev_value[0]).val
+      = (SyscallInstrsChip.syscallId r).val + (SyscallInstrsChip.tableByte r).val * 256 :=
+    byteSplit_val hlow hhigh heq
+  have hlow' : (SyscallInstrsChip.syscallId r).val < 256 := hlow
+  have hhigh' : (SyscallInstrsChip.tableByte r).val < 256 := hhigh
+  show (SP1Clean.CoreAIR.Current.word64 (syscallInstrsReconfigure r).values 7 8 9 10).toNat
+    / 256 % 256 = _
+  rw [SP1Clean.CoreAIR.Current.word64, BitVec.toNat_ofNat]
+  show ((((syscallInstrsReconfigure r).values[(7 : Fin 65)]).val
+    + ((syscallInstrsReconfigure r).values[(8 : Fin 65)]).val * 2 ^ 16
+    + ((syscallInstrsReconfigure r).values[(9 : Fin 65)]).val * 2 ^ 32
+    + ((syscallInstrsReconfigure r).values[(10 : Fin 65)]).val * 2 ^ 48) % 2 ^ 64)
+    / 256 % 256 = _
+  have hidx : (syscallInstrsReconfigure r).values[(7 : Fin 65)]
+      = r.op_a_memory.prev_value[0] := rfl
+  rw [hidx, hlift]
+  omega
 
 /-! ## The row's bus messages
 
