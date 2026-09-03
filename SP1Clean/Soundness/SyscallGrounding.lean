@@ -72,13 +72,71 @@ def SyscallAdvancePayload (handler : ExecutableSyscallHandler) : Prop :=
       Machine.SyscallTransition handler.relation prog (syscallEventOfRow r) s s' ∧
       SyscallRowEffect (syscallEventOfRow r) s s'
 
-/-- The payload holds for the thirteen-arm handler — this is `syscallTransition_of_row` packaged in
-the shape the grounding engine consumes. -/
+/-! ### The configuration frame under the handler's writes
+
+Neither `Register.PC` nor `Register.x5` is a configuration CSR, so `SailConfigured` survives both of
+the handler's inserts. `SailConfigured.congr` is the general tool; these two are its instances at the
+shapes `ExecutableSyscallHandler.full` actually produces. -/
+
+private theorem configFrame_pc (s : SailState) (v : RegisterType Register.PC)
+    (c : SailConfigured s) :
+    SailConfigured { s with regs := s.regs.insert Register.PC v } := by
+  refine SP1Clean.Advance.SailConfigured.congr c (SailState.isInitialized_insert s c.init _ _) ?_
+  intro R hR
+  have hne : ¬((Register.PC == R) = true) := by
+    rcases hR with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  show (s.regs.insert Register.PC v).get? R = s.regs.get? R
+  rw [Std.ExtDHashMap.get?_insert, dif_neg hne]
+
+private theorem configFrame_pc_x5 (s : SailState) (v : RegisterType Register.PC)
+    (w : RegisterType Register.x5) (c : SailConfigured s) :
+    SailConfigured { s with regs := (s.regs.insert Register.PC v).insert Register.x5 w } := by
+  refine SP1Clean.Advance.SailConfigured.congr c
+    (SailState.isInitialized_insert _ (SailState.isInitialized_insert s c.init _ _) _ _) ?_
+  intro R hR
+  have hnePC : ¬((Register.PC == R) = true) := by
+    rcases hR with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  have hnex5 : ¬((Register.x5 == R) = true) := by
+    rcases hR with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  show ((s.regs.insert Register.PC v).insert Register.x5 w).get? R = s.regs.get? R
+  rw [Std.ExtDHashMap.get?_insert, dif_neg hnex5, Std.ExtDHashMap.get?_insert, dif_neg hnePC]
+
+/-- The payload holds for the thirteen-arm handler — `syscallTransition_of_row` packaged in the shape
+the grounding engine consumes, with the row effect read off the handler's own inserts. The two
+branches differ in exactly one place: HALT writes only the pc, so `x5` keeps the prior code and
+`otherRegs` is total; every other arm writes `x5` too, and `otherRegs` holds off the destination. -/
 theorem syscallAdvancePayload_full :
     SyscallAdvancePayload (p := p) ExecutableSyscallHandler.full := by
-  -- SKETCH (L3): `syscallTransition_of_row` gives the transition and the target; the row effect
-  -- reads off the handler's two register inserts.
-  sorry
+  intro r prog s real spec sel pulled canonical _cfg _rom ctx
+  have htable : (syscallEventOfRow r).tableByte = 0 :=
+    CoreSyscallEvent.tableByte_of_inlineCanonical canonical
+  obtain ⟨target, hrun, htrans⟩ :=
+    syscallTransition_of_row r prog s spec sel pulled real canonical ctx
+  refine ⟨target, htrans, ?_⟩
+  have hpcT : target.regs.get? Register.PC = some (syscallEventOfRow r).nextPc :=
+    htrans.2.1.2.2.2.2.1
+  have ht0 : target.get_reg? 5#5 = some (syscallEventOfRow r).result :=
+    htrans.2.1.2.2.2.2.2
+  by_cases h0 : (syscallEventOfRow r).syscallId = Machine.haltSyscallId
+  · have heq : target = { s with regs := s.regs.insert Register.PC Machine.haltPc } := by
+      rw [full_run_halt prog _ s htable h0] at hrun
+      exact (Option.some.inj hrun).symm
+    subst heq
+    exact { pc := hpcT, t0 := ht0, otherRegs := fun idx _ => by simp, mem := fun _ => rfl, init := fun h => SailState.isInitialized_insert s h _ _, cfg := fun c => configFrame_pc s _ c }
+  · have hmem : (syscallEventOfRow r).syscallId ∈ inlineSyscallIds :=
+      inlineSyscallIds_exhaustive _ canonical
+    have heq : target = { s with regs := (s.regs.insert Register.PC ((syscallEventOfRow r).pc + 4)).insert Register.x5 (syscallEventOfRow r).result } := by
+      rw [full_run_inline prog _ s htable h0 hmem] at hrun
+      exact (Option.some.inj hrun).symm
+    subst heq
+    refine { pc := hpcT, t0 := ht0, otherRegs := ?_, mem := fun _ => rfl, init := ?_, cfg := fun c => configFrame_pc_x5 s _ _ c }
+    · intro idx hidx
+      have hne : Register.x5 ≠ reg_idx_to_Register idx := by
+        simp only [ne_eq, eq_comm (a := Register.x5), regidxToRegister_eq_x5_iff]
+        exact hidx
+      have h1 := SailState.get_reg?_insert_of_ne (s := { s with regs := s.regs.insert Register.PC ((syscallEventOfRow r).pc + 4) }) (v := (syscallEventOfRow r).result) hne
+      simpa using h1
+    · exact fun h => SailState.isInitialized_insert _ (SailState.isInitialized_insert s h _ _) _ _
 
 /-! ## The row's facts, and its step obligation -/
 
