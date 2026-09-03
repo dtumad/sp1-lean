@@ -511,6 +511,156 @@ private theorem syscallInstrsRow_cpuState_bounds
   rw [e1] at clk1B
   exact ⟨clk0B, clk1B⟩
 
+/-- The syscall row's `PcArm` slice as a variable, named once so the crossing lemma below can be
+stated over an *abstract* environment. That is the whole trick: `simp` reducing this evaluation
+against a concrete `Table.environment` term is what exceeds the depth budget, while the same
+reduction over a free `env` is one cheap step. -/
+private def syscallPcVar : Var SyscallInstrsChip.PcArm.Inputs (ZMod p) :=
+  ⟨(varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p)).state.pc,
+   (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p)).next_pc,
+   (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p)).is_real,
+   (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p)).is_halt⟩
+
+omit [Fact (2 ^ 25 < p)] in
+/-- **The eight scalar crossings**, over an abstract environment. Evaluating the `PcArm` record and
+projecting is the same as projecting the row's variable and evaluating — field by field, never as a
+whole record, because the `Vector` fields of the record equation force a `mapRange` unfold that no
+depth budget survives. -/
+private theorem syscallPcVar_eval (env : Environment (ZMod p)) :
+    ((Eval.eval env (syscallPcVar (p := p))).is_real
+        = Expression.eval env (varFromOffset SyscallInstrsChip.Inputs 0 :
+            Var SyscallInstrsChip.Inputs (ZMod p)).is_real) ∧
+      ((Eval.eval env (syscallPcVar (p := p))).is_halt
+        = Expression.eval env (varFromOffset SyscallInstrsChip.Inputs 0 :
+            Var SyscallInstrsChip.Inputs (ZMod p)).is_halt) ∧
+      (∀ i : Fin 3, (Eval.eval env (syscallPcVar (p := p))).next_pc[i]
+        = Expression.eval env ((varFromOffset SyscallInstrsChip.Inputs 0 :
+            Var SyscallInstrsChip.Inputs (ZMod p)).next_pc[i])) ∧
+      (∀ i : Fin 3, (Eval.eval env (syscallPcVar (p := p))).pc[i]
+        = Expression.eval env ((varFromOffset SyscallInstrsChip.Inputs 0 :
+            Var SyscallInstrsChip.Inputs (ZMod p)).state.pc[i])) := by
+  refine ⟨?_, ?_, fun i => ?_, fun i => ?_⟩ <;>
+    simp only [syscallPcVar, ProvableStruct.eval_eq_eval, circuit_norm]
+
+/-- `PcArm` is retained as a subcircuit of the syscall row at the row's own offset: every arm in
+`SyscallInstrsChip.main` has `localLength = 0`, so the offset never advances past the witness
+block. -/
+private theorem syscall_pcArm_mem_subcircuits :
+    (⟨size SyscallInstrsChip.Inputs, SyscallInstrsChip.PcArm.circuit.toSubcircuit
+        (size SyscallInstrsChip.Inputs) (syscallPcVar (p := p))⟩ :
+      (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
+      ((SyscallInstrsChip.main (varFromOffset SyscallInstrsChip.Inputs 0 :
+        Var SyscallInstrsChip.Inputs (ZMod p))).operations
+          (size SyscallInstrsChip.Inputs)).subcircuits := by
+  simp only [syscallPcVar, SyscallInstrsChip.main, circuit_norm, List.mem_cons,
+    List.mem_singleton]
+
+/-- The decoded syscall row's four `PcArm`-relevant fields, in the evaluated-`varFromOffset` form.
+Written with the environment *inline*: a `set`- or `let`-bound environment is one simp `zeta` step
+away from being unfolded against a sixty-five-column row, which is what exceeds the depth budget.
+`witness_syscallInstrsRows_selectorBinary` crosses `is_real` exactly this way for the same reason. -/
+private theorem syscallInstrsRow_cross (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (row : Array (ZMod p)) :
+    ((syscallInstrsRow (syscallInstrsTable witness) row).is_real =
+        Expression.eval ((syscallInstrsTable witness).environment row)
+          (varFromOffset SyscallInstrsChip.Inputs 0 :
+            Var SyscallInstrsChip.Inputs (ZMod p)).is_real) ∧
+      ((syscallInstrsRow (syscallInstrsTable witness) row).is_halt =
+        Expression.eval ((syscallInstrsTable witness).environment row)
+          (varFromOffset SyscallInstrsChip.Inputs 0 :
+            Var SyscallInstrsChip.Inputs (ZMod p)).is_halt) ∧
+      (∀ i : Fin 3, (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[i] =
+        Expression.eval ((syscallInstrsTable witness).environment row)
+          ((varFromOffset SyscallInstrsChip.Inputs 0 :
+            Var SyscallInstrsChip.Inputs (ZMod p)).next_pc[i])) ∧
+      (∀ i : Fin 3, (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[i] =
+        Expression.eval ((syscallInstrsTable witness).environment row)
+          ((varFromOffset SyscallInstrsChip.Inputs 0 :
+            Var SyscallInstrsChip.Inputs (ZMod p)).state.pc[i])) := by
+  refine ⟨?_, ?_, fun i => ?_, fun i => ?_⟩ <;>
+    · rw [syscallInstrsRow_eq]
+      simp only [circuit_norm]
+
+/-- **The pc arm's meaning at a syscall row, from the row's constraints alone** — no channel
+guarantee, no memory currency, no grounding position. That is what makes it reachable at the State
+layer, where the chip's full `Spec` is not: `PcArm` is a pure `assertZero` block whose
+`channelsWithGuarantees` is `[]`, so its `FullGuarantees` obligation is vacuous, and its
+`Assumptions` are just the two selector booleanities the row asserts ungated. -/
+private theorem syscallInstrsRow_pcArm_spec
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints)
+    {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table) :
+    SyscallInstrsChip.PcArm.Spec
+      (SyscallInstrsChip.toPcArm (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have tableMem : syscallInstrsTable witness ∈ witness.tables :=
+    List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
+  have rowConstraints := (constraints _ (witness.mem_allTables_of_mem_tables tableMem)) row rowMem
+  rw [syscallInstrsTable_component] at rowConstraints
+  let env := (syscallInstrsTable witness).environment row
+  let input : Var SyscallInstrsChip.Inputs (ZMod p) := varFromOffset SyscallInstrsChip.Inputs 0
+  have opsConstraints : ((SyscallInstrsChip.circuit.main input).operations
+      (size SyscallInstrsChip.Inputs)).ConstraintsHold env :=
+    (Component.constraintsHold_iff env).mp rowConstraints
+  have shallow := shallowConstraints_of_componentConstraints (SyscallInstrsChip.circuit (p := p))
+    env rowConstraints
+  have hreal := SyscallInstrsChip.selectorBinary_of_shallow input
+    (size SyscallInstrsChip.Inputs) env shallow
+  have hhalt := SyscallInstrsChip.haltSelectorBinary_of_shallow input
+    (size SyscallInstrsChip.Inputs) env shallow
+  obtain ⟨cReal, cHalt, cNext, cPc⟩ := syscallPcVar_eval (p := p) env
+  have armConstraints := constraintsHold_assertionSubcircuit_of_mem env
+    ((SyscallInstrsChip.circuit.main input).operations (size SyscallInstrsChip.Inputs))
+    SyscallInstrsChip.PcArm.circuit (syscallPcVar (p := p)) (size SyscallInstrsChip.Inputs)
+    syscall_pcArm_mem_subcircuits opsConstraints
+  have armGuarantees :
+      ((SyscallInstrsChip.PcArm.circuit.main (syscallPcVar (p := p))).operations
+        (size SyscallInstrsChip.Inputs)).FullGuarantees env := by
+    change
+      (((FormalAssertion.isGeneralFormalCircuit SyscallInstrsChip.PcArm.circuit).main
+        (syscallPcVar (p := p))).operations (size SyscallInstrsChip.Inputs)).FullGuarantees env
+    rw [GeneralFormalCircuit.guarantees_iff]
+    have noChannels :
+        (FormalAssertion.isGeneralFormalCircuit
+          (SyscallInstrsChip.PcArm.circuit (p := p))).channelsWithGuarantees =
+          ([] : List (RawChannel (ZMod p))) := rfl
+    rw [noChannels]
+    simp only [List.not_mem_nil, false_implies, implies_true]
+  have arm := SyscallInstrsChip.PcArm.soundness (size SyscallInstrsChip.Inputs) env
+    (syscallPcVar (p := p)) (Eval.eval env (syscallPcVar (p := p))) rfl
+    ⟨by rw [cReal]; exact hreal, by rw [cHalt]; exact hhalt⟩
+    (Circuit.can_replace_soundness armConstraints armGuarantees)
+  -- from the row's variable to the decoded row: the cheap crossing the selector lemmas already use
+  obtain ⟨vReal, vHalt, vNext, vPc⟩ := syscallInstrsRow_cross witness row
+  have rHalt := cHalt.trans vHalt.symm
+  have rReal := cReal.trans vReal.symm
+  have rN : ∀ i : Fin 3, (Eval.eval env (syscallPcVar (p := p))).next_pc[i] =
+      (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[i] :=
+    fun i => (cNext i).trans (vNext i).symm
+  have rP : ∀ i : Fin 3, (Eval.eval env (syscallPcVar (p := p))).pc[i] =
+      (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[i] :=
+    fun i => (cPc i).trans (vPc i).symm
+  have rN0 : (Eval.eval env (syscallPcVar (p := p))).next_pc[0] =
+    (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[0] := rN 0
+  have rN1 : (Eval.eval env (syscallPcVar (p := p))).next_pc[1] =
+    (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[1] := rN 1
+  have rN2 : (Eval.eval env (syscallPcVar (p := p))).next_pc[2] =
+    (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[2] := rN 2
+  have rP0 : (Eval.eval env (syscallPcVar (p := p))).pc[0] =
+    (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[0] := rP 0
+  have rP1 : (Eval.eval env (syscallPcVar (p := p))).pc[1] =
+    (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[1] := rP 1
+  have rP2 : (Eval.eval env (syscallPcVar (p := p))).pc[2] =
+    (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[2] := rP 2
+  -- unfold the slice in the goal so both sides speak the row's language before anything is applied
+  simp only [SyscallInstrsChip.PcArm.Spec, SyscallInstrsChip.toPcArm]
+  refine ⟨fun hh => ?_, fun hr hh => ?_⟩
+  · obtain ⟨a0, a1, a2⟩ := arm.1.1 (rHalt.trans hh)
+    exact ⟨rN0.symm.trans a0, rN1.symm.trans a1, rN2.symm.trans a2⟩
+  · obtain ⟨a0, a1, a2⟩ := arm.1.2 (rReal.trans hr) (rHalt.trans hh)
+    exact ⟨rN0.symm.trans (a0.trans (congrArg (· + 4) rP0)),
+      rN1.symm.trans (a1.trans rP1), rN2.symm.trans (a2.trans rP2)⟩
+
 private theorem halt_x5_subcircuit_mem :
     (⟨size HaltChip.Inputs, (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size HaltChip.Inputs)
