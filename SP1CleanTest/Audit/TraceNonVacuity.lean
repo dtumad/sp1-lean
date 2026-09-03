@@ -414,7 +414,7 @@ theorem anchorTrace_balanced : anchorTrace.Balanced := by
   intro channel hchannel
   rw [sp1Ensemble_channels] at hchannel
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hchannel
-  rcases hchannel with rfl | rfl | rfl | rfl | rfl
+  rcases hchannel with rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · refine balancedOn_append_halt anchorTrace_stateInteractions
       (by simp only [Channel.toRaw_name, Channels.stateChannel]; decide) (by norm_num) ?_ ?_
     · intro i hi
@@ -442,6 +442,10 @@ theorem anchorTrace_balanced : anchorTrace.Balanced := by
     · exact (by native_decide : ∀ i ∈ exitInteractions,
         i.mult = 0 ∨ i.mult = 1 ∨ i.mult = -1)
     · native_decide
+  -- the two `SyscallInstrs` buses: no registered table speaks on them yet, so both are the
+  -- empty ledger's balance.
+  · exact anchorTrace.balancedOn_of_interactions_nil (witness_syscallChannel_silent _)
+  · exact anchorTrace.balancedOn_of_interactions_nil (witness_publicValuesChannel_silent _)
 
 
 /-! ## The semantic boundary binding

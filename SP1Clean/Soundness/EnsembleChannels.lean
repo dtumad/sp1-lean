@@ -32,286 +32,304 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
+/-- **The five buses the current tables actually speak on.** The ensemble declares two more —
+`syscallChannel` and `publicValuesChannel`, the `SyscallInstrs` row's buses — but until that table
+joins (S4b) no registered table touches them, and this list is what makes that a *uniform* theorem:
+every per-table subset fact below lands here, so silence on any channel outside this list follows
+for all tables at once (`sp1AllTables_channel_not_mem_of_not_core`) instead of costing a per-table
+sweep per new channel, the way the Exit wave did. -/
+def sp1CoreChannels : List (RawChannel (ZMod p)) :=
+  [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
+   Channels.programChannel.toRaw, Channels.memoryChannel.toRaw,
+   Channels.exitChannel.toRaw]
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma sp1CoreChannels_eq :
+    sp1CoreChannels (p := p) =
+      [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
+       Channels.programChannel.toRaw, Channels.memoryChannel.toRaw,
+       Channels.exitChannel.toRaw] := rfl
+
 /-! ## The 25 instruction chips -/
 
 private theorem addChip_channels_subset :
-    (AddChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (AddChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (AddChip.circuit (p := p)).channelsWithGuarantees =
       (AddChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (AddChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem addiChip_channels_subset :
-    (AddiChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (AddiChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (AddiChip.circuit (p := p)).channelsWithGuarantees =
       (AddiChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (AddiChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem addwChip_channels_subset :
-    (AddwChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (AddwChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (AddwChip.circuit (p := p)).channelsWithGuarantees =
       (AddwChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (AddwChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem subChip_channels_subset :
-    (SubChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (SubChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (SubChip.circuit (p := p)).channelsWithGuarantees =
       (SubChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (SubChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem subwChip_channels_subset :
-    (SubwChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (SubwChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (SubwChip.circuit (p := p)).channelsWithGuarantees =
       (SubwChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (SubwChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem bitwiseChip_channels_subset :
-    (BitwiseChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (BitwiseChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (BitwiseChip.circuit (p := p)).channelsWithGuarantees =
       (BitwiseChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (BitwiseChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem ltChip_channels_subset :
-    (LtChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (LtChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (LtChip.circuit (p := p)).channelsWithGuarantees =
       (LtChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (LtChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem shiftLeftChip_channels_subset :
-    (ShiftLeftChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ShiftLeftChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ShiftLeftChip.circuit (p := p)).channelsWithGuarantees =
       (ShiftLeftChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (ShiftLeftChip.circuit (p := p)).channelsWithRequirements = [memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem shiftRightChip_channels_subset :
-    (ShiftRightChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ShiftRightChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ShiftRightChip.circuit (p := p)).channelsWithGuarantees =
       (ShiftRightChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (ShiftRightChip.circuit (p := p)).channelsWithRequirements = [memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem jalChip_channels_subset :
-    (JalChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (JalChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (JalChip.circuit (p := p)).channelsWithGuarantees =
       (JalChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (JalChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem jalrChip_channels_subset :
-    (JalrChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (JalrChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (JalrChip.circuit (p := p)).channelsWithGuarantees =
       (JalrChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (JalrChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem branchChip_channels_subset :
-    (BranchChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (BranchChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (BranchChip.circuit (p := p)).channelsWithGuarantees =
       (BranchChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (BranchChip.circuit (p := p)).channelsWithRequirements = [memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem uTypeChip_channels_subset :
-    (UTypeChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (UTypeChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (UTypeChip.circuit (p := p)).channelsWithGuarantees =
       (UTypeChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (UTypeChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem loadByteChip_channels_subset :
-    (LoadByteChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (LoadByteChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (LoadByteChip.circuit (p := p)).channelsWithGuarantees =
       (LoadByteChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (LoadByteChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem loadHalfChip_channels_subset :
-    (LoadHalfChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (LoadHalfChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (LoadHalfChip.circuit (p := p)).channelsWithGuarantees =
       (LoadHalfChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (LoadHalfChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem loadWordChip_channels_subset :
-    (LoadWordChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (LoadWordChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (LoadWordChip.circuit (p := p)).channelsWithGuarantees =
       (LoadWordChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (LoadWordChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem loadDoubleChip_channels_subset :
-    (LoadDoubleChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (LoadDoubleChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (LoadDoubleChip.circuit (p := p)).channelsWithGuarantees =
       (LoadDoubleChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (LoadDoubleChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem loadX0Chip_channels_subset :
-    (LoadX0Chip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (LoadX0Chip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (LoadX0Chip.circuit (p := p)).channelsWithGuarantees =
       (LoadX0Chip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (LoadX0Chip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem storeByteChip_channels_subset :
-    (StoreByteChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (StoreByteChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (StoreByteChip.circuit (p := p)).channelsWithGuarantees =
       (StoreByteChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (StoreByteChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem storeHalfChip_channels_subset :
-    (StoreHalfChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (StoreHalfChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (StoreHalfChip.circuit (p := p)).channelsWithGuarantees =
       (StoreHalfChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (StoreHalfChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem storeWordChip_channels_subset :
-    (StoreWordChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (StoreWordChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (StoreWordChip.circuit (p := p)).channelsWithGuarantees =
       (StoreWordChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (StoreWordChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem storeDoubleChip_channels_subset :
-    (StoreDoubleChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (StoreDoubleChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (StoreDoubleChip.circuit (p := p)).channelsWithGuarantees =
       (StoreDoubleChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (StoreDoubleChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem mulChip_channels_subset :
-    (MulChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (MulChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (MulChip.circuit (p := p)).channelsWithGuarantees =
       (MulChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (MulChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem divRemChip_channels_subset :
-    (DivRemChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (DivRemChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (DivRemChip.circuit (p := p)).channelsWithGuarantees =
       (DivRemChip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (DivRemChip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem aluX0Chip_channels_subset :
-    (AluX0Chip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (AluX0Chip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (AluX0Chip.circuit (p := p)).channelsWithGuarantees =
       (AluX0Chip.elaborated (p := p)).channelsWithGuarantees from rfl,
     show (AluX0Chip.circuit (p := p)).channelsWithRequirements = [stateChannel.toRaw, memoryChannel.toRaw] from rfl] at h
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 /-- **Every instruction chip stays on the ensemble's four buses.** -/
 theorem sp1Tables_channels_subset : ∀ c ∈ sp1Tables (p := p),
-    c.circuit.channels ⊆ (sp1Ensemble (p := p)).channels := by
+    c.circuit.channels ⊆ sp1CoreChannels (p := p) := by
   intro c hc
   fin_cases hc
   exacts [addChip_channels_subset, addiChip_channels_subset, addwChip_channels_subset, subChip_channels_subset, subwChip_channels_subset, bitwiseChip_channels_subset, ltChip_channels_subset, shiftLeftChip_channels_subset, shiftRightChip_channels_subset, jalChip_channels_subset, jalrChip_channels_subset, branchChip_channels_subset, uTypeChip_channels_subset, loadByteChip_channels_subset, loadHalfChip_channels_subset, loadWordChip_channels_subset, loadDoubleChip_channels_subset, loadX0Chip_channels_subset, storeByteChip_channels_subset, storeHalfChip_channels_subset, storeWordChip_channels_subset, storeDoubleChip_channels_subset, mulChip_channels_subset, divRemChip_channels_subset, aluX0Chip_channels_subset]
@@ -319,127 +337,128 @@ theorem sp1Tables_channels_subset : ∀ c ∈ sp1Tables (p := p),
 /-! ## The 28 boundary/provider tables, and the verifier row -/
 
 private theorem u8RangeProvider_channels_subset :
-    (ByteChip.U8Range.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ByteChip.U8Range.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ByteChip.U8Range.circuit (p := p)).channelsWithGuarantees = [] from rfl,
     show (ByteChip.U8Range.circuit (p := p)).channelsWithRequirements = [byteChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem msbProvider_channels_subset :
-    (ByteChip.MSB.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ByteChip.MSB.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ByteChip.MSB.circuit (p := p)).channelsWithGuarantees = [] from rfl,
     show (ByteChip.MSB.circuit (p := p)).channelsWithRequirements = [byteChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem andProvider_channels_subset :
-    (ByteChip.AndByte.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ByteChip.AndByte.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ByteChip.AndByte.circuit (p := p)).channelsWithGuarantees = [] from rfl,
     show (ByteChip.AndByte.circuit (p := p)).channelsWithRequirements = [byteChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem orProvider_channels_subset :
-    (ByteChip.OrByte.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ByteChip.OrByte.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ByteChip.OrByte.circuit (p := p)).channelsWithGuarantees = [] from rfl,
     show (ByteChip.OrByte.circuit (p := p)).channelsWithRequirements = [byteChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem xorProvider_channels_subset :
-    (ByteChip.XorByte.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ByteChip.XorByte.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ByteChip.XorByte.circuit (p := p)).channelsWithGuarantees = [] from rfl,
     show (ByteChip.XorByte.circuit (p := p)).channelsWithRequirements = [byteChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem ltuProvider_channels_subset :
-    (ByteChip.Ltu.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ByteChip.Ltu.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ByteChip.Ltu.circuit (p := p)).channelsWithGuarantees = [] from rfl,
     show (ByteChip.Ltu.circuit (p := p)).channelsWithRequirements = [byteChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem programProvider_channels_subset :
-    (ProgramProviderChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (ProgramProviderChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (ProgramProviderChip.circuit (p := p)).channelsWithGuarantees = [] from rfl,
     show (ProgramProviderChip.circuit (p := p)).channelsWithRequirements = [programChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem memoryInitProvider_channels_subset :
-    (MemoryProviderChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (MemoryProviderChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (MemoryProviderChip.circuit (p := p)).channelsWithGuarantees = [] from rfl,
     show (MemoryProviderChip.circuit (p := p)).channelsWithRequirements = [memoryChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
+set_option linter.unusedSectionVars false in
 private theorem memoryFinalizeProvider_channels_subset :
-    (MemoryFinalizeChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (MemoryFinalizeChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (MemoryFinalizeChip.circuit (p := p)).channelsWithGuarantees = [memoryChannel.toRaw] from rfl,
     show (MemoryFinalizeChip.circuit (p := p)).channelsWithRequirements = [] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem memoryBumpProvider_channels_subset :
-    (MemoryBumpChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (MemoryBumpChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (MemoryBumpChip.circuit (p := p)).channelsWithGuarantees = [byteChannel.toRaw, memoryChannel.toRaw] from rfl,
     show (MemoryBumpChip.circuit (p := p)).channelsWithRequirements = [memoryChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem stateBumpProvider_channels_subset :
-    (StateBumpChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (StateBumpChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (StateBumpChip.circuit (p := p)).channelsWithGuarantees = [byteChannel.toRaw, stateChannel.toRaw] from rfl,
     show (StateBumpChip.circuit (p := p)).channelsWithRequirements = [] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem rangeProvider_channels_subset (width : RangeChip.Width) :
-    (RangeChip.circuitFor (p := p) width).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (RangeChip.circuitFor (p := p) width).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (RangeChip.circuitFor (p := p) width).channelsWithGuarantees = [] from rfl,
     show (RangeChip.circuitFor (p := p) width).channelsWithRequirements = [byteChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false, false_or] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem haltProvider_channels_subset :
-    (HaltChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (HaltChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (HaltChip.circuit (p := p)).channelsWithGuarantees
@@ -447,23 +466,23 @@ private theorem haltProvider_channels_subset :
          exitChannel.toRaw] from rfl,
     show (HaltChip.circuit (p := p)).channelsWithRequirements = [memoryChannel.toRaw] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 private theorem verifier_channels_subset :
-    (sp1StateVerifier (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+    (sp1StateVerifier (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
   rw [GeneralFormalCircuit.channels, List.mem_append,
     show (sp1StateVerifier (p := p)).channelsWithGuarantees
       = [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw] from rfl,
     show (sp1StateVerifier (p := p)).channelsWithRequirements = [] from rfl] at h
   simp only [List.not_mem_nil, List.mem_cons, or_false] at h
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
 /-- **Every boundary/provider table stays on the ensemble's five buses.** -/
 theorem sp1ProviderTables_channels_subset : ∀ c ∈ sp1ProviderTables (p := p),
-    c.circuit.channels ⊆ (sp1Ensemble (p := p)).channels := by
+    c.circuit.channels ⊆ sp1CoreChannels (p := p) := by
   intro c hc
   rw [sp1ProviderTables_explicit, List.mem_append, List.mem_append] at hc
   rcases hc with (hc | hc) | hc
@@ -481,12 +500,12 @@ theorem sp1ProviderTables_channels_subset : ∀ c ∈ sp1ProviderTables (p := p)
       memoryFinalizeProvider_channels_subset, memoryBumpProvider_channels_subset,
       stateBumpProvider_channels_subset, haltProvider_channels_subset]
 
-/-- **The ensemble's tables speak only on the ensemble's channels** — verifier row included.
-
-Clean's `Ensemble` does not impose this, so it is a fact about `sp1Ensemble` specifically. -/
-theorem sp1Ensemble_allTables_channels_subset :
+/-- **The ensemble's tables speak only on the five core buses** — verifier row included, and
+*tighter than the declared channel list*: the ensemble also declares the two `SyscallInstrs` buses,
+which nothing registered yet touches. -/
+theorem sp1AllTables_channels_subset_core :
     ∀ component ∈ (sp1Ensemble (p := p)).allTables,
-      component.circuit.channels ⊆ (sp1Ensemble (p := p)).channels := by
+      component.circuit.channels ⊆ sp1CoreChannels (p := p) := by
   intro component hc
   rw [Ensemble.allTables, List.mem_cons, sp1Ensemble_tables, List.mem_append] at hc
   rcases hc with rfl | hc | hc
@@ -494,7 +513,84 @@ theorem sp1Ensemble_allTables_channels_subset :
   · exact sp1Tables_channels_subset _ hc
   · exact sp1ProviderTables_channels_subset _ hc
 
-/-- **The five buses have five distinct names**, so a channel name identifies its channel.
+/-- The core buses are among the declared channels. -/
+theorem sp1CoreChannels_subset :
+    sp1CoreChannels (p := p) ⊆ (sp1Ensemble (p := p)).channels := by
+  intro ch h
+  simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false] at h
+  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  tauto
+
+/-- **The ensemble's tables speak only on the ensemble's channels** — verifier row included.
+
+Clean's `Ensemble` does not impose this, so it is a fact about `sp1Ensemble` specifically. -/
+theorem sp1Ensemble_allTables_channels_subset :
+    ∀ component ∈ (sp1Ensemble (p := p)).allTables,
+      component.circuit.channels ⊆ (sp1Ensemble (p := p)).channels :=
+  fun component hc =>
+    List.Subset.trans (sp1AllTables_channels_subset_core component hc) sp1CoreChannels_subset
+
+/-- **Silence, uniformly**: a channel outside the core five is touched by no registered table. This
+is the whole cost of declaring a new bus before its table joins — one membership check, not a
+per-table sweep. -/
+theorem sp1AllTables_channel_not_mem_of_not_core {ch : RawChannel (ZMod p)}
+    (h : ch ∉ sp1CoreChannels (p := p)) :
+    ∀ component ∈ (sp1Ensemble (p := p)).allTables, ch ∉ component.circuit.channels :=
+  fun component hc hmem => h (sp1AllTables_channels_subset_core component hc hmem)
+
+/-- Any witness of the ensemble is completely silent on a channel outside the core five: no table
+touches the channel, so no table contributes an interaction. -/
+theorem witness_interactionsWith_eq_nil_of_not_core
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) {ch : RawChannel (ZMod p)}
+    (hch : ch ∉ sp1CoreChannels (p := p)) :
+    witness.interactionsWith ch = [] := by
+  rw [Air.Flat.EnsembleWitness.interactionsWith, List.flatMap_eq_nil_iff]
+  intro table htable
+  refine Air.Flat.Table.interactionsWith_nil_of_channel_not_mem
+    (sp1AllTables_channel_not_mem_of_not_core hch table.component ?_)
+  rw [Air.Flat.EnsembleWitness.allTables, List.mem_cons] at htable
+  rw [Air.Flat.Ensemble.allTables, List.mem_cons]
+  rcases htable with rfl | htable
+  · exact Or.inl rfl
+  · refine Or.inr ?_
+    obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp htable
+    have hlen : i < (sp1Ensemble (p := p)).tables.length := by
+      rw [witness.same_length]; exact hi
+    rw [← witness.same_circuits i hlen]
+    exact List.getElem_mem hlen
+
+/-- No registered table touches SP1's syscall bus yet (its table joins at S4b). -/
+theorem witness_syscallChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    witness.interactionsWith Channels.syscallChannel.toRaw = [] :=
+  witness_interactionsWith_eq_nil_of_not_core witness (by
+    simp [sp1CoreChannels_eq, Channels.syscallChannel_eq_stateChannel_false,
+      Channels.syscallChannel_eq_byteChannel_false,
+      Channels.syscallChannel_eq_programChannel_false,
+      Channels.syscallChannel_eq_memoryChannel_false,
+      Channels.syscallChannel_eq_exitChannel_false])
+
+/-- No registered table touches the native public-values bus yet. -/
+theorem witness_publicValuesChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    witness.interactionsWith Channels.publicValuesChannel.toRaw = [] :=
+  witness_interactionsWith_eq_nil_of_not_core witness (by
+    simp [sp1CoreChannels_eq, Channels.publicValuesChannel_eq_stateChannel_false,
+      Channels.publicValuesChannel_eq_byteChannel_false,
+      Channels.publicValuesChannel_eq_programChannel_false,
+      Channels.publicValuesChannel_eq_memoryChannel_false,
+      Channels.publicValuesChannel_eq_exitChannel_false])
+
+omit [Fact (2 ^ 24 < p)] in
+/-- The empty interaction list balances: nothing was sent and nothing was received. -/
+theorem balancedInteractions_nil :
+    BalancedInteractions ([] : List (Interaction (ZMod p))) := by
+  constructor
+  · left
+    rw [List.length_nil, ZMod.ringChar_zmod_n]
+    exact (Fact.out (p := p.Prime)).pos
+  · intro msg
+    rfl
+
+/-- **The seven buses have seven distinct names**, so a channel name identifies its channel.
 
 This is what turns `Interaction.toAccess`'s key — which carries the emitting channel's `name` — into
 a statement about *which* channel produced an access. -/
@@ -502,29 +598,34 @@ theorem channel_eq_of_name_eq {c₁ c₂ : RawChannel (ZMod p)}
     (h₁ : c₁ ∈ (sp1Ensemble (p := p)).channels) (h₂ : c₂ ∈ (sp1Ensemble (p := p)).channels)
     (hname : c₁.name = c₂.name) : c₁ = c₂ := by
   simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at h₁ h₂
-  rcases h₁ with rfl | rfl | rfl | rfl | rfl <;> rcases h₂ with rfl | rfl | rfl | rfl | rfl <;>
+  rcases h₁ with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases h₂ with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
     first
       | rfl
       | (exfalso
          revert hname
          simp only [Channel.toRaw_name, stateChannel, byteChannel, programChannel, memoryChannel,
-           exitChannel]
+           exitChannel, Channels.syscallChannel, Channels.publicValuesChannel]
          decide)
 
 
-/-- **The five buses have five distinct kinds too**, so an access's `InteractionKind` identifies its
-channel just as its name does. This is the form the ledger's kind-filter needs. -/
+/-- **The seven buses have seven distinct kinds too**, so an access's `InteractionKind` identifies
+its channel just as its name does. This is the form the ledger's kind-filter needs — and it is the
+proof a new ensemble channel *owes*: a channel classified `.Unmodelled` by `kindOf` would collide
+with nothing today, but the moment a second one joined, this theorem is where the build fails
+instead of State balance silently absorbing the pair. -/
 theorem channel_eq_of_kindOf_eq {c₁ c₂ : RawChannel (ZMod p)}
     (h₁ : c₁ ∈ (sp1Ensemble (p := p)).channels) (h₂ : c₂ ∈ (sp1Ensemble (p := p)).channels)
     (hkind : kindOf c₁.name = kindOf c₂.name) : c₁ = c₂ := by
   simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at h₁ h₂
-  rcases h₁ with rfl | rfl | rfl | rfl | rfl <;> rcases h₂ with rfl | rfl | rfl | rfl | rfl <;>
+  rcases h₁ with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases h₂ with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
     first
       | rfl
       | (exfalso
          revert hkind
          simp [Channel.toRaw_name, stateChannel, byteChannel, programChannel, memoryChannel,
-           exitChannel, kindOf])
+           exitChannel, Channels.syscallChannel, Channels.publicValuesChannel, kindOf])
 
 /-- **The side condition `Model/CleanLedger.lean`'s kind-filter asks of a table**, discharged for
 every table of this ensemble: an interaction whose kind matches a declared channel's *is* on that

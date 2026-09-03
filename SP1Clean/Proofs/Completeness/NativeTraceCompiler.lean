@@ -372,7 +372,7 @@ theorem NativeTraceFootprint.interactionLengths
       (trace.witness.interactionsWith channel).length < p := by
   intro channel channelMem
   simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at channelMem
-  rcases channelMem with rfl | rfl | rfl | rfl | rfl
+  rcases channelMem with rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · simpa only [NativeTraceFootprint.ofTrace,
       Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.1
   · simpa only [NativeTraceFootprint.ofTrace,
@@ -383,6 +383,10 @@ theorem NativeTraceFootprint.interactionLengths
       Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.2.2.2.1
   · simpa only [NativeTraceFootprint.ofTrace,
       Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.2.2.2.2
+  · rw [witness_syscallChannel_silent]
+    simpa using (Fact.out (p := p.Prime)).pos
+  · rw [witness_publicValuesChannel_silent]
+    simpa using (Fact.out (p := p.Prime)).pos
 
 /-- Public limb well-formedness makes the arbitrary-shard prover-data clock representable. -/
 theorem nativeInitialClock_encodable (statement : SupportedCoreStatement p)

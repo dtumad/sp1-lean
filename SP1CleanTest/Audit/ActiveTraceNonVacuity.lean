@@ -914,7 +914,7 @@ theorem activeTrace_balanced : activeTrace.Balanced := by
   intro channel hchannel
   rw [sp1Ensemble_channels] at hchannel
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hchannel
-  rcases hchannel with rfl | rfl | rfl | rfl | rfl
+  rcases hchannel with rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact activeBalancedOn_append_halt activeTrace_stateInteractions
       (by simp only [Channel.toRaw_name, Channels.stateChannel]; decide)
       (by rw [activeStateLedger_length]; norm_num)
@@ -938,6 +938,10 @@ theorem activeTrace_balanced : activeTrace.Balanced := by
       exact activeExitLedger_signed
     · rw [activeTrace_exitInteractions]
       exact activeExitLedger_perm
+  -- the two `SyscallInstrs` buses: no registered table speaks on them yet, so both are the
+  -- empty ledger's balance.
+  · exact activeTrace.balancedOn_of_interactions_nil (witness_syscallChannel_silent _)
+  · exact activeTrace.balancedOn_of_interactions_nil (witness_publicValuesChannel_silent _)
 
 /-! ## Semantic provider binding -/
 

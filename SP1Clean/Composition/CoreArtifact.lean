@@ -186,12 +186,14 @@ private theorem channel_eq_byte_of_mem_of_kind
     channel = Channels.byteChannel.toRaw := by
   rw [Soundness.sp1Ensemble_channels] at channelMem
   simp only [List.mem_cons, List.not_mem_nil, or_false] at channelMem
-  rcases channelMem with rfl | rfl | rfl | rfl | rfl
+  rcases channelMem with rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · simp [kindOf, Channel.toRaw_name, Channels.stateChannel] at kindEq
   · rfl
   · simp [kindOf, Channel.toRaw_name, Channels.programChannel] at kindEq
   · simp [kindOf, Channel.toRaw_name, Channels.memoryChannel] at kindEq
   · simp [kindOf, Channel.toRaw_name, Channels.exitChannel] at kindEq
+  · simp [kindOf, Channel.toRaw_name, Channels.syscallChannel] at kindEq
+  · simp [kindOf, Channel.toRaw_name, Channels.publicValuesChannel] at kindEq
 
 /-- Within the registered four-channel universe, `kindOf = Program` identifies Program. -/
 private theorem channel_eq_program_of_mem_of_kind
@@ -201,12 +203,14 @@ private theorem channel_eq_program_of_mem_of_kind
     channel = Channels.programChannel.toRaw := by
   rw [Soundness.sp1Ensemble_channels] at channelMem
   simp only [List.mem_cons, List.not_mem_nil, or_false] at channelMem
-  rcases channelMem with rfl | rfl | rfl | rfl | rfl
+  rcases channelMem with rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · simp [kindOf, Channel.toRaw_name, Channels.stateChannel] at kindEq
   · simp [kindOf, Channel.toRaw_name, Channels.byteChannel] at kindEq
   · rfl
   · simp [kindOf, Channel.toRaw_name, Channels.memoryChannel] at kindEq
   · simp [kindOf, Channel.toRaw_name, Channels.exitChannel] at kindEq
+  · simp [kindOf, Channel.toRaw_name, Channels.syscallChannel] at kindEq
+  · simp [kindOf, Channel.toRaw_name, Channels.publicValuesChannel] at kindEq
 
 /-- If a channel kind uniquely identifies `channel` in the evaluated full interaction list, then
 the channel's access ledger is exactly the corresponding kind-filter of the full access ledger. -/
@@ -339,7 +343,7 @@ theorem exactNativeEnsembleWitness_balancedChannels {Digest : Type}
     have channelCase := channelMem
     rw [Soundness.sp1Ensemble_channels] at channelCase
     simp only [List.mem_cons, List.not_mem_nil, or_false] at channelCase
-    rcases channelCase with state | byte | program | memory | exit
+    rcases channelCase with state | byte | program | memory | exit | syscall | publicValues
     · exact global.remainingIntegerBalance channel (Or.inl state)
     · exact exactNativeEnsembleWitness_preprocessedIntegerBalance statement executionWitness
         memoryBoundaryWitness inventory data hint recount channel (Or.inl byte)
@@ -347,6 +351,10 @@ theorem exactNativeEnsembleWitness_balancedChannels {Digest : Type}
         memoryBoundaryWitness inventory data hint recount channel (Or.inr program)
     · exact global.remainingIntegerBalance channel (Or.inr (Or.inl memory))
     · exact global.remainingIntegerBalance channel (Or.inr (Or.inr exit))
+    · rw [syscall, Soundness.witness_syscallChannel_silent]
+      exact fun k => rfl
+    · rw [publicValues, Soundness.witness_publicValuesChannel_silent]
+      exact fun k => rfl
   change BalancedInteractions
     ((exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
       ).allTablesWitness.interactionsWith channel)

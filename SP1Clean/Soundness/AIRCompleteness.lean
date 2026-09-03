@@ -78,6 +78,15 @@ def BalancedOn (channel : RawChannel (ZMod p)) : Prop :=
     LookupAccessList.isConsistentBalanced
       ((trace.witness.interactionsWith channel).map Interaction.toAccess)
 
+/-- A channel nothing touches balances vacuously — the two `SyscallInstrs` buses, until their
+table joins the ensemble. -/
+theorem balancedOn_of_interactions_nil {channel : RawChannel (ZMod p)}
+    (h : trace.witness.interactionsWith channel = []) : trace.BalancedOn channel := by
+  refine ⟨?_, ?_⟩ <;> rw [h]
+  · simpa using (Fact.out (p := p.Prime)).pos
+  · intro k
+    rfl
+
 /-- The unit-occurrence ledger remains a convenient sufficient condition for `BalancedOn`.
 This compatibility constructor is useful to trace generators which have not aggregated equal
 provider keys: the old signed-message permutation first gives Clean balance, and the proved reverse
@@ -321,7 +330,7 @@ theorem canonicalClosure_balancedChannels_of_handoff
   rw [Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness]
   have channelCase := hchannel
   simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at channelCase
-  rcases channelCase with rfl | rfl | rfl | rfl | rfl
+  rcases channelCase with rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact trace.canonicalClosure.balancedInteractions_of_handoff _ hchannel
       InteractionKind.State rfl stateKeys hstate (hlen _ hchannel)
   · exact trace.canonicalClosure_byte_balancedInteractions hwf hserv hnonpos (hlen _ hchannel)
@@ -334,6 +343,10 @@ theorem canonicalClosure_balancedChannels_of_handoff
       (List.Perm.refl _) (hlen _ hchannel)
       (trace.canonicalClosure.balancedOn_exit hhaltClosure hhaltLenClosure hexitZero
         (hlen _ hchannel)).2
+  · rw [witness_syscallChannel_silent]
+    exact balancedInteractions_nil
+  · rw [witness_publicValuesChannel_silent]
+    exact balancedInteractions_nil
 
 /--
 **The whole ensemble's channels balance — for the two structural reasons, and nothing else.**
@@ -375,12 +388,14 @@ theorem balanced_of_closure_and_handoff
   have hlenc := hlen channel hchannel
   have hmem := hchannel
   simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at hmem
-  rcases hmem with rfl | rfl | rfl | rfl | rfl
+  rcases hmem with rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact trace.balancedOn_of_handoff _ hchannel InteractionKind.State rfl stateKeys hstate hlenc
   · exact trace.balancedOn_of_closure hwf hfit hsupply hnonpos _ hchannel (Or.inl rfl) hlenc
   · exact trace.balancedOn_of_closure hwf hfit hsupply hnonpos _ hchannel (Or.inr rfl) hlenc
   · exact trace.balancedOn_of_handoff _ hchannel InteractionKind.Memory rfl memoryKeys hmemory hlenc
   · exact trace.balancedOn_exit hhalt hhaltLen hexitZero hlenc
+  · exact trace.balancedOn_of_interactions_nil (witness_syscallChannel_silent _)
+  · exact trace.balancedOn_of_interactions_nil (witness_publicValuesChannel_silent _)
 
 /-- **A balanced trace assembles into a witness whose channels balance.** The exact integer ledger
 casts to Clean's field balance without a binary-multiplicity restriction; channel homogeneity is

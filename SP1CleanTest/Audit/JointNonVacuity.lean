@@ -772,7 +772,18 @@ theorem jointWitness_balanced : jointWitness.BalancedChannels := by
   intro channel hchannel
   rw [sp1Ensemble_channels] at hchannel
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hchannel
-  rcases hchannel with rfl | rfl | rfl | rfl | rfl
+  rcases hchannel with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  case inr.inr.inr.inr.inr.inl =>
+    show BalancedInteractions (jointWitness.interactionsWith Channels.syscallChannel.toRaw)
+    rw [witness_syscallChannel_silent (p := SP1Prime) jointWitness]
+    exact balancedInteractions_nil
+      (Or.inl (Nat.lt_of_lt_of_le Nat.zero_lt_two sp1Prime_char_pos_facts.1.le))
+  case inr.inr.inr.inr.inr.inr =>
+    show BalancedInteractions
+      (jointWitness.interactionsWith Channels.publicValuesChannel.toRaw)
+    rw [witness_publicValuesChannel_silent (p := SP1Prime) jointWitness]
+    exact balancedInteractions_nil
+      (Or.inl (Nat.lt_of_lt_of_le Nat.zero_lt_two sp1Prime_char_pos_facts.1.le))
   · show BalancedInteractions (jointWitness.interactionsWith stateChannel.toRaw)
     rw [jointWitness_interactionsWith_split, jointWitness_verifierState,
       u8RangeTable_interactionsWith_nil (of_eq_false Channels.stateChannel_eq_byteChannel_false),

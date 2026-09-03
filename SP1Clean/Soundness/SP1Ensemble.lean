@@ -341,16 +341,21 @@ theorem sp1ProviderTables_stateChannel_not_mem :
       MemoryBumpChip.circuit, circuit_norm]
 
 /-- **The SP1 machine as a plain Clean `Ensemble`**: the 25 chips + the 29 boundary/provider tables,
-the five native buses (State first — the trail's main channel; Exit last — the halt table's
-exit-code hand-off), and the pull-final/push-init boundary verifier. Its `Statement` (per-table
-constraints + per-channel balance) is everything the capstone consumes; the per-channel soundness
-facts are proven separately (see the module doc). -/
+seven buses, and the pull-final/push-init boundary verifier. The first five are the buses the
+registered tables speak on (State first — the trail's main channel; Exit — the halt table's
+exit-code hand-off); the last two are the `SyscallInstrs` row's — SP1's own syscall bus and the
+native-only public-values hand-off — declared ahead of that table joining (S4b) so that its
+faithfulness anchor and the channel classification land against the final bus topology. Until it
+joins, both are silent everywhere (`sp1AllTables_channel_not_mem_of_not_core`), so their balance is
+the empty ledger's. Its `Statement` (per-table constraints + per-channel balance) is everything the
+capstone consumes; the per-channel soundness facts are proven separately (see the module doc). -/
 def sp1Ensemble : Ensemble (ZMod p) SP1PublicIO where
   tables := sp1Tables ++ sp1ProviderTables
   channels :=
     [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
      Channels.programChannel.toRaw, Channels.memoryChannel.toRaw,
-     Channels.exitChannel.toRaw]
+     Channels.exitChannel.toRaw, Channels.syscallChannel.toRaw,
+     Channels.publicValuesChannel.toRaw]
   verifier := sp1StateVerifier
   verifier_length_zero := fun _ => rfl
 
@@ -360,7 +365,8 @@ def sp1Ensemble : Ensemble (ZMod p) SP1PublicIO where
     (sp1Ensemble (p := p)).channels =
       [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
        Channels.programChannel.toRaw, Channels.memoryChannel.toRaw,
-       Channels.exitChannel.toRaw] := rfl
+       Channels.exitChannel.toRaw, Channels.syscallChannel.toRaw,
+       Channels.publicValuesChannel.toRaw] := rfl
 @[circuit_norm] lemma sp1Ensemble_verifier :
     (sp1Ensemble (p := p)).verifier = sp1StateVerifier := rfl
 
