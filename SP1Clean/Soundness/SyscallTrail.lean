@@ -67,13 +67,35 @@ noncomputable def SyscallTrailRow.canonEdge (data : ProverData (ZMod p)) :
   | .syscall r =>
       (SyscallInstrsChip.statePulledMessage r, SyscallInstrsChip.statePushedMessage r)
 
-/-- `RankedGrounding`'s obligation: every edge strictly advances the clock. Only strictness is
-needed — the exact `264` is used later, by the clock accounting, not here. -/
-theorem SyscallTrailRow.time_increases (data : ProverData (ZMod p)) (row : SyscallTrailRow p) :
+/-- Every trail row's window is positive — **except the bump row's**, which is a self-loop of width
+zero. This is the fact that makes `time_increases` need its side condition. -/
+theorem SyscallTrailRow.duration_pos (row : SyscallTrailRow p) (noBump : ∀ a, row ≠ .bump a) :
+    0 < row.duration := by
+  cases hrow : row with
+  | instruction _ => norm_num [SyscallTrailRow.duration]
+  | bump a => exact absurd hrow (noBump a)
+  | syscall _ => norm_num [SyscallTrailRow.duration]
+
+/-- `RankedGrounding`'s obligation: every edge strictly advances the clock — reduced to the two facts
+it actually rests on, neither of which the sketch's hypothesis-free statement admitted.
+
+**The bump arm makes the bare statement false.** `canonEdge` sends a bump row to `default`, whose two
+endpoints are the *same* message, so the strict inequality fails outright rather than going unproved.
+Bump rows cancel before the trail is extracted, and `noBump` is where that has to be said.
+
+**The advance is a canonicalization premise, not arithmetic.** A syscall row's push is
+`clk_low + 264` and an instruction row's is `clk_low + 8`, both computed by upstream without a range
+constraint; on a wrapping row the pushed message's `timeNat` is not the sum at all. So "this edge
+advances by this row's duration" is supplied by `StateBumpChip`, exactly as the pc's `+ 4` carry is,
+and it is the *same* non-canonicality on the clock axis that `syscallEdge_pcBounds` handles on the pc
+axis. -/
+theorem SyscallTrailRow.time_increases (data : ProverData (ZMod p)) (row : SyscallTrailRow p)
+    (noBump : ∀ a, row ≠ .bump a)
+    (advances : StateMsg.timeNat (row.canonEdge data).2
+      = StateMsg.timeNat (row.canonEdge data).1 + row.duration) :
     StateMsg.timeNat (row.canonEdge data).1 < StateMsg.timeNat (row.canonEdge data).2 := by
-  -- SKETCH (L4): instruction rows by the existing `+8` step lemma; syscall rows by `+264`; bump
-  -- rows never reach here, having cancelled before the trail is extracted.
-  sorry
+  have hpos := row.duration_pos noBump
+  omega
 
 /-- **The goodness obligation a mid-shard syscall row owes.** The halt row is excused from bounding
 its pushed pc because that pc is the literal `(1, 0, 0)`. A syscall row's push is a real `pc + 4`, so
@@ -100,14 +122,27 @@ noncomputable def transcriptOfTrail (rows : List (SyscallTrailRow p)) : List Exe
     | .bump _ => .ordinary
     | .syscall r => .syscall (syscallEventOfRow r)
 
-/-- Each trail row's own window is the duration its event reports at the same index. This is the
-identity that lets the walk's positions be read off the timeline and vice versa. -/
+/-- Each trail row's own window is the duration its event reports at the same index — **on a
+bump-free trail**, and the side condition is not bookkeeping.
+
+`SyscallTrailRow` has a zero-width arm and `ExecutionEvent` does not, so a `.bump` row is mapped to
+`.ordinary` and its event claims eight ticks where the row claims none. Without the hypothesis this
+statement is *false*, not merely unproved. That is the price of walking the pre-filter row type:
+`WalkedRow` is the post-filter one, it has no zero-width arm, and
+`SyscallGrounding.durationAt_transcriptOf` states the same identity there with no side condition at
+all. The trail should be projected to `WalkedRow` once the goodness filter has cancelled the
+self-loops, and this lemma is the reminder of where that projection has to happen. -/
 theorem durationAt_transcriptOfTrail (rows : List (SyscallTrailRow p)) (k : ℕ)
-    (hk : k < rows.length) :
+    (hk : k < rows.length) (noBump : ∀ row ∈ rows, ∀ a, row ≠ .bump a) :
     Semantics.durationAt (transcriptOfTrail rows) k = (rows[k]'hk).duration := by
-  -- SKETCH (L4): `durationAt` reads `events[k]?`, which is the mapped row; the two `match`es agree
-  -- arm for arm.
-  sorry
+  have hlen : k < (transcriptOfTrail rows).length := by simpa [transcriptOfTrail] using hk
+  rw [Semantics.durationAt, List.getElem?_eq_getElem hlen]
+  simp only [transcriptOfTrail, List.getElem_map]
+  have hmem : rows[k] ∈ rows := List.getElem_mem hk
+  cases hrow : rows[k] with
+  | instruction row => rfl
+  | bump a => exact absurd hrow (noBump _ hmem a)
+  | syscall r => rfl
 
 /-- **The walk feed, with no shape assumption on the interleaving.** Given an ordered trail, its per
 row facts, and the two balances, every row is grounded at the transcript's own timeline. This is what

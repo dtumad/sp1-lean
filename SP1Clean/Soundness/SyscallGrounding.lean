@@ -192,6 +192,13 @@ inductive WalkedRow (p : ℕ) [Fact p.Prime] [Fact (2 ^ 17 < p)]
   | instruction (row : DecodedInstructionRow p)
   | syscall (r : SyscallInstrsChip.Inputs (ZMod p))
 
+/-- The clock window a walked row occupies. Unlike `SyscallTrailRow.duration` this is total on the
+type — there is no zero-width arm — which is exactly why the transcript identity below holds
+unconditionally here and needs a side condition on the trail. -/
+def WalkedRow.duration : WalkedRow p → ℕ
+  | .instruction _ => 8
+  | .syscall _ => 264
+
 /-- The transcript a walk order denotes. -/
 noncomputable def transcriptOf (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) :
     List ExecutionEvent :=
@@ -199,6 +206,18 @@ noncomputable def transcriptOf (data : ProverData (ZMod p)) (rows : List (Walked
     match row with
     | .instruction _ => .ordinary
     | .syscall r => .syscall (syscallEventOfRow r)
+
+/-- **Each walked row's own window is the duration its event reports at the same index.** This is
+the identity that lets the walk's positions be read off the timeline and vice versa, and it is what
+`walkE` needs at every index. It holds arm for arm because `WalkedRow` and `ExecutionEvent` are the
+same two-way split. -/
+theorem durationAt_transcriptOf (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) (k : ℕ)
+    (hk : k < rows.length) :
+    Semantics.durationAt (transcriptOf data rows) k = (rows[k]'hk).duration := by
+  have hlen : k < (transcriptOf data rows).length := by simpa [transcriptOf] using hk
+  rw [Semantics.durationAt, List.getElem?_eq_getElem hlen]
+  simp only [transcriptOf, List.getElem_map]
+  cases rows[k] <;> rfl
 
 /-- The clock coupling, stated where it can be checked: a syscall row's event carries the very clock
 its State pull sits at, which is what `EventTransitionsClocked` demands and what an ordinary row gets
