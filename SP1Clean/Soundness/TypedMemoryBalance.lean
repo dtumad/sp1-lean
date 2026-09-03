@@ -105,11 +105,13 @@ theorem witness_nonMemoryProviderTable_memoryInteractions_eq_nil
     (lower : instructionTableCount ≤ i) (upper : i < ensembleTableCount)
     (witnessBound : i < witness.tables.length)
     (notInit : i ≠ memoryInitProviderIndex) (notFinalize : i ≠ memoryFinalizeProviderIndex)
-    (notBump : i ≠ memoryBumpIndex) (notHalt : i ≠ haltIndex) :
+    (notBump : i ≠ memoryBumpIndex) (notHalt : i ≠ haltIndex)
+    (notSyscall : i ≠ syscallInstrsIndex) :
     typedTableInteractionsWith witness.tables[i] memoryChannel = [] := by
   change 25 ≤ i at lower
-  change i < 54 at upper
+  change i < 55 at upper
   change i ≠ 53 at notHalt
+  change i ≠ 54 at notSyscall
   apply List.map_eq_nil_iff.mp
   rw [typedTableInteractionsWith_raw]
   apply Table.interactionsWith_nil_of_channel_not_mem
@@ -133,6 +135,7 @@ theorem witness_nonMemoryProviderTable_memoryInteractions_eq_nil
     | exact (notFinalize (by rfl)).elim
     | exact (notBump (by rfl)).elim
     | exact (notHalt (by rfl)).elim
+    | exact (notSyscall (by rfl)).elim
     | (change memoryChannel.toRaw ∉ [byteChannel.toRaw];
        simp [Channels.memoryChannel_eq_byteChannel_false])
     | (change memoryChannel.toRaw ∉ [programChannel.toRaw];
@@ -152,25 +155,27 @@ theorem witness_providerMemoryInteractions_eq
       typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel ++
         (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel ++
           (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel ++
-            typedTableInteractionsWith (haltTable witness) memoryChannel)) := by
-  have tablesLength : witness.tables.length = 54 := by
+            (typedTableInteractionsWith (haltTable witness) memoryChannel ++
+              typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel))) := by
+  have tablesLength : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
   have interactionsAtOther (i : ℕ) (lower : instructionTableCount ≤ i)
       (upper : i < ensembleTableCount) (bound : i < witness.tables.length)
       (notInit : i ≠ memoryInitProviderIndex) (notFinalize : i ≠ memoryFinalizeProviderIndex)
-      (notBump : i ≠ memoryBumpIndex) (notHalt : i ≠ haltIndex) :
+      (notBump : i ≠ memoryBumpIndex) (notHalt : i ≠ haltIndex)
+      (notSyscall : i ≠ syscallInstrsIndex) :
       typedTableInteractionsWith witness.tables[i] memoryChannel = [] :=
     witness_nonMemoryProviderTable_memoryInteractions_eq_nil witness i lower upper bound
-      notInit notFinalize notBump notHalt
+      notInit notFinalize notBump notHalt notSyscall
   repeat rw [List.drop_eq_getElem_cons (by omega)]
   rw [List.drop_eq_nil_of_le (by omega)]
   simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
   simp [interactionsAtOther, instructionTableCount, ensembleTableCount, programProviderIndex,
     byteProviderTableCount, rangeProviderTableCount, memoryInitProviderIndex,
-    memoryFinalizeProviderIndex, memoryBumpIndex, haltIndex, nonBumpProviderTableCount,
-    stateSilentProviderTableCount, memoryInitProviderTable, memoryFinalizeProviderTable,
-    memoryBumpTable, haltTable]
+    memoryFinalizeProviderIndex, memoryBumpIndex, haltIndex, syscallInstrsIndex,
+    nonBumpProviderTableCount, stateSilentProviderTableCount, memoryInitProviderTable,
+    memoryFinalizeProviderTable, memoryBumpTable, haltTable, syscallInstrsTable]
 
 /-! ## Exact Memory-channel decomposition of the whole ensemble witness -/
 
@@ -184,7 +189,8 @@ theorem typedEnsembleMemoryInteractions_eq
         (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel ++
           (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel ++
             (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel ++
-              typedTableInteractionsWith (haltTable witness) memoryChannel))) := by
+              (typedTableInteractionsWith (haltTable witness) memoryChannel ++
+                typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)))) := by
   rw [typedEnsembleInteractionsWith_partition, witness_verifierMemoryInteractions_eq_nil,
     witness_providerMemoryInteractions_eq, List.nil_append]
 
@@ -210,10 +216,12 @@ theorem producedMessages_typedEnsembleMemory_eq
             memoryChannel) ++
             (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               memoryChannel) ++
-              producedMessages (typedTableInteractionsWith (haltTable witness)
-                memoryChannel)))) := by
+              (producedMessages (typedTableInteractionsWith (haltTable witness)
+                memoryChannel) ++
+                producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                  memoryChannel))))) := by
   rw [typedEnsembleMemoryInteractions_eq, producedMessages_append, producedMessages_append,
-    producedMessages_append, producedMessages_append,
+    producedMessages_append, producedMessages_append, producedMessages_append,
     decodedWitnessMemoryInteractions_eq_flatMap, producedMessages_flatMap]
   rfl
 
@@ -230,10 +238,12 @@ theorem consumedMessages_typedEnsembleMemory_eq
             memoryChannel) ++
             (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               memoryChannel) ++
-              consumedMessages (typedTableInteractionsWith (haltTable witness)
-                memoryChannel)))) := by
+              (consumedMessages (typedTableInteractionsWith (haltTable witness)
+                memoryChannel) ++
+                consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                  memoryChannel))))) := by
   rw [typedEnsembleMemoryInteractions_eq, consumedMessages_append, consumedMessages_append,
-    consumedMessages_append, consumedMessages_append,
+    consumedMessages_append, consumedMessages_append, consumedMessages_append,
     decodedWitnessMemoryInteractions_eq_flatMap, consumedMessages_flatMap]
   rfl
 
@@ -260,8 +270,10 @@ theorem realDecodedMemory_perm
           memoryChannel) ++
           (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             memoryChannel) ++
-            producedMessages (typedTableInteractionsWith (haltTable witness)
-              memoryChannel))))).Perm
+            (producedMessages (typedTableInteractionsWith (haltTable witness)
+              memoryChannel) ++
+              producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                memoryChannel)))))).Perm
     ((decodedInstructionRows (p := p) witness.tables).flatMap
         (fun decoded => decoded.consumedMemoryMessages witness.data) ++
       (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel) ++
@@ -269,8 +281,10 @@ theorem realDecodedMemory_perm
           memoryChannel) ++
           (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             memoryChannel) ++
-            consumedMessages (typedTableInteractionsWith (haltTable witness)
-              memoryChannel))))) := by
+            (consumedMessages (typedTableInteractionsWith (haltTable witness)
+              memoryChannel) ++
+              consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                memoryChannel)))))) := by
   classical
   have channelBalanced := typedInteractions_balanced witness balanced memoryChannel
     (by simp [sp1Ensemble_channels])
@@ -303,8 +317,10 @@ theorem realDecodedMemory_perlocBalance
             memoryChannel) ++
             (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               memoryChannel) ++
-              producedMessages (typedTableInteractionsWith (haltTable witness)
-                memoryChannel))))) : Multiset (MemoryMsg (ZMod p))) =
+              (producedMessages (typedTableInteractionsWith (haltTable witness)
+                memoryChannel) ++
+                producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                  memoryChannel)))))) : Multiset (MemoryMsg (ZMod p))) =
     Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
       ((decodedInstructionRows (p := p) witness.tables).flatMap
           (fun decoded => decoded.consumedMemoryMessages witness.data) ++
@@ -314,8 +330,10 @@ theorem realDecodedMemory_perlocBalance
             memoryChannel) ++
             (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               memoryChannel) ++
-              consumedMessages (typedTableInteractionsWith (haltTable witness)
-                memoryChannel))))) := by
+              (consumedMessages (typedTableInteractionsWith (haltTable witness)
+                memoryChannel) ++
+                consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                  memoryChannel)))))) := by
   classical
   rw [Multiset.coe_eq_coe.mpr (realDecodedMemory_perm witness balanced memBinary)]
 
@@ -643,6 +661,40 @@ private theorem haltTable_memory_signedVal
   · exact pullCase _ rfl
   · exact pushCase _ rfl
 
+/-- The `SyscallInstrs` table's Memory multiplicities are `{-1, 0, 1}` — the same argument as the
+Halt table's, since both gate all six register interactions on the row's single boolean selector. -/
+private theorem syscallInstrsTable_memory_signedVal
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (i : TypedInteraction (memoryChannel (p := p)))
+    (hi : i ∈ typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel) :
+    signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
+  have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
+  rw [syscallInstrsTable_typedMemory] at hi
+  obtain ⟨row, rowMem, hi⟩ := List.mem_flatMap.mp hi
+  have hbool := witness_syscallInstrsRows_selectorBinary witness constraints row rowMem
+  have pullCase : ∀ msg : MemoryMsg (ZMod p),
+      i = TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real msg →
+      signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
+    rintro msg rfl
+    rw [TypedInteraction.pulledIfValue_mult, signedVal_neg_is_real hp hbool]
+    rcases val_of_binary hp hbool with hv | hv <;> rw [hv] <;> norm_num
+  have pushCase : ∀ msg : MemoryMsg (ZMod p),
+      i = TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real msg →
+      signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
+    rintro msg rfl
+    rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool]
+    rcases val_of_binary hp hbool with hv | hv <;> rw [hv] <;> norm_num
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hi
+  rcases hi with rfl | rfl | rfl | rfl | rfl | rfl
+  · exact pullCase _ rfl
+  · exact pushCase _ rfl
+  · exact pullCase _ rfl
+  · exact pushCase _ rfl
+  · exact pullCase _ rfl
+  · exact pushCase _ rfl
+
 /-- Physical constraints alone give the signed-binary multiplicity bound for every Memory
 interaction in the supported ensemble.  Instruction rows use the registry-wide selector-gating
 theorem; the only provider participants use their own boolean multiplicity columns. -/
@@ -670,9 +722,11 @@ theorem witness_memoryMultiplicityBinary
         zero | negative
       · exact Or.inr (Or.inl zero)
       · exact Or.inl negative
-    rcases List.mem_append.mp bumpMem with bumpMem | haltMem
+    rcases List.mem_append.mp bumpMem with bumpMem | tailMem
     · exact memoryBumpTable_signedVal witness constraints interaction bumpMem
+    rcases List.mem_append.mp tailMem with haltMem | syscallMem
     · exact haltTable_memory_signedVal witness constraints interaction haltMem
+    · exact syscallInstrsTable_memory_signedVal witness constraints interaction syscallMem
 
 /-- A constrained padding instruction row has no active Memory message.  This is a direct
 consequence of selector booleanity and the fact that every retained Memory interaction is gated by

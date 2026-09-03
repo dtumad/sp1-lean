@@ -10,6 +10,7 @@ import SP1Clean.Proofs.Chips.MemoryFinalizeChip
 import SP1Clean.Proofs.Chips.StateBumpChip.Formal
 import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Formal
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
 import SP1Clean.FormalModel.Contracts.PublicValues
 import Clean.Air.FlatEnsemble
 
@@ -289,14 +290,16 @@ def providerTableFor : ProviderTableId → Component (ZMod p)
   | .memoryBump => ⟨MemoryBumpChip.circuit⟩
   | .stateBump => ⟨StateBumpChip.circuit⟩
   | .halt => ⟨HaltChip.circuit⟩
+  | .syscallInstrs => ⟨SyscallInstrsChip.circuit⟩
 
-/-- The 29 in-circuit boundary/provider tables: six `ByteChip` opcode tables, the complete
+/-- The 30 in-circuit boundary/provider tables: six `ByteChip` opcode tables, the complete
 17-member fixed-width Range family, the program-ROM provider, the two memory boundary tables
 (init-push + finalize-pull, W11 Phase 4), the two SP1 system tables MemoryBump (position 51: the
 register-record timestamp refreshes) and StateBump (position 52: the clock/pc re-limbing rows that
 lift the ~2^21-row shard cap and the 64 KiB pc-boundary restriction) — W3, external report Finding
-2 — and the Halt table (position 53: the halting shard's ECALL witness row, the semantics-gap
-campaign's PR 2.4). Every pusher proves its pushes' channel `Guarantees` in-circuit, which is what
+2 — the Halt table (position 53: the halting shard's ECALL witness row, the semantics-gap
+campaign's PR 2.4), and the `SyscallInstrs` table (position 54: SP1's whole syscall chip, the only
+table here carrying a `ChipFaithful` anchor). Every pusher proves its pushes' channel `Guarantees` in-circuit, which is what
 grounds the chips' byte/program/memory pulls at the capstone. -/
 def sp1ProviderTables : List (Component (ZMod p)) :=
   ProviderTableId.all.map (providerTableFor (p := p))
@@ -310,7 +313,7 @@ theorem sp1ProviderTables_explicit :
         sp1RangeProviderTables ++
       [⟨ProgramProviderChip.circuit⟩, ⟨MemoryProviderChip.circuit⟩,
        ⟨MemoryFinalizeChip.circuit⟩, ⟨MemoryBumpChip.circuit⟩,
-       ⟨StateBumpChip.circuit⟩, ⟨HaltChip.circuit⟩] := by
+       ⟨StateBumpChip.circuit⟩, ⟨HaltChip.circuit⟩, ⟨SyscallInstrsChip.circuit⟩] := by
   rfl
 
 /-- Pointwise positional coverage, including out-of-bounds provider positions. -/
@@ -320,8 +323,8 @@ theorem sp1ProviderTables_explicit :
   simp [sp1ProviderTables]
 
 /-- Regression guard: the boundary/provider table count (6 byte + 17 range + program + 2 memory +
-2 bump + halt). -/
-theorem sp1ProviderTables_length : (sp1ProviderTables (p := p)).length = 29 := by
+2 bump + halt + syscallInstrs). -/
+theorem sp1ProviderTables_length : (sp1ProviderTables (p := p)).length = 30 := by
   simp [sp1ProviderTables]
 
 /-- Every boundary/provider circuit before the bump/halt tail — positions 25–51 — stays off the
@@ -382,7 +385,7 @@ theorem witness_instructionTables_aligned
       (witness.tables.take 25) := by
   unfold InstructionTablesAligned
   rw [List.forall₂_iff_get]
-  have tablesLength : witness.tables.length = 54 := by
+  have tablesLength : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length,
       sp1ProviderTables_length]

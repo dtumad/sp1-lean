@@ -325,6 +325,9 @@ theorem memoryFrontierBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
             memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
           (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+            memoryChannel))) +
+        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             memoryChannel))) =
       optMS (memoryFinalizeFrontier witness loc) + pullsAt (memoryFrontierRows witness) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
@@ -332,6 +335,9 @@ theorem memoryFrontierBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
             memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
           (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+            memoryChannel))) +
+        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             memoryChannel))) := by
   have hbal := realDecodedMemory_perlocBalance witness balanced memBinary loc
   simp only [filter_coe_append, initPure, finPure, Multiset.coe_nil, Multiset.filter_zero,

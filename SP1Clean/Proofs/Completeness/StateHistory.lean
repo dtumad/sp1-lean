@@ -517,11 +517,13 @@ theorem StateTraceAgreement.ledger_perm_handoff
         (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
       (haltRow (haltTable trace.witness) row).is_real = 0)
+    (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
+      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0)
     (chronology : StateChronology initial events final) :
     (active trace.stateLedger).Perm
       (handoff (chainTokens (stateInitToken trace,
         chronologicalStateLinks (p := p) events, stateFinalToken trace))) :=
-  stateLedger_perm_handoff_chronological trace hbinary hbump hhalt _
+  stateLedger_perm_handoff_chronological trace hbinary hbump hhalt hsyscall _
     agreement.links_perm_chronological (agreement.isHandoffChain chronology)
 
 end SP1Clean.Soundness

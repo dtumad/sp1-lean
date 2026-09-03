@@ -1,6 +1,8 @@
 import SP1Clean.Soundness.TypedInteractions
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.StateCanon
+import SP1Clean.Faithful.SyscallInstrsChip
+import SP1Clean.Soundness.SyscallRowSemantics
 
 /-! # Typed decoders for the two bump system tables (W3 D6, external report Finding 2)
 
@@ -21,20 +23,29 @@ namespace SP1Clean.Soundness
 
 open SP1Clean
 open SP1Clean.Channels (stateChannel memoryChannel byteChannel programChannel exitChannel
-  StateMsg MemoryMsg ProgramMsg ExitMsg)
+  syscallChannel publicValuesChannel StateMsg MemoryMsg ProgramMsg ExitMsg)
 open Air.Flat
 open Circuit
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-/-- The MemoryBump table's stable position in the 54-table layout. -/
+/-- The MemoryBump table's stable position in the 55-table layout. -/
 def memoryBumpIndex : ℕ := instructionTableCount + nonBumpProviderTableCount
 
-/-- The StateBump table's stable position in the 54-table layout. -/
+/-- The StateBump table's stable position in the 55-table layout. -/
 def stateBumpIndex : ℕ := instructionTableCount + stateSilentProviderTableCount
 
-/-- The Halt table's stable position in the 54-table layout. -/
+/-- The Halt table's stable position in the 55-table layout. -/
 def haltIndex : ℕ := instructionTableCount + stateSilentProviderTableCount + 1
+
+/-- The `SyscallInstrs` table's stable position: last, so every index above is unchanged. -/
+def syscallInstrsIndex : ℕ := instructionTableCount + stateSilentProviderTableCount + 2
+
+theorem syscallInstrsIndex_lt_tablesLength (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    syscallInstrsIndex < witness.tables.length := by
+  rw [← witness.same_length]
+  simp [syscallInstrsIndex, instructionTableCount, stateSilentProviderTableCount,
+    sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
 
 theorem memoryBumpIndex_lt_tablesLength (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     memoryBumpIndex < witness.tables.length := by
@@ -53,6 +64,11 @@ theorem haltIndex_lt_tablesLength (witness : EnsembleWitness (sp1Ensemble (p := 
   rw [← witness.same_length]
   simp [haltIndex, instructionTableCount, stateSilentProviderTableCount,
     sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
+
+/-- The physical `SyscallInstrs` table selected by the stable ensemble layout. -/
+noncomputable def syscallInstrsTable
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) : Table (ZMod p) :=
+  witness.tables[syscallInstrsIndex]'(syscallInstrsIndex_lt_tablesLength witness)
 
 /-- The physical MemoryBump table selected by the stable ensemble layout. -/
 noncomputable def memoryBumpTable
@@ -99,6 +115,20 @@ theorem haltTable_component
       sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length])
   exact aligned.symm.trans (by rfl)
 
+/-- The stable `SyscallInstrs` position carries the syscall circuit. -/
+theorem syscallInstrsTable_component
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    (syscallInstrsTable witness).component = ⟨SyscallInstrsChip.circuit⟩ := by
+  unfold syscallInstrsTable
+  have aligned := witness.same_circuits syscallInstrsIndex (by
+    simp [syscallInstrsIndex, instructionTableCount, stateSilentProviderTableCount,
+      sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length])
+  exact aligned.symm.trans (by rfl)
+
+theorem syscallInstrsTable_data (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    (syscallInstrsTable witness).data = witness.data :=
+  witness.same_data _ (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))
+
 /-- The bump tables use the ensemble's shared prover data. -/
 theorem memoryBumpTable_data (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     (memoryBumpTable witness).data = witness.data :=
@@ -124,18 +154,19 @@ def MemoryBumpChip.pushedMessage (r : MemoryBumpChip.Inputs (ZMod p)) : MemoryMs
   ⟨r.clk_24_32 + r.clk_32_48 * 256, r.clk_0_16 + r.clk_16_24 * 65536,
     r.addr, 0, 0, r.access.prev_value⟩
 
-/-- The provider tail beyond the state-silent prefix is exactly the StateBump/Halt pair — the two
-provider-segment State contributors. -/
+/-- The provider tail beyond the state-silent prefix: StateBump, Halt, and the `SyscallInstrs`
+table — the three provider-segment components that name the State bus. -/
 theorem tables_drop_stateBumpIndex (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    witness.tables.drop stateBumpIndex = [stateBumpTable witness, haltTable witness] := by
-  have hlen : witness.tables.length = 54 := by
+    witness.tables.drop stateBumpIndex =
+      [stateBumpTable witness, haltTable witness, syscallInstrsTable witness] := by
+  have hlen : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length,
       sp1ProviderTables_length]
   simp only [stateBumpIndex, instructionTableCount, InstructionChipId.count_eq,
     stateSilentProviderTableCount]
   rw [List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
-    List.drop_eq_nil_of_le (by omega)]
+    List.drop_eq_getElem_cons (by omega), List.drop_eq_nil_of_le (by omega)]
   rfl
 
 /-- The provider tail splits into its 27 state-silent tables and the StateBump/Halt pair. -/
@@ -500,6 +531,32 @@ theorem exitChannel_interaction_guarantees [Fact p.Prime] (env : Environment (ZM
     trivial
   exact fun _ => h _ hchannel _ _ _
 
+omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
+/-- The syscall bus's local guarantee is `True` as well: with no provider table, D2's carve-out is
+derived from *balance* rather than from anything this channel promises. -/
+theorem syscallChannel_interaction_guarantees [Fact p.Prime] (env : Environment (ZMod p))
+    {i : AbstractInteraction (ZMod p)} (hchannel : i.channel = syscallChannel.toRaw) :
+    i.Guarantees env := by
+  have h : ∀ c : RawChannel (ZMod p), c = syscallChannel.toRaw →
+      ∀ (m : ZMod p) (v : Vector (ZMod p) c.arity) (d : ProverData (ZMod p)),
+        c.Guarantees m v d := by
+    rintro _ rfl _ _ _ _
+    trivial
+  exact fun _ => h _ hchannel _ _ _
+
+omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
+/-- The public-values bus's local guarantee is `True`; the digest binding lives in the public-values
+layer, not in this channel. -/
+theorem publicValuesChannel_interaction_guarantees [Fact p.Prime] (env : Environment (ZMod p))
+    {i : AbstractInteraction (ZMod p)} (hchannel : i.channel = publicValuesChannel.toRaw) :
+    i.Guarantees env := by
+  have h : ∀ c : RawChannel (ZMod p), c = publicValuesChannel.toRaw →
+      ∀ (m : ZMod p) (v : Vector (ZMod p) c.arity) (d : ProverData (ZMod p)),
+        c.Guarantees m v d := by
+    rintro _ rfl _ _ _ _
+    trivial
+  exact fun _ => h _ hchannel _ _ _
+
 /-- Every StateBump row satisfies the chip's semantic `Spec`: `Component.weakSoundness` with the
 trivial `Assumptions`, the row's constraints, and the byte/state guarantees — byte grounded by the
 finished-channel engine (the bump tables sit on its consumer side), State's guarantee `True`. -/
@@ -663,6 +720,38 @@ theorem haltRow_eq [Fact p.Prime] (t : Table (ZMod p)) (row : Array (ZMod p)) :
         (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p)) :=
   (eval_varFromOffset_valueFromOffset _ _ _).symm
 
+/-- A `SyscallInstrs` table row decoded into the chip's semantic `Inputs`. -/
+noncomputable def syscallInstrsRow (t : Table (ZMod p)) (row : Array (ZMod p)) :
+    SyscallInstrsChip.Inputs (ZMod p) :=
+  valueFromOffset SyscallInstrsChip.Inputs 0 (t.environment row)
+
+omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
+/-- The decoded syscall row, in the evaluated-`varFromOffset` form the per-row interaction
+evaluations produce. -/
+theorem syscallInstrsRow_eq [Fact p.Prime] (t : Table (ZMod p)) (row : Array (ZMod p)) :
+    syscallInstrsRow t row =
+      Eval.eval (t.environment row)
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p)) :=
+  (eval_varFromOffset_valueFromOffset _ _ _).symm
+
+/-- One syscall register read's pulled prior record. -/
+def SyscallInstrsChip.memPulledMessage (r : SyscallInstrsChip.Inputs (ZMod p))
+    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) : MemoryMsg (ZMod p) :=
+  ⟨r.state.clk_high, block.access_timestamp.prev_low, idx, 0, 0, block.prev_value⟩
+
+/-- One syscall register access's read-back record at this row's access clock, carrying `value` —
+the prior word for a pure read, the *written* word for `t0`. That `value` parameter is the whole
+difference from the halt table's version, which only ever reads. -/
+def SyscallInstrsChip.memPushedMessage (r : SyscallInstrsChip.Inputs (ZMod p))
+    (idx off : ZMod p) (value : Word (ZMod p)) : MemoryMsg (ZMod p) :=
+  ⟨r.state.clk_high, r.state.clk_0_16 + r.state.clk_16_24 * 65536 + off, idx, 0, 0, value⟩
+
+/-- The Exit message a real halt-arm syscall row pushes — the reduced `op_b` word. -/
+def SyscallInstrsChip.exitMessage (r : SyscallInstrsChip.Inputs (ZMod p)) : ExitMsg (ZMod p) :=
+  ⟨r.op_b_memory.prev_value[0] +
+    (r.op_b_memory.prev_value[1] +
+      (r.op_b_memory.prev_value[2] + r.op_b_memory.prev_value[3] * 65536) * 65536) * 65536⟩
+
 /-- The State message a halt row pulls — the pre-syscall `(clk, pc)`. -/
 def HaltChip.statePulledMessage (r : HaltChip.Inputs (ZMod p)) : StateMsg (ZMod p) :=
   ⟨r.state.clk_high, r.state.clk_0_16 + r.state.clk_16_24 * 65536,
@@ -737,6 +826,42 @@ theorem haltTable_typedState (witness : EnsembleWitness (sp1Ensemble (p := p))) 
   · rw [Channel.eval_pushedIf]
     simp only [HaltChip.statePushedMessage, circuit_norm, haltRow_eq]
 
+/-- The `SyscallInstrs` table's typed State view: per physical row, the pre-syscall pull and the
+`(clk + 264, next_pc)` push. This is the table's entry into the State trail — the reason registering
+it is not merely "two more buses go silent". -/
+theorem syscallInstrsTable_typedState (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    typedTableInteractionsWith (syscallInstrsTable witness) stateChannel =
+      (syscallInstrsTable witness).table.flatMap fun row =>
+        [TypedInteraction.pulledIfValue stateChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.statePulledMessage
+             (syscallInstrsRow (syscallInstrsTable witness) row)),
+         TypedInteraction.pushedIfValue stateChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.statePushedMessage
+             (syscallInstrsRow (syscallInstrsTable witness) row))] := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  unfold typedTableInteractionsWith
+  apply List.flatMap_congr
+  intro row rowMem
+  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
+  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
+    syscallInstrsTable_component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval ((syscallInstrsTable witness).environment row))
+      (((SyscallInstrsChip.main
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
+          ).operations (size SyscallInstrsChip.Inputs)).interactionsWith stateChannel.toRaw) = _
+  rw [Faithful.syscallInstrsInteractionsWith_state]
+  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_raw,
+    TypedInteraction.pushedIfValue_raw]
+  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩
+  · rw [Channel.eval_pulledIf]
+    simp only [SyscallInstrsChip.statePulledMessage, Readers.CPUState.currentMsg, circuit_norm,
+      syscallInstrsRow_eq]
+  · rw [Channel.eval_pushedIf]
+    simp only [SyscallInstrsChip.statePushedMessage, Readers.CPUState.nextMsg, circuit_norm,
+      syscallInstrsRow_eq]
+
 /-- The Halt table's typed Program view: per physical row, the gated committed-ECALL fetch pull. -/
 theorem haltTable_typedProgram (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     typedTableInteractionsWith (haltTable witness) programChannel =
@@ -760,6 +885,38 @@ theorem haltTable_typedProgram (witness : EnsembleWitness (sp1Ensemble (p := p))
   refine List.cons_eq_cons.mpr ⟨?_, rfl⟩
   rw [Channel.eval_pulledIf]
   simp only [HaltChip.programMessage, HaltChip.programMsg, circuit_norm, haltRow_eq]
+
+/-- The `SyscallInstrs` table's typed Program view: per physical row, the gated ECALL fetch pull. -/
+theorem syscallInstrsTable_typedProgram (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    typedTableInteractionsWith (syscallInstrsTable witness) programChannel =
+      (syscallInstrsTable witness).table.flatMap fun row =>
+        [TypedInteraction.pulledIfValue programChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.programMessage
+             (syscallInstrsRow (syscallInstrsTable witness) row))] := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  unfold typedTableInteractionsWith
+  apply List.flatMap_congr
+  intro row rowMem
+  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
+  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
+    syscallInstrsTable_component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval ((syscallInstrsTable witness).environment row))
+      (((SyscallInstrsChip.main
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
+          ).operations (size SyscallInstrsChip.Inputs)).interactionsWith programChannel.toRaw) = _
+  rw [Faithful.syscallInstrsInteractionsWith_program]
+  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_raw]
+  refine List.cons_eq_cons.mpr ⟨?_, rfl⟩
+  -- the anchor states this entry in raw-record form; it is defeq to the `pulledIf` spelling the
+  -- evaluation lemma matches on.
+  show AbstractInteraction.eval ((syscallInstrsTable witness).environment row)
+      ((programChannel.pulledIf (varFromOffset SyscallInstrsChip.Inputs 0).is_real
+        (SyscallInstrsChip.programMsg
+          (varFromOffset SyscallInstrsChip.Inputs 0))).toRaw) = _
+  rw [Channel.eval_pulledIf]
+  simp only [SyscallInstrsChip.programMessage, SyscallInstrsChip.programMsg, circuit_norm,
+    syscallInstrsRow_eq]
 
 /-- The Halt table's typed Memory view: per physical row, the three decoded register
 read-prior/read-back pairs (`x5` at `+4`, `x10` at `+3`, `x11` at `+2`). -/
@@ -813,6 +970,124 @@ theorem haltTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (p := p)))
       | (rw [Channel.eval_pushedIf]
          simp only [HaltChip.memPushedMessage, HaltChip.memPushMsg, HaltChip.clkLow,
            circuit_norm, haltRow_eq])
+
+/-- The anchor's Exit entry at the `pushedIf` spelling — same defeq restatement as the Memory
+list's below, for the same reason. -/
+private theorem syscallInstrsExitInteractions_gated
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    ((SyscallInstrsChip.main r).operations offset).interactionsWith (exitChannel (p := p)).toRaw =
+      [(exitChannel.pushedIf r.is_halt (SyscallInstrsChip.exitMsg r)).toRaw] :=
+  Faithful.syscallInstrsInteractionsWith_exit r offset
+
+/-- The anchor's Memory list, restated at the `pulledIf`/`pushedIf` spelling. The two forms are
+definitionally equal — `pulledIf g m` *is* `{ mult := -g, msg := m, assumeGuarantees := true }` — so
+this is the same proof term; but the evaluation lemmas match syntactically, and asking `show` to
+bridge the gap with metavariables exhausts the recursion budget. -/
+private theorem syscallInstrsMemoryInteractions_gated
+    (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
+    ((SyscallInstrsChip.main r).operations offset).interactionsWith (memoryChannel (p := p)).toRaw =
+      [(memoryChannel.pulledIf r.is_real
+          (SyscallInstrsChip.memPullMsg r r.op_a_memory r.op_a)).toRaw,
+       (memoryChannel.pushedIf r.is_real
+          (SyscallInstrsChip.memPushMsg r r.op_a 4 r.op_a_value)).toRaw,
+       (memoryChannel.pulledIf r.is_real
+          (SyscallInstrsChip.memPullMsg r r.op_b_memory r.op_b)).toRaw,
+       (memoryChannel.pushedIf r.is_real
+          (SyscallInstrsChip.memPushMsg r r.op_b 3 r.op_b_memory.prev_value)).toRaw,
+       (memoryChannel.pulledIf r.is_real
+          (SyscallInstrsChip.memPullMsg r r.op_c_memory r.op_c)).toRaw,
+       (memoryChannel.pushedIf r.is_real
+          (SyscallInstrsChip.memPushMsg r r.op_c 2 r.op_c_memory.prev_value)).toRaw] :=
+  Faithful.syscallInstrsInteractionsWith_memory r offset
+
+/-- The `SyscallInstrs` table's typed Memory view: three decoded register read-prior/read-back
+pairs (`op_a` at `+4`, `op_b` at `+3`, `op_c` at `+2`). The `op_a` push carries `op_a_value` rather
+than the prior word — that is the `t0` write SP1 performs and the halt table models as a read. -/
+theorem syscallInstrsTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel =
+      (syscallInstrsTable witness).table.flatMap fun row =>
+        [TypedInteraction.pulledIfValue memoryChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
+         TypedInteraction.pushedIfValue memoryChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value),
+         TypedInteraction.pulledIfValue memoryChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
+         TypedInteraction.pushedIfValue memoryChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value),
+         TypedInteraction.pulledIfValue memoryChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
+         TypedInteraction.pushedIfValue memoryChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2
+             (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  unfold typedTableInteractionsWith
+  apply List.flatMap_congr
+  intro row rowMem
+  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
+  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
+    syscallInstrsTable_component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval ((syscallInstrsTable witness).environment row))
+      (((SyscallInstrsChip.main
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
+          ).operations (size SyscallInstrsChip.Inputs)).interactionsWith memoryChannel.toRaw) = _
+  rw [syscallInstrsMemoryInteractions_gated]
+  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_raw,
+    TypedInteraction.pushedIfValue_raw]
+  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+      List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩ <;>
+    first
+      | (rw [Channel.eval_pulledIf]
+         simp only [SyscallInstrsChip.memPulledMessage, SyscallInstrsChip.memPullMsg,
+           circuit_norm, syscallInstrsRow_eq])
+      | (rw [Channel.eval_pushedIf]
+         simp only [SyscallInstrsChip.memPushedMessage, SyscallInstrsChip.memPushMsg,
+           SyscallInstrsChip.clkLowVar, circuit_norm, syscallInstrsRow_eq])
+
+/-- The `SyscallInstrs` table's typed Exit view: per physical row, a single `is_halt`-gated push.
+There is no anti-gated companion — a many-row table cannot balance the verifier that way, which is
+exactly why the exit accounting is redesigned when the halt table retires. -/
+theorem syscallInstrsTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    typedTableInteractionsWith (syscallInstrsTable witness) exitChannel =
+      (syscallInstrsTable witness).table.flatMap fun row =>
+        [TypedInteraction.pushedIfValue exitChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_halt
+           (SyscallInstrsChip.exitMessage
+             (syscallInstrsRow (syscallInstrsTable witness) row))] := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  unfold typedTableInteractionsWith
+  apply List.flatMap_congr
+  intro row rowMem
+  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
+  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
+    syscallInstrsTable_component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval ((syscallInstrsTable witness).environment row))
+      (((SyscallInstrsChip.main
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
+          ).operations (size SyscallInstrsChip.Inputs)).interactionsWith exitChannel.toRaw) = _
+  rw [syscallInstrsExitInteractions_gated]
+  simp only [List.map_cons, List.map_nil, TypedInteraction.pushedIfValue_raw]
+  refine List.cons_eq_cons.mpr ⟨?_, rfl⟩
+  rw [Channel.eval_pushedIf]
+  simp only [SyscallInstrsChip.exitMessage, SyscallInstrsChip.exitMsg,
+    SyscallInstrsChip.reduceWord, circuit_norm, syscallInstrsRow_eq]
 
 /-- The Halt table's typed Exit view: per physical row, the gated reduced-word push and the
 anti-gated zero push — the hand-off pair the verifier's ungated `⟨exit_code⟩` pull balances. -/
@@ -942,6 +1217,109 @@ theorem mem_realHaltRows (witness : EnsembleWitness (sp1Ensemble (p := p)))
     row ∈ (haltTable witness).table ∧
       (haltRow (haltTable witness) row).is_real = 1 := by
   rw [realHaltRows, List.mem_filter] at rowMem
+  simpa only [decide_eq_true_eq] using rowMem
+
+/-- The `SyscallInstrs` table's per-row full guarantee bundle. Seven channels rather than the halt
+table's five: the two extra buses are the ones only this chip speaks on, and both carry `True`, so
+D2's carve-outs stay *derived from balance* rather than promised here. -/
+private theorem syscallInstrsTable_fullGuarantees
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (byteGuarantees : (syscallInstrsTable witness).ChannelGuarantees byteChannel.toRaw)
+    (programGuarantees : (syscallInstrsTable witness).ChannelGuarantees programChannel.toRaw)
+    (memoryGuarantees : (syscallInstrsTable witness).ChannelGuarantees memoryChannel.toRaw)
+    {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table) :
+    (syscallInstrsTable witness).component.operations.FullGuarantees
+      ((syscallInstrsTable witness).environment row) := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have hlist : (syscallInstrsTable witness).component.circuit.channelsWithGuarantees =
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+       exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw] := by
+    rw [syscallInstrsTable_component]
+    rfl
+  simp only [Component.guarantees_iff, Component.rowOperations]
+  rw [GeneralFormalCircuit.guarantees_iff]
+  intro channel channelMem
+  show (syscallInstrsTable witness).component.rowOperations.ChannelGuarantees channel
+    ((syscallInstrsTable witness).environment row)
+  rw [← Component.channelGuarantees_iff]
+  rw [hlist] at channelMem
+  rcases List.mem_cons.mp channelMem with rfl | channelMem
+  · exact byteGuarantees row rowMem
+  rcases List.mem_cons.mp channelMem with rfl | channelMem
+  · intro i hi hmult
+    exact stateChannel_interaction_guarantees _ hmult
+  rcases List.mem_cons.mp channelMem with rfl | channelMem
+  · exact programGuarantees row rowMem
+  rcases List.mem_cons.mp channelMem with rfl | channelMem
+  · exact memoryGuarantees row rowMem
+  rcases List.mem_cons.mp channelMem with rfl | channelMem
+  · intro i hi hmult
+    exact exitChannel_interaction_guarantees _ hmult
+  rcases List.mem_cons.mp channelMem with rfl | channelMem
+  · intro i hi hmult
+    exact syscallChannel_interaction_guarantees _ hmult
+  · rw [List.mem_singleton.mp channelMem]
+    intro i hi hmult
+    exact publicValuesChannel_interaction_guarantees _ hmult
+
+/-- The per-row `Spec` extraction through `Component.weakSoundness`. -/
+private theorem syscallInstrsRow_spec_of_facts
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (tableConstraints : (syscallInstrsTable witness).Constraints)
+    (byteGuarantees : (syscallInstrsTable witness).ChannelGuarantees byteChannel.toRaw)
+    (programGuarantees : (syscallInstrsTable witness).ChannelGuarantees programChannel.toRaw)
+    (memoryGuarantees : (syscallInstrsTable witness).ChannelGuarantees memoryChannel.toRaw)
+    {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table) :
+    SyscallInstrsChip.Spec (syscallInstrsRow (syscallInstrsTable witness) row) := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have hassump : (syscallInstrsTable witness).component.Assumptions
+      ((syscallInstrsTable witness).environment row) := by
+    rw [syscallInstrsTable_component]
+    rw [show ∀ env, (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).Assumptions env = True from
+      fun _ => SyscallInstrsChip.circuit_Assumptions_apply _ _]
+    trivial
+  have spec := ((syscallInstrsTable witness).component.weakSoundness
+    (env := (syscallInstrsTable witness).environment row)
+    hassump (tableConstraints row rowMem)
+    (syscallInstrsTable_fullGuarantees witness byteGuarantees programGuarantees
+      memoryGuarantees rowMem)).1
+  rw [syscallInstrsTable_component,
+    show ∀ env, (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).Spec env =
+        SyscallInstrsChip.Spec (valueFromOffset SyscallInstrsChip.Inputs 0 env) from
+      fun _ => SyscallInstrsChip.circuit_Spec_apply _ _ _] at spec
+  exact spec
+
+/-- **Every `SyscallInstrs` row satisfies the chip's semantic `Spec`.** This is the extractor the
+stash was missing: it registered the table and decoded its rows, but nothing carried the row's
+meaning out of the ensemble, so every downstream fact about a syscall edge was unreachable. -/
+theorem syscallInstrsTable_spec (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (memoryGuarantees : (syscallInstrsTable witness).ChannelGuarantees memoryChannel.toRaw) :
+    ∀ row ∈ (syscallInstrsTable witness).table,
+      SyscallInstrsChip.Spec (syscallInstrsRow (syscallInstrsTable witness) row) := by
+  have tableMem : syscallInstrsTable witness ∈ witness.tables :=
+    List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
+  have tableConstraints : (syscallInstrsTable witness).Constraints :=
+    constraints _ (witness.mem_allTables_of_mem_tables tableMem)
+  have grounded := sp1_finishedChannel_guarantees witness constraints balanced
+    _ (witness.mem_allTables_of_mem_tables tableMem)
+  intro row rowMem
+  exact syscallInstrsRow_spec_of_facts witness tableConstraints grounded.1 grounded.2
+    memoryGuarantees rowMem
+
+/-- The active rows of the `SyscallInstrs` table. -/
+noncomputable def realSyscallInstrsRows
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) : List (Array (ZMod p)) :=
+  (syscallInstrsTable witness).table.filter fun row =>
+    (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1
+
+/-- Membership in the active syscall rows unpacks to physical-table membership plus the live
+selector. -/
+theorem mem_realSyscallInstrsRows (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
+    row ∈ (syscallInstrsTable witness).table ∧
+      (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1 := by
+  rw [realSyscallInstrsRows, List.mem_filter] at rowMem
   simpa only [decide_eq_true_eq] using rowMem
 
 end SP1Clean.Soundness

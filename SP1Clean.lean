@@ -538,6 +538,7 @@ import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Formal
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.GoodnessFilter
 import SP1Clean.Soundness.RefreshElimination

@@ -79,11 +79,13 @@ theorem witness_instructionExitInteractions_eq_nil
 theorem witness_nonHaltProviderTable_exitInteractions_eq_nil
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (i : ℕ)
     (lower : instructionTableCount ≤ i) (upper : i < ensembleTableCount)
-    (witnessBound : i < witness.tables.length) (notHalt : i ≠ haltIndex) :
+    (witnessBound : i < witness.tables.length) (notHalt : i ≠ haltIndex)
+    (notSyscall : i ≠ syscallInstrsIndex) :
     typedTableInteractionsWith witness.tables[i] exitChannel = [] := by
   change 25 ≤ i at lower
-  change i < 54 at upper
+  change i < 55 at upper
   change i ≠ 53 at notHalt
+  change i ≠ 54 at notSyscall
   apply List.map_eq_nil_iff.mp
   rw [typedTableInteractionsWith_raw]
   apply Table.interactionsWith_nil_of_channel_not_mem
@@ -101,45 +103,58 @@ theorem witness_nonHaltProviderTable_exitInteractions_eq_nil
     rw [List.getElem_append_right (by simpa only [sp1Tables_length] using lower)]
     simp only [sp1Tables_length]
   rw [componentProviderEq]
-  exact sp1ProviderTables_exitChannel_not_mem (i - 25) providerBound (by omega)
+  exact sp1ProviderTables_exitChannel_not_mem (i - 25) providerBound (by omega) (by omega)
 
-/-- The whole provider suffix's Exit interactions are exactly the Halt table's. -/
+/-- The whole provider suffix's Exit interactions are the Halt table's followed by the
+`SyscallInstrs` table's. **Two tables now push on this bus**, which is the structural fact the exit
+accounting has to absorb: the halt table's per-row gated *pair* still balances the verifier's
+ungated pull on its own, so the syscall table's `is_halt`-gated pushes must sum to zero — that is
+the interim halt-free invariant, derived rather than assumed. -/
 theorem witness_providerExitInteractions_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     (witness.tables.drop 25).flatMap (typedTableInteractionsWith · exitChannel) =
-      typedTableInteractionsWith (haltTable witness) exitChannel := by
-  have tablesLength : witness.tables.length = 54 := by
+      typedTableInteractionsWith (haltTable witness) exitChannel ++
+        typedTableInteractionsWith (syscallInstrsTable witness) exitChannel := by
+  have tablesLength : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
   have interactionsAtOther (i : ℕ) (lower : instructionTableCount ≤ i)
       (upper : i < ensembleTableCount) (bound : i < witness.tables.length)
-      (notHalt : i ≠ haltIndex) :
+      (notHalt : i ≠ haltIndex) (notSyscall : i ≠ syscallInstrsIndex) :
       typedTableInteractionsWith witness.tables[i] exitChannel = [] :=
     witness_nonHaltProviderTable_exitInteractions_eq_nil witness i lower upper bound notHalt
+      notSyscall
   repeat rw [List.drop_eq_getElem_cons (by omega)]
   rw [List.drop_eq_nil_of_le (by omega)]
   simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
-  rw [show witness.tables[53] = haltTable witness from rfl]
+  rw [show witness.tables[53] = haltTable witness from rfl,
+    show witness.tables[54] = syscallInstrsTable witness from rfl]
   simp [interactionsAtOther, instructionTableCount, ensembleTableCount, haltIndex,
-    stateSilentProviderTableCount]
+    syscallInstrsIndex, stateSilentProviderTableCount]
 
 /-- Exact Exit-channel decomposition of the whole ensemble witness: the verifier's ungated pull,
-then the Halt table's per-row gated hand-off pair. -/
+the Halt table's per-row gated hand-off pair, then the `SyscallInstrs` table's `is_halt`-gated
+pushes. -/
 theorem typedEnsembleExitInteractions_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     typedEnsembleInteractionsWith witness exitChannel =
       [TypedInteraction.pulledIfValue exitChannel 1
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] ++
-      (haltTable witness).table.flatMap fun row =>
+      (((haltTable witness).table.flatMap fun row =>
         [TypedInteraction.pushedIfValue exitChannel
            (haltRow (haltTable witness) row).is_real
            (HaltChip.exitMessage (haltRow (haltTable witness) row)),
          TypedInteraction.pushedIfValue exitChannel
            (1 - (haltRow (haltTable witness) row).is_real)
-           (⟨0⟩ : ExitMsg (ZMod p))] := by
+           (⟨0⟩ : ExitMsg (ZMod p))]) ++
+      ((syscallInstrsTable witness).table.flatMap fun row =>
+        [TypedInteraction.pushedIfValue exitChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_halt
+           (SyscallInstrsChip.exitMessage
+             (syscallInstrsRow (syscallInstrsTable witness) row))])) := by
   rw [typedEnsembleInteractionsWith_partition, witness_verifierExitInteractions_eq,
     witness_instructionExitInteractions_eq_nil, witness_providerExitInteractions_eq,
-    haltTable_typedExit, List.append_nil]
+    haltTable_typedExit, syscallInstrsTable_typedExit, List.append_nil]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- One gated hand-off pair contributes exactly one produced message: the reduced word on a real
@@ -173,6 +188,46 @@ private theorem producedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
       List.filter_nil, List.map_cons, List.map_nil, TypedInteraction.pushedIfValue_message]
 
 omit [Fact (2 ^ 24 < p)] in
+omit [Fact (2 ^ 24 < p)] in
+/-- A single gated push produces its message exactly when the gate is live, and consumes nothing.
+This is the syscall table's Exit shape — one push, with no anti-gated companion to balance the
+verifier, which is the whole reason a many-row table cannot inherit the halt table's accounting. -/
+private theorem producedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
+    (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
+    producedMessages [TypedInteraction.pushedIfValue exitChannel gate m] =
+      (if gate = 1 then [m] else []) := by
+  haveI : Fact (1 < p) := ⟨by omega⟩
+  have hpush : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
+  unfold producedMessages
+  rcases hbool with h0 | h1
+  · rw [List.filter_cons_of_neg (by
+        simp only [TypedInteraction.pushedIfValue_mult, hpush, decide_eq_true_eq]
+        rw [show gate.val = 0 from by rw [h0]; exact ZMod.val_zero]
+        norm_num), List.filter_nil, List.map_nil,
+      if_neg (by rw [h0]; exact zero_ne_one)]
+  · rw [List.filter_cons_of_pos (by
+        simp only [TypedInteraction.pushedIfValue_mult, hpush, decide_eq_true_eq]
+        rw [show gate.val = 1 from by rw [h1]; exact ZMod.val_one p]
+        norm_num), List.filter_nil, List.map_cons, List.map_nil, if_pos h1]
+    rfl
+
+omit [Fact (2 ^ 24 < p)] in
+/-- The syscall table's Exit pushes consume nothing. -/
+private theorem consumedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
+    (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
+    consumedMessages [TypedInteraction.pushedIfValue exitChannel gate m] = [] := by
+  haveI : Fact (1 < p) := ⟨by omega⟩
+  have hpush : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
+  have hval : gate.val = 0 ∨ gate.val = 1 := by
+    rcases hbool with h | h
+    · left; rw [h, ZMod.val_zero]
+    · right; rw [h, ZMod.val_one]
+  unfold consumedMessages
+  rw [List.filter_cons_of_neg (by
+      simp only [TypedInteraction.pushedIfValue_mult, hpush, decide_eq_true_eq]
+      rcases hval with h | h <;> rw [h] <;> norm_num),
+    List.filter_nil, List.map_nil]
+
 /-- A gated hand-off pair consumes nothing: both entries are pushes. -/
 private theorem consumedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
@@ -214,7 +269,7 @@ theorem witness_exitInteractions_signedBinary
   haveI : Fact (1 < p) := ⟨by omega⟩
   rw [typedEnsembleExitInteractions_eq]
   intro interaction interactionMem
-  rcases List.mem_append.mp interactionMem with hverifier | hhalt
+  rcases List.mem_append.mp interactionMem with hverifier | htail
   · rw [List.mem_singleton.mp hverifier]
     left
     rw [TypedInteraction.pulledIfValue_mult]
@@ -222,6 +277,7 @@ theorem witness_exitInteractions_signedBinary
       signedVal (-(1 : ZMod p)) = -((1 : ZMod p).val : ℤ) :=
         signedVal_neg_is_real hp (Or.inr rfl)
       _ = -1 := by rw [ZMod.val_one]; norm_num
+  rcases List.mem_append.mp htail with hhalt | hsyscall
   · obtain ⟨row, rowMem, hmem⟩ := List.mem_flatMap.mp hhalt
     have hbool := witness_haltRows_selectorBinary witness constraints row rowMem
     have hbool' : (1 : ZMod p) - (haltRow (haltTable witness) row).is_real = 0 ∨
@@ -240,6 +296,14 @@ theorem witness_exitInteractions_signedBinary
         · right; left; rw [h0, ZMod.val_zero]; rfl
         · right; right; rw [h1, ZMod.val_one]; rfl
       · exact absurd hnil List.not_mem_nil
+  · obtain ⟨row, rowMem, hmem⟩ := List.mem_flatMap.mp hsyscall
+    have hbool := witness_syscallInstrsRows_haltSelectorBinary witness constraints row rowMem
+    rcases List.mem_cons.mp hmem with rfl | hnil
+    · rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool]
+      rcases hbool with h0 | h1
+      · right; left; rw [h0, ZMod.val_zero]; rfl
+      · right; right; rw [h1, ZMod.val_one]; rfl
+    · exact absurd hnil List.not_mem_nil
 
 /-- Produced Exit messages of the whole witness: exactly one hand-off message per physical Halt
 row (the reduced word when real, the zero code when padding). -/
@@ -247,12 +311,16 @@ theorem witness_exitProduced_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
     producedMessages (typedEnsembleInteractionsWith witness exitChannel) =
-      (haltTable witness).table.map fun row =>
+      ((haltTable witness).table.map fun row =>
         if (haltRow (haltTable witness) row).is_real = 1
         then HaltChip.exitMessage (haltRow (haltTable witness) row)
-        else (⟨0⟩ : ExitMsg (ZMod p)) := by
+        else (⟨0⟩ : ExitMsg (ZMod p))) ++
+      ((syscallInstrsTable witness).table.flatMap fun row =>
+        if (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 1
+        then [SyscallInstrsChip.exitMessage (syscallInstrsRow (syscallInstrsTable witness) row)]
+        else []) := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
-  rw [typedEnsembleExitInteractions_eq, producedMessages_append]
+  rw [typedEnsembleExitInteractions_eq, producedMessages_append, producedMessages_append]
   have hverifier : producedMessages
       [TypedInteraction.pulledIfValue exitChannel 1
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] = [] := by
@@ -264,8 +332,9 @@ theorem witness_exitProduced_eq
           ZMod.val_one, decide_eq_true_eq]
         norm_num),
       List.filter_nil, List.map_nil]
-  rw [hverifier, List.nil_append, producedMessages_flatMap]
-  rw [show ((haltTable witness).table.map fun row =>
+  rw [hverifier, List.nil_append, producedMessages_flatMap, producedMessages_flatMap]
+  refine congrArg₂ (· ++ ·) ?_ ?_
+  · rw [show ((haltTable witness).table.map fun row =>
       if (haltRow (haltTable witness) row).is_real = 1
       then HaltChip.exitMessage (haltRow (haltTable witness) row)
       else (⟨0⟩ : ExitMsg (ZMod p))) =
@@ -273,10 +342,14 @@ theorem witness_exitProduced_eq
       [if (haltRow (haltTable witness) row).is_real = 1
        then HaltChip.exitMessage (haltRow (haltTable witness) row)
        else (⟨0⟩ : ExitMsg (ZMod p))] from List.map_eq_flatMap ..]
-  apply List.flatMap_congr
-  intro row rowMem
-  exact producedMessages_exitPair hp
-    (witness_haltRows_selectorBinary witness constraints row rowMem) _
+    apply List.flatMap_congr
+    intro row rowMem
+    exact producedMessages_exitPair hp
+      (witness_haltRows_selectorBinary witness constraints row rowMem) _
+  · apply List.flatMap_congr
+    intro row rowMem
+    exact producedMessages_exitPush hp
+      (witness_syscallInstrsRows_haltSelectorBinary witness constraints row rowMem) _
 
 /-- Consumed Exit messages of the whole witness: exactly the verifier's committed exit code. -/
 theorem witness_exitConsumed_eq
@@ -309,18 +382,37 @@ theorem witness_exitConsumed_eq
     intro row rowMem
     exact consumedMessages_exitPair hp
       (witness_haltRows_selectorBinary witness constraints row rowMem) _
-  rw [hverifier, hhalt, List.append_nil]
+  have hsyscall : consumedMessages ((syscallInstrsTable witness).table.flatMap fun row =>
+      [TypedInteraction.pushedIfValue exitChannel
+         (syscallInstrsRow (syscallInstrsTable witness) row).is_halt
+         (SyscallInstrsChip.exitMessage
+           (syscallInstrsRow (syscallInstrsTable witness) row))]) = [] := by
+    rw [consumedMessages_flatMap, List.flatMap_eq_nil_iff]
+    intro row rowMem
+    exact consumedMessages_exitPush hp
+      (witness_syscallInstrsRows_haltSelectorBinary witness constraints row rowMem) _
+  rw [consumedMessages_append, hverifier, hhalt, hsyscall, List.append_nil, List.append_nil]
 
 /-- **The Exit hand-off, balanced.**  Every physical Halt row's hand-off message list is a
 permutation of the singleton committed exit code — so the Halt table has exactly one physical row,
-whose hand-off message *is* the committed exit code. -/
+whose hand-off message *is* the committed exit code.
+
+**Both** Exit contributors appear here now, and that is the point: the Halt table emits exactly one
+message per physical row *unconditionally*, while the `SyscallInstrs` table emits one per active
+`is_halt` row. Their concatenation is a singleton, so the two counts sum to one — which, once the
+Halt table is known non-empty, forces the syscall table halt-free. That is the interim invariant
+letting the two tables coexist, and it is derived from balance rather than assumed. -/
 theorem witness_exitMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((haltTable witness).table.map fun row =>
       if (haltRow (haltTable witness) row).is_real = 1
       then HaltChip.exitMessage (haltRow (haltTable witness) row)
-      else (⟨0⟩ : ExitMsg (ZMod p))) =
+      else (⟨0⟩ : ExitMsg (ZMod p))) ++
+    ((syscallInstrsTable witness).table.flatMap fun row =>
+      if (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 1
+      then [SyscallInstrsChip.exitMessage (syscallInstrsRow (syscallInstrsTable witness) row)]
+      else []) =
       [(⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] := by
   classical
   have channelBalanced := typedInteractions_balanced witness balanced exitChannel
@@ -332,13 +424,52 @@ theorem witness_exitMessages_eq
     witness_exitConsumed_eq witness constraints] at messagePerm
   exact List.perm_singleton.mp messagePerm
 
+/-- **The interim two-contributor invariant.** The Halt table emits one Exit message per physical
+row unconditionally and the `SyscallInstrs` table one per active `is_halt` row, so their counts sum
+to one. A *non-empty* Halt table therefore accounts for the whole singleton on its own, forcing the
+syscall table halt-free. Derived from balance, not assumed — and exactly what disappears when
+`HaltChip` retires and D8's successor becomes the sole ungated contributor. -/
+private theorem haltTable_length_one_of_ne_nil
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (hne : (haltTable witness).table ≠ []) :
+    (haltTable witness).table.length = 1 ∧
+      ((syscallInstrsTable witness).table.flatMap fun row =>
+        if (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 1
+        then [SyscallInstrsChip.exitMessage (syscallInstrsRow (syscallInstrsTable witness) row)]
+        else []) = [] := by
+  have hlen := congrArg List.length (witness_exitMessages_eq witness constraints balanced)
+  rw [List.length_append, List.length_map, List.length_singleton] at hlen
+  have hpos : 0 < (haltTable witness).table.length := by
+    cases hcase : (haltTable witness).table with
+    | nil => exact absurd hcase hne
+    | cons a t => simp
+  exact ⟨by omega, List.length_eq_zero_iff.mp (by omega)⟩
+
+/-- With the syscall table halt-free, the hand-off reduces to the Halt table's own gated pushes —
+the shape every consumer below was written against. -/
+private theorem haltExitMessages_eq_of_ne_nil
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (hne : (haltTable witness).table ≠ []) :
+    ((haltTable witness).table.map fun row =>
+      if (haltRow (haltTable witness) row).is_real = 1
+      then HaltChip.exitMessage (haltRow (haltTable witness) row)
+      else (⟨0⟩ : ExitMsg (ZMod p))) =
+      [(⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] := by
+  have handoff := witness_exitMessages_eq witness constraints balanced
+  rw [(haltTable_length_one_of_ne_nil witness constraints balanced hne).2,
+    List.append_nil] at handoff
+  exact handoff
+
 /-- On a shard with no active Halt row the committed public exit code is zero. -/
 theorem witness_exit_code_zero_of_haltFree
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (haltPresent : (haltTable witness).table ≠ [])
     (haltFree : realHaltRows witness = []) :
     witness.publicInput.exit_code = 0 := by
-  have handoff := witness_exitMessages_eq witness constraints balanced
+  have handoff := haltExitMessages_eq_of_ne_nil witness constraints balanced haltPresent
   have noReal : ∀ row ∈ (haltTable witness).table,
       ¬ (haltRow (haltTable witness) row).is_real = 1 := by
     intro row rowMem hreal
@@ -367,10 +498,12 @@ theorem witness_realHaltRows_eq_of_mem
     realHaltRows witness = [h] ∧
       HaltChip.exitMessage (haltRow (haltTable witness) h) =
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p)) := by
-  have handoff := witness_exitMessages_eq witness constraints balanced
-  have lengthOne : (haltTable witness).table.length = 1 := by
-    have := congrArg List.length handoff
-    simpa using this
+  have hTable0 := (mem_realHaltRows witness hmem).1
+  have hne : (haltTable witness).table ≠ [] := fun hnil => by
+    rw [hnil] at hTable0; exact List.not_mem_nil hTable0
+  have handoff := haltExitMessages_eq_of_ne_nil witness constraints balanced hne
+  have lengthOne : (haltTable witness).table.length = 1 :=
+    (haltTable_length_one_of_ne_nil witness constraints balanced hne).1
   obtain ⟨r, tableEq⟩ := List.length_eq_one_iff.mp lengthOne
   obtain ⟨hTable, hReal⟩ := mem_realHaltRows witness hmem
   have hr : h = r := by
@@ -391,10 +524,11 @@ theorem witness_haltTable_table_eq_of_mem
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {h : Array (ZMod p)} (hmem : h ∈ realHaltRows witness) :
     (haltTable witness).table = [h] := by
-  have handoff := witness_exitMessages_eq witness constraints balanced
-  have lengthOne : (haltTable witness).table.length = 1 := by
-    have := congrArg List.length handoff
-    simpa using this
+  have hTable0 := (mem_realHaltRows witness hmem).1
+  have hne : (haltTable witness).table ≠ [] := fun hnil => by
+    rw [hnil] at hTable0; exact List.not_mem_nil hTable0
+  have lengthOne : (haltTable witness).table.length = 1 :=
+    (haltTable_length_one_of_ne_nil witness constraints balanced hne).1
   obtain ⟨r, tableEq⟩ := List.length_eq_one_iff.mp lengthOne
   obtain ⟨hTable, -⟩ := mem_realHaltRows witness hmem
   rw [tableEq] at hTable ⊢

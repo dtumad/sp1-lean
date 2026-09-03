@@ -89,6 +89,30 @@ theorem HaltChip.selectorBinary_of_shallow [Fact (2 ^ 17 < p)]
   simpa only [circuit_norm] using shallow.1
 
 omit [Fact (2 ^ 24 < p)] in
+/-- The syscall row's shallow inline gate forces its selector binary. Same shape as the halt row's,
+and for the same reason: `is_real`'s boolean gate is the row's first operation, so `.1` projects it
+without normalizing the composed `main` — which for a sixty-five-column row matters more, not less. -/
+theorem SyscallInstrsChip.selectorBinary_of_shallow [Fact (2 ^ 17 < p)]
+    (input : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ)
+    (env : Environment (ZMod p))
+    (shallow : ConstraintsHold.Shallow env ((SyscallInstrsChip.main input).operations offset)) :
+    Expression.eval env input.is_real = 0 ∨ Expression.eval env input.is_real = 1 := by
+  apply bool_of_mul_pred
+  simpa only [circuit_norm] using shallow.1
+
+omit [Fact (2 ^ 24 < p)] in
+/-- The syscall row's `is_halt` selector is boolean, by the fourth of the row's five shallow gates.
+The projection index is the gate's position in `main`, so it reads the constraint without
+normalizing the composed sixty-five-column row. -/
+theorem SyscallInstrsChip.haltSelectorBinary_of_shallow [Fact (2 ^ 17 < p)]
+    (input : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ)
+    (env : Environment (ZMod p))
+    (shallow : ConstraintsHold.Shallow env ((SyscallInstrsChip.main input).operations offset)) :
+    Expression.eval env input.is_halt = 0 ∨ Expression.eval env input.is_halt = 1 := by
+  apply bool_of_mul_pred
+  simpa only [circuit_norm] using shallow.2.2.2.1
+
+omit [Fact (2 ^ 24 < p)] in
 /-- Evaluation of Add's input selector, exposed once for downstream typed-interaction proofs. -/
 theorem AddChip.eval_isReal (env : Environment (ZMod p))
     (input : Var AddChip.Inputs (ZMod p)) :

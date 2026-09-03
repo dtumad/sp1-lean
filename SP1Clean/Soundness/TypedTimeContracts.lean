@@ -436,6 +436,81 @@ private theorem haltRow_cpuState_bounds
   rw [e1] at clk1B
   exact ⟨clk0B, clk1B⟩
 
+private theorem syscall_cpu_subcircuit_mem :
+    (⟨size SyscallInstrsChip.Inputs, (Readers.CPUState.circuit (p := p)).toSubcircuit
+      (size SyscallInstrsChip.Inputs)
+      ⟨(varFromOffset SyscallInstrsChip.Inputs 0 :
+          Var SyscallInstrsChip.Inputs (ZMod p)).state,
+        (varFromOffset SyscallInstrsChip.Inputs 0 :
+          Var SyscallInstrsChip.Inputs (ZMod p)).next_pc, 264,
+        (varFromOffset SyscallInstrsChip.Inputs 0 :
+          Var SyscallInstrsChip.Inputs (ZMod p)).is_real⟩⟩ :
+      (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
+    ((SyscallInstrsChip.main
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))).operations
+      (size SyscallInstrsChip.Inputs)).subcircuits := by
+  simp only [SyscallInstrsChip.main, circuit_norm]
+
+/-- The composed `CPUState` reader's two clock byte bounds at one active syscall row, from the
+finished Byte channel alone. The halt row's twin takes the same route for the same reason: the State
+layer must not assume memory grounding, so the bounds come from the byte bus rather than from the
+chip's `Spec`. The one difference is the reader's `next_pc` argument — the halt table hands it the
+constant `(1, 0, 0)`, while the syscall row hands it the row's own witnessed `next_pc`, which is the
+whole difference between standing in for one arm and dispatching thirteen. -/
+private theorem syscallInstrsRow_cpuState_bounds
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
+    (((syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 - 1)
+        * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
+      (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24.val < 2 ^ 8 := by
+  obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
+  have tableGuarantees := (sp1_finishedChannel_guarantees witness constraints balanced
+    _ (witness.mem_allTables_of_mem_tables
+      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).1
+  set env := (syscallInstrsTable witness).environment row with envDef
+  have opsGuarantees : (syscallInstrsTable witness).component.operations.ChannelGuarantees
+      Channels.byteChannel.toRaw env := tableGuarantees row tableMem
+  rw [syscallInstrsTable_component] at opsGuarantees
+  have rowGuarantees :=
+    (Component.channelGuarantees_iff env Channels.byteChannel.toRaw).mp opsGuarantees
+  set inputVar : Var SyscallInstrsChip.Inputs (ZMod p) :=
+    varFromOffset SyscallInstrsChip.Inputs 0 with inputVarDef
+  set cpuInput : Var Readers.CPUState.Inputs (ZMod p) :=
+    ⟨inputVar.state, inputVar.next_pc, 264, inputVar.is_real⟩ with cpuInputDef
+  have cpuMem : (⟨size SyscallInstrsChip.Inputs,
+      (Readers.CPUState.circuit (p := p)).toSubcircuit (size SyscallInstrsChip.Inputs) cpuInput⟩ :
+        (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
+      ((⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+    rw [Component.rowOperations_mk, cpuInputDef, inputVarDef]
+    exact syscall_cpu_subcircuit_mem
+  have cpuGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
+    (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ((Readers.CPUState.circuit (p := p)).toSubcircuit (size SyscallInstrsChip.Inputs) cpuInput)
+    cpuMem rowGuarantees
+  have crossing : (syscallInstrsRow (syscallInstrsTable witness) row).is_real =
+      Expression.eval env cpuInput.is_real := by
+    rw [cpuInputDef]
+    rw [syscallInstrsRow_eq, inputVarDef]
+    simp only [circuit_norm]
+    rw [envDef]
+  have realEval : Expression.eval env cpuInput.is_real = 1 := crossing ▸ real
+  obtain ⟨clk0B, clk1B⟩ := Readers.CPUState.bounds_of_byteGuarantees cpuInput
+    (size SyscallInstrsChip.Inputs) env cpuGuarantees realEval
+  have e0 : Expression.eval env cpuInput.cols.clk_0_16 =
+      (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 := by
+    rw [syscallInstrsRow_eq, show cpuInput.cols = inputVar.state from rfl, inputVarDef]
+    simp only [circuit_norm]
+    rw [envDef]
+  have e1 : Expression.eval env cpuInput.cols.clk_16_24 =
+      (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 := by
+    rw [syscallInstrsRow_eq, show cpuInput.cols = inputVar.state from rfl, inputVarDef]
+    simp only [circuit_norm]
+    rw [envDef]
+  rw [e0] at clk0B
+  rw [e1] at clk1B
+  exact ⟨clk0B, clk1B⟩
+
 private theorem halt_x5_subcircuit_mem :
     (⟨size HaltChip.Inputs, (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size HaltChip.Inputs)
@@ -733,6 +808,42 @@ theorem witness_realHaltRows_time_increases
           (HaltChip.statePushedMessage (haltRow (haltTable witness) row)) := by
   intro row rowMem
   rw [witness_realHaltRows_timeStep witness constraints balanced row rowMem]
+  omega
+
+/-- Every active syscall row advances its decoded State time by exactly the syscall width `264`.
+Same route as the halt row's: the composed `CPUState` reader's two byte checks bound the pulled low
+clock and the `2 ^ 25` field bound keeps the increment exact. Note what this does *not* need — the
+`clk_low + 264` sum may pass `2 ^ 24`, but that costs the limb *pair* its canonicity, not the
+`timeNat` arithmetic, which is a plain field-value computation. `StateBumpChip` is what restores the
+canonical pair for the next row's pull; it is not needed for the step. -/
+theorem witness_realSyscallInstrsRows_timeStep
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ row ∈ realSyscallInstrsRows witness,
+      Semantics.StateMsg.timeNat (SyscallInstrsChip.statePushedMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row)) =
+        Semantics.StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row)) + 264 := by
+  intro row rowMem
+  obtain ⟨clk0B, clk1B⟩ := syscallInstrsRow_cpuState_bounds witness constraints balanced rowMem
+  simp only [Semantics.StateMsg.timeNat, SyscallInstrsChip.statePushedMessage,
+    SyscallInstrsChip.statePulledMessage]
+  exact TimeExtraction.clkNat_add_syscall_of_cpuState_bounds
+    (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_high
+    (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16
+    (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 clk0B clk1B
+
+/-- Consequently every active syscall State edge is strictly increasing in natural-number time. -/
+theorem witness_realSyscallInstrsRows_time_increases
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ row ∈ realSyscallInstrsRows witness,
+      Semantics.StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row)) <
+        Semantics.StateMsg.timeNat (SyscallInstrsChip.statePushedMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+  intro row rowMem
+  rw [witness_realSyscallInstrsRows_timeStep witness constraints balanced row rowMem]
   omega
 
 /-- Consequently every active decoded State edge is strictly increasing in natural-number time. -/

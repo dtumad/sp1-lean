@@ -1145,6 +1145,27 @@ theorem syscallInstrsInteractionsWith_memory (r : Var SyscallInstrsChip.Inputs (
     Channels.syscallChannel_eq_memoryChannel_false,
     Channels.publicValuesChannel_eq_memoryChannel_false]
 
+/-- The `Exit` hand-off: a single `is_halt`-gated push of the reduced exit code. Unlike the halt
+table's, there is no anti-gated companion push — a many-row table cannot use that trick. -/
+theorem syscallInstrsInteractionsWith_exit (r : Var SyscallInstrsChip.Inputs (ZMod p))
+    (offset : ℕ) :
+    ((SyscallInstrsChip.main r).operations offset).interactionsWith (exitChannel (p := p)).toRaw =
+    [({ mult := r.is_halt, msg := SyscallInstrsChip.exitMsg r, assumeGuarantees := false } :
+        ChannelInteraction (exitChannel (p := p))).toRaw] := by
+  simp only [Operations.interactionsWith, syscallInstrsInteractionBlocks, isZeroInteractions,
+    pcArmInteractions, writeArmInteractions, dispatchArmInteractions, commitArmInteractions,
+    u16toU8SafeInteractions, u16CompareInteractions, fieldBoundArmInteractions,
+    cpuStateInteractions, registerAccessColsInteractions, registerAccessTimestampInteractions,
+    ChannelInteraction.toRaw_channel,
+    List.filter_cons, List.filter_nil, List.append_nil, List.nil_append,
+    List.cons_append, decide_eq_true_eq, if_true, if_false,
+    Channels.byteChannel_eq_exitChannel_false,
+    Channels.stateChannel_eq_exitChannel_false,
+    Channels.programChannel_eq_exitChannel_false,
+    Channels.memoryChannel_eq_exitChannel_false,
+    Channels.syscallChannel_eq_exitChannel_false,
+    Channels.publicValuesChannel_eq_exitChannel_false]
+
 /-- Twenty byte checks: the four identifier-split bytes, the state reader's two clock bounds, two timestamp bounds per register, one field-element compare per bounded operand, the four `op_a_value` range checks, and the two digest byte pairs. -/
 theorem syscallInstrsInteractionsWith_byte (r : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ) :
     ((SyscallInstrsChip.main r).operations offset).interactionsWith (byteChannel (p := p)).toRaw =

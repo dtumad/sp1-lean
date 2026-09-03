@@ -97,52 +97,6 @@ theorem SyscallTrailRow.time_increases (data : ProverData (ZMod p)) (row : Sysca
   have hpos := row.duration_pos noBump
   omega
 
-/-- **The goodness obligation a mid-shard syscall row owes.** The halt row is excused from bounding
-its pushed pc because that pc is the literal `(1, 0, 0)`. A syscall row's push is a real `pc + 4`, so
-both endpoints need limb bounds or `canonState` fails to preserve `pcBits`. -/
-theorem syscallEdge_pcBounds (r : SyscallInstrsChip.Inputs (ZMod p))
-    (spec : SyscallInstrsChip.Spec r) (pulled : SyscallInstrsChip.PulledFacts r)
-    (real : r.is_real = 1) (carry : (r.state.pc[0]).val + 4 < 2 ^ 16) :
-    (∀ i : Fin 3, (r.state.pc[i]).val < 2 ^ 16) ∧
-      (∀ i : Fin 3, (r.next_pc[i]).val < 2 ^ 16) := by
-  have hp : 2 ^ 17 < p := Fact.out
-  haveI : Fact (1 < p) := ⟨by omega⟩
-  have hpull := pulled real
-  have hpc0 : (r.state.pc[0]).val < 2 ^ 16 := hpull.2.1
-  have hpc1 : (r.state.pc[1]).val < 2 ^ 16 := hpull.2.2.1
-  have hpc2 : (r.state.pc[2]).val < 2 ^ 16 := hpull.2.2.2.1
-  have hnext : (r.next_pc[0]).val < 2 ^ 16 ∧ (r.next_pc[1]).val < 2 ^ 16 ∧
-      (r.next_pc[2]).val < 2 ^ 16 := by
-    rcases spec.1.2.2.2.1 with hh | hh
-    · -- the ordinary arm: `pc + 4`, bounded by the bump chip's carry fact
-      have hpc : r.next_pc[0] = r.state.pc[0] + 4 ∧ r.next_pc[1] = r.state.pc[1] ∧
-          r.next_pc[2] = r.state.pc[2] := spec.2.2.2.2.2.2.1.2 real hh
-      have h4 : ((4 : ZMod p)).val = 4 := by
-        rw [show (4 : ZMod p) = ((4 : ℕ) : ZMod p) by norm_num,
-          ZMod.val_natCast_of_lt (by omega : (4 : ℕ) < p)]
-      have hval : ((r.state.pc[0] + 4 : ZMod p)).val = (r.state.pc[0]).val + 4 := by
-        rw [ZMod.val_add_of_lt (by rw [h4]; omega), h4]
-      refine ⟨?_, ?_, ?_⟩
-      · rw [hpc.1, hval]; omega
-      · rw [hpc.2.1]; exact hpc1
-      · rw [hpc.2.2]; exact hpc2
-    · -- the halt arm: the literal `(1, 0, 0)`
-      have hpc : r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0 :=
-        spec.2.2.2.2.2.2.1.1 hh
-      refine ⟨?_, ?_, ?_⟩
-      · rw [hpc.1, ZMod.val_one]; norm_num
-      · rw [hpc.2.1, ZMod.val_zero]; norm_num
-      · rw [hpc.2.2, ZMod.val_zero]; norm_num
-  refine ⟨fun i => ?_, fun i => ?_⟩
-  · fin_cases i
-    · exact hpc0
-    · exact hpc1
-    · exact hpc2
-  · fin_cases i
-    · exact hnext.1
-    · exact hnext.2.1
-    · exact hnext.2.2
-
 /-! ## The shape the engine must now consume
 
 The three statements below are what replace `listAllInl` and the halt-branch split. They are stated

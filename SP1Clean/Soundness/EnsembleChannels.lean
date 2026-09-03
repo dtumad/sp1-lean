@@ -26,7 +26,8 @@ namespace SP1Clean.Soundness
 open SP1Clean
 open Air.Flat
 open Circuit
-open SP1Clean.Channels (stateChannel byteChannel programChannel memoryChannel exitChannel)
+open SP1Clean.Channels (stateChannel byteChannel programChannel memoryChannel exitChannel
+  syscallChannel publicValuesChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
@@ -480,38 +481,59 @@ private theorem verifier_channels_subset :
   simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
-/-- **Every boundary/provider table stays on the ensemble's five buses.** -/
-theorem sp1ProviderTables_channels_subset : ∀ c ∈ sp1ProviderTables (p := p),
-    c.circuit.channels ⊆ sp1CoreChannels (p := p) := by
+/-- The `SyscallInstrs` table is the one provider that leaves the core five. It stays inside the
+ensemble's declared seven, which is the property the ledger actually needs. -/
+theorem syscallInstrsProvider_channels_subset :
+    (SyscallInstrsChip.circuit (p := p)).channels ⊆ (sp1Ensemble (p := p)).channels := by
+  intro ch h
+  rw [GeneralFormalCircuit.channels, List.mem_append,
+    show (SyscallInstrsChip.circuit (p := p)).channelsWithGuarantees =
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+       exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw] from rfl,
+    show (SyscallInstrsChip.circuit (p := p)).channelsWithRequirements =
+      [memoryChannel.toRaw] from rfl] at h
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at h
+  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  tauto
+
+/-- **Every boundary/provider table stays on the core five, except the `SyscallInstrs` table.** -/
+theorem sp1ProviderTables_channels_subset_core : ∀ c ∈ sp1ProviderTables (p := p),
+    c.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
+      c = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) := by
   intro c hc
   rw [sp1ProviderTables_explicit, List.mem_append, List.mem_append] at hc
   rcases hc with (hc | hc) | hc
   · simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
     rcases hc with rfl | rfl | rfl | rfl | rfl | rfl
-    exacts [u8RangeProvider_channels_subset, msbProvider_channels_subset,
-      andProvider_channels_subset, orProvider_channels_subset,
-      xorProvider_channels_subset, ltuProvider_channels_subset]
+    exacts [Or.inl u8RangeProvider_channels_subset, Or.inl msbProvider_channels_subset,
+      Or.inl andProvider_channels_subset, Or.inl orProvider_channels_subset,
+      Or.inl xorProvider_channels_subset, Or.inl ltuProvider_channels_subset]
   · rw [sp1RangeProviderTables] at hc
     obtain ⟨width, -, rfl⟩ := List.mem_map.mp hc
-    exact rangeProvider_channels_subset width
+    exact Or.inl (rangeProvider_channels_subset width)
   · simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
-    rcases hc with rfl | rfl | rfl | rfl | rfl | rfl
-    exacts [programProvider_channels_subset, memoryInitProvider_channels_subset,
-      memoryFinalizeProvider_channels_subset, memoryBumpProvider_channels_subset,
-      stateBumpProvider_channels_subset, haltProvider_channels_subset]
+    rcases hc with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    exacts [Or.inl programProvider_channels_subset, Or.inl memoryInitProvider_channels_subset,
+      Or.inl memoryFinalizeProvider_channels_subset, Or.inl memoryBumpProvider_channels_subset,
+      Or.inl stateBumpProvider_channels_subset, Or.inl haltProvider_channels_subset, Or.inr rfl]
 
-/-- **The ensemble's tables speak only on the five core buses** — verifier row included, and
-*tighter than the declared channel list*: the ensemble also declares the two `SyscallInstrs` buses,
-which nothing registered yet touches. -/
+/-- **Every registered table stays on the five core buses, with exactly one exception.**
+
+The `SyscallInstrs` table is that exception, and naming it here is the honest form: it is the only
+table that speaks on the syscall and public-values buses, so a blanket "everything is core-only"
+claim would now be false. Stating the carve-out as a disjunction rather than deleting the theorem
+keeps the *other* fifty-four tables' silence a one-line consequence, which is what the two buses'
+balance still rests on while the syscall table's trace is empty. -/
 theorem sp1AllTables_channels_subset_core :
     ∀ component ∈ (sp1Ensemble (p := p)).allTables,
-      component.circuit.channels ⊆ sp1CoreChannels (p := p) := by
+      component.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
+        component = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) := by
   intro component hc
   rw [Ensemble.allTables, List.mem_cons, sp1Ensemble_tables, List.mem_append] at hc
   rcases hc with rfl | hc | hc
-  · exact verifier_channels_subset
-  · exact sp1Tables_channels_subset _ hc
-  · exact sp1ProviderTables_channels_subset _ hc
+  · exact Or.inl verifier_channels_subset
+  · exact Or.inl (sp1Tables_channels_subset _ hc)
+  · exact sp1ProviderTables_channels_subset_core _ hc
 
 /-- The core buses are among the declared channels. -/
 theorem sp1CoreChannels_subset :
@@ -526,28 +548,16 @@ theorem sp1CoreChannels_subset :
 Clean's `Ensemble` does not impose this, so it is a fact about `sp1Ensemble` specifically. -/
 theorem sp1Ensemble_allTables_channels_subset :
     ∀ component ∈ (sp1Ensemble (p := p)).allTables,
-      component.circuit.channels ⊆ (sp1Ensemble (p := p)).channels :=
-  fun component hc =>
-    List.Subset.trans (sp1AllTables_channels_subset_core component hc) sp1CoreChannels_subset
+      component.circuit.channels ⊆ (sp1Ensemble (p := p)).channels := by
+  intro component hc
+  rcases sp1AllTables_channels_subset_core component hc with hcore | rfl
+  · exact List.Subset.trans hcore sp1CoreChannels_subset
+  · exact syscallInstrsProvider_channels_subset
 
-/-- **Silence, uniformly**: a channel outside the core five is touched by no registered table. This
-is the whole cost of declaring a new bus before its table joins — one membership check, not a
-per-table sweep. -/
-theorem sp1AllTables_channel_not_mem_of_not_core {ch : RawChannel (ZMod p)}
-    (h : ch ∉ sp1CoreChannels (p := p)) :
-    ∀ component ∈ (sp1Ensemble (p := p)).allTables, ch ∉ component.circuit.channels :=
-  fun component hc hmem => h (sp1AllTables_channels_subset_core component hc hmem)
-
-/-- Any witness of the ensemble is completely silent on a channel outside the core five: no table
-touches the channel, so no table contributes an interaction. -/
-theorem witness_interactionsWith_eq_nil_of_not_core
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) {ch : RawChannel (ZMod p)}
-    (hch : ch ∉ sp1CoreChannels (p := p)) :
-    witness.interactionsWith ch = [] := by
-  rw [Air.Flat.EnsembleWitness.interactionsWith, List.flatMap_eq_nil_iff]
-  intro table htable
-  refine Air.Flat.Table.interactionsWith_nil_of_channel_not_mem
-    (sp1AllTables_channel_not_mem_of_not_core hch table.component ?_)
+/-- Membership of a witness table's component in the ensemble's component list. -/
+theorem witness_table_component_mem (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    {table : Air.Flat.Table (ZMod p)} (htable : table ∈ witness.allTables) :
+    table.component ∈ (sp1Ensemble (p := p)).allTables := by
   rw [Air.Flat.EnsembleWitness.allTables, List.mem_cons] at htable
   rw [Air.Flat.Ensemble.allTables, List.mem_cons]
   rcases htable with rfl | htable
@@ -559,20 +569,46 @@ theorem witness_interactionsWith_eq_nil_of_not_core
     rw [← witness.same_circuits i hlen]
     exact List.getElem_mem hlen
 
-/-- No registered table touches SP1's syscall bus yet (its table joins at S4b). -/
-theorem witness_syscallChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+/-- **A witness is silent on a non-core channel exactly when its syscall table has no rows.**
+
+Two reasons compose, one per table: fifty-four of the fifty-five tables never name the channel, and
+the fifty-fifth names it but has nothing to say. The hypothesis is what the deterministic compiler
+supplies by construction — `syscallInstrsTraceInputs` is the empty list — and it is precisely the
+thing that stops being true when the compiler learns to emit syscall rows, which is the point at
+which these buses need a real balance argument instead of silence. -/
+theorem witness_interactionsWith_eq_nil_of_not_core
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (hempty : ∀ table ∈ witness.allTables,
+      table.component = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) → table.table = [])
+    {ch : RawChannel (ZMod p)} (hch : ch ∉ sp1CoreChannels (p := p)) :
+    witness.interactionsWith ch = [] := by
+  rw [Air.Flat.EnsembleWitness.interactionsWith, List.flatMap_eq_nil_iff]
+  intro table htable
+  rcases sp1AllTables_channels_subset_core _ (witness_table_component_mem witness htable) with
+    hcore | hsyscall
+  · exact Air.Flat.Table.interactionsWith_nil_of_channel_not_mem fun hmem => hch (hcore hmem)
+  · rw [Air.Flat.Table.interactionsWith_eq_filter, Air.Flat.Table.interactions,
+      hempty table htable hsyscall]
+    rfl
+
+/-- SP1's syscall bus carries nothing while the syscall table has no rows. -/
+theorem witness_syscallChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (hempty : ∀ table ∈ witness.allTables,
+      table.component = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) → table.table = []) :
     witness.interactionsWith Channels.syscallChannel.toRaw = [] :=
-  witness_interactionsWith_eq_nil_of_not_core witness (by
+  witness_interactionsWith_eq_nil_of_not_core witness hempty (by
     simp [sp1CoreChannels_eq, Channels.syscallChannel_eq_stateChannel_false,
       Channels.syscallChannel_eq_byteChannel_false,
       Channels.syscallChannel_eq_programChannel_false,
       Channels.syscallChannel_eq_memoryChannel_false,
       Channels.syscallChannel_eq_exitChannel_false])
 
-/-- No registered table touches the native public-values bus yet. -/
-theorem witness_publicValuesChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+/-- The native public-values bus carries nothing while the syscall table has no rows. -/
+theorem witness_publicValuesChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (hempty : ∀ table ∈ witness.allTables,
+      table.component = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) → table.table = []) :
     witness.interactionsWith Channels.publicValuesChannel.toRaw = [] :=
-  witness_interactionsWith_eq_nil_of_not_core witness (by
+  witness_interactionsWith_eq_nil_of_not_core witness hempty (by
     simp [sp1CoreChannels_eq, Channels.publicValuesChannel_eq_stateChannel_false,
       Channels.publicValuesChannel_eq_byteChannel_false,
       Channels.publicValuesChannel_eq_programChannel_false,
@@ -1016,9 +1052,13 @@ theorem sp1Tables_exitChannel_not_mem : ∀ c ∈ sp1Tables (p := p),
   fin_cases hc
   exacts [addChip_exitChannel_not_mem, addiChip_exitChannel_not_mem, addwChip_exitChannel_not_mem, subChip_exitChannel_not_mem, subwChip_exitChannel_not_mem, bitwiseChip_exitChannel_not_mem, ltChip_exitChannel_not_mem, shiftLeftChip_exitChannel_not_mem, shiftRightChip_exitChannel_not_mem, jalChip_exitChannel_not_mem, jalrChip_exitChannel_not_mem, branchChip_exitChannel_not_mem, uTypeChip_exitChannel_not_mem, loadByteChip_exitChannel_not_mem, loadHalfChip_exitChannel_not_mem, loadWordChip_exitChannel_not_mem, loadDoubleChip_exitChannel_not_mem, loadX0Chip_exitChannel_not_mem, storeByteChip_exitChannel_not_mem, storeHalfChip_exitChannel_not_mem, storeWordChip_exitChannel_not_mem, storeDoubleChip_exitChannel_not_mem, mulChip_exitChannel_not_mem, divRemChip_exitChannel_not_mem, aluX0Chip_exitChannel_not_mem]
 
-/-- **No provider table before the Halt position speaks on the Exit bus.** -/
+/-- **The only provider components that name the Exit bus are the Halt table and the
+`SyscallInstrs` table.** The syscall table's Exit push is gated by `is_halt`, so unlike the Halt
+table it cannot be excluded by its channel list; while its trace is empty its Exit contribution is
+nil for the other reason, and once it carries rows the exit accounting owes it a real block. -/
 theorem sp1ProviderTables_exitChannel_not_mem (k : ℕ)
-    (bound : k < (sp1ProviderTables (p := p)).length) (notHalt : k ≠ 28) :
+    (bound : k < (sp1ProviderTables (p := p)).length) (notHalt : k ≠ 28)
+    (notSyscall : k ≠ 29) :
     (exitChannel (p := p)).toRaw ∉ ((sp1ProviderTables (p := p))[k]).circuit.channels := by
   rw [sp1ProviderTables_length] at bound
   interval_cases k
@@ -1030,6 +1070,7 @@ theorem sp1ProviderTables_exitChannel_not_mem (k : ℕ)
   · exact ltuProvider_exitChannel_not_mem
   all_goals first
   | exact (notHalt rfl).elim
+  | exact (notSyscall rfl).elim
   | exact rangeProvider_exitChannel_not_mem _
   | exact programProvider_exitChannel_not_mem
   | exact memoryInitProvider_exitChannel_not_mem

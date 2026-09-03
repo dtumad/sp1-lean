@@ -22,7 +22,8 @@ namespace SP1Clean.Soundness
 open SP1Clean
 open Air.Flat
 open Circuit
-open SP1Clean.Channels (stateChannel byteChannel programChannel memoryChannel exitChannel)
+open SP1Clean.Channels (stateChannel byteChannel programChannel memoryChannel exitChannel
+  syscallChannel publicValuesChannel)
 
 -- Same bound as `sp1Ensemble` (`Mul`/`DivRem` carry `Fact (2 ^ 24 < p)`), with the project-standard
 -- `Fact (2 ^ 17 < p)` derived locally. KoalaBear satisfies it.
@@ -62,12 +63,14 @@ private lemma sp1Tables_cwr_subset : ∀ c ∈ sp1Tables (p := p),
     tauto
   rcases hshape with hshape | hshape <;> rw [hshape] at hchannel <;> simp_all
 
-/-- The 29 provider tables' (guarantee, requirement) channel pairs: the 23 byte
+/-- The 30 provider tables' (guarantee, requirement) channel pairs: the 23 byte
 providers push-prove byte, the program provider push-proves program, the memory boundary provider
 push-proves memory, the finalize table pulls memory owing nothing, — W3 — the MemoryBump table
 pulls byte/memory and owes its refreshed memory push, the StateBump table pulls byte/state
-owing nothing (the State bus has no requirements), and the Halt table pulls all four gated buses
-and owes only its memory read-backs (the Exit pushes carry `Guarantees := True`). -/
+owing nothing (the State bus has no requirements), the Halt table pulls all four gated buses
+and owes only its memory read-backs (the Exit pushes carry `Guarantees := True`), and the
+`SyscallInstrs` table touches all seven buses — it is the only table that names the syscall and
+public-values channels — owing, like Halt, only its memory read-backs. -/
 private lemma providers_channels_eq :
     (sp1ProviderTables (p := p)).map
       (fun c => (c.circuit.channelsWithGuarantees, c.circuit.channelsWithRequirements)) =
@@ -77,7 +80,10 @@ private lemma providers_channels_eq :
        ([byteChannel.toRaw, memoryChannel.toRaw], [memoryChannel.toRaw]),
        ([byteChannel.toRaw, stateChannel.toRaw], []),
        ([byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
-         exitChannel.toRaw], [memoryChannel.toRaw])] := rfl
+         exitChannel.toRaw], [memoryChannel.toRaw]),
+       ([byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+         exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw],
+        [memoryChannel.toRaw])] := rfl
 
 /-- Every provider circuit's `Assumptions` is the structure default `fun _ _ => True`. -/
 private lemma providers_assumptions :
@@ -235,7 +241,10 @@ private lemma consumer_guarantees (witness : EnsembleWitness (sp1Ensemble (p := 
             [([byteChannel.toRaw, memoryChannel.toRaw], [memoryChannel.toRaw]),
              ([byteChannel.toRaw, stateChannel.toRaw], []),
              ([byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
-               exitChannel.toRaw], [memoryChannel.toRaw])] from rfl] at hpair
+               exitChannel.toRaw], [memoryChannel.toRaw]),
+             ([byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+               exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw],
+              [memoryChannel.toRaw])] from rfl] at hpair
         simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hpair
         have hshape : t.component.circuit.channelsWithRequirements = [memoryChannel.toRaw] ∨
             t.component.circuit.channelsWithRequirements = [] := by tauto

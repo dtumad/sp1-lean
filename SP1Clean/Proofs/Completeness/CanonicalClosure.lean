@@ -374,6 +374,7 @@ def canonicalProviderOccurrences : (id : ProviderTableId) → List id.Occurrence
   | .memoryBump => trace.providerOccurrences .memoryBump
   | .stateBump => trace.providerOccurrences .stateBump
   | .halt => trace.providerOccurrences .halt
+  | .syscallInstrs => trace.providerOccurrences .syscallInstrs
 
 /-- Rebuild only the Byte, Range, and Program provider window from the trace's own demand. -/
 def canonicalClosure : SupportedCoreTraceWitness p where
@@ -437,16 +438,16 @@ theorem tables_drop_preprocessed (t : SupportedCoreTraceWitness p) :
     List.drop_append]
 
 /-- The provider suffix after the 24 preprocessed tables is exactly the two Memory boundaries,
-the two canonicalization-bump tables, and the Halt table. -/
+the two canonicalization-bump tables, the Halt table, and the `SyscallInstrs` table. -/
 theorem providerTables_drop_preprocessed (t : SupportedCoreTraceWitness p) :
     t.providerTables.drop preprocessedProviderTableCount =
       [t.providerTableFor .memoryInit, t.providerTableFor .memoryFinalize,
         t.providerTableFor .memoryBump, t.providerTableFor .stateBump,
-        t.providerTableFor .halt] := by
+        t.providerTableFor .halt, t.providerTableFor .syscallInstrs] := by
   simp [providerTables, ProviderTableId.all, ByteProviderId.all,
     preprocessedProviderTableCount, List.drop_append]
 
-/-- Canonical closure preserves the five-table suffix after the preprocessed window. -/
+/-- Canonical closure preserves the six-table suffix after the preprocessed window. -/
 theorem canonicalClosure_providerTables_drop :
     trace.canonicalClosure.providerTables.drop preprocessedProviderTableCount =
       trace.providerTables.drop preprocessedProviderTableCount := by

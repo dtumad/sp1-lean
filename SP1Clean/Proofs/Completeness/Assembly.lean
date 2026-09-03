@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Completeness.Providers
 import SP1Clean.FormalModel.TraceGen.Bump
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
 import SP1Clean.Proofs.Chips.AddChip.Complete
 import SP1Clean.Proofs.Chips.AddiChip.Complete
 import SP1Clean.Proofs.Chips.AddwChip.Complete
@@ -146,6 +147,10 @@ def Occurrence : ProviderTableId → Type
   -- 2.4b tranche replaces it with the semantic halt event). The halt table itself is never empty:
   -- `HaltChip.haltTraceInputs [] = [paddingInputs]`, whose `⟨0⟩` Exit push balances the verifier.
   | .halt => Empty
+  -- The compiler emits no syscall rows yet either, but for a different reason than `halt`: the
+  -- syscall table is genuinely *empty* rather than one padding row, because its Exit push is
+  -- positively gated and needs no anti-gated companion to balance the verifier.
+  | .syscallInstrs => Empty
 
 /-- Side condition required by one provider table's trace builder. -/
 def Valid : (id : ProviderTableId) → id.Occurrence → Prop
@@ -157,6 +162,7 @@ def Valid : (id : ProviderTableId) → id.Occurrence → Prop
   | .memoryBump, e => e.WellFormed
   | .stateBump, e => e.WellFormed
   | .halt, e => e.elim
+  | .syscallInstrs, e => e.elim
 
 end SP1Clean.ProviderTableId
 
@@ -390,8 +396,11 @@ def providerTableFor : ProviderTableId → Table (ZMod p)
       (stateBumpTraceInputs (trace.providerOccurrences .stateBump)) trace.data trace.hint
   | .halt => Table.build HaltChip.component
       (HaltChip.haltTraceInputs (trace.providerOccurrences .halt)) trace.data trace.hint
+  | .syscallInstrs => Table.build SyscallInstrsChip.component
+      (SyscallInstrsChip.syscallInstrsTraceInputs (trace.providerOccurrences .syscallInstrs))
+        trace.data trace.hint
 
-/-- The twenty-nine built provider and boundary tables, in the one physical order fixed by the
+/-- The thirty built provider and boundary tables, in the one physical order fixed by the
 neutral provider registry. -/
 def providerTables : List (Table (ZMod p)) :=
   ProviderTableId.all.map trace.providerTableFor
@@ -410,6 +419,7 @@ circuit-bearing soundness registry. -/
   | memoryBump => rfl
   | stateBump => rfl
   | halt => rfl
+  | syscallInstrs => rfl
 
 /-- Every provider table carries the trace's shared committed prover data. -/
 @[simp] theorem providerTableFor_data (id : ProviderTableId) :
@@ -423,6 +433,7 @@ circuit-bearing soundness registry. -/
   | memoryBump => rfl
   | stateBump => rfl
   | halt => rfl
+  | syscallInstrs => rfl
 
 /-- Pointwise provider-table completeness. This is the sole proof that dispatches on all provider
 identities; list-level assembly below only reasons through `List.map`. -/
@@ -461,8 +472,10 @@ theorem providerTableFor_constraints (wf : trace.WellFormed) (id : ProviderTable
   | halt =>
       exact HaltChip.traceTable_constraints _ _ _
         (HaltChip.haltTraceInputs_spec (trace.providerOccurrences .halt))
+  | syscallInstrs =>
+      exact SyscallInstrsChip.traceTable_constraints (trace.providerOccurrences .syscallInstrs) _ _
 
-/-- The full 54-table assembly is the instruction registry followed by the provider segment. -/
+/-- The full 55-table assembly is the instruction registry followed by the provider segment. -/
 def tables : List (Table (ZMod p)) :=
   trace.instructionTables ++ trace.providerTables
 

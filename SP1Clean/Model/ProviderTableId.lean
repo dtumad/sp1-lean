@@ -38,7 +38,7 @@ theorem all_nodup : all.Nodup := by decide
 
 end ByteProviderId
 
-/-- Stable identity of one non-instruction table in the 54-table native ensemble. -/
+/-- Stable identity of one non-instruction table in the 55-table native ensemble. -/
 inductive ProviderTableId where
   | byte (provider : ByteProviderId)
   | range (width : Fin 17)
@@ -48,23 +48,28 @@ inductive ProviderTableId where
   | memoryBump
   | stateBump
   | halt
+  /-- SP1's `SyscallInstrs` table. Registered after `halt`, so every existing positional index
+  (`haltIndex = 53`, `stateBumpIndex = 52`, `memoryBumpIndex = 51`, `programProviderIndex = 48`) is
+  unchanged and every prefix lemma keeps its proof. -/
+  | syscallInstrs
 deriving DecidableEq, Repr, Inhabited
 
 namespace ProviderTableId
 
 /-- Every provider/boundary identity in physical ensemble order: six Byte tables, Range widths
-`0..16`, then Program, the two Memory boundaries, MemoryBump, StateBump, and the Halt table. -/
+`0..16`, then Program, the two Memory boundaries, MemoryBump, StateBump, the Halt table, and the
+`SyscallInstrs` table. -/
 def all : List ProviderTableId :=
   ByteProviderId.all.map .byte ++ (List.finRange 17).map .range ++
-    [.program, .memoryInit, .memoryFinalize, .memoryBump, .stateBump, .halt]
+    [.program, .memoryInit, .memoryFinalize, .memoryBump, .stateBump, .halt, .syscallInstrs]
 
 /-- Number of non-instruction tables in the native ensemble. -/
 def count : ℕ := all.length
 
-@[simp] theorem all_length : all.length = 29 := by
+@[simp] theorem all_length : all.length = 30 := by
   simp [all, ByteProviderId.all]
 
-@[simp] theorem count_eq : count = 29 := by
+@[simp] theorem count_eq : count = 30 := by
   simp [count]
 
 @[simp] theorem mem_all (id : ProviderTableId) : id ∈ all := by
@@ -77,6 +82,7 @@ def count : ℕ := all.length
   | memoryBump => simp [all]
   | stateBump => simp [all]
   | halt => simp [all]
+  | syscallInstrs => simp [all]
 
 theorem all_nodup : all.Nodup := by
   decide
@@ -92,11 +98,11 @@ deriving DecidableEq, Repr, Inhabited
 
 namespace NativeTableId
 
-/-- The complete 54-table witness order, derived from the two role-specific registries. -/
+/-- The complete 55-table witness order, derived from the two role-specific registries. -/
 def all : List NativeTableId :=
   InstructionChipId.all.map .instruction ++ ProviderTableId.all.map .provider
 
-@[simp] theorem all_length : all.length = 54 := by
+@[simp] theorem all_length : all.length = 55 := by
   simp [all]
 
 @[simp] theorem mem_all (id : NativeTableId) : id ∈ all := by

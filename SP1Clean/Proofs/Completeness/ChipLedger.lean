@@ -269,7 +269,9 @@ theorem active_stateLedger_eq (trace : SupportedCoreTraceWitness p)
       (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
         (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0) :
+      (haltRow (haltTable trace.witness) row).is_real = 0)
+    (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
+      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0) :
     active trace.stateLedger =
       ([accessAt (stateFinalToken trace) (-1), accessAt (stateInitToken trace) 1] ++
         (stateInstrLinks trace).flatMap fun l => linkAccesses l.1 l.2) ++
@@ -316,10 +318,23 @@ theorem active_stateLedger_eq (trace : SupportedCoreTraceWitness p)
     intro row hrow
     rw [hhalt row hrow, h0]
     decide
+  have hgateSyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
+      signedVal (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0 ∨
+        signedVal (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 1 := by
+    intro row hrow
+    rw [hsyscall row hrow]
+    exact Or.inl h0
+  have hfilterSyscall : ((syscallInstrsTable trace.witness).table.filter fun row =>
+      signedVal (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 1) = [] := by
+    rw [List.filter_eq_nil_iff]
+    intro row hrow
+    rw [hsyscall row hrow, h0]
+    decide
   simp only [signedVal_neg hp]
   rw [active_flatMap_gatedPair _ _ _ _ hgateInstr,
     active_flatMap_gatedPair _ _ _ _ hgateBump,
-    active_flatMap_gatedPair _ _ _ _ hgateHalt, hfilterHalt]
+    active_flatMap_gatedPair _ _ _ _ hgateHalt, hfilterHalt,
+    active_flatMap_gatedPair _ _ _ _ hgateSyscall, hfilterSyscall]
   simp only [stateInstrLinks, stateBumpLinks, stateInitToken, stateFinalToken,
     List.flatMap_map, List.flatMap_nil, List.append_nil, active, List.filter_cons,
     multOf_accessAt, List.filter_nil]
@@ -343,12 +358,14 @@ theorem stateLedger_perm_handoff (trace : SupportedCoreTraceWitness p)
         (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
       (haltRow (haltTable trace.witness) row).is_real = 0)
+    (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
+      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0)
     (hchain : IsHandoffChain (stateInitToken trace)
       (stateInstrLinks trace ++ stateBumpLinks trace) (stateFinalToken trace)) :
     (active trace.stateLedger).Perm
       (handoff (stateInitToken trace ::
         (stateInstrLinks trace ++ stateBumpLinks trace).map Prod.snd)) := by
-  rw [active_stateLedger_eq trace hbinary hbump hhalt, List.append_assoc,
+  rw [active_stateLedger_eq trace hbinary hbump hhalt hsyscall, List.append_assoc,
     ← List.flatMap_append]
   exact List.Perm.trans (List.Perm.swap _ _ _)
     (chainLedger_perm_handoff _ _ _ hchain)
@@ -391,8 +408,10 @@ theorem memoryLedger_eq (trace : SupportedCoreTraceWitness p) :
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
           (((typedTableInteractionsWith (memoryBumpTable trace.witness)
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-            ((typedTableInteractionsWith (haltTable trace.witness)
-              (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw)))) := by
+            (((typedTableInteractionsWith (haltTable trace.witness)
+              (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
+              ((typedTableInteractionsWith (syscallInstrsTable trace.witness)
+                (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw))))) := by
   rw [memoryLedger_eq_channelLedger, ← typedEnsembleInteractionsWith_raw,
     typedEnsembleMemoryInteractions_eq]
   simp only [List.map_append, List.map_map, Function.comp_def,
@@ -436,12 +455,14 @@ theorem stateLedger_perm_handoff_singleChain (trace : SupportedCoreTraceWitness 
         (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
       (haltRow (haltTable trace.witness) row).is_real = 0)
+    (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
+      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0)
     (hchain : IsHandoffChain (stateInitToken trace)
       (stateInstrLinks trace ++ stateBumpLinks trace) (stateFinalToken trace)) :
     (active trace.stateLedger).Perm
       (handoff (chainTokens (stateInitToken trace,
         stateInstrLinks trace ++ stateBumpLinks trace, stateFinalToken trace))) :=
-  stateLedger_perm_handoff trace hbinary hbump hhalt hchain
+  stateLedger_perm_handoff trace hbinary hbump hhalt hsyscall hchain
 
 /-- **The State hand-off in chronological form.**
 
@@ -462,6 +483,8 @@ theorem stateLedger_perm_handoff_chronological (trace : SupportedCoreTraceWitnes
         (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
       (haltRow (haltTable trace.witness) row).is_real = 0)
+    (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
+      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0)
     (links : List (LookupKey × LookupKey))
     (hregroup : (stateInstrLinks trace ++ stateBumpLinks trace).Perm links)
     (hchain : IsHandoffChain (stateInitToken trace) links (stateFinalToken trace)) :
@@ -472,7 +495,7 @@ theorem stateLedger_perm_handoff_chronological (trace : SupportedCoreTraceWitnes
           fun link => linkAccesses link.1 link.2).Perm
         (links.flatMap fun link => linkAccesses link.1 link.2) :=
     hregroup.flatMap fun _ _ => List.Perm.refl _
-  rw [active_stateLedger_eq trace hbinary hbump hhalt, List.append_assoc,
+  rw [active_stateLedger_eq trace hbinary hbump hhalt hsyscall, List.append_assoc,
     ← List.flatMap_append]
   refine (linkLedgerPerm.append_left _).trans ?_
   exact (List.Perm.swap _ _ _).trans (chainLedger_perm_handoff _ _ _ hchain)

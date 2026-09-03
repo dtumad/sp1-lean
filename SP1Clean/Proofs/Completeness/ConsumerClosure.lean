@@ -109,6 +109,19 @@ theorem stateBumpProgramInteractions_eq_nil :
   simp [Channels.programChannel_eq_byteChannel_false,
     Channels.programChannel_eq_stateChannel_false]
 
+/-- **The compiler's `SyscallInstrs` table has no rows**, so it is silent on every channel.
+`syscallInstrsTraceInputs` is `[]` by construction (`List Empty` in, empty list out), which is a
+property of *this compiler's trace* rather than of the chip — the chip genuinely speaks on seven
+buses. This is precisely the fact that stops holding when the compiler learns to emit syscall rows,
+and it is why the syscall table can join the ensemble before the compiler can fill it. -/
+theorem syscallInstrsInteractions_eq_nil {Message : TypeMap} [ProvableType Message]
+    (channel : Channel (ZMod p) Message) :
+    typedTableInteractionsWith (trace.providerTableFor .syscallInstrs) channel = [] := by
+  rw [typedTableInteractionsWith,
+    show (trace.providerTableFor (p := p) .syscallInstrs).table = [] from
+      SyscallInstrsChip.traceTable_table _ _ _]
+  rfl
+
 /-- The non-preprocessed provider suffix's Program interactions are exactly the halt table's
 gated ECALL fetch pulls (the four Memory/State system tables are Program-silent). -/
 theorem providerSuffixProgramInteractions_eq :
@@ -119,7 +132,7 @@ theorem providerSuffixProgramInteractions_eq :
   simp only [List.flatMap_cons, List.flatMap_nil,
     trace.memoryInitProgramInteractions_eq_nil,
     trace.memoryFinalizeProgramInteractions_eq_nil,
-    trace.memoryBumpProgramInteractions_eq_nil,
+    trace.memoryBumpProgramInteractions_eq_nil, trace.syscallInstrsInteractions_eq_nil,
     trace.stateBumpProgramInteractions_eq_nil, List.nil_append, List.append_nil]
 
 /-- The skeleton verifier table does not name the Program channel. -/

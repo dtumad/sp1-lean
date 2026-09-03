@@ -384,6 +384,18 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   requirementsChannelsLawful := requirementsLawful
 
 set_option linter.unusedSectionVars false in
+/-- The bundled `Spec` field, applied — the shape the ensemble's `weakSoundness` extraction needs. -/
+@[circuit_norm] lemma circuit_Spec_apply (input : Inputs (ZMod p)) (out : unit (ZMod p))
+    (data : ProverData (ZMod p)) :
+    (circuit (p := p)).Spec input out data = Spec input := rfl
+
+set_option linter.unusedSectionVars false in
+/-- The bundled `Assumptions` field, applied. -/
+@[circuit_norm] lemma circuit_Assumptions_apply (input : Inputs (ZMod p))
+    (data : ProverData (ZMod p)) :
+    (circuit (p := p)).Assumptions input data = True := rfl
+
+set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
     (circuit (p := p)).localLength x = 0 := rfl
 
