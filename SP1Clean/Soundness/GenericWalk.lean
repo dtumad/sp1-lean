@@ -523,6 +523,7 @@ theorem walkT_of_walkG (program : GuestProgram) (initial : SailState) (tl : Time
   obtain ⟨hkey, htruth, hval, htime⟩ := hfinM loc m hm
   exact ⟨hkey, localMemTruthG_sail.mp htruth, localValueAtG_sail.mp hval, htime⟩
 
+omit [Fact (2 ^ 17 < p)] in
 /-- **The event instantiation.** A step may be an ordinary Sail step or a handled syscall, and the
 timeline is the transcript's own prefix-summed durations — so a 264-tick row occupies exactly one
 timeline step, by construction rather than by hypothesis. -/

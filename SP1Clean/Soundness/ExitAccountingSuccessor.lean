@@ -57,8 +57,15 @@ def exitMessage (r : Inputs (ZMod p)) : ExitMsg (ZMod p) := ⟨r.code⟩
 
 /-! ## What balance then gives
 
-Stated here because they are the reason the table exists, and because they are what the audit's
-Finding 7 needs in order to stop being true. -/
+⚠ **The five `True`-valued declarations below are design records, not theorems.** Each names a
+balance fact about a table that does not exist yet, and none can be *stated* — let alone proved —
+until the table joins the ensemble at L6 and its channels are in the ledger. They are written as
+`True` so the file typechecks and the intent is reviewable in place.
+
+Two of them formerly carried `sorry` bodies. That was a mistake worth recording: a `sorry` on a
+`True` statement asserts nothing *and* injects `sorryAx` into the axiom census, so it reads as
+pending proof work while being neither. They are `trivial` now; the deferral is carried by this
+callout and by the `SKETCH (L6)` comments, which is where a deferral belongs. -/
 
 /-- **The count is still forced.** The verifier pulls once, ungated; this table pushes once per row,
 ungated; so the table has exactly one row — the same argument `HaltChip` relies on, unchanged. -/
@@ -70,13 +77,18 @@ theorem exitTable_length_one : True := by
 /-- **On a halting shard the code is `a0`.** The hand-off channel has one push (the syscall row's)
 and one pull (this row's), so their messages agree, and the verifier's pull then reads that word. -/
 theorem exitCode_eq_a0_of_halted : True := by
-  sorry
+  -- SKETCH (L6): one push (the syscall row's `is_halt`-gated hand-off, carrying the reduced `op_b`)
+  -- against one pull (this row's, gated on `halted`) makes the two messages equal by the same
+  -- singleton-permutation step the Exit count uses.
+  trivial
 
 /-- **On a halt-free shard the code is free.** Nothing pushes the hand-off, so `halted = 0` by
 balance, and `code` is constrained by nothing — which is what SP1 does, and what makes the
 `_of_totality` theorems' conclusion stop being false. -/
 theorem exitCode_free_of_haltFree : True := by
-  sorry
+  -- SKETCH (L6): with no push on the hand-off channel, balance forces `halted = 0`, and `code` then
+  -- appears in no assertion — which is exactly SP1's shape and what removes the counterexample.
+  trivial
 
 /-! ## What retires with `HaltChip`
 

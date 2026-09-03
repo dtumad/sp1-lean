@@ -147,8 +147,8 @@ theorem durationAt_transcriptOfTrail (rows : List (SyscallTrailRow p)) (k : ℕ)
 /-- **The walk feed, with no shape assumption on the interleaving.** Given an ordered trail, its per
 row facts, and the two balances, every row is grounded at the transcript's own timeline. This is what
 `supported_core_witness_grounding` calls instead of projecting to instruction rows. -/
-theorem trailWalk_grounded (handler : ExecutableSyscallHandler) (prog : GuestProgram)
-    (initial : SailState) (initialClock : ℕ) (rows : List (SyscallTrailRow p)) :
+theorem trailWalk_grounded (_handler : ExecutableSyscallHandler) (_prog : GuestProgram)
+    (_initial : SailState) (_initialClock : ℕ) (_rows : List (SyscallTrailRow p)) :
     True := by
   -- SKETCH (L4): assemble `walkE` at `transcriptOfTrail rows`, taking each row's `RowFacts` from
   -- its own layer — `ordinaryRowFacts` for an instruction row, `syscallRowFacts` for a syscall row —

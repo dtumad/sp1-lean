@@ -200,7 +200,7 @@ def WalkedRow.duration : WalkedRow p → ℕ
   | .syscall _ => 264
 
 /-- The transcript a walk order denotes. -/
-noncomputable def transcriptOf (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) :
+noncomputable def transcriptOf (_data : ProverData (ZMod p)) (rows : List (WalkedRow p)) :
     List ExecutionEvent :=
   rows.map fun row =>
     match row with
