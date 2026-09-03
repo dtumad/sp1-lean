@@ -106,9 +106,26 @@ theorem syscallStepFact_of_advance (handler : ExecutableSyscallHandler) (prog : 
   -- `.syscall` event, so the trajectory's own successor *is* the handler's target.
   sorry
 
-/-- The row's shape obligations. Every field is available: `timeGap` from `264 ≥ 8`, `align8` from
-`8 ∣ 264`, and `touches` because the register slots sit at 4/3/2, inside `TouchOK`'s budget. -/
-theorem syscallRowOKCore (initialClock : ℕ) (r : SyscallInstrsChip.Inputs (ZMod p)) :
+/-- The row's shape obligations — with the two premises a 264-tick row genuinely cannot supply
+itself, which the sketch's hypothesis-free statement hid.
+
+**`align8` is a walk fact, not a row fact.** It relates this row's pull to the *shard's* initial
+clock, which no single row can see; the walk establishes it inductively as rows chain.
+
+**`timeGap` needs the bump chip.** Upstream computes the pushed clock as `clk_low + 264` with no
+range constraint, and *`clk_low + 264` may exceed `2 ^ 24`* — the same deliberate non-canonicality
+as `next_pc[0] = pc[0] + 4` without a carry, legalized downstream by `StateBumpChip`
+(`air.rs:129-140`, `adapter/bump.rs:185-247`). So on a wrapping row the pushed message's `timeNat`
+is *not* `pull + 264`, and the 264 has to arrive as a canonicalization premise exactly as the pc's
+`+ 4` carry does in `SyscallRowContext`. `ClkDiscipline` does not cover it: that discipline is
+stated for offsets `≤ 4`, which is the intra-row effect range, not the window width.
+
+The remaining four fields are vacuous while `syscallRowFacts` has no touches, and become the
+offset-4/3/2 register slots when it gains them. -/
+theorem syscallRowOKCore (initialClock : ℕ) (r : SyscallInstrsChip.Inputs (ZMod p))
+    (align : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) % 8 = initialClock % 8)
+    (canonicalClock : StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
+      = StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 264) :
     TimedGrounding.RowOKCore initialClock (syscallRowFacts r) := by
   sorry
 
@@ -127,9 +144,31 @@ theorem statePullAlign8_of_durations {α : Type} (rows : List α)
   -- exact step. Stated as `True` here only until the walk's row type is fixed at L4.
   trivial
 
+/-- `Timeline.start` is injective, because it strictly increases. Stated here rather than in
+`MicroTime.lean` only to avoid a rebuild of everything below during the sketch phase; it belongs
+beside `start_lt_of_lt`. -/
+private theorem start_injective (tl : Semantics.Timeline) : Function.Injective tl.start := by
+  intro a b h
+  rcases lt_trichotomy a b with hlt | heq | hgt
+  · exact absurd h (Nat.ne_of_lt (tl.start_lt_of_lt hlt))
+  · exact heq
+  · exact absurd h.symm (Nat.ne_of_lt (tl.start_lt_of_lt hgt))
+
+/-- One step of the transcript's timeline is that step's own duration — the prefix sum, unrolled
+once. This is the identity that makes the walk's positions and the timeline's starts one
+arithmetic. -/
+private theorem eventTimeline_start_succ (events : List ExecutionEvent) (initialClock k : ℕ) :
+    (Semantics.eventTimeline events initialClock).start (k + 1)
+      = (Semantics.eventTimeline events initialClock).start k + Semantics.durationAt events k := by
+  simp only [Semantics.eventTimeline_start]
+  rw [List.range_succ, List.map_append, List.sum_append]
+  simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil]
+  omega
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- The transcript's timeline agrees with the walk's positions: a row at trail index `k` pulls at
-`tl.start k` and pushes at `tl.start (k+1)`. This is `walkG`'s timeline hypothesis, and it is
-dischargeable from the already-duration-generic position lemma. -/
+`tl.start k` and pushes at `tl.start (k+1)`. This is `walkG`'s timeline hypothesis, and the index is
+unique because `Timeline.start` strictly increases. -/
 theorem timelineAgreement_of_durations (events : List ExecutionEvent) (initialClock : ℕ)
     (r : RowFacts p) (k : ℕ)
     (hpull : StateMsg.timeNat r.statePull = (eventTimeline events initialClock).start k)
@@ -137,9 +176,10 @@ theorem timelineAgreement_of_durations (events : List ExecutionEvent) (initialCl
       = StateMsg.timeNat r.statePull + Semantics.durationAt events k) :
     ∀ n : ℕ, StateMsg.timeNat r.statePull = (eventTimeline events initialClock).start n →
       StateMsg.timeNat r.statePush = (eventTimeline events initialClock).start (n + 1) := by
-  -- SKETCH (L3): `Timeline.start` is strictly monotone, hence injective, so `n = k`; then the push
-  -- time is `tl.start k + durationAt events k`, which is `tl.start (k+1)` by construction.
-  sorry
+  intro n hn
+  have hnk : n = k := start_injective _ (hn.symm.trans hpull)
+  subst hnk
+  rw [hpush, hpull, eventTimeline_start_succ]
 
 /-! ## The transcript
 
@@ -163,11 +203,16 @@ noncomputable def transcriptOf (data : ProverData (ZMod p)) (rows : List (Walked
 /-- The clock coupling, stated where it can be checked: a syscall row's event carries the very clock
 its State pull sits at, which is what `EventTransitionsClocked` demands and what an ordinary row gets
 for free. -/
-theorem syscallEvent_startsAt (r : SyscallInstrsChip.Inputs (ZMod p)) :
+theorem syscallEvent_startsAt (r : SyscallInstrsChip.Inputs (ZMod p))
+    (spec : SyscallInstrsChip.Spec r) (real : r.is_real = 1) :
     (ExecutionEvent.syscall (syscallEventOfRow r)).StartsAt
       (StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)) := by
   -- SKETCH (L3): `decodeSyscallRow`'s `clock` field is `values[0]·2^24 + values[1]·2^16 + values[2]`,
-  -- which is `clk_high`/`clk_16_24`/`clk_0_16` — definitionally the pulled message's `timeNat`.
+  -- which is `clk_high`/`clk_16_24`/`clk_0_16`. That is *not* definitionally the pulled message's
+  -- `timeNat`: the message carries the two low limbs already recombined as
+  -- `clk_0_16 + clk_16_24 * 65536`, so the two agree only once that field addition is known not to
+  -- wrap — which is what `CPUState.Spec`'s `clk_0_16 < 2 ^ 16` / `clk_16_24 < 2 ^ 8` bounds give,
+  -- and why this statement now takes the row's `Spec`.
   sorry
 
 end SP1Clean.Soundness
