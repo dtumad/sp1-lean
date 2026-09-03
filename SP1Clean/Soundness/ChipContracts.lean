@@ -438,6 +438,9 @@ theorem memoryBalance_of_alignsWith [Fact (2 ^ 24 < p)]
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
           (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+            Channels.memoryChannel))) +
+        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             Channels.memoryChannel))) =
       optMS (memoryFinalizeFrontier witness loc) + pullsAt (orderedRows.map g) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
@@ -445,6 +448,9 @@ theorem memoryBalance_of_alignsWith [Fact (2 ^ 24 < p)]
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
           (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+            Channels.memoryChannel))) +
+        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             Channels.memoryChannel))) := by
   have hordinary : memoryFrontierRows witness =
       (realDecodedInstructionRows witness.data witness.tables).map

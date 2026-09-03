@@ -1383,10 +1383,12 @@ theorem witness_stateEdges_goodness
       · exact absurd hkeep hq
       · exact hbound
 
-/-- The trail row label: a decoded instruction row or (halt-table wave) an active halt-table
-row. -/
+/-- The trail row label: a decoded instruction row, an active halt-table row, or — since the
+`SyscallInstrs` table joined the ensemble — an active syscall row. The third arm is what makes the
+trail an *arbitrary interleaving* rather than "all instructions, optionally one terminal halt": a
+syscall row sits mid-shard and is walked like an instruction row, not cut out before the walk. -/
 abbrev TrailRow (p : ℕ) [Fact p.Prime] [Fact (2 ^ 17 < p)] :=
-  DecodedInstructionRow p ⊕ Array (ZMod p)
+  DecodedInstructionRow p ⊕ Array (ZMod p) ⊕ Array (ZMod p)
 
 /-- The canonicalized State edge of one trail row. -/
 noncomputable def trailCanonEdge (witness : EnsembleWitness (sp1Ensemble (p := p))) :
@@ -1395,9 +1397,14 @@ noncomputable def trailCanonEdge (witness : EnsembleWitness (sp1Ensemble (p := p
   | .inl decoded =>
       (canonState (decodedStateEdge witness.data decoded).1,
        canonState (decodedStateEdge witness.data decoded).2)
-  | .inr row =>
+  | .inr (.inl row) =>
       (canonState (HaltChip.statePulledMessage (haltRow (haltTable witness) row)),
        canonState (HaltChip.statePushedMessage (haltRow (haltTable witness) row)))
+  | .inr (.inr row) =>
+      (canonState (SyscallInstrsChip.statePulledMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row)),
+       canonState (SyscallInstrsChip.statePushedMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row)))
 
 /-- Physical constraints plus five-bus balance construct an exhaustive, clock-ordered trail of all
 active decoded instruction rows **and the active halt row** over their canonicalized State edges.
@@ -1410,14 +1417,19 @@ theorem witness_realDecodedState_canonExhaustiveTrail
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
     RankedGrounding.ExhaustiveTrail
-      ((↑((realDecodedInstructionRows witness.data witness.tables).map (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
-        ↑((realHaltRows witness).map (Sum.inr : Array (ZMod p) → TrailRow p))) : Multiset (TrailRow p))
+      ((↑((realDecodedInstructionRows witness.data witness.tables).map
+          (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
+        (↑((realHaltRows witness).map
+            (((fun row => Sum.inr (Sum.inl row)) : Array (ZMod p) → TrailRow p))) +
+          ↑((realSyscallInstrsRows witness).map
+            (((fun row => Sum.inr (Sum.inr row)) : Array (ZMod p) → TrailRow p))))) :
+        Multiset (TrailRow p))
       (trailCanonEdge witness)
       (initialBoundaryStateMessage witness.publicInput)
       (finalBoundaryStateMessage witness.publicInput) := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
   classical
-  obtain ⟨instrGood, bumpCanon, haltGood⟩ :=
+  obtain ⟨instrGood, bumpCanon, haltGood, syscallGood⟩ :=
     witness_stateEdges_goodness witness constraints balanced
   obtain ⟨-, il, ip0, ip1, -⟩ := initialBoundaryStateMessage_bounds witness.publicInput
     (witness_publicInput_limbBounds witness constraints balanced)
@@ -1431,27 +1443,34 @@ theorem witness_realDecodedState_canonExhaustiveTrail
           (fun row =>
             (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
              StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)))) +
-         ↑((realHaltRows witness).map
+         (↑((realHaltRows witness).map
           (fun row =>
             (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row))))) :
+             HaltChip.statePushedMessage (haltRow (haltTable witness) row))) : Multiset _) +
+        ↑((realSyscallInstrsRows witness).map
+          (fun row =>
+            (SyscallInstrsChip.statePulledMessage
+                (syscallInstrsRow (syscallInstrsTable witness) row),
+             SyscallInstrsChip.statePushedMessage
+                (syscallInstrsRow (syscallInstrsTable witness) row)))))) :
         Multiset (StateMsg (ZMod p) × StateMsg (ZMod p))) =
       (↑((realDecodedInstructionRows witness.data witness.tables).map
           (decodedStateEdge witness.data)) +
-        ↑((realHaltRows witness).map
+        (↑((realHaltRows witness).map
           (fun row =>
             (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row))))) +
+             HaltChip.statePushedMessage (haltRow (haltTable witness) row))) : Multiset _) +
+        ↑((realSyscallInstrsRows witness).map
+          (fun row =>
+            (SyscallInstrsChip.statePulledMessage
+                (syscallInstrsRow (syscallInstrsTable witness) row),
+             SyscallInstrsChip.statePushedMessage
+                (syscallInstrsRow (syscallInstrsTable witness) row)))))) +
         ↑((realStateBumpRows witness).map
           (fun row =>
             (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
              StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)))) := by
-    rw [add_comm
-      (↑((realStateBumpRows witness).map
-        (fun row =>
-          (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
-           StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)))) :
-        Multiset (StateMsg (ZMod p) × StateMsg (ZMod p))), ← add_assoc]
+    abel
   rw [reassoc] at balanced0
   have cancelled := GoodnessFilter.endpointBalanced_of_cancel_loops _ _ _ _ _ ?loops
     (GoodnessFilter.endpointBalanced_map canonState _ _ _ _ balanced0)
@@ -1464,30 +1483,48 @@ theorem witness_realDecodedState_canonExhaustiveTrail
     Semantics.StateMsg.timeNat _ _ ?_ ?_
   · have mapEq :
         ((↑((realDecodedInstructionRows witness.data witness.tables).map (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
-          ↑((realHaltRows witness).map (Sum.inr : Array (ZMod p) → TrailRow p))) : Multiset (TrailRow p)).map
+          (↑((realHaltRows witness).map (((fun row => Sum.inr (Sum.inl row)) : Array (ZMod p) → TrailRow p))) +
+          ↑((realSyscallInstrsRows witness).map
+            (((fun row => Sum.inr (Sum.inr row)) : Array (ZMod p) → TrailRow p))))) : Multiset (TrailRow p)).map
             (fun e : TrailRow p =>
               match e with
               | .inl decoded => decodedStateEdge witness.data decoded
-              | .inr row =>
+              | .inr (.inl row) =>
                   (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))) =
+                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))
+                | .inr (.inr row) =>
+                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row))) =
           ↑((realDecodedInstructionRows witness.data witness.tables).map
             (decodedStateEdge witness.data)) +
-          ↑((realHaltRows witness).map
+          (↑((realHaltRows witness).map
             (fun row =>
               (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-               HaltChip.statePushedMessage (haltRow (haltTable witness) row)))) := by
-      rw [Multiset.map_add]
-      congr 1 <;> · rw [Multiset.map_coe, List.map_map]; rfl
+               HaltChip.statePushedMessage (haltRow (haltTable witness) row))) : Multiset _) +
+          ↑((realSyscallInstrsRows witness).map
+            (fun row =>
+              (SyscallInstrsChip.statePulledMessage
+                  (syscallInstrsRow (syscallInstrsTable witness) row),
+               SyscallInstrsChip.statePushedMessage
+                  (syscallInstrsRow (syscallInstrsTable witness) row))))) := by
+      rw [Multiset.map_add, Multiset.map_add]
+      congr 1
+      · rw [Multiset.map_coe, List.map_map]; rfl
+      · congr 1 <;> · rw [Multiset.map_coe, List.map_map]; rfl
     have converted := GoodnessFilter.endpointBalanced_of_map
       (fun e : TrailRow p =>
         match e with
         | .inl decoded => decodedStateEdge witness.data decoded
-        | .inr row =>
+        | .inr (.inl row) =>
             (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row)))
+             HaltChip.statePushedMessage (haltRow (haltTable witness) row))
+          | .inr (.inr row) =>
+            (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+             SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)))
       ((↑((realDecodedInstructionRows witness.data witness.tables).map (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
-        ↑((realHaltRows witness).map (Sum.inr : Array (ZMod p) → TrailRow p))) : Multiset (TrailRow p))
+        (↑((realHaltRows witness).map (((fun row => Sum.inr (Sum.inl row)) : Array (ZMod p) → TrailRow p))) +
+          ↑((realSyscallInstrsRows witness).map
+            (((fun row => Sum.inr (Sum.inr row)) : Array (ZMod p) → TrailRow p))))) : Multiset (TrailRow p))
       (fun e => (canonState e.1, canonState e.2))
       (initialBoundaryStateMessage witness.publicInput)
       (finalBoundaryStateMessage witness.publicInput)
@@ -1497,19 +1534,25 @@ theorem witness_realDecodedState_canonExhaustiveTrail
             ((fun e : TrailRow p =>
               match e with
               | .inl decoded => decodedStateEdge witness.data decoded
-              | .inr row =>
+              | .inr (.inl row) =>
                   (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))) e).1,
+                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))
+                | .inr (.inr row) =>
+                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row))) e).1,
           canonState
             ((fun e : TrailRow p =>
               match e with
               | .inl decoded => decodedStateEdge witness.data decoded
-              | .inr row =>
+              | .inr (.inl row) =>
                   (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))) e).2)) e =
+                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))
+                | .inr (.inr row) =>
+                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row))) e).2)) e =
           trailCanonEdge witness e := by
       intro e
-      cases e <;> rfl
+      rcases e with _ | (_ | _) <;> rfl
     rw [show trailCanonEdge witness = _ from funext fun e => (edgeEq e).symm]
     exact converted
   · intro e emem
@@ -1521,13 +1564,22 @@ theorem witness_realDecodedState_canonExhaustiveTrail
       rw [timeNat_canonState hclkPull, timeNat_canonState hclkPush]
       exact witness_realDecodedInstructionRows_time_increases witness constraints balanced decoded
         dmem
-    · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
-      obtain ⟨⟨hclkPull, hclkPush⟩, -⟩ := haltGood row rowMem
-      show Semantics.StateMsg.timeNat
-          (canonState (HaltChip.statePulledMessage (haltRow (haltTable witness) row))) <
-        Semantics.StateMsg.timeNat
-          (canonState (HaltChip.statePushedMessage (haltRow (haltTable witness) row)))
-      rw [timeNat_canonState hclkPull, timeNat_canonState hclkPush]
-      exact witness_realHaltRows_time_increases witness constraints balanced row rowMem
+    · rcases Multiset.mem_add.mp he with he | he
+      · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
+        obtain ⟨⟨hclkPull, hclkPush⟩, -⟩ := haltGood row rowMem
+        show Semantics.StateMsg.timeNat
+            (canonState (HaltChip.statePulledMessage (haltRow (haltTable witness) row))) <
+          Semantics.StateMsg.timeNat
+            (canonState (HaltChip.statePushedMessage (haltRow (haltTable witness) row)))
+        rw [timeNat_canonState hclkPull, timeNat_canonState hclkPush]
+        exact witness_realHaltRows_time_increases witness constraints balanced row rowMem
+      · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
+        obtain ⟨⟨hclkPull, hclkPush⟩, -, -⟩ := syscallGood row rowMem
+        show Semantics.StateMsg.timeNat (canonState (SyscallInstrsChip.statePulledMessage
+              (syscallInstrsRow (syscallInstrsTable witness) row))) <
+          Semantics.StateMsg.timeNat (canonState (SyscallInstrsChip.statePushedMessage
+              (syscallInstrsRow (syscallInstrsTable witness) row)))
+        rw [timeNat_canonState hclkPull, timeNat_canonState hclkPush]
+        exact witness_realSyscallInstrsRows_time_increases witness constraints balanced row rowMem
 
 end SP1Clean.Soundness
