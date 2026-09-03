@@ -39,6 +39,27 @@ open SP1Clean.Channels (StateMsg MemoryMsg)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
+/-- `Timeline.start` is injective, because it strictly increases. Stated here rather than in
+`MicroTime.lean` only to avoid a rebuild of everything below during the sketch phase; it belongs
+beside `start_lt_of_lt`. -/
+private theorem start_injective (tl : Semantics.Timeline) : Function.Injective tl.start := by
+  intro a b h
+  rcases lt_trichotomy a b with hlt | heq | hgt
+  · exact absurd h (Nat.ne_of_lt (tl.start_lt_of_lt hlt))
+  · exact heq
+  · exact absurd h.symm (Nat.ne_of_lt (tl.start_lt_of_lt hgt))
+
+/-- One step of the transcript's timeline is that step's own duration — the prefix sum, unrolled
+once. This is the identity that makes the walk's positions and the timeline's starts one
+arithmetic. -/
+private theorem eventTimeline_start_succ (events : List ExecutionEvent) (initialClock k : ℕ) :
+    (Semantics.eventTimeline events initialClock).start (k + 1)
+      = (Semantics.eventTimeline events initialClock).start k + Semantics.durationAt events k := by
+  simp only [Semantics.eventTimeline_start]
+  rw [List.range_succ, List.map_append, List.sum_append]
+  simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil]
+  omega
+
 /-! ## The row effect a syscall has
 
 `RowEffect` minus its Sail-retirement field, with the pc and register clauses reading the *event*
@@ -150,19 +171,68 @@ noncomputable def syscallRowFacts (r : SyscallInstrsChip.Inputs (ZMod p)) : RowF
     memPulls := []   -- SKETCH (L3): the three read-priors, each at the row's own pull time
     memPushes := [] }  -- SKETCH (L3): the three read-backs at offsets 4/3/2
 
-/-- **The syscall row's step fact**, at the event trajectory. This is the syscall analogue of
+omit [Fact (2 ^ 17 < p)] in
+/-- **The syscall row's step fact**, at the event trajectory — the syscall analogue of
 `stepFact_of_advance`, and the reason the walk had to be parameterized: its conclusion is
-`LocalStateTruthG` at a trajectory whose step here is the handler, not `try_step`. -/
+`LocalStateTruthG` at a trajectory whose step here is the handler, not `try_step`.
+
+⚠ **The sketch's signature carried none of the linkage this needs**, which made it unprovable
+rather than merely unproved. A payload alone says what *a* row does to *a* state; it says nothing
+about *this* row sitting at *this* position of *this* transcript. Three hypotheses supply that, and
+each is a real obligation on the caller rather than bookkeeping:
+
+* `positioned` — wherever the row's State pull lands on the timeline, the transcript's event at that
+  index *is* this row's syscall event. This is the row-to-transcript identification, and without it
+  the trajectory's successor has no reason to be the handler's target.
+* `rowContext` — the operand and carry facts hold at whatever state the pull observes. The Memory and
+  Program buses supply these; naming them here keeps the step fact honest about what is not row-local.
+* `clockAgrees` — the pushed clock really is `pull + 264`, the `StateBump` canonicalization premise
+  that `syscallRowOKCore` also takes.
+
+The ordinary analogue hides all three inside `RowWiring`. A syscall `RowWiring` is the natural next
+step; until it exists these are the fields it would have. -/
 theorem syscallStepFact_of_advance (handler : ExecutableSyscallHandler) (prog : GuestProgram)
     (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
     (r : SyscallInstrsChip.Inputs (ZMod p))
-    (payload : SyscallAdvancePayload (p := p) handler) :
+    (payload : SyscallAdvancePayload (p := p) handler)
+    (real : r.is_real = 1) (spec : SyscallInstrsChip.Spec r)
+    (sel : SyscallInstrsChip.SelectorsValid r) (pulled : SyscallInstrsChip.PulledFacts r)
+    (canonical : (syscallEventOfRow r).IsInlineCanonical)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)
+        = (eventTimeline events initialClock).start n →
+      events[n]? = some (ExecutionEvent.syscall (syscallEventOfRow r)))
+    (rowContext : ∀ (n : ℕ) (s : SailState),
+      eventTrajectory handler prog events initial n = some s →
+      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)
+        = (eventTimeline events initialClock).start n →
+      SyscallRowContext r prog s)
+    (clockAgrees : StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
+      = StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 264) :
     LocalStepFactG prog (eventTrajectory handler prog events initial) initial
       (eventTimeline events initialClock) (syscallRowFacts r) := by
-  -- SKETCH (L3): destructure the pulled truth to get the step index `n` and the state; fire the
-  -- payload there; the pushed state is `eventTrajectory … (n+1)` because `events[n]` is this row's
-  -- `.syscall` event, so the trajectory's own successor *is* the handler's target.
-  sorry
+  intro hpull _hcurr
+  obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
+  have htime' : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)
+      = (eventTimeline events initialClock).start n := htime
+  have hev := positioned n htime'
+  obtain ⟨s', htrans, heff⟩ :=
+    payload r prog state real spec sel pulled canonical hcfg hrom (rowContext n state htraj htime')
+  refine ⟨⟨n + 1, s', ?_, ?_, heff.pc, ?_, heff.cfg hcfg⟩, by simp [syscallRowFacts]⟩
+  · -- the trajectory's own successor *is* the handler's target, because `events[n]` is this row
+    rw [Semantics.eventTrajectory_succ, hev]
+    dsimp only
+    rw [htraj, Option.bind_some]
+    exact htrans.2.2
+  · -- the pushed clock is the next timeline start, because this row's window is its event's duration
+    show StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
+      = (eventTimeline events initialClock).start (n + 1)
+    have hdur : Semantics.durationAt events n = 264 := by simp [Semantics.durationAt, hev]
+    rw [eventTimeline_start_succ, hdur, clockAgrees, htime']
+  · -- ROM survives because a syscall row touches no memory
+    intro a w hw i
+    rw [heff.mem]
+    exact hrom a w hw i
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The row's shape obligations — with the two premises a 264-tick row genuinely cannot supply
@@ -210,27 +280,6 @@ theorem statePullAlign8_of_durations {α : Type} (rows : List α)
   -- residue from `statePullTime_of_stateWalk_durations` plus `8 ∣ duration` instead of from the
   -- exact step. Stated as `True` here only until the walk's row type is fixed at L4.
   trivial
-
-/-- `Timeline.start` is injective, because it strictly increases. Stated here rather than in
-`MicroTime.lean` only to avoid a rebuild of everything below during the sketch phase; it belongs
-beside `start_lt_of_lt`. -/
-private theorem start_injective (tl : Semantics.Timeline) : Function.Injective tl.start := by
-  intro a b h
-  rcases lt_trichotomy a b with hlt | heq | hgt
-  · exact absurd h (Nat.ne_of_lt (tl.start_lt_of_lt hlt))
-  · exact heq
-  · exact absurd h.symm (Nat.ne_of_lt (tl.start_lt_of_lt hgt))
-
-/-- One step of the transcript's timeline is that step's own duration — the prefix sum, unrolled
-once. This is the identity that makes the walk's positions and the timeline's starts one
-arithmetic. -/
-private theorem eventTimeline_start_succ (events : List ExecutionEvent) (initialClock k : ℕ) :
-    (Semantics.eventTimeline events initialClock).start (k + 1)
-      = (Semantics.eventTimeline events initialClock).start k + Semantics.durationAt events k := by
-  simp only [Semantics.eventTimeline_start]
-  rw [List.range_succ, List.map_append, List.sum_append]
-  simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil]
-  omega
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- The transcript's timeline agrees with the walk's positions: a row at trail index `k` pulls at
