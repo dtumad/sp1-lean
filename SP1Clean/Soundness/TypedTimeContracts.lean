@@ -590,8 +590,18 @@ private theorem syscallInstrsRow_pcArm_spec
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints)
     {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table) :
-    SyscallInstrsChip.PcArm.Spec
-      (SyscallInstrsChip.toPcArm (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+    ((syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 1 →
+        (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[0] = 1 ∧
+          (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[1] = 0 ∧
+          (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[2] = 0) ∧
+      ((syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1 →
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 0 →
+        (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[0] =
+            (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[0] + 4 ∧
+          (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[1] =
+            (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[1] ∧
+          (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[2] =
+            (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[2]) := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : syscallInstrsTable witness ∈ witness.tables :=
     List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
@@ -652,8 +662,6 @@ private theorem syscallInstrsRow_pcArm_spec
     (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[1] := rP 1
   have rP2 : (Eval.eval env (syscallPcVar (p := p))).pc[2] =
     (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[2] := rP 2
-  -- unfold the slice in the goal so both sides speak the row's language before anything is applied
-  simp only [SyscallInstrsChip.PcArm.Spec, SyscallInstrsChip.toPcArm]
   refine ⟨fun hh => ?_, fun hr hh => ?_⟩
   · obtain ⟨a0, a1, a2⟩ := arm.1.1 (rHalt.trans hh)
     exact ⟨rN0.symm.trans a0, rN1.symm.trans a1, rN2.symm.trans a2⟩
@@ -960,6 +968,40 @@ theorem witness_realHaltRows_time_increases
   rw [witness_realHaltRows_timeStep witness constraints balanced row rowMem]
   omega
 
+/-- **Every active syscall edge either preserves the two upper pc limbs or pushes bounded ones** —
+the same dichotomy the instruction rows satisfy, and for the same reason: `PcArm` either parks the
+machine at the literal `(1, 0, 0)` or leaves the upper limbs alone while adding four to the low one.
+Only constraints are consumed, so this is available to the goodness filter. -/
+theorem witness_realSyscallInstrsRows_pcClass
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) :
+    ∀ row ∈ realSyscallInstrsRows witness,
+      ((SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1 =
+          (SyscallInstrsChip.statePulledMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1 ∧
+        (SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2 =
+          (SyscallInstrsChip.statePulledMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2) ∨
+      ((SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1.val < 2 ^ 16 ∧
+        (SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2.val < 2 ^ 16) := by
+  intro row rowMem
+  obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
+  have arm := syscallInstrsRow_pcArm_spec witness constraints tableMem
+  rcases witness_syscallInstrsRows_haltSelectorBinary witness constraints row tableMem with
+    hh | hh
+  · obtain ⟨-, h1, h2⟩ := arm.2 real hh
+    exact Or.inl ⟨h1, h2⟩
+  · obtain ⟨-, h1, h2⟩ := arm.1 hh
+    refine Or.inr ⟨?_, ?_⟩
+    · show ((syscallInstrsRow (syscallInstrsTable witness) row).next_pc[1]).val < 2 ^ 16
+      rw [h1, ZMod.val_zero]; norm_num
+    · show ((syscallInstrsRow (syscallInstrsTable witness) row).next_pc[2]).val < 2 ^ 16
+      rw [h2, ZMod.val_zero]; norm_num
+
 /-- Every active syscall row advances its decoded State time by exactly the syscall width `264`.
 Same route as the halt row's: the composed `CPUState` reader's two byte checks bound the pulled low
 clock and the `2 ^ 25` field bound keeps the increment exact. Note what this does *not* need — the
@@ -1158,11 +1200,24 @@ theorem witness_stateEdges_goodness
     (∀ row ∈ realStateBumpRows witness,
       canonState (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row)) =
         canonState (StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row))) ∧
-    ∀ row ∈ realHaltRows witness,
+    (∀ row ∈ realHaltRows witness,
       ((HaltChip.statePulledMessage (haltRow (haltTable witness) row)).clk_high.val < 2 ^ 24 ∧
         (HaltChip.statePushedMessage (haltRow (haltTable witness) row)).clk_high.val < 2 ^ 24) ∧
       ((HaltChip.statePulledMessage (haltRow (haltTable witness) row)).pc1.val < 2 ^ 16 ∧
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) row)).pc2.val < 2 ^ 16) := by
+        (HaltChip.statePulledMessage (haltRow (haltTable witness) row)).pc2.val < 2 ^ 16)) ∧
+    ∀ row ∈ realSyscallInstrsRows witness,
+      ((SyscallInstrsChip.statePulledMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).clk_high.val < 2 ^ 24 ∧
+        (SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).clk_high.val < 2 ^ 24) ∧
+      ((SyscallInstrsChip.statePulledMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1.val < 2 ^ 16 ∧
+        (SyscallInstrsChip.statePulledMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2.val < 2 ^ 16) ∧
+      ((SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1.val < 2 ^ 16 ∧
+        (SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2.val < 2 ^ 16) := by
   classical
   obtain ⟨ih, -, -, ip1, ip2⟩ := initialBoundaryStateMessage_bounds witness.publicInput
     (witness_publicInput_limbBounds witness constraints balanced)
@@ -1182,8 +1237,14 @@ theorem witness_stateEdges_goodness
       (fun row =>
         (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
          HaltChip.statePushedMessage (haltRow (haltTable witness) row)))) with haltMDef
-  have reassoc : instrM + (bumpM + haltM) = (instrM + haltM) + bumpM := by
-    rw [add_comm bumpM haltM, ← add_assoc]
+  set syscallM : Multiset (StateMsg (ZMod p) × StateMsg (ZMod p)) :=
+    ↑((realSyscallInstrsRows witness).map
+      (fun row =>
+        (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+         SyscallInstrsChip.statePushedMessage
+           (syscallInstrsRow (syscallInstrsTable witness) row)))) with syscallMDef
+  have reassoc : instrM + (bumpM + (haltM + syscallM))
+      = ((instrM + haltM) + syscallM) + bumpM := by abel
   rw [reassoc] at balanced0
   -- pass 1: `clk_high < 2^24` is preserved by instruction and halt edges and range-checked on
   -- bump pushes
@@ -1193,13 +1254,17 @@ theorem witness_stateEdges_goodness
   case pres1 =>
     intro e he
     rcases Multiset.mem_add.mp he with he | he
-    · obtain ⟨decoded, dmem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
-      exact ⟨by rw [decodedStateEdge_snd_clk_high], fun _ =>
-        witness_realDecodedInstructionRows_time_increases witness constraints balanced decoded
-          dmem⟩
+    · rcases Multiset.mem_add.mp he with he | he
+      · obtain ⟨decoded, dmem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
+        exact ⟨by rw [decodedStateEdge_snd_clk_high], fun _ =>
+          witness_realDecodedInstructionRows_time_increases witness constraints balanced decoded
+            dmem⟩
+      · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
+        exact ⟨Iff.rfl, fun _ =>
+          witness_realHaltRows_time_increases witness constraints balanced row rowMem⟩
     · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
       exact ⟨Iff.rfl, fun _ =>
-        witness_realHaltRows_time_increases witness constraints balanced row rowMem⟩
+        witness_realSyscallInstrsRows_time_increases witness constraints balanced row rowMem⟩
   case cons1 =>
     intro e he
     obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
@@ -1209,21 +1274,32 @@ theorem witness_stateEdges_goodness
   -- pass 2: `pc1, pc2 < 2^16`; instruction edges split by the pc-limb classification, and the
   -- halt edge's pushed pc is the literal `(1, 0, 0)`
   have balanced1 := realState_endpointBalanced_withBump_of_constraints witness constraints balanced
-  rw [show (instrM + (bumpM + haltM) : Multiset (StateMsg (ZMod p) × StateMsg (ZMod p))) =
-      instrM + (bumpM + haltM) from rfl] at balanced1
-  rw [← Multiset.filter_add_not
-    (fun e : StateMsg (ZMod p) × StateMsg (ZMod p) => e.2.pc1 = e.1.pc1 ∧ e.2.pc2 = e.1.pc2)
-    instrM, add_assoc] at balanced1
+  -- Both instruction and syscall edges split the same way — some preserve the upper pc limbs and
+  -- some push bounded ones — so both filtered halves join the preserved side.
+  have split : instrM + (bumpM + (haltM + syscallM))
+      = (Multiset.filter (fun e : StateMsg (ZMod p) × StateMsg (ZMod p) => e.2.pc1 = e.1.pc1 ∧ e.2.pc2 = e.1.pc2) instrM + Multiset.filter (fun e : StateMsg (ZMod p) × StateMsg (ZMod p) => e.2.pc1 = e.1.pc1 ∧ e.2.pc2 = e.1.pc2) syscallM)
+        + (Multiset.filter (fun e => ¬ (fun e : StateMsg (ZMod p) × StateMsg (ZMod p) => e.2.pc1 = e.1.pc1 ∧ e.2.pc2 = e.1.pc2) e) instrM
+          + (Multiset.filter (fun e => ¬ (fun e : StateMsg (ZMod p) × StateMsg (ZMod p) => e.2.pc1 = e.1.pc1 ∧ e.2.pc2 = e.1.pc2) e) syscallM + (bumpM + haltM))) := by
+    conv_lhs =>
+      rw [← Multiset.filter_add_not (fun e : StateMsg (ZMod p) × StateMsg (ZMod p) => e.2.pc1 = e.1.pc1 ∧ e.2.pc2 = e.1.pc2) instrM, ← Multiset.filter_add_not (fun e : StateMsg (ZMod p) × StateMsg (ZMod p) => e.2.pc1 = e.1.pc1 ∧ e.2.pc2 = e.1.pc2) syscallM]
+    abel
+  rw [split] at balanced1
   have pass2 := GoodnessFilter.good_of_endpointBalanced (fun e => e)
     (fun m : StateMsg (ZMod p) => m.pc1.val < 2 ^ 16 ∧ m.pc2.val < 2 ^ 16)
     Semantics.StateMsg.timeNat _ _ _ _ balanced1 ⟨ip1, ip2⟩ ⟨fp1, fp2⟩ ?pres2 ?cons2
   case pres2 =>
     intro e he
-    rw [Multiset.mem_filter] at he
-    obtain ⟨he, hq⟩ := he
-    obtain ⟨decoded, dmem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
-    exact ⟨by rw [hq.1, hq.2], fun _ =>
-      witness_realDecodedInstructionRows_time_increases witness constraints balanced decoded dmem⟩
+    rcases Multiset.mem_add.mp he with he | he
+    · rw [Multiset.mem_filter] at he
+      obtain ⟨he, hq⟩ := he
+      obtain ⟨decoded, dmem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
+      exact ⟨by rw [hq.1, hq.2], fun _ =>
+        witness_realDecodedInstructionRows_time_increases witness constraints balanced decoded dmem⟩
+    · rw [Multiset.mem_filter] at he
+      obtain ⟨he, hq⟩ := he
+      obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
+      exact ⟨by rw [hq.1, hq.2], fun _ =>
+        witness_realSyscallInstrsRows_time_increases witness constraints balanced row rowMem⟩
   case cons2 =>
     intro e he
     rcases Multiset.mem_add.mp he with he | he
@@ -1231,6 +1307,14 @@ theorem witness_stateEdges_goodness
       obtain ⟨he, hnq⟩ := he
       obtain ⟨decoded, dmem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
       rcases witness_realDecodedRows_pcClass witness constraints balanced decoded dmem
+        with hkeep | hbound
+      · exact absurd hkeep hnq
+      · exact hbound
+    rcases Multiset.mem_add.mp he with he | he
+    · rw [Multiset.mem_filter] at he
+      obtain ⟨he, hnq⟩ := he
+      obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
+      rcases witness_realSyscallInstrsRows_pcClass witness constraints row rowMem
         with hkeep | hbound
       · exact absurd hkeep hnq
       · exact hbound
@@ -1244,15 +1328,16 @@ theorem witness_stateEdges_goodness
         · show ZMod.val (0 : ZMod p) < 2 ^ 16
           rw [ZMod.val_zero]
           norm_num
-  refine ⟨fun decoded dmem => ?_, fun row rowMem => ?_, fun row rowMem => ?_⟩
+  refine ⟨fun decoded dmem => ?_, fun row rowMem => ?_, fun row rowMem => ?_,
+    fun row rowMem => ?_⟩
   · have emem : decodedStateEdge witness.data decoded ∈ instrM :=
       Multiset.mem_coe.mpr (List.mem_map_of_mem dmem)
-    refine ⟨pass1.1 _ (Multiset.mem_add.mpr (Or.inl emem)), ?_⟩
+    refine ⟨pass1.1 _ (Multiset.mem_add.mpr (Or.inl (Multiset.mem_add.mpr (Or.inl emem)))), ?_⟩
     by_cases hq : ((decodedStateEdge witness.data decoded).2.pc1 =
           (decodedStateEdge witness.data decoded).1.pc1 ∧
         (decodedStateEdge witness.data decoded).2.pc2 =
           (decodedStateEdge witness.data decoded).1.pc2)
-    · exact pass2.1 _ (Multiset.mem_filter.mpr ⟨emem, hq⟩)
+    · exact pass2.1 _ (Multiset.mem_add.mpr (Or.inl (Multiset.mem_filter.mpr ⟨emem, hq⟩)))
     · refine ⟨pass2.2 _ (Multiset.mem_add.mpr (Or.inl (Multiset.mem_filter.mpr ⟨emem, hq⟩))), ?_⟩
       rcases witness_realDecodedRows_pcClass witness constraints balanced decoded dmem
         with hkeep | hbound
@@ -1260,16 +1345,43 @@ theorem witness_stateEdges_goodness
       · exact hbound
   · obtain ⟨tableMem, real⟩ := mem_realStateBumpRows witness rowMem
     have h1 := pass1.2 _ (Multiset.mem_coe.mpr (List.mem_map_of_mem rowMem))
-    have h2 := pass2.2 _ (Multiset.mem_add.mpr (Or.inr (Multiset.mem_add.mpr (Or.inl
-      (Multiset.mem_coe.mpr (List.mem_map_of_mem rowMem))))))
+    have h2 := pass2.2 _ (Multiset.mem_add.mpr (Or.inr (Multiset.mem_add.mpr (Or.inr
+      (Multiset.mem_add.mpr (Or.inl
+        (Multiset.mem_coe.mpr (List.mem_map_of_mem rowMem))))))))
     exact stateBump_canon_eq_of_pulled_good
       (stateBumpTable_spec witness constraints balanced row tableMem) real h1 h2.1 h2.2
   · have hmemP : (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
         HaltChip.statePushedMessage (haltRow (haltTable witness) row)) ∈ haltM :=
       Multiset.mem_coe.mpr (List.mem_map_of_mem rowMem)
-    have h1 := pass1.1 _ (Multiset.mem_add.mpr (Or.inr hmemP))
-    have h2 := pass2.2 _ (Multiset.mem_add.mpr (Or.inr (Multiset.mem_add.mpr (Or.inr hmemP))))
+    have h1 := pass1.1 _ (Multiset.mem_add.mpr (Or.inl (Multiset.mem_add.mpr (Or.inr hmemP))))
+    have h2 := pass2.2 _ (Multiset.mem_add.mpr (Or.inr (Multiset.mem_add.mpr (Or.inr
+      (Multiset.mem_add.mpr (Or.inr hmemP))))))
     exact ⟨h1, h2⟩
+  · -- syscall rows: same shape as the instruction rows, since the pc arm gives the same dichotomy
+    have emem : (SyscallInstrsChip.statePulledMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row),
+        SyscallInstrsChip.statePushedMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row)) ∈ syscallM :=
+      Multiset.mem_coe.mpr (List.mem_map_of_mem rowMem)
+    refine ⟨pass1.1 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+        SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)) (Multiset.mem_add.mpr (Or.inr emem)), ?_⟩
+    by_cases hq : ((SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1 =
+          (SyscallInstrsChip.statePulledMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1 ∧
+        (SyscallInstrsChip.statePushedMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2 =
+          (SyscallInstrsChip.statePulledMessage
+            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2)
+    · exact pass2.1 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+        SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)) (Multiset.mem_add.mpr (Or.inr (Multiset.mem_filter.mpr ⟨emem, hq⟩)))
+    · refine ⟨pass2.2 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+        SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)) (Multiset.mem_add.mpr (Or.inr (Multiset.mem_add.mpr (Or.inl
+        (Multiset.mem_filter.mpr ⟨emem, hq⟩))))), ?_⟩
+      rcases witness_realSyscallInstrsRows_pcClass witness constraints row rowMem
+        with hkeep | hbound
+      · exact absurd hkeep hq
+      · exact hbound
 
 /-- The trail row label: a decoded instruction row or (halt-table wave) an active halt-table
 row. -/
