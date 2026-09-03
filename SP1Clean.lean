@@ -467,6 +467,7 @@ import SP1Clean.Soundness.LocalExecution
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.GenericWalk
+import SP1Clean.Soundness.SyscallGrounding
 import SP1Clean.Soundness.SyscallRowSemantics
 import SP1Clean.Soundness.GroundingAdapter
 import SP1Clean.Soundness.FetchDiscriminant
@@ -498,6 +499,7 @@ import SP1Clean.FormalModel.OpcodeTable
 import SP1Clean.FormalModel.CoreAIRRelation
 import SP1Clean.FormalModel.CoreShard
 import SP1Clean.FormalModel.Relations
+import SP1Clean.FormalModel.EventExecution
 import SP1Clean.FormalModel.Execution
 import SP1Clean.FormalModel.SupportedShard
 import SP1Clean.FormalModel.Verifier

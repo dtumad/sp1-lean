@@ -90,11 +90,59 @@ def CoreSyscallEvent.HandlerAddressesFit (event : CoreSyscallEvent) : Prop :=
 def CoreSyscallEvent.RowLaw (event : CoreSyscallEvent) : Prop :=
   event.WellRouted ∧ event.ResultLaw ∧ event.PcLaw ∧ event.HandlerAddressesFit
 
+/-! ## The thirteen inline codes -/
+
+/-- The syscall ids SP1's `SyscallInstrs` AIR handles inline — exactly the codes whose table byte is
+zero, hence exactly those a shard with no `syscallChannel` provider can carry. Each is `< 256`, so a
+canonical inline code occupies byte 0 alone. -/
+def inlineSyscallIds : List ℕ :=
+  [ haltSyscallId,               --   0  HALT
+    2,                                   --   2  WRITE
+    enterUnconstrainedSyscallId, --   3  ENTER_UNCONSTRAINED
+    4,                                   --   4  EXIT_UNCONSTRAINED  (never appears in a trace)
+    commitSyscallId,             --  16  COMMIT
+    commitDeferredSyscallId,     --  26  COMMIT_DEFERRED_PROOFS
+    27,                                  --  27  VERIFY_SP1_PROOF
+    53,                                  --  53  HINT_MPROTECT_FLUSH
+    64,                                  --  64  DUMP_ELF
+    65,                                  --  65  INSERT_PROFILER_SYMBOLS
+    66,                                  --  66  DELETE_PROFILER_SYMBOLS
+    hintLenSyscallId,            -- 240  HINT_LEN
+    241 ]                                -- 241  HINT_READ
+
+theorem inlineSyscallIds_length : inlineSyscallIds.length = 13 := rfl
+
+theorem inlineSyscallIds_lt_256 : ∀ c ∈ inlineSyscallIds, c < 256 := by decide
+
+/-- **The canonicity premise (D9).** The row's syscall register holds one of the thirteen inline
+codes exactly — not merely a word whose low byte is one of them. This is what SP1's executor
+enforces by construction and its AIR does not. -/
+def CoreSyscallEvent.IsInlineCanonical (event : CoreSyscallEvent) : Prop :=
+  event.rawCode.toNat ∈ inlineSyscallIds
+
+/-- A canonical inline code is its own low byte, so the AIR's byte-0 view is the whole code. -/
+theorem CoreSyscallEvent.syscallId_of_inlineCanonical {event : CoreSyscallEvent}
+    (h : event.IsInlineCanonical) : event.syscallId = event.rawCode.toNat := by
+  -- SKETCH (L2): `rawCode.toNat < 256` from `inlineSyscallIds_lt_256`, then `Nat.mod_eq_of_lt`.
+  sorry
+
+/-- A canonical inline code routes nowhere: its table byte is zero. -/
+theorem CoreSyscallEvent.tableByte_of_inlineCanonical {event : CoreSyscallEvent}
+    (h : event.IsInlineCanonical) : event.tableByte = 0 := by
+  sorry
+
 /-- The terminal event is the exact Rust `SyscallCode::HALT`, not merely an arbitrary register value
 whose low byte happens to be zero.  This distinction is necessary for refinement to the executor:
 `SyscallInstrsChip` itself classifies HALT using only byte zero. -/
 def CoreSyscallEvent.IsCanonicalHalt (event : CoreSyscallEvent) : Prop :=
   event.IsCanonicalCode 0
+
+/-- Canonicity plus a zero id is the *exact* Rust `SyscallCode::HALT` — which is what `SP1Halted`
+and `HaltsWith` need and what the row alone cannot supply. -/
+theorem CoreSyscallEvent.isCanonicalHalt_of_inlineCanonical {event : CoreSyscallEvent}
+    (hc : event.IsInlineCanonical) (hid : event.syscallId = haltSyscallId) :
+    event.IsCanonicalHalt := by
+  sorry
 
 /-- The event fields agree with the architectural observations at the two State-bus endpoints.
 This is not a frame rule: complete register/memory effects belong to the explicit handler relation. -/
