@@ -467,7 +467,9 @@ import SP1Clean.Soundness.LocalExecution
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.GenericWalk
+import SP1Clean.Soundness.ExitAccountingSuccessor
 import SP1Clean.Soundness.SyscallGrounding
+import SP1Clean.Soundness.SyscallTrail
 import SP1Clean.Soundness.SyscallRowSemantics
 import SP1Clean.Soundness.GroundingAdapter
 import SP1Clean.Soundness.FetchDiscriminant

@@ -109,6 +109,27 @@ def exitChannel : Channel (ZMod p) ExitMsg where
   name := "SP1Exit"
   Guarantees _ _ := True
 
+/-- The **halt hand-off** channel — native-only, and the mechanism that makes the exit code honest.
+
+The verifier's `⟨exit_code⟩` pull is ungated, so its counterparty must be a one-row table; that is
+`HaltChip` today, and its trick is a *gated pair* — a real row pushes the reduced `x10`, a padding
+row pushes `⟨0⟩` — which forces `exit_code = 0` on every halt-free shard. **SP1 makes no such
+restriction.** Upstream leaves `exit_code` free on a non-halting execution shard whose previous code
+is zero; it is sticky once set and chained across shards by the verifier, never pinned within one
+(`record.rs:1172-1193`, `prover/src/verify.rs:269-293`).
+
+So the exit accounting is refactored across two tables and this channel. The successor table keeps
+the ungated `⟨code⟩` push — so the one-row count is still forced — but the `code` it pushes is a
+**witness cell**, constrained only by a gated pull on this channel. The `SyscallInstrs` table's
+`is_halt` rows push here with their reduced `op_b`. Balance then says exactly what SP1 says: on a
+halting shard the committed exit code is `a0`, and on a halt-free shard nothing constrains it.
+
+Like `exitChannel`, `Guarantees := True`: the binding is a multiset fact, not a per-message
+predicate. -/
+def haltHandoffChannel : Channel (ZMod p) ExitMsg where
+  name := "SP1HaltHandoff"
+  Guarantees _ _ := True
+
 /-- The Syscall channel — SP1's own syscall bus (`InteractionKind::Syscall`), the one new channel
 here that is *not* native-only. Its payload is the existing `SyscallMsg`, the same carrier the
 exact v6.4.0 lists project, so both models name this bus with one type.
