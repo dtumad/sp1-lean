@@ -349,6 +349,7 @@ import SP1Clean.Proofs.Sail.TryStepReduction
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Model.Semantics.EventTime
 import SP1Clean.Model.Semantics.EventTruth
+import SP1Clean.Model.Semantics.GenericTruth
 import SP1Clean.Model.Semantics.GuestProgram
 import SP1Clean.Model.Semantics.ImageContent
 import SP1Clean.Model.Semantics.ProgramCommitment
@@ -465,6 +466,8 @@ import SP1Clean.Proofs.Chips.AddChip.Contracts
 import SP1Clean.Soundness.LocalExecution
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.RowEffectDefs
+import SP1Clean.Soundness.GenericWalk
+import SP1Clean.Soundness.SyscallRowSemantics
 import SP1Clean.Soundness.GroundingAdapter
 import SP1Clean.Soundness.FetchDiscriminant
 import SP1Clean.Soundness.GroundingInternal
