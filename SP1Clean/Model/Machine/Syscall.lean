@@ -122,14 +122,13 @@ def CoreSyscallEvent.IsInlineCanonical (event : CoreSyscallEvent) : Prop :=
 
 /-- A canonical inline code is its own low byte, so the AIR's byte-0 view is the whole code. -/
 theorem CoreSyscallEvent.syscallId_of_inlineCanonical {event : CoreSyscallEvent}
-    (h : event.IsInlineCanonical) : event.syscallId = event.rawCode.toNat := by
-  -- SKETCH (L2): `rawCode.toNat < 256` from `inlineSyscallIds_lt_256`, then `Nat.mod_eq_of_lt`.
-  sorry
+    (h : event.IsInlineCanonical) : event.syscallId = event.rawCode.toNat :=
+  Nat.mod_eq_of_lt (inlineSyscallIds_lt_256 _ h)
 
 /-- A canonical inline code routes nowhere: its table byte is zero. -/
 theorem CoreSyscallEvent.tableByte_of_inlineCanonical {event : CoreSyscallEvent}
     (h : event.IsInlineCanonical) : event.tableByte = 0 := by
-  sorry
+  rw [CoreSyscallEvent.tableByte, Nat.div_eq_of_lt (inlineSyscallIds_lt_256 _ h)]
 
 /-- The terminal event is the exact Rust `SyscallCode::HALT`, not merely an arbitrary register value
 whose low byte happens to be zero.  This distinction is necessary for refinement to the executor:
@@ -142,7 +141,11 @@ and `HaltsWith` need and what the row alone cannot supply. -/
 theorem CoreSyscallEvent.isCanonicalHalt_of_inlineCanonical {event : CoreSyscallEvent}
     (hc : event.IsInlineCanonical) (hid : event.syscallId = haltSyscallId) :
     event.IsCanonicalHalt := by
-  sorry
+  have hzero : event.rawCode.toNat = 0 := by
+    rw [← CoreSyscallEvent.syscallId_of_inlineCanonical hc]; exact hid
+  have : event.rawCode = 0#64 := by
+    apply BitVec.eq_of_toNat_eq; simpa using hzero
+  simpa [CoreSyscallEvent.IsCanonicalHalt, CoreSyscallEvent.IsCanonicalCode] using this
 
 /-- The event fields agree with the architectural observations at the two State-bus endpoints.
 This is not a frame rule: complete register/memory effects belong to the explicit handler relation. -/

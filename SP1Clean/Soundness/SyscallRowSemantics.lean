@@ -119,7 +119,15 @@ theorem full_run_eq_haltOnly_of_canonicalHalt (program : GuestProgram) (event : 
     (source : SailState) (h : event.IsCanonicalHalt) :
     ExecutableSyscallHandler.full.run program event source =
       ExecutableSyscallHandler.haltOnly.run program event source := by
-  sorry
+  have hraw : event.rawCode = 0 := by
+    simpa [CoreSyscallEvent.IsCanonicalHalt, CoreSyscallEvent.IsCanonicalCode] using h
+  have hnat : event.rawCode.toNat = 0 := by rw [hraw]; rfl
+  have htable : event.tableByte = 0 := by
+    rw [CoreSyscallEvent.tableByte, hnat]
+  have hid : event.syscallId = haltSyscallId := by
+    rw [CoreSyscallEvent.syscallId, hnat]; rfl
+  simp only [ExecutableSyscallHandler.full, ExecutableSyscallHandler.haltOnly, htable, hid,
+    ne_eq, not_true_eq_false, if_false, if_true, if_pos hraw]
 
 /-! ## The per-arm case theorems
 
@@ -218,7 +226,7 @@ end Arms
 thirteen — so the arms above are a total dispatch and no case is silently unhandled. -/
 theorem inlineSyscallIds_exhaustive (event : CoreSyscallEvent) (hc : event.IsInlineCanonical) :
     event.syscallId ∈ inlineSyscallIds := by
-  sorry
+  rw [CoreSyscallEvent.syscallId_of_inlineCanonical hc]; exact hc
 
 /-! ## The assembled transition -/
 
