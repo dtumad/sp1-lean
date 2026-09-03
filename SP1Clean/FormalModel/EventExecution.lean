@@ -78,11 +78,22 @@ def EventSegmentWitness.OrdinaryRun {p : ℕ} (handler : Machine.ExecutableSysca
 
 /-- **The halting run shape**, generalized. The transcript's last event is the halting syscall; the
 state before it is genuinely `SP1Halted`, and the final state is that state parked at `haltPc`. The
-`264` is now just the last event's own duration, so it is not a special case any more. -/
+`264` is now just the last event's own duration, so it is not a special case any more.
+
+⚠ **The `haltEvent` clause is load-bearing and was missing from the sketch.** Without it the
+docstring's first sentence was a description rather than a condition: nothing tied the last *event*
+to the halt, so an **all-ordinary** transcript could satisfy this shape — claiming a halt while its
+final event takes eight ticks. `elapsed` would then read `8 * length` where SP1's schedule says
+`8 * (length - 1) + 264`, and the two run shapes would disagree about the same shard's clock with
+nothing to catch it. Requiring the last event to be a HALT syscall is what makes `elapsed` come out
+to SP1's number, and it is what makes the specialization bridge's halting branch impossible rather
+than merely unprovable. -/
 def EventSegmentWitness.HaltedRun {p : ℕ} (handler : Machine.ExecutableSyscallHandler)
     (statement : SupportedCoreStatement p) (w : EventSegmentWitness) : Prop :=
-  ∃ preHalt : SailState,
+  ∃ preHalt : SailState, ∃ haltEvent : Machine.CoreSyscallEvent,
     1 ≤ w.events.length ∧
+    w.events[w.events.length - 1]? = some (Machine.ExecutionEvent.syscall haltEvent) ∧
+    haltEvent.syscallId = Machine.haltSyscallId ∧
     eventTrajectory handler statement.program w.events w.initial (w.events.length - 1)
       = some preHalt ∧
     w.OrdinaryStepsRetire handler statement.program ∧
@@ -115,21 +126,6 @@ If this cannot be proved, the generalization above has changed the claim rather 
 def EventSegmentWitness.toSailSegment (w : EventSegmentWitness) : SailSegmentWitness :=
   { initial := w.initial, steps := w.events.length, final := w.final, memory := w.memory }
 
-/-- **The bridge.** An all-ordinary transcript satisfying the event relation satisfies the existing
-plain-Sail relation, with `elapsed` collapsing to `8 * steps` and `eventTrajectory` to
-`SailRetireChain`. Modulo D8's dropped `exit_code = 0`, which is recovered from the ensemble's own
-Exit accounting rather than from the run shape. -/
-theorem supportedCoreSailRelation_of_event {p : ℕ} (handler : Machine.ExecutableSyscallHandler)
-    (statement : SupportedCoreStatement p) (w : EventSegmentWitness)
-    (ordinary : ∀ event ∈ w.events, event = Machine.ExecutionEvent.ordinary)
-    (exitZero : statement.publicValues.exit_code = 0)
-    (h : SupportedCoreEventRelation handler statement w) :
-    SupportedCoreSailRelation statement w.toSailSegment := by
-  -- SKETCH (L5): `eventTrajectory_allOrdinary` turns the trajectory into `Machine.trajectory`, whose
-  -- defined values are `SailChain`s; `OrdinaryStepsRetire` upgrades each to `SailRetiresNormally`,
-  -- giving `SailRetireChain`. `elapsed` is `8 * length` because every `durationAt` is `8`.
-  sorry
-
 /-- **The positional accessor `SailRetireChain` lacks.** The inductive exposes `toSailChain` and
 `snoc` and nothing else, so a chain cannot be read at an index — yet `OrdinaryStepsRetire` is stated
 *pointwise over the trajectory*. Bridging the two run shapes in either direction needs exactly this
@@ -157,6 +153,28 @@ theorem retiresAt_of_sailRetireChain : ∀ {n : ℕ} {a b : SailState}, SailReti
           subst hsx; subst hsy; exact hstep
       | succ j =>
           exact ih j (by omega) s s' (by rwa [hshift] at hs) (by rwa [hshift] at hs')
+
+/-- **The converse accessor.** A trajectory that reaches its endpoint and retires normally at every
+step *is* a `SailRetireChain`. Together with `retiresAt_of_sailRetireChain` this makes the inductive
+and pointwise presentations interchangeable, which is what both specialization bridges need. Local
+during the sketch phase; it belongs beside `SailRetireChain.snoc`. -/
+theorem sailRetireChain_of_retiresAt : ∀ (n : ℕ) (a b : SailState),
+    Machine.trajectory a n = some b →
+    (∀ k, k < n → ∀ s s' : SailState,
+      Machine.trajectory a k = some s → Machine.trajectory a (k + 1) = some s' →
+      SailRetiresNormally s s') →
+    SailRetireChain n a b := by
+  intro n
+  induction n with
+  | zero => intro a b hb _; rw [Option.some.inj hb]; exact SailRetireChain.refl _
+  | succ n ih =>
+      intro a b hb hret
+      rw [Machine.trajectory] at hb
+      rcases hmid : Machine.trajectory a n with _ | s
+      · rw [hmid] at hb; exact absurd hb (by simp)
+      · rw [hmid, Option.bind_some] at hb
+        exact (ih a s hmid (fun k hk => hret k (by omega))).snoc
+          (hret n (by omega) s b hmid (by rw [Machine.trajectory, hmid, Option.bind_some]; exact hb))
 
 /-- Every event of a replicated all-ordinary transcript is ordinary. -/
 private theorem mem_replicate_ordinary (n : ℕ) :
@@ -187,6 +205,39 @@ private theorem elapsed_replicate (n : ℕ) (initial final : SailState)
       = 8 * n := by
   rw [elapsed_of_allOrdinary _ (mem_replicate_ordinary n)]
   simp
+
+/-- **The bridge.** An all-ordinary transcript satisfying the event relation satisfies the existing
+plain-Sail relation, with `elapsed` collapsing to `8 * steps` and `eventTrajectory` to
+`SailRetireChain`. Modulo D8's dropped `exit_code = 0`, which is recovered from the ensemble's own
+Exit accounting rather than from the run shape. -/
+theorem supportedCoreSailRelation_of_event {p : ℕ} (handler : Machine.ExecutableSyscallHandler)
+    (statement : SupportedCoreStatement p) (w : EventSegmentWitness)
+    (ordinary : ∀ event ∈ w.events, event = Machine.ExecutionEvent.ordinary)
+    (exitZero : statement.publicValues.exit_code = 0)
+    (h : SupportedCoreEventRelation handler statement w) :
+    SupportedCoreSailRelation statement w.toSailSegment := by
+  obtain ⟨wf, start, -, memWF, memAgrees, run⟩ := h
+  have hbridge : ∀ n ≤ w.events.length,
+      eventTrajectory handler statement.program w.events w.initial n
+        = Machine.trajectory w.initial n :=
+    fun n hn => eventTrajectory_allOrdinary handler statement.program w.events w.initial
+      ordinary n hn
+  refine ⟨wf, start, memWF, memAgrees, ?_⟩
+  rcases run with ⟨htraj, hretire, hfinalPc, hclock⟩ | ⟨preHalt, haltEvent, hpos, hlast, -, -, -, -, -, -⟩
+  · refine Or.inl ⟨?_, hfinalPc, ?_, exitZero⟩
+    · show SailRetireChain w.events.length w.initial w.final
+      refine sailRetireChain_of_retiresAt _ _ _ (by rw [← hbridge _ (le_refl _)]; exact htraj) ?_
+      intro k hk s s' hs hs'
+      refine hretire k s s' ?_ (by rw [hbridge k (by omega)]; exact hs)
+        (by rw [hbridge (k + 1) (by omega)]; exact hs')
+      rw [List.getElem?_eq_getElem hk]
+      exact congrArg _ (ordinary _ (List.getElem_mem hk))
+    · show statement.finalClkNat = statement.initClkNat + 8 * w.events.length
+      rw [hclock, elapsed_of_allOrdinary w ordinary]
+  · -- impossible: the transcript's last event is both ordinary and the halting syscall
+    have hmem : w.events[w.events.length - 1]'(by omega) ∈ w.events := List.getElem_mem (by omega)
+    rw [List.getElem?_eq_getElem (by omega), ordinary _ hmem] at hlast
+    exact absurd hlast (by simp)
 
 /-- **The converse direction, on the ordinary arm.** Every plain-Sail witness of a non-halting shard
 is an all-ordinary event witness denoting the same segment — which is what keeps the generalization
