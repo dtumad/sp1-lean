@@ -460,6 +460,31 @@ theorem statePullAlign8_of_stateWalk
   rw [position]
   omega
 
+/-- **The interim syscall boundary**, named rather than left implicit.
+
+The `SyscallInstrs` table has no active row, so it contributes nothing to the State trail, nothing to
+the Memory ledger, and nothing to the Exit hand-off — which is what leaves the Halt table as the sole
+Exit contributor and so keeps its physical row present.
+
+The *State* side no longer needs this: the trail has a syscall arm and the goodness filter covers it.
+The **Memory** side does. A syscall row's three register touches have to flow through the walk, and
+the Halt table's side-term treatment cannot be reused for them: `haltPushLate` says "this row is last
+in time at every key it touches", which is true only of a terminal row. A mid-shard syscall row's
+read-backs are ordinary frontier records that later rows consume, so the engine's row carrier must
+admit syscall rows before this premise can go. `haltTablePresent` is D8's premise and disappears with
+the successor table. -/
+structure SyscallTableInactive (witness : SupportedCoreNativeWitness p) : Prop where
+  /-- No active syscall row, so the trail is instruction rows and at most the halt row. -/
+  noActiveRows : realSyscallInstrsRows witness = []
+  /-- The table is Memory-silent, so the per-location balance keeps its old shape. -/
+  memoryProducedNil : producedMessages (typedTableInteractionsWith
+    (syscallInstrsTable witness) Channels.memoryChannel) = []
+  /-- Likewise on the consumed side. -/
+  memoryConsumedNil : consumedMessages (typedTableInteractionsWith
+    (syscallInstrsTable witness) Channels.memoryChannel) = []
+  /-- The Halt table still carries its physical row, so the Exit singleton is its own. -/
+  haltTablePresent : (haltTable witness).table ≠ []
+
 /-- Generic closure of the ordered-row dynamic seam.  The proof chooses each chip's aligned carrier,
 eliminates the MemoryBump refresh edges from the widened memory balance (rewriting each affected
 pull to its value-equal pre-refresh ancestor), canonicalizes the carrier's State edge, feeds the
@@ -475,6 +500,7 @@ one of the two facts `memoryBump_isRefresh` consumes.  Its only caller,
 `supported_core_witness_grounding`, already carries the same hypothesis. -/
 theorem supportedCore_orderedRows_dynamic_of_obligations
     (statement : SupportedCoreStatement p) (witness : SupportedCoreNativeWitness p)
+    (syscallInactive : SyscallTableInactive witness)
     (initial : SailState) (fin : Channels.StateMsg (ZMod p))
     (initTimeLt : Semantics.StateMsg.timeNat
       (initialBoundaryStateMessage statement.publicValues) < 2 ^ 48)
@@ -673,6 +699,8 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
     (initPure witness constraints) (finPure witness constraints) boundary.memoryProviderUnique
     boundary.memoryFinalizeProviderUnique obligations.paddingMemoryEmpty orderedRows exhaustive
     alignedRow aligns
+  simp only [syscallInactive.memoryProducedNil, syscallInactive.memoryConsumedNil,
+    Multiset.coe_nil, Multiset.filter_zero, add_zero] at widened
   have pushGood : ∀ loc : Semantics.MemLoc, ∀ m ∈
       TimedGrounding.optMS (memoryInitFrontier witness loc) +
           TimedGrounding.pushesAt (orderedRows.map alignedRow) loc +
@@ -1337,6 +1365,7 @@ this theorem.  The timed walk and physical-row bridge are fully proved by
 finite `supportedCore_groundingObligations_of_constraints` rollout above. -/
 theorem supportedCore_orderedRows_dynamic
     (statement : SupportedCoreStatement p) (witness : SupportedCoreNativeWitness p)
+    (syscallInactive : SyscallTableInactive witness)
     (initial : SailState) (publicInputEq : witness.publicInput = statement.publicValues)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (boundary : InitialBoundaryFacts statement witness initial)
@@ -1375,7 +1404,8 @@ theorem supportedCore_orderedRows_dynamic
       (finalBoundaryStateMessage statement.publicValues) < 2 ^ 48 :=
     clkNat_lt_of_limbs (finalBoundaryStateMessage_bounds _ limbBounds).1
       (finalBoundaryStateMessage_bounds _ limbBounds).2.1
-  have result := supportedCore_orderedRows_dynamic_of_obligations statement witness initial
+  have result := supportedCore_orderedRows_dynamic_of_obligations statement witness
+    syscallInactive initial
     (finalBoundaryStateMessage statement.publicValues) initTimeLt finalTimeLt constraints
     balanced boundary
     (supportedCore_groundingObligations_of_constraints witness constraints)
@@ -1735,6 +1765,7 @@ dichotomy itself is the Exit-channel balance (`Soundness/ExitAccounting.lean`): 
 verifier's ungated `⟨exit_code⟩` pull forces exactly one Halt-table hand-off row. -/
 theorem supported_core_witness_grounding
     (statement : SupportedCoreStatement p) (witness : SupportedCoreNativeWitness p)
+    (syscallInactive : SyscallTableInactive witness)
     (initial : SailState)
     (publicInputEq : witness.publicInput = statement.publicValues)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
@@ -1751,9 +1782,10 @@ theorem supported_core_witness_grounding
   | nil =>
       left
       refine ⟨rfl, ?_, ?_⟩
-      · have := witness_exit_code_zero_of_haltFree witness constraints balanced hhalt
+      · have := witness_exit_code_zero_of_haltFree witness constraints balanced
+          syscallInactive.haltTablePresent hhalt
         rwa [publicInputEq] at this
-      rw [hhalt] at trailMultiset
+      rw [hhalt, syscallInactive.noActiveRows] at trailMultiset
       simp only [List.map_nil, Multiset.coe_nil, add_zero] at trailMultiset
       have allInl : ∀ t ∈ trailRows, ∃ d : DecodedInstructionRow p,
           t = (Sum.inl d : TrailRow p) := by
@@ -1781,8 +1813,8 @@ theorem supported_core_witness_grounding
         (Walk.isWalk_map (trailCanonEdge witness)
           (Sum.inl : DecodedInstructionRow p → TrailRow p) orderedRows _ _).mp trailWalk
       have goodness := (witness_stateEdges_goodness witness constraints balanced).1
-      have dyn := supportedCore_orderedRows_dynamic statement witness initial publicInputEq
-        constraints balanced boundary hhalt orderedRows exhaustive stateWalk
+      have dyn := supportedCore_orderedRows_dynamic statement witness syscallInactive initial
+        publicInputEq constraints balanced boundary hhalt orderedRows exhaustive stateWalk
       refine ⟨orderedRows, exhaustive, ?_, ?_, ?_, dyn.2.1, dyn.2.2⟩
       · simpa [initialBoundaryStateMessage, finalBoundaryStateMessage,
           Semantics.StateMsg.pcBits, supportedPcBits] using
@@ -1817,10 +1849,11 @@ theorem supported_core_witness_grounding
       obtain ⟨-, real⟩ := mem_realHaltRows witness haltMem
       have goodness := witness_stateEdges_goodness witness constraints balanced
       have instrGood := goodness.1
-      have haltGood := goodness.2.2 halt haltMem
+      have haltGood := goodness.2.2.1 halt haltMem
       -- locate the halt edge in the trail
-      rw [haltRealEq] at trailMultiset
-      have haltInTrail : (Sum.inr halt : TrailRow p) ∈ trailRows := by
+      rw [haltRealEq, syscallInactive.noActiveRows] at trailMultiset
+      simp only [List.map_nil, Multiset.coe_nil, add_zero] at trailMultiset
+      have haltInTrail : (Sum.inr (Sum.inl halt) : TrailRow p) ∈ trailRows := by
         rw [← Multiset.mem_coe, trailMultiset]
         refine Multiset.mem_add.mpr (Or.inr ?_)
         simp
@@ -1830,15 +1863,15 @@ theorem supported_core_witness_grounding
       have sideEq : ((↑pre : Multiset (TrailRow p)) + ↑post) =
           ↑((realDecodedInstructionRows witness.data witness.tables).map
             (Sum.inl : DecodedInstructionRow p → TrailRow p)) := by
-        have expand : ((↑(pre ++ (Sum.inr halt : TrailRow p) :: post)) :
+        have expand : ((↑(pre ++ (Sum.inr (Sum.inl halt) : TrailRow p) :: post)) :
             Multiset (TrailRow p)) =
-            (Sum.inr halt : TrailRow p) ::ₘ ((↑pre : Multiset (TrailRow p)) + ↑post) := by
+            (Sum.inr (Sum.inl halt) : TrailRow p) ::ₘ ((↑pre : Multiset (TrailRow p)) + ↑post) := by
           rw [← Multiset.coe_add, ← Multiset.cons_coe, Multiset.add_cons]
         have rhs : ((↑((realDecodedInstructionRows witness.data witness.tables).map
               (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
-            ↑([halt].map (Sum.inr : Array (ZMod p) → TrailRow p))) :
+            ↑([halt].map (((fun row => Sum.inr (Sum.inl row)) : Array (ZMod p) → TrailRow p)))) :
               Multiset (TrailRow p)) =
-            (Sum.inr halt : TrailRow p) ::ₘ
+            (Sum.inr (Sum.inl halt) : TrailRow p) ::ₘ
               ↑((realDecodedInstructionRows witness.data witness.tables).map
                 (Sum.inl : DecodedInstructionRow p → TrailRow p)) := by
           simp only [List.map_cons, List.map_nil]
@@ -1927,7 +1960,7 @@ theorem supported_core_witness_grounding
             have dGood := instrGood d dMem
             rw [show (trailCanonEdge witness (Sum.inl d)).1 =
                 canonState (decodedStateEdge witness.data d).1 from rfl] at pcEq
-            rw [show (trailCanonEdge witness (Sum.inr halt)).2 =
+            rw [show (trailCanonEdge witness (Sum.inr (Sum.inl halt))).2 =
                 canonState (HaltChip.statePushedMessage (haltRow (haltTable witness) halt))
               from rfl, haltPushPc] at pcEq
             rw [pcBits_canonState dGood.2.1.1 dGood.2.1.2] at pcEq
@@ -1952,7 +1985,7 @@ theorem supported_core_witness_grounding
           (HaltChip.statePushedMessage (haltRow (haltTable witness) halt)) =
           finalBoundaryStateMessage statement.publicValues := by
         have : Walk.IsWalk (trailCanonEdge witness)
-            (trailCanonEdge witness (Sum.inr halt)).2
+            (trailCanonEdge witness (Sum.inr (Sum.inl halt))).2
             (finalBoundaryStateMessage statement.publicValues) [] := walkPost
         exact this
       -- the instruction prefix walks from the public initial boundary to the halt pull
@@ -2020,7 +2053,8 @@ theorem supported_core_witness_grounding
         rw [cDef]
         exact pullTimeCanon
       -- feed the generalized ordered-row engine at the halt row's own pull as final boundary
-      have result := supportedCore_orderedRows_dynamic_of_obligations statement witness initial
+      have result := supportedCore_orderedRows_dynamic_of_obligations statement witness
+        syscallInactive initial
         c initTimeLt finalTimeLt constraints balanced boundary
         (supportedCore_groundingObligations_of_constraints witness constraints)
         orderedRows exhaustive stateWalk'

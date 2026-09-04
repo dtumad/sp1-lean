@@ -52,13 +52,22 @@ contract demanded it before producing the touch lists that the capstone's per-lo
 balance is built from. Moving that demand into the per-touch antecedent of the contract's slot
 conjunct broke the cycle: `supportedCore_orderedRows_dynamic_of_obligations` now *derives* both
 timestamp facts for every pulled record from the produced side of the widened balance
-(`pushGood`/`pullGood`), so the capstone's remaining premises are exactly the ensemble algebra and
-the semantic boundary binding. -/
+(`pushGood`/`pullGood`).
+
+⚠ **There is now a third conjunct, and it is temporary.** `SyscallTableInactive` says the
+`SyscallInstrs` table has no active row. It appeared when that table joined the ensemble: the State
+side is fully re-based — the trail has a syscall arm and the goodness filter covers it — but the
+*Memory* side is not, because a syscall row's register touches must flow through the walk and the
+Halt table's side-term treatment cannot be reused for a mid-shard row (see `SyscallTableInactive`'s
+own docstring). Until the engine's row carrier admits syscall rows, this relation certifies exactly
+the shards it can, and says so in its statement rather than in a comment. Removing it is the
+remaining work; nothing else about the capstone changes when it goes. -/
 def SupportedCoreNativeRelation :
     WitnessRelation.Relation (SupportedCoreStatement p) (SupportedCoreNativeWitness p) :=
   fun statement witness =>
     SupportedCoreEnsembleRelation statement witness ∧
-      SP1SemanticBoundaryRelation statement witness
+      SP1SemanticBoundaryRelation statement witness ∧
+      SyscallTableInactive witness
 
 /-- The capacity-bounded native shard relation.
 
@@ -93,9 +102,9 @@ theorem supported_core_native_grounding
     ∃ initial orderedRows, InitialBoundaryFacts statement witness initial ∧
       statement.publicValues.exit_code = 0 ∧
       SupportedCoreGrounding statement witness initial orderedRows := by
-  obtain ⟨⟨publicInputEq, constraints, balanced⟩, binding⟩ := valid
+  obtain ⟨⟨publicInputEq, constraints, balanced⟩, binding, syscallInactive⟩ := valid
   obtain ⟨initial, boundary⟩ := binding.boundaryFacts
-  rcases supported_core_witness_grounding statement witness initial publicInputEq constraints
+  rcases supported_core_witness_grounding statement witness syscallInactive initial publicInputEq constraints
       balanced boundary with ⟨-, exitZero, orderedRows, grounding⟩ | ⟨rows', halt, hg⟩
   · exact ⟨initial, orderedRows, boundary, exitZero, grounding⟩
   · exact absurd (haltFree.symm.trans hg.haltReal) (by simp)
@@ -114,9 +123,9 @@ theorem supported_core_native_sound :
     WitnessRelation.Sound (SupportedCoreNativeRelation (p := p))
       (SupportedCoreSailRelation (p := p)) := by
   intro statement witness valid
-  obtain ⟨⟨publicInputEq, constraints, balanced⟩, binding⟩ := valid
+  obtain ⟨⟨publicInputEq, constraints, balanced⟩, binding, syscallInactive⟩ := valid
   obtain ⟨initial, boundary⟩ := binding.boundaryFacts
-  rcases supported_core_witness_grounding statement witness initial publicInputEq constraints
+  rcases supported_core_witness_grounding statement witness syscallInactive initial publicInputEq constraints
       balanced boundary with ⟨-, exitZero, rows, grounding⟩ | ⟨rows, halt, hg⟩
   · -- **Ordinary shard**: the whole run retires normally between the public pc endpoints.
     obtain ⟨memBoundary, memWF, memContent⟩ :=
@@ -236,10 +245,10 @@ theorem supported_core_native_shard_execution
         (semanticWitness.evaluatedTrace (supportedCoreShardModel (p := p))).steps =
           (realDecodedInstructionRows witness.data witness.tables).length := by
   obtain ⟨⟨nativeValid, rowLimit⟩, haltFree⟩ := valid
-  obtain ⟨⟨publicInputEq, constraints, balanced⟩, binding⟩ := nativeValid
+  obtain ⟨⟨publicInputEq, constraints, balanced⟩, binding, syscallInactive⟩ := nativeValid
   obtain ⟨initial, boundary⟩ := binding.boundaryFacts
   obtain ⟨-, -, rows, grounding⟩ :=
-    (supported_core_witness_grounding statement witness initial publicInputEq constraints balanced
+    (supported_core_witness_grounding statement witness syscallInactive initial publicInputEq constraints balanced
       boundary).resolve_right (by
         rintro ⟨rows', halt, hg⟩
         exact absurd (haltFree.symm.trans hg.haltReal) (by simp))
@@ -341,10 +350,10 @@ theorem supported_core_native_shard_execution_halted
         (semanticWitness.evaluatedTrace (supportedCoreShardModel (p := p))).HaltsWith
           statement.program statement.publicValues.exitCodeBits := by
   obtain ⟨nativeValid, rowLimit⟩ := valid
-  obtain ⟨⟨publicInputEq, constraints, balanced⟩, binding⟩ := nativeValid
+  obtain ⟨⟨publicInputEq, constraints, balanced⟩, binding, syscallInactive⟩ := nativeValid
   obtain ⟨initial, boundary⟩ := binding.boundaryFacts
   obtain ⟨rows, halt', hg⟩ :=
-    (supported_core_witness_grounding statement witness initial publicInputEq constraints balanced
+    (supported_core_witness_grounding statement witness syscallInactive initial publicInputEq constraints balanced
       boundary).resolve_left (by
         rintro ⟨haltFree, -, -⟩
         rw [haltFree] at haltMem
