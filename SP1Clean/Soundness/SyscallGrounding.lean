@@ -163,15 +163,77 @@ theorem syscallAdvancePayload_full :
 
 /-- The `RowFacts` a syscall row contributes: its State edge and its three register touches. Unlike
 the halt table's, these are ordinary walked touches — later rows re-read `x5`/`x10`/`x11`, so the
-frontier records this row pushes are consumed rather than final. -/
+frontier records this row pushes are consumed rather than final.
+
+⚠ **The three read micro-times are `t`, `t + 3`, `t + 2`, not uniformly `t`**, and that is forced
+rather than stylistic. `op_a` is the `t0` *write*: its push carries `op_a_value`, which need not
+equal the prior, so it can only satisfy `TouchOK.push_kind`'s second disjunct — the one that pins
+the push at `t + writeOffset = t + 4` and leaves the read time free (any point of `[t, t + 3]`
+observes pre-write content, so `t` is the natural choice). `op_b` and `op_c` are pure read-backs:
+their pushes carry the prior word, so they take the *first* disjunct, which demands
+`MemoryMsg.timeNat push = mp.2` — fixing their read times at `t + 3` and `t + 2`, the clocks SP1
+gives those two accesses. `ordinaryRowFacts` can use one uniform read time precisely because no
+instruction row mixes the two disjuncts this way. -/
 noncomputable def syscallRowFacts (r : SyscallInstrsChip.Inputs (ZMod p)) : RowFacts p :=
   { statePull := SyscallInstrsChip.statePulledMessage r
     statePush := SyscallInstrsChip.statePushedMessage r
     fetch := SyscallInstrsChip.programMessage r
-    memPulls := []   -- SKETCH (L3): the three read-priors, each at the row's own pull time
-    memPushes := [] }  -- SKETCH (L3): the three read-backs at offsets 4/3/2
+    memPulls :=
+      [(SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a,
+          StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)),
+       (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b,
+          StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 3),
+       (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c,
+          StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 2)]
+    memPushes :=
+      [SyscallInstrsChip.memPushedMessage r r.op_a 4 r.op_a_value,
+       SyscallInstrsChip.memPushedMessage r r.op_b 3 r.op_b_memory.prev_value,
+       SyscallInstrsChip.memPushedMessage r r.op_c 2 r.op_c_memory.prev_value] }
+
+/-- Each of the row's six Memory records addresses a register, because the committed `ECALL` pins
+the three operand columns. This is where `witness_syscallRow_ecallTruth` pays for itself: without
+it `locOf` falls through to `.ram`, whose `readWindow = 0` and `writeOffset = 1` make the offset-3
+read and the offset-4 write unrepresentable. -/
+theorem syscallRow_locOf_reg (r : SyscallInstrsChip.Inputs (ZMod p))
+    {idx : ZMod p} {i : BitVec 5} (hidx : ((i.toNat : ℕ) : ZMod p) = idx)
+    (block : Extracted.RegisterAccessCols (ZMod p)) (v : Word (ZMod p)) (c : ZMod p) :
+    Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPulledMessage r block idx) = Semantics.MemLoc.reg i ∧
+      Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPushedMessage r idx c v)
+        = Semantics.MemLoc.reg i :=
+  ⟨Semantics.MemoryMsg.locOf_register _ i hidx rfl rfl,
+   Semantics.MemoryMsg.locOf_register _ i hidx rfl rfl⟩
+
+section RowShape
+
+variable [Fact (2 ^ 25 < p)]
 
 omit [Fact (2 ^ 17 < p)] in
+/-- **A read-back clock is a genuine 24-bit low clock, and lands where the window says.** The two
+`CPUState` byte checks bound `clk_low` below `2 ^ 24 - 6`, so adding any offset up to the syscall
+width is exact natural-number addition — which is what makes `clk + 4/3/2` real access clocks
+rather than field sums that might have wrapped. -/
+theorem syscallRow_memPush_time (r : SyscallInstrsChip.Inputs (ZMod p))
+    (clk0B : ((r.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
+    (clk1B : r.state.clk_16_24.val < 2 ^ 8)
+    (idx : ZMod p) (v : Word (ZMod p)) (off : ℕ) (hoff : off ≤ 6)
+    (c : ZMod p) (hc : ((off : ℕ) : ZMod p) = c) :
+    MemoryMsg.timeNat (SyscallInstrsChip.memPushedMessage r idx c v)
+        = StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + off ∧
+      Channels.MemoryMsg.ClkBound (SyscallInstrsChip.memPushedMessage r idx c v) := by
+  obtain ⟨lowSmall, addVal⟩ := TimeExtraction.clkVal_small_add_of_cpuState_bounds
+    r.state.clk_0_16 r.state.clk_16_24 off (by omega) clk0B clk1B
+  rw [← hc]
+  constructor
+  · show Semantics.clkNat r.state.clk_high
+        (r.state.clk_0_16 + r.state.clk_16_24 * 65536 + ((off : ℕ) : ZMod p))
+      = Semantics.clkNat r.state.clk_high (r.state.clk_0_16 + r.state.clk_16_24 * 65536) + off
+    simp only [Semantics.clkNat]
+    omega
+  · show (r.state.clk_0_16 + r.state.clk_16_24 * 65536 + ((off : ℕ) : ZMod p)).val < 2 ^ 24
+    omega
+
+end RowShape
+
 /-- **The syscall row's step fact**, at the event trajectory — the syscall analogue of
 `stepFact_of_advance`, and the reason the walk had to be parameterized: its conclusion is
 `LocalStateTruthG` at a trajectory whose step here is the handler, not `try_step`.
@@ -191,13 +253,18 @@ each is a real obligation on the caller rather than bookkeeping:
 
 The ordinary analogue hides all three inside `RowWiring`. A syscall `RowWiring` is the natural next
 step; until it exists these are the fields it would have. -/
-theorem syscallStepFact_of_advance (handler : ExecutableSyscallHandler) (prog : GuestProgram)
+theorem syscallStepFact_of_advance [Fact (2 ^ 25 < p)]
+    (handler : ExecutableSyscallHandler) (prog : GuestProgram)
     (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
     (r : SyscallInstrsChip.Inputs (ZMod p))
     (payload : SyscallAdvancePayload (p := p) handler)
     (real : r.is_real = 1) (spec : SyscallInstrsChip.Spec r)
     (sel : SyscallInstrsChip.SelectorsValid r) (pulled : SyscallInstrsChip.PulledFacts r)
     (canonical : (syscallEventOfRow r).IsInlineCanonical)
+    (clk0B : ((r.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
+    (clk1B : r.state.clk_16_24.val < 2 ^ 8)
+    (u64A : Word.isU64 r.op_a_value)
+    (opA : ((5 : ℕ) : ZMod p) = r.op_a)
     (positioned : ∀ n : ℕ,
       StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)
         = (eventTimeline events initialClock).start n →
@@ -211,28 +278,76 @@ theorem syscallStepFact_of_advance (handler : ExecutableSyscallHandler) (prog : 
       = StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 264) :
     LocalStepFactG prog (eventTrajectory handler prog events initial) initial
       (eventTimeline events initialClock) (syscallRowFacts r) := by
-  intro hpull _hcurr
+  intro hpull hcurr
   obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
   have htime' : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)
       = (eventTimeline events initialClock).start n := htime
   have hev := positioned n htime'
   obtain ⟨s', htrans, heff⟩ :=
     payload r prog state real spec sel pulled canonical hcfg hrom (rowContext n state htraj htime')
-  refine ⟨⟨n + 1, s', ?_, ?_, heff.pc, ?_, heff.cfg hcfg⟩, by simp [syscallRowFacts]⟩
-  · -- the trajectory's own successor *is* the handler's target, because `events[n]` is this row
+  set tl := eventTimeline events initialClock with tlDef
+  have hdur : Semantics.durationAt events n = 264 := by simp [Semantics.durationAt, hev]
+  have hstartSucc : tl.start (n + 1) = tl.start n + 264 := by
+    rw [tlDef, eventTimeline_start_succ, hdur]
+  -- the trajectory's own successor *is* the handler's target, because `events[n]` is this row
+  have hsucc : eventTrajectory handler prog events initial (n + 1) = some s' := by
     rw [Semantics.eventTrajectory_succ, hev]
     dsimp only
     rw [htraj, Option.bind_some]
     exact htrans.2.2
+  -- the row's three touch clocks and their `ClkBound`s
+  obtain ⟨timeA, boundA⟩ := syscallRow_memPush_time r clk0B clk1B r.op_a r.op_a_value 4
+    (by norm_num) 4 (by norm_num)
+  obtain ⟨timeB, boundB⟩ := syscallRow_memPush_time r clk0B clk1B r.op_b
+    r.op_b_memory.prev_value 3 (by norm_num) 3 (by norm_num)
+  obtain ⟨timeC, boundC⟩ := syscallRow_memPush_time r clk0B clk1B r.op_c
+    r.op_c_memory.prev_value 2 (by norm_num) 2 (by norm_num)
+  obtain ⟨locPullA, locPushA⟩ := syscallRow_locOf_reg r (i := 5#5) opA r.op_a_memory
+    r.op_a_value 4
+  -- the currency antecedent, at the row's three pulls
+  have currB := hcurr (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b,
+    StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 3) (by simp [syscallRowFacts])
+  have currC := hcurr (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c,
+    StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 2) (by simp [syscallRowFacts])
+  refine ⟨⟨n + 1, s', hsucc, ?_, heff.pc, ?_, heff.cfg hcfg⟩, ?_⟩
   · -- the pushed clock is the next timeline start, because this row's window is its event's duration
-    show StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
-      = (eventTimeline events initialClock).start (n + 1)
-    have hdur : Semantics.durationAt events n = 264 := by simp [Semantics.durationAt, hev]
-    rw [eventTimeline_start_succ, hdur, clockAgrees, htime']
+    show StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r) = tl.start (n + 1)
+    rw [hstartSucc, clockAgrees, htime']
   · -- ROM survives because a syscall row touches no memory
     intro a w hw i
     rw [heff.mem]
     exact hrom a w hw i
+  · -- **The three read-backs.** `op_b`/`op_c` are pure reads: their pushes carry the pulled word at
+    -- the pulled location and the pulled read time, so their truth *is* the currency antecedent's.
+    -- `op_a` is the write, and it is the one that needs the post-state — which is why its push sits
+    -- at `t + 4`, on or after `regEffectOffset`.
+    intro message messageMem
+    simp only [syscallRowFacts, List.mem_cons, List.not_mem_nil, or_false] at messageMem
+    rcases messageMem with rfl | rfl | rfl
+    · refine ⟨u64A, boundA, ?_⟩
+      have hstart0 : tl.start 0 ≤ tl.start n := tl.start_le_of_le (Nat.zero_le n)
+      have hstep : tl.stepOf (tl.start n + 4) = n :=
+        tl.stepOf_eq (by omega) (by rw [hstartSucc]; omega)
+      have htimeA : Semantics.MemoryMsg.timeNat
+          (SyscallInstrsChip.memPushedMessage r r.op_a 4 r.op_a_value) = tl.start n + 4 := by
+        rw [timeA, htime']
+      show Semantics.microValueG (eventTrajectory handler prog events initial) initial tl
+        (Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPushedMessage r r.op_a 4 r.op_a_value))
+        (Semantics.MemoryMsg.timeNat
+          (SyscallInstrsChip.memPushedMessage r r.op_a 4 r.op_a_value))
+        = some (Word.toBitVec64 r.op_a_value)
+      rw [locPushA, htimeA]
+      simp only [Semantics.microValueG, if_neg (by omega : ¬ tl.start n + 4 < tl.start 0),
+        hstep, Nat.add_sub_cancel_left, Semantics.regEffectOffset, le_refl, decide_true,
+        if_true, hsucc, Option.bind_some, Semantics.locContent]
+      rw [heff.t0, result_syscallEventOfRow]
+      rfl
+    · refine ⟨currB.1, boundB, ?_⟩
+      rw [timeB]
+      exact currB.2.2
+    · refine ⟨currC.1, boundC, ?_⟩
+      rw [timeC]
+      exact currC.2.2
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The row's shape obligations — with the two premises a 264-tick row genuinely cannot supply
@@ -251,20 +366,72 @@ stated for offsets `≤ 4`, which is the intra-row effect range, not the window 
 
 The remaining four fields are vacuous while `syscallRowFacts` has no touches, and become the
 offset-4/3/2 register slots when it gains them. -/
-theorem syscallRowOKCore (initialClock : ℕ) (r : SyscallInstrsChip.Inputs (ZMod p))
+theorem syscallRowOKCore [Fact (2 ^ 25 < p)] (initialClock : ℕ)
+    (r : SyscallInstrsChip.Inputs (ZMod p)) (real : r.is_real = 1)
+    (spec : SyscallInstrsChip.Spec r)
+    (clk0B : ((r.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
+    (clk1B : r.state.clk_16_24.val < 2 ^ 8)
+    (opA : ((5 : ℕ) : ZMod p) = r.op_a) (opB : ((10 : ℕ) : ZMod p) = r.op_b)
+    (opC : ((11 : ℕ) : ZMod p) = r.op_c)
     (align : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) % 8 = initialClock % 8)
     (canonicalClock : StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
       = StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 264) :
-    TimedGrounding.RowOKCore initialClock (syscallRowFacts r) where
-  timeGap := by
-    show StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 8
-      ≤ StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
+    TimedGrounding.RowOKCore initialClock (syscallRowFacts r) := by
+  set t := StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) with tDef
+  obtain ⟨locPullA, locPushA⟩ := syscallRow_locOf_reg r (i := 5#5) opA r.op_a_memory
+    r.op_a_value 4
+  obtain ⟨locPullB, locPushB⟩ := syscallRow_locOf_reg r (i := 10#5) opB r.op_b_memory
+    r.op_b_memory.prev_value 3
+  obtain ⟨locPullC, locPushC⟩ := syscallRow_locOf_reg r (i := 11#5) opC r.op_c_memory
+    r.op_c_memory.prev_value 2
+  obtain ⟨timeA, boundA⟩ := syscallRow_memPush_time r clk0B clk1B r.op_a r.op_a_value 4
+    (by norm_num) 4 (by norm_num)
+  obtain ⟨timeB, boundB⟩ := syscallRow_memPush_time r clk0B clk1B r.op_b
+    r.op_b_memory.prev_value 3 (by norm_num) 3 (by norm_num)
+  obtain ⟨timeC, boundC⟩ := syscallRow_memPush_time r clk0B clk1B r.op_c
+    r.op_c_memory.prev_value 2 (by norm_num) 2 (by norm_num)
+  refine
+    { timeGap := ?_
+      align8 := align
+      touches := ?_
+      chain_mono := ?_
+      pushClkBound := ?_
+      slotOfClkBound := ?_ }
+  · show t + 8 ≤ StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
     omega
-  align8 := align
-  touches := List.Forall₂.nil
-  chain_mono := by intro loc; simp [TimedGrounding.rowTouchesAt, syscallRowFacts]
-  pushClkBound := by simp [syscallRowFacts]
-  slotOfClkBound := by simp [syscallRowFacts]
+  · refine List.Forall₂.cons ?_ (List.Forall₂.cons ?_ (List.Forall₂.cons ?_ List.Forall₂.nil))
+    · exact ⟨locPushA.trans locPullA.symm, le_rfl, Nat.le_add_right _ _,
+        Or.inr (by rw [timeA, locPushA]; rfl)⟩
+    · exact ⟨locPushB.trans locPullB.symm, Nat.le_add_right _ _,
+        by rw [locPullB]; simp [syscallRowFacts], Or.inl ⟨rfl, timeB⟩⟩
+    · exact ⟨locPushC.trans locPullC.symm, Nat.le_add_right _ _,
+        by rw [locPullC]; simp [syscallRowFacts], Or.inl ⟨rfl, timeC⟩⟩
+  · -- Each location carries at most one of the row's three touches, because `x5`/`x10`/`x11` are
+    -- distinct — which is exactly why the operand indices had to be pinned. With `op_a = op_b` the
+    -- chain would demand `t + 4 < t + 3`.
+    intro loc
+    rcases eq_or_ne loc (Semantics.MemLoc.reg 5#5) with rfl | n5
+    · simp [TimedGrounding.rowTouchesAt, syscallRowFacts, locPushA, locPushB, locPushC]
+    rcases eq_or_ne loc (Semantics.MemLoc.reg 10#5) with rfl | n10
+    · simp [TimedGrounding.rowTouchesAt, syscallRowFacts, locPushA, locPushB, locPushC]
+    rcases eq_or_ne loc (Semantics.MemLoc.reg 11#5) with rfl | n11
+    · simp [TimedGrounding.rowTouchesAt, syscallRowFacts, locPushA, locPushB, locPushC]
+    · simp [TimedGrounding.rowTouchesAt, syscallRowFacts, locPushA, locPushB, locPushC,
+        Ne.symm n5, Ne.symm n10, Ne.symm n11]
+  · intro m mMem
+    simp only [syscallRowFacts, List.mem_cons, List.not_mem_nil, or_false] at mMem
+    rcases mMem with rfl | rfl | rfl
+    exacts [boundA, boundB, boundC]
+  · intro pq pqMem prevBound
+    simp only [syscallRowFacts, List.zip_cons_cons, List.zip_nil_right,
+      List.mem_cons, List.not_mem_nil, or_false] at pqMem
+    rcases pqMem with rfl | rfl | rfl
+    · exact TimeExtraction.memoryTimeNat_lt_of_registerAccessCols _ _ r.op_a_memory r.is_real
+        (SyscallInstrsChip.clkLow r + 4) real prevBound spec.2.2.1 rfl rfl rfl
+    · exact TimeExtraction.memoryTimeNat_lt_of_registerAccessCols _ _ r.op_b_memory r.is_real
+        (SyscallInstrsChip.clkLow r + 3) real prevBound spec.2.2.2.1 rfl rfl rfl
+    · exact TimeExtraction.memoryTimeNat_lt_of_registerAccessCols _ _ r.op_c_memory r.is_real
+        (SyscallInstrsChip.clkLow r + 2) real prevBound spec.2.2.2.2.1 rfl rfl rfl
 
 /-! ## The duration generalizations
 
