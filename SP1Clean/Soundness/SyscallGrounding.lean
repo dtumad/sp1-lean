@@ -190,6 +190,35 @@ noncomputable def syscallRowFacts (r : SyscallInstrsChip.Inputs (ZMod p)) : RowF
        SyscallInstrsChip.memPushedMessage r r.op_b 3 r.op_b_memory.prev_value,
        SyscallInstrsChip.memPushedMessage r r.op_c 2 r.op_c_memory.prev_value] }
 
+omit [Fact (2 ^ 17 < p)] in
+@[simp] theorem syscallRowFacts_statePull (r : SyscallInstrsChip.Inputs (ZMod p)) :
+    (syscallRowFacts r).statePull = SyscallInstrsChip.statePulledMessage r := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+@[simp] theorem syscallRowFacts_statePush (r : SyscallInstrsChip.Inputs (ZMod p)) :
+    (syscallRowFacts r).statePush = SyscallInstrsChip.statePushedMessage r := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+@[simp] theorem syscallRowFacts_fetch (r : SyscallInstrsChip.Inputs (ZMod p)) :
+    (syscallRowFacts r).fetch = SyscallInstrsChip.programMessage r := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+@[simp] theorem syscallRowFacts_memPulls (r : SyscallInstrsChip.Inputs (ZMod p)) :
+    (syscallRowFacts r).memPulls =
+      [(SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a,
+          StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)),
+       (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b,
+          StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 3),
+       (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c,
+          StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 2)] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+@[simp] theorem syscallRowFacts_memPushes (r : SyscallInstrsChip.Inputs (ZMod p)) :
+    (syscallRowFacts r).memPushes =
+      [SyscallInstrsChip.memPushedMessage r r.op_a 4 r.op_a_value,
+       SyscallInstrsChip.memPushedMessage r r.op_b 3 r.op_b_memory.prev_value,
+       SyscallInstrsChip.memPushedMessage r r.op_c 2 r.op_c_memory.prev_value] := rfl
+
 /-- Each of the row's six Memory records addresses a register, because the committed `ECALL` pins
 the three operand columns. This is where `witness_syscallRow_ecallTruth` pays for itself: without
 it `locOf` falls through to `.ram`, whose `readWindow = 0` and `writeOffset = 1` make the offset-3

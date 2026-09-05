@@ -1264,8 +1264,10 @@ private theorem syscallInstrsTable_fullGuarantees
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (byteGuarantees : (syscallInstrsTable witness).ChannelGuarantees byteChannel.toRaw)
     (programGuarantees : (syscallInstrsTable witness).ChannelGuarantees programChannel.toRaw)
-    (memoryGuarantees : (syscallInstrsTable witness).ChannelGuarantees memoryChannel.toRaw)
-    {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table) :
+    {row : Array (ZMod p)}
+    (memoryGuarantees : (syscallInstrsTable witness).component.operations.ChannelGuarantees
+      memoryChannel.toRaw ((syscallInstrsTable witness).environment row))
+    (rowMem : row ∈ (syscallInstrsTable witness).table) :
     (syscallInstrsTable witness).component.operations.FullGuarantees
       ((syscallInstrsTable witness).environment row) := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
@@ -1289,7 +1291,7 @@ private theorem syscallInstrsTable_fullGuarantees
   rcases List.mem_cons.mp channelMem with rfl | channelMem
   · exact programGuarantees row rowMem
   rcases List.mem_cons.mp channelMem with rfl | channelMem
-  · exact memoryGuarantees row rowMem
+  · exact memoryGuarantees
   rcases List.mem_cons.mp channelMem with rfl | channelMem
   · intro i hi hmult
     exact exitChannel_interaction_guarantees _ hmult
@@ -1300,14 +1302,18 @@ private theorem syscallInstrsTable_fullGuarantees
     intro i hi hmult
     exact publicValuesChannel_interaction_guarantees _ hmult
 
-/-- The per-row `Spec` extraction through `Component.weakSoundness`. -/
-private theorem syscallInstrsRow_spec_of_facts
+/-- The per-row `Spec` extraction through `Component.weakSoundness`. The Memory guarantee is taken
+**at this row's environment** rather than table-wide, because that is the form the walk can supply:
+its currency antecedent hands one row's pulls their `isU64 ∧ ClkBound` at a time. -/
+theorem syscallInstrsRow_spec_of_facts
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (tableConstraints : (syscallInstrsTable witness).Constraints)
     (byteGuarantees : (syscallInstrsTable witness).ChannelGuarantees byteChannel.toRaw)
     (programGuarantees : (syscallInstrsTable witness).ChannelGuarantees programChannel.toRaw)
-    (memoryGuarantees : (syscallInstrsTable witness).ChannelGuarantees memoryChannel.toRaw)
-    {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table) :
+    {row : Array (ZMod p)}
+    (memoryGuarantees : (syscallInstrsTable witness).component.operations.ChannelGuarantees
+      memoryChannel.toRaw ((syscallInstrsTable witness).environment row))
+    (rowMem : row ∈ (syscallInstrsTable witness).table) :
     SyscallInstrsChip.Spec (syscallInstrsRow (syscallInstrsTable witness) row) := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have hassump : (syscallInstrsTable witness).component.Assumptions
@@ -1343,7 +1349,7 @@ theorem syscallInstrsTable_spec (witness : EnsembleWitness (sp1Ensemble (p := p)
     _ (witness.mem_allTables_of_mem_tables tableMem)
   intro row rowMem
   exact syscallInstrsRow_spec_of_facts witness tableConstraints grounded.1 grounded.2
-    memoryGuarantees rowMem
+    (memoryGuarantees row rowMem) rowMem
 
 /-- The active rows of the `SyscallInstrs` table. -/
 noncomputable def realSyscallInstrsRows
