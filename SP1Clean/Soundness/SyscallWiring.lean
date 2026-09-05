@@ -159,4 +159,34 @@ theorem syscallInstrsRow_pulledFacts
     (syscallInstrsRow_programRowSpec witness constraints balanced rowMem real) curA curB curC
     (syscallInstrsRow_opAValue_isU64 witness constraints balanced activeMem) real
 
+/-- **The row's three operand columns are `x5`/`x10`/`x11`.** Nothing row-local says so — the chip
+passes its own columns where `HaltChip` hardcodes the constants — so it is read off the committed
+`ECALL` row on the Program bus, whose operand fields *are* those constants
+(`Target.ecallProgramRow`). This is what lets `MemoryMsg.locOf` decode each of the row's touches to
+`.reg`, and hence what makes `TouchOK` satisfiable at offsets 3 and 4 at all.
+
+Stated in the `((n : ℕ) : ZMod p) = column` direction because that is the form
+`Semantics.MemoryMsg.locOf_register` consumes. -/
+theorem syscallInstrsRow_operands
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound witness)
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
+    ((5 : ℕ) : ZMod p) = (syscallInstrsRow (syscallInstrsTable witness) row).op_a ∧
+      ((10 : ℕ) : ZMod p) = (syscallInstrsRow (syscallInstrsTable witness) row).op_b ∧
+      ((11 : ℕ) : ZMod p) = (syscallInstrsRow (syscallInstrsTable witness) row).op_c := by
+  have shape :=
+    (witness_syscallRow_ecallTruth witness constraints balanced providerBound rowMem).2
+  refine ⟨?_, ?_, ?_⟩
+  · have h := congrArg (fun r : SP1Clean.ProgramChip.ProgramRow (ZMod p) => r.op_a) shape
+    simpa [Target.ecallProgramRow, Semantics.rowOfMsg,
+      SyscallInstrsChip.programMessage] using h.symm
+  · have h := congrArg
+      (fun r : SP1Clean.ProgramChip.ProgramRow (ZMod p) => r.op_b[0]) shape
+    simpa [Target.ecallProgramRow, Semantics.rowOfMsg,
+      SyscallInstrsChip.programMessage] using h.symm
+  · have h := congrArg
+      (fun r : SP1Clean.ProgramChip.ProgramRow (ZMod p) => r.op_c[0]) shape
+    simpa [Target.ecallProgramRow, Semantics.rowOfMsg,
+      SyscallInstrsChip.programMessage] using h.symm
+
 end SP1Clean.Soundness
