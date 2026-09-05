@@ -906,6 +906,61 @@ theorem durationAt_transcriptOf (data : ProverData (ZMod p)) (rows : List (Walke
   simp only [transcriptOf, List.getElem_map]
   cases rows[k] <;> rfl
 
+/-- **The walked row's `RowFacts`** — the carrier the engine consumes once a syscall row can sit in
+the middle of the trail. This is the type change `SyscallTableInactive.noActiveRows` exists to avoid:
+today's engine walks `List (DecodedInstructionRow p)`, and a 264-tick row cannot join that list under
+any choice of facts. -/
+noncomputable def WalkedRow.facts [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p)) :
+    WalkedRow p → Semantics.RowFacts p
+  | .instruction row => row.ordinaryRowFacts data
+  | .syscall r => syscallRowFacts r
+
+omit [Fact (2 ^ 17 < p)] in
+@[simp] theorem WalkedRow.facts_instruction [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+    (row : DecodedInstructionRow p) :
+    WalkedRow.facts data (.instruction row) = row.ordinaryRowFacts data := rfl
+
+@[simp] theorem WalkedRow.facts_syscall [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+    (r : SyscallInstrsChip.Inputs (ZMod p)) :
+    WalkedRow.facts data (.syscall r) = syscallRowFacts r := rfl
+
+/-- The event a walked row denotes, named rather than inlined so the two positional lemmas below
+share one motive. -/
+noncomputable def WalkedRow.event : WalkedRow p → ExecutionEvent
+  | .instruction _ => .ordinary
+  | .syscall r => .syscall (syscallEventOfRow r)
+
+theorem transcriptOf_eq_map (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) :
+    transcriptOf data rows = rows.map WalkedRow.event := rfl
+
+/-- The transcript's event at an index is the row's own event, by construction. -/
+theorem transcriptOf_getElem? (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) (k : ℕ)
+    (hk : k < rows.length) :
+    (transcriptOf data rows)[k]? = some (rows[k]'hk).event := by
+  rw [transcriptOf_eq_map, List.getElem?_map, List.getElem?_eq_getElem hk]
+  rfl
+
+/-- **The positional linkage, from the walk order.** Both step facts take a `positioned`
+hypothesis — the ordinary one to know its transcript slot is `.ordinary`, the syscall one to know
+its slot carries *this* row's event — and both are the same fact: `Timeline.start` is strictly
+increasing, so the index at which a row's pull time lands is unique, and at *its own* index the
+transcript holds its own event by construction.
+
+That is the whole content of "the semantic transcript clock and the bus clock are the same number":
+it is bought once, by the walk order, and spent by every row. -/
+theorem positioned_of_walkOrder [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+    (rows : List (WalkedRow p))
+    (initialClock k : ℕ) (hk : k < rows.length)
+    (hpull : StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+      = (eventTimeline (transcriptOf data rows) initialClock).start k) :
+    ∀ n : ℕ, StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+        = (eventTimeline (transcriptOf data rows) initialClock).start n →
+      (transcriptOf data rows)[n]? = some (rows[k]'hk).event := by
+  intro n hn
+  have hnk : n = k := start_injective _ (hn.symm.trans hpull)
+  subst hnk
+  exact transcriptOf_getElem? data rows n hk
+
 /-- The two clock limbs recombine without wrapping — **and this genuinely needs `2 ^ 24 < p`**, not
 the ambient `2 ^ 17 < p`. The recombined low clock reaches `2 ^ 24`, so on a smaller field the field
 addition wraps and the equation is false. `clkBound_of_cpuState_bounds` takes the same split; the
