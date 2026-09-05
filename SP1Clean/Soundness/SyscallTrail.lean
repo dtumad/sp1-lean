@@ -132,16 +132,91 @@ theorem durationAt_transcriptOfTrail (rows : List (SyscallTrailRow p)) (k : ℕ)
   | bump a => exact absurd hrow (noBump _ hmem a)
   | syscall r => rfl
 
-/-- **The walk feed, with no shape assumption on the interleaving.** Given an ordered trail, its per
-row facts, and the two balances, every row is grounded at the transcript's own timeline. This is what
-`supported_core_witness_grounding` calls instead of projecting to instruction rows. -/
-theorem trailWalk_grounded (_handler : ExecutableSyscallHandler) (_prog : GuestProgram)
-    (_initial : SailState) (_initialClock : ℕ) (_rows : List (SyscallTrailRow p)) :
-    True := by
-  -- SKETCH (L4): assemble `walkE` at `transcriptOfTrail rows`, taking each row's `RowFacts` from
-  -- its own layer — `ordinaryRowFacts` for an instruction row, `syscallRowFacts` for a syscall row —
-  -- and its timeline agreement from `durationAt_transcriptOfTrail` plus
-  -- `timelineAgreement_of_durations`. Stated as `True` until the ordered-trail carrier is fixed.
-  trivial
+/-- **The walk feed, with no shape assumption on the interleaving.** Given an ordered walk of mixed
+rows, each row's own four obligations at its own index, and the two balances, every row is grounded
+at the transcript's own timeline — and so are the shard's final State message and its Memory
+frontier.
+
+This is what `supported_core_witness_grounding` calls instead of projecting to instruction rows, and
+it is the statement that replaces `listAllInl` and the halt-branch split. Nothing here assumes an
+arm ordering: `rows` is an arbitrary interleaving, and the only thing tying a row to the transcript
+is its index, through `positioned_of_walkOrder` and `walkedRow_timeStep`.
+
+⚠ The carrier is `WalkedRow`, not `SyscallTrailRow`. The trail type has a zero-width `.bump` arm and
+`ExecutionEvent` does not, so the transcript identity fails on it outright; bump rows are self-loops
+that the goodness filter cancels before the trail is extracted, and the projection onto `WalkedRow`
+is where that cancellation has to be spent. -/
+theorem trailWalk_grounded (handler : ExecutableSyscallHandler) (prog : Target.GuestProgram)
+    (data : ProverData (ZMod p)) (rows : List (WalkedRow p))
+    (initial : SailState) (initialClock : ℕ)
+    (fin : StateMsg (ZMod p)) (head : StateMsg (ZMod p))
+    (finM live : Semantics.MemLoc → Option (Channels.MemoryMsg (ZMod p)))
+    (stepAt : ∀ (k : ℕ) (hk : k < rows.length),
+      Semantics.LocalStepFactG prog
+        (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial) initial
+        (Semantics.eventTimeline (transcriptOf data rows) initialClock)
+        (WalkedRow.facts data (rows[k]'hk)))
+    (frameAt : ∀ (k : ℕ) (hk : k < rows.length),
+      Semantics.FrameFactG prog
+        (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial) initial
+        (Semantics.eventTimeline (transcriptOf data rows) initialClock)
+        (WalkedRow.facts data (rows[k]'hk)))
+    (rowOKAt : ∀ (k : ℕ) (hk : k < rows.length),
+      TimedGrounding.RowOKCore initialClock (WalkedRow.facts data (rows[k]'hk)))
+    (widthAt : ∀ (k : ℕ) (hk : k < rows.length),
+      StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePush
+        = StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+          + (rows[k]'hk).duration)
+    (pullAt : ∀ (k : ℕ) (hk : k < rows.length),
+      StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+        = (Semantics.eventTimeline (transcriptOf data rows) initialClock).start k)
+    (headTruth : Semantics.LocalStateTruthG prog
+      (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial)
+      (Semantics.eventTimeline (transcriptOf data rows) initialClock) head)
+    (liveHead : Semantics.LiveOKG
+      (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial) initial
+      (Semantics.eventTimeline (transcriptOf data rows) initialClock)
+      (StateMsg.timeNat head) live)
+    (stateBalance : head ::ₘ
+        (↑((rows.map (WalkedRow.facts data)).map (·.statePush)) :
+          Multiset (StateMsg (ZMod p)))
+      = fin ::ₘ ↑((rows.map (WalkedRow.facts data)).map (·.statePull)))
+    (memoryBalance : ∀ loc : Semantics.MemLoc,
+      TimedGrounding.optMS (live loc)
+          + TimedGrounding.pushesAt (rows.map (WalkedRow.facts data)) loc
+        = TimedGrounding.optMS (finM loc)
+          + TimedGrounding.pullsAt (rows.map (WalkedRow.facts data)) loc) :
+    (∀ r ∈ rows.map (WalkedRow.facts data),
+        Semantics.GroundedG prog
+          (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial) initial
+          (Semantics.eventTimeline (transcriptOf data rows) initialClock) r) ∧
+      Semantics.LocalStateTruthG prog
+        (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial)
+        (Semantics.eventTimeline (transcriptOf data rows) initialClock) fin ∧
+      ∀ (loc : Semantics.MemLoc) (m : Channels.MemoryMsg (ZMod p)), finM loc = some m →
+        Semantics.MemoryMsg.locOf m = loc ∧
+        Semantics.LocalMemTruthG
+          (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial) initial
+          (Semantics.eventTimeline (transcriptOf data rows) initialClock) m ∧
+        Semantics.LocalValueAtG
+          (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial) initial
+          (Semantics.eventTimeline (transcriptOf data rows) initialClock) loc
+          (StateMsg.timeNat fin) m.value ∧
+        Semantics.MemoryMsg.timeNat m ≤ StateMsg.timeNat fin := by
+  have indexOf : ∀ r ∈ rows.map (WalkedRow.facts data),
+      ∃ (k : ℕ) (hk : k < rows.length), r = WalkedRow.facts data (rows[k]'hk) := by
+    intro r hr
+    obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hr
+    obtain ⟨k, hk, hrk⟩ := List.getElem_of_mem hrow
+    exact ⟨k, hk, by rw [hrk]⟩
+  exact TimedGrounding.walkE handler prog (transcriptOf data rows) initial initialClock fin finM
+    (rows.map (WalkedRow.facts data)).length (rows.map (WalkedRow.facts data)) head live rfl
+    (fun r hr => by obtain ⟨k, hk, rfl⟩ := indexOf r hr; exact stepAt k hk)
+    (fun r hr => by obtain ⟨k, hk, rfl⟩ := indexOf r hr; exact frameAt k hk)
+    (fun r hr => by obtain ⟨k, hk, rfl⟩ := indexOf r hr; exact rowOKAt k hk)
+    (fun r hr => by
+      obtain ⟨k, hk, rfl⟩ := indexOf r hr
+      exact walkedRow_timeStep data rows initialClock k hk (pullAt k hk) (widthAt k hk))
+    headTruth liveHead stateBalance memoryBalance
 
 end SP1Clean.Soundness

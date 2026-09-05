@@ -961,6 +961,28 @@ theorem positioned_of_walkOrder [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
   subst hnk
   exact transcriptOf_getElem? data rows n hk
 
+/-- **`walkE`'s timeline hypothesis, from the walk order.** The walk needs each row's push to land
+on the *next* timeline start; the row supplies its own window width, and `durationAt_transcriptOf`
+says the transcript reports exactly that width at the row's index. The two then agree by
+`timelineAgreement_of_durations`.
+
+This is where a mixed shard's arithmetic stops being `8 * k` and becomes a prefix sum, and it is
+also where the `.bump` arm of `SyscallTrailRow` would break the identity — `WalkedRow` has no
+zero-width arm, which is why the trail must be projected onto it before the walk begins. -/
+theorem walkedRow_timeStep [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+    (rows : List (WalkedRow p)) (initialClock k : ℕ) (hk : k < rows.length)
+    (hpull : StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+      = (eventTimeline (transcriptOf data rows) initialClock).start k)
+    (hwidth : StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePush
+      = StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+        + (rows[k]'hk).duration) :
+    ∀ n : ℕ, StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+        = (eventTimeline (transcriptOf data rows) initialClock).start n →
+      StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePush
+        = (eventTimeline (transcriptOf data rows) initialClock).start (n + 1) :=
+  timelineAgreement_of_durations _ initialClock _ k hpull
+    (by rw [hwidth, durationAt_transcriptOf data rows k hk])
+
 /-- The two clock limbs recombine without wrapping — **and this genuinely needs `2 ^ 24 < p`**, not
 the ambient `2 ^ 17 < p`. The recombined low clock reaches `2 ^ 24`, so on a smaller field the field
 addition wraps and the equation is false. `clkBound_of_cpuState_bounds` takes the same split; the
