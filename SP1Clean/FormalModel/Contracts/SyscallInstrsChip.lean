@@ -425,7 +425,13 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
   DispatchArm.Spec (toDispatchArm r) ∧
   FieldBoundArm.Spec (toFieldBoundB r) ∧
   FieldBoundArm.Spec (toFieldBoundC r) ∧
-  CommitArm.Spec (toCommitArm r)
+  CommitArm.Spec (toCommitArm r) ∧
+  -- ⚠ **Load-bearing, and the reason it is here rather than only in `RowContract`.** Every arm
+  -- `Spec` above is phrased over the `IsZero` selectors, while every semantic law is phrased over
+  -- the *event's* natural identifier. `SelectorsValid` is the only thing tying a selector to
+  -- `syscallId`, so without it in the soundness conclusion no per-arm theorem is reachable from
+  -- constraints — the row's meaning would stop at the circuit boundary.
+  SelectorsValid r
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The soundness conclusion follows from the prover's obligation, so the two never drift apart. -/
@@ -433,7 +439,7 @@ theorem rowContract_toSpec {r : Inputs (ZMod p)} (h : RowContract r) : Spec r :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
     (fun _ => h.2.2.2.2.2.2.2.1), h.2.2.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2.2.2.2.1,
     h.2.2.2.2.2.2.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1,
-    h.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
+    h.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, h.2.2.2.2.2.1⟩
 
 
 end SP1Clean.SyscallInstrsChip

@@ -43,8 +43,8 @@ theorem soundness :
   simp only [circuit_norm, memoryChannel, programChannel,
     Channels.MemoryMsg.isU64, Channels.MemoryMsg.ClkBound, Channels.ProgramMsg.RowSpec]
     at h_holds ⊢
-  obtain ⟨h_gate, h_cbool, h_dbool, h_hbool, h_tbool, -, -, h_ize, h_izl, h_izc, h_izd, -, -,
-    h_padh, h_padd,
+  obtain ⟨h_gate, h_cbool, h_dbool, h_hbool, h_tbool, h_u16, h_izh, h_ize, h_izl, h_izc, h_izd,
+    h_hdef, h_padt, h_padh, h_padd,
     h_cpu, h_raca, h_racb, h_racc, h_prog, h_ma, h_mb, h_mc,
     h_write, h_pc, h_disp, h_fbb, h_fbc, h_commit, h_ba0, h_ba1, h_ba2, h_ba3, -⟩ :=
     h_holds
@@ -145,7 +145,7 @@ theorem soundness :
       (by norm_num [commitDeferredCode]) (by norm_num [commitCode, commitDeferredCode])
       ((h_izc h_rbin) hr).1 ((h_izd h_rbin) hr).1
   refine ⟨⟨⟨h_rbin, h_cbin, h_dbin, h_hbin, h_tbin⟩, h_cpu h_rbin, h_raca h_rbin,
-    h_racb h_rbin, h_racc h_rbin, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
+    h_racb h_rbin, h_racc h_rbin, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   · intro ha0
     exact h_write ⟨h_rbin, ha0, h_ebin, h_ehsum⟩
   · exact h_pc ⟨h_rbin, h_hbin⟩
@@ -155,6 +155,55 @@ theorem soundness :
   · exact h_fbb ⟨h_hbin, fun hh => (h_mb (hrealHalt hh)).1 1⟩
   · exact h_fbc ⟨h_dbin, fun hd => (h_mc (hrealDef hd)).1 1⟩
   · exact h_commit ⟨h_rbin, h_cbin, h_dbin, h_sum⟩
+  · -- `SelectorsValid`: the byte split, the five indicators with their inverse witnesses, the
+    -- `is_halt = is_halt_zero · is_real` definition, and the padding-row zeros. All of it was
+    -- already in scope and discarded before this conjunct joined `Spec`.
+    have bridge : ∀ c : ℕ,
+        (input_syscall_id_bytes_low_bytes[0] = ((c : ℕ) : ZMod p)) ↔
+          (Expression.eval env input_var_syscall_id_bytes_low_bytes[0] - ((c : ℕ) : ZMod p) = 0) := by
+      intro c
+      rw [esb0, sub_eq_zero]
+    refine ⟨h_u16 h_rbin, fun hr => ⟨?_, ?_, ?_, ?_, ?_⟩, fun hr => ⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
+    · rw [(h_izh h_rbin hr).1]; exact if_congr (bridge haltCode).symm rfl rfl
+    · rw [(h_ize h_rbin hr).1]
+      exact if_congr (bridge enterUnconstrainedCode).symm rfl rfl
+    · rw [(h_izl h_rbin hr).1]; exact if_congr (bridge hintLenCode).symm rfl rfl
+    · rw [(h_izc h_rbin hr).1]; exact if_congr (bridge commitCode).symm rfl rfl
+    · rw [(h_izd h_rbin hr).1]
+      exact if_congr (bridge commitDeferredCode).symm rfl rfl
+    · intro hne
+      have h := (h_izh h_rbin hr).2 (by rw [esb0]; exact hne)
+      rw [esb0] at h
+      exact h
+    · intro hne
+      have h := (h_ize h_rbin hr).2 (by rw [esb0]; exact hne)
+      rw [esb0] at h
+      exact h
+    · intro hne
+      have h := (h_izl h_rbin hr).2 (by rw [esb0]; exact hne)
+      rw [esb0] at h
+      exact h
+    · intro hne
+      have h := (h_izc h_rbin hr).2 (by rw [esb0]; exact hne)
+      rw [esb0] at h
+      exact h
+    · intro hne
+      have h := (h_izd h_rbin hr).2 (by rw [esb0]; exact hne)
+      rw [esb0] at h
+      exact h
+    · linear_combination h_hdef
+    · intro h0
+      have h0' : input_is_real = 0 := h0
+      rw [eoa0, esb0, h0'] at h_padt
+      rw [h0'] at h_padh h_padd
+      refine ⟨?_, ?_, ?_⟩
+      · show (input_op_a_memory_prev_value[0] - input_syscall_id_bytes_low_bytes[0])
+          * (256 : ZMod p)⁻¹ = 0
+        linear_combination -h_padt
+      · show input_is_halt = 0
+        linear_combination -h_padh
+      · show input_is_commit_deferred_result = 0
+        linear_combination -h_padd
   · and_intros <;>
       first
         | exact Or.inl rfl

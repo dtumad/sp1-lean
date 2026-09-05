@@ -456,7 +456,7 @@ theorem arm_commit (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.Se
   have hsum : r.is_commit.result + r.is_commit_deferred.result = 1 := by
     rw [(sel.2.1 real).2.2.2.1, if_pos hfield, (sel.2.1 real).2.2.2.2, if_neg hne, add_zero]
   have cspec : SyscallInstrsChip.CommitArm.Spec (SyscallInstrsChip.toCommitArm r) :=
-    spec.2.2.2.2.2.2.2.2.2.2
+    spec.2.2.2.2.2.2.2.2.2.2.1
   -- One index bit is set, or the bitmap could not sum to one.
   have hbits : ∀ i : Fin 8, r.digest_index_bits[i] = 0 ∨ r.digest_index_bits[i] = 1 :=
     fun i => cspec.1 i real

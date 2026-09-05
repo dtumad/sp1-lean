@@ -1000,6 +1000,66 @@ private theorem syscallInstrsMemoryInteractions_gated
           (SyscallInstrsChip.memPushMsg r r.op_c 2 r.op_c_memory.prev_value)).toRaw] :=
   Faithful.syscallInstrsInteractionsWith_memory r offset
 
+/-- One syscall row's typed Memory view. Split out of `syscallInstrsTable_typedMemory` because the
+walk needs it *per row*: the currency antecedent supplies `isU64 ∧ ClkBound` for one row's three
+pulls, and `channelGuarantees_of_consumedMessages` turns exactly that into the memory
+`ChannelGuarantees` the row's own `weakSoundness` consumes. -/
+theorem syscallInstrsRow_typedMemory (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (row : Array (ZMod p)) :
+    typedInteractionValuesWith (syscallInstrsTable witness).component.operations memoryChannel
+        ((syscallInstrsTable witness).environment row) =
+      [TypedInteraction.pulledIfValue memoryChannel
+       (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+       (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
+     TypedInteraction.pushedIfValue memoryChannel
+       (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+       (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value),
+     TypedInteraction.pulledIfValue memoryChannel
+       (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+       (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
+     TypedInteraction.pushedIfValue memoryChannel
+       (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+       (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value),
+     TypedInteraction.pulledIfValue memoryChannel
+       (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+       (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
+     TypedInteraction.pushedIfValue memoryChannel
+       (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+       (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
+  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
+    syscallInstrsTable_component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval ((syscallInstrsTable witness).environment row))
+      (((SyscallInstrsChip.main
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
+          ).operations (size SyscallInstrsChip.Inputs)).interactionsWith memoryChannel.toRaw) = _
+  rw [syscallInstrsMemoryInteractions_gated]
+  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_raw,
+    TypedInteraction.pushedIfValue_raw]
+  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+      List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩ <;>
+    first
+      | (rw [Channel.eval_pulledIf]
+         simp only [SyscallInstrsChip.memPulledMessage, SyscallInstrsChip.memPullMsg,
+           circuit_norm, syscallInstrsRow_eq])
+      | (rw [Channel.eval_pushedIf]
+         simp only [SyscallInstrsChip.memPushedMessage, SyscallInstrsChip.memPushMsg,
+           SyscallInstrsChip.clkLowVar, circuit_norm, syscallInstrsRow_eq])
+
 /-- The `SyscallInstrs` table's typed Memory view: three decoded register read-prior/read-back
 pairs (`op_a` at `+4`, `op_b` at `+3`, `op_c` at `+2`). The `op_a` push carries `op_a_value` rather
 than the prior word — that is the `t0` write SP1 performs and the halt table models as a read. -/
@@ -1036,30 +1096,8 @@ theorem syscallInstrsTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (
            (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
              (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2
              (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
-  apply List.flatMap_congr
-  intro row rowMem
-  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
-  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
-    syscallInstrsTable_component, Component.interactionsWith_eq]
-  change List.map (AbstractInteraction.eval ((syscallInstrsTable witness).environment row))
-      (((SyscallInstrsChip.main
-        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
-          ).operations (size SyscallInstrsChip.Inputs)).interactionsWith memoryChannel.toRaw) = _
-  rw [syscallInstrsMemoryInteractions_gated]
-  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_raw,
-    TypedInteraction.pushedIfValue_raw]
-  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
-    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
-      List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩ <;>
-    first
-      | (rw [Channel.eval_pulledIf]
-         simp only [SyscallInstrsChip.memPulledMessage, SyscallInstrsChip.memPullMsg,
-           circuit_norm, syscallInstrsRow_eq])
-      | (rw [Channel.eval_pushedIf]
-         simp only [SyscallInstrsChip.memPushedMessage, SyscallInstrsChip.memPushMsg,
-           SyscallInstrsChip.clkLowVar, circuit_norm, syscallInstrsRow_eq])
+  exact List.flatMap_congr fun row _ => syscallInstrsRow_typedMemory witness row
 
 /-- The `SyscallInstrs` table's typed Exit view: per physical row, a single `is_halt`-gated push.
 There is no anti-gated companion — a many-row table cannot balance the verifier that way, which is
