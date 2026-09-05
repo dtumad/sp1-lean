@@ -317,4 +317,106 @@ theorem walkedMemoryBalance
   simp only [add_assoc, add_left_comm, add_comm] at base ⊢
   exact base
 
+/-! ## The dynamic row consumer, at the event trajectory
+
+`DecodedInstructionRow.dynamicGrounded_of_weakCurrency` takes a `SailChain steps initial state` and
+uses it in exactly three places, all of them `localValueAt_stepStart_iff` — the same single appeal
+that `RowWiring.advance_at` made. Replacing it with `localValueAtG_stepStart_iff` re-indexes the
+whole consumer off the trajectory, which is what lets the engine's conclusion stop being
+`SailChain`-shaped. `DynamicGroundedRow` itself never mentioned a chain; only the quantifier in
+front of it did. -/
+
+theorem RowWiring.valueOperandsBound_of_pullCurrencyG
+    {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
+    (wiring : RowWiring view rf) {traj : Semantics.Trajectory} {initial state : SailState}
+    {tl : Semantics.Timeline} {n : ℕ}
+    (curr : ∀ mp ∈ rf.memPulls,
+      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+    (htraj : traj n = some state)
+    (rowTime : StateMsg.timeNat rf.statePull = tl.start n) :
+    Target.ValueOperandsBound view state := by
+  constructor
+  · intro index immediate indexEq
+    obtain ⟨mp, hmp, location, value⟩ := wiring.opB_pull index immediate indexEq
+    have current := curr mp hmp
+    rw [location, value, wiring.readTime mp hmp, rowTime] at current
+    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp current
+  · intro index immediate indexEq
+    obtain ⟨mp, hmp, location, value⟩ := wiring.opC_pull index immediate indexEq
+    have current := curr mp hmp
+    rw [location, value, wiring.readTime mp hmp, rowTime] at current
+    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp current
+
+theorem RowWiring.sourceAValueBound_of_pullCurrencyG
+    {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
+    (wiring : RowWiring view rf) {traj : Semantics.Trajectory} {initial state : SailState}
+    {tl : Semantics.Timeline} {n : ℕ}
+    (curr : ∀ mp ∈ rf.memPulls,
+      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+    (htraj : traj n = some state)
+    (rowTime : StateMsg.timeNat rf.statePull = tl.start n) :
+    Target.SourceAValueBound view state := by
+  intro index indexEq
+  obtain ⟨mp, hmp, location, value⟩ := wiring.opA_pull index indexEq
+  have current := curr mp hmp
+  rw [location, value, wiring.readTime mp hmp, rowTime] at current
+  exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp current
+
+theorem RowWiring.memoryPullsBound_of_pullCurrencyG
+    {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
+    (wiring : RowWiring view rf) {traj : Semantics.Trajectory} {initial state : SailState}
+    {tl : Semantics.Timeline} {n : ℕ}
+    (curr : ∀ mp ∈ rf.memPulls,
+      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+    (htraj : traj n = some state)
+    (rowTime : StateMsg.timeNat rf.statePull = tl.start n) :
+    MemoryPullsBound rf state := by
+  intro mp hmp
+  have current := curr mp hmp
+  rw [wiring.readTime mp hmp, rowTime] at current
+  exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp current
+
+/-- **The weak dynamic-row consumer, event-indexed.** `dynamicGrounded_of_weakCurrency` with its
+`SailChain` replaced by `traj n = some state` and its `initialClock + 8 * steps` by `tl.start n` —
+the two places a 264-tick row makes the Sail form unusable. -/
+theorem DecodedInstructionRow.dynamicGroundedG_of_weakCurrency
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (decoded : DecodedInstructionRow p)
+    (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
+    (contracts : ChipGroundingContracts decoded.chip)
+    (program : Target.GuestProgram) {traj : Semantics.Trajectory}
+    (initial state : SailState) {tl : Semantics.Timeline} {n : ℕ}
+    (decode : Target.decodedInROM program
+      (programAccess (decoded.toChipRow witness.data).view).toRow)
+    (hcurr : ∀ mp ∈ (decoded.ordinaryRowFacts witness.data).memPulls,
+      (MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) ∧
+        Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+    (htraj : traj n = some state)
+    (real : (decoded.toChipRow witness.data).is_real = 1)
+    (rowTime : StateMsg.timeNat
+      (statePullMessage (decoded.toChipRow witness.data)) = tl.start n) :
+    DynamicGroundedRow witness.data program (decoded.toChipRow witness.data) state := by
+  have guard := contracts.routing witness constraints decoded rfl decodedMem real program decode
+  have memory := decoded.memoryChannelGuarantees_of_pullCurrency witness.data
+    (fun mp hmp => ⟨(hcurr mp hmp).1.1, (hcurr mp hmp).1.2⟩)
+  have assumptions := contracts.assumptions witness constraints balanced decoded rfl decodedMem
+    real program decode memory
+  let openInputs : DecodedRowOpenSoundnessInputs decoded witness.data := ⟨assumptions, memory⟩
+  have wiring := contracts.wiring witness constraints balanced decoded rfl decodedMem real
+    program decode openInputs
+  have rowTime' : StateMsg.timeNat
+      (decoded.ordinaryRowFacts witness.data).statePull = tl.start n := by
+    simpa only [DecodedInstructionRow.ordinaryRowFacts_statePull] using rowTime
+  have curr' : ∀ mp ∈ (decoded.ordinaryRowFacts witness.data).memPulls,
+      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value :=
+    fun mp hmp => (hcurr mp hmp).2
+  have operands := wiring.valueOperandsBound_of_pullCurrencyG curr' htraj rowTime'
+  have sourceA := wiring.sourceAValueBound_of_pullCurrencyG curr' htraj rowTime'
+  have pulls := wiring.memoryPullsBound_of_pullCurrencyG curr' htraj rowTime'
+  have ready := contracts.readiness witness constraints balanced decoded rfl decodedMem real guard
+    program decode openInputs state operands sourceA pulls
+  exact decoded.dynamicGrounded_of_inputs witness constraints balanced decodedMem program state
+    { circuit := openInputs, ready, operands }
+
 end SP1Clean.Soundness
