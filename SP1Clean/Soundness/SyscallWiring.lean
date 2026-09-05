@@ -242,4 +242,79 @@ theorem syscall_pullsAt_eq
   rw [Multiset.coe_eq_coe]
   exact List.Perm.flatMap_right _ exhaustive
 
+/-- **The walked per-location Memory balance.** `memoryBalance_of_alignsWith`'s conclusion carries
+four summands beside the instruction rows' touches: the two boundary frontiers, the MemoryBump
+refresh pairs, the Halt table's records, and the `SyscallInstrs` table's. Once the syscall rows are
+*walked*, the last of those is no longer a side term — it is part of the walk — so the balance is
+restated over the combined carrier with that summand gone.
+
+`splitPerm` is the only new obligation, and it is the honest statement of what "the trail is an
+arbitrary interleaving" means: the walked carrier's facts are, up to order, the instruction rows'
+aligned facts together with the syscall rows' facts. `pushesAt`/`pullsAt` are multiset sums, so the
+interleaving itself never has to be reconstructed. -/
+theorem walkedMemoryBalance
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
+      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
+        signedVal interaction.mult = 1)
+    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+      memoryChannel) = [])
+    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+      memoryChannel) = [])
+    (initUnique : MemoryInitProviderUnique witness)
+    (finalizeUnique : MemoryFinalizeProviderUnique witness)
+    (paddingEmpty : ∀ decoded ∈ decodedInstructionRows (p := p) witness.tables,
+      (decoded.toChipRow witness.data).is_real ≠ 1 →
+        decoded.producedMemoryMessages witness.data = [] ∧
+          decoded.consumedMemoryMessages witness.data = [])
+    (orderedRows : List (DecodedInstructionRow p))
+    (exhaustive : orderedRows.Perm (realDecodedInstructionRows witness.data witness.tables))
+    (g : DecodedInstructionRow p → Semantics.RowFacts p)
+    (aligns : ∀ d ∈ orderedRows, TimedGrounding.AlignsWith (g d)
+      (d.ordinaryRowFacts witness.data))
+    (syscallRows : List (Array (ZMod p)))
+    (syscallExhaustive : syscallRows.Perm (realSyscallInstrsRows witness))
+    (walkedRows : List (WalkedRow p))
+    (splitPerm : (walkedRows.map (WalkedRow.facts g)).Perm
+      (orderedRows.map g ++ syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)))
+    (loc : Semantics.MemLoc) :
+    TimedGrounding.optMS (memoryInitFrontier witness loc)
+        + TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
+        + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
+        + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+            memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
+      TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
+        + TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
+        + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
+        + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+            memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
+  have base := memoryBalance_of_alignsWith witness balanced memBinary initPure finPure
+    initUnique finalizeUnique paddingEmpty orderedRows exhaustive g aligns loc
+  have hpush : TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
+      = TimedGrounding.pushesAt (orderedRows.map g) loc
+        + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+            memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
+    rw [pushesAt_perm splitPerm loc, TimedGrounding.pushesAt_append,
+      syscall_pushesAt_eq witness constraints syscallRows syscallExhaustive loc]
+  have hpull : TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
+      = TimedGrounding.pullsAt (orderedRows.map g) loc
+        + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+            memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
+    rw [pullsAt_perm splitPerm loc, TimedGrounding.pullsAt_append,
+      syscall_pullsAt_eq witness constraints syscallRows syscallExhaustive loc]
+  rw [hpush, hpull]
+  -- Both sides are now the base balance's terms in a different order; Memory multisets form an
+  -- additive commutative monoid, so AC-normalizing both settles it.
+  simp only [add_assoc, add_left_comm, add_comm] at base ⊢
+  exact base
+
 end SP1Clean.Soundness

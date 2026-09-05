@@ -909,20 +909,24 @@ theorem durationAt_transcriptOf (data : ProverData (ZMod p)) (rows : List (Walke
 /-- **The walked row's `RowFacts`** — the carrier the engine consumes once a syscall row can sit in
 the middle of the trail. This is the type change `SyscallTableInactive.noActiveRows` exists to avoid:
 today's engine walks `List (DecodedInstructionRow p)`, and a 264-tick row cannot join that list under
-any choice of facts. -/
-noncomputable def WalkedRow.facts [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p)) :
+any choice of facts.
+
+The instruction arm takes its facts from a **parameter** rather than fixing `ordinaryRowFacts`,
+because the engine does not walk the ordinary carrier: it walks the *aligned* one, related to the
+ordinary carrier by `AlignsWith`. Fixing the ordinary form here would produce a carrier the engine
+cannot actually feed. -/
+noncomputable def WalkedRow.facts (g : DecodedInstructionRow p → Semantics.RowFacts p) :
     WalkedRow p → Semantics.RowFacts p
-  | .instruction row => row.ordinaryRowFacts data
+  | .instruction row => g row
   | .syscall r => syscallRowFacts r
 
-omit [Fact (2 ^ 17 < p)] in
-@[simp] theorem WalkedRow.facts_instruction [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+@[simp] theorem WalkedRow.facts_instruction (g : DecodedInstructionRow p → Semantics.RowFacts p)
     (row : DecodedInstructionRow p) :
-    WalkedRow.facts data (.instruction row) = row.ordinaryRowFacts data := rfl
+    WalkedRow.facts g (.instruction row) = g row := rfl
 
-@[simp] theorem WalkedRow.facts_syscall [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+@[simp] theorem WalkedRow.facts_syscall (g : DecodedInstructionRow p → Semantics.RowFacts p)
     (r : SyscallInstrsChip.Inputs (ZMod p)) :
-    WalkedRow.facts data (.syscall r) = syscallRowFacts r := rfl
+    WalkedRow.facts g (.syscall r) = syscallRowFacts r := rfl
 
 /-- The event a walked row denotes, named rather than inlined so the two positional lemmas below
 share one motive. -/
@@ -948,12 +952,12 @@ transcript holds its own event by construction.
 
 That is the whole content of "the semantic transcript clock and the bus clock are the same number":
 it is bought once, by the walk order, and spent by every row. -/
-theorem positioned_of_walkOrder [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
-    (rows : List (WalkedRow p))
+theorem positioned_of_walkOrder (data : ProverData (ZMod p))
+    (g : DecodedInstructionRow p → Semantics.RowFacts p) (rows : List (WalkedRow p))
     (initialClock k : ℕ) (hk : k < rows.length)
-    (hpull : StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+    (hpull : StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
       = (eventTimeline (transcriptOf data rows) initialClock).start k) :
-    ∀ n : ℕ, StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+    ∀ n : ℕ, StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
         = (eventTimeline (transcriptOf data rows) initialClock).start n →
       (transcriptOf data rows)[n]? = some (rows[k]'hk).event := by
   intro n hn
@@ -987,22 +991,23 @@ widths — `statePullTime_of_stateWalk_durations`, which is why that lemma had t
 Together with `positioned_of_walkOrder` this is the whole clock coupling: the bus clock a row is
 walked at and the semantic clock its event starts at are the same number, derived rather than
 assumed. -/
-theorem walkedRow_pullAt [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+theorem walkedRow_pullAt (data : ProverData (ZMod p))
+    (g : DecodedInstructionRow p → Semantics.RowFacts p)
     (rows : List (WalkedRow p)) (initialClock : ℕ) {initialMsg finalMsg : StateMsg (ZMod p)}
     (walk : Walk.IsWalk
-      (fun r => ((WalkedRow.facts data r).statePull, (WalkedRow.facts data r).statePush))
+      (fun r => ((WalkedRow.facts g r).statePull, (WalkedRow.facts g r).statePush))
       initialMsg finalMsg rows)
     (steps : ∀ r ∈ rows,
-      StateMsg.timeNat (WalkedRow.facts data r).statePush
-        = StateMsg.timeNat (WalkedRow.facts data r).statePull + r.duration)
+      StateMsg.timeNat (WalkedRow.facts g r).statePush
+        = StateMsg.timeNat (WalkedRow.facts g r).statePull + r.duration)
     (headTime : StateMsg.timeNat initialMsg = initialClock)
     (k : ℕ) (hk : k < rows.length) :
-    StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+    StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
       = (Semantics.eventTimeline (transcriptOf data rows) initialClock).start k := by
   have hsplit : rows = rows.take k ++ (rows[k]'hk) :: rows.drop (k + 1) := by
     rw [List.getElem_cons_drop, List.take_append_drop]
   have position := statePullTime_of_stateWalk_durations
-    (fun r => ((WalkedRow.facts data r).statePull, (WalkedRow.facts data r).statePush))
+    (fun r => ((WalkedRow.facts g r).statePull, (WalkedRow.facts g r).statePush))
     WalkedRow.duration walk steps (rows.take k) (rows[k]'hk) (rows.drop (k + 1)) hsplit
   rw [Semantics.eventTimeline_start, transcriptOf_prefixSum data rows k (by omega), ← headTime]
   exact position
@@ -1046,16 +1051,17 @@ says the transcript reports exactly that width at the row's index. The two then 
 This is where a mixed shard's arithmetic stops being `8 * k` and becomes a prefix sum, and it is
 also where the `.bump` arm of `SyscallTrailRow` would break the identity — `WalkedRow` has no
 zero-width arm, which is why the trail must be projected onto it before the walk begins. -/
-theorem walkedRow_timeStep [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+theorem walkedRow_timeStep (data : ProverData (ZMod p))
+    (g : DecodedInstructionRow p → Semantics.RowFacts p)
     (rows : List (WalkedRow p)) (initialClock k : ℕ) (hk : k < rows.length)
-    (hpull : StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+    (hpull : StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
       = (eventTimeline (transcriptOf data rows) initialClock).start k)
-    (hwidth : StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePush
-      = StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+    (hwidth : StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePush
+      = StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
         + (rows[k]'hk).duration) :
-    ∀ n : ℕ, StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+    ∀ n : ℕ, StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
         = (eventTimeline (transcriptOf data rows) initialClock).start n →
-      StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePush
+      StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePush
         = (eventTimeline (transcriptOf data rows) initialClock).start (n + 1) :=
   timelineAgreement_of_durations _ initialClock _ k hpull
     (by rw [hwidth, durationAt_transcriptOf data rows k hk])

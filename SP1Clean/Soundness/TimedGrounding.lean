@@ -636,6 +636,20 @@ def pushesAt (rows : List (RowFacts p)) (loc : MemLoc) : Multiset (MemoryMsg (ZM
   (rows.map fun r => (↑(rowPushesAt r loc) : Multiset (MemoryMsg (ZMod p)))).sum
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- A batch's pushes split along a concatenation. This is what lets the walked carrier's Memory
+balance be read off the instruction and syscall tables separately, once `pushesAt_perm` has put the
+interleaving into two blocks. -/
+@[simp] theorem pushesAt_append (l l' : List (RowFacts p)) (loc : MemLoc) :
+    pushesAt (l ++ l') loc = pushesAt l loc + pushesAt l' loc := by
+  rw [pushesAt, List.map_append, List.sum_append, ← pushesAt, ← pushesAt]
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- The pulled twin of `pushesAt_append`. -/
+@[simp] theorem pullsAt_append (l l' : List (RowFacts p)) (loc : MemLoc) :
+    pullsAt (l ++ l') loc = pullsAt l loc + pullsAt l' loc := by
+  rw [pullsAt, List.map_append, List.sum_append, ← pullsAt, ← pullsAt]
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- **A batch's pushes at a location are the location-filter of its flattened push list.** The
 bridge between the walk's per-row view (`pushesAt`) and the ledger's flat view
 (`producedMessages`), which is what lets a table's Memory summand be *absorbed* into the walk rather
