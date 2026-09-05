@@ -541,7 +541,8 @@ theorem NativeTraceReady.stateLedgerPerm
     (witness_decodedInstructionRows_selectorBinary _
       (ready.constraints publicWellFormed))
     (nativeTrace_stateBumpSelectorBinary statement execution)
-    ((nativeTrace statement execution).haltTablePadding).2 ready.stateChronology
+    ((nativeTrace statement execution).haltTablePadding).2
+    (witness_syscallRows_padding (nativeTrace statement execution)) ready.stateChronology
 
 /-- The generated native witness has exactly one active instruction row per semantic transition.
 

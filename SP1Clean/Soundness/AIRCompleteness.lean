@@ -226,7 +226,10 @@ theorem balancedOn_exit
          Channels.exitChannel.pushedIfValue
            (1 - (haltRow (haltTable trace.witness) row).is_real)
            (⟨0⟩ : Channels.ExitMsg (ZMod p))] := by
-    rw [typedEnsembleExitInteractions_eq, List.map_append, List.map_flatMap]
+    -- The syscall table is a second Exit contributor in general; for a *compiled* trace it has no
+    -- rows, so its gated pushes collapse and the hand-off is the halt table's alone.
+    rw [typedEnsembleExitInteractions_eq, syscallInstrsTable_nil trace]
+    simp only [List.flatMap_nil, List.append_nil, List.map_append, List.map_flatMap]
     rfl
   have hbin : SignedMults (trace.witness.interactionsWith Channels.exitChannel.toRaw) := by
     rw [rawEq, closed]
@@ -434,6 +437,23 @@ def SupportedCoreGeneratedTraceRelation :
       trace.publicValues = statement.publicValues ∧
       SemanticBoundaryBinding statement trace.witness
 
+/-- **The compiler's trace meets the interim syscall boundary.** Every field is a consequence of the
+syscall table having no rows, except `haltTablePresent`, which is the compiled Halt table's one
+padding row — the `⟨0⟩` Exit push that balances the verifier's ungated pull. -/
+theorem SupportedCoreTraceWitness.syscallTableInactive (trace : SupportedCoreTraceWitness p) :
+    SyscallTableInactive trace.witness where
+  noActiveRows := by
+    rw [realSyscallInstrsRows, syscallInstrsTable_nil trace]; rfl
+  memoryProducedNil := by
+    rw [typedTableInteractionsWith, syscallInstrsTable_nil trace]; rfl
+  memoryConsumedNil := by
+    rw [typedTableInteractionsWith, syscallInstrsTable_nil trace]; rfl
+  haltTablePresent := by
+    have hlen := trace.haltTablePadding.1
+    intro hnil
+    rw [hnil] at hlen
+    simp at hlen
+
 /--
 **Machine-level completeness of the supported-core AIR.**
 
@@ -454,7 +474,8 @@ def supported_core_generated_trace_functionalCompleteness :
   map _ trace := trace.witness
   map_valid statement trace valid := by
     obtain ⟨wf, balanced, publicEq, boundary⟩ := valid
-    exact ⟨⟨publicEq, trace.witness_constraints wf, balanced⟩, boundary⟩
+    exact ⟨⟨publicEq, trace.witness_constraints wf, balanced⟩, boundary,
+      trace.syscallTableInactive⟩
 
 /-- The relational form of `supported_core_generated_trace_functionalCompleteness`.
 existential completeness API. -/
@@ -536,8 +557,8 @@ theorem sp1Ensemble_statement_of_structural_balance
   let memoryKeys := memoryChains.flatMap LookupAccessList.chainTokens
   have hstate : (LookupAccessList.active trace.stateLedger).Perm
       (LookupAccessList.handoff stateKeys) :=
-    stateLedger_perm_handoff_chronological trace hbinary hbump hhalt stateLinks hstateRegroup
-      hstateChain
+    stateLedger_perm_handoff_chronological trace hbinary hbump hhalt
+      (witness_syscallRows_padding trace) stateLinks hstateRegroup hstateChain
   have hmemory : (LookupAccessList.active trace.memoryLedger).Perm
       (LookupAccessList.handoff memoryKeys) :=
     memoryLedger_perm_handoff trace memoryChains hmemoryChains hmemoryRegroup

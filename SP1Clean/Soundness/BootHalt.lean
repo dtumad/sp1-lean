@@ -45,6 +45,10 @@ def SupportedCoreBootHaltRelation :
     SupportedCoreEnsembleRelation statement witness ∧
       (∃ initial, BootBoundaryFacts statement witness initial) ∧
       realHaltRows witness ≠ [] ∧
+      -- The interim syscall boundary, carried here for the same reason
+      -- `SupportedCoreNativeRelation` carries it: the grounding engine does not yet walk a syscall
+      -- row's memory touches. It goes when the engine's row carrier admits them.
+      SyscallTableInactive witness ∧
       CoreProfile.WithinOrdinaryRowLimit
         (realDecodedInstructionRows witness.data witness.tables).length
 
@@ -54,8 +58,8 @@ theorem SupportedCoreBootHaltRelation.toShardRelation
     {statement : SupportedCoreStatement p} {witness : SupportedCoreNativeWitness p}
     (valid : SupportedCoreBootHaltRelation statement witness) :
     SupportedCoreNativeShardRelation statement witness := by
-  obtain ⟨ensemble, ⟨initial, boot⟩, -, rowLimit⟩ := valid
-  exact ⟨⟨ensemble, boot.base.binding⟩, rowLimit⟩
+  obtain ⟨ensemble, ⟨initial, boot⟩, -, syscallInactive, rowLimit⟩ := valid
+  exact ⟨⟨ensemble, boot.base.binding, syscallInactive⟩, rowLimit⟩
 
 /-- **Boot to halt, on one shard.**  A satisfying, channel-balanced native witness whose semantic
 boundary is a genuine boot state and whose Halt table carries a live row yields a complete
@@ -74,10 +78,11 @@ theorem supported_core_boot_to_halt_single_shard
       Target.SP1Halted statement.program statement.publicValues.exitCodeBits preHalt ∧
       statement.finalPcBits = Machine.haltPc ∧
       statement.finalClkNat = 1 + 8 * steps + 264 := by
-  obtain ⟨⟨publicInputEq, constraints, balanced⟩, ⟨initial, boot⟩, haltLive, -⟩ := valid
+  obtain ⟨⟨publicInputEq, constraints, balanced⟩, ⟨initial, boot⟩, haltLive,
+    syscallInactive, -⟩ := valid
   obtain ⟨rows, halt, hg⟩ :=
-    (supported_core_witness_grounding statement witness initial publicInputEq constraints balanced
-      boot.base).resolve_left (by
+    (supported_core_witness_grounding statement witness syscallInactive initial publicInputEq
+      constraints balanced boot.base).resolve_left (by
         rintro ⟨haltFree, -, -⟩
         exact haltLive haltFree)
   obtain ⟨preHalt, retire, halted, -⟩ :=

@@ -881,9 +881,15 @@ theorem nativeTrace_memoryLedgerPermHandoffChains
         LookupAccessList.accessAt, multOf, signedVal, ZMod.val_zero, Nat.cast_zero,
         Nat.mul_zero, ne_eq, decide_not] <;>
       simp
-  rw [memoryLedger_eq, active_append, active_append, active_append, active_append,
-    nativeTrace_activeMemoryInitLedger, nativeTrace_activeMemoryFinalizeLedger, haltInactive,
-    List.append_nil]
+  have syscallInactive : active ((typedTableInteractionsWith
+      (syscallInstrsTable (nativeTrace statement execution).witness) memoryChannel).map
+        fun i => Interaction.toAccess i.raw) = [] := by
+    rw [typedTableInteractionsWith, syscallInstrsTable_nil (nativeTrace statement execution)]
+    rfl
+  rw [memoryLedger_eq]
+  simp only [active_append, nativeTrace_activeMemoryInitLedger,
+    nativeTrace_activeMemoryFinalizeLedger, haltInactive, syscallInactive,
+    List.append_nil, List.nil_append]
   have projected' :
       (active (physicalInstructionMemoryLedger trace) ++
         (initLedger ++ (finalizeLedger ++ active (physicalMemoryBumpLedger trace)))).Perm
