@@ -353,6 +353,71 @@ theorem ordinaryStepFactG_of_advance {kind : ChipKind p}
         Option.bind_some]
       exact hpost heff hpulls
 
+/-- **An ordinary instruction row's frame fact, at the event trajectory.** The companion of
+`ordinaryStepFactG_of_advance`, with the same `positioned` linkage and the same proof as
+`frameFact_of_advance`: at the window start the value is the trajectory state's content, and the
+`RowEffect`'s two frame halves carry it to the successor. -/
+theorem ordinaryFrameFactG_of_advance {kind : ChipKind p}
+    {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
+    (handler : ExecutableSyscallHandler) (events : List ExecutionEvent)
+    (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
+    {data : ProverData (ZMod p)} {program : GuestProgram}
+    (real : (kind.view inp cols).is_real = 1)
+    (spec : kind.chipSpec inp cols data)
+    (decode : Target.decodedInROM program (programAccess (kind.view inp cols)).toRow)
+    (ready : ∀ s : SailState, ValueOperandsBound (kind.view inp cols) s →
+      SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
+        kind.advanceReady inp cols program s)
+    (initial : SailState) (initialClock : ℕ)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat rf.statePull = (eventTimeline events initialClock).start n →
+      events[n]? = some ExecutionEvent.ordinary) :
+    FrameFactG program (eventTrajectory handler program events initial) initial
+      (eventTimeline events initialClock) rf := by
+  intro hpull hcurr loc v hpush hvalAt
+  obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
+  set tl := eventTimeline events initialClock with tlDef
+  have hev := positioned n htime
+  have hdur : Semantics.durationAt events n = 8 := by simp [Semantics.durationAt, hev]
+  have hstartSucc : tl.start (n + 1) = tl.start n + 8 := by
+    rw [tlDef, eventTimeline_start_succ, hdur]
+  obtain ⟨s', hstep, heff⟩ := wiring.advance_atG advance real spec decode ready htraj htime
+    hpc hrom hcfg (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.2⟩)
+  have hsucc : eventTrajectory handler program events initial (n + 1) = some s' := by
+    rw [Semantics.eventTrajectory_succ, hev]
+    dsimp only
+    rw [htraj, Option.bind_some, Semantics.executeEvent?_ordinary]
+    exact TimedGrounding.stepOnce_of_sailStep hstep
+  rw [htime] at hvalAt
+  have hcontent : locContent state loc = some (Word.toBitVec64 v) :=
+    (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hvalAt
+  have hpulls : MemoryPullsBound rf state := by
+    intro mp hmp
+    have hc := (hcurr mp hmp).2.2
+    rw [wiring.readTime mp hmp, htime] at hc
+    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+  have hpushTime : StateMsg.timeNat rf.statePush = tl.start (n + 1) := by
+    rw [hstartSucc, wiring.time8, htime]
+  rw [hpushTime]
+  apply (TimedGrounding.localValueAtG_stepStart_iff hsucc).mpr
+  cases loc with
+  | ram cell =>
+    exact wiring.ram_frame heff hpulls cell v hpush hcontent
+  | reg i =>
+    show s'.get_reg? i = some (Word.toBitVec64 v)
+    have hregs := heff.regs
+    by_cases hw : (kind.view inp cols).commit.writesReg = true
+    · rw [if_pos hw] at hregs
+      by_cases hop : (i.toNat : ZMod p) = (kind.view inp cols).adapter.op_a
+      · obtain ⟨m, hm, hlocm, hvalm⟩ := wiring.write_push hw i hop
+        have hveq : m.value = v := hpush m hm hlocm
+        rw [hregs.1 i hop, ← hvalm, hveq]
+      · rw [hregs.2 i hop]
+        exact hcontent
+    · rw [if_neg hw] at hregs
+      rw [hregs i]
+      exact hcontent
+
 /-! ## The row's facts, and its step obligation -/
 
 /-- The `RowFacts` a syscall row contributes: its State edge and its three register touches. Unlike
@@ -612,6 +677,81 @@ theorem syscallStepFact_of_advance [Fact (2 ^ 25 < p)]
     · refine ⟨currC.1, boundC, ?_⟩
       rw [timeC]
       exact currC.2.2
+
+/-- **A syscall row's frame fact.** The companion of `syscallStepFact_of_advance`, and much the
+simpler of the two: a syscall touches exactly one location, so every other one is carried across the
+264-tick window by `SyscallRowEffect`'s frame halves — `otherRegs` on the register axis and `mem`,
+which says a syscall writes no RAM at all, on the other.
+
+The one touched location is `x5`, and there the row's own `op_a` read-back pins the frame value:
+`hpush` forces `v` to be the written word, which is exactly what `t0` says the successor holds. -/
+theorem syscallFrameFact_of_advance [Fact (2 ^ 25 < p)]
+    (handler : ExecutableSyscallHandler) (prog : GuestProgram)
+    (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
+    (r : SyscallInstrsChip.Inputs (ZMod p))
+    (payload : SyscallAdvancePayload (p := p) handler)
+    (real : r.is_real = 1) (spec : SyscallInstrsChip.Spec r)
+    (sel : SyscallInstrsChip.SelectorsValid r) (pulled : SyscallInstrsChip.PulledFacts r)
+    (canonical : (syscallEventOfRow r).IsInlineCanonical)
+    (opA : ((5 : ℕ) : ZMod p) = r.op_a)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)
+        = (eventTimeline events initialClock).start n →
+      events[n]? = some (ExecutionEvent.syscall (syscallEventOfRow r)))
+    (rowContext : ∀ (n : ℕ) (s : SailState),
+      eventTrajectory handler prog events initial n = some s →
+      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)
+        = (eventTimeline events initialClock).start n →
+      SyscallRowContext r prog s)
+    (clockAgrees : StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r)
+      = StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 264) :
+    FrameFactG prog (eventTrajectory handler prog events initial) initial
+      (eventTimeline events initialClock) (syscallRowFacts r) := by
+  intro hpull hcurr loc v hpush hvalAt
+  obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
+  have htime' : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r)
+      = (eventTimeline events initialClock).start n := htime
+  set tl := eventTimeline events initialClock with tlDef
+  have hev := positioned n htime'
+  have hdur : Semantics.durationAt events n = 264 := by simp [Semantics.durationAt, hev]
+  have hstartSucc : tl.start (n + 1) = tl.start n + 264 := by
+    rw [tlDef, eventTimeline_start_succ, hdur]
+  obtain ⟨s', htrans, heff⟩ :=
+    payload r prog state real spec sel pulled canonical hcfg hrom (rowContext n state htraj htime')
+  have hsucc : eventTrajectory handler prog events initial (n + 1) = some s' := by
+    rw [Semantics.eventTrajectory_succ, hev]
+    dsimp only
+    rw [htraj, Option.bind_some]
+    exact htrans.2.2
+  have hpushTime : StateMsg.timeNat (syscallRowFacts r).statePush = tl.start (n + 1) := by
+    show StateMsg.timeNat (SyscallInstrsChip.statePushedMessage r) = tl.start (n + 1)
+    rw [hstartSucc, clockAgrees, htime']
+  rw [show StateMsg.timeNat (syscallRowFacts r).statePull
+      = StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) from rfl, htime'] at hvalAt
+  have hcontent : locContent state loc = some (Word.toBitVec64 v) :=
+    (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hvalAt
+  rw [hpushTime]
+  apply (TimedGrounding.localValueAtG_stepStart_iff hsucc).mpr
+  cases loc with
+  | ram cell =>
+    -- A syscall writes no RAM, so every cell's content survives the window verbatim.
+    rw [show locContent s' (MemLoc.ram cell) = Semantics.ramWord64? s' cell.baseAddr from rfl,
+      show Semantics.ramWord64? s' cell.baseAddr = Semantics.ramWord64? state cell.baseAddr from by
+        simp only [Semantics.ramWord64?, heff.mem]]
+    exact hcontent
+  | reg i =>
+    show s'.get_reg? i = some (Word.toBitVec64 v)
+    by_cases hi : i = 5#5
+    · -- the written `t0`: `hpush` pins the frame value to the row's own read-back word
+      subst hi
+      obtain ⟨locPullA, locPushA⟩ := syscallRow_locOf_reg r (i := 5#5) opA r.op_a_memory
+        r.op_a_value 4
+      have hveq : r.op_a_value = v :=
+        hpush _ (by rw [syscallRowFacts_memPushes]; exact List.mem_cons_self) locPushA
+      rw [heff.t0, result_syscallEventOfRow, hveq]
+      rfl
+    · rw [heff.otherRegs i hi]
+      exact hcontent
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The row's shape obligations — with the two premises a 264-tick row genuinely cannot supply
