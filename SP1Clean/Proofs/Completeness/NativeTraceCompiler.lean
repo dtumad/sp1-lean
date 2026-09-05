@@ -121,6 +121,9 @@ def nativeBaseProviderOccurrences (compiled : CompiledExecution) :
   | .memoryBump => compiled.memoryBumps
   | .stateBump => stateBumpEvents compiled.routedEvents
   | .halt => []
+  -- The syscall table is empty rather than one padding row: its Exit push is positively gated, so
+  -- it needs no anti-gated companion to balance the verifier's ungated pull.
+  | .syscallInstrs => []
 
 /-- Assemble the unique unclosed native trace from one chronological compiler result.  The three
 preprocessed provider families are empty here; `canonicalClosure` below reconstructs them from
@@ -257,6 +260,7 @@ theorem nativeBaseTraceOfCompiled_wellFormed
     | memoryBump => exact compiledWellFormed.memoryBumps event member
     | stateBump => exact stateBumpEvents_wellFormed stateBumpsReady event member
     | halt => exact event.elim
+    | syscallInstrs => exact event.elim
   · exact publicWellFormed
 
 /-! ## Explicit readiness of the one compiled trace -/
