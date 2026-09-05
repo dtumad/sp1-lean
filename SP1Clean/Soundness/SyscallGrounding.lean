@@ -219,6 +219,47 @@ omit [Fact (2 ^ 17 < p)] in
        SyscallInstrsChip.memPushedMessage r r.op_b 3 r.op_b_memory.prev_value,
        SyscallInstrsChip.memPushedMessage r r.op_c 2 r.op_c_memory.prev_value] := rfl
 
+omit [Fact (2 ^ 17 < p)] in
+/-- The walk's currency antecedent, split at the row's three named pulls. Stated over an **abstract**
+row so the three membership proofs are checked once here rather than re-unified against a 65-column
+concrete row at every use site — the crossing rule from the campaign log. -/
+theorem syscallRowFacts_currency_split (r : SyscallInstrsChip.Inputs (ZMod p))
+    (currency : ∀ mp ∈ (syscallRowFacts r).memPulls,
+      Channels.MemoryMsg.isU64 (mp : Channels.MemoryMsg (ZMod p) × ℕ).1 ∧
+        Channels.MemoryMsg.ClkBound mp.1) :
+    (Channels.MemoryMsg.isU64 (SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a) ∧
+        Channels.MemoryMsg.ClkBound
+          (SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a)) ∧
+      (Channels.MemoryMsg.isU64 (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b) ∧
+        Channels.MemoryMsg.ClkBound
+          (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b)) ∧
+      (Channels.MemoryMsg.isU64 (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c) ∧
+        Channels.MemoryMsg.ClkBound
+          (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c)) :=
+  ⟨currency _ (by rw [syscallRowFacts_memPulls]; exact List.mem_cons_self),
+   currency _ (by rw [syscallRowFacts_memPulls]; exact List.mem_cons_of_mem _ List.mem_cons_self),
+   currency _ (by
+     rw [syscallRowFacts_memPulls]
+     exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))⟩
+
+omit [Fact (2 ^ 17 < p)] in
+/-- `PulledFacts` assembled from the three buses' named pieces, over an **abstract** row. The
+assembly is trivial — it is a re-association of twelve conjuncts — but doing it at a concrete
+65-column row makes the anonymous constructor's defeq checks blow the depth budget, so the crossing
+happens once here where every argument is a variable. -/
+theorem SyscallInstrsChip.pulledFacts_of_buses (r : SyscallInstrsChip.Inputs (ZMod p))
+    (prog : Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage r))
+    (curA : Channels.MemoryMsg.isU64 (SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a) ∧
+      Channels.MemoryMsg.ClkBound (SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a))
+    (curB : Channels.MemoryMsg.isU64 (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b) ∧
+      Channels.MemoryMsg.ClkBound (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b))
+    (curC : Channels.MemoryMsg.isU64 (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c) ∧
+      Channels.MemoryMsg.ClkBound (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c))
+    (u64 : Word.isU64 r.op_a_value) :
+    SyscallInstrsChip.PulledFacts r :=
+  fun _ => ⟨prog.1, prog.2.1, prog.2.2.1, prog.2.2.2.1, prog.2.2.2.2,
+    curA.1, curA.2, curB.1, curB.2, curC.1, curC.2, u64⟩
+
 /-- Each of the row's six Memory records addresses a register, because the committed `ECALL` pins
 the three operand columns. This is where `witness_syscallRow_ecallTruth` pays for itself: without
 it `locOf` falls through to `.ram`, whose `readWindow = 0` and `writeOffset = 1` make the offset-3

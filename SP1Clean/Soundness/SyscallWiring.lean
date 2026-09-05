@@ -23,9 +23,14 @@ open SP1Clean.Channels (StateMsg MemoryMsg memoryChannel byteChannel programChan
 open Air.Flat
 open Circuit
 
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
+variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+-- Named rather than anonymous: `SyscallTrail` already declares an anonymous `Fact (2 ^ 17 < p)`
+-- instance in this namespace, and `local` scopes the *use* but not the generated declaration name.
+local instance syscallWiring_fact_24 : Fact (2 ^ 24 < p) :=
+  ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance syscallWiring_fact_17 : Fact (2 ^ 17 < p) :=
+  ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- **The circularity break at a syscall row.** The row's three pulled priors carry `isU64 ∧
 ClkBound` in the walk's currency antecedent; that is exactly the memory channel's `Guarantees`, so
@@ -41,7 +46,7 @@ theorem syscallInstrsRow_memoryGuarantees_of_pullCurrency
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
     (syscallInstrsTable witness).component.operations.ChannelGuarantees memoryChannel.toRaw
       ((syscallInstrsTable witness).environment row) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
+  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
   have hbool := witness_syscallInstrsRows_selectorBinary witness constraints row rowMem
   refine channelGuarantees_of_consumedMessages _ memoryChannel _ hp fun msg msgMem => ?_
   rw [syscallInstrsRow_typedMemory, consumedMessages, List.mem_map] at msgMem
@@ -109,5 +114,49 @@ theorem syscallInstrsRow_spec_of_pullCurrency
     _ (witness.mem_allTables_of_mem_tables tableMem)
   exact syscallInstrsRow_spec_of_facts witness tableConstraints finished.1 finished.2
     (syscallInstrsRow_memoryGuarantees_of_pullCurrency witness constraints rowMem currency) rowMem
+
+/-- **The row's committed `ECALL` fetch satisfies the Program bus's `RowSpec`.** The Program channel
+is finished, so the row's single gated pull carries its guarantee outright — the same route
+`decodedInstructionRow_programRowSpec` takes for an instruction row. -/
+theorem syscallInstrsRow_programRowSpec
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannels)
+    {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table)
+    (real : (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1) :
+    Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+  have tableMem : syscallInstrsTable witness ∈ witness.tables :=
+    List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
+  have programGuarantees := (sp1_finishedChannel_guarantees witness constraints balanced
+    _ (witness.mem_allTables_of_mem_tables tableMem)).2 row rowMem
+  have guarantee := TypedInteraction.guarantee_of_channelGuarantees
+    (syscallInstrsTable witness).component.operations programChannel
+    ((syscallInstrsTable witness).environment row)
+    (TypedInteraction.pulledIfValue programChannel (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+      (SyscallInstrsChip.programMessage (syscallInstrsRow (syscallInstrsTable witness) row)))
+    (by rw [syscallInstrsRow_typedProgram]; exact List.mem_cons_self)
+    programGuarantees (by rfl)
+    (by rw [TypedInteraction.pulledIfValue_mult, real])
+  simpa only [TypedInteraction.pulledIfValue_message, programChannel] using guarantee
+
+/-- **The row's `PulledFacts`, assembled from the three buses.** Nothing here is row-local: the
+first five conjuncts are the Program bus's `RowSpec` at the committed `ECALL`, the next six are the
+walk's own currency at the three register pulls, and the last — the written `t0` word's
+`Word.isU64` — is the byte bus's four `Range 16` checks, because no arm of the `Spec` constrains it
+(`HINT_LEN` deliberately leaves the result free). -/
+theorem syscallInstrsRow_pulledFacts
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannels)
+    {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table)
+    (currency : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+      MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
+    SyscallInstrsChip.PulledFacts (syscallInstrsRow (syscallInstrsTable witness) row) := by
+  intro real
+  have activeMem : row ∈ realSyscallInstrsRows witness := by
+    rw [realSyscallInstrsRows, List.mem_filter]
+    exact ⟨rowMem, by simpa using real⟩
+  obtain ⟨curA, curB, curC⟩ := syscallRowFacts_currency_split _ currency
+  exact SyscallInstrsChip.pulledFacts_of_buses _
+    (syscallInstrsRow_programRowSpec witness constraints balanced rowMem real) curA curB curC
+    (syscallInstrsRow_opAValue_isU64 witness constraints balanced activeMem) real
 
 end SP1Clean.Soundness

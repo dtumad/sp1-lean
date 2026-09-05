@@ -886,18 +886,18 @@ theorem haltTable_typedProgram (witness : EnsembleWitness (sp1Ensemble (p := p))
   rw [Channel.eval_pulledIf]
   simp only [HaltChip.programMessage, HaltChip.programMsg, circuit_norm, haltRow_eq]
 
-/-- The `SyscallInstrs` table's typed Program view: per physical row, the gated ECALL fetch pull. -/
-theorem syscallInstrsTable_typedProgram (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedTableInteractionsWith (syscallInstrsTable witness) programChannel =
-      (syscallInstrsTable witness).table.flatMap fun row =>
-        [TypedInteraction.pulledIfValue programChannel
-           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-           (SyscallInstrsChip.programMessage
-             (syscallInstrsRow (syscallInstrsTable witness) row))] := by
+/-- One syscall row's typed Program view: the single `is_real`-gated `ECALL` fetch. Split out of
+`syscallInstrsTable_typedProgram` so the row's `ProgramMsg.RowSpec` can be read off at one
+environment. -/
+theorem syscallInstrsRow_typedProgram (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (row : Array (ZMod p)) :
+    typedInteractionValuesWith (syscallInstrsTable witness).component.operations programChannel
+        ((syscallInstrsTable witness).environment row) =
+      [TypedInteraction.pulledIfValue programChannel
+         (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+         (SyscallInstrsChip.programMessage
+           (syscallInstrsRow (syscallInstrsTable witness) row))] := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
-  unfold typedTableInteractionsWith
-  apply List.flatMap_congr
-  intro row rowMem
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
     syscallInstrsTable_component, Component.interactionsWith_eq]
@@ -917,6 +917,17 @@ theorem syscallInstrsTable_typedProgram (witness : EnsembleWitness (sp1Ensemble 
   rw [Channel.eval_pulledIf]
   simp only [SyscallInstrsChip.programMessage, SyscallInstrsChip.programMsg, circuit_norm,
     syscallInstrsRow_eq]
+
+/-- The `SyscallInstrs` table's typed Program view: per physical row, the gated ECALL fetch pull. -/
+theorem syscallInstrsTable_typedProgram (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    typedTableInteractionsWith (syscallInstrsTable witness) programChannel =
+      (syscallInstrsTable witness).table.flatMap fun row =>
+        [TypedInteraction.pulledIfValue programChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+           (SyscallInstrsChip.programMessage
+             (syscallInstrsRow (syscallInstrsTable witness) row))] := by
+  unfold typedTableInteractionsWith
+  exact List.flatMap_congr fun row _ => syscallInstrsRow_typedProgram witness row
 
 /-- The Halt table's typed Memory view: per physical row, the three decoded register
 read-prior/read-back pairs (`x5` at `+4`, `x10` at `+3`, `x11` at `+2`). -/
