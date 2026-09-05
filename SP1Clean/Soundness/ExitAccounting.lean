@@ -228,6 +228,7 @@ private theorem consumedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
       rcases hval with h | h <;> rw [h] <;> norm_num),
     List.filter_nil, List.map_nil]
 
+omit [Fact (2 ^ 24 < p)] in
 /-- A gated hand-off pair consumes nothing: both entries are pushes. -/
 private theorem consumedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :

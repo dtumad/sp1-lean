@@ -261,11 +261,13 @@ noncomputable def stateBumpLinks (trace : SupportedCoreTraceWitness p) :
       msgToken stateChannel
         (StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable trace.witness) row)))
 
+omit [Fact (2 ^ 24 < p)] in
 /-- The syscall table's row list, in the form `BumpDecode`'s accessor spells it. -/
 theorem syscallInstrsTable_nil (trace : SupportedCoreTraceWitness p) :
     (syscallInstrsTable trace.witness).table = [] :=
   trace.witness_syscallTable_nil _ rfl
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **Every syscall row is padding — vacuously, since there are none.** This is the shape the State
 ledger's `hsyscall` premise asks for, and it is a property of *this compiler's trace* rather than of
 the chip: `syscallInstrsTraceInputs` is `[]` by construction. -/

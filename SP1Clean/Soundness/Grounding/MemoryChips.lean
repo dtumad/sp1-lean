@@ -576,8 +576,8 @@ theorem AddressOperation.upperLimbs_not_both_zero_of_constraints
       apply constraints.1
       simp only [AddressOperation.main, circuit_norm]
       iterate 5 right
-      simp [inverse, FormalAssertion.toSubcircuit, Gadgets.Equality.main,
-        Circuit.forEach.operations_eq, FlatOperation.constraints, circuit_norm]
+      simp [inverse, Gadgets.Equality.main,
+        Circuit.forEach.operations_eq, circuit_norm]
     have element (x : Expression (ZMod p)) : (toElements (M := field) x)[0] = x := rfl
     rw [element, element] at inverseDiffEq
     simpa only [inverse, eval_sub, Expression.eval, sub_zero] using inverseDiffEq

@@ -63,7 +63,7 @@ noncomputable def supported_core_native_functionalCompleteness
     have constraints := ready.constraints publicWellFormed
     have balanced := ready.balancedChannels publicWellFormed fits
     exact ⟨⟨nativeTrace_witness_publicInput statement execution, constraints, balanced⟩,
-      ready.semanticBoundary semantic⟩
+      ready.semanticBoundary semantic, (nativeTrace statement execution).syscallTableInactive⟩
 
 /-- Capacity-aligned functional completeness.
 

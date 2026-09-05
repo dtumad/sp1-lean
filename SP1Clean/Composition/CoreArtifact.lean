@@ -125,7 +125,7 @@ private theorem providerComponent_channels_subset
   · fin_cases componentMem <;>
       simp [GeneralFormalCircuit.channels, ProgramProviderChip.circuit,
         MemoryProviderChip.circuit, MemoryFinalizeChip.circuit, MemoryBumpChip.circuit,
-        StateBumpChip.circuit, HaltChip.circuit, circuit_norm]
+        StateBumpChip.circuit, HaltChip.circuit, SyscallInstrsChip.circuit, circuit_norm]
 
 /-- Every component of the concrete native ensemble is statically confined to its four channels. -/
 private theorem ensembleComponent_channels_subset
@@ -321,6 +321,60 @@ theorem exactNativeEnsembleWitness_preprocessedIntegerBalance {Digest : Type}
       exactNativeAllCleanAccesses_preprocessedBalance statement executionWitness
         memoryBoundaryWitness inventory data hint recount key (Or.inr keyKind)
 
+/-- The transport's `SyscallInstrs` table is the manufactured empty one. Stated twice — once
+positionally for the silence lemmas, once at `BumpDecode`'s accessor for the grounding boundary —
+because the two consumers spell the same table differently. -/
+private theorem exactNativeEnsembleWitness_syscallTable_nil {Digest : Type}
+    (statement : SP1ShardStatement (ZMod p) Digest)
+    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
+    (inventory : CanonicalPreprocessedInventory executionWitness)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (Soundness.syscallInstrsTable (exactNativeEnsembleWitness statement executionWitness
+      memoryBoundaryWitness inventory data hint)).table = [] := by
+  show (extractedSyscallInstrsTable (p := p) data).table = []
+  exact SyscallInstrsChip.traceTable_table _ _ _
+
+private theorem exactNativeEnsembleWitness_syscallTable_nil' {Digest : Type}
+    (statement : SP1ShardStatement (ZMod p) Digest)
+    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
+    (inventory : CanonicalPreprocessedInventory executionWitness)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ∀ t : Air.Flat.Table (ZMod p),
+      (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data
+        hint).tables[Soundness.syscallTablePosition]? = some t → t.table = [] := by
+  intro t ht
+  have hpos : (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness
+      inventory data hint).tables[Soundness.syscallTablePosition]?
+      = some (Soundness.syscallInstrsTable (exactNativeEnsembleWitness statement executionWitness
+        memoryBoundaryWitness inventory data hint)) := rfl
+  rw [hpos] at ht
+  rw [← Option.some.inj ht]
+  exact exactNativeEnsembleWitness_syscallTable_nil statement executionWitness
+    memoryBoundaryWitness inventory data hint
+
+/-- **The transport meets the interim syscall boundary.** Three fields come from the manufactured
+empty `SyscallInstrs` table; `haltTablePresent` comes from the manufactured one-padding-row Halt
+table, which the transport supplies precisely because the exact v6.4.0 cluster has none. -/
+private theorem exactNativeEnsembleWitness_syscallTableInactive {Digest : Type}
+    (statement : SP1ShardStatement (ZMod p) Digest)
+    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
+    (inventory : CanonicalPreprocessedInventory executionWitness)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    Soundness.SyscallTableInactive (exactNativeEnsembleWitness statement executionWitness
+      memoryBoundaryWitness inventory data hint) where
+  noActiveRows := by
+    rw [Soundness.realSyscallInstrsRows, exactNativeEnsembleWitness_syscallTable_nil]
+    rfl
+  memoryProducedNil := by
+    rw [Soundness.typedTableInteractionsWith, exactNativeEnsembleWitness_syscallTable_nil]
+    rfl
+  memoryConsumedNil := by
+    rw [Soundness.typedTableInteractionsWith, exactNativeEnsembleWitness_syscallTable_nil]
+    rfl
+  haltTablePresent := by
+    show (extractedHaltTable (p := p) data).table ≠ []
+    simp [extractedHaltTable, HaltChip.haltTraceInputs, Air.Flat.Table.build_table]
+
 /-- The State/Memory endpoint plus the recount-derived Byte/Program balances and exact count bounds
 give Clean balance on every native channel.  The access-list permutation is reflexive because each
 integer-balance fact is stated on the canonical `Interaction.toAccess` projection; channel
@@ -351,9 +405,13 @@ theorem exactNativeEnsembleWitness_balancedChannels {Digest : Type}
         memoryBoundaryWitness inventory data hint recount channel (Or.inr program)
     · exact global.remainingIntegerBalance channel (Or.inr (Or.inl memory))
     · exact global.remainingIntegerBalance channel (Or.inr (Or.inr exit))
-    · rw [syscall, Soundness.witness_syscallChannel_silent]
+    · rw [syscall, Soundness.witness_syscallChannel_silent _
+        (exactNativeEnsembleWitness_syscallTable_nil' statement executionWitness
+          memoryBoundaryWitness inventory data hint)]
       exact fun k => rfl
-    · rw [publicValues, Soundness.witness_publicValuesChannel_silent]
+    · rw [publicValues, Soundness.witness_publicValuesChannel_silent _
+        (exactNativeEnsembleWitness_syscallTable_nil' statement executionWitness
+          memoryBoundaryWitness inventory data hint)]
       exact fun k => rfl
   change BalancedInteractions
     ((exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
@@ -386,7 +444,9 @@ theorem exactNativeArtifact_supportedCoreNativeRelation {Digest : Type}
     Soundness.SupportedCoreNativeRelation
       (exactNativeStatement program statement)
       (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint) := by
-  refine ⟨⟨rfl, ?_, ?_⟩, global.semanticBoundary⟩
+  refine ⟨⟨rfl, ?_, ?_⟩, global.semanticBoundary,
+    exactNativeEnsembleWitness_syscallTableInactive statement executionWitness
+      memoryBoundaryWitness inventory data hint⟩
   · exact exactNativeEnsembleWitness_constraints statement executionWitness
       memoryBoundaryWitness inventory data hint transport boundary
   · exact exactNativeEnsembleWitness_balancedChannels program statement executionWitness

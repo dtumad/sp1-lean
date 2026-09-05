@@ -552,8 +552,7 @@ private theorem syscall_pcArm_mem_subcircuits :
       ((SyscallInstrsChip.main (varFromOffset SyscallInstrsChip.Inputs 0 :
         Var SyscallInstrsChip.Inputs (ZMod p))).operations
           (size SyscallInstrsChip.Inputs)).subcircuits := by
-  simp only [syscallPcVar, SyscallInstrsChip.main, circuit_norm, List.mem_cons,
-    List.mem_singleton]
+  simp only [syscallPcVar, SyscallInstrsChip.main, circuit_norm, List.mem_cons]
 
 /-- The decoded syscall row's four `PcArm`-relevant fields, in the evaluated-`varFromOffset` form.
 Written with the environment *inline*: a `set`- or `let`-bound environment is one simp `zeta` step

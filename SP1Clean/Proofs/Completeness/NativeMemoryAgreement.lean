@@ -889,7 +889,7 @@ theorem nativeTrace_memoryLedgerPermHandoffChains
   rw [memoryLedger_eq]
   simp only [active_append, nativeTrace_activeMemoryInitLedger,
     nativeTrace_activeMemoryFinalizeLedger, haltInactive, syscallInactive,
-    List.append_nil, List.nil_append]
+    List.append_nil]
   have projected' :
       (active (physicalInstructionMemoryLedger trace) ++
         (initLedger ++ (finalizeLedger ++ active (physicalMemoryBumpLedger trace)))).Perm
