@@ -517,6 +517,76 @@ theorem sp1ProviderTables_channels_subset_core : ∀ c ∈ sp1ProviderTables (p 
       Or.inl memoryFinalizeProvider_channels_subset, Or.inl memoryBumpProvider_channels_subset,
       Or.inl stateBumpProvider_channels_subset, Or.inl haltProvider_channels_subset, Or.inr rfl]
 
+/-- The `SyscallInstrs` table's stable ensemble position. Spelled here as well as in `BumpDecode`
+(whose `syscallInstrsIndex` is definitionally this same number) because this file sits *below* that
+one and cannot cite it. -/
+def syscallTablePosition : ℕ := instructionTableCount + stateSilentProviderTableCount + 2
+
+/-- The syscall table is the twenty-ninth provider, and every other provider id is something else.
+Stated over `Fin` rather than a bounded `ℕ` so `decide` sees a *closed* proposition: an `ℕ`-indexed
+`getElem` carries its bounds proof as a term, and after `interval_cases` that proof is a local
+hypothesis, which `decide` refuses to look at. -/
+theorem providerTableId_all_ne_syscall :
+    ∀ j : Fin ProviderTableId.all.length, j.val ≠ 29 →
+      ProviderTableId.all[j] ≠ .syscallInstrs := by decide
+
+/-- **Every provider but the syscall table stays on the five core buses.** The disjunctive form
+`sp1ProviderTables_channels_subset_core` is what a *membership* argument can offer; this is the same
+content keyed on the id, which is what a *positional* argument needs. -/
+theorem providerTableFor_channels_subset_core_of_ne (id : ProviderTableId)
+    (hne : id ≠ .syscallInstrs) :
+    (providerTableFor (p := p) id).circuit.channels ⊆ sp1CoreChannels (p := p) := by
+  cases id with
+  | byte provider =>
+      cases provider
+      exacts [u8RangeProvider_channels_subset, msbProvider_channels_subset,
+        andProvider_channels_subset, orProvider_channels_subset,
+        xorProvider_channels_subset, ltuProvider_channels_subset]
+  | range width => exact rangeProvider_channels_subset width
+  | program => exact programProvider_channels_subset
+  | memoryInit => exact memoryInitProvider_channels_subset
+  | memoryFinalize => exact memoryFinalizeProvider_channels_subset
+  | memoryBump => exact memoryBumpProvider_channels_subset
+  | stateBump => exact stateBumpProvider_channels_subset
+  | halt => exact haltProvider_channels_subset
+  | syscallInstrs => exact absurd rfl hne
+
+/-- **Positional core-only classification.** Every ensemble position except the syscall table's is
+core-only. This is the form that lets a witness-level argument reach the *table* rather than only its
+component: the index is what identifies the physical row list, and `Component` equality cannot be
+refuted (the components differ in their `Input` type map, and type-level injectivity is not
+available). -/
+theorem sp1Ensemble_tables_channels_subset_core_of_ne (i : ℕ)
+    (hi : i < (sp1Ensemble (p := p)).tables.length) (hne : i ≠ syscallTablePosition) :
+    ((sp1Ensemble (p := p)).tables[i]'hi).circuit.channels ⊆ sp1CoreChannels (p := p) := by
+  have hlen : (sp1Ensemble (p := p)).tables.length = 55 := by
+    simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
+  rw [hlen] at hi
+  have hpos : syscallTablePosition = 54 := by
+    simp [syscallTablePosition, instructionTableCount, stateSilentProviderTableCount]
+  rw [hpos] at hne
+  by_cases hlt : i < 25
+  · have hget : ((sp1Ensemble (p := p)).tables[i]'(by rw [hlen]; omega))
+        = (sp1Tables (p := p))[i]'(by rw [sp1Tables_length]; exact hlt) := by
+      change ((sp1Tables (p := p) ++ sp1ProviderTables (p := p))[i]'_) = _
+      rw [List.getElem_append_left]
+    rw [hget]
+    exact sp1Tables_channels_subset _ (List.getElem_mem _)
+  · have hall : ProviderTableId.all.length = 30 := by decide
+    have hj : i - 25 < ProviderTableId.all.length := by omega
+    have hget : ((sp1Ensemble (p := p)).tables[i]'(by rw [hlen]; omega))
+        = providerTableFor (p := p) (ProviderTableId.all[i - 25]'hj) := by
+      change ((sp1Tables (p := p) ++ sp1ProviderTables (p := p))[i]'_) = _
+      rw [List.getElem_append_right (by rw [sp1Tables_length]; omega)]
+      simp only [sp1Tables_length, sp1ProviderTables, List.getElem_map]
+    -- Rewrite the *channel list*, not the component: `Component` is dependent, so `rw` on it
+    -- generates an ill-typed motive, while `c.circuit.channels` has a non-dependent codomain.
+    have hch := congrArg (fun c : Component (ZMod p) => c.circuit.channels) hget
+    rw [hch]
+    have hne29 : i - 25 ≠ 29 := by omega
+    exact providerTableFor_channels_subset_core_of_ne (p := p) _
+      (providerTableId_all_ne_syscall ⟨i - 25, hj⟩ hne29)
+
 /-- **Every registered table stays on the five core buses, with exactly one exception.**
 
 The `SyscallInstrs` table is that exception, and naming it here is the honest form: it is the only
@@ -578,25 +648,33 @@ thing that stops being true when the compiler learns to emit syscall rows, which
 which these buses need a real balance argument instead of silence. -/
 theorem witness_interactionsWith_eq_nil_of_not_core
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (hempty : ∀ table ∈ witness.allTables,
-      table.component = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) → table.table = [])
+    (hEmpty : ∀ t, witness.tables[syscallTablePosition]? = some t → t.table = [])
     {ch : RawChannel (ZMod p)} (hch : ch ∉ sp1CoreChannels (p := p)) :
     witness.interactionsWith ch = [] := by
   rw [Air.Flat.EnsembleWitness.interactionsWith, List.flatMap_eq_nil_iff]
   intro table htable
-  rcases sp1AllTables_channels_subset_core _ (witness_table_component_mem witness htable) with
-    hcore | hsyscall
-  · exact Air.Flat.Table.interactionsWith_nil_of_channel_not_mem fun hmem => hch (hcore hmem)
-  · rw [Air.Flat.Table.interactionsWith_eq_filter, Air.Flat.Table.interactions,
-      hempty table htable hsyscall]
-    rfl
+  rw [Air.Flat.EnsembleWitness.allTables, List.mem_cons] at htable
+  rcases htable with rfl | htable
+  · refine Air.Flat.Table.interactionsWith_nil_of_channel_not_mem fun hmem => hch ?_
+    rw [Air.Flat.EnsembleWitness.verifierTable_component] at hmem
+    exact verifier_channels_subset hmem
+  · obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp htable
+    have hlen : i < (sp1Ensemble (p := p)).tables.length := by rw [witness.same_length]; exact hi
+    by_cases hidx : i = syscallTablePosition
+    · subst hidx
+      rw [Air.Flat.Table.interactionsWith_eq_filter, Air.Flat.Table.interactions,
+        hEmpty _ (List.getElem?_eq_getElem hi)]
+      rfl
+    · refine Air.Flat.Table.interactionsWith_nil_of_channel_not_mem fun hmem => hch ?_
+      have hchan := congrArg (fun c : Component (ZMod p) => c.circuit.channels)
+        (witness.same_circuits i hlen)
+      exact sp1Ensemble_tables_channels_subset_core_of_ne i hlen hidx (hchan ▸ hmem)
 
 /-- SP1's syscall bus carries nothing while the syscall table has no rows. -/
 theorem witness_syscallChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (hempty : ∀ table ∈ witness.allTables,
-      table.component = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) → table.table = []) :
+    (hEmpty : ∀ t, witness.tables[syscallTablePosition]? = some t → t.table = []) :
     witness.interactionsWith Channels.syscallChannel.toRaw = [] :=
-  witness_interactionsWith_eq_nil_of_not_core witness hempty (by
+  witness_interactionsWith_eq_nil_of_not_core witness hEmpty (by
     simp [sp1CoreChannels_eq, Channels.syscallChannel_eq_stateChannel_false,
       Channels.syscallChannel_eq_byteChannel_false,
       Channels.syscallChannel_eq_programChannel_false,
@@ -605,10 +683,9 @@ theorem witness_syscallChannel_silent (witness : EnsembleWitness (sp1Ensemble (p
 
 /-- The native public-values bus carries nothing while the syscall table has no rows. -/
 theorem witness_publicValuesChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (hempty : ∀ table ∈ witness.allTables,
-      table.component = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) → table.table = []) :
+    (hEmpty : ∀ t, witness.tables[syscallTablePosition]? = some t → t.table = []) :
     witness.interactionsWith Channels.publicValuesChannel.toRaw = [] :=
-  witness_interactionsWith_eq_nil_of_not_core witness hempty (by
+  witness_interactionsWith_eq_nil_of_not_core witness hEmpty (by
     simp [sp1CoreChannels_eq, Channels.publicValuesChannel_eq_stateChannel_false,
       Channels.publicValuesChannel_eq_byteChannel_false,
       Channels.publicValuesChannel_eq_programChannel_false,

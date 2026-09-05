@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Completeness.Providers
+import SP1Clean.Soundness.EnsembleChannels
 import SP1Clean.FormalModel.TraceGen.Bump
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
 import SP1Clean.Proofs.Chips.AddChip.Complete
@@ -538,6 +539,21 @@ theorem witness_verifierTable :
   Air.Flat.verifierTable_eq_build _ _
 
 /-! ## Constraints -/
+
+/-- **The compiler's syscall table has no rows**, in the positional shape the two non-core buses'
+silence lemmas ask for. `syscallInstrsTraceInputs` is `[]` by construction (`List Empty` in, empty
+list out), so this is a property of *this compiler's trace* rather than of the chip — the chip
+genuinely speaks on seven buses. It is exactly what stops holding when the compiler learns to emit
+syscall rows. -/
+theorem witness_syscallTable_nil :
+    ∀ t : Air.Flat.Table (ZMod p),
+      trace.witness.tables[syscallTablePosition]? = some t → t.table = [] := by
+  intro t ht
+  have hpos : trace.witness.tables[syscallTablePosition]?
+      = some (trace.providerTableFor .syscallInstrs) := rfl
+  rw [hpos] at ht
+  rw [← Option.some.inj ht]
+  exact SyscallInstrsChip.traceTable_table _ _ _
 
 /--
 **The assembled witness satisfies the ensemble's constraint system.**

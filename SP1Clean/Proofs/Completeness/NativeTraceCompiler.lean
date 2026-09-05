@@ -387,9 +387,9 @@ theorem NativeTraceFootprint.interactionLengths
       Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.2.2.2.1
   · simpa only [NativeTraceFootprint.ofTrace,
       Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.2.2.2.2
-  · rw [witness_syscallChannel_silent]
+  · rw [witness_syscallChannel_silent _ trace.witness_syscallTable_nil]
     simpa using (Fact.out (p := p.Prime)).pos
-  · rw [witness_publicValuesChannel_silent]
+  · rw [witness_publicValuesChannel_silent _ trace.witness_syscallTable_nil]
     simpa using (Fact.out (p := p.Prime)).pos
 
 /-- Public limb well-formedness makes the arbitrary-shard prover-data clock representable. -/

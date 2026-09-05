@@ -343,9 +343,9 @@ theorem canonicalClosure_balancedChannels_of_handoff
       (List.Perm.refl _) (hlen _ hchannel)
       (trace.canonicalClosure.balancedOn_exit hhaltClosure hhaltLenClosure hexitZero
         (hlen _ hchannel)).2
-  · rw [witness_syscallChannel_silent]
+  · rw [witness_syscallChannel_silent _ trace.canonicalClosure.witness_syscallTable_nil]
     exact balancedInteractions_nil
-  · rw [witness_publicValuesChannel_silent]
+  · rw [witness_publicValuesChannel_silent _ trace.canonicalClosure.witness_syscallTable_nil]
     exact balancedInteractions_nil
 
 /--
@@ -394,8 +394,8 @@ theorem balanced_of_closure_and_handoff
   · exact trace.balancedOn_of_closure hwf hfit hsupply hnonpos _ hchannel (Or.inr rfl) hlenc
   · exact trace.balancedOn_of_handoff _ hchannel InteractionKind.Memory rfl memoryKeys hmemory hlenc
   · exact trace.balancedOn_exit hhalt hhaltLen hexitZero hlenc
-  · exact trace.balancedOn_of_interactions_nil (witness_syscallChannel_silent _)
-  · exact trace.balancedOn_of_interactions_nil (witness_publicValuesChannel_silent _)
+  · exact trace.balancedOn_of_interactions_nil (witness_syscallChannel_silent _ trace.witness_syscallTable_nil)
+  · exact trace.balancedOn_of_interactions_nil (witness_publicValuesChannel_silent _ trace.witness_syscallTable_nil)
 
 /-- **A balanced trace assembles into a witness whose channels balance.** The exact integer ledger
 casts to Clean's field balance without a binary-multiplicity restriction; channel homogeneity is
