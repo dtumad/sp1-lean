@@ -218,6 +218,141 @@ theorem RowWiring.advance_atG {kind : ChipKind p}
   exact advance inp cols data program state real spec hcfg hrom hpc operands decode
     (ready state operands sourceA pulls)
 
+/-- **An ordinary instruction row's step fact, at the event trajectory.** The twin of
+`syscallStepFact_of_advance`, and the same three-part linkage: the row's window is the transcript's
+event `n`, the trajectory's successor there is `try_step` because that event is `.ordinary`, and the
+row's own `advance` says what `try_step` does.
+
+`positioned` is the one genuinely new hypothesis relative to the Sail version. On an all-ordinary
+transcript it is free; on a mixed one it is the fact that this row is *not* sitting where a syscall
+event sits, which no row-local datum can decide. -/
+theorem ordinaryStepFactG_of_advance {kind : ChipKind p}
+    {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
+    (handler : ExecutableSyscallHandler) (events : List ExecutionEvent)
+    (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
+    {data : ProverData (ZMod p)} {program : GuestProgram}
+    (real : (kind.view inp cols).is_real = 1)
+    (spec : kind.chipSpec inp cols data)
+    (decode : Target.decodedInROM program (programAccess (kind.view inp cols)).toRow)
+    (ready : ∀ s : SailState, ValueOperandsBound (kind.view inp cols) s →
+      SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
+        kind.advanceReady inp cols program s)
+    (initial : SailState) (initialClock : ℕ)
+    (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
+      eventTrajectory handler program events initial m = some st → SailStep st nx →
+        RomLoaded program st → RomLoaded program nx)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat rf.statePull = (eventTimeline events initialClock).start n →
+      events[n]? = some ExecutionEvent.ordinary) :
+    LocalStepFactG program (eventTrajectory handler program events initial) initial
+      (eventTimeline events initialClock) rf := by
+  intro hpull hcurr
+  obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
+  set tl := eventTimeline events initialClock with tlDef
+  have hev := positioned n htime
+  have hdur : Semantics.durationAt events n = 8 := by simp [Semantics.durationAt, hev]
+  have hstartSucc : tl.start (n + 1) = tl.start n + 8 := by
+    rw [tlDef, eventTimeline_start_succ, hdur]
+  obtain ⟨s', hstep, heff⟩ := wiring.advance_atG advance real spec decode ready htraj htime
+    hpc hrom hcfg (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.2⟩)
+  -- the trajectory's successor here *is* `try_step`, because this transcript position is ordinary
+  have hsucc : eventTrajectory handler program events initial (n + 1) = some s' := by
+    rw [Semantics.eventTrajectory_succ, hev]
+    dsimp only
+    rw [htraj, Option.bind_some, Semantics.executeEvent?_ordinary]
+    exact TimedGrounding.stepOnce_of_sailStep hstep
+  have hpushTime : StateMsg.timeNat rf.statePush = tl.start (n + 1) := by
+    rw [hstartSucc, wiring.time8, htime]
+  have hpulls : MemoryPullsBound rf state := by
+    intro mp hmp
+    have hc := (hcurr mp hmp).2.2
+    rw [wiring.readTime mp hmp, htime] at hc
+    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+  refine ⟨⟨n + 1, s', hsucc, hpushTime, ?_, codeMemoryCompatible htraj hstep hrom,
+    heff.cfg hcfg⟩, ?_⟩
+  · rw [wiring.statePush_eq]
+    show s'.regs.get? Register.PC
+      = some (StateMsg.pcBits (statePushOfView (kind.view inp cols)))
+    rw [pcBits_statePushOfView]
+    exact heff.pc
+  · -- every pushed Memory record is true, window-locally
+    intro m hm
+    rcases wiring.push_classified m hm with
+      ⟨mp, hmp, hloc, hval, hlo, hhi, hramSafe⟩ |
+      ⟨hw, hu64, ⟨idx, hlocw, hidx⟩, hvalw, htw⟩ |
+      ⟨hnw, mp, hmp, ⟨idx, hlocr⟩, hloc, hval, htr⟩ |
+      ⟨_hnw, hu64, hloc, hzero, htimeZero⟩ |
+      ⟨cell, hu64, hloc, htimeRam, hpost⟩
+    · -- read-back inside the pre-effect region
+      have hc := (hcurr mp hmp).2.2
+      rw [wiring.readTime mp hmp] at hc
+      have hu : Channels.MemoryMsg.isU64 m := by
+        show Word.isU64 m.value
+        rw [hval]
+        exact (hcurr mp hmp).1
+      refine ⟨hu, wiring.push_clkBound m hm, ?_⟩
+      rw [hloc, hval]
+      rw [htime] at hc
+      -- Registers shift freely inside the pre-write half; a RAM read-back either sits at the window
+      -- start already, or reads the post-state — where `hramSafe` says this row wrote no cell.
+      cases hlocmp : Semantics.MemoryMsg.locOf mp.1 with
+      | reg i =>
+        rw [hlocmp] at hc
+        exact TimedGrounding.localValueAtG_shift_reg (n := n)
+          (Or.inl ⟨le_rfl, by omega, by omega, by omega⟩) hc
+      | ram a =>
+        rw [hlocmp] at hc
+        by_cases heq : Semantics.MemoryMsg.timeNat m = tl.start n
+        · rw [heq]; exact hc
+        · unfold Semantics.LocalValueAtG at hc ⊢
+          rw [TimedGrounding.microValueG_ram_pre (n := n) le_rfl (by omega), htraj,
+            Option.bind_some] at hc
+          rw [TimedGrounding.microValueG_ram_post (n := n) (by omega)
+            (by rw [hstartSucc]; omega), hsucc, Option.bind_some]
+          rw [locContent_ram_congr (heff.mem.1 (hramSafe a (hloc.trans hlocmp))) a]
+          exact hc
+    · -- the `op_a` write, at the `+ 4` effect slot
+      refine ⟨hu64, wiring.push_clkBound m hm, ?_⟩
+      rw [hlocw, hvalw, htw, htime]
+      show Semantics.microValueG _ _ _ (MemLoc.reg idx) (tl.start n + 4) = _
+      rw [TimedGrounding.microValueG_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
+        Option.bind_some]
+      have hregs := heff.regs
+      rw [if_pos hw] at hregs
+      exact hregs.1 idx hidx
+    · -- a non-writing row's `op_a` read-back at the `+ 4` slot
+      have hlocmp : Semantics.MemoryMsg.locOf mp.1 = MemLoc.reg idx := hloc.symm.trans hlocr
+      have hc := (hcurr mp hmp).2.2
+      rw [wiring.readTime mp hmp, hlocmp, htime] at hc
+      have hu : Channels.MemoryMsg.isU64 m := by
+        show Word.isU64 m.value
+        rw [hval]
+        exact (hcurr mp hmp).1
+      refine ⟨hu, wiring.push_clkBound m hm, ?_⟩
+      rw [hlocr, hval, htr, htime]
+      show Semantics.microValueG _ _ _ (MemLoc.reg idx) (tl.start n + 4) = _
+      rw [TimedGrounding.microValueG_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
+        Option.bind_some]
+      have hregs := heff.regs
+      rw [if_neg (by simp [hnw])] at hregs
+      show locContent s' (MemLoc.reg idx) = some (Word.toBitVec64 mp.1.value)
+      rw [show locContent s' (MemLoc.reg idx) = s'.get_reg? idx from rfl, hregs idx]
+      rwa [TimedGrounding.localValueAtG_stepStart_iff htraj] at hc
+    · -- the factored `rd = x0` destination push
+      refine ⟨hu64, wiring.push_clkBound m hm, ?_⟩
+      rw [hloc, htimeZero, htime]
+      show Semantics.microValueG _ _ _ (MemLoc.reg 0#5) (tl.start n + 4) = _
+      rw [TimedGrounding.microValueG_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
+        Option.bind_some]
+      simp [locContent, SailState.get_reg?, hzero]
+    · -- a genuine RAM write at the `+ 1` effect slot
+      refine ⟨hu64, wiring.push_clkBound m hm, ?_⟩
+      rw [hloc, htimeRam, htime]
+      show Semantics.microValueG _ _ _ (MemLoc.ram cell) (tl.start n + 1) = _
+      rw [TimedGrounding.microValueG_ram_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
+        Option.bind_some]
+      exact hpost heff hpulls
+
 /-! ## The row's facts, and its step obligation -/
 
 /-- The `RowFacts` a syscall row contributes: its State edge and its three register touches. Unlike
