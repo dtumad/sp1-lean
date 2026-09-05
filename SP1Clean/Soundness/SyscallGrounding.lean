@@ -1007,6 +1007,37 @@ theorem walkedRow_pullAt [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
   rw [Semantics.eventTimeline_start, transcriptOf_prefixSum data rows k (by omega), ← headTime]
   exact position
 
+omit [Fact (2 ^ 17 < p)] in
+/-- **A batch of syscall rows' walked pushes, in flat form** — stated over *abstract* rows, which is
+the whole point: the same identity at the witness's concrete 65-column decode exceeds the depth
+budget, while here every argument is a variable. The witness-level absorption
+(`syscall_pushesAt_eq`) is this lemma plus one `List.map_map`. -/
+theorem syscallRows_pushesAt (rs : List (SyscallInstrsChip.Inputs (ZMod p)))
+    (loc : Semantics.MemLoc) :
+    TimedGrounding.pushesAt (rs.map syscallRowFacts) loc
+      = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(rs.flatMap fun r =>
+            [SyscallInstrsChip.memPushedMessage r r.op_a 4 r.op_a_value,
+             SyscallInstrsChip.memPushedMessage r r.op_b 3 r.op_b_memory.prev_value,
+             SyscallInstrsChip.memPushedMessage r r.op_c 2 r.op_c_memory.prev_value])
+            : Multiset (Channels.MemoryMsg (ZMod p))) := by
+  rw [TimedGrounding.pushesAt_map_eq_filter_flatMap syscallRowFacts loc rs]
+  simp only [syscallRowFacts_memPushes]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The pulled twin of `syscallRows_pushesAt`, over abstract rows for the same reason. -/
+theorem syscallRows_pullsAt (rs : List (SyscallInstrsChip.Inputs (ZMod p)))
+    (loc : Semantics.MemLoc) :
+    TimedGrounding.pullsAt (rs.map syscallRowFacts) loc
+      = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(rs.flatMap fun r =>
+            [SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a,
+             SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b,
+             SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c])
+            : Multiset (Channels.MemoryMsg (ZMod p))) := by
+  rw [TimedGrounding.pullsAt_map_eq_filter_flatMap syscallRowFacts loc rs]
+  simp only [syscallRowFacts_memPulls, List.map_cons, List.map_nil]
+
 /-- **`walkE`'s timeline hypothesis, from the walk order.** The walk needs each row's push to land
 on the *next* timeline start; the row supplies its own window width, and `durationAt_transcriptOf`
 says the transcript reports exactly that width at the row's index. The two then agree by

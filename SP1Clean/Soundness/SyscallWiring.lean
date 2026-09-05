@@ -189,4 +189,57 @@ theorem syscallInstrsRow_operands
     simpa [Target.ecallProgramRow, Semantics.rowOfMsg,
       SyscallInstrsChip.programMessage] using h.symm
 
+/-! ## Absorbing the syscall table's Memory summand
+
+`memoryBalance_of_alignsWith` carries the `SyscallInstrs` table's produced and consumed Memory
+messages as a *side term* on both sides, exactly as it carries the Halt table's. That is the right
+shape for a table whose rows are extracted after the walk. It is the wrong shape for a table whose
+rows are *walked*: the walk already accounts for a row's touches through `pushesAt`/`pullsAt`, so
+carrying them again would double-count.
+
+The two lemmas below are the absorption. They say the side term *is* the walked term, so the summand
+can be dropped from the balance's conclusion rather than tracked. Note that
+`memoryFrontierBalance` keeps its syscall summand — it is the raw ledger form and correct there;
+what loses the term is this balance's conclusion. -/
+
+/-- The syscall table's produced Memory messages at a location are exactly its rows' walked pushes. -/
+theorem syscall_pushesAt_eq
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (syscallRows : List (Array (ZMod p)))
+    (exhaustive : syscallRows.Perm (realSyscallInstrsRows witness))
+    (loc : Semantics.MemLoc) :
+    TimedGrounding.pushesAt
+        (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) loc
+      = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+            memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
+  rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row))
+      = (syscallRows.map (syscallInstrsRow (syscallInstrsTable witness))).map syscallRowFacts from
+        by rw [List.map_map]; rfl,
+    syscallRows_pushesAt, syscallInstrs_producedMessages_eq witness constraints,
+    List.flatMap_map]
+  refine congrArg (Multiset.filter _) ?_
+  rw [Multiset.coe_eq_coe]
+  exact List.Perm.flatMap_right _ exhaustive
+
+/-- The consumed twin of `syscall_pushesAt_eq`. -/
+theorem syscall_pullsAt_eq
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (syscallRows : List (Array (ZMod p)))
+    (exhaustive : syscallRows.Perm (realSyscallInstrsRows witness))
+    (loc : Semantics.MemLoc) :
+    TimedGrounding.pullsAt
+        (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) loc
+      = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+            memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
+  rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row))
+      = (syscallRows.map (syscallInstrsRow (syscallInstrsTable witness))).map syscallRowFacts from
+        by rw [List.map_map]; rfl,
+    syscallRows_pullsAt, syscallInstrs_consumedMessages_eq witness constraints,
+    List.flatMap_map]
+  refine congrArg (Multiset.filter _) ?_
+  rw [Multiset.coe_eq_coe]
+  exact List.Perm.flatMap_right _ exhaustive
+
 end SP1Clean.Soundness

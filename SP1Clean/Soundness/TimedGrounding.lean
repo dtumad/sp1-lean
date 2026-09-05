@@ -635,6 +635,35 @@ def pullsAt (rows : List (RowFacts p)) (loc : MemLoc) : Multiset (MemoryMsg (ZMo
 def pushesAt (rows : List (RowFacts p)) (loc : MemLoc) : Multiset (MemoryMsg (ZMod p)) :=
   (rows.map fun r => (↑(rowPushesAt r loc) : Multiset (MemoryMsg (ZMod p)))).sum
 
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- **A batch's pushes at a location are the location-filter of its flattened push list.** The
+bridge between the walk's per-row view (`pushesAt`) and the ledger's flat view
+(`producedMessages`), which is what lets a table's Memory summand be *absorbed* into the walk rather
+than carried beside it. -/
+theorem pushesAt_map_eq_filter_flatMap {α : Type*} (f : α → RowFacts p) (loc : MemLoc) :
+    ∀ l : List α, pushesAt (l.map f) loc
+      = Multiset.filter (fun m => MemoryMsg.locOf m = loc)
+          (↑(l.flatMap fun a => (f a).memPushes) : Multiset (MemoryMsg (ZMod p)))
+  | [] => rfl
+  | a :: l => by
+      rw [List.map_cons, pushesAt, List.map_cons, List.sum_cons, ← pushesAt,
+        pushesAt_map_eq_filter_flatMap f loc l, List.flatMap_cons, ← Multiset.coe_add,
+        Multiset.filter_add]
+      rfl
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- The pulled twin of `pushesAt_map_eq_filter_flatMap`. -/
+theorem pullsAt_map_eq_filter_flatMap {α : Type*} (f : α → RowFacts p) (loc : MemLoc) :
+    ∀ l : List α, pullsAt (l.map f) loc
+      = Multiset.filter (fun m => MemoryMsg.locOf m = loc)
+          (↑(l.flatMap fun a => (f a).memPulls.map (·.1)) : Multiset (MemoryMsg (ZMod p)))
+  | [] => rfl
+  | a :: l => by
+      rw [List.map_cons, pullsAt, List.map_cons, List.sum_cons, ← pullsAt,
+        pullsAt_map_eq_filter_flatMap f loc l, List.flatMap_cons,
+        ← Multiset.coe_add, Multiset.filter_add]
+      rfl
+
 /-! ## List/multiset helpers -/
 
 lemma exists_min_by {α : Type} (f : α → ℕ) :
