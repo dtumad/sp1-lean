@@ -209,6 +209,24 @@ lemma localValueAtG_shift_window {traj : Trajectory} {initial : SailState} {tl :
     rw [readWindow_ram] at hhi hhi'
     exact localValueAtG_shift_ram (Or.inl ⟨hlo, by omega, hlo', by omega⟩) h
 
+omit [Fact (2 ^ 17 < p)] in
+/-- **Currency at a window start**, location-generic. At `tl.start n` every location is still
+pre-effect — offset `0` is below both `regEffectOffset` and `ramEffectOffset` — so a
+`LocalValueAtG` fact there *is* the trajectory state's content at that location.
+
+This is the `G` twin of `localValueAt_stepStart_iff`, and it is the whole reason an ordinary row's
+step fact can be stated over an arbitrary trajectory: `RowWiring.advance_at` consumes its
+`SailChain` argument *only* through the Sail version of this iff, never to reach the chip's
+`advance`, which needs the state alone. -/
+lemma localValueAtG_stepStart_iff {traj : Trajectory} {initial state : SailState} {tl : Timeline}
+    {loc : MemLoc} {v : Word (ZMod p)} {n : ℕ} (htraj : traj n = some state) :
+    LocalValueAtG traj initial tl loc (tl.start n) v ↔
+      locContent state loc = some (Word.toBitVec64 v) := by
+  unfold LocalValueAtG
+  cases loc with
+  | reg i => rw [microValueG_reg_pre (n := n) le_rfl (by omega), htraj, Option.bind_some]
+  | ram a => rw [microValueG_ram_pre (n := n) le_rfl (by omega), htraj, Option.bind_some]
+
 /-! ## The walk
 
 The proof is `walkT`'s, with `chainState initial` replaced by the trajectory parameter throughout.

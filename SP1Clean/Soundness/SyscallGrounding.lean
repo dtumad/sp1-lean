@@ -159,6 +159,65 @@ theorem syscallAdvancePayload_full :
       simpa using h1
     · exact fun h => SailState.isInitialized_insert _ (SailState.isInitialized_insert s h _ _) _ _
 
+/-! ## The *ordinary* row's step fact, at the event trajectory
+
+A syscall row is not the only row whose step fact has to move. On a shard that contains one, every
+*instruction* row's step fact must also be stated at `eventTrajectory` rather than at the Sail
+trajectory, because the two stop agreeing the moment a syscall event sits between them.
+
+The port is small, and the reason is worth recording: `RowWiring.advance_at` consumes its
+`SailChain` argument *only* through `localValueAt_stepStart_iff`, to turn the row's currency into
+the operand bounds the chip's `advance` wants — and `advance` itself needs the state, not the chain.
+Replacing that one appeal with `localValueAtG_stepStart_iff` makes the whole derivation
+trajectory-agnostic. -/
+
+/-- `RowWiring.advance_at` over an arbitrary trajectory: the chain becomes `traj n = some state`,
+and the row's window start becomes `tl.start n`. -/
+theorem RowWiring.advance_atG {kind : ChipKind p}
+    {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
+    (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
+    {data : ProverData (ZMod p)} {program : GuestProgram}
+    (real : (kind.view inp cols).is_real = 1)
+    (spec : kind.chipSpec inp cols data)
+    (decode : Target.decodedInROM program (programAccess (kind.view inp cols)).toRow)
+    (ready : ∀ s : SailState, ValueOperandsBound (kind.view inp cols) s →
+      SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
+        kind.advanceReady inp cols program s)
+    {traj : Semantics.Trajectory} {initial state : SailState} {tl : Semantics.Timeline} {n : ℕ}
+    (htraj : traj n = some state)
+    (htime : StateMsg.timeNat rf.statePull = tl.start n)
+    (hpc : state.regs.get? Register.PC = some (StateMsg.pcBits rf.statePull))
+    (hrom : RomLoaded program state) (hcfg : SailConfigured state)
+    (curr : ∀ mp ∈ rf.memPulls, Channels.MemoryMsg.isU64 mp.1 ∧
+      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+    ∃ s', SailStep state s' ∧ RowEffect program (kind.view inp cols) state s' := by
+  have operands : ValueOperandsBound (kind.view inp cols) state := by
+    constructor
+    · intro index himm hidx
+      obtain ⟨mp, hmp, hloc, hval⟩ := wiring.opB_pull index himm hidx
+      have hc := (curr mp hmp).2
+      rw [hloc, wiring.readTime mp hmp, htime, hval] at hc
+      exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+    · intro index himm hidx
+      obtain ⟨mp, hmp, hloc, hval⟩ := wiring.opC_pull index himm hidx
+      have hc := (curr mp hmp).2
+      rw [hloc, wiring.readTime mp hmp, htime, hval] at hc
+      exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+  have sourceA : SourceAValueBound (kind.view inp cols) state := by
+    intro index hidx
+    obtain ⟨mp, hmp, hloc, hval⟩ := wiring.opA_pull index hidx
+    have hc := (curr mp hmp).2
+    rw [hloc, wiring.readTime mp hmp, htime, hval] at hc
+    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+  have pulls : MemoryPullsBound rf state := by
+    intro mp hmp
+    have hc := (curr mp hmp).2
+    rw [wiring.readTime mp hmp, htime] at hc
+    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+  rw [wiring.statePull_eq, pcBits_statePullOfView] at hpc
+  exact advance inp cols data program state real spec hcfg hrom hpc operands decode
+    (ready state operands sourceA pulls)
+
 /-! ## The row's facts, and its step obligation -/
 
 /-- The `RowFacts` a syscall row contributes: its State edge and its three register touches. Unlike
