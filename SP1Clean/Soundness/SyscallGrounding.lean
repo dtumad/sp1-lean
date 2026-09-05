@@ -961,6 +961,52 @@ theorem positioned_of_walkOrder [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
   subst hnk
   exact transcriptOf_getElem? data rows n hk
 
+/-- The transcript's prefix-summed durations are the walk order's own prefix-summed widths. This is
+the arithmetic that replaces `8 * k` once a shard can contain a 264-tick row, and it is exact rather
+than approximate because `durationAt_transcriptOf` matches the transcript index for index. -/
+theorem transcriptOf_prefixSum (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) :
+    ∀ k : ℕ, k ≤ rows.length →
+      ((List.range k).map (Semantics.durationAt (transcriptOf data rows))).sum
+        = ((rows.take k).map WalkedRow.duration).sum := by
+  intro k
+  induction k with
+  | zero => intro _; rfl
+  | succ k ih =>
+      intro hk
+      have hklt : k < rows.length := by omega
+      rw [List.range_succ, List.map_append, List.sum_append, ih (by omega),
+        List.take_add_one, List.map_append, List.sum_append,
+        List.getElem?_eq_getElem hklt]
+      simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, Option.toList_some]
+      rw [durationAt_transcriptOf data rows k hklt]
+
+/-- **Each walked row's pull time is its own timeline start.** The State walk telescopes the row
+widths — `statePullTime_of_stateWalk_durations`, which is why that lemma had to be generalized off
+`DecodedInstructionRow` — and `transcriptOf_prefixSum` says the transcript reports the same sum.
+
+Together with `positioned_of_walkOrder` this is the whole clock coupling: the bus clock a row is
+walked at and the semantic clock its event starts at are the same number, derived rather than
+assumed. -/
+theorem walkedRow_pullAt [Fact (2 ^ 24 < p)] (data : ProverData (ZMod p))
+    (rows : List (WalkedRow p)) (initialClock : ℕ) {initialMsg finalMsg : StateMsg (ZMod p)}
+    (walk : Walk.IsWalk
+      (fun r => ((WalkedRow.facts data r).statePull, (WalkedRow.facts data r).statePush))
+      initialMsg finalMsg rows)
+    (steps : ∀ r ∈ rows,
+      StateMsg.timeNat (WalkedRow.facts data r).statePush
+        = StateMsg.timeNat (WalkedRow.facts data r).statePull + r.duration)
+    (headTime : StateMsg.timeNat initialMsg = initialClock)
+    (k : ℕ) (hk : k < rows.length) :
+    StateMsg.timeNat (WalkedRow.facts data (rows[k]'hk)).statePull
+      = (Semantics.eventTimeline (transcriptOf data rows) initialClock).start k := by
+  have hsplit : rows = rows.take k ++ (rows[k]'hk) :: rows.drop (k + 1) := by
+    rw [List.getElem_cons_drop, List.take_append_drop]
+  have position := statePullTime_of_stateWalk_durations
+    (fun r => ((WalkedRow.facts data r).statePull, (WalkedRow.facts data r).statePush))
+    WalkedRow.duration walk steps (rows.take k) (rows[k]'hk) (rows.drop (k + 1)) hsplit
+  rw [Semantics.eventTimeline_start, transcriptOf_prefixSum data rows k (by omega), ← headTime]
+  exact position
+
 /-- **`walkE`'s timeline hypothesis, from the walk order.** The walk needs each row's push to land
 on the *next* timeline start; the row supplies its own window width, and `durationAt_transcriptOf`
 says the transcript reports exactly that width at the row's index. The two then agree by

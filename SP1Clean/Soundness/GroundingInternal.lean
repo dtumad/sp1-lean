@@ -4,6 +4,7 @@ import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.ProviderBindings
 import SP1Clean.Soundness.TimedGrounding
+import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.LocalExecution
 import SP1Clean.Soundness.MemoryBoundaryTruth
 import SP1Clean.Soundness.RowSoundness
@@ -319,36 +320,6 @@ theorem pcWalk_of_canonStateWalk (data : ProverData (ZMod p)) :
         rw [pcBits_canonState hp1 hp2] at tailWalk
         simpa [decodedStateEdge] using tailWalk
 
-omit [Fact (Nat.Prime p)] [Fact (2 ^ 25 < p)] in
-/-- A State-message walk with a row-dependent positive-width schedule has the expected endpoint
-clock count.  No instruction class, fixed divisor, or concrete edge map is baked into this
-telescoping theorem; the capstone instantiates it at the canonicalized decoded edge. -/
-theorem clockCount_of_stateWalk_durations {α : Type*}
-    (edge : α → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p))
-    (duration : α → ℕ) :
-    ∀ {initial final : Channels.StateMsg (ZMod p)}
-      {rows : List α},
-      Walk.IsWalk edge initial final rows →
-      (∀ decoded ∈ rows,
-        Semantics.StateMsg.timeNat (edge decoded).2 =
-          Semantics.StateMsg.timeNat (edge decoded).1 + duration decoded) →
-      Semantics.StateMsg.timeNat initial + (rows.map duration).sum =
-        Semantics.StateMsg.timeNat final := by
-  intro initial final rows walk steps
-  induction rows generalizing initial with
-  | nil =>
-      change initial = final at walk
-      subst final
-      simp
-  | cons decoded rows ih =>
-      obtain ⟨source, tail⟩ := walk
-      have sourceTime := congrArg Semantics.StateMsg.timeNat source
-      have rowStep := steps decoded List.mem_cons_self
-      have tailCount := ih tail (fun other otherMem =>
-        steps other (List.mem_cons_of_mem decoded otherMem))
-      simp only [List.map_cons, List.sum_cons]
-      omega
-
 /-- A State-message walk whose rows each advance eight ticks has the expected endpoint clock
 count.  This is the ordinary-slice specialization of the row-dependent theorem above. -/
 theorem clockCount_of_stateWalk
@@ -362,69 +333,6 @@ theorem clockCount_of_stateWalk
       Semantics.StateMsg.timeNat initial + 8 * rows.length =
         Semantics.StateMsg.timeNat final := fun walk steps => by
   simpa [Nat.mul_comm] using clockCount_of_stateWalk_durations edge (fun _ => 8) walk steps
-
-omit [Fact (Nat.Prime p)] [Fact (2 ^ 25 < p)] in
-/-- The telescoping endpoint-multiset balance of a State walk: the head plus each row's push equals the
-final plus each row's pull, as multisets.  The `List`-level companion of
-`RankedGrounding.endpointBalanced_of_balanced`, derived directly from `IsWalk` so it carries the
-`statement.publicValues` endpoints natively — the exact State-balance hypothesis `TimedGrounding.walk`
-consumes (after mapping the canonicalized edge onto the walk carrier's `statePush`/`statePull`). -/
-theorem endpointBalance_of_stateWalk {α : Type*}
-    (edge : α → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p)) :
-    ∀ {initial final : Channels.StateMsg (ZMod p)}
-      {rows : List α},
-      Walk.IsWalk edge initial final rows →
-      initial ::ₘ (↑(rows.map (fun d => (edge d).2)) :
-          Multiset (Channels.StateMsg (ZMod p)))
-        = final ::ₘ ↑(rows.map (fun d => (edge d).1)) := by
-  intro initial final rows walk
-  induction rows generalizing initial with
-  | nil =>
-      change initial = final at walk
-      subst final
-      rfl
-  | cons decoded rows ih =>
-      obtain ⟨source, tail⟩ := walk
-      have ihEq := ih tail
-      simp only [List.map_cons, Multiset.cons_coe, Multiset.coe_eq_coe] at ihEq ⊢
-      rw [source]
-      exact (List.Perm.cons initial ihEq).trans (List.Perm.swap final initial _)
-
-omit [Fact (Nat.Prime p)] [Fact (2 ^ 25 < p)] in
-/-- Locate a row in a State walk by the sum of all preceding row-dependent durations. -/
-theorem statePullTime_of_stateWalk_durations {α : Type*}
-    (edge : α → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p))
-    (duration : α → ℕ) :
-    ∀ {initial final : Channels.StateMsg (ZMod p)}
-      {rows : List α},
-      Walk.IsWalk edge initial final rows →
-      (∀ decoded ∈ rows,
-        Semantics.StateMsg.timeNat (edge decoded).2 =
-          Semantics.StateMsg.timeNat (edge decoded).1 + duration decoded) →
-      ∀ done decoded suffix, rows = done ++ decoded :: suffix →
-        Semantics.StateMsg.timeNat (edge decoded).1 =
-          Semantics.StateMsg.timeNat initial + (done.map duration).sum := by
-  intro initial final rows walk steps done
-  induction done generalizing initial rows with
-  | nil =>
-      intro decoded suffix rowsEq
-      subst rows
-      obtain ⟨source, -⟩ := walk
-      simpa using congrArg Semantics.StateMsg.timeNat source
-  | cons head done ih =>
-      intro decoded suffix rowsEq
-      subst rows
-      obtain ⟨source, tail⟩ := walk
-      have headStep := steps head List.mem_cons_self
-      have tailSteps : ∀ row ∈ done ++ decoded :: suffix,
-          Semantics.StateMsg.timeNat (edge row).2 =
-            Semantics.StateMsg.timeNat (edge row).1 + duration row := by
-        intro row rowMem
-        exact steps row (List.mem_cons_of_mem head rowMem)
-      have position := ih tail tailSteps decoded suffix rfl
-      have sourceTime := congrArg Semantics.StateMsg.timeNat source
-      simp only [List.map_cons, List.sum_cons]
-      omega
 
 /-- The State walk and each chip's proved `+8` clock contract locate every exact decoded row at its
 prefix length. This is the ordinary-slice specialization consumed by shard-local Memory currency. -/
