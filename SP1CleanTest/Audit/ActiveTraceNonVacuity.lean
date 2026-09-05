@@ -118,6 +118,9 @@ def activeProviderOccurrences : (id : ProviderTableId) → List id.Occurrence
   -- `Occurrence .halt = Empty`: the Halt table still carries its mandatory single padding row,
   -- whose anti-gated `⟨0⟩` Exit push balances the boundary verifier's ungated `⟨exit_code⟩` pull.
   | .halt => []
+  -- `Occurrence .syscallInstrs = Empty` too, and unlike the Halt table this one really is empty:
+  -- its Exit push is positively gated, so it needs no anti-gated companion.
+  | .syscallInstrs => []
 
 /-! ## The hand-assembled trace source -/
 
@@ -287,6 +290,7 @@ theorem activeTrace_wellFormed : activeTrace.WellFormed where
         trivial
     | memoryBump | stateBump => simp [activeTrace, activeProviderOccurrences] at he
     | halt => exact e.elim
+    | syscallInstrs => exact e.elim
   boundary := boundaryInputs_limbBounds _ _ _ _
 
 /-! ## Circuit-built provider tables -/
@@ -365,7 +369,8 @@ private def activeTableGroup4 : List (Table (ZMod SP1Prime)) :=
   [activeProgramBuilt, activeMemoryInitBuilt, activeMemoryFinalizeBuilt,
    Table.build MemoryBumpChip.component [] anchorData anchorHint,
    Table.build StateBumpChip.component [] anchorData anchorHint,
-   TraceNonVacuity.haltBuilt]
+   TraceNonVacuity.haltBuilt,
+   Table.build SyscallInstrsChip.component [] anchorData anchorHint]
 
 private def activeGroupedTables : List (Table (ZMod SP1Prime)) :=
   activeTableGroup0 ++
@@ -940,8 +945,8 @@ theorem activeTrace_balanced : activeTrace.Balanced := by
       exact activeExitLedger_perm
   -- the two `SyscallInstrs` buses: no registered table speaks on them yet, so both are the
   -- empty ledger's balance.
-  · exact activeTrace.balancedOn_of_interactions_nil (witness_syscallChannel_silent _)
-  · exact activeTrace.balancedOn_of_interactions_nil (witness_publicValuesChannel_silent _)
+  · exact activeTrace.balancedOn_of_interactions_nil (witness_syscallChannel_silent _ activeTrace.witness_syscallTable_nil)
+  · exact activeTrace.balancedOn_of_interactions_nil (witness_publicValuesChannel_silent _ activeTrace.witness_syscallTable_nil)
 
 /-! ## Semantic provider binding -/
 
@@ -1169,8 +1174,7 @@ theorem activeTrace_semanticBoundaryBinding :
 theorem activeTrace_generatedTrace :
     SupportedCoreGeneratedTraceRelation activeStatement activeTrace :=
   ⟨activeTrace_wellFormed, activeTrace.witness_balancedChannels activeTrace_balanced,
-    activeTrace_public_eq,
-    activeTrace_semanticBoundaryBinding⟩
+    activeTrace_public_eq, activeTrace_semanticBoundaryBinding⟩
 
 /-- The particular circuit-built witness stored in `activeTrace` satisfies the native relation.
 This keeps the non-vacuity anchor attached to the row-count and ledger theorems above, rather than
@@ -1179,7 +1183,7 @@ theorem activeTrace_nativeRelation :
     SupportedCoreNativeRelation activeStatement activeTrace.witness :=
   ⟨⟨activeTrace_public_eq, activeTrace.witness_constraints activeTrace_wellFormed,
       activeTrace.witness_balancedChannels activeTrace_balanced⟩,
-    activeTrace_semanticBoundaryBinding⟩
+    activeTrace_semanticBoundaryBinding, activeTrace.syscallTableInactive⟩
 
 /-- Completeness assembles the active trace into the native AIR relation. -/
 theorem activeTrace_yields_airWitness :

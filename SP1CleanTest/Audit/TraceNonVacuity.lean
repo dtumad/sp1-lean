@@ -78,6 +78,7 @@ def anchorProviderOccurrences : (id : ProviderTableId) → List id.Occurrence
   | .memoryBump => []
   | .stateBump => []
   | .halt => []
+  | .syscallInstrs => []
 
 /--
 **The boundary-only generated trace.** Twenty-five empty instruction tables, twenty-six empty
@@ -134,6 +135,7 @@ theorem anchorTrace_wellFormed : anchorTrace.WellFormed := by
     | program | memoryInit | memoryFinalize | memoryBump | stateBump =>
         simp [anchorTrace, anchorProviderOccurrences] at he
     | halt => exact e.elim
+    | syscallInstrs => exact e.elim
   · exact boundaryInputs_limbBounds _ _ _ _
 
 /-! ## The assembled tables
@@ -252,7 +254,7 @@ theorem anchorTrace_tables_eq :
        Table.build MemoryFinalizeChip.component [] anchorData anchorHint,
        Table.build MemoryBumpChip.component [] anchorData anchorHint,
        Table.build StateBumpChip.component [] anchorData anchorHint,
-       haltBuilt] := rfl
+       haltBuilt, Table.build SyscallInstrsChip.component [] anchorData anchorHint] := rfl
 
 /-- **The whole shard's channel view**: the verifier row followed by the two byte providers and the
 Halt padding table, the fifty-one empty tables contributing nothing. -/
@@ -444,8 +446,10 @@ theorem anchorTrace_balanced : anchorTrace.Balanced := by
     · native_decide
   -- the two `SyscallInstrs` buses: no registered table speaks on them yet, so both are the
   -- empty ledger's balance.
-  · exact anchorTrace.balancedOn_of_interactions_nil (witness_syscallChannel_silent _)
-  · exact anchorTrace.balancedOn_of_interactions_nil (witness_publicValuesChannel_silent _)
+  · exact anchorTrace.balancedOn_of_interactions_nil
+      (witness_syscallChannel_silent _ anchorTrace.witness_syscallTable_nil)
+  · exact anchorTrace.balancedOn_of_interactions_nil
+      (witness_publicValuesChannel_silent _ anchorTrace.witness_syscallTable_nil)
 
 
 /-! ## The semantic boundary binding

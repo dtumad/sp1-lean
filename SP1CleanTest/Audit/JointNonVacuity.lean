@@ -190,7 +190,7 @@ theorem emptyTables_data : ∀ t ∈ emptyTables, t.data = anchorData := by
   obtain ⟨c, -, rfl⟩ := List.mem_map.mp ht
   rfl
 
-theorem emptyTables_length : emptyTables.length = 54 := by
+theorem emptyTables_length : emptyTables.length = 55 := by
   simp only [emptyTables, List.length_map, sp1Ensemble_tables, List.length_append]
   rfl
 
@@ -235,9 +235,10 @@ def haltPaddingTable : Table (ZMod SP1Prime) where
   data := anchorData
   uniform_width := by intro row hrow; fin_cases hrow; rfl
 
-/-- The 54 mapped tables of the joint shard: the all-empty template with the two byte-provider
+/-- The 55 mapped tables of the joint shard: the all-empty template with the two byte-provider
 positions and the Halt position patched (25 = `U8Range`, 47 = `Range16`, 53 = `Halt`, matching
-`sp1ProviderTables` order). -/
+`sp1ProviderTables` order). Position 54 — the `SyscallInstrs` table — is deliberately left at the
+empty template: this anchor exercises a syscall-free shard. -/
 noncomputable def jointTables : List (Table (ZMod SP1Prime)) :=
   ((emptyTables.set 25 u8RangeTable).set 47 range16Table).set 53 haltPaddingTable
 
@@ -250,7 +251,7 @@ theorem mem_jointTables {t : Table (ZMod SP1Prime)} (ht : t ∈ jointTables) :
     · exact Or.inr (Or.inr (Or.inl rfl))
   · exact Or.inr (Or.inr (Or.inr rfl))
 
-theorem jointTables_length : jointTables.length = 54 := by
+theorem jointTables_length : jointTables.length = 55 := by
   simp only [jointTables, List.length_set]
   exact emptyTables_length
 
@@ -768,6 +769,37 @@ theorem jointWitness_exitInteractions :
     haltPaddingTable_exit, List.nil_append, List.nil_append]
   rfl
 
+/-- Position 54 is untouched by the three `set`s, so the syscall table is the empty template. -/
+theorem jointWitness_syscallTable_nil :
+    ∀ t : Table (ZMod SP1Prime),
+      jointWitness.tables[syscallTablePosition]? = some t → t.table = [] := by
+  intro t ht
+  have hidx : jointWitness.tables[syscallTablePosition]?
+      = emptyTables[syscallTablePosition]? := by
+    rw [jointWitness_tables, jointTables, List.getElem?_set_ne (by decide),
+      List.getElem?_set_ne (by decide), List.getElem?_set_ne (by decide)]
+  rw [hidx] at ht
+  exact emptyTables_table_eq_nil t (List.mem_of_getElem? ht)
+
+/-- The same fact at `BumpDecode`'s accessor. -/
+theorem jointWitness_syscallInstrsTable_nil :
+    (syscallInstrsTable jointWitness).table = [] :=
+  jointWitness_syscallTable_nil _ rfl
+
+/-- The joint anchor meets the interim syscall boundary: no syscall rows, and the Halt table
+carries its padding row. -/
+theorem jointWitness_syscallTableInactive : SyscallTableInactive jointWitness where
+  noActiveRows := by
+    rw [realSyscallInstrsRows, jointWitness_syscallInstrsTable_nil]; rfl
+  memoryProducedNil := by
+    rw [typedTableInteractionsWith, jointWitness_syscallInstrsTable_nil]; rfl
+  memoryConsumedNil := by
+    rw [typedTableInteractionsWith, jointWitness_syscallInstrsTable_nil]; rfl
+  haltTablePresent := by
+    show (haltTable jointWitness).table ≠ []
+    show haltPaddingTable.table ≠ []
+    simp [haltPaddingTable]
+
 theorem jointWitness_balanced : jointWitness.BalancedChannels := by
   intro channel hchannel
   rw [sp1Ensemble_channels] at hchannel
@@ -775,13 +807,15 @@ theorem jointWitness_balanced : jointWitness.BalancedChannels := by
   rcases hchannel with rfl | rfl | rfl | rfl | rfl | rfl | rfl
   case inr.inr.inr.inr.inr.inl =>
     show BalancedInteractions (jointWitness.interactionsWith Channels.syscallChannel.toRaw)
-    rw [witness_syscallChannel_silent (p := SP1Prime) jointWitness]
+    rw [witness_syscallChannel_silent (p := SP1Prime) jointWitness
+      jointWitness_syscallTable_nil]
     exact balancedInteractions_nil
       (Or.inl (Nat.lt_of_lt_of_le Nat.zero_lt_two sp1Prime_char_pos_facts.1.le))
   case inr.inr.inr.inr.inr.inr =>
     show BalancedInteractions
       (jointWitness.interactionsWith Channels.publicValuesChannel.toRaw)
-    rw [witness_publicValuesChannel_silent (p := SP1Prime) jointWitness]
+    rw [witness_publicValuesChannel_silent (p := SP1Prime) jointWitness
+      jointWitness_syscallTable_nil]
     exact balancedInteractions_nil
       (Or.inl (Nat.lt_of_lt_of_le Nat.zero_lt_two sp1Prime_char_pos_facts.1.le))
   · show BalancedInteractions (jointWitness.interactionsWith stateChannel.toRaw)
@@ -1135,6 +1169,6 @@ witness yields the honest 0-step local Sail execution between the equal endpoint
 theorem supportedCoreNativeRelation_nonvacuous :
     SupportedCoreNativeRelation (p := SP1Prime) stmt jointWitness :=
   ⟨⟨rfl, jointWitness_constraints, jointWitness_balanced⟩,
-   anchorBoundaryFacts.binding⟩
+   anchorBoundaryFacts.binding, jointWitness_syscallTableInactive⟩
 
 end SP1Clean.Audit.JointNonVacuity
