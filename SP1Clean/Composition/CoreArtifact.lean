@@ -365,12 +365,6 @@ private theorem exactNativeEnsembleWitness_syscallTableInactive {Digest : Type}
   noActiveRows := by
     rw [Soundness.realSyscallInstrsRows, exactNativeEnsembleWitness_syscallTable_nil]
     rfl
-  memoryProducedNil := by
-    rw [Soundness.typedTableInteractionsWith, exactNativeEnsembleWitness_syscallTable_nil]
-    rfl
-  memoryConsumedNil := by
-    rw [Soundness.typedTableInteractionsWith, exactNativeEnsembleWitness_syscallTable_nil]
-    rfl
   haltTablePresent := by
     show (extractedHaltTable (p := p) data).table ≠ []
     simp [extractedHaltTable, HaltChip.haltTraceInputs, Air.Flat.Table.build_table]

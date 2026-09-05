@@ -319,14 +319,15 @@ theorem pcWalk_of_canonStateWalk (data : ProverData (ZMod p)) :
         rw [pcBits_canonState hp1 hp2] at tailWalk
         simpa [decodedStateEdge] using tailWalk
 
+omit [Fact (Nat.Prime p)] [Fact (2 ^ 25 < p)] in
 /-- A State-message walk with a row-dependent positive-width schedule has the expected endpoint
 clock count.  No instruction class, fixed divisor, or concrete edge map is baked into this
 telescoping theorem; the capstone instantiates it at the canonicalized decoded edge. -/
-theorem clockCount_of_stateWalk_durations
-    (edge : DecodedInstructionRow p → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p))
-    (duration : DecodedInstructionRow p → ℕ) :
+theorem clockCount_of_stateWalk_durations {α : Type*}
+    (edge : α → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p))
+    (duration : α → ℕ) :
     ∀ {initial final : Channels.StateMsg (ZMod p)}
-      {rows : List (DecodedInstructionRow p)},
+      {rows : List α},
       Walk.IsWalk edge initial final rows →
       (∀ decoded ∈ rows,
         Semantics.StateMsg.timeNat (edge decoded).2 =
@@ -362,15 +363,16 @@ theorem clockCount_of_stateWalk
         Semantics.StateMsg.timeNat final := fun walk steps => by
   simpa [Nat.mul_comm] using clockCount_of_stateWalk_durations edge (fun _ => 8) walk steps
 
+omit [Fact (Nat.Prime p)] [Fact (2 ^ 25 < p)] in
 /-- The telescoping endpoint-multiset balance of a State walk: the head plus each row's push equals the
 final plus each row's pull, as multisets.  The `List`-level companion of
 `RankedGrounding.endpointBalanced_of_balanced`, derived directly from `IsWalk` so it carries the
 `statement.publicValues` endpoints natively — the exact State-balance hypothesis `TimedGrounding.walk`
 consumes (after mapping the canonicalized edge onto the walk carrier's `statePush`/`statePull`). -/
-theorem endpointBalance_of_stateWalk
-    (edge : DecodedInstructionRow p → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p)) :
+theorem endpointBalance_of_stateWalk {α : Type*}
+    (edge : α → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p)) :
     ∀ {initial final : Channels.StateMsg (ZMod p)}
-      {rows : List (DecodedInstructionRow p)},
+      {rows : List α},
       Walk.IsWalk edge initial final rows →
       initial ::ₘ (↑(rows.map (fun d => (edge d).2)) :
           Multiset (Channels.StateMsg (ZMod p)))
@@ -388,12 +390,13 @@ theorem endpointBalance_of_stateWalk
       rw [source]
       exact (List.Perm.cons initial ihEq).trans (List.Perm.swap final initial _)
 
+omit [Fact (Nat.Prime p)] [Fact (2 ^ 25 < p)] in
 /-- Locate a row in a State walk by the sum of all preceding row-dependent durations. -/
-theorem statePullTime_of_stateWalk_durations
-    (edge : DecodedInstructionRow p → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p))
-    (duration : DecodedInstructionRow p → ℕ) :
+theorem statePullTime_of_stateWalk_durations {α : Type*}
+    (edge : α → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p))
+    (duration : α → ℕ) :
     ∀ {initial final : Channels.StateMsg (ZMod p)}
-      {rows : List (DecodedInstructionRow p)},
+      {rows : List α},
       Walk.IsWalk edge initial final rows →
       (∀ decoded ∈ rows,
         Semantics.StateMsg.timeNat (edge decoded).2 =
@@ -464,7 +467,9 @@ theorem statePullAlign8_of_stateWalk
 
 The `SyscallInstrs` table has no active row, so it contributes nothing to the State trail, nothing to
 the Memory ledger, and nothing to the Exit hand-off — which is what leaves the Halt table as the sole
-Exit contributor and so keeps its physical row present.
+Exit contributor and so keeps its physical row present. The two Memory-silence fields this structure
+once carried are gone: `syscallInstrs_producedMessages_nil_of_inactive` and its consumed twin derive
+them from `noActiveRows`, so the premise no longer restates what it already implies.
 
 The *State* side no longer needs this: the trail has a syscall arm and the goodness filter covers it.
 The **Memory** side does. A syscall row's three register touches have to flow through the walk, and
@@ -474,14 +479,9 @@ read-backs are ordinary frontier records that later rows consume, so the engine'
 admit syscall rows before this premise can go. `haltTablePresent` is D8's premise and disappears with
 the successor table. -/
 structure SyscallTableInactive (witness : SupportedCoreNativeWitness p) : Prop where
-  /-- No active syscall row, so the trail is instruction rows and at most the halt row. -/
+  /-- No active syscall row, so the trail is instruction rows and at most the halt row — and, via
+  `syscallInstrs_{produced,consumed}Messages_eq`, the table is Memory-silent too. -/
   noActiveRows : realSyscallInstrsRows witness = []
-  /-- The table is Memory-silent, so the per-location balance keeps its old shape. -/
-  memoryProducedNil : producedMessages (typedTableInteractionsWith
-    (syscallInstrsTable witness) Channels.memoryChannel) = []
-  /-- Likewise on the consumed side. -/
-  memoryConsumedNil : consumedMessages (typedTableInteractionsWith
-    (syscallInstrsTable witness) Channels.memoryChannel) = []
   /-- The Halt table still carries its physical row, so the Exit singleton is its own. -/
   haltTablePresent : (haltTable witness).table ≠ []
 
@@ -699,7 +699,10 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
     (initPure witness constraints) (finPure witness constraints) boundary.memoryProviderUnique
     boundary.memoryFinalizeProviderUnique obligations.paddingMemoryEmpty orderedRows exhaustive
     alignedRow aligns
-  simp only [syscallInactive.memoryProducedNil, syscallInactive.memoryConsumedNil,
+  simp only [syscallInstrs_producedMessages_nil_of_inactive witness constraints
+      syscallInactive.noActiveRows,
+    syscallInstrs_consumedMessages_nil_of_inactive witness constraints
+      syscallInactive.noActiveRows,
     Multiset.coe_nil, Multiset.filter_zero, add_zero] at widened
   have pushGood : ∀ loc : Semantics.MemLoc, ∀ m ∈
       TimedGrounding.optMS (memoryInitFrontier witness loc) +

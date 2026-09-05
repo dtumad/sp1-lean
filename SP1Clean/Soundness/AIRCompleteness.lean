@@ -437,17 +437,13 @@ def SupportedCoreGeneratedTraceRelation :
       trace.publicValues = statement.publicValues ∧
       SemanticBoundaryBinding statement trace.witness
 
-/-- **The compiler's trace meets the interim syscall boundary.** Every field is a consequence of the
-syscall table having no rows, except `haltTablePresent`, which is the compiled Halt table's one
-padding row — the `⟨0⟩` Exit push that balances the verifier's ungated pull. -/
+/-- **The compiler's trace meets the interim syscall boundary.** `noActiveRows` is a consequence of
+the syscall table having no rows at all; `haltTablePresent` is the compiled Halt table's one padding
+row — the `⟨0⟩` Exit push that balances the verifier's ungated pull. -/
 theorem SupportedCoreTraceWitness.syscallTableInactive (trace : SupportedCoreTraceWitness p) :
     SyscallTableInactive trace.witness where
   noActiveRows := by
     rw [realSyscallInstrsRows, syscallInstrsTable_nil trace]; rfl
-  memoryProducedNil := by
-    rw [typedTableInteractionsWith, syscallInstrsTable_nil trace]; rfl
-  memoryConsumedNil := by
-    rw [typedTableInteractionsWith, syscallInstrsTable_nil trace]; rfl
   haltTablePresent := by
     have hlen := trace.haltTablePadding.1
     intro hnil

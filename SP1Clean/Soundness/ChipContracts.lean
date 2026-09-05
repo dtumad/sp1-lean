@@ -4907,6 +4907,175 @@ theorem halt_consumedMessages_eq
     rfl
 
 omit [Fact (2 ^ 17 < p)] in
+/-- The `SyscallInstrs` table's produced Memory messages are exactly its active rows' three
+register read-backs — `op_a` at `clk + 4` carrying the *written* word, `op_b`/`op_c` at `clk + 3`
+and `clk + 2` carrying their unchanged priors. The Halt twin of this lemma is
+`halt_producedMessages_eq`; the only structural difference is which word the first push carries. -/
+theorem syscallInstrs_producedMessages_eq
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
+    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel) =
+      (realSyscallInstrsRows witness).flatMap (fun row =>
+        [SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+           (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value,
+         SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+           (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value,
+         SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+           (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value]) := by
+  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
+  rw [syscallInstrsTable_typedMemory, producedMessages_flatMap, realSyscallInstrsRows]
+  refine flatMap_triple_eq_filter_flatMap _ _ _ _ fun row rowMem => ?_
+  have hbool := witness_syscallInstrsRows_selectorBinary witness constraints row rowMem
+  rw [show [TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value),
+      TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value),
+      TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] =
+      [TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value)] ++
+      ([TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value)] ++
+      [TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)]) from rfl,
+    producedMessages_append, producedMessages_append,
+    producedMessages_gatedPair hp hbool, producedMessages_gatedPair hp hbool,
+    producedMessages_gatedPair hp hbool]
+  by_cases hreal : (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1
+  · simp only [if_pos hreal]
+    rfl
+  · simp only [if_neg hreal]
+    rfl
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The `SyscallInstrs` table's consumed Memory messages are exactly its active rows' three pulled
+register priors. -/
+theorem syscallInstrs_consumedMessages_eq
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
+    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel) =
+      (realSyscallInstrsRows witness).flatMap (fun row =>
+        [SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+           (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a,
+         SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+           (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b,
+         SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+           (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c]) := by
+  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
+  rw [syscallInstrsTable_typedMemory, consumedMessages_flatMap, realSyscallInstrsRows]
+  refine flatMap_triple_eq_filter_flatMap _ _ _ _ fun row rowMem => ?_
+  have hbool := witness_syscallInstrsRows_selectorBinary witness constraints row rowMem
+  rw [show [TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value),
+      TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value),
+      TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] =
+      [TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value)] ++
+      ([TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value)] ++
+      [TypedInteraction.pulledIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
+      TypedInteraction.pushedIfValue memoryChannel
+        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
+          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)]) from rfl,
+    consumedMessages_append, consumedMessages_append,
+    consumedMessages_gatedPair hp hbool, consumedMessages_gatedPair hp hbool,
+    consumedMessages_gatedPair hp hbool]
+  by_cases hreal : (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1
+  · simp only [if_pos hreal]
+    rfl
+  · simp only [if_neg hreal]
+    rfl
+
+omit [Fact (2 ^ 17 < p)] in
+/-- On a shard with no active syscall row the `SyscallInstrs` table produces no Memory message —
+the fact that let `SyscallTableInactive`'s two Memory-silence fields be deleted. -/
+theorem syscallInstrs_producedMessages_nil_of_inactive
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (inactive : realSyscallInstrsRows witness = []) :
+    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)
+      = [] := by
+  rw [syscallInstrs_producedMessages_eq witness constraints, inactive, List.flatMap_nil]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- On a shard with no active syscall row the `SyscallInstrs` table consumes no Memory message. -/
+theorem syscallInstrs_consumedMessages_nil_of_inactive
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (inactive : realSyscallInstrsRows witness = []) :
+    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)
+      = [] := by
+  rw [syscallInstrs_consumedMessages_eq witness constraints, inactive, List.flatMap_nil]
+
+omit [Fact (2 ^ 17 < p)] in
 /-- On a shard with no active Halt row the Halt table produces no Memory message. -/
 theorem halt_producedMessages_nil_of_haltFree
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)

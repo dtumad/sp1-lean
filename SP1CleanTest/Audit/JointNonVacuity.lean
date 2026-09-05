@@ -791,10 +791,6 @@ carries its padding row. -/
 theorem jointWitness_syscallTableInactive : SyscallTableInactive jointWitness where
   noActiveRows := by
     rw [realSyscallInstrsRows, jointWitness_syscallInstrsTable_nil]; rfl
-  memoryProducedNil := by
-    rw [typedTableInteractionsWith, jointWitness_syscallInstrsTable_nil]; rfl
-  memoryConsumedNil := by
-    rw [typedTableInteractionsWith, jointWitness_syscallInstrsTable_nil]; rfl
   haltTablePresent := by
     show (haltTable jointWitness).table ≠ []
     show haltPaddingTable.table ≠ []
