@@ -990,26 +990,31 @@ widths — `statePullTime_of_stateWalk_durations`, which is why that lemma had t
 
 Together with `positioned_of_walkOrder` this is the whole clock coupling: the bus clock a row is
 walked at and the semantic clock its event starts at are the same number, derived rather than
-assumed. -/
+assumed.
+
+The walk's `edge` is a **parameter** rather than the row's own `statePull`/`statePush`, because the
+trail is extracted over the *canonicalized* State messages (`trailCanonEdge`) while the row's facts
+carry the raw ones. `timeAgree` is the bridge, and at the real call site it is `timeNat_canonState`
+— a rewriting, not a new obligation. -/
 theorem walkedRow_pullAt (data : ProverData (ZMod p))
     (g : DecodedInstructionRow p → Semantics.RowFacts p)
     (rows : List (WalkedRow p)) (initialClock : ℕ) {initialMsg finalMsg : StateMsg (ZMod p)}
-    (walk : Walk.IsWalk
-      (fun r => ((WalkedRow.facts g r).statePull, (WalkedRow.facts g r).statePush))
-      initialMsg finalMsg rows)
+    (edge : WalkedRow p → StateMsg (ZMod p) × StateMsg (ZMod p))
+    (walk : Walk.IsWalk edge initialMsg finalMsg rows)
     (steps : ∀ r ∈ rows,
-      StateMsg.timeNat (WalkedRow.facts g r).statePush
-        = StateMsg.timeNat (WalkedRow.facts g r).statePull + r.duration)
+      StateMsg.timeNat (edge r).2 = StateMsg.timeNat (edge r).1 + r.duration)
+    (timeAgree : ∀ r ∈ rows,
+      StateMsg.timeNat (edge r).1 = StateMsg.timeNat (WalkedRow.facts g r).statePull)
     (headTime : StateMsg.timeNat initialMsg = initialClock)
     (k : ℕ) (hk : k < rows.length) :
     StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
       = (Semantics.eventTimeline (transcriptOf data rows) initialClock).start k := by
   have hsplit : rows = rows.take k ++ (rows[k]'hk) :: rows.drop (k + 1) := by
     rw [List.getElem_cons_drop, List.take_append_drop]
-  have position := statePullTime_of_stateWalk_durations
-    (fun r => ((WalkedRow.facts g r).statePull, (WalkedRow.facts g r).statePush))
-    WalkedRow.duration walk steps (rows.take k) (rows[k]'hk) (rows.drop (k + 1)) hsplit
-  rw [Semantics.eventTimeline_start, transcriptOf_prefixSum data rows k (by omega), ← headTime]
+  have position := statePullTime_of_stateWalk_durations edge WalkedRow.duration walk steps
+    (rows.take k) (rows[k]'hk) (rows.drop (k + 1)) hsplit
+  rw [Semantics.eventTimeline_start, transcriptOf_prefixSum data rows k (by omega), ← headTime,
+    ← timeAgree _ (List.getElem_mem hk)]
   exact position
 
 omit [Fact (2 ^ 17 < p)] in
@@ -1042,6 +1047,33 @@ theorem syscallRows_pullsAt (rs : List (SyscallInstrsChip.Inputs (ZMod p)))
             : Multiset (Channels.MemoryMsg (ZMod p))) := by
   rw [TimedGrounding.pullsAt_map_eq_filter_flatMap syscallRowFacts loc rs]
   simp only [syscallRowFacts_memPulls, List.map_cons, List.map_nil]
+
+/-- **The successor to `listAllInl`.** Today's projection is what
+`SyscallTableInactive.noActiveRows` exists to make available: with no syscall rows every trail entry
+is a `Sum.inl`, so the trail *is* a list of decoded instruction rows and the engine can walk it.
+
+This one asks only that no **halt** row is present — which the halt-free branch already establishes
+from `realHaltRows witness = []` — and produces a `WalkedRow` list in the same order, so a syscall
+row is carried through the projection rather than excluded by it.
+
+The result is a `List.Forall₂` rather than a `List.map`: the two row types are related by a
+*relation* (the syscall arm decodes a raw array), not by a function into `WalkedRow`, so there is no
+map to speak of. `Walk.isWalk_forall₂` is the transport that shape needs. -/
+theorem listAllWalked {α β : Type*} (dec : β → SyscallInstrsChip.Inputs (ZMod p))
+    (mk : α → DecodedInstructionRow p) :
+    ∀ (l : List (α ⊕ γ ⊕ β)),
+      (∀ t ∈ l, (∃ a : α, t = Sum.inl a) ∨ (∃ b : β, t = Sum.inr (Sum.inr b))) →
+      ∃ rows : List (WalkedRow p), List.Forall₂
+        (fun t r => (∃ a : α, t = Sum.inl a ∧ r = WalkedRow.instruction (mk a)) ∨
+          (∃ b : β, t = Sum.inr (Sum.inr b) ∧ r = WalkedRow.syscall (dec b))) l rows
+  | [], _ => ⟨[], List.Forall₂.nil⟩
+  | t :: l, hall => by
+      obtain ⟨rows, hrows⟩ := listAllWalked dec mk l fun t ht => hall t (List.mem_cons_of_mem _ ht)
+      rcases hall t List.mem_cons_self with ⟨a, rfl⟩ | ⟨b, rfl⟩
+      · exact ⟨WalkedRow.instruction (mk a) :: rows,
+          List.Forall₂.cons (Or.inl ⟨a, rfl, rfl⟩) hrows⟩
+      · exact ⟨WalkedRow.syscall (dec b) :: rows,
+          List.Forall₂.cons (Or.inr ⟨b, rfl, rfl⟩) hrows⟩
 
 /-- **`walkE`'s timeline hypothesis, from the walk order.** The walk needs each row's push to land
 on the *next* timeline start; the row supplies its own window width, and `durationAt_transcriptOf`

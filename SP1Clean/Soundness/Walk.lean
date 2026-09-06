@@ -121,6 +121,23 @@ theorem isWalk_map {β : Type*} (edge : β → V × V) (f : α → β) :
       exact and_congr Iff.rfl (isWalk_map edge f rest _ b)
 
 omit [DecidableEq α] [DecidableEq V] in
+/-- **Transporting a walk along a pointwise correspondence.** Two row lists in the same order whose
+edges agree entry for entry describe the same walk. This is what a *projection* of the trail needs:
+the projected list is not a `List.map` of the original — the two row types are related by a relation,
+not a function — so `isWalk_map` does not apply. -/
+theorem isWalk_forall₂ {β : Type*} (edge : α → V × V) (edge' : β → V × V)
+    (R : α → β → Prop) (hR : ∀ {x y}, R x y → edge x = edge' y) :
+    ∀ {l : List α} {l' : List β}, List.Forall₂ R l l' →
+      ∀ {a b : V}, IsWalk edge a b l → IsWalk edge' a b l'
+  | [], [], _, _, _, h => h
+  | x :: rest, y :: rest', hf, a, b, h => by
+      obtain ⟨hxy, hrest⟩ := List.forall₂_cons.mp hf
+      obtain ⟨hhead, htail⟩ := h
+      refine ⟨?_, ?_⟩
+      · rw [← hR hxy]; exact hhead
+      · rw [← hR hxy]; exact isWalk_forall₂ edge edge' R hR hrest htail
+
+omit [DecidableEq α] [DecidableEq V] in
 /-- A walk over an append splits at the junction vertex. -/
 theorem isWalk_append (edge : α → V × V) :
     ∀ (l₁ l₂ : List α) (a b : V), IsWalk edge a b (l₁ ++ l₂) ↔
