@@ -1,5 +1,6 @@
 import Mathlib.Data.List.Nodup
 import SP1Clean.Extracted.CoreAIRManifest
+import SP1Clean.Model.Machine.Syscall
 
 /-! # The pinned SP1 Core AIR profile
 
@@ -39,6 +40,23 @@ native AIR witnesses project their active instruction-row count into it; neither
 separate spelling of the row budget. -/
 def WithinOrdinaryRowLimit (rows : ℕ) : Prop :=
   rows ≤ maxOrdinaryTransitions
+
+/-- **The canonicity premise (D9).** Every syscall a supported shard takes uses one of the thirteen
+inline codes exactly.
+
+⚠ This is a *premise*, and deliberately so. SP1's AIR reads bytes 0 and 1 of `x5`, while its
+executor dispatches on the full `x5 as u32` through `SyscallCode::from_u32`, which **panics** on a
+non-enumerated value. An AIR-valid `HALT` row may therefore carry `x5 = 0x00010000` — a witness the
+constraint system admits and no execution produces. Canonicity is a fact about the *executor*, not a
+consequence of the AIR, so the honest place for it is the supported profile, beside
+`WithinOrdinaryRowLimit`, rather than an invented row constraint that would make the native chip
+stricter than the one it models.
+
+It is stated over the shard's syscall events so that neither direction owns a separate spelling: the
+semantic side projects its transcript's syscall events into it, the native side its active syscall
+rows' decoded events — exactly the arrangement `WithinOrdinaryRowLimit` uses for the row budget. -/
+def CanonicalSyscallCodes (events : List SP1Clean.Machine.CoreSyscallEvent) : Prop :=
+  ∀ e ∈ events, e.IsInlineCanonical
 
 /-- Generated AIR artifacts and the hand-audited profile name the same unmodified Rust source. -/
 theorem checkedIn_semanticRevision :

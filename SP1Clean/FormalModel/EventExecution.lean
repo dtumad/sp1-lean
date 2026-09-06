@@ -66,6 +66,37 @@ def EventSegmentWitness.CanonicalSyscallCodes (w : EventSegmentWitness) : Prop :
   ∀ event ∈ w.events, ∀ e : Machine.CoreSyscallEvent,
     event = Machine.ExecutionEvent.syscall e → e.IsInlineCanonical
 
+/-- The transcript's syscall events, as a list — the semantic side's projection into the profile's
+`CanonicalSyscallCodes`. -/
+def EventSegmentWitness.syscallEvents (w : EventSegmentWitness) :
+    List Machine.CoreSyscallEvent :=
+  w.events.filterMap fun event =>
+    match event with
+    | Machine.ExecutionEvent.syscall e => some e
+    | _ => none
+
+/-- **One spelling, two projections.** The segment-level canonicity condition *is* the profile's,
+read at the transcript's syscall events. Stating the agreement rather than duplicating the predicate
+is what keeps the semantic and native sides from drifting — the same discipline
+`WithinOrdinaryRowLimit` follows for the row budget. -/
+theorem EventSegmentWitness.canonicalSyscallCodes_iff (w : EventSegmentWitness) :
+    w.CanonicalSyscallCodes ↔ SP1Clean.CoreProfile.CanonicalSyscallCodes w.syscallEvents := by
+  constructor
+  · intro h e he
+    rw [EventSegmentWitness.syscallEvents, List.mem_filterMap] at he
+    obtain ⟨event, hevent, heq⟩ := he
+    cases event with
+    | ordinary => exact absurd heq (by simp)
+    | syscall e' =>
+        have : e' = e := by simpa using heq
+        subst this
+        exact h _ hevent e' rfl
+  · intro h event hevent e heq
+    subst heq
+    refine h e ?_
+    rw [EventSegmentWitness.syscallEvents, List.mem_filterMap]
+    exact ⟨Machine.ExecutionEvent.syscall e, hevent, rfl⟩
+
 /-- **The ordinary run shape**, generalized. The transcript reaches the committed final pc in its own
 elapsed time. Note what is *absent* relative to `SailSegmentWitness.OrdinaryRun`: no `exit_code = 0`,
 because SP1 does not constrain it here (D8). -/

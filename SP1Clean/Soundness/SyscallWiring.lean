@@ -472,4 +472,31 @@ theorem syscallRowContext_of_currency
     (TimedGrounding.localValueAtG_regRead_of_traj (k := 3) htraj (by norm_num) curB)
     (TimedGrounding.localValueAtG_regRead_of_traj (k := 2) htraj (by norm_num) curC)
 
+/-! ## The canonicity premise, at the native witness
+
+D9's condition lives on the supported profile (`CoreProfile.CanonicalSyscallCodes`) because it is a
+fact about SP1's *executor*, not about its AIR: the AIR reads bytes 0 and 1 of `x5`, while
+`SyscallCode::from_u32` dispatches on the full word and panics on a non-enumerated value. An
+AIR-valid `HALT` row may therefore carry `x5 = 0x00010000`, which no execution produces.
+
+The native side's projection into that predicate is below. It is what a caller must supply for a
+syscall row's step fact, which takes `IsInlineCanonical` and cannot derive it — and the reason
+`SyscallTableInactive.noActiveRows` cannot simply be dropped: without active syscall rows the
+condition is vacuous, and with them it is a genuine, disclosed obligation. -/
+
+/-- The decoded events of a witness's active syscall rows — the native side's projection into
+`CoreProfile.CanonicalSyscallCodes`. -/
+noncomputable def syscallEventsOf (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    List Machine.CoreSyscallEvent :=
+  (realSyscallInstrsRows witness).map fun row => syscallEventOfRow (syscallInstrsRow (syscallInstrsTable witness) row)
+
+/-- Reading the profile condition back at one active row — the form
+`syscallStepFact_of_advance` consumes. -/
+theorem isInlineCanonical_of_profile
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (canonical : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
+    (syscallEventOfRow (syscallInstrsRow (syscallInstrsTable witness) row)).IsInlineCanonical :=
+  canonical _ (List.mem_map_of_mem rowMem)
+
 end SP1Clean.Soundness
