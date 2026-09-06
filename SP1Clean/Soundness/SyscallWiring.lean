@@ -15,6 +15,8 @@ output. `DecodedInstructionRow.memoryChannelGuarantees_of_pullCurrency` is the i
 version; this file is the syscall one, and the halt table needed neither because it is extracted
 *after* the walk rather than walked. -/
 
+open LeanRV64D.Defs
+
 namespace SP1Clean.Soundness
 
 open SP1Clean.Machine
@@ -418,5 +420,56 @@ theorem DecodedInstructionRow.dynamicGroundedG_of_weakCurrency
     program decode openInputs state operands sourceA pulls
   exact decoded.dynamicGrounded_of_inputs witness constraints balanced decodedMem program state
     { circuit := openInputs, ready, operands }
+
+/-! ## The row's semantic context, from the walk
+
+`SyscallRowContext` names the five things a syscall row's meaning needs that the row itself does not
+carry. `syscallInstrsRow_operands` supplied the first from the Program bus. The three below come
+from the walk — the pulled state's pc and the three register reads — and `pcCarry` stays a premise,
+because it is `StateBumpChip`'s carry fact and genuinely external, exactly as the pc's `+ 4` is on
+the AIR side. -/
+
+/-- **`SyscallRowContext`, assembled at the walk's own state.** The three register reads all speak
+about the *same* state, and that is the content of the `+0`/`+3`/`+2` read times being below
+`regEffectOffset`: every one of them is still in the pre-write half of the row's window, so
+`localValueAtG_regRead_of_traj` sends all three to `traj n`.
+
+`ecall` then follows from `pcValue` and the committed `ECALL` fetch, which is where
+`witness_syscallRow_ecallTruth` is spent a second time — once for the operand indices, once for the
+fetch itself. -/
+theorem syscallRowContext_of_currency
+    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound witness)
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
+    (pcCarry : ((syscallInstrsRow (syscallInstrsTable witness) row).state.pc[0]).val + 4 < 2 ^ 16)
+    {traj : Semantics.Trajectory} {initial source : SailState} {tl : Semantics.Timeline}
+    {n : ℕ}
+    (htraj : traj n = some source)
+    (hpc : source.regs.get? Register.PC
+      = some (Semantics.pcBits (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)).pc0
+          (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)).pc1
+          (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)).pc2))
+    (htime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)) = tl.start n)
+    (hcurr : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+      Semantics.LocalValueAtG traj initial tl
+        (Semantics.MemoryMsg.locOf (mp : MemoryMsg (ZMod p) × ℕ).1) mp.2 mp.1.value) :
+    SyscallRowContext (syscallInstrsRow (syscallInstrsTable witness) row) (Commit.progOf witness.data) source := by
+  obtain ⟨opA, opB, opC⟩ :=
+    syscallInstrsRow_operands witness constraints balanced providerBound rowMem
+  obtain ⟨locPullA, -⟩ := syscallRow_locOf_reg (syscallInstrsRow (syscallInstrsTable witness) row) (i := 5#5) opA
+    (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value 4
+  obtain ⟨locPullB, -⟩ := syscallRow_locOf_reg (syscallInstrsRow (syscallInstrsTable witness) row) (i := 10#5) opB
+    (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value 3
+  obtain ⟨locPullC, -⟩ := syscallRow_locOf_reg (syscallInstrsRow (syscallInstrsTable witness) row) (i := 11#5) opC
+    (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value 2
+  obtain ⟨curA, curB, curC⟩ := syscallRowFacts_currency_split_values _ hcurr
+  rw [locPullA, htime] at curA
+  rw [locPullB, htime] at curB
+  rw [locPullC, htime] at curC
+  exact SyscallRowContext.of_pieces (syscallInstrsRow (syscallInstrsTable witness) row) _ source opA opB opC pcCarry
+    (witness_syscallRow_ecallTruth witness constraints balanced providerBound rowMem).1 hpc
+    ((TimedGrounding.localValueAtG_stepStart_iff htraj).mp curA)
+    (TimedGrounding.localValueAtG_regRead_of_traj (k := 3) htraj (by norm_num) curB)
+    (TimedGrounding.localValueAtG_regRead_of_traj (k := 2) htraj (by norm_num) curC)
 
 end SP1Clean.Soundness

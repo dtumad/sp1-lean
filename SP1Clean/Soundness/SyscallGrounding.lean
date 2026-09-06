@@ -1018,6 +1018,55 @@ theorem walkedRow_pullAt (data : ProverData (ZMod p))
   exact position
 
 omit [Fact (2 ^ 17 < p)] in
+/-- **`SyscallRowContext` from its five named pieces, over an abstract row.** The assembly is a
+re-association plus three `rfl`-level spelling changes — the event's `pc`/`rawCode`/`arg1`/`arg2`
+*are* the row's recombined limbs — but at the witness's concrete 65-column row those `rfl`s exceed
+the depth budget, so the crossing happens once here where every argument is a variable. -/
+theorem SyscallRowContext.of_pieces (r : SyscallInstrsChip.Inputs (ZMod p))
+    (prog : Target.GuestProgram) (source : SailState)
+    (opA : ((5 : ℕ) : ZMod p) = r.op_a) (opB : ((10 : ℕ) : ZMod p) = r.op_b)
+    (opC : ((11 : ℕ) : ZMod p) = r.op_c)
+    (pcCarry : (r.state.pc[0]).val + 4 < 2 ^ 16)
+    (fetch : prog.fetchWord (Target.pcBitsOfRow
+      (Semantics.rowOfMsg (SyscallInstrsChip.programMessage r))) = some Target.ECALL_ENC)
+    (pcValue : source.regs.get? Register.PC
+      = some (Semantics.pcBits (SyscallInstrsChip.statePulledMessage r).pc0
+          (SyscallInstrsChip.statePulledMessage r).pc1
+          (SyscallInstrsChip.statePulledMessage r).pc2))
+    (vA : source.get_reg? 5#5 = some (Word.toBitVec64 r.op_a_memory.prev_value))
+    (vB : source.get_reg? 10#5 = some (Word.toBitVec64 r.op_b_memory.prev_value))
+    (vC : source.get_reg? 11#5 = some (Word.toBitVec64 r.op_c_memory.prev_value)) :
+    SyscallRowContext r prog source :=
+  ⟨⟨by simpa using opA.symm, by simpa using opB.symm, by simpa using opC.symm⟩,
+   pcCarry, ⟨(syscallEventOfRow r).pc, pcValue, fetch⟩, ⟨vA, vB, vC⟩, pcValue⟩
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The walk's *value* currency, split at the row's three named pulls — the `LocalValueAtG` twin of
+`syscallRowFacts_currency_split`, over an abstract row for the same crossing reason. -/
+theorem syscallRowFacts_currency_split_values (r : SyscallInstrsChip.Inputs (ZMod p))
+    {traj : Semantics.Trajectory} {initial : SailState} {tl : Semantics.Timeline}
+    (hcurr : ∀ mp ∈ (syscallRowFacts r).memPulls,
+      Semantics.LocalValueAtG traj initial tl
+        (Semantics.MemoryMsg.locOf (mp : Channels.MemoryMsg (ZMod p) × ℕ).1) mp.2 mp.1.value) :
+    Semantics.LocalValueAtG traj initial tl
+        (Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a))
+        (StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r))
+        r.op_a_memory.prev_value ∧
+      Semantics.LocalValueAtG traj initial tl
+        (Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b))
+        (StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 3)
+        r.op_b_memory.prev_value ∧
+      Semantics.LocalValueAtG traj initial tl
+        (Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c))
+        (StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 2)
+        r.op_c_memory.prev_value :=
+  ⟨hcurr _ (by rw [syscallRowFacts_memPulls]; exact List.mem_cons_self),
+   hcurr _ (by rw [syscallRowFacts_memPulls]; exact List.mem_cons_of_mem _ List.mem_cons_self),
+   hcurr _ (by
+     rw [syscallRowFacts_memPulls]
+     exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))⟩
+
+omit [Fact (2 ^ 17 < p)] in
 /-- **A batch of syscall rows' walked pushes, in flat form** — stated over *abstract* rows, which is
 the whole point: the same identity at the witness's concrete 65-column decode exceeds the depth
 budget, while here every argument is a variable. The witness-level absorption

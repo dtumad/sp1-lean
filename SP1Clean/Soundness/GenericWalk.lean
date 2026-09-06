@@ -228,6 +228,20 @@ lemma localValueAtG_stepStart_iff {traj : Trajectory} {initial state : SailState
   | reg i => rw [microValueG_reg_pre (n := n) le_rfl (by omega), htraj, Option.bind_some]
   | ram a => rw [microValueG_ram_pre (n := n) le_rfl (by omega), htraj, Option.bind_some]
 
+omit [Fact (2 ^ 17 < p)] in
+/-- **A register read anywhere in the pre-write half reads the step's own state.** The generalization
+of `localValueAtG_stepStart_iff` off the exact window start: any offset below `regEffectOffset` is
+still pre-write, which is what lets a syscall row's `op_b`/`op_c` reads at `+3` and `+2` speak about
+the state its `op_a` read at `+0` does. -/
+lemma localValueAtG_regRead_of_traj {traj : Trajectory} {initial state : SailState}
+    {tl : Timeline} {i : BitVec 5} {v : Word (ZMod p)} {n k : ℕ}
+    (htraj : traj n = some state) (hk : k < 4)
+    (h : LocalValueAtG traj initial tl (MemLoc.reg i) (tl.start n + k) v) :
+    state.get_reg? i = some (Word.toBitVec64 v) := by
+  unfold LocalValueAtG at h
+  rw [microValueG_reg_pre (n := n) (by omega) (by omega), htraj, Option.bind_some] at h
+  exact h
+
 /-! ## The walk
 
 The proof is `walkT`'s, with `chainState initial` replaced by the trajectory parameter throughout.
