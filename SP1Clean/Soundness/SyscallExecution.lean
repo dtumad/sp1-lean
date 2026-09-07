@@ -297,6 +297,98 @@ theorem syscallRowOKCore_of_witness (witness : EnsembleWitness (sp1Ensemble (p :
     at real clk0B clk1B opA opB opC spec step align ⊢
   exact syscallRowOKCore initialClock r real spec clk0B clk1B opA opB opC align step
 
+omit [Fact (2 ^ 17 < p)] in
+/-- **The syscall arm's step fact, from the witness.**
+
+Ten of `syscallStepFact_of_advance`'s premises are witness facts; the three that remain are exactly
+the ones no row-local reasoning can supply.  `payload` is the handler's own semantics.  `positioned`
+says this row's window is the transcript slot carrying *this* row's event — a fact about the walk
+order, not about the row.  And `rowContext` needs the trajectory's state at the row's index, plus
+the `StateBumpChip` pc-carry premise. -/
+theorem syscallStepFact_of_witness (handler : ExecutableSyscallHandler) (prog : GuestProgram)
+    (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (providerBound : ProgramProviderBound witness)
+    (canonicalCodes : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
+    (payload : SyscallAdvancePayload (p := p) handler)
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
+    (currency : ∀ mp ∈
+        (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+      MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row))
+        = (eventTimeline events initialClock).start n →
+      events[n]? = some (ExecutionEvent.syscall
+        (syscallEventOfRow (syscallInstrsRow (syscallInstrsTable witness) row))))
+    (rowContext : ∀ (n : ℕ) (s : SailState),
+      eventTrajectory handler prog events initial n = some s →
+      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row))
+        = (eventTimeline events initialClock).start n →
+      SyscallRowContext (syscallInstrsRow (syscallInstrsTable witness) row) prog s) :
+    LocalStepFactG prog (eventTrajectory handler prog events initial) initial
+      (eventTimeline events initialClock)
+      (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+  obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
+  obtain ⟨clk0B, clk1B⟩ := syscallInstrsRow_cpuState_bounds witness constraints balanced rowMem
+  obtain ⟨opA, -, -⟩ :=
+    syscallInstrsRow_operands witness constraints balanced providerBound rowMem
+  have spec := syscallInstrsRow_spec_of_pullCurrency witness constraints balanced tableMem currency
+  have pulled := syscallInstrsRow_pulledFacts witness constraints balanced tableMem currency
+  have canonical := isInlineCanonical_of_profile witness canonicalCodes rowMem
+  have u64A := syscallInstrsRow_opAValue_isU64 witness constraints balanced rowMem
+  have step := witness_realSyscallInstrsRows_timeStep witness constraints balanced row rowMem
+  have sel := SyscallInstrsChip.Spec.selectorsValid spec
+  generalize syscallInstrsRow (syscallInstrsTable witness) row = r
+    at real clk0B clk1B opA spec pulled canonical u64A step sel positioned rowContext ⊢
+  exact syscallStepFact_of_advance handler prog events initial initialClock r payload real spec sel
+    pulled canonical clk0B clk1B u64A opA positioned rowContext step
+
+omit [Fact (2 ^ 17 < p)] in
+/-- **The syscall arm's frame fact, from the witness.**  The step fact's twin, with the same three
+irreducible hypotheses; it needs neither the clock-byte bounds nor `op_a`'s `isU64`, because a frame
+claim never touches the written value. -/
+theorem syscallFrameFact_of_witness (handler : ExecutableSyscallHandler) (prog : GuestProgram)
+    (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (providerBound : ProgramProviderBound witness)
+    (canonicalCodes : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
+    (payload : SyscallAdvancePayload (p := p) handler)
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
+    (currency : ∀ mp ∈
+        (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+      MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row))
+        = (eventTimeline events initialClock).start n →
+      events[n]? = some (ExecutionEvent.syscall
+        (syscallEventOfRow (syscallInstrsRow (syscallInstrsTable witness) row))))
+    (rowContext : ∀ (n : ℕ) (s : SailState),
+      eventTrajectory handler prog events initial n = some s →
+      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+          (syscallInstrsRow (syscallInstrsTable witness) row))
+        = (eventTimeline events initialClock).start n →
+      SyscallRowContext (syscallInstrsRow (syscallInstrsTable witness) row) prog s) :
+    FrameFactG prog (eventTrajectory handler prog events initial) initial
+      (eventTimeline events initialClock)
+      (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+  obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
+  obtain ⟨opA, -, -⟩ :=
+    syscallInstrsRow_operands witness constraints balanced providerBound rowMem
+  have spec := syscallInstrsRow_spec_of_pullCurrency witness constraints balanced tableMem currency
+  have pulled := syscallInstrsRow_pulledFacts witness constraints balanced tableMem currency
+  have canonical := isInlineCanonical_of_profile witness canonicalCodes rowMem
+  have step := witness_realSyscallInstrsRows_timeStep witness constraints balanced row rowMem
+  have sel := SyscallInstrsChip.Spec.selectorsValid spec
+  generalize syscallInstrsRow (syscallInstrsTable witness) row = r
+    at real opA spec pulled canonical step sel positioned rowContext ⊢
+  exact syscallFrameFact_of_advance handler prog events initial initialClock r payload real spec sel
+    pulled canonical opA positioned rowContext step
+
 end WitnessObligations
 
 /-- Discharge the engine's per-position `EventStep` obligation, arm by arm.

@@ -434,6 +434,13 @@ def Spec (r : Inputs (ZMod p)) : Prop :=
   SelectorsValid r
 
 omit [Fact (2 ^ 17 < p)] in
+/-- `SelectorsValid` is `Spec`'s final conjunct.  Project it by name: reaching it positionally means
+an eleven-deep chain of `.2`s, which silently re-points to a different conjunct the moment anyone
+inserts one — and this is the conjunct every per-arm semantic theorem turns on. -/
+theorem Spec.selectorsValid {r : Inputs (ZMod p)} (h : Spec r) : SelectorsValid r :=
+  h.2.2.2.2.2.2.2.2.2.2.2
+
+omit [Fact (2 ^ 17 < p)] in
 /-- The soundness conclusion follows from the prover's obligation, so the two never drift apart. -/
 theorem rowContract_toSpec {r : Inputs (ZMod p)} (h : RowContract r) : Spec r :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1,
