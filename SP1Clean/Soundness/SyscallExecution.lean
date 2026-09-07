@@ -454,6 +454,99 @@ theorem walkedTrail_of_haltFree (witness : EnsembleWitness (sp1Ensemble (p := p)
     trailWalk
   rintro t r (⟨d, rfl, rfl⟩ | ⟨raw, rfl, rfl⟩) <;> rfl
 
+/-- The walked canonical edge advances by the row's own duration.
+
+Canonicalization preserves `timeNat` once the endpoint's `clk_high` is genuinely 24-bit, which the
+goodness filter supplies for both arms; the widths themselves are the two `timeStep` lemmas. -/
+theorem walkedCanonEdge_steps (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (rows : List (WalkedRow p))
+    (instructionSource : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      row ∈ realDecodedInstructionRows witness.data witness.tables)
+    (syscallSource : ∀ r : SyscallInstrsChip.Inputs (ZMod p), WalkedRow.syscall r ∈ rows →
+      ∃ raw ∈ realSyscallInstrsRows witness,
+        r = syscallInstrsRow (syscallInstrsTable witness) raw) :
+    ∀ r ∈ rows, StateMsg.timeNat (walkedCanonEdge witness r).2
+      = StateMsg.timeNat (walkedCanonEdge witness r).1 + r.duration := by
+  obtain ⟨instrGood, -, -, syscallGood⟩ := witness_stateEdges_goodness witness constraints balanced
+  intro r hr
+  cases hrow : r with
+  | instruction row =>
+      rw [hrow] at hr
+      obtain ⟨pullBound, pushBound⟩ := (instrGood row (instructionSource row hr)).1
+      simp only [walkedCanonEdge, WalkedRow.duration]
+      rw [timeNat_canonState pushBound, timeNat_canonState pullBound]
+      exact witness_realDecodedInstructionRows_timeStep witness constraints balanced row
+        (instructionSource row hr)
+  | syscall rr =>
+      rw [hrow] at hr
+      obtain ⟨raw, rawMem, rfl⟩ := syscallSource rr hr
+      obtain ⟨pullBound, pushBound⟩ := (syscallGood raw rawMem).1
+      simp only [walkedCanonEdge, WalkedRow.duration]
+      rw [timeNat_canonState pushBound, timeNat_canonState pullBound]
+      exact witness_realSyscallInstrsRows_timeStep witness constraints balanced raw rawMem
+
+/-- The walked canonical edge's pull time is the row's own `RowFacts` pull time.
+
+The instruction arm needs `AlignsWith`, which fixes the aligned carrier's State messages to the
+ordinary ones on the nose; the syscall arm needs only the `RowFacts` projection. -/
+theorem walkedCanonEdge_timeAgree (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (g : DecodedInstructionRow p → Semantics.RowFacts p) (rows : List (WalkedRow p))
+    (aligned : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      TimedGrounding.AlignsWith (g row) (row.ordinaryRowFacts witness.data))
+    (instructionSource : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      row ∈ realDecodedInstructionRows witness.data witness.tables)
+    (syscallSource : ∀ r : SyscallInstrsChip.Inputs (ZMod p), WalkedRow.syscall r ∈ rows →
+      ∃ raw ∈ realSyscallInstrsRows witness,
+        r = syscallInstrsRow (syscallInstrsTable witness) raw) :
+    ∀ r ∈ rows, StateMsg.timeNat (walkedCanonEdge witness r).1
+      = StateMsg.timeNat (WalkedRow.facts g r).statePull := by
+  obtain ⟨instrGood, -, -, syscallGood⟩ := witness_stateEdges_goodness witness constraints balanced
+  intro r hr
+  cases hrow : r with
+  | instruction row =>
+      rw [hrow] at hr
+      have pullBound := (instrGood row (instructionSource row hr)).1.1
+      simp only [walkedCanonEdge, WalkedRow.facts]
+      rw [timeNat_canonState pullBound, (aligned row hr).statePull]
+      rfl
+  | syscall rr =>
+      rw [hrow] at hr
+      obtain ⟨raw, rawMem, rfl⟩ := syscallSource rr hr
+      have pullBound := (syscallGood raw rawMem).1.1
+      simp only [walkedCanonEdge, WalkedRow.facts, syscallRowFacts_statePull]
+      rw [timeNat_canonState pullBound]
+
+/-- **The walk feed's position obligation**: a walked row at trail index `k` pulls at the
+transcript's own `tl.start k`.
+
+This is the last of `walkE`'s five per-row inputs.  It is where the walk order and the transcript
+are tied together, and it holds for a mixed shard for the same reason it holds for an ordinary one:
+`walkedRow_pullAt` telescopes the State walk against each row's *own* width, and the transcript
+reports that same width at that same index. -/
+theorem walkedTrail_pullAt (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (g : DecodedInstructionRow p → Semantics.RowFacts p) (rows : List (WalkedRow p))
+    (initialClock : ℕ) {initialMsg finalMsg : StateMsg (ZMod p)}
+    (walk : Walk.IsWalk (walkedCanonEdge witness) initialMsg finalMsg rows)
+    (aligned : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      TimedGrounding.AlignsWith (g row) (row.ordinaryRowFacts witness.data))
+    (instructionSource : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      row ∈ realDecodedInstructionRows witness.data witness.tables)
+    (syscallSource : ∀ r : SyscallInstrsChip.Inputs (ZMod p), WalkedRow.syscall r ∈ rows →
+      ∃ raw ∈ realSyscallInstrsRows witness,
+        r = syscallInstrsRow (syscallInstrsTable witness) raw)
+    (headTime : StateMsg.timeNat initialMsg = initialClock)
+    (k : ℕ) (hk : k < rows.length) :
+    StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
+      = (eventTimeline (transcriptOf witness.data rows) initialClock).start k :=
+  walkedRow_pullAt witness.data g rows initialClock (walkedCanonEdge witness) walk
+    (walkedCanonEdge_steps witness constraints balanced rows instructionSource syscallSource)
+    (walkedCanonEdge_timeAgree witness constraints balanced g rows aligned instructionSource
+      syscallSource)
+    headTime k hk
+
 end WitnessObligations
 
 /-- Discharge the engine's per-position `EventStep` obligation, arm by arm.
