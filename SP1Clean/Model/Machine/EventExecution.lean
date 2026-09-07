@@ -48,6 +48,18 @@ def ExecutionEvent.StartsAt (clock : ℕ) : ExecutionEvent → Prop
 @[simp] theorem ExecutionEvent.duration_syscall (event : CoreSyscallEvent) :
     (ExecutionEvent.syscall event).duration = 264 := rfl
 
+/-- Ordinary-arm test on one event, as a `Bool` so a shard's ordinary-row count is computable
+without a decidability instance for `CoreSyscallEvent`. -/
+def ExecutionEvent.isOrdinary : ExecutionEvent → Bool
+  | .ordinary => true
+  | .syscall _ => false
+
+@[simp] theorem ExecutionEvent.isOrdinary_ordinary :
+    ExecutionEvent.ordinary.isOrdinary = true := rfl
+
+@[simp] theorem ExecutionEvent.isOrdinary_syscall (event : CoreSyscallEvent) :
+    (ExecutionEvent.syscall event).isOrdinary = false := rfl
+
 /-- One honest SP1 semantic step.  The syscall case does not claim to be a Sail step: SP1 replaces
 the architectural ECALL trap with its own handler protocol. -/
 inductive EventStep (handler : SyscallHandler) (program : GuestProgram) :
@@ -131,6 +143,42 @@ the proof-free trace so support checks and trace compilation never inspect a val
 def EventExecutionTrace.AllOrdinary (execution : EventExecutionTrace) : Prop :=
   ∀ transition ∈ execution.transitions, transition.event = .ordinary
 
+/-- Number of ordinary (eight-tick) transitions in a raw transition list.
+
+This — not the plain length — is the count the Core instruction-row budget is charged against: a
+syscall transition occupies the syscall table, not one of the 25 instruction tables, so it consumes
+no ordinary instruction row.  The two agree on an all-ordinary list, which is why the distinction
+was invisible while the profile demanded `AllOrdinary`.  It is stated on the list rather than the
+trace so the halting branch can charge its `dropLast` prefix with the same spelling. -/
+def ordinaryTransitionCount (transitions : List EventTransition) : ℕ :=
+  (transitions.filter fun transition => transition.event.isOrdinary).length
+
+theorem ordinaryTransitionCount_le (transitions : List EventTransition) :
+    ordinaryTransitionCount transitions ≤ transitions.length :=
+  List.length_filter_le _ _
+
+theorem ordinaryTransitionCount_eq_length {transitions : List EventTransition}
+    (ordinary : ∀ transition ∈ transitions, transition.event = .ordinary) :
+    ordinaryTransitionCount transitions = transitions.length := by
+  unfold ordinaryTransitionCount
+  rw [List.filter_eq_self.mpr]
+  intro transition mem
+  rw [ordinary transition mem]
+  rfl
+
+/-- Ordinary-step count of a raw execution; see `ordinaryTransitionCount`. -/
+def EventExecutionTrace.ordinarySteps (execution : EventExecutionTrace) : ℕ :=
+  ordinaryTransitionCount execution.transitions
+
+theorem EventExecutionTrace.ordinarySteps_le_steps (execution : EventExecutionTrace) :
+    execution.ordinarySteps ≤ execution.steps :=
+  ordinaryTransitionCount_le _
+
+@[simp] theorem EventExecutionTrace.ordinarySteps_eq_steps_of_allOrdinary
+    {execution : EventExecutionTrace} (ordinary : execution.AllOrdinary) :
+    execution.ordinarySteps = execution.steps :=
+  ordinaryTransitionCount_eq_length ordinary
+
 /-- A valid transition list containing only ordinary events is exactly an official-Sail chain.
 The syscall handler disappears from the conclusion because no syscall constructor can occur. -/
 theorem EventTransitionsValid.sailChain_of_allOrdinary {handler : SyscallHandler}
@@ -201,6 +249,15 @@ def EventExecutionTrace.locatedTransitions (execution : EventExecutionTrace) :
     (execution : EventExecutionTrace) :
     execution.locatedTransitions.map LocatedTransition.transition = execution.transitions := by
   simp [EventExecutionTrace.locatedTransitions]
+
+/-- Transport membership from the located view back to the raw transition list, so a per-transition
+fact stated on `transitions` (such as `AllOrdinary`) applies to a located transition. -/
+theorem EventExecutionTrace.mem_transitions_of_mem_locatedTransitions
+    {execution : EventExecutionTrace} {located : LocatedTransition}
+    (mem : located ∈ execution.locatedTransitions) :
+    located.transition ∈ execution.transitions := by
+  rw [← execution.locatedTransitions_map_transition]
+  exact List.mem_map_of_mem mem
 
 /-- A direction offered at `source`: its observable event, target state, and proof that taking it is
 a valid step.  This makes invalid transitions unrepresentable in a PolyFun execution prefix. -/
@@ -374,6 +431,31 @@ def EventExecutionTrace.HaltsWith (program : GuestProgram) (exitCode : BitVec 64
       event.IsCanonicalHalt ∧
       event.arg1 = exitCode ∧
       SP1Halted program exitCode execution.stateBeforeFinal
+
+/-- The trace takes no HALT.
+
+This is the **execution** branch's own restriction, and it is exactly what `AllOrdinary` used to
+stand in for while the profile admitted no syscall at all: a non-halting shard may take inline
+syscalls, but it may not take the terminal one.  Stating it directly is what keeps the two shard
+branches disjoint once mid-shard syscall transitions are admitted — `AllOrdinary` no longer
+separates them, because a mixed non-halting shard satisfies neither. -/
+def EventExecutionTrace.HaltFree (execution : EventExecutionTrace) : Prop :=
+  ∀ transition ∈ execution.transitions, ∀ event : CoreSyscallEvent,
+    transition.event = .syscall event → ¬ event.IsCanonicalHalt
+
+theorem EventExecutionTrace.haltFree_of_allOrdinary {execution : EventExecutionTrace}
+    (ordinary : execution.AllOrdinary) : execution.HaltFree := by
+  intro transition mem event isSyscall
+  rw [ordinary transition mem] at isSyscall
+  exact absurd isSyscall (by simp)
+
+/-- The branch discriminator: a halt-free trace cannot satisfy the terminal-halt condition, whose
+final transition is a canonical HALT syscall and therefore a member of the transition list. -/
+theorem EventExecutionTrace.not_haltsWith_of_haltFree {program : GuestProgram}
+    {exitCode : BitVec 64} {execution : EventExecutionTrace}
+    (haltFree : execution.HaltFree) : ¬ execution.HaltsWith program exitCode := by
+  rintro ⟨transition, event, isLast, isSyscall, canonical, -, -⟩
+  exact haltFree transition (List.mem_of_getLast? isLast) event isSyscall canonical
 
 theorem EventExecutionTrace.events_length (execution : EventExecutionTrace) :
     execution.events.length = execution.steps := by

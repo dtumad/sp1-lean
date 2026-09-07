@@ -328,15 +328,18 @@ theorem haltedExecution_of_haltGrounding
   · -- the prefix is all-ordinary
     rw [dropLastEq]
     exact ordinary₀
-  · -- the prefix is supported
+  · -- the prefix is supported.  `supported₀` is the contract's arm-split obligation; the prefix is
+    -- all-ordinary, so the `.ordinary` side condition is discharged from `ordinary₀` and this
+    -- theorem keeps publishing the stronger un-split form its callers want.
     intro located locatedMem
-    refine supported₀ located ?_
     have locEq : execution.locatedTransitions.dropLast = execution₀.locatedTransitions := by
       rw [executionDef]
       show (Machine.locateTransitions _ (execution₀.transitions ++ _)).dropLast = _
       rw [Machine.locateTransitions_append]
       exact List.dropLast_concat
-    rwa [locEq] at locatedMem
+    rw [locEq] at locatedMem
+    exact supported₀ located locatedMem (ordinary₀ _
+      (Machine.EventExecutionTrace.mem_transitions_of_mem_locatedTransitions locatedMem))
   · -- the prefix length
     rw [dropLastEq]
     exact stepsEq

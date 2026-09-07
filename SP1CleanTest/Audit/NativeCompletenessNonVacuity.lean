@@ -100,7 +100,8 @@ theorem anchorExecution_semantic :
       exact anchorState_pc
     · exact ⟨fun transition member => absurd member List.not_mem_nil,
         fun located member => absurd member List.not_mem_nil,
-        by simp [CoreProfile.WithinOrdinaryRowLimit]⟩
+        by simp [CoreProfile.WithinOrdinaryRowLimit,
+          Machine.EventExecutionTrace.ordinarySteps, Machine.ordinaryTransitionCount]⟩
 
 /-- The zero-step shard is strictly inside the pinned Core row budget. -/
 theorem anchorExecution_withinCoreRowLimit :

@@ -328,8 +328,9 @@ theorem supported_core_native_shard_execution
       (finalClock.trans grounding.clockCount) ?_ finalPc ?_
     · simpa only [initialEq, supportedCoreShardModel, supportedCoreShardBoundary] using
         boundary.initialPc
-    · refine ⟨ordinary, supported, ?_⟩
-      rw [stepsEq, grounding.exhaustive.length_eq]
+    · refine ⟨Machine.EventExecutionTrace.haltFree_of_allOrdinary ordinary, supported, ?_⟩
+      rw [Machine.EventExecutionTrace.ordinarySteps_eq_steps_of_allOrdinary ordinary, stepsEq,
+        grounding.exhaustive.length_eq]
       exact rowLimit
   · rw [Machine.CoreShardSemanticWitness.evaluatedTrace_eq_of_trace? evaluated]
     exact ordinary
@@ -414,10 +415,13 @@ theorem supported_core_native_shard_execution_halted
     · rw [Machine.CoreShardSemanticWitness.evaluatedTrace_eq_of_trace? evaluated]
       exact contentBridge cell.loc cell.finalValue finalMicro
   · -- the shared `.halted` case: an ordinary supported prefix, then the canonical HALT syscall.
+    -- The grounding engine still hands back the *un-split* prefix obligation (its prefix is
+    -- all-ordinary), which is strictly stronger than the arm-split one the contract now asks for.
     refine .halted execution.events execution rfl rfl evaluated execValid clocked finalClock ?_
-      finalPc halts ⟨prefixOrdinary, prefixSupported, ?_⟩
+      finalPc halts ⟨fun located locatedMem _ => prefixSupported located locatedMem, ?_⟩
     · simpa only [supportedCoreShardModel, supportedCoreShardBoundary] using initialPc
-    · rw [prefixLength, hg.exhaustive.length_eq]
+    · rw [Machine.ordinaryTransitionCount_eq_length prefixOrdinary, prefixLength,
+        hg.exhaustive.length_eq]
       exact rowLimit
   · rw [Machine.CoreShardSemanticWitness.evaluatedTrace_eq_of_trace? evaluated]
     exact halts

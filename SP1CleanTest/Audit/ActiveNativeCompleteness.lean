@@ -116,7 +116,7 @@ theorem activeExecution_configuredDecode :
 /-- The active transition belongs to the exact supported 25-chip profile. -/
 theorem activeExecution_supported :
     AllTransitionsSupported anchorProgram activeExecution := by
-  intro located member
+  intro located member _
   rw [activeExecution_locatedTransitions, List.mem_singleton] at member
   subst located
   exact ⟨rfl, activeTarget_effect.normal, anchorState_configured, activeView,
@@ -218,8 +218,10 @@ theorem activeExecution_semantic :
       exact anchorState_pc
     · change activeTarget.regs.get? Register.PC = some 65536#64
       simpa only [jalView_sndPc] using activeTarget_effect.pc
-    · exact ⟨activeExecution_allOrdinary, activeExecution_supported,
-        by simp [CoreProfile.WithinOrdinaryRowLimit]⟩
+    · exact ⟨Machine.EventExecutionTrace.haltFree_of_allOrdinary activeExecution_allOrdinary,
+        activeExecution_supported,
+        by simp [CoreProfile.WithinOrdinaryRowLimit,
+          Machine.EventExecutionTrace.ordinarySteps, Machine.ordinaryTransitionCount]⟩
 
 /-- The circuit-built active witness also lies inside the shared bounded native relation. -/
 theorem activeTrace_boundedNativeRelation :

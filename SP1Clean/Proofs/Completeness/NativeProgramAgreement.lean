@@ -124,11 +124,13 @@ theorem nativeProgramKey_decodedInROM
     ∃ row : ProgramChip.ProgramRow (ZMod p),
       key = ProgramChip.programRowKey row ∧ decodedInROM statement.program row := by
   subst execution
-  obtain ⟨-, -, -, -, -, -, supported, -⟩ :=
+  obtain ⟨-, -, -, -, -, ordinaryTrace, supported, -⟩ :=
     Execution.SupportedCoreShardExecutionValid.evaluatedTrace_facts semantic ordinary
-  have semanticSupported : AllTransitionsSupported statement.program
-      (semanticWitness.evaluatedTrace (supportedCoreShardModel (p := p))) := by
-    simpa only [Execution.SupportedCoreShardExecutionValid.program_eq semantic] using supported
+  have semanticSupported : ∀ located ∈
+      (semanticWitness.evaluatedTrace (supportedCoreShardModel (p := p))).locatedTransitions,
+      SupportedSP1Transition statement.program located := by
+    simpa only [Execution.SupportedCoreShardExecutionValid.program_eq semantic] using
+      supported.all_of_allOrdinary ordinaryTrace
   obtain ⟨compiledRow, compiledRowMem, row, generatedView, sourcePc, projected, keyEq⟩ :=
     projection key keyMem keyKind
   have locatedMem : compiledRow.located ∈

@@ -301,8 +301,9 @@ private theorem executePcWalkEventsAux {Row : Type u}
         simp only [execution, Machine.EventExecutionTrace.locatedTransitions,
           Machine.locateTransitions, List.mem_cons] at locatedMem
         rcases locatedMem with rfl | locatedMem
-        · exact headSupported
-        · apply tailSupported
+        · exact fun _ => headSupported
+        · intro headOrdinary
+          refine tailSupported _ ?_ headOrdinary
           simpa [Machine.EventExecutionTrace.locatedTransitions, tailInitial] using locatedMem
 
 /-- A fully grounded ordered row list constructs one exact proof-free ordinary event trace.  Its

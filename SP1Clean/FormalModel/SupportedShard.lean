@@ -37,23 +37,47 @@ def SupportedSP1Transition (program : GuestProgram)
       SP1Clean.Semantics.projectSP1Transition? program located = some view ∧
         ConfiguredDecode view.word view.decoded
 
-/-- Every transition of a proof-free execution routes through the native instruction registry. -/
+/-- Every **ordinary** transition of a proof-free execution routes through the native instruction
+registry.
+
+The quantifier is arm-split rather than global.  A syscall transition's meaning does not come from
+the instruction-routing profile at all: it travels in `Machine.EventStep.syscall`'s own
+`SyscallTransition`, authenticated by trace validity in `CoreShardCase`.  Demanding
+`SupportedSP1Transition` of it would demand `event = .ordinary`, which is exactly the restriction
+this profile is dropping. -/
 def AllTransitionsSupported (program : GuestProgram)
     (execution : Machine.EventExecutionTrace) : Prop :=
   ∀ located ∈ execution.locatedTransitions,
-    SupportedSP1Transition program located
+    located.transition.event = .ordinary → SupportedSP1Transition program located
 
-/-- **The supported halting discipline**: every transition before the terminal halt is a
-supported ordinary instruction, and the ordinary prefix fits the Core row budget.  The terminal
+/-- **The supported halting discipline**: every ordinary transition before the terminal halt is a
+supported instruction, and the ordinary prefix fits the Core row budget.  The terminal
 transition's own laws — the canonical HALT code, the exit-code binding, and the endpoint
 states — travel in the shared `.halted` constructor through `HaltsWith` and trace validity, so
-this predicate deliberately restates none of them. -/
+this predicate deliberately restates none of them.
+
+The prefix is no longer required to be all-ordinary: a halting shard may take inline syscalls
+before its terminal HALT, and each such transition is authenticated by `EventStep.syscall`.  The
+row budget is charged against the prefix's *ordinary* transitions, which is what the native side
+supplies (`realDecodedInstructionRows`, an instruction-row count that never included syscall
+rows). -/
 def SupportedHaltingTrace (program : GuestProgram)
     (execution : Machine.EventExecutionTrace) : Prop :=
-  (∀ transition ∈ execution.transitions.dropLast, transition.event = .ordinary) ∧
   (∀ located ∈ execution.locatedTransitions.dropLast,
-    SupportedSP1Transition program located) ∧
-  _root_.SP1Clean.CoreProfile.WithinOrdinaryRowLimit execution.transitions.dropLast.length
+    located.transition.event = .ordinary → SupportedSP1Transition program located) ∧
+  _root_.SP1Clean.CoreProfile.WithinOrdinaryRowLimit
+    (Machine.ordinaryTransitionCount execution.transitions.dropLast)
+
+/-- Recover the un-split routing obligation on an all-ordinary trace: every located transition is
+supported, with no side condition.  This is the shape every syscall-free consumer already wants, and
+supplying it is what keeps those consumers unchanged by the arm split. -/
+theorem AllTransitionsSupported.all_of_allOrdinary {program : GuestProgram}
+    {execution : Machine.EventExecutionTrace}
+    (supported : AllTransitionsSupported program execution)
+    (ordinary : execution.AllOrdinary) :
+    ∀ located ∈ execution.locatedTransitions, SupportedSP1Transition program located :=
+  fun located mem => supported located mem
+    (ordinary _ (Machine.EventExecutionTrace.mem_transitions_of_mem_locatedTransitions mem))
 
 /-- Eliminate one supported transition to the exact shared projection and stable decode evidence. -/
 theorem SupportedSP1Transition.view
@@ -138,10 +162,13 @@ def supportedCoreShardContract {p : ℕ} [Fact p.Prime] :
   -- `SupportedCoreNativeRelation`'s boundary conjunct, not in the shard contract.
   witnessValid := fun _ _ => True
   haltValid := fun _ witness execution => SupportedHaltingTrace witness.program execution
+  -- `HaltFree`, not `AllOrdinary`: the execution branch's real content is that this shard does not
+  -- take the terminal HALT, and that is also what keeps it disjoint from the `.halted` branch once
+  -- mid-shard syscall transitions are admitted.  `AllOrdinary` used to serve both roles at once.
   executionValid := fun _ witness execution =>
-    execution.AllOrdinary ∧
+    execution.HaltFree ∧
       AllTransitionsSupported witness.program execution ∧
-      _root_.SP1Clean.CoreProfile.WithinOrdinaryRowLimit execution.steps
+      _root_.SP1Clean.CoreProfile.WithinOrdinaryRowLimit execution.ordinarySteps
 
 /-- The single capacity-bounded semantic language for the supported native Core profile. -/
 abbrev SupportedCoreShardExecutionValid {p : ℕ} [Fact p.Prime] :=
@@ -207,18 +234,23 @@ theorem evaluatedTrace_facts {p : ℕ} [Fact p.Prime]
   obtain ⟨events, trace, -, evaluated, traceValid, clocked, finalClock, initialPc, finalPc,
       supportedProfile⟩ := valid.executionTrace rfl ordinary
   obtain ⟨-, supported, limit⟩ := supportedProfile
-  rw [witness.evaluatedTrace_eq_of_trace? evaluated]
-  exact ⟨traceValid, clocked, finalClock, initialPc, finalPc,
-    by rwa [witness.evaluatedTrace_eq_of_trace? evaluated] at ordinary, supported, limit⟩
+  rw [witness.evaluatedTrace_eq_of_trace? evaluated] at ordinary ⊢
+  rw [Machine.EventExecutionTrace.ordinarySteps_eq_steps_of_allOrdinary ordinary] at limit
+  exact ⟨traceValid, clocked, finalClock, initialPc, finalPc, ordinary, supported, limit⟩
 
 /-- **Halting-shard elimination on the supported profile**: a valid witness whose evaluated trace
-is not all-ordinary is a halting shard — a supported ordinary prefix followed by the canonical
-HALT syscall carrying the committed exit-code cell, between the committed public endpoints. -/
+takes a HALT is a halting shard — a supported prefix followed by the canonical HALT syscall
+carrying the committed exit-code cell, between the committed public endpoints.
+
+⚠ The hypothesis is `¬ HaltFree`, not `¬ AllOrdinary`.  Those coincided only while the profile
+admitted no syscall at all; with mid-shard syscalls admitted, a non-halting mixed shard is
+`¬ AllOrdinary` and yet squarely in the *execution* branch, so the old hypothesis would have made
+this a false claim rather than an unprovable one. -/
 theorem halted_facts {p : ℕ} [Fact p.Prime]
     {statement : SupportedCoreStatement p} {witness : Machine.CoreShardSemanticWitness}
     (valid : SupportedCoreShardExecutionValid statement witness)
-    (notOrdinary :
-      ¬ (witness.evaluatedTrace (supportedCoreShardModel (p := p))).AllOrdinary) :
+    (notHaltFree :
+      ¬ (witness.evaluatedTrace (supportedCoreShardModel (p := p))).HaltFree) :
     (witness.evaluatedTrace (supportedCoreShardModel (p := p))).Valid
         Machine.ExecutableSyscallHandler.haltOnly.relation witness.program ∧
       (witness.evaluatedTrace (supportedCoreShardModel (p := p))).Clocked
@@ -236,9 +268,9 @@ theorem halted_facts {p : ℕ} [Fact p.Prime]
         (witness.evaluatedTrace (supportedCoreShardModel (p := p))) := by
   obtain ⟨events, trace, -, evaluated, traceValid, clocked, finalClock, initialPc, finalPc,
       branch⟩ := valid.executionTrace_cases rfl
-  rw [witness.evaluatedTrace_eq_of_trace? evaluated] at notOrdinary ⊢
+  rw [witness.evaluatedTrace_eq_of_trace? evaluated] at notHaltFree ⊢
   rcases branch with exec | ⟨halts, haltValid⟩
-  · exact absurd exec.1 notOrdinary
+  · exact absurd exec.1 notHaltFree
   · exact ⟨traceValid, clocked, finalClock, initialPc, finalPc, halts, haltValid⟩
 
 end SupportedCoreShardExecutionValid

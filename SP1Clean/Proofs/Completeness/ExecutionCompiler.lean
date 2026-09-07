@@ -287,9 +287,10 @@ theorem SupportedCoreShardExecutionValid.compileExecution?_exists_of_instruction
         (witness.evaluatedTrace (supportedCoreShardModel (p := p))) initialClock =
           some compiled := by
   let execution := witness.evaluatedTrace (supportedCoreShardModel (p := p))
-  obtain ⟨-, -, -, -, -, -, supported, -⟩ := valid.evaluatedTrace_facts ordinary
-  have statementSupported : AllTransitionsSupported statement.program execution := by
-    simpa only [valid.program_eq] using supported
+  obtain ⟨-, -, -, -, -, ordinaryTrace, supported, -⟩ := valid.evaluatedTrace_facts ordinary
+  have statementSupported : ∀ located ∈ execution.locatedTransitions,
+      SupportedSP1Transition statement.program located := by
+    simpa only [valid.program_eq] using supported.all_of_allOrdinary ordinaryTrace
   apply TraceGen.compileExecution?_exists_of_views
   intro located member
   obtain ⟨view, projected, -⟩ := (statementSupported located member).view
