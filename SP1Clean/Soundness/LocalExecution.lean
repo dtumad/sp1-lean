@@ -383,6 +383,29 @@ private theorem executeWalkEventsAux {Row : Type u}
           refine tailSupported _ ?_ rowOrdinary
           simpa [Machine.EventExecutionTrace.locatedTransitions, tailInitial] using locatedMem
 
+/-- A walk whose every row can advance produces that walk's own proof-free event trace.
+
+The public entry point to the engine: `executeWalkEventsAux` specialized from its suffix-indexed
+form to the whole row list. -/
+theorem walkExecution_of_advances {Row : Type u}
+    (handler : Machine.SyscallHandler) (program : GuestProgram)
+    (eventOf : Row → Machine.ExecutionEvent) (edge : Row → BitVec 64 × BitVec 64)
+    (traj : Semantics.Trajectory) (rows : List Row) (initial : SailState)
+    (initialPc finalPc : BitVec 64)
+    (advances : WalkAdvancesAt handler program eventOf edge traj rows)
+    (walk : Walk.IsWalk edge initialPc finalPc rows)
+    (genesis : traj 0 = some initial)
+    (pc : initial.regs.get? Register.PC = some initialPc)
+    (rom : RomLoaded program initial) (cfg : SailConfigured initial) :
+    ∃ execution : Machine.EventExecutionTrace,
+      execution.initialState = initial ∧
+      execution.events = rows.map eventOf ∧
+      execution.finalState.regs.get? Register.PC = some finalPc ∧
+      execution.Valid handler program ∧
+      AllTransitionsSupported program execution :=
+  executeWalkEventsAux handler program eventOf edge traj rows advances [] rows initialPc finalPc
+    initial (by simp) walk (by simpa using genesis) pc rom cfg
+
 /-- A fully grounded ordered row list constructs one exact proof-free ordinary event trace.  Its
 validity is the official event-step relation, its transition order is the row order, every decode
 retains a canonical instruction-chip route, and the ordinary schedule gives the exact eight-tick
@@ -419,9 +442,9 @@ theorem eventExecution_of_groundedRows {Row : Type u}
       .ordinary headSupported.notAboutToExecuteEcall step, effect.pc,
       codeMemoryCompatible chain step romState, effect.cfg cfgState, fun _ => headSupported⟩
   obtain ⟨execution, initialEq, events, finalEq, valid, supported⟩ :=
-    executeWalkEventsAux handler program (fun _ => Machine.ExecutionEvent.ordinary)
-      (pcEdgeOf rowOf) (Semantics.sailTrajectory initial) rows advances [] rows initialPc finalPc
-      initial (by simp) ((pcWalk_iff_isWalk rowOf initialPc finalPc rows).mp walk)
+    walkExecution_of_advances handler program (fun _ => Machine.ExecutionEvent.ordinary)
+      (pcEdgeOf rowOf) (Semantics.sailTrajectory initial) rows initial initialPc finalPc advances
+      ((pcWalk_iff_isWalk rowOf initialPc finalPc rows).mp walk)
       (Semantics.sailTrajectory_eq_some_iff.mpr (by simpa using Target.SailChain.refl initial))
       pc rom cfg
   -- The single event equation recovers all three facts the eight-tick engine stated separately.

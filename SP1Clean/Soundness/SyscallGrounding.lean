@@ -961,6 +961,12 @@ noncomputable def WalkedRow.event : WalkedRow p → ExecutionEvent
 theorem transcriptOf_eq_map (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) :
     transcriptOf data rows = rows.map WalkedRow.event := rfl
 
+/-- A walked row's window is the duration its own event reports — the pointwise form of
+`durationAt_transcriptOf`, which the clock accounting needs off-index. -/
+@[simp] theorem WalkedRow.duration_event (row : WalkedRow p) :
+    row.event.duration = row.duration := by
+  cases row <;> rfl
+
 /-- The transcript's event at an index is the row's own event, by construction. -/
 theorem transcriptOf_getElem? (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) (k : ℕ)
     (hk : k < rows.length) :

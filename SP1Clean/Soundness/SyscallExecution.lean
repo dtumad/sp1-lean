@@ -111,4 +111,54 @@ theorem walkAdvancesAt_of_walk (handler : ExecutableSyscallHandler) (prog : Gues
   exact ⟨next, nextTraj, eventStep, by simpa only [walkedPcEdge, StateMsg.pcBits] using nextPc,
     nextRom, nextCfg, routed⟩
 
+/-- **The mixed shard's proof-free execution trace.**
+
+The engine reports its events as `rows.map WalkedRow.event`, which is *definitionally*
+`transcriptOf data rows` — `transcriptOf_eq_map` is `rfl`.  So this produces the very transcript the
+whole syscall layer is already stated over, rather than a parallel one that would then have to be
+proved equal to it.  That is the same discipline as `walkAdvancesAt_of_walk`, one level up: make the
+two spellings one term by construction instead of reconciling them afterwards. -/
+theorem walkedExecution_of_advances (handler : ExecutableSyscallHandler) (prog : GuestProgram)
+    (data : ProverData (ZMod p)) (g : DecodedInstructionRow p → Semantics.RowFacts p)
+    (rows : List (WalkedRow p)) (initial : SailState) (initialPc finalPc : BitVec 64)
+    (advances : WalkAdvancesAt handler.relation prog WalkedRow.event (walkedPcEdge g)
+      (eventTrajectory handler prog (transcriptOf data rows) initial) rows)
+    (walk : Walk.IsWalk (walkedPcEdge g) initialPc finalPc rows)
+    (pc : initial.regs.get? Register.PC = some initialPc)
+    (rom : RomLoaded prog initial) (cfg : SailConfigured initial) :
+    ∃ execution : Machine.EventExecutionTrace,
+      execution.initialState = initial ∧
+      execution.events = transcriptOf data rows ∧
+      execution.finalState.regs.get? Register.PC = some finalPc ∧
+      execution.Valid handler.relation prog ∧
+      AllTransitionsSupported prog execution :=
+  walkExecution_of_advances handler.relation prog WalkedRow.event (walkedPcEdge g)
+    (eventTrajectory handler prog (transcriptOf data rows) initial) rows initial initialPc finalPc
+    advances walk rfl pc rom cfg
+
+/-- The mixed trace's final clock is the walk's own prefix-summed row widths.
+
+This is where the 264-tick row is actually paid for: `transitions_finalClock` sums the trace's own
+event durations with no ordinary hypothesis at all, and `WalkedRow.duration_event` turns each event
+duration back into the row width the walk was stated with. -/
+theorem walkedExecution_finalClock (data : ProverData (ZMod p)) (rows : List (WalkedRow p))
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ)
+    (events : execution.events = transcriptOf data rows) :
+    execution.finalClock initialClock
+      = initialClock + (rows.map WalkedRow.duration).sum := by
+  change Machine.clockAfterEvents initialClock
+    (execution.transitions.map Machine.EventTransition.event) = _
+  have base : execution.transitions.map Machine.EventTransition.event
+      = rows.map WalkedRow.event := events
+  have step : execution.transitions.map (fun transition => transition.event.duration)
+      = rows.map WalkedRow.duration :=
+    calc execution.transitions.map (fun transition => transition.event.duration)
+        = (execution.transitions.map Machine.EventTransition.event).map
+            Machine.ExecutionEvent.duration := by rw [List.map_map]; rfl
+      _ = (rows.map WalkedRow.event).map Machine.ExecutionEvent.duration := by rw [base]
+      _ = rows.map WalkedRow.duration := by
+            rw [List.map_map]
+            exact List.map_congr_left fun row _ => WalkedRow.duration_event row
+  rw [transitions_finalClock, step]
+
 end SP1Clean.Soundness
