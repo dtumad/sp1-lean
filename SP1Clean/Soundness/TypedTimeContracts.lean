@@ -456,8 +456,11 @@ finished Byte channel alone. The halt row's twin takes the same route for the sa
 layer must not assume memory grounding, so the bounds come from the byte bus rather than from the
 chip's `Spec`. The one difference is the reader's `next_pc` argument — the halt table hands it the
 constant `(1, 0, 0)`, while the syscall row hands it the row's own witnessed `next_pc`, which is the
-whole difference between standing in for one arm and dispatching thirteen. -/
-private theorem syscallInstrsRow_cpuState_bounds
+whole difference between standing in for one arm and dispatching thirteen.
+
+Public because the walk feed's row contract consumes it outside this file; the halt row's twin below
+stays private because its only consumer is here. -/
+theorem syscallInstrsRow_cpuState_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :

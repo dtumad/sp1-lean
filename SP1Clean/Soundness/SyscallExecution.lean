@@ -259,6 +259,44 @@ theorem walkedRow_widthAt (witness : EnsembleWitness (sp1Ensemble (p := p)))
         syscallRowFacts_statePull]
       exact witness_realSyscallInstrsRows_timeStep witness constraints balanced raw rawMem
 
+omit [Fact (2 ^ 17 < p)] in
+/-- **The syscall arm's row-local engine contract, from the witness.**
+
+`syscallRowOKCore` takes ten premises; nine are witness facts already proved elsewhere — `is_real`
+from table membership, `Spec` through the currency break, the two clock-byte bounds from the
+composed `CPUState` reader, the three operand indices from the committed `ECALL` Program row, and
+the `+264` step.
+
+The one that stays a hypothesis is `align8`, and it stays for a reason worth naming: it relates the
+row's pull to the **shard's** initial clock, which no single row can see.  Only the walk establishes
+it, inductively, which is why it cannot be discharged here however many witness facts are in hand. -/
+theorem syscallRowOKCore_of_witness (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (providerBound : ProgramProviderBound witness) (initialClock : ℕ)
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
+    (currency : ∀ mp ∈
+        (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+      MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1)
+    (align : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+        (syscallInstrsRow (syscallInstrsTable witness) row)) % 8 = initialClock % 8) :
+    TimedGrounding.RowOKCore initialClock
+      (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+  obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
+  obtain ⟨clk0B, clk1B⟩ := syscallInstrsRow_cpuState_bounds witness constraints balanced rowMem
+  obtain ⟨opA, opB, opC⟩ :=
+    syscallInstrsRow_operands witness constraints balanced providerBound rowMem
+  have spec := syscallInstrsRow_spec_of_pullCurrency witness constraints balanced tableMem currency
+  have step := witness_realSyscallInstrsRows_timeStep witness constraints balanced row rowMem
+  -- ⚠ **Interpose an opaque variable before applying the abstract-row lemma.**  Every premise above
+  -- is cheap to derive and the application is cheap at an abstract row, but doing both at the
+  -- *concrete* row costs 372k `Vector.mapRange` unfoldings: the clock-bound premise and
+  -- `syscallRowOKCore`'s expectation of it differ enough that `whnf` starts normalizing the table's
+  -- element construction (`[def_eq] sp1Ensemble` in the diagnostics).  With the row generalized to
+  -- a bare `r` nothing can unfold it, and the proof elaborates in ~2s.
+  generalize syscallInstrsRow (syscallInstrsTable witness) row = r
+    at real clk0B clk1B opA opB opC spec step align ⊢
+  exact syscallRowOKCore initialClock r real spec clk0B clk1B opA opB opC align step
+
 end WitnessObligations
 
 /-- Discharge the engine's per-position `EventStep` obligation, arm by arm.
