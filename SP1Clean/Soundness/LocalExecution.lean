@@ -1,6 +1,8 @@
 import SP1Clean.Soundness.ChipRegistry
 import SP1Clean.FormalModel.SupportedShard
 import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Model.Semantics.GenericTruth
+import SP1Clean.Soundness.Walk
 
 /-! # Ordered grounded rows produce a local Sail execution
 
@@ -31,6 +33,26 @@ def PcWalk {Row : Type u} (rowOf : Row → ChipRow p) : BitVec 64 → BitVec 64 
       rcvPcOf (stateAccess (rowOf row).view) = initial ∧
         PcWalk rowOf (sndPcOf (stateAccess (rowOf row).view)) final rest
 
+/-- The pc edge of one row: what the State bus says it receives, and what it sends. -/
+def pcEdgeOf {Row : Type u} (rowOf : Row → ChipRow p) (row : Row) : BitVec 64 × BitVec 64 :=
+  (rcvPcOf (stateAccess (rowOf row).view), sndPcOf (stateAccess (rowOf row).view))
+
+/-- `PcWalk` **is** the generic `Walk.IsWalk` at the pc edge — the two have the same nil (`a = b`)
+and cons (`(edge x).1 = a ∧ …`) shapes, so this holds by `Iff.rfl` at every position.
+
+Stating the identity is worth a lemma for two reasons.  It makes `Walk.isWalk_append`,
+`isWalk_map` and `isWalk_forall₂` available to the pc walk — the halt branch is literally a
+`prefix ++ [one row]` walk, which is `isWalk_append`.  And it is the generalization a syscall row
+needs: a row with no `ChipRow` still has a pc edge, so the mixed engine walks `Walk.IsWalk` at an
+edge built from `RowFacts` (`statePullMessage_pcBits`/`statePushMessage_pcBits`) while every
+existing consumer keeps its `PcWalk rowOf` spelling unchanged. -/
+theorem pcWalk_iff_isWalk {Row : Type u} (rowOf : Row → ChipRow p)
+    (initial final : BitVec 64) (rows : List Row) :
+    PcWalk rowOf initial final rows ↔ Walk.IsWalk (pcEdgeOf rowOf) initial final rows := by
+  induction rows generalizing initial with
+  | nil => exact Iff.rfl
+  | cons row rest ih => exact and_congr Iff.rfl (ih _)
+
 /-- State-independent facts about one active decoded row.  These come from deterministic witness
 decoding, the chip registry, and Program-channel grounding; they do not belong to the evolving-state
 induction. -/
@@ -56,26 +78,33 @@ structure GroundedRow (data : ProverData (ZMod p)) (program : GuestProgram)
 
 /-- Position-indexed grounding for an ordered list of row labels.  The labels stay generic so a
 caller can retain a physical decoded circuit row while this semantic engine reads only `rowOf`.
-Static facts are stated once per member; only operand currency and readiness are indexed by an
-already-constructed Sail prefix. -/
+Static facts are stated once per member; only operand currency and readiness are indexed by
+execution position.
+
+The position index is a **trajectory**, not a `SailChain`.  `DynamicGroundedRow` never mentions a
+chain — only the quantifier in front of it did — and `sailTrajectory_eq_some_iff` is already proved
+in both directions, so `SailChain done.length initial state` is recovered verbatim at
+`Semantics.sailTrajectory initial` and no consumer changes.  What the generalization buys is a
+position index a 264-tick syscall row can also occupy: `eventTrajectory` counts *steps*, so a row's
+duration never enters here (it enters the clock, which is a separate axis). -/
 structure RowsGrounded {Row : Type u} (rowOf : Row → ChipRow p)
     (data : ProverData (ZMod p)) (program : GuestProgram)
-    (initial : SailState) (rows : List Row) : Prop where
+    (traj : Semantics.Trajectory) (rows : List Row) : Prop where
   static : ∀ row ∈ rows, StaticGroundedRow program (rowOf row)
   dynamic : ∀ done row suffix, rows = done ++ row :: suffix →
-    ∀ state, SailChain done.length initial state → DynamicGroundedRow data program (rowOf row) state
+    ∀ state, traj done.length = some state → DynamicGroundedRow data program (rowOf row) state
 
 /-- Recombine the static and position-dependent layers at one execution position. -/
 theorem RowsGrounded.at {Row : Type u} {rowOf : Row → ChipRow p}
     {data : ProverData (ZMod p)} {program : GuestProgram}
-    {initial : SailState} {rows : List Row}
-    (grounded : RowsGrounded rowOf data program initial rows)
+    {traj : Semantics.Trajectory} {rows : List Row}
+    (grounded : RowsGrounded rowOf data program traj rows)
     (done : List Row) (row : Row) (suffix : List Row)
     (rowsEq : rows = done ++ row :: suffix) (state : SailState)
-    (chain : SailChain done.length initial state) :
+    (position : traj done.length = some state) :
     GroundedRow data program (rowOf row) state := by
   refine { toStaticGroundedRow := grounded.static row ?_
-           toDynamicGroundedRow := grounded.dynamic done row suffix rowsEq state chain }
+           toDynamicGroundedRow := grounded.dynamic done row suffix rowsEq state position }
   rw [rowsEq]
   simp
 
@@ -170,7 +199,7 @@ index into `RowsGrounded`. -/
 private theorem executePcWalkAux {Row : Type u}
     (rowOf : Row → ChipRow p)
     (data : ProverData (ZMod p)) (program : GuestProgram) (initial : SailState)
-    (rows : List Row) (grounded : RowsGrounded rowOf data program initial rows)
+    (rows : List Row) (grounded : RowsGrounded rowOf data program (Semantics.sailTrajectory initial) rows)
     (codeMemoryCompatible : SailCodeMemoryCompatible program initial) :
     ∀ (done suffix : List Row) (current final : BitVec 64) (state : SailState),
       rows = done ++ suffix →
@@ -195,7 +224,8 @@ private theorem executePcWalkAux {Row : Type u}
           some (rcvPcOf (stateAccess (rowOf row).view)) := by
         rw [rowSource]
         exact pc
-      have rowGrounded := grounded.at done row suffix rows_eq state chain.toSailChain
+      have rowGrounded := grounded.at done row suffix rows_eq state
+        (Semantics.sailTrajectory_eq_some_iff.mpr chain.toSailChain)
       obtain ⟨next, step, effect⟩ := rowGrounded.advance cfg rom pcRow
       have rows_eq' : rows = (done ++ [row]) ++ suffix := by
         simpa [List.append_assoc] using rows_eq
@@ -213,7 +243,7 @@ theorem sailRetireChain_of_groundedRows {Row : Type u} (rowOf : Row → ChipRow 
     (data : ProverData (ZMod p)) (program : GuestProgram) (initial : SailState)
     (rows : List Row) (initialPc finalPc : BitVec 64)
     (walk : PcWalk rowOf initialPc finalPc rows)
-    (grounded : RowsGrounded rowOf data program initial rows)
+    (grounded : RowsGrounded rowOf data program (Semantics.sailTrajectory initial) rows)
     (codeMemoryCompatible : SailCodeMemoryCompatible program initial)
     (pc : initial.regs.get? Register.PC = some initialPc)
     (rom : RomLoaded program initial) (cfg : SailConfigured initial) :
@@ -230,7 +260,7 @@ private theorem executePcWalkEventsAux {Row : Type u}
     (handler : Machine.SyscallHandler)
     (rowOf : Row → ChipRow p)
     (data : ProverData (ZMod p)) (program : GuestProgram) (initial : SailState)
-    (rows : List Row) (grounded : RowsGrounded rowOf data program initial rows)
+    (rows : List Row) (grounded : RowsGrounded rowOf data program (Semantics.sailTrajectory initial) rows)
     (codeMemoryCompatible : SailCodeMemoryCompatible program initial) :
     ∀ (done suffix : List Row) (current final : BitVec 64) (state : SailState),
       rows = done ++ suffix →
@@ -266,7 +296,8 @@ private theorem executePcWalkEventsAux {Row : Type u}
           some (rcvPcOf (stateAccess (rowOf row).view)) := by
         rw [rowSource]
         exact pc
-      have rowGrounded := grounded.at done row suffix rowsEq state chain
+      have rowGrounded := grounded.at done row suffix rowsEq state
+        (Semantics.sailTrajectory_eq_some_iff.mpr chain)
       obtain ⟨next, step, effect⟩ := rowGrounded.advance cfg rom pcRow
       have rowsEq' : rows = (done ++ [row]) ++ suffix := by
         simpa [List.append_assoc] using rowsEq
@@ -315,7 +346,7 @@ theorem eventExecution_of_groundedRows {Row : Type u}
     (data : ProverData (ZMod p)) (program : GuestProgram) (initial : SailState)
     (rows : List Row) (initialPc finalPc : BitVec 64)
     (walk : PcWalk rowOf initialPc finalPc rows)
-    (grounded : RowsGrounded rowOf data program initial rows)
+    (grounded : RowsGrounded rowOf data program (Semantics.sailTrajectory initial) rows)
     (codeMemoryCompatible : SailCodeMemoryCompatible program initial)
     (pc : initial.regs.get? Register.PC = some initialPc)
     (rom : RomLoaded program initial) (cfg : SailConfigured initial) (initialClock : ℕ) :
@@ -353,7 +384,7 @@ theorem groundedRows_sailRelation {Row : Type u}
     (rom : RomLoaded statement.program initial) (cfg : SailConfigured initial)
     (codeMemoryCompatible : SailCodeMemoryCompatible statement.program initial)
     (walk : PcWalk rowOf statement.initPcBits statement.finalPcBits rows)
-    (grounded : RowsGrounded rowOf data statement.program initial rows)
+    (grounded : RowsGrounded rowOf data statement.program (Semantics.sailTrajectory initial) rows)
     (clockCount : statement.initClkNat + 8 * rows.length = statement.finalClkNat)
     (exitZero : statement.publicValues.exit_code = 0)
     (memoryWellFormed : memory.WellFormed statement.finalClkNat)

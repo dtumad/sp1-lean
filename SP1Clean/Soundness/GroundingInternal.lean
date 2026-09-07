@@ -199,7 +199,7 @@ structure SupportedCoreGrounding
     orderedRows
   grounded : RowsGrounded (fun decoded : DecodedInstructionRow p =>
       decoded.toChipRow witness.data)
-    witness.data statement.program initial orderedRows
+    witness.data statement.program (Semantics.sailTrajectory initial) orderedRows
   clockCount :
     Semantics.clkNat statement.publicValues.init_clk_high statement.publicValues.init_clk_low +
         8 * orderedRows.length =
@@ -1606,7 +1606,8 @@ structure SupportedCoreHaltGrounding
     (Semantics.StateMsg.pcBits (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
     orderedRows
   grounded : RowsGrounded (fun decoded : DecodedInstructionRow p =>
-      decoded.toChipRow witness.data) witness.data statement.program initial orderedRows
+      decoded.toChipRow witness.data) witness.data statement.program
+    (Semantics.sailTrajectory initial) orderedRows
   pullClock : Semantics.StateMsg.timeNat
       (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) =
     Commit.initClkNat witness.data + 8 * orderedRows.length
@@ -1735,7 +1736,11 @@ theorem supported_core_witness_grounding
       · exact {
           static := supportedCore_orderedRows_static statement witness constraints balanced
             boundary orderedRows exhaustive
-          dynamic := dyn.1 }
+          -- See the halt branch below: the engine still states its position index as a
+          -- `SailChain`, which `sailTrajectory_eq_some_iff` converts to the structure's trajectory.
+          dynamic := fun done decoded suffix rowsEq state position =>
+            dyn.1 done decoded suffix rowsEq state
+              (Semantics.sailTrajectory_eq_some_iff.mp position) }
       · have clockCount := clockCount_of_stateWalk _ stateWalk
           (fun decoded decodedMem => by
             rw [timeNat_canonState (goodness decoded (exhaustive.mem_iff.mp decodedMem)).1.1,
@@ -2079,7 +2084,12 @@ theorem supported_core_witness_grounding
         grounded := {
           static := supportedCore_orderedRows_static statement witness constraints balanced
             boundary orderedRows exhaustive
-          dynamic := result.1 }
+          -- `result.1` is still the engine's own `SailChain`-indexed position statement; the
+          -- structure's index is now a trajectory, and the two are interchangeable by
+          -- `sailTrajectory_eq_some_iff`.  The engine itself moves to the trajectory index at A3.
+          dynamic := fun done decoded suffix rowsEq state position =>
+            result.1 done decoded suffix rowsEq state
+              (Semantics.sailTrajectory_eq_some_iff.mp position) }
         pullClock := pullClock
         finalClock := finalClock
         finalPc := finalPc
