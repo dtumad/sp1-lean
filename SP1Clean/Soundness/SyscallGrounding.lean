@@ -39,10 +39,15 @@ open SP1Clean.Channels (StateMsg MemoryMsg)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- `Timeline.start` is injective, because it strictly increases. Stated here rather than in
-`MicroTime.lean` only to avoid a rebuild of everything below during the sketch phase; it belongs
-beside `start_lt_of_lt`. -/
-private theorem start_injective (tl : Semantics.Timeline) : Function.Injective tl.start := by
+/-- A timeline's `start` is injective, because it strictly increases.  This is the identification
+that turns "the walk reports *some* trajectory index" into "the walk reports *this* index", and it
+is what keeps the engine's list position and the transcript's timeline position one number rather
+than two that must be reconciled later.
+
+It belongs beside `Timeline.start_lt_of_lt` in `Model/Semantics/MicroTime.lean`; it lives here to
+avoid a rebuild of everything below that file, and is public because the mixed-row instantiation
+consumes it. -/
+theorem start_injective (tl : Semantics.Timeline) : Function.Injective tl.start := by
   intro a b h
   rcases lt_trichotomy a b with hlt | heq | hgt
   · exact absurd h (Nat.ne_of_lt (tl.start_lt_of_lt hlt))
