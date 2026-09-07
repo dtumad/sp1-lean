@@ -242,6 +242,91 @@ lemma localValueAtG_regRead_of_traj {traj : Trajectory} {initial state : SailSta
   rw [microValueG_reg_pre (n := n) (by omega) (by omega), htraj, Option.bind_some] at h
   exact h
 
+/-! ## The value-aligned carrier exchange, over any trajectory
+
+`RowWiring.readTime` pins every pull to the row's window start, so it holds at the **ordinary**
+carrier and not at the aligned one — which is why an instruction row's step and frame facts are
+proved at the ordinary carrier and then transported.  The Sail transports
+(`localStepFact_valueAligned_of_ordinary` and its frame twin) already exist; these are their
+trajectory-indexed forms, and they are what let the mixed walk consume an instruction row at the
+same carrier a syscall row uses. -/
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- `LocalStateTruthG` is a function of the message's ℕ time and 64-bit pc image. -/
+theorem localStateTruthG_congr {program : GuestProgram} {traj : Trajectory} {tl : Timeline}
+    {m m' : StateMsg (ZMod p)}
+    (ht : StateMsg.timeNat m' = StateMsg.timeNat m)
+    (hpc : StateMsg.pcBits m' = StateMsg.pcBits m)
+    (h : LocalStateTruthG program traj tl m) :
+    LocalStateTruthG program traj tl m' := by
+  obtain ⟨n, state, htraj, htime, hpcEq, hrom, hcfg⟩ := h
+  refine ⟨n, state, htraj, by rw [ht]; exact htime, ?_, hrom, hcfg⟩
+  rw [show pcBits m'.pc0 m'.pc1 m'.pc2 = pcBits m.pc0 m.pc1 m.pc2 from hpc]
+  exact hpcEq
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Ordinary pull currency from the carrier's, trajectory-indexed.  Each matched pull is shifted
+back to the ordinary window start — which is `tl.start n` for the step index the pulled state truth
+names — and `isU64` travels along the value equality. -/
+theorem ordinaryPullCurrencyG_of_valueAligned
+    {program : GuestProgram} {traj : Trajectory} {initial : SailState} {tl : Timeline}
+    {r_new r_ord : RowFacts p} (h : ValueAligned r_new r_ord)
+    (hstateTruth : LocalStateTruthG program traj tl r_new.statePull)
+    (hcurr_new : ∀ mp ∈ r_new.memPulls, MemoryMsg.isU64 mp.1 ∧
+      MemoryMsg.ClkBound mp.1 ∧
+      LocalValueAtG traj initial tl (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+    ∀ mp ∈ r_ord.memPulls, MemoryMsg.isU64 mp.1 ∧
+      MemoryMsg.ClkBound mp.1 ∧
+      LocalValueAtG traj initial tl (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+  obtain ⟨n, state, htraj, htime, -, -, -⟩ := hstateTruth
+  intro mp hmp
+  obtain ⟨mp', hmp'_mem, hloc, hval, hlo, hhi⟩ := h.match_ mp hmp
+  obtain ⟨hu64, -, hval_new⟩ := hcurr_new mp' hmp'_mem
+  rw [hloc, hval] at hval_new
+  rw [htime] at hlo hhi
+  refine ⟨?_, h.pullClk mp hmp, ?_⟩
+  · unfold SP1Clean.Channels.MemoryMsg.isU64 at hu64 ⊢
+    rwa [hval] at hu64
+  · rw [h.ordTime mp hmp, ← h.pullTime, htime]
+    exact localValueAtG_shift_window (MemoryMsg.locOf mp.1) hlo hhi le_rfl
+      (Nat.le_add_right _ _) hval_new
+
+omit [Fact (2 ^ 17 < p)] in
+/-- `LocalStepFactG` transports from the ordinary carrier to a value-aligned one. -/
+theorem localStepFactG_valueAligned_of_ordinary
+    {program : GuestProgram} {traj : Trajectory} {initial : SailState} {tl : Timeline}
+    {r_new r_ord : RowFacts p} (h : ValueAligned r_new r_ord)
+    (step_ord : LocalStepFactG program traj initial tl r_ord) :
+    LocalStepFactG program traj initial tl r_new := by
+  intro hpull hcurr_new
+  have hpull_ord : LocalStateTruthG program traj tl r_ord.statePull :=
+    localStateTruthG_congr h.pullTime.symm h.pullPc.symm hpull
+  have hcurr_ord := ordinaryPullCurrencyG_of_valueAligned h hpull hcurr_new
+  obtain ⟨hpush_ord, hmem_ord⟩ := step_ord hpull_ord hcurr_ord
+  refine ⟨localStateTruthG_congr h.pushTime h.pushPc hpush_ord, ?_⟩
+  intro m hm
+  exact hmem_ord m (h.pushes.mem_iff.mp hm)
+
+omit [Fact (2 ^ 17 < p)] in
+/-- `FrameFactG` transports the same way. -/
+theorem frameFactG_valueAligned_of_ordinary
+    {program : GuestProgram} {traj : Trajectory} {initial : SailState} {tl : Timeline}
+    {r_new r_ord : RowFacts p} (h : ValueAligned r_new r_ord)
+    (frame_ord : FrameFactG program traj initial tl r_ord) :
+    FrameFactG program traj initial tl r_new := by
+  intro hpull hcurr_new loc v hpush hstart
+  have hpull_ord : LocalStateTruthG program traj tl r_ord.statePull :=
+    localStateTruthG_congr h.pullTime.symm h.pullPc.symm hpull
+  have hcurr_ord := ordinaryPullCurrencyG_of_valueAligned h hpull hcurr_new
+  have hpush_ord : ∀ m ∈ r_ord.memPushes, MemoryMsg.locOf m = loc → m.value = v :=
+    fun m hm => hpush m (h.pushes.mem_iff.mpr hm)
+  have hstart_ord : LocalValueAtG traj initial tl loc
+      (StateMsg.timeNat r_ord.statePull) v := by
+    rw [← h.pullTime]; exact hstart
+  have := frame_ord hpull_ord hcurr_ord loc v hpush_ord hstart_ord
+  rw [h.pushTime]
+  exact this
+
 /-! ## The walk
 
 The proof is `walkT`'s, with `chainState initial` replaced by the trajectory parameter throughout.
