@@ -389,6 +389,71 @@ theorem syscallFrameFact_of_witness (handler : ExecutableSyscallHandler) (prog :
   exact syscallFrameFact_of_advance handler prog events initial initialClock r payload real spec sel
     pulled canonical opA positioned rowContext step
 
+/-- The canonicalized State edge of one walked row — `trailCanonEdge` with the halt arm gone. -/
+noncomputable def walkedCanonEdge (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    WalkedRow p → StateMsg (ZMod p) × StateMsg (ZMod p)
+  | .instruction decoded =>
+      (canonState (decodedStateEdge witness.data decoded).1,
+       canonState (decodedStateEdge witness.data decoded).2)
+  | .syscall r =>
+      (canonState (SyscallInstrsChip.statePulledMessage r),
+       canonState (SyscallInstrsChip.statePushedMessage r))
+
+/-- **The walked trail**, on a shard whose Halt table is empty.
+
+`listAllInl` needs *both* the halt and the syscall table empty; this needs only the halt one, and
+hands back a `WalkedRow` list in the same order — so a syscall row is carried **through** the
+projection rather than excluded by it.  That is precisely what `noActiveRows` was buying, and
+precisely what this replaces.
+
+The correspondence is a `List.Forall₂`, not a `List.map`: the syscall arm *decodes* a raw array, so
+the two row types are related by a relation rather than a function.  `Walk.isWalk_forall₂` is the
+transport that shape needs, and the edge agreement it asks for is `rfl` arm by arm. -/
+theorem walkedTrail_of_haltFree (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (hhalt : realHaltRows witness = []) :
+    ∃ (trailRows : List (TrailRow p)) (rows : List (WalkedRow p)),
+      List.Forall₂
+        (fun t r => (∃ d : DecodedInstructionRow p, t = Sum.inl d ∧ r = WalkedRow.instruction d) ∨
+          (∃ raw : Array (ZMod p), t = Sum.inr (Sum.inr raw) ∧
+            r = WalkedRow.syscall (syscallInstrsRow (syscallInstrsTable witness) raw)))
+        trailRows rows ∧
+      (↑trailRows : Multiset (TrailRow p)) =
+        ↑((realDecodedInstructionRows witness.data witness.tables).map
+            (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
+          ↑((realSyscallInstrsRows witness).map
+            ((fun row => Sum.inr (Sum.inr row)) : Array (ZMod p) → TrailRow p)) ∧
+      Walk.IsWalk (walkedCanonEdge witness)
+        (initialBoundaryStateMessage witness.publicInput)
+        (finalBoundaryStateMessage witness.publicInput) rows := by
+  classical
+  obtain ⟨trailRows, trailWalk, trailMultiset⟩ :=
+    witness_realDecodedState_canonExhaustiveTrail witness constraints balanced
+  rw [hhalt] at trailMultiset
+  simp only [List.map_nil, Multiset.coe_nil, zero_add] at trailMultiset
+  have allArms : ∀ t ∈ trailRows,
+      (∃ d : DecodedInstructionRow p, t = Sum.inl d) ∨
+      (∃ raw : Array (ZMod p), t = Sum.inr (Sum.inr raw)) := by
+    intro t tMem
+    have tMem' : t ∈ (↑((realDecodedInstructionRows witness.data witness.tables).map
+          (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
+        ↑((realSyscallInstrsRows witness).map
+          ((fun row => Sum.inr (Sum.inr row)) : Array (ZMod p) → TrailRow p)) :
+          Multiset (TrailRow p)) := by
+      rw [← trailMultiset]
+      exact Multiset.mem_coe.mpr tMem
+    rcases Multiset.mem_add.mp tMem' with h | h
+    · obtain ⟨d, -, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp h)
+      exact Or.inl ⟨d, rfl⟩
+    · obtain ⟨raw, -, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp h)
+      exact Or.inr ⟨raw, rfl⟩
+  obtain ⟨rows, hforall₂⟩ :=
+    listAllWalked (syscallInstrsRow (syscallInstrsTable witness)) id trailRows allArms
+  refine ⟨trailRows, rows, hforall₂, trailMultiset, ?_⟩
+  refine Walk.isWalk_forall₂ (trailCanonEdge witness) (walkedCanonEdge witness) _ ?_ hforall₂
+    trailWalk
+  rintro t r (⟨d, rfl, rfl⟩ | ⟨raw, rfl, rfl⟩) <;> rfl
+
 end WitnessObligations
 
 /-- Discharge the engine's per-position `EventStep` obligation, arm by arm.
