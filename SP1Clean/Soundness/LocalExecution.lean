@@ -281,88 +281,106 @@ theorem sailRetireChain_of_groundedRows {Row : Type u} (rowOf : Row → ChipRow 
   simpa using executePcWalkAux rowOf data program initial rows grounded codeMemoryCompatible
     [] rows initialPc finalPc initial (by simp) walk (.refl initial) pc rom cfg
 
-/-- Execute the unprocessed suffix into the single proof-free event-trace carrier used by the exact
-semantic relation.  Prefix Sail chains remain only the position index required by `RowsGrounded`;
-every newly fired row is recorded as one ordinary transition with its canonical decode route. -/
-private theorem executePcWalkEventsAux {Row : Type u}
-    (handler : Machine.SyscallHandler)
-    (rowOf : Row → ChipRow p)
-    (data : ProverData (ZMod p)) (program : GuestProgram) (initial : SailState)
-    (rows : List Row) (grounded : RowsGrounded rowOf data program (Semantics.sailTrajectory initial) rows)
-    (codeMemoryCompatible : SailCodeMemoryCompatible program initial) :
+/-! ## The row-generic execution engine
+
+The eight-tick engine below *constructs* its own position index (`chain.snoc`).  A mixed walk cannot
+do that: a syscall step is not a `SailStep`, so nothing lets the engine extend the trajectory itself.
+The generic engine therefore **consumes** its index — each row's own advance obligation hands back
+`traj (k + 1)` — and stays generic in the row type, because this file sits below the entire syscall
+campaign in the import order and so cannot mention a mixed row type. -/
+
+/-- What each row of a walk owes the engine at its own position.
+
+Everything the engine cannot derive from a bare row type lives here: the row's own semantic step,
+the trajectory's next value, the outgoing pc / ROM / configuration facts, and — on the ordinary arm
+only — the instruction-routing obligation.  A caller discharges this per arm: `GroundedRow.advance`
+for an ordinary row, the syscall row's own payload for a `.syscall` one.  The routing obligation is
+guarded because `SupportedSP1Transition` *begins* with `event = .ordinary`; a syscall transition's
+meaning travels in `Machine.EventStep.syscall` instead. -/
+def WalkAdvancesAt {Row : Type u} (handler : Machine.SyscallHandler) (program : GuestProgram)
+    (eventOf : Row → Machine.ExecutionEvent) (edge : Row → BitVec 64 × BitVec 64)
+    (traj : Semantics.Trajectory) (rows : List Row) : Prop :=
+  ∀ done row suffix, rows = done ++ row :: suffix →
+    ∀ state, traj done.length = some state →
+      state.regs.get? Register.PC = some (edge row).1 →
+      RomLoaded program state → SailConfigured state →
+      ∃ next : SailState,
+        traj (done.length + 1) = some next ∧
+        Machine.EventStep handler program state (eventOf row) next ∧
+        next.regs.get? Register.PC = some (edge row).2 ∧
+        RomLoaded program next ∧ SailConfigured next ∧
+        (eventOf row = .ordinary →
+          SupportedSP1Transition program ⟨state, ⟨eventOf row, next⟩⟩)
+
+/-- Execute the unprocessed suffix of a walk into the proof-free event-trace carrier.
+
+The event list is reported as `suffix.map eventOf` rather than as a step count.  That single
+equation carries the length, the per-row durations — so the clock is a prefix sum — and, when every
+row is ordinary, `AllOrdinary` too; the eight-tick engine had to state all three separately. -/
+private theorem executeWalkEventsAux {Row : Type u}
+    (handler : Machine.SyscallHandler) (program : GuestProgram)
+    (eventOf : Row → Machine.ExecutionEvent) (edge : Row → BitVec 64 × BitVec 64)
+    (traj : Semantics.Trajectory) (rows : List Row)
+    (advances : WalkAdvancesAt handler program eventOf edge traj rows) :
     ∀ (done suffix : List Row) (current final : BitVec 64) (state : SailState),
       rows = done ++ suffix →
-      PcWalk rowOf current final suffix →
-      SailChain done.length initial state →
+      Walk.IsWalk edge current final suffix →
+      traj done.length = some state →
       state.regs.get? Register.PC = some current →
       RomLoaded program state → SailConfigured state →
       ∃ execution : Machine.EventExecutionTrace,
         execution.initialState = state ∧
-        execution.steps = suffix.length ∧
+        execution.events = suffix.map eventOf ∧
         execution.finalState.regs.get? Register.PC = some final ∧
         execution.Valid handler program ∧
-        execution.AllOrdinary ∧
         AllTransitionsSupported program execution := by
   intro done suffix
   induction suffix generalizing done with
   | nil =>
-      intro current final state rowsEq walk chain pc rom cfg
+      intro current final state rowsEq walk position pc rom cfg
       have currentEq : current = final := walk
-      refine ⟨⟨state, []⟩, rfl, rfl, ?_, ?_, ?_, ?_⟩
+      refine ⟨⟨state, []⟩, rfl, rfl, ?_, ?_, ?_⟩
       · simpa [Machine.EventExecutionTrace.finalState, Machine.stateAfterTransitions, currentEq]
           using pc
       · exact .nil state
-      · intro transition transitionMem
-        simp at transitionMem
       · intro located locatedMem
         simp [Machine.EventExecutionTrace.locatedTransitions, Machine.locateTransitions]
           at locatedMem
   | cons row suffix ih =>
-      intro current final state rowsEq walk chain pc rom cfg
+      intro current final state rowsEq walk position pc rom cfg
       obtain ⟨rowSource, tailWalk⟩ := walk
-      have pcRow : state.regs.get? Register.PC =
-          some (rcvPcOf (stateAccess (rowOf row).view)) := by
+      have pcRow : state.regs.get? Register.PC = some (edge row).1 := by
         rw [rowSource]
         exact pc
-      have rowGrounded := grounded.at done row suffix rowsEq state
-        (Semantics.sailTrajectory_eq_some_iff.mpr chain)
-      obtain ⟨next, step, effect⟩ := rowGrounded.advance cfg rom pcRow
+      obtain ⟨next, nextPosition, step, nextPc, nextRom, nextCfg, headSupported⟩ :=
+        advances done row suffix rowsEq state position pcRow rom cfg
       have rowsEq' : rows = (done ++ [row]) ++ suffix := by
         simpa [List.append_assoc] using rowsEq
-      have chain' : SailChain (done ++ [row]).length initial next := by
-        simpa using chain.snoc step
-      have nextRom : RomLoaded program next := codeMemoryCompatible chain step rom
-      obtain ⟨tailExecution, tailInitial, tailSteps, tailFinal, tailValid, tailOrdinary,
-          tailSupported⟩ :=
-        ih (done ++ [row]) (sndPcOf (stateAccess (rowOf row).view)) final next rowsEq'
-          tailWalk chain' effect.pc nextRom (effect.cfg cfg)
-      have headSupported :=
-        rowGrounded.supportedSP1Transition effect.normal cfg pcRow
-      let head : Machine.EventTransition := ⟨.ordinary, next⟩
+      have nextPosition' : traj (done ++ [row]).length = some next := by
+        simpa using nextPosition
+      obtain ⟨tailExecution, tailInitial, tailEvents, tailFinal, tailValid, tailSupported⟩ :=
+        ih (done ++ [row]) (edge row).2 final next rowsEq' tailWalk nextPosition' nextPc
+          nextRom nextCfg
+      let head : Machine.EventTransition := ⟨eventOf row, next⟩
       let execution : Machine.EventExecutionTrace :=
         ⟨state, head :: tailExecution.transitions⟩
-      refine ⟨execution, rfl, ?_, ?_, ?_, ?_, ?_⟩
-      · change tailExecution.transitions.length + 1 = suffix.length + 1
-        simpa only [Machine.EventExecutionTrace.steps] using
-          congrArg (fun n => n + 1) tailSteps
+      refine ⟨execution, rfl, ?_, ?_, ?_, ?_⟩
+      · have tailMap : tailExecution.transitions.map Machine.EventTransition.event =
+            suffix.map eventOf := tailEvents
+        simp only [execution, head, Machine.EventExecutionTrace.events, List.map_cons, tailMap]
       · simpa [execution, Machine.EventExecutionTrace.finalState,
           Machine.stateAfterTransitions, tailInitial] using tailFinal
-      · refine .cons head (.ordinary headSupported.notAboutToExecuteEcall step) ?_
+      · refine .cons head step ?_
         change Machine.EventTransitionsValid handler program next tailExecution.transitions
         rw [← tailInitial]
         exact tailValid
-      · intro transition transitionMem
-        simp only [execution, List.mem_cons] at transitionMem
-        rcases transitionMem with rfl | transitionMem
-        · rfl
-        · exact tailOrdinary transition transitionMem
       · intro located locatedMem
         simp only [execution, Machine.EventExecutionTrace.locatedTransitions,
           Machine.locateTransitions, List.mem_cons] at locatedMem
         rcases locatedMem with rfl | locatedMem
-        · exact fun _ => headSupported
-        · intro headOrdinary
-          refine tailSupported _ ?_ headOrdinary
+        · exact headSupported
+        · intro rowOrdinary
+          refine tailSupported _ ?_ rowOrdinary
           simpa [Machine.EventExecutionTrace.locatedTransitions, tailInitial] using locatedMem
 
 /-- A fully grounded ordered row list constructs one exact proof-free ordinary event trace.  Its
@@ -387,9 +405,35 @@ theorem eventExecution_of_groundedRows {Row : Type u}
       execution.finalClock initialClock = initialClock + 8 * rows.length ∧
       execution.AllOrdinary ∧
       AllTransitionsSupported program execution := by
-  obtain ⟨execution, initialEq, stepsEq, finalEq, valid, ordinary, supported⟩ :=
-    executePcWalkEventsAux handler rowOf data program initial rows grounded
-      codeMemoryCompatible [] rows initialPc finalPc initial (by simp) walk (.refl initial) pc rom cfg
+  -- The ordinary arm of the generic engine: every row is `.ordinary`, the position index is the
+  -- Sail trajectory, and the pc edge is the row's own `ChipRow` projection.
+  have advances : WalkAdvancesAt handler program (fun _ => Machine.ExecutionEvent.ordinary)
+      (pcEdgeOf rowOf) (Semantics.sailTrajectory initial) rows := by
+    intro done row suffix rowsEq state position pcRow romState cfgState
+    simp only [pcEdgeOf] at pcRow
+    have chain := Semantics.sailTrajectory_eq_some_iff.mp position
+    have rowGrounded := grounded.at done row suffix rowsEq state position
+    obtain ⟨next, step, effect⟩ := rowGrounded.advance cfgState romState pcRow
+    have headSupported := rowGrounded.supportedSP1Transition effect.normal cfgState pcRow
+    exact ⟨next, Semantics.sailTrajectory_eq_some_iff.mpr (chain.snoc step),
+      .ordinary headSupported.notAboutToExecuteEcall step, effect.pc,
+      codeMemoryCompatible chain step romState, effect.cfg cfgState, fun _ => headSupported⟩
+  obtain ⟨execution, initialEq, events, finalEq, valid, supported⟩ :=
+    executeWalkEventsAux handler program (fun _ => Machine.ExecutionEvent.ordinary)
+      (pcEdgeOf rowOf) (Semantics.sailTrajectory initial) rows advances [] rows initialPc finalPc
+      initial (by simp) ((pcWalk_iff_isWalk rowOf initialPc finalPc rows).mp walk)
+      (Semantics.sailTrajectory_eq_some_iff.mpr (by simpa using Target.SailChain.refl initial))
+      pc rom cfg
+  -- The single event equation recovers all three facts the eight-tick engine stated separately.
+  have ordinary : execution.AllOrdinary := by
+    intro transition transitionMem
+    have member : transition.event ∈ execution.events := List.mem_map_of_mem transitionMem
+    rw [events] at member
+    obtain ⟨_, -, headEq⟩ := List.mem_map.mp member
+    exact headEq.symm
+  have stepsEq : execution.steps = rows.length := by
+    simpa [Machine.EventExecutionTrace.events, Machine.EventExecutionTrace.steps] using
+      congrArg List.length events
   refine ⟨execution, initialEq, stepsEq, finalEq, valid,
     ordinaryTransitions_clocked execution.transitions initialClock ordinary, ?_, ordinary, supported⟩
   change Machine.clockAfterEvents initialClock
