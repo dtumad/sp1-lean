@@ -200,4 +200,73 @@ theorem walkedExecution_clocked (data : ProverData (ZMod p)) (rows : List (Walke
   rw [eventEq, takeEq]
   exact starts k hk'
 
+/-- Discharge the engine's per-position `EventStep` obligation, arm by arm.
+
+Neither arm can be handled generically, and they fail differently.  An ordinary row needs
+`¬ AboutToExecuteEcall` — which comes from its own routing evidence, not from the trajectory — plus
+the determinism step that identifies its `advance`'s target with the trajectory's.  A syscall row
+needs the *opposite* ecall fact, from `SyscallRowContext`, plus its payload's `SyscallTransition`;
+there the determinism is free, because `ExecutableSyscallHandler.relation` is definitionally
+`run = some` and the trajectory's successor is that same `run`.
+
+The instruction arm's premise is stated as "this row advances and routes" rather than as a
+`GroundedRow`, so this lemma stays clear of the wiring/carrier layer; the caller supplies it from
+`GroundedRow.advance` and `GroundedRow.supportedSP1Transition`. -/
+theorem stepOf_of_arms (handler : ExecutableSyscallHandler) (prog : GuestProgram)
+    (data : ProverData (ZMod p)) (g : DecodedInstructionRow p → Semantics.RowFacts p)
+    (rows : List (WalkedRow p)) (initial : SailState)
+    (payload : SyscallAdvancePayload (p := p) handler)
+    (instructionAt : ∀ (k : ℕ) (hk : k < rows.length) (row : DecodedInstructionRow p),
+      (rows[k]'hk) = WalkedRow.instruction row →
+      ∀ state : SailState,
+        state.regs.get? Register.PC = some (walkedPcEdge g (rows[k]'hk)).1 →
+        RomLoaded prog state → SailConfigured state →
+        ∃ target, SailStep state target ∧
+          SupportedSP1Transition prog ⟨state, ⟨ExecutionEvent.ordinary, target⟩⟩)
+    (syscallAt : ∀ (k : ℕ) (hk : k < rows.length) (r : SyscallInstrsChip.Inputs (ZMod p)),
+      (rows[k]'hk) = WalkedRow.syscall r →
+      ∀ state : SailState,
+        eventTrajectory handler prog (transcriptOf data rows) initial k = some state →
+        r.is_real = 1 ∧ SyscallInstrsChip.Spec r ∧ SyscallInstrsChip.SelectorsValid r ∧
+          SyscallInstrsChip.PulledFacts r ∧ (syscallEventOfRow r).IsInlineCanonical ∧
+          SyscallRowContext r prog state) :
+    ∀ (k : ℕ) (hk : k < rows.length) (state next : SailState),
+      eventTrajectory handler prog (transcriptOf data rows) initial k = some state →
+      eventTrajectory handler prog (transcriptOf data rows) initial (k + 1) = some next →
+      state.regs.get? Register.PC = some (walkedPcEdge g (rows[k]'hk)).1 →
+      RomLoaded prog state → SailConfigured state →
+      EventStep handler.relation prog state (rows[k]'hk).event next ∧
+        ((rows[k]'hk).event = ExecutionEvent.ordinary →
+          SupportedSP1Transition prog ⟨state, ⟨(rows[k]'hk).event, next⟩⟩) := by
+  intro k hk state next now nextTraj pcRow romState cfgState
+  have hev : (transcriptOf data rows)[k]? = some (rows[k]'hk).event :=
+    transcriptOf_getElem? data rows k hk
+  cases hrow : (rows[k]'hk) with
+  | instruction row =>
+      obtain ⟨target, targetStep, supported⟩ :=
+        instructionAt k hk row hrow state pcRow romState cfgState
+      have hOrdinary : (transcriptOf data rows)[k]? = some ExecutionEvent.ordinary := by
+        rw [hev, hrow]; rfl
+      have trajStep :=
+        sailStep_of_eventTrajectory_ordinary handler prog (transcriptOf data rows) initial
+          hOrdinary now nextTraj
+      have targetEq : target = next :=
+        Option.some.inj ((TimedGrounding.stepOnce_of_sailStep targetStep).symm.trans
+          (TimedGrounding.stepOnce_of_sailStep trajStep))
+      subst targetEq
+      exact ⟨.ordinary supported.notAboutToExecuteEcall trajStep, fun _ => supported⟩
+  | syscall r =>
+      obtain ⟨real, spec, sel, pulled, canonical, context⟩ := syscallAt k hk r hrow state now
+      obtain ⟨target, transition, -⟩ :=
+        payload r prog state real spec sel pulled canonical cfgState romState context
+      have hSyscall : (transcriptOf data rows)[k]?
+          = some (ExecutionEvent.syscall (syscallEventOfRow r)) := by
+        rw [hev, hrow]; rfl
+      have run :=
+        handlerRun_of_eventTrajectory_syscall handler prog (transcriptOf data rows) initial
+          hSyscall now nextTraj
+      have targetEq : target = next := Option.some.inj (transition.2.2.symm.trans run)
+      subst targetEq
+      exact ⟨.syscall context.ecall transition, fun h => absurd h (by simp [WalkedRow.event])⟩
+
 end SP1Clean.Soundness

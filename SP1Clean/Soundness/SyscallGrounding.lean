@@ -249,6 +249,24 @@ theorem sailStep_of_eventTrajectory_ordinary (handler : ExecutableSyscallHandler
   rw [hnow, Option.bind_some, Semantics.executeEvent?_ordinary] at hnext
   exact TimedGrounding.sailStep_of_stepOnce hnext
 
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- The trajectory's own successor at a **syscall** transcript position is the handler's target.
+
+`executeEvent?` on the syscall arm *is* `handler.run`, so this is the trajectory unrolled once with
+nothing else to say — which is exactly why the syscall arm needs no analogue of
+`sailStep_of_stepOnce`: `ExecutableSyscallHandler.relation` is definitionally `run = some`. -/
+theorem handlerRun_of_eventTrajectory_syscall (handler : ExecutableSyscallHandler)
+    (prog : GuestProgram) (events : List ExecutionEvent) (initial : SailState)
+    {n : ℕ} {state next : SailState} {ev : CoreSyscallEvent}
+    (hev : events[n]? = some (ExecutionEvent.syscall ev))
+    (hnow : eventTrajectory handler prog events initial n = some state)
+    (hnext : eventTrajectory handler prog events initial (n + 1) = some next) :
+    handler.run prog ev state = some next := by
+  rw [Semantics.eventTrajectory_succ, hev] at hnext
+  dsimp only at hnext
+  rw [hnow, Option.bind_some] at hnext
+  exact hnext
+
 /-- **An ordinary instruction row's step fact, at the event trajectory.** The twin of
 `syscallStepFact_of_advance`, and the same three-part linkage: the row's window is the transcript's
 event `n`, the trajectory's successor there is `try_step` because that event is `.ordinary`, and the
