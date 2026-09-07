@@ -171,6 +171,48 @@ private theorem ordinaryTransitions_clocked :
       subst event
       exact ⟨trivial, ih _ tail⟩
 
+/-- The event clock after a transition list is the prefix sum of that list's own event durations.
+
+No ordinary hypothesis: this is plain `clockAfterEvents` telescoping, and it is the form a mixed
+timeline needs, where an ordinary row spends 8 ticks and a syscall row 264.  The eight-tick
+`ordinaryTransitions_finalClock` below is this theorem composed with
+`ordinaryTransitions_durationSum`. -/
+theorem transitions_finalClock :
+    ∀ (transitions : List Machine.EventTransition) (clock : ℕ),
+      Machine.clockAfterEvents clock (transitions.map Machine.EventTransition.event) =
+        clock + (transitions.map fun transition => transition.event.duration).sum := by
+  intro transitions
+  induction transitions with
+  | nil => intro clock; simp [Machine.clockAfterEvents]
+  | cons transition rest ih =>
+      intro clock
+      simp only [List.map_cons, Machine.clockAfterEvents, List.foldl_cons, List.sum_cons]
+      change Machine.clockAfterEvents (clock + transition.event.duration)
+          (rest.map Machine.EventTransition.event) =
+        clock + (transition.event.duration +
+          (rest.map fun item => item.event.duration).sum)
+      rw [ih _]
+      omega
+
+/-- An all-ordinary transition list's durations sum to the eight-tick step count. -/
+private theorem ordinaryTransitions_durationSum :
+    ∀ (transitions : List Machine.EventTransition),
+      (∀ transition ∈ transitions, transition.event = .ordinary) →
+      (transitions.map fun transition => transition.event.duration).sum =
+        8 * transitions.length := by
+  intro transitions
+  induction transitions with
+  | nil => intro _; simp
+  | cons transition rest ih =>
+      intro ordinary
+      have head : transition.event = .ordinary := ordinary transition (by simp)
+      have tail : ∀ item ∈ rest, item.event = .ordinary :=
+        fun item itemMem => ordinary item (by simp [itemMem])
+      simp only [List.map_cons, List.sum_cons, List.length_cons, head,
+        Machine.ExecutionEvent.duration_ordinary]
+      rw [ih tail]
+      omega
+
 /-- The ordinary eight-tick schedule makes the final event clock a simple step count. -/
 private theorem ordinaryTransitions_finalClock :
     ∀ (transitions : List Machine.EventTransition) (clock : ℕ),
@@ -178,21 +220,7 @@ private theorem ordinaryTransitions_finalClock :
       Machine.clockAfterEvents clock (transitions.map Machine.EventTransition.event) =
         clock + 8 * transitions.length := by
   intro transitions clock ordinary
-  induction transitions generalizing clock with
-  | nil => simp [Machine.clockAfterEvents]
-  | cons transition rest ih =>
-      have head : transition.event = .ordinary := ordinary transition (by simp)
-      have tail : ∀ item ∈ rest, item.event = .ordinary :=
-        fun item itemMem => ordinary item (by simp [itemMem])
-      rcases transition with ⟨event, target⟩
-      simp only at head
-      subst event
-      simp only [List.map_cons, Machine.clockAfterEvents, List.foldl_cons,
-        Machine.ExecutionEvent.duration_ordinary, List.length_cons]
-      change Machine.clockAfterEvents (clock + 8)
-          (rest.map Machine.EventTransition.event) = clock + 8 * (rest.length + 1)
-      rw [ih _ tail]
-      omega
+  rw [transitions_finalClock, ordinaryTransitions_durationSum transitions ordinary]
 
 /-- Execute the unprocessed suffix of a pc walk, retaining the already-executed prefix only as an
 index into `RowsGrounded`. -/

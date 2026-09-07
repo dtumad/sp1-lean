@@ -839,18 +839,11 @@ theorem syscallRowOKCore [Fact (2 ^ 25 < p)] (initialClock : ℕ)
 
 /-! ## The duration generalizations
 
-Three statements in the engine are pinned to exactly eight ticks. Each has a duration-generic form,
-and in two cases the generic form is *already there* — only the `+8` wrapper is used. -/
-
-/-- `statePullAlign8_of_stateWalk` with the exact `+8` step replaced by "each row's window is a
-multiple of eight". Named by the engine audit as the easiest and most necessary of the three. -/
-theorem statePullAlign8_of_durations {α : Type} (rows : List α)
-    (duration : α → ℕ) (_dvd : ∀ d ∈ rows, 8 ∣ duration d) :
-    True := by
-  -- SKETCH (L3): mirror `statePullAlign8_of_stateWalk` (`GroundingInternal.lean:446`), deriving the
-  -- residue from `statePullTime_of_stateWalk_durations` plus `8 ∣ duration` instead of from the
-  -- exact step. Stated as `True` here only until the walk's row type is fixed at L4.
-  trivial
+Three statements in the engine were pinned to exactly eight ticks; all three now have a
+duration-generic form. `clockCount_of_stateWalk_durations` and
+`statePullTime_of_stateWalk_durations` were already generic — only their `+8` wrappers were being
+used — and `statePullAlign8_of_durations` joins them in `GenericWalk.lean`, beside the two lemmas
+its proof consumes. -/
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- The transcript's timeline agrees with the walk's positions: a row at trail index `k` pulls at

@@ -702,5 +702,37 @@ theorem statePullTime_of_stateWalk_durations {α : Type*}
       simp only [List.map_cons, List.sum_cons]
       omega
 
+/-- Every row of a duration-generic State walk begins in the same residue class modulo eight as the
+public initial State record, provided each row's own window is a multiple of eight.
+
+This is `RowOK.align8`'s input with the exact `+8` step removed, and it is what lets a 264-tick
+syscall row join the walk without breaking alignment: `264 = 8 * 33`, so the residue survives a
+mixed timeline.  The eight-tick `statePullAlign8_of_stateWalk` is this theorem at
+`duration := fun _ => 8`. -/
+theorem statePullAlign8_of_durations {α : Type*}
+    (edge : α → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p))
+    (duration : α → ℕ) :
+    ∀ {initial final : Channels.StateMsg (ZMod p)}
+      {rows : List α},
+      Walk.IsWalk edge initial final rows →
+      (∀ row ∈ rows, 8 ∣ duration row) →
+      (∀ row ∈ rows,
+        Semantics.StateMsg.timeNat (edge row).2 =
+          Semantics.StateMsg.timeNat (edge row).1 + duration row) →
+      ∀ row ∈ rows,
+        Semantics.StateMsg.timeNat (edge row).1 % 8 =
+          Semantics.StateMsg.timeNat initial % 8 := by
+  intro initial final rows walk dvd steps row rowMem
+  obtain ⟨done, suffix, rowsEq⟩ := List.append_of_mem rowMem
+  have position :=
+    statePullTime_of_stateWalk_durations edge duration walk steps done row suffix rowsEq
+  have prefixDvd : 8 ∣ (done.map duration).sum := by
+    refine List.dvd_sum ?_
+    intro x xMem
+    obtain ⟨a, aMem, rfl⟩ := List.mem_map.mp xMem
+    exact dvd a (by rw [rowsEq]; exact List.mem_append_left _ aMem)
+  obtain ⟨c, hc⟩ := prefixDvd
+  omega
+
 
 end SP1Clean.Soundness

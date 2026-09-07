@@ -353,7 +353,9 @@ theorem statePullTime_of_stateWalk
         rowsEq
 
 /-- Every row of the eight-tick State walk begins in the same residue class modulo eight as the
-public initial State record.  This is the `RowOK.align8` input of the timed Memory walk. -/
+public initial State record.  This is the `RowOK.align8` input of the timed Memory walk, and — like
+its two siblings above — the ordinary-slice specialization of the row-dependent theorem, here at
+`duration := fun _ => 8`. -/
 theorem statePullAlign8_of_stateWalk
     (edge : DecodedInstructionRow p → Channels.StateMsg (ZMod p) × Channels.StateMsg (ZMod p)) :
     ∀ {initial final : Channels.StateMsg (ZMod p)}
@@ -364,12 +366,9 @@ theorem statePullAlign8_of_stateWalk
           Semantics.StateMsg.timeNat (edge decoded).1 + 8) →
       ∀ decoded ∈ rows,
         Semantics.StateMsg.timeNat (edge decoded).1 % 8 =
-          Semantics.StateMsg.timeNat initial % 8 := by
-  intro initial final rows walk steps decoded decodedMem
-  obtain ⟨done, suffix, rowsEq⟩ := List.append_of_mem decodedMem
-  have position := statePullTime_of_stateWalk edge walk steps done decoded suffix rowsEq
-  rw [position]
-  omega
+          Semantics.StateMsg.timeNat initial % 8 :=
+  fun walk steps =>
+    statePullAlign8_of_durations edge (fun _ => 8) walk (fun _ _ => dvd_rfl) steps
 
 /-- **The interim syscall boundary**, named rather than left implicit.
 
