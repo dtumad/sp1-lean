@@ -218,6 +218,32 @@ theorem RowWiring.advance_atG {kind : ChipKind p}
   exact advance inp cols data program state real spec hcfg hrom hpc operands decode
     (ready state operands sourceA pulls)
 
+/-! ## Reading a step back out of the trajectory
+
+`LocalStepFactG` deliberately forgets *which* transition produced the trajectory's successor: the
+truth layer needs only that it has one.  An execution engine that **consumes** a trajectory needs the
+`EventStep` itself, and the trajectory remembers it — `eventTrajectory_succ` evaluates
+`executeEvent?` at the transcript's own event.
+
+Only the ordinary arm needs a lemma.  On the syscall arm the `EventStep` is its constructor applied
+to the row's own payload: `SyscallTransition`'s third component is `handler.run … = some target`,
+which is definitionally `ExecutableSyscallHandler.relation`, and the trajectory's successor is that
+same `run`. -/
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- The trajectory's own successor at an **ordinary** transcript position is a real Sail step. -/
+theorem sailStep_of_eventTrajectory_ordinary (handler : ExecutableSyscallHandler)
+    (prog : GuestProgram) (events : List ExecutionEvent) (initial : SailState)
+    {n : ℕ} {state next : SailState}
+    (hev : events[n]? = some ExecutionEvent.ordinary)
+    (hnow : eventTrajectory handler prog events initial n = some state)
+    (hnext : eventTrajectory handler prog events initial (n + 1) = some next) :
+    SailStep state next := by
+  rw [Semantics.eventTrajectory_succ, hev] at hnext
+  dsimp only at hnext
+  rw [hnow, Option.bind_some, Semantics.executeEvent?_ordinary] at hnext
+  exact TimedGrounding.sailStep_of_stepOnce hnext
+
 /-- **An ordinary instruction row's step fact, at the event trajectory.** The twin of
 `syscallStepFact_of_advance`, and the same three-part linkage: the row's window is the transcript's
 event `n`, the trajectory's successor there is `try_step` because that event is `.ordinary`, and the

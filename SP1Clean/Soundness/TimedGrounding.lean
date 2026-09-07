@@ -99,6 +99,21 @@ lemma stepOnce_of_sailStep {s s' : SailState} (h : SailStep s s') : stepOnce s =
   unfold SP1Clean.Machine.stepOnce
   rw [hrun]
 
+/-- …and conversely.  `stepOnce` succeeds only by `try_step` running to an `ok`, which is exactly
+what `SailStep` asserts, so the totalized and relational presentations of one Sail step are
+interchangeable.  The forward direction alone was enough while the engine *built* its trajectory;
+an engine that **consumes** one needs to read a step back out of it. -/
+lemma sailStep_of_stepOnce {s s' : SailState} (h : stepOnce s = some s') : SailStep s s' := by
+  change SP1Clean.Machine.stepOnce s = some s' at h
+  unfold SP1Clean.Machine.stepOnce at h
+  cases hrun : (try_step 0 false).run s with
+  | ok b next =>
+      rw [hrun] at h
+      exact ⟨b, by rw [hrun, Option.some.inj h]⟩
+  | error e t =>
+      rw [hrun] at h
+      exact absurd h (by simp)
+
 /-- Extend a determined trajectory by one determined step. -/
 lemma chainState_succ_of {s0 s s' : SailState} {n : ℕ}
     (h : chainState s0 n = some s) (h' : stepOnce s = some s') :
