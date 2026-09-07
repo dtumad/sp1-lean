@@ -467,6 +467,60 @@ theorem ordinaryFrameFactG_of_advance {kind : ChipKind p}
       rw [hregs i]
       exact hcontent
 
+/-- **The engine feed, event-indexed** — the `G` twin of `engineFacts_of_kind`.
+
+The three producers stay currency-*conditional* for the same reason they are on the Sail side: the
+row's `RowWiring`, `chipSpec` and readiness are all built inside the currency antecedent, never from
+the walk's own output.  That is the D0 circularity break, and generalizing the index does not
+disturb it.
+
+What is new is `positioned`.  On the Sail side the transcript slot could not be anything but
+ordinary, so the fact was free; on a mixed transcript it is the statement that this row is not
+sitting where a syscall event sits, which no row-local datum can decide. -/
+theorem engineFactsG_of_kind {kind : ChipKind p}
+    {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
+    (handler : ExecutableSyscallHandler) (events : List ExecutionEvent)
+    (migrated : kind.advance.isSome = true)
+    {data : ProverData (ZMod p)} {program : GuestProgram}
+    (real : (kind.view inp cols).is_real = 1)
+    (decode : Target.decodedInROM program (programAccess (kind.view inp cols)).toRow)
+    (initial : SailState) (initialClock : ℕ)
+    (wiringOf : (∀ mp ∈ rf.memPulls, SP1Clean.Channels.MemoryMsg.isU64 mp.1 ∧
+        SP1Clean.Channels.MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG (eventTrajectory handler program events initial) initial
+          (eventTimeline events initialClock) (MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
+      RowWiring (kind.view inp cols) rf)
+    (specOf : (∀ mp ∈ rf.memPulls, SP1Clean.Channels.MemoryMsg.isU64 mp.1 ∧
+        SP1Clean.Channels.MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG (eventTrajectory handler program events initial) initial
+          (eventTimeline events initialClock) (MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
+      kind.chipSpec inp cols data)
+    (readyOf : ∀ _hcurr : (∀ mp ∈ rf.memPulls, SP1Clean.Channels.MemoryMsg.isU64 mp.1 ∧
+        SP1Clean.Channels.MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG (eventTrajectory handler program events initial) initial
+          (eventTimeline events initialClock) (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
+      ∀ s : SailState, ValueOperandsBound (kind.view inp cols) s →
+        SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
+          kind.advanceReady inp cols program s)
+    (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
+      eventTrajectory handler program events initial m = some st → SailStep st nx →
+        RomLoaded program st → RomLoaded program nx)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat rf.statePull = (eventTimeline events initialClock).start n →
+      events[n]? = some ExecutionEvent.ordinary) :
+    LocalStepFactG program (eventTrajectory handler program events initial) initial
+        (eventTimeline events initialClock) rf ∧
+      FrameFactG program (eventTrajectory handler program events initial) initial
+        (eventTimeline events initialClock) rf := by
+  have advance := ChipKind.advancePayload_of_migrated migrated
+  refine ⟨?_, ?_⟩
+  · intro hpull hcurr
+    exact ordinaryStepFactG_of_advance handler events (wiringOf hcurr) advance real (specOf hcurr)
+      decode (readyOf hcurr) initial initialClock codeMemoryCompatible positioned hpull hcurr
+  · intro hpull hcurr loc v hpush hval
+    exact ordinaryFrameFactG_of_advance handler events (wiringOf hcurr) advance real (specOf hcurr)
+      decode (readyOf hcurr) initial initialClock positioned hpull hcurr loc v hpush hval
+
 /-! ## The row's facts, and its step obligation -/
 
 /-- The `RowFacts` a syscall row contributes: its State edge and its three register touches. Unlike

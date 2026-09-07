@@ -421,6 +421,67 @@ theorem DecodedInstructionRow.dynamicGroundedG_of_weakCurrency
   exact decoded.dynamicGrounded_of_inputs witness constraints balanced decodedMem program state
     { circuit := openInputs, ready, operands }
 
+/-- **The engine-feed consumer, event-indexed.** `ChipGroundingContracts.engineFacts` with its
+`SailChain`-indexed records replaced by their trajectory-indexed forms.
+
+The bundle's three currency-conditional producers are reused *verbatim*: the currency's own index
+changes, and none of `wiring`, `chipSpec` or `readiness` inspects it.  That is the same observation
+D10 made about the walk — the reasoning was already index-agnostic and only the types said
+otherwise — arriving here one layer down. -/
+theorem ChipGroundingContracts.engineFactsG
+    {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
+    (handler : Machine.ExecutableSyscallHandler) (events : List Machine.ExecutionEvent)
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (decoded : DecodedInstructionRow p) (hchip : decoded.chip = chip)
+    (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
+    (real : (decoded.toChipRow witness.data).is_real = 1)
+    (program : Target.GuestProgram)
+    (decode : Target.decodedInROM program
+      (programAccess (decoded.toChipRow witness.data).view).toRow)
+    (initial : SailState) (initialClock : ℕ)
+    (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
+      Semantics.eventTrajectory handler program events initial m = some st →
+        Target.SailStep st nx → Target.RomLoaded program st → Target.RomLoaded program nx)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat (decoded.ordinaryRowFacts witness.data).statePull
+        = (Semantics.eventTimeline events initialClock).start n →
+      events[n]? = some Machine.ExecutionEvent.ordinary) :
+    Semantics.LocalStepFactG program
+        (Semantics.eventTrajectory handler program events initial) initial
+        (Semantics.eventTimeline events initialClock) (decoded.ordinaryRowFacts witness.data) ∧
+      Semantics.FrameFactG program
+        (Semantics.eventTrajectory handler program events initial) initial
+        (Semantics.eventTimeline events initialClock) (decoded.ordinaryRowFacts witness.data) := by
+  have guard := contracts.routing witness constraints decoded hchip decodedMem real program decode
+  have migrated : (decoded.toChipRow witness.data).kind.advance.isSome = true := by
+    show decoded.chip.kind.advance.isSome = true
+    rw [hchip]
+    exact contracts.migrated
+  -- The D0 circularity break, unchanged: the row's open Memory inputs come from the *assumed* pull
+  -- currency, never from the walk's own `Grounded` output.
+  have mkOpenInputs : (∀ mp ∈ (decoded.ordinaryRowFacts witness.data).memPulls,
+        MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+        Semantics.LocalValueAtG (Semantics.eventTrajectory handler program events initial) initial
+          (Semantics.eventTimeline events initialClock)
+          (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
+      DecodedRowOpenSoundnessInputs decoded witness.data := fun hcurr => by
+    let memory := decoded.memoryChannelGuarantees_of_pullCurrency witness.data
+      (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.1⟩)
+    exact
+      { assumptions := contracts.assumptions witness constraints balanced decoded hchip decodedMem
+          real program decode memory
+        memory }
+  exact engineFactsG_of_kind handler events migrated real decode initial initialClock
+    (fun hcurr => contracts.wiring witness constraints balanced decoded hchip decodedMem real
+      program decode (mkOpenInputs hcurr))
+    (fun hcurr => decoded.chipSpec_of_openSoundnessInputs witness constraints balanced decodedMem
+      (mkOpenInputs hcurr))
+    (fun hcurr state operands sourceA pulls =>
+      contracts.readiness witness constraints balanced decoded hchip decodedMem real guard
+        program decode (mkOpenInputs hcurr) state operands sourceA pulls)
+    codeMemoryCompatible positioned
+
 /-! ## The row's semantic context, from the walk
 
 `SyscallRowContext` names the five things a syscall row's meaning needs that the row itself does not
