@@ -136,11 +136,30 @@ theorem walkedExecution_of_advances (handler : ExecutableSyscallHandler) (prog :
     (eventTrajectory handler prog (transcriptOf data rows) initial) rows initial initialPc finalPc
     advances walk rfl pc rom cfg
 
+/-- The trace's per-transition widths are the walk's own row widths.
+
+`WalkedRow.duration_event` is the whole content: a row's window and the duration its event reports
+agree arm for arm, because `WalkedRow` and `ExecutionEvent` are the same two-way split. -/
+theorem walkedExecution_durations (data : ProverData (ZMod p)) (rows : List (WalkedRow p))
+    (execution : Machine.EventExecutionTrace)
+    (events : execution.events = transcriptOf data rows) :
+    execution.transitions.map (fun transition => transition.event.duration)
+      = rows.map WalkedRow.duration := by
+  have base : execution.transitions.map Machine.EventTransition.event
+      = rows.map WalkedRow.event := events
+  calc execution.transitions.map (fun transition => transition.event.duration)
+      = (execution.transitions.map Machine.EventTransition.event).map
+          Machine.ExecutionEvent.duration := by rw [List.map_map]; rfl
+    _ = (rows.map WalkedRow.event).map Machine.ExecutionEvent.duration := by rw [base]
+    _ = rows.map WalkedRow.duration := by
+          rw [List.map_map]
+          exact List.map_congr_left fun row _ => WalkedRow.duration_event row
+
 /-- The mixed trace's final clock is the walk's own prefix-summed row widths.
 
 This is where the 264-tick row is actually paid for: `transitions_finalClock` sums the trace's own
-event durations with no ordinary hypothesis at all, and `WalkedRow.duration_event` turns each event
-duration back into the row width the walk was stated with. -/
+event durations with no ordinary hypothesis at all.  Nothing in the chain knows that 8 is a special
+number. -/
 theorem walkedExecution_finalClock (data : ProverData (ZMod p)) (rows : List (WalkedRow p))
     (execution : Machine.EventExecutionTrace) (initialClock : ℕ)
     (events : execution.events = transcriptOf data rows) :
@@ -148,17 +167,37 @@ theorem walkedExecution_finalClock (data : ProverData (ZMod p)) (rows : List (Wa
       = initialClock + (rows.map WalkedRow.duration).sum := by
   change Machine.clockAfterEvents initialClock
     (execution.transitions.map Machine.EventTransition.event) = _
+  rw [transitions_finalClock, walkedExecution_durations data rows execution events]
+
+/-- The mixed trace's schedule discipline, from each row's own `StartsAt`.
+
+The obligation is arm-split by construction and cannot be otherwise: an instruction row owes
+nothing, because an ordinary event's `StartsAt` is `True`; a syscall row owes
+`event.clock = ` its own prefix sum, which `syscallEvent_startsAt` derives from the row's `Spec`
+limb bounds and `2 ^ 24 < p`.  That is precisely the fact a row-generic engine cannot produce, which
+is why it enters here as a hypothesis rather than as a conclusion. -/
+theorem walkedExecution_clocked (data : ProverData (ZMod p)) (rows : List (WalkedRow p))
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ)
+    (events : execution.events = transcriptOf data rows)
+    (starts : ∀ (k : ℕ) (hk : k < rows.length),
+      (rows[k]'hk).event.StartsAt
+        (initialClock + ((rows.take k).map WalkedRow.duration).sum)) :
+    execution.Clocked initialClock := by
   have base : execution.transitions.map Machine.EventTransition.event
       = rows.map WalkedRow.event := events
-  have step : execution.transitions.map (fun transition => transition.event.duration)
-      = rows.map WalkedRow.duration :=
-    calc execution.transitions.map (fun transition => transition.event.duration)
-        = (execution.transitions.map Machine.EventTransition.event).map
-            Machine.ExecutionEvent.duration := by rw [List.map_map]; rfl
-      _ = (rows.map WalkedRow.event).map Machine.ExecutionEvent.duration := by rw [base]
-      _ = rows.map WalkedRow.duration := by
-            rw [List.map_map]
-            exact List.map_congr_left fun row _ => WalkedRow.duration_event row
-  rw [transitions_finalClock, step]
+  have durations := walkedExecution_durations data rows execution events
+  have lengths : execution.transitions.length = rows.length := by
+    simpa using congrArg List.length base
+  refine Machine.eventTransitionsClocked_of_starts execution.transitions initialClock ?_
+  intro k hk
+  have hk' : k < rows.length := lengths ▸ hk
+  have eventEq : (execution.transitions[k]'hk).event = (rows[k]'hk').event := by
+    have h := List.getElem_of_eq base (i := k) (by simpa using hk)
+    simpa using h
+  have takeEq : ((execution.transitions.take k).map fun t => t.event.duration)
+      = (rows.take k).map WalkedRow.duration := by
+    rw [List.map_take, durations, ← List.map_take]
+  rw [eventEq, takeEq]
+  exact starts k hk'
 
 end SP1Clean.Soundness

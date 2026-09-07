@@ -134,6 +134,32 @@ def EventTransitionsClocked : ℕ → List EventTransition → Prop
 def EventExecutionTrace.Clocked (initialClock : ℕ) (execution : EventExecutionTrace) : Prop :=
   EventTransitionsClocked initialClock execution.transitions
 
+/-- The schedule discipline depends only on where each event sits: every event must start at the
+prefix sum of the durations before it.
+
+Stating it index-wise is what lets a **mixed** trace establish `Clocked` with no all-ordinary
+hypothesis.  An ordinary event's `StartsAt` is `True` and needs nothing; a syscall event's is a real
+equation on the event's own clock, which its row supplies and which no generic argument could
+produce. -/
+theorem eventTransitionsClocked_of_starts :
+    ∀ (transitions : List EventTransition) (clock : ℕ),
+      (∀ (k : ℕ) (hk : k < transitions.length),
+        (transitions[k]'hk).event.StartsAt
+          (clock + ((transitions.take k).map fun transition => transition.event.duration).sum)) →
+      EventTransitionsClocked clock transitions := by
+  intro transitions
+  induction transitions with
+  | nil => intro clock _; trivial
+  | cons transition rest ih =>
+      intro clock starts
+      refine ⟨?_, ih (clock + transition.event.duration) ?_⟩
+      · exact starts 0 (by simp)
+      · intro k hk
+        have h := starts (k + 1) (by simpa using hk)
+        simp only [List.getElem_cons_succ, List.take_succ_cons, List.map_cons, List.sum_cons,
+          ← Nat.add_assoc] at h
+        exact h
+
 /-- Number of semantic steps in a raw execution. -/
 def EventExecutionTrace.steps (execution : EventExecutionTrace) : ℕ :=
   execution.transitions.length
