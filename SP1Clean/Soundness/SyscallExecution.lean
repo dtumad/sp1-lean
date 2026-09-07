@@ -32,6 +32,7 @@ open SP1Clean.Semantics
 open SP1Clean.Execution
 open SP1Clean.Soundness.Target
 open SP1Clean.Channels (StateMsg MemoryMsg)
+open Air.Flat
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -199,6 +200,66 @@ theorem walkedExecution_clocked (data : ProverData (ZMod p)) (rows : List (Walke
     rw [List.map_take, durations, ← List.map_take]
   rw [eventEq, takeEq]
   exact starts k hk'
+
+/-! ## The walk feed's per-row obligations, from the ensemble
+
+Everything below reads the *witness*, so it needs the field bound the syscall row's clock
+recombination needs (`2 ^ 24 < p`, from the ambient `2 ^ 25`), where the engine plumbing above is
+content with `2 ^ 17`.  Keeping that in a section rather than in the file's variable block is what
+stops the plumbing from inheriting a bound it does not use. -/
+
+section WitnessObligations
+
+variable [Fact (2 ^ 25 < p)]
+
+-- Named rather than anonymous, for the reason `SyscallWiring` records: `local` scopes the *use*,
+-- not the generated declaration name, so two anonymous instances in one namespace collide.
+local instance syscallExecution_fact_24 : Fact (2 ^ 24 < p) :=
+  ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+
+/-- Each walked row's window is its own duration.
+
+This is `walkE`'s `widthAt` input, and the first place the two arms' genuinely *different* clock
+contracts have to be presented as one statement: `+8` for an instruction row
+(`witness_realDecodedInstructionRows_timeStep`) against `+264` for a syscall row
+(`witness_realSyscallInstrsRows_timeStep`).  The aligned carrier costs nothing here — `AlignsWith`
+fixes both State messages on the nose and reorders only the memory lists. -/
+theorem walkedRow_widthAt (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (g : DecodedInstructionRow p → Semantics.RowFacts p) (rows : List (WalkedRow p))
+    (aligned : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      TimedGrounding.AlignsWith (g row) (row.ordinaryRowFacts witness.data))
+    (instructionSource : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      row ∈ realDecodedInstructionRows witness.data witness.tables)
+    (syscallSource : ∀ r : SyscallInstrsChip.Inputs (ZMod p), WalkedRow.syscall r ∈ rows →
+      ∃ raw ∈ realSyscallInstrsRows witness,
+        r = syscallInstrsRow (syscallInstrsTable witness) raw) :
+    ∀ (k : ℕ) (hk : k < rows.length),
+      StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePush
+        = StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
+          + (rows[k]'hk).duration := by
+  intro k hk
+  have hmem : (rows[k]'hk) ∈ rows := List.getElem_mem hk
+  cases hrow : (rows[k]'hk) with
+  | instruction row =>
+      rw [hrow] at hmem
+      have align := aligned row hmem
+      have step := witness_realDecodedInstructionRows_timeStep witness constraints balanced row
+        (instructionSource row hmem)
+      simp only [WalkedRow.facts, WalkedRow.duration]
+      rw [align.statePush, align.statePull]
+      exact step
+  | syscall r =>
+      rw [hrow] at hmem
+      obtain ⟨raw, rawMem, rfl⟩ := syscallSource r hmem
+      -- ⚠ Rewrite with the `RowFacts` projections rather than letting `exact` reach the messages by
+      -- defeq: `syscallInstrsRow` unfolds into the table's element construction, and crossing that
+      -- at a witness row exceeds the depth budget (see the campaign's crossing rule).
+      simp only [WalkedRow.facts, WalkedRow.duration, syscallRowFacts_statePush,
+        syscallRowFacts_statePull]
+      exact witness_realSyscallInstrsRows_timeStep witness constraints balanced raw rawMem
+
+end WitnessObligations
 
 /-- Discharge the engine's per-position `EventStep` obligation, arm by arm.
 
