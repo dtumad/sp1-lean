@@ -1,368 +1,129 @@
 # Verification overview
 
-*Snapshot: 2026-08, repository tree at this document's commit. Lean and mathlib v4.32.2; generated Sail model
-paired with lean-sail v5; SP1 semantic pin `v6.4.0`. Recorded pins are
-machine-cross-checked by `scripts/check_pins.sh`; see `release-audit.md` for the full table.*
+This is a guide to the current theorem boundary. The [technical report](verification-report.md)
+contains the detailed arguments; the [release audit](release-audit.md) records dependency pins and
+trust boundaries. SP1 is pinned to `v6.4.0`, and Lean/mathlib to v4.32.2.
 
-This repository proves a substantial SP1 AIR-to-execution result, but it does not yet prove full
-upstream Core AIR soundness.
+## Native soundness
 
-The closed capstone is `supported_core_native_sound`. It says that a satisfying, balanced witness for
-the 25-chip native Clean machine, together with an explicit program/provider boundary relation,
-determines a genuine shard-local execution of the generated RISC-V Sail model. The required pulled
-memory-timestamp bound is derived inside the theorem from Memory balance; it is not a separate
-premise. The exact
-v6.4.0 upstream AIR is separately represented by complete extracted assertion and interaction lists.
-All 25 native instruction chips are proved faithful to their corresponding upstream tables. The two
-exact clusters, **when paired with a caller-supplied `CanonicalPreprocessedInventory` and the named
-preprocessing, memory-boundary, and public-limb transport contracts**, now construct the complete
-local 54-table native artifact and verifier
-row, with every local constraint proved. The remaining top-level work is global: derive the
-provider-recount preconditions, all-channel count bounds, and State/Memory balance from
-exact-Core/ArkLib extraction; authenticate the caller-supplied source-backed inventory and its program
-identity through PCS; combine those facts with explicit loader, platform, code-memory, program,
-memory-boundary, and handler contracts for `SemanticBoundaryBinding`; prove that combined contract jointly inhabitable
-with valid exact clusters; then
-instantiate the exact-AIR refinement bundle.
-
-No Lean proof in `SP1Clean/` is deferred: the audit finds no `sorry`, `stop`, project `axiom`, or
-`sorryAx`. That fact should not be confused with completion of every desired theorem. Open work is
-represented by theorem premises or by theorem names that are intentionally not declared.
-
-## The theorem that is fully proved
-
-The current semantic capstone is:
+`supported_core_native_sound`, in `SP1Clean/Soundness/AIR.lean`, proves:
 
 ```lean
-theorem supported_core_native_sound :
-    WitnessRelation.Sound (SupportedCoreNativeRelation (p := p))
-      (SupportedCoreSailRelation (p := p))
+WitnessRelation.Sound (SupportedCoreNativeRelation (p := p))
+  (SupportedCoreSailRelation (p := p))
 ```
 
-Its source relation has two visible parts:
+The input relation has three conjuncts:
 
-1. `SupportedCoreEnsembleRelation`
-   - the witness public input equals the statement;
-   - every native Clean table constraint holds — the ensemble has 54 tables: the 25 instruction
-     chips plus 29 provider/boundary tables (six Byte-op providers, 17 Range providers for every
-     width `0..16`, the Program-ROM provider, the two Memory init/finalize boundary tables, the
-     two SP1 system tables MemoryBump and StateBump, and the Halt table that witnesses a halting
-     shard's `HALT` ECALL); and
-   - all five Clean channels balance — State, Byte, Program, Memory, and the Exit hand-off that
-     binds the committed `exit_code`.
-2. `SP1SemanticBoundaryRelation`, regrouped for reading:
-   - three commitment facts — the program is well formed, bound to the shared prover data, and
-     the committed prover data carries the public initial clock;
-   - a `ShardStartState` — a concrete initial Sail state has the public PC, ROM loaded, and the
-     platform configuration pinned;
-   - the code/data-separation contract (`SailCodeMemoryCompatible`); and
-   - the four-field assumed core (`ProviderBindingContracts`) — Program-provider rows describe
-     that program, Memory-init rows have the required meaning, and init/finalize records are
-     per-location unique.
+| Premise | Meaning |
+|---|---|
+| `SupportedCoreEnsembleRelation` | The public input agrees with the statement, all table constraints hold, and every ensemble channel balances. |
+| `SP1SemanticBoundaryRelation` | The program, providers, shared prover data, and a concrete initial Sail state agree under explicit loader, platform, and code-memory contracts. |
+| `SyscallTableInactive` | The SyscallInstrs table has no active row and the Halt table contains a physical row. |
 
-Those two conjuncts are the whole hypothesis. In particular the 24-bit range fact on each pulled
-memory timestamp — needed by SP1's timestamp-difference argument, and formerly a third companion
-relation — is now *derived* inside the proof from the per-location Memory balance: every record on
-the produced side of that balance carries the bound (the boundary provider pins both init clock
-limbs to zero, instruction rows inherit it from the range-checked public shard-time ceiling, and
-MemoryBump rows range-check it in-circuit), so every pulled record does too.
+The semantic boundary supplies program well-formedness and commitment, the initial clock,
+`ShardStartState`, `SailCodeMemoryCompatible`, and provider content and uniqueness facts.
+It does not assume the execution trajectory that the proof constructs. The proof derives
+pulled-Memory timestamp bounds from per-location balance.
 
-From those facts the proof deterministically decodes the physical rows, obtains an exhaustive
-State-bus order, grounds Program and Memory accesses at every position, applies the registered chip
-contract, and constructs a successful Sail chain. The conclusion (`SupportedCoreSailRelation`) is
-stated directly on the official Sail machine, with no machine-model parameter or schedule
-hypothesis. The resulting run:
+The conclusion uses the official generated Sail interpreter, with normal retirement at every
+ordinary step. It is either an ordinary sequence between the public endpoints or an ordinary
+prefix reaching `SP1Halted`, followed by the modeled HALT handler. Ordinary steps take eight ticks;
+HALT adds 264. The intermediate grounding theorem also retains agreement between the populated
+Memory boundary and the initial/final states.
 
-- uses the statement's program;
-- starts from a `ShardStartState` (public initial PC, committed ROM loaded, platform configured);
-- retires normally at every step (`SailRetireChain` — the trap, illegal-instruction, wait, and
-  extension-failure exits are excluded, not merely unobserved);
-- ends at the public final PC, taking exactly `(finalClk − initClk)/8` instructions;
-- carries a well-formed Memory boundary — one cell per canonically-addressed, genesis-backed
-  committed finalize record — agreeing with real location content in the initial and final Sail
-  states; and
-- is constructed by the proof from exactly the active physical instruction rows (the exported
-  relation states the endpoint facts; row exactness lives in the intermediate grounding
-  theorem).
+This is shard-local. The separate `supported_core_boot_to_halt_single_shard` theorem adds a boot
+boundary and a live Halt row. Its joint input relation has no constructed inhabitant yet.
+Neither theorem establishes cryptographic verifier acceptance or cross-shard composition.
 
-The machine-model-scheduled form of the conclusion is recovered by the corollary
-`supported_core_native_sound_scheduled`, the seam later shard composition consumes.
+## Physical machine and chip coverage
 
-It does not say that the initial state is reachable from boot, that the final row halts, that shards
-compose, or that a cryptographic verifier accepted a proof. Those are deliberately separate claims.
+`sp1Ensemble` contains **55 tables**, plus its state-boundary verifier:
 
-The timed grounding engine is duration-generic: the walk is stated over a `Timeline` (the bus
-clock at the start of each semantic step, windows at least eight ticks wide), so mixed
-ordinary/syscall (8/264-tick) shards are expressible, and the uniform eight-tick walk this
-statement uses is its `Timeline.ordinary` instantiation. The fixed micro-time constants
-(`ordinaryClkInc`/`ramEffectOffset`/`regEffectOffset`, named for the Rust `CLK_INC` and
-`MemoryAccessPosition` constants they track) remain the vocabulary the per-chip layers prove;
-the scheduled corollary's `UsesOrdinarySchedule` hypothesis bridges to the
-`Machine.SP1MachineModel.schedule` event model at the statement level
-(`architecture.md` § deliberate layering exceptions).
+| Positions | Tables |
+|---|---|
+| 0–24 | The 25 supported instruction chips |
+| 25–30 | Six Byte providers |
+| 31–47 | Range providers for every width 0–16 |
+| 48 | Program |
+| 49–50 | MemoryInit and MemoryFinalize |
+| 51–52 | MemoryBump and StateBump |
+| 53 | Halt |
+| 54 | SyscallInstrs |
 
-## Current coverage
+Its seven channels are State, Byte, Program, Memory, Exit, Syscall, and PublicValues.
+The current headline relation makes the last two ledgers silent by requiring an inactive
+SyscallInstrs table.
 
-| Layer | Current coverage | Status |
-|---|---:|---|
-| Native instruction circuits | 25 / 25 supported tables | soundness and completeness proved (completeness-witness scope disclosed below) |
-| Sail instruction bridges | 25 / 25 supported tables | proved |
-| Whole-chip Rust AIR faithfulness | 25 / 25 supported instruction tables | proved |
-| Grounding contracts used by the native capstone | 25 / 25 descriptors | proved |
-| Exact upstream Core shard | paired 34-table execution + 6-table Memory-boundary clusters | complete list-level source relation present |
-| Exact clusters + named transport contracts → local native ensemble artifact | 54 tables + verifier | constructed; all local constraints proved |
-| Active hand-assembled semantic trace → circuit-generated native AIR → Sail anchor | 1 JAL-x0 row | one event and one decoded physical instruction row; five-bus balance, native relation, and local execution proved for any supplied ordinary-schedule model |
-| Whole-chip Rust trace conformance (dump-anchored gate) | 25 chips | executable test evidence, not a theorem premise |
-| Exact upstream AIR to Sail | paired 34+6-table shard witness | open 12-field AIR bundle plus explicit external context; conditional combinator only |
-| Cross-shard boot-to-halt execution | full shard ledger | relation specified; theorem not yet declared |
-| Cross-shard ledger predicate layer | `Contracts/PublicValues.lean` | reserved API, declared ahead of its consumer |
-| ArkLib verifier knowledge soundness | Core verifier | out of this workstream's current proof |
+Every one of the 25 instruction families has native soundness and completeness, a Sail bridge,
+and a whole-chip faithfulness proof against complete extracted Rust assertion and interaction
+lists. The comparison reconstructs a canonical native physical row from an arbitrary extracted
+row; it is not an equivalence over every possible native assignment.
 
-The 25 instruction tables are Add, Addi, Addw, Sub, Subw, Bitwise, Lt, ShiftLeft, ShiftRight, Jal,
-Jalr, Branch, UType, five load tables, four store tables, Mul, DivRem, and AluX0. The theorem
-`supportedChipFaithfulness_upstream` proves that the proof-bearing faithfulness index is a permutation
-of the exact `CoreProfile.instructionTables` list. It also tracks the physical order of the native
-`supportedChips` registry.
+The full SyscallInstrs circuit has a separate whole-row result:
+`syscallInstrsChip_faithful` factors Rust's public-value assertions into an explicit
+`PublicValueBinding` and native public-value messages. It does not prove that the ensemble
+discharges that binding. The PublicValues provider and the connection from mixed-row grounding to
+the event capstone remain unfinished.
 
-The native completeness layer now has a proof-independent compiler for all 25 instruction tables.
-It folds the `EventExecutionTrace` deterministically evaluated from the common
-`CoreShardSemanticWitness`, inserts the required State/Memory refreshes,
-constructs both Memory boundaries, and closes Byte/Range/Program demand from the trace's own Clean
-ledger. Provider balance is proved directly in the field, so the old `2 * multiplicity ≤ p`
-restriction is gone; only the actual interaction-list footprint `< p` remains.
+The current Halt circuit is a restricted native model of one syscall arm. It requires a canonical
+HALT register value and a 16-bit exit code. It is not the full SyscallInstrs row and has no
+whole-chip Rust faithfulness anchor.
 
-`supported_core_native_functionalCompleteness` proves the resulting 54-table witness satisfies the
-same native relation consumed by soundness on `SupportedCoreNativeAdmissibleShardRelation`.
-That source restricts the common bounded shard relation by named residual semantic readiness facts
-and the physical `< p` footprint for the deterministic compiler output. Both
-directions use the same `CoreProfile.WithinOrdinaryRowLimit` policy, and
-`supported_core_native_shard_sound` targets that same bounded semantic relation. The semantic
-shard language also contains **halting shards** — the shared case's third branch, a supported
-ordinary prefix ending in the canonical HALT syscall under the concrete
-`ExecutableSyscallHandler.haltOnly` host semantics, with `HaltsWith` binding the committed
-exit-code cell. **Soundness now covers both branches**: `supported_core_native_shard_sound` case-splits
-on whether the Halt table carries a live row, and `supported_core_native_sound` concludes the
-`OrdinaryRun`/`HaltedRun` dichotomy of `SupportedCoreSailRelation` — for a halting shard, a
-normally-retiring prefix reaching a genuine `SP1Halted` state (the pc at a committed `ECALL` word,
-`t0` holding the canonical `HALT` code, `a0` the committed exit code), parked at SP1's terminal
-`haltPc` one 264-tick syscall window later. The deterministic **compiler** does not yet emit the
-terminal halt row (`NativeTraceReady.syscallFree`), so the totality-conditional correctness and
-language-equality statements remain relative to the syscall-free sub-language
-(`SupportedCoreNativeOrdinaryShardRelation` ↔ `SupportedCoreOrdinaryShardExecutionRelation`).
-Within that sub-language the remaining scope gap is exactly `NativeShardTraceTotal`, not missing
-tables, bump placement, provider closure, a second execution carrier, or an existential trace
-generator.
+## Native completeness and non-vacuity
 
-The Exit hand-off is what makes the dichotomy decidable from the algebra alone: the state-boundary
-verifier pulls `⟨exit_code⟩` **ungated**, and every Halt-table row pushes either its reduced `a0`
-word (when live) or the zero code (when padding), so balance forces exactly one physical Halt row,
-`exit_code = 0` on an ordinary shard, and `exit_code = reduce(a0)` on a halting one. The halt row
-additionally pins `a0`'s upper three limbs to zero — a disclosed 16-bit exit-code profile
-restriction, so that the single committed field cell decodes back to `a0`. The restriction is ours
-and narrower than upstream's: SP1's halt arm instead bounds `op_b` to a valid field element, which
-caps its reduction at `p - 1` so the decode never wraps.
+`supported_core_native_functionalCompleteness` constructs the entire native witness from an
+admissible semantic shard. The deterministic compiler covers all 25 ordinary instruction families,
+generates refreshes and Memory boundaries, and recounts Byte/Range/Program providers from its
+actual interactions. It emits one padding Halt row and an empty SyscallInstrs table.
 
-### The first whole-execution claim
+The admissible source retains `NativeTraceReady` and `NativeTraceFootprint.Fits`. These include
+successful ordinary-event compilation, semantic and circuit-row agreement, provider servability,
+zero exit code, and per-channel interaction capacity. They are visible conditions, not a proved
+totality result on all bounded semantic executions.
 
-`supported_core_boot_to_halt_single_shard` (`SP1Clean/Soundness/BootHalt.lean`) is the one place
-where the two ends of a shard are the two ends of a program. Its premise
-`SupportedCoreBootHaltRelation` is the ensemble algebra plus a **boot** semantic boundary
-(`BootBoundaryFacts`: `IsInitialState` at the committed entry pc, SP1's zeroed integer register
-file, boot clock `1`) plus a live Halt row; its conclusion is entirely in Sail/`GuestProgram`
-vocabulary:
+Soundness and completeness share a bounded shard vocabulary. The
+`supported_core_native_shard_correct_of_totality` and
+`supported_core_native_shard_language_eq_of_totality` theorems concern its ordinary sub-language
+and require the unproved `NativeShardTraceTotal` condition.
 
-> from the program's entry point with zeroed registers, `steps` normally-retiring
-> official-interpreter steps reach a genuine `SP1Halted` state whose `a0` is the committed public
-> exit code, with committed terminal pc `haltPc` and committed final clock `1 + 8·steps + 264`.
+The executable regressions include both a zero-event admissible shard and an active join:
+an official Sail self-jump, its deterministic compiler event, a nonempty bounded AIR witness, and
+soundness back to the shared semantic language. These establish particular joint witnesses; they
+do not establish universal compiler totality or boot-to-HALT non-vacuity.
 
-It is a **single-shard** statement. Composing shards along an authenticated ledger
-(`EventShardLayout`, `LastExecutionHalts`, `SP1ExecutionRelation`) is a separate,
-recursion-dependent target. And it is not yet demonstrably inhabited: the deterministic compiler
-emits only the padding Halt row, so no *constructed* witness satisfies the live-halt-row
-restriction. Producing one — the compiler's terminal halt row, with `t0`/`a0` read from the
-trace's final state — is the named next step.
+## Exact upstream AIR boundary
 
-`ChipFaithful` is a whole-row statement. For every adversarial Rust row it proves equivalence between:
+The extracted relation pairs the 34-table execution cluster with the six-table memory-boundary
+cluster and the 160-cell public-value block. Its natural send/receive balance is a knowledge-extracted
+witness relation, not raw verifier acceptance.
 
-- the complete upstream `assertZero` list; and
-- the native Clean component's complete constraint predicate.
+The instruction transport uses all 25 faithfulness proofs. Under named local contracts, source-backed
+preprocessing inventory, and public-boundary conditions, `Composition/` constructs all native
+tables and proves their local constraints. Its Halt and SyscallInstrs tables are manufactured
+padding/empty tables; upstream syscall events are not transported by that construction.
 
-On accepted rows it also proves equality, up to permutation and removal of zero-multiplicity entries,
-of the complete active interaction multiset. Rust helper operations and Lean proof gadgets may be
-factored differently; they are not separate public proof boundaries.
+Remaining global inputs include interaction-count bounds, State/Memory/Exit integer balance,
+authenticated preprocessing and program identity, and semantic boundary binding.
+`CoreAIRRefinementObligations` also requires public-value well-formedness and shard transitions,
+syscall transcript and COMMIT operand facts, Memory boundary agreement, and execution/boundary cases.
+There is no closed construction of the bundle.
 
-## The exact upstream AIR boundary
+The public declarations are therefore `sp1_air_refinement_of_obligations` and
+`sp1_air_sound_of_obligations`. A full exact-Core theorem additionally needs the supported syscall
+profile and host semantics resolved. Full-word canonical syscall codes are an explicit restriction;
+the Rust executor's `u32` dispatch alone does not establish it.
 
-The semantic Rust source is pinned to:
+## Reproduction and review
 
-```text
-f66b4bff51d0ccff51d152e0f7f66b2ffedf3529
-v6.4.0
-```
+Run `lake build SP1Clean`, `lake test`, `lake lint`, and `scripts/run_audit.sh`.
+The [axiom ledger](snapshots/axiom-ledger.md) records the main/test split and disclosed dependency
+classes. The main library contains no proof deferrals, project axioms, or `native_decide`.
 
-The list-only extractor uses a separately pinned descendant branch (every extraction change an
-ordinary commit on it). Its machine-source delta from the semantic revision consists only of
-reflection derives/imports. Shape projection, symbolic IR, compiler, and trace-tool changes live on
-a separate explicit trusted-tooling surface at the exact extraction pin; their allowlisting is not
-a semantic-inertness proof. The generated manifest fixes table membership, row widths,
-preprocessed widths, and the 160-cell public-values width.
+Regenerating witness exports, SP1 trace dumps, and extracted AIR lists tests separate boundaries.
+The Rust differential compares all committed fixture rows, while a fresh project build checks
+independence from prior project oleans. None substitutes for reviewing the semantic contracts or
+the trusted exporter.
 
-`CoreAIR.Current.Relation` contains:
-
-- exact heterogeneous row types for every table;
-- the complete generated assertion and interaction list for every row;
-- the complete public-value assertion and interaction block;
-- exact cluster membership and nonempty active traces;
-- a verifying-key/preprocessed-trace binding; and
-- equality of canonical natural send/receive multiplicities.
-
-The final item is intentionally stronger than a modular field equality. An ArkLib LogUp/GKR
-knowledge-soundness theorem must justify extraction of that natural multiset fact, with the appropriate
-bounds and error probability.
-
-Two exact system/public-value artifacts use constants canonically encoded for SP1's KoalaBear field
-(`Global`/`SyscallInstrs`, plus public-value curve seeds). Therefore a closed exact-v6.4.0 capstone
-must be concrete at KoalaBear unless it first proves an explicit literal-interpretation contract.
-The native instruction and grounding results remain field-generic; that scope does not automatically
-extend to the full exact system relation.
-
-At this pin, the Core machine AIR sources do not call first-row, last-row, or transition-window
-selectors. The exported row lists therefore do not omit a separate next-row constraint family.
-Changing the Rust pin requires rechecking this fact as well as regenerating the manifest and lists.
-
-## Why full `sp1_air_sound` is not yet declared
-
-`CoreAIRRefinementObligations` names the remaining deterministic proofs from the exact execution
-cluster to an eventful Sail shard:
-
-- public-value and program well-formedness;
-- verification-key/program binding and entry point;
-- first-execution-shard facts;
-- syscall transcript decoding and per-existing-row digest operands;
-- the one-way row-to-flag implications and the public-values COMMIT transition laws;
-- the non-execution boundary case; and
-- the execution case, including system-table grounding into an exact event trace.
-
-The last field is the main semantic theorem, not bookkeeping. No closed value of this structure exists
-today. The available declarations are therefore deliberately named:
-
-```lean
-sp1_air_refinement_of_obligations
-sp1_air_sound_of_obligations
-```
-
-They are useful, proved composition lemmas, but they are not evidence that the obligations have been
-discharged. The unqualified names `sp1_air_refinement` and `sp1_air_sound` are reserved for the closed
-construction.
-
-The local bridge is now constructive under its exact hypotheses: valid exact instruction and
-memory-boundary clusters, a caller-supplied `CanonicalPreprocessedInventory`, and named
-preprocessing, memory-boundary, and public-limb transport contracts assemble the native instruction,
-provider, bump, and verifier rows and prove
-their local constraints. Its Byte/Range/Program multiplicities are recounted from the actual Clean
-interaction ledger of the verifier, 25 instruction tables, MemoryInit/MemoryFinalize, and both bumps,
-not copied from the full exact cluster: the latter includes consumers that the native 54-table slice
-intentionally omits. The raw exact Byte/Range/Program assertion lists are empty.
-`CoreAIR.PreprocessedBinding` only records the named matrix/PCS-opening premise, to be discharged by
-ArkLib; it proves neither row-local meaning nor provider selection. `PreprocessedProviderContract`
-is the explicit caller premise for that meaning.
-Source main multiplicities are not reused, and neither premise implies projected-key uniqueness. The caller supplies a
-demand-oriented `CanonicalPreprocessedInventory`: its carriers are source-backed by the matching
-Byte/Program matrix or Range-width block, and the selected projected keys are explicitly `Nodup`.
-Zero-demand raw keys may be omitted. The recount contract separately states nonzero-demand
-Byte/Program-key coverage, consumer nonpositivity, and canonical capacity. `freshRowsByKey` is only a
-declarative/regression helper. PCS/program identity, State and Memory balance, and the semantic
-boundary remain separate and explicit. The
-missing bridge is the global interpretation concentrated in
-`SyscallCore`, `SyscallInstrs`, `MemoryLocal`, `Global`, and the authenticated preprocessing/public
-blocks. It must derive the artifact's named Range13-quotient→Range16 and raw-Global→typed-Memory
-transformations, the native boundary/program meaning, the 8-tick ordinary and 264-tick syscall
-schedule facts, and an explicit host-handler contract. The exact/native table access-permutation
-lemmas are reusable ingredients; the unused full-exact-payload key-balance closure was retired.
-`CoreArtifact` consumes an explicit recount contract to derive Byte
-(including Range) and Program integer balance; `ExactNativeGlobalContract` retains all-channel count
-bounds, State/Memory integer balance, and semantic binding. No joint inhabitance anchor for those
-contracts and valid exact clusters exists. The bridge reuses the 25
-chip-faithfulness proofs rather than restating instruction semantics.
-
-## COMMIT rows and public output
-
-The AIR constrains each canonical COMMIT or COMMIT_DEFERRED row that exists. It does not prove the
-converse that a rolling flag implies such a row exists.
-
-Accordingly:
-
-- `CommitRowsMatch` is an AIR-level, per-existing-row property;
-- `CommitRowsSetFlags` records the AIR-forced direction from an existing row to its shard flag
-  (an obligations-bundle field — stated, not yet discharged from the exact tables);
-- `CommitTransitionValid` records the public-values AIR laws that preserve a digest once the rolling
-  flag is set;
-- `CompleteCommitCoverage` means that all eight public digest indices occur across the whole
-  execution;
-- `UsesStandardHaltWrapper` is the program-level condition that supplies that coverage; and
-- `CommitCoveringVerifyingKey` packages that coverage condition for every program admitted by a
-  verification key.
-
-The base execution relation does not assume wrapper use. The optional
-`SP1CommitCoveredExecutionRelation` adds coverage only when one of those program contracts is
-supplied. `completeCommitDigestMatches_of_coveredExecution` combines coverage with row-to-flag,
-intra-shard digest freezing, and cross-shard ledger continuity, proving that every one of the eight
-rows carries its word of the terminal committed digest. The model does not yet connect output bytes
-to the wrapper's hash computation, so this is still not full guest-public-output authentication.
-
-## Trust and assumptions
-
-The audit separates proof incompleteness from external trust:
-
-- Lean checks the main proof library; standard logical dependencies are `propext`,
-  `Classical.choice`, and `Quot.sound`.
-- Selected bit-vector lemmas use `bv_decide` and disclose their generated proof constants.
-- The official generated Sail target contains platform hooks for reservation, floating-point, random,
-  and termination behavior. A theorem stated over that target inherits those hooks even when the
-  supported RV64IM path does not execute them.
-- The SP1 constraint compiler and trace dumper are trusted, pin-checked source-to-artifact tools
-  (one committed extraction branch). Generated outputs are not treated as self-authenticating;
-  whole-chip `ChipFaithful` proofs compare the AIR lists with the native circuits, and the
-  dump-anchored generation-time gate recomputes every dumped trace row cell-for-cell.
-- `native_decide` is forbidden in `SP1Clean/`. It appears only in `SP1CleanTest/`, where compiler
-  trust is explicitly accepted: the exportability battery and the satisfiability anchors,
-  including the real-row battery (`SP1CleanTest/NonVacuityReal.lean`, a concrete satisfying
-  `is_real = 1` row for every instruction chip's complete constraint system).
-- Cryptographic commitments, PCS opening, LogUp/GKR, Fiat--Shamir, and verifier extraction remain the
-  responsibility of the later ArkLib layer.
-
-The semantic boundary relation in `SupportedCoreNativeRelation` is a theorem premise, not a hidden
-axiom. Full upstream soundness requires deriving its authenticated provider-content/program portion
-from the exact-system and cryptographic binding relations, while loader, platform, code-memory,
-memory-boundary, and handler contracts remain explicit application premises. The single most
-load-bearing such premise deserves naming here:
-`SailCodeMemoryCompatible` — every store on the run preserves the program's ROM bytes. SP1 fetches
-instructions from an immutable program table while unmodified Sail fetches from the same mutable
-memory that stores write to; for a guest that overwrites its own code the two genuinely diverge, and
-the theorem simply does not apply. Self-modifying programs are excluded by assumption, not proved
-impossible.
-
-The former standalone per-bus `Trace*Link` predicates and integer `*Lookups` shadows have been
-retired. The capstone reads typed Clean interactions directly through `TypedState`, `TypedProgram`,
-and `TypedMemory`; its premise surface is exactly the two relation conjuncts above.
-
-## Reproduce the current checkpoint
-
-```bash
-lake build SP1Clean
-lake test
-lake lint
-scripts/run_audit.sh
-```
-
-The audit regenerates the declaration list and raw `#print axioms` census and compares it against
-the committed snapshots (drift fails; `--update` rewrites deliberately). The current main/test split
-and total live only in the mechanically checked [`axiom ledger`](snapshots/axiom-ledger.md), so this
-reader document cannot carry a stale duplicate count. The audit also cross-checks every recorded pin
-against the build graph.
-
-Where to go next: [`release-audit.md`](release-audit.md) for the machine-derived pins and census;
-[`verification-report.md`](verification-report.md) for the argued long-form report;
-[`architecture.md`](architecture.md) for module ownership and the deliberate layering exceptions;
-[`roadmap.md`](roadmap.md) for the remaining dependency order; [`README.md`](README.md) for the
-one-role-per-document map.
+Use the [audit surface](audit-surface.md) for definition-level review and the
+[roadmap](roadmap.md) for the remaining constructions.

@@ -114,9 +114,10 @@ theorem inlineSyscallIds_length : inlineSyscallIds.length = 13 := rfl
 
 theorem inlineSyscallIds_lt_256 : ∀ c ∈ inlineSyscallIds, c < 256 := by decide
 
-/-- **The canonicity premise (D9).** The row's syscall register holds one of the thirteen inline
-codes exactly — not merely a word whose low byte is one of them. This is what SP1's executor
-enforces by construction and its AIR does not. -/
+/-- The supported profile requires the whole syscall register to hold an inline code exactly.
+This is stronger than successful Rust dispatch: the executor applies `SyscallCode::from_u32` after
+casting `x5` to `u32`, so dispatch alone does not constrain its upper 32 bits. It is also stronger
+than the AIR's low-byte selector tests. The full-word restriction is an explicit premise. -/
 def CoreSyscallEvent.IsInlineCanonical (event : CoreSyscallEvent) : Prop :=
   event.rawCode.toNat ∈ inlineSyscallIds
 
@@ -130,9 +131,8 @@ theorem CoreSyscallEvent.tableByte_of_inlineCanonical {event : CoreSyscallEvent}
     (h : event.IsInlineCanonical) : event.tableByte = 0 := by
   rw [CoreSyscallEvent.tableByte, Nat.div_eq_of_lt (inlineSyscallIds_lt_256 _ h)]
 
-/-- The terminal event is the exact Rust `SyscallCode::HALT`, not merely an arbitrary register value
-whose low byte happens to be zero.  This distinction is necessary for refinement to the executor:
-`SyscallInstrsChip` itself classifies HALT using only byte zero. -/
+/-- The terminal event has the full-word HALT code required by the current `SP1Halted` predicate.
+This is stronger than the executor's `u32` dispatch and the AIR's byte-zero HALT selector. -/
 def CoreSyscallEvent.IsCanonicalHalt (event : CoreSyscallEvent) : Prop :=
   event.IsCanonicalCode 0
 

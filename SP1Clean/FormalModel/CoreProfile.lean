@@ -41,16 +41,14 @@ separate spelling of the row budget. -/
 def WithinOrdinaryRowLimit (rows : ℕ) : Prop :=
   rows ≤ maxOrdinaryTransitions
 
-/-- **The canonicity premise (D9).** Every syscall a supported shard takes uses one of the thirteen
-inline codes exactly.
+/-- Every syscall in this supported profile uses a full-word canonical inline code.
 
-⚠ This is a *premise*, and deliberately so. SP1's AIR reads bytes 0 and 1 of `x5`, while its
-executor dispatches on the full `x5 as u32` through `SyscallCode::from_u32`, which **panics** on a
-non-enumerated value. An AIR-valid `HALT` row may therefore carry `x5 = 0x00010000` — a witness the
-constraint system admits and no execution produces. Canonicity is a fact about the *executor*, not a
-consequence of the AIR, so the honest place for it is the supported profile, beside
-`WithinOrdinaryRowLimit`, rather than an invented row constraint that would make the native chip
-stricter than the one it models.
+The AIR selects syscall arms from byte 0 and uses byte 1 for dispatch multiplicity. The executor
+instead calls `SyscallCode::from_u32` on `x5 as u32`, rejecting unrecognized low-32-bit codes but
+ignoring the upper 32 bits. Requiring the entire 64-bit register to equal an inline code is therefore
+a profile restriction; successful executor dispatch alone does not establish it. For example,
+`0x100000003 as u32` selects `ENTER_UNCONSTRAINED`, although that raw word is not canonical here.
+The row proofs do not derive this premise from AIR validity.
 
 It is stated over the shard's syscall events so that neither direction owns a separate spelling: the
 semantic side projects its transcript's syscall events into it, the native side its active syscall

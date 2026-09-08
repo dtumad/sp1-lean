@@ -9,7 +9,7 @@ prefix reaching a `SP1Halted` state parked at `haltPc`. Both arms are chains of 
 hard-code the clock as `8 * steps` (plus one `264` on the halting arm).
 
 Neither can describe a shard that **commits**. A mid-shard `COMMIT` row is not a `try_step`, so no
-`SailRetireChain` contains it, and the shard's clock is no longer eight times anything.
+`SailRetireChain` contains it, and the elapsed clock is no longer eight times the event count.
 
 So the headline's conclusion has to generalize. The shape is **generalize and re-derive**, not
 weaken: this file states the relation over event transcripts, and `SupportedCoreSailRelation` comes
@@ -59,9 +59,9 @@ def EventSegmentWitness.OrdinaryStepsRetire (handler : Machine.ExecutableSyscall
     eventTrajectory handler program w.events w.initial (n + 1) = some s' →
     SailRetiresNormally s s'
 
-/-- **The canonicity premise (D9)**, at the segment level: every syscall the transcript takes uses
-one of the thirteen inline codes exactly. True of any execution SP1's executor produces — it panics
-otherwise — and checkable on the witness. -/
+/-- The segment's profile restriction: each syscall uses a full-word canonical inline code.
+This is checkable on the witness, but is stronger than the executor's `u32` dispatch and is not
+derived from the AIR. -/
 def EventSegmentWitness.CanonicalSyscallCodes (w : EventSegmentWitness) : Prop :=
   ∀ event ∈ w.events, ∀ e : Machine.CoreSyscallEvent,
     event = Machine.ExecutionEvent.syscall e → e.IsInlineCanonical
@@ -150,8 +150,9 @@ def SupportedCoreEventRelation {p : ℕ} (handler : Machine.ExecutableSyscallHan
 
 /-! ## The specialization
 
-The honesty check: on an all-ordinary transcript the event relation *is* the plain-Sail relation.
-If this cannot be proved, the generalization above has changed the claim rather than widened it. -/
+On an all-ordinary transcript with zero public exit code, the event relation implies the
+plain-Sail relation. The converse below starts from its ordinary run case. The zero-exit premise
+is necessary because the event relation does not impose the native Exit hand-off restriction. -/
 
 /-- The `SailSegmentWitness` an all-ordinary transcript denotes. -/
 def EventSegmentWitness.toSailSegment (w : EventSegmentWitness) : SailSegmentWitness :=

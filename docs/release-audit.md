@@ -7,7 +7,7 @@ commands below before citing this report for another commit.
 ## Executive assessment
 
 The repository has a closed, nontrivial native AIR-to-Sail theorem for all 25 supported Core
-instruction tables. Every registered chip has:
+instruction tables. Every registered instruction chip has:
 
 - native Clean soundness and completeness;
 - a bridge to the generated RISC-V Sail semantics;
@@ -15,8 +15,9 @@ instruction tables. Every registered chip has:
 - a whole-chip proof against the complete active Rust interaction multiset on every locally
   accepted reconstructed row in the codec image, modulo permutation and zero-multiplicity entries.
 
-The repository does not yet have a closed theorem from the exact 34-table upstream Core relation to
-Sail. Local exact-to-native assembly is now proved. The remaining gap is deriving the explicit
+The repository does not yet have a closed theorem from the paired exact upstream Core relation
+(34 execution and six Memory-boundary tables) to Sail. Local exact-to-native assembly is now
+proved. The remaining gap is deriving the explicit
 global balance/count, preprocessing and program authentication, memory-boundary semantics, and
 application-level semantic binding needed to instantiate the unclosed
 `CoreAIRRefinementObligations` structure. The available
@@ -81,9 +82,9 @@ The change is a bug fix rather than an ergonomics request: `not_computable_from_
 example file proves that the previous obligation was **false** for any witness program reading
 `FExpr.dataGet`, not merely hard to discharge.
 
-**Exit condition: re-pin to upstream as soon as the PR merges.** Until then this fork is the one
-dependency in the table that is not upstream, and the axiom census is unaffected by it (verified: the
-census is unchanged across the re-pin). Fork state, the PR queue, and the standing rule for what may
+**Upstreaming remains separate from the reproducible pinned baseline.** The Clean fork's recorded
+re-pin left the axiom census unchanged. The generated Sail model and RISC-V support also use
+project-hosted revisions, as disclosed above. Fork state, the PR queue, and the standing rule for what may
 go in the fork versus `ToClean/` are recorded in `docs/agents/clean-upstream.md`.
 
 The extraction branch is a descendant of the semantic source with that source as its merge base, and
@@ -94,6 +95,9 @@ merge base, the changed-file allowlist, the derive-only machine diff, and a clea
 writes any artifact. Changes to `IntoShape`, the constraint compiler, and the symbolic IR are a
 separate pinned trusted-extractor surface: their paths are fail-closed by the allowlist and their
 bytes by the exact commit, but the gate does not label them semantically inert.
+
+The [capstone assessment](audits/2026-09-capstone-assessment.md) records the 2026-09-08 reproduction,
+confirmed repairs, remaining proof obligations, and limits of that review.
 
 ## Verification stack and status
 
@@ -109,16 +113,17 @@ bytes by the exact commit, but the gate does not label them semantically inert.
 | Cross-shard execution | `SP1ExecutionRelation` | target relation specified; no soundness theorem yet |
 | Core verifier | `VerifierBoundary.PerfectExtraction` composition API | cryptographic proof not implemented here |
 | Native ensemble completeness | `supported_core_native_functionalCompleteness` | closed for the deterministic all-25 compiler on its explicit admissible semantic image |
-| Broader semantic-language completeness | shared capacity-bounded semantic relation | open two-sided relation alignment plus residual semantic/footprint implications; no language equality claimed |
+| Broader semantic-language completeness | shared capacity-bounded ordinary semantic relation | alignment closed; `NativeShardTraceTotal` remains open, so correctness and language equality are conditional |
 
 `supported_core_native_complete` is the existential projection of a proof-independent functional
 compiler. It computes all native physical rows, refreshes, Memory boundaries, and canonical
-Byte/Range/Program providers from the supplied semantic execution; constraints and all five channel
+Byte/Range/Program providers from the supplied semantic execution; constraints and all seven channel
 balances are proved. Its explicit admissible source still requires the named event-validity,
-provider-semantic, and actual-footprint facts. Proving those on an intended bounded source is not
-by itself enough to combine this theorem with exact soundness: the current soundness target is
-unbounded and does not record the Core row cap or physical capacity. Public-language equality first
-requires a shared capacity-bounded semantic relation (or equivalent two-sided refinement).
+provider-semantic, and actual-footprint facts. Soundness and completeness now share the ordinary
+semantic relation and `CoreProfile.WithinOrdinaryRowLimit`. `NativeShardTraceTotal` is the remaining
+implication from that bounded ordinary source to compiler readiness and physical capacity.
+The correctness and language-equality theorems explicitly consume it. The compiler still emits
+only a padding Halt row and an empty SyscallInstrs table.
 
 ## Closed capstone statement
 
@@ -127,7 +132,7 @@ requires a shared capacity-bounded semantic relation (or equivalent two-sided re
 ```text
 native public-input equality
 + all native Clean constraints
-+ five-channel balance (State, Byte, Program, Memory, Exit)
++ seven-channel balance (State, Byte, Program, Memory, Exit, Syscall, PublicValues)
 + committed Program and provider/boundary semantics
 + Memory provider uniqueness
 ```
@@ -151,9 +156,10 @@ between the public PC and clock endpoints
 (constructed by the proof from exactly the active decoded rows)
 ```
 
-The exported target relation states only the program/endpoint facts; the row-exactness fact lives
-in the intermediate `supported_core_witness_grounding` theorem and is discarded by the final
-existential. It does not derive its provider/boundary premises from the exact upstream system
+The exported target relation also carries a finite Memory boundary, its well-formedness, and
+agreement with location contents at both endpoints. Exact correspondence to decoded physical rows
+lives in the intermediate `supported_core_witness_grounding` theorem. The capstone does not derive
+its provider/boundary premises from the exact upstream system
 tables. The endpoint/program scope restrictions are in the relation definitions, rather than prose
 assumptions.
 
@@ -175,13 +181,13 @@ Two disclosures attach to the halting branch:
   *complete* assertion systems and two *complete* interaction multisets, and these are not the same
   table: SP1's row is a multi-arm dispatcher whose interaction list carries `IsZero` selectors for
   syscall codes `0`, `3`, `16`, `26`, and `240`, and which sends on the global `.syscall` bus that
-  the supported profile's five channels do not contain. `HaltChip` implements the code-`0` arm
+  `HaltChip` does not use. `HaltChip` implements the code-`0` arm
   alone. What lines up — and is the review evidence — is the skeleton: the Rust row computes
   `clk + 264` and reads its three registers at clock offsets `+4`, `+3`, `+2`, exactly the window
   and offsets `HaltChip` uses for `x5`/`x10`/`x11`, with a matching bus shape (2 State, 1 Program,
   6 Memory). Closing this needs a *gated projection* anchor — agreement on rows whose syscall-code
-  selector is `HALT` and whose excluded-bus terms vanish — which in turn needs the syscall bus in
-  ensemble scope. Until then the restriction relation is reviewed prose, not a theorem.
+  selector is `HALT` and whose excluded-bus terms vanish. The ensemble now registers the full
+  syscall chip, but the restriction relation for the separate Halt chip remains reviewed prose.
 * **A 16-bit exit-code profile restriction — ours, not SP1's.** The halt row pins `a0`'s upper
   three limbs to zero, so only a 16-bit exit code can satisfy it. This is a *strengthening* of the
   AIR (an honest prover of a larger exit code cannot produce a satisfying halt row), disclosed here
@@ -216,15 +222,16 @@ entries.
 The system tables are handled differently: their complete generated lists are used directly in the
 exact relation. StateBump and MemoryBump retain native chips and whole-table faithfulness anchors.
 The rest do not acquire artificial row-wise native counterparts, because the native ensemble uses a
-proof-oriented provider interface (29 provider/boundary tables alongside the 25 instruction chips —
-a 54-table Clean ensemble). The provider family contains six Byte-op tables, all 17 Range widths
-`0..16`, Program, MemoryInit, MemoryFinalize, MemoryBump, and StateBump; the complete Range family
+proof-oriented provider interface (30 provider/boundary tables alongside the 25 instruction chips —
+a 55-table Clean ensemble). The provider family contains six Byte-op tables, all 17 Range widths
+`0..16`, Program, MemoryInit, MemoryFinalize, MemoryBump, StateBump, Halt, and SyscallInstrs; the complete Range family
 closes the provider side of honest shift-row lookups. `SP1Clean/Composition/{PreprocessedProviders,
 MemoryBoundary,SystemTables,ProviderSegment,CoreEnsemble}.lean` now constructively connects the two
-local interfaces under a caller-supplied `CanonicalPreprocessedInventory` and proves all 54 native
+local interfaces under a caller-supplied `CanonicalPreprocessedInventory` and proves all 55 native
 tables plus the verifier row satisfy their constraints.
 Byte/Range/Program counts are recounted from the actual Clean interaction ledger of the verifier,
-25 transported instruction tables, MemoryInit/MemoryFinalize, and both bumps rather than copied from
+25 transported instruction tables, MemoryInit/MemoryFinalize, both bumps, a padding Halt table,
+and an empty SyscallInstrs table rather than copied from
 the larger exact cluster. The raw exact Byte/Range/Program assertion lists are empty.
 `CoreAIR.PreprocessedBinding` only records the named matrix/PCS-opening premise, to be discharged by
 ArkLib; it proves neither row-local meaning nor provider selection. `PreprocessedProviderContract`
@@ -349,10 +356,11 @@ recomputed and matched cell-for-cell), and the independent Rust interpreter diff
 | Two-key generated Sail config | `clint`/`simple_interrupt_generator` disabled at four generated value sites — devices SP1 does not implement, whose stock defaults make the memory-bridge lemmas false as stated | stays config-generated; the generation pins and config hash are gated by `check_pins.sh` |
 | `SailConfigured` platform state | the theorems' initial-state hypotheses select SP1's platform on the Lean side: machine mode, no enabled interrupts, `MPRV`/`mseccfg`/PMM off, no HTIF, PMP all-OFF (`h_pmp_off`), and the single RWX PMA region `[2^16, 2^48)` | discharge per-field from SP1's boot/ELF-load contract; the PMA window and PMP-off are the platform selection itself (verification-report §3.2) |
 | Native semantic boundary relation | native provider tables must mean the selected program/state | derive from exact Program/Memory/Global system tables |
-| `SyscallHandler` | Sail does not implement SP1 host syscalls | `ExecutableSyscallHandler.haltOnly` is now a *concrete* handler for the one claimed syscall (`HALT`), so the halting conclusion rests on a named executable host semantics rather than an opaque relation; every other syscall still evaluates to `none` (outside the profile) |
-| Native `HaltChip` | SP1's ECALL row is a multi-arm dispatcher (`IsZero` selectors for syscall codes 0/3/16/26/240) that also sends on the global `.syscall` bus, which the supported profile's channels exclude; `HaltChip` implements the `HALT` arm alone | the Rust oracle exists (`Extracted/SystemOracle/SyscallInstrs.lean`) but no `ChipFaithful` anchor does — whole-row assertion/interaction equality is false between an arm and its dispatcher; the restriction relation is reviewed prose. Close it with a gated-projection anchor once the syscall bus is in ensemble scope |
-| Native-only `Exit` bus | SP1's `InteractionKind` has no `Exit` (or public-values) kind: its syscall chip binds `public_values.exit_code` by direct chip-level access. Clean's flat AIR localizes `PublicIO` to the designated verifier row — `Air.Flat.Table` carries no public input, and `Ensemble.tables` cannot depend on one — so a chip-level public-value assertion **must** be factored through a channel. This is Clean's own idiom, not a local workaround: upstream's `Air/Vm.lean` `VmTables` requires exactly this (`verifier_channel`, over `verifier.exposedChannels`). The ensemble therefore carries one bus SP1's AIR does not, which strengthens rather than weakens it (an extra balanced bus only constrains the prover), and the Faithful anchors stay valid because extracted Rust interactions never carry either native-only kind (`Interaction.toAccess_kind_not_native`; `Interaction.toAccess_kind_ne_exit` is its Exit half). Note the scope: this argument covers `Exit` and `PublicValues`, which SP1 has no bus for. It does **not** cover `Syscall` — SP1 does have that bus, and since 2026-09 both sides classify it as `InteractionKind.Syscall` under the same `"SP1Syscall"` key rather than aliasing it onto `State`. An instruction chip's anchor instead discharges the syscall filter from the fact that its oracle emits no raw interaction at all (`Extracted.perm_filter_by_kind_of_no_raw`) | intrinsic to the arithmetization boundary, not closable — but it should stay a *stated, uniform* translation: every future public-value binding (the commit digest and flags) uses the same encoding rather than a new mechanism |
+| `SyscallHandler` | Sail does not implement SP1 host syscalls | `ExecutableSyscallHandler.haltOnly` is now a *concrete* handler for the one claimed syscall (`HALT`), so the halting conclusion rests on a named executable host semantics rather than an opaque relation; every other syscall evaluates to `none` for that handler; the separate inline handler has broader local semantics, without an active-syscall soundness capstone |
+| Native `HaltChip` | SP1's ECALL row is a multi-arm dispatcher (`IsZero` selectors for syscall codes 0/3/16/26/240) that also sends on the global `.syscall` bus, which the standalone Halt circuit does not use; `HaltChip` implements the `HALT` arm alone | the Rust oracle exists (`Extracted/SystemOracle/SyscallInstrs.lean`) but no `ChipFaithful` anchor does — whole-row assertion/interaction equality is false between an arm and its dispatcher; the restriction relation is reviewed prose. Close it with a gated-projection anchor and integrate the full syscall table into grounding |
+| Native-only public-value buses | Clean localizes public inputs to the verifier row. Native chips therefore communicate values that Rust constrains directly through Exit/PublicValues messages. The instruction anchors exclude these additional kinds; the full syscall anchor instead states an explicit `PublicValueBinding` and an interaction permutation with added messages. | Exit already has the verifier pull and Halt producer. PublicValues still needs an authenticated provider, and active syscalls need an extended terminal-row policy. The local faithfulness theorem does not discharge either integration obligation. |
 | 16-bit exit codes | the halt row pins `a0`'s upper three limbs to zero so the single committed `exit_code` cell decodes back to `a0`. Ours, not upstream's: SP1's halt arm bounds `op_b` to a valid field element (`U16CompareOperation` vs `32512`), capping `reduce(op_b)` at `p - 1`, so it never wraps | reproduce SP1's compare instead of pinning limb 1 — widens to upstream's ~31-bit range and retires this row |
+| Canonical inline syscall words | The native predicate checks the complete 64-bit register, while the pinned Rust executor dispatches after truncation to 32 bits. Successful Rust dispatch does not imply this predicate. | Retain it as an explicit supported-profile restriction or widen the semantics with a reviewed AIR/host correspondence proof. |
 | Preprocessed commitment | verifying key must bind the Program/provider trace | discharge in PCS/ArkLib layer |
 | Exact natural balance | execution needs a real multiset, not modular equality | extract with LogUp/GKR soundness and bounds |
 | Shard ledger cryptography | cumulative sums and deferred proofs are recursive-proof facts | prove in recursion/verifier layer |
@@ -375,10 +383,11 @@ exact instruction tables
 Specifically:
 
 - discharge `ExactNativeGlobalContract` from the exact interaction argument: all-channel count
-  bounds, State/Memory integer balance, and the semantic program/boundary binding;
+  bounds, State/Memory/Exit integer balance, and the semantic program/boundary binding;
 - authenticate and construct the source-backed preprocessing inventory, and close the named
   Range13→Range16 and raw-Global→typed-Memory transformations (the 25 instruction tables and
-  complete 28-table provider/system tail are already constructed under those explicit contracts);
+  complete 30-table provider/system tail are already constructed under those explicit contracts,
+  using manufactured padding Halt and empty SyscallInstrs tables);
 - prove the mixed ordinary/syscall schedule and exact syscall transcript;
 - instantiate `CoreAIRRefinementObligations`;
 - compose authenticated shards from boot to HALT; and

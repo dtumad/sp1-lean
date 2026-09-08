@@ -76,7 +76,7 @@ structure ExactNativeGlobalContract {Digest : Type}
   interactionCount : ∀ channel ∈ (Soundness.sp1Ensemble (p := p)).channels,
     ((exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
       ).interactionsWith channel).length < p
-  /-- The projected State and Memory access ledgers balance over the integers.  Byte and Program
+  /-- The projected State, Memory, and Exit access ledgers balance over the integers. Byte and Program
   are deliberately absent: `exactNativeAllCleanAccesses_preprocessedBalance` derives them from the
   native recount contract. -/
   remainingIntegerBalance : ∀ channel,
@@ -106,7 +106,7 @@ private theorem instructionComponent_channels_subset
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hc ⊢
   tauto
 
-/-- Every native provider/boundary component also declares only the four ensemble channels. -/
+/-- Every native provider/boundary component uses only declared ensemble channels. -/
 private theorem providerComponent_channels_subset
     (component : Air.Flat.Component (ZMod p))
     (componentMem : component ∈ Soundness.sp1ProviderTables (p := p)) :
@@ -127,7 +127,7 @@ private theorem providerComponent_channels_subset
         MemoryProviderChip.circuit, MemoryFinalizeChip.circuit, MemoryBumpChip.circuit,
         StateBumpChip.circuit, HaltChip.circuit, SyscallInstrsChip.circuit, circuit_norm]
 
-/-- Every component of the concrete native ensemble is statically confined to its four channels. -/
+/-- Every component of the concrete native ensemble uses only its declared channels. -/
 private theorem ensembleComponent_channels_subset
     (component : Air.Flat.Component (ZMod p))
     (componentMem : component ∈ (Soundness.sp1Ensemble (p := p)).allTables) :
@@ -352,7 +352,7 @@ private theorem exactNativeEnsembleWitness_syscallTable_nil' {Digest : Type}
   exact exactNativeEnsembleWitness_syscallTable_nil statement executionWitness
     memoryBoundaryWitness inventory data hint
 
-/-- **The transport meets the interim syscall boundary.** Three fields come from the manufactured
+/-- The transport meets the interim syscall boundary. Inactivity follows from the manufactured
 empty `SyscallInstrs` table; `haltTablePresent` comes from the manufactured one-padding-row Halt
 table, which the transport supplies precisely because the exact v6.4.0 cluster has none. -/
 private theorem exactNativeEnsembleWitness_syscallTableInactive {Digest : Type}

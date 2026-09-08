@@ -1921,12 +1921,13 @@ The assertion clause carries `PublicValueBinding` and the interaction clause car
 the arithmetization boundary: SP1 states them as row constraints against `publicValues`, and the
 native row — which cannot reach the public input, because Clean's flat AIR reserves it to the
 verifier — states them as messages. Nothing is dropped in either clause. What is *not* claimed is
-that the messages are honoured: that needs providers for `Channels.publicValuesChannel` and
-`Channels.exitChannel`, which the ensemble does not have, and it is disclosed as the
-native-only-bus row in `docs/release-audit.md`.
+that the messages are honoured: `Channels.publicValuesChannel` still needs an authenticated
+provider. `Channels.exitChannel` already has the verifier pull and Halt-table producer, but its
+terminal-row policy must be extended before active syscall rows enter the soundness theorem.
+These integration obligations are disclosed in `docs/release-audit.md`.
 
-Both clauses are stated against `⟨SyscallInstrsChip.circuit⟩`, the flat component the ensemble will
-register. -/
+Both clauses are stated against `⟨SyscallInstrsChip.circuit⟩`, the flat component registered in the
+ensemble. -/
 theorem syscallInstrsChip_faithful (preprocessed : Vector (ZMod p) 0)
     (publicValues : Vector (ZMod p) 160) :
     (∀ (rustCols : Extracted.SyscallInstrsCols (ZMod p)) (data : ProverData (ZMod p)),

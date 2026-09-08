@@ -6,14 +6,13 @@ Formal verification of SP1 Core instruction AIRs and native AIR-to-execution ref
 
 </div>
 
-## What this repository proves
+## Verified result
 
-This is a Clean-native Lean 4 verification of SP1's Core RISC-V instruction chips and native
-53-table AIR-to-execution layer, anchored to the unmodified Rust source at
-`f66b4bff51d0ccff51d152e0f7f66b2ffedf3529`
-(`v6.4.0`).
+This repository verifies SP1's Core RISC-V instruction chips in Lean using the Clean circuit DSL
+and the generated RISC-V Sail model. The SP1 semantic source is
+`f66b4bff51d0ccff51d152e0f7f66b2ffedf3529` (`v6.4.0`).
 
-The current closed capstone is:
+The main theorem is:
 
 ```lean
 theorem supported_core_native_sound :
@@ -21,170 +20,75 @@ theorem supported_core_native_sound :
       (SupportedCoreSailRelation (p := p))
 ```
 
-It proves that a valid, balanced witness for the 25-chip native Clean machine, with an explicit
-program/provider binding, yields a genuine shard-local execution of the generated RISC-V Sail
-model: a normally-retiring interpreter run between the public PC endpoints, taking exactly the
-committed number of eight-tick instructions.  The machine-model-scheduled form is the corollary
-`supported_core_native_sound_scheduled`.
+Its input has three parts: the native ensemble's constraints and channel balance; a semantic
+binding for the program, providers, and initial Sail state; and `SyscallTableInactive`, requiring
+an inactive syscall table and a physically present Halt table.
 
-All 25 supported instruction chips have:
+The conclusion is a shard-local execution of the official generated Sail interpreter: either a
+normally retiring instruction sequence, or such a sequence followed by the modeled HALT handler.
+The public PC and clock endpoints agree with the execution. Ordinary instructions take eight
+ticks; HALT adds 264. Program loading, platform configuration, and code/memory compatibility are
+explicit assumptions. The Memory timestamp bounds are derived in the grounding proof.
 
-- native Clean soundness and completeness proofs;
-- Sail instruction-step bridges;
-- whole-chip equivalence with the complete extracted Rust assertion system on the canonical
-  native physical row reconstructed from each extracted Rust row; and
-- on extracted Rust rows satisfying the complete assertion system, whole-chip equality of active
-  interaction multisets.
+The native ensemble has **55 tables and seven channels**, plus its separate verifier row.
+It contains 25 instruction tables and 30 provider/system tables, including Halt and SyscallInstrs.
+Registering the full syscall chip does not make active syscall rows part of the current soundness
+theorem.
 
-The proof-bearing coverage certificate is tied to the exact upstream 25-table instruction profile.
-The main library has no `sorry`, `stop`, project `axiom`, `sorryAx`, `skipKernelTC`, or
-`native_decide`.
+## Coverage and limits
 
-A constructive **native ensemble completeness** theorem is proved too.
-`supported_core_native_functionalCompleteness` deterministically compiles a supported admissible
-`Machine.CoreShardSemanticWitness` into the same `SupportedCoreNativeRelation` consumed by soundness—all
-53 tables plus the verifier row, with every physical row computed by the circuits' own generators.
-The compiler covers all 25 instruction families, inserts State/Memory refresh rows, constructs
-Memory boundaries, and recounts Byte/Range/Program providers from the emitted Clean interactions.
-Its map is proof-independent; `supported_core_native_complete` is the existential projection and
-`sp1Ensemble_statement_of_supported_execution` is the direct Clean statement.
+| Result | Current boundary |
+|---|---|
+| 25 instruction-chip soundness and completeness proofs | Native Clean circuits and their semantic contracts |
+| 25 Sail instruction bridges | Supported RV64IM instruction routes |
+| 25 whole-chip Rust faithfulness proofs | Complete assertion systems and active interaction multisets on reconstructed native rows |
+| Full SyscallInstrs chip and factored faithfulness proof | Local row result with explicit public-value binding; active syscall grounding remains unfinished |
+| Native AIR-to-Sail soundness | Explicit semantic boundary and inactive syscall table |
+| Deterministic native completeness | All 25 instruction families on the named admissible, ordinary-shard domain |
+| Single-shard boot-to-halt theorem | Requires a boot boundary and live Halt row; no joint inhabitant is constructed yet |
+| Exact upstream Core AIR-to-Sail refinement | Conditional on an unconstructed obligations bundle |
 
-The source is explicitly `SupportedCoreNativeAdmissibleShardRelation`: the canonical
-`SupportedCoreShardExecutionRelation` restricted by named compiler/readiness facts about its
-deterministically evaluated trace and the actual interaction footprint `< p`. Constraints and all
-four channel balances are conclusions. `supported_core_native_shard_sound` and
-`supported_core_native_shard_functionalCompleteness` now use the same bounded native/semantic
-relation pair. The sole remaining condition for unconditional correctness and public-language
-equality is `NativeShardTraceTotal`: every witness in that bounded semantic relation
-must satisfy the transparent `NativeTraceAdmissible` compiler/output predicate.
+The compiler builds instruction rows, State/Memory refreshes, Memory boundaries, and recounted
+Byte/Range/Program providers. It currently emits a padding Halt row and an empty SyscallInstrs
+table. Its source relation retains explicit readiness and interaction-capacity conditions.
+Unconditional correctness and language equality for the ordinary sub-language still require
+`NativeShardTraceTotal`. The active regression joins an official Sail step, its deterministic
+compiler event, a nonempty bounded native witness, and native soundness back to Sail.
 
-`SP1CleanTest/Audit/NativeCompletenessNonVacuity.lean` jointly witnesses the entire admissible source
-with a zero-event canonical shard and invokes both completeness capstones, so the theorem is not
-vacuous. Separately, `ActiveTraceNonVacuity.lean` exercises the lower generated-trace assembly path
-with a hand-assembled `JAL x0, 0` semantic record: its instruction-event count and decoded physical
-instruction-row count are both one, and soundness reaches the official-Sail local execution for any
-supplied `SP1MachineModel` satisfying `UsesOrdinarySchedule`. That second test is the active-row
-regression, not an inhabitant of every admissibility premise. See the verification report, §7.4.
+The complete extracted upstream relation contains the paired **34-table execution** and
+**six-table memory-boundary** clusters and the **160-cell public-value block**. Its local transport
+constructs the native ensemble under named contracts; its Halt and SyscallInstrs tables are
+manufactured padding/empty tables, not a transport of upstream syscall events. Global balance,
+authenticated preprocessing, semantic boundary binding, and syscall refinement remain explicit
+obligations.
 
-## What is not yet proved
+The exact-AIR declarations are therefore named
+`sp1_air_refinement_of_obligations` and `sp1_air_sound_of_obligations`.
+Neither a closed exact-Core soundness theorem nor cryptographic verifier soundness is claimed.
+A future verifier theorem must account for cryptographic assumptions and an extraction error bound.
+Cross-shard composition and completeness are separate results.
 
-The repository also contains a complete list-level model of the pinned upstream Core AIR:
+## Trust and dependencies
 
-- the exact 34-table execution and 6-table Memory-boundary clusters, paired in one public shard
-  witness/relation;
-- every table's complete assertion and interaction lists;
-- the 160-cell public-value block; and
-- a preprocessed-commitment and exact natural interaction-balance relation.
+All dependencies are pinned in `lake-manifest.json`, with Lean/mathlib v4.32.2. The important
+boundaries are:
 
-That exact upstream relation has not yet been connected all the way to Sail, though the two theorem
-families are no longer disconnected. `SP1Clean/Composition/` turns each chip's whole-chip
-`ChipFaithful` anchor into a table-level transport — a valid extracted table becomes a native Clean
-table satisfying the whole native circuit's constraints — and proves the twenty-five transported
-tables *are* the ensemble's instruction tables. The separate generic `transportTable_spec` reaches a
-chip's semantic contract only when its native `Assumptions` and channel `Guarantees` are also supplied;
-the exact assembly theorem itself claims local constraints, not row semantics.
+- **SP1 extraction:** a pinned Rust compiler/exporter produces complete row shapes and
+  assertion/interaction lists. Its tooling remains trusted; source-delta checks, whole-chip
+  faithfulness proofs, and trace conformance provide separate evidence.
+- **Clean:** the dependency is a pinned fork containing changes to prover-data agreement and
+  witness-program sharing. Local additions live in `ToClean/`. The exact differences are
+  disclosed in the [release audit](docs/release-audit.md).
+- **Sail:** the generated model and runtime are pinned together. The model is regenerated with
+  the checked-in SP1 platform configuration; loader and initial-state hypotheses remain explicit.
+- **Lean:** main-library proofs have no proof deferrals, project axioms, kernel bypasses, or
+  `native_decide`. Generated Sail platform hooks and selected bit-vector proof constants are
+  disclosed in the [axiom ledger](docs/snapshots/axiom-ledger.md). Compiler-trusted executable
+  tests live separately in `SP1CleanTest/`.
 
-The transport now covers the whole *local* native artifact. Given valid exact execution and
-memory-boundary witnesses **plus a caller-supplied `CanonicalPreprocessedInventory` and the named
-preprocessing, memory-boundary, and public-limb transport contracts**, the construction produces all
-25 instruction tables and all 28 redistributed provider/system tables; `CoreEnsemble.lean` assembles
-those 53 tables plus the verifier row and
-proves their complete local constraints. The provider tail has six Byte-op tables, one Range table
-for every width `0..16`, Program, MemoryInit, MemoryFinalize, MemoryBump, and StateBump. Supporting
-all 17 Range widths is load-bearing: honest shift rows request widths outside the former
-`8/13/14/16` subset and can now balance without an impossible provider key.
+Do not run bare `lake update`; dependency changes require a reviewed pin change.
 
-Exact Byte/Range/Program multiplicities are deliberately recounted from the constructed native
-consumer skeleton: the verifier, 25 transported instruction tables, MemoryInit/MemoryFinalize, and
-both bump tables, after projecting their actual Clean interactions. They are not copied from the full
-34-table exact cluster, whose counts include consumers absent from the native 53-table slice.
-The raw exact Byte/Range/Program assertion lists are empty. `CoreAIR.PreprocessedBinding` only
-records the named matrix/PCS-opening premise, to be discharged by ArkLib; it proves no row-local
-meaning or provider selection. That meaning is the explicit caller premise
-`PreprocessedProviderContract`; exact
-main multiplicities are not reused, and raw projected keys are not claimed duplicate-free. The
-caller-supplied `CanonicalPreprocessedInventory` selects demand-oriented carriers
-partitioned by native provider. Every selected carrier must be backed by the matching exact source
-matrix (and, for Range, the matching width block), while projected-key `Nodup` is a field of the
-selected inventory itself. Raw keys with zero native demand may be omitted. The recount contract then
-requires coverage of every nonzero Byte/Program consumer key, consumer nonpositivity, and canonical
-count capacity. PCS/program identity, State and Memory balance, and semantic boundary binding remain
-separate explicit contracts. `freshRowsByKey` is only a declarative/small-regression
-canonicalization, not the construction path.
-The access-permutation theorems provide the reusable Rust/native table transport. The former
-exact-payload-to-compatibility-key balance layer was retired because no live artifact consumed it:
-the full exact cluster contains consumers absent from the reduced native ensemble, whose provider
-multiplicities are deliberately recounted instead. `CoreArtifact.lean` exposes the remaining
-`ExactNativeGlobalContract` explicitly:
-all-channel interaction-count bounds, exact centered-integer balance for State and Memory, and
-semantic program/boundary binding combine with the explicit provider-recount contract to imply
-`SupportedCoreNativeRelation` and hence an official-Sail local execution for any supplied model
-satisfying `UsesOrdinarySchedule`. Byte (including Range) and Program integer balance are derived by
-the recount. No theorem yet jointly witnesses those contracts with valid exact clusters.
-
-What remains is assembling those explicit contracts from two auditable sources: exact-Core / ArkLib
-extraction must supply the recount preconditions, all-channel interaction-count bounds, and exact
-State/Memory balance, while PCS authentication must justify the caller-supplied source-backed
-inventory and program identity. Loader, platform, code-memory, program, and memory-boundary contracts
-supply the remaining semantic binding.
-The named non-literal seams are the upstream public-value Range13 quotient versus the native Range16
-boundary lookup, raw `Global` versus typed native Memory, preprocessing/program authentication,
-memory-boundary semantics, and syscall facts. The exact system/public-value
-artifacts also contain constants encoded canonically for SP1's KoalaBear field, so the final closed
-exact-v6.4.0 capstone must be stated at that concrete field (or consume a proved literal-
-interpretation contract); native chip and grounding theorems remain field-generic.
-
-The available exact-AIR declarations are deliberately conditional:
-
-```lean
-sp1_air_refinement_of_obligations
-sp1_air_sound_of_obligations
-```
-
-Their `CoreAIRRefinementObligations` argument is not currently instantiated. The unqualified
-`sp1_air_refinement` and `sp1_air_sound` names are reserved for the future closed theorem.
-
-Boot-to-halt shard composition and ArkLib verifier knowledge soundness are separate downstream
-theorems. This repository does not claim that verifier acceptance deterministically implies an
-execution without cryptographic assumptions and an error bound.
-
-## Architecture
-
-The stable verification boundary is a whole SP1 chip:
-
-```text
-native Clean circuit
-  ├─→ semantic chip contract
-  ├─→ official Sail instruction behavior
-  └─→ complete extracted Rust AIR row relation
-```
-
-Rust helper operations and Lean proof gadgets may be decomposed differently. Extraction emits only row
-shapes and ordered assertion/interaction lists; it does not generate Clean circuits.
-
-At machine level, State, Program, Memory, and Byte are ordinary structural Clean channels. Global
-execution meaning is derived by deterministic typed decoding, ranked State ordering, Program
-commitment, and timed per-location Memory grounding. It is not smuggled into channel guarantees.
-
-COMMIT-row correctness and row existence are also kept separate. The AIR layer's obligations
-bundle requires that every canonical row that exists carries the correct digest word (stated as
-the `publicCommitOperand` obligation, not yet discharged). Complete eight-row coverage is an
-optional program-level contract of the verification-key-bound standard halt wrapper; output-byte
-and hashing semantics are not yet modeled.
-
-## Repository layout
-
-- `SP1Clean/Math/` — generic word, carry, bit-vector, and arithmetic lemmas.
-- `SP1Clean/Model/` — SP1 buses, Sail state/execution, schedules, and syscall interfaces.
-- `SP1Clean/Extracted/` — generated Rust row/list oracles, manifest, and provenance.
-- `SP1Clean/FormalModel/` — semantic contracts and public witness relations.
-- `SP1Clean/Native/` — independent native Clean circuits.
-- `SP1Clean/Proofs/` — circuit soundness/completeness and Sail bridges.
-- `SP1Clean/Faithful/` — extracted-Rust-row → canonical-native-row whole-chip comparison.
-- `SP1Clean/Soundness/` — registry, typed grounding, and machine capstones.
-- `SP1CleanTest/` — isolated compiler-trusted witness/trace conformance tests.
-
-## Build and audit
+## Build and reproduce
 
 ```bash
 lake build SP1Clean
@@ -193,46 +97,31 @@ lake lint
 scripts/run_audit.sh
 ```
 
-The audit regenerates the released-declaration `#print axioms` census and checks source deferrals,
-project axioms, forbidden kernel bypasses, main-library `native_decide`, and performance-budget
-drift. The sole numeric count is maintained and mechanically checked in the
-[`axiom ledger`](docs/snapshots/axiom-ledger.md).
-Sail-model platform hooks, selected generated `bv_decide` proof constants, and the trusted extraction
-toolchain are disclosed in the report.
+Trace conformance also uses `scripts/check_witgen_export.sh --regen` and
+`scripts/run_interp_diff.sh`. Regenerating the Rust extraction requires a clean checkout of its
+separate extraction pin; [the extraction procedure](docs/agents/extraction.md) documents it.
+A successful cached build checks a different reproduction boundary from rebuilding the project
+without its previous oleans.
 
-## Documentation
+## Review and contribute
 
-Each document has one role; start with the one that matches yours:
+For the consolidated eight-PR development, start with the
+[capstone assessment](docs/audits/2026-09-capstone-assessment.md), which records reproduction,
+confirmed defects, and remaining proof obligations. For the implementation, read the
+[verification overview](docs/overview.md), then the
+[technical report](docs/verification-report.md), [semantic audit surface](docs/audit-surface.md),
+and [architecture](docs/architecture.md). The [documentation index](docs/README.md) identifies
+each document's role. Remaining work is described in the [roadmap](docs/roadmap.md).
 
-1. [`docs/overview.md`](docs/overview.md) — the ten-minute orientation: current theorem, coverage,
-   and limitations.
-2. [`docs/verification-report.md`](docs/verification-report.md) — the self-contained technical
-   report that argues and evidences each claim, for external reviewers.
-3. [`docs/architecture.md`](docs/architecture.md) — proof and module structure, design rules, and
-   the deliberate layering exceptions.
-4. [`docs/release-audit.md`](docs/release-audit.md) — machine-checked source pins, trust boundary,
-   and audit result.
-5. [`docs/roadmap.md`](docs/roadmap.md) — the dependency-ordered path to full Core soundness.
-6. [`docs/goal-overview.md`](docs/goal-overview.md) — completed-state verifier and completeness
-   goals (a contract, not current status).
+The main source layers are `Math`, `Model`, `Extracted`, `FormalModel`, `Native`, `Proofs`,
+`Faithful`, `Composition`, and `Soundness`. Extraction produces Lean data, not Clean circuits;
+the native circuits are maintained independently. The whole chip is the Rust-faithfulness boundary.
 
-Clean's upstream proof and performance documentation is authoritative for circuit proof style. See
-[`AGENTS.md`](AGENTS.md) and [`docs/agents/proof-patterns.md`](docs/agents/proof-patterns.md) before
-changing nontrivial proofs.
+[AGENTS.md](AGENTS.md) records contributor rules. Clean's pinned proof and performance documentation
+is authoritative for circuit proofs; the [local proof notes](docs/agents/proof-patterns.md)
+describe SP1-specific applications.
 
 ## License
 
-Dual-licensed under either of [Apache License 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT),
-at your option. Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in this repository by you shall be dual-licensed as above, without any additional
-terms or conditions.
-
-## Toolchain note
-
-Lean and mathlib are on **v4.32.2**, and every dependency is an immutable git pin, so a clean clone
-builds this project. The generated Sail model (`sail-riscv-lean`) is pinned to a snapshot
-regenerated from pinned sources plus a checked-in SP1 platform configuration
-(`scripts/sail-config/`) — see
-[`docs/agents/sail-model-provenance.md`](docs/agents/sail-model-provenance.md) for what the config
-sets and why stock upstream is not usable. Do not run a bare `lake update`; update one
-`[[require]]` at a time.
+Dual-licensed under either [Apache License 2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT), at your
+option. Unless explicitly stated otherwise, contributions are dual-licensed under the same terms.

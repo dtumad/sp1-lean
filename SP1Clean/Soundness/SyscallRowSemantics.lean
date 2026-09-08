@@ -24,14 +24,14 @@ HandlerAddressesFit`. What the row does **not** give, and must be supplied by th
   `StateBumpChip` is what legalizes the non-canonical result;
 * canonicity of the syscall code — see `IsInlineCanonical` below.
 
-**The canonicity premise (D9).** SP1's AIR reads only bytes 0 and 1 of `x5`; bytes 2–7 are free. The
-executor instead dispatches on `x5 as u32` through `SyscallCode::from_u32`, which *panics* on any
-non-enumerated value, and writes back `code as u64`. So an AIR-valid row may carry a `x5` that no
-execution produces, and `IsCanonicalCode`/`SP1Halted` are not derivable from the row. Rather than
-adding a constraint SP1 does not have — which is exactly the native-stricter pin `HaltChip` carries
-today — canonicity is a **named profile premise**: true of every genuine execution, checkable on the
-witness, and disclosed. All thirteen inline codes are `< 256`, so it reduces to "`x5`'s upper three
-limbs vanish". -/
+**The canonical-code profile premise.** SP1's AIR selects from bytes 0 and 1 of `x5`. The executor
+dispatches on `x5 as u32` through `SyscallCode::from_u32`, rejecting unrecognized low-32-bit codes.
+The native bridge requires the stronger full-word predicate `IsInlineCanonical`; it is not derived
+from the row or from successful Rust dispatch. In particular, the cast ignores the upper 32 bits:
+`0x100000003` dispatches as `ENTER_UNCONSTRAINED` but is outside this profile. All thirteen inline
+codes are below 256, so canonicality requires membership in that list and zero higher bytes. This
+restriction preserves the current `IsCanonicalCode`/`SP1Halted` meaning without adding assertions
+absent from the Rust row. -/
 
 open LeanRV64D.Defs
 

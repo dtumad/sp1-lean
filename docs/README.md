@@ -23,6 +23,7 @@ Each document has one role:
 | [`audits/2026-08-independent-semantic-audit.md`](audits/2026-08-independent-semantic-audit.md) | retained independent semantic review |
 | [`audits/2026-08-pr110-external-report-disposition.md`](audits/2026-08-pr110-external-report-disposition.md) | retained finding-by-finding external-review disposition |
 | [`audits/2026-08-unification-target-architecture.md`](audits/2026-08-unification-target-architecture.md) | unification campaign's measured architecture baseline and pin decision |
+| [`audits/2026-09-capstone-assessment.md`](audits/2026-09-capstone-assessment.md) | eight-PR provenance, reproduction evidence, confirmed defects, and finish-line assessment |
 | [`agents/`](agents/README.md) | maintained contributor techniques and provenance procedures |
 | [`snapshots/axiom-ledger.md`](snapshots/axiom-ledger.md) | generated per-theorem axiom inventory |
 

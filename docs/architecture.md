@@ -61,7 +61,7 @@ an explicit Rust-facing projection, never a second native ledger definition.
 | `Proofs/` | circuit soundness/completeness and Sail bridges |
 | `Faithful/` | whole-chip comparisons on canonical native rows reconstructed from extracted Rust rows |
 | `Soundness/` | machine registry, typed decoding, grounding, and capstones |
-| `Composition/` | the composed exact→native artifact: transport, provider redistribution, the 54-table assembly |
+| `Composition/` | the composed exact→native artifact: transport, provider redistribution, the 55-table assembly |
 | `SP1CleanTest/` | compiler-trusted executable conformance tests, isolated from the main library |
 
 `SP1Clean.lean` imports the complete main proof library (`scripts/check_root_index.sh` gates that it
@@ -199,22 +199,24 @@ Opcode families and the `rd = x0` guard are derived from the neutral identity's 
 than stored again. `InstructionChipId.all` drives the Clean table list, typed row decoder, opcode
 coverage, Sail dispatch, and faithfulness coverage. Its order is a witness-format decision.
 
-`SP1Ensemble.lean` adds 29 proof-oriented provider/boundary tables to form a 54-table Clean ensemble:
+`SP1Ensemble.lean` adds 30 proof-oriented provider/boundary tables to form a 55-table Clean ensemble:
 six Byte-op providers at positions 25–30, one fixed Range provider for every width `0..16` at
-31–47, Program at 48, MemoryInit/MemoryFinalize at 49/50, the W3 system tables MemoryBump and
-StateBump at 51/52, and the Halt table at 53. The complete Range family is semantic, not padding: shift consumers emit widths
+31–47, Program at 48, MemoryInit/MemoryFinalize at 49/50, MemoryBump and StateBump at 51/52,
+Halt at 53, and SyscallInstrs at 54. The seven channels are State, Byte, Program, Memory,
+Exit, Syscall, and PublicValues. `SyscallTableInactive` restricts the current soundness theorem
+to inactive SyscallInstrs tables. The complete Range family is semantic, not padding: shift consumers emit widths
 outside the former `8/13/14/16` subset, so that subset could not balance an honest shift trace.
 These provider circuits are not asserted to be row-wise copies of the exact upstream Core system
 tables. They are the small native interface used to prove the instruction execution theorem;
 `Composition/ProviderSegment.lean` consumes a caller-supplied, source-backed
 `CanonicalPreprocessedInventory` together with the exact memory-boundary and bump rows, and
-`CoreEnsemble.lean` proves the complete 54-table local constraint system.
+`CoreEnsemble.lean` proves the complete 55-table local constraint system.
 
 The redistribution does not copy Byte/Range/Program multiplicities from the exact 34-table
-execution cluster. That cluster counts system/public consumers that the native 54-table slice does
+execution cluster. That cluster counts system/public consumers that the native 55-table slice does
 not contain. Instead, transport projects the actual Clean interactions of the verifier, 25
-transported instruction tables, MemoryInit/MemoryFinalize, MemoryBump, and StateBump — every native
-table except the three preprocessing-provider families — into a skeleton ledger and recounts it.
+transported instruction tables, MemoryInit/MemoryFinalize, MemoryBump, StateBump, the manufactured
+padding Halt table, and the empty SyscallInstrs table into a skeleton ledger and recounts it.
 The raw exact Byte/Range/Program assertion lists are empty. `CoreAIR.PreprocessedBinding` only
 records the named matrix/PCS-opening premise, to be discharged by ArkLib; it proves neither
 row-local meaning nor provider selection. `PreprocessedProviderContract` is the explicit caller

@@ -8,10 +8,10 @@ This module is the "read this one file" audit boundary: the public relations and
 theorems, with the timed-grounding interior factored into
 `Soundness/GroundingInternal.lean`:
 
-* `SupportedCoreEnsembleRelation` is exactly the algebra checked by the 53-table Clean ensemble;
+* `SupportedCoreEnsembleRelation` is exactly the algebra checked by the native Clean ensemble;
 * `SP1SemanticBoundaryRelation` separately binds its preprocessed/provider rows to the committed
   program and a concrete local initial Sail state;
-* `SupportedCoreNativeRelation` is their conjunction; and
+* `SupportedCoreNativeRelation` conjoins these with `SyscallTableInactive`; and
 * `SupportedCoreSailRelation` is the plain official-Sail target for that slice
   (`supported_core_native_sound`), with the model-scheduled and capacity-bounded shard forms as
   corollaries.
@@ -45,23 +45,14 @@ def SP1SemanticBoundaryRelation :
 /-- The honest native relation used by semantic soundness. Provider truth is an explicit companion
 predicate, not an implication smuggled out of raw interaction balance.
 
-There is deliberately **no** third conjunct. The physical range premise SP1's generic RAM
-access-timestamp comparison needs — a genuine 24-bit high limb on every pulled Memory record — used
-to travel here as `SupportedCoreMemoryTimestampRangeRelation`, because the per-chip aligned-carrier
-contract demanded it before producing the touch lists that the capstone's per-location memory
-balance is built from. Moving that demand into the per-touch antecedent of the contract's slot
-conjunct broke the cycle: `supportedCore_orderedRows_dynamic_of_obligations` now *derives* both
-timestamp facts for every pulled record from the produced side of the widened balance
-(`pushGood`/`pullGood`).
+The three conjuncts are ensemble validity, semantic boundary binding, and `SyscallTableInactive`.
+The last requires an inactive `SyscallInstrs` table and a physically present Halt table. The
+headline grounding proof has not yet connected the mixed-row Memory walk to its execution
+conclusion, so shards with active syscall rows are outside this relation.
 
-⚠ **There is now a third conjunct, and it is temporary.** `SyscallTableInactive` says the
-`SyscallInstrs` table has no active row. It appeared when that table joined the ensemble: the State
-side is fully re-based — the trail has a syscall arm and the goodness filter covers it — but the
-*Memory* side is not, because a syscall row's register touches must flow through the walk and the
-Halt table's side-term treatment cannot be reused for a mid-shard row (see `SyscallTableInactive`'s
-own docstring). Until the engine's row carrier admits syscall rows, this relation certifies exactly
-the shards it can, and says so in its statement rather than in a comment. Removing it is the
-remaining work; nothing else about the capstone changes when it goes. -/
+The 24-bit high-limb bound on pulled Memory timestamps is derived inside
+`supportedCore_orderedRows_dynamic_of_obligations` from the produced side of per-location
+Memory balance (`pushGood`/`pullGood`); it is not an additional premise. -/
 def SupportedCoreNativeRelation :
     WitnessRelation.Relation (SupportedCoreStatement p) (SupportedCoreNativeWitness p) :=
   fun statement witness =>
@@ -111,10 +102,11 @@ theorem supported_core_native_grounding
 
 /-- **Supported native-Clean soundness.** A satisfying, channel-balanced witness whose provider
 tables are semantically bound produces a genuine shard-local official-Sail execution: a
-normally-retiring interpreter run between the committed public pc endpoints, taking exactly the
-committed number of eight-tick instructions.  Those two conjuncts are the *whole* premise: the
-RAM access-timestamp range fact the generic underflow argument needs is derived inside the
-capstone from the per-location Memory balance, not assumed here.  No machine-model parameter and
+normally-retiring interpreter run, or such a prefix followed by HALT, between the committed public
+pc and clock endpoints. The ordinary prefix takes eight ticks per instruction; HALT adds 264.
+The input relation additionally requires an inactive syscall table and a physically present Halt
+table. The RAM access-timestamp range fact is derived inside the capstone from per-location
+Memory balance. No machine-model parameter and
 no schedule hypothesis appear; the model-scheduled form is
 `supported_core_native_sound_scheduled` below.  This deliberately concludes a shard-local
 segment; boot reachability is supplied later by `supportedCoreLocalExecution_anchors` when

@@ -204,10 +204,10 @@ Mirror-rust layout under `SP1Clean/`:
   `*Consistency.lean` lookup shadows were retired);
   `ChipRow.lean` (the `ChipKind` structure-of-functions — each chip registers one `kind`, carrying a
   `name` = its SP1 `MachineAir::name`) + `ChipRegistry.lean` (`allChipKinds`); `SP1Ensemble.lean`
-  (`sp1Ensemble` — a plain Clean `Ensemble`, 25 chips + 28 boundary/provider tables: six Byte
+  (`sp1Ensemble` — a plain Clean `Ensemble`, 25 chips + 30 boundary/provider tables: six Byte
   providers at positions 25–30, all 17 fixed Range widths `0..16` at 31–47, Program at 48, Memory
-  init/final at 49/50, and the W3 system tables MemoryBump (51) and StateBump (52)); the full native
-  ensemble therefore has 53 tables,
+  init/final at 49/50, MemoryBump (51), StateBump (52), Halt (53), and SyscallInstrs (54)); the full native
+  ensemble therefore has 55 tables,
   plus the separate state-boundary verifier. Exact transport recounts Byte/Range/Program
   multiplicities from the actual Clean interaction ledger of every non-preprocessing native table;
   it does not copy the full exact cluster's multiplicities. The raw exact Byte/Range/Program
@@ -241,8 +241,8 @@ Mirror-rust layout under `SP1Clean/`:
   row-routing shadow and `Completeness.lean` routing scaffold were retired in favor of witness decoding
   and timed grounding. The converse is now the proof-independent all-25 compiler under
   `Proofs/Completeness/{InstructionEvent,ExecutionCompiler,NativeTraceCompiler}.lean` plus the
-  stratum-10 `Soundness/NativeCompleteness.lean` capstone: it constructs all 53 tables and proves
-  constraints/four-channel balance on `SupportedCoreNativeAdmissibleShardRelation`. Widening that
+  stratum-10 `Soundness/NativeCompleteness.lean` capstone: it constructs all 55 tables and proves
+  constraints/seven-channel balance on `SupportedCoreNativeAdmissibleShardRelation`. Widening that
   compiler domain remains named semantic-readiness/footprint work. Soundness and completeness now
   share `SupportedCoreShardExecutionRelation` and the single
   `CoreProfile.WithinOrdinaryRowLimit` policy; `NativeShardTraceTotal` is the exact remaining
@@ -356,7 +356,7 @@ proved and its table registered at ensemble position 54, but the timed grounding
 walk a syscall row's three register touches, so `noActiveRows` restricts the relation to shards whose
 syscall table is inactive, and `haltTablePresent` keeps the Halt table the sole Exit contributor.
 Both fields go when those two things change — the first with the engine's mixed-row carrier, the
-second with D8's successor Exit table. Shards with an active syscall row are outside the certified
+second with the terminal-row policy for the full syscall table. Shards with an active syscall row are outside the certified
 set today, and the relation says so rather than assuming it away.
 An *earlier* third conjunct (`SupportedCoreMemoryTimestampRangeRelation`, the
 pulled-record `clk_high < 2 ^ 24` bound) was deleted in the 2026-08 W3 wave: it is now derived from

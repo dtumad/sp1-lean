@@ -16,8 +16,8 @@ import Clean.Air.FlatEnsemble
 
 /-! # The supported native SP1 machine as a plain Clean `Ensemble`
 
-This module packages the 25 supported instruction tables and 29 native provider/boundary tables over
-the five native buses, together with the pull-final/push-init State verifier. It also proves the
+This module packages the 25 supported instruction tables and 30 native provider/boundary tables over
+seven channels, together with the pull-final/push-init State verifier. It also proves the
 physical-table alignment and typed-interaction partition used by the timed grounding capstone in
 `Soundness/AIR.lean`.
 
@@ -26,17 +26,14 @@ table's `channelsWithGuarantees ⊆ finished`; post-flip every chip's is `[byte,
 `memoryChannel` can never be a *finished* channel (chips pull-then-push it — the circular VM-channel
 shape, `Clean/Air/Vm.lean` top doc). Nor can `addVm` compose it (single-VM-channel engine; State and
 Memory are both VM-shaped). A plain `Ensemble` carries no composition obligations — its `Statement`
-supplies exactly the constraints + four-bus balance the capstone consumes — and the per-channel
+supplies the constraints and channel balance — and the per-channel
 soundness facts are proven separately (byte/program grounding via the finished-channel machinery;
-State via the trail; memory `isU64` via the boundary balance). The multi-VM `VmTables` composition
-(roadmap W11 path A) was evaluated and **rejected** (consolidation proposal §3.2 — a timeless engine
-cannot express memory currency); its de-risk spike `Soundness/StateVm.lean` has been deleted.
+State via the trail; memory `isU64` via the boundary balance). The SP1 argument needs an explicitly
+ordered execution and per-location memory history in addition to Clean's channel-level results.
 
-The former unconditional Eulerian-trail wrapper was retired. It tried to derive semantic chip Specs
-from only `Constraints ∧ BalancedChannels`, even though those Specs require program/provider binding
-and the timestamp premise made explicit by `SupportedCoreNativeRelation`. The current capstone proves
-ordered State and Memory grounding directly from that honest relation; no witness-dependent semantic
-fact is hidden in an ensemble-level `Assumptions := True`. -/
+`SupportedCoreNativeRelation` supplies the semantic program/provider binding and restricts the
+syscall table to inactive rows. These are separate from `Ensemble.Statement`; neither follows
+from constraints and balance alone. Memory timestamp bounds are derived by the grounding proof. -/
 
 namespace SP1Clean.Soundness
 
@@ -294,12 +291,12 @@ def providerTableFor : ProviderTableId → Component (ZMod p)
 
 /-- The 30 in-circuit boundary/provider tables: six `ByteChip` opcode tables, the complete
 17-member fixed-width Range family, the program-ROM provider, the two memory boundary tables
-(init-push + finalize-pull, W11 Phase 4), the two SP1 system tables MemoryBump (position 51: the
+(init-push + finalize-pull), the two SP1 system tables MemoryBump (position 51: the
 register-record timestamp refreshes) and StateBump (position 52: the clock/pc re-limbing rows that
-lift the ~2^21-row shard cap and the 64 KiB pc-boundary restriction) — W3, external report Finding
-2 — the Halt table (position 53: the halting shard's ECALL witness row, the semantics-gap
-campaign's PR 2.4), and the `SyscallInstrs` table (position 54: SP1's whole syscall chip, the only
-table here carrying a `ChipFaithful` anchor). Every pusher proves its pushes' channel `Guarantees` in-circuit, which is what
+allow clock and pc limb normalization), the Halt table (position 53: the halting shard's ECALL
+witness row), and the `SyscallInstrs` table (position 54: SP1's whole syscall chip).
+MemoryBump, StateBump, and SyscallInstrs have whole-table faithfulness anchors. Every pusher proves
+its pushes' channel `Guarantees` in-circuit, which is what
 grounds the chips' byte/program/memory pulls at the capstone. -/
 def sp1ProviderTables : List (Component (ZMod p)) :=
   ProviderTableId.all.map (providerTableFor (p := p))
@@ -328,9 +325,8 @@ theorem sp1ProviderTables_length : (sp1ProviderTables (p := p)).length = 30 := b
   simp [sp1ProviderTables]
 
 /-- Every boundary/provider circuit before the bump/halt tail — positions 25–51 — stays off the
-State channel; StateBump (52) and Halt (53) are, by design, the only provider-segment State
-contributors. Stated over the `take 27` prefix so the typed State decomposition can split the
-provider tail into a nil prefix and the two-table State tail. -/
+State channel. StateBump (52), Halt (53), and SyscallInstrs (54) form the remaining State-contributing
+tail. The `take 27` prefix supports the typed State decomposition. -/
 theorem sp1ProviderTables_stateChannel_not_mem :
     ∀ component ∈ (sp1ProviderTables (p := p)).take stateSilentProviderTableCount,
       Channels.stateChannel.toRaw ∉ component.circuit.channels := by
@@ -343,15 +339,11 @@ theorem sp1ProviderTables_stateChannel_not_mem :
       ProgramProviderChip.circuit, MemoryProviderChip.circuit, MemoryFinalizeChip.circuit,
       MemoryBumpChip.circuit, circuit_norm]
 
-/-- **The SP1 machine as a plain Clean `Ensemble`**: the 25 chips + the 29 boundary/provider tables,
-seven buses, and the pull-final/push-init boundary verifier. The first five are the buses the
-registered tables speak on (State first — the trail's main channel; Exit — the halt table's
-exit-code hand-off); the last two are the `SyscallInstrs` row's — SP1's own syscall bus and the
-native-only public-values hand-off — declared ahead of that table joining (S4b) so that its
-faithfulness anchor and the channel classification land against the final bus topology. Until it
-joins, both are silent everywhere (`sp1AllTables_channel_not_mem_of_not_core`), so their balance is
-the empty ledger's. Its `Statement` (per-table constraints + per-channel balance) is everything the
-capstone consumes; the per-channel soundness facts are proven separately (see the module doc). -/
+/-- The 25 instruction and 30 provider/system tables, seven channels, and boundary verifier.
+State, Byte, Program, and Memory carry the ordinary instruction interactions. Exit binds the public
+exit code. SyscallInstrs also uses SP1's Syscall channel and the native PublicValues channel.
+The current soundness relation restricts SyscallInstrs to inactive rows, making the latter two
+ledgers empty. Its semantic boundary binding is an additional premise beyond `Statement`. -/
 def sp1Ensemble : Ensemble (ZMod p) SP1PublicIO where
   tables := sp1Tables ++ sp1ProviderTables
   channels :=
@@ -416,7 +408,7 @@ theorem witness_instructionTables_aligned
 
 /-- Every canonical decoded instruction row satisfies the constraints of its exact physical Clean
 table row.  This is the common starting point for row-local AIR facts; downstream proofs never need
-to reopen `same_circuits` or reason positionally about the 54-table witness again. -/
+to reopen `same_circuits` or reason positionally about the full witness again. -/
 theorem decodedInstructionRow_constraints
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (decoded : DecodedInstructionRow p)
@@ -430,7 +422,7 @@ theorem decodedInstructionRow_constraints
       (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take tableMem))
   · exact decodedMem
 
-/-- Every physical table after the stable 25-chip prefix is one of the 28 declared provider or
+/-- Every physical table after the stable 25-chip prefix is one of the 30 declared provider or
 boundary components. -/
 theorem witness_providerTable_component_mem
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
