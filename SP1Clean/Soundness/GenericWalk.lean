@@ -327,6 +327,49 @@ theorem frameFactG_valueAligned_of_ordinary
   rw [h.pushTime]
   exact this
 
+omit [Fact (2 ^ 17 < p)] in
+/-- `LocalStepFactG` transports across a State re-spelling that preserves time and pc image.
+
+The `ValueAligned` route above cannot serve here: `ValueAligned` demands `ordTime`, that every pull
+sit at the row's window start, and a syscall row's three reads deliberately sit at `+0`, `+3` and
+`+2`.  A bare re-spelling asks for none of that, and it is all a canonicalized State edge needs. -/
+theorem localStepFactG_stateRespell {program : GuestProgram} {traj : Trajectory}
+    {initial : SailState} {tl : Timeline} {r : RowFacts p} {pull push : StateMsg (ZMod p)}
+    (hpullT : StateMsg.timeNat pull = StateMsg.timeNat r.statePull)
+    (hpullP : StateMsg.pcBits pull = StateMsg.pcBits r.statePull)
+    (hpushT : StateMsg.timeNat push = StateMsg.timeNat r.statePush)
+    (hpushP : StateMsg.pcBits push = StateMsg.pcBits r.statePush)
+    (h : LocalStepFactG program traj initial tl r) :
+    LocalStepFactG program traj initial tl (stateRespell r pull push) := by
+  intro hpull hcurr
+  rw [stateRespell_statePull] at hpull
+  rw [stateRespell_memPulls] at hcurr
+  obtain ⟨hpushTruth, hmem⟩ := h (localStateTruthG_congr hpullT.symm hpullP.symm hpull) hcurr
+  refine ⟨?_, ?_⟩
+  · rw [stateRespell_statePush]
+    exact localStateTruthG_congr hpushT hpushP hpushTruth
+  · rw [stateRespell_memPushes]
+    exact hmem
+
+omit [Fact (2 ^ 17 < p)] in
+/-- `FrameFactG` transports across a State re-spelling the same way — and needs one hypothesis
+fewer, because a frame claim reads the pushed message's *time* and never its pc. -/
+theorem frameFactG_stateRespell {program : GuestProgram} {traj : Trajectory}
+    {initial : SailState} {tl : Timeline} {r : RowFacts p} {pull push : StateMsg (ZMod p)}
+    (hpullT : StateMsg.timeNat pull = StateMsg.timeNat r.statePull)
+    (hpullP : StateMsg.pcBits pull = StateMsg.pcBits r.statePull)
+    (hpushT : StateMsg.timeNat push = StateMsg.timeNat r.statePush)
+    (h : FrameFactG program traj initial tl r) :
+    FrameFactG program traj initial tl (stateRespell r pull push) := by
+  intro hpull hcurr loc v hpush hstart
+  rw [stateRespell_statePull] at hpull
+  rw [stateRespell_memPulls] at hcurr
+  rw [stateRespell_memPushes] at hpush
+  rw [stateRespell_statePull, hpullT] at hstart
+  have result := h (localStateTruthG_congr hpullT.symm hpullP.symm hpull) hcurr loc v hpush hstart
+  rw [stateRespell_statePush, hpushT]
+  exact result
+
 /-! ## The walk
 
 The proof is `walkT`'s, with `chainState initial` replaced by the trajectory parameter throughout.

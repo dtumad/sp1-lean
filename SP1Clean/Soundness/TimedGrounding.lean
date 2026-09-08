@@ -956,6 +956,31 @@ lemma RowOK.core {initialClock : ℕ} {r : RowFacts p} (h : RowOK initialClock r
     h.slotOfClkBound⟩
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- `RowOKCore` transports across a time-preserving State re-spelling, for the same reason its
+eight-tick sibling does: every field either ignores the State messages entirely or reads only
+their ℕ time.  This is the form a 264-tick row needs, since it never satisfies `RowOK.time8`. -/
+theorem rowOKCore_stateRespell {initialClock : ℕ} {r : RowFacts p} {pull push : StateMsg (ZMod p)}
+    (hpull : StateMsg.timeNat pull = StateMsg.timeNat r.statePull)
+    (hpush : StateMsg.timeNat push = StateMsg.timeNat r.statePush)
+    (h : RowOKCore initialClock r) :
+    RowOKCore initialClock (stateRespell r pull push) where
+  timeGap := by
+    show StateMsg.timeNat pull + 8 ≤ StateMsg.timeNat push
+    rw [hpull, hpush]
+    exact h.timeGap
+  align8 := by
+    show StateMsg.timeNat pull % 8 = initialClock % 8
+    rw [hpull]
+    exact h.align8
+  touches := by
+    show List.Forall₂ (TouchOK (StateMsg.timeNat pull)) r.memPulls r.memPushes
+    rw [hpull]
+    exact h.touches
+  chain_mono := h.chain_mono
+  pushClkBound := h.pushClkBound
+  slotOfClkBound := h.slotOfClkBound
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- `RowOK.chainOK`, on the duration-generic core (same proof — no field it reads changed). -/
 lemma RowOKCore.chainOK {initialClock : ℕ} {r : RowFacts p} (hok : RowOKCore initialClock r)
     (loc : MemLoc)
