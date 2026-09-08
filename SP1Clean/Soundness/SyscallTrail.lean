@@ -152,6 +152,19 @@ theorem trailWalk_grounded (handler : ExecutableSyscallHandler) (prog : Target.G
     (initial : SailState) (initialClock : ℕ)
     (fin : StateMsg (ZMod p)) (head : StateMsg (ZMod p))
     (finM live : Semantics.MemLoc → Option (Channels.MemoryMsg (ZMod p)))
+    (edge : WalkedRow p → StateMsg (ZMod p) × StateMsg (ZMod p))
+    (edgePullTime : ∀ (k : ℕ) (hk : k < rows.length),
+      StateMsg.timeNat (edge (rows[k]'hk)).1
+        = StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull)
+    (edgePullPc : ∀ (k : ℕ) (hk : k < rows.length),
+      StateMsg.pcBits (edge (rows[k]'hk)).1
+        = StateMsg.pcBits (WalkedRow.facts g (rows[k]'hk)).statePull)
+    (edgePushTime : ∀ (k : ℕ) (hk : k < rows.length),
+      StateMsg.timeNat (edge (rows[k]'hk)).2
+        = StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePush)
+    (edgePushPc : ∀ (k : ℕ) (hk : k < rows.length),
+      StateMsg.pcBits (edge (rows[k]'hk)).2
+        = StateMsg.pcBits (WalkedRow.facts g (rows[k]'hk)).statePush)
     (stepAt : ∀ (k : ℕ) (hk : k < rows.length),
       Semantics.LocalStepFactG prog
         (Semantics.eventTrajectory handler prog (transcriptOf data rows) initial) initial
@@ -179,9 +192,8 @@ theorem trailWalk_grounded (handler : ExecutableSyscallHandler) (prog : Target.G
       (Semantics.eventTimeline (transcriptOf data rows) initialClock)
       (StateMsg.timeNat head) live)
     (stateBalance : head ::ₘ
-        (↑((rows.map (WalkedRow.facts g)).map (·.statePush)) :
-          Multiset (StateMsg (ZMod p)))
-      = fin ::ₘ ↑((rows.map (WalkedRow.facts g)).map (·.statePull)))
+        (↑(rows.map (fun r => (edge r).2)) : Multiset (StateMsg (ZMod p)))
+      = fin ::ₘ ↑(rows.map (fun r => (edge r).1)))
     (memoryBalance : ∀ loc : Semantics.MemLoc,
       TimedGrounding.optMS (live loc)
           + TimedGrounding.pushesAt (rows.map (WalkedRow.facts g)) loc
@@ -204,20 +216,76 @@ theorem trailWalk_grounded (handler : ExecutableSyscallHandler) (prog : Target.G
           (Semantics.eventTimeline (transcriptOf data rows) initialClock) loc
           (StateMsg.timeNat fin) m.value ∧
         Semantics.MemoryMsg.timeNat m ≤ StateMsg.timeNat fin := by
-  have indexOf : ∀ r ∈ rows.map (WalkedRow.facts g),
-      ∃ (k : ℕ) (hk : k < rows.length), r = WalkedRow.facts g (rows[k]'hk) := by
+  -- The walk runs on the **canonicalized** State edge, because that is what makes the StateBump
+  -- rows cancel as self-loops during trail extraction.  The rows' own facts carry the raw messages,
+  -- and a syscall row's pushed message is genuinely non-canonical (`clk_low + 264` may pass
+  -- `2 ^ 24`; `next_pc[0] = pc[0] + 4` carries nowhere), so the carrier is re-spelled here and the
+  -- walk's output transported back.  Only the *balance* forces this: every other obligation reads
+  -- the State messages through `timeNat`, which the re-spelling preserves.
+  set respelled : WalkedRow p → Semantics.RowFacts p :=
+    fun r => TimedGrounding.stateRespell (WalkedRow.facts g r) (edge r).1 (edge r).2
+      with respelledDef
+  have indexOf : ∀ r ∈ rows.map respelled,
+      ∃ (k : ℕ) (hk : k < rows.length), r = respelled (rows[k]'hk) := by
     intro r hr
     obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hr
     obtain ⟨k, hk, hrk⟩ := List.getElem_of_mem hrow
     exact ⟨k, hk, by rw [hrk]⟩
-  exact TimedGrounding.walkE handler prog (transcriptOf data rows) initial initialClock fin finM
-    (rows.map (WalkedRow.facts g)).length (rows.map (WalkedRow.facts g)) head live rfl
-    (fun r hr => by obtain ⟨k, hk, rfl⟩ := indexOf r hr; exact stepAt k hk)
-    (fun r hr => by obtain ⟨k, hk, rfl⟩ := indexOf r hr; exact frameAt k hk)
-    (fun r hr => by obtain ⟨k, hk, rfl⟩ := indexOf r hr; exact rowOKAt k hk)
-    (fun r hr => by
-      obtain ⟨k, hk, rfl⟩ := indexOf r hr
-      exact walkedRow_timeStep data g rows initialClock k hk (pullAt k hk) (widthAt k hk))
-    headTruth liveHead stateBalance memoryBalance
+  have pushMap : (rows.map respelled).map (·.statePush) = rows.map (fun r => (edge r).2) := by
+    rw [List.map_map]
+    rfl
+  have pullMap : (rows.map respelled).map (·.statePull) = rows.map (fun r => (edge r).1) := by
+    rw [List.map_map]
+    rfl
+  have memEq : ∀ loc : Semantics.MemLoc,
+      TimedGrounding.pushesAt (rows.map respelled) loc
+          = TimedGrounding.pushesAt (rows.map (WalkedRow.facts g)) loc ∧
+        TimedGrounding.pullsAt (rows.map respelled) loc
+          = TimedGrounding.pullsAt (rows.map (WalkedRow.facts g)) loc := by
+    intro loc
+    refine ⟨?_, ?_⟩
+    · unfold TimedGrounding.pushesAt
+      rw [List.map_map, List.map_map]
+      rfl
+    · unfold TimedGrounding.pullsAt
+      rw [List.map_map, List.map_map]
+      rfl
+  obtain ⟨grounded, finTruth, frontier⟩ :=
+    TimedGrounding.walkE handler prog (transcriptOf data rows) initial initialClock fin finM
+      (rows.map respelled).length (rows.map respelled) head live rfl
+      (fun r hr => by
+        obtain ⟨k, hk, rfl⟩ := indexOf r hr
+        exact TimedGrounding.localStepFactG_stateRespell (edgePullTime k hk) (edgePullPc k hk)
+          (edgePushTime k hk) (edgePushPc k hk) (stepAt k hk))
+      (fun r hr => by
+        obtain ⟨k, hk, rfl⟩ := indexOf r hr
+        exact TimedGrounding.frameFactG_stateRespell (edgePullTime k hk) (edgePullPc k hk)
+          (edgePushTime k hk) (frameAt k hk))
+      (fun r hr => by
+        obtain ⟨k, hk, rfl⟩ := indexOf r hr
+        exact TimedGrounding.rowOKCore_stateRespell (edgePullTime k hk) (edgePushTime k hk)
+          (rowOKAt k hk))
+      (fun r hr => by
+        obtain ⟨k, hk, rfl⟩ := indexOf r hr
+        intro n hn
+        rw [respelledDef] at hn ⊢
+        rw [TimedGrounding.stateRespell_statePull, edgePullTime k hk] at hn
+        rw [TimedGrounding.stateRespell_statePush, edgePushTime k hk]
+        exact walkedRow_timeStep data g rows initialClock k hk (pullAt k hk) (widthAt k hk) n hn)
+      headTruth liveHead (by rw [pushMap, pullMap]; exact stateBalance)
+      (fun loc => by rw [(memEq loc).1, (memEq loc).2]; exact memoryBalance loc)
+  refine ⟨?_, finTruth, frontier⟩
+  -- Transport the per-row output back to the raw carrier: `GroundedG`'s state half moves by
+  -- `localStateTruthG_congr`, and its memory half is untouched by a State re-spelling.
+  intro r hr
+  obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hr
+  obtain ⟨k, hk, hrk⟩ := List.getElem_of_mem hrow
+  obtain ⟨pullTruth, currency⟩ := grounded (respelled (rows[k]'hk)) (by
+    exact List.mem_map_of_mem (by rw [hrk]; exact hrow))
+  rw [← hrk]
+  refine ⟨?_, ?_⟩
+  · exact TimedGrounding.localStateTruthG_congr (edgePullTime k hk).symm (edgePullPc k hk).symm
+      pullTruth
+  · exact currency
 
 end SP1Clean.Soundness
