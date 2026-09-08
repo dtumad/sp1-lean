@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.SyscallTrail
 import SP1Clean.Soundness.SyscallWiring
+import SP1Clean.Soundness.RefreshWiring
 
 /-!
 # The mixed walk drives the row-generic execution engine
@@ -652,6 +653,69 @@ theorem walkedTouches_projections (initialClock : ℕ)
         rw [hrow] at htc zl
         simp only [walkedTouches, WalkedRow.facts] at htc zl
         exact zl tc htc
+
+/-- **The walked Memory balance in touch-pair form**, which is what the refresh elimination eats.
+
+This converts the balance's *shape*, not its provenance: `walkedMemoryBalance` supplies the
+`pushesAt`/`pullsAt` form, and `RefreshWiring`'s two bridges — already row-generic — turn it into
+the per-location touch pairs `exists_refreshFreeTouchLists` consumes.
+
+On a halt-free shard the Halt table's two Memory terms vanish outright.  What is left is the
+MemoryBump refresh pair, which is exactly the elimination's own input, so nothing about a syscall
+row survives as a *side term*: its touches are absorbed into the batch, which is the move the
+ordinary engine already performs for the halt row. -/
+theorem walkedTouchBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (initialClock : ℕ)
+    (g : DecodedInstructionRow p → Semantics.RowFacts p)
+    (t : DecodedInstructionRow p → List (TimedGrounding.Touch p))
+    (walkedRows : List (WalkedRow p))
+    (haltFree : realHaltRows witness = [])
+    (rowOK : ∀ r ∈ walkedRows, TimedGrounding.RowOKCore initialClock (WalkedRow.facts g r))
+    (instrPush : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ walkedRows →
+      (g row).memPushes = (t row).map Prod.snd)
+    (instrPull : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ walkedRows →
+      (g row).memPulls = (t row).map Prod.fst)
+    (instrLoc : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ walkedRows →
+      ∀ tc ∈ t row, Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).2
+        = Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).1.1)
+    (base : ∀ loc : Semantics.MemLoc,
+      TimedGrounding.optMS (memoryInitFrontier witness loc)
+          + TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
+          + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+              Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
+          + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+            (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+              Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
+        TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
+          + TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
+          + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+              Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
+          + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+            (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+              Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))) :
+    ∀ loc : Semantics.MemLoc,
+      TimedGrounding.optMS (memoryInitFrontier witness loc)
+          + (touchPairsAt (walkedRows.map (walkedTouches t)) loc).map Prod.snd
+          + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+              Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
+        TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
+          + (touchPairsAt (walkedRows.map (walkedTouches t)) loc).map Prod.fst
+          + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
+            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+              Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
+  obtain ⟨pushProj, pullProj, locProj⟩ :=
+    walkedTouches_projections initialClock g t walkedRows rowOK instrPush instrPull instrLoc
+  intro loc
+  have step := base loc
+  rw [halt_producedMessages_nil_of_haltFree witness constraints haltFree,
+    halt_consumedMessages_nil_of_haltFree witness constraints haltFree] at step
+  simp only [Multiset.coe_nil, Multiset.filter_zero, add_zero] at step
+  rw [← pushesAt_of_touchLists walkedRows (WalkedRow.facts g) (walkedTouches t) pushProj loc,
+    ← pullsAt_of_touchLists walkedRows (WalkedRow.facts g) (walkedTouches t) pullProj locProj loc]
+  exact step
 
 end WitnessObligations
 
