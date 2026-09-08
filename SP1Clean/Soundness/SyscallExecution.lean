@@ -578,6 +578,81 @@ theorem walkedTrail_pullAt (witness : EnsembleWitness (sp1Ensemble (p := p)))
       instructionSource syscallSource r hr).1)
     headTime k hk
 
+/-! ## Into the refresh-elimination machinery
+
+`RefreshWiring`'s `touchPairsAt` bridges are already row-generic (`{α : Type*} (rows : List α)`), so
+the Memory balance over walked rows is an *instantiation* rather than a port.  What it needs is a
+per-row touch list, and the two facts that a row's push and pull lists are that list's two
+projections. -/
+
+/-- The per-row touch list of a walked row: the caller's aligned touches for an instruction row —
+the same `touchesOf` the ordinary engine chooses — and the syscall row's own three register touches,
+which are already paired by construction. -/
+noncomputable def walkedTouches (t : DecodedInstructionRow p → List (TimedGrounding.Touch p)) :
+    WalkedRow p → List (TimedGrounding.Touch p)
+  | .instruction row => t row
+  | .syscall r => (syscallRowFacts r).memPulls.zip (syscallRowFacts r).memPushes
+
+omit [Fact (2 ^ 25 < p)] in
+/-- A walked row's push and pull lists are its touch list's two projections, and its two endpoints
+of each touch share a location.
+
+The syscall arm gets all three from `RowOKCore` itself: `touches` is a `List.Forall₂` over the two
+lists, so it pins their lengths (which is what makes `zip` lossless) and carries `TouchOK.loc_eq`
+per touch.  Nothing extra has to be assumed about the row. -/
+theorem walkedTouches_projections (initialClock : ℕ)
+    (g : DecodedInstructionRow p → Semantics.RowFacts p)
+    (t : DecodedInstructionRow p → List (TimedGrounding.Touch p)) (rows : List (WalkedRow p))
+    (rowOK : ∀ r ∈ rows, TimedGrounding.RowOKCore initialClock (WalkedRow.facts g r))
+    (instrPush : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      (g row).memPushes = (t row).map Prod.snd)
+    (instrPull : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      (g row).memPulls = (t row).map Prod.fst)
+    (instrLoc : ∀ row : DecodedInstructionRow p, WalkedRow.instruction row ∈ rows →
+      ∀ tc ∈ t row, Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).2
+        = Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).1.1) :
+    (∀ r ∈ rows, (WalkedRow.facts g r).memPushes = (walkedTouches t r).map Prod.snd) ∧
+      (∀ r ∈ rows, (WalkedRow.facts g r).memPulls = (walkedTouches t r).map Prod.fst) ∧
+      (∀ r ∈ rows, ∀ tc ∈ walkedTouches t r,
+        Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).2
+          = Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).1.1) := by
+  have lengths : ∀ r ∈ rows,
+      (WalkedRow.facts g r).memPulls.length = (WalkedRow.facts g r).memPushes.length :=
+    fun r hr => (List.forall₂_iff_zip.mp (rowOK r hr).touches).1
+  have zipLoc : ∀ r ∈ rows, ∀ tc ∈ (WalkedRow.facts g r).memPulls.zip
+      (WalkedRow.facts g r).memPushes,
+      Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).2
+        = Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).1.1 := by
+    intro r hr tc htc
+    exact ((List.forall₂_iff_zip.mp (rowOK r hr).touches).2 htc).loc_eq
+  refine ⟨?_, ?_, ?_⟩
+  · intro r hr
+    have len := lengths r hr
+    cases hrow : r with
+    | instruction row => exact instrPush row (hrow ▸ hr)
+    | syscall rr =>
+        rw [hrow] at len
+        simp only [walkedTouches, WalkedRow.facts] at len ⊢
+        exact (List.map_snd_zip (le_of_eq len.symm)).symm
+  · intro r hr
+    have len := lengths r hr
+    cases hrow : r with
+    | instruction row => exact instrPull row (hrow ▸ hr)
+    | syscall rr =>
+        rw [hrow] at len
+        simp only [walkedTouches, WalkedRow.facts] at len ⊢
+        exact (List.map_fst_zip (le_of_eq len)).symm
+  · intro r hr tc htc
+    have zl := zipLoc r hr
+    cases hrow : r with
+    | instruction row =>
+        rw [hrow] at htc
+        exact instrLoc row (hrow ▸ hr) tc htc
+    | syscall rr =>
+        rw [hrow] at htc zl
+        simp only [walkedTouches, WalkedRow.facts] at htc zl
+        exact zl tc htc
+
 end WitnessObligations
 
 /-- Discharge the engine's per-position `EventStep` obligation, arm by arm.
