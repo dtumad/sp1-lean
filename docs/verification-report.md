@@ -707,7 +707,17 @@ def SupportedCoreNativeRelation :
   companion *premise* — provider tables mean what they say — not something derivable from
   balance alone.
 
-There is no third conjunct. The physical `< 2^24` bound on each pulled memory timestamp — the fact
+There is one interim third conjunct, and it is a placeholder rather than a claim.
+`SyscallTableInactive` (`SP1Clean/Soundness/GroundingInternal.lean`) restricts the relation to
+shards whose `SyscallInstrs` table has no active row (`noActiveRows`) and whose Halt table still
+carries its physical row (`haltTablePresent`). The syscall chip is proved and its table registered
+at ensemble position 54, but the timed grounding engine does not yet walk a syscall row's three
+register touches, and the Halt table remains the sole Exit contributor. Shards with an active
+syscall row are therefore outside the certified set today; the relation names that restriction
+instead of assuming it away, and both fields go when the engine's row carrier admits syscall rows
+and D8's successor Exit table lands.
+
+The `< 2^24` timestamp bound is *not* such a conjunct. The physical bound on each pulled memory timestamp — the fact
 that prevents timestamp wraparound at the field characteristic, and which SP1's generic
 `MemoryAccess` underflow argument needs on the high-limb comparison branch — used to be a third
 companion relation (`SupportedCoreMemoryTimestampRangeRelation`), because the per-chip

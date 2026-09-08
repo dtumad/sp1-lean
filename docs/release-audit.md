@@ -134,8 +134,13 @@ native public-input equality
 
 It does **not** consume a pulled-timestamp range premise: the `< 2^24` bound on every pulled
 Memory record's high clock limb is derived inside the capstone from the per-location Memory
-balance (`pushGood`/`pullGood` in `SP1Clean/Soundness/AIR.lean`), so `SupportedCoreNativeRelation`
-is exactly the ensemble relation plus the semantic boundary binding.
+balance (`pushGood`/`pullGood` in `SP1Clean/Soundness/AIR.lean`).
+
+It does, however, currently consume one interim premise beyond the ensemble relation and the
+semantic boundary binding: `SyscallTableInactive`, which restricts the certified set to shards whose
+`SyscallInstrs` table is inactive and whose Halt table still carries the Exit hand-off. That is a
+disclosed placeholder for work in flight — the syscall chip is proved and registered, but the
+grounding engine does not yet walk a syscall row's memory touches — not a derived fact.
 
 and produces:
 

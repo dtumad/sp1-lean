@@ -300,9 +300,14 @@ TARGETS = [
      r"fullLedger_multiplicitySum_channel|channelLedger_isConsistentBalanced|"
      r"channelLedger_isConsistentBalanced_of_handoff)\b"),
     # The ensemble's own channel discipline, which the orientation bridge rests on.
+    # The two `_core` spellings are the syscall-table wave's: the syscall chip speaks on seven
+    # buses, so the provider/all-tables statements gained a disjunct and were renamed.  Naming the
+    # current spellings matters — `\b` after an alternation does *not* match a `_core` suffix, so
+    # the old names went on matching nothing and the census silently lost both probes.
     ("SP1Clean/Soundness/EnsembleChannels.lean",
-     r"theorem\s+(sp1Tables_channels_subset|sp1ProviderTables_channels_subset|"
-     r"sp1Ensemble_allTables_channels_subset|channel_eq_of_name_eq)\b"),
+     r"theorem\s+(sp1Tables_channels_subset|sp1ProviderTables_channels_subset_core|"
+     r"sp1AllTables_channels_subset_core|sp1Ensemble_allTables_channels_subset|"
+     r"channel_eq_of_name_eq)\b"),
     # Phase 3: the clock bridge, the generator's shadow bookkeeping, and the ALU fold.
     ("SP1Clean/FormalModel/TraceGen/ClockBridge.lean",
      r"theorem\s+(ordinarySchedule_duration_eq|accessOffsets_ordered|"
@@ -452,7 +457,7 @@ TARGETS = [
     ("SP1Clean/Soundness/ChipRegistry.lean", r"(?:theorem|def)\s+(allChipKinds\w*)\b"),
     ("SP1Clean/Soundness/Coverage.lean",
      r"theorem\s+(coverage_kinds_eq_registry|coverage_length|covered_iff_routed|"
-     r"wired_subset_reachable|reachable_subset_wired|routeOf_reaches_sail)\b"),
+     r"wired_subset_reachable|reachable_subset_wired)\b"),
     ("SP1Clean/Soundness/Decode.lean",
      r"(?:theorem|def)\s+(decodedInROM[\w.]*|sailConfigured_nonempty)\b"),
     # C1/Move-2: the decode projection, guards, ∃I∀s `decodedInROM`, its accessor, the 16 collapsed

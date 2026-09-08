@@ -37,7 +37,7 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `WitnessRelation.Correct` | `SP1Clean/FormalModel/Relations.lean` | Both existential directions, hence public-language equality rather than witness inversion |
 | `SupportedCoreStatement` | `SP1Clean/FormalModel/Execution.lean` | The one program/public-boundary statement shared by both proof directions |
 | `CoreProfile.WithinOrdinaryRowLimit` | `SP1Clean/FormalModel/CoreProfile.lean` | The one numeric Core row-budget policy used by both witness representations |
-| `SupportedCoreNativeRelation` | `SP1Clean/Soundness/AIR.lean` | The hypothesis side: exactly two conjuncts |
+| `SupportedCoreNativeRelation` | `SP1Clean/Soundness/AIR.lean` | The hypothesis side: the ensemble algebra, the semantic boundary binding, and the interim `SyscallTableInactive` placeholder |
 | `SupportedCoreNativeShardRelation` | `SP1Clean/Soundness/AIR.lean` | The same native relation restricted to the pinned active-row budget |
 | `supported_core_native_sound` | `SP1Clean/Soundness/AIR.lean` | The headline theorem: the plain-Sail conclusion, no model parameter, no schedule hypothesis |
 | `supported_core_native_sound_scheduled` | `SP1Clean/Soundness/AIR.lean` | The model-scheduled corollary — the shard-composition seam |

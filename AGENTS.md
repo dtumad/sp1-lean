@@ -349,8 +349,16 @@ soundness, and the eventual ArkLib verifier theorem; see `docs/roadmap.md` (P0�
 The memory-bus closed forms, `GroundingAdapter`, all 25 `ChipGroundingContracts`, aligned-carrier
 transports, RAM/same-location grounding, and per-position assumptions/readiness are proved. Remaining
 work is to derive this native relation's semantic boundary premise from the exact upstream system
-tables. `SupportedCoreNativeRelation` is exactly **two** conjuncts — the ensemble algebra and that
-boundary binding. The former third conjunct (`SupportedCoreMemoryTimestampRangeRelation`, the
+tables. `SupportedCoreNativeRelation` currently carries **three** conjuncts — the ensemble algebra, that
+boundary binding, and the interim `SyscallTableInactive` (`Soundness/GroundingInternal.lean`). The
+third is a placeholder rather than a claim, and is disclosed as one: the `SyscallInstrs` chip is
+proved and its table registered at ensemble position 54, but the timed grounding engine does not yet
+walk a syscall row's three register touches, so `noActiveRows` restricts the relation to shards whose
+syscall table is inactive, and `haltTablePresent` keeps the Halt table the sole Exit contributor.
+Both fields go when those two things change — the first with the engine's mixed-row carrier, the
+second with D8's successor Exit table. Shards with an active syscall row are outside the certified
+set today, and the relation says so rather than assuming it away.
+An *earlier* third conjunct (`SupportedCoreMemoryTimestampRangeRelation`, the
 pulled-record `clk_high < 2 ^ 24` bound) was deleted in the 2026-08 W3 wave: it is now derived from
 the produced side of the capstone's own per-location Memory balance, unblocked by moving the bound
 out of `ChipGroundingContracts.rowAligned`'s premises and into the per-touch antecedent of its slot

@@ -540,7 +540,8 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Soundness.SupportedCoreTraceWitness.channelLedger_isConsistentBalanced
 #print axioms SP1Clean.Soundness.SupportedCoreTraceWitness.channelLedger_isConsistentBalanced_of_handoff
 #print axioms SP1Clean.Soundness.sp1Tables_channels_subset
-#print axioms SP1Clean.Soundness.sp1ProviderTables_channels_subset
+#print axioms SP1Clean.Soundness.sp1ProviderTables_channels_subset_core
+#print axioms SP1Clean.Soundness.sp1AllTables_channels_subset_core
 #print axioms SP1Clean.Soundness.sp1Ensemble_allTables_channels_subset
 #print axioms SP1Clean.Soundness.channel_eq_of_name_eq
 #print axioms SP1Clean.TraceGen.ordinarySchedule_duration_eq
