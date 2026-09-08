@@ -717,6 +717,46 @@ theorem walkedTouchBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
     ← pullsAt_of_touchLists walkedRows (WalkedRow.facts g) (walkedTouches t) pullProj locProj loc]
   exact step
 
+omit [Fact (2 ^ 25 < p)] in
+/-- **The refresh-free Memory balance at the rewritten walked carrier** — `walkE`'s `memoryBalance`
+hypothesis, at last.
+
+`exists_refreshFreeTouchLists` hands back a rewritten touch batch and a weakened finalize frontier
+whose per-location balance carries no refresh edge.  Rebuilding each row's carrier from its own
+rewritten touch list turns that straight back into `pushesAt`/`pullsAt`: `alignedOf`'s two memory
+projections *are* the touch list's two projections, by definition, so both bridge obligations are
+`rfl` and the same two lemmas that carried the balance into touch-pair form carry it back out.
+
+The only genuine premise is the per-touch location agreement, which the rewrite preserves — a
+`PullRewrite` moves a pull to a same-location, same-value, no-later ancestor. -/
+theorem walkedRewrittenMemoryBalance
+    (g : DecodedInstructionRow p → Semantics.RowFacts p)
+    (pairs : List (WalkedRow p × List (TimedGrounding.Touch p)))
+    (initF finF : Semantics.MemLoc → Option (MemoryMsg (ZMod p)))
+    (locAgree : ∀ q ∈ pairs, ∀ tc ∈ (q : WalkedRow p × List (TimedGrounding.Touch p)).2,
+      Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).2
+        = Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).1.1)
+    (refreshFree : ∀ loc : Semantics.MemLoc,
+      TimedGrounding.optMS (initF loc)
+          + (touchPairsAt (pairs.map Prod.snd) loc).map Prod.snd
+        = TimedGrounding.optMS (finF loc)
+          + (touchPairsAt (pairs.map Prod.snd) loc).map Prod.fst) :
+    ∀ loc : Semantics.MemLoc,
+      TimedGrounding.optMS (initF loc)
+          + TimedGrounding.pushesAt (pairs.map (fun q =>
+              TimedGrounding.alignedOf (WalkedRow.facts g q.1) q.2)) loc
+        = TimedGrounding.optMS (finF loc)
+          + TimedGrounding.pullsAt (pairs.map (fun q =>
+              TimedGrounding.alignedOf (WalkedRow.facts g q.1) q.2)) loc := by
+  intro loc
+  rw [pushesAt_of_touchLists pairs
+      (fun q => TimedGrounding.alignedOf (WalkedRow.facts g q.1) q.2) Prod.snd
+      (fun _ _ => rfl) loc,
+    pullsAt_of_touchLists pairs
+      (fun q => TimedGrounding.alignedOf (WalkedRow.facts g q.1) q.2) Prod.snd
+      (fun _ _ => rfl) locAgree loc]
+  exact refreshFree loc
+
 end WitnessObligations
 
 /-- Discharge the engine's per-position `EventStep` obligation, arm by arm.
