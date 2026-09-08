@@ -5,8 +5,9 @@ Scans the SP1Clean tree for the released theorem set (chip soundness/completenes
 bridges + `kind` registrations, faithfulness anchors, witness-conformance anchors, the
 timed-grounding capstone layer, deterministic completeness agreement/non-vacuity headlines, and
 the coverage guards), resolving each declaration's fully qualified name by tracking
-`namespace`/`end` blocks. The probe is self-checking: a wrong FQN fails to elaborate, so a green
-probe run certifies the census covers real declarations.
+`namespace`/`end` blocks. A wrong FQN fails to elaborate. The existing probe files also record the
+required inventory: generation fails before writing either file if a recorded declaration stops
+matching, even when another declaration still matches the same target pattern.
 
 Two probe files are emitted, one per library, so each elaborates against exactly the
 oleans its build target produces (the CI `audit` job builds only `SP1Clean`; the `test`
@@ -18,9 +19,12 @@ job additionally builds `SP1CleanTest` via `lake test`):
 
 Usage: `python3 scripts/gen_axiom_probe.py` (from the repo root); then
 `lake env lean scripts/axiom_probe.lean` / `... scripts/axiom_probe_test.lean`
-(see `scripts/run_audit.sh`).
+(see `scripts/run_audit.sh`). `--check` checks byte identity without writing. Use
+`--allow-removals` only to regenerate an intentionally reduced or renamed inventory, and review
+the resulting probe diff before updating the axiom snapshots.
 """
 
+import argparse
 import re
 from pathlib import Path
 
@@ -508,6 +512,14 @@ def fqns_in(path: Path, decl_re: re.Pattern) -> list[str]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true", help="check committed probes without writing")
+    mode.add_argument(
+        "--allow-removals", action="store_true",
+        help="regenerate after an intentional removal or rename; review the probe diff",
+    )
+    args = parser.parse_args()
     main_fqns: list[str] = []
     test_fqns: list[str] = []
     test_imports: list[str] = []  # `SP1CleanTest.*` modules, imported explicitly in the test probe
@@ -559,8 +571,7 @@ def main() -> None:
              "Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -/",
              ""]
     lines += [f"#print axioms {f}" for f in main_ordered]
-    OUT_MAIN.write_text("\n".join(lines) + "\n")
-    print(f"wrote {OUT_MAIN.relative_to(ROOT)} with {len(main_ordered)} probes")
+    main_text = "\n".join(lines) + "\n"
 
     test_ordered = dedupe(test_fqns)
     lines = [f"import {m}" for m in test_imports]
@@ -571,8 +582,37 @@ def main() -> None:
               "Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/",
               ""]
     lines += [f"#print axioms {f}" for f in test_ordered]
-    OUT_TEST.write_text("\n".join(lines) + "\n")
-    print(f"wrote {OUT_TEST.relative_to(ROOT)} with {len(test_ordered)} probes")
+    test_text = "\n".join(lines) + "\n"
+
+    outputs = [(OUT_MAIN, main_text, main_ordered), (OUT_TEST, test_text, test_ordered)]
+    failures = []
+    for path, generated, names in outputs:
+        recorded = path.read_text() if path.exists() else ""
+        previous_names = set(re.findall(r"^#print axioms (\S+)$", recorded, re.M))
+        removed = sorted(previous_names - set(names))
+        if removed and not args.allow_removals:
+            failures.append(
+                f"{path.relative_to(ROOT)} lost recorded axiom probes:\n  " + "\n  ".join(removed)
+            )
+        if args.check and (not path.exists() or recorded != generated):
+            failures.append(f"{path.relative_to(ROOT)} differs from the source inventory")
+
+    # Validate both libraries before writing either: a test-scope failure must not modify the
+    # main probe and make a subsequent audit appear to start from a different inventory.
+    if failures:
+        for failure in failures:
+            print(f"FAIL: {failure}")
+        print("Restore missing targets, or regenerate an intentional change and review the probe diff.")
+        print("Intentional removals require: python3 scripts/gen_axiom_probe.py --allow-removals")
+        raise SystemExit(1)
+
+    if args.check:
+        print(f"PASS: axiom probes match source inventory ({len(main_ordered)} main, "
+              f"{len(test_ordered)} test)")
+    else:
+        for path, generated, names in outputs:
+            path.write_text(generated)
+            print(f"wrote {path.relative_to(ROOT)} with {len(names)} probes")
 
 
 if __name__ == "__main__":

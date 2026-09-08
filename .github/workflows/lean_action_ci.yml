@@ -26,6 +26,10 @@ jobs:
         run: scripts/check_witgen_export.sh
       - name: Recorded pins match the build graph
         run: scripts/check_pins.sh
+      - name: Axiom probe inventory matches source
+        run: python3 scripts/gen_axiom_probe.py --check
+      - name: Audit tooling regressions
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Root index imports every module
         run: scripts/check_root_index.sh
       - name: SP1 field has one Lean owner
