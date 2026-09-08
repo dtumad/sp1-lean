@@ -38,7 +38,7 @@ omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
     syscallInstrsTraceInputs (p := p) events = [] := rfl
 
 /-- The built table has no rows. Every fact below is this one plus vacuity. -/
-@[simp] theorem traceTable_table (events : List Empty) (data : ProverData (ZMod p))
+theorem traceTable_table (events : List Empty) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) :
     (Table.build (component (p := p)) (syscallInstrsTraceInputs events) data hint).table = [] := by
   rfl
