@@ -425,6 +425,8 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms Air.Flat.FiniteLookup.ofStatic
 #print axioms Air.Flat.Component.export_constraints_iff
 #print axioms Air.Flat.Component.export_interactions
+#print axioms Air.Flat.EnsembleExport.containsFixed_iff
+#print axioms Air.Flat.EnsembleExport.interactionsNamed_eq
 #print axioms SP1Clean.Model.Core.ByteMemory.readBytes_writeBytes
 #print axioms SP1Clean.Model.Core.ByteMemory.read_writeBytes_of_readOnly
 #print axioms SP1Clean.Model.Core.HostIO.readHint_eq_some_iff

@@ -47,6 +47,8 @@ EXACT_REQUIRED_THEOREMS = [
     ("ToClean/Air/EnsembleExport.lean", "FiniteLookup.ofStatic"),
     ("ToClean/Air/EnsembleExport.lean", "Component.export_constraints_iff"),
     ("ToClean/Air/EnsembleExport.lean", "Component.export_interactions"),
+    ("ToClean/Air/EnsembleExport.lean", "EnsembleExport.containsFixed_iff"),
+    ("ToClean/Air/EnsembleExport.lean", "EnsembleExport.interactionsNamed_eq"),
     ("SP1Clean/Model/Core/Memory.lean", "readBytes_writeBytes"),
     ("SP1Clean/Model/Core/Memory.lean", "read_writeBytes_of_readOnly"),
     ("SP1Clean/Model/Core/HostIO.lean", "HostIO.readHint_eq_some_iff"),
