@@ -1,8 +1,9 @@
 import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1CleanTest.Core.InitialMemoryLookup
 import SP1Clean.Soundness.InitialMemoryEnsemble
+import SP1Clean.Soundness.FinalMemoryEnsemble
 
-/-! # Initial-record and ordered-key AIR regressions
+/-! # Initial/final records and ordered-key AIR regressions
 
 These checks execute the actual witness programs, evaluate every assertion and initial-image
 lookup, and validate every nonzero Byte interaction against the byte-op semantics. Memory and
@@ -89,7 +90,8 @@ theorem rejectsInvalidBoundaryRows :
       [false, false, false, false, false] := by native_decide
 
 private def controlRow {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
-    (program : Var Input Fp → Circuit Fp (Var Output Fp)) (input : Input Fp) :
+    (program : Var Input Fp → Circuit Fp (Var Output Fp)) (input : Input Fp)
+    (channelName : String := OrderedInitialProvider.channelName) :
     Bool × List (List Fp × Fp) :=
   let circuit := program (varFromOffset Input 0)
   let env := (circuit.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
@@ -99,7 +101,7 @@ private def controlRow {Input Output : TypeMap} [ProvableType Input] [ProvableTy
     interaction.channel.name != "SP1Byte" || env interaction.mult == 0 ||
       byteValid (interaction.msg.map env).toList
   (InitialMemoryLookup.localConstraints image.initialMemory (2 ^ 48) env operations && bytes,
-    (interactions.filter (fun interaction => interaction.channel.name == OrderedInitialProvider.channelName)).map
+    (interactions.filter (fun interaction => interaction.channel.name == channelName)).map
       (fun interaction => ((interaction.msg.map env).toList, env interaction.mult)))
 
 private def controlValid (rows : List (Bool × List (List Fp × Fp))) : Bool :=
@@ -150,5 +152,86 @@ theorem rejectsMalformedInventories :
      controlValid [verifierRow, initRegisterRow 0 0, initRegisterRow 2 3, terminalRow 1],
      controlValid [verifierRow, terminalRow (2 ^ 48 + 1)]] =
        [false, false, false, false, false] := by native_decide
+
+private def finalRecord (address value clock : ℕ) : Channels.MemoryMsg Fp :=
+  ⟨clock / 4, clock % 4, (word address)[0], (word address)[1], (word address)[2], word value⟩
+
+private def finalInput (previous address current value clock : ℕ) :
+    OrderedMemoryProvider.Inputs Channels.MemoryMsg Fp :=
+  ⟨finalRecord address value clock, OrderedBoundary.populate (word previous) (word current)⟩
+
+private def finalVerifierRow :=
+  controlRow (OrderedBoundaryVerifier.circuit OrderedFinalProvider.channelName
+    (Soundness.OrderedMemoryEnsemble.startKey (p := SP1Prime))
+    Soundness.OrderedMemoryEnsemble.endKey).main () OrderedFinalProvider.channelName
+
+private def finalTerminalRow (previous : ℕ) :=
+  controlRow (OrderedBoundaryEnd.circuit OrderedFinalProvider.channelName
+    (Soundness.OrderedMemoryEnsemble.endKey (p := SP1Prime))).main
+      (OrderedBoundaryEnd.populate (word previous) Soundness.OrderedMemoryEnsemble.endKey)
+      OrderedFinalProvider.channelName
+
+private def finalRegisterRow (previous index : ℕ) :=
+  controlRow OrderedFinalProvider.registerCircuit.main
+    (finalInput previous index (index + 1) 9 16) OrderedFinalProvider.channelName
+
+/-- info: exportable ✓ (133 witness cells) -/
+#guard_msgs in
+#assert_exportable (OrderedFinalProvider.registerCircuit (p := SP1Prime))
+
+/-- info: exportable ✓ (196 witness cells) -/
+#guard_msgs in
+#assert_exportable (OrderedFinalProvider.ramCircuit (p := SP1Prime))
+
+/-- Finalizer constructors preserve every record field across the register range and RAM boundaries. -/
+theorem constructedFinalRows :
+    (List.range 32).all (fun index =>
+      ((OrderedFinalProvider.populateRegister? 0 (finalRecord index (index + 7) 16)).map fun input =>
+        evaluate OrderedFinalProvider.registerCircuit.main input ==
+          (true, (toElements (finalRecord index (index + 7) 16)).toList)).getD false) &&
+    [65536, 131064, 131072, 2 ^ 48 - 8].all (fun address =>
+      ((OrderedFinalProvider.populateRam? 32 (finalRecord address 123 24)).map fun input =>
+        evaluate OrderedFinalProvider.ramCircuit.main input ==
+          (true, (toElements (finalRecord address 123 24)).toList)).getD false) = true := by
+  native_decide
+
+/-- Invalid final addresses and unrelated ordering keys fail the actual circuit constraints. -/
+theorem rejectsInvalidFinalRows :
+    [(evaluate OrderedFinalProvider.registerCircuit.main (finalInput 0 32 33 9 16)).1,
+     (evaluate OrderedFinalProvider.registerCircuit.main (finalInput 0 65536 65537 9 16)).1,
+     (evaluate OrderedFinalProvider.registerCircuit.main (finalInput 0 0 2 9 16)).1,
+     (evaluate OrderedFinalProvider.ramCircuit.main (finalInput 0 32 33 9 16)).1,
+     (evaluate OrderedFinalProvider.ramCircuit.main (finalInput 0 65537 65538 9 16)).1,
+     (evaluate OrderedFinalProvider.ramCircuit.main (finalInput 0 65536 65538 9 16)).1] =
+      [false, false, false, false, false, false] := by native_decide
+
+/-- Both empty and physically permuted mixed final inventories close their private control bus. -/
+theorem finalInventories :
+    controlValid [finalVerifierRow, finalTerminalRow 0] &&
+    controlValid [finalVerifierRow, finalRegisterRow 1 31, finalRegisterRow 0 0,
+      controlRow OrderedFinalProvider.ramCircuit.main (finalInput 32 65536 65537 19 24)
+        OrderedFinalProvider.channelName, finalTerminalRow 65537] = true := by native_decide
+
+/-- Finalization cannot duplicate records or borrow initialization's fixed control boundary. -/
+theorem rejectsMalformedFinalInventories :
+    [controlValid [finalVerifierRow],
+     controlValid [finalVerifierRow, finalTerminalRow 0, finalTerminalRow 0],
+     controlValid [finalVerifierRow, finalRegisterRow 0 0, finalRegisterRow 0 0, finalTerminalRow 1],
+     controlValid [finalVerifierRow, finalRegisterRow 0 0, finalRegisterRow 2 3, finalTerminalRow 1],
+     controlValid [controlRow (OrderedBoundaryVerifier.circuit OrderedInitialProvider.channelName
+       (Soundness.OrderedMemoryEnsemble.startKey (p := SP1Prime))
+       Soundness.OrderedMemoryEnsemble.endKey).main () OrderedFinalProvider.channelName,
+       finalTerminalRow 0]] = [false, false, false, false, false] := by native_decide
+
+/-- Initial/final physical Memory ledgers close only when every clock, location, and value agrees. -/
+theorem pairedMemoryBoundary :
+    let initial := controlRow (OrderedInitialProvider.ramCircuit image).main
+      (ramInput 0 65536 65537) "SP1Memory"
+    let final (value clock : ℕ) := controlRow OrderedFinalProvider.ramCircuit.main
+      (finalInput 0 65536 65537 value clock) "SP1Memory"
+    let value := (image.initialMemory.readWord 65536).toNat
+    [controlValid [initial, final value 0], controlValid [initial, final (value + 1) 0],
+      controlValid [initial, final value 8], controlValid [initial, final value 0, final value 0]] =
+      [true, false, false, false] := by native_decide
 
 end SP1CleanTest.Core.MemoryBoundary

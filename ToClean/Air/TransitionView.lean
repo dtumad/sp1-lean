@@ -38,6 +38,23 @@ def readRows (views : List (TransitionView channel)) (tables : List (Table F)) :
   (views.zip tables).flatMap fun (view, table) =>
     table.table.map fun row => (view, table.environment row)
 
+/-- Reading physical environments preserves every interaction, on any selected channel. -/
+theorem readIndexedRows_interactions {Index : Type*} (indices : List Index)
+    (component : Index → Component F) (tables : List (Table F)) (selected : RawChannel F)
+    (aligned : List.Forall₂ (fun index table => component index = table.component) indices tables) :
+    tables.flatMap (·.interactionsWith selected) =
+      (readIndexedRows indices tables).flatMap (fun (index, env) =>
+        (component index).operations.interactionValuesWith selected env) := by
+  induction aligned with
+  | nil => rfl
+  | @cons index table indices tables same _ ih =>
+    simp only [readIndexedRows, List.zip_cons_cons, List.flatMap_cons, List.flatMap_append,
+      List.flatMap_map] at ih ⊢
+    rw [ih]
+    congr 1
+    unfold Table.interactionsWith
+    rw [same]
+
 theorem readRows_eq_indexed {Index : Type*} (indices : List Index)
     (view : Index → TransitionView channel) (tables : List (Table F)) :
     readRows (indices.map view) tables =

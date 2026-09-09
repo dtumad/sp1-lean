@@ -49,16 +49,25 @@ Implemented foundations:
   table specifications from constraints and channel guarantees. Generic unit-balance and physical
   transition-view adapters are isolated in `ToClean/Air/`; the fixed verifier and terminal witness
   programs export. Regressions cover empty/mixed inventories and malformed control ledgers.
+- Final register/RAM providers now check canonical locations and pull one Memory record per row.
+  `OrderedMemoryProvider` and `OrderedMemoryEnsemble` share the ordering circuit and inventory
+  argument between initialization and finalization. Both subsystems prove that their decoded
+  records are exactly their physical Memory interactions. The final inventory derives uniqueness
+  from its own fixed control boundary and actual balance; constructors discharge internal gadget
+  conditions on a stated register/RAM domain. Regressions reject forged addresses, unrelated keys,
+  duplicate/disconnected final rows, and mismatched values or clocks in paired boundary ledgers.
+  Both finalizer witness programs export. Their value/clock guarantees still require the enclosing
+  machine's closed Memory bus; the final-state meaning is a timed-grounding conclusion.
 - The fixed program-provider circuit composes the existing provider with complete static-ROM
   membership. The 25 instruction circuits and faithfulness anchors are unchanged.
 
 Still required before the native capstone can be claimed:
 
 1. Finish executable instruction decoding and construct the decoded fixed ROM. Integrate the new
-   initialization subsystem into the full native machine. Its fixed control boundary and actual-ledger
-   uniqueness proof are closed. Apply the same discipline to finalization, derive the subsystem's
-   local table specifications in the enclosing machine, and connect both boundaries to timed
-   grounding. The subsystem has not yet replaced the existing ensemble's semantic boundary premise.
+   initialization and finalization subsystems into the full native machine. Their fixed control
+   boundaries, actual Memory projections, and actual-ledger uniqueness proofs are closed. Derive
+   their local table specifications in the enclosing machine and connect both boundaries to timed
+   grounding. These subsystems have not yet replaced the existing ensemble's semantic boundary premise.
 2. Complete the host execution environment, including commitments, control and terminal behavior;
    integrate host effects and ordinary ROM-write exclusion into the AIR and mixed timed grounding.
 3. Prove the event compiler total on shared semantic resource bounds; construct all native tables

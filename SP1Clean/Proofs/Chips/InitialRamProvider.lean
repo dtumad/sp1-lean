@@ -1,4 +1,5 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
+import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Native.Operations.InitialMemoryRead
 import SP1Clean.Native.Operations.AddressOperation
 
@@ -39,45 +40,6 @@ private theorem address_assumptions (input : Inputs (ZMod p))
     AddressOperation.SoundnessAssumptions (addressInput input) :=
   ⟨bound, zero_u64, Or.inr rfl⟩
 
-omit [Fact (2 ^ 17 < p)] in
-private theorem aligned_cell (address : ℕ) (bound : address < 2 ^ 48)
-    (aligned : address % 8 = 0) :
-    (BitVec.ofNat 61 (address / 8)).toNat * 8 = address := by
-  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : address / 8 < 2 ^ 61)]
-  omega
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem ram_location_of_key (record : MemoryMsg (ZMod p)) (address : ℕ)
-    (lower : 2 ^ 16 ≤ address) (upper : address < 2 ^ 48) (alignment : address % 8 = 0)
-    (key : record.addr0.val + record.addr1.val * 2 ^ 16 + record.addr2.val * 2 ^ 32 = address) :
-    (MemoryMsg.locOf record).CanonicalAddress ∧
-      Word.toNat (MemoryBoundary.address record) = (MemoryMsg.locOf record).busAddress ∧
-      ∀ state, locContent state (MemoryMsg.locOf record) =
-        ramWord64? state (BitVec.ofNat 64 address) := by
-  have notRegister : ¬ (record.addr0.val < 32 ∧ record.addr1 = 0 ∧ record.addr2 = 0) := by
-    rintro ⟨small, one, two⟩
-    simp only [one, two, ZMod.val_zero, zero_mul, add_zero] at key
-    omega
-  let cell : RamCell := BitVec.ofNat 61 (address / 8)
-  have aligned : cell.toNat * 8 = address := aligned_cell address upper alignment
-  have decoded : MemoryMsg.locOf record = MemLoc.ram cell := by
-    simp only [MemoryMsg.locOf, if_neg notRegister, key, cell]
-  have base : cell.baseAddr = BitVec.ofNat 64 address :=
-    congrArg (BitVec.ofNat 64) aligned
-  refine ⟨?_, ?_, ?_⟩
-  · rw [decoded]
-    change 32 ≤ cell.toNat * 8 ∧ cell.toNat * 8 < 2 ^ 48
-    rw [aligned]
-    exact ⟨by omega, upper⟩
-  · rw [decoded]
-    change Word.toNat (MemoryBoundary.address record) = cell.toNat * 8
-    simpa only [MemoryBoundary.address, Word.toNat, circuit_norm, ZMod.val_zero,
-      zero_mul, add_zero, aligned] using key
-  · intro state
-    rw [decoded]
-    change ramWord64? state cell.baseAddr = _
-    rw [base]
-
 private theorem key_reorder (a b c total : ℕ)
     (equal : a + 65536 * b + 65536 ^ 2 * c = total) :
     a + b * 2 ^ 16 + c * 2 ^ 32 = total := by
@@ -107,7 +69,7 @@ private theorem ram_location (input : Inputs (ZMod p))
     exact (congrArg (fun value => (Word.toNat input.bytes[0].address + value) % 2 ^ 48) zero_nat).trans
       ((congrArg (fun value => value % 2 ^ 48) (Nat.add_zero _)).trans
         (Nat.mod_eq_of_lt (by omega)))
-  exact ram_location_of_key _ _ facts.2.1 facts.1 facts.2.2.symm
+  exact MemoryBoundary.ram_location_of_key _ _ facts.2.1 facts.1 facts.2.2.symm
     ((key_reorder _ _ _ _ checked.1).trans sumEq)
 
 omit [Fact (2 ^ 17 < p)] in
@@ -168,6 +130,20 @@ def main (image : ProgramImage) (input : Var Inputs (ZMod p)) :
 instance elaborated (image : ProgramImage) :
     ElaboratedCircuit (ZMod p) Inputs MemoryMsg (main image) := by
   elaborate_circuit
+
+theorem main_memory_interactions (image : ProgramImage) (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main image input).operations offset).interactionsWith memoryChannel.toRaw =
+      [(memoryChannel.pushed ((elaborated image).output input offset)).toRaw] := by
+  have readEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
+    (InitialMemoryRead.circuit image.initialMemory).base memoryChannel.toRaw input n (by
+      simp [ InitialMemoryRead.circuit, circuit_norm, memoryChannel, byteChannel])
+  have addressEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
+    AddressOperation.circuit.base memoryChannel.toRaw (addressInput input) n (by
+      simp [ AddressOperation.circuit, circuit_norm, memoryChannel, byteChannel])
+  simp only [main, circuit_norm]
+  simp only [Operations.interactionsWith] at readEmpty addressEmpty ⊢
+  simp only [GeneralFormalCircuit.toSubcircuit_interactions, readEmpty, addressEmpty, List.nil_append]
+  rfl
 
 def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs MemoryMsg where
   main := main image

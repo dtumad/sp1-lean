@@ -1,7 +1,5 @@
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider
-import SP1Clean.Native.Operations.OrderedBoundary
-import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Model.Semantics.Decode
+import SP1Clean.Proofs.Chips.OrderedMemoryProvider
 import SP1Clean.Proofs.Chips.InitialRamProvider
 import SP1Clean.Proofs.Chips.InitialRegisterProvider
 
@@ -20,29 +18,7 @@ open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels SP1Clean.S
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 variable {Payload : TypeMap} [ProvableType Payload]
 
-private def oneWord : Word (ZMod p) := bitVecToWord 1
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem key_of_addition (image : ProgramImage) (record : MemoryMsg (ZMod p))
-    (current : Word (ZMod p)) (valid : MemoryBoundary.InitialSpec image record)
-    (currentBound : Word.isU64 current)
-    (addition : Word.toBitVec64 current = Word.toBitVec64 (MemoryBoundary.address record) + 1) :
-    Word.toNat current = (MemoryMsg.locOf record).busAddress + 1 := by
-  have address := valid.2.2.2.2.2
-  have bound := MemLoc.busAddress_lt_two_pow_48 valid.2.2.2.1
-  have equal := congrArg BitVec.toNat addition
-  rw [Word.toBitVec64_toNat currentBound, BitVec.toNat_add,
-    Word.toBitVec64_toNat address.1, address.2,
-    show (1 : BitVec 64).toNat = 1 by decide] at equal
-  exact equal.trans (Nat.mod_eq_of_lt (by omega))
-
-def main (name : String) (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
-    (input : Var (Inputs Payload) (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
-  let record ← provider input.payload
-  let _ ← OrderedBoundary.circuit name input.link
-  assertion AddOperation.circuit
-    ⟨MemoryBoundary.address record, const oneWord, ⟨input.link.current⟩, 1⟩
-  return record
+abbrev main := @OrderedMemoryProvider.main
 
 /-- The wrapper's control interactions are precisely the checked predecessor/current pair.
 The provider's interface must omit this private channel; its Memory/Byte effects remain intact. -/
@@ -52,61 +28,15 @@ theorem main_interactions (name : String) (distinct : name ≠ "SP1Byte")
     (input : Var (Inputs Payload) (ZMod p)) (offset : ℕ) :
     ((main name provider input).operations offset).interactionsWith (OrderedBoundary.channel name).toRaw =
       [((OrderedBoundary.channel name).pulled input.link.previous).toRaw,
-       ((OrderedBoundary.channel name).pushed input.link.current).toRaw] := by
-  have providerEmpty (payload : Var Payload (ZMod p)) (n : ℕ) :=
-    InteractionRecovery.interactionsWith_main_eq_nil provider.base
-      (OrderedBoundary.channel name).toRaw payload n privateChannel
-  have addEmpty (args : Var AddOperation.Inputs (ZMod p)) (n : ℕ) :=
-    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddOperation.circuit
-      (OrderedBoundary.channel name).toRaw args
-      (by change (OrderedBoundary.channel (p := p) name).toRaw ∉
-            [Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw]
-          simp only [List.mem_cons, List.not_mem_nil, OrderedBoundary.channel_ne_byte name distinct, or_self, not_false_eq_true])
-      (by change (OrderedBoundary.channel (p := p) name).toRaw ∉ []; exact List.not_mem_nil) (n := n)
-  simp only [main, circuit_norm, addEmpty, List.append_nil]
-  have linkExact (n : ℕ) := OrderedBoundary.main_interactions name distinct input.link n
-  simp only [Operations.interactionsWith] at providerEmpty linkExact
-  simp only [GeneralFormalCircuit.toSubcircuit_interactions, providerEmpty,
-    OrderedBoundary.circuit, linkExact, List.nil_append]
-  rfl
+       ((OrderedBoundary.channel name).pushed input.link.current).toRaw] :=
+  OrderedMemoryProvider.main_interactions name distinct provider privateChannel input offset
 
 def circuit (name : String) (image : ProgramImage)
     (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
     (binds : ∀ input output data, provider.Spec input output data → MemoryBoundary.InitialSpec image output) :
-    GeneralFormalCircuit (ZMod p) (Inputs Payload) MemoryMsg where
-  main := main name provider
-  Assumptions input data := provider.Assumptions input.payload data
-  Spec input output _ := Spec image input.link output
-  ProverAssumptions input data hint :=
-    provider.ProverAssumptions input.payload data hint ∧ provider.Assumptions input.payload data ∧
-      OrderedBoundary.ProverAssumptions input.link ∧
-        ∀ output, provider.Spec input.payload output data →
-          Word.toBitVec64 input.link.current = Word.toBitVec64 (MemoryBoundary.address output) + 1
-  channelsWithRequirements := provider.channelsWithRequirements ++ [(OrderedBoundary.channel name).toRaw]
-  soundness := by
-    circuit_proof_start [OrderedBoundary.circuit, MemoryBoundary.address]
-    have one : Vector.map (Expression.eval env) (Vector.map Expression.const (oneWord (p := p))) =
-        oneWord := by simp only [Vector.map_map, Function.comp_def, Expression.eval]; exact Vector.map_id _
-    rw [one] at h_holds
-    have valid := binds _ _ _ (h_holds.1 h_assumptions)
-    have addition := h_holds.2.2 ⟨fun _ => ⟨valid.2.2.2.2.2.1, isU64_bitVecToWord _⟩, Or.inr rfl⟩
-    have key := key_of_addition image _ _ valid h_holds.2.1.2.1 (by
-      simpa only [oneWord, toBitVec64_bitVecToWord, MemoryBoundary.address] using (addition rfl).2)
-    exact ⟨⟨valid, h_holds.2.1, key⟩, Or.inr h_assumptions⟩
-  completeness := by
-    circuit_proof_start [OrderedBoundary.circuit, MemoryBoundary.address]
-    have one : Vector.map (Expression.eval env.toEnvironment)
-        (Vector.map Expression.const (oneWord (p := p))) = oneWord := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    rw [one]
-    have spec := (h_env.1 h_assumptions.1).1 h_assumptions.2.1
-    have valid := binds _ _ _ spec
-    refine ⟨h_assumptions.1, h_assumptions.2.2.1,
-      ⟨⟨fun _ => ⟨valid.2.2.2.2.2.1, isU64_bitVecToWord _⟩, Or.inr rfl⟩, ?_⟩⟩
-    intro _
-    refine ⟨h_assumptions.2.2.1.1.2.1, ?_⟩
-    simpa only [oneWord, toBitVec64_bitVecToWord] using h_assumptions.2.2.2 _ spec
+    GeneralFormalCircuit (ZMod p) (Inputs Payload) MemoryMsg :=
+  OrderedMemoryProvider.circuit name (MemoryBoundary.InitialSpec image) provider binds
+    (fun _ valid => valid.canonical)
 
 /-- Both classes of initial records share one address-ordering channel. -/
 def channelName : String := "SP1NativeMemoryInitOrder"
@@ -120,9 +50,7 @@ def registerCircuit (image : ProgramImage) :
   circuit channelName image (InitialRegisterProvider.circuit image) (fun _ _ _ valid => valid.1)
 
 /-- Construct the control columns from the payload and its semantic address. -/
-def populate (payload : Payload (ZMod p)) (previous address : ℕ) : Inputs Payload (ZMod p) :=
-  ⟨payload, OrderedBoundary.populate (bitVecToWord (BitVec.ofNat 64 previous))
-    (bitVecToWord (BitVec.ofNat 64 (address + 1)))⟩
+abbrev populate := @OrderedMemoryProvider.populate
 
 /-- A provider that preserves its query admits the ordered wrapper's honest constructor.
 In particular, the universally quantified internal output condition is discharged here rather
@@ -137,20 +65,8 @@ theorem populate_assumptions (name : String) (image : ProgramImage)
     (bound : query payload < 2 ^ 48) (increases : previous < query payload + 1) :
     (circuit name image provider (fun input output data spec => (bindsAt input output data spec).1)).ProverAssumptions
       (populate payload previous (query payload)) data hint := by
-  have previousBound : previous < 2 ^ 64 := by omega
-  have currentBound : query payload + 1 < 2 ^ 64 := by omega
-  refine ⟨prover, assumes, ?_, ?_⟩
-  · apply OrderedBoundary.populate_assumptions _ _ (isU64_bitVecToWord _) (isU64_bitVecToWord _)
-    rw [endpoint_toNat _ previousBound, endpoint_toNat _ currentBound]
-    exact increases
-  · intro output spec
-    have valid := bindsAt payload output data spec
-    change Word.toBitVec64 (bitVecToWord (BitVec.ofNat 64 (query payload + 1))) = _
-    rw [toBitVec64_bitVecToWord]
-    apply BitVec.eq_of_toNat_eq
-    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt currentBound, BitVec.toNat_add,
-      Word.toBitVec64_toNat valid.1.2.2.2.2.2.1, valid.2,
-      show (1 : BitVec 64).toNat = 1 by decide, Nat.mod_eq_of_lt currentBound]
+  exact OrderedMemoryProvider.populate_assumptions name (MemoryBoundary.InitialSpec image) provider
+    query bindsAt (fun _ valid => valid.canonical) payload previous data hint prover assumes bound increases
 
 /-- The complete ordered RAM row constructor has no proof inputs or external column hints. -/
 def populateRam? (image : ProgramImage) (previous address : ℕ) :

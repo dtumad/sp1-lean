@@ -619,9 +619,21 @@ physical boundary rows and fixed verifier pair; auxiliary tables must omit this 
 The unit-balance bridge retains Clean's characteristic/count bound. Empty and mixed inventories,
 duplicate records/terminals, missing terminals, and disconnected rows have executable regressions.
 
+The shared `OrderedMemoryProvider.circuit` now serves both initialization and finalization;
+`OrderedInitialProvider.circuit` preserves the initialization interface as a specialization.
+`FinalRegisterProvider.circuit` checks register encoding, and `FinalRamProvider.circuit` checks
+bounded aligned guest RAM encoding. Each finalizer pulls exactly one Memory record; value and
+clock bounds come from the Memory-channel guarantee. `Soundness/FinalMemoryEnsemble.lean` fixes
+its own control endpoints and derives `records_locations_nodup` through the common
+`OrderedMemoryEnsemble.Inventory` argument. Both subsystems' `memory_interactions_eq` theorems
+identify the decoded inventory with the actual physical Memory ledger, without an extra
+record-correspondence premise. Finalizer constructors discharge their internal completeness
+conditions, and both witness programs export. Tests cover malformed final inventories and
+paired initial/final ledgers whose value or clock differs.
+
 These are subsystem results, not the full native capstone. The local table specifications must
 still be derived in the enclosing machine's channel-soundness phase. Replacing the existing
-machine providers, constraining finalization, connecting both boundaries to timed grounding,
+machine providers, connecting both constrained boundaries to timed grounding,
 and closing the rest of `SemanticBoundaryBinding` remain open.
 
 ### 7.3 What is *not* claimed at this layer

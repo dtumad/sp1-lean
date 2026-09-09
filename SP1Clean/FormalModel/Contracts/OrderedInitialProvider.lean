@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.FormalModel.Contracts.OrderedBoundary
+import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 
 /-! # Authenticated initial records with ordered address keys
 
@@ -11,10 +11,7 @@ namespace SP1Clean.OrderedInitialProvider
 
 open SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
 
-structure Inputs (Payload : TypeMap) (F : Type) where
-  payload : Payload F
-  link : OrderedBoundary.Inputs F
-deriving ProvableStruct
+abbrev Inputs := OrderedMemoryProvider.Inputs
 
 variable {p : ℕ} [Fact p.Prime]
 

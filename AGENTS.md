@@ -166,8 +166,13 @@ Mirror-rust layout under `SP1Clean/`:
   control endpoints; `Soundness/OrderedBoundaryEnsemble.lean` derives endpoint balance from the
   actual Clean ledger. The subsystem proves authentic records and per-location uniqueness from
   local table specifications and balance; deriving those local specifications in the enclosing
-  machine and connecting finalization/grounding remain integration work. These are not yet the
-  providers of `sp1Ensemble`;
+  machine and connecting grounding remain integration work. Final register/RAM circuits in
+  `Proofs/Chips/{FinalRegisterProvider,FinalRamProvider,OrderedFinalProvider}.lean` instantiate the
+  same ordering machinery through `Soundness/FinalMemoryEnsemble.lean`. Shared circuit and inventory
+  proofs live in `OrderedMemoryProvider` and `OrderedMemoryEnsemble`; both subsystems identify their
+  decoded records with the actual physical Memory ledger and derive per-location uniqueness.
+  Finalizers receive value/clock guarantees from the Memory bus; last-access meaning remains a
+  global grounding conclusion. These are not yet the providers of `sp1Ensemble`;
   the guest-program execution model (`GuestProgram`, `IsInitialState`, `SailStep`/`SailChain`,
   `SP1Halted`, `exitOf`) lives in `Model/Semantics/GuestProgram.lean`. Relation-level AIR/verifier
   contracts live in `Relations.lean`, `CoreProfile.lean`, `CoreAIRRelation.lean`, `Execution.lean`, and

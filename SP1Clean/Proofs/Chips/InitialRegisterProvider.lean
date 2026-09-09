@@ -1,4 +1,5 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
+import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Model.Channels
 import Clean.Gadgets.Bits
 import Clean.Utils.Tactics
@@ -58,6 +59,15 @@ def main (index : Var field (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)
   let record := message index
   memoryChannel.push record
   return record
+
+theorem main_memory_interactions (index : Var field (ZMod p)) (offset : ℕ) :
+    ((main index).operations offset).interactionsWith memoryChannel.toRaw =
+      [(memoryChannel.pushed (message index)).toRaw] := by
+  have rangeEmpty (n : ℕ) := InteractionRecovery.filter_interactions_formalAssertion_eq_nil
+    (Gadgets.ToBits.rangeCheck 5 indexBound) memoryChannel.toRaw index
+    (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil)
+    (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil) (n := n)
+  simp only [main, circuit_norm, rangeEmpty, List.nil_append]
 
 def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) field MemoryMsg where
   main

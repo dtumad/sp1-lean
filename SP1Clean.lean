@@ -598,10 +598,17 @@ import SP1Clean.FormalModel.Contracts.OrderedBoundary
 import SP1Clean.Native.Operations.OrderedBoundary
 import SP1Clean.Native.Operations.OrderedBoundaryEnd
 import SP1Clean.Native.Operations.OrderedBoundaryVerifier
+import SP1Clean.Proofs.Chips.FinalRamProvider
 import SP1Clean.Proofs.Chips.InitialRamProvider
+import SP1Clean.Proofs.Chips.FinalRegisterProvider
 import SP1Clean.Proofs.Chips.InitialRegisterProvider
+import SP1Clean.Proofs.Chips.OrderedMemoryProvider
+import SP1Clean.Proofs.Chips.OrderedFinalProvider
 import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1Clean.Soundness.InitialMemoryBoundary
+import SP1Clean.Soundness.OrderedMemoryEnsemble
 import SP1Clean.Soundness.OrderedBoundaryEnsemble
+import SP1Clean.Soundness.FinalMemoryEnsemble
 import SP1Clean.Soundness.InitialMemoryEnsemble
+import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

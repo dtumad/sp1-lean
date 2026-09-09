@@ -28,6 +28,11 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.MemoryBoundary.emptyInventory
 #print axioms SP1CleanTest.Core.MemoryBoundary.mixedInventory
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsMalformedInventories
+#print axioms SP1CleanTest.Core.MemoryBoundary.constructedFinalRows
+#print axioms SP1CleanTest.Core.MemoryBoundary.rejectsInvalidFinalRows
+#print axioms SP1CleanTest.Core.MemoryBoundary.finalInventories
+#print axioms SP1CleanTest.Core.MemoryBoundary.rejectsMalformedFinalInventories
+#print axioms SP1CleanTest.Core.MemoryBoundary.pairedMemoryBoundary
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_nativeTraceReady
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorSemanticWitness_trace
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_admissible
