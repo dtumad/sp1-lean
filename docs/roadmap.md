@@ -1,8 +1,51 @@
 # Roadmap
 
 The native 25-chip soundness theorem, every registered chip contract, and every whole-chip
-faithfulness proof are closed. The critical path is no longer chip remediation. It is the semantic
-interpretation of the exact upstream Core system tables.
+faithfulness proof are closed. The current development target is a self-contained native Clean
+ensemble with soundness and constructive completeness for bounded boot-to-HALT execution,
+including constrained inline syscalls. Exact upstream Core refinement remains a separate workstream.
+
+## Native Clean core
+
+The target is equality between the raw Clean ensemble statement and a bounded RISC-V execution
+relation over checked finite inputs. Ordinary steps use official Sail; syscalls use an explicit
+host environment. Program, initial memory, and host transcript are inputs; exit code, public bytes,
+commitment banks, and host requests are outputs. The native profile protects instruction bytes
+against both ordinary stores and host writes. Neither direction may depend on a caller proving
+provider validity, compiler readiness, syscall inactivity, or an execution-dependent totality bundle.
+
+Implemented foundations:
+
+- `ToClean/Air/CompleteEnsemble.lean` packages both correctness directions and a proof-independent
+  compiler whose success domain is proved equal to an independent execution relation.
+- `ToClean/Air/EnsembleExport.lean` exports all components, verifier, channels, and fixed lookups;
+  every lookup realization and channel reference is backed by a Lean proof. Lowering preserves
+  constraints and interactions. Serialization and the Rust interpreter remain explicit trust boundaries.
+- The Rust whole-ensemble checker validates row shapes, fixed lookups, verifier constraints,
+  full-message field balance, and Clean's interaction-count bound. Its row builder executes witness
+  programs for supplied table inputs. The Lean-exported fixture is regenerated in CI.
+- `Model/Core/` provides checked finite program images, sparse byte-memory operations and frame
+  proofs, and executable hint/output/hook-reply operations, including padding-write protection.
+- The fixed program-provider circuit composes the existing provider with complete static-ROM
+  membership. The 25 instruction circuits and faithfulness anchors are unchanged.
+
+Still required before the native capstone can be claimed:
+
+1. Finish executable instruction decoding and initialization refinement, construct the fixed ROM
+   and sparse-image tables, and assemble their constrained uniqueness/continuity boundaries.
+2. Complete the host execution environment, including commitments, control and terminal behavior;
+   integrate host effects and ordinary ROM-write exclusion into the AIR and mixed timed grounding.
+3. Prove the event compiler total on shared semantic resource bounds; construct all native tables
+   and close soundness and completeness for the same boot-to-HALT domain.
+4. Export event routing and provider-assembly recipes and instantiate the generic exporter for the
+   complete native core. The current Rust `build_rows` API consumes assembled inputs; it is not yet
+   the planned event-tape compiler.
+
+The reusable correctness bundle is not yet instantiated for this core. No new unconditional
+RISC-V/AIR equivalence is claimed. Keep the current audited Clean/Lean/Sail pins; public Clean main
+does not yet supply the prover-data agreement fix or remove these native obligations. Cryptographic
+proving, ELF authentication, host implementation correctness, and recursive proof verification are
+separate adapters or workstreams.
 
 ## Current checkpoint
 

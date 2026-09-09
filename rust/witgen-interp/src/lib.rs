@@ -5,12 +5,15 @@
 //! the differential fixtures under `export/testdata/`. Deliberately self-contained:
 //! the crate depends only on the wire format — no prover types, no Lean toolchain.
 //!
-//! Witness generation is completeness-side: a wrong interpreter (or a wrong exported
-//! program) makes a prover fail, never a false proof verify — this crate is a
-//! conformance oracle, not a trusted component.
+//! The row differential is a completeness-side conformance oracle. The separate
+//! `ensemble` module checks full native AIR witnesses; users relying on its acceptance
+//! trust the Rust implementation and the exported instance. It is not a cryptographic
+//! proof verifier, and it does not establish RISC-V semantics for an arbitrary instance.
 
 pub mod check;
 pub mod eval;
+pub mod ensemble;
+pub mod ensemble_wire;
 pub mod field;
 pub mod fixtures;
 pub mod wire;

@@ -1,4 +1,7 @@
 import SP1Clean.Proofs.Chips.AddChip.Bridge
+import ToClean.Air.CompleteEnsemble
+import ToClean.Air.EnsembleExport
+import SP1Clean.Proofs.Chips.FixedProgramProvider
 import SP1Clean.Native.Chips.AddChip.Defs
 import SP1Clean.Proofs.Chips.AddChip.Formal
 import SP1Clean.Proofs.Chips.AddChip.Witgen
@@ -340,6 +343,9 @@ import SP1Clean.Model.SailDecode
 import SP1Clean.Model.SailMemory
 import SP1Clean.Model.SailWrap
 import SP1Clean.Model.Machine.Boot
+import SP1Clean.Model.Core.Memory
+import SP1Clean.Model.Core.HostIO
+import SP1Clean.Model.Core.ProgramImage
 import SP1Clean.Model.Machine.Schedule
 import SP1Clean.Model.Machine.Syscall
 import SP1Clean.Model.Machine.EventExecution
@@ -467,7 +473,6 @@ import SP1Clean.Soundness.LocalExecution
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.GenericWalk
-import SP1Clean.Soundness.ExitAccountingSuccessor
 import SP1Clean.Soundness.SyscallGrounding
 import SP1Clean.Soundness.SyscallExecution
 import SP1Clean.Soundness.SyscallTrail

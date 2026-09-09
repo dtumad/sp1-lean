@@ -40,6 +40,21 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Generic native-ensemble interfaces and executable input/host boundaries.
+    ("ToClean/Air/CompleteEnsemble.lean", "CompleteEnsemble.statement_iff"),
+    ("ToClean/Air/CompleteEnsemble.lean", "EnsembleCompiler.succeeds_iff"),
+    ("ToClean/Air/CompleteEnsemble.lean", "EnsembleCompiler.toCompleteEnsemble"),
+    ("ToClean/Air/EnsembleExport.lean", "FiniteLookup.ofStatic"),
+    ("ToClean/Air/EnsembleExport.lean", "Component.export_constraints_iff"),
+    ("ToClean/Air/EnsembleExport.lean", "Component.export_interactions"),
+    ("SP1Clean/Model/Core/Memory.lean", "readBytes_writeBytes"),
+    ("SP1Clean/Model/Core/Memory.lean", "read_writeBytes_of_readOnly"),
+    ("SP1Clean/Model/Core/HostIO.lean", "HostIO.readHint_eq_some_iff"),
+    ("SP1Clean/Model/Core/HostIO.lean", "HostIO.readHint_preserves_readOnly"),
+    ("SP1Clean/Model/Core/HostIO.lean", "HostIO.applyHook_eq_some_iff"),
+    ("SP1Clean/Model/Core/ProgramImage.lean", "toGuestProgram_wellFormed"),
+    ("SP1Clean/Model/Core/ProgramImage.lean", "check_isSome_iff"),
+    ("SP1Clean/Proofs/Chips/FixedProgramProvider.lean", "circuit"),
     # One production field spelling and the common shard/bus representation laws.
     ("SP1Clean/Model/SP1Field.lean", "sp1Prime_prime"),
     ("SP1Clean/Model/SP1Field.lean", "pow17_lt_sp1Prime"),
@@ -538,7 +553,7 @@ def main() -> None:
             # it is the native_decide quarantine). Those go to the separate test probe, importing
             # each module explicitly so its FQNs resolve there.
             rel = path.relative_to(ROOT)
-            if rel.parts[0] != "SP1Clean":
+            if rel.parts[0] == "SP1CleanTest":
                 test_fqns.extend(found)
                 mod = ".".join(rel.with_suffix("").parts)
                 if mod not in seen_imports:

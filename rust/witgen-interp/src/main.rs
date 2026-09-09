@@ -14,6 +14,7 @@ use std::process::exit;
 fn usage() -> ! {
     eprintln!("usage: witgen-interp check --export-dir DIR [--chip NAME] [--verbose]");
     eprintln!("       witgen-interp bench --export-dir DIR --chip NAME [--iters N]");
+    eprintln!("       witgen-interp check-ensemble --instance FILE --trace FILE");
     exit(2);
 }
 
@@ -22,6 +23,36 @@ fn main() {
     let mut it = args.iter();
     let mode = it.next().map(|s| s.to_string());
     let mode = mode.as_deref();
+    if mode == Some("check-ensemble") {
+        let mut instance = None;
+        let mut trace = None;
+        while let Some(arg) = it.next() {
+            match arg.as_str() {
+                "--instance" if instance.is_none() => instance = it.next().map(PathBuf::from),
+                "--trace" if trace.is_none() => trace = it.next().map(PathBuf::from),
+                _ => usage(),
+            }
+        }
+        let instance = instance.unwrap_or_else(|| usage());
+        let trace = trace.unwrap_or_else(|| usage());
+        let read_json = |path: &PathBuf| -> Result<serde_json::Value, String> {
+            let bytes = std::fs::read(path).map_err(|error| format!("{}: {error}", path.display()))?;
+            serde_json::from_slice(&bytes).map_err(|error| format!("{}: {error}", path.display()))
+        };
+        let checked = (|| -> Result<(), String> {
+            let instance = witgen_interp::ensemble_wire::parse_instance(&read_json(&instance)?)?;
+            let trace = witgen_interp::ensemble_wire::parse_trace(&read_json(&trace)?)?;
+            instance.check_trace::<witgen_interp::field::KoalaBear>(&trace)
+        })();
+        match checked {
+            Ok(()) => println!("witgen-interp: native ensemble constraints and channel balance hold."),
+            Err(error) => {
+                eprintln!("witgen-interp: {error}");
+                exit(1);
+            }
+        }
+        return;
+    }
     if mode != Some("check") && mode != Some("bench") {
         usage();
     }

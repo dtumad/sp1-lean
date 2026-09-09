@@ -262,6 +262,39 @@ Row provenance is honest:
 the **shared** operation list — the same programs the wire carries
 (`WitgenIR.eval_share`).
 
+## Whole-ensemble instances
+
+`ToClean/Air/EnsembleExport.lean` additionally emits a version-1 ensemble envelope. It has
+`version`, `modulus`, `components`, `verifier`, `channels`, and `fixedTables` fields. Each component
+has `name`, `inputWidth`, and `program` (the witness format above). A channel has `name` and `width`;
+a fixed table has `name`, `width`, and canonical field-element `rows`. The verifier is a component
+with zero local witness length and runs exactly once on the public input. Names are unique within
+each inventory. Component order determines trace-table order.
+
+Trace JSON has `version: 1`, `publicInput`, and `tables`; tables contain complete native rows,
+including witness cells. No SP1 reconfiguration or Rust row map is involved. Check it with:
+
+```sh
+cargo run --manifest-path rust/witgen-interp/Cargo.toml -- check-ensemble \
+  --instance export/ensemble/lookup.instance.json --trace export/ensemble/lookup.valid.json
+```
+
+The checker rejects wrong widths, noncanonical values, missing/ambiguous lookup and channel
+descriptors, failed lookups/assertions, and unbalanced messages. Every interaction occurrence,
+including multiplicity zero, counts towards Clean's strict characteristic bound. Fixed-table
+contents belong to the instance, never to witness data. The Lean exporter requires a proof that
+these contents realize each original lookup predicate independently of prover data.
+
+The Rust `Instance.build_rows` library API runs witness programs for already assembled table
+inputs and then checks the complete ensemble. Event routing and provider construction remain
+separate compiler work. This executable AIR checker is not a cryptographic verifier; relying on
+its acceptance trusts the instance's provenance, serialization, and Rust implementation.
+
+`scripts/ensembleExportFixture.lean` is the sole writer of `export/ensemble/`.
+`bash scripts/check_ensemble_export.sh` regenerates into an ignored workspace directory and
+compares every fixture. Cargo tests accept its valid trace and reject a trace with balanced
+channels but forged fixed-lookup contents.
+
 ## SP1-specific facts a consumer may rely on
 
 - All 25 chips use `hintGet` only — `data` schemas are empty (`dataGet` support in an

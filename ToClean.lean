@@ -5,5 +5,7 @@ import ToClean.Circuit.WitnessGenerationData
 import ToClean.Circuit.InteractionRecovery
 import ToClean.Gadgets.ComputableWitnesses
 import ToClean.Air.EnsembleBuild
+import ToClean.Air.CompleteEnsemble
+import ToClean.Air.EnsembleExport
 import ToClean.Air.TableBuild
 import ToClean.Tactic.GetElemFastPath

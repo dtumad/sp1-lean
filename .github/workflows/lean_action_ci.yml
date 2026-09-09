@@ -142,6 +142,8 @@ jobs:
           use-github-cache: "true"
       - name: Conformance tests (lake test)
         run: lake test
+      - name: Whole-ensemble export identity
+        run: bash scripts/check_ensemble_export.sh
       # The committed export/witgen goldens must match a fresh regeneration byte-for-byte.
       # This runs here (not in `guards`) because the exporter needs the SP1CleanTest oleans
       # that `lake test` just built — golden drift on a Clean pin bump is caught automatically.

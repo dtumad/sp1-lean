@@ -100,6 +100,18 @@ class ProbeInventoryTests(unittest.TestCase):
             self.run_generator("--check")
         self.assertFalse(self.main_probe.exists())
 
+    def test_upstream_additions_are_in_the_main_census(self):
+        source = self.root / "ToClean" / "Example.lean"
+        source.parent.mkdir()
+        source.write_text("namespace Air\ntheorem exported : True := by trivial\nend Air\n")
+        with patch.object(probes, "TARGETS", [
+            *probes.TARGETS,
+            ("ToClean/Example.lean", r"theorem\s+(exported)\b"),
+        ]):
+            self.run_generator()
+        self.assertIn("#print axioms Air.exported\n", self.main_probe.read_text())
+        self.assertNotIn("Air.exported", self.test_probe.read_text())
+
 
 if __name__ == "__main__":
     unittest.main()

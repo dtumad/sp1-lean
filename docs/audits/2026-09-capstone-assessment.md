@@ -4,6 +4,11 @@ Assessment date: 2026-09-08. This records a review of the eight unmerged pull re
 repairs made while preparing a single development for external review. It is a reproducible
 baseline and a scope decision aid, not an independent certification of the entire development.
 
+The subsequent accepted target is a self-contained native Clean soundness/completeness capstone,
+including constrained inline host effects and whole-ensemble Rust export. The choices below record
+the original assessment; current implementation status and remaining proofs are maintained in
+the [roadmap](../roadmap.md#native-clean-core).
+
 The stack already has one combined tip. Its instruction verification, native grounding, and
 ordinary-shard compiler form a substantial closed development, with explicit restrictions.
 Full exact-Core soundness is still a separate proof project. Active syscall support also needs

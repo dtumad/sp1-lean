@@ -112,7 +112,10 @@ pub enum Op {
         output: VExpr,
     },
     Assert(Expr),
-    Lookup,
+    Lookup {
+        table: String,
+        entry: Vec<Expr>,
+    },
     Interact {
         channel: String,
         multiplicity: Expr,
@@ -145,7 +148,7 @@ fn num(v: &Value, path: &str) -> PResult<u64> {
 }
 
 fn idx(v: &Value, path: &str) -> PResult<usize> {
-    Ok(num(v, path)? as usize)
+    usize::try_from(num(v, path)?).map_err(|_| format!("{path}: index exceeds host usize"))
 }
 
 fn tag<'a>(m: &'a serde_json::Map<String, Value>, path: &str) -> PResult<&'a str> {
@@ -382,6 +385,9 @@ pub fn parse_step(v: &Value, path: &str) -> PResult<Step> {
 
 pub fn parse_program(v: &Value) -> PResult<Program> {
     let m = obj(v, "$")?;
+    if m.len() != 3 || m.keys().any(|key| !["version", "localLength", "operations"].contains(&key.as_str())) {
+        return Err("$: expected exactly version, localLength, and operations".into());
+    }
     let version = num(get(m, "version", "$")?, "$.version")?;
     if version != 1 {
         return Err(format!("$.version: unsupported wire version {version}"));
@@ -394,6 +400,15 @@ pub fn parse_program(v: &Value) -> PResult<Program> {
     for (i, op) in ops_v.iter().enumerate() {
         let path = format!("operations[{i}]");
         let om = obj(op, &path)?;
+        let forms = ["witness", "assert", "lookup", "interact"];
+        if forms.iter().filter(|key| om.contains_key(**key)).count() != 1
+            || om
+                .keys()
+                .any(|key| !forms.contains(&key.as_str()) && key != "code")
+            || (om.contains_key("code") && !om.contains_key("witness"))
+        {
+            return Err(format!("{path}: ambiguous or unknown operation form"));
+        }
         if let Some(mv) = om.get("witness") {
             let m_cells = idx(mv, &format!("{path}.witness"))?;
             let code = obj(get(om, "code", &path)?, &format!("{path}.code"))?;
@@ -415,8 +430,24 @@ pub fn parse_program(v: &Value) -> PResult<Program> {
             });
         } else if let Some(av) = om.get("assert") {
             ops.push(Op::Assert(parse_expr(av, &format!("{path}.assert"))?));
-        } else if om.contains_key("lookup") {
-            ops.push(Op::Lookup);
+        } else if let Some(lv) = om.get("lookup") {
+            let lm = obj(lv, &format!("{path}.lookup"))?;
+            if lm.len() != 2 {
+                return Err(format!("{path}.lookup: expected exactly table and entry"));
+            }
+            let table = get(lm, "table", &path)?
+                .as_str()
+                .ok_or_else(|| format!("{path}.lookup.table: expected string"))?
+                .to_string();
+            let entries = get(lm, "entry", &path)?
+                .as_array()
+                .ok_or_else(|| format!("{path}.lookup.entry: expected array"))?;
+            let entry = entries
+                .iter()
+                .enumerate()
+                .map(|(j, value)| parse_expr(value, &format!("{path}.lookup.entry[{j}]")))
+                .collect::<PResult<Vec<_>>>()?;
+            ops.push(Op::Lookup { table, entry });
         } else if let Some(iv) = om.get("interact") {
             let im = obj(iv, &format!("{path}.interact"))?;
             let channel = get(im, "channel", &format!("{path}.interact"))?

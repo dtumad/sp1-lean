@@ -61,7 +61,12 @@ These layers are parallel workstreams and may be owned by different developers. 
 Plonk, and Groth16 are separate verifier targets; pin **Core** first. Parsing may initially be delegated
 to a canonical Rust exporter so it does not obscure the verifier/refinement boundary.
 
-**This workstream's current priority:** instantiate the exact v6.4.0 Core AIR refinement bundle. Native
+**This workstream's current priority:** close the native Clean boot-to-HALT soundness/completeness
+capstone with checked finite inputs, constrained inline host effects, and generic whole-ensemble
+export. The generic interfaces, finite-image/host-I/O substrate, fixed program provider, and Rust
+ensemble checker are implemented; the integrated native capstone is not. Its exact remaining work
+is in `docs/roadmap.md` under "Native Clean core". Preserve the 25 instruction faithfulness anchors;
+exact v6.4.0 Core AIR refinement remains separate. Native
 timed grounding, every one of the 25 chip contracts, and `supported_core_native_sound` are closed. The
 paired 34-table execution and 6-table memory-boundary shard relation exists, but full upstream soundness remains open
 until the six Core system tables derive the native boundary facts and
