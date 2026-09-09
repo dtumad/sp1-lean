@@ -157,6 +157,12 @@ Mirror-rust layout under `SP1Clean/`:
   and `Model/Core/Boot.lean` proves initialization for every checked finite image. The native
   initial-memory byte/word contracts live in `Contracts/InitialMemory{,Read}.lean`, with concrete
   sparse interval tables under `Model/Core/` and circuits in `Native/Operations/InitialMemory{Lookup,Read}.lean`;
+  `Contracts/MemoryBoundary.lean` and `Contracts/OrderedInitialProvider.lean` expose the native
+  providers' boot-value, query-address, and control-key contracts. Their implementations are in
+  `Proofs/Chips/{InitialRamProvider,InitialRegisterProvider,OrderedInitialProvider}.lean`, with
+  `Native/Operations/OrderedBoundary.lean` supplying the strict control link and
+  `Soundness/InitialMemoryBoundary.lean` deriving uniqueness from endpoint balance. These are not
+  yet the providers of `sp1Ensemble`;
   the guest-program execution model (`GuestProgram`, `IsInitialState`, `SailStep`/`SailChain`,
   `SP1Halted`, `exitOf`) lives in `Model/Semantics/GuestProgram.lean`. Relation-level AIR/verifier
   contracts live in `Relations.lean`, `CoreProfile.lean`, `CoreAIRRelation.lean`, `Execution.lean`, and

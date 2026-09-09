@@ -593,3 +593,11 @@ import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
 import SP1Clean.Proofs.Completeness.NativeProgramAgreement
 import SP1Clean.Proofs.Completeness.NativeBoundaryAgreement
 import SP1Clean.Soundness.NativeCompleteness
+import SP1Clean.FormalModel.Contracts.MemoryBoundary
+import SP1Clean.FormalModel.Contracts.OrderedBoundary
+import SP1Clean.Native.Operations.OrderedBoundary
+import SP1Clean.Proofs.Chips.InitialRamProvider
+import SP1Clean.Proofs.Chips.InitialRegisterProvider
+import SP1Clean.Proofs.Chips.OrderedInitialProvider
+import SP1Clean.Soundness.InitialMemoryBoundary
+import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

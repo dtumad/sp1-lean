@@ -186,4 +186,72 @@ theorem exists_exhaustiveTrail_of_endpointBalanced (edges : Multiset Edge)
   exists_exhaustiveTrail edges edge rank initial final
     (balanced_of_endpointBalanced edges edge initial final balanced) increases
 
+omit [DecidableEq Edge] [DecidableEq Vertex] in
+private theorem targets_pairwise_of_isWalk (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ)
+    {initial final : Vertex} {path : List Edge} (walk : IsWalk edge initial final path)
+    (increases : ∀ row ∈ path, rank (edge row).1 < rank (edge row).2) :
+    (∀ row ∈ path, rank initial < rank (edge row).2) ∧
+      (path.map fun row => (edge row).2).Pairwise (fun a b => rank a < rank b) := by
+  induction path generalizing initial with
+  | nil => simp
+  | cons row rest ih =>
+      obtain ⟨source, tail⟩ := walk
+      have next := increases row (List.mem_cons_self ..)
+      have suffix := ih tail (fun other member => increases other (List.mem_cons_of_mem _ member))
+      constructor
+      · intro other member
+        rcases List.mem_cons.mp member with rfl | member
+        · simpa only [source] using next
+        · exact lt_trans (source ▸ next) (suffix.1 other member)
+      · rw [List.map_cons, List.pairwise_cons]
+        refine ⟨?_, suffix.2⟩
+        intro vertex member
+        obtain ⟨other, otherMember, rfl⟩ := List.mem_map.mp member
+        exact suffix.1 other otherMember
+
+/-- Balance and a strict local rank force destination uniqueness. This is the boundary-provider
+payoff: assigning each address to the target of an ordered control edge rules out duplicate
+initial/final records, including identical duplicate rows in the witness multiset. -/
+theorem targets_nodup_of_endpointBalanced (edges : Multiset Edge)
+    (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ) (initial final : Vertex)
+    (balanced : EndpointBalanced edges edge initial final)
+    (increases : ∀ row ∈ edges, rank (edge row).1 < rank (edge row).2) :
+    (edges.map fun row => (edge row).2).Nodup := by
+  obtain ⟨path, walk, exhaustive⟩ :=
+    exists_exhaustiveTrail_of_endpointBalanced edges edge rank initial final balanced increases
+  have sorted := (targets_pairwise_of_isWalk edge rank walk (fun row member =>
+    increases row (exhaustive ▸ Multiset.mem_coe.mpr member))).2
+  have unique : (path.map fun row => (edge row).2).Nodup :=
+    sorted.imp (fun smaller => fun equal => (ne_of_lt smaller) (congrArg rank equal))
+  rw [← exhaustive, Multiset.map_coe, Multiset.coe_nodup]
+  exact unique
+
+omit [DecidableEq Edge] [DecidableEq Vertex] in
+/-- Endpoint balance survives any projection of the structural channel key. -/
+theorem EndpointBalanced.map {Other : Type*} (edges : Multiset Edge)
+    (edge : Edge → Vertex × Vertex) (initial final : Vertex)
+    (balanced : EndpointBalanced edges edge initial final) (project : Vertex → Other) :
+    EndpointBalanced edges (fun row => (project (edge row).1, project (edge row).2))
+      (project initial) (project final) := by
+  simpa only [EndpointBalanced, Multiset.map_cons, Multiset.map_map, Function.comp_apply] using
+    congrArg (Multiset.map project) balanced
+
+omit [DecidableEq Vertex] in
+/-- Keys tied to a destination rank inherit uniqueness, without requiring an injective encoding
+or a caller-supplied uniqueness premise. -/
+theorem keys_nodup_of_endpointBalanced {Key : Type*} (edges : Multiset Edge)
+    (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ) (key : Edge → Key) (encode : Key → ℕ)
+    (initial final : Vertex) (balanced : EndpointBalanced edges edge initial final)
+    (increases : ∀ row ∈ edges, rank (edge row).1 < rank (edge row).2)
+    (keyEq : ∀ row ∈ edges, rank (edge row).2 = encode (key row)) :
+    (edges.map key).Nodup := by
+  have projected := balanced.map edges edge initial final rank
+  have unique := targets_nodup_of_endpointBalanced edges _ id _ _ projected increases
+  have mapped : edges.map (fun row => rank (edge row).2) = (edges.map key).map encode := by
+    rw [Multiset.map_map]
+    apply Multiset.map_congr rfl
+    exact keyEq
+  rw [mapped] at unique
+  exact Multiset.Nodup.of_map _ unique
+
 end SP1Clean.Soundness.RankedGrounding

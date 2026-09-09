@@ -1,6 +1,7 @@
 import SP1CleanTest.Core.ProgramImage
 import SP1CleanTest.Core.InitialMemoryLookup
 import SP1CleanTest.Core.InitialMemoryRead
+import SP1CleanTest.Core.MemoryBoundary
 import SP1CleanTest.Audit.NativeCompletenessNonVacuity
 import SP1CleanTest.Audit.JointNonVacuity
 import SP1CleanTest.Audit.ActiveNativeCompleteness
@@ -20,6 +21,10 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.InitialMemoryLookup.rejectsForgedRows
 #print axioms SP1CleanTest.Core.InitialMemoryRead.constructedWordRows
 #print axioms SP1CleanTest.Core.InitialMemoryRead.rejectsWrongOffset
+#print axioms SP1CleanTest.Core.MemoryBoundary.constructedRamRows
+#print axioms SP1CleanTest.Core.MemoryBoundary.constructedRegisterRows
+#print axioms SP1CleanTest.Core.MemoryBoundary.rejectsUnrelatedKeys
+#print axioms SP1CleanTest.Core.MemoryBoundary.rejectsInvalidBoundaryRows
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_nativeTraceReady
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorSemanticWitness_trace
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_admissible

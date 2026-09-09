@@ -1,7 +1,7 @@
 # Formal Verification of SP1 Core Instruction AIRs and Native AIR-to-Execution Refinement in Lean — Technical Report
 
 *sp1-clean-native — a Clean-native, semantically-specified verification of SP1's RISC-V chips.*
-*Snapshot: 2026-08 (repository tree at this document's commit; Lean v4.32.2 + Sail v5; SP1 semantic pin
+*Snapshot: 2026-09 (repository tree at this document's commit; Lean v4.32.2 + Sail v5; SP1 semantic pin
 `v6.4.0`).*
 
 > **Line-number caveat.** Declarations are cited by name and file; line numbers appear only where
@@ -603,9 +603,16 @@ accepted `ProgramImage`. Its bytes and 64-bit memory words equal the ROM-overlai
 zero defaults. `InitialMemoryLookup.circuit` and `InitialMemoryRead.circuit` authenticate byte and
 word reads against concrete image-derived interval rows; both have proved constructors and
 exportable witness programs. `InitialMemoryRead.Spec.initialSailState` connects the word contract
-to that Sail state. This closes local initial-value binding, but these circuits have not yet replaced
-the machine's memory providers: provider uniqueness and the rest of `SemanticBoundaryBinding`
-remain open at the ensemble boundary.
+to that Sail state. `InitialRamProvider.circuit` and `InitialRegisterProvider.circuit` now emit
+canonical zero-time Memory records whose values and addresses are bound to the requested boot
+location (`FormalModel/Contracts/MemoryBoundary.lean`). The generic `OrderedInitialProvider.circuit`
+composes either provider with a strictly increasing control link and constrains its key to the
+canonical address plus one. Its executable row constructors discharge the internal completeness
+conditions, and the combined witness programs are exportable. The shared
+`Soundness/InitialMemoryBoundary.lean` theorem `locations_nodup` derives location uniqueness from
+endpoint balance. These new circuits have not yet replaced the machine's providers: integrating
+the fixed control endpoints, deriving their balance from the actual ensemble ledger, constraining
+finalization, and closing the rest of `SemanticBoundaryBinding` remain open.
 
 ### 7.3 What is *not* claimed at this layer
 

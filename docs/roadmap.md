@@ -34,14 +34,22 @@ Implemented foundations:
   reads from this concrete fixed table. Their executable constructors supply all internal columns
   on exactly the bounded read domain, and their witness programs are exportable. Word-read
   correctness reaches the initial Sail state's memory through the public semantic contract.
+- Native register/RAM providers now push authenticated zero-time records directly to the Memory
+  bus, preserve the requested address, and prove canonical address encoding. Their ordered wrappers
+  constrain each control key to that address plus one. A shared theorem derives per-location
+  uniqueness from endpoint balance, including mixed register/RAM rows and duplicate witness rows.
+  Constructors discharge the wrappers' completeness conditions; ordered RAM construction succeeds
+  exactly on aligned guest cells whose key exceeds the preceding key. Both witness programs export.
 - The fixed program-provider circuit composes the existing provider with complete static-ROM
   membership. The 25 instruction circuits and faithfulness anchors are unchanged.
 
 Still required before the native capstone can be claimed:
 
-1. Finish executable instruction decoding and construct the decoded fixed ROM. Assemble the
-   initial-memory word circuit into register/RAM providers and constrain per-location uniqueness
-   and boundary continuity. Interval coverage alone does not constrain uniqueness of provider rows.
+1. Finish executable instruction decoding and construct the decoded fixed ROM. Integrate the new
+   ordered initial providers into the native ensemble, close their fixed start/end control boundary,
+   and derive endpoint balance from its actual ledger. Apply the same uniqueness discipline to
+   finalization and connect both boundaries to timed grounding. The new row circuits and ordering
+   theorem have not yet replaced the existing ensemble's semantic boundary premise.
 2. Complete the host execution environment, including commitments, control and terminal behavior;
    integrate host effects and ordinary ROM-write exclusion into the AIR and mixed timed grounding.
 3. Prove the event compiler total on shared semantic resource bounds; construct all native tables
