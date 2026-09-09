@@ -254,4 +254,15 @@ theorem keys_nodup_of_endpointBalanced {Key : Type*} (edges : Multiset Edge)
   rw [mapped] at unique
   exact Multiset.Nodup.of_map _ unique
 
+omit [DecidableEq Vertex] in
+/-- List form of distinct destination ranks. The list-to-multiset transport is checked over
+opaque rows, so applications to decoded physical AIR tables do not unfold their decoders. -/
+theorem rankedKeys_nodup_list (rows : List Edge) (edge : Edge → Vertex × Vertex)
+    (rank : Vertex → ℕ) (initial final : Vertex)
+    (balanced : EndpointBalanced (↑rows : Multiset Edge) edge initial final)
+    (strict : ∀ row ∈ rows, rank (edge row).1 < rank (edge row).2) :
+    (rows.map fun row => rank (edge row).2).Nodup := by
+  exact keys_nodup_of_endpointBalanced _ edge rank
+    (fun row => rank (edge row).2) id initial final balanced strict (fun _ _ => rfl)
+
 end SP1Clean.Soundness.RankedGrounding

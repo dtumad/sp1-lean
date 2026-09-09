@@ -9,4 +9,6 @@ import ToClean.Air.CompleteEnsemble
 import ToClean.Air.EnsembleExport
 import ToClean.Circuit.StaticTable
 import ToClean.Air.TableBuild
+import ToClean.Air.UnitBalance
+import ToClean.Air.TransitionView
 import ToClean.Tactic.GetElemFastPath

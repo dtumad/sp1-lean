@@ -161,8 +161,13 @@ Mirror-rust layout under `SP1Clean/`:
   providers' boot-value, query-address, and control-key contracts. Their implementations are in
   `Proofs/Chips/{InitialRamProvider,InitialRegisterProvider,OrderedInitialProvider}.lean`, with
   `Native/Operations/OrderedBoundary.lean` supplying the strict control link and
-  `Soundness/InitialMemoryBoundary.lean` deriving uniqueness from endpoint balance. These are not
-  yet the providers of `sp1Ensemble`;
+  `Soundness/InitialMemoryBoundary.lean` deriving uniqueness from endpoint balance.
+  `Soundness/InitialMemoryEnsemble.lean` registers the providers and terminal table with fixed
+  control endpoints; `Soundness/OrderedBoundaryEnsemble.lean` derives endpoint balance from the
+  actual Clean ledger. The subsystem proves authentic records and per-location uniqueness from
+  local table specifications and balance; deriving those local specifications in the enclosing
+  machine and connecting finalization/grounding remain integration work. These are not yet the
+  providers of `sp1Ensemble`;
   the guest-program execution model (`GuestProgram`, `IsInitialState`, `SailStep`/`SailChain`,
   `SP1Halted`, `exitOf`) lives in `Model/Semantics/GuestProgram.lean`. Relation-level AIR/verifier
   contracts live in `Relations.lean`, `CoreProfile.lean`, `CoreAIRRelation.lean`, `Execution.lean`, and

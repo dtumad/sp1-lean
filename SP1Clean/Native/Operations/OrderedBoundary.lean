@@ -1,6 +1,7 @@
 import SP1Clean.FormalModel.Contracts.OrderedBoundary
 import SP1Clean.Native.Operations.WordRangeCheck
 import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
+import ToClean.Circuit.InteractionRecovery
 
 /-! # A constrained ordered boundary link
 
@@ -18,6 +19,12 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 def channel (name : String) : Channel (ZMod p) Word where
   name
   Guarantees _ _ := True
+
+omit [Fact (2 ^ 17 < p)] in
+theorem channel_ne_byte (name : String) (distinct : name ≠ "SP1Byte") :
+    (channel (p := p) name).toRaw ≠ Channels.byteChannel.toRaw := by
+  intro equal
+  exact distinct (congrArg RawChannel.name equal)
 
 def ProverAssumptions (input : Inputs (ZMod p)) : Prop :=
   Spec input ∧ input.comparison = LtOperationUnsigned.populate input.previous input.current
@@ -39,6 +46,23 @@ def main (name : String) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit :
   assertZero (input.comparison.u16_compare_operation.bit - 1)
   (channel name).pull input.previous
   (channel name).push input.current
+
+/-- The comparison and range subcircuits contribute no control interactions. -/
+theorem main_interactions (name : String) (distinct : name ≠ "SP1Byte") (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main name input).operations offset).interactionsWith (channel name).toRaw =
+      [((channel name).pulled input.previous).toRaw, ((channel name).pushed input.current).toRaw] := by
+  have wordEmpty (word : Var Word (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil WordRangeCheck.circuit
+      (channel name).toRaw word
+      (by change (channel name).toRaw ∉ ([] : List (RawChannel (ZMod p))); exact List.not_mem_nil)
+      (by simp [WordRangeCheck.circuit]) (n := n)
+  have comparisonEmpty (args : Var LtOperationUnsigned.Inputs (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil LtOperationUnsigned.circuit
+      (channel name).toRaw args
+      (by change (channel name).toRaw ∉ [Channels.byteChannel.toRaw]
+          simpa only [List.mem_singleton] using channel_ne_byte name distinct)
+      (by simp [LtOperationUnsigned.circuit]) (n := n)
+  simp only [main, circuit_norm, wordEmpty, comparisonEmpty, List.nil_append]
 
 def circuit (name : String) : GeneralFormalCircuit (ZMod p) Inputs unit where
   main := main name
@@ -74,5 +98,23 @@ def circuit (name : String) : GeneralFormalCircuit (ZMod p) Inputs unit where
       ⟨⟨fun _ => ⟨previousBound, currentBound⟩, Or.inr rfl⟩, compare⟩, ?_⟩
     dsimp only at result
     rw [result, if_pos increases, sub_self]
+
+/-- Composing the checked link preserves its exact control pair. -/
+theorem subcircuit_interactions (name : String) (distinct : name ≠ "SP1Byte")
+    (input : Var Inputs (ZMod p)) (offset : ℕ) (ops : Operations (ZMod p)) :
+    Operations.interactionsWith (channel name).toRaw
+      (.subcircuit ((circuit name).toSubcircuit offset input) :: ops) =
+      [((channel name).pulled input.previous).toRaw, ((channel name).pushed input.current).toRaw] ++
+        ops.interactionsWith (channel name).toRaw :=
+  InteractionRecovery.interactionsWith_generalSubcircuit_of_main_exact_list
+    (circuit name) (channel name).toRaw input offset ops _ (main_interactions name distinct input offset)
+
+theorem interactionValues (name : String) (distinct : name ≠ "SP1Byte")
+    (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :
+    ((main name input).operations offset).interactionValuesWith (channel name).toRaw env =
+      [(channel name).pulledValue (Eval.eval env input.previous),
+       (channel name).pushedValue (Eval.eval env input.current)] := by
+  simp only [Operations.interactionValuesWith, main_interactions name distinct,
+    List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed]
 
 end SP1Clean.OrderedBoundary

@@ -40,16 +40,25 @@ Implemented foundations:
   uniqueness from endpoint balance, including mixed register/RAM rows and duplicate witness rows.
   Constructors discharge the wrappers' completeness conditions; ordered RAM construction succeeds
   exactly on aligned guest cells whose key exceeds the preceding key. Both witness programs export.
+- `Soundness/InitialMemoryEnsemble.lean` now registers both providers and a terminal table in a
+  Clean initialization subsystem with fixed control endpoints `0` and `2^48 + 1`. Its exact
+  physical ledger yields endpoint balance; local table specifications and that balance prove
+  authentic boot records and uniqueness by decoded memory location. No endpoint permutation or
+  provider-uniqueness premise is supplied. Auxiliary tables must omit the private control channel.
+  This is a compositional subsystem theorem: the enclosing machine must still derive its local
+  table specifications from constraints and channel guarantees. Generic unit-balance and physical
+  transition-view adapters are isolated in `ToClean/Air/`; the fixed verifier and terminal witness
+  programs export. Regressions cover empty/mixed inventories and malformed control ledgers.
 - The fixed program-provider circuit composes the existing provider with complete static-ROM
   membership. The 25 instruction circuits and faithfulness anchors are unchanged.
 
 Still required before the native capstone can be claimed:
 
 1. Finish executable instruction decoding and construct the decoded fixed ROM. Integrate the new
-   ordered initial providers into the native ensemble, close their fixed start/end control boundary,
-   and derive endpoint balance from its actual ledger. Apply the same uniqueness discipline to
-   finalization and connect both boundaries to timed grounding. The new row circuits and ordering
-   theorem have not yet replaced the existing ensemble's semantic boundary premise.
+   initialization subsystem into the full native machine. Its fixed control boundary and actual-ledger
+   uniqueness proof are closed. Apply the same discipline to finalization, derive the subsystem's
+   local table specifications in the enclosing machine, and connect both boundaries to timed
+   grounding. The subsystem has not yet replaced the existing ensemble's semantic boundary premise.
 2. Complete the host execution environment, including commitments, control and terminal behavior;
    integrate host effects and ordinary ROM-write exclusion into the AIR and mixed timed grounding.
 3. Prove the event compiler total on shared semantic resource bounds; construct all native tables

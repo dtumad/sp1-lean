@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1CleanTest.Core.InitialMemoryLookup
+import SP1Clean.Soundness.InitialMemoryEnsemble
 
 /-! # Initial-record and ordered-key AIR regressions
 
@@ -86,5 +87,68 @@ theorem rejectsInvalidBoundaryRows :
      (evaluate (OrderedInitialProvider.ramCircuit image).main (ramInput 0 65537 65538)).1,
      (evaluate (OrderedInitialProvider.registerCircuit image).main (registerInput 0 32 33)).1] =
       [false, false, false, false, false] := by native_decide
+
+private def controlRow {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
+    (program : Var Input Fp → Circuit Fp (Var Output Fp)) (input : Input Fp) :
+    Bool × List (List Fp × Fp) :=
+  let circuit := program (varFromOffset Input 0)
+  let env := (circuit.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
+  let operations := (circuit.operations (size Input)).toFlat
+  let interactions := FlatOperation.interactions operations
+  let bytes := interactions.all fun interaction =>
+    interaction.channel.name != "SP1Byte" || env interaction.mult == 0 ||
+      byteValid (interaction.msg.map env).toList
+  (InitialMemoryLookup.localConstraints image.initialMemory (2 ^ 48) env operations && bytes,
+    (interactions.filter (fun interaction => interaction.channel.name == OrderedInitialProvider.channelName)).map
+      (fun interaction => ((interaction.msg.map env).toList, env interaction.mult)))
+
+private def controlValid (rows : List (Bool × List (List Fp × Fp))) : Bool :=
+  let interactions := rows.flatMap Prod.snd
+  rows.all Prod.fst && decide (interactions.length < SP1Prime) &&
+    interactions.all fun (message, _) =>
+      ((interactions.filter (fun interaction => interaction.1 == message)).map Prod.snd).sum == 0
+
+private def verifierRow : Bool × List (List Fp × Fp) :=
+  controlRow (OrderedBoundaryVerifier.circuit OrderedInitialProvider.channelName
+    (Soundness.InitialMemoryEnsemble.startKey (p := SP1Prime))
+    Soundness.InitialMemoryEnsemble.endKey).main ()
+
+private def terminalRow (previous : ℕ) : Bool × List (List Fp × Fp) :=
+  controlRow (OrderedBoundaryEnd.circuit OrderedInitialProvider.channelName
+    (Soundness.InitialMemoryEnsemble.endKey (p := SP1Prime))).main
+      (OrderedBoundaryEnd.populate (word previous) Soundness.InitialMemoryEnsemble.endKey)
+
+private def initRegisterRow (previous index : ℕ) :=
+  controlRow (OrderedInitialProvider.registerCircuit (p := SP1Prime) image).main
+    (registerInput previous index (index + 1))
+
+/-- info: exportable ✓ (128 witness cells) -/
+#guard_msgs in
+#assert_exportable (OrderedBoundaryEnd.circuit (p := SP1Prime) OrderedInitialProvider.channelName
+  Soundness.InitialMemoryEnsemble.endKey)
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (OrderedBoundaryVerifier.circuit (p := SP1Prime) OrderedInitialProvider.channelName
+  Soundness.InitialMemoryEnsemble.startKey Soundness.InitialMemoryEnsemble.endKey)
+
+/-- The actual fixed verifier and terminal balance an empty inventory without padding rows. -/
+theorem emptyInventory : controlValid [verifierRow, terminalRow 0] = true := by native_decide
+
+/-- Register and RAM rows coordinate through their actual shared ledger, independent of physical order. -/
+theorem mixedInventory : controlValid
+    [verifierRow, initRegisterRow 1 31, initRegisterRow 0 0,
+      controlRow (OrderedInitialProvider.ramCircuit image).main (ramInput 32 65536 65537),
+      terminalRow 65537] = true := by native_decide
+
+/-- Missing/duplicate terminal rows, duplicate initial records, and a disconnected strict row
+fail actual control balance, even though each provider's value is locally authentic. -/
+theorem rejectsMalformedInventories :
+    [controlValid [verifierRow],
+     controlValid [verifierRow, terminalRow 0, terminalRow 0],
+     controlValid [verifierRow, initRegisterRow 0 0, initRegisterRow 0 0, terminalRow 1],
+     controlValid [verifierRow, initRegisterRow 0 0, initRegisterRow 2 3, terminalRow 1],
+     controlValid [verifierRow, terminalRow (2 ^ 48 + 1)]] =
+       [false, false, false, false, false] := by native_decide
 
 end SP1CleanTest.Core.MemoryBoundary

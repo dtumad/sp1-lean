@@ -610,9 +610,19 @@ composes either provider with a strictly increasing control link and constrains 
 canonical address plus one. Its executable row constructors discharge the internal completeness
 conditions, and the combined witness programs are exportable. The shared
 `Soundness/InitialMemoryBoundary.lean` theorem `locations_nodup` derives location uniqueness from
-endpoint balance. These new circuits have not yet replaced the machine's providers: integrating
-the fixed control endpoints, deriving their balance from the actual ensemble ledger, constraining
-finalization, and closing the rest of `SemanticBoundaryBinding` remain open.
+endpoint balance. `Soundness/InitialMemoryEnsemble.lean` now composes these providers with a
+terminal table and a verifier fixing control endpoints to `0` and `2^48 + 1`. Its
+`records_authentic` and `records_locations_nodup` theorems recover authentic, location-unique boot
+records from local table specifications and actual Clean channel balance. The generic
+`OrderedBoundaryEnsemble.interactions_eq` proves that the control ledger contains exactly the
+physical boundary rows and fixed verifier pair; auxiliary tables must omit this private channel.
+The unit-balance bridge retains Clean's characteristic/count bound. Empty and mixed inventories,
+duplicate records/terminals, missing terminals, and disconnected rows have executable regressions.
+
+These are subsystem results, not the full native capstone. The local table specifications must
+still be derived in the enclosing machine's channel-soundness phase. Replacing the existing
+machine providers, constraining finalization, connecting both boundaries to timed grounding,
+and closing the rest of `SemanticBoundaryBinding` remain open.
 
 ### 7.3 What is *not* claimed at this layer
 

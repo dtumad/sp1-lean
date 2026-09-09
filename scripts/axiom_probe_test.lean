@@ -25,6 +25,9 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.MemoryBoundary.constructedRegisterRows
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsUnrelatedKeys
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsInvalidBoundaryRows
+#print axioms SP1CleanTest.Core.MemoryBoundary.emptyInventory
+#print axioms SP1CleanTest.Core.MemoryBoundary.mixedInventory
+#print axioms SP1CleanTest.Core.MemoryBoundary.rejectsMalformedInventories
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_nativeTraceReady
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorSemanticWitness_trace
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_admissible

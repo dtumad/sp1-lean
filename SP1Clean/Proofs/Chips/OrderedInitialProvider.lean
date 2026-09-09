@@ -44,6 +44,32 @@ def main (name : String) (provider : GeneralFormalCircuit (ZMod p) Payload Memor
     ⟨MemoryBoundary.address record, const oneWord, ⟨input.link.current⟩, 1⟩
   return record
 
+/-- The wrapper's control interactions are precisely the checked predecessor/current pair.
+The provider's interface must omit this private channel; its Memory/Byte effects remain intact. -/
+theorem main_interactions (name : String) (distinct : name ≠ "SP1Byte")
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (privateChannel : (OrderedBoundary.channel name).toRaw ∉ provider.channels)
+    (input : Var (Inputs Payload) (ZMod p)) (offset : ℕ) :
+    ((main name provider input).operations offset).interactionsWith (OrderedBoundary.channel name).toRaw =
+      [((OrderedBoundary.channel name).pulled input.link.previous).toRaw,
+       ((OrderedBoundary.channel name).pushed input.link.current).toRaw] := by
+  have providerEmpty (payload : Var Payload (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.interactionsWith_main_eq_nil provider.base
+      (OrderedBoundary.channel name).toRaw payload n privateChannel
+  have addEmpty (args : Var AddOperation.Inputs (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddOperation.circuit
+      (OrderedBoundary.channel name).toRaw args
+      (by change (OrderedBoundary.channel (p := p) name).toRaw ∉
+            [Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw]
+          simp only [List.mem_cons, List.not_mem_nil, OrderedBoundary.channel_ne_byte name distinct, or_self, not_false_eq_true])
+      (by change (OrderedBoundary.channel (p := p) name).toRaw ∉ []; exact List.not_mem_nil) (n := n)
+  simp only [main, circuit_norm, addEmpty, List.append_nil]
+  have linkExact (n : ℕ) := OrderedBoundary.main_interactions name distinct input.link n
+  simp only [Operations.interactionsWith] at providerEmpty linkExact
+  simp only [GeneralFormalCircuit.toSubcircuit_interactions, providerEmpty,
+    OrderedBoundary.circuit, linkExact, List.nil_append]
+  rfl
+
 def circuit (name : String) (image : ProgramImage)
     (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
     (binds : ∀ input output data, provider.Spec input output data → MemoryBoundary.InitialSpec image output) :

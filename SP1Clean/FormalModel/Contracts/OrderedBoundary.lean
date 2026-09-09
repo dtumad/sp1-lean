@@ -16,10 +16,20 @@ structure Inputs (F : Type) where
   comparison : Extracted.LtOperationUnsigned F
 deriving ProvableStruct
 
+/-- A terminal row supplies only the last key and its comparison witness. The final key is
+a circuit parameter, never a witness column. -/
+structure TerminalInputs (F : Type) where
+  previous : Word F
+  comparison : Extracted.LtOperationUnsigned F
+deriving ProvableStruct
+
 variable {p : ℕ} [Fact p.Prime]
 
 def Spec (input : Inputs (ZMod p)) : Prop :=
   Word.isU64 input.previous ∧ Word.isU64 input.current ∧
     Word.toNat input.previous < Word.toNat input.current
+
+def TerminalSpec (final : Word (ZMod p)) (input : TerminalInputs (ZMod p)) : Prop :=
+  Word.isU64 input.previous ∧ Word.toNat input.previous < Word.toNat final
 
 end SP1Clean.OrderedBoundary
