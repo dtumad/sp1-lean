@@ -1,3 +1,6 @@
+import SP1CleanTest.Core.ProgramImage
+import SP1CleanTest.Core.InitialMemoryLookup
+import SP1CleanTest.Core.InitialMemoryRead
 import SP1CleanTest.Audit.NativeCompletenessNonVacuity
 import SP1CleanTest.Audit.JointNonVacuity
 import SP1CleanTest.Audit.ActiveNativeCompleteness
@@ -12,6 +15,11 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.ProgramImage.checkedImage_boot
+#print axioms SP1CleanTest.Core.InitialMemoryLookup.constructedRows
+#print axioms SP1CleanTest.Core.InitialMemoryLookup.rejectsForgedRows
+#print axioms SP1CleanTest.Core.InitialMemoryRead.constructedWordRows
+#print axioms SP1CleanTest.Core.InitialMemoryRead.rejectsWrongOffset
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_nativeTraceReady
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorSemanticWitness_trace
 #print axioms SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_admissible

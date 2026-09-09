@@ -36,6 +36,28 @@ def writeBytes (memory : ByteMemory) (address : ℕ) : List (BitVec 8) → ByteM
 
 @[simp] theorem read_empty (address : ℕ) : (ByteMemory.mk []).read address = 0 := rfl
 
+/-- A listed byte is the read value whenever all bindings at its address agree. This permits
+compatible ROM/data overlap without requiring the update history itself to have unique keys. -/
+theorem read_eq_of_mem (memory : ByteMemory) (address : ℕ) (value : BitVec 8)
+    (present : (address, value) ∈ memory.entries)
+    (agrees : ∀ entry ∈ memory.entries, entry.1 = address → entry.2 = value) :
+    memory.read address = value := by
+  cases found : memory.entries.find? (fun entry => entry.1 == address) with
+  | none =>
+      have := List.find?_eq_none.mp found (address, value) present
+      simp at this
+  | some entry =>
+      have atAddress : entry.1 = address := by simpa using List.find?_some found
+      simp [read, found, agrees entry (List.mem_of_find?_eq_some found) atAddress]
+
+/-- An address absent from the sparse image has the canonical zero value. -/
+theorem read_eq_zero_of_absent (memory : ByteMemory) (address : ℕ)
+    (absent : ∀ entry ∈ memory.entries, entry.1 ≠ address) : memory.read address = 0 := by
+  have found : memory.entries.find? (fun entry => entry.1 == address) = none := by
+    apply List.find?_eq_none.mpr
+    simpa using absent
+  simp [read, found]
+
 @[simp] theorem read_write (memory : ByteMemory) (address query : ℕ) (value : BitVec 8) :
     (memory.write address value).read query =
       if address = query then value else memory.read query := by

@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.ProgramImage
+import SP1Clean.Model.Core.Boot
 
 /-! # Finite program-image validation regressions -/
 
@@ -10,6 +10,14 @@ private def image : ProgramImage :=
   ⟨[(65536, 0x00000073)], 65536, [(65536, 0x73), (65540, 42)]⟩
 
 example : image.check.isSome = true := by native_decide
+
+private theorem image_valid : image.Valid := by native_decide
+
+/-- An accepted finite input constructs the actual loaded Sail state with zeroed registers. -/
+theorem checkedImage_boot :
+    SP1Clean.Soundness.Target.IsInitialState (image.toGuestProgram image_valid) image.initialSailState ∧
+      SP1Clean.Machine.RegistersZero image.initialSailState :=
+  ⟨image.initialSailState_loaded image_valid, image.initialSailState_registersZero⟩
 
 example : ({ image with entry := 65540 }).check.isSome = false := by native_decide
 

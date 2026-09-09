@@ -57,6 +57,41 @@ EXACT_REQUIRED_THEOREMS = [
     ("SP1Clean/Model/Core/ProgramImage.lean", "toGuestProgram_wellFormed"),
     ("SP1Clean/Model/Core/ProgramImage.lean", "check_isSome_iff"),
     ("SP1Clean/Proofs/Chips/FixedProgramProvider.lean", "circuit"),
+    # Checked boot and image-derived native byte/word memory circuits.
+    ("ToClean/Circuit/StaticTable.lean", "ofRows"),
+    ("SP1Clean/Math/ByteWord.lean", "ofBytes_isU64"),
+    ("SP1Clean/Math/ByteWord.lean", "toBitVec64_ofBytes"),
+    ("SP1Clean/Model/Core/ProgramImage.lean", "initialMemory_rom"),
+    ("SP1Clean/Model/Core/ProgramImage.lean", "initialMemory_image"),
+    ("SP1Clean/Model/Core/ProgramImage.lean", "initialMemory_zero"),
+    ("SP1Clean/Model/Core/SailMemory.lean", "toSailMemory_get?"),
+    ("SP1Clean/Model/Core/SailMemory.lean", "toSailMemory_write"),
+    ("SP1Clean/Model/Core/MemoryWord.lean", "ramWord64?_of_bytes"),
+    ("SP1Clean/Model/Core/Boot.lean", "initialSailState_memory"),
+    ("SP1Clean/Model/Core/Boot.lean", "initialSailState_word"),
+    ("SP1Clean/Model/Core/Boot.lean", "initialSailState_registersZero"),
+    ("SP1Clean/Model/Core/Boot.lean", "initialSailState_loaded"),
+    ("SP1Clean/Model/Core/Boot.lean", "hasInitialState"),
+    ("SP1Clean/Model/Core/Boot.lean", "dataOf_statementFor"),
+    ("SP1Clean/Model/Core/MemoryIntervals.lean", "intervals_count"),
+    ("SP1Clean/Model/Core/MemoryIntervals.lean", "intervals_length_le"),
+    ("SP1Clean/Model/Core/MemoryIntervals.lean", "intervals_iff"),
+    ("SP1Clean/Model/Core/MemoryIntervals.lean", "intervalAt?_sound"),
+    ("SP1Clean/Model/Core/MemoryIntervals.lean", "intervalAt?_isSome_iff"),
+    ("SP1Clean/Model/Core/MemoryTable.lean", "ByteMemory.fixedTable_sound"),
+    ("SP1Clean/Model/Core/MemoryTable.lean", "ByteMemory.fixedTable_read"),
+    ("SP1Clean/Native/Operations/InitialMemoryLookup.lean", "circuit"),
+    ("SP1Clean/Native/Operations/InitialMemoryLookup.lean", "populate?_sound"),
+    ("SP1Clean/Native/Operations/InitialMemoryLookup.lean", "populate?_isSome_iff"),
+    ("SP1Clean/Native/Operations/InitialMemoryRead.lean", "circuit"),
+    ("SP1Clean/Native/Operations/InitialMemoryRead.lean", "populate?_sound"),
+    ("SP1Clean/Native/Operations/InitialMemoryRead.lean", "populate?_isSome_iff"),
+    ("SP1Clean/FormalModel/Contracts/InitialMemoryRead.lean", "Spec.initialSailState"),
+    ("SP1CleanTest/Core/ProgramImage.lean", "checkedImage_boot"),
+    ("SP1CleanTest/Core/InitialMemoryLookup.lean", "constructedRows"),
+    ("SP1CleanTest/Core/InitialMemoryLookup.lean", "rejectsForgedRows"),
+    ("SP1CleanTest/Core/InitialMemoryRead.lean", "constructedWordRows"),
+    ("SP1CleanTest/Core/InitialMemoryRead.lean", "rejectsWrongOffset"),
     # One production field spelling and the common shard/bus representation laws.
     ("SP1Clean/Model/SP1Field.lean", "sp1Prime_prime"),
     ("SP1Clean/Model/SP1Field.lean", "pow17_lt_sp1Prime"),
@@ -204,7 +239,7 @@ EXACT_REQUIRED_THEOREMS = [
 ]
 
 EXACT_REQUIRED_TARGETS = [
-    (path, rf"(?:theorem|def)\s+({re.escape(name)})\b")
+    (path, rf"(?:theorem|def)\s+({re.escape(name)})(?=\s|[({{:]|$)")
     for path, name in EXACT_REQUIRED_THEOREMS
 ]
 
@@ -490,7 +525,9 @@ TARGETS = [
     ("SP1Clean/Model/SailDecode.lean",
      r"theorem\s+(run_bind_ok_\w+|decode_\w+)\b"),
     ("SP1Clean/FormalModel/Trace/Witness.lean",
-     r"(?:theorem|lemma)\s+(isInitialState_nonvacuous|cfgState_[\w?]+|mem_fullRegs)\b"),
+     r"(?:theorem|lemma)\s+(isInitialState_nonvacuous)\b"),
+    ("SP1Clean/Model/Machine/ConfiguredState.lean",
+     r"(?:theorem|lemma)\s+(cfgState_[\w?]+|mem_fullRegs)\b"),
 ]
 
 NS_RE = re.compile(r"^namespace\s+([\w.]+)")

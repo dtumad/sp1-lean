@@ -109,6 +109,66 @@ def romBytes (input : ProgramImage) : List (ℕ × BitVec 8) :=
 def initialMemory (input : ProgramImage) : ByteMemory :=
   ⟨input.romBytes ++ input.image.map (fun byte => (byte.1.toNat, byte.2))⟩
 
+private theorem mem_romBytes (input : ProgramImage) (byte : ℕ × BitVec 8) :
+    byte ∈ input.romBytes ↔ ∃ row ∈ input.rom, ∃ index : Fin 4,
+      (row.1.toNat + index, row.2.extractLsb' (8 * index) 8) = byte := by
+  simp [romBytes]
+
+private theorem aligned_bytes_eq (left right : ℕ) (i j : Fin 4)
+    (leftAligned : left % 4 = 0) (rightAligned : right % 4 = 0)
+    (atAddress : left + i = right + j) : left = right ∧ i = j := by
+  have ilt := i.isLt
+  have jlt := j.isLt
+  have bases : left = right := by omega
+  exact ⟨bases, Fin.ext (by omega)⟩
+
+/-- Every ROM byte is realized by the canonical sparse image, even when the supplied data image
+also names that address. Alignment and unique ROM addresses prevent conflicting code words. -/
+theorem initialMemory_rom (input : ProgramImage) (valid : input.Valid)
+    (row : BitVec 64 × BitVec 32) (member : row ∈ input.rom) (index : Fin 4) :
+    input.initialMemory.read (row.1.toNat + index) = row.2.extractLsb' (8 * index) 8 := by
+  apply ByteMemory.read_eq_of_mem
+  · exact List.mem_append_left _ ((mem_romBytes input _).mpr ⟨row, member, index, rfl⟩)
+  · intro byte byteMem atAddress
+    rcases List.mem_append.mp byteMem with inROM | inImage
+    · obtain ⟨other, otherMem, j, rfl⟩ := (mem_romBytes input byte).mp inROM
+      obtain ⟨pcEq, indexEq⟩ := aligned_bytes_eq other.1.toNat row.1.toNat j index
+        (valid.2.1 other otherMem).1 (valid.2.1 row member).1 atAddress
+      have rowEq := List.inj_on_of_nodup_map valid.1 otherMem member (BitVec.eq_of_toNat_eq pcEq)
+      rw [rowEq, indexEq]
+    · obtain ⟨imageByte, imageMem, rfl⟩ := List.mem_map.mp inImage
+      exact valid.2.2.2.2.2 row member imageByte imageMem index atAddress
+
+/-- Every supplied data byte survives the ROM overlay: the input checker requires exact
+agreement at overlaps, rather than silently replacing inconsistent data. -/
+theorem initialMemory_image (input : ProgramImage) (valid : input.Valid)
+    (byte : BitVec 64 × BitVec 8) (member : byte ∈ input.image) :
+    input.initialMemory.read byte.1.toNat = byte.2 := by
+  apply ByteMemory.read_eq_of_mem
+  · exact List.mem_append_right _ (List.mem_map.mpr ⟨byte, member, rfl⟩)
+  · intro other otherMem atAddress
+    rcases List.mem_append.mp otherMem with inROM | inImage
+    · obtain ⟨row, rowMem, index, rfl⟩ := (mem_romBytes input other).mp inROM
+      exact (valid.2.2.2.2.2 row rowMem byte member index atAddress.symm).symm
+    · obtain ⟨imageByte, imageMem, rfl⟩ := List.mem_map.mp inImage
+      have byteEq := List.inj_on_of_nodup_map valid.2.2.2.1 imageMem member
+        (BitVec.eq_of_toNat_eq atAddress)
+      exact congrArg Prod.snd byteEq
+
+/-- The remaining addresses have zero initial content; no separate memory-provider truth
+premise chooses their values. -/
+theorem initialMemory_zero (input : ProgramImage) (address : ℕ)
+    (outsideROM : ∀ row ∈ input.rom, ∀ index : Fin 4, row.1.toNat + index ≠ address)
+    (outsideImage : ∀ byte ∈ input.image, byte.1.toNat ≠ address) :
+    input.initialMemory.read address = 0 := by
+  apply ByteMemory.read_eq_zero_of_absent
+  intro byte member
+  rcases List.mem_append.mp member with inROM | inImage
+  · obtain ⟨row, rowMem, index, rfl⟩ := (mem_romBytes input byte).mp inROM
+    exact outsideROM row rowMem index
+  · obtain ⟨imageByte, imageMem, rfl⟩ := List.mem_map.mp inImage
+    exact outsideImage imageByte imageMem
+
 /-- Byte-level ROM protection shared by ordinary stores and host writes. -/
 def readOnly (input : ProgramImage) (address : ℕ) : Bool :=
   input.rom.any (fun row => decide (row.1.toNat ≤ address ∧ address < row.1.toNat + 4))

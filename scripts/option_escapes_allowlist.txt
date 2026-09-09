@@ -64,4 +64,4 @@ maxRecDepth    SP1Clean/Faithful/BranchChip.lean                       1000   1
 # Bracket (512, 600], the narrowest in the tree; set to 800 rather than 600 because 17% over a measured
 # failing value is not a margin. Scoped, not file-level: a file-level bump silently covers declarations
 # that never needed it.
-maxRecDepth    SP1Clean/FormalModel/Trace/Witness.lean                  800   1
+maxRecDepth    SP1Clean/Model/Machine/ConfiguredState.lean                  800   1

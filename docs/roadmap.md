@@ -26,13 +26,22 @@ Implemented foundations:
   programs for supplied table inputs. The Lean-exported fixture is regenerated in CI.
 - `Model/Core/` provides checked finite program images, sparse byte-memory operations and frame
   proofs, and executable hint/output/hook-reply operations, including padding-write protection.
+- Every accepted image now constructs a loaded, configured Sail initial state with zeroed integer
+  registers. Its memory agrees byte-for-byte and word-for-word with the ROM-overlaid sparse image,
+  including zero defaults; no boot witness is supplied by the caller.
+- The sparse initial-memory table has at most `2N + 1` constant-byte intervals for `N` image entries,
+  with exactly one interval covering each in-range address. Native byte and word circuits prove
+  reads from this concrete fixed table. Their executable constructors supply all internal columns
+  on exactly the bounded read domain, and their witness programs are exportable. Word-read
+  correctness reaches the initial Sail state's memory through the public semantic contract.
 - The fixed program-provider circuit composes the existing provider with complete static-ROM
   membership. The 25 instruction circuits and faithfulness anchors are unchanged.
 
 Still required before the native capstone can be claimed:
 
-1. Finish executable instruction decoding and initialization refinement, construct the fixed ROM
-   and sparse-image tables, and assemble their constrained uniqueness/continuity boundaries.
+1. Finish executable instruction decoding and construct the decoded fixed ROM. Assemble the
+   initial-memory word circuit into register/RAM providers and constrain per-location uniqueness
+   and boundary continuity. Interval coverage alone does not constrain uniqueness of provider rows.
 2. Complete the host execution environment, including commitments, control and terminal behavior;
    integrate host effects and ordinary ROM-write exclusion into the AIR and mixed timed grounding.
 3. Prove the event compiler total on shared semantic resource bounds; construct all native tables

@@ -321,6 +321,7 @@ import SP1Clean.Faithful.U16MSBOperation
 import SP1Clean.Faithful.U16toU8OperationSafe
 import SP1Clean.Faithful.UTypeChip
 import SP1Clean.Math.Bitwise
+import SP1Clean.Math.ByteWord
 import SP1Clean.Math.EvalVec
 import SP1Clean.Math.Gate
 import SP1Clean.Model.BalanceBridge
@@ -344,13 +345,19 @@ import SP1Clean.Model.SailMemory
 import SP1Clean.Model.SailWrap
 import SP1Clean.Model.Machine.Boot
 import SP1Clean.Model.Core.Memory
+import SP1Clean.Model.Core.MemoryIntervals
+import SP1Clean.Model.Core.MemoryTable
+import SP1Clean.Model.Core.MemoryWord
 import SP1Clean.Model.Core.HostIO
 import SP1Clean.Model.Core.ProgramImage
+import SP1Clean.Model.Core.SailMemory
+import SP1Clean.Model.Core.Boot
 import SP1Clean.Model.Machine.Schedule
 import SP1Clean.Model.Machine.Syscall
 import SP1Clean.Model.Machine.EventExecution
 import SP1Clean.Model.Machine.Shard
 import SP1Clean.Model.Machine.Execution
+import SP1Clean.Model.Machine.ConfiguredState
 import SP1Clean.Proofs.Sail.TryStepReduction
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Model.Semantics.EventTime
@@ -369,6 +376,8 @@ import SP1Clean.Model.Semantics.Truth
 import SP1Clean.Model.Semantics.Decode
 import SP1Clean.Math.Word
 import SP1Clean.Proofs.Operations.AddOperation.Formal
+import SP1Clean.Native.Operations.InitialMemoryLookup
+import SP1Clean.Native.Operations.InitialMemoryRead
 import SP1Clean.Native.Operations.AddOperation.Defs
 import SP1Clean.Native.Operations.AddOperation.Populate
 import SP1Clean.Native.Operations.AddOperation.RawSpec
@@ -497,6 +506,8 @@ import SP1Clean.Soundness.AIRCompleteness
 import SP1Clean.Soundness.CoreAIR
 import SP1Clean.Soundness.CoreAIRSyscallFree
 import SP1Clean.Soundness.FinishedChannels
+import SP1Clean.FormalModel.Contracts.InitialMemory
+import SP1Clean.FormalModel.Contracts.InitialMemoryRead
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.FormalModel.Contracts.DivRem

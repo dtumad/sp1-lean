@@ -153,7 +153,10 @@ Mirror-rust layout under `SP1Clean/`:
   (`ChipAssumptions.lean` — Add/Addi/Addw/Sub/Subw/UType; the two-reason keep-list taxonomy for the
   other chips is stated in that file's module docstring). `ProverSpec` is uniformly
   `fun _ _ _ => True` (inline in each `circuit` bundle). `Trace/Witness.lean` holds the non-vacuity
-  witness (a concrete configured Sail state proving `IsInitialState` satisfiable);
+  examples; reusable configured-state construction lives in `Model/Machine/ConfiguredState.lean`,
+  and `Model/Core/Boot.lean` proves initialization for every checked finite image. The native
+  initial-memory byte/word contracts live in `Contracts/InitialMemory{,Read}.lean`, with concrete
+  sparse interval tables under `Model/Core/` and circuits in `Native/Operations/InitialMemory{Lookup,Read}.lean`;
   the guest-program execution model (`GuestProgram`, `IsInitialState`, `SailStep`/`SailChain`,
   `SP1Halted`, `exitOf`) lives in `Model/Semantics/GuestProgram.lean`. Relation-level AIR/verifier
   contracts live in `Relations.lean`, `CoreProfile.lean`, `CoreAIRRelation.lean`, `Execution.lean`, and

@@ -597,6 +597,16 @@ The model's total boot-loader field (ROM+image loading for arbitrary well-formed
 follow-up work; (ii) the shard-local initial state comes from the boundary binding, not from
 `model.boot`.
 
+The new finite-input native core has a stronger, independently proved initialization result:
+`Model/Core/Boot.lean` constructs a loaded, configured Sail state with zeroed registers for every
+accepted `ProgramImage`. Its bytes and 64-bit memory words equal the ROM-overlaid sparse image with
+zero defaults. `InitialMemoryLookup.circuit` and `InitialMemoryRead.circuit` authenticate byte and
+word reads against concrete image-derived interval rows; both have proved constructors and
+exportable witness programs. `InitialMemoryRead.Spec.initialSailState` connects the word contract
+to that Sail state. This closes local initial-value binding, but these circuits have not yet replaced
+the machine's memory providers: provider uniqueness and the rest of `SemanticBoundaryBinding`
+remain open at the ensemble boundary.
+
 ### 7.3 What is *not* claimed at this layer
 
 No cross-shard stitching (the relation exists — `SP1ExecutionRelation`, with full-state

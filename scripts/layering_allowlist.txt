@@ -39,6 +39,8 @@ import SP1Clean/Proofs/Chips/BranchChip/Core.lean SP1Clean/Proofs/Chips/BranchCh
 #    rather than a blanket relaxation of the law.
 namespace SP1Clean/Model/Opcode.lean
 namespace SP1Clean/Model/Machine/Boot.lean
+# Shared configured-state construction retains the existing Target vocabulary after its hoist.
+namespace SP1Clean/Model/Machine/ConfiguredState.lean
 namespace SP1Clean/Model/Semantics/Decode.lean
 namespace SP1Clean/Model/Semantics/GuestProgram.lean
 namespace SP1Clean/Model/Semantics/ImageContent.lean

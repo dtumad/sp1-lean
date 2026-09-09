@@ -45,7 +45,7 @@ closer to what Clean would fold into a bundled `Spec`/`exposedChannels` conjunct
 ## Elaboration budgets: this repo doesn't use them — fold the blowup
 
 **Hand-written Lean here carries zero `set_option maxHeartbeats`**, matching upstream Clean (none in
-44,603 lines), and two `maxRecDepth` sites (`Faithful/BranchChip.lean`, `FormalModel/Trace/Witness.lean`),
+44,603 lines), and two `maxRecDepth` sites (`Faithful/BranchChip.lean`, `Model/Machine/ConfiguredState.lean`),
 each structural and measured. Every other surviving site is
 on a *generated* definition, where the only lever is `update_extracted.py`.
 
