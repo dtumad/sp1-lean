@@ -2,6 +2,7 @@ import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1CleanTest.Core.InitialMemoryLookup
 import SP1Clean.Soundness.InitialMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
+import SP1Clean.Soundness.NativeCoreBoundaries
 
 /-! # Initial/final records and ordered-key AIR regressions
 
@@ -233,5 +234,61 @@ theorem pairedMemoryBoundary :
     [controlValid [initial, final value 0], controlValid [initial, final (value + 1) 0],
       controlValid [initial, final value 8], controlValid [initial, final value 0, final value 0]] =
       [true, false, false, false] := by native_decide
+
+private def bootPublic : SP1PublicIO Fp where
+  init_clk_0_16 := 1
+  init_clk_16_24 := 0
+  init_clk_24_32 := 0
+  init_clk_32_48 := 0
+  init_pc0 := 0
+  init_pc1 := 1
+  init_pc2 := 0
+  final_clk_0_16 := 9
+  final_clk_16_24 := 0
+  final_clk_24_32 := 0
+  final_clk_32_48 := 0
+  final_pc0 := 4
+  final_pc1 := 1
+  final_pc2 := 0
+  exit_code := 0
+  is_execution_shard := 1
+  committed_value_digest := Vector.replicate 32 0
+
+private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :=
+  controlRow (Soundness.NativeCore.verifier image).main pi name
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (Soundness.NativeCore.verifier (p := SP1Prime) image)
+
+/-- The composed verifier emits both fixed control boundaries while validating the public boot
+fields. This checks the actual circuit, including the offsets after the State verifier. -/
+theorem nativeVerifierEndpoints :
+    nativeVerifierRow bootPublic OrderedInitialProvider.channelName = verifierRow ∧
+    nativeVerifierRow bootPublic OrderedFinalProvider.channelName = finalVerifierRow := by
+  native_decide
+
+/-- Wrong boot PC/time and a field-wrapping alternative clock encoding are rejected by the
+combined verifier and its Byte requirements. A matching folded clock alone is insufficient. -/
+theorem rejectsForgedBoot :
+    [nativeVerifierRow { bootPublic with init_clk_0_16 := 0 } OrderedInitialProvider.channelName,
+     nativeVerifierRow { bootPublic with init_clk_24_32 := 1 } OrderedInitialProvider.channelName,
+     nativeVerifierRow { bootPublic with init_pc0 := 4 } OrderedInitialProvider.channelName,
+     nativeVerifierRow { bootPublic with init_pc1 := 0 } OrderedInitialProvider.channelName,
+     nativeVerifierRow { bootPublic with init_clk_0_16 := 65537, init_clk_16_24 := -1 }
+       OrderedInitialProvider.channelName].map Prod.fst = [false, false, false, false, false] := by
+  native_decide
+
+/-- Both private inventories close using the one composed verifier. Omitting either terminal
+or duplicating an initial record fails its actual control ledger. -/
+theorem nativeBoundaryInventories :
+    let initial := nativeVerifierRow bootPublic OrderedInitialProvider.channelName
+    let final := nativeVerifierRow bootPublic OrderedFinalProvider.channelName
+    [controlValid [initial, initRegisterRow 0 0, terminalRow 1],
+     controlValid [final, finalRegisterRow 0 0, finalTerminalRow 1],
+     controlValid [initial, initRegisterRow 0 0],
+     controlValid [final, finalRegisterRow 0 0],
+     controlValid [initial, initRegisterRow 0 0, initRegisterRow 0 0, terminalRow 1]] =
+      [true, true, false, false, false] := by native_decide
 
 end SP1CleanTest.Core.MemoryBoundary

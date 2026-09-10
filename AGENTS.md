@@ -67,6 +67,13 @@ export. The generic interfaces, finite-image/host-I/O substrate, executable inst
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are
 explicitly excluded from the checked parser. The integrated native capstone remains open. Its remaining work
+includes mixed-row grounding and host/terminal completion for the new 59-table
+`Soundness/NativeCoreEnsemble.lean` assembly. That assembly already replaces the legacy Program and
+memory providers, fixes the boot PC/time and both ordering endpoints, and closes Byte/Program.
+`NativeCoreBoundaries.lean` derives initial-record authenticity/uniqueness, their exact physical Memory
+projection, public boot fields, and physical Program-row ROM/Sail membership from raw constraints and
+balance. Finalizer specifications/uniqueness still require Memory grounding; the older 55-table
+execution theorem has not been transported to this assembly. The detailed remaining work
 is in `docs/roadmap.md` under "Native Clean core". Preserve the 25 instruction faithfulness anchors;
 exact v6.4.0 Core AIR refinement remains separate. Native
 timed grounding, every one of the 25 chip contracts, and `supported_core_native_sound` are closed. The

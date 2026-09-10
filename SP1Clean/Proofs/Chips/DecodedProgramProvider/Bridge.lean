@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Chips.DecodedProgramProvider
 import SP1Clean.Model.Semantics.Truth
 import SP1Clean.Proofs.Sail.InstructionDecode
-import Clean.Air.FlatComponent
+import ToClean.Air.ChannelClosure
 
 /-! # Authentic Program rows from fixed AIR constraints
 
@@ -38,14 +38,7 @@ theorem constraints_committed {image : ProgramImage} (valid : image.Valid)
     (constraints : (⟨circuit image⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
     Soundness.Target.committedInROM (image.toGuestProgram valid)
       (Semantics.rowOfMsg ((⟨circuit image⟩ : Component (ZMod p)).rowInput env).toMessage) := by
-  have localSound (component : Component (ZMod p))
-      (noChannels : component.circuit.channelsWithGuarantees = [])
-      (assumptions : component.Assumptions env)
-      (holds : component.operations.ConstraintsHold env) : component.Spec env := by
-    have interface := component.inChannelsOrGuarantees env
-    rw [noChannels] at interface
-    have guarantees := (Operations.guarantees_iff component.operations [] env interface).mpr (by simp)
-    exact (Component.weakSoundness assumptions holds guarantees).1
-  exact spec_committed valid (localSound ⟨circuit image⟩ rfl (by trivial) constraints)
+  exact spec_committed valid ((⟨circuit image⟩ : Component (ZMod p)).weakSoundness_of_no_guarantees
+    rfl (by trivial) constraints).1
 
 end SP1Clean.DecodedProgramProvider

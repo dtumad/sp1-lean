@@ -1,21 +1,12 @@
 import SP1Clean.Soundness.SP1Ensemble
-import Clean.Air.OrderedChannel
+import ToClean.Air.ChannelClosure
 
-/-! # Finished structural-channel grounding over the capstone ensemble
+/-! # Finished structural channels from actual ensemble balance
 
-From a constraint-satisfying, channel-balanced ensemble witness, every table's Byte and Program
-pull guarantees hold.  These are precisely the lookup-shaped structural predicates (`ByteRowSpec` and
-`ProgramMsg.RowSpec`).  Committed-ROM membership is stronger and remains a timed/global theorem.
-
-The engine is Clean's `guarantees_of_requirements_append` (`Clean/Air/OrderedChannel.lean`), applied
-per channel to the partition *consumers* (`verifierTable :: witness.tables.take 25` — the boundary
-verifier plus the 25 chips, none of which lists byte/program in its `channelsWithRequirements`) vs
-*providers* (`witness.tables.drop 25` — the 28 boundary/provider tables, whose pushes prove their
-channel `Requirements` in-circuit from constraints alone, via `Table.weakSoundness` with trivial
-`Assumptions` and empty `channelsWithGuarantees`; `MemoryFinalizeChip` instead has empty
-`channelsWithRequirements`, so its requirements are vacuous). The provider tables' own byte/program
-guarantees are vacuous (`Table.guarantees_of_not_mem` — neither channel is in any provider's
-`channelsWithGuarantees`), which covers all of `witness.allTables`. -/
+Byte and Program requirements follow from each component's raw constraints. Clean channel
+consistency therefore closes every table's pull guarantees, independently of table positions.
+These are structural lookup facts; committed-ROM membership remains a stronger global theorem.
+-/
 
 namespace SP1Clean.Soundness
 
@@ -33,11 +24,6 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 
 /-! ## Channel and channel-list facts -/
 
-/-- The structural boundary verifier has no local requirement channels. -/
-private lemma verifierTable_cwr (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    witness.verifierTable.component.circuit.channelsWithRequirements =
-      [] := rfl
-
 /-- The exact requirement-channel shape of the 25 instruction chips.  Most require State and Memory;
 ShiftLeft, ShiftRight, and Branch carry State on their guarantee side and require only Memory. -/
 private lemma sp1Tables_cwr_eq :
@@ -48,7 +34,7 @@ private lemma sp1Tables_cwr_eq :
        [stateChannel.toRaw, memoryChannel.toRaw], [memoryChannel.toRaw]] ++
       List.replicate 13 [stateChannel.toRaw, memoryChannel.toRaw] := rfl
 
-private lemma sp1Tables_cwr_subset : ∀ c ∈ sp1Tables (p := p),
+lemma sp1Tables_cwr_subset : ∀ c ∈ sp1Tables (p := p),
     c.circuit.channelsWithRequirements ⊆ [stateChannel.toRaw, memoryChannel.toRaw] := by
   intro c hc channel hchannel
   have h := List.mem_map_of_mem
@@ -97,234 +83,56 @@ private lemma providers_assumptions :
     trivial
   · fin_cases hc <;> trivial
 
-/-! ## Positional component identification
+/-- Every component proves Byte/Program requirements from its constraints. Only the closed
+lookup providers list these requirement channels; every other component omits them. -/
+theorem sp1_component_finished_requirements (component : Component (ZMod p))
+    (member : component ∈ (sp1Ensemble (p := p)).allTables)
+    (channel : RawChannel (ZMod p))
+    (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw])
+    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
+    component.operations.ChannelRequirements channel env := by
+  have absent (notRequired : channel ∉ component.circuit.channelsWithRequirements) :
+      component.operations.ChannelRequirements channel env :=
+    Operations.requirements_of_not_mem _ _ _
+      (component.inChannelsOrRequirements_of_constraints env constraints) channel notRequired
+  simp only [Ensemble.allTables, sp1Ensemble_tables, List.mem_cons, List.mem_append] at member
+  rcases member with rfl | member | member
+  · exact absent (by simp [Ensemble.verifierTable, sp1Ensemble, sp1StateVerifier])
+  · exact absent (fun required => outside (sp1Tables_cwr_subset _ member required))
+  · have shape := List.mem_map_of_mem
+      (f := fun c : Component (ZMod p) =>
+        (c.circuit.channelsWithGuarantees, c.circuit.channelsWithRequirements)) member
+    rw [providers_channels_eq] at shape
+    simp only [List.mem_append, List.mem_replicate, List.mem_cons, List.not_mem_nil,
+      or_false, Prod.mk.injEq] at shape
+    have cases : component.circuit.channelsWithGuarantees = [] ∨
+        component.circuit.channelsWithRequirements = [] ∨
+        component.circuit.channelsWithRequirements = [memoryChannel.toRaw] := by tauto
+    rcases cases with noGuarantees | noRequirements | memoryOnly
+    · have requirements := (component.weakSoundness_of_no_guarantees noGuarantees
+        (providers_assumptions _ member env) constraints).2
+      exact fun interaction emitted _ => requirements interaction emitted
+    · exact absent (by simp [noRequirements])
+    · exact absent (by
+        rw [memoryOnly]
+        intro required
+        exact outside (List.mem_cons_of_mem _ required))
 
-`witness.tables_map_component` pins the 53 abstract witness tables to the concrete
-`sp1Tables ++ sp1ProviderTables`; `take 25`/`drop 25` splits it into the chip and provider blocks. -/
-
-private lemma mem_take25_component (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    ∀ t ∈ witness.tables.take 25, t.component ∈ sp1Tables (p := p) := by
-  intro t ht
-  have h := List.mem_map_of_mem (f := (·.component)) ht
-  rw [List.map_take, witness.tables_map_component] at h
-  exact h
-
-private lemma mem_drop25_component (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    ∀ t ∈ witness.tables.drop 25, t.component ∈ sp1ProviderTables (p := p) := by
-  intro t ht
-  have h := List.mem_map_of_mem (f := (·.component)) ht
-  rw [List.map_drop, witness.tables_map_component] at h
-  exact h
-
-/-- The pure-provider middle (positions 25–50) carries the first 26 provider components. -/
-private lemma mem_middle_component (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    ∀ t ∈ (witness.tables.drop instructionTableCount).take nonBumpProviderTableCount,
-      t.component ∈ (sp1ProviderTables (p := p)).take nonBumpProviderTableCount := by
-  intro t ht
-  have h := List.mem_map_of_mem (f := (·.component)) ht
-  rw [List.map_take, List.map_drop, witness.tables_map_component] at h
-  exact h
-
-/-- The bump tail (positions 51–52) carries the last two provider components. -/
-private lemma mem_bumpTail_component (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    ∀ t ∈ witness.tables.drop (instructionTableCount + nonBumpProviderTableCount),
-      t.component ∈ (sp1ProviderTables (p := p)).drop nonBumpProviderTableCount := by
-  intro t ht
-  have h := List.mem_map_of_mem (f := (·.component)) ht
-  rw [List.map_drop, witness.tables_map_component] at h
-  exact h
-
-/-! ## The provider tables prove their requirements in-circuit -/
-
-/-- **Every provider-tail table proves its `ChannelRequirements` on every non-memory channel from
-its constraints alone.** The 25 ordinary pushers have trivial `Assumptions` and empty
-`channelsWithGuarantees`, so `Table.weakSoundness` yields their full `Requirements`;
-`MemoryFinalizeChip` and (W3) `StateBumpChip` have empty `channelsWithRequirements`, so
-`Table.requirements_of_not_mem_of_constraints` applies; `MemoryBumpChip`'s only requirement
-channel is Memory (its refreshed push), which the `channel ≠ memory` hypothesis excludes — on the
-Memory channel the bump table is a genuine consumer, handled by the memory-side machinery, never
-by this lemma. -/
-private lemma provider_requirements (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (hC : witness.Constraints) :
-    ∀ t ∈ witness.tables.drop 25, ∀ channel : RawChannel (ZMod p),
-      channel ≠ memoryChannel.toRaw → t.ChannelRequirements channel := by
-  intro t ht channel hchm
-  have hc : t.Constraints := hC _ (witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop ht))
-  have hcomp := mem_drop25_component witness _ ht
-  have hA : t.Assumptions := fun row _ => providers_assumptions _ hcomp _
-  have hpair := List.mem_map_of_mem
-    (f := fun c : Component (ZMod p) =>
-      (c.circuit.channelsWithGuarantees, c.circuit.channelsWithRequirements)) hcomp
-  rw [providers_channels_eq] at hpair
-  simp only [List.mem_append, List.mem_replicate, List.mem_cons, List.not_mem_nil, or_false,
-    Prod.mk.injEq] at hpair
-  have hcase : t.component.circuit.channelsWithGuarantees = [] ∨
-      t.component.circuit.channelsWithRequirements = [] ∨
-      t.component.circuit.channelsWithRequirements = [memoryChannel.toRaw] := by tauto
-  rcases hcase with hg | hr | hr
-  · -- pusher: no guarantees owed anywhere ⟹ `weakSoundness` gives full `Requirements`
-    have hg' : t.Guarantees := by
-      rw [Table.guarantees_iff_channelGuarantees]
-      intro c hcmem
-      simp only [Table.channelsWithGuarantees, hg] at hcmem
-      simp at hcmem
-    exact t.channelRequirements_of_requirements (Table.weakSoundness hA hc hg').2
-  · -- finalize table / StateBump: no requirement channels at all
-    refine t.requirements_of_not_mem_of_constraints hc ?_
-    simp [Table.channelsWithRequirements, hr]
-  · -- MemoryBump: its sole requirement channel is Memory, excluded by hypothesis
-    refine t.requirements_of_not_mem_of_constraints hc ?_
-    simp [Table.channelsWithRequirements, hr, hchm]
-
-/-! ## The consumers' pull guarantees, per channel -/
-
-/-- **The engine application.** For any consistent ensemble channel outside the chips'
-requirement set `[state, memory]` — i.e. byte or program — the verifier and all 25 chip tables
-carry the channel's `Guarantees`: `guarantees_of_requirements_append` on the consumer/provider
-partition, with partial balance from the witness's `BalancedChannels` (the partition is a
-permutation of `allTables`, so `partialBalancedChannel_of_sublist` transports it). -/
-private lemma consumer_guarantees (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (hC : witness.Constraints) (hB : witness.BalancedChannels)
-    (channel : RawChannel (ZMod p)) [channel.Consistent]
-    (hchmem : channel ∈ (sp1Ensemble (p := p)).channels)
-    (hnr : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw]) :
-    ∀ table ∈ witness.verifierTable ::
-        (witness.tables.take instructionTableCount ++
-          witness.tables.drop (instructionTableCount + nonBumpProviderTableCount)),
-      table.ChannelGuarantees channel := by
-  have hdata_ts : ∀ t ∈ witness.verifierTable ::
-      (witness.tables.take instructionTableCount ++
-        witness.tables.drop (instructionTableCount + nonBumpProviderTableCount)),
-        t.data = witness.data := by
-    intro t ht
-    rcases List.mem_cons.mp ht with rfl | ht
-    · rfl
-    · rcases List.mem_append.mp ht with ht | ht
-      · exact witness.same_data _ (List.mem_of_mem_take ht)
-      · exact witness.same_data _ (List.mem_of_mem_drop ht)
-  have hdata_ss : ∀ t ∈
-      (witness.tables.drop instructionTableCount).take nonBumpProviderTableCount,
-      t.data = witness.data :=
-    fun t ht => witness.same_data _ (List.mem_of_mem_drop (List.mem_of_mem_take ht))
-  refine guarantees_of_requirements_append
-    (ts := ⟨witness.verifierTable ::
-      (witness.tables.take instructionTableCount ++
-        witness.tables.drop (instructionTableCount + nonBumpProviderTableCount)),
-      witness.data, hdata_ts⟩)
-    (ss := ⟨(witness.tables.drop instructionTableCount).take nonBumpProviderTableCount,
-      witness.data, hdata_ss⟩) rfl ?_ ?_ ?_
-    (fun t ht => provider_requirements witness hC t (List.mem_of_mem_take ht) channel
-      (by intro h; exact hnr (by simp [h])))
-  · -- consumer constraints
-    intro t ht
-    rcases List.mem_cons.mp ht with rfl | ht
-    · exact hC _ witness.mem_allTables_verifierTable
-    · rcases List.mem_append.mp ht with ht | ht
-      · exact hC _ (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take ht))
-      · exact hC _ (witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop ht))
-  · -- no consumer lists the channel in its requirements: the verifier's list is empty, the chips'
-    -- are inside `[state, memory]`, and the bump tail's are inside `[memory]`/`[]`.
-    intro t ht
-    rcases List.mem_cons.mp ht with rfl | ht
-    · rw [verifierTable_cwr]
-      simp
-    · rcases List.mem_append.mp ht with ht | ht
-      · exact fun hrequirement => hnr
-          (sp1Tables_cwr_subset _ (mem_take25_component witness _ ht) hrequirement)
-      · intro hrequirement
-        have hcomp := mem_bumpTail_component witness _ ht
-        have hpair := List.mem_map_of_mem
-          (f := fun c : Component (ZMod p) =>
-            (c.circuit.channelsWithGuarantees, c.circuit.channelsWithRequirements)) hcomp
-        rw [show ((sp1ProviderTables (p := p)).drop nonBumpProviderTableCount).map
-              (fun c => (c.circuit.channelsWithGuarantees, c.circuit.channelsWithRequirements)) =
-            [([byteChannel.toRaw, memoryChannel.toRaw], [memoryChannel.toRaw]),
-             ([byteChannel.toRaw, stateChannel.toRaw], []),
-             ([byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
-               exitChannel.toRaw], [memoryChannel.toRaw]),
-             ([byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
-               exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw],
-              [memoryChannel.toRaw])] from rfl] at hpair
-        simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hpair
-        have hshape : t.component.circuit.channelsWithRequirements = [memoryChannel.toRaw] ∨
-            t.component.circuit.channelsWithRequirements = [] := by tauto
-        rcases hshape with hshape | hshape <;> rw [hshape] at hrequirement
-        · exact hnr (by simpa using Or.inr (List.mem_singleton.mp hrequirement))
-        · exact absurd hrequirement (List.not_mem_nil)
-  · -- partial balance: the partition is a permutation of `allTables`
-    refine partialBalancedChannel_of_sublist
-      (Ensemble.partialBalancedChannel_of_balancedChannel channel (hB channel hchmem))
-      ⟨[], ?_, by simp, by simp⟩
-    rw [List.append_nil, Tables.append_tables]
-    show (witness.verifierTable :: witness.tables).Perm _
-    refine List.Perm.cons _ ?_
-    have hsplit : witness.tables = witness.tables.take instructionTableCount ++
-        ((witness.tables.drop instructionTableCount).take nonBumpProviderTableCount ++
-          witness.tables.drop (instructionTableCount + nonBumpProviderTableCount)) := by
-      rw [show witness.tables.drop (instructionTableCount + nonBumpProviderTableCount) =
-          (witness.tables.drop instructionTableCount).drop nonBumpProviderTableCount from by
-          rw [List.drop_drop], List.take_append_drop, List.take_append_drop]
-    conv_lhs => rw [hsplit]
-    show (witness.tables.take instructionTableCount ++
-        ((witness.tables.drop instructionTableCount).take nonBumpProviderTableCount ++
-          witness.tables.drop (instructionTableCount + nonBumpProviderTableCount))).Perm
-      ((witness.tables.take instructionTableCount ++
-          witness.tables.drop (instructionTableCount + nonBumpProviderTableCount)) ++
-        (witness.tables.drop instructionTableCount).take nonBumpProviderTableCount)
-    rw [List.append_assoc]
-    exact List.Perm.append_left _ List.perm_append_comm
-
-/-! ## The headline theorem -/
-
-/-- Byte and Program structural guarantees are grounded by their provider tables and channel balance. -/
+/-- Byte and Program structural guarantees are grounded by their provider circuits and actual
+channel balance. No positional consumer/provider partition is part of this argument. -/
 theorem sp1_finishedChannel_guarantees (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (hC : witness.Constraints) (hB : witness.BalancedChannels) :
     ∀ table ∈ witness.allTables,
       table.ChannelGuarantees Channels.byteChannel.toRaw ∧
       table.ChannelGuarantees Channels.programChannel.toRaw := by
-  have hgB := consumer_guarantees witness hC hB byteChannel.toRaw
-    (by simp [sp1Ensemble_channels])
-    (by simp [Channels.byteChannel_eq_stateChannel_false,
-      Channels.byteChannel_eq_memoryChannel_false])
-  have hgP := consumer_guarantees witness hC hB programChannel.toRaw
-    (by simp [sp1Ensemble_channels])
-    (by simp [Channels.programChannel_eq_stateChannel_false,
-      Channels.programChannel_eq_memoryChannel_false])
-  rw [EnsembleWitness.forall_mem_allTables_iff]
-  refine ⟨⟨hgB _ List.mem_cons_self, hgP _ List.mem_cons_self⟩, ?_⟩
-  intro table htable
-  rw [show witness.tables = witness.tables.take instructionTableCount ++
-      ((witness.tables.drop instructionTableCount).take nonBumpProviderTableCount ++
-        witness.tables.drop (instructionTableCount + nonBumpProviderTableCount)) from by
-    rw [show witness.tables.drop (instructionTableCount + nonBumpProviderTableCount) =
-        (witness.tables.drop instructionTableCount).drop nonBumpProviderTableCount from by
-        rw [List.drop_drop], List.take_append_drop, List.take_append_drop]] at htable
-  rcases List.mem_append.mp htable with h | h
-  · exact ⟨hgB _ (List.mem_cons_of_mem _ (List.mem_append_left _ h)),
-      hgP _ (List.mem_cons_of_mem _ (List.mem_append_left _ h))⟩
-  rcases List.mem_append.mp h with h | h
-  · -- the pure-provider middle: both guarantees are vacuous
-    have hpair := List.mem_map_of_mem
-      (f := fun c : Component (ZMod p) =>
-        (c.circuit.channelsWithGuarantees, c.circuit.channelsWithRequirements))
-      (mem_middle_component witness _ h)
-    rw [show ((sp1ProviderTables (p := p)).take nonBumpProviderTableCount).map
-          (fun c => (c.circuit.channelsWithGuarantees, c.circuit.channelsWithRequirements)) =
-        List.replicate 23 ([], [byteChannel.toRaw]) ++
-          [([], [programChannel.toRaw]), ([], [memoryChannel.toRaw]),
-           ([memoryChannel.toRaw], [])] from by
-        simp [nonBumpProviderTableCount, providers_channels_eq]] at hpair
-    simp only [List.mem_append, List.mem_replicate, List.mem_cons, List.not_mem_nil, or_false,
-      Prod.mk.injEq] at hpair
-    have hcwg : table.component.circuit.channelsWithGuarantees = [] ∨
-        table.component.circuit.channelsWithGuarantees = [memoryChannel.toRaw] := by tauto
-    refine ⟨table.guarantees_of_not_mem ?_, table.guarantees_of_not_mem ?_⟩ <;>
-      rcases hcwg with hg | hg <;>
-      simp only [Table.channelsWithGuarantees, hg] <;>
-      simp [Channels.byteChannel_eq_memoryChannel_false,
-        Channels.programChannel_eq_memoryChannel_false]
-  · -- the bump tail: genuine byte consumers, covered by the engine
-    exact ⟨hgB _ (List.mem_cons_of_mem _ (List.mem_append_right _ h)),
-      hgP _ (List.mem_cons_of_mem _ (List.mem_append_right _ h))⟩
+  have closed (channel : RawChannel (ZMod p)) [channel.Consistent]
+      (member : channel ∈ (sp1Ensemble (p := p)).channels)
+      (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw]) :=
+    witness.channelGuarantees_of_component_requirements channel hC (hB channel member)
+      (fun component componentMem env constraints =>
+        sp1_component_finished_requirements component componentMem channel outside env constraints)
+  have byte := closed byteChannel.toRaw (by simp [sp1Ensemble_channels]) (by simp [circuit_norm])
+  have program := closed programChannel.toRaw (by simp [sp1Ensemble_channels]) (by simp [circuit_norm])
+  exact fun table member => ⟨byte table member, program table member⟩
 
 end SP1Clean.Soundness

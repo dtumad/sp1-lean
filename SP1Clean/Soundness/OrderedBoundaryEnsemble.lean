@@ -142,6 +142,24 @@ theorem rows_strict (witness : Witness (name := name) (initial := initial) (fina
   exact strict row.1 (TransitionView.readRows_view_mem _ _ row member) row.2
     (rows_spec witness valid row member)
 
+/-- Only the inventory's own table specifications and private-channel balance are needed.
+Auxiliary components may still be undergoing their separate execution-grounding proof. -/
+theorem keys_nodup_of_tables (witness : Witness (name := name) (initial := initial) (final := final)
+    (views := views) (auxiliary := auxiliary) (channels := channels))
+    (privateChannel : ∀ component ∈ auxiliary,
+      (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
+    (strict : ∀ view ∈ views, ∀ env, view.component.Spec env →
+      Word.toNat (view.edge env).1 < Word.toNat (view.edge env).2)
+    (valid : ∀ table ∈ witness.tables.take views.length, table.Spec)
+    (balanced : witness.BalancedChannel (OrderedBoundary.channel name).toRaw) :
+    ((rows witness).map fun row => Word.toNat (row.1.edge row.2).2).Nodup := by
+  classical
+  exact rankedKeys_nodup_list (rows witness) (fun row => row.1.edge row.2) Word.toNat initial final
+    (endpointBalanced witness privateChannel balanced) (by
+      intro row member
+      exact strict row.1 (TransitionView.readRows_view_mem _ _ row member) row.2
+        (TransitionView.readRows_spec views _ (tables_aligned witness) valid row member))
+
 /-- Strict local specifications and actual global balance force distinct destination ranks. -/
 theorem keys_nodup_of_specs (witness : Witness (name := name) (initial := initial) (final := final)
     (views := views) (auxiliary := auxiliary) (channels := channels))
@@ -150,10 +168,9 @@ theorem keys_nodup_of_specs (witness : Witness (name := name) (initial := initia
     (strict : ∀ view ∈ views, ∀ env, view.component.Spec env →
       Word.toNat (view.edge env).1 < Word.toNat (view.edge env).2)
     (valid : witness.Spec) (balanced : witness.BalancedChannels) :
-    ((rows witness).map fun row => Word.toNat (row.1.edge row.2).2).Nodup := by
-  classical
-  exact rankedKeys_nodup_list (rows witness) (fun row => row.1.edge row.2) Word.toNat initial final
-    (endpointBalanced witness privateChannel (balanced _ (List.mem_cons_self ..)))
-    (rows_strict witness strict valid)
+    ((rows witness).map fun row => Word.toNat (row.1.edge row.2).2).Nodup :=
+  keys_nodup_of_tables witness privateChannel strict
+    (fun table member => valid table (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member)))
+    (balanced _ (List.mem_cons_self ..))
 
 end SP1Clean.Soundness.OrderedBoundaryEnsemble

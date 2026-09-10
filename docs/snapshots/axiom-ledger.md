@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-10. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1073 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 102 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1092 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 105 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1175 released declarations are probed.
+- 1197 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,14 +35,22 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The uniform decoder agreement checkpoint adds five main proofs. The ROM-fetch and hint-exclusion
+The uniform decoder agreement checkpoint added five main proofs. The ROM-fetch and hint-exclusion
 lemmas use subsets of the ordinary logical baseline. `SailDecode.instructionDecode_agrees` and
 `DecodedProgramProvider.spec_committed`/`constraints_committed` also retain Sail's `sys_enable_experimental_extensions`
 hook through the official decoder target. The former closes `InstructionDecode.AgreesWithSail`;
 the provider bridges instantiate the existing conditional ROM theorem without a decoder premise,
 including directly from physical-row constraints. Two new
 regression anchors include a compiler-trusted alias-domain check and kernel-checked witnesses of
-Sail's hint priority. No previously recorded declaration changed its axiom set.
+Sail's hint priority.
+
+The combined native-boundary integration adds 19 main declarations and three executable regression
+anchors. These cover generic channel closure, the 59-table assembly and boot verifier, initial-record
+authentication/uniqueness and its physical ledger, and Program-row ROM/Sail membership. The generic
+closure and inventory arguments use the ordinary logical baseline. The assembly-indexed statements
+also reference the existing proof-bearing chip registry and retain its disclosed Sail/bit-vector
+dependencies; an initialization-only conclusion does not erase those dependencies from its type.
+The new executable regressions remain in the test library.
 
 Most chip-local semantic and whole-chip faithfulness proofs use only the ordinary logical baseline.
 Mul and several Sail bridges additionally retain generated bit-vector decision proofs. Execution
@@ -70,7 +78,8 @@ The generator scans:
   program-image and host-memory frame proofs, authenticated initial register/RAM providers,
   ordered-key uniqueness, constructive row domains, and initialization inventory derived from
   the actual Clean control ledger with fixed endpoints, canonical finalization, and both
-  inventories' exact physical Memory projections;
+  inventories' exact physical Memory projections, plus the combined native assembly's raw-constraint
+  initialization/Program/boot results and generic channel closure;
 - the common shard evaluator, paired exact relation, natural-ledger bridge, and native
   correctness/language-equality surface;
 - exact Core profile and manifest guards;

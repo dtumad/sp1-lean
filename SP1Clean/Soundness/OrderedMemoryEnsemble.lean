@@ -144,30 +144,31 @@ theorem memory_interactions_eq (witness : EnsembleWitness (inventory.ensemble au
   simp only [realizes, records, indexedRows, List.filterMap_eq_flatMap_toList, List.map_flatMap]
 
 omit [Fact (2 ^ 17 < p)] in
-theorem indexedRows_spec (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
-    (valid : witness.Spec) :
+theorem indexedRows_spec_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
+    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec) :
     ∀ row ∈ inventory.indexedRows witness, (inventory.viewFor row.1).component.Spec row.2 := by
   apply TransitionView.readIndexedRows_spec inventory.tableIds inventory.viewFor _
   · exact OrderedBoundaryEnsemble.tables_aligned witness
-  · intro table member
-    exact valid table (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member))
+  · exact valid
 
 omit [Fact (2 ^ 17 < p)] in
-theorem records_valid (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
-    (valid : witness.Spec) : ∀ record ∈ inventory.records witness, recordSpec record := by
+theorem records_valid_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
+    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec) :
+    ∀ record ∈ inventory.records witness, recordSpec record := by
   intro record member
   obtain ⟨row, member, found⟩ := List.mem_filterMap.mp member
   exact (inventory.recordFor_spec row.1 row.2
-    (inventory.indexedRows_spec witness valid row member) record found).1
+    (inventory.indexedRows_spec_of_tables witness valid row member) record found).1
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Actual Clean balance forces distinct canonical locations throughout the inventory. -/
-theorem records_locations_nodup (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
+theorem records_locations_nodup_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
-    (valid : witness.Spec) (balanced : witness.BalancedChannels) :
+    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec)
+    (balanced : witness.BalancedChannel (OrderedBoundary.channel name).toRaw) :
     ((inventory.records witness).map MemoryMsg.locOf).Nodup := by
-  have unique := OrderedBoundaryEnsemble.keys_nodup_of_specs witness privateChannel (by
+  have unique := OrderedBoundaryEnsemble.keys_nodup_of_tables witness privateChannel (by
     intro view member env spec
     obtain ⟨id, _, rfl⟩ := List.mem_map.mp member
     exact inventory.strict id env spec) valid balanced
@@ -180,8 +181,31 @@ theorem records_locations_nodup (witness : EnsembleWitness (inventory.ensemble a
       intro row member loc found
       obtain ⟨record, decodedRecord, rfl⟩ := Option.map_eq_some_iff.mp found
       exact (inventory.recordFor_spec row.1 row.2
-        (inventory.indexedRows_spec witness valid row member) record decodedRecord).2)
+        (inventory.indexedRows_spec_of_tables witness valid row member) record decodedRecord).2)
   simpa only [records, List.map_filterMap, Function.comp_def] using decoded
+
+omit [Fact (2 ^ 17 < p)] in
+theorem indexedRows_spec (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
+    (valid : witness.Spec) :
+    ∀ row ∈ inventory.indexedRows witness, (inventory.viewFor row.1).component.Spec row.2 :=
+  inventory.indexedRows_spec_of_tables witness (fun table member =>
+    valid table (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member)))
+
+omit [Fact (2 ^ 17 < p)] in
+theorem records_valid (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
+    (valid : witness.Spec) : ∀ record ∈ inventory.records witness, recordSpec record :=
+  inventory.records_valid_of_tables witness (fun table member =>
+    valid table (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member)))
+
+omit [Fact (2 ^ 17 < p)] in
+theorem records_locations_nodup (witness : EnsembleWitness (inventory.ensemble auxiliary channels))
+    (privateChannel : ∀ component ∈ auxiliary,
+      (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
+    (valid : witness.Spec) (balanced : witness.BalancedChannels) :
+    ((inventory.records witness).map MemoryMsg.locOf).Nodup :=
+  inventory.records_locations_nodup_of_tables witness privateChannel
+    (fun table member => valid table (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member)))
+    (balanced _ (List.mem_cons_self ..))
 
 end Inventory
 end SP1Clean.Soundness.OrderedMemoryEnsemble

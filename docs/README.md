@@ -17,6 +17,7 @@ Each document has one role:
 | [`layering.md`](layering.md) | structural layering and namespace contract |
 | [`architecture.md`](architecture.md) | module ownership, proof chain, and deliberate exceptions |
 | [`roadmap.md`](roadmap.md) | dependency-ordered future work and non-blocking backlog |
+| [`leanervm-comparison.md`](leanervm-comparison.md) | pinned comparison, capstone decisions, and possible shared contributions |
 | [`goal-overview.md`](goal-overview.md) | completed-state contract; never current status |
 | [`witgen-wire-format.md`](witgen-wire-format.md) | witness-export wire format |
 | [`rust-integration-memo.md`](rust-integration-memo.md) | SP1-side witness-generation integration memo |

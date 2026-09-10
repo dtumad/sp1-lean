@@ -75,14 +75,26 @@ Implemented foundations:
   Its `constraints_committed` companion derives that meaning from each physical row's raw fixed-table
   constraints, without a provider-validity or channel-balance premise.
   The 25 instruction circuits and faithfulness anchors are unchanged.
+- `Soundness/NativeCoreEnsemble.lean` now combines all 25 instruction tables, the computed fixed
+  Program table, both ordered memory inventories, and the existing Byte/Range/bump/Halt/syscall
+  tables in one 59-table assembly. Its verifier fixes boot PC/time and both private ordering
+  boundaries. The generic `ToClean/Air/ChannelClosure.lean` theorem closes Byte/Program directly
+  from component requirements and the actual ledger; the older positional closure proof now uses
+  this same helper. `NativeCoreBoundaries.lean` derives initial-record authenticity and location
+  uniqueness, their exact physical Memory projection, public boot fields, and physical Program-row
+  ROM/Sail membership. No caller supplies initial-provider validity or uniqueness. Regressions
+  exercise the composed verifier, both inventories, forged boot fields, and noncanonical clocks.
+  This assembly still contains the legacy Halt table, including its padding behavior; it is not
+  yet certified as a boot-to-HALT machine.
 
 Still required before the native capstone can be claimed:
 
-1. Wire the computed fixed ROM and its proved Sail contract into the machine. Integrate the new
-   initialization and finalization subsystems into the full native machine. Their fixed control
-   boundaries, actual Memory projections, and actual-ledger uniqueness proofs are closed. Derive
-   their local table specifications in the enclosing machine and connect both boundaries to timed
-   grounding. These subsystems have not yet replaced the existing ensemble's semantic boundary premise.
+1. Connect the new 59-table assembly to timed grounding. Initial-record meaning/uniqueness and
+   physical Program-row authentication now follow from its constraints and balance. Derive final
+   address/order facts without assuming Memory values, then close Memory grounding and recover
+   final-record values and timestamps. Transport committed Program meaning to instruction pulls.
+   The older 55-table execution theorem still carries its semantic boundary premise; no execution
+   theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;
    integrate host effects and ordinary ROM-write exclusion into the AIR and mixed timed grounding.
 3. Prove the event compiler total on shared semantic resource bounds; construct all native tables
@@ -98,6 +110,10 @@ proving, ELF authentication, host implementation correctness, and recursive proo
 separate adapters or workstreams.
 
 ## Capstone integration and review
+
+The [pinned leanerVM comparison](leanervm-comparison.md) supports targeted fixes and small
+simplifications during this capstone. Shared graph/ensemble APIs and binary-field bus work are
+follow-ups; the comparison does not change the theorem target or authorize dependency updates.
 
 The consolidation branch, `dtumad/core-verification-capstone`, already contains all eight
 predecessor PRs. Preserve that history and implement the remaining work as reviewable commits;

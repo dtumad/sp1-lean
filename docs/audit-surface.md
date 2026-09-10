@@ -89,6 +89,17 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 
 ## The assumed semantic boundary
 
+The new image-authenticated assembly derives the following boundary facts directly. It has not
+yet replaced the older execution theorem whose assumptions are listed below.
+
+| Declaration | File | Question it decides |
+|---|---|---|
+| `BootFor` | `SP1Clean/FormalModel/Contracts/NativeCoreBoundary.lean` | Which initial clock and PC the new verifier constrains |
+| `ensemble` | `SP1Clean/Soundness/NativeCoreEnsemble.lean` | Which physical tables, channels, and verifier form the new assembly |
+| `initial_records_authentic` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether raw AIR constraints and balance authenticate boot memory |
+| `initial_records_locations_nodup` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether the actual ledger forbids duplicate initial locations |
+| `program_row_committed` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether physical Program rows match the checked ROM and official Sail |
+
 The public premise `SemanticBoundaryBinding` is regrouped for reading: three commitment facts
 (program well-formedness, `Commit.StatementFor`, the committed initial clock), the 3-field
 `ShardStartState`, the code/data-separation contract, and the 4-field external bundle

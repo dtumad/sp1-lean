@@ -617,5 +617,8 @@ import SP1Clean.Soundness.OrderedMemoryEnsemble
 import SP1Clean.Soundness.OrderedBoundaryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
 import SP1Clean.Soundness.InitialMemoryEnsemble
+import SP1Clean.FormalModel.Contracts.NativeCoreBoundary
+import SP1Clean.Soundness.NativeCoreEnsemble
+import SP1Clean.Soundness.NativeCoreBoundaries
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

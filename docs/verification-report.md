@@ -633,6 +633,18 @@ record-correspondence premise. Finalizer constructors discharge their internal c
 conditions, and both witness programs export. Tests cover malformed final inventories and
 paired initial/final ledgers whose value or clock differs.
 
+`Soundness/NativeCoreEnsemble.lean` integrates these providers into a new 59-table assembly,
+replacing the legacy Program/init/final components. Its verifier constrains the initial PC to the
+image's entry, the initial clock to one, and both private ordering endpoints. The shared generic
+channel-closure theorem proves Byte/Program guarantees for all physical tables. From constraints
+and balance alone, `NativeCoreBoundaries.initial_records_authentic` and
+`initial_records_locations_nodup` prove the initial inventory's boot values and per-location
+uniqueness; `initial_memory_interactions` identifies those records with the actual Memory ledger.
+`public_boot` proves the public boot fields and canonical boundary limbs. Finalizer specifications
+and uniqueness still depend on Memory grounding. This assembly retains the legacy Halt table's
+padding behavior and has no boot-to-HALT execution theorem yet; the existing 55-table execution
+theorem and its semantic boundary premise remain unchanged.
+
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL
 encoding. `Model/Core/ProgramTable.lean` constructs complete fixed messages, proves that projection
@@ -657,10 +669,10 @@ other `rd = x0` cases. The finite-image checker enforces this exclusion even at 
 Supporting these aliases requires semantic bridges for the hint constructors; no dependency pin or
 instruction-chip faithfulness theorem changed.
 
-These are subsystem results, not the full native capstone. The local table specifications must
-still be derived in the enclosing machine's channel-soundness phase. Replacing the existing
-machine providers, connecting both constrained boundaries to timed grounding,
-and closing the rest of `SemanticBoundaryBinding` remain open.
+These boundary results do not yet give the full native capstone. Initialization specifications
+are now derived inside the new assembly; finalizer address/order facts and Memory grounding,
+transport of committed Program meaning to instruction pulls, and the remaining execution/host
+argument are still open. The older execution theorem retains `SemanticBoundaryBinding`.
 
 ### 7.3 What is *not* claimed at this layer
 
