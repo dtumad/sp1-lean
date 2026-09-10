@@ -1,15 +1,15 @@
 # Axiom and trust ledger
 
-Checked against the consolidated stack on 2026-09-09. Each raw file retains the source revision
+Checked against the consolidated stack on 2026-09-10. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1054 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 94 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1068 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 100 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1148 released declarations are probed.
+- 1168 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,13 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The executable decoder and computed-ROM checkpoint adds fourteen main proofs. Thirteen use only
+subsets of the ordinary logical baseline; `ProgramTable.row_committed_of_decode` also retains
+Sail's `sys_enable_experimental_extensions` hook through its semantic target. That theorem remains
+conditional on `InstructionDecode.AgreesWithSail`, which is not instantiated. Six new regression
+anchors include five compiler-trusted checks and one kernel-reduced operand-encoding proof.
+No previously recorded declaration changed its axiom set.
 
 Most chip-local semantic and whole-chip faithfulness proofs use only the ordinary logical baseline.
 Mul and several Sail bridges additionally retain generated bit-vector decision proofs. Execution
