@@ -21,6 +21,8 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.InstructionDecode.literalEncodings
 #print axioms SP1CleanTest.Core.InstructionDecode.operandEdges
 #print axioms SP1CleanTest.Core.InstructionDecode.rejectedEncodings
+#print axioms SP1CleanTest.Core.InstructionDecode.hintAliases
+#print axioms SP1CleanTest.Core.InstructionDecode.sailHintPriority
 #print axioms SP1CleanTest.Core.InstructionDecode.checkedProgram
 #print axioms SP1CleanTest.Core.InstructionDecode.fixedProgramConstraints
 #print axioms SP1CleanTest.Core.ProgramImage.checkedImage_boot

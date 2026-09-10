@@ -6,9 +6,9 @@ A finite decoder for the native instruction profile, including the exact ECALL e
 rejects compressed instructions, reserved function fields, and extensions outside RV64IM. The
 result uses the existing Sail instruction vocabulary and guarded Program-row projection.
 
-This is an executable parser, not yet a replacement for `ConfiguredDecode`: the general theorem
-identifying its successful results with the official, stateful Sail decoder remains to be proved.
-The existing Sail certificates and machine soundness theorem continue to use the official decoder.
+`Proofs/Sail/InstructionDecode.lean` proves that successful parsing agrees with the official,
+stateful Sail decoder in every configured state. Enabled hint-extension aliases are rejected:
+their distinct Sail constructors need separate semantic bridges before they can join this profile.
 -/
 
 namespace SP1Clean.Model.Core
@@ -20,6 +20,19 @@ namespace InstructionDecode
 /-- Extract an unsigned instruction field without a field-modulus dependency. -/
 def bits (word : BitVec 32) (start width : ℕ) : BitVec width :=
   BitVec.ofNat width (word.toNat >>> start)
+
+/-- Encodings claimed by enabled Sail hint extensions before the base-integer decoder.
+
+Zicbop claims three ORI-to-x0 immediate patterns; Zihintntl claims four ADD-to-x0 words.
+Although their base-integer interpretations are no-ops, literal agreement with the pinned
+official decoder requires excluding them until the hint constructors have semantic bridges.
+This check deliberately preserves other instructions with `rd = x0`.
+-/
+def reservedHint (word : BitVec 32) : Bool :=
+  let selector := (bits word 20 5).toNat
+  ((bits word 0 15 == 0x6013#15) && (selector == 0 || selector == 1 || selector == 3)) ||
+    ((bits word 0 20 == 0x00033#20) && (bits word 25 7 == 0#7) &&
+      (selector == 2 || selector == 3 || selector == 4 || selector == 5))
 
 /-- Register-register integer and multiplication/division instructions. -/
 def register (word : BitVec 32) (wordOp : Bool) : Option instruction := do
@@ -99,39 +112,48 @@ def immediate (word : BitVec 32) (wordOp : Bool) : Option instruction := do
 
 /-- Decode the supported base instruction word; no state, hints, or proof fields are inputs. -/
 def decode (word : BitVec 32) : Option instruction := do
-  let rd := regidx.Regidx (bits word 7 5)
-  let rs1 := regidx.Regidx (bits word 15 5)
-  let rs2 := regidx.Regidx (bits word 20 5)
-  let function := (bits word 12 3).toNat
-  match (bits word 0 7).toNat with
-  | 0x33 => register word false
-  | 0x3b => register word true
-  | 0x13 => immediate word false
-  | 0x1b => immediate word true
-  | 0x37 => some (.UTYPE (bits word 12 20, rd, .LUI))
-  | 0x17 => some (.UTYPE (bits word 12 20, rd, .AUIPC))
-  | 0x6f =>
-    let imm := bits word 31 1 ++ bits word 12 8 ++ bits word 20 1 ++ bits word 21 10 ++ 0#1
-    some (.JAL (imm, rd))
-  | 0x67 => if function = 0 then some (.JALR (bits word 20 12, rs1, rd)) else none
-  | 0x63 =>
-    let op ← match function with
-      | 0 => some bop.BEQ | 1 => some .BNE | 4 => some .BLT | 5 => some .BGE
-      | 6 => some .BLTU | 7 => some .BGEU | _ => none
-    let imm := bits word 31 1 ++ bits word 7 1 ++ bits word 25 6 ++ bits word 8 4 ++ 0#1
-    some (.BTYPE (imm, rs2, rs1, op))
-  | 0x03 =>
-    let (width, unsigned) ← match function with
-      | 0 => some (1, false) | 1 => some (2, false) | 2 => some (4, false)
-      | 3 => some (8, false) | 4 => some (1, true) | 5 => some (2, true)
-      | 6 => some (4, true) | _ => none
-    some (.LOAD (bits word 20 12, rs1, rd, unsigned, width))
-  | 0x23 =>
-    let width ← match function with
-      | 0 => some 1 | 1 => some 2 | 2 => some 4 | 3 => some 8 | _ => none
-    some (.STORE (bits word 25 7 ++ bits word 7 5, rs2, rs1, width))
-  | 0x73 => if word = 0x00000073 then some (.ECALL ()) else none
-  | _ => none
+  if reservedHint word then none else do
+    let rd := regidx.Regidx (bits word 7 5)
+    let rs1 := regidx.Regidx (bits word 15 5)
+    let rs2 := regidx.Regidx (bits word 20 5)
+    let function := (bits word 12 3).toNat
+    match (bits word 0 7).toNat with
+    | 0x33 => register word false
+    | 0x3b => register word true
+    | 0x13 => immediate word false
+    | 0x1b => immediate word true
+    | 0x37 => some (.UTYPE (bits word 12 20, rd, .LUI))
+    | 0x17 => some (.UTYPE (bits word 12 20, rd, .AUIPC))
+    | 0x6f =>
+      let imm := bits word 31 1 ++ bits word 12 8 ++ bits word 20 1 ++ bits word 21 10 ++ 0#1
+      some (.JAL (imm, rd))
+    | 0x67 => if function = 0 then some (.JALR (bits word 20 12, rs1, rd)) else none
+    | 0x63 =>
+      let op ← match function with
+        | 0 => some bop.BEQ | 1 => some .BNE | 4 => some .BLT | 5 => some .BGE
+        | 6 => some .BLTU | 7 => some .BGEU | _ => none
+      let imm := bits word 31 1 ++ bits word 7 1 ++ bits word 25 6 ++ bits word 8 4 ++ 0#1
+      some (.BTYPE (imm, rs2, rs1, op))
+    | 0x03 =>
+      let (width, unsigned) ← match function with
+        | 0 => some (1, false) | 1 => some (2, false) | 2 => some (4, false)
+        | 3 => some (8, false) | 4 => some (1, true) | 5 => some (2, true)
+        | 6 => some (4, true) | _ => none
+      some (.LOAD (bits word 20 12, rs1, rd, unsigned, width))
+    | 0x23 =>
+      let width ← match function with
+        | 0 => some 1 | 1 => some 2 | 2 => some 4 | 3 => some 8 | _ => none
+      some (.STORE (bits word 25 7 ++ bits word 7 5, rs2, rs1, width))
+    | 0x73 => if word = 0x00000073 then some (.ECALL ()) else none
+    | _ => none
+
+/-- Every accepted instruction avoids the enabled hint-extension aliases. -/
+theorem decode_reservedHint {word : BitVec 32} {i : instruction}
+    (decoded : decode word = some i) : reservedHint word = false := by
+  unfold decode at decoded
+  split at decoded
+  · contradiction
+  · simpa using ‹¬reservedHint word = true›
 
 /-- Every successful parse belongs to the existing routed instruction image or is ECALL. -/
 theorem decode_supported {word : BitVec 32} {i : instruction} (decoded : decode word = some i) :
@@ -154,8 +176,8 @@ theorem decode_supported {word : BitVec 32} {i : instruction} (decoded : decode 
         SP1Clean.Soundness.Target.instructionRouteKey, SP1Clean.Soundness.Target.mulOpCanonical,
         SP1Clean.Soundness.Target.loadWidthOK, SP1Clean.Soundness.Target.storeWidthOK]
 
-/-- The remaining uniform parser/Sail obligation. This is a proposition to prove, not an axiom
-or a field of checked program inputs. No instance is currently supplied. -/
+/-- Uniform parser/Sail agreement, proved by `SailDecode.instructionDecode_agrees`.
+This proposition is not an axiom or a field of checked program inputs. -/
 def AgreesWithSail : Prop :=
   ∀ word i, decode word = some i → SP1Clean.Soundness.Target.ConfiguredDecode word i
 

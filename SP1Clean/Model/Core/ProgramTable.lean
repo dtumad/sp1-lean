@@ -9,9 +9,9 @@ The table contains complete messages produced by the executable decoder, indepen
 trace rows and prover data. Validation fails if any ROM word cannot be projected. Local range
 facts follow from the projection; no row-validity proof is supplied with the image.
 
-Membership here certifies agreement with `InstructionDecode.decode`. Identifying that parser with
-Sail's configured decoder is a separate, still open proof obligation. This table is not yet wired
-into the released machine theorem.
+Membership here certifies agreement with `InstructionDecode.decode`; the separate proof in
+`Proofs/Sail/InstructionDecode.lean` identifies its results with Sail's configured decoder.
+This table is not yet wired into the released machine theorem.
 -/
 
 namespace SP1Clean.Model.Core
@@ -147,8 +147,8 @@ theorem row_isSome_iff (entry : BitVec 64 × BitVec 32) :
       · exact (ecall wordEq).elim
       · exact projection_isSome _ i canonical routed
 
-/-- Once the uniform parser theorem is proved, computed rows reach the existing committed-ROM
-contract. All instruction-family distinctions remain inside the decoder and projection. -/
+/-- Transport uniform decoder agreement to the existing committed-ROM contract.
+The proof layer supplies the closed parser theorem; instruction-family distinctions remain internal. -/
 theorem row_committed_of_decode (decoder : InstructionDecode.AgreesWithSail)
     {program : GuestProgram} {entry : BitVec 64 × BitVec 32} {row : ProgramRow (ZMod p)}
     (fetch : program.fetchWord entry.1 = some entry.2) (bound : entry.1.toNat < 2 ^ 48)

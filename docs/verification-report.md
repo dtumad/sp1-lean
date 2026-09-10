@@ -229,10 +229,12 @@ syscall convention) are all defined over that single step relation. The two fixe
 arguments are audited benign: `step_no` feeds only trace strings, and `exit_wait` affects only a
 hart-waiting arm that is dead under the configured active-hart state.
 
-Instruction decoding is likewise delegated: the typed program-ROM decoder used by the grounding
+Instruction decoding is anchored to Sail: the typed program-ROM decoder used by the grounding
 engine is anchored to the generated `ext_decode` (a `decodedInROM` fact yields
 `(ext_decode w).run s = .ok i s`), with per-class round-trip lemmas — so opcode/funct field
-extraction is the Sail model's, not a re-implementation.
+extraction reaches the official Sail model. The new finite-image provider additionally uses an
+executable parser whose uniform agreement with that decoder is proved (§7.2); integrating that
+provider into the released machine theorem remains separate work.
 
 ### 3.2 The generated platform configuration: two keys, four value sites
 
@@ -639,9 +641,21 @@ native address window. Its finite program checker rejects unsupported entries, i
 ROM words, without depending on the AIR field. `DecodedProgramProvider.populate_assumptions`
 discharges the fixed provider's complete-message membership and range premises; its witness program
 exports. Regression checks cover all 51 supported SP1 opcode projections and malformed words/messages.
-The uniform `InstructionDecode.AgreesWithSail` proposition has **no proof yet**;
-`ProgramTable.row_committed_of_decode` is conditional on that proposition. The computed ROM has not
-replaced the released machine's program-binding premise.
+`SailDecode.instructionDecode_agrees` proves uniform agreement with official Sail for every accepted
+word and configured state, with 62 symbolic integer cases and exact ECALL hidden beneath the public
+statement. `DecodedProgramProvider.spec_committed` connects the provider contract directly to the
+validated image's actual instruction ROM and official decoder; `constraints_committed` derives
+that meaning from the physical row's raw fixed-table constraints. Neither needs a decoder
+certificate, and the latter needs no provider-validity or channel-balance premise. The computed
+ROM has not yet replaced the released machine's program-binding premise.
+
+The proof investigation found a parser-domain defect: enabled Sail hint extensions claim some
+base-integer no-op encodings before the ordinary decoder. In particular, `0x00200033` decodes as
+`NTL.P1`, rather than ADD. The executable parser now rejects all four Zihintntl ADD aliases and the
+three Zicbop ORI immediate-selector patterns, while retaining neighboring supported encodings and
+other `rd = x0` cases. The finite-image checker enforces this exclusion even at unused ROM addresses.
+Supporting these aliases requires semantic bridges for the hint constructors; no dependency pin or
+instruction-chip faithfulness theorem changed.
 
 These are subsystem results, not the full native capstone. The local table specifications must
 still be derived in the enclosing machine's channel-soundness phase. Replacing the existing

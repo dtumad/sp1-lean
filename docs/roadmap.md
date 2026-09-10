@@ -65,15 +65,20 @@ Implemented foundations:
   in the native window and satisfy Program-channel range guarantees. Provider constructors discharge
   the complete lookup and range assumptions, and their witness program exports. Regressions cover
   all 51 supported SP1 opcode projections, immediate/reserved-bit cases, and forged messages even at
-  zero multiplicity. General agreement with official Sail is still open:
-  `InstructionDecode.AgreesWithSail` names the uniform obligation, and
-  `ProgramTable.row_committed_of_decode` proves its connection to the existing committed-ROM contract.
+  zero multiplicity. `SailDecode.instructionDecode_agrees` now proves agreement with official Sail
+  for every accepted word and every configured state, covering 62 integer instruction variants and
+  exact ECALL. The parser rejects the ADD/ORI encodings that the pinned Sail configuration claims
+  for enabled Zihintntl/Zicbop hints; other `rd = x0` cases remain supported. Those aliases need
+  semantic hint bridges before they can join the exact-decoder profile.
+  `DecodedProgramProvider.spec_committed` derives actual ROM/Sail membership directly from the
+  fixed provider's contract and finite-image validation, without a caller-supplied decoder certificate.
+  Its `constraints_committed` companion derives that meaning from each physical row's raw fixed-table
+  constraints, without a provider-validity or channel-balance premise.
   The 25 instruction circuits and faithfulness anchors are unchanged.
 
 Still required before the native capstone can be claimed:
 
-1. Prove the executable decoder agrees with configured official Sail decoding and wire its computed
-   fixed ROM into the machine. Integrate the new
+1. Wire the computed fixed ROM and its proved Sail contract into the machine. Integrate the new
    initialization and finalization subsystems into the full native machine. Their fixed control
    boundaries, actual Memory projections, and actual-ledger uniqueness proofs are closed. Derive
    their local table specifications in the enclosing machine and connect both boundaries to timed
@@ -91,6 +96,40 @@ RISC-V/AIR equivalence is claimed. Keep the current audited Clean/Lean/Sail pins
 does not yet supply the prover-data agreement fix or remove these native obligations. Cryptographic
 proving, ELF authentication, host implementation correctness, and recursive proof verification are
 separate adapters or workstreams.
+
+## Capstone integration and review
+
+The consolidation branch, `dtumad/core-verification-capstone`, already contains all eight
+predecessor PRs. Preserve that history and implement the remaining work as reviewable commits;
+there is no need to replay or merge the predecessors individually.
+
+The public API will instantiate `CompleteEnsemble` and `EnsembleCompiler` for the same independent
+bounded boot-to-HALT relation. Checked inputs and semantic resource limits determine the instance;
+public outputs have canonical bounded encodings. Give the exported core a concrete `SP1Prime`
+specialization while retaining generic underlying proofs. Both directions must close without a
+decoder certificate, semantic boundary binding, provider-validity premise, syscall-inactivity
+premise, or compiler-totality bundle supplied by the caller.
+
+Integration proceeds through decoder agreement, authenticated Program and memory boundaries,
+constrained host effects and mixed-row grounding, then constructive completeness and event-tape
+export. In particular, the current syscall frame's unchanged-memory premise must be replaced by
+precise host-memory footprints. ROM protection includes ordinary stores and hint padding. The new
+core uses the syscall HALT path as its sole Exit contributor, with SP1's canonical field-valued exit
+range rather than the legacy Halt table's 16-bit restriction. External hook and recursive-proof
+requests remain transcript interactions, not claims that their implementations are verified.
+
+Publication is gated on the closed theorem, the complete core export, and the final audit. Before
+opening the combined PR, construct a joint compiled boot-to-HALT regression with memory and host
+effects, compare complete Lean/Rust trace assembly, retain all instruction dump-conformance gates,
+and review the propositions and trust boundaries themselves. Finish with clean build/test/lint,
+regeneration, axiom-audit, and fresh-build CI results. Align the maintained documentation around the
+actual theorem, remove obsolete scaffolding and plan-number vocabulary with consumer checks, and
+preserve provenance and review attribution. The combined PR will link the eight predecessors;
+merging into `main` remains a later review decision.
+
+Exact upstream Core refinement, cross-shard composition, and cryptographic verifier soundness
+remain separate follow-on workstreams. Historical exact-Core sequencing below does not override
+the native capstone's current priority or authorize a dependency re-pin.
 
 ## Current checkpoint
 

@@ -1,12 +1,12 @@
-import SP1Clean.Proofs.Chips.DecodedProgramProvider
+import SP1Clean.Proofs.Chips.DecodedProgramProvider.Bridge
 import SP1Clean.Model.SP1Field
 import Clean.Circuit.WitnessExport
 
 /-! # Executable decoder and fixed Program AIR regressions
 
 Literal instruction encodings cover the entire SP1 opcode projection supported by RV64IM, plus
-immediate and reserved-bit edge cases. These are conformance checks, not a proof that the parser
-agrees with Sail for every instruction word.
+immediate and reserved-bit edge cases. The uniform parser/Sail agreement theorem is in the main
+proof library; these regressions also witness the official hint-extension priority concretely.
 -/
 
 namespace SP1CleanTest.Core.InstructionDecode
@@ -66,12 +66,45 @@ theorem rejectedEncodings :
      0x003100af, 0x003100d3, 0xffffffff].all
       (fun word => (InstructionDecode.decode word).isNone) = true := by native_decide
 
+/-- The pinned Sail decoder claims these base-integer no-op encodings for enabled hint
+extensions. Neighboring ADD/ORI instructions, including other `rd = x0` cases, remain accepted. -/
+theorem hintAliases :
+    [0x00200033, 0x00300033, 0x00400033, 0x00500033,
+     0x00006013, 0x00116013, 0xfe3fe013].all
+      (fun word => (InstructionDecode.decode word).isNone) = true ∧
+    [0x00000033, 0x00100033, 0x00600033, 0x00208033, 0x002000b3,
+     0x00206013, 0x00406013, 0x00006093, 0x00001017].all
+      (fun word => (InstructionDecode.decode word).isSome) = true := by native_decide
+
+open Sail LeanRV64D.Functions in
+/-- Official Sail recognizes the overlapping NTL and prefetch encodings as hint constructors.
+These kernel-checked witnesses explain why literal ADD/ORI decoding must reject the aliases. -/
+theorem sailHintPriority (s : SailState) :
+    (ext_decode 0x00200033#32).run s = .ok (.NTL .NTL_P1) s ∧
+    (ext_decode 0x00006013#32).run s = .ok (.ZICBOP (.PREFETCH_I, .Regidx 0#5, 0#12)) s := by
+  constructor
+  · conv_lhs => whnf
+    refine (SP1Clean.SailDecode.run_match_step _ (some (instruction.NTL .NTL_P1))
+      _ _ s ?_).trans rfl
+    conv_lhs => whnf
+    rw [show currentlyEnabled extension.Ext_Zihintntl s = .ok true s by
+      simp [currentlyEnabled, hartSupports, pure, EStateM.pure]]
+    rfl
+  · conv_lhs => whnf
+    refine (SP1Clean.SailDecode.run_match_step _
+      (some (instruction.ZICBOP (.PREFETCH_I, .Regidx 0#5, 0#12))) _ _ s ?_).trans rfl
+    conv_lhs => whnf
+    rw [show currentlyEnabled extension.Ext_Zicbop s = .ok true s by
+      simp [currentlyEnabled, hartSupports, pure, EStateM.pure]]
+    rfl
+
 private def image : ProgramImage := ⟨[(65536, 0x003100b3), (65540, 0x73)], 65536, []⟩
 
 /-- Validation checks every ROM word, including unsupported instructions at unused addresses. -/
 theorem checkedProgram :
     (image.checkProgram).isSome = true ∧
     (({ image with rom := image.rom ++ [(65544, 0x00100073)] }).checkProgram).isSome = false ∧
+    (({ image with rom := image.rom ++ [(65544, 0x00200033)] }).checkProgram).isSome = false ∧
     (({ image with rom := image.rom ++ image.rom }).checkProgram).isSome = false ∧
     (image.programRows (p := SP1Clean.SP1Prime)).length = 2 := by native_decide
 

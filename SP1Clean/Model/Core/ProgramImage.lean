@@ -71,6 +71,18 @@ def toGuestProgram (input : ProgramImage) (valid : input.Valid) : GuestProgram w
     intro row member
     exact (valid.2.1 row member).2.2
 
+/-- Every listed ROM entry is the semantic fetch result at its address. Uniqueness comes
+from finite-image validation, rather than a separate program-provider premise. -/
+theorem fetchWord_of_mem (input : ProgramImage) (valid : input.Valid)
+    {entry : BitVec 64 × BitVec 32} (member : entry ∈ input.rom) :
+    (input.toGuestProgram valid).fetchWord entry.1 = some entry.2 := by
+  cases found : input.rom.find? (fun row => row.1 == entry.1) with
+  | none => exact False.elim (List.find?_eq_none.mp found entry member (by simp))
+  | some row =>
+    have atAddress : row.1 = entry.1 := by simpa using List.find?_some found
+    have same := List.inj_on_of_nodup_map valid.1 (List.mem_of_find?_eq_some found) member atAddress
+    simp only [GuestProgram.fetchWord, toGuestProgram, found, Option.map_some, same]
+
 /-- The executable finite checks establish the semantic loader contract. -/
 theorem toGuestProgram_wellFormed (input : ProgramImage) (valid : input.Valid) :
     (input.toGuestProgram valid).WellFormed where

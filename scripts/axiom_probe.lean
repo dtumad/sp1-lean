@@ -434,8 +434,11 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Model.Core.HostIO.applyHook_eq_some_iff
 #print axioms SP1Clean.Model.Core.ProgramImage.toGuestProgram_wellFormed
 #print axioms SP1Clean.Model.Core.ProgramImage.check_isSome_iff
+#print axioms SP1Clean.Model.Core.ProgramImage.fetchWord_of_mem
 #print axioms SP1Clean.FixedProgramProvider.circuit
 #print axioms SP1Clean.Model.Core.InstructionDecode.decode_supported
+#print axioms SP1Clean.Model.Core.InstructionDecode.decode_reservedHint
+#print axioms SP1Clean.SailDecode.instructionDecode_agrees
 #print axioms SP1Clean.Model.Core.ProgramTable.row_pc
 #print axioms SP1Clean.Model.Core.ProgramTable.row_address
 #print axioms SP1Clean.Model.Core.ProgramTable.message_rowSpec
@@ -449,6 +452,8 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Model.Core.ProgramImage.programTable_rowSpec
 #print axioms SP1Clean.DecodedProgramProvider.populate_isSome_iff
 #print axioms SP1Clean.DecodedProgramProvider.populate_assumptions
+#print axioms SP1Clean.DecodedProgramProvider.spec_committed
+#print axioms SP1Clean.DecodedProgramProvider.constraints_committed
 #print axioms StaticTable.ofRows
 #print axioms SP1Clean.Word.ofBytes_isU64
 #print axioms SP1Clean.Word.toBitVec64_ofBytes

@@ -5,7 +5,8 @@ import SP1Clean.Proofs.Chips.FixedProgramProvider
 
 The provider's fixed lookup is the computed ROM table. The constructor supplies a complete
 message and an arbitrary lookup count, including zero-count padding, and discharges the circuit's
-prover assumptions. Full Sail decode agreement remains the obligation documented by `ProgramTable`.
+prover assumptions. Its semantic contract reaches the checked program's actual ROM and official
+Sail decoding in `DecodedProgramProvider/Bridge.lean`, including at zero multiplicity.
 -/
 
 namespace SP1Clean.DecodedProgramProvider

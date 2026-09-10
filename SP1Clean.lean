@@ -2,6 +2,7 @@ import SP1Clean.Proofs.Chips.AddChip.Bridge
 import ToClean.Air.CompleteEnsemble
 import ToClean.Air.EnsembleExport
 import SP1Clean.Proofs.Chips.DecodedProgramProvider
+import SP1Clean.Proofs.Chips.DecodedProgramProvider.Bridge
 import SP1Clean.Proofs.Chips.FixedProgramProvider
 import SP1Clean.Native.Chips.AddChip.Defs
 import SP1Clean.Proofs.Chips.AddChip.Formal
@@ -361,6 +362,9 @@ import SP1Clean.Model.Machine.EventExecution
 import SP1Clean.Model.Machine.Shard
 import SP1Clean.Model.Machine.Execution
 import SP1Clean.Model.Machine.ConfiguredState
+import SP1Clean.Proofs.Sail.InstructionDecode
+import SP1Clean.Proofs.Sail.InstructionDecode.Families
+import SP1Clean.Proofs.Sail.InstructionDecode.Tactic
 import SP1Clean.Proofs.Sail.TryStepReduction
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Model.Semantics.EventTime
