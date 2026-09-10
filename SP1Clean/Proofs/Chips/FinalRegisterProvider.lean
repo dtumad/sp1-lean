@@ -1,14 +1,15 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
 import ToClean.Circuit.InteractionRecovery
+import ToClean.Circuit.EmittedInteraction
 import SP1Clean.Model.Channels
 import Clean.Gadgets.Bits
 import Clean.Utils.Tactics
 
 /-! # Canonical register finalization
 
-Each physical row pulls one final Memory record. Its address must be a five-bit register index;
-the higher address limbs must vanish. The Memory channel supplies value and clock bounds.
-Ordering is supplied by the shared canonical-memory wrapper.
+Each physical row consumes one final Memory record. Its address must be a five-bit register index;
+the higher address limbs must vanish. The negative emission assumes no Memory guarantee, so the
+shared ordering wrapper can establish uniqueness before values and clocks are grounded globally.
 -/
 
 namespace SP1Clean.FinalRegisterProvider
@@ -41,12 +42,12 @@ def main (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMo
   assertion (Gadgets.ToBits.rangeCheck 5 indexBound) input.addr0
   assertZero input.addr1
   assertZero input.addr2
-  memoryChannel.pull input
+  memoryChannel.emit (-1) input
   return input
 
 theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith memoryChannel.toRaw =
-      [(memoryChannel.pulled input).toRaw] := by
+      [(memoryChannel.emitted (-1) input).toRaw] := by
   have rangeEmpty (n : ℕ) := InteractionRecovery.filter_interactions_formalAssertion_eq_nil
     (Gadgets.ToBits.rangeCheck 5 indexBound) memoryChannel.toRaw input.addr0
     (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil)
@@ -55,28 +56,27 @@ theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ)
 
 /-- The semantic domain of a register finalization row. -/
 def Domain (record : MemoryMsg (ZMod p)) : Prop :=
-  record.addr0.val < 32 ∧ record.addr1 = 0 ∧ record.addr2 = 0 ∧
-    MemoryMsg.isU64 record ∧ MemoryMsg.ClkBound record
+  record.addr0.val < 32 ∧ record.addr1 = 0 ∧ record.addr2 = 0
 
 instance (record : MemoryMsg (ZMod p)) : Decidable (Domain record) := by
-  unfold Domain MemoryMsg.isU64 MemoryMsg.ClkBound Word.isU64
+  unfold Domain
   infer_instance
 
 instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
   localLength _ := 5
   output input _ := input
-  channelsWithGuarantees := [memoryChannel.toRaw]
+  channelsWithGuarantees := []
 
 def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
   main
   elaborated := elaborated
   Spec input output _ := MemoryBoundary.FinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
   ProverAssumptions input _ _ := Domain input
-  channelsWithRequirements := []
+  channelsWithRequirements := [memoryChannel.toRaw]
   soundness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck, MemoryBoundary.address]
-    exact ⟨⟨canonical ⟨input_clk_high, input_clk_low, input_addr0, input_addr1, input_addr2, input_value⟩
-      h_holds.1 h_holds.2.1 h_holds.2.2.1, h_holds.2.2.2⟩, rfl⟩
+    exact ⟨canonical ⟨input_clk_high, input_clk_low, input_addr0, input_addr1, input_addr2, input_value⟩
+      h_holds.1 h_holds.2.1 h_holds.2.2, rfl⟩
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact h_assumptions

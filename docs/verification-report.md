@@ -624,8 +624,9 @@ duplicate records/terminals, missing terminals, and disconnected rows have execu
 The shared `OrderedMemoryProvider.circuit` now serves both initialization and finalization;
 `OrderedInitialProvider.circuit` preserves the initialization interface as a specialization.
 `FinalRegisterProvider.circuit` checks register encoding, and `FinalRamProvider.circuit` checks
-bounded aligned guest RAM encoding. Each finalizer pulls exactly one Memory record; value and
-clock bounds come from the Memory-channel guarantee. `Soundness/FinalMemoryEnsemble.lean` fixes
+bounded aligned guest RAM encoding. Each finalizer emits exactly one negative Memory record
+without assuming a local Memory guarantee. Its `FinalSpec` records canonical location only;
+value and clock bounds must be derived globally. `Soundness/FinalMemoryEnsemble.lean` fixes
 its own control endpoints and derives `records_locations_nodup` through the common
 `OrderedMemoryEnsemble.Inventory` argument. Both subsystems' `memory_interactions_eq` theorems
 identify the decoded inventory with the actual physical Memory ledger, without an extra
@@ -640,8 +641,19 @@ channel-closure theorem proves Byte/Program guarantees for all physical tables. 
 and balance alone, `NativeCoreBoundaries.initial_records_authentic` and
 `initial_records_locations_nodup` prove the initial inventory's boot values and per-location
 uniqueness; `initial_memory_interactions` identifies those records with the actual Memory ledger.
-`public_boot` proves the public boot fields and canonical boundary limbs. Finalizer specifications
-and uniqueness still depend on Memory grounding. This assembly retains the legacy Halt table's
+`public_boot` proves the public boot fields and canonical boundary limbs.
+`NativeCoreFinalBoundary.final_records_canonical` and `final_records_locations_nodup` derive the
+final inventory's location facts from these same raw premises, before Memory grounding.
+`final_memory_interactions` preserves its complete negative ledger, including values and clocks.
+This change removes the circular dependency of local finalizer facts on Memory guarantees;
+it does not establish final values or timestamps, which remain grounding work.
+
+`NativeCoreProgram.program_pull_committed` authenticates every active Program pull in the new
+assembly against the checked image and official Sail decoder. It proves that the fixed ROM is the
+only possible contributor with multiplicity other than zero or minus one, then uses Clean's
+count-bounded balance to match the entire fetched message. This covers ECALL as well as ordinary
+instructions without a Program-truth or execution-order premise.
+This assembly retains the legacy Halt table's
 padding behavior and has no boot-to-HALT execution theorem yet; the existing 55-table execution
 theorem and its semantic boundary premise remain unchanged.
 

@@ -6,8 +6,8 @@ The stable verification boundary is a complete SP1 chip.
 
 Rust operations and Lean gadgets may use different intermediate structures. A native Lean chip is
 proved against a semantic contract, connected to Sail, and then compared with the complete upstream
-chip assertion and interaction systems. Operation-level extraction remains an implementation aid while
-the migration is completed; it is not part of the public correctness claim.
+chip assertion and interaction systems. Shared reader and operation extraction provides canonical
+statement targets for the whole-chip oracles; the public verification boundary remains the chip.
 
 This produces four distinct objects:
 
@@ -186,6 +186,18 @@ clauses directly against `⟨StateBumpChip.circuit⟩` / `⟨MemoryBumpChip.circ
 the 25-entry instruction coverage certificate.
 
 ## The native supported machine
+
+The new image-authenticated assembly is `NativeCore.ensemble`: 59 tables with a computed fixed
+Program ROM, ordered initial/final memory inventories, and one boot verifier. Its raw Clean
+constraints and balance now prove authentic, unique initial records; canonical, unique final
+locations; and ROM/Sail membership for every active Program pull. Finalizers use negative
+emissions without local Memory guarantees, so their location proofs precede timed grounding.
+`NativeCoreDecode` carries the actual ordinary rows and their interactions into the semantic
+decoder without reconstructing another witness. Final values, mixed host effects, and a closed
+boot-to-HALT soundness/completeness instance remain work in progress; see [the roadmap](roadmap.md).
+
+The existing released execution theorem still uses the 55-table assembly described below and
+retains its explicit semantic-boundary and syscall-inactivity premises.
 
 `Soundness/SupportedMachine.lean` is the circuit-bearing instruction registry. Each of its 25
 entries carries:

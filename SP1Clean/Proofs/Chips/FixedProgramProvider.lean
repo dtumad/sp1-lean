@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Chips.ProgramProviderChip
+import Clean.Air.FlatComponent
 
 /-! # A program provider bound to concrete fixed rows
 
@@ -33,5 +34,49 @@ def circuit (rom : StaticTable (ZMod p) ProgramMsg) :
   completeness := by
     circuit_proof_start [ProgramProviderChip.circuit, ProgramProviderChip.Inputs.toMessage]
     exact h_assumptions
+
+/-- Adding fixed membership preserves the provider's exact Program payload and multiplicity. -/
+theorem main_program_interactions (rom : StaticTable (ZMod p) ProgramMsg)
+    (input : Var ProgramProviderChip.Inputs (ZMod p)) (offset : ℕ) :
+    (((circuit rom).main input).operations offset).interactionsWith programChannel.toRaw =
+      [(programChannel.pushedIf input.multiplicity input.toMessage).toRaw] := by
+  have emitted := InteractionRecovery.interactionsWith_generalSubcircuit_of_main_exact
+    ProgramProviderChip.circuit programChannel.toRaw input offset
+    [.lookup ⟨rom.toTable.toRaw, toElements input.toMessage⟩]
+    (programChannel.pushedIf input.multiplicity input.toMessage).toRaw
+    (ProgramProviderChip.main_program_interactions input offset)
+  simpa only [circuit, circuit_norm] using emitted
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem payload_of_program_emission
+    (provider : GeneralFormalCircuit (ZMod p) ProgramProviderChip.Inputs unit)
+    (emission : ∀ input offset, ((provider.main input).operations offset).interactionsWith
+      programChannel.toRaw = [(programChannel.pushedIf input.multiplicity input.toMessage).toRaw])
+    (env : Environment (ZMod p)) (interaction : Interaction (ZMod p))
+    (member : interaction ∈ (⟨provider⟩ : Air.Flat.Component (ZMod p)).operations.interactionValuesWith
+      programChannel.toRaw env) :
+    interaction.msg = (toElements
+      ((⟨provider⟩ : Air.Flat.Component (ZMod p)).rowInput env).toMessage).toArray := by
+  rw [Operations.interactionValuesWith, Air.Flat.Component.interactionsWith_eq] at member
+  change interaction ∈ (((provider.main (varFromOffset ProgramProviderChip.Inputs 0)).operations
+    (size ProgramProviderChip.Inputs)).interactionsWith programChannel.toRaw).map _ at member
+  rw [emission] at member
+  obtain rfl := List.mem_singleton.mp member
+  have evaluated := Channel.eval_pushedIf (channel := programChannel (p := p))
+    (enabled := (varFromOffset ProgramProviderChip.Inputs 0).multiplicity)
+    (msg := (varFromOffset ProgramProviderChip.Inputs 0).toMessage) (env := env)
+  exact (congrArg Interaction.msg evaluated).trans (by
+    change (toElements (eval env (varFromOffset ProgramProviderChip.Inputs 0).toMessage)).toArray = _
+    rw [ProgramProviderChip.Inputs.eval_toMessage]
+    simp only [eval_varFromOffset_valueFromOffset, Air.Flat.Component.rowInput])
+
+/-- The evaluated ledger preserves the complete provider input as its Program payload. -/
+theorem program_interaction_payload (rom : StaticTable (ZMod p) ProgramMsg)
+    (env : Environment (ZMod p)) (interaction : Interaction (ZMod p))
+    (member : interaction ∈ (⟨circuit rom⟩ : Air.Flat.Component (ZMod p)).operations.interactionValuesWith
+      programChannel.toRaw env) :
+    interaction.msg = (toElements
+      ((⟨circuit rom⟩ : Air.Flat.Component (ZMod p)).rowInput env).toMessage).toArray :=
+  payload_of_program_emission (circuit rom) (main_program_interactions rom) env interaction member
 
 end SP1Clean.FixedProgramProvider

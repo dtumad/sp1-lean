@@ -115,16 +115,16 @@ theorem afterInitialTables_silent (image : ProgramImage) :
       List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl
     · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
-        [memoryChannel.toRaw, byteChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
+        [byteChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
           byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
-          (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
+          memoryChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
       simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
         memoryChannel, byteChannel, Channel.toRaw]
     · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
-        [byteChannel.toRaw, memoryChannel.toRaw, byteChannel.toRaw,
+        [byteChannel.toRaw, byteChannel.toRaw,
           (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
           byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
-          (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
+          memoryChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
       simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
         memoryChannel, byteChannel, Channel.toRaw]
     · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
@@ -206,7 +206,7 @@ theorem initial_records_locations_nodup {image : ProgramImage}
   exact balanced _ (List.mem_cons_self ..)
 
 omit [Fact (2 ^ 24 < p)] in
-private theorem spec_of_byte (component : Component (ZMod p))
+theorem component_spec_of_byte (component : Component (ZMod p))
     (channels : component.circuit.channelsWithGuarantees ⊆
       [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw,
         (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
@@ -232,7 +232,7 @@ theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble 
     witness.publicInput.LimbBounds ∧ witness.publicInput.BootFor image := by
   have spec : witness.verifierTable.Spec := by
     intro row member
-    exact spec_of_byte (⟨verifier image⟩ : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
+    exact component_spec_of_byte (⟨verifier image⟩ : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
       (constraints _ witness.mem_allTables_verifierTable row member)
       ((finishedChannel_guarantees image witness constraints balanced _
         witness.mem_allTables_verifierTable).1 row member)

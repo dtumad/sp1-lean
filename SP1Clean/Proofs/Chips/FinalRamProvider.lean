@@ -1,13 +1,14 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
 import ToClean.Circuit.InteractionRecovery
+import ToClean.Circuit.EmittedInteraction
 import SP1Clean.Native.Operations.WordRangeCheck
 import SP1Clean.Native.Operations.AddressOperation
 
 /-! # Canonical RAM finalization
 
 The final record is pulled verbatim after checking its 48-bit address and eight-byte alignment.
-The address gadget excludes SP1's reserved low region. Values and timestamps are supplied by the
-Memory-channel guarantee; their last-access meaning follows from global balance.
+The address gadget excludes SP1's reserved low region. The negative Memory emission assumes no
+channel guarantee: values, timestamps, and last-access meaning follow from global grounding.
 -/
 
 namespace SP1Clean.FinalRamProvider
@@ -45,12 +46,12 @@ theorem canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryBound
 def main (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
   assertion WordRangeCheck.circuit (MemoryBoundary.address input)
   let _ ← AddressOperation.circuit (addressInput input)
-  memoryChannel.pull input
+  memoryChannel.emit (-1) input
   return input
 
 theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith memoryChannel.toRaw =
-      [(memoryChannel.pulled input).toRaw] := by
+      [(memoryChannel.emitted (-1) input).toRaw] := by
   have rangeEmpty (n : ℕ) := InteractionRecovery.filter_interactions_formalAssertion_eq_nil
     WordRangeCheck.circuit memoryChannel.toRaw (MemoryBoundary.address input)
     (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil)
@@ -65,7 +66,7 @@ theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ)
 instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
   localLength _ := 68
   output input _ := input
-  channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+  channelsWithGuarantees := [byteChannel.toRaw]
   channelsLawful := by
     intro input offset
     simp only [main, circuit_norm, WordRangeCheck.circuit, AddressOperation.circuit]
@@ -75,29 +76,28 @@ def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
   elaborated := elaborated
   Spec input output _ := MemoryBoundary.FinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
   ProverAssumptions input _ _ := Word.isU64 (MemoryBoundary.address input) ∧
-    AddressOperation.Assumptions (addressInput input) ∧ MemoryMsg.isU64 input ∧ MemoryMsg.ClkBound input
-  channelsWithRequirements := []
+    AddressOperation.Assumptions (addressInput input)
+  channelsWithRequirements := [memoryChannel.toRaw]
   soundness := by
     circuit_proof_start [WordRangeCheck.circuit, AddressOperation.circuit, addressInput,
       MemoryBoundary.address]
-    have checked := (h_holds.2.1 ⟨h_holds.1 trivial, zero_u64, Or.inr rfl⟩).2.2.2 rfl
-    exact ⟨⟨canonical ⟨input_clk_high, input_clk_low, input_addr0, input_addr1, input_addr2, input_value⟩
-      (h_holds.1 trivial) _ checked, h_holds.2.2⟩, rfl⟩
+    have checked := (h_holds.2 ⟨h_holds.1 trivial, zero_u64, Or.inr rfl⟩).2.2.2 rfl
+    exact ⟨canonical ⟨input_clk_high, input_clk_low, input_addr0, input_addr1, input_addr2, input_value⟩
+      (h_holds.1 trivial) _ checked, rfl⟩
   completeness := by
     circuit_proof_start [WordRangeCheck.circuit, AddressOperation.circuit, addressInput,
       MemoryBoundary.address]
     exact ⟨⟨trivial, h_assumptions.1⟩, h_assumptions.2⟩
 
-/-- Bounded aligned guest RAM, with structural value and clock bounds. -/
+/-- Bounded aligned guest RAM; value and timestamp currency are global obligations. -/
 def Domain (record : MemoryMsg (ZMod p)) : Prop :=
   Word.isU64 (MemoryBoundary.address record) ∧
     2 ^ 16 ≤ Word.toNat (MemoryBoundary.address record) ∧
     Word.toNat (MemoryBoundary.address record) < 2 ^ 48 ∧
-    Word.toNat (MemoryBoundary.address record) % 8 = 0 ∧
-    MemoryMsg.isU64 record ∧ MemoryMsg.ClkBound record
+    Word.toNat (MemoryBoundary.address record) % 8 = 0
 
 instance (record : MemoryMsg (ZMod p)) : Decidable (Domain record) := by
-  unfold Domain MemoryMsg.isU64 MemoryMsg.ClkBound Word.isU64
+  unfold Domain Word.isU64
   infer_instance
 
 /-- The internal address-gadget readiness condition is exactly the public semantic domain. -/
@@ -109,21 +109,21 @@ theorem proverAssumptions_iff (record : MemoryMsg (ZMod p)) (data : ProverData (
     have fits : Word.toNat (MemoryBoundary.address record) < 2 ^ 64 := by
       rw [← Word.toBitVec64_toNat valid.1]
       exact BitVec.isLt _
-    have address := valid.2.1
+    have address := valid.2
     simp only [AddressOperation.Assumptions, addressInput, zeroNat, add_zero,
       Nat.mod_eq_of_lt fits, ZMod.val_zero, mul_zero, true_implies] at address
     have upper := address.2.2.2.1
-    refine ⟨valid.1, ?_, upper, ?_, valid.2.2⟩
+    refine ⟨valid.1, ?_, upper, ?_⟩
     · simpa only [Nat.mod_eq_of_lt upper] using address.2.2.2.2.2.2.2.1
     · simpa only [Nat.mod_eq_of_lt upper] using address.2.2.2.2.2.2.2.2.symm
   · intro valid
-    refine ⟨valid.1, ?_, valid.2.2.2.2⟩
+    refine ⟨valid.1, ?_⟩
     refine ⟨valid.1, zero_u64, Or.inr rfl, ?_, Or.inl rfl, Or.inl rfl, Or.inl rfl, ?_, ?_⟩ <;>
       simp only [addressInput, zeroNat, add_zero, ZMod.val_zero, mul_zero,
         Nat.mod_eq_of_lt (by have := valid.2.2.1; omega : Word.toNat (MemoryBoundary.address record) < 2 ^ 64),
         Nat.mod_eq_of_lt valid.2.2.1]
     · exact valid.2.2.1
     · exact fun _ => valid.2.1
-    · exact valid.2.2.2.1.symm
+    · exact valid.2.2.2.symm
 
 end SP1Clean.FinalRamProvider

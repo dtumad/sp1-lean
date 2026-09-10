@@ -2,7 +2,7 @@ import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1CleanTest.Core.InitialMemoryLookup
 import SP1Clean.Soundness.InitialMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Soundness.NativeCoreBoundaries
+import SP1Clean.Soundness.NativeCoreProgram
 
 /-! # Initial/final records and ordered-key AIR regressions
 
@@ -234,6 +234,21 @@ theorem pairedMemoryBoundary :
     [controlValid [initial, final value 0], controlValid [initial, final (value + 1) 0],
       controlValid [initial, final value 8], controlValid [initial, final value 0, final value 0]] =
       [true, false, false, false] := by native_decide
+
+private def finalMemoryFlags (program : Var Channels.MemoryMsg Fp → Circuit Fp (Var Channels.MemoryMsg Fp)) :
+    List (Fp × Bool) :=
+  let input := finalRecord 0 0 0
+  let circuit := program (varFromOffset Channels.MemoryMsg 0)
+  let env := (circuit.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
+  ((FlatOperation.interactions (circuit.operations (size Channels.MemoryMsg)).toFlat).filter
+    (fun interaction => interaction.channel.name == "SP1Memory")).map
+      (fun interaction => (env interaction.mult, interaction.assumeGuarantees))
+
+/-- Finalizers consume the exact negative Memory interaction without a local semantic assumption.
+Value and clock mismatches are still rejected by the paired full-message ledger above. -/
+theorem finalizersDeferMemoryGuarantees :
+    finalMemoryFlags FinalRegisterProvider.main = [(-1, false)] ∧
+      finalMemoryFlags FinalRamProvider.main = [(-1, false)] := by native_decide
 
 private def bootPublic : SP1PublicIO Fp where
   init_clk_0_16 := 1

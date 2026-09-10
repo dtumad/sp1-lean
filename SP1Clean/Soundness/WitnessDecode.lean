@@ -149,6 +149,23 @@ def InstructionTablesAligned (data : ProverData (ZMod p))
     (chips : List (SupportedChip p)) (tables : List (Table (ZMod p))) : Prop :=
   List.Forall₂ (fun chip table => table.component = chip.table ∧ table.data = data) chips tables
 
+/-- List-level component identity and shared data establish the decoder alignment in any
+assembly. Instruction tables need not begin at physical position zero. -/
+theorem InstructionTablesAligned.of_components {data : ProverData (ZMod p)}
+    {chips : List (SupportedChip p)} {tables : List (Table (ZMod p))}
+    (components : tables.map (·.component) = chips.map (·.table))
+    (sameData : ∀ table ∈ tables, table.data = data) :
+    InstructionTablesAligned data chips tables := by
+  rw [InstructionTablesAligned, List.forall₂_iff_get]
+  constructor
+  · simpa only [List.length_map] using (congrArg List.length components).symm
+  · intro i _ tableBound
+    have mappedBound : i < (tables.map (·.component)).length := by
+      simpa only [List.length_map] using tableBound
+    have same := List.getElem_of_eq components mappedBound
+    simp only [List.get_eq_getElem, List.getElem_map] at same ⊢
+    exact ⟨same, sameData _ (List.getElem_mem tableBound)⟩
+
 /-- A decoded row inherits the constraints of the exact physical table row from which it was built.
 The positional alignment pins both the dependent circuit and shared prover data, so this theorem does
 not cast between unrelated flat components or reconstruct a second environment. -/

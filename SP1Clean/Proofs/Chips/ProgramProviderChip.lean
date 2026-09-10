@@ -6,6 +6,7 @@ import Clean.Gadgets.Bits
 import Clean.Gadgets.Boolean
 import Clean.Utils.Tactics
 import Clean.Utils.Tactics.ProvableStructDeriving
+import ToClean.Circuit.InteractionRecovery
 
 /-! # The in-circuit Program-ROM provider (push side of SP1's preprocessed program/decode chip)
 
@@ -77,6 +78,12 @@ def Inputs.toMessage {R : Type} (input : Inputs R) : ProgramMsg R where
   imm_b := input.imm_b
   imm_c := input.imm_c
 
+omit [Fact (2 ^ 17 < p)] in
+theorem Inputs.eval_toMessage (env : Environment (ZMod p)) (input : Var Inputs (ZMod p)) :
+    eval env input.toMessage = (eval env input).toMessage := by
+  simp only [ProvableStruct.eval_eq_eval]
+  rfl
+
 /-- Range-checks the write-register index `op_a` (5-bit) and the three pc limbs (16-bit), asserts `op_a_0`
 boolean, and pushes the committed instruction fetch `input.toMessage` onto
 `programChannel` with multiplicity `m`. -/
@@ -87,6 +94,23 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion (Gadgets.ToBits.rangeCheck 16 two_pow_sixteen_lt) input.pc2
   assertion assertBool input.op_a_0
   programChannel.pushIf input.multiplicity input.toMessage
+
+/-- The complete Program contribution retains every field of the provider input. -/
+theorem main_program_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).interactionsWith programChannel.toRaw =
+      [(programChannel.pushedIf input.multiplicity input.toMessage).toRaw] := by
+  have rangeEmpty (width : ℕ) (bound : 2 ^ width < p) (value : Expression (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil
+      (Gadgets.ToBits.rangeCheck width bound) programChannel.toRaw value
+      (by change programChannel.toRaw ∉ []; exact List.not_mem_nil)
+      (by change programChannel.toRaw ∉ []; exact List.not_mem_nil) (n := n)
+  have boolEmpty (n : ℕ) := InteractionRecovery.filter_interactions_formalAssertion_eq_nil
+    assertBool programChannel.toRaw input.op_a_0
+    (by change programChannel.toRaw ∉ []; exact List.not_mem_nil)
+    (by change programChannel.toRaw ∉ []; exact List.not_mem_nil) (n := n)
+  simp only [circuit_norm] at boolEmpty
+  simp only [main, circuit_norm, rangeEmpty, List.nil_append]
+  rw [boolEmpty, List.nil_append]
 
 /-- The Program-ROM provider: pushes a committed instruction fetch whose decode fields it range-checks
 in-circuit. `Spec` is `ProgramMsg.RowSpec` (the rich membership facts the consumers pull-and-derive);

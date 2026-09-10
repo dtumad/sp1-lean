@@ -37,6 +37,7 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.MemoryBoundary.nativeVerifierEndpoints
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsForgedBoot
 #print axioms SP1CleanTest.Core.MemoryBoundary.nativeBoundaryInventories
+#print axioms SP1CleanTest.Core.MemoryBoundary.finalizersDeferMemoryGuarantees
 #print axioms SP1CleanTest.Core.MemoryBoundary.emptyInventory
 #print axioms SP1CleanTest.Core.MemoryBoundary.mixedInventory
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsMalformedInventories

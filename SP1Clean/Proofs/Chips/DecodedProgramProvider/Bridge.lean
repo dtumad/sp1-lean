@@ -41,4 +41,13 @@ theorem constraints_committed {image : ProgramImage} (valid : image.Valid)
   exact spec_committed valid ((⟨circuit image⟩ : Component (ZMod p)).weakSoundness_of_no_guarantees
     rfl (by trivial) constraints).1
 
+/-- The evaluated provider ledger has exactly the complete committed message as its payload. -/
+theorem program_interaction_payload (image : ProgramImage) (env : Environment (ZMod p))
+    (interaction : Interaction (ZMod p))
+    (member : interaction ∈ (⟨circuit image⟩ : Component (ZMod p)).operations.interactionValuesWith
+      Channels.programChannel.toRaw env) :
+    interaction.msg = (toElements
+      ((⟨circuit image⟩ : Component (ZMod p)).rowInput env).toMessage).toArray :=
+  FixedProgramProvider.program_interaction_payload image.programTable env interaction member
+
 end SP1Clean.DecodedProgramProvider

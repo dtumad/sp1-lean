@@ -82,10 +82,10 @@ theorem ram_location_of_key (record : MemoryMsg (ZMod p)) (address : ℕ)
     change ramWord64? state cell.baseAddr = _
     rw [base]
 
-/-- A final record has a canonical location and the structural Memory-channel guarantees.
-Its last-access meaning is derived globally from balance, not asserted as a local predicate. -/
+/-- The local finalizer establishes only its canonical location. Values and timestamps are
+grounded from the global Memory ledger after both inventories' locations are known. -/
 def FinalSpec (message : MemoryMsg (ZMod p)) : Prop :=
-  CanonicalSpec message ∧ MemoryMsg.isU64 message ∧ MemoryMsg.ClkBound message
+  CanonicalSpec message
 
 def FinalAtSpec (query : ℕ) (message : MemoryMsg (ZMod p)) : Prop :=
   FinalSpec message ∧ Word.toNat (address message) = query

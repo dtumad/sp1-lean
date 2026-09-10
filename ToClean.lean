@@ -3,6 +3,7 @@ import ToClean.Circuit.WitgenBridge
 import ToClean.Circuit.WitgenEval
 import ToClean.Circuit.WitnessGenerationData
 import ToClean.Circuit.InteractionRecovery
+import ToClean.Circuit.EmittedInteraction
 import ToClean.Gadgets.ComputableWitnesses
 import ToClean.Air.EnsembleBuild
 import ToClean.Air.ChannelClosure

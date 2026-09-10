@@ -5,7 +5,7 @@ import SP1Clean.Proofs.Chips.FinalRamProvider
 /-! # Constructive ordered finalization
 
 Both final-record circuits use the same ordering wrapper as initialization. Their constructors
-accept exactly canonical register or bounded aligned RAM records with valid values and clocks,
+accept exactly canonical register or bounded aligned RAM locations,
 and a preceding key smaller than the record's key. No internal address-gadget condition escapes.
 -/
 
@@ -20,12 +20,12 @@ def channelName : String := "SP1NativeMemoryFinalOrder"
 def registerCircuit :
     GeneralFormalCircuit (ZMod p) (OrderedMemoryProvider.Inputs MemoryMsg) MemoryMsg :=
   OrderedMemoryProvider.circuit channelName MemoryBoundary.FinalSpec FinalRegisterProvider.circuit
-    (fun _ _ _ valid => valid.1) (fun _ valid => valid.1)
+    (fun _ _ _ valid => valid.1) (fun _ valid => valid)
 
 def ramCircuit :
     GeneralFormalCircuit (ZMod p) (OrderedMemoryProvider.Inputs MemoryMsg) MemoryMsg :=
   OrderedMemoryProvider.circuit channelName MemoryBoundary.FinalSpec FinalRamProvider.circuit
-    (fun _ _ _ valid => valid.1) (fun _ valid => valid.1)
+    (fun _ _ _ valid => valid.1) (fun _ valid => valid)
 
 def populateRegister? (previous : ℕ) (record : MemoryMsg (ZMod p)) :
     Option (OrderedMemoryProvider.Inputs MemoryMsg (ZMod p)) :=
@@ -62,10 +62,10 @@ theorem populateRegister?_sound (previous : ℕ) (record : MemoryMsg (ZMod p))
   split at found
   next valid =>
     obtain rfl := Option.some.inj found
-    have canonical := FinalRegisterProvider.canonical record valid.1.1 valid.1.2.1 valid.1.2.2.1
+    have canonical := FinalRegisterProvider.canonical record valid.1.1 valid.1.2.1 valid.1.2.2
     exact OrderedMemoryProvider.populate_assumptions channelName MemoryBoundary.FinalSpec
       FinalRegisterProvider.circuit (fun input => Word.toNat (MemoryBoundary.address input))
-      (fun _ _ _ spec => spec) (fun _ spec => spec.1) record previous data hint valid.1 trivial
+      (fun _ _ _ spec => spec) (fun _ spec => spec) record previous data hint valid.1 trivial
       (by rw [canonical.2.2]; exact MemLoc.busAddress_lt_two_pow_48 canonical.1) valid.2
   next invalid => contradiction
 
@@ -80,7 +80,7 @@ theorem populateRam?_sound (previous : ℕ) (record : MemoryMsg (ZMod p))
     obtain rfl := Option.some.inj found
     exact OrderedMemoryProvider.populate_assumptions channelName MemoryBoundary.FinalSpec
       FinalRamProvider.circuit (fun input => Word.toNat (MemoryBoundary.address input))
-      (fun _ _ _ spec => spec) (fun _ spec => spec.1) record previous data hint
+      (fun _ _ _ spec => spec) (fun _ spec => spec) record previous data hint
       ((FinalRamProvider.proverAssumptions_iff record data hint).mpr valid.1) trivial valid.1.2.2.1 valid.2
   next invalid => contradiction
 

@@ -14,6 +14,13 @@ commitment banks, and host requests are outputs. The native profile protects ins
 against both ordinary stores and host writes. Neither direction may depend on a caller proving
 provider validity, compiler readiness, syscall inactivity, or an execution-dependent totality bundle.
 
+The selected guest-runtime profile contains eight canonical full-register syscall codes:
+HALT (0), WRITE (2), ENTER_UNCONSTRAINED (3, constrained return zero), COMMIT (16),
+COMMIT_DEFERRED_PROOFS (26), VERIFY_SP1_PROOF (27, recording a request), HINT_LEN (240), and
+HINT_READ (241). EXIT_UNCONSTRAINED, memory-protection flushing, ELF dumping, and profiler calls
+are outside this native profile. This selection specifies the host environment still to be
+constrained; the existing syscall instruction table alone does not enforce it.
+
 Implemented foundations:
 
 - `ToClean/Air/CompleteEnsemble.lean` packages both correctness directions and a proof-independent
@@ -49,15 +56,16 @@ Implemented foundations:
   table specifications from constraints and channel guarantees. Generic unit-balance and physical
   transition-view adapters are isolated in `ToClean/Air/`; the fixed verifier and terminal witness
   programs export. Regressions cover empty/mixed inventories and malformed control ledgers.
-- Final register/RAM providers now check canonical locations and pull one Memory record per row.
+- Final register/RAM providers now check canonical locations and emit one negative Memory record per row.
   `OrderedMemoryProvider` and `OrderedMemoryEnsemble` share the ordering circuit and inventory
   argument between initialization and finalization. Both subsystems prove that their decoded
   records are exactly their physical Memory interactions. The final inventory derives uniqueness
   from its own fixed control boundary and actual balance; constructors discharge internal gadget
   conditions on a stated register/RAM domain. Regressions reject forged addresses, unrelated keys,
   duplicate/disconnected final rows, and mismatched values or clocks in paired boundary ledgers.
-  Both finalizer witness programs export. Their value/clock guarantees still require the enclosing
-  machine's closed Memory bus; the final-state meaning is a timed-grounding conclusion.
+  Both finalizer witness programs export. Negative emissions assume no local Memory guarantee:
+  `FinalSpec` now records canonical location only. Value/clock bounds and final-state meaning
+  belong to the enclosing machine's timed-grounding conclusion.
 - The executable instruction decoder now builds complete fixed Program messages from the finite
   image. Successful parses are proved to be exact ECALL or part of the existing routed instruction
   image; projection accepts exactly the parser's domain. The bounded input checker rejects any
@@ -86,13 +94,22 @@ Implemented foundations:
   exercise the composed verifier, both inventories, forged boot fields, and noncanonical clocks.
   This assembly still contains the legacy Halt table, including its padding behavior; it is not
   yet certified as a boot-to-HALT machine.
+- `NativeCoreFinalBoundary.lean` derives final-record canonicity and location uniqueness directly
+  from the combined constraints, Byte closure, and private-channel balance. Its exact ledger
+  projection retains the original records, including every value and timestamp, without assuming
+  Memory guarantees. `NativeCoreProgram.program_pull_committed` proves that every active Program
+  pull, including ECALL, names an instruction in the checked image and official Sail decoder.
+  The fixed ROM is the only possible non-pull contributor; Clean's count-bounded balance supplies
+  a matching complete payload. No Program-truth premise or instruction case is exposed to callers.
+  `NativeCoreDecode.instructionRows_program_committed` transports that result to every active
+  ordinary decoded row; the same adapter preserves its raw constraints and channel interactions.
 
 Still required before the native capstone can be claimed:
 
 1. Connect the new 59-table assembly to timed grounding. Initial-record meaning/uniqueness and
-   physical Program-row authentication now follow from its constraints and balance. Derive final
-   address/order facts without assuming Memory values, then close Memory grounding and recover
-   final-record values and timestamps. Transport committed Program meaning to instruction pulls.
+   physical Program-row authentication now follow from its constraints and balance. Final
+   address/order facts and committed Program meaning at active pulls are also closed. Close Memory
+   grounding and recover final-record values and timestamps, using the actual mixed-row ledger.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;

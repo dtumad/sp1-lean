@@ -19,13 +19,13 @@ open SP1Clean.OrderedFinalProvider
 
 def registerView : TransitionView (OrderedBoundary.channel (p := p) channelName) :=
   OrderedMemoryEnsemble.providerView channelName (by decide) MemoryBoundary.FinalSpec
-    FinalRegisterProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid.1) (by
+    FinalRegisterProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid) (by
       simp [GeneralFormalCircuit.channels, FinalRegisterProvider.circuit, circuit_norm,
         OrderedBoundary.channel, channelName, memoryChannel])
 
 def ramView : TransitionView (OrderedBoundary.channel (p := p) channelName) :=
   OrderedMemoryEnsemble.providerView channelName (by decide) MemoryBoundary.FinalSpec
-    FinalRamProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid.1) (by
+    FinalRamProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid) (by
       simp [GeneralFormalCircuit.channels, FinalRamProvider.circuit, circuit_norm,
         OrderedBoundary.channel, channelName, memoryChannel, byteChannel])
 
@@ -87,7 +87,7 @@ theorem records_locations_nodup (witness : EnsembleWitness (ensemble auxiliary c
 /-- The finite record decoder agrees exactly with each table's physical Memory interactions. -/
 theorem recordFor_interactions (id : TableId) (env : Environment (ZMod p)) :
     (viewFor id).component.operations.interactionValuesWith memoryChannel.toRaw env =
-      ((recordFor id env).toList).map memoryChannel.pulledValue := by
+      ((recordFor id env).toList).map (memoryChannel.emittedValue (-1)) := by
   cases id with
   | registers =>
     simp only [viewFor, registerView, OrderedMemoryEnsemble.providerView,
@@ -96,7 +96,7 @@ theorem recordFor_interactions (id : TableId) (env : Environment (ZMod p)) :
     rw [OrderedMemoryProvider.main_memory_interactions]
     simp only [FinalRegisterProvider.circuit]
     rw [FinalRegisterProvider.main_memory_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pulled]
+    simp only [List.map_cons, List.map_nil, Channel.eval_emitted]
     simp only [recordFor, Option.toList_some, List.map_cons, List.map_nil, Component.rowOutput,
       OrderedFinalProvider.registerCircuit, OrderedMemoryProvider.circuit, FinalRegisterProvider.circuit,
       OrderedMemoryProvider.elaborated, FinalRegisterProvider.elaborated, circuit_norm]
@@ -107,7 +107,7 @@ theorem recordFor_interactions (id : TableId) (env : Environment (ZMod p)) :
     rw [OrderedMemoryProvider.main_memory_interactions]
     simp only [FinalRamProvider.circuit]
     rw [FinalRamProvider.main_memory_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pulled]
+    simp only [List.map_cons, List.map_nil, Channel.eval_emitted]
     simp only [recordFor, Option.toList_some, List.map_cons, List.map_nil, Component.rowOutput,
       OrderedFinalProvider.ramCircuit, OrderedMemoryProvider.circuit, FinalRamProvider.circuit,
       OrderedMemoryProvider.elaborated, FinalRamProvider.elaborated, circuit_norm]
@@ -117,7 +117,7 @@ theorem recordFor_interactions (id : TableId) (env : Environment (ZMod p)) :
 /-- The physical boundary tables emit precisely the decoded records, with unit multiplicity. -/
 theorem memory_interactions_eq (witness : EnsembleWitness (ensemble auxiliary channels)) :
     (witness.tables.take (inventory (p := p)).views.length).flatMap (·.interactionsWith memoryChannel.toRaw) =
-      (records witness).map memoryChannel.pulledValue := by
-  exact inventory.memory_interactions_eq witness memoryChannel.pulledValue recordFor_interactions
+      (records witness).map (memoryChannel.emittedValue (-1)) := by
+  exact inventory.memory_interactions_eq witness (memoryChannel.emittedValue (-1)) recordFor_interactions
 
 end SP1Clean.Soundness.FinalMemoryEnsemble
