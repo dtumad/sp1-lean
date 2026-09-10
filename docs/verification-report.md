@@ -707,9 +707,12 @@ and boundary premises to the generic engine. It retains the original event rows'
 step/frame facts as explicit premises. Under those premises, it proves grounded rewritten rows,
 final State truth, and the original physical frontier's value currency at the public final State
 time. Original refresh timestamps may be later than that time; only the rewritten records carry
-the engine's final-time bound. Instantiating the remaining step/frame facts for this assembly,
-including constrained host effects and terminal behavior, remains open. No unconditional
-boot-to-HALT execution theorem is claimed.
+the engine's final-time bound. `NativeCoreInstructionExecution` now derives every ordinary
+instruction's step/frame facts through the component-local contracts for all 25 chips and the
+carrier's proved successor timing. `GroundingCarrier.ground_of_system_steps` exposes the remaining
+premises: HALT/syscall step/frame facts, the trajectory's ordinary `stepOnce` equation, and ROM
+preservation. Constructing the mixed trajectory and constraining ROM protection, host effects,
+and terminal behavior remain open. No unconditional boot-to-HALT execution theorem is claimed.
 
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL

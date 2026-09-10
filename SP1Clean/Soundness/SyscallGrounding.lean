@@ -267,17 +267,11 @@ theorem handlerRun_of_eventTrajectory_syscall (handler : ExecutableSyscallHandle
   rw [hnow, Option.bind_some] at hnext
   exact hnext
 
-/-- **An ordinary instruction row's step fact, at the event trajectory.** The twin of
-`syscallStepFact_of_advance`, and the same three-part linkage: the row's window is the transcript's
-event `n`, the trajectory's successor there is `try_step` because that event is `.ordinary`, and the
-row's own `advance` says what `try_step` does.
-
-`positioned` is the one genuinely new hypothesis relative to the Sail version. On an all-ordinary
-transcript it is free; on a mixed one it is the fact that this row is *not* sitting where a syscall
-event sits, which no row-local datum can decide. -/
-theorem ordinaryStepFactG_of_advance {kind : ChipKind p}
+/-- An ordinary chip's semantic step on a trajectory whose successor at this row is Sail's
+`stepOnce`. The timeline supplies this row's eight-tick duration; other rows may have any duration.
+The proof uses the registered `advance` payload and the actual Memory pulls and pushes. -/
+theorem ordinaryStepFactG_of_advanceOnTrajectory {kind : ChipKind p}
     {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
-    (handler : ExecutableSyscallHandler) (events : List ExecutionEvent)
     (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
     {data : ProverData (ZMod p)} {program : GuestProgram}
     (real : (kind.view inp cols).is_real = 1)
@@ -286,29 +280,24 @@ theorem ordinaryStepFactG_of_advance {kind : ChipKind p}
     (ready : ∀ s : SailState, ValueOperandsBound (kind.view inp cols) s →
       SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
         kind.advanceReady inp cols program s)
-    (initial : SailState) (initialClock : ℕ)
+    (trajectory : Trajectory) (initial : SailState) (tl : Timeline)
     (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
-      eventTrajectory handler program events initial m = some st → SailStep st nx →
+      trajectory m = some st → SailStep st nx →
         RomLoaded program st → RomLoaded program nx)
-    (positioned : ∀ n : ℕ,
-      StateMsg.timeNat rf.statePull = (eventTimeline events initialClock).start n →
-      events[n]? = some ExecutionEvent.ordinary) :
-    LocalStepFactG program (eventTrajectory handler program events initial) initial
-      (eventTimeline events initialClock) rf := by
+    (timeStep : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
+      tl.start (n + 1) = tl.start n + 8)
+    (step : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
+      trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
+    LocalStepFactG program trajectory initial
+      tl rf := by
   intro hpull hcurr
   obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
-  set tl := eventTimeline events initialClock with tlDef
-  have hev := positioned n htime
-  have hdur : Semantics.durationAt events n = 8 := by simp [Semantics.durationAt, hev]
-  have hstartSucc : tl.start (n + 1) = tl.start n + 8 := by
-    rw [tlDef, eventTimeline_start_succ, hdur]
+  have hstartSucc := timeStep n htime
   obtain ⟨s', hstep, heff⟩ := wiring.advance_atG advance real spec decode ready htraj htime
     hpc hrom hcfg (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.2⟩)
-  -- the trajectory's successor here *is* `try_step`, because this transcript position is ordinary
-  have hsucc : eventTrajectory handler program events initial (n + 1) = some s' := by
-    rw [Semantics.eventTrajectory_succ, hev]
-    dsimp only
-    rw [htraj, Option.bind_some, Semantics.executeEvent?_ordinary]
+  -- The selected trajectory agrees with Sail at this row's position.
+  have hsucc : trajectory (n + 1) = some s' := by
+    rw [step n htime, htraj, Option.bind_some]
     exact TimedGrounding.stepOnce_of_sailStep hstep
   have hpushTime : StateMsg.timeNat rf.statePush = tl.start (n + 1) := by
     rw [hstartSucc, wiring.time8, htime]
@@ -402,11 +391,8 @@ theorem ordinaryStepFactG_of_advance {kind : ChipKind p}
         Option.bind_some]
       exact hpost heff hpulls
 
-/-- **An ordinary instruction row's frame fact, at the event trajectory.** The companion of
-`ordinaryStepFactG_of_advance`, with the same `positioned` linkage and the same proof as
-`frameFact_of_advance`: at the window start the value is the trajectory state's content, and the
-`RowEffect`'s two frame halves carry it to the successor. -/
-theorem ordinaryFrameFactG_of_advance {kind : ChipKind p}
+/-- Event-transcript specialization, retaining the original public statement. -/
+theorem ordinaryStepFactG_of_advance {kind : ChipKind p}
     {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
     (handler : ExecutableSyscallHandler) (events : List ExecutionEvent)
     (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
@@ -418,24 +404,51 @@ theorem ordinaryFrameFactG_of_advance {kind : ChipKind p}
       SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
         kind.advanceReady inp cols program s)
     (initial : SailState) (initialClock : ℕ)
+    (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
+      eventTrajectory handler program events initial m = some st → SailStep st nx →
+        RomLoaded program st → RomLoaded program nx)
     (positioned : ∀ n : ℕ,
       StateMsg.timeNat rf.statePull = (eventTimeline events initialClock).start n →
       events[n]? = some ExecutionEvent.ordinary) :
-    FrameFactG program (eventTrajectory handler program events initial) initial
+    LocalStepFactG program (eventTrajectory handler program events initial) initial
       (eventTimeline events initialClock) rf := by
+  apply ordinaryStepFactG_of_advanceOnTrajectory wiring advance real spec decode ready
+    (eventTrajectory handler program events initial) initial (eventTimeline events initialClock)
+    codeMemoryCompatible
+  · intro n time
+    have event := positioned n time
+    rw [eventTimeline_start_succ]
+    simp only [Semantics.durationAt, event, ExecutionEvent.duration_ordinary]
+  · intro n time
+    rw [eventTrajectory_succ, positioned n time]
+    rfl
+
+/-- The ordinary chip's register/RAM frame argument on an arbitrary mixed trajectory. Only
+this row's successor equation and eight-tick duration are needed. -/
+theorem ordinaryFrameFactG_of_advanceOnTrajectory {kind : ChipKind p}
+    {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
+    (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
+    {data : ProverData (ZMod p)} {program : GuestProgram}
+    (real : (kind.view inp cols).is_real = 1)
+    (spec : kind.chipSpec inp cols data)
+    (decode : Target.decodedInROM program (programAccess (kind.view inp cols)).toRow)
+    (ready : ∀ s : SailState, ValueOperandsBound (kind.view inp cols) s →
+      SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
+        kind.advanceReady inp cols program s)
+    (trajectory : Trajectory) (initial : SailState) (tl : Timeline)
+    (timeStep : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
+      tl.start (n + 1) = tl.start n + 8)
+    (step : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
+      trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
+    FrameFactG program trajectory initial
+      tl rf := by
   intro hpull hcurr loc v hpush hvalAt
   obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
-  set tl := eventTimeline events initialClock with tlDef
-  have hev := positioned n htime
-  have hdur : Semantics.durationAt events n = 8 := by simp [Semantics.durationAt, hev]
-  have hstartSucc : tl.start (n + 1) = tl.start n + 8 := by
-    rw [tlDef, eventTimeline_start_succ, hdur]
+  have hstartSucc := timeStep n htime
   obtain ⟨s', hstep, heff⟩ := wiring.advance_atG advance real spec decode ready htraj htime
     hpc hrom hcfg (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.2⟩)
-  have hsucc : eventTrajectory handler program events initial (n + 1) = some s' := by
-    rw [Semantics.eventTrajectory_succ, hev]
-    dsimp only
-    rw [htraj, Option.bind_some, Semantics.executeEvent?_ordinary]
+  have hsucc : trajectory (n + 1) = some s' := by
+    rw [step n htime, htraj, Option.bind_some]
     exact TimedGrounding.stepOnce_of_sailStep hstep
   rw [htime] at hvalAt
   have hcontent : locContent state loc = some (Word.toBitVec64 v) :=
@@ -466,6 +479,34 @@ theorem ordinaryFrameFactG_of_advance {kind : ChipKind p}
     · rw [if_neg hw] at hregs
       rw [hregs i]
       exact hcontent
+
+/-- Event-transcript specialization, retaining the original public statement. -/
+theorem ordinaryFrameFactG_of_advance {kind : ChipKind p}
+    {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
+    (handler : ExecutableSyscallHandler) (events : List ExecutionEvent)
+    (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
+    {data : ProverData (ZMod p)} {program : GuestProgram}
+    (real : (kind.view inp cols).is_real = 1)
+    (spec : kind.chipSpec inp cols data)
+    (decode : Target.decodedInROM program (programAccess (kind.view inp cols)).toRow)
+    (ready : ∀ s : SailState, ValueOperandsBound (kind.view inp cols) s →
+      SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
+        kind.advanceReady inp cols program s)
+    (initial : SailState) (initialClock : ℕ)
+    (positioned : ∀ n : ℕ,
+      StateMsg.timeNat rf.statePull = (eventTimeline events initialClock).start n →
+      events[n]? = some ExecutionEvent.ordinary) :
+    FrameFactG program (eventTrajectory handler program events initial) initial
+      (eventTimeline events initialClock) rf := by
+  apply ordinaryFrameFactG_of_advanceOnTrajectory wiring advance real spec decode ready
+    (eventTrajectory handler program events initial) initial (eventTimeline events initialClock)
+  · intro n time
+    have event := positioned n time
+    rw [eventTimeline_start_succ]
+    simp only [Semantics.durationAt, event, ExecutionEvent.duration_ordinary]
+  · intro n time
+    rw [eventTrajectory_succ, positioned n time]
+    rfl
 
 /-- **The engine feed, event-indexed** — the `G` twin of `engineFacts_of_kind`.
 

@@ -1877,15 +1877,8 @@ theorem fullRequirements_of_openSoundnessInputs
     (decoded : DecodedInstructionRow p)
     (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
     (openInputs : DecodedRowOpenSoundnessInputs decoded witness.data) :
-    decoded.chip.table.operations.FullRequirements (decoded.environment witness.data) := by
-  have finished := witness_decodedRow_finishedChannelGuarantees witness constraints balanced
-    decoded decodedMem
-  have guarantees := (DecodedRowChannelGuarantees.mk
-    (decodedRow_stateChannelGuarantees decoded witness.data)
-    finished.1 finished.2 openInputs.memory).full
-    (decoded.usesSupportedBusChannels_of_mem witness.tables decodedMem)
-  exact (Component.weakSoundness openInputs.assumptions
-    (decodedInstructionRow_constraints witness constraints decoded decodedMem) guarantees).2
+    decoded.chip.table.operations.FullRequirements (decoded.environment witness.data) :=
+  (decodedRowStaticInputs_of_witness witness constraints balanced decoded decodedMem).fullRequirements openInputs
 
 /-- Every produced Memory message of a row with proved push requirements is a well-formed `U64` —
 in particular the `op_a` write value's range check reaches the wiring. -/

@@ -421,13 +421,69 @@ theorem DecodedInstructionRow.dynamicGroundedG_of_weakCurrency
   exact decoded.dynamicGrounded_of_inputs witness constraints balanced decodedMem program state
     { circuit := openInputs, ready, operands }
 
-/-- **The engine-feed consumer, event-indexed.** `ChipGroundingContracts.engineFacts` with its
-`SailChain`-indexed records replaced by their trajectory-indexed forms.
+/-- Component-local ordinary execution facts on any trajectory whose successor at this row is
+Sail's `stepOnce`. Wiring, chip semantics, and readiness are derived inside incoming Memory
+currency; the enclosing assembly supplies only physical evidence, decode, and timeline position. -/
+theorem ChipGroundingContracts.engineFactsLocalG
+    {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
+    (proverData : ProverData (ZMod p))
+    (decoded : DecodedInstructionRow p) (hchip : decoded.chip = chip)
+    (staticInputs : DecodedRowStaticInputs decoded proverData)
+    (real : (decoded.toChipRow proverData).is_real = 1)
+    (program : Target.GuestProgram)
+    (decode : Target.decodedInROM program
+      (programAccess (decoded.toChipRow proverData).view).toRow)
+    (trajectory : Semantics.Trajectory) (initial : SailState) (tl : Semantics.Timeline)
+    (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
+      trajectory m = some st →
+        Target.SailStep st nx → Target.RomLoaded program st → Target.RomLoaded program nx)
+    (timeStep : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
+      tl.start (n + 1) = tl.start n + 8)
+    (step : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
+      trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
+    Semantics.LocalStepFactG program
+        trajectory initial
+        tl (decoded.ordinaryRowFacts proverData) ∧
+      Semantics.FrameFactG program
+        trajectory initial
+        tl (decoded.ordinaryRowFacts proverData) := by
+  have guard := contracts.routingLocal proverData decoded hchip staticInputs.constraints real program decode
+  have migrated : (decoded.toChipRow proverData).kind.advance.isSome = true := by
+    show decoded.chip.kind.advance.isSome = true
+    rw [hchip]
+    exact contracts.migrated
+  -- The D0 circularity break, unchanged: the row's open Memory inputs come from the *assumed* pull
+  -- currency, never from the walk's own `Grounded` output.
+  have mkOpenInputs : (∀ mp ∈ (decoded.ordinaryRowFacts proverData).memPulls,
+        MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+        Semantics.LocalValueAtG trajectory initial
+          tl
+          (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
+      DecodedRowOpenSoundnessInputs decoded proverData := fun hcurr => by
+    let memory := decoded.memoryChannelGuarantees_of_pullCurrency proverData
+      (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.1⟩)
+    exact
+      { assumptions := contracts.assumptionsLocal proverData decoded hchip staticInputs
+          real program decode memory
+        memory }
+  have advance := ChipKind.advancePayload_of_migrated migrated
+  refine ⟨?_, ?_⟩
+  · intro hpull hcurr
+    have inputs := mkOpenInputs hcurr
+    exact ordinaryStepFactG_of_advanceOnTrajectory
+      (contracts.wiringLocal proverData decoded hchip staticInputs real program decode inputs)
+      advance real (staticInputs.chipSpec inputs) decode
+      (contracts.readinessLocal proverData decoded hchip staticInputs real guard program decode inputs)
+      trajectory initial tl codeMemoryCompatible timeStep step hpull hcurr
+  · intro hpull hcurr loc value pushes current
+    have inputs := mkOpenInputs hcurr
+    exact ordinaryFrameFactG_of_advanceOnTrajectory
+      (contracts.wiringLocal proverData decoded hchip staticInputs real program decode inputs)
+      advance real (staticInputs.chipSpec inputs) decode
+      (contracts.readinessLocal proverData decoded hchip staticInputs real guard program decode inputs)
+      trajectory initial tl timeStep step hpull hcurr loc value pushes current
 
-The bundle's three currency-conditional producers are reused *verbatim*: the currency's own index
-changes, and none of `wiring`, `chipSpec` or `readiness` inspects it.  That is the same observation
-D10 made about the walk — the reasoning was already index-agnostic and only the types said
-otherwise — arriving here one layer down. -/
+/-- The legacy ensemble and event transcript specialize the component-local engine facts. -/
 theorem ChipGroundingContracts.engineFactsG
     {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
     (handler : Machine.ExecutableSyscallHandler) (events : List Machine.ExecutionEvent)
@@ -453,34 +509,19 @@ theorem ChipGroundingContracts.engineFactsG
       Semantics.FrameFactG program
         (Semantics.eventTrajectory handler program events initial) initial
         (Semantics.eventTimeline events initialClock) (decoded.ordinaryRowFacts witness.data) := by
-  have guard := contracts.routing witness constraints decoded hchip decodedMem real program decode
-  have migrated : (decoded.toChipRow witness.data).kind.advance.isSome = true := by
-    show decoded.chip.kind.advance.isSome = true
-    rw [hchip]
-    exact contracts.migrated
-  -- The D0 circularity break, unchanged: the row's open Memory inputs come from the *assumed* pull
-  -- currency, never from the walk's own `Grounded` output.
-  have mkOpenInputs : (∀ mp ∈ (decoded.ordinaryRowFacts witness.data).memPulls,
-        MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-        Semantics.LocalValueAtG (Semantics.eventTrajectory handler program events initial) initial
-          (Semantics.eventTimeline events initialClock)
-          (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
-      DecodedRowOpenSoundnessInputs decoded witness.data := fun hcurr => by
-    let memory := decoded.memoryChannelGuarantees_of_pullCurrency witness.data
-      (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.1⟩)
-    exact
-      { assumptions := contracts.assumptions witness constraints balanced decoded hchip decodedMem
-          real program decode memory
-        memory }
-  exact engineFactsG_of_kind handler events migrated real decode initial initialClock
-    (fun hcurr => contracts.wiring witness constraints balanced decoded hchip decodedMem real
-      program decode (mkOpenInputs hcurr))
-    (fun hcurr => decoded.chipSpec_of_openSoundnessInputs witness constraints balanced decodedMem
-      (mkOpenInputs hcurr))
-    (fun hcurr state operands sourceA pulls =>
-      contracts.readiness witness constraints balanced decoded hchip decodedMem real guard
-        program decode (mkOpenInputs hcurr) state operands sourceA pulls)
-    codeMemoryCompatible positioned
+  apply contracts.engineFactsLocalG witness.data decoded hchip
+    (decodedRowStaticInputs_of_witness witness constraints balanced decoded decodedMem)
+    real program decode (Semantics.eventTrajectory handler program events initial) initial
+    (Semantics.eventTimeline events initialClock) codeMemoryCompatible
+  · intro n time
+    have event := positioned n time
+    simp only [Semantics.eventTimeline_start, List.range_succ, List.map_append,
+      List.sum_append, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil]
+    simp only [Semantics.durationAt, event, Machine.ExecutionEvent.duration_ordinary]
+    omega
+  · intro n time
+    rw [Semantics.eventTrajectory_succ, positioned n time]
+    rfl
 
 /-! ## The row's semantic context, from the walk
 

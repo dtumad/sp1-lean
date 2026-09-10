@@ -222,9 +222,12 @@ refresh-free ledger directly from raw constraints/balance and the checked image.
 full structural row facts, and `WindowAligned` semantic transport. The latter permits each original
 read's pre-effect offset, so syscall reads are preserved. `NativeCoreGrounding` derives the
 carrier's timeline, boot truth, and genesis, and `GroundingCarrier.ground_of_steps` instantiates the
-generic engine. Original mixed-row step/frame facts remain explicit semantic premises; given
-them, the original final frontier's values are current at the public final State time. Proving
-those facts for the new assembly and connecting host/terminal execution remain open.
+generic engine. `NativeCoreInstructionExecution` discharges ordinary row step/frame facts using
+component-local chip contracts and the carrier's derived timing. Its `ground_of_system_steps`
+retains HALT/syscall step/frame facts, the trajectory's ordinary `stepOnce` equation, and ROM
+preservation as explicit premises. Given these, the original final frontier's values are current
+at the public final State time. Constructing that mixed trajectory, constraining ROM protection,
+and connecting host/terminal execution remain open.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

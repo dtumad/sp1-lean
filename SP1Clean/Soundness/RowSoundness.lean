@@ -171,6 +171,59 @@ theorem witness_decodedRow_finishedChannelGuarantees
         (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take tableMem))).2
     · exact decodedMem
 
+/-- Physical row evidence independent of any enclosing ensemble. The Memory channel is deliberately
+absent: its guarantees are derived inside the incoming-currency antecedent of timed grounding. -/
+structure DecodedRowStaticInputs (decoded : DecodedInstructionRow p)
+    (data : ProverData (ZMod p)) : Prop where
+  registered : decoded.chip ∈ supportedChips (p := p)
+  constraints : decoded.chip.table.operations.ConstraintsHold (decoded.environment data)
+  byte : decoded.chip.table.operations.ChannelGuarantees byteChannel.toRaw (decoded.environment data)
+  program : decoded.chip.table.operations.ChannelGuarantees programChannel.toRaw (decoded.environment data)
+
+/-- The legacy ensemble supplies the same component-local evidence used by other assemblies. -/
+theorem decodedRowStaticInputs_of_witness
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (decoded : DecodedInstructionRow p)
+    (member : decoded ∈ decodedInstructionRows (p := p) witness.tables) :
+    DecodedRowStaticInputs decoded witness.data :=
+  ⟨decodedInstructionRows_chip_mem witness.tables member,
+    decodedInstructionRow_constraints witness constraints decoded member,
+    (witness_decodedRow_finishedChannelGuarantees witness constraints balanced decoded member).1,
+    (witness_decodedRow_finishedChannelGuarantees witness constraints balanced decoded member).2⟩
+
+/-- Registry membership closes the row's channel inventory without an enclosing witness. -/
+theorem DecodedRowStaticInputs.channels {decoded : DecodedInstructionRow p}
+    {data : ProverData (ZMod p)} (inputs : DecodedRowStaticInputs decoded data) :
+    UsesSupportedBusChannels decoded := by
+  have declared := supportedChip_usesSupportedBusChannels decoded.chip inputs.registered
+  intro channel member
+  apply declared
+  apply decoded.chip.table.circuit.channels_subset
+  simpa only [Operations.channels, Component.interactions_eq, Component.rowOperations] using member
+
+/-- The actual Program pull supplies structural bounds on an active row. -/
+theorem DecodedRowStaticInputs.programRowSpec {decoded : DecodedInstructionRow p}
+    {data : ProverData (ZMod p)} (inputs : DecodedRowStaticInputs decoded data)
+    (real : (decoded.toChipRow data).is_real = 1) :
+    ProgramMsg.RowSpec (programMessageOfView (decoded.toChipRow data).view) := by
+  have interactions := decoded.programInteractions_eq data inputs.constraints
+    (supportedChip_programEmissionShape decoded.chip inputs.registered)
+  let target := TypedInteraction.pulledIfValue programChannel
+    (decoded.toChipRow data).is_real
+    (programMessageOfView (decoded.toChipRow data).view)
+  have targetMem : target ∈ decoded.interactionsWith data programChannel := by
+    rw [interactions]
+    exact List.mem_cons_self
+  have targetNegative : target.mult = -1 := by
+    simp only [target, TypedInteraction.pulledIfValue_mult, real]
+  have programGuarantees :=
+    inputs.program
+  have guarantee := TypedInteraction.guarantee_of_channelGuarantees
+    decoded.chip.table.operations programChannel (decoded.environment data) target targetMem
+    programGuarantees (by rfl) targetNegative
+  simpa only [target, TypedInteraction.pulledIfValue_message, programChannel] using guarantee
+
 /-- An active decoded row inherits the structural well-formedness of its exact Program fetch.
 This is deliberately separate from committed-ROM membership: the finished Program channel supplies
 the limb/index bounds, while `decodedInROM` supplies instruction semantics. -/
@@ -180,24 +233,8 @@ theorem decodedInstructionRow_programRowSpec
     (decoded : DecodedInstructionRow p)
     (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
     (real : (decoded.toChipRow witness.data).is_real = 1) :
-    ProgramMsg.RowSpec (programMessageOfView (decoded.toChipRow witness.data).view) := by
-  have rowConstraints := decodedInstructionRow_constraints witness constraints decoded decodedMem
-  have interactions := decoded.programInteractions_eq_of_mem witness.data witness.tables decodedMem
-    rowConstraints
-  let target := TypedInteraction.pulledIfValue programChannel
-    (decoded.toChipRow witness.data).is_real
-    (programMessageOfView (decoded.toChipRow witness.data).view)
-  have targetMem : target ∈ decoded.interactionsWith witness.data programChannel := by
-    rw [interactions]
-    exact List.mem_cons_self
-  have targetNegative : target.mult = -1 := by
-    simp only [target, TypedInteraction.pulledIfValue_mult, real]
-  have programGuarantees :=
-    (witness_decodedRow_finishedChannelGuarantees witness constraints balanced decoded decodedMem).2
-  have guarantee := TypedInteraction.guarantee_of_channelGuarantees
-    decoded.chip.table.operations programChannel (decoded.environment witness.data) target targetMem
-    programGuarantees (by rfl) targetNegative
-  simpa only [target, TypedInteraction.pulledIfValue_message, programChannel] using guarantee
+    ProgramMsg.RowSpec (programMessageOfView (decoded.toChipRow witness.data).view) :=
+  (decodedRowStaticInputs_of_witness witness constraints balanced decoded decodedMem).programRowSpec real
 
 /-- The exact hypotheses Clean's circuit theorem consumes for one decoded physical row.  In the
 capstone these are assembled dynamically: Memory truth supplies the remaining guarantees and helps
@@ -267,6 +304,25 @@ theorem DecodedInstructionRow.chipSpec_of_weakSoundness
   rw [SupportedChip.decodeRow_chipSpec_iff]
   exact (Component.weakSoundness inputs.assumptions constraints inputs.guarantees).1
 
+/-- Local circuit soundness consumes the static evidence and currency-derived open inputs. -/
+theorem DecodedRowStaticInputs.chipSpec {decoded : DecodedInstructionRow p}
+    {data : ProverData (ZMod p)} (inputs : DecodedRowStaticInputs decoded data)
+    (openInputs : DecodedRowOpenSoundnessInputs decoded data) :
+    (decoded.toChipRow data).chipSpec data :=
+  decoded.chipSpec_of_weakSoundness data inputs.constraints
+    ⟨openInputs.assumptions, (DecodedRowChannelGuarantees.mk
+      (decodedRow_stateChannelGuarantees decoded data) inputs.byte inputs.program
+      openInputs.memory).full inputs.channels⟩
+
+/-- The same circuit theorem supplies requirements on every produced interaction. -/
+theorem DecodedRowStaticInputs.fullRequirements {decoded : DecodedInstructionRow p}
+    {data : ProverData (ZMod p)} (inputs : DecodedRowStaticInputs decoded data)
+    (openInputs : DecodedRowOpenSoundnessInputs decoded data) :
+    decoded.chip.table.operations.FullRequirements (decoded.environment data) :=
+  (Component.weakSoundness openInputs.assumptions inputs.constraints
+    ((DecodedRowChannelGuarantees.mk (decodedRow_stateChannelGuarantees decoded data)
+      inputs.byte inputs.program openInputs.memory).full inputs.channels)).2
+
 /-- Witness-level specialization: once the timed layer proves the chip assumptions and Memory
 guarantees for this row, its semantic `chipSpec` follows.  Constraints, bus coverage, State, Byte, and
 Program are all discharged here from the canonical witness and registry. -/
@@ -276,16 +332,8 @@ theorem DecodedInstructionRow.chipSpec_of_openSoundnessInputs
     (decoded : DecodedInstructionRow p)
     (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
     (openInputs : DecodedRowOpenSoundnessInputs decoded witness.data) :
-    (decoded.toChipRow witness.data).chipSpec witness.data := by
-  have finished := witness_decodedRow_finishedChannelGuarantees witness constraints balanced
-    decoded decodedMem
-  apply decoded.chipSpec_of_weakSoundness witness.data
-    (decodedInstructionRow_constraints witness constraints decoded decodedMem)
-  refine { assumptions := openInputs.assumptions, guarantees := ?_ }
-  apply (DecodedRowChannelGuarantees.mk
-    (decodedRow_stateChannelGuarantees decoded witness.data)
-    finished.1 finished.2 openInputs.memory).full
-  exact decoded.usesSupportedBusChannels_of_mem witness.tables decodedMem
+    (decoded.toChipRow witness.data).chipSpec witness.data :=
+  (decodedRowStaticInputs_of_witness witness constraints balanced decoded decodedMem).chipSpec openInputs
 
 /-- Assemble the semantic row consumed by local execution.  This theorem makes the dependency
 direction explicit: the timed layer never assumes `chipSpec`; it supplies the open circuit inputs,
