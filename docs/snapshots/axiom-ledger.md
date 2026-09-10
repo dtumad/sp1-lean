@@ -183,3 +183,8 @@ including the committed ECALL, three source registers, and target PC/return regi
 facts remain conditional; full-code restrictions, host RAM effects, and ROM protection are not
 claimed closed. The regression witnesses a PC arm whose raw low limb crosses `65535` while the
 recombined PC correctly advances four bytes; it does not claim a complete AIR witness.
+Seven new component-local proofs use the three-axiom logical baseline. `syscallRow_sourceValues`
+also retains the official decoder's existing `sys_enable_experimental_extensions` hook through
+its committed-program premise. Six assembly-indexed proofs retain the existing 100-axiom registry
+set. The regression uses only the logical baseline. Every prior main and test axiom set is
+unchanged; no declaration was removed and no new axiom name appeared.
