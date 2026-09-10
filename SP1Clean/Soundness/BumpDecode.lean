@@ -1412,26 +1412,26 @@ theorem mem_realHaltRows (witness : EnsembleWitness (sp1Ensemble (p := p)))
 table's five: the two extra buses are the ones only this chip speaks on, and both carry `True`, so
 D2's carve-outs stay *derived from balance* rather than promised here. -/
 private theorem syscallInstrsTable_fullGuarantees
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (byteGuarantees : (syscallInstrsTable witness).ChannelGuarantees byteChannel.toRaw)
-    (programGuarantees : (syscallInstrsTable witness).ChannelGuarantees programChannel.toRaw)
+    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
+    (byteGuarantees : table.ChannelGuarantees byteChannel.toRaw)
+    (programGuarantees : table.ChannelGuarantees programChannel.toRaw)
     {row : Array (ZMod p)}
-    (memoryGuarantees : (syscallInstrsTable witness).component.operations.ChannelGuarantees
-      memoryChannel.toRaw ((syscallInstrsTable witness).environment row))
-    (rowMem : row ∈ (syscallInstrsTable witness).table) :
-    (syscallInstrsTable witness).component.operations.FullGuarantees
-      ((syscallInstrsTable witness).environment row) := by
+    (memoryGuarantees : table.component.operations.ChannelGuarantees
+      memoryChannel.toRaw (table.environment row))
+    (rowMem : row ∈ table.table) :
+    table.component.operations.FullGuarantees
+      (table.environment row) := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
-  have hlist : (syscallInstrsTable witness).component.circuit.channelsWithGuarantees =
+  have hlist : table.component.circuit.channelsWithGuarantees =
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
        exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw] := by
-    rw [syscallInstrsTable_component]
+    rw [component]
     rfl
   simp only [Component.guarantees_iff, Component.rowOperations]
   rw [GeneralFormalCircuit.guarantees_iff]
   intro channel channelMem
-  show (syscallInstrsTable witness).component.rowOperations.ChannelGuarantees channel
-    ((syscallInstrsTable witness).environment row)
+  show table.component.rowOperations.ChannelGuarantees channel
+    (table.environment row)
   rw [← Component.channelGuarantees_iff]
   rw [hlist] at channelMem
   rcases List.mem_cons.mp channelMem with rfl | channelMem
@@ -1456,6 +1456,35 @@ private theorem syscallInstrsTable_fullGuarantees
 /-- The per-row `Spec` extraction through `Component.weakSoundness`. The Memory guarantee is taken
 **at this row's environment** rather than table-wide, because that is the form the walk can supply:
 its currency antecedent hands one row's pulls their `isU64 ∧ ClkBound` at a time. -/
+theorem syscallInstrsRow_spec_of_component
+    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
+    (tableConstraints : table.Constraints)
+    (byteGuarantees : table.ChannelGuarantees byteChannel.toRaw)
+    (programGuarantees : table.ChannelGuarantees programChannel.toRaw)
+    {row : Array (ZMod p)}
+    (memoryGuarantees : table.component.operations.ChannelGuarantees
+      memoryChannel.toRaw (table.environment row))
+    (rowMem : row ∈ table.table) :
+    SyscallInstrsChip.Spec (syscallInstrsRow table row) := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have hassump : table.component.Assumptions
+      (table.environment row) := by
+    rw [component]
+    rw [show ∀ env, (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).Assumptions env = True from
+      fun _ => SyscallInstrsChip.circuit_Assumptions_apply _ _]
+    trivial
+  have spec := (table.component.weakSoundness
+    (env := table.environment row)
+    hassump (tableConstraints row rowMem)
+    (syscallInstrsTable_fullGuarantees table component byteGuarantees programGuarantees
+      memoryGuarantees rowMem)).1
+  rw [component,
+    show ∀ env, (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).Spec env =
+        SyscallInstrsChip.Spec (valueFromOffset SyscallInstrsChip.Inputs 0 env) from
+      fun _ => SyscallInstrsChip.circuit_Spec_apply _ _ _] at spec
+  exact spec
+
+/-- The legacy assembly specializes component-local syscall soundness. -/
 theorem syscallInstrsRow_spec_of_facts
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (tableConstraints : (syscallInstrsTable witness).Constraints)
@@ -1465,24 +1494,9 @@ theorem syscallInstrsRow_spec_of_facts
     (memoryGuarantees : (syscallInstrsTable witness).component.operations.ChannelGuarantees
       memoryChannel.toRaw ((syscallInstrsTable witness).environment row))
     (rowMem : row ∈ (syscallInstrsTable witness).table) :
-    SyscallInstrsChip.Spec (syscallInstrsRow (syscallInstrsTable witness) row) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
-  have hassump : (syscallInstrsTable witness).component.Assumptions
-      ((syscallInstrsTable witness).environment row) := by
-    rw [syscallInstrsTable_component]
-    rw [show ∀ env, (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).Assumptions env = True from
-      fun _ => SyscallInstrsChip.circuit_Assumptions_apply _ _]
-    trivial
-  have spec := ((syscallInstrsTable witness).component.weakSoundness
-    (env := (syscallInstrsTable witness).environment row)
-    hassump (tableConstraints row rowMem)
-    (syscallInstrsTable_fullGuarantees witness byteGuarantees programGuarantees
-      memoryGuarantees rowMem)).1
-  rw [syscallInstrsTable_component,
-    show ∀ env, (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).Spec env =
-        SyscallInstrsChip.Spec (valueFromOffset SyscallInstrsChip.Inputs 0 env) from
-      fun _ => SyscallInstrsChip.circuit_Spec_apply _ _ _] at spec
-  exact spec
+    SyscallInstrsChip.Spec (syscallInstrsRow (syscallInstrsTable witness) row) :=
+  syscallInstrsRow_spec_of_component _ (syscallInstrsTable_component witness)
+    tableConstraints byteGuarantees programGuarantees memoryGuarantees rowMem
 
 /-- **Every `SyscallInstrs` row satisfies the chip's semantic `Spec`.** This is the extractor the
 stash was missing: it registered the table and decoded its rows, but nothing carried the row's

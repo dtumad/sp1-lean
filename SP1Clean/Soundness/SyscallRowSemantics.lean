@@ -20,9 +20,12 @@ HandlerAddressesFit`. What the row does **not** give, and must be supplied by th
 
 * the register indices `5`/`10`/`11` — SP1 does not pin them in the AIR either; the preprocessed
   Program table does, because the decoder always emits `Instruction::new(ECALL, X5, X10, X11)`;
-* the `pc + 4` carry — upstream asserts `next_pc[0] = pc[0] + 4` with no carry into limb 1, and
-  `StateBumpChip` is what legalizes the non-canonical result;
 * canonicity of the syscall code — see `IsInlineCanonical` below.
+
+The Program bus's low-limb bound suffices to prove `nextPc = pc + 4`, even when the raw next
+low limb exceeds `65535`. StateBump normalizes that representation separately. The released
+`SyscallRowContext.pcCarry` premise remains for source compatibility; the component-local
+`rowLaw_of_spec_and_pulledFacts` theorem needs no such premise.
 
 **The canonical-code profile premise.** SP1's AIR selects from bytes 0 and 1 of `x5`. The executor
 dispatches on `x5 as u32` through `SyscallCode::from_u32`, rejecting unrecognized low-32-bit codes.
@@ -257,8 +260,8 @@ structure SyscallRowContext (r : SyscallInstrsChip.Inputs (ZMod p)) (program : G
     (source : SailState) : Prop where
   /-- The register operands are `x5`/`x10`/`x11`, from the Program bus's committed ECALL row. -/
   operands : r.op_a = 5 ∧ r.op_b = 10 ∧ r.op_c = 11
-  /-- The pc's low limb does not carry, so `next_pc` recombines to `pc + 4`. Supplied by
-  `StateBumpChip`, exactly as upstream intends. -/
+  /-- Legacy no-carry restriction, retained for source compatibility. The row-law proof only
+  needs the Program bus's input bound, as `arm_pcAdvance_of_pcBound` shows. -/
   pcCarry : (r.state.pc[0]).val + 4 < 2 ^ 16
   /-- The row sits at an `ECALL` word of the committed program. -/
   ecall : Machine.AboutToExecuteEcall program source
@@ -330,12 +333,11 @@ theorem arm_halt (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.Sele
   rw [nextPc_syscallEventOfRow, hpc.1, hpc.2.1, hpc.2.2, ZMod.val_one, ZMod.val_zero]
   rfl
 
-/-- **Every other arm's pc.** One instruction on. The `+ 4` is a *field* addition on the low limb
-with no carry constraint — upstream leaves the non-canonical state to `StateBumpChip` — so the carry
-fact travels in `SyscallRowContext`, and it is what turns a limb equation into a 64-bit one. -/
-theorem arm_pcAdvance (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.SelectorsValid r)
+/-- Program bounds suffice for the syscall PC increment. The low limb may carry into the
+next 16-bit limb; only wrap in the ambient field must be excluded. -/
+theorem arm_pcAdvance_of_pcBound (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.SelectorsValid r)
     (real : r.is_real = 1) (hid : (syscallEventOfRow r).syscallId ≠ Machine.haltSyscallId)
-    (carry : (r.state.pc[0]).val + 4 < 2 ^ 16) :
+    (pcBound : (r.state.pc[0]).val < 2 ^ 16) :
     (syscallEventOfRow r).nextPc = (syscallEventOfRow r).pc + 4 := by
   have hp : 2 ^ 17 < p := Fact.out
   have hfield : SyscallInstrsChip.syscallId r ≠ ((SyscallInstrsChip.haltCode : ℕ) : ZMod p) :=
@@ -355,6 +357,13 @@ theorem arm_pcAdvance (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip
         + (r.state.pc[2]).val * 2 ^ 32) + 4 := by ring
   rw [nextPc_syscallEventOfRow, pc_syscallEventOfRow, hpc.1, hpc.2.1, hpc.2.2, hval, harith]
   simp [BitVec.ofNat_add]
+
+/-- The released no-carry interface specializes the weaker Program-bound theorem. -/
+theorem arm_pcAdvance (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.SelectorsValid r)
+    (real : r.is_real = 1) (hid : (syscallEventOfRow r).syscallId ≠ Machine.haltSyscallId)
+    (carry : (r.state.pc[0]).val + 4 < 2 ^ 16) :
+    (syscallEventOfRow r).nextPc = (syscallEventOfRow r).pc + 4 :=
+  arm_pcAdvance_of_pcBound r spec sel real hid (by omega)
 
 /-- **ENTER_UNCONSTRAINED.** `t0 := 0`. The tracing VM returns `0` here (the minimal executor's `1`
 is never traced), which is what the AIR's zero-word arm records. The `op_a_0` booleanity the write
@@ -518,9 +527,9 @@ theorem arm_commitDeferred (spec : SyscallInstrsChip.Spec r)
 while every arm `Spec` speaks of a selector column, and the selector bridge is the only thing that
 connects them. Assembling the law from the arms — rather than proving it directly — is what makes a
 missing arm a missing theorem. -/
-theorem rowLaw_of_spec (spec : SyscallInstrsChip.Spec r)
+theorem rowLaw_of_spec_and_pulledFacts (spec : SyscallInstrsChip.Spec r)
     (sel : SyscallInstrsChip.SelectorsValid r) (pulled : SyscallInstrsChip.PulledFacts r)
-    (real : r.is_real = 1) (ctx : SyscallRowContext r program source) :
+    (real : r.is_real = 1) :
     (syscallEventOfRow r).RowLaw := by
   have hp : 2 ^ 17 < p := Fact.out
   haveI : Fact (1 < p) := ⟨by omega⟩
@@ -539,11 +548,11 @@ theorem rowLaw_of_spec (spec : SyscallInstrsChip.Spec r)
       by_cases h240 : (syscallEventOfRow r).syscallId = Machine.hintLenSyscallId
       · rw [if_pos h240]; trivial
       · rw [if_neg h240]; exact arm_default r spec sel pulled real h3 h240
-  · -- `PcLaw`: park at `haltPc`, or advance one instruction using the bump chip's carry fact.
+  · -- `PcLaw`: park at `haltPc`, or advance one instruction using the Program bus's low-limb bound.
     unfold CoreSyscallEvent.PcLaw
     by_cases h0 : (syscallEventOfRow r).syscallId = Machine.haltSyscallId
     · rw [if_pos h0]; exact arm_halt r spec sel real h0
-    · rw [if_neg h0]; exact arm_pcAdvance r spec sel real h0 ctx.pcCarry
+    · rw [if_neg h0]; exact arm_pcAdvance_of_pcBound r spec sel real h0 (pulled real).2.1
   · -- `HandlerAddressesFit`: a dispatched row drops its fourth operand limb, leaving 48 bits.
     intro htable
     have hfield : SyscallInstrsChip.tableByte r = 1 := by
@@ -568,6 +577,15 @@ theorem rowLaw_of_spec (spec : SyscallInstrsChip.Spec r)
     · rw [arg2_syscallEventOfRow, hdisp.2, ZMod.val_zero]
       simp only [BitVec.toNat_ofNat]
       omega
+
+
+/-- The released context-bearing interface follows from the row and its pulled bounds alone. -/
+theorem rowLaw_of_spec (spec : SyscallInstrsChip.Spec r)
+    (sel : SyscallInstrsChip.SelectorsValid r) (pulled : SyscallInstrsChip.PulledFacts r)
+    (real : r.is_real = 1) (ctx : SyscallRowContext r program source) :
+    (syscallEventOfRow r).RowLaw := by
+  cases ctx
+  exact rowLaw_of_spec_and_pulledFacts r spec sel pulled real
 
 end Arms
 

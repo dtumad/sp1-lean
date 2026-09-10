@@ -36,6 +36,7 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsUnrelatedKeys
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsInvalidBoundaryRows
 #print axioms SP1Clean.Audit.MixedMemoryRows.syscallKeepsMixedReadTimes
+#print axioms SP1Clean.Audit.MixedMemoryRows.syscallPcArmCrossesLimb
 #print axioms SP1CleanTest.Core.MemoryBoundary.nativeVerifierEndpoints
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsForgedBoot
 #print axioms SP1CleanTest.Core.MemoryBoundary.nativeBoundaryInventories

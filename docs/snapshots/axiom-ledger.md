@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-10. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1290 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 107 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1304 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 108 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1397 released declarations are probed.
+- 1412 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -175,3 +175,11 @@ and test dependency set is unchanged, no declaration was removed, and no new axi
 `ground_of_host_steps` constructs the trajectory and discharges ordinary/HALT grounding internally.
 It remains conditional on ROM preservation and active syscall step/frame facts, and does not yet
 establish terminal ECALL/Exit agreement or the full boot-to-HALT execution relation.
+
+The native syscall-semantics checkpoint adds 14 main probes and one kernel-checked regression.
+Component-local inputs derive the row law without the legacy no-carry premise. The native
+post-grounding bridge derives an `EventStep` for each active syscall on the constructed trajectory,
+including the committed ECALL, three source registers, and target PC/return register. Host step/frame
+facts remain conditional; full-code restrictions, host RAM effects, and ROM protection are not
+claimed closed. The regression witnesses a PC arm whose raw low limb crosses `65535` while the
+recombined PC correctly advances four bytes; it does not claim a complete AIR witness.

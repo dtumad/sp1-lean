@@ -89,6 +89,18 @@ theorem GroundingCarrier.trajectory_ordinary {image : ProgramImage} (valid : ima
   rw [eventTrajectory_succ, carrier.event_at member atIndex]
   rfl
 
+/-- Each active syscall invokes the supplied host at its own derived timeline position. -/
+theorem GroundingCarrier.trajectory_syscall {image : ProgramImage} (valid : image.Valid)
+    {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness)
+    (handler : Machine.ExecutableSyscallHandler) {row : SyscallInstrsChip.Inputs (ZMod p)}
+    (member : ExecutionRow.syscall row ∈ executionRows witness) {n : ℕ}
+    (atIndex : StateMsg.timeNat (syscallRowFacts row).statePull = carrier.timeline.start n) :
+    carrier.trajectory valid handler (n + 1) = (carrier.trajectory valid handler n).bind
+      (handler.withHalt.run (image.toGuestProgram valid) (syscallEventOfRow row)) := by
+  unfold trajectory
+  rw [eventTrajectory_succ, carrier.event_at member atIndex]
+  rfl
+
 /-- A zero-code HALT event parks the PC and preserves every register and memory location. -/
 theorem GroundingCarrier.trajectory_halt {image : ProgramImage} (valid : image.Valid)
     {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness)

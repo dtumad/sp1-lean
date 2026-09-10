@@ -156,6 +156,15 @@ Implemented foundations:
   The host's zero-code arm is fixed to canonical HALT; other host behavior stays supplied by the
   environment. These are grounding results: terminal ECALL/Exit agreement and a full execution
   theorem for this assembly remain open.
+- `SyscallInputs` derives the syscall contract, operand bounds, and source observations from a
+  component's constraints and Byte/Program ledgers plus incoming Memory currency. The new row-law
+  proof needs only the Program input PC bound; it permits a raw next low limb above `65535`.
+  `NativeCoreSyscallSemantics.GroundingCarrier.syscall_eventStep_of_grounded` connects every active
+  syscall in the mixed carrier to a semantic `EventStep` for the supplied host. Event position,
+  committed ECALL, all three source registers, and the target PC/return register are derived
+  internally. This is a post-grounding bridge: host step/frame facts remain open, as do the eight
+  full-code restrictions and host RAM effects. The instruction row's three register touches cannot
+  account for `HINT_READ` writes; those need host tables and a corresponding grounding footprint.
 
 Still required before the native capstone can be claimed:
 
@@ -169,8 +178,10 @@ Still required before the native capstone can be claimed:
    canonical State walk, derived timeline, and generic grounding connection are also closed.
    Ordinary instruction step/frame facts now follow through component-local chip contracts.
    The mixed trajectory, its ordinary successor equations, and HALT step/frame facts are now
-   constructed internally. Constrain ROM preservation and connect active syscall step/frame
-   facts with the host environment. Final-value currency follows under these two remaining
+   constructed internally. Active syscall row laws and their post-grounding `EventStep` bridge
+   are closed, without a caller-supplied no-carry premise. Constrain ROM preservation and derive
+   active syscall step/frame facts from the host environment and its AIR tables, including RAM
+   writes. Final-value currency follows under these two remaining
    semantic premises; terminal ECALL/Exit agreement and execution reconstruction remain open.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.

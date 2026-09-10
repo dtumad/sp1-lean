@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.ChipContracts
 import SP1Clean.Soundness.SyscallGrounding
+import SP1Clean.Soundness.SyscallInputs
 
 /-! # Wiring a syscall row into the walk
 
@@ -12,8 +13,9 @@ That is the same currency circularity the ordinary rows hit, and it has the same
 walk's own step antecedent already hands each row `isU64 ∧ ClkBound` for its pulls before asking for
 the step fact, so the guarantee can be rebuilt from the antecedent rather than from the walk's
 output. `DecodedInstructionRow.memoryChannelGuarantees_of_pullCurrency` is the instruction-row
-version; this file is the syscall one, and the halt table needed neither because it is extracted
-*after* the walk rather than walked. -/
+version. `SyscallInputs` provides the component-local syscall implementation; this file keeps
+the legacy assembly specializations. The mixed native carrier derives HALT separately through
+`HaltGrounding`. -/
 
 open LeanRV64D.Defs
 
@@ -47,55 +49,10 @@ theorem syscallInstrsRow_memoryGuarantees_of_pullCurrency
         (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
     (syscallInstrsTable witness).component.operations.ChannelGuarantees memoryChannel.toRaw
-      ((syscallInstrsTable witness).environment row) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  have hbool := witness_syscallInstrsRows_selectorBinary witness constraints row rowMem
-  refine channelGuarantees_of_consumedMessages _ memoryChannel _ hp fun msg msgMem => ?_
-  rw [syscallInstrsRow_typedMemory, consumedMessages, List.mem_map] at msgMem
-  obtain ⟨i, iMem, rfl⟩ := msgMem
-  rw [List.mem_filter, decide_eq_true_eq] at iMem
-  obtain ⟨iList, iPull⟩ := iMem
-  -- A push can never be on the consumed side: its multiplicity is the boolean gate itself.
-  have pushImpossible : ∀ {m : MemoryMsg (ZMod p)},
-      signedVal (TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real m).mult = -1 → False := by
-    intro m h
-    rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool] at h
-    rcases hbool with h0 | h1
-    · rw [h0, ZMod.val_zero] at h; simp at h
-    · rw [h1, ZMod.val_one] at h; simp at h
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at iList
-  rcases iList with rfl | rfl | rfl | rfl | rfl | rfl
-  · rw [TypedInteraction.pulledIfValue_message]
-    refine currency (SyscallInstrsChip.memPulledMessage
-      (syscallInstrsRow (syscallInstrsTable witness) row)
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_a,
-      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-        (syscallInstrsRow (syscallInstrsTable witness) row))) ?_
-    rw [syscallRowFacts_memPulls]
-    exact List.mem_cons_self
-  · exact absurd iPull pushImpossible
-  · rw [TypedInteraction.pulledIfValue_message]
-    refine currency (SyscallInstrsChip.memPulledMessage
-      (syscallInstrsRow (syscallInstrsTable witness) row)
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_b,
-      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-        (syscallInstrsRow (syscallInstrsTable witness) row)) + 3) ?_
-    rw [syscallRowFacts_memPulls]
-    exact List.mem_cons_of_mem _ List.mem_cons_self
-  · exact absurd iPull pushImpossible
-  · rw [TypedInteraction.pulledIfValue_message]
-    refine currency (SyscallInstrsChip.memPulledMessage
-      (syscallInstrsRow (syscallInstrsTable witness) row)
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_c,
-      StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-        (syscallInstrsRow (syscallInstrsTable witness) row)) + 2) ?_
-    rw [syscallRowFacts_memPulls]
-    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
-  · exact absurd iPull pushImpossible
+      ((syscallInstrsTable witness).environment row) :=
+  syscallInstrsRow_memoryGuarantees_of_component _ (syscallInstrsTable_component witness)
+    (constraints _ (witness.mem_allTables_of_mem_tables
+      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))) rowMem currency
 
 /-- **A syscall row's `Spec`, from the walk's currency rather than from grounding.** This is the
 statement `SyscallRowWiring` is built on: everything the row's meaning needs is either a finished
@@ -108,14 +65,11 @@ theorem syscallInstrsRow_spec_of_pullCurrency
         (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
     SyscallInstrsChip.Spec (syscallInstrsRow (syscallInstrsTable witness) row) := by
-  have tableMem : syscallInstrsTable witness ∈ witness.tables :=
-    List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
-  have tableConstraints : (syscallInstrsTable witness).Constraints :=
-    constraints _ (witness.mem_allTables_of_mem_tables tableMem)
-  have finished := sp1_finishedChannel_guarantees witness constraints balanced
-    _ (witness.mem_allTables_of_mem_tables tableMem)
-  exact syscallInstrsRow_spec_of_facts witness tableConstraints finished.1 finished.2
-    (syscallInstrsRow_memoryGuarantees_of_pullCurrency witness constraints rowMem currency) rowMem
+  have member := witness.mem_allTables_of_mem_tables
+    (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))
+  have finished := sp1_finishedChannel_guarantees witness constraints balanced _ member
+  exact (syscallInstrsRow_contract_of_component _ (syscallInstrsTable_component witness)
+    (constraints _ member) finished.1 finished.2 rowMem currency).1
 
 /-- **The row's committed `ECALL` fetch satisfies the Program bus's `RowSpec`.** The Program channel
 is finished, so the row's single gated pull carries its guarantee outright — the same route
@@ -125,20 +79,11 @@ theorem syscallInstrsRow_programRowSpec
     (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table)
     (real : (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1) :
-    Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow (syscallInstrsTable witness) row)) := by
-  have tableMem : syscallInstrsTable witness ∈ witness.tables :=
-    List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
-  have programGuarantees := (sp1_finishedChannel_guarantees witness constraints balanced
-    _ (witness.mem_allTables_of_mem_tables tableMem)).2 row rowMem
-  have guarantee := TypedInteraction.guarantee_of_channelGuarantees
-    (syscallInstrsTable witness).component.operations programChannel
-    ((syscallInstrsTable witness).environment row)
-    (TypedInteraction.pulledIfValue programChannel (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-      (SyscallInstrsChip.programMessage (syscallInstrsRow (syscallInstrsTable witness) row)))
-    (by rw [syscallInstrsRow_typedProgram]; exact List.mem_cons_self)
-    programGuarantees (by rfl)
-    (by rw [TypedInteraction.pulledIfValue_mult, real])
-  simpa only [TypedInteraction.pulledIfValue_message, programChannel] using guarantee
+    Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow (syscallInstrsTable witness) row)) :=
+  syscallInstrsRow_programRowSpec_of_component _ (syscallInstrsTable_component witness)
+    (sp1_finishedChannel_guarantees witness constraints balanced _
+      (witness.mem_allTables_of_mem_tables
+        (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).2 rowMem real
 
 /-- **The row's `PulledFacts`, assembled from the three buses.** Nothing here is row-local: the
 first five conjuncts are the Program bus's `RowSpec` at the committed `ECALL`, the next six are the
@@ -152,14 +97,11 @@ theorem syscallInstrsRow_pulledFacts
     (currency : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
     SyscallInstrsChip.PulledFacts (syscallInstrsRow (syscallInstrsTable witness) row) := by
-  intro real
-  have activeMem : row ∈ realSyscallInstrsRows witness := by
-    rw [realSyscallInstrsRows, List.mem_filter]
-    exact ⟨rowMem, by simpa using real⟩
-  obtain ⟨curA, curB, curC⟩ := syscallRowFacts_currency_split _ currency
-  exact SyscallInstrsChip.pulledFacts_of_buses _
-    (syscallInstrsRow_programRowSpec witness constraints balanced rowMem real) curA curB curC
-    (syscallInstrsRow_opAValue_isU64 witness constraints balanced activeMem) real
+  have member := witness.mem_allTables_of_mem_tables
+    (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))
+  have finished := sp1_finishedChannel_guarantees witness constraints balanced _ member
+  exact (syscallInstrsRow_contract_of_component _ (syscallInstrsTable_component witness)
+    (constraints _ member) finished.1 finished.2 rowMem currency).2
 
 /-- **The row's three operand columns are `x5`/`x10`/`x11`.** Nothing row-local says so — the chip
 passes its own columns where `HaltChip` hardcodes the constants — so it is read off the committed
@@ -527,9 +469,8 @@ theorem ChipGroundingContracts.engineFactsG
 
 `SyscallRowContext` names the five things a syscall row's meaning needs that the row itself does not
 carry. `syscallInstrsRow_operands` supplied the first from the Program bus. The three below come
-from the walk — the pulled state's pc and the three register reads — and `pcCarry` stays a premise,
-because it is `StateBumpChip`'s carry fact and genuinely external, exactly as the pc's `+ 4` is on
-the AIR side. -/
+from the walk — the pulled state's pc and the three register reads. The released `pcCarry` premise
+remains for source compatibility; `rowLaw_of_spec_and_pulledFacts` proves the row law without it. -/
 
 /-- **`SyscallRowContext`, assembled at the walk's own state.** The three register reads all speak
 about the *same* state, and that is the content of the `+0`/`+3`/`+2` read times being below

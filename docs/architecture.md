@@ -233,6 +233,16 @@ are current at the public final State time. The host wrapper fixes zero-code HAL
 other calls to the supplied environment. Constraining ROM protection, connecting host effects,
 and proving terminal ECALL/Exit agreement and execution reconstruction remain open.
 
+`SyscallInputs` supplies component-local syscall contracts and source observations from constraints,
+finished Byte/Program guarantees, and incoming Memory currency. The row law follows using the
+Program PC bound alone: a raw next low limb above `65535` still recombines correctly, with StateBump
+normalization handled separately. `NativeCoreSyscallSemantics` derives a semantic `EventStep` for
+every active syscall after grounding, recovering its committed ECALL, source registers, target
+PC/return value, and exact position on the constructed trajectory. This bridge consumes the host
+step fact; it does not derive the selected full-code profile or host effects. In particular, the
+existing three-register footprint cannot certify host RAM writes such as `HINT_READ`. Host tables
+and their Memory footprint must supply those before the unconditional capstone can close.
+
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.
 

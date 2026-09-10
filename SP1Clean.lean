@@ -494,6 +494,7 @@ import SP1Clean.Soundness.WalkTimeline
 import SP1Clean.Soundness.SyscallGrounding
 import SP1Clean.Soundness.SyscallExecution
 import SP1Clean.Soundness.SyscallTrail
+import SP1Clean.Soundness.SyscallInputs
 import SP1Clean.Soundness.SyscallWiring
 import SP1Clean.Soundness.SyscallRowSemantics
 import SP1Clean.Soundness.GroundingAdapter
@@ -643,5 +644,6 @@ import SP1Clean.Soundness.NativeCoreInstructionExecution
 import SP1Clean.Soundness.NativeCoreTrajectory
 import SP1Clean.Soundness.HaltGrounding
 import SP1Clean.Soundness.NativeCoreHaltExecution
+import SP1Clean.Soundness.NativeCoreSyscallSemantics
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

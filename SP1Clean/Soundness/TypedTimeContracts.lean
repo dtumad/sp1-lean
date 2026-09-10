@@ -1398,19 +1398,16 @@ its four-limb bound cannot come from the Memory channel the way `op_b`/`op_c`'s 
 come from the chip's `Spec` — the `HINT_LEN` arm deliberately leaves the result free, so no arm
 constrains it. It comes from the chip's own four `Range 16` byte pulls, which is exactly where
 upstream puts it (`air.rs` range-checks the written `op_a` limbs). -/
-theorem syscallInstrsRow_opAValue_isU64
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    Word.isU64 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value := by
-  obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
-  have tableGuarantees := (sp1_finishedChannel_guarantees witness constraints balanced
-    _ (witness.mem_allTables_of_mem_tables
-      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).1
-  set env := (syscallInstrsTable witness).environment row with envDef
-  have opsGuarantees : (syscallInstrsTable witness).component.operations.ChannelGuarantees
+theorem syscallInstrsRow_opAValue_isU64_of_component
+    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
+    (tableGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    {row : Array (ZMod p)} (tableMem : row ∈ table.table)
+    (real : (syscallInstrsRow table row).is_real = 1) :
+    Word.isU64 (syscallInstrsRow table row).op_a_value := by
+  set env := table.environment row with envDef
+  have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := tableGuarantees row tableMem
-  rw [syscallInstrsTable_component] at opsGuarantees
+  rw [component] at opsGuarantees
   have rowGuarantees :=
     (Component.channelGuarantees_iff env Channels.byteChannel.toRaw).mp opsGuarantees
   set inputVar : Var SyscallInstrsChip.Inputs (ZMod p) :=
@@ -1430,7 +1427,7 @@ theorem syscallInstrsRow_opAValue_isU64
     val_lt_of_byteRangePull_guarantee inputVar.is_real inputVar.op_a_value[0] env
       (listG _ (List.getElem_mem (n := 14) (by norm_num))) realEval
   have cross0 : Expression.eval env inputVar.op_a_value[0] =
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value[0] := by
+      (syscallInstrsRow table row).op_a_value[0] := by
     rw [syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -1438,7 +1435,7 @@ theorem syscallInstrsRow_opAValue_isU64
     val_lt_of_byteRangePull_guarantee inputVar.is_real inputVar.op_a_value[1] env
       (listG _ (List.getElem_mem (n := 15) (by norm_num))) realEval
   have cross1 : Expression.eval env inputVar.op_a_value[1] =
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value[1] := by
+      (syscallInstrsRow table row).op_a_value[1] := by
     rw [syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -1446,7 +1443,7 @@ theorem syscallInstrsRow_opAValue_isU64
     val_lt_of_byteRangePull_guarantee inputVar.is_real inputVar.op_a_value[2] env
       (listG _ (List.getElem_mem (n := 16) (by norm_num))) realEval
   have cross2 : Expression.eval env inputVar.op_a_value[2] =
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value[2] := by
+      (syscallInstrsRow table row).op_a_value[2] := by
     rw [syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -1454,11 +1451,23 @@ theorem syscallInstrsRow_opAValue_isU64
     val_lt_of_byteRangePull_guarantee inputVar.is_real inputVar.op_a_value[3] env
       (listG _ (List.getElem_mem (n := 17) (by norm_num))) realEval
   have cross3 : Expression.eval env inputVar.op_a_value[3] =
-      (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value[3] := by
+      (syscallInstrsRow table row).op_a_value[3] := by
     rw [syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   exact Word.isU64_of_cases (cross0 ▸ limb0) (cross1 ▸ limb1) (cross2 ▸ limb2) (cross3 ▸ limb3)
+
+/-- Specialize the table-local return-word bound to the legacy assembly. -/
+theorem syscallInstrsRow_opAValue_isU64
+    (witness : EnsembleWitness (sp1Ensemble (p := p)))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
+    Word.isU64 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value := by
+  obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
+  exact syscallInstrsRow_opAValue_isU64_of_component _ (syscallInstrsTable_component witness)
+    (sp1_finishedChannel_guarantees witness constraints balanced
+      _ (witness.mem_allTables_of_mem_tables
+        (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).1 tableMem real
 
 /-- Every active halt row advances its decoded State time by exactly the syscall width `264`
 (halt-table wave): the composed `CPUState` reader's two byte checks bound the pulled low clock,
