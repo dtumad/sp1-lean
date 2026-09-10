@@ -75,6 +75,14 @@ No earlier main declaration changes its axiom set, no declaration is removed, an
 axiom name appears. The local touch contract deliberately retains prior-clock conditions; its
 closed construction is not a claim that mixed execution grounding is complete.
 
+The prior-record and refresh-chronology checkpoint adds 11 main probes. Three table-local
+MemoryBump evidence/order proofs use the three logical baseline axioms. Eight assembly-indexed
+statements retain the existing 100-axiom registry set. No earlier main or test axiom set changes,
+no declaration is removed, and no new axiom name appears. `ordered_memory_rows` derives both
+prior clock-limb bounds and strict refresh order; `memory_refresh_free` consumes those conclusions
+to construct the refresh-free ledger. These are structural chronology results; mixed execution
+steps, host effects, and final-record currency remain separate obligations.
+
 Most chip-local semantic and whole-chip faithfulness proofs use only the ordinary logical baseline.
 Mul and several Sail bridges additionally retain generated bit-vector decision proofs. Execution
 theorems stated against the complete Sail interpreter inherit its platform-hook surface, including
