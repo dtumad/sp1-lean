@@ -50,7 +50,9 @@ authentication/uniqueness and its physical ledger, and Program-row ROM/Sail memb
 closure and inventory arguments use the ordinary logical baseline. The assembly-indexed statements
 also reference the existing proof-bearing chip registry and retain its disclosed Sail/bit-vector
 dependencies; an initialization-only conclusion does not erase those dependencies from its type.
-The new executable regressions remain in the test library.
+The new executable regressions remain in the test library. No previously recorded declaration
+changed its axiom set, and no new main-library axiom name appeared. The three new compiler-trusted
+constants belong exactly to those three test anchors.
 
 Most chip-local semantic and whole-chip faithfulness proofs use only the ordinary logical baseline.
 Mul and several Sail bridges additionally retain generated bit-vector decision proofs. Execution
