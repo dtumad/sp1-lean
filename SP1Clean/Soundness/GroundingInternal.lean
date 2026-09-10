@@ -64,34 +64,8 @@ theorem supportedCore_groundingObligations_of_constraints
     { chipContracts := ?_
       memoryMultiplicityBinary := witness_memoryMultiplicityBinary witness constraints
       paddingMemoryEmpty := witness_paddingMemoryEmpty witness constraints }
-  intro chip chipMem
-  fin_cases chipMem <;>
-    first
-    | exact addChip_groundingContracts
-    | exact addiChip_groundingContracts
-    | exact addwChip_groundingContracts
-    | exact subChip_groundingContracts
-    | exact subwChip_groundingContracts
-    | exact bitwiseChip_groundingContracts
-    | exact ltChip_groundingContracts
-    | exact shiftLeftChip_groundingContracts
-    | exact shiftRightChip_groundingContracts
-    | exact mulChip_groundingContracts
-    | exact divRemChip_groundingContracts
-    | exact jalChip_groundingContracts
-    | exact jalrChip_groundingContracts
-    | exact branchChip_groundingContracts
-    | exact uTypeChip_groundingContracts
-    | exact loadByteChip_groundingContracts
-    | exact loadHalfChip_groundingContracts
-    | exact loadWordChip_groundingContracts
-    | exact loadDoubleChip_groundingContracts
-    | exact loadX0Chip_groundingContracts
-    | exact storeByteChip_groundingContracts
-    | exact storeHalfChip_groundingContracts
-    | exact storeWordChip_groundingContracts
-    | exact storeDoubleChip_groundingContracts
-    | exact aluX0Chip_groundingContracts
+  exact supportedChip_groundingContracts
+
 
 
 private theorem mapFilterComm {α β : Type*} (f : α → β) (q : β → Bool) (l : List α) :

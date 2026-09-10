@@ -201,15 +201,21 @@ including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicit
 balance into an exact message permutation and then a per-location frontier equation. The initial
 frontier satisfies the generic timed engine's live-memory invariant at the configured boot state.
 These results assume only raw constraints and balance (and the trajectory's initial state for the
-live invariant); execution ordering and final-record currency still require the mixed-row walk.
+live invariant); final-record currency still requires the mixed-row walk.
 
 `NativeCoreRows` projects that exact ledger into one ordinary/HALT/syscall inventory, with actual
 MemoryBump pairs separate. `NativeCoreRowBalance` transports balance through reordering and
 per-row message permutations, then eliminates refreshes under explicit aligned-touch and timestamp
 order obligations. Its `RowMemoryPermutation` interface leaves read currency points independent:
 the ordinary `AlignsWith` relation's all-reads-at-start field would exclude syscall rows. The
-remaining native State argument must produce chronology and aligned rows; mixed step/frame facts
-and final-record currency are not consequences of this Memory transport alone.
+native State argument now constructs an exhaustive mixed-row order from the same witness:
+`NativeCoreState` accounts for the complete State ledger, and `StateChronology` canonicalizes and
+cancels the actual StateBump rows using a layout-independent ranking proof. `NativeCoreOrder`
+instantiates that proof and establishes exact 8/264-tick durations and the boot clock residue.
+`NativeCoreTouches.ordered_aligned_rows` combines the order with aligned Memory touches and their
+unchanged per-location balance. The local alignment retains prior-clock conditions; deriving prior
+high-clock bounds and strict refresh order from Memory balance, mixed step/frame facts, and
+final-record currency remain grounding work.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

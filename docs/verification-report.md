@@ -675,9 +675,17 @@ ordering, per-row Memory message permutations, aligned `RowOKCore` facts, and st
 timestamp order are supplied. It preserves row occurrences and rewrites prior/final records only
 to equal-value records at the same location and a no-later time. The message-permutation interface
 leaves syscall read times intact; ordinary `AlignsWith` would wrongly require all of them at the
-row start, a distinction checked by a kernel regression. Deriving chronology from the native State
-ledger and proving mixed step/frame and host effects remain open. These results do not yet prove
-final-record currency or a boot-to-HALT execution.
+row start, a distinction checked by a kernel regression.
+
+`NativeCoreTouches.ordered_aligned_rows` now derives the exhaustive State order and aligned Memory
+rows from the combined AIR and checked image, preserving the exact per-location Memory equation
+with actual refresh pairs. `NativeCoreOrder.executionRows_ordered` cancels StateBump rows internally;
+`ordered_rows_timing` proves the 8/264-tick durations and boot clock residue. The ordering/touch proofs require the explicit no-wrap field bound `2^25 < p`. No ordering, touch
+permutation, or syscall-inactivity premise is supplied by callers. `AlignedFacts` proves access
+windows, per-location chains, and push-clock bounds while retaining the explicit prior-clock
+conditions needed for slot order. Deriving prior high-clock bounds and strict refresh order from
+Memory balance, and proving mixed step/frame and host effects, remain open. These results do not
+yet prove final-record currency or a boot-to-HALT execution.
 
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL

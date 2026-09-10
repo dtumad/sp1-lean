@@ -117,6 +117,14 @@ Implemented foundations:
   strict refresh timestamp order are supplied. Its interface preserves syscall read times instead
   of imposing ordinary rows' all-reads-at-start restriction. These are internal chronology seams,
   not new premises added to the native AIR relation.
+- `NativeCoreTouches.ordered_aligned_rows` now derives an exhaustive State order and aligned
+  Memory rows directly from the combined constraints/balance and a checked image. The State
+  proof cancels actual StateBump rows internally and retains all active ordinary, HALT, and
+  syscall occurrences. `ordered_rows_timing` proves exact 8/264-tick durations and the boot clock
+  residue; `AlignedFacts` preserves State/fetch and complete Memory multisets while proving touch
+  windows, per-location chains, and push-clock bounds. Its prior-clock conditions are still
+  explicit: low-clock bounds come from received Memory facts, and prior high-clock bounds must
+  be derived from the ledger before `AlignedFacts.rowOKCore` supplies the timed engine's core.
 
 Still required before the native capstone can be claimed:
 
@@ -125,8 +133,9 @@ Still required before the native capstone can be claimed:
    address/order facts and committed Program meaning at active pulls are also closed. The complete
    Memory ledger now yields unique per-location frontiers, their exact balance equation, and an
    authentic genesis invariant. Its mixed-row projection and conditional refresh-elimination
-   adapter are closed. Derive State-bus ordering, aligned touch shape, and strict refresh order
-   from the combined AIR, then prove mixed step/frame facts and recover final values and timestamps.
+   adapter are closed. State-bus ordering and aligned touches are now derived. Discharge the
+   remaining prior high-clock bounds and strict refresh order from the combined AIR, then prove
+   mixed step/frame facts and recover final values and timestamps.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;

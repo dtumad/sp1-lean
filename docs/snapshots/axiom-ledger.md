@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-10. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1143 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1175 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 107 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1250 released declarations are probed.
+- 1282 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -66,6 +66,14 @@ message-permutation interface proofs use no axioms. Ten assembly-indexed stateme
 registry's existing 100-axiom set. The syscall read-time regression uses only the ordinary logical
 baseline. All earlier axiom sets are unchanged, no declaration was removed, and no new axiom name
 appeared in either scope.
+
+The native State-ordering and touch-alignment checkpoint adds 32 main probes. Sixteen local
+projection, timestamp, alignment, and generic trail proofs use the three logical baseline axioms;
+`AlignedFacts.rowOKCore` uses two. Fourteen registry/assembly statements retain the existing
+100-axiom set; the mixed carrier's State/facts equality retains 77 already-disclosed dependencies.
+No earlier main declaration changes its axiom set, no declaration is removed, and no new main
+axiom name appears. The local touch contract deliberately retains prior-clock conditions; its
+closed construction is not a claim that mixed execution grounding is complete.
 
 Most chip-local semantic and whole-chip faithfulness proofs use only the ordinary logical baseline.
 Mul and several Sail bridges additionally retain generated bit-vector decision proofs. Execution
