@@ -154,3 +154,14 @@ scripts/run_audit.sh
 
 Use the raw census for declaration-level review. The summary above is intended to explain classes, not
 replace that evidence.
+
+The component-local ordinary-execution checkpoint adds 59 main probes, including the preserved
+witness-facing compatibility methods. The four new native assembly/carrier statements retain
+the existing 100-axiom registry set. The trajectory-generic ordinary step/frame proofs retain
+the existing Sail target dependencies. One previously probed declaration changes its set:
+`supportedChip_groundingContracts` drops the two Clean byte-provider `bv_decide` constants from
+`And8.and_times_two_add_xor` and `Or8.or_times_two_sub_xor` (100 to 98 axioms), because its local
+contract no longer includes the legacy ensemble's provider/balance proofs. Every other prior
+main and test set is unchanged; no declaration was removed and no new axiom name appeared.
+Ordinary chip assumptions and operand bindings are now derived for the new assembly; mixed
+trajectory construction, ROM preservation, and HALT/syscall execution remain explicit obligations.
