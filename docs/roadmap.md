@@ -109,6 +109,14 @@ Implemented foundations:
   multiplicities are signed units or zero. `memoryInitialFrontier_liveOK` supplies the generic
   timed engine's genesis invariant for any trajectory starting at the configured image state.
   Neither theorem assumes Memory guarantees, semantic boundary facts, or syscall inactivity.
+- `NativeCoreRows.executionRows_memory_balance` now connects that ledger to one mixed carrier
+  containing every active ordinary, HALT, and syscall row. The projection preserves complete
+  messages and duplicate occurrences; actual MemoryBump pairs are the only remaining side terms.
+  `NativeCoreRowBalance.memory_refresh_free_of_chronology` eliminates those pairs after an
+  exhaustive row ordering, per-row message permutations, aligned `RowOKCore` touch shape, and
+  strict refresh timestamp order are supplied. Its interface preserves syscall read times instead
+  of imposing ordinary rows' all-reads-at-start restriction. These are internal chronology seams,
+  not new premises added to the native AIR relation.
 
 Still required before the native capstone can be claimed:
 
@@ -116,8 +124,9 @@ Still required before the native capstone can be claimed:
    physical Program-row authentication now follow from its constraints and balance. Final
    address/order facts and committed Program meaning at active pulls are also closed. The complete
    Memory ledger now yields unique per-location frontiers, their exact balance equation, and an
-   authentic genesis invariant. Connect that ledger to the mixed-row timed walk to recover final
-   values and timestamps, including syscall and refresh effects.
+   authentic genesis invariant. Its mixed-row projection and conditional refresh-elimination
+   adapter are closed. Derive State-bus ordering, aligned touch shape, and strict refresh order
+   from the combined AIR, then prove mixed step/frame facts and recover final values and timestamps.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;

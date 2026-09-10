@@ -3,6 +3,7 @@ import SP1CleanTest.Core.ProgramImage
 import SP1CleanTest.Core.InitialMemoryLookup
 import SP1CleanTest.Core.InitialMemoryRead
 import SP1CleanTest.Core.MemoryBoundary
+import SP1CleanTest.Audit.MixedMemoryRows
 import SP1CleanTest.Audit.NativeCompletenessNonVacuity
 import SP1CleanTest.Audit.JointNonVacuity
 import SP1CleanTest.Audit.ActiveNativeCompleteness
@@ -34,6 +35,7 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.MemoryBoundary.constructedRegisterRows
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsUnrelatedKeys
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsInvalidBoundaryRows
+#print axioms SP1Clean.Audit.MixedMemoryRows.syscallKeepsMixedReadTimes
 #print axioms SP1CleanTest.Core.MemoryBoundary.nativeVerifierEndpoints
 #print axioms SP1CleanTest.Core.MemoryBoundary.rejectsForgedBoot
 #print axioms SP1CleanTest.Core.MemoryBoundary.nativeBoundaryInventories

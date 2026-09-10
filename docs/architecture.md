@@ -203,6 +203,14 @@ frontier satisfies the generic timed engine's live-memory invariant at the confi
 These results assume only raw constraints and balance (and the trajectory's initial state for the
 live invariant); execution ordering and final-record currency still require the mixed-row walk.
 
+`NativeCoreRows` projects that exact ledger into one ordinary/HALT/syscall inventory, with actual
+MemoryBump pairs separate. `NativeCoreRowBalance` transports balance through reordering and
+per-row message permutations, then eliminates refreshes under explicit aligned-touch and timestamp
+order obligations. Its `RowMemoryPermutation` interface leaves read currency points independent:
+the ordinary `AlignsWith` relation's all-reads-at-start field would exclude syscall rows. The
+remaining native State argument must produce chronology and aligned rows; mixed step/frame facts
+and final-record currency are not consequences of this Memory transport alone.
+
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.
 

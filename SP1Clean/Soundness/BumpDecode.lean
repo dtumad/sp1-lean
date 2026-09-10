@@ -459,23 +459,24 @@ theorem stateBumpTable_typedState (witness : EnsembleWitness (sp1Ensemble (p := 
 
 /-- The MemoryBump table's typed Memory view: per physical row, the decoded old-record pull and
 refreshed push. -/
-theorem memoryBumpTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedTableInteractionsWith (memoryBumpTable witness) memoryChannel =
-      (memoryBumpTable witness).table.flatMap fun row =>
+theorem memoryBumpTable_typedMemory_of_component (table : Table (ZMod p))
+    (component : table.component = ⟨MemoryBumpChip.circuit⟩) :
+    typedTableInteractionsWith table memoryChannel =
+      table.table.flatMap fun row =>
         [TypedInteraction.pulledIfValue memoryChannel
-           (memoryBumpRow (memoryBumpTable witness) row).is_real
-           (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row)),
+           (memoryBumpRow table row).is_real
+           (MemoryBumpChip.pulledMessage (memoryBumpRow table row)),
          TypedInteraction.pushedIfValue memoryChannel
-           (memoryBumpRow (memoryBumpTable witness) row).is_real
-           (MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row))] := by
+           (memoryBumpRow table row).is_real
+           (MemoryBumpChip.pushedMessage (memoryBumpRow table row))] := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
-    memoryBumpTable_component, Component.interactionsWith_eq]
-  change List.map (AbstractInteraction.eval ((memoryBumpTable witness).environment row))
+    component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval (table.environment row))
       (((MemoryBumpChip.main
         (varFromOffset MemoryBumpChip.Inputs 0 : Var MemoryBumpChip.Inputs (ZMod p))).operations
           (size MemoryBumpChip.Inputs)).interactionsWith memoryChannel.toRaw) = _
@@ -486,20 +487,32 @@ theorem memoryBumpTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (p :
         (varFromOffset MemoryBumpChip.Inputs 0 :
           Var MemoryBumpChip.Inputs (ZMod p)).is_real
         (MemoryBumpChip.pulledMsg (varFromOffset MemoryBumpChip.Inputs 0))).toRaw.eval
-        ((memoryBumpTable witness).environment row) =
-      memoryChannel.pulledIfValue (memoryBumpRow (memoryBumpTable witness) row).is_real
-        (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row)) from by
+        (table.environment row) =
+      memoryChannel.pulledIfValue (memoryBumpRow table row).is_real
+        (MemoryBumpChip.pulledMessage (memoryBumpRow table row)) from by
     rw [Channel.eval_pulledIf, eval_memoryBump_pulledMsg]
     simp only [circuit_norm, memoryBumpRow_eq]]
   rw [show ((memoryChannel (p := p)).pushedIf
         (varFromOffset MemoryBumpChip.Inputs 0 :
           Var MemoryBumpChip.Inputs (ZMod p)).is_real
         (MemoryBumpChip.pushedMsg (varFromOffset MemoryBumpChip.Inputs 0))).toRaw.eval
-        ((memoryBumpTable witness).environment row) =
-      memoryChannel.pushedIfValue (memoryBumpRow (memoryBumpTable witness) row).is_real
-        (MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row)) from by
+        (table.environment row) =
+      memoryChannel.pushedIfValue (memoryBumpRow table row).is_real
+        (MemoryBumpChip.pushedMessage (memoryBumpRow table row)) from by
     rw [Channel.eval_pushedIf, eval_memoryBump_pushedMsg]
     simp only [circuit_norm, memoryBumpRow_eq]]
+
+/-- The legacy assembly specializes the component-local Memory projection. -/
+theorem memoryBumpTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    typedTableInteractionsWith (memoryBumpTable witness) memoryChannel =
+      (memoryBumpTable witness).table.flatMap fun row =>
+        [TypedInteraction.pulledIfValue memoryChannel
+           (memoryBumpRow (memoryBumpTable witness) row).is_real
+           (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row)),
+         TypedInteraction.pushedIfValue memoryChannel
+           (memoryBumpRow (memoryBumpTable witness) row).is_real
+           (MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row))] :=
+  memoryBumpTable_typedMemory_of_component (memoryBumpTable witness) (memoryBumpTable_component witness)
 
 /-! ## Row specs from constraints and grounded byte pulls -/
 
@@ -931,6 +944,59 @@ theorem syscallInstrsTable_typedProgram (witness : EnsembleWitness (sp1Ensemble 
 
 /-- The Halt table's typed Memory view: per physical row, the three decoded register
 read-prior/read-back pairs (`x5` at `+4`, `x10` at `+3`, `x11` at `+2`). -/
+theorem haltTable_typedMemory_of_component (table : Table (ZMod p))
+    (component : table.component = ⟨HaltChip.circuit⟩) :
+    typedTableInteractionsWith table memoryChannel =
+      table.table.flatMap fun row =>
+        [TypedInteraction.pulledIfValue memoryChannel
+           (haltRow table row).is_real
+           (HaltChip.memPulledMessage (haltRow table row)
+             (haltRow table row).x5_memory 5),
+         TypedInteraction.pushedIfValue memoryChannel
+           (haltRow table row).is_real
+           (HaltChip.memPushedMessage (haltRow table row)
+             (haltRow table row).x5_memory 5 4),
+         TypedInteraction.pulledIfValue memoryChannel
+           (haltRow table row).is_real
+           (HaltChip.memPulledMessage (haltRow table row)
+             (haltRow table row).x10_memory 10),
+         TypedInteraction.pushedIfValue memoryChannel
+           (haltRow table row).is_real
+           (HaltChip.memPushedMessage (haltRow table row)
+             (haltRow table row).x10_memory 10 3),
+         TypedInteraction.pulledIfValue memoryChannel
+           (haltRow table row).is_real
+           (HaltChip.memPulledMessage (haltRow table row)
+             (haltRow table row).x11_memory 11),
+         TypedInteraction.pushedIfValue memoryChannel
+           (haltRow table row).is_real
+           (HaltChip.memPushedMessage (haltRow table row)
+             (haltRow table row).x11_memory 11 2)] := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  unfold typedTableInteractionsWith
+  apply List.flatMap_congr
+  intro row rowMem
+  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
+  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
+    component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval (table.environment row))
+      (((HaltChip.main
+        (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p))).operations
+          (size HaltChip.Inputs)).interactionsWith memoryChannel.toRaw) = _
+  rw [HaltChip.interactionsWith_memory_eq]
+  simp only [HaltChip.exposedMemoryInteractions, List.map_cons, List.map_nil,
+    TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw]
+  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+      List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩ <;>
+    first
+      | (rw [Channel.eval_pulledIf]
+         simp only [HaltChip.memPulledMessage, HaltChip.memPullMsg, circuit_norm, haltRow_eq])
+      | (rw [Channel.eval_pushedIf]
+         simp only [HaltChip.memPushedMessage, HaltChip.memPushMsg, HaltChip.clkLow,
+           circuit_norm, haltRow_eq])
+
+/-- The legacy assembly specializes the component-local Memory projection. -/
 theorem haltTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     typedTableInteractionsWith (haltTable witness) memoryChannel =
       (haltTable witness).table.flatMap fun row =>
@@ -957,30 +1023,8 @@ theorem haltTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (p := p)))
          TypedInteraction.pushedIfValue memoryChannel
            (haltRow (haltTable witness) row).is_real
            (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-             (haltRow (haltTable witness) row).x11_memory 11 2)] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
-  unfold typedTableInteractionsWith
-  apply List.flatMap_congr
-  intro row rowMem
-  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
-  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
-    haltTable_component, Component.interactionsWith_eq]
-  change List.map (AbstractInteraction.eval ((haltTable witness).environment row))
-      (((HaltChip.main
-        (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p))).operations
-          (size HaltChip.Inputs)).interactionsWith memoryChannel.toRaw) = _
-  rw [HaltChip.interactionsWith_memory_eq]
-  simp only [HaltChip.exposedMemoryInteractions, List.map_cons, List.map_nil,
-    TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw]
-  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
-    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
-      List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩ <;>
-    first
-      | (rw [Channel.eval_pulledIf]
-         simp only [HaltChip.memPulledMessage, HaltChip.memPullMsg, circuit_norm, haltRow_eq])
-      | (rw [Channel.eval_pushedIf]
-         simp only [HaltChip.memPushedMessage, HaltChip.memPushMsg, HaltChip.clkLow,
-           circuit_norm, haltRow_eq])
+             (haltRow (haltTable witness) row).x11_memory 11 2)] :=
+  haltTable_typedMemory_of_component (haltTable witness) (haltTable_component witness)
 
 /-- The anchor's Exit entry at the `pushedIf` spelling — same defeq restatement as the Memory
 list's below, for the same reason. -/
@@ -1015,6 +1059,64 @@ private theorem syscallInstrsMemoryInteractions_gated
 walk needs it *per row*: the currency antecedent supplies `isU64 ∧ ClkBound` for one row's three
 pulls, and `channelGuarantees_of_consumedMessages` turns exactly that into the memory
 `ChannelGuarantees` the row's own `weakSoundness` consumes. -/
+theorem syscallInstrsRow_typedMemory_of_component (table : Table (ZMod p))
+    (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
+    (row : Array (ZMod p)) :
+    typedInteractionValuesWith table.component.operations memoryChannel
+        (table.environment row) =
+      [TypedInteraction.pulledIfValue memoryChannel
+       (syscallInstrsRow table row).is_real
+       (SyscallInstrsChip.memPulledMessage (syscallInstrsRow table row)
+         (syscallInstrsRow table row).op_a_memory
+         (syscallInstrsRow table row).op_a),
+     TypedInteraction.pushedIfValue memoryChannel
+       (syscallInstrsRow table row).is_real
+       (SyscallInstrsChip.memPushedMessage (syscallInstrsRow table row)
+         (syscallInstrsRow table row).op_a 4
+         (syscallInstrsRow table row).op_a_value),
+     TypedInteraction.pulledIfValue memoryChannel
+       (syscallInstrsRow table row).is_real
+       (SyscallInstrsChip.memPulledMessage (syscallInstrsRow table row)
+         (syscallInstrsRow table row).op_b_memory
+         (syscallInstrsRow table row).op_b),
+     TypedInteraction.pushedIfValue memoryChannel
+       (syscallInstrsRow table row).is_real
+       (SyscallInstrsChip.memPushedMessage (syscallInstrsRow table row)
+         (syscallInstrsRow table row).op_b 3
+         (syscallInstrsRow table row).op_b_memory.prev_value),
+     TypedInteraction.pulledIfValue memoryChannel
+       (syscallInstrsRow table row).is_real
+       (SyscallInstrsChip.memPulledMessage (syscallInstrsRow table row)
+         (syscallInstrsRow table row).op_c_memory
+         (syscallInstrsRow table row).op_c),
+     TypedInteraction.pushedIfValue memoryChannel
+       (syscallInstrsRow table row).is_real
+       (SyscallInstrsChip.memPushedMessage (syscallInstrsRow table row)
+         (syscallInstrsRow table row).op_c 2
+         (syscallInstrsRow table row).op_c_memory.prev_value)] := by
+  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
+  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
+    component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval (table.environment row))
+      (((SyscallInstrsChip.main
+        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
+          ).operations (size SyscallInstrsChip.Inputs)).interactionsWith memoryChannel.toRaw) = _
+  rw [syscallInstrsMemoryInteractions_gated]
+  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_raw,
+    TypedInteraction.pushedIfValue_raw]
+  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+      List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩ <;>
+    first
+      | (rw [Channel.eval_pulledIf]
+         simp only [SyscallInstrsChip.memPulledMessage, SyscallInstrsChip.memPullMsg,
+           circuit_norm, syscallInstrsRow_eq])
+      | (rw [Channel.eval_pushedIf]
+         simp only [SyscallInstrsChip.memPushedMessage, SyscallInstrsChip.memPushMsg,
+           SyscallInstrsChip.clkLowVar, circuit_norm, syscallInstrsRow_eq])
+
+/-- The legacy assembly specializes the component-local Memory projection. -/
 theorem syscallInstrsRow_typedMemory (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (row : Array (ZMod p)) :
     typedInteractionValuesWith (syscallInstrsTable witness).component.operations memoryChannel
@@ -1048,28 +1150,8 @@ theorem syscallInstrsRow_typedMemory (witness : EnsembleWitness (sp1Ensemble (p 
        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2
-         (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
-  apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
-  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
-    syscallInstrsTable_component, Component.interactionsWith_eq]
-  change List.map (AbstractInteraction.eval ((syscallInstrsTable witness).environment row))
-      (((SyscallInstrsChip.main
-        (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
-          ).operations (size SyscallInstrsChip.Inputs)).interactionsWith memoryChannel.toRaw) = _
-  rw [syscallInstrsMemoryInteractions_gated]
-  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_raw,
-    TypedInteraction.pushedIfValue_raw]
-  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
-    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
-      List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩ <;>
-    first
-      | (rw [Channel.eval_pulledIf]
-         simp only [SyscallInstrsChip.memPulledMessage, SyscallInstrsChip.memPullMsg,
-           circuit_norm, syscallInstrsRow_eq])
-      | (rw [Channel.eval_pushedIf]
-         simp only [SyscallInstrsChip.memPushedMessage, SyscallInstrsChip.memPushMsg,
-           SyscallInstrsChip.clkLowVar, circuit_norm, syscallInstrsRow_eq])
+         (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] :=
+  syscallInstrsRow_typedMemory_of_component (syscallInstrsTable witness) (syscallInstrsTable_component witness) row
 
 /-- The `SyscallInstrs` table's typed Memory view: three decoded register read-prior/read-back
 pairs (`op_a` at `+4`, `op_b` at `+3`, `op_c` at `+2`). The `op_a` push carries `op_a_value` rather

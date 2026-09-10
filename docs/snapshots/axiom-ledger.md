@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-10. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1122 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 106 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1143 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 107 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1228 released declarations are probed.
+- 1250 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -88,7 +88,8 @@ The generator scans:
   the actual Clean control ledger with fixed endpoints, canonical finalization, and both
   inventories' exact physical Memory projections, plus the combined native assembly's raw-constraint
   initialization/Program/boot results and generic channel closure, its complete mixed Memory
-  ledger and per-location frontier balance, and the authenticated genesis invariant;
+  ledger and per-location frontier balance, the authenticated genesis invariant, exact mixed-row
+  Memory projections, and refresh elimination under explicit chronology obligations;
 - the common shard evaluator, paired exact relation, natural-ledger bridge, and native
   correctness/language-equality surface;
 - exact Core profile and manifest guards;

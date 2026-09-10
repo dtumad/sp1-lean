@@ -664,9 +664,20 @@ Clean's count-bounded balance; it retains active syscall, HALT, and refresh rows
 `memory_frontier_balance` turns this into the per-location equation with unique optional endpoints,
 using the inventories' proved location uniqueness. `memoryInitialFrontier_liveOK` supplies the
 generic timed engine's genesis invariant for any trajectory whose initial state is the configured
-image state. Neither requires Memory guarantees or a semantic boundary premise. The remaining
-connection is the mixed-row timed walk and its execution/host effects; these balance and genesis
-results do not yet prove final-record currency or a boot-to-HALT execution.
+image state. Neither requires Memory guarantees or a semantic boundary premise.
+
+`NativeCoreRows.executionRows_memory_balance` connects this physical ledger to the timed engine's
+row vocabulary, retaining all active ordinary, HALT, and syscall occurrences, including the syscall
+register write. Only actual MemoryBump refresh pairs remain outside the mixed carrier. The proof
+uses raw constraints and balance; it needs neither HALT nor syscall inactivity.
+`NativeCoreRowBalance.memory_refresh_free_of_chronology` removes those refreshes once an exhaustive
+ordering, per-row Memory message permutations, aligned `RowOKCore` facts, and strict refresh
+timestamp order are supplied. It preserves row occurrences and rewrites prior/final records only
+to equal-value records at the same location and a no-later time. The message-permutation interface
+leaves syscall read times intact; ordinary `AlignsWith` would wrongly require all of them at the
+row start, a distinction checked by a kernel regression. Deriving chronology from the native State
+ledger and proving mixed step/frame and host effects remain open. These results do not yet prove
+final-record currency or a boot-to-HALT execution.
 
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL
