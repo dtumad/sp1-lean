@@ -83,6 +83,15 @@ prior clock-limb bounds and strict refresh order; `memory_refresh_free` consumes
 to construct the refresh-free ledger. These are structural chronology results; mixed execution
 steps, host effects, and final-record currency remain separate obligations.
 
+The mixed-carrier transport and grounding connection adds 27 main probes. Seventeen generic
+read-window, rewrite, and timeline declarations use subsets of the logical baseline (fourteen
+use two axioms; three use all three). Ten assembly-indexed declarations retain the existing
+100-axiom registry set. All earlier main and test axiom sets are unchanged, no declaration is
+removed, and no new axiom name appears. `grounding_carrier` constructs the canonical rewritten
+carrier and `ground_of_steps` connects it to the generic engine, with original event step/frame
+facts explicitly retained. Conditional final-value currency does not certify host execution or
+bound an original refresh timestamp by the final State clock.
+
 Most chip-local semantic and whole-chip faithfulness proofs use only the ordinary logical baseline.
 Mul and several Sail bridges additionally retain generated bit-vector decision proofs. Execution
 theorems stated against the complete Sail interpreter inherit its platform-hook surface, including
@@ -113,7 +122,8 @@ The generator scans:
   initialization/Program/boot results and generic channel closure, its complete mixed Memory
   ledger and per-location frontier balance, the authenticated genesis invariant, exact mixed-row
   Memory projections, State ordering, aligned touch chronology, prior/final clock bounds, and
-  refresh elimination derived from the native AIR;
+  refresh elimination derived from the native AIR, mixed read-window transport, canonical
+  carrier construction, its derived timeline, and grounding under explicit event step/frame facts;
 - the common shard evaluator, paired exact relation, natural-ledger bridge, and native
   correctness/language-equality surface;
 - exact Core profile and manifest guards;
