@@ -213,9 +213,13 @@ native State argument now constructs an exhaustive mixed-row order from the same
 cancels the actual StateBump rows using a layout-independent ranking proof. `NativeCoreOrder`
 instantiates that proof and establishes exact 8/264-tick durations and the boot clock residue.
 `NativeCoreTouches.ordered_aligned_rows` combines the order with aligned Memory touches and their
-unchanged per-location balance. The local alignment retains prior-clock conditions; deriving prior
-high-clock bounds and strict refresh order from Memory balance, mixed step/frame facts, and
-final-record currency remain grounding work.
+unchanged per-location balance. `NativeCoreMemoryOrder.ordered_memory_rows` discharges the local
+prior-clock conditions from the produced side of Memory balance, proves strict refresh order,
+and supplies full `RowOKCore` facts. This includes clock bounds on the final frontier without
+assuming final-table Memory guarantees. Its `memory_refresh_free` theorem constructs the
+refresh-free ledger directly from raw constraints/balance and the checked image. Transporting the
+mixed carrier through those rewrites, mixed step/frame facts, and final-record currency remain
+grounding work.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

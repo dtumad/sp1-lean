@@ -9,7 +9,8 @@ import SP1Clean.Soundness.FetchDiscriminant
 The checked image fixes register operands; the closed Byte channel fixes access windows and
 timestamp differences. Every mixed execution row therefore admits paired Memory touches without
 changing its State edge, fetch, or complete Memory multiset. Prior-record timestamp bounds remain
-conditional here: deriving them and eliminating the actual refresh rows is the next grounding step.
+conditional in this local interface; `NativeCoreMemoryOrder` discharges them from Memory balance
+and eliminates the actual refresh rows.
 -/
 
 namespace SP1Clean.Soundness.NativeCore

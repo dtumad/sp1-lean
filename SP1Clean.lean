@@ -633,5 +633,6 @@ import SP1Clean.Soundness.NativeCoreState
 import SP1Clean.Soundness.NativeCoreOrder
 import SP1Clean.Soundness.SystemTouches
 import SP1Clean.Soundness.NativeCoreTouches
+import SP1Clean.Soundness.NativeCoreMemoryOrder
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

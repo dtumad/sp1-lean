@@ -5250,6 +5250,70 @@ private theorem memoryBump_evidence_of_env
 table-level form of `memoryBump_evidence_of_env`, crossing every cell through the fully projected
 closed form `memoryBumpRow_closedForm` of `Soundness/BumpDecode.lean` — a rewrite, never a
 unification, so the decoded row's `valueFromOffset` body is never normalised. -/
+theorem memoryBump_evidence_of_component
+    (table : Table (ZMod p)) (component : table.component = ⟨MemoryBumpChip.circuit⟩)
+    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
+    {row : Array (ZMod p)} (tableMem : row ∈ table.table)
+    (real : (memoryBumpRow table row).is_real = 1) :
+    (memoryBumpRow table row).clk_0_16.val < 2 ^ 16 ∧
+    (memoryBumpRow table row).clk_32_48.val < 2 ^ 16 ∧
+    (memoryBumpRow table row).clk_16_24.val < 2 ^ 8 ∧
+    (memoryBumpRow table row).clk_24_32.val < 2 ^ 8 ∧
+    ((memoryBumpRow table row).access.access_timestamp.compare_low = 0 ∨
+      (memoryBumpRow table row).access.access_timestamp.compare_low = 1) ∧
+    (memoryBumpRow table row).access.access_timestamp.compare_low *
+      ((memoryBumpRow table row).clk_24_32 +
+        (memoryBumpRow table row).clk_32_48 * 256 -
+        (memoryBumpRow table row).access.access_timestamp.prev_high) = 0 ∧
+    (memoryBumpRow table row).access.access_timestamp.compare_low *
+        ((memoryBumpRow table row).clk_0_16 +
+          (memoryBumpRow table row).clk_16_24 * 65536)
+      + (1 - (memoryBumpRow table row).access.access_timestamp.compare_low) *
+        ((memoryBumpRow table row).clk_24_32 +
+          (memoryBumpRow table row).clk_32_48 * 256)
+      - ((memoryBumpRow table row).access.access_timestamp.compare_low *
+          (memoryBumpRow table row).access.access_timestamp.prev_low
+        + (1 -
+            (memoryBumpRow table row).access.access_timestamp.compare_low) *
+          (memoryBumpRow table row).access.access_timestamp.prev_high)
+      - 1
+      = (memoryBumpRow table row).access.access_timestamp.diff_low_limb
+        + (memoryBumpRow table row).access.access_timestamp.diff_high_limb
+          * 65536 ∧
+    (memoryBumpRow table row).access.access_timestamp.diff_low_limb.val
+      < 2 ^ 16 ∧
+    (memoryBumpRow table row).access.access_timestamp.diff_high_limb.val
+      < 2 ^ 8 := by
+  have rowConstraints := constraints row tableMem
+  rw [component] at rowConstraints
+  have shallow := shallowConstraints_of_componentConstraints MemoryBumpChip.circuit
+    (table.environment row) rowConstraints
+  have byteG : ((MemoryBumpChip.main (varFromOffset MemoryBumpChip.Inputs 0 :
+      Var MemoryBumpChip.Inputs (ZMod p))).operations
+        (size MemoryBumpChip.Inputs)).ChannelGuarantees byteChannel.toRaw
+        (table.environment row) := by
+    have h := byte row tableMem
+    rw [Component.channelGuarantees_iff, component,
+      Component.rowOperations_mk] at h
+    exact h
+  have realEnv : Expression.eval (table.environment row)
+      ((varFromOffset MemoryBumpChip.Inputs 0 : Var MemoryBumpChip.Inputs (ZMod p)).is_real)
+      = 1 := by
+    -- `simp only` (not `rwa`): the closing `assumption` of `rwa` would unify the rewritten
+    -- hypothesis against every context entry, including the circuit-shaped `shallow`/`byteG`.
+    simp only [memoryBumpRow_closedForm] at real
+    exact real
+  have core := memoryBump_evidence_of_env (varFromOffset MemoryBumpChip.Inputs 0)
+    (size MemoryBumpChip.Inputs) (table.environment row) shallow byteG realEnv
+  -- `simp only` (not `rw`): it iota-reduces the rewritten structure literal's projections on the
+  -- spot, so `exact core` matches syntactically.  A bare `rw` leaves `(⟨…⟩ : Inputs _).clk_0_16`
+  -- standing and hands the reduction to unification, which blows the budget.
+  simp only [memoryBumpRow_closedForm]
+  exact core
+
+-- Preserve the released theorem's section-instance binders.
+set_option linter.unusedSectionVars false in
+/-- The legacy ensemble specialization of the table-local refresh evidence. -/
 theorem memoryBump_evidence
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
@@ -5284,37 +5348,10 @@ theorem memoryBump_evidence
       < 2 ^ 16 ∧
     (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.diff_high_limb.val
       < 2 ^ 8 := by
-  have tableMem' : memoryBumpTable witness ∈ witness.tables :=
-    List.getElem_mem (memoryBumpIndex_lt_tablesLength witness)
-  have tableConstraints : (memoryBumpTable witness).Constraints :=
-    constraints _ (witness.mem_allTables_of_mem_tables tableMem')
-  have rowConstraints := tableConstraints row tableMem
-  rw [memoryBumpTable_component witness] at rowConstraints
-  have shallow := shallowConstraints_of_componentConstraints MemoryBumpChip.circuit
-    ((memoryBumpTable witness).environment row) rowConstraints
-  have byteG : ((MemoryBumpChip.main (varFromOffset MemoryBumpChip.Inputs 0 :
-      Var MemoryBumpChip.Inputs (ZMod p))).operations
-        (size MemoryBumpChip.Inputs)).ChannelGuarantees byteChannel.toRaw
-        ((memoryBumpTable witness).environment row) := by
-    have h := (sp1_finishedChannel_guarantees witness constraints balanced
-      _ (witness.mem_allTables_of_mem_tables tableMem')).1 row tableMem
-    rw [Component.channelGuarantees_iff, memoryBumpTable_component witness,
-      Component.rowOperations_mk] at h
-    exact h
-  have realEnv : Expression.eval ((memoryBumpTable witness).environment row)
-      ((varFromOffset MemoryBumpChip.Inputs 0 : Var MemoryBumpChip.Inputs (ZMod p)).is_real)
-      = 1 := by
-    -- `simp only` (not `rwa`): the closing `assumption` of `rwa` would unify the rewritten
-    -- hypothesis against every context entry, including the circuit-shaped `shallow`/`byteG`.
-    simp only [memoryBumpRow_closedForm] at real
-    exact real
-  have core := memoryBump_evidence_of_env (varFromOffset MemoryBumpChip.Inputs 0)
-    (size MemoryBumpChip.Inputs) ((memoryBumpTable witness).environment row) shallow byteG realEnv
-  -- `simp only` (not `rw`): it iota-reduces the rewritten structure literal's projections on the
-  -- spot, so `exact core` matches syntactically.  A bare `rw` leaves `(⟨…⟩ : Inputs _).clk_0_16`
-  -- standing and hands the reduction to unification, which blows the budget.
-  simp only [memoryBumpRow_closedForm]
-  exact core
+  have member := witness.mem_allTables_of_mem_tables
+    (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness))
+  exact memoryBump_evidence_of_component _ (memoryBumpTable_component witness)
+    (constraints _ member) (sp1_finishedChannel_guarantees witness constraints balanced _ member).1 tableMem real
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The `2^8` limb scale round-trips through `ZMod.val`.  Extracted from the two refresh consumers
@@ -5334,6 +5371,33 @@ private lemma bump_val65536 : ((65536 : ZMod p)).val = 65536 := by
 
 /-- The refreshed push of an active MemoryBump row carries canonical clock limbs: both the
 recombined low clock (`ClkBound`) and the recombined high clock are genuine 24-bit values. -/
+theorem memoryBump_pushedMessage_clkFacts_of_component
+    (table : Table (ZMod p)) (component : table.component = ⟨MemoryBumpChip.circuit⟩)
+    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
+    {row : Array (ZMod p)} (tableMem : row ∈ table.table)
+    (real : (memoryBumpRow table row).is_real = 1) :
+      SP1Clean.Channels.MemoryMsg.ClkBound
+        (MemoryBumpChip.pushedMessage (memoryBumpRow table row)) ∧
+      (MemoryBumpChip.pushedMessage
+        (memoryBumpRow table row)).clk_high.val < 2 ^ 24 := by
+  obtain ⟨h016, h3248, h1624, h2432, -, -, -, -, -⟩ :=
+    memoryBump_evidence_of_component table component constraints byte tableMem real
+  have hp := Fact.out (p := 2 ^ 25 < p)
+  have v256 : ((256 : ZMod p)).val = 256 := bump_val256
+  have v65536 : ((65536 : ZMod p)).val = 65536 := bump_val65536
+  constructor
+  · show ((memoryBumpRow table row).clk_0_16 +
+      (memoryBumpRow table row).clk_16_24 * 65536).val < 2 ^ 24
+    rw [val_recombine v65536 (by omega)]
+    omega
+  · show ((memoryBumpRow table row).clk_24_32 +
+      (memoryBumpRow table row).clk_32_48 * 256).val < 2 ^ 24
+    rw [val_recombine v256 (by omega)]
+    omega
+
+-- Preserve the released theorem's section-instance binders.
+set_option linter.unusedSectionVars false in
+/-- The legacy ensemble specialization of the table-local refresh theorem. -/
 theorem memoryBump_pushedMessage_clkFacts
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
@@ -5344,20 +5408,10 @@ theorem memoryBump_pushedMessage_clkFacts
         (memoryBumpRow (memoryBumpTable witness) row)).clk_high.val < 2 ^ 24 := by
   intro row rowMem
   obtain ⟨tableMem, real⟩ := mem_realMemoryBumpRows witness rowMem
-  obtain ⟨h016, h3248, h1624, h2432, -, -, -, -, -⟩ :=
-    memoryBump_evidence witness constraints balanced tableMem real
-  have hp := Fact.out (p := 2 ^ 25 < p)
-  have v256 : ((256 : ZMod p)).val = 256 := bump_val256
-  have v65536 : ((65536 : ZMod p)).val = 65536 := bump_val65536
-  constructor
-  · show ((memoryBumpRow (memoryBumpTable witness) row).clk_0_16 +
-      (memoryBumpRow (memoryBumpTable witness) row).clk_16_24 * 65536).val < 2 ^ 24
-    rw [val_recombine v65536 (by omega)]
-    omega
-  · show ((memoryBumpRow (memoryBumpTable witness) row).clk_24_32 +
-      (memoryBumpRow (memoryBumpTable witness) row).clk_32_48 * 256).val < 2 ^ 24
-    rw [val_recombine v256 (by omega)]
-    omega
+  have member := witness.mem_allTables_of_mem_tables
+    (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness))
+  exact memoryBump_pushedMessage_clkFacts_of_component _ (memoryBumpTable_component witness)
+    (constraints _ member) (sp1_finishedChannel_guarantees witness constraints balanced _ member).1 tableMem real
 
 omit [Fact (2 ^ 17 < p)] in
 /-- **The pure-arithmetic core of the refresh's strict time increase**, over abstract field
@@ -5417,6 +5471,40 @@ pulled record — its bus `ClkBound` and a 24-bit high limb, both matched at the
 produced side of the widened memory balance — the row's pulled and pushed records form a genuine
 `IsRefresh`: same location and value, and a strict ℕ-time increase from the in-circuit
 `compare_low`-selected difference evidence (`bump_clkNat_lt`). -/
+theorem memoryBump_isRefresh_of_component
+    (table : Table (ZMod p)) (component : table.component = ⟨MemoryBumpChip.circuit⟩)
+    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
+    {row : Array (ZMod p)} (tableMem : row ∈ table.table)
+    (real : (memoryBumpRow table row).is_real = 1) :
+      SP1Clean.Channels.MemoryMsg.ClkBound
+        (MemoryBumpChip.pulledMessage (memoryBumpRow table row)) →
+      (MemoryBumpChip.pulledMessage
+        (memoryBumpRow table row)).clk_high.val < 2 ^ 24 →
+      RefreshElimination.IsRefresh
+        (fun m : MemoryMsg (ZMod p) => (Semantics.MemoryMsg.locOf m, m.value))
+        Semantics.MemoryMsg.timeNat
+        (MemoryBumpChip.pulledMessage (memoryBumpRow table row),
+         MemoryBumpChip.pushedMessage (memoryBumpRow table row)) := by
+  intro hClk hHigh
+  obtain ⟨h016, h3248, h1624, h2432, hcl, hhieq, hdiff, hdlow, hdhigh⟩ :=
+    memoryBump_evidence_of_component table component constraints byte tableMem real
+  -- Make the decoded row opaque before the definitional crossings below (the `set`-free form of
+  -- `docs/agents/proof-patterns.md`'s opacity device).
+  obtain ⟨r, hr⟩ : ∃ r, memoryBumpRow table row = r := ⟨_, rfl⟩
+  rw [hr] at h016 h3248 h1624 h2432 hcl hhieq hdiff hdlow hdhigh hClk hHigh ⊢
+  clear hr
+  refine ⟨rfl, ?_⟩
+  -- `timeNat`/`clkNat` and the two message projections are definitional; stage the crossing so
+  -- neither `show` has to reduce more than one layer.
+  show Semantics.MemoryMsg.timeNat (MemoryBumpChip.pulledMessage r) <
+    Semantics.MemoryMsg.timeNat (MemoryBumpChip.pushedMessage r)
+  show Semantics.clkNat r.access.access_timestamp.prev_high r.access.access_timestamp.prev_low <
+    Semantics.clkNat (r.clk_24_32 + r.clk_32_48 * 256) (r.clk_0_16 + r.clk_16_24 * 65536)
+  exact bump_clkNat_lt h016 h3248 h1624 h2432 hcl hhieq hdiff hdlow hdhigh hClk hHigh
+
+-- Preserve the released theorem's section-instance binders.
+set_option linter.unusedSectionVars false in
+/-- The legacy ensemble specialization of the table-local refresh theorem. -/
 theorem memoryBump_isRefresh
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
@@ -5430,23 +5518,12 @@ theorem memoryBump_isRefresh
         Semantics.MemoryMsg.timeNat
         (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row),
          MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row)) := by
-  intro row rowMem hClk hHigh
+  intro row rowMem
   obtain ⟨tableMem, real⟩ := mem_realMemoryBumpRows witness rowMem
-  obtain ⟨h016, h3248, h1624, h2432, hcl, hhieq, hdiff, hdlow, hdhigh⟩ :=
-    memoryBump_evidence witness constraints balanced tableMem real
-  -- Make the decoded row opaque before the definitional crossings below (the `set`-free form of
-  -- `docs/agents/proof-patterns.md`'s opacity device).
-  obtain ⟨r, hr⟩ : ∃ r, memoryBumpRow (memoryBumpTable witness) row = r := ⟨_, rfl⟩
-  rw [hr] at h016 h3248 h1624 h2432 hcl hhieq hdiff hdlow hdhigh hClk hHigh ⊢
-  clear hr
-  refine ⟨rfl, ?_⟩
-  -- `timeNat`/`clkNat` and the two message projections are definitional; stage the crossing so
-  -- neither `show` has to reduce more than one layer.
-  show Semantics.MemoryMsg.timeNat (MemoryBumpChip.pulledMessage r) <
-    Semantics.MemoryMsg.timeNat (MemoryBumpChip.pushedMessage r)
-  show Semantics.clkNat r.access.access_timestamp.prev_high r.access.access_timestamp.prev_low <
-    Semantics.clkNat (r.clk_24_32 + r.clk_32_48 * 256) (r.clk_0_16 + r.clk_16_24 * 65536)
-  exact bump_clkNat_lt h016 h3248 h1624 h2432 hcl hhieq hdiff hdlow hdhigh hClk hHigh
+  have member := witness.mem_allTables_of_mem_tables
+    (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness))
+  exact memoryBump_isRefresh_of_component _ (memoryBumpTable_component witness)
+    (constraints _ member) (sp1_finishedChannel_guarantees witness constraints balanced _ member).1 tableMem real
 
 end BumpRefresh
 

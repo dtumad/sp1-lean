@@ -10,7 +10,7 @@ the syscall carrier unchanged. It is an internal transport interface, not an AIR
 
 The raw combined AIR supplies the balance. Refresh elimination additionally needs strict order
 of the actual refresh timestamps and the aligned rows' structural `RowOKCore` facts. Those
-chronology obligations remain explicit until native State grounding constructs them. The result
+chronology obligations form the reusable interface discharged by `NativeCoreMemoryOrder`. The result
 is the exact refresh-free Memory equation for the generic timed walk, without an inactivity or
 semantic-boundary assumption.
 -/

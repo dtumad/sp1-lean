@@ -122,9 +122,15 @@ Implemented foundations:
   proof cancels actual StateBump rows internally and retains all active ordinary, HALT, and
   syscall occurrences. `ordered_rows_timing` proves exact 8/264-tick durations and the boot clock
   residue; `AlignedFacts` preserves State/fetch and complete Memory multisets while proving touch
-  windows, per-location chains, and push-clock bounds. Its prior-clock conditions are still
-  explicit: low-clock bounds come from received Memory facts, and prior high-clock bounds must
-  be derived from the ledger before `AlignedFacts.rowOKCore` supplies the timed engine's core.
+  windows, per-location chains, and push-clock bounds.
+- `NativeCoreMemoryOrder.ordered_memory_rows` derives both prior clock-limb bounds, final-frontier
+  clock bounds, and strict order for every actual MemoryBump pair from the produced side of the
+  balanced ledger. Execution writes lie before the bounded public final clock; refresh writes
+  carry Byte-checked limbs; initial records have time zero. The resulting `MemoryChronology`
+  supplies every aligned row's full `RowOKCore`. `memory_refresh_free` now constructs the
+  refresh-free ledger from the checked image and raw constraints/balance, with no caller-supplied
+  prior bounds or refresh order. It preserves all row occurrences, read times, pushed records,
+  and prior/final values and locations; rewritten prior/final timestamps can only move earlier.
 
 Still required before the native capstone can be claimed:
 
@@ -133,9 +139,10 @@ Still required before the native capstone can be claimed:
    address/order facts and committed Program meaning at active pulls are also closed. The complete
    Memory ledger now yields unique per-location frontiers, their exact balance equation, and an
    authentic genesis invariant. Its mixed-row projection and conditional refresh-elimination
-   adapter are closed. State-bus ordering and aligned touches are now derived. Discharge the
-   remaining prior high-clock bounds and strict refresh order from the combined AIR, then prove
-   mixed step/frame facts and recover final values and timestamps.
+   adapter are closed. State-bus ordering, aligned `RowOKCore`, prior-record bounds, and strict
+   refresh order now follow from the combined AIR, yielding a refresh-free ledger. Transport the
+   mixed carrier through its rewrites, prove mixed step/frame facts, and recover final-record
+   currency and terminal execution.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;

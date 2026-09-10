@@ -594,6 +594,17 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Soundness.NativeCore.syscall_program_committed
 #print axioms SP1Clean.Soundness.NativeCore.executionRows_aligned
 #print axioms SP1Clean.Soundness.NativeCore.ordered_aligned_rows
+#print axioms SP1Clean.Soundness.memoryBump_evidence_of_component
+#print axioms SP1Clean.Soundness.memoryBump_pushedMessage_clkFacts_of_component
+#print axioms SP1Clean.Soundness.memoryBump_isRefresh_of_component
+#print axioms SP1Clean.Soundness.NativeCore.ordered_rows_window_bound
+#print axioms SP1Clean.Soundness.NativeCore.memoryRefreshes_push_bounds
+#print axioms SP1Clean.Soundness.NativeCore.memory_consumed_bounds
+#print axioms SP1Clean.Soundness.NativeCore.ordered_rows_chronology
+#print axioms SP1Clean.Soundness.NativeCore.ordered_memory_rows
+#print axioms SP1Clean.Soundness.NativeCore.executionRows_prior_bounds
+#print axioms SP1Clean.Soundness.NativeCore.memoryRefreshes_ordered
+#print axioms SP1Clean.Soundness.NativeCore.memory_refresh_free
 #print axioms SP1Clean.Soundness.MemoryBumpChip.selectorBinary_of_shallow
 #print axioms SP1Clean.Soundness.signedVal_binary_of_selector_gated
 #print axioms SP1Clean.Soundness.InstructionTablesAligned.of_components
