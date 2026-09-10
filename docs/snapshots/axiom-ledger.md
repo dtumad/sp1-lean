@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-10. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1110 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1122 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 106 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1216 released declarations are probed.
+- 1228 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -54,6 +54,12 @@ The new executable regressions remain in the test library. No previously recorde
 changed its axiom set, and no new main-library axiom name appeared. The three new compiler-trusted
 constants belong exactly to those three test anchors.
 
+The native Memory-frontier checkpoint adds 12 main probes: two shared selector/multiplicity lemmas
+and ten assembly-level ledger, balance, and genesis statements. The shared lemmas use only the
+ordinary logical baseline. The ten assembly statements retain the registry's existing 100-axiom
+set, including its disclosed Sail and bit-vector dependencies. No prior main or test declaration
+changed its axiom set, no recorded declaration was removed, and no new axiom name appeared.
+
 Most chip-local semantic and whole-chip faithfulness proofs use only the ordinary logical baseline.
 Mul and several Sail bridges additionally retain generated bit-vector decision proofs. Execution
 theorems stated against the complete Sail interpreter inherit its platform-hook surface, including
@@ -81,7 +87,8 @@ The generator scans:
   ordered-key uniqueness, constructive row domains, and initialization inventory derived from
   the actual Clean control ledger with fixed endpoints, canonical finalization, and both
   inventories' exact physical Memory projections, plus the combined native assembly's raw-constraint
-  initialization/Program/boot results and generic channel closure;
+  initialization/Program/boot results and generic channel closure, its complete mixed Memory
+  ledger and per-location frontier balance, and the authenticated genesis invariant;
 - the common shard evaluator, paired exact relation, natural-ledger bridge, and native
   correctness/language-equality surface;
 - exact Core profile and manifest guards;
