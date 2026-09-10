@@ -631,6 +631,18 @@ record-correspondence premise. Finalizer constructors discharge their internal c
 conditions, and both witness programs export. Tests cover malformed final inventories and
 paired initial/final ledgers whose value or clock differs.
 
+`Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
+its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL
+encoding. `Model/Core/ProgramTable.lean` constructs complete fixed messages, proves that projection
+accepts exactly the parser's domain, and proves structural ranges and exact PC recovery in the
+native address window. Its finite program checker rejects unsupported entries, including unused
+ROM words, without depending on the AIR field. `DecodedProgramProvider.populate_assumptions`
+discharges the fixed provider's complete-message membership and range premises; its witness program
+exports. Regression checks cover all 51 supported SP1 opcode projections and malformed words/messages.
+The uniform `InstructionDecode.AgreesWithSail` proposition has **no proof yet**;
+`ProgramTable.row_committed_of_decode` is conditional on that proposition. The computed ROM has not
+replaced the released machine's program-binding premise.
+
 These are subsystem results, not the full native capstone. The local table specifications must
 still be derived in the enclosing machine's channel-soundness phase. Replacing the existing
 machine providers, connecting both constrained boundaries to timed grounding,

@@ -738,6 +738,14 @@ See `Proofs/Chips/AddChip/Formal.lean` and `Native/Readers/RegisterAccessCols.le
 
 ## Compile-time / performance landmines
 
+For executable validation of a finite list, make the decision procedure an explicit `List.all`
+check and prove its equivalence to the bounded universal proposition. Instance search for
+`Decidable (∀ entry ∈ entries, P entry)` can choose finite-type enumeration when the entry type
+has `Fintype`. The program decoder initially hit this with `BitVec 64 × BitVec 32`: a two-row
+input attempted enumeration of the ambient address/word space. The boolean-list implementation
+in `Model/Core/ProgramTable.lean` avoids that search and the full decoder regression module now
+elaborates in about two seconds. Test the executable checker itself, not just its logical iff.
+
 Generate a point-in-time compile profile with `scripts/profile_compile.sh` when needed; do not keep
 stale timing snapshots as architecture documentation. These are the durable lessons — apply them
 when adding a chip or chasing a slow file. The broad attribute/macro wins have already been harvested

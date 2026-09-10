@@ -1,6 +1,7 @@
 import SP1Clean.Proofs.Chips.AddChip.Bridge
 import ToClean.Air.CompleteEnsemble
 import ToClean.Air.EnsembleExport
+import SP1Clean.Proofs.Chips.DecodedProgramProvider
 import SP1Clean.Proofs.Chips.FixedProgramProvider
 import SP1Clean.Native.Chips.AddChip.Defs
 import SP1Clean.Proofs.Chips.AddChip.Formal
@@ -349,6 +350,8 @@ import SP1Clean.Model.Core.MemoryIntervals
 import SP1Clean.Model.Core.MemoryTable
 import SP1Clean.Model.Core.MemoryWord
 import SP1Clean.Model.Core.HostIO
+import SP1Clean.Model.Core.InstructionDecode
+import SP1Clean.Model.Core.ProgramTable
 import SP1Clean.Model.Core.ProgramImage
 import SP1Clean.Model.Core.SailMemory
 import SP1Clean.Model.Core.Boot

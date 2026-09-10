@@ -63,8 +63,9 @@ to a canonical Rust exporter so it does not obscure the verifier/refinement boun
 
 **This workstream's current priority:** close the native Clean boot-to-HALT soundness/completeness
 capstone with checked finite inputs, constrained inline host effects, and generic whole-ensemble
-export. The generic interfaces, finite-image/host-I/O substrate, fixed program provider, and Rust
-ensemble checker are implemented; the integrated native capstone is not. Its exact remaining work
+export. The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
+computed fixed program provider, and Rust ensemble checker are implemented; general decoder/Sail
+agreement remains open, as `InstructionDecode.AgreesWithSail` records; the integrated native capstone is not. Its exact remaining work
 is in `docs/roadmap.md` under "Native Clean core". Preserve the 25 instruction faithfulness anchors;
 exact v6.4.0 Core AIR refinement remains separate. Native
 timed grounding, every one of the 25 chip contracts, and `supported_core_native_sound` are closed. The

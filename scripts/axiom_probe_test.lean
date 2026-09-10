@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.InstructionDecode
 import SP1CleanTest.Core.ProgramImage
 import SP1CleanTest.Core.InitialMemoryLookup
 import SP1CleanTest.Core.InitialMemoryRead
@@ -16,6 +17,12 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.InstructionDecode.opcodeCoverage
+#print axioms SP1CleanTest.Core.InstructionDecode.literalEncodings
+#print axioms SP1CleanTest.Core.InstructionDecode.operandEdges
+#print axioms SP1CleanTest.Core.InstructionDecode.rejectedEncodings
+#print axioms SP1CleanTest.Core.InstructionDecode.checkedProgram
+#print axioms SP1CleanTest.Core.InstructionDecode.fixedProgramConstraints
 #print axioms SP1CleanTest.Core.ProgramImage.checkedImage_boot
 #print axioms SP1CleanTest.Core.InitialMemoryLookup.constructedRows
 #print axioms SP1CleanTest.Core.InitialMemoryLookup.rejectsForgedRows

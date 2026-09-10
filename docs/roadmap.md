@@ -58,12 +58,22 @@ Implemented foundations:
   duplicate/disconnected final rows, and mismatched values or clocks in paired boundary ledgers.
   Both finalizer witness programs export. Their value/clock guarantees still require the enclosing
   machine's closed Memory bus; the final-state meaning is a timed-grounding conclusion.
-- The fixed program-provider circuit composes the existing provider with complete static-ROM
-  membership. The 25 instruction circuits and faithfulness anchors are unchanged.
+- The executable instruction decoder now builds complete fixed Program messages from the finite
+  image. Successful parses are proved to be exact ECALL or part of the existing routed instruction
+  image; projection accepts exactly the parser's domain. The bounded input checker rejects any
+  unsupported ROM entry and is independent of the AIR field. Computed rows preserve full addresses
+  in the native window and satisfy Program-channel range guarantees. Provider constructors discharge
+  the complete lookup and range assumptions, and their witness program exports. Regressions cover
+  all 51 supported SP1 opcode projections, immediate/reserved-bit cases, and forged messages even at
+  zero multiplicity. General agreement with official Sail is still open:
+  `InstructionDecode.AgreesWithSail` names the uniform obligation, and
+  `ProgramTable.row_committed_of_decode` proves its connection to the existing committed-ROM contract.
+  The 25 instruction circuits and faithfulness anchors are unchanged.
 
 Still required before the native capstone can be claimed:
 
-1. Finish executable instruction decoding and construct the decoded fixed ROM. Integrate the new
+1. Prove the executable decoder agrees with configured official Sail decoding and wire its computed
+   fixed ROM into the machine. Integrate the new
    initialization and finalization subsystems into the full native machine. Their fixed control
    boundaries, actual Memory projections, and actual-ledger uniqueness proofs are closed. Derive
    their local table specifications in the enclosing machine and connect both boundaries to timed
