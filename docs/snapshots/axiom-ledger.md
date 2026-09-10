@@ -60,6 +60,13 @@ ordinary logical baseline. The ten assembly statements retain the registry's exi
 set, including its disclosed Sail and bit-vector dependencies. No prior main or test declaration
 changed its axiom set, no recorded declaration was removed, and no new axiom name appeared.
 
+The mixed-row Memory connection adds 21 main probes and one kernel-checked regression. Nine
+component-local projection/selector proofs use the ordinary logical baseline, and the two
+message-permutation interface proofs use no axioms. Ten assembly-indexed statements retain the
+registry's existing 100-axiom set. The syscall read-time regression uses only the ordinary logical
+baseline. All earlier axiom sets are unchanged, no declaration was removed, and no new axiom name
+appeared in either scope.
+
 Most chip-local semantic and whole-chip faithfulness proofs use only the ordinary logical baseline.
 Mul and several Sail bridges additionally retain generated bit-vector decision proofs. Execution
 theorems stated against the complete Sail interpreter inherit its platform-hook surface, including
