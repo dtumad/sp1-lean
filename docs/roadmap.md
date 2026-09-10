@@ -147,8 +147,15 @@ Implemented foundations:
   specializations. The derived carrier timeline supplies each ordinary successor position.
   `GroundingCarrier.ground_of_system_steps` reduces the generic grounding premise to HALT and
   syscall step/frame facts, an ordinary `stepOnce` trajectory equation, and ROM preservation.
-  These remaining conditions are explicit; the ordinary equations still need a constructed
-  mixed trajectory and ROM protection still needs AIR constraints.
+- `NativeCoreTrajectory` constructs the mixed transcript and its trajectory from the carrier's
+  ordered physical events. The State walk identifies each event's exact list position, so ordinary
+  successor equations follow internally. `NativeCoreHaltExecution` derives HALT's zero code from
+  its own assertions and its clock bounds from Byte closure; `HaltGrounding` proves the PC park
+  and all three register read-backs on that trajectory. `GroundingCarrier.ground_of_host_steps`
+  retains only ROM preservation and active syscall step/frame facts as semantic premises.
+  The host's zero-code arm is fixed to canonical HALT; other host behavior stays supplied by the
+  environment. These are grounding results: terminal ECALL/Exit agreement and a full execution
+  theorem for this assembly remain open.
 
 Still required before the native capstone can be claimed:
 
@@ -161,9 +168,10 @@ Still required before the native capstone can be claimed:
    refresh order now follow from the combined AIR. The mixed carrier's rewrite transport,
    canonical State walk, derived timeline, and generic grounding connection are also closed.
    Ordinary instruction step/frame facts now follow through component-local chip contracts.
-   Construct the mixed trajectory, derive its ordinary successor equations, constrain ROM
-   preservation, and connect HALT/syscall step/frame facts with the host environment. Final-value
-   currency follows under these explicit remaining premises; terminal execution remains open.
+   The mixed trajectory, its ordinary successor equations, and HALT step/frame facts are now
+   constructed internally. Constrain ROM preservation and connect active syscall step/frame
+   facts with the host environment. Final-value currency follows under these two remaining
+   semantic premises; terminal ECALL/Exit agreement and execution reconstruction remain open.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;

@@ -223,11 +223,15 @@ full structural row facts, and `WindowAligned` semantic transport. The latter pe
 read's pre-effect offset, so syscall reads are preserved. `NativeCoreGrounding` derives the
 carrier's timeline, boot truth, and genesis, and `GroundingCarrier.ground_of_steps` instantiates the
 generic engine. `NativeCoreInstructionExecution` discharges ordinary row step/frame facts using
-component-local chip contracts and the carrier's derived timing. Its `ground_of_system_steps`
-retains HALT/syscall step/frame facts, the trajectory's ordinary `stepOnce` equation, and ROM
-preservation as explicit premises. Given these, the original final frontier's values are current
-at the public final State time. Constructing that mixed trajectory, constraining ROM protection,
-and connecting host/terminal execution remain open.
+component-local chip contracts and the carrier's derived timing. `NativeCoreTrajectory` constructs
+the event transcript and trajectory, proving exact event positions from the State walk and
+discharging the ordinary `stepOnce` equations. `NativeCoreHaltExecution` derives HALT's code and
+clock facts from the assembly; `HaltGrounding` supplies its PC-only transition and register
+read-backs. The resulting `ground_of_host_steps` retains ROM preservation and active syscall
+step/frame facts as its two semantic premises. Given these, the original final frontier's values
+are current at the public final State time. The host wrapper fixes zero-code HALT and delegates
+other calls to the supplied environment. Constraining ROM protection, connecting host effects,
+and proving terminal ECALL/Exit agreement and execution reconstruction remain open.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

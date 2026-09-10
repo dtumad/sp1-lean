@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-10. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1272 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1290 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 107 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1379 released declarations are probed.
+- 1397 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -163,5 +163,6 @@ the existing Sail target dependencies. One previously probed declaration changes
 `And8.and_times_two_add_xor` and `Or8.or_times_two_sub_xor` (100 to 98 axioms), because its local
 contract no longer includes the legacy ensemble's provider/balance proofs. Every other prior
 main and test set is unchanged; no declaration was removed and no new axiom name appeared.
-Ordinary chip assumptions and operand bindings are now derived for the new assembly; mixed
-trajectory construction, ROM preservation, and HALT/syscall execution remain explicit obligations.
+That checkpoint derives ordinary chip assumptions and operand bindings for the new assembly.
+The subsequent mixed-execution checkpoint constructs the trajectory and derives HALT step/frame
+facts; ROM preservation and active syscall step/frame facts remain explicit obligations.

@@ -42,6 +42,22 @@ private theorem duration_step {rows : List (RowFacts p)}
   unfold rowDuration
   omega
 
+/-- A row at a known list position starts at that position's prefix-summed clock. -/
+theorem rowTimeline_pullTime_of_getElem? [Fact p.Prime]
+    {initial final : StateMsg (ZMod p)} {rows : List (RowFacts p)}
+    (walk : Walk.IsWalk (fun row : RowFacts p => (row.statePull, row.statePush)) initial final rows)
+    (gap : ∀ row ∈ rows, StateMsg.timeNat row.statePull + 8 ≤ StateMsg.timeNat row.statePush)
+    {row : RowFacts p} {n : ℕ} (atIndex : rows[n]? = some row) :
+    StateMsg.timeNat row.statePull = (rowTimeline (StateMsg.timeNat initial) rows gap).start n := by
+  obtain ⟨bound, rfl⟩ := List.getElem?_eq_some_iff.mp atIndex
+  have split : rows = rows.take n ++ rows[n] :: rows.drop (n + 1) := by
+    rw [List.getElem_cons_drop, List.take_append_drop]
+  have pull := statePullTime_of_stateWalk_durations _ rowDuration walk (duration_step gap)
+    (rows.take n) rows[n] (rows.drop (n + 1)) split
+  rw [rowTimeline, Timeline.ofDurations_start_le _ _ _ (by simpa using Nat.le_of_lt bound),
+    ← List.map_take]
+  exact pull
+
 /-- Every row's State successor is the next index of the constructed timeline. -/
 theorem rowTimeline_step_of_walk [Fact p.Prime]
     {initial final : StateMsg (ZMod p)} {rows : List (RowFacts p)}

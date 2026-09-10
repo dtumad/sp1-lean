@@ -101,6 +101,27 @@ def haltOnly : ExecutableSyscallHandler where
     else
       Option.none
 
+/-- Fix the native HALT behavior while leaving other host calls to the supplied environment.
+The event/state agreement and the syscall's effects still require their separate AIR proofs. -/
+def withHalt (handler : ExecutableSyscallHandler) : ExecutableSyscallHandler where
+  run := fun program event source =>
+    if event.rawCode = 0 then
+      some { source with regs := source.regs.insert Register.PC haltPc }
+    else handler.run program event source
+
+/-- Canonical HALT changes only the program counter. -/
+theorem withHalt_run_zero (handler : ExecutableSyscallHandler) (program : GuestProgram)
+    (event : CoreSyscallEvent) (source : SailState) (zero : event.rawCode = 0) :
+    (handler.withHalt).run program event source =
+      some { source with regs := source.regs.insert Register.PC haltPc } := by
+  simp only [withHalt, zero, ↓reduceIte]
+
+/-- Every non-HALT call retains the supplied host semantics. -/
+theorem withHalt_run_nonzero (handler : ExecutableSyscallHandler) (program : GuestProgram)
+    (event : CoreSyscallEvent) (source : SailState) (nonzero : event.rawCode ≠ 0) :
+    (handler.withHalt).run program event source = handler.run program event source := by
+  simp only [withHalt, nonzero, ↓reduceIte]
+
 end ExecutableSyscallHandler
 
 /-- Statement-dependent data needed to interpret the common shard witness.  Exact preprocessing
