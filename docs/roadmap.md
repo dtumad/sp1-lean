@@ -103,13 +103,21 @@ Implemented foundations:
   a matching complete payload. No Program-truth premise or instruction case is exposed to callers.
   `NativeCoreDecode.instructionRows_program_committed` transports that result to every active
   ordinary decoded row; the same adapter preserves its raw constraints and channel interactions.
+- `NativeCoreMemory.memory_frontier_balance` derives the exact per-location Memory equation
+  from the complete physical ledger and the two authenticated inventories. The interior retains
+  ordinary instructions, refreshes, HALT, and active syscalls; constraints prove all Memory
+  multiplicities are signed units or zero. `memoryInitialFrontier_liveOK` supplies the generic
+  timed engine's genesis invariant for any trajectory starting at the configured image state.
+  Neither theorem assumes Memory guarantees, semantic boundary facts, or syscall inactivity.
 
 Still required before the native capstone can be claimed:
 
 1. Connect the new 59-table assembly to timed grounding. Initial-record meaning/uniqueness and
    physical Program-row authentication now follow from its constraints and balance. Final
-   address/order facts and committed Program meaning at active pulls are also closed. Close Memory
-   grounding and recover final-record values and timestamps, using the actual mixed-row ledger.
+   address/order facts and committed Program meaning at active pulls are also closed. The complete
+   Memory ledger now yields unique per-location frontiers, their exact balance equation, and an
+   authentic genesis invariant. Connect that ledger to the mixed-row timed walk to recover final
+   values and timestamps, including syscall and refresh effects.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;

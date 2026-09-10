@@ -1086,7 +1086,7 @@ theorem supportedChip_memorySelectorConstraintShape (chip : SupportedChip p)
 
 /-- A field multiplicity gated by a binary selector has the signed integer range required by Clean's
 typed balance theorem. -/
-private theorem signedVal_binary_of_selector_gated (selector mult : ZMod p)
+theorem signedVal_binary_of_selector_gated (selector mult : ZMod p)
     (selectorBinary : selector = 0 ∨ selector = 1)
     (gated : mult = -selector ∨ mult = 0 ∨ mult = selector) :
     signedVal mult = -1 ∨ signedVal mult = 0 ∨ signedVal mult = 1 := by

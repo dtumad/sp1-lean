@@ -623,5 +623,6 @@ import SP1Clean.Soundness.NativeCoreBoundaries
 import SP1Clean.Soundness.NativeCoreFinalBoundary
 import SP1Clean.Soundness.NativeCoreProgram
 import SP1Clean.Soundness.NativeCoreDecode
+import SP1Clean.Soundness.NativeCoreMemory
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

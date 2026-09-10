@@ -196,6 +196,13 @@ emissions without local Memory guarantees, so their location proofs precede time
 decoder without reconstructing another witness. Final values, mixed host effects, and a closed
 boot-to-HALT soundness/completeness instance remain work in progress; see [the roadmap](roadmap.md).
 
+`NativeCoreMemory` retains the complete physical Memory ledger after the boundary inventories,
+including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicity proof turns Clean
+balance into an exact message permutation and then a per-location frontier equation. The initial
+frontier satisfies the generic timed engine's live-memory invariant at the configured boot state.
+These results assume only raw constraints and balance (and the trajectory's initial state for the
+live invariant); execution ordering and final-record currency still require the mixed-row walk.
+
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.
 

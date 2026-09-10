@@ -657,6 +657,17 @@ This assembly retains the legacy Halt table's
 padding behavior and has no boot-to-HALT execution theorem yet; the existing 55-table execution
 theorem and its semantic boundary premise remain unchanged.
 
+`NativeCoreMemory.memory_records_perm` proves that initial records plus all interior Memory pushes
+are a permutation of final records plus all interior pulls, preserving complete values, locations,
+and timestamps. The proof derives signed-unit multiplicities from physical constraints and uses
+Clean's count-bounded balance; it retains active syscall, HALT, and refresh rows.
+`memory_frontier_balance` turns this into the per-location equation with unique optional endpoints,
+using the inventories' proved location uniqueness. `memoryInitialFrontier_liveOK` supplies the
+generic timed engine's genesis invariant for any trajectory whose initial state is the configured
+image state. Neither requires Memory guarantees or a semantic boundary premise. The remaining
+connection is the mixed-row timed walk and its execution/host effects; these balance and genesis
+results do not yet prove final-record currency or a boot-to-HALT execution.
+
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL
 encoding. `Model/Core/ProgramTable.lean` constructs complete fixed messages, proves that projection

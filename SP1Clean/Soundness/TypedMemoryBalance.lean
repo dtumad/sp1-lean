@@ -576,14 +576,7 @@ private theorem memoryBump_gate_binary [Fact (2 ^ 17 < p)]
     (r : Var MemoryBumpChip.Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
     (constraints : ConstraintsHold.Shallow env ((MemoryBumpChip.main r).operations offset)) :
     (ProvableStruct.eval env r).is_real = 0 ∨ (ProvableStruct.eval env r).is_real = 1 := by
-  have allShallow := (constraintsHold_shallow_iff_forall_mem.mp constraints).1
-  have gate := allShallow (r.is_real * (r.is_real - 1)) (by
-    change (r.is_real * (r.is_real - 1)) ∈ Operations.shallowConstraints
-      ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
-        .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
-    simp only [circuit_norm, Operations.shallowConstraints, List.mem_cons, true_or])
-  simp only [circuit_norm] at gate
-  exact bool_of_mul_pred gate
+  simpa only [circuit_norm] using MemoryBumpChip.selectorBinary_of_shallow r offset env constraints
 
 /-- Every MemoryBump row's selector is boolean, from its table constraints alone (the inline gate
 is an ungated assert — no channel guarantee is needed, so this is non-circular for the memory

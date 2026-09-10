@@ -76,6 +76,17 @@ theorem AddChip.selectorBinary_of_shallow
   exact bool_of_mul_pred shallow
 
 omit [Fact (2 ^ 24 < p)] in
+/-- A refresh row's first assertion forces its Memory selector binary, before any Memory
+guarantee or execution fact is available. -/
+theorem MemoryBumpChip.selectorBinary_of_shallow [Fact (2 ^ 17 < p)]
+    (input : Var MemoryBumpChip.Inputs (ZMod p)) (offset : ℕ)
+    (env : Environment (ZMod p))
+    (shallow : ConstraintsHold.Shallow env ((MemoryBumpChip.main input).operations offset)) :
+    Expression.eval env input.is_real = 0 ∨ Expression.eval env input.is_real = 1 := by
+  apply bool_of_mul_pred
+  simpa only [circuit_norm] using shallow.1
+
+omit [Fact (2 ^ 24 < p)] in
 /-- The halt row's shallow inline gate forces its selector binary — a pure constraint fact,
 independent of the guarantee grounding the full `haltTable_spec` needs (halt-table wave). -/
 theorem HaltChip.selectorBinary_of_shallow [Fact (2 ^ 17 < p)]
