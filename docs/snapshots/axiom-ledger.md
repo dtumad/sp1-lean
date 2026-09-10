@@ -166,3 +166,12 @@ main and test set is unchanged; no declaration was removed and no new axiom name
 That checkpoint derives ordinary chip assumptions and operand bindings for the new assembly.
 The subsequent mixed-execution checkpoint constructs the trajectory and derives HALT step/frame
 facts; ROM preservation and active syscall step/frame facts remain explicit obligations.
+
+The mixed-execution checkpoint adds 18 main probes. Seven handler, HALT, and timeline declarations
+use subsets of the ordinary logical baseline (six use three axioms, one uses two). The semantic
+event projection retains the existing 77 Sail dependencies through its instruction-row carrier;
+ten assembly-indexed declarations retain the existing 100-axiom registry set. Every prior main
+and test dependency set is unchanged, no declaration was removed, and no new axiom name appears.
+`ground_of_host_steps` constructs the trajectory and discharges ordinary/HALT grounding internally.
+It remains conditional on ROM preservation and active syscall step/frame facts, and does not yet
+establish terminal ECALL/Exit agreement or the full boot-to-HALT execution relation.
