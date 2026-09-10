@@ -694,8 +694,22 @@ and refresh-free Memory ledger from just the checked image, raw constraints, and
 preserves row occurrences and records each pull rewrite's unchanged read time, pushed record,
 location, and value, with a no-later prior timestamp; final-frontier rewrites have the same
 location/value and timestamp relation. The theorem retains chronology on the original aligned
-rows. Transporting the mixed carrier through those rewrites and proving mixed step/frame and host
-effects remain open. These results do not yet prove final-record currency or a boot-to-HALT execution.
+rows. `NativeCoreTransport.grounding_carrier` now completes the transport: the rewritten carrier
+has canonical State endpoints, full `RowOKCore`, both balance equations, and semantic alignment
+back to every original event occurrence. `WindowAligned` replaces the ordinary alignment's
+all-reads-at-start restriction with the location's pre-effect read window. Its step/frame transport
+applies to arbitrary trajectories and preserves the syscall offsets.
+
+`NativeCoreGrounding` derives the carrier's timeline by prefix-summing its State clock gaps, proves
+the successor-index and public-final-clock equations, and derives initial State truth from the
+boot verifier and checked image. `GroundingCarrier.ground_of_steps` then supplies all structural
+and boundary premises to the generic engine. It retains the original event rows' semantic
+step/frame facts as explicit premises. Under those premises, it proves grounded rewritten rows,
+final State truth, and the original physical frontier's value currency at the public final State
+time. Original refresh timestamps may be later than that time; only the rewritten records carry
+the engine's final-time bound. Instantiating the remaining step/frame facts for this assembly,
+including constrained host effects and terminal behavior, remains open. No unconditional
+boot-to-HALT execution theorem is claimed.
 
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL

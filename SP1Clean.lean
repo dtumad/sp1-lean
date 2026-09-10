@@ -368,6 +368,7 @@ import SP1Clean.Proofs.Sail.InstructionDecode.Tactic
 import SP1Clean.Proofs.Sail.TryStepReduction
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Model.Semantics.EventTime
+import SP1Clean.Model.Semantics.DurationTime
 import SP1Clean.Model.Semantics.EventTruth
 import SP1Clean.Model.Semantics.GenericTruth
 import SP1Clean.Model.Semantics.GuestProgram
@@ -489,6 +490,7 @@ import SP1Clean.Soundness.LocalExecution
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.GenericWalk
+import SP1Clean.Soundness.WalkTimeline
 import SP1Clean.Soundness.SyscallGrounding
 import SP1Clean.Soundness.SyscallExecution
 import SP1Clean.Soundness.SyscallTrail
@@ -634,5 +636,8 @@ import SP1Clean.Soundness.NativeCoreOrder
 import SP1Clean.Soundness.SystemTouches
 import SP1Clean.Soundness.NativeCoreTouches
 import SP1Clean.Soundness.NativeCoreMemoryOrder
+import SP1Clean.Soundness.MixedRowTransport
+import SP1Clean.Soundness.NativeCoreTransport
+import SP1Clean.Soundness.NativeCoreGrounding
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

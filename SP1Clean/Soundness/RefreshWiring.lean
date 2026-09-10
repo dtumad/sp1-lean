@@ -192,9 +192,57 @@ private theorem isChain_push_of_forall₂ {r : Touch p → Touch p → Prop}
           exact ⟨by rw [hsnd _ _ hR, hsnd _ _ hR₂]; exact hchain.1, ih hchain.2⟩
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
-/-- **`RowOK` across the rewrite.**  Every field of `rowOK_alignedOf` reads only the pushed record,
+/-- **`RowOKCore` across the rewrite.**  Every field of `rowOK_alignedOf` reads only the pushed record,
 the read micro-time, or the pulled record's location and value — all preserved — except the slot
 order, which improves because the rewritten pull is no later. -/
+theorem rowOKCore_alignedOf_pullRewrite (initialClock : ℕ) (r_ord : RowFacts p)
+    (touches touches' : List (Touch p)) (hrew : List.Forall₂ PullRewrite touches touches')
+    (htimeGap : StateMsg.timeNat r_ord.statePull + 8 ≤ StateMsg.timeNat r_ord.statePush)
+    (halign8 : StateMsg.timeNat r_ord.statePull % 8 = initialClock % 8)
+    (htouch : ∀ tc ∈ touches, TouchOK (StateMsg.timeNat r_ord.statePull) tc.1 tc.2)
+    (hchain : ∀ loc : MemLoc, List.IsChain
+      (fun a b : Touch p => MemoryMsg.timeNat a.2 < MemoryMsg.timeNat b.2)
+      (touches.filter (fun pq => MemoryMsg.locOf pq.2 = loc)))
+    (hpushClk : ∀ tc ∈ touches, SP1Clean.Channels.MemoryMsg.ClkBound tc.2)
+    (hslot : ∀ tc ∈ touches,
+      MemoryMsg.timeNat (tc : Touch p).1.1 < MemoryMsg.timeNat tc.2) :
+    RowOKCore initialClock (alignedOf r_ord touches') := by
+  have hpair : ∀ tc' ∈ touches', ∃ tc ∈ touches, PullRewrite tc tc' :=
+    forall₂_exists_left hrew
+  refine ⟨htimeGap, halign8, ?_, ?_, ?_, ?_⟩
+  · apply List.forall₂_map_left_iff.mpr
+    apply List.forall₂_map_right_iff.mpr
+    apply List.forall₂_same.mpr
+    intro tc' htc'
+    obtain ⟨tc, htc, hread, hpush, hloc, hval, -⟩ := hpair tc' htc'
+    have base := htouch tc htc
+    refine ⟨by rw [hpush, hloc]; exact base.loc_eq, by rw [hread]; exact base.read_lo,
+      by rw [hread, hloc]; exact base.read_hi, ?_⟩
+    rcases base.push_kind with ⟨hv, ht⟩ | ht
+    · exact Or.inl ⟨by rw [hpush, hval]; exact hv, by rw [hpush, hread]; exact ht⟩
+    · exact Or.inr (by rw [hpush]; exact ht)
+  · intro loc
+    rw [rowTouchesAt_alignedOf]
+    refine isChain_push_of_forall₂ (fun (a b : Touch p) (h : PullRewrite a b) => h.2.1) ?_
+      (hchain loc)
+    exact forall₂_filter_congr (P := fun pq : Touch p => MemoryMsg.locOf pq.2 = loc)
+      (fun (a b : Touch p) (h : PullRewrite a b) => by rw [h.2.1]) hrew
+  · intro message member
+    obtain ⟨tc', htc', rfl⟩ := List.mem_map.mp member
+    obtain ⟨tc, htc, -, hpush, -⟩ := hpair tc' htc'
+    rw [hpush]
+    exact hpushClk tc htc
+  · intro tc' htc' _
+    have zipped : (touches'.map Prod.fst).zip (touches'.map Prod.snd) = touches' := by simp [List.zip_map']
+    change tc' ∈ (touches'.map Prod.fst).zip (touches'.map Prod.snd) at htc'
+    rw [zipped] at htc'
+    obtain ⟨tc, htc, -, hpush, -, -, htime⟩ := hpair tc' htc'
+    have := hslot tc htc
+    rw [hpush]
+    omega
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- The eight-tick specialization of the duration-generic rewrite transport. -/
 theorem rowOK_alignedOf_pullRewrite (initialClock : ℕ) (r_ord : RowFacts p)
     (touches touches' : List (Touch p)) (hrew : List.Forall₂ PullRewrite touches touches')
     (htime8 : StateMsg.timeNat r_ord.statePush = StateMsg.timeNat r_ord.statePull + 8)
@@ -207,31 +255,9 @@ theorem rowOK_alignedOf_pullRewrite (initialClock : ℕ) (r_ord : RowFacts p)
     (hslot : ∀ tc ∈ touches,
       MemoryMsg.timeNat (tc : Touch p).1.1 < MemoryMsg.timeNat tc.2) :
     RowOK initialClock (alignedOf r_ord touches') := by
-  have hpair : ∀ tc' ∈ touches', ∃ tc ∈ touches, PullRewrite tc tc' :=
-    forall₂_exists_left hrew
-  refine rowOK_alignedOf initialClock r_ord touches' htime8 halign8 ?_ ?_ ?_ ?_
-  · intro tc' htc'
-    obtain ⟨tc, htc, hread, hpush, hloc, hval, -⟩ := hpair tc' htc'
-    have base := htouch tc htc
-    refine ⟨by rw [hpush, hloc]; exact base.loc_eq, by rw [hread]; exact base.read_lo,
-      by rw [hread, hloc]; exact base.read_hi, ?_⟩
-    rcases base.push_kind with ⟨hv, ht⟩ | ht
-    · exact Or.inl ⟨by rw [hpush, hval]; exact hv, by rw [hpush, hread]; exact ht⟩
-    · exact Or.inr (by rw [hpush]; exact ht)
-  · intro loc
-    refine isChain_push_of_forall₂ (fun (a b : Touch p) (h : PullRewrite a b) => h.2.1) ?_
-      (hchain loc)
-    exact forall₂_filter_congr (P := fun pq : Touch p => MemoryMsg.locOf pq.2 = loc)
-      (fun (a b : Touch p) (h : PullRewrite a b) => by rw [h.2.1]) hrew
-  · intro tc' htc'
-    obtain ⟨tc, htc, -, hpush, -⟩ := hpair tc' htc'
-    rw [hpush]
-    exact hpushClk tc htc
-  · intro tc' htc' _
-    obtain ⟨tc, htc, -, hpush, -, -, htime⟩ := hpair tc' htc'
-    have := hslot tc htc
-    rw [hpush]
-    omega
+  have core := rowOKCore_alignedOf_pullRewrite initialClock r_ord touches touches' hrew
+    (by omega) halign8 htouch hchain hpushClk hslot
+  exact ⟨htime8, core.align8, core.touches, core.chain_mono, core.pushClkBound, core.slotOfClkBound⟩
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- **`ValueAligned` across the rewrite.**  The rewritten aligned carrier still matches every

@@ -217,9 +217,14 @@ unchanged per-location balance. `NativeCoreMemoryOrder.ordered_memory_rows` disc
 prior-clock conditions from the produced side of Memory balance, proves strict refresh order,
 and supplies full `RowOKCore` facts. This includes clock bounds on the final frontier without
 assuming final-table Memory guarantees. Its `memory_refresh_free` theorem constructs the
-refresh-free ledger directly from raw constraints/balance and the checked image. Transporting the
-mixed carrier through those rewrites, mixed step/frame facts, and final-record currency remain
-grounding work.
+refresh-free ledger directly from raw constraints/balance and the checked image.
+`NativeCoreTransport.grounding_carrier` completes that construction with canonical State endpoints,
+full structural row facts, and `WindowAligned` semantic transport. The latter permits each original
+read's pre-effect offset, so syscall reads are preserved. `NativeCoreGrounding` derives the
+carrier's timeline, boot truth, and genesis, and `GroundingCarrier.ground_of_steps` instantiates the
+generic engine. Original mixed-row step/frame facts remain explicit semantic premises; given
+them, the original final frontier's values are current at the public final State time. Proving
+those facts for the new assembly and connecting host/terminal execution remain open.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

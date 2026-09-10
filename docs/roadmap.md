@@ -131,6 +131,16 @@ Implemented foundations:
   refresh-free ledger from the checked image and raw constraints/balance, with no caller-supplied
   prior bounds or refresh order. It preserves all row occurrences, read times, pushed records,
   and prior/final values and locations; rewritten prior/final timestamps can only move earlier.
+- `NativeCoreTransport.grounding_carrier` now constructs the final canonical, refresh-free mixed
+  carrier with full `RowOKCore`, an exhaustive State walk, and both ledger balances. Its
+  `WindowAligned` transport retains the original pre-effect read windows, including syscall
+  offsets, and moves step/frame proofs across rewrites and State re-limbing. The generic
+  `Timeline.ofDurations`/`rowTimeline` constructions derive successor timing from State edges.
+  `NativeCoreGrounding.GroundingCarrier.ground_of_steps` connects this carrier to the grounding
+  engine, deriving boot truth and genesis internally. Its remaining semantic premises are the
+  original event rows' step/frame facts on the selected trajectory. Given those, it recovers
+  final-state truth and the original physical frontier's values at the public final State time;
+  it does not claim original refresh timestamps precede that time.
 
 Still required before the native capstone can be claimed:
 
@@ -140,9 +150,12 @@ Still required before the native capstone can be claimed:
    Memory ledger now yields unique per-location frontiers, their exact balance equation, and an
    authentic genesis invariant. Its mixed-row projection and conditional refresh-elimination
    adapter are closed. State-bus ordering, aligned `RowOKCore`, prior-record bounds, and strict
-   refresh order now follow from the combined AIR, yielding a refresh-free ledger. Transport the
-   mixed carrier through its rewrites, prove mixed step/frame facts, and recover final-record
-   currency and terminal execution.
+   refresh order now follow from the combined AIR. The mixed carrier's rewrite transport,
+   canonical State walk, derived timeline, and generic grounding connection are also closed.
+   Derive the original event rows' step/frame facts for this assembly: make the ordinary-chip
+   wiring/assumption/routing/readiness contracts component-local, then connect HALT and syscall
+   semantics with the constrained host environment. Final-value currency currently follows under
+   those explicit semantic premises; terminal execution remains open.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;
