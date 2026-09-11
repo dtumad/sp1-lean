@@ -1,4 +1,5 @@
 import SP1CleanTest.Core.HostExecution
+import SP1CleanTest.Core.HostFootprint
 import SP1CleanTest.Core.SyscallCode
 import SP1CleanTest.Core.InstructionDecode
 import SP1CleanTest.Core.ProgramImage
@@ -31,6 +32,12 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.HostExecution.sailAdapter
 #print axioms SP1CleanTest.Core.HostExecution.committedDispatch
 #print axioms SP1CleanTest.Core.HostExecution.statefulSequence
+#print axioms SP1CleanTest.Core.HostFootprint.byteCovers
+#print axioms SP1CleanTest.Core.HostFootprint.dispatchFootprints
+#print axioms SP1CleanTest.Core.HostFootprint.paddedWriteFootprints
+#print axioms SP1CleanTest.Core.HostFootprint.observedDependency
+#print axioms SP1CleanTest.Core.HostFootprint.failedWordsDoNotAuthenticateBytes
+#print axioms SP1CleanTest.Core.HostFootprint.writtenWordMeaning
 #print axioms SP1CleanTest.Core.SyscallCode.exportedInventory
 #print axioms SP1CleanTest.Core.SyscallCode.supportedCodes
 #print axioms SP1CleanTest.Core.SyscallCode.rejectedCodes

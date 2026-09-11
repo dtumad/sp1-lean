@@ -354,6 +354,8 @@ import SP1Clean.Model.Core.HostIO
 import SP1Clean.Model.Core.HostExecution
 import SP1Clean.Model.Core.HostExecutionLaws
 import SP1Clean.Model.Core.HostSail
+import SP1Clean.Model.Core.MemorySpan
+import SP1Clean.Model.Core.HostFootprint
 import SP1Clean.Model.Core.SyscallCode
 import SP1Clean.Model.Core.SyscallTable
 import SP1Clean.Model.Core.InstructionDecode
@@ -656,5 +658,6 @@ import SP1Clean.Soundness.NativeCoreTrajectory
 import SP1Clean.Soundness.HaltGrounding
 import SP1Clean.Soundness.NativeCoreHaltExecution
 import SP1Clean.Soundness.NativeCoreSyscallSemantics
+import SP1Clean.Soundness.HostFootprint
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

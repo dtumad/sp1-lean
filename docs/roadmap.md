@@ -186,6 +186,17 @@ Implemented foundations:
   actual Sail updates, and successive hint/output/HALT calls sharing host state and memory.
   This closes the executable host semantics component. It does not thread host state through the
   mixed machine trajectory or authenticate the extra observations and effects with AIR tables.
+- `Model/Core/MemorySpan.lean` and `HostFootprint.lean` compute the complete register/cell
+  inventory from host execution. It retains WRITE's x12, all requested buffer bytes, and every
+  padded write byte; overlapping buffers share cells. Successful execution yields the footprint,
+  guest-window bounds, and distinct canonical encoded Memory locations. Agreement on those
+  observations reproduces the entire host result and effects. `Soundness/HostFootprint.lean`
+  derives this agreement from defined Memory-bus words, proves preservation of outside RAM
+  cells, and identifies each fully written post-state word with its little-endian host bytes.
+  Regressions cover overlap, unaligned and empty reads, padding words, observed-byte changes,
+  and the counterexample showing that equal failed word reads do not authenticate their bytes.
+  These close local semantic bridges for the host access tables; their AIR construction,
+  timestamps, and inclusion in the physical mixed ledger remain open.
 
 Host integration must account for these source-backed details in v6.4.0:
 
@@ -194,6 +205,9 @@ Host integration must account for these source-backed details in v6.4.0:
   x5/x10/x11 footprint cannot authenticate either extra input. Host tables must bind the x12
   read and the addressed buffer, including unaligned byte slices; supplying an arbitrary byte
   transcript or treating x11 as the length would change the semantics.
+  The native footprint uses the minimal cell cover of the requested bytes. For an unaligned
+  zero-length WRITE it is empty, whereas Rust's `(head + nbytes).div_ceil(8)` may still read a
+  word. No equality with that untraced physical read inventory is claimed.
 - `HINT_READ` writes a final padded eight-byte word even for zero or eight-byte-aligned lengths
   (`minimal/hint.rs`). The existing `HostIO` model preserves that footprint. The executor's
   `ContextMemory::mw_hint` writes without tracing and resets the cell's clock to zero

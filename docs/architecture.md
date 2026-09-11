@@ -268,6 +268,17 @@ fixed PublicValues pulls: the exact AIR binds every commit in a shard to one pub
 distinct overwrites are a disclosed exact-completeness obstacle. Proof requests record observed digests;
 they do not assert recursive proof verification.
 
+The host's byte observations now have a computed aligned-cell interface.
+`Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and
+write cells. Execution derives coverage, window bounds, and existence of this inventory;
+`Soundness/HostFootprint.lean` proves canonical, distinct encoded locations. Defined word
+observations suffice to replay the same host execution, fully written words have the emitted
+little-endian values, and outside words are preserved. Requiring defined words is essential:
+two failed optional word reads can hide different readable bytes. The pending host AIR must
+authenticate these observations and written words and retain their accesses in the mixed ledger.
+The semantic footprint is a minimal native cover, with the zero-length WRITE distinction from
+Rust recorded in the roadmap.
+
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.
 
