@@ -304,10 +304,22 @@ provider interpretation permits overwrites without claiming the exact AIR's fixe
 binding. The state channels contain only clock/word tuples and have no semantic guarantees.
 `HostCommitHistory.ordered_history` reads the eight physical slot tables of a bank and derives
 an exhaustive ordered host-interpreter fold from their local specs and actual endpoint balance.
-The count bound is retained. Initial/final records are explicit premises: the mixed ensemble must
-still authenticate zero genesis and public final banks, discharge local specs, and balance calls.
+The count bound is retained. Its explicit local-spec and initial/final-record premises are
+discharged by the nine-table bank ensemble below.
 Both local circuit directions, witness construction, and the host-effect bridge are closed;
 regressions check actual instruction/provider ledgers and distinct repeated writes.
+
+`HostCommitEnsemble` closes those bank-level endpoint premises. Each bank adds one terminal
+component, which preserves the words and advances to the fixed clock `2^48`; this clock is only
+on the private bank channel. A verifier with no witness cells pushes the zero bank and pulls
+that fixed terminal state carrying the public final words. The last call timestamp stays private.
+The actual nine-table ledger yields an exhaustive history from raw constraints and balance;
+Byte guarantees discharge local specs. Auxiliary components must prove that they omit the bank
+channel and satisfy their Byte-provider requirements. These static interface proofs are separate
+from witness validity. The subsystem has not yet been installed in the mixed machine, and its
+HostCall inputs still require actual instruction sources. An instance without such sources can
+only have an empty call history. Regressions distinguish complete empty-ledger satisfiability
+from the bank-channel and local-check tests of active histories.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

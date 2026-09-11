@@ -5,9 +5,29 @@ import Clean.Air.FlatEnsemble
 Clean supplies channel consistency and an ordered-table induction, but no direct ensemble rule
 for a channel whose provider requirements are already proved. Such a channel needs no table
 ordering: consistency applies to the actual balanced ledger, and each table inherits the result.
-The component-level corollary keeps these static proofs independent of witness layout. This is
-intended for `Clean/Air/FlatEnsemble.lean`; it uses no application-specific messages or tables.
+The component-level corollary keeps these static proofs independent of witness layout. A companion
+closes universally true structural-channel guarantees, including the dependent arity transport
+otherwise repeated at each call site. These additions are intended for `Clean/Air/FlatEnsemble.lean`;
+they use no application-specific messages or tables.
 -/
+
+namespace Circuit.Operations
+
+variable {F : Type} [FiniteField F]
+
+/-- A structural channel with a universally true guarantee needs no provider hypothesis.
+This also transports the dependent message arity when selecting the channel of an interaction. -/
+theorem channelGuarantees_of_trivial (selected : RawChannel F)
+    (guaranteed : ∀ mult message data, selected.Guarantees mult message data)
+    (ops : Operations F) (env : Environment F) : ops.ChannelGuarantees selected env := by
+  have transport : ∀ channel : RawChannel F, channel = selected →
+      ∀ mult message data, channel.Guarantees mult message data := by
+    rintro _ rfl
+    exact guaranteed
+  intro interaction _ same _
+  exact transport interaction.channel same _ _ _
+
+end Circuit.Operations
 
 namespace Air.Flat
 

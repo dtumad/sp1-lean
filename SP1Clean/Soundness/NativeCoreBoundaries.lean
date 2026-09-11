@@ -16,17 +16,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
-omit [Fact (2 ^ 24 < p)] in
-private theorem trivial_guarantees (selected : RawChannel (ZMod p))
-    (trivialSpec : ∀ mult message data, selected.Guarantees mult message data)
-    (ops : Operations (ZMod p)) (env : Environment (ZMod p)) : ops.ChannelGuarantees selected env := by
-  have trivialGuarantee : ∀ channel : RawChannel (ZMod p), channel = selected →
-      ∀ mult message data, channel.Guarantees mult message data := by
-    rintro _ rfl
-    exact trivialSpec
-  intro interaction _ same _
-  exact trivialGuarantee interaction.channel same _ _ _
-
 private theorem initialView_spec (image : ProgramImage)
     (view : TransitionView (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName))
     (member : view ∈ InitialMemoryEnsemble.views image) (env : Environment (ZMod p))
@@ -55,7 +44,7 @@ private theorem initialView_spec (image : ProgramImage)
   rcases List.mem_cons.mp (channels member) with rfl | member
   · exact byte
   · obtain rfl := List.mem_singleton.mp member
-    exact trivial_guarantees _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
+    exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
 
 /-- A proof view of the actual combined table list, with just the initialization verifier.
 No row or prover data is synthesized or replaced. -/
@@ -220,10 +209,10 @@ theorem component_spec_of_byte (component : Component (ZMod p))
   have member := channels member
   simp only [List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl | rfl | rfl
-  · exact trivial_guarantees _ (by simp [stateChannel, Channel.toRaw]) _ _
+  · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
   · exact byte
-  · exact trivial_guarantees _ (by simp [exitChannel, Channel.toRaw]) _ _
-  all_goals exact trivial_guarantees _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
+  · exact Operations.channelGuarantees_of_trivial _ (by simp [exitChannel, Channel.toRaw]) _ _
+  all_goals exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
 
 /-- The public start state is fixed to the image's entry and boot clock by the actual verifier,
 and both public endpoints have canonical limbs. -/

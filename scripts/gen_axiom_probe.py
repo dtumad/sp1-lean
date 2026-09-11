@@ -40,6 +40,31 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Public commitment-bank boundaries and physical ensemble closure.
+    ("ToClean/Air/ChannelClosure.lean", "channelGuarantees_of_trivial"),
+    ("SP1Clean/Native/Operations/HostCommitBoundary.lean", "terminal"),
+    ("SP1Clean/Native/Operations/HostCommitBoundary.lean", "verifier"),
+    ("SP1Clean/Native/Operations/HostCommitBoundary.lean", "terminal_interactions"),
+    ("SP1Clean/Native/Operations/HostCommitBoundary.lean", "verifier_interactions"),
+    ("SP1Clean/Native/Operations/HostCommitBoundary.lean", "terminal_values"),
+    ("SP1Clean/Native/Operations/HostCommitBoundary.lean", "verifier_values"),
+    ("SP1Clean/Native/Operations/HostCommitBoundary.lean", "terminal_strict"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "terminalView"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "view"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "components_length"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "view_spec_of_byte"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "ordered_history"),
+    ("SP1Clean/Soundness/HostCommitEnsemble.lean", "ensemble"),
+    ("SP1Clean/Soundness/HostCommitEnsemble.lean", "tables_aligned"),
+    ("SP1Clean/Soundness/HostCommitEnsemble.lean", "auxiliary_silent"),
+    ("SP1Clean/Soundness/HostCommitEnsemble.lean", "interactions_eq"),
+    ("SP1Clean/Soundness/HostCommitEnsemble.lean", "byte_guarantees"),
+    ("SP1Clean/Soundness/HostCommitEnsemble.lean", "sound"),
+    ("SP1CleanTest/Core/HostCommitBoundary.lean", "emptyBanks"),
+    ("SP1CleanTest/Core/HostCommitBoundary.lean", "repeatedBanks"),
+    ("SP1CleanTest/Core/HostCommitBoundary.lean", "boundaryTampering"),
+    ("SP1CleanTest/Core/HostCommitBoundary.lean", "terminalClocks"),
+    ("SP1CleanTest/Core/HostCommitBoundary.lean", "interleavedBanks"),
     # Mutable native commitment calls and their physical bank histories.
     ("SP1Clean/Native/Operations/ClockOrder.lean", "soundness"),
     ("SP1Clean/Native/Operations/ClockOrder.lean", "completeness"),

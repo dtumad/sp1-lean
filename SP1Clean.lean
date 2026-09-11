@@ -687,3 +687,7 @@ import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
 import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Soundness.HostCommitHistory
+import SP1Clean.FormalModel.Contracts.HostCommitBoundary
+import SP1Clean.Native.Operations.HostCommitBoundary
+import SP1Clean.Soundness.HostCommitBank
+import SP1Clean.Soundness.HostCommitEnsemble

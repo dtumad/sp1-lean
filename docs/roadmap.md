@@ -228,8 +228,23 @@ Implemented foundations:
   and endpoint balance including Clean's count bound. Joint-row regressions cover every slot,
   distinct overwrites, invalid clocks/values/witnesses, and rejected forks or missing updates;
   the witness programs export 186 cells. Native bank history does not require every intermediate
-  value to equal the final digest. Installing the tables, authenticating zero initial/public final
-  banks, and deriving the local-spec and handoff-balance premises in the mixed ensemble remain open.
+  value to equal the final digest. The composable bank ensemble below now authenticates its
+  endpoints and derives local specs. Installing it and the handoff in the mixed machine remains open.
+
+- `HostCommitBoundary` closes a bank at a fixed private-channel clock beyond all ordinary call
+  times, preserving all eight words. Its terminal has 48 computed witness cells; its verifier
+  fixes zero genesis and the public final words without allocating witnesses or publishing the
+  last call timestamp. `HostCommitBank` registers eight slot tables plus that terminal.
+  `HostCommitEnsemble.sound` derives an exhaustive host-interpreter history from the composable
+  ensemble's raw constraints and actual balance, including Byte closure and the count guard.
+  Its only auxiliary proof parameters are static bank-channel exclusion and Byte-provider
+  requirements; no row-local spec, initial/final record, ordering or boundary-truth premise is
+  supplied by the caller. Physical-table regressions cover empty banks, repeated writes,
+  interleaved slots, missing/duplicate terminals, forged genesis, wrong public outputs, and invalid
+  terminal clocks.
+  This is a bank subsystem, not yet the mixed RISC-V ensemble. Calls and other host state/effects
+  still need coordination there. In particular, with no auxiliary call sources this subsystem
+  admits only empty call histories; no active-call non-vacuity claim is made for that configuration.
 
 Host integration must account for these source-backed details in v6.4.0:
 

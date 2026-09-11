@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HostCommitBoundary
 import SP1CleanTest.Core.HostCommit
 import SP1CleanTest.Core.HostCall
 import SP1CleanTest.Core.HostRamAccess
@@ -24,6 +25,11 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostCommitBoundary.emptyBanks
+#print axioms SP1CleanTest.Core.HostCommitBoundary.repeatedBanks
+#print axioms SP1CleanTest.Core.HostCommitBoundary.boundaryTampering
+#print axioms SP1CleanTest.Core.HostCommitBoundary.terminalClocks
+#print axioms SP1CleanTest.Core.HostCommitBoundary.interleavedBanks
 #print axioms SP1CleanTest.Core.HostCommit.validUpdates
 #print axioms SP1CleanTest.Core.HostCommit.clockChecks
 #print axioms SP1CleanTest.Core.HostCommit.rejectsMalformed

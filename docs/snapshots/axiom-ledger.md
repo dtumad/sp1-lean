@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-11. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1406 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 146 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1425 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 151 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1552 released declarations are probed.
+- 1576 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -263,7 +263,7 @@ remain explicit premises. All 1384 preceding main and 140 preceding test axiom s
 with no removals or new main-library axiom names. Six new compiler-trust constants occur only
 in `SP1CleanTest.Core.HostCommit`, covering all sixteen routes, bounds and corrupted witnesses,
 original instruction/provider balance, distinct overwrites, and rejected forks or omitted updates.
-The 186-cell witness programs are exportable. The audit now probes 1406 main and 146 test
+The 186-cell witness programs are exportable. That checkpoint audited 1406 main and 146 test
 declarations. Native historical PublicValues providers permit mutable banks; they do not prove
 the exact AIR's fixed `PublicValueBinding`. Installing these components and authenticating zero
 initial/public final banks in the mixed machine remain integration work.
