@@ -237,3 +237,18 @@ removals or new main-library axiom names. Four executed regressions add four com
 constants only in `SP1CleanTest.Core.HostRamAccess`. The component remains outside the mixed
 ensemble; call-level footprint/value authorization, WRITE's x12 access, and threaded host state
 remain open integration work.
+
+The instruction-to-host handoff checkpoint adds nineteen main probes, each with exactly
+`[propext, Classical.choice, Quot.sound]`. `HostCallChip` composes the original full-code-checked
+syscall circuit, internally derived WRITE selection, and an authenticated x12 read-back at
+event time plus one. Its raw-constraint and ledger theorems retain every original instruction
+interaction, including PublicValues, and expose the complete evaluated host request. Both the
+register reader and handoff have soundness/completeness proofs and timestamp constructors;
+the composed witness program exports eight cells. The shared timestamp arithmetic replaces
+existing proof bodies without changing any of the 1365 preceding main or 134 preceding test
+axiom sets. Six new compiler-trust constants occur only in `SP1CleanTest.Core.HostCall`.
+The audit now probes 1384 main and 140 test declarations, with no removals or new main-library
+axiom names. This is a local component result: the x12 touch and handoff are not yet installed
+in the mixed ensemble, and RAM footprint authorization, host effects and host-state threading
+remain open. The original PublicValues pulls are preserved; compatibility with mutable
+commitment slots remains separate.
