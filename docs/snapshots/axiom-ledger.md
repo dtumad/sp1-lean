@@ -298,3 +298,17 @@ interpreter effects and terminality, and constructed rows across clock-limb boun
 HALT and ENTER export 64 and zero witness cells. The census now probes 1452 main and 158 test
 declarations. Matched observations and host-state order still need whole-machine derivation;
 the four remaining host handlers and mixed-machine installation remain open.
+
+The shared host-read checkpoint adds nineteen main declarations. Seventeen use exactly
+`[propext, Classical.choice, Quot.sound]`; the physical-plan projection and uniqueness proofs
+use `propext` and `Quot.sound`. The native provider preserves the word and performs one physical
+Memory transfer while serving one or two logical consumers through separate unit interactions.
+The semantic span plan proves exact read multiplicities, including overlapping buffers, and
+constructors prove local completeness; physical address uniqueness explicitly requires correctly
+indexed prior records. All preceding 1452 main and 158 test axiom sets are unchanged, with no
+removals or new main-library axiom names. Five new compiler-trust constants occur only in
+`SP1CleanTest.Core.HostRamRead`. Executed fixtures cover empty and overlapping spans, the final
+RAM cells, unit multiplicities, invalid sharing/writes/witnesses, and mismatched or omitted reads.
+The composed witness program exports 201 cells. The census now probes 1471 main and 163 test
+declarations. Buffer requests in these regressions are fixtures: call-bound span/byte
+authentication, the remaining host handlers, and mixed-machine installation remain open.
