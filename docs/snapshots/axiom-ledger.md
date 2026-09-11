@@ -252,3 +252,18 @@ axiom names. This is a local component result: the x12 touch and handoff are not
 in the mixed ensemble, and RAM footprint authorization, host effects and host-state threading
 remain open. The original PublicValues pulls are preserved; compatibility with mutable
 commitment slots remains separate.
+
+The mutable commitment-bank checkpoint adds twenty-two main probes using only subsets of
+`[propext, Classical.choice, Quot.sound]`. The native COMMIT/COMMIT_DEFERRED components prove
+soundness/completeness, construct comparison/byte witnesses, retain exact handoff/state/public
+ledgers, and implement the independent host interpreter's single-slot effect. Strict bounded
+clock order and actual bank-table balance yield an exhaustive interpreter history through
+`HostCommitHistory.ordered_history`; local table specifications and initial/final endpoints
+remain explicit premises. All 1384 preceding main and 140 preceding test axiom sets are unchanged,
+with no removals or new main-library axiom names. Six new compiler-trust constants occur only
+in `SP1CleanTest.Core.HostCommit`, covering all sixteen routes, bounds and corrupted witnesses,
+original instruction/provider balance, distinct overwrites, and rejected forks or omitted updates.
+The 186-cell witness programs are exportable. The audit now probes 1406 main and 146 test
+declarations. Native historical PublicValues providers permit mutable banks; they do not prove
+the exact AIR's fixed `PublicValueBinding`. Installing these components and authenticating zero
+initial/public final banks in the mixed machine remain integration work.
