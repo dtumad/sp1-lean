@@ -176,8 +176,18 @@ Implemented foundations:
   upper-word aliases and nonboolean gates, and check the whole-chip lookup wiring and exportability.
   The original Rust-faithfulness anchor is unchanged. This is a component result; the strengthened
   chip has not yet replaced the original syscall component in the 59-table assembly.
+- `Model/Core/HostExecution.lean` now executes all eight selected calls from observed registers
+  and memory, threading hints, request-bound hook replies, both commitment banks, output bytes,
+  recorded proof requests, and terminal state. `HostExecutionLaws.lean` proves exact dispatch,
+  byte-observation, and padded-write conditions. `HostSail.lean` applies these effects to official
+  Sail states and proves instruction row laws, endpoint observations, register/memory frames,
+  written-byte readback, and ROM preservation. `HostState.step_sound` gives a committed ECALL
+  transition for the concrete one-step handler. Regressions cover all eight calls, rejection paths,
+  actual Sail updates, and successive hint/output/HALT calls sharing host state and memory.
+  This closes the executable host semantics component. It does not thread host state through the
+  mixed machine trajectory or authenticate the extra observations and effects with AIR tables.
 
-Host integration must account for two source-backed details in the v6.4.0 executor:
+Host integration must account for these source-backed details in v6.4.0:
 
 - `WRITE` takes its descriptor and pointer from x10/x11, but reads the byte count from **x12** and
   the output bytes from RAM (`crates/core/executor/src/minimal/write.rs`). The instruction row's
@@ -190,6 +200,17 @@ Host integration must account for two source-backed details in the v6.4.0 execut
   (`crates/core/jit/src/context.rs`). Native authenticated host writes need an explicit timeline
   and ROM-protection argument; they cannot be admitted as additional authenticated boot records.
   Correspondence with those exact Rust timestamp conventions remains separate refinement work.
+- The executor mutates commitment slots, but `SyscallInstrsChip::eval_commit` checks every COMMIT
+  or COMMIT_DEFERRED_PROOFS row in a shard against one fixed public-values digest. Distinct overwrites of
+  the same slot cannot both satisfy that binding. The native host model keeps mutable slots;
+  its successful runs do not automatically satisfy the exact AIR's `PublicValueBinding`.
+  Native host-table composition must account for the instruction chip's PublicValues pulls;
+  exact completeness needs an explicit compatibility restriction or a different refinement target.
+- The minimal executor treats COMMIT_DEFERRED_PROOFS and VERIFY_SP1_PROOF as no-ops; traced replay
+  records deferred commitments (`vm/syscall/deferred.rs`). The native profile records canonical
+  deferred values and the two observed 32-byte proof-request digests. Recording such a request
+  asserts no recursive proof acceptance. These native observables and constrained replay's
+  ENTER_UNCONSTRAINED return zero are explicit profile choices.
 
 Still required before the native capstone can be claimed:
 
@@ -210,8 +231,8 @@ Still required before the native capstone can be claimed:
    two remaining semantic premises; terminal ECALL/Exit agreement and execution reconstruction remain open.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
-2. Complete the host execution environment, including commitments, control and terminal behavior;
-   integrate the full-code-checked syscall chip, host effects, and ordinary ROM-write exclusion into
+2. Thread the executable host state through mixed execution; integrate the full-code-checked
+   syscall chip, host effects, and ordinary ROM-write exclusion into
    the AIR and mixed timed grounding. Extending the Memory footprint must preserve host accesses
    in the balanced ledger rather than projecting back to the instruction-only footprint.
 3. Prove the event compiler total on shared semantic resource bounds; construct all native tables

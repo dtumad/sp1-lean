@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HostExecution
 import SP1CleanTest.Core.SyscallCode
 import SP1CleanTest.Core.InstructionDecode
 import SP1CleanTest.Core.ProgramImage
@@ -19,6 +20,17 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostExecution.allCalls
+#print axioms SP1CleanTest.Core.HostExecution.observedWrite
+#print axioms SP1CleanTest.Core.HostExecution.descriptorDispatch
+#print axioms SP1CleanTest.Core.HostExecution.hookReplies
+#print axioms SP1CleanTest.Core.HostExecution.commitmentUpdates
+#print axioms SP1CleanTest.Core.HostExecution.proofObservations
+#print axioms SP1CleanTest.Core.HostExecution.terminality
+#print axioms SP1CleanTest.Core.HostExecution.paddedHintMemory
+#print axioms SP1CleanTest.Core.HostExecution.sailAdapter
+#print axioms SP1CleanTest.Core.HostExecution.committedDispatch
+#print axioms SP1CleanTest.Core.HostExecution.statefulSequence
 #print axioms SP1CleanTest.Core.SyscallCode.exportedInventory
 #print axioms SP1CleanTest.Core.SyscallCode.supportedCodes
 #print axioms SP1CleanTest.Core.SyscallCode.rejectedCodes

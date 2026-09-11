@@ -351,6 +351,9 @@ import SP1Clean.Model.Core.MemoryIntervals
 import SP1Clean.Model.Core.MemoryTable
 import SP1Clean.Model.Core.MemoryWord
 import SP1Clean.Model.Core.HostIO
+import SP1Clean.Model.Core.HostExecution
+import SP1Clean.Model.Core.HostExecutionLaws
+import SP1Clean.Model.Core.HostSail
 import SP1Clean.Model.Core.SyscallCode
 import SP1Clean.Model.Core.SyscallTable
 import SP1Clean.Model.Core.InstructionDecode

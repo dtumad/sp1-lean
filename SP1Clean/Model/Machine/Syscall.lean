@@ -92,9 +92,9 @@ def CoreSyscallEvent.RowLaw (event : CoreSyscallEvent) : Prop :=
 
 /-! ## The thirteen inline codes -/
 
-/-- The syscall ids SP1's `SyscallInstrs` AIR handles inline — exactly the codes whose table byte is
-zero, hence exactly those a shard with no `syscallChannel` provider can carry. Each is `< 256`, so a
-canonical inline code occupies byte 0 alone. -/
+/-- The thirteen canonical inline codes selected by SP1's executor enum. Each is `< 256`, so its
+table byte is zero. The raw instruction AIR checks routing bytes, not enum membership; absence
+of a `syscallChannel` provider alone does not restrict a shard to this list. -/
 def inlineSyscallIds : List ℕ :=
   [ haltSyscallId,               --   0  HALT
     2,                                   --   2  WRITE

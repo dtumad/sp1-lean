@@ -254,6 +254,20 @@ syscall component; integrating the strengthened chip belongs with the remaining 
 The [roadmap](roadmap.md#native-clean-core) records the pinned executor's extra WRITE reads and
 zero-clock, untraced hint writes that this integration must address explicitly.
 
+`Model/Core/HostExecution.lean` supplies the concrete eight-call interpreter. Its dispatcher reads
+x5/x10/x11 and WRITE's x12 from a partial observation interface, reads the requested guest bytes,
+and returns the next host state and complete optional memory write. The state carries both
+commitment banks, hint and hook-reply queues, outputs, recorded requests, and terminal status.
+`HostExecutionLaws.lean` characterizes successful observations and writes; `HostSail.lean` supplies
+actual Sail observations and proves the resulting ECALL row law, endpoint agreement, memory
+readback/frame, register frame, and ROM preservation. The concrete handler is indexed by the
+incoming host state. Machine integration must thread the returned state between calls and add
+AIR-authenticated host accesses to the grounding footprint; the existing mixed trajectory does
+neither yet. Mutable commitment updates also need separate treatment of the instruction circuit's
+fixed PublicValues pulls: the exact AIR binds every commit in a shard to one public digest, so
+distinct overwrites are a disclosed exact-completeness obstacle. Proof requests record observed digests;
+they do not assert recursive proof verification.
+
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.
 
