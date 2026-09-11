@@ -282,3 +282,19 @@ claiming full-machine call authentication. The terminal and verifier witness pro
 48 and zero cells respectively. That checkpoint audited 1425 main and 151 test declarations.
 Installation in the mixed machine, authentication of calls, and coordination with its other host
 effects remain open; this checkpoint does not establish a new RISC-V execution theorem.
+
+The native control-handler checkpoint adds twenty-seven main declarations. Twenty-six use exactly
+`[propext, Classical.choice, Quot.sound]`; `HostHaltChip.stopped_after` uses only `propext`.
+Both handlers have closed local circuit proofs, full-dispatch bridges from matched register
+observations, and exact HostCall ledger projections without another Memory or Exit contribution.
+Constructors derive their completeness assumptions from successful host interpretation. The
+instruction's structural exit range is proved equivalent to the handler's canonical bound at
+`SP1Prime`; this field specialization is explicit. All preceding 1425 main and 151 test axiom sets
+are unchanged, with no removals or new main-library axiom names, including after sharing the host
+regression evaluator. Seven new compiler-trust constants occur only in
+`SP1CleanTest.Core.HostControl`. They check canonical exits, unrestricted unused arguments,
+malformed fields and witnesses, joint instruction/handler ledgers, handoff tampering, complete
+interpreter effects and terminality, and constructed rows across clock-limb boundaries.
+HALT and ENTER export 64 and zero witness cells. The census now probes 1452 main and 158 test
+declarations. Matched observations and host-state order still need whole-machine derivation;
+the four remaining host handlers and mixed-machine installation remain open.
