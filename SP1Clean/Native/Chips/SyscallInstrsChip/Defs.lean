@@ -25,8 +25,8 @@ rather than against one arm of it.
 **Dispatch.** The identifier's byte split (`U16toU8OperationSafe`) yields byte 0, the identifier
 proper, and byte 1, SP1's "this handler has its own table" flag. Five `IsZeroOperation` selectors
 test byte 0 against the canonical codes, and byte 1 is the multiplicity of the send on
-`syscallChannel` — with no provider for that channel, balance forces it to zero, which is what
-confines a supported shard to the arms modelled here.
+`syscallChannel`. With no provider for that channel, balance forces the routing byte to zero.
+This does not prove enum membership: `CoreSyscallChip` separately checks the full-word native profile.
 
 **Public values.** SP1 states five of its conjuncts against `public_values` directly. Clean's flat
 AIR reserves the public input to the verifier row, so each becomes one message built from columns

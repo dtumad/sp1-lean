@@ -666,3 +666,13 @@ import SP1Clean.Soundness.NativeCoreSyscallSemantics
 import SP1Clean.Soundness.HostFootprint
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider
+import SP1Clean.Model.MemoryClock
+import SP1Clean.FormalModel.Contracts.RegisterRead
+import SP1Clean.FormalModel.Contracts.HostCall
+import SP1Clean.Native.Readers.RegisterRead
+import SP1Clean.Native.Readers.RegisterReadLedger
+import SP1Clean.Native.Readers.RegisterReadPopulate
+import SP1Clean.Native.Chips.HostCallChip.Defs
+import SP1Clean.Proofs.Chips.HostCallChip.Formal
+import SP1Clean.Proofs.Chips.HostCallChip.Ledger
+import SP1Clean.Proofs.Chips.HostCallChip.Populate

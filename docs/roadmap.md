@@ -203,9 +203,21 @@ Implemented foundations:
   ledger theorems retain the prior/new Memory pair and a coordination record containing the event
   clock, address, and both words. Its witness program is exportable. Regressions cover both clock
   branches, the final RAM cell, and malformed addresses, values, and clocks, including field
-  underflow aliases. This component is not yet registered in the mixed ensemble. WRITE's x12
-  access, the call tables that select the complete footprint and authorize values, and their
-  inclusion in the physical mixed ledger remain open.
+  underflow aliases. This component is not yet registered in the mixed ensemble. Call tables
+  must still select the complete footprint, authorize values, and retain these accesses in
+  the physical mixed ledger.
+
+
+- `HostCallChip` composes the full-code-checked instruction with an internally computed WRITE
+  selector, x12 read-back at event time plus one, and one gated host-call message carrying all
+  four limbs of the code, arguments, return word and WRITE length. Raw constraints determine
+  the selector; exact ledger theorems retain the new Memory pair and every original interaction
+  on State, Program, Exit, Syscall and PublicValues. Non-WRITE calls emit zero length and no
+  extra active Memory access. The sound/complete circuit and its semantic timestamp constructor
+  are closed and exportable; complete-row regressions cover all eight calls, padding, invalid
+  prior reads and corrupted selectors. This closes the local instruction-to-host handoff.
+  It does not select RAM records, constrain returned host values/effects, or thread host state.
+  The component and x12 touch still need installation in the mixed ensemble and grounding carrier.
 
 Host integration must account for these source-backed details in v6.4.0:
 

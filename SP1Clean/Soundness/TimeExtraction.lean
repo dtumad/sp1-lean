@@ -1,3 +1,4 @@
+import SP1Clean.Model.MemoryClock
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Model.Semantics.MicroTime
 
@@ -165,22 +166,8 @@ theorem prevLow_val_lt_of_accessTimestamp (clk_target prev_low diff_low_limb : Z
     (prevBound : prev_low.val < 2 ^ 24)
     (diffLow : diff_low_limb.val < 2 ^ 16)
     (diffHigh : ((clk_target - prev_low - 1 - diff_low_limb) * (65536 : ZMod p)⁻¹).val < 2 ^ 8) :
-    prev_low.val < clk_target.val := by
-  have hp := Fact.out (p := 2 ^ 25 < p)
-  set high := (clk_target - prev_low - 1 - diff_low_limb) * (65536 : ZMod p)⁻¹ with highDef
-  have reconstruct : clk_target = prev_low + (1 + (diff_low_limb + high * 65536)) := by
-    rw [highDef, mul_assoc, inv_mul_cancel₀ val_65536_ne_zero, mul_one]
-    ring
-  have highMulVal : (high * 65536).val = high.val * 65536 := by
-    rw [ZMod.val_mul_of_lt (by rw [val_65536_zmod_p]; omega), val_65536_zmod_p]
-  have diffVal : (diff_low_limb + high * 65536).val = diff_low_limb.val + high.val * 65536 := by
-    rw [ZMod.val_add_of_lt (by rw [highMulVal]; omega), highMulVal]
-  have succVal : (1 + (diff_low_limb + high * 65536)).val
-      = 1 + (diff_low_limb.val + high.val * 65536) := by
-    rw [ZMod.val_add_of_lt (by rw [diffVal, ZMod.val_one]; omega), diffVal, ZMod.val_one]
-  have targetVal : clk_target.val = prev_low.val + (1 + (diff_low_limb.val + high.val * 65536)) := by
-    rw [reconstruct, ZMod.val_add_of_lt (by rw [succVal]; omega), succVal]
-  omega
+    prev_low.val < clk_target.val :=
+  MemoryClock.lt_of_register_gap clk_target prev_low diff_low_limb prevBound diffLow diffHigh
 
 /-- Natural-number order extracted from SP1's generic two-limb access-timestamp gap equation.
 

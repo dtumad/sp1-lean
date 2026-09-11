@@ -285,8 +285,16 @@ checks establish strict bounded time order and the effect at event time plus one
 constructor computes the timestamp comparison columns. The actual ledger contains precisely
 that Memory pair and a host coordination record with the event clock, address, and both words.
 The component has an exportable witness program. It remains outside the mixed ensemble until
-the call tables bind these records to the full footprint and host effects; WRITE's x12 access
-and host-state threading also remain open.
+the call tables bind these records to the full footprint and host effects.
+
+`HostCallChip` supplies the instruction-facing handoff. It composes `CoreSyscallChip`, Clean's
+full-word equality gadget, and the shared `RegisterRead` circuit. WRITE reads x12 at event time
+plus one and writes back the same word; all other calls have no extra active read. Each active
+row emits the actual clock, full code, arguments and return word, and the selected WRITE length.
+Raw constraints determine selection, and the ledger preserves all original instruction
+interactions, including PublicValues. Soundness/completeness, timestamp construction and
+exportability are proved locally. Installation in the mixed carrier, matching calls to RAM
+footprints, host effects, and host-state threading remain open.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

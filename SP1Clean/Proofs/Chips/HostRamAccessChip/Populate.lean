@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
+import SP1Clean.Model.MemoryClock
 
 /-! # Constructing the host RAM timestamp witness
 
@@ -32,31 +33,6 @@ def Domain (prior : MemoryMsg (ZMod p)) (clkHigh clk0 clk1 : ZMod p)
     ((clk0 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧ clk1.val < 2 ^ 8 ∧
     Semantics.MemoryMsg.timeNat prior < Semantics.clkNat clkHigh (clk0 + clk1 * 65536 + 1)
 
-private theorem gap_encoding (current previous : ZMod p)
-    (increases : previous.val < current.val) (bound : current.val < 2 ^ 24) :
-    let gap := current.val - previous.val - 1
-    current - previous - 1 = ((gap % 65536 : ℕ) : ZMod p) + ((gap / 65536 : ℕ) : ZMod p) * 65536 ∧
-      ((gap % 65536 : ℕ) : ZMod p).val < 2 ^ 16 ∧ ((gap / 65536 : ℕ) : ZMod p).val < 2 ^ 8 := by
-  dsimp only
-  let gap := current.val - previous.val - 1
-  have gapBound : gap < 2 ^ 24 := by dsimp only [gap]; omega
-  have low : gap % 65536 < 2 ^ 16 := Nat.mod_lt _ (by norm_num)
-  have high : gap / 65536 < 2 ^ 8 := by omega
-  have hp := Fact.out (p := 2 ^ 25 < p)
-  refine ⟨?_, ?_, ?_⟩
-  · have reconstruct : previous.val + 1 + (gap % 65536 + gap / 65536 * 65536) = current.val := by
-      have := Nat.mod_add_div gap 65536
-      dsimp only [gap] at *
-      omega
-    have cast := congrArg (fun n : ℕ => (n : ZMod p)) reconstruct
-    push_cast at cast
-    simp only [ZMod.natCast_zmod_val] at cast
-    linear_combination -cast
-  · rw [ZMod.val_natCast_of_lt (by omega : gap % 65536 < p)]
-    exact low
-  · rw [ZMod.val_natCast_of_lt (by omega : gap / 65536 < p)]
-    exact high
-
 /-- Honest word transfers construct every internal timestamp witness needed by completeness. -/
 theorem populate_assumptions (prior : MemoryMsg (ZMod p)) (clkHigh clk0 clk1 : ZMod p)
     (newValue : Word (ZMod p)) (valid : Domain prior clkHigh clk0 clk1 newValue) :
@@ -72,7 +48,7 @@ theorem populate_assumptions (prior : MemoryMsg (ZMod p)) (clkHigh clk0 clk1 : Z
   · have lowIncreases : prior.clk_low.val < (clk0 + clk1 * 65536 + 1).val := by
       rw [sameHigh] at increases
       omega
-    obtain ⟨gap, gapLow, gapHigh⟩ := gap_encoding _ _ lowIncreases currentLow
+    obtain ⟨gap, gapLow, gapHigh⟩ := MemoryClock.gap_encoding _ _ lowIncreases currentLow
     simp only [populate, Inputs.reader, Inputs.clockLow,
       Readers.MemoryAccess.selCur, Readers.MemoryAccess.selPrev, sub_self, zero_mul, one_mul,
       add_zero, sameHigh, if_true, mul_zero]
@@ -80,7 +56,7 @@ theorem populate_assumptions (prior : MemoryMsg (ZMod p)) (clkHigh clk0 clk1 : Z
   · have highDifferent : prior.clk_high.val ≠ clkHigh.val := fun equal =>
       sameHigh (ZMod.val_injective p equal)
     have highIncreases : prior.clk_high.val < clkHigh.val := by omega
-    obtain ⟨gap, gapLow, gapHigh⟩ := gap_encoding _ _ highIncreases high
+    obtain ⟨gap, gapLow, gapHigh⟩ := MemoryClock.gap_encoding _ _ highIncreases high
     simp only [populate, if_neg sameHigh, Inputs.reader, Inputs.clockLow,
       Readers.MemoryAccess.selCur, Readers.MemoryAccess.selPrev, zero_mul, sub_zero, one_mul,
       zero_add]

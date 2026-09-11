@@ -1,0 +1,131 @@
+import SP1Clean.Proofs.Chips.HostCallChip.Ledger
+import SP1Clean.Proofs.Chips.HostCallChip.Populate
+import SP1Clean.Model.SP1Field
+import ToClean.Air.EnsembleExport
+
+/-! # Executed instruction-to-host handoff regressions
+
+Run complete syscall rows through the witness program, all assertions, the fixed code lookup,
+and Byte/Memory/Program local checks. State, Exit and PublicValues balance, and the host effects,
+remain whole-ensemble obligations outside these local satisfiability tests.
+-/
+
+namespace SP1CleanTest.Core.HostCall
+
+open Circuit Air.Flat SP1Clean SP1Clean.HostCallChip SP1Clean.Model.Core
+
+private abbrev Fp := ZMod SP1Prime
+
+private instance byteDecidable (op : ByteOpcode) (a b c : Fp) : Decidable (op.constrain a b c) := by
+  cases op <;> unfold ByteOpcode.constrain <;> infer_instance
+
+private def byteValid (values : List Fp) : Bool :=
+  match values with
+  | [opcode, a, b, c] =>
+    [ByteOpcode.AND, .OR, .XOR, .U8Range, .LTU, .MSB, .Range].any fun op =>
+      opcode == (op.idx : Fp) && decide (op.constrain a b c)
+  | _ => false
+
+private def memoryValid (values : List Fp) : Bool :=
+  match values with
+  | [_, low, _, _, _, a, b, c, d] =>
+    low.val < 2 ^ 24 && [a, b, c, d].all (fun limb => limb.val < 65536)
+  | _ => false
+
+private def evaluate (input : Inputs Fp) (corruptSelector := false) :
+    Bool × List (String × List Fp × Fp) :=
+  let program := HostCallChip.main (varFromOffset Inputs 0)
+  let honest := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
+  let env : Environment Fp := if corruptSelector then
+      { honest with get := fun i => if i == size Inputs + 1 then 1 - honest.get i else honest.get i }
+    else honest
+  let operations := (program.operations (size Inputs)).toFlat
+  let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
+  let valid := operations.all fun operation =>
+    match operation with
+    | .assert expression => env expression == 0
+    | .lookup lookup => lookup.table.name == fixed.table.name &&
+      fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+    | .witness .. => true
+    | .interact interaction =>
+      if env interaction.mult == 0 then true
+      else if interaction.channel.name == "SP1Byte" then byteValid (interaction.msg.map env).toList
+      else if interaction.channel.name == "SP1Memory" then memoryValid (interaction.msg.map env).toList
+      else if interaction.channel.name == "SP1Program" then
+        (interaction.msg.map env).toList == [0, 1, 0, 50, 5, 10, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0]
+      else ["SP1State", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call"].contains
+        interaction.channel.name
+  (valid, (FlatOperation.interactions operations).filterMap fun interaction =>
+    if env interaction.mult == 0 then none else
+      some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+
+private def row (code : ℕ) : Inputs Fp :=
+  let instruction : SyscallInstrsChip.Inputs Fp :=
+    { state := ⟨0, 0, 1, #v[0, 1, 0]⟩
+      op_a := 5, op_a_memory := ⟨#v[code, 0, 0, 0], ⟨0, 4⟩⟩, op_a_0 := 0
+      op_b := 10, op_b_memory := ⟨#v[0, 0, 0, 0], ⟨0, 3⟩⟩
+      op_c := 11, op_c_memory := ⟨#v[0, 0, 0, 0], ⟨0, 2⟩⟩
+      next_pc := if code == 0 then #v[1, 0, 0] else #v[4, 1, 0]
+      is_halt := if code == 0 then 1 else 0
+      op_a_value := if code == 3 then #v[0, 0, 0, 0] else #v[code, 0, 0, 0]
+      syscall_id_bytes := ⟨#v[code, 0, 0, 0]⟩
+      is_enter_unconstrained := IsZeroOperation.populate ((code : Fp) - 3)
+      is_hint_len := IsZeroOperation.populate ((code : Fp) - 240)
+      is_halt_zero := IsZeroOperation.populate (code : Fp)
+      is_commit := IsZeroOperation.populate ((code : Fp) - 16)
+      is_commit_deferred := IsZeroOperation.populate ((code : Fp) - 26)
+      digest_index_bits := if code == 16 || code == 26 then #v[1, 0, 0, 0, 0, 0, 0, 0] else 0
+      digest_word := 0, op_b_cmp := ⟨1⟩, op_c_cmp := ⟨1⟩, is_real := 1 }
+  HostCallChip.populate instruction #v[17, 2, 3, 4] 0
+
+/-- Every native code has a satisfying complete instruction-to-host row. -/
+theorem supportedCalls : [0, 2, 3, 16, 26, 27, 240, 241].all
+    (fun code => (evaluate (row code)).1) = true := by native_decide
+
+/-- The extra x12 observation is an unchanged read-back at event time plus one. -/
+theorem writeLedger : ((evaluate (row 2)).2.filter fun item =>
+    item.1 == "sp1.native.host_call" ||
+      (item.1 == "SP1Memory" && item.2.1[2]? == some 12)) =
+    [("SP1Memory", [0, 0, 12, 0, 0, 17, 2, 3, 4], -1),
+     ("SP1Memory", [0, 2, 12, 0, 0, 17, 2, 3, 4], 1),
+     ("sp1.native.host_call", [0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 17, 2, 3, 4], 1)] := by
+  native_decide
+
+/-- Non-WRITE calls have six Memory interactions, one handoff, and zero length. -/
+theorem otherCallLedgers : [0, 3, 16, 26, 27, 240, 241].all (fun code =>
+    let ledger := (evaluate (row code)).2
+    (ledger.filter (fun item => item.1 == "SP1Memory")).length == 6 &&
+    (ledger.filter (fun item => item.1 == "sp1.native.host_call")).map (fun item => item.2.1.drop 18) ==
+      [[0, 0, 0, 0]]) = true := by native_decide
+
+/-- Equal/reversed prior clocks and unbounded length words fail on active WRITE. -/
+theorem rejectedReads :
+    [HostCallChip.populate (row 2).instruction #v[17, 0, 0, 0] 2,
+     HostCallChip.populate (row 2).instruction #v[17, 0, 0, 0] 3,
+     HostCallChip.populate (row 2).instruction #v[65536, 0, 0, 0] 0,
+     HostCallChip.populate (row 2).instruction #v[17, 0, 0, 0] (-1)].all
+      (fun input => !(evaluate input).1) = true ∧
+    (evaluate (row 2) true).1 = false ∧ (evaluate (row 3) true).1 = false := by native_decide
+
+/-- Unused length columns carry no read on another call or on padding. -/
+theorem gatedReads :
+    (evaluate (HostCallChip.populate (row 3).instruction #v[65536, 2, 3, 4] (-1))).1 = true ∧
+    (evaluate { (row 2) with instruction := { (row 2).instruction with is_real := 0 } }).1 = true ∧
+    (evaluate { (row 2) with instruction := { (row 2).instruction with is_real := 0 } }).2 = [] := by
+  native_decide
+
+/-- All four code limbs feed the native profile check, and corrupting the selector fails. -/
+theorem rejectedAliases :
+    [#v[2, 0, 1, 0], #v[2, 0, 0, 1], #v[2, 1, 0, 0], #v[4, 0, 0, 0]].all (fun code =>
+      !(evaluate { (row 2) with instruction := { (row 2).instruction with
+        op_a_memory := ⟨code, ⟨0, 4⟩⟩ } }).1) = true := by native_decide
+
+/-- info: exportable ✓ (8 witness cells) -/
+#guard_msgs in
+#assert_exportable (HostCallChip.circuit (p := SP1Prime))
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (Readers.RegisterRead.circuit (p := SP1Prime))
+
+end SP1CleanTest.Core.HostCall
