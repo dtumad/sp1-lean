@@ -312,3 +312,20 @@ RAM cells, unit multiplicities, invalid sharing/writes/witnesses, and mismatched
 The composed witness program exports 201 cells. The census now probes 1471 main and 163 test
 declarations. Buffer requests in these regressions are fixtures: call-bound span/byte
 authentication, the remaining host handlers, and mixed-machine installation remain open.
+
+The host-byte checkpoint adds sixteen main declarations, all using exactly
+`[propext, Classical.choice, Quot.sound]`. The read provider now exports its proved local word
+and aligned-address bounds through the existing read channel. `HostRamBytes` has closed native
+soundness/completeness, a constructor computing its low-byte columns, and exact ledger proofs:
+one full-key read pull and no physical Memory touch. Its output reaches the Sail-backed host
+byte interface once the corresponding Memory word is grounded. Defined covering words also
+authenticate arbitrary requested slices with explicit complete guest-window bounds. The shared
+byte-extraction lemma moved into `Math/ByteWord`; its existing grounding statement is preserved.
+
+All preceding 1471 main and 163 test axiom sets are unchanged, with no removals or new main-library
+axiom names. Five new compiler-trust constants occur only in `SP1CleanTest.Core.HostRamBytes`.
+Executed regressions check all eight output positions, shared provider/consumer ledgers, malformed
+byte columns and local channel guarantees, changed read keys, unaligned and empty reads, missing
+bytes, and a span crossing the upper guest boundary. The decoder exports zero witness-program
+cells. The census now probes 1487 main and 168 test declarations. Call-bound complete buffer
+coverage, the four remaining host handlers, and mixed-machine integration remain open.
