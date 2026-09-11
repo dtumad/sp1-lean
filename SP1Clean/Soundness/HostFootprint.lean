@@ -2,6 +2,7 @@ import SP1Clean.Model.Core.HostFootprint
 import SP1Clean.Model.Core.HostSail
 import SP1Clean.Math.ByteWord
 import SP1Clean.Soundness.Grounding.MemoryCell
+import SP1Clean.Proofs.Operations.HostRamBytes
 
 /-! # Host execution from authenticated Memory-bus words
 
@@ -61,6 +62,28 @@ def HostWordAgreement (footprint : HostFootprint) (left right : SailState) : Pro
     ∀ index ∈ footprint.ramCells, ∃ word,
       locContent left (.ram (BitVec.ofNat 61 index)) = some word ∧
       locContent right (.ram (BitVec.ofNat 61 index)) = some word
+
+/-- A decoded host read reaches the Sail-backed host byte interface after its exact Memory
+word has been grounded. Canonical address bounds and alignment come from the circuit contract. -/
+theorem hostRamBytes_read_of_word {p : ℕ} [Fact p.Prime]
+    {input : HostRamBytes.Inputs (ZMod p)} {output : Vector (ZMod p) 8}
+    (checked : HostRamBytes.Spec input output) (source : SailState)
+    (observed : locContent source
+      (.ram (BitVec.ofNat 61 (Word.toNat input.read.address / 8))) =
+        some (Word.toBitVec64 input.read.value)) :
+    (HostReadContext.ofSail source).readBytes? (Word.toNat input.read.address) 8 =
+      some (output.map fun byte => BitVec.ofNat 8 byte.val).toList := by
+  apply checked.readBytes
+  intro index
+  have read := byte_of_ramWord64?_eq_some observed index
+  have address : (RamCell.baseAddr (BitVec.ofNat 61 (Word.toNat input.read.address / 8))).toNat =
+      Word.toNat input.read.address := by
+    have bounded := checked.1.2.2.1
+    have aligned := checked.1.2.2.2.1
+    rw [RamCell.baseAddr_toNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    omega
+  rw [address] at read
+  fin_cases index <;> exact read
 
 /-- Defined aligned words authenticate every covered byte, including byte slices spanning cells. -/
 theorem hostReadContext_agrees_of_words {footprint : HostFootprint} {left right : SailState}

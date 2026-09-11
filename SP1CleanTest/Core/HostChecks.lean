@@ -5,7 +5,7 @@ import ToClean.Air.EnsembleExport
 /-! # Executing native host-circuit regressions
 
 Evaluate complete witness programs, local assertions, and the fixed syscall lookup. Byte and
-Memory guarantees are checked directly; Program messages must be the fixture's canonical ECALL
+Memory and host-read guarantees are checked directly; Program messages must be the fixture's canonical ECALL
 at address `2^16`. Structural-channel messages are retained for each test's ledger assertions.
 These fixture checks do not assert whole-machine balance or authentic boot-memory contents.
 -/
@@ -50,9 +50,16 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
         | _ => false
       else if interaction.channel.name == "SP1Program" then
         (interaction.msg.map env).toList == [0, 1, 0, 50, 5, 10, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0]
+      else if interaction.channel.name == "sp1.native.host_ram_read" then
+        match (interaction.msg.map env).toList with
+        | [_, _, addr0, addr1, addr2, a, b, c, d] =>
+          let address := addr0.val + addr1.val * 65536 + addr2.val * 65536 ^ 2
+          [addr0, addr1, addr2, a, b, c, d].all (fun limb => limb.val < 65536) &&
+            65536 ≤ address && address < 2 ^ 48 && address % 8 == 0
+        | _ => false
       else ["SP1State", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
-        "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access",
-        "sp1.native.host_ram_read"].contains interaction.channel.name
+        "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access"].contains
+          interaction.channel.name
   (valid, (FlatOperation.interactions operations).filterMap fun interaction =>
     if env interaction.mult == 0 then none else
       some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))

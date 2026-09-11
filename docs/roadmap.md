@@ -217,8 +217,22 @@ Implemented foundations:
   requires that the supplied history is indexed by its actual cell, which is explicit in the
   theorem. Executed regressions balance compiled rows against both buffer inventories and reject
   wrong sharing, words, clocks, missing rows, writes and corrupted witnesses. The 201-cell witness
-  program is exportable. Call-bound buffer coverage, byte extraction, and installation in the
+  program is exportable. Call-bound buffer coverage and installation in the
   mixed Memory ledger remain open; these fixture requests are not authenticated host calls.
+
+- `HostRamBytes` now consumes a shared read and returns its eight canonical little-endian bytes
+  through a sound/complete native Clean circuit. It reuses the safe limb decoder and adds zero
+  witness-program cells or physical Memory accesses. The read channel carries only locally proved
+  canonical word/address bounds; global currency remains a Memory-grounding conclusion.
+  The exact decoder ledger preserves the full clock/address/value key, and its semantic bridge
+  reaches the Sail-backed host read interface once that Memory word is grounded. The reusable
+  `HostReadContext.readGuest_of_cells` theorem authenticates arbitrary byte slices from defined
+  covering words and complete guest-window bounds, including empty and unaligned reads.
+  Executed regressions check output order, joint shared-read ledgers, malformed byte columns and
+  channel guarantees, wrong full-message keys, and missing bytes or out-of-window span tails.
+  The next buffer tables must still constrain complete coverage and bind the query and payload
+  to the decoded call, starting with VERIFY_SP1_PROOF's two 32-byte buffers. No call-bound buffer
+  circuit or whole-machine host-read theorem is claimed by this checkpoint.
 
 - `HostCallChip` composes the full-code-checked instruction with an internally computed WRITE
   selector, x12 read-back at event time plus one, and one gated host-call message carrying all

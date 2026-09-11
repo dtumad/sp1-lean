@@ -19,8 +19,9 @@ def ProverAssumptions (input : Inputs (ZMod p)) : Prop :=
 theorem soundness : GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) main
     (fun _ _ => True) (fun input _ _ => Spec input) := by
   circuit_proof_start [HostRamAccessChip.circuit, Gadgets.Equality.circuit,
-    HostRamAccessChip.channel, channel]
-  exact h_holds
+    HostRamAccessChip.channel, channel, Inputs.message, HostRamAccessChip.Inputs.clockLow]
+  have valid := Spec.message (input := ⟨_, _⟩) h_holds
+  exact ⟨h_holds, fun _ _ => valid, fun _ _ => valid⟩
 
 theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) main
     (fun input _ _ => ProverAssumptions input) (fun _ _ _ => True) := by

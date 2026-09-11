@@ -707,3 +707,7 @@ import SP1Clean.Native.Chips.HostRamReadChip.Defs
 import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
 import SP1Clean.Proofs.Chips.HostRamReadChip.Ledger
 import SP1Clean.Proofs.Chips.HostRamReadChip.Populate
+import SP1Clean.Model.Core.HostReadWords
+import SP1Clean.FormalModel.Contracts.HostRamBytes
+import SP1Clean.Native.Operations.HostRamBytes
+import SP1Clean.Proofs.Operations.HostRamBytes

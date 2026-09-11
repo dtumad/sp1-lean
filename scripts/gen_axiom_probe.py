@@ -40,6 +40,28 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Canonical host-read bytes, exact decoder ledger, and defined-word slice semantics.
+    ("SP1Clean/Math/ByteWord.lean", "bytesValue_extract"),
+    ("SP1Clean/Math/ByteWord.lean", "toBitVec64_ofByteFields"),
+    ("SP1Clean/Model/Core/HostReadWords.lean", "readBytes_of_word"),
+    ("SP1Clean/Model/Core/HostReadWords.lean", "readBytes_of_cells"),
+    ("SP1Clean/Model/Core/HostReadWords.lean", "readGuest_of_cells"),
+    ("SP1Clean/FormalModel/Contracts/HostRamRead.lean", "Spec.message"),
+    ("SP1Clean/Native/Operations/HostRamBytes.lean", "populate"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "soundness"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "completeness"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "circuit"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "populate_assumptions"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "Spec.readBytes"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "main_read_interactions"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "main_memory_interactions"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "read_values"),
+    ("SP1Clean/Soundness/HostFootprint.lean", "hostRamBytes_read_of_word"),
+    ("SP1CleanTest/Core/HostRamBytes.lean", "decodesBytes"),
+    ("SP1CleanTest/Core/HostRamBytes.lean", "sharedDecoderLedger"),
+    ("SP1CleanTest/Core/HostRamBytes.lean", "rejectsMalformed"),
+    ("SP1CleanTest/Core/HostRamBytes.lean", "rejectsWrongReadKey"),
+    ("SP1CleanTest/Core/HostRamBytes.lean", "spanReads"),
     # Shared physical host reads and exact two-buffer multiplicities.
     ("SP1Clean/Model/Core/HostReadPlan.lean", "physical_cells"),
     ("SP1Clean/Model/Core/HostReadPlan.lean", "physical_nodup"),

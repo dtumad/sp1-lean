@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.GroundingAdapter
+import SP1Clean.Math.ByteWord
 
 /-! # Aligned RAM-cell updates
 
@@ -245,38 +246,8 @@ theorem cellBytesToWord_wordBytes (word : BitVec 64) :
 
 /-- Byte `i` occupies bits `[8*i, 8*i+8)` of the assembled cell. -/
 theorem extractLsb_cellBytesToWord (bytes : Vector (BitVec 8) 8) (i : Fin 8) :
-    (cellBytesToWord bytes).extractLsb' (8 * i.val) 8 = bytes[i] := by
-  fin_cases i <;> simp only [cellBytesToWord]
-  · rw [BitVec.extractLsb'_append_eq_right]
-    simp
-  · rw [BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_right]
-    simp
-  · rw [BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_right]
-    simp
-  · rw [BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_right]
-    simp
-  · rw [BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_right]
-    simp
-  · rw [BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_right]
-    simp
-  · rw [BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_right]
-    simp
-  · rw [BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega),
-      BitVec.extractLsb'_append_eq_of_le (by omega), BitVec.extractLsb'_append_eq_of_le (by omega)]
-    simp
+    (cellBytesToWord bytes).extractLsb' (8 * i.val) 8 = bytes[i] :=
+  Word.bytesValue_extract bytes i
 
 /-- Little-endian byte assembly loses no information. -/
 theorem cellBytesToWord_injective : Function.Injective cellBytesToWord := by

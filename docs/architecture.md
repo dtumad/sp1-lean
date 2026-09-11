@@ -294,8 +294,15 @@ for it. `HostReadPlan` computes a unique physical cell list for two spans and pr
 expanded read multiplicities equal the two requested inventories. This handles overlapping
 VERIFY_SP1_PROOF buffers without duplicate simultaneous Memory accesses. Physical address
 uniqueness for compiled rows explicitly requires a correctly indexed prior-record history.
-The provider does not select or authenticate buffer boundaries or extract their bytes; those
-facts belong to the remaining call tables and mixed-machine integration.
+The read channel exposes the provider's local canonical aligned address and word bounds; it
+does not assert the word's currency in an execution. `HostRamBytes` consumes that exact key and
+composes the safe limb decoder to return the eight canonical little-endian bytes. Its soundness,
+constructive completeness, zero-cell witness export, and exact read/Memory ledgers are proved.
+`hostRamBytes_read_of_word` connects the output to the Sail-backed host byte interface once
+Memory grounding supplies the defined word. `HostReadContext.readGuest_of_cells` lifts defined
+word observations to an arbitrary requested slice with explicit complete-window bounds.
+Selecting and authenticating complete buffer boundaries against host calls, and installing
+these reads in the mixed machine, remain open.
 
 `HostCallChip` supplies the instruction-facing handoff. It composes `CoreSyscallChip`, Clean's
 full-word equality gadget, and the shared `RegisterRead` circuit. WRITE reads x12 at event time
