@@ -279,6 +279,15 @@ authenticate these observations and written words and retain their accesses in t
 The semantic footprint is a minimal native cover, with the zero-length WRITE distinction from
 Rust recorded in the roadmap.
 
+`HostRamAccessChip` now supplies the local Clean RAM transfer component. The existing address
+and Memory readers establish canonical aligned RAM and the old/new word pair; local clock
+checks establish strict bounded time order and the effect at event time plus one. Its semantic
+constructor computes the timestamp comparison columns. The actual ledger contains precisely
+that Memory pair and a host coordination record with the event clock, address, and both words.
+The component has an exportable witness program. It remains outside the mixed ensemble until
+the call tables bind these records to the full footprint and host effects; WRITE's x12 access
+and host-state threading also remain open.
+
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.
 

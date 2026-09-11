@@ -41,6 +41,19 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
     # Generic native-ensemble interfaces and executable input/host boundaries.
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Formal.lean", "soundness"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Formal.lean", "completeness"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Formal.lean", "circuit"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Ledger.lean", "main_memory_interactions"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Ledger.lean", "main_host_interactions"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Ledger.lean", "memory_values"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Ledger.lean", "host_values"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Populate.lean", "populate"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Populate.lean", "populate_assumptions"),
+    ("SP1CleanTest/Core/HostRamAccess.lean", "validTransfers"),
+    ("SP1CleanTest/Core/HostRamAccess.lean", "rejectsMalformedWords"),
+    ("SP1CleanTest/Core/HostRamAccess.lean", "rejectsMalformedTimes"),
+    ("SP1CleanTest/Core/HostRamAccess.lean", "retainedLedgers"),
     ("ToClean/Air/CompleteEnsemble.lean", "CompleteEnsemble.statement_iff"),
     ("ToClean/Air/CompleteEnsemble.lean", "EnsembleCompiler.succeeds_iff"),
     ("ToClean/Air/CompleteEnsemble.lean", "EnsembleCompiler.toCompleteEnsemble"),

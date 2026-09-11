@@ -569,6 +569,11 @@ import SP1Clean.FormalModel.Contracts.CoreSyscall
 import SP1Clean.Native.Chips.CoreSyscallChip.Defs
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
+import SP1Clean.FormalModel.Contracts.HostRamAccess
+import SP1Clean.Native.Chips.HostRamAccessChip.Defs
+import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
+import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
+import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
 import SP1Clean.Native.Chips.StateBumpChip.Defs
 import SP1Clean.Native.Chips.MemoryBumpChip.Defs
 import SP1Clean.Native.Chips.HaltChip.Defs

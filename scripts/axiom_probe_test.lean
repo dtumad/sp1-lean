@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HostRamAccess
 import SP1CleanTest.Core.HostExecution
 import SP1CleanTest.Core.HostFootprint
 import SP1CleanTest.Core.SyscallCode
@@ -21,6 +22,10 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostRamAccess.validTransfers
+#print axioms SP1CleanTest.Core.HostRamAccess.rejectsMalformedWords
+#print axioms SP1CleanTest.Core.HostRamAccess.rejectsMalformedTimes
+#print axioms SP1CleanTest.Core.HostRamAccess.retainedLedgers
 #print axioms SP1CleanTest.Core.HostExecution.allCalls
 #print axioms SP1CleanTest.Core.HostExecution.observedWrite
 #print axioms SP1CleanTest.Core.HostExecution.descriptorDispatch

@@ -195,8 +195,17 @@ Implemented foundations:
   cells, and identifies each fully written post-state word with its little-endian host bytes.
   Regressions cover overlap, unaligned and empty reads, padding words, observed-byte changes,
   and the counterexample showing that equal failed word reads do not authenticate their bytes.
-  These close local semantic bridges for the host access tables; their AIR construction,
-  timestamps, and inclusion in the physical mixed ledger remain open.
+  These close local semantic bridges for the host access tables.
+- `HostRamAccessChip` is a sound and complete native Clean component for one aligned RAM word
+  transfer. It composes the existing address and Memory gadgets, checks both high clocks locally,
+  and proves strict prior/new time order and an effect at event time plus one. Its constructor
+  derives the timestamp selector and gap columns from bounded, strictly ordered records. Exact
+  ledger theorems retain the prior/new Memory pair and a coordination record containing the event
+  clock, address, and both words. Its witness program is exportable. Regressions cover both clock
+  branches, the final RAM cell, and malformed addresses, values, and clocks, including field
+  underflow aliases. This component is not yet registered in the mixed ensemble. WRITE's x12
+  access, the call tables that select the complete footprint and authorize values, and their
+  inclusion in the physical mixed ledger remain open.
 
 Host integration must account for these source-backed details in v6.4.0:
 

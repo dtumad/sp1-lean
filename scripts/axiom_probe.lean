@@ -28,6 +28,9 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.HaltChip.soundness
 #print axioms SP1Clean.HaltChip.completeness
 #print axioms SP1Clean.HaltChip.circuit
+#print axioms SP1Clean.HostRamAccessChip.soundness
+#print axioms SP1Clean.HostRamAccessChip.completeness
+#print axioms SP1Clean.HostRamAccessChip.circuit
 #print axioms SP1Clean.JalChip.soundness
 #print axioms SP1Clean.JalChip.completeness
 #print axioms SP1Clean.JalChip.circuit
@@ -420,6 +423,12 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Composition.extracted_instructionTables_constraints
 #print axioms SP1Clean.Composition.signedSum_eq_sent_sub_received
 #print axioms SP1Clean.Composition.signedSum_eq_zero
+#print axioms SP1Clean.HostRamAccessChip.main_memory_interactions
+#print axioms SP1Clean.HostRamAccessChip.main_host_interactions
+#print axioms SP1Clean.HostRamAccessChip.memory_values
+#print axioms SP1Clean.HostRamAccessChip.host_values
+#print axioms SP1Clean.HostRamAccessChip.populate
+#print axioms SP1Clean.HostRamAccessChip.populate_assumptions
 #print axioms Air.Flat.CompleteEnsemble.statement_iff
 #print axioms Air.Flat.EnsembleCompiler.succeeds_iff
 #print axioms Air.Flat.EnsembleCompiler.toCompleteEnsemble
