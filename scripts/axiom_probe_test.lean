@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.SyscallCode
 import SP1CleanTest.Core.InstructionDecode
 import SP1CleanTest.Core.ProgramImage
 import SP1CleanTest.Core.InitialMemoryLookup
@@ -18,6 +19,11 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.SyscallCode.exportedInventory
+#print axioms SP1CleanTest.Core.SyscallCode.supportedCodes
+#print axioms SP1CleanTest.Core.SyscallCode.rejectedCodes
+#print axioms SP1CleanTest.Core.SyscallCode.padding
+#print axioms SP1CleanTest.Core.SyscallCode.chipProfileWiring
 #print axioms SP1CleanTest.Core.InstructionDecode.opcodeCoverage
 #print axioms SP1CleanTest.Core.InstructionDecode.literalEncodings
 #print axioms SP1CleanTest.Core.InstructionDecode.operandEdges

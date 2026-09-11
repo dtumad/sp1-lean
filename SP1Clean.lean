@@ -351,6 +351,8 @@ import SP1Clean.Model.Core.MemoryIntervals
 import SP1Clean.Model.Core.MemoryTable
 import SP1Clean.Model.Core.MemoryWord
 import SP1Clean.Model.Core.HostIO
+import SP1Clean.Model.Core.SyscallCode
+import SP1Clean.Model.Core.SyscallTable
 import SP1Clean.Model.Core.InstructionDecode
 import SP1Clean.Model.Core.ProgramTable
 import SP1Clean.Model.Core.ProgramImage
@@ -383,6 +385,7 @@ import SP1Clean.Model.Semantics.TransitionView
 import SP1Clean.Model.Semantics.Truth
 import SP1Clean.Model.Semantics.Decode
 import SP1Clean.Math.Word
+import SP1Clean.Math.WordEquality
 import SP1Clean.Proofs.Operations.AddOperation.Formal
 import SP1Clean.Native.Operations.InitialMemoryLookup
 import SP1Clean.Native.Operations.InitialMemoryRead
@@ -448,6 +451,7 @@ import SP1Clean.Native.Operations.U16MSBOperation.RawSpec
 import SP1Clean.Native.Operations.U16toU8OperationSafe
 import SP1Clean.Native.Operations.U16toU8OperationUnsafe
 import SP1Clean.Native.Operations.WordRangeCheck
+import SP1Clean.Native.Operations.SyscallCodeGuard
 import SP1Clean.Native.Readers.ALUTypeReader
 import SP1Clean.Native.Readers.ALUTypeReaderImmutable
 import SP1Clean.Native.Readers.CPUState
@@ -556,6 +560,10 @@ import SP1Clean.Proofs.Chips.MemoryProviderEnsemble
 import SP1Clean.Proofs.Chips.MemoryFinalizeChip
 import SP1Clean.FormalModel.Contracts.SystemChips
 import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
+import SP1Clean.FormalModel.Contracts.CoreSyscall
+import SP1Clean.Native.Chips.CoreSyscallChip.Defs
+import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
+import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
 import SP1Clean.Native.Chips.StateBumpChip.Defs
 import SP1Clean.Native.Chips.MemoryBumpChip.Defs
 import SP1Clean.Native.Chips.HaltChip.Defs

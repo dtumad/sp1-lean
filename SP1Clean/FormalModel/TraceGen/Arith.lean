@@ -1,5 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.Native.Operations.AddOperation.Populate
+import SP1Clean.Math.WordEquality
 
 /-! # Trace generation — the `AddOperation` witness at built words
 
@@ -42,17 +43,8 @@ omit [Fact (2 ^ 24 < p)] in
 /-- **`Word.toNat` is injective on u64 words.** Each limb is a `< 2 ^ 16` residue, so the base-2^16
 sum determines them, and `ZMod.val` is injective. -/
 lemma word_eq_of_toNat_eq {w v : Word (ZMod p)} (hw : Word.isU64 w) (hv : Word.isU64 v)
-    (h : Word.toNat w = Word.toNat v) : w = v := by
-  obtain ⟨h0, h1, h2, h3⟩ := Word.lt_cases_of_isU64 hw
-  obtain ⟨g0, g1, g2, g3⟩ := Word.lt_cases_of_isU64 hv
-  rw [Word.toNat_def, Word.toNat_def] at h
-  have hinj : ∀ x y : ZMod p, x.val = y.val → x = y := fun x y hxy => ZMod.val_injective _ hxy
-  refine Vector.ext (fun i hi => ?_)
-  interval_cases i
-  · exact hinj _ _ (by omega)
-  · exact hinj _ _ (by omega)
-  · exact hinj _ _ (by omega)
-  · exact hinj _ _ (by omega)
+    (h : Word.toNat w = Word.toNat v) : w = v :=
+  Word.eq_of_toNat_eq hw hv h
 
 /-- **The `AddOperation` witness at two built words is the built word of the sum.** SP1's limb-wise
 64-bit addition, run on the committed forms of two naturals, commits the natural sum truncated to

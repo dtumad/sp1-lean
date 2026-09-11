@@ -1,6 +1,7 @@
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
 import SP1Clean.Proofs.Operations.MulOperation.Formal
+import SP1Clean.Math.WordEquality
 
 /-! # `DivRemChip` populate value bundles — the `c_times_quotient` ↔ `MulOperation` glue
 
@@ -21,15 +22,8 @@ local instance : NeZero p := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 set_option linter.unusedSectionVars false in
 /-- Two `isU64` words with the same 64-bit value are equal (per-limb base-2^16 uniqueness). -/
 lemma word_eq_of_toBitVec64_eq {w w' : Word (ZMod p)} (hw : Word.isU64 w) (hw' : Word.isU64 w')
-    (h : Word.toBitVec64 w = Word.toBitVec64 w') : w = w' := by
-  obtain ⟨h0, h1, h2, h3⟩ := Word.lt_cases_of_isU64 hw
-  obtain ⟨g0, g1, g2, g3⟩ := Word.lt_cases_of_isU64 hw'
-  have hn : Word.toNat w = Word.toNat w' := by
-    have := congrArg BitVec.toNat h
-    rwa [Word.toBitVec64_toNat hw, Word.toBitVec64_toNat hw'] at this
-  rw [Word.toNat_def, Word.toNat_def] at hn
-  apply Vector.ext; intro i hi
-  interval_cases i <;> exact ZMod.val_injective _ (by omega)
+    (h : Word.toBitVec64 w = Word.toBitVec64 w') : w = w' :=
+  Word.eq_of_toBitVec64_eq hw hw' h
 
 /-- `wordOfBits` round-trips through `toBitVec64`. -/
 lemma wordOfBits_toBitVec64 (x : BitVec 64) : Word.toBitVec64 (wordOfBits (p := p) x) = x := by

@@ -240,8 +240,19 @@ normalization handled separately. `NativeCoreSyscallSemantics` derives a semanti
 every active syscall after grounding, recovering its committed ECALL, source registers, target
 PC/return value, and exact position on the constructed trajectory. This bridge consumes the host
 step fact; it does not derive the selected full-code profile or host effects. In particular, the
-existing three-register footprint cannot certify host RAM writes such as `HINT_READ`. Host tables
-and their Memory footprint must supply those before the unconditional capstone can close.
+existing three-register footprint cannot certify host RAM writes such as `HINT_READ` or WRITE's
+x12 length and guest-buffer reads. Host tables and their Memory footprint must supply those before
+the unconditional capstone can close.
+
+`CoreSyscallChip` separately composes the original instruction circuit with `SyscallCodeGuard`,
+a boolean-gated fixed lookup over all four limbs of the prior x5 value. Its sound/complete contract
+includes the eight-code semantic profile; `constraints_profile` authenticates it from raw
+constraints without any Memory guarantee. The lookup has eight concrete rows and a canonical
+`FiniteLookup.ofStatic` export realization. It adds no witness columns or interactions and does
+not alter the original Rust-faithfulness claim. The 59-table assembly still uses the original
+syscall component; integrating the strengthened chip belongs with the remaining host work.
+The [roadmap](roadmap.md#native-clean-core) records the pinned executor's extra WRITE reads and
+zero-clock, untraced hint writes that this integration must address explicitly.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

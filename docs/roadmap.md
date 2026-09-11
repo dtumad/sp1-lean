@@ -18,8 +18,10 @@ The selected guest-runtime profile contains eight canonical full-register syscal
 HALT (0), WRITE (2), ENTER_UNCONSTRAINED (3, constrained return zero), COMMIT (16),
 COMMIT_DEFERRED_PROOFS (26), VERIFY_SP1_PROOF (27, recording a request), HINT_LEN (240), and
 HINT_READ (241). EXIT_UNCONSTRAINED, memory-protection flushing, ELF dumping, and profiler calls
-are outside this native profile. This selection specifies the host environment still to be
-constrained; the existing syscall instruction table alone does not enforce it.
+are outside this native profile. `CoreSyscallChip` composes the instruction circuit with a
+sound/complete fixed lookup enforcing all four code limbs. The existing 59-table assembly still
+uses the original instruction circuit; integrating the strengthened chip and constraining the
+selected host effects remain open.
 
 Implemented foundations:
 
@@ -165,6 +167,29 @@ Implemented foundations:
   internally. This is a post-grounding bridge: host step/frame facts remain open, as do the eight
   full-code restrictions and host RAM effects. The instruction row's three register touches cannot
   account for `HINT_READ` writes; those need host tables and a corresponding grounding footprint.
+- `Model/Core/SyscallCode.lean` defines the eight-call full-word profile and its proved parser.
+  `SyscallCodeGuard` enforces membership through a concrete fixed table, with a boolean active
+  gate and unrestricted padding codes. `CoreSyscallChip` composes this guard with the original
+  instruction chip, retaining its complete contract and adding no witness columns or channel
+  interactions. `constraints_profile` derives the restriction directly from raw constraints,
+  before Memory grounding. Regressions evaluate the actual assertions and finite lookup, reject
+  upper-word aliases and nonboolean gates, and check the whole-chip lookup wiring and exportability.
+  The original Rust-faithfulness anchor is unchanged. This is a component result; the strengthened
+  chip has not yet replaced the original syscall component in the 59-table assembly.
+
+Host integration must account for two source-backed details in the v6.4.0 executor:
+
+- `WRITE` takes its descriptor and pointer from x10/x11, but reads the byte count from **x12** and
+  the output bytes from RAM (`crates/core/executor/src/minimal/write.rs`). The instruction row's
+  x5/x10/x11 footprint cannot authenticate either extra input. Host tables must bind the x12
+  read and the addressed buffer, including unaligned byte slices; supplying an arbitrary byte
+  transcript or treating x11 as the length would change the semantics.
+- `HINT_READ` writes a final padded eight-byte word even for zero or eight-byte-aligned lengths
+  (`minimal/hint.rs`). The existing `HostIO` model preserves that footprint. The executor's
+  `ContextMemory::mw_hint` writes without tracing and resets the cell's clock to zero
+  (`crates/core/jit/src/context.rs`). Native authenticated host writes need an explicit timeline
+  and ROM-protection argument; they cannot be admitted as additional authenticated boot records.
+  Correspondence with those exact Rust timestamp conventions remains separate refinement work.
 
 Still required before the native capstone can be claimed:
 
@@ -180,13 +205,15 @@ Still required before the native capstone can be claimed:
    The mixed trajectory, its ordinary successor equations, and HALT step/frame facts are now
    constructed internally. Active syscall row laws and their post-grounding `EventStep` bridge
    are closed, without a caller-supplied no-carry premise. Constrain ROM preservation and derive
-   active syscall step/frame facts from the host environment and its AIR tables, including RAM
-   writes. Final-value currency follows under these two remaining
-   semantic premises; terminal ECALL/Exit agreement and execution reconstruction remain open.
+   active syscall step/frame facts from the host environment and its AIR tables, including WRITE's
+   x12/buffer reads and HINT_READ's padded RAM writes. Final-value currency follows under these
+   two remaining semantic premises; terminal ECALL/Exit agreement and execution reconstruction remain open.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
 2. Complete the host execution environment, including commitments, control and terminal behavior;
-   integrate host effects and ordinary ROM-write exclusion into the AIR and mixed timed grounding.
+   integrate the full-code-checked syscall chip, host effects, and ordinary ROM-write exclusion into
+   the AIR and mixed timed grounding. Extending the Memory footprint must preserve host accesses
+   in the balanced ledger rather than projecting back to the instruction-only footprint.
 3. Prove the event compiler total on shared semantic resource bounds; construct all native tables
    and close soundness and completeness for the same boot-to-HALT domain.
 4. Export event routing and provider-assembly recipes and instantiate the generic exporter for the
