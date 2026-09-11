@@ -691,3 +691,13 @@ import SP1Clean.FormalModel.Contracts.HostCommitBoundary
 import SP1Clean.Native.Operations.HostCommitBoundary
 import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Soundness.HostCommitEnsemble
+import SP1Clean.FormalModel.Contracts.HostControl
+import SP1Clean.Native.Chips.HostHaltChip.Defs
+import SP1Clean.Native.Chips.HostEnterChip.Defs
+import SP1Clean.Proofs.Chips.HostHaltChip.Formal
+import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
+import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
+import SP1Clean.Proofs.Chips.HostControlLedger
+import SP1Clean.Proofs.Chips.HostControlPopulate
+import SP1Clean.Proofs.Chips.HostControlCompatibility

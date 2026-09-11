@@ -246,6 +246,21 @@ Implemented foundations:
   still need coordination there. In particular, with no auxiliary call sources this subsystem
   admits only empty call histories; no active-call non-vacuity claim is made for that configuration.
 
+- `HostHaltChip` and `HostEnterChip` now constrain HALT and constrained-replay ENTER. Their complete
+  dispatch bridges take matched x5/x10/x11 observations and an unstopped host, and prove the return
+  value and absence of RAM writes; HALT records the exit and prevents further dispatch.
+  The handlers consume HostCall records without adding another Exit or Memory contribution.
+  `HostControlPopulate` constructs both rows from successful interpreter results and derives all
+  local completeness assumptions. The faithful instruction's KoalaBear exit bound and the
+  handler's canonical range are proved equivalent at `SP1Prime` in `HostControlCompatibility`;
+  a generic handler proof is not an arbitrary-field whole-core completeness claim. Regressions
+  cover exits through `SP1Prime - 1`, unrestricted unused arguments, forged handoffs, corrupted
+  witnesses, full interpreter effects, and constructor clocks crossing 24-bit limb boundaries.
+  Witness export uses 64 cells for HALT and zero for ENTER. Installation in the mixed machine
+  remains open, together with the four remaining handlers: WRITE, HINT_LEN, HINT_READ, and
+  VERIFY_SP1_PROOF. The host-row tests establish local checks and joint handoff balance, not a
+  complete boot-to-HALT witness.
+
 Host integration must account for these source-backed details in v6.4.0:
 
 - `WRITE` takes its descriptor and pointer from x10/x11, but reads the byte count from **x12** and

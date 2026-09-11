@@ -321,6 +321,19 @@ HostCall inputs still require actual instruction sources. An instance without su
 only have an empty call history. Regressions distinguish complete empty-ledger satisfiability
 from the bank-channel and local-check tests of active histories.
 
+`HostHaltChip` and `HostEnterChip` consume the full control-call handoff. HALT checks a canonical
+exit below the host policy's field characteristic and `2^32`; ENTER returns zero and preserves
+the host state. Both full-dispatch bridges use observed x5/x10/x11 and an unstopped host, and both
+effects have no RAM write. HALT then prevents further host dispatch. Their physical ledgers have
+no Memory or Exit interactions, so the instruction retains those contributions. Local contracts
+follow from raw constraints and HALT's Byte guarantees. `HostControlPopulate` constructs handler
+rows directly from successful interpreter results and derives their completeness assumptions.
+The instruction's structural exit limit is specifically KoalaBear; `HostControlCompatibility`
+proves it equals the native handler's full range at `SP1Prime`. This does not imply whole-core
+completeness for arbitrary field characteristics. These control handlers and the mutable banks
+still need installation and ordering in the mixed machine; the four remaining handlers are
+WRITE, HINT_LEN, HINT_READ, and VERIFY_SP1_PROOF.
+
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.
 

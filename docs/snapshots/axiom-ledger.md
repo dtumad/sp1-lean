@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-11. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1425 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 151 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1452 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 158 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1576 released declarations are probed.
+- 1610 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -279,6 +279,6 @@ are unchanged, with no removals or new main-library axiom names. Five new compil
 occur only in `SP1CleanTest.Core.HostCommitBoundary`. Empty-bank regressions check the complete
 emitted ledger; active histories check local assertions, Byte meanings, and bank balance, without
 claiming full-machine call authentication. The terminal and verifier witness programs export
-48 and zero cells respectively. The census now probes 1425 main and 151 test declarations.
+48 and zero cells respectively. That checkpoint audited 1425 main and 151 test declarations.
 Installation in the mixed machine, authentication of calls, and coordination with its other host
 effects remain open; this checkpoint does not establish a new RISC-V execution theorem.
