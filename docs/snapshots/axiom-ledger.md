@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-11. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1384 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 140 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1406 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 146 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1524 released declarations are probed.
+- 1552 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -247,7 +247,7 @@ register reader and handoff have soundness/completeness proofs and timestamp con
 the composed witness program exports eight cells. The shared timestamp arithmetic replaces
 existing proof bodies without changing any of the 1365 preceding main or 134 preceding test
 axiom sets. Six new compiler-trust constants occur only in `SP1CleanTest.Core.HostCall`.
-The audit now probes 1384 main and 140 test declarations, with no removals or new main-library
+That checkpoint audited 1384 main and 140 test declarations, with no removals or new main-library
 axiom names. This is a local component result: the x12 touch and handoff are not yet installed
 in the mixed ensemble, and RAM footprint authorization, host effects and host-state threading
 remain open. The original PublicValues pulls are preserved; compatibility with mutable

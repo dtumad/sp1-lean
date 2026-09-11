@@ -263,9 +263,9 @@ actual Sail observations and proves the resulting ECALL row law, endpoint agreem
 readback/frame, register frame, and ROM preservation. The concrete handler is indexed by the
 incoming host state. Machine integration must thread the returned state between calls and add
 AIR-authenticated host accesses to the grounding footprint; the existing mixed trajectory does
-neither yet. Mutable commitment updates also need separate treatment of the instruction circuit's
-fixed PublicValues pulls: the exact AIR binds every commit in a shard to one public digest, so
-distinct overwrites are a disclosed exact-completeness obstacle. Proof requests record observed digests;
+neither yet. Mutable commitment updates use the native historical providers described below. The
+exact AIR still binds every commit in a shard to one public digest, so distinct overwrites are a
+disclosed exact-completeness obstacle. Proof requests record observed digests;
 they do not assert recursive proof verification.
 
 The host's byte observations now have a computed aligned-cell interface.
@@ -295,6 +295,19 @@ Raw constraints determine selection, and the ledger preserves all original instr
 interactions, including PublicValues. Soundness/completeness, timestamp construction and
 exportability are proved locally. Installation in the mixed carrier, matching calls to RAM
 footprints, host effects, and host-state threading remain open.
+
+`HostCommitChip` now constrains the two mutable commitment banks. Each slot component checks the
+full call and return, a canonical 32-bit value (also below the field characteristic for deferred
+commitments), strict clock order, and exactly one bank-slot replacement. Its PublicValues pushes
+supply each call's historical value; the original instruction pulls are preserved. This native
+provider interpretation permits overwrites without claiming the exact AIR's fixed public-digest
+binding. The state channels contain only clock/word tuples and have no semantic guarantees.
+`HostCommitHistory.ordered_history` reads the eight physical slot tables of a bank and derives
+an exhaustive ordered host-interpreter fold from their local specs and actual endpoint balance.
+The count bound is retained. Initial/final records are explicit premises: the mixed ensemble must
+still authenticate zero genesis and public final banks, discharge local specs, and balance calls.
+Both local circuit directions, witness construction, and the host-effect bridge are closed;
+regressions check actual instruction/provider ledgers and distinct repeated writes.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

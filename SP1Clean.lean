@@ -676,3 +676,14 @@ import SP1Clean.Native.Chips.HostCallChip.Defs
 import SP1Clean.Proofs.Chips.HostCallChip.Formal
 import SP1Clean.Proofs.Chips.HostCallChip.Ledger
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
+import SP1Clean.FormalModel.Contracts.ClockOrder
+import SP1Clean.FormalModel.Contracts.BoundedWord
+import SP1Clean.FormalModel.Contracts.HostCommit
+import SP1Clean.Native.Operations.ClockOrder
+import SP1Clean.Native.Operations.BoundedWord
+import SP1Clean.Native.Chips.HostCommitChip.Defs
+import SP1Clean.Proofs.Chips.HostCommitChip.Formal
+import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
+import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
+import SP1Clean.Proofs.Chips.HostCommitChip.Populate
+import SP1Clean.Soundness.HostCommitHistory

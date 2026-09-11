@@ -207,7 +207,6 @@ Implemented foundations:
   must still select the complete footprint, authorize values, and retain these accesses in
   the physical mixed ledger.
 
-
 - `HostCallChip` composes the full-code-checked instruction with an internally computed WRITE
   selector, x12 read-back at event time plus one, and one gated host-call message carrying all
   four limbs of the code, arguments, return word and WRITE length. Raw constraints determine
@@ -218,6 +217,19 @@ Implemented foundations:
   prior reads and corrupted selectors. This closes the local instruction-to-host handoff.
   It does not select RAM records, constrain returned host values/effects, or thread host state.
   The component and x12 touch still need installation in the mixed ensemble and grounding carrier.
+
+- `HostCommitChip` supplies native COMMIT and COMMIT_DEFERRED updates for both eight-slot banks.
+  Its sixteen routed components constrain the full call, canonical value bounds, strict bounded
+  clock order, and a single-slot replacement; the semantic constructor computes all comparison
+  and byte columns. Soundness/completeness and the exact host-interpreter effect are proved.
+  The actual ledger consumes the handoff, replaces the bank state, and supplies historical
+  PublicValues records matching the preserved instruction pulls. `HostCommitHistory.ordered_history`
+  derives an exhaustive ordered interpreter fold from physical bank tables, their local specs,
+  and endpoint balance including Clean's count bound. Joint-row regressions cover every slot,
+  distinct overwrites, invalid clocks/values/witnesses, and rejected forks or missing updates;
+  the witness programs export 186 cells. Native bank history does not require every intermediate
+  value to equal the final digest. Installing the tables, authenticating zero initial/public final
+  banks, and deriving the local-spec and handoff-balance premises in the mixed ensemble remain open.
 
 Host integration must account for these source-backed details in v6.4.0:
 
@@ -239,8 +251,10 @@ Host integration must account for these source-backed details in v6.4.0:
   or COMMIT_DEFERRED_PROOFS row in a shard against one fixed public-values digest. Distinct overwrites of
   the same slot cannot both satisfy that binding. The native host model keeps mutable slots;
   its successful runs do not automatically satisfy the exact AIR's `PublicValueBinding`.
-  Native host-table composition must account for the instruction chip's PublicValues pulls;
-  exact completeness needs an explicit compatibility restriction or a different refinement target.
+  Native `HostCommitChip` providers now preserve and match those pulls with historical records,
+  while a separate state ledger proves mutable bank updates. This is a native interpretation,
+  not a proof of exact `PublicValueBinding`; exact completeness still needs an explicit
+  compatibility restriction or a different refinement target.
 - The minimal executor treats COMMIT_DEFERRED_PROOFS and VERIFY_SP1_PROOF as no-ops; traced replay
   records deferred commitments (`vm/syscall/deferred.rs`). The native profile records canonical
   deferred values and the two observed 32-byte proof-request digests. Recording such a request
