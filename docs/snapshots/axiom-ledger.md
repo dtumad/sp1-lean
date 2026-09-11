@@ -214,3 +214,15 @@ grounding, and AIR-authenticated host accesses remain open. The native mutable c
 also retain the disclosed exact-AIR compatibility gap: distinct overwrites within one shard
 cannot all satisfy the exact instruction AIR's fixed public-digest binding. Recorded proof
 requests assert no recursive proof acceptance.
+
+The aligned host-footprint checkpoint adds 21 main probes: fifteen use the three-axiom logical
+baseline, four use `propext`/`Quot.sound`, the footprint builder uses `propext` alone, and the
+deduplicated-union theorem uses no axioms. Coverage, native window bounds, and distinct canonical
+Memory locations follow from the computed inventory and successful host execution. Defined
+Memory-bus words determine the host result; fully written words have the emitted little-endian
+contents, and outside RAM cells are preserved. All 1335 prior main and 124 prior test axiom sets
+are unchanged, with no removals or new main-library axiom names. Six regressions add six
+compiler-trust constants only in `SP1CleanTest.Core.HostFootprint`. The minimal native cover's
+empty-WRITE distinction from Rust's untraced physical reads is explicit. These are local semantic
+bridges: host AIR tables, their timestamps and balanced accesses, and threaded host state in the
+mixed trajectory remain integration work.
