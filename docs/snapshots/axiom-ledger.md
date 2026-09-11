@@ -200,3 +200,17 @@ Five actual-constraint, export-inventory, and wiring regressions add five named 
 constants only in `SP1CleanTest.Core.SyscallCode`. The strengthened chip is not yet installed in
 the 59-table assembly. Authenticated WRITE x12/buffer reads, HINT_READ's padded writes and
 timestamp treatment, host effects, and ROM protection remain open integration obligations.
+
+The stateful native-host checkpoint adds 16 main probes: eight use the three-axiom logical
+baseline, seven use `propext`/`Quot.sound`, and the executable dispatcher uses `propext` alone.
+The interpreter obtains actual register/byte observations, computes all eight selected effects,
+and threads terminal state, both commitment banks, outputs, hints, and request-bound replies.
+Its Sail adapter proves committed ECALL row laws and endpoint agreement, written-byte readback,
+memory/register frames, and ROM preservation. All 1319 prior main and 113 prior test axiom sets
+are unchanged; no declaration was removed and no new main-library axiom name appeared.
+Eleven executable regressions add eleven compiler-trust constants only in
+`SP1CleanTest.Core.HostExecution`. The host state is not yet threaded through mixed timed
+grounding, and AIR-authenticated host accesses remain open. The native mutable commitment banks
+also retain the disclosed exact-AIR compatibility gap: distinct overwrites within one shard
+cannot all satisfy the exact instruction AIR's fixed public-digest binding. Recorded proof
+requests assert no recursive proof acceptance.
