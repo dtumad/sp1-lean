@@ -57,6 +57,14 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
           [addr0, addr1, addr2, a, b, c, d].all (fun limb => limb.val < 65536) &&
             65536 ≤ address && address < 2 ^ 48 && address % 8 == 0
         | _ => false
+      else if interaction.channel.name == "sp1.native.host_buffer32" then
+        match (interaction.msg.map env).toList with
+        | _ :: _ :: a :: b :: c :: d :: bytes =>
+          let address := a.val + b.val * 65536 + c.val * 65536 ^ 2 + d.val * 65536 ^ 3
+          [a, b, c, d].all (fun limb => limb.val < 65536) &&
+            65536 ≤ address && address + 32 ≤ 2 ^ 48 && bytes.length == 32 &&
+            bytes.all (fun byte => byte.val < 256)
+        | _ => false
       else ["SP1State", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
         "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access"].contains
           interaction.channel.name

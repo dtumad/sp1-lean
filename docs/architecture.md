@@ -301,8 +301,12 @@ constructive completeness, zero-cell witness export, and exact read/Memory ledge
 `hostRamBytes_read_of_word` connects the output to the Sail-backed host byte interface once
 Memory grounding supplies the defined word. `HostReadContext.readGuest_of_cells` lifts defined
 word observations to an arbitrary requested slice with explicit complete-window bounds.
-Selecting and authenticating complete buffer boundaries against host calls, and installing
-these reads in the mixed machine, remain open.
+`HostBuffer32` constrains a complete 32-byte window using four or five shared reads. Its constructor
+computes the alignment variant and minimal cover; the semantic specification proves complete-window
+bounds and the exact host byte result from grounded words. The read ledger equals that cover, and
+one full buffer message carries the query, clock, and all bytes to a future call consumer. Every
+variant is sound, complete, and exportable with zero witness-program cells. Binding those messages
+to decoded calls and installing these reads in the mixed machine remain open.
 
 `HostCallChip` supplies the instruction-facing handoff. It composes `CoreSyscallChip`, Clean's
 full-word equality gadget, and the shared `RegisterRead` circuit. WRITE reads x12 at event time

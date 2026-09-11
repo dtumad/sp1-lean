@@ -230,9 +230,22 @@ Implemented foundations:
   covering words and complete guest-window bounds, including empty and unaligned reads.
   Executed regressions check output order, joint shared-read ledgers, malformed byte columns and
   channel guarantees, wrong full-message keys, and missing bytes or out-of-window span tails.
-  The next buffer tables must still constrain complete coverage and bind the query and payload
-  to the decoded call, starting with VERIFY_SP1_PROOF's two 32-byte buffers. No call-bound buffer
-  circuit or whole-machine host-read theorem is claimed by this checkpoint.
+  `HostBuffer32` supplies the complete fixed-size consumer described below; binding its query and
+  payload to the decoded call and proving whole-machine host reads remain open.
+
+- `HostBuffer32.circuit` is sound and complete for a full 32-byte guest-memory window. Its
+  constructor computes the alignment variant, all four or five covering addresses, low-byte
+  columns, and the payload from the query and canonical RAM words. The semantic theorem hides
+  alignment cases: it states full-window bounds, exact read keys, and agreement with the host byte
+  interface once the consumed words are grounded. Its consumed address list is the minimal ordered
+  cover and is duplicate-free. Exact ledger theorems retain one shared read per covering word and
+  one complete buffer message, with no extra physical Memory access. All eight variants export with
+  zero witness-program cells. Executed regressions cover alignment, limb carries, upper/lower window
+  limits, altered messages and covering cells, and two overlapping buffers served by seven distinct
+  physical reads. The buffer channel carries local bounds only; Memory currency remains a grounding
+  conclusion. The next step is a VERIFY_SP1_PROOF consumer that binds both full buffer messages to
+  the decoded call and the host state transition. The buffer components are not yet registered in
+  the mixed ensemble.
 
 - `HostCallChip` composes the full-code-checked instruction with an internally computed WRITE
   selector, x12 read-back at event time plus one, and one gated host-call message carrying all

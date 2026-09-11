@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HostBuffer32
 import SP1CleanTest.Core.HostRamBytes
 import SP1CleanTest.Core.HostRamRead
 import SP1CleanTest.Core.HostControl
@@ -28,6 +29,11 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostBuffer32.allAlignments
+#print axioms SP1CleanTest.Core.HostBuffer32.windowBounds
+#print axioms SP1CleanTest.Core.HostBuffer32.rejectsChangedMessage
+#print axioms SP1CleanTest.Core.HostBuffer32.rejectsChangedCells
+#print axioms SP1CleanTest.Core.HostBuffer32.overlappingBuffers
 #print axioms SP1CleanTest.Core.HostRamBytes.decodesBytes
 #print axioms SP1CleanTest.Core.HostRamBytes.sharedDecoderLedger
 #print axioms SP1CleanTest.Core.HostRamBytes.rejectsMalformed

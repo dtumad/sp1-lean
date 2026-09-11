@@ -88,6 +88,17 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs (fields 8) where
       intro impossible
       exact (impossible (by simp only [circuit_norm])).elim
 
+@[circuit_norm, explicit_circuit_norm]
+theorem circuit_localLength (input : Var Inputs (ZMod p)) : circuit.localLength input = 0 := rfl
+
+@[circuit_norm, explicit_circuit_norm]
+theorem channelsWithGuarantees_eq : (circuit (p := p)).channelsWithGuarantees =
+    [Channels.byteChannel.toRaw, HostRamReadChip.channel.toRaw] := rfl
+
+@[circuit_norm, explicit_circuit_norm]
+theorem channelsWithRequirements_eq : circuit.channelsWithRequirements =
+    ([] : List (RawChannel (ZMod p))) := rfl
+
 omit [Fact (2 ^ 17 < p)] in
 theorem populate_assumptions (read : HostRamReadChip.Message (ZMod p)) (valid : read.Valid) :
     ProverAssumptions (populate read) := ⟨valid, rfl⟩

@@ -711,3 +711,10 @@ import SP1Clean.Model.Core.HostReadWords
 import SP1Clean.FormalModel.Contracts.HostRamBytes
 import SP1Clean.Native.Operations.HostRamBytes
 import SP1Clean.Proofs.Operations.HostRamBytes
+
+import SP1Clean.FormalModel.Contracts.HostBuffer32
+import SP1Clean.Native.Operations.HostBuffer32
+import SP1Clean.Proofs.Operations.HostBuffer32.Content
+import SP1Clean.Proofs.Operations.HostBuffer32
+import SP1Clean.Proofs.Operations.HostBuffer32.Populate
+import SP1Clean.Proofs.Operations.HostBuffer32.Ledger

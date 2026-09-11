@@ -40,6 +40,30 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete 32-byte host buffers, constructive completeness, and exact ledgers.
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "circuit_localLength"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "channelsWithGuarantees_eq"),
+    ("SP1Clean/Proofs/Operations/HostRamBytes.lean", "channelsWithRequirements_eq"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Content.lean", "spec_of_cells"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Content.lean", "Spec.cell_addresses"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Content.lean", "Spec.cell_addresses_nodup"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32.lean", "soundness"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32.lean", "completeness"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32.lean", "circuit"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Populate.lean", "selectedOffset"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Populate.lean", "readAt"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Populate.lean", "populate"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Populate.lean", "populate_assumptions"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Ledger.lean", "main_read_interactions"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Ledger.lean", "main_buffer_interactions"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Ledger.lean", "main_memory_interactions"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Ledger.lean", "read_values"),
+    ("SP1Clean/Proofs/Operations/HostBuffer32/Ledger.lean", "buffer_values"),
+    ("SP1CleanTest/Core/HostBuffer32.lean", "allAlignments"),
+    ("SP1CleanTest/Core/HostBuffer32.lean", "windowBounds"),
+    ("SP1CleanTest/Core/HostBuffer32.lean", "rejectsChangedMessage"),
+    ("SP1CleanTest/Core/HostBuffer32.lean", "rejectsChangedCells"),
+    ("SP1CleanTest/Core/HostBuffer32.lean", "overlappingBuffers"),
     # Canonical host-read bytes, exact decoder ledger, and defined-word slice semantics.
     ("SP1Clean/Math/ByteWord.lean", "bytesValue_extract"),
     ("SP1Clean/Math/ByteWord.lean", "toBitVec64_ofByteFields"),
