@@ -267,3 +267,18 @@ The 186-cell witness programs are exportable. That checkpoint audited 1406 main 
 declarations. Native historical PublicValues providers permit mutable banks; they do not prove
 the exact AIR's fixed `PublicValueBinding`. Installing these components and authenticating zero
 initial/public final banks in the mixed machine remain integration work.
+
+The public bank-boundary checkpoint adds nineteen main declarations, each using exactly
+`[propext, Classical.choice, Quot.sound]`. `HostCommitEnsemble.sound` derives an exhaustive
+ordered interpreter history from the actual nine-table bank ensemble's constraints and balance.
+The verifier fixes zero genesis and public final words; a value-preserving terminal keeps the
+last call timestamp private. Local contracts follow from Byte closure. Static auxiliary-component
+proofs still establish bank-channel exclusion and Byte-provider requirements, and the host policy's
+characteristic is explicitly matched to the field. All preceding 1406 main and 146 test axiom sets
+are unchanged, with no removals or new main-library axiom names. Five new compiler-trust constants
+occur only in `SP1CleanTest.Core.HostCommitBoundary`. Empty-bank regressions check the complete
+emitted ledger; active histories check local assertions, Byte meanings, and bank balance, without
+claiming full-machine call authentication. The terminal and verifier witness programs export
+48 and zero cells respectively. The census now probes 1425 main and 151 test declarations.
+Installation in the mixed machine, authentication of calls, and coordination with its other host
+effects remain open; this checkpoint does not establish a new RISC-V execution theorem.
