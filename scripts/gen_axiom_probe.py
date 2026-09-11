@@ -40,6 +40,31 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Shared physical host reads and exact two-buffer multiplicities.
+    ("SP1Clean/Model/Core/HostReadPlan.lean", "physical_cells"),
+    ("SP1Clean/Model/Core/HostReadPlan.lean", "physical_nodup"),
+    ("SP1Clean/Model/Core/HostReadPlan.lean", "logical_cells_perm"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Formal.lean", "soundness"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Formal.lean", "completeness"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Formal.lean", "circuit"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Ledger.lean", "main_memory_interactions"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Ledger.lean", "main_access_interactions"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Ledger.lean", "main_read_interactions"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Ledger.lean", "memory_values"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Ledger.lean", "access_values"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Ledger.lean", "read_values"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Ledger.lean", "access_balance"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Populate.lean", "populate"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Populate.lean", "populate_assumptions"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Populate.lean", "populateSpans"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Populate.lean", "populateSpans_assumptions"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Populate.lean", "populateSpans_addresses"),
+    ("SP1Clean/Proofs/Chips/HostRamReadChip/Populate.lean", "populateSpans_addresses_nodup"),
+    ("SP1CleanTest/Core/HostRamRead.lean", "compiledSpans"),
+    ("SP1CleanTest/Core/HostRamRead.lean", "sharedLedger"),
+    ("SP1CleanTest/Core/HostRamRead.lean", "rejectsMalformed"),
+    ("SP1CleanTest/Core/HostRamRead.lean", "rejectsWrongSharing"),
+    ("SP1CleanTest/Core/HostRamRead.lean", "rejectsWrongReads"),
     # Native control handlers, semantic constructors, and exact instruction-range compatibility.
     ("SP1Clean/Proofs/Chips/HostHaltChip/Formal.lean", "populate_assumptions"),
     ("SP1Clean/Proofs/Chips/HostHaltChip/Bridge.lean", "exit_value_of_spec"),

@@ -51,7 +51,8 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
       else if interaction.channel.name == "SP1Program" then
         (interaction.msg.map env).toList == [0, 1, 0, 50, 5, 10, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0]
       else ["SP1State", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
-        "sp1.native.commit_state", "sp1.native.deferred_state"].contains interaction.channel.name
+        "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access",
+        "sp1.native.host_ram_read"].contains interaction.channel.name
   (valid, (FlatOperation.interactions operations).filterMap fun interaction =>
     if env interaction.mult == 0 then none else
       some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))

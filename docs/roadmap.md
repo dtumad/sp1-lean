@@ -207,6 +207,19 @@ Implemented foundations:
   must still select the complete footprint, authorize values, and retain these accesses in
   the physical mixed ledger.
 
+- `HostRamReadChip` now shares one physical read between one or two logical buffer consumers.
+  Whole-word equality prevents writes, the lower-level access coordination cancels internally,
+  and the actual Memory ledger retains exactly one prior/new pair. Separate unit-weight read
+  pushes preserve Clean's interaction-count bound. `HostReadPlan.logical_cells_perm` proves
+  that distinct physical cells with computed sharing bits recover both requested span inventories
+  exactly, including overlapping VERIFY_SP1_PROOF buffers and empty WRITEs. The constructor
+  proves local completeness from earlier bounded records; physical address uniqueness additionally
+  requires that the supplied history is indexed by its actual cell, which is explicit in the
+  theorem. Executed regressions balance compiled rows against both buffer inventories and reject
+  wrong sharing, words, clocks, missing rows, writes and corrupted witnesses. The 201-cell witness
+  program is exportable. Call-bound buffer coverage, byte extraction, and installation in the
+  mixed Memory ledger remain open; these fixture requests are not authenticated host calls.
+
 - `HostCallChip` composes the full-code-checked instruction with an internally computed WRITE
   selector, x12 read-back at event time plus one, and one gated host-call message carrying all
   four limbs of the code, arguments, return word and WRITE length. Raw constraints determine

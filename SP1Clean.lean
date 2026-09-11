@@ -701,3 +701,9 @@ import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
 import SP1Clean.Proofs.Chips.HostControlLedger
 import SP1Clean.Proofs.Chips.HostControlPopulate
 import SP1Clean.Proofs.Chips.HostControlCompatibility
+import SP1Clean.Model.Core.HostReadPlan
+import SP1Clean.FormalModel.Contracts.HostRamRead
+import SP1Clean.Native.Chips.HostRamReadChip.Defs
+import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
+import SP1Clean.Proofs.Chips.HostRamReadChip.Ledger
+import SP1Clean.Proofs.Chips.HostRamReadChip.Populate

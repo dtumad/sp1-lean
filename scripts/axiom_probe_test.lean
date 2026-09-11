@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HostRamRead
 import SP1CleanTest.Core.HostControl
 import SP1CleanTest.Core.HostCommitBoundary
 import SP1CleanTest.Core.HostCommit
@@ -26,6 +27,11 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostRamRead.compiledSpans
+#print axioms SP1CleanTest.Core.HostRamRead.sharedLedger
+#print axioms SP1CleanTest.Core.HostRamRead.rejectsMalformed
+#print axioms SP1CleanTest.Core.HostRamRead.rejectsWrongSharing
+#print axioms SP1CleanTest.Core.HostRamRead.rejectsWrongReads
 #print axioms SP1CleanTest.Core.HostControl.canonicalExits
 #print axioms SP1CleanTest.Core.HostControl.unusedArguments
 #print axioms SP1CleanTest.Core.HostControl.rejectsMalformed

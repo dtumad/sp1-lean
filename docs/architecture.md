@@ -287,6 +287,16 @@ that Memory pair and a host coordination record with the event clock, address, a
 The component has an exportable witness program. It remains outside the mixed ensemble until
 the call tables bind these records to the full footprint and host effects.
 
+`HostRamReadChip` composes that access with whole-word preservation and one-or-two logical read
+copies. It cancels the lower-level coordination internally and retains one physical Memory pair.
+The optional copy is a separate Boolean-gated unit interaction, so Clean's count bound accounts
+for it. `HostReadPlan` computes a unique physical cell list for two spans and proves that its
+expanded read multiplicities equal the two requested inventories. This handles overlapping
+VERIFY_SP1_PROOF buffers without duplicate simultaneous Memory accesses. Physical address
+uniqueness for compiled rows explicitly requires a correctly indexed prior-record history.
+The provider does not select or authenticate buffer boundaries or extract their bytes; those
+facts belong to the remaining call tables and mixed-machine integration.
+
 `HostCallChip` supplies the instruction-facing handoff. It composes `CoreSyscallChip`, Clean's
 full-word equality gadget, and the shared `RegisterRead` circuit. WRITE reads x12 at event time
 plus one and writes back the same word; all other calls have no extra active read. Each active
