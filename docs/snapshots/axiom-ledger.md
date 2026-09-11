@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-11. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1487 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 168 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1505 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 173 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1655 released declarations are probed.
+- 1678 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -329,3 +329,14 @@ byte columns and local channel guarantees, changed read keys, unaligned and empt
 bytes, and a span crossing the upper guest boundary. The decoder exports zero witness-program
 cells. The census now probes 1487 main and 168 test declarations. Call-bound complete buffer
 coverage, the four remaining host handlers, and mixed-machine integration remain open.
+
+The complete 32-byte buffer checkpoint adds eighteen main probes. Seventeen use exactly
+`[propext, Classical.choice, Quot.sound]`; the computed alignment selector uses no axioms.
+`HostBuffer32` proves soundness, constructive completeness, full-window byte semantics,
+minimal ordered coverage, and exact read/buffer/Memory ledgers. All eight alignment variants
+export with zero witness-program cells. All preceding 1487 main and 168 test axiom sets are
+unchanged, with no removals or new main-library axiom names. Five new compiler-trust constants
+occur only in `SP1CleanTest.Core.HostBuffer32`, covering alignment and serialization, limb and
+window boundaries, changed messages/cells, and overlapping buffers sharing seven physical reads.
+The census now probes 1505 main and 173 test declarations. Buffer messages still require binding
+to decoded calls; Memory currency, host-state order, and mixed-machine installation remain open.
