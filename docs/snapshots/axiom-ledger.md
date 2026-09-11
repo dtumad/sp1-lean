@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-10. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1304 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 108 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1319 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 113 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1412 released declarations are probed.
+- 1432 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -188,3 +188,15 @@ also retains the official decoder's existing `sys_enable_experimental_extensions
 its committed-program premise. Six assembly-indexed proofs retain the existing 100-axiom registry
 set. The regression uses only the logical baseline. Every prior main and test axiom set is
 unchanged; no declaration was removed and no new axiom name appeared.
+
+The native syscall-profile checkpoint adds 15 main probes, all within the logical baseline:
+ten use three axioms, three use `propext`/`Quot.sound`, and two use `propext` alone.
+The fixed lookup and composed instruction chip are sound and complete; raw constraints derive
+the eight-code restriction before Memory grounding. Projection preserves the original assertions,
+interactions, and row width. The two existing word-encoding APIs retain identical elaborated
+statements and axiom sets after their arithmetic was hoisted into `Math/WordEquality.lean`.
+All prior main/test axiom sets are unchanged, with no removals or new main-library axiom names.
+Five actual-constraint, export-inventory, and wiring regressions add five named compiler-trust
+constants only in `SP1CleanTest.Core.SyscallCode`. The strengthened chip is not yet installed in
+the 59-table assembly. Authenticated WRITE x12/buffer reads, HINT_READ's padded writes and
+timestamp treatment, host effects, and ROM protection remain open integration obligations.
