@@ -226,3 +226,14 @@ compiler-trust constants only in `SP1CleanTest.Core.HostFootprint`. The minimal 
 empty-WRITE distinction from Rust's untraced physical reads is explicit. These are local semantic
 bridges: host AIR tables, their timestamps and balanced accesses, and threaded host state in the
 mixed trajectory remain integration work.
+
+The host RAM access checkpoint adds nine main probes, all using only the three-axiom logical
+baseline. The native circuit is sound and complete for a bounded word transfer at an aligned
+guest RAM address, with strict prior/new time order and an effect at event time plus one. Its
+constructor derives the timestamp witnesses from semantic bounds and order. The exact evaluated
+Memory pair and host coordination record are retained, and its 201-cell witness program passes
+the exportability check. All 1356 prior main and 130 prior test axiom sets are unchanged, with no
+removals or new main-library axiom names. Four executed regressions add four compiler-trust
+constants only in `SP1CleanTest.Core.HostRamAccess`. The component remains outside the mixed
+ensemble; call-level footprint/value authorization, WRITE's x12 access, and threaded host state
+remain open integration work.
