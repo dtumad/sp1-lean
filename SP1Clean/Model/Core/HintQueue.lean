@@ -92,7 +92,7 @@ theorem wellFormed_push {store : Store} (valid : WellFormed store) (node : Node)
     · next fresh => cases read; omega
     · exact valid (index + 1) actual read
 
-/-- Allocate from the end of the prepended so hook responses retain their original order. -/
+/-- Allocate the added hints from back to front so hook responses retain their original order. -/
 def prepend (store : Store) (head : ℕ) : List Bytes → Store × ℕ
   | [] => (store, head)
   | bytes :: rest =>
