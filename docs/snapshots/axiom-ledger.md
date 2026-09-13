@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1976 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 242 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2002 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 249 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2218 released declarations are probed.
+- 2251 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,22 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The fresh-allocation checkpoint adds 26 main declarations and seven test anchors. Every main
+addition uses only the logical baseline or a subset. All preceding 1976 main and 242 test
+dependency sets are unchanged, with no removals or new main-library axiom names. Seven new
+compiler-trusted constants are isolated to allocation and queue-cursor regressions.
+
+The private queue cursor retains its allocation frontier after pops, including at an empty head;
+HINT_LEN preserves it. `HintNodeAllocate` checks a nonwrapping successor below `2^48` and the
+old-head tail link. Its semantic bridge binds an actual append and preserves every historical
+node. `HintQueuePrepend` compiles ordered prefixes with all local contracts, exact row count,
+full cursor replay, and byte-exact endpoint representation under one capacity bound. Tests reject
+historical identity reuse, overflow, malformed fields, broken cursor continuity, and forged
+frontier endpoints. An explicit equal-length/different-bytes counterexample retains the distinction
+between checked metadata and byte authentication. The internal circuit emits only three Byte
+requests; host-authorized byte binding, node publication, mixed-ensemble installation, and ordered
+head-history derivation remain open. The full-AIR forged HINT_LEN return remains open.
 
 The native HINT_LEN checkpoint adds 30 main declarations and six test anchors. Every main
 addition uses only the logical baseline or a subset. All preceding 1946 main and 236 test

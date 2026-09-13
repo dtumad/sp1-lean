@@ -139,6 +139,12 @@ computed from source hints. `HostHintLengthChip` constrains the current-head obs
 queue-clock advance, and full HostCall handoff. Its bridge proves the complete host transition
 from explicit current-queue/node binding; its constructor derives completeness from successful
 dispatch and pointer/clock bounds. Source and handler ledgers and witness export are proved.
+The private queue cursor also retains the full allocation frontier after pops, including at an
+empty head; HINT_LEN preserves it. `HintNodeAllocate` checks the actual successor identity without
+48-bit wrap and links it to the current head. Its semantic bridge preserves every old node.
+`HintQueuePrepend` compiles ordered prefixes into these checked allocations, with exact row count,
+cursor continuity, and full byte-level queue representation under one capacity bound. Allocation
+does not itself authenticate bytes or publish nodes: those remain enclosing-handler obligations.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
 node-byte binding for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.

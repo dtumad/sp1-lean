@@ -149,6 +149,17 @@ theorem historicalNodes :
           checked.1 && origin.1 && balanced
             (selected ["sp1.native.hint_node"] (checked.2 ++ origin.2))) = true := by native_decide
 
+/-- HINT_LEN preserves historical allocation even at an empty head; endpoints reject a reset. -/
+theorem frontierTampering :
+    let (store, _) := HintQueue.ofList [[1], [], [9]]
+    let execution := ((host []).run policy context).getD ⟨.hintLength, 0, 0, 0, ⟨host [], none⟩⟩
+    let honest := HostHintLengthChip.populate (p := SP1Prime) store 0 1 265 execution
+    let forged := { honest with previous := { honest.previous with allocated := 0 } }
+    (evaluate true honest).1 = true ∧ Address.toNat honest.next.allocated = 3 ∧
+      (evaluate true forged).1 = true ∧
+      balanced (selected ["sp1.native.hint_queue_state"]
+        ((endpoints honest).2 ++ (evaluate true forged).2)) = false := by native_decide
+
 /-- info: exportable ✓ (122 witness cells) -/
 #guard_msgs in
 #assert_exportable (HostHintLengthChip.circuit (p := SP1Prime) false)

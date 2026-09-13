@@ -739,7 +739,15 @@ Local descending-pointer validity and a bounded root imply a complete finite dec
 HostCall/node/state ledgers and exportable witnesses. Its bridge proves the full host transition
 from explicit current-queue/node binding; successful dispatch supplies local completeness under
 pointer/clock bounds. Joint component regressions reject forged returns and node metadata and
-false empty claims. Mixed-AIR installation, new WRITE/hook node authorization, complete HINT_READ
+false empty claims. A separate allocation frontier now persists after pops and is preserved by
+HINT_LEN. This prevents the constructor from reusing a historical identity when the head moves
+backwards. `HintNodeAllocate` proves soundness/completeness for the fresh successor and tail link,
+with explicit no-wrap bounds; its semantic extension preserves all old nodes. `HintQueuePrepend`
+constructs ordered prefixes with exact row count, checked cursor continuity, and byte-exact
+endpoint representation under a capacity bound. The internal operation exports 212 witness cells
+and emits only three Byte requests. Byte authorization and node publication remain the enclosing
+handler's responsibility; a regression demonstrates the ambiguity of equal-length metadata.
+Mixed-AIR installation, new WRITE/hook node authorization, complete HINT_READ
 byte binding, and ordered head-history derivation remain open. Pointer bounds must also enter the
 shared resource profile. The full-AIR forged HINT_LEN return counterexample is not yet closed.
 

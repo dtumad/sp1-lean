@@ -322,7 +322,16 @@ Implemented foundations:
   uses explicit current-queue/node binding, while successful dispatch derives the constructor's
   completeness domain under pointer and clock bounds. Source and handler ledgers are proved.
   Joint regressions reject forged returns/metadata, false empty claims, malformed records, and
-  stale clocks, and retain empty hints and historical source heads. These are component results.
+  stale clocks, and retain empty hints and historical source heads. The queue cursor now retains
+  a separate allocation frontier after pops, including at an empty head, and HINT_LEN preserves it.
+  `HintNodeAllocate` checks a fresh successor without 48-bit wrap, the old-head link, and bounded
+  length; its byte-parametric extension theorem preserves every historical node. Its circuit
+  exports 212 computed witness cells. `HintQueuePrepend` compiles any ordered prefix with all local
+  contracts, exact row count, cursor continuity, and full endpoint representation under one
+  capacity bound. Regressions reject historical identity reuse, carries that overflow, malformed
+  fields, reordered/dropped/duplicated allocations, and forged frontier endpoints. A separate
+  regression records that identical node metadata cannot authenticate different equal-length bytes.
+  These are component results; allocation does not yet publish a node or a host-authorized transition.
   The next queue step must install source and handler components, authorize new WRITE/hook nodes
   and their bytes, derive ordered head history, and connect HINT_READ's full padded write to the
   same node identities. Include the 48-bit identity bound in the shared resource profile.

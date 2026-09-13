@@ -69,4 +69,48 @@ theorem toNat_lt {address : fields 3 (ZMod p)} (bounded : Bounded address) :
   dsimp only [toNat]
   omega
 
+/-- Canonical limbs are recovered exactly, not only modulo the identity space. -/
+theorem ofNat_toNat {address : fields 3 (ZMod p)} (bounded : Bounded address) :
+    ofNat (toNat address) = address := by
+  have low : address[0].val < 2 ^ 16 := bounded 0
+  have middle : address[1].val < 2 ^ 16 := bounded 1
+  have high : address[2].val < 2 ^ 16 := bounded 2
+  have hp := Fact.out (p := 2 ^ 17 < p)
+  have value (n : ℕ) : ((n % 2 ^ 16 : ℕ) : ZMod p).val = n % 2 ^ 16 :=
+    ZMod.val_natCast_of_lt (by have := Nat.mod_lt n (by decide : 0 < 2 ^ 16); omega)
+  apply Vector.ext
+  intro index bound
+  apply ZMod.val_injective
+  have cases : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+  rcases cases with rfl | rfl | rfl <;>
+    simp only [ofNat, toNat, Vector.getElem_mk, List.getElem_toArray,
+      List.getElem_cons_zero, List.getElem_cons_succ, value]
+  all_goals omega
+
+/-- Embed an identity into the existing unsigned-word arithmetic gadgets. -/
+def asWord {F : Type} [Zero F] (address : fields 3 F) : Word F :=
+  #v[address[0], address[1], address[2], 0]
+
+omit [Fact (2 ^ 17 < p)] in
+theorem isU64_asWord {address : fields 3 (ZMod p)} (bounded : Bounded address) :
+    Word.isU64 (asWord address) := by
+  apply Word.isU64_of_cases
+  · exact bounded 0
+  · exact bounded 1
+  · exact bounded 2
+  · simp [asWord]
+
+omit [Fact (2 ^ 17 < p)] in
+theorem bounded_of_isU64_asWord {address : fields 3 (ZMod p)} (bounded : Word.isU64 (asWord address)) :
+    Bounded address := by
+  intro index
+  fin_cases index
+  · exact bounded 0
+  · exact bounded 1
+  · exact bounded 2
+
+omit [Fact (2 ^ 17 < p)] in
+theorem toNat_asWord (address : fields 3 (ZMod p)) : Word.toNat (asWord address) = toNat address := by
+  simp [asWord, Word.toNat_def, toNat]
+
 end SP1Clean.Address

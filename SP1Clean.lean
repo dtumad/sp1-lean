@@ -367,6 +367,13 @@ import SP1Clean.Model.Core.MemoryWord
 import SP1Clean.Model.Core.HostIO
 import SP1Clean.Model.Core.HintQueue
 import SP1Clean.Model.Core.HintQueueRecords
+import SP1Clean.FormalModel.Contracts.HintNodeAllocate
+import SP1Clean.Native.Operations.HintNodeAllocate
+import SP1Clean.Proofs.Operations.HintNodeAllocate
+import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
+import SP1Clean.Proofs.Operations.HintNodeAllocateLedger
+import SP1Clean.Proofs.Operations.HintQueueCursor
+import SP1Clean.Proofs.Operations.HintQueuePrepend
 import SP1Clean.FormalModel.Contracts.HintQueue
 import SP1Clean.Native.Operations.HintQueueSource
 import SP1Clean.Native.Chips.HostHintLengthChip.Defs

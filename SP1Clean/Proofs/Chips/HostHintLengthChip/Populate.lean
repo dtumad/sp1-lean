@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
 import SP1Clean.Model.Core.HostQueue
+import SP1Clean.Proofs.Operations.HintQueueCursor
 import SP1Clean.Proofs.Chips.HostControlPopulate
 
 /-! # HINT_LEN rows from successful host execution
@@ -20,7 +21,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 def populate (store : HintQueue.Store) (head previousClock clock : ℕ)
     (executed : HostExecution) : Inputs (ZMod p) :=
   ⟨HostControl.message clock executed,
-    ⟨(previousClock / 2 ^ 24 : ℕ), (previousClock % 2 ^ 24 : ℕ), Address.ofNat head⟩,
+    HostHintQueue.State.encode previousClock head store.size,
     HintQueue.NodeRecord.encode head ((HintQueue.node? store head).getD default)⟩
 
 private theorem clock_spec (store : HintQueue.Store) (head previousClock clock : ℕ)
@@ -31,7 +32,7 @@ private theorem clock_spec (store : HintQueue.Store) (head previousClock clock :
   have previousLow : previousClock % 2 ^ 24 < p := by omega
   have currentHigh : clock / 2 ^ 24 < p := by omega
   have currentLow : clock % 2 ^ 24 < p := by omega
-  simp only [ClockOrder.Spec, populate, Inputs.clock, HostControl.message, Semantics.clkNat,
+  simp only [ClockOrder.Spec, populate, HostHintQueue.State.encode, Inputs.clock, HostControl.message, Semantics.clkNat,
     ZMod.val_natCast_of_lt previousHigh, ZMod.val_natCast_of_lt previousLow,
     ZMod.val_natCast_of_lt currentHigh, ZMod.val_natCast_of_lt currentLow]
   omega
@@ -49,7 +50,7 @@ theorem populate_spec_of_run (store : HintQueue.Store) (head previousClock clock
   by_cases empty : head = 0
   · have result : executed.result = BitVec.allOnes 64 := by
       simpa only [empty, HintQueue.hintLength?, ↓reduceIte, Option.some.injEq] using length.symm
-    simp [HeadSpec, empty, populate, HostControl.message, result, emptyWord, Address.ofNat]
+    simp [HeadSpec, empty, populate, HostControl.message, result, emptyWord, HostHintQueue.State.encode, Address.ofNat]
     rfl
   · obtain ⟨node, read, descending⟩ : ∃ node, HintQueue.node? store head = some node ∧ node.tail < head := by
       generalize host.io.hints = hints at current
@@ -72,5 +73,12 @@ theorem populate_binding (store : HintQueue.Store) (head previousClock clock : �
   | cons read descending _ =>
     simp only [populate, read, Option.getD_some]
     exact HintQueue.NodeRecord.encode_binds read headBound descending
+
+/-- The input records the full allocation frontier, including nodes no longer in the current queue. -/
+theorem populate_cursor (store : HintQueue.Store) (head previousClock clock : ℕ)
+    (executed : HostExecution) (hints : List Bytes) (current : HintQueue.Represents store head hints)
+    (fits : store.size < 2 ^ 48) :
+    (populate (p := p) store head previousClock clock executed).previous.Binds store hints :=
+  HostHintQueue.State.encode_binds previousClock current fits
 
 end SP1Clean.HostHintLengthChip

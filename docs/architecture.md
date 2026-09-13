@@ -408,7 +408,16 @@ into a prepend or pop, including ordered hook responses, with exact allocation a
 assuming that HINT_LEN always sees the initial source queue. `HintQueueRecords` uses bounded
 48-bit identities; its fixed source lookup proves node metadata belongs to the actual source
 store. `HostHintLengthChip` consumes the current node and full HostCall, advances the queue clock,
-and preserves the head. Its full host bridge keeps current-queue and node binding explicit;
+and preserves the head and allocation frontier. The frontier records every allocated node,
+including historical nodes after pops; using head-plus-one would allow identity reuse.
+`HintNodeAllocate` composes the existing range, order, equality, and address-addition circuits to
+check a fresh successor below `2^48`, the old-head tail link, and bounded length. Its semantic
+bridge appends actual bytes, preserves all old nodes, and advances the complete queue cursor.
+`HintQueuePrepend` constructs ordered prefixes from back to front, proving each row's contract,
+exact row count, cursor replay, and the byte-exact endpoint under a capacity bound. This internal
+operation emits only three Byte requests; the enclosing host handler must authenticate the
+bytes and publish the authorized node and queue transition. Equal lengths do not bind bytes.
+HINT_LEN's full host bridge keeps current-queue and node binding explicit;
 its constructor derives local completeness from successful execution and pointer/clock bounds.
 The components and their exact ledgers are closed, but mixed-ensemble installation, authorization
 of new WRITE/hook nodes, complete byte binding for HINT_READ, and derived head history remain open.

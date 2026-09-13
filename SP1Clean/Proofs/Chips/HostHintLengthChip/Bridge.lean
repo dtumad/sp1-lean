@@ -18,6 +18,11 @@ def execution (input : Inputs (ZMod p)) (host : HostState) : HostExecution :=
   ⟨.hintLength, Word.toBitVec64 input.call.arg1, Word.toBitVec64 input.call.arg2,
     Word.toBitVec64 input.call.result, ⟨host, none⟩⟩
 
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- Observing a length preserves both the current head and all allocated historical identities. -/
+theorem next_binds (input : Inputs (ZMod p)) (store : HintQueue.Store) (hints : List Bytes)
+    (current : input.previous.Binds store hints) : input.next.Binds store hints := current
+
 /-- The same statement covers an empty queue and a nonempty queue, including empty hint bytes. -/
 theorem result_of_spec (empty : Bool) (input : Inputs (ZMod p)) (valid : Spec empty input)
     (host : HostState) (store : HintQueue.Store)
