@@ -424,16 +424,28 @@ of new WRITE/hook nodes, constrained complete HINT_READ word coverage, and deriv
 Pointer bounds must enter the common resource profile; no content hash or trusted byte oracle is used.
 
 `HintQueueWordSource` now supplies original node contents within the bounded word-key domain
-through a fixed lookup computed from source hints. Records carry a canonical node identity, word position, and full
-64-bit value. `HintQueueWords` matches these words to the semantic RAM write, including the
+through a fixed lookup computed from source hints. Records carry a canonical node identity, word
+position, full 64-bit value, and an authenticated final-word marker. `HintQueueWords` matches
+these words to the semantic RAM write, including the
 mandatory final padding word. Complete word coverage plus the separately authenticated length
 determines every hint byte; padded word values alone do not determine length. The metadata's
-natural-length theorem explicitly requires the actual length below `2^64`. Source word positions
+natural-length theorem explicitly requires the actual length below `2^64`; authenticating a bounded
+final word now derives that bound. Source word positions
 are capped at the 48-bit key domain without wrapping; a permitted write in the native address
 window supplies a stronger word-count bound. `HintNodeWords` ties generated word contents to the
 checked allocation's exact identity while preserving historical nodes. This closes source-word
 authentication and the semantic content bridge; authorized new-word publication, constrained
 HINT_READ coverage, and installation in the mixed ensemble remain open.
+
+`HintReadSpan` composes canonical division by eight, address ordering, and bounded addition to
+check the exact positive padded count and last written word address. Using the last address
+retains writes ending exactly at `2^48`, whose one-past endpoint cannot fit in three limbs.
+Aligned permitted native-window writes construct all columns and the completeness domain;
+the circuit exports 116 witness cells and emits only six Byte pulls. Its node bridge combines
+authenticated metadata and a final word to derive the actual natural length and exact word count.
+This matters because a hint length of `2^64` encodes the same length word as zero: span constraints
+alone do not authenticate node extent. The full consumer must still derive these bindings and
+the complete word walk from its ledgers, alongside writable-byte permission and RAM transfers.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and

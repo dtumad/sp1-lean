@@ -151,6 +151,12 @@ from the actual source hints, with exact ledgers and no incoming byte premise. C
 coverage plus the authenticated length recovers all bytes and matches the semantic HINT_READ RAM
 write, including mandatory final padding. Generated allocation words share the checked fresh node
 identity. New-word authorization, complete AIR consumer coverage, and mixed installation remain open.
+`HintReadSpan` now constrains the exact positive padded count and last written address, retaining
+writes whose one-past endpoint is exactly `2^48`. Its semantic constructor covers aligned permitted
+native-window writes. Word records authenticate an `isLast` marker: a bounded final word derives
+the actual node length below `2^64`, and `HintReadSpan.Spec.node_end` ties that natural length and
+word count to the checked span. This closes the modulo-length alias at the component boundary;
+HINT_READ still needs to consume this binding and derive the full word walk from AIR balance.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
 node-word coverage for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.

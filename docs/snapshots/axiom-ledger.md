@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2036 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 256 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2060 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 265 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2292 released declarations are probed.
+- 2325 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,24 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The source-word checkpoint adds 34 main declarations and seven test anchors. Every main
+The padded-span checkpoint adds 24 main declarations and nine test anchors. Every main addition
+uses only the logical baseline or a subset, with no new main-library axiom names. The strengthened
+word-binding predicate adds `Classical.choice` to `WordRecord.Binds.extend` and `.value`; both
+remain within the logical baseline. All other preceding 2034 main and all 256 test dependency
+sets are unchanged, with no removals. Eight new compiler-trusted constants belong only to the
+executable endpoint/end-marker regressions; the symbolic wrapped-length regression is kernel proved.
+
+`HintReadSpan` proves the exact positive padded word count and last written address, retaining
+writes ending exactly at `2^48`. Its semantic constructor is complete for aligned permitted
+native-window writes, and its 116-cell witness program uses only six Byte pulls. Word records
+authenticate the actual final-word marker: a bounded final word derives the natural node length
+below `2^64`, and `Spec.node_end` ties that length and count to the checked span. This prevents a
+modulo-length alias when the consumer authenticates the end; the span alone cannot do so.
+The consumer still needs to derive its bindings and complete word walk from AIR balance, connect
+RAM transfers and writable-byte permissions, and join the mixed ensemble. New WRITE/hook word
+publication and queue history remain open, as does the full-AIR forged HINT_LEN return.
+
+The source-word checkpoint added 34 main declarations and seven test anchors. Every main
 addition uses only the logical baseline or a subset. All preceding 2002 main and 249 test
 dependency sets are unchanged, with no removals or new main-library axiom names. Seven new
 compiler-trusted constants are isolated to the source-content and padded-write regressions.
@@ -43,7 +60,8 @@ compiler-trusted constants are isolated to the source-content and padded-write r
 `HintQueueWords` and `HintQueueWordRecords` prove that complete padded word coverage plus the
 authenticated length determines every hint byte and matches the semantic RAM write. Length
 authentication is independent: trailing zeros can yield identical word contents, and the
-metadata's natural-length theorem requires the actual hint length below `2^64`. The fixed
+metadata's basic natural-length theorem requires the actual hint length below `2^64` (now
+derivable from a bounded authenticated final word). The fixed
 `HintQueueWordSource` authenticates source words without an incoming byte premise; its exact
 ledger and zero-cell witness export are closed. Word positions outside the 48-bit key domain
 are omitted without aliasing; permitted native-window writes derive the needed bound.

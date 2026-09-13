@@ -77,9 +77,27 @@ theorem forgedWords :
      { row with index := #v[65536, 0, 0] },
      { row with index := Address.ofNat 1 }, { row with index := Address.ofNat 2 },
      { row with value := #v[65536, 0, 0, 0] },
+     { row with isLast := 1 }, { row with isLast := 2 },
+     { (WordRecord.encode 1 actual 1) with isLast := 0 },
      { (WordRecord.encode 1 actual 1) with value := #v[1, 0, 0, 0] }].all
        (fun forged => !(sourceWord [actual] forged).1) = true ∧
       (sourceWord [] (WordRecord.encode 1 [] 0)).1 = false := by native_decide
+
+/-- The fixed source lookup authenticates exactly one final word, including empty hints. -/
+theorem authenticatedEnds : (List.range 26).all (fun length =>
+    let actual := bytes length
+    let rows := nodeWordRows (p := SP1Prime) 1 actual
+    (rows.filter (fun record => record.isLast == 1)).length == 1 &&
+      rows.all (fun record => (sourceWord [actual] record).1 &&
+        (record.isLast == 1) == (Address.toNat record.index + 1 == wordCount actual))) = true := by
+  native_decide
+
+/-- Even a hint whose length word wraps to zero cannot authenticate its first word as final. -/
+theorem wrappedLengthHasNoBoundedEnd (actual : Bytes) (length : actual.length = 2 ^ 64)
+    (index : ℕ) (bound : index < 2 ^ 48) :
+    (WordRecord.encode (p := SP1Prime) 1 actual index).isLast = 0 := by
+  have different : index + 1 ≠ wordCount actual := by simp only [wordCount, length]; omega
+  simp only [WordRecord.encode, different, ↓reduceIte]
 
 /-- Authenticated words agree with actual sparse writes, including overwritten padding bytes. -/
 theorem actualPaddedWrites : (List.range 26).all (fun length =>

@@ -341,9 +341,19 @@ Implemented foundations:
   to the checked fresh allocation identity. Regressions reject same-length content changes,
   wrong keys, missing/forged padding, and length changes hidden by zero padding. Historical source
   words remain usable; new nodes correctly fail the source lookup until separately authorized.
+  `HintReadSpan` now checks the exact positive padded word count and last written RAM address,
+  including valid writes ending at `2^48`. It composes a proved native division-by-eight circuit
+  and existing bounded adders; aligned permitted writes construct its completeness domain.
+  The word ledger also authenticates the actual final-word marker. A bounded final word derives
+  the node's true length below `2^64`, closing the metadata's modulo-length ambiguity without
+  restricting unrelated source hints. `HintReadSpan.Spec.node_end` binds the checked span to that
+  exact node extent. Regressions cover carries, the address ceiling, forged endpoints and markers,
+  and the fact that a wrapped length word alone can pass the span while miscounting actual bytes.
   The next queue step must install source and handler components, authorize new WRITE/hook nodes
   and their words, derive ordered head history, and constrain HINT_READ's full padded word cover on the
-  same node identities. Include the 48-bit identity bound in the shared resource profile.
+  same node identities. The consumer must derive its authenticated final-word binding and complete
+  walk from AIR balance; the endpoint theorem alone does not prove coverage. Include the 48-bit
+  identity bound in the shared resource profile.
   The full-AIR forged HINT_LEN return regression remains open until that integration.
 
 - `HostRamAccessChip` is a sound and complete native Clean component for one aligned RAM word

@@ -4,7 +4,9 @@ import SP1Clean.Model.Core.HintQueueWords
 /-! # Authenticating immutable hint words from finite source bytes
 
 A word record identifies a node and a word position with canonical 48-bit keys. Its value is
-the complete little-endian word, including required zero padding. The source lookup is computed
+the complete little-endian word, including required zero padding, and an authenticated final-word
+marker. A bounded final word recovers the true node length without a caller-supplied length bound.
+The source lookup is computed
 from source hints and permits no witness-selected content. Positions beyond the key range are
 omitted, never wrapped; completeness states the needed position bound explicitly.
 -/
@@ -17,45 +19,51 @@ structure WordRecord (F : Type) where
   pointer : fields 3 F
   index : fields 3 F
   value : Word F
+  isLast : F
 deriving ProvableStruct, DecidableEq
 
 variable {p : ℕ} [Fact p.Prime]
 
 def WordRecord.Valid (record : WordRecord (ZMod p)) : Prop :=
   Address.Bounded record.pointer ∧ 0 < Address.toNat record.pointer ∧
-    Address.Bounded record.index ∧ Word.isU64 record.value
+    Address.Bounded record.index ∧ Word.isU64 record.value ∧ (record.isLast = 0 ∨ record.isLast = 1)
 
 def WordRecord.Binds (store : Store) (record : WordRecord (ZMod p)) : Prop :=
   ∃ node, node? store (Address.toNat record.pointer) = some node ∧
     Address.toNat record.index < wordCount node.bytes ∧
-    Word.toBitVec64 record.value = wordValue node.bytes (Address.toNat record.index)
+    Word.toBitVec64 record.value = wordValue node.bytes (Address.toNat record.index) ∧
+    record.isLast = if Address.toNat record.index + 1 = wordCount node.bytes then 1 else 0
 
 def WordRecord.encode (pointer : ℕ) (bytes : Bytes) (index : ℕ) : WordRecord (ZMod p) :=
-  ⟨Address.ofNat pointer, Address.ofNat index, bitVecToWord (wordValue bytes index)⟩
+  ⟨Address.ofNat pointer, Address.ofNat index, bitVecToWord (wordValue bytes index),
+    if index + 1 = wordCount bytes then 1 else 0⟩
 
 variable [Fact (2 ^ 17 < p)]
 
 theorem WordRecord.encode_valid (pointer : ℕ) (bytes : Bytes) (index : ℕ)
     (positive : 0 < pointer) (bound : pointer < 2 ^ 48) :
     (encode (p := p) pointer bytes index).Valid := by
-  refine ⟨Address.bounded_ofNat _, ?_, Address.bounded_ofNat _, isU64_bitVecToWord _⟩
-  simpa only [encode, Address.toNat_ofNat _ bound] using positive
+  refine ⟨Address.bounded_ofNat _, ?_, Address.bounded_ofNat _, isU64_bitVecToWord _, ?_⟩
+  · simpa only [encode, Address.toNat_ofNat _ bound] using positive
+  · simp only [encode]
+    split_ifs <;> simp
 
 theorem WordRecord.encode_binds {store : Store} {pointer : ℕ} {node : Node}
     (read : node? store pointer = some node) (bound : pointer < 2 ^ 48)
     (index : ℕ) (position : index < wordCount node.bytes) (fits : index < 2 ^ 48) :
     (encode (p := p) pointer node.bytes index).Binds store := by
-  refine ⟨node, ?_, ?_, ?_⟩
+  refine ⟨node, ?_, ?_, ?_, ?_⟩
   · simpa only [encode, Address.toNat_ofNat _ bound] using read
   · simpa only [encode, Address.toNat_ofNat _ fits] using position
   · simp only [encode, Address.toNat_ofNat _ fits, toBitVec64_bitVecToWord]
+  · simp only [encode, Address.toNat_ofNat _ fits]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Word authentication survives every later immutable allocation, including after pops. -/
 theorem WordRecord.Binds.extend {old new : Store} {record : WordRecord (ZMod p)}
     (extension : Extends old new) (binding : record.Binds old) : record.Binds new := by
-  obtain ⟨node, read, position, value⟩ := binding
-  exact ⟨node, extension _ _ read, position, value⟩
+  obtain ⟨node, read, position, value, last⟩ := binding
+  exact ⟨node, extension _ _ read, position, value, last⟩
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The complete word value is fixed by its node and position, not by metadata length alone. -/
@@ -64,10 +72,33 @@ theorem WordRecord.Binds.value {store : Store} {record : WordRecord (ZMod p)}
     (read : node? store (Address.toNat record.pointer) = some node) :
     Address.toNat record.index < wordCount node.bytes ∧
       Word.toBitVec64 record.value = wordValue node.bytes (Address.toNat record.index) := by
-  obtain ⟨actual, found, position, value⟩ := binding
+  obtain ⟨actual, found, position, value, _⟩ := binding
   have same : actual = node := Option.some.inj (found.symm.trans read)
   cases same
   exact ⟨position, value⟩
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The marker identifies the actual final padding word, rather than an arbitrary requested prefix. -/
+theorem WordRecord.Binds.isLast_iff {store : Store} {record : WordRecord (ZMod p)}
+    (binding : record.Binds store) {node : Node}
+    (read : node? store (Address.toNat record.pointer) = some node) :
+    record.isLast = 1 ↔ Address.toNat record.index + 1 = wordCount node.bytes := by
+  obtain ⟨actual, found, _, _, last⟩ := binding
+  have same : actual = node := Option.some.inj (found.symm.trans read)
+  cases same
+  rw [last]
+  by_cases ended : Address.toNat record.index + 1 = wordCount node.bytes <;> simp [ended]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- An authenticated final word has a bounded true length, even when source hints are unrestricted. -/
+theorem WordRecord.Binds.length_bound_of_last {store : Store} {record : WordRecord (ZMod p)}
+    (binding : record.Binds store) (valid : record.Valid) {node : Node}
+    (read : node? store (Address.toNat record.pointer) = some node) (last : record.isLast = 1) :
+    node.bytes.length < 2 ^ 51 := by
+  have ended := (binding.isLast_iff read).mp last
+  have bound := Address.toNat_lt valid.2.2.1
+  simp only [wordCount] at ended
+  omega
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Authenticated words give the exact RAM values after the semantic padded write. -/
@@ -92,6 +123,19 @@ theorem NodeRecord.Binds.length_eq {store : Store} {record : NodeRecord (ZMod p)
   cases same
   have natural := congrArg BitVec.toNat length
   simpa only [Word.toBitVec64_toNat valid.2.2.2, BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound] using natural
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Final-word authentication discharges the natural-length premise of the metadata bridge. -/
+theorem NodeRecord.Binds.length_eq_of_last {store : Store} {record : NodeRecord (ZMod p)}
+    (binding : record.Binds store) (valid : record.Valid) (word : WordRecord (ZMod p))
+    (wordBinding : word.Binds store) (wordValid : word.Valid) (same : word.pointer = record.pointer)
+    (last : word.isLast = 1) {node : Node}
+    (read : node? store (Address.toNat record.pointer) = some node) :
+    Word.toNat record.length = node.bytes.length := by
+  have atWord : node? store (Address.toNat word.pointer) = some node := by rwa [same]
+  apply binding.length_eq valid read
+  have bound := wordBinding.length_bound_of_last wordValid atWord last
+  omega
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Complete word coverage and the separately authenticated length recover every hint byte. -/

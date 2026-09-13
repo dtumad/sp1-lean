@@ -2,7 +2,7 @@ import SP1Clean.Model.Core.HintQueueWordRecords
 
 /-! # Immutable hint-word coordination
 
-The channel carries the node identity, word position, and full value. Its guarantee is only
+The channel carries the node identity, word position, full value, and final-word marker. Its guarantee is only
 local representation validity. Source and authorized-allocation providers must establish actual
 byte binding; complete consumers must request every required word, including final padding.
 -/

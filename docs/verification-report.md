@@ -755,13 +755,25 @@ Original hint contents now have a native fixed word provider computed from sourc
 `HintQueueWords` and `HintQueueWordRecords` prove that the complete padded word cover plus the
 authenticated length recovers all bytes, and that these values match the actual semantic RAM
 write. Length is independently necessary because trailing zero bytes can have identical padded
-word contents. The metadata-to-natural-length theorem discloses its below-`2^64` premise.
+word contents. The metadata-to-natural-length theorem discloses its below-`2^64` premise;
+the word record's authenticated final-word marker now derives that bound from the final index.
 The source provider has no incoming byte assumption, exact ledgers, and zero witness cells.
 Its bounded position inventory never wraps; a permitted native-window write derives the needed
 position bound. Generated allocation words share the checked fresh node's identity. Regressions
 reject content changes, wrong keys, missing/forged padding, and length substitutions, while
 retaining historical source words. Authorized new-word publication, complete HINT_READ AIR
 coverage, and mixed-ensemble installation remain open.
+
+The native `HintReadSpan` circuit checks a positive count of `length / 8 + 1` words and the last
+written address, including writes ending exactly at `2^48`. Its constructor is complete for
+aligned permitted writes in the native window, and it exports 116 witness cells with six Byte
+pulls. `HintReadSpan.Spec.node_end` combines the span with authenticated metadata and the actual
+final word to recover the natural node length and complete padded count. This authentication is
+necessary: a length of `2^64` has the same encoded length word as zero and would otherwise pass a
+one-word span. A symbolic regression proves such a node has no bounded authenticated final word;
+executable regressions reject forged markers, counts, endpoints, and out-of-window padding.
+These are endpoint and content-binding results. HINT_READ's full AIR consumer still needs a
+balance-derived word walk, writable-byte permissions, and the corresponding RAM transfers.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

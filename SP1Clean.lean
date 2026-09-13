@@ -373,6 +373,16 @@ import SP1Clean.FormalModel.Contracts.HintWords
 import SP1Clean.Native.Operations.HintQueueWordSource
 import SP1Clean.Proofs.Operations.HintQueueWordSource
 import SP1Clean.Proofs.Operations.HintNodeWords
+import SP1Clean.FormalModel.Contracts.AddressDiv8
+import SP1Clean.Native.Operations.AddressDiv8
+import SP1Clean.Proofs.Operations.AddressDiv8
+import SP1Clean.Proofs.Operations.AddrAddOperation.Address
+import SP1Clean.FormalModel.Contracts.HintReadSpan
+import SP1Clean.Native.Operations.HintReadSpan
+import SP1Clean.Proofs.Operations.HintReadSpan
+import SP1Clean.Proofs.Operations.HintReadSpanPopulate
+import SP1Clean.Proofs.Operations.HintReadSpanLedger
+import SP1Clean.Proofs.Operations.HintReadSpanNode
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Proofs.Operations.HintNodeAllocate
