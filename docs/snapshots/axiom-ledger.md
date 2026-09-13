@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1818 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 227 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1863 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 233 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2045 released declarations are probed.
+- 2096 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,26 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The native ROM-permission checkpoint adds 45 main declarations and six test anchors. Forty-two
+main additions use the logical baseline or a subset. The new ensemble and its table-count theorem
+retain the existing 100-axiom registry set; the byte-frame ROM-preservation lemma retains the
+existing 77-axiom Sail set. All preceding 1818 main and 227 test dependency sets are unchanged,
+with no removals or new main-library axiom names. Six new compiler-trusted proof constants are
+isolated to the ROM-write, permission-forgery, partial-write, non-store, endpoint, and padding tests.
+
+`ProtectedLocalCore.ensemble` installs a fixed writable-interval provider and four store wrappers.
+The wrappers prove exact preservation of original physical widths, assertion/lookup lists, and
+existing ledgers. The provider's constructor succeeds exactly on writable 48-bit byte addresses;
+its soundness/completeness and exportable comparison witnesses are closed. Complete AIR regressions
+reject a reproduced store into its own instruction and forged/missing permissions while retaining
+partial writes beside code, store padding, and stopped identities. This is an explicit native
+immutable-code profile restriction, separate from the original Rust-faithfulness claims.
+
+The new 60-table witness still needs projection to the existing local assembly, permission
+source authentication through balance, and grounding transport. The existing execution combinator
+therefore still takes ROM preservation as a premise. Host-memory writes, complete outgoing-state
+agreement, terminal Exit agreement, and compiler totality remain open.
 
 The stateful local HALT checkpoint adds 16 main declarations and three test anchors. Eight main
 additions use the logical baseline or a subset, two retain the existing 77-axiom Sail set, and six

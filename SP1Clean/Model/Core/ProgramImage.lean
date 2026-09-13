@@ -121,7 +121,7 @@ def romBytes (input : ProgramImage) : List (ℕ × BitVec 8) :=
 def initialMemory (input : ProgramImage) : ByteMemory :=
   ⟨input.romBytes ++ input.image.map (fun byte => (byte.1.toNat, byte.2))⟩
 
-private theorem mem_romBytes (input : ProgramImage) (byte : ℕ × BitVec 8) :
+theorem mem_romBytes (input : ProgramImage) (byte : ℕ × BitVec 8) :
     byte ∈ input.romBytes ↔ ∃ row ∈ input.rom, ∃ index : Fin 4,
       (row.1.toNat + index, row.2.extractLsb' (8 * index) 8) = byte := by
   simp [romBytes]

@@ -33,6 +33,12 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.LocalCore.unguardedStoreIntoRom
+#print axioms SP1CleanTest.Core.LocalCore.protectedRejectsStoreIntoRom
+#print axioms SP1CleanTest.Core.LocalCore.protectedPartialStoreBesideRom
+#print axioms SP1CleanTest.Core.LocalCore.protectedNonStores
+#print axioms SP1CleanTest.Core.LocalCore.permissionAddressWindow
+#print axioms SP1CleanTest.Core.LocalCore.protectedPaddingIdentity
 #print axioms SP1CleanTest.Core.LocalCore.activeHaltLocalShard
 #print axioms SP1CleanTest.Core.LocalCore.legacyHaltExitRange
 #print axioms SP1CleanTest.Core.LocalCore.rejectsForgedHalt

@@ -108,6 +108,17 @@ Implemented foundations:
   `replay_of_finalTruth` recovers full-tape replay success and the returned PC/clock from grounded
   final State truth; it does not assume successful replay. Regressions check complete intermediate
   states, ordinary host preservation, endpoint extension, and rejection of a real step after HALT.
+- `ProtectedLocalCore.ensemble` installs all four byte-permission store wrappers and the fixed
+  writable-interval provider, for 60 tables. Original row widths, assertion/lookup lists, and
+  existing interaction ledgers are provably preserved. The permission constructor succeeds exactly
+  for writable addresses below `2^48`; its table size depends on ROM size. Full-AIR regressions
+  reject the reproduced code-writing SB and forged/missing permissions, permit a partial store
+  beside ROM in the same RAM cell, and retain store padding and stopped-source identities.
+  Store and provider witness programs pass exportability checks. The generic byte-frame lemma
+  proves ROM preservation from allowed writes. Projection to the existing local witness, permission
+  authentication from the new ledger, and grounding transport are still open, so the current
+  local execution combinator retains its ROM premise. This strengthens the native immutable-code
+  profile without changing the original SP1 chip faithfulness statements.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -445,9 +456,11 @@ Still required before the native capstone can be claimed:
    HALT host transition and status, leaving ROM preservation and active SyscallInstrs semantic
    facts; final State truth supplies successful full-tape replay and the returned PC/clock.
    Widen the legacy HALT row's 16-bit exit domain when integrating the full syscall/Exit path.
-   Constrain ROM
-   preservation and actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded
-   RAM writes, to close the remaining semantic facts. Terminal ECALL/Exit agreement and complete
+   Project the 60-table `ProtectedLocalCore` witness to the existing local assembly, derive every
+   active store's byte permissions from balance and the fixed provider, and feed the resulting
+   `RowEffect` ROM preservation into grounding. The current combinator still takes that premise.
+   Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM
+   writes; the latter must use the same byte-permission interface. Terminal ECALL/Exit agreement and complete
    execution reconstruction, including ordinary normal retirement, remain open. No unconditional
    local execution theorem is claimed.
 3. Integrate the paired semantic replay with the mixed carrier, the full-code-checked

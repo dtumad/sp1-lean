@@ -97,6 +97,15 @@ to the AIR timeline. `LocalCoreInstructionExecution.ground_of_system_steps` deri
 chip's step/frame facts on this replay. `LocalCoreHaltExecution.ground_of_host_steps` also derives
 HALT's actual stateful host transition and exit status from committed ECALL and incoming register
 currency; only ROM preservation and active SyscallInstrs effects remain semantic premises.
+The new 60-table `ProtectedLocalCore.ensemble` installs four store wrappers and a fixed writable-
+interval permission provider. All four wrappers prove original widths/assertions/lookups and old
+ledgers unchanged, and the provider's proof-independent constructor succeeds exactly for writable
+48-bit byte addresses. Full-AIR regressions reject code-writing SB, missing/forged permission, and
+retain partial writes beside ROM in one RAM cell, store padding, and stopped identities. Its full
+witness projection, permission-ledger authentication, and grounding transport are still open;
+`RowEffect.romLoaded_of_writePermission` supplies the byte-frame implication. The existing local
+execution theorem therefore still has its ROM premise. Keep this native profile strengthening
+separate from the unchanged original SP1 chip faithfulness anchors.
 The host policy characteristic explicitly equals the AIR field. HALT's legacy row still has a
 16-bit exit domain, stronger than the concrete host's canonical below-characteristic, 32-bit range.
 Running-host and non-ECALL guards follow inside incoming State truth, not from caller assumptions.

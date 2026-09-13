@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.LocalCoreGrounding
+import SP1Clean.Soundness.ProtectedLocalCore
 import SP1Clean.Model.Core.HostSnapshot
 import SP1CleanTest.Audit.OneAddNativePremises
 import ToClean.Air.EnsembleExport
@@ -91,7 +92,8 @@ private def evaluate (image : ProgramImage) (source : ExecutionSnapshot) (compon
   let operations := (program.operations component.rowOffset).toFlat
   let fixed := [FiniteLookup.ofStatic (source.sail.memorySnapshot.registerTable (p := SP1Prime)),
     FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
-    FiniteLookup.ofStatic (image.programTable (p := SP1Prime))]
+    FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
+    FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime))]
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
@@ -101,8 +103,11 @@ private def evaluate (image : ProgramImage) (source : ExecutionSnapshot) (compon
   (valid, (FlatOperation.interactions operations).map fun interaction =>
     (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
 
-private def evaluateRow (image : ProgramImage) (source : ExecutionSnapshot) (row : Row) : Bool × Ledger :=
-  match (Soundness.LocalCore.tables image source)[row.1]? with
+private def evaluateRow (image : ProgramImage) (source : ExecutionSnapshot) (row : Row)
+    (guarded : Bool := false) : Bool × Ledger :=
+  let tables := if guarded then Soundness.ProtectedLocalCore.tables image source
+    else Soundness.LocalCore.tables image source
+  match tables[row.1]? with
   | none => (false, [])
   | some component => evaluate image source component row.2
 
@@ -116,18 +121,21 @@ private def byteProvider (entry : String × List Fp × Fp) : Option Row :=
     else if opcode == 4 then some (37, [b, c, -entry.2.2])
     else if opcode == 5 then some (33, [b, -entry.2.2])
     else if opcode == 6 && b.val < 17 then some (38 + b.val, [a, -entry.2.2])
-    else some (59, [])
-  | _ => some (59, [])
+    else some (60, [])
+  | _ => some (60, [])
 
-private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1PublicIO Fp) (rows : List Row) : Bool :=
+private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1PublicIO Fp) (rows : List Row)
+    (guarded : Bool := false) : Bool :=
+  let assembly := if guarded then Soundness.ProtectedLocalCore.ensemble (p := SP1Prime) image source
+    else Soundness.LocalCore.ensemble image source
   let head := evaluate image source ⟨Soundness.LocalCore.verifier image source⟩ (toElements pi).toList
-  let initial := head :: rows.map (evaluateRow image source)
+  let initial := head :: rows.map (fun row => evaluateRow image source row guarded)
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
-  let evaluated := initial ++ demands.map (evaluateRow image source)
+  let evaluated := initial ++ demands.map (fun row => evaluateRow image source row guarded)
   let ledger := evaluated.flatMap Prod.snd
   evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
-      ((Soundness.LocalCore.ensemble (p := SP1Prime) image source).channels.map RawChannel.name).contains name &&
+      (assembly.channels.map RawChannel.name).contains name &&
         ((ledger.filter (fun entry => entry.1 == name && entry.2.1 == message)).map
           (fun entry => entry.2.2)).sum == 0
 
@@ -434,5 +442,134 @@ theorem rejectsForgedHalt :
       (haltPublic 65535) (haltRows 65535),
      check syscallImage (haltSource 65535) (haltPublic 65534) (haltRows 65535)] =
       [false, false, false] := by native_decide
+
+private def storeRomImage : ProgramImage := ⟨[(65536, 0x00110023)], 65536, []⟩
+
+private def storeRomSource : ExecutionSnapshot :=
+  { source with
+    sail := { registers := ((configuredState 65536).regs.insert .x1 0).insert .x2 65536
+              memory := storeRomImage.initialMemory } }
+
+private def storeRomInput : StoreByteChip.Inputs Fp :=
+  { is_real := 1, state := ⟨0, 0, 9, #v[0, 1, 0]⟩
+    adapter :=
+      { op_a := 1, op_a_memory := ⟨word 0, ⟨0, 12⟩⟩, op_a_0 := 0,
+        op_b := 2, op_b_memory := ⟨word 65536, ⟨0, 11⟩⟩, op_c_imm := word 0 }
+    memory_access :=
+      { prev_value := word 0x00110023, access_timestamp := ⟨0, 0, 1, 9, 0⟩ }
+    offset_bit := #v[0, 0, 0], mem_limb := 0x23, mem_limb_low_byte := 0x23
+    register_low_byte := 0, increment := -(0x23 : Fp), store_value := word 0x00110000 }
+
+private def storeRomRows : List Row :=
+  let sourceRow (previous index : ℕ) : Row :=
+    (0, (toElements (OrderedSnapshotProvider.populate
+      (SnapshotRegisterProvider.populate storeRomSource.sail.memorySnapshot (BitVec.ofNat 5 index))
+      previous index)).toList)
+  [sourceRow 0 1, sourceRow 2 2,
+    (1, (toElements (OrderedSnapshotProvider.populate
+      (InitialMemoryRead.populate (p := SP1Prime) storeRomSource.sail.memory 65536) 3 65536)).toList),
+    terminal 2 65537,
+    (3, finalRecord 0 1 13 0), (3, finalRecord 2 2 12 65536),
+    (4, finalRecord 3 65536 10 0x00110000), terminal 5 65537,
+    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) storeRomImage (65536, 0x00110023) 1).map
+      (fun input => (toElements input).toList)).getD []),
+    (25, (toElements storeRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
+
+/-- The unguarded local AIR permits SB to overwrite its own instruction byte. Source ROM
+validation and fixed Program membership alone do not enforce ROM preservation. -/
+theorem unguardedStoreIntoRom :
+    check storeRomImage storeRomSource publicInput storeRomRows = true ∧
+      storeRomImage.readOnly 65536 = true ∧
+      storeRomSource.sail.memory.read 65536 = 0x23 ∧
+      Word.toBitVec64 storeRomInput.store_value = 0x00110000 := by native_decide
+
+private def permissionRow (address : ℕ) : Row :=
+  (59, ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage address).map
+    (fun input => (toElements input).toList)).getD [])
+
+private def besideRomSource : ExecutionSnapshot :=
+  { storeRomSource with
+    sail.registers := (storeRomSource.sail.registers.insert .x1 127).insert .x2 65540 }
+
+private def besideRomInput : StoreByteChip.Inputs Fp :=
+  { storeRomInput with
+    adapter.op_a_memory.prev_value := word 127
+    adapter.op_b_memory.prev_value := word 65540
+    offset_bit := #v[0, 0, 1], mem_limb := 0, mem_limb_low_byte := 0
+    register_low_byte := 127, increment := 127, store_value := word 0x7f00110023 }
+
+private def besideRomRows : List Row :=
+  let sourceRow (previous index : ℕ) : Row :=
+    (0, (toElements (OrderedSnapshotProvider.populate
+      (SnapshotRegisterProvider.populate besideRomSource.sail.memorySnapshot (BitVec.ofNat 5 index))
+      previous index)).toList)
+  [sourceRow 0 1, sourceRow 2 2,
+    (1, (toElements (OrderedSnapshotProvider.populate
+      (InitialMemoryRead.populate (p := SP1Prime) besideRomSource.sail.memory 65536) 3 65536)).toList),
+    terminal 2 65537,
+    (3, finalRecord 0 1 13 127), (3, finalRecord 2 2 12 65540),
+    (4, finalRecord 3 65536 10 0x7f00110023), terminal 5 65537,
+    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) storeRomImage (65536, 0x00110023) 1).map
+      (fun input => (toElements input).toList)).getD []),
+    (25, (toElements besideRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
+
+/-- The strengthened full AIR rejects the reproduced store into its own code byte, including
+an attempted provider row whose query is ROM but whose interval was selected for writable RAM. -/
+theorem protectedRejectsStoreIntoRom :
+    [check storeRomImage storeRomSource publicInput storeRomRows true,
+     check storeRomImage storeRomSource publicInput (storeRomRows ++ [permissionRow 65540]) true,
+     check storeRomImage storeRomSource publicInput (storeRomRows ++ [(59,
+       ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage 65540).map
+         (fun input => (toElements { input with address := Address.ofNat 65536 }).toList)).getD [])]) true] =
+      [false, false, false] := by native_decide
+
+/-- Byte-precise protection permits changing writable data in the other half of the same RAM
+cell as code, while requiring a matching permission provider at the actual written address. -/
+theorem protectedPartialStoreBesideRom :
+    [check storeRomImage besideRomSource publicInput (besideRomRows ++ [permissionRow 65540]) true,
+     check storeRomImage besideRomSource publicInput besideRomRows true,
+     check storeRomImage besideRomSource publicInput (besideRomRows ++ [permissionRow 65541]) true] =
+      [true, false, false] := by native_decide
+
+/-- Adding the permission ledger preserves ordinary non-store and HALT local segments. -/
+theorem protectedNonStores :
+    check image source publicInput baseRows true = true ∧
+      check syscallImage (haltSource 65535) (haltPublic 65535) (haltRows 65535) true = true := by native_decide
+
+/-- Endpoint encoding includes the last native byte and excludes the first out-of-range address. -/
+theorem permissionAddressWindow :
+    ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage (2 ^ 48 - 1)).isSome,
+      (WritePermissionProvider.populate? (p := SP1Prime) storeRomImage (2 ^ 48)).isSome) =
+        (true, false) := by native_decide
+
+/-- info: exportable ✓ (4 witness cells) -/
+#guard_msgs in
+#assert_exportable (ProtectedStore.byte (p := SP1Prime))
+
+/-- info: exportable ✓ (4 witness cells) -/
+#guard_msgs in
+#assert_exportable (ProtectedStore.half (p := SP1Prime))
+
+/-- info: exportable ✓ (4 witness cells) -/
+#guard_msgs in
+#assert_exportable (ProtectedStore.word (p := SP1Prime))
+
+/-- info: exportable ✓ (4 witness cells) -/
+#guard_msgs in
+#assert_exportable (ProtectedStore.double (p := SP1Prime))
+
+/-- info: exportable ✓ (88 witness cells) -/
+#guard_msgs in
+#assert_exportable (WritePermissionProvider.circuit (p := SP1Prime) storeRomImage)
+
+/-- Padding in every store table has zero permission demand; stopped-source identities remain valid. -/
+theorem protectedPaddingIdentity :
+    let rows := identityRows ++
+      [(25, List.replicate (size StoreByteChip.Inputs) 0),
+       (26, List.replicate (size StoreHalfChip.Inputs) 0),
+       (27, List.replicate (size StoreWordChip.Inputs) 0),
+       (28, List.replicate (size StoreDoubleChip.Inputs) 0)]
+    check image source identityPublic rows true = true ∧
+      check image { source with host.exitCode := some 0 } identityPublic rows true = true := by native_decide
 
 end SP1CleanTest.Core.LocalCore

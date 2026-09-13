@@ -1,3 +1,10 @@
+import SP1Clean.Soundness.ProtectedLocalCore
+import SP1Clean.Soundness.RomWriteProtection
+import SP1Clean.Proofs.Chips.ProtectedStore
+import SP1Clean.Native.Operations.WritePermission
+import SP1Clean.FormalModel.Contracts.WritePermission
+import SP1Clean.Model.Core.WritePermission
+import SP1Clean.Math.Address
 import SP1Clean.Proofs.Chips.AddChip.Bridge
 import ToClean.Air.CompleteEnsemble
 import ToClean.Air.EnsembleExport
@@ -360,6 +367,8 @@ import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
 import SP1Clean.Model.Core.HostHalt
+import SP1Clean.FormalModel.Contracts.AddressOrder
+import SP1Clean.Native.Operations.AddressOrder
 import SP1Clean.Model.Core.ExecutionBoot
 import SP1Clean.Model.Core.ExecutionSnapshot
 import SP1Clean.Model.Core.SailRegisterEquality

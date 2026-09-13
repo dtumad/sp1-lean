@@ -293,6 +293,24 @@ three zero upper exit limbs still restrict that table to 16-bit exits. Normal re
 execution reconstruction, the other host effects, and complete outgoing
 snapshot agreement still require integration; replay success alone is not a normal-retirement theorem.
 
+`ProtectedLocalCore.ensemble` adds byte-level ROM write protection to the local AIR. Its four
+store wrappers retain the original physical widths, assertion/lookup lists, and all existing
+interaction ledgers, with proved equalities. They request permission for exactly the bytes written;
+a new provider authenticates those addresses against writable intervals computed from the fixed
+ROM. The table grows with ROM size, not the 48-bit address space. Its constructor is proved total
+exactly for in-range writable addresses. Comparison and provider witnesses use exportable Clean
+operations, with no additional Byte traffic. Full-AIR regressions reject a store that overwrites
+its own instruction and forged/missing permissions, while accepting writable bytes in the other
+half of the same eight-byte cell, all four store paddings, and stopped-source identities.
+
+This is a native immutable-code profile restriction; the 25 original Rust-faithfulness anchors
+are unchanged. The 60-table assembly still needs a proved projection to `LocalCore`, authentication
+of every permission request from its full ledger, and transport into timed grounding.
+`RowEffect.romLoaded_of_writePermission` supplies the byte-frame implication, but the current
+`ground_of_host_steps` still takes ROM preservation as a premise. Active host-memory writes must
+join this permission interface when their effects are integrated. Full local soundness/completeness
+is not yet claimed.
+
 The stopped-source clock constraint closes one concrete soundness gap: an active ADD previously
 passed with `source.host.exitCode = some 0`. `executionRows_nil_of_stopped` now excludes all active
 event kinds, and the regression retains empty stopped-source segments. A separate regression makes
