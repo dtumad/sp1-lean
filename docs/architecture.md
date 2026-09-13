@@ -400,6 +400,16 @@ exact AIR still binds every commit in a shard to one public digest, so distinct 
 disclosed exact-completeness obstacle. Proof requests record observed digests;
 they do not assert recursive proof verification.
 
+`HintQueue` represents complete hint bytes with immutable indexed nodes and decreasing tail
+pointers. Its source encoder and decoder agree exactly with finite hint lists, and appending nodes
+preserves every historical head. `HostState.hintUpdate_sound` compiles every successful host call
+into a prepend or pop, including ordered hook responses, with exact allocation accounting.
+`hintLength?_of_run` binds the interpreter's return to the current represented queue. This avoids
+assuming that HINT_LEN always sees the initial source queue. These semantic proofs do not yet
+close the AIR gap: source/new node contents, head transitions, and length observations still need
+ledger authentication, alongside the WRITE and HINT_READ Memory footprints. Pointer field bounds
+must be explicit in the common resource profile; no content hash or trusted byte oracle is used.
+
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and
 write cells. Execution derives coverage, window bounds, and existence of this inventory;

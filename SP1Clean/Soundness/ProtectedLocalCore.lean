@@ -6,8 +6,8 @@ import SP1Clean.Native.Operations.WritePermission
 
 Four instruction components acquire byte-permission requests, and one fixed-interval provider
 supplies them. The complete source verifier and all other tables are retained. This is the native
-assembly intended for the capstone; transport of the existing local grounding theorem to its
-additional ledger is a separate proof obligation, not an assumed execution guarantee.
+assembly intended for the capstone. `ProtectedLocalCoreExecution` derives ordinary ROM preservation
+from its additional ledger; active host effects and complete execution reconstruction remain open.
 -/
 
 namespace SP1Clean.Soundness.ProtectedLocalCore

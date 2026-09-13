@@ -293,8 +293,9 @@ Implemented foundations:
   written-byte readback, and ROM preservation. `HostState.step_sound` gives a committed ECALL
   transition for the concrete one-step handler. Regressions cover all eight calls, rejection paths,
   actual Sail updates, and successive hint/output/HALT calls sharing host state and memory.
-  This closes the executable host semantics component. It does not thread host state through the
-  mixed machine trajectory or authenticate the extra observations and effects with AIR tables.
+  This closes the executable host semantics component. `LocalCoreTrajectory` now threads that
+  host state through replay; authenticating the extra observations and effects with AIR tables
+  remains open.
 - `Model/Core/MemorySpan.lean` and `HostFootprint.lean` compute the complete register/cell
   inventory from host execution. It retains WRITE's x12, all requested buffer bytes, and every
   padded write byte; overlapping buffers share cells. Successful execution yields the footprint,
@@ -305,6 +306,21 @@ Implemented foundations:
   Regressions cover overlap, unaligned and empty reads, padding words, observed-byte changes,
   and the counterexample showing that equal failed word reads do not authenticate their bytes.
   These close local semantic bridges for the host access tables.
+- `Model/Core/HintQueue.lean` now gives an executable persistent representation of complete
+  hint bytes. Zero is empty; allocated nodes have smaller tail pointers. Source encoding,
+  byte-exact decoding, deterministic meaning, preservation of all historical nodes, pops, and
+  exact allocation counts are proved. Local node validity and a bounded root imply a complete
+  finite queue. `HostQueue.lean` derives updates from every successful eight-call host execution,
+  including guest prepends and ordered, request-bound hook replies. `hintLength?_of_run` observes
+  the current represented queue; no static-source-queue assumption is introduced. Regressions
+  follow changing lengths through all eight calls, empty-hint padding, preserved historical heads,
+  and malformed pointers; equal lengths with different bytes remain distinguishable.
+  This is semantic compiler machinery, not installed AIR authentication. The next queue step
+  must bind the complete source nodes, authorize new bytes from WRITE/hooks, constrain ordered
+  head transitions and observations, and connect HINT_READ's full padded write. Natural-number
+  pointers still need field encoding under explicit resource bounds. The full-AIR forged
+  HINT_LEN return regression remains open until that integration.
+
 - `HostRamAccessChip` is a sound and complete native Clean component for one aligned RAM word
   transfer. It composes the existing address and Memory gadgets, checks both high clocks locally,
   and proves strict prior/new time order and an effect at event time plus one. Its constructor
@@ -466,6 +482,10 @@ Still required before the native capstone can be claimed:
    the fixed provider and connected to its decoded store's semantic byte footprint.
    `ProtectedLocalCore.ground_of_host_steps` now derives ordinary ROM preservation through the
    registered row effects and includes stateful HALT, leaving active SyscallInstrs effects explicit.
+   The persistent hint-queue compiler now covers all eight semantic calls; authenticate its
+   node inventory and head history in AIR, including WRITE/hook prepends and HINT_READ pops.
+   Parameterize the bank subsystem's currently zero genesis with the complete local source
+   commitment/deferred values before installing it in arbitrary continuation shards.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM
    writes; the latter must use the same byte-permission interface. Terminal ECALL/Exit agreement and complete
    execution reconstruction, including ordinary normal retirement, remain open. No unconditional

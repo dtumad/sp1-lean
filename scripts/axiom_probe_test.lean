@@ -10,6 +10,7 @@ import SP1CleanTest.Core.HostCommitBoundary
 import SP1CleanTest.Core.HostCommit
 import SP1CleanTest.Core.HostCall
 import SP1CleanTest.Core.HostRamAccess
+import SP1CleanTest.Core.HostQueue
 import SP1CleanTest.Core.HostExecution
 import SP1CleanTest.Core.HostFootprint
 import SP1CleanTest.Core.SyscallCode
@@ -136,6 +137,9 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.HostRamAccess.rejectsMalformedWords
 #print axioms SP1CleanTest.Core.HostRamAccess.rejectsMalformedTimes
 #print axioms SP1CleanTest.Core.HostRamAccess.retainedLedgers
+#print axioms SP1CleanTest.Core.HostQueue.changingQueue
+#print axioms SP1CleanTest.Core.HostQueue.historicalHeads
+#print axioms SP1CleanTest.Core.HostQueue.rejectsMalformedAndDistinguishesBytes
 #print axioms SP1CleanTest.Core.HostExecution.allCalls
 #print axioms SP1CleanTest.Core.HostExecution.observedWrite
 #print axioms SP1CleanTest.Core.HostExecution.descriptorDispatch

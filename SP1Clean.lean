@@ -365,6 +365,8 @@ import SP1Clean.Model.Core.MemoryIntervals
 import SP1Clean.Model.Core.MemoryTable
 import SP1Clean.Model.Core.MemoryWord
 import SP1Clean.Model.Core.HostIO
+import SP1Clean.Model.Core.HintQueue
+import SP1Clean.Model.Core.HostQueue
 import SP1Clean.Model.Core.HostExecution
 import SP1Clean.Model.Core.HostExecutionLaws
 import SP1Clean.Model.Core.HostTerminal

@@ -729,6 +729,16 @@ totality, native witness composition, and complete event-tape export remain open
 regression composes ENTER and HALT at a non-boot clock and rejects changed host/RAM endpoints,
 forged host events, and positive-length execution after HALT.
 
+`Model/Core/HintQueue.lean` and `HostQueue.lean` add a persistent, byte-exact queue representation
+and a compiler for every successful eight-call host execution. Allocations preserve historical
+nodes; pops return the full hint and suffix; hook prepends retain reply order. The encoded current
+queue determines HINT_LEN's actual return, including empty hints versus the empty-queue sentinel.
+Local descending-pointer validity and a bounded root imply a complete finite decoded queue.
+These are semantic representation and compilation results. The mixed AIR must still authenticate
+source/new node bytes and ordered head observations, including WRITE's inputs and HINT_READ's
+padded writes. Natural pointer bounds still need to enter the shared field/resource profile.
+The full-AIR forged HINT_LEN return counterexample is not yet closed.
+
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares
 all integer registers and every byte below `2^48` with Sail, including locations absent from a

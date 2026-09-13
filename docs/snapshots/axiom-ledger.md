@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1907 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 233 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1946 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 236 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2140 released declarations are probed.
+- 2182 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,23 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The persistent hint-queue checkpoint adds 39 main declarations and three test anchors. Every
+main addition uses only the logical baseline or a subset, including eleven with no axioms.
+All preceding 1907 main and 233 test dependency sets are unchanged, with no removals or new
+main-library axiom names. Three new compiler-trusted constants are isolated to the changing-queue,
+historical-head, and malformed-pointer/byte-identity regressions.
+
+`HintQueue` represents complete hint bytes with immutable nodes and decreasing tail pointers.
+Source encoding, exact decoding, node validity, bounded roots, persistent prepends, and pops are
+proved. `HostState.hintUpdate_sound` compiles every successful eight-call execution into a queue
+update without an extra readiness condition; updates preserve old nodes and account for every
+allocation. `hintLength?_of_run` reads the interpreter's actual current queue. Regressions exercise
+all eight calls with guest and hook prepends, empty-hint padding, preserved historical heads, and
+changed bytes at equal lengths. This is semantic compiler machinery, not a newly authenticated AIR
+queue: node contents, head transitions, and field/resource bounds still need integration. The
+full-AIR forged HINT_LEN result remains open. Arbitrary local bank integration must also replace
+the existing bank subsystem's zero genesis with the actual source commitment/deferred values.
 
 The protected-ROM grounding checkpoint adds 13 main declarations and no test anchors. Two
 additions use the logical baseline or a subset, two retain the existing 77-axiom Sail set, one

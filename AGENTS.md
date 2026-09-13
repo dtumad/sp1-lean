@@ -130,6 +130,13 @@ soundness/completeness against the Sail adapter, including padded writes. Source
 stopped hosts for empty identity segments. The local verifier freezes a stopped source's clock,
 and `executionRows_nil_of_stopped` proves its active event inventory empty, closing the reproduced
 ADD-after-HALT gap. The full HINT_LEN forged-return gap remains open.
+`Model/Core/HintQueue` now represents complete hint bytes with immutable nodes and decreasing tail
+pointers; source encoding, decoding, pops, and preservation of historical heads are proved.
+`HostQueue` compiles the queue update from every successful eight-call host execution, including
+WRITE/hook prepends, and proves the current queue determines HINT_LEN's return. This is semantic
+compiler machinery. Source/new node authentication and ordered head observations still need AIR
+integration and explicit field/resource bounds; no static-source-queue assumption is admissible.
+The bank subsystem's zero genesis also needs generalization to the actual local source banks.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are
