@@ -102,8 +102,11 @@ interval permission provider. All four wrappers prove original widths/assertions
 ledgers unchanged, and the provider's proof-independent constructor succeeds exactly for writable
 48-bit byte addresses. Full-AIR regressions reject code-writing SB, missing/forged permission, and
 retain partial writes beside ROM in one RAM cell, store padding, and stopped identities. Its full
-witness projection, permission-ledger authentication, and grounding transport are still open;
-`RowEffect.romLoaded_of_writePermission` supplies the byte-frame implication. The existing local
+witness projection now preserves the original constraints, old ledgers, public input, and data.
+`ProtectedLocalCorePermissions` authenticates every active permission pull from the fixed provider
+and this ensemble's own balance, using an exhaustive component source classification. Identifying
+those requests with decoded stores' semantic byte footprints and transporting them into grounding
+remain open; `RowEffect.romLoaded_of_writePermission` supplies the byte-frame implication. The existing local
 execution theorem therefore still has its ROM premise. Keep this native profile strengthening
 separate from the unchanged original SP1 chip faithfulness anchors.
 The host policy characteristic explicitly equals the AIR field. HALT's legacy row still has a

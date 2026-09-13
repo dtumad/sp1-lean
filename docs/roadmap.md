@@ -115,8 +115,11 @@ Implemented foundations:
   reject the reproduced code-writing SB and forged/missing permissions, permit a partial store
   beside ROM in the same RAM cell, and retain store padding and stopped-source identities.
   Store and provider witness programs pass exportability checks. The generic byte-frame lemma
-  proves ROM preservation from allowed writes. Projection to the existing local witness, permission
-  authentication from the new ledger, and grounding transport are still open, so the current
+  proves ROM preservation from allowed writes. The complete witness projection now preserves
+  constraints, exact old ledgers, data, and public input; `statement_implies_local` proves refinement
+  to the original local AIR. Exhaustive source classification and count-bounded balance authenticate
+  every active permission request, with a physical-row interface. Identifying those requests with
+  decoded stores' semantic byte footprints and grounding transport remain open, so the current
   local execution combinator retains its ROM premise. This strengthens the native immutable-code
   profile without changing the original SP1 chip faithfulness statements.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
@@ -456,9 +459,11 @@ Still required before the native capstone can be claimed:
    HALT host transition and status, leaving ROM preservation and active SyscallInstrs semantic
    facts; final State truth supplies successful full-tape replay and the returned PC/clock.
    Widen the legacy HALT row's 16-bit exit domain when integrating the full syscall/Exit path.
-   Project the 60-table `ProtectedLocalCore` witness to the existing local assembly, derive every
-   active store's byte permissions from balance and the fixed provider, and feed the resulting
-   `RowEffect` ROM preservation into grounding. The current combinator still takes that premise.
+   The 60-table `ProtectedLocalCore` witness now projects to the original local assembly with
+   preserved constraints and balance, and every active permission request is authenticated from
+   the fixed provider. Relate these requests to each decoded store's semantic byte footprint and
+   feed the resulting `RowEffect` ROM preservation into grounding. The current combinator still
+   takes that premise.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM
    writes; the latter must use the same byte-permission interface. Terminal ECALL/Exit agreement and complete
    execution reconstruction, including ordinary normal retirement, remain open. No unconditional

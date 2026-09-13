@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1863 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1894 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 233 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2096 released declarations are probed.
+- 2127 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,6 +35,22 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
+The protected-ledger authentication checkpoint adds 31 main declarations and no test anchors.
+Twenty-one additions use only the logical baseline. The ten concrete ensemble declarations retain
+the existing 100-axiom registry set. All preceding 1863 main and 233 test dependency sets are
+unchanged, with no removals or new axiom names. Direct chip-channel proofs keep the eight store
+emission and pull-polarity lemmas independent of Sail's platform hooks.
+
+`ProtectedLocalCoreProjection` preserves the complete physical prefix, raw constraints, exact old
+ledgers, public input, and prover data; `statement_implies_local` proves refinement of the raw AIR
+relation. The reusable projection transport lives in `ToClean/Air/EnsembleProjection.lean`.
+`ProtectedLocalCorePermissions` exhaustively classifies the full assembly's permission sources and
+uses its own count-bounded balance to authenticate every active pull. The physical-row theorem
+`row_pull_permitted` requires no caller-supplied provider semantics. The remaining ROM step connects
+these requested addresses to decoded stores' semantic footprints and uses the byte-frame lemma
+inside grounding. The current execution combinator still takes ROM preservation; host effects,
+full outgoing-state agreement, and compiler totality remain open.
+
 The native ROM-permission checkpoint adds 45 main declarations and six test anchors. Forty-two
 main additions use the logical baseline or a subset. The new ensemble and its table-count theorem
 retain the existing 100-axiom registry set; the byte-frame ROM-preservation lemma retains the
@@ -50,10 +66,10 @@ reject a reproduced store into its own instruction and forged/missing permission
 partial writes beside code, store padding, and stopped identities. This is an explicit native
 immutable-code profile restriction, separate from the original Rust-faithfulness claims.
 
-The new 60-table witness still needs projection to the existing local assembly, permission
-source authentication through balance, and grounding transport. The existing execution combinator
-therefore still takes ROM preservation as a premise. Host-memory writes, complete outgoing-state
-agreement, terminal Exit agreement, and compiler totality remain open.
+At that checkpoint, projection to the existing local witness and permission source authentication
+were still open; the protected-ledger checkpoint above closes both. Grounding still needs the
+semantic-footprint connection. Host-memory writes, complete outgoing-state agreement, terminal
+Exit agreement, and compiler totality remain open.
 
 The stateful local HALT checkpoint adds 16 main declarations and three test anchors. Eight main
 additions use the logical baseline or a subset, two retain the existing 77-axiom Sail set, and six

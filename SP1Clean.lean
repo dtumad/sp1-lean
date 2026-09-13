@@ -1,4 +1,8 @@
 import SP1Clean.Soundness.ProtectedLocalCore
+import SP1Clean.Soundness.ProtectedLocalCoreProjection
+import SP1Clean.Soundness.WritePermissionBalance
+import SP1Clean.Soundness.ProtectedStorePermissions
+import SP1Clean.Soundness.ProtectedLocalCorePermissions
 import SP1Clean.Soundness.RomWriteProtection
 import SP1Clean.Proofs.Chips.ProtectedStore
 import SP1Clean.Native.Operations.WritePermission

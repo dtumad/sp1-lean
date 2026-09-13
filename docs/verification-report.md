@@ -826,8 +826,14 @@ its own instruction and forged/missing permissions, while accepting writable byt
 half of the same eight-byte cell, all four store paddings, and stopped-source identities.
 
 This is a native immutable-code profile restriction; the 25 original Rust-faithfulness anchors
-are unchanged. The 60-table assembly still needs a proved projection to `LocalCore`, authentication
-of every permission request from its full ledger, and transport into timed grounding.
+are unchanged. `ProtectedLocalCoreProjection` now projects the complete physical witness to
+`LocalCore`, preserving constraints, exact old ledgers, data, and public input. Its
+`statement_implies_local` proves refinement at the same public boundary. The exhaustive component
+classification in `ProtectedLocalCorePermissions` proves that the fixed interval provider is the
+only permission source; count-bounded balance authenticates every active pull, including the
+`row_pull_permitted` physical-row interface. No provider-validity premise is supplied externally.
+The remaining step identifies these requested bytes with each decoded store's semantic footprint
+and transports that permission through timed grounding.
 `RowEffect.romLoaded_of_writePermission` supplies the byte-frame implication, but the current
 `ground_of_host_steps` still takes ROM preservation as a premise. Active host-memory writes must
 join this permission interface when their effects are integrated. Full local soundness/completeness
