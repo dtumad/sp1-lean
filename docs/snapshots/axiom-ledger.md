@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1946 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 236 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1976 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 242 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2182 released declarations are probed.
+- 2218 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,22 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The native HINT_LEN checkpoint adds 30 main declarations and six test anchors. Every main
+addition uses only the logical baseline or a subset. All preceding 1946 main and 236 test
+dependency sets are unchanged, with no removals or new main-library axiom names. The six new
+compiler-trusted constants are isolated to the HINT_LEN component regressions.
+
+`HintQueueRecords` encodes 48-bit node identities and authenticates source metadata through a
+fixed table computed from actual source hints. Binding persists through later allocations.
+`HostHintLengthChip` checks the current head, exact return, and strictly advancing queue clock,
+consumes the complete instruction handoff, and preserves the head. Its full host bridge keeps
+current-queue and node binding explicit. Successful dispatch constructs its completeness domain
+under pointer/clock bounds. Source and handler ledgers and witness export are closed; regressions
+reject forged returns/metadata, false empty claims, malformed records, and stale clocks, and
+retain empty hints and historical source nodes. The components still need installation in the
+mixed ensemble, authenticated new WRITE/hook nodes, complete byte binding for HINT_READ, and
+ordered head-history derivation. The full-AIR forged HINT_LEN return remains open.
 
 The persistent hint-queue checkpoint adds 39 main declarations and three test anchors. Every
 main addition uses only the logical baseline or a subset, including eleven with no axioms.

@@ -133,9 +133,15 @@ ADD-after-HALT gap. The full HINT_LEN forged-return gap remains open.
 `Model/Core/HintQueue` now represents complete hint bytes with immutable nodes and decreasing tail
 pointers; source encoding, decoding, pops, and preservation of historical heads are proved.
 `HostQueue` compiles the queue update from every successful eight-call host execution, including
-WRITE/hook prepends, and proves the current queue determines HINT_LEN's return. This is semantic
-compiler machinery. Source/new node authentication and ordered head observations still need AIR
-integration and explicit field/resource bounds; no static-source-queue assumption is admissible.
+WRITE/hook prepends, and proves the current queue determines HINT_LEN's return. `HintQueueRecords`
+encodes bounded 48-bit node identities and authenticates initial metadata against a fixed table
+computed from source hints. `HostHintLengthChip` constrains the current-head observation, strict
+queue-clock advance, and full HostCall handoff. Its bridge proves the complete host transition
+from explicit current-queue/node binding; its constructor derives completeness from successful
+dispatch and pointer/clock bounds. Source and handler ledgers and witness export are proved.
+These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
+node-byte binding for HINT_READ, and ordered head-history derivation. The shared resource profile
+must include the identity bounds; no static-source-queue assumption is admissible.
 The bank subsystem's zero genesis also needs generalization to the actual local source banks.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail

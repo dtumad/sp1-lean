@@ -315,11 +315,18 @@ Implemented foundations:
   the current represented queue; no static-source-queue assumption is introduced. Regressions
   follow changing lengths through all eight calls, empty-hint padding, preserved historical heads,
   and malformed pointers; equal lengths with different bytes remain distinguishable.
-  This is semantic compiler machinery, not installed AIR authentication. The next queue step
-  must bind the complete source nodes, authorize new bytes from WRITE/hooks, constrain ordered
-  head transitions and observations, and connect HINT_READ's full padded write. Natural-number
-  pointers still need field encoding under explicit resource bounds. The full-AIR forged
-  HINT_LEN return regression remains open until that integration.
+  `HintQueueRecords` now encodes pointers in three bounded 16-bit limbs. Its fixed source table
+  authenticates node metadata against actual source hints and rejects oversized inventories.
+  `HostHintLengthChip` constrains the current head, exact return, strict queue-clock advance,
+  and full HostCall handoff; both routes export 122 computed witness cells. Its full host bridge
+  uses explicit current-queue/node binding, while successful dispatch derives the constructor's
+  completeness domain under pointer and clock bounds. Source and handler ledgers are proved.
+  Joint regressions reject forged returns/metadata, false empty claims, malformed records, and
+  stale clocks, and retain empty hints and historical source heads. These are component results.
+  The next queue step must install source and handler components, authorize new WRITE/hook nodes
+  and their bytes, derive ordered head history, and connect HINT_READ's full padded write to the
+  same node identities. Include the 48-bit identity bound in the shared resource profile.
+  The full-AIR forged HINT_LEN return regression remains open until that integration.
 
 - `HostRamAccessChip` is a sound and complete native Clean component for one aligned RAM word
   transfer. It composes the existing address and Memory gadgets, checks both high clocks locally,
@@ -422,9 +429,10 @@ Implemented foundations:
   cover exits through `SP1Prime - 1`, unrestricted unused arguments, forged handoffs, corrupted
   witnesses, full interpreter effects, and constructor clocks crossing 24-bit limb boundaries.
   Witness export uses 64 cells for HALT and zero for ENTER. Installation in the mixed machine
-  remains open, together with the four remaining handlers: WRITE, HINT_LEN, HINT_READ, and
-  VERIFY_SP1_PROOF. The host-row tests establish local checks and joint handoff balance, not a
-  complete boot-to-HALT witness.
+  remains open, together with the three remaining handler components: WRITE, HINT_READ, and
+  VERIFY_SP1_PROOF. HINT_LEN's component and explicit queue obligations are described above.
+  The host-row tests establish local checks and joint handoff balance, not a complete boot-to-HALT
+  witness.
 
 Host integration must account for these source-backed details in v6.4.0:
 
@@ -482,8 +490,9 @@ Still required before the native capstone can be claimed:
    the fixed provider and connected to its decoded store's semantic byte footprint.
    `ProtectedLocalCore.ground_of_host_steps` now derives ordinary ROM preservation through the
    registered row effects and includes stateful HALT, leaving active SyscallInstrs effects explicit.
-   The persistent hint-queue compiler now covers all eight semantic calls; authenticate its
-   node inventory and head history in AIR, including WRITE/hook prepends and HINT_READ pops.
+   The persistent hint-queue compiler covers all eight semantic calls. Install its fixed source
+   node provider and HINT_LEN handler, then authenticate new nodes and derive head history,
+   including WRITE/hook prepends and HINT_READ pops with their complete bytes.
    Parameterize the bank subsystem's currently zero genesis with the complete local source
    commitment/deferred values before installing it in arbitrary continuation shards.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM

@@ -28,7 +28,7 @@ private def byteValid (values : List Fp) : Bool :=
   | _ => false
 
 def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
-    (corrupt : Option ℕ := none) : Bool × Ledger :=
+    (corrupt : Option ℕ := none) (lookups : List (FiniteLookup Fp) := []) : Bool × Ledger :=
   let honest := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let env : Environment Fp := { honest with get := fun i =>
     if corrupt == (some (i - inputs.length)) && inputs.length ≤ i then honest.get i + 1 else honest.get i }
@@ -37,8 +37,8 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
   let valid := operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => lookup.table.name == fixed.table.name &&
-      fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+    | .lookup lookup => (fixed :: lookups).any fun table => lookup.table.name == table.table.name &&
+      table.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
     | .witness .. => true
     | .interact interaction =>
       if env interaction.mult == 0 then true
@@ -65,7 +65,14 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
             65536 ≤ address && address + 32 ≤ 2 ^ 48 && bytes.length == 32 &&
             bytes.all (fun byte => byte.val < 256)
         | _ => false
-      else ["SP1State", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
+      else if interaction.channel.name == "sp1.native.hint_node" then
+        match (interaction.msg.map env).toList with
+        | [a, b, c, d, e, f, w, x, y, z] =>
+          [a, b, c, d, e, f, w, x, y, z].all (fun limb => limb.val < 65536) &&
+            d.val + e.val * 65536 + f.val * 65536 ^ 2 <
+              a.val + b.val * 65536 + c.val * 65536 ^ 2
+        | _ => false
+      else ["sp1.native.hint_queue_state", "SP1State", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
         "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access"].contains
           interaction.channel.name
   (valid, (FlatOperation.interactions operations).filterMap fun interaction =>

@@ -734,10 +734,14 @@ and a compiler for every successful eight-call host execution. Allocations prese
 nodes; pops return the full hint and suffix; hook prepends retain reply order. The encoded current
 queue determines HINT_LEN's actual return, including empty hints versus the empty-queue sentinel.
 Local descending-pointer validity and a bounded root imply a complete finite decoded queue.
-These are semantic representation and compilation results. The mixed AIR must still authenticate
-source/new node bytes and ordered head observations, including WRITE's inputs and HINT_READ's
-padded writes. Natural pointer bounds still need to enter the shared field/resource profile.
-The full-AIR forged HINT_LEN return counterexample is not yet closed.
+`HintQueueRecords.lean` supplies bounded 48-bit field identities and a fixed source-node lookup.
+`HostHintLengthChip` constrains the current-head length and strict queue-clock advance, with exact
+HostCall/node/state ledgers and exportable witnesses. Its bridge proves the full host transition
+from explicit current-queue/node binding; successful dispatch supplies local completeness under
+pointer/clock bounds. Joint component regressions reject forged returns and node metadata and
+false empty claims. Mixed-AIR installation, new WRITE/hook node authorization, complete HINT_READ
+byte binding, and ordered head-history derivation remain open. Pointer bounds must also enter the
+shared resource profile. The full-AIR forged HINT_LEN return counterexample is not yet closed.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

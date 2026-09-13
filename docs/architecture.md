@@ -405,10 +405,14 @@ pointers. Its source encoder and decoder agree exactly with finite hint lists, a
 preserves every historical head. `HostState.hintUpdate_sound` compiles every successful host call
 into a prepend or pop, including ordered hook responses, with exact allocation accounting.
 `hintLength?_of_run` binds the interpreter's return to the current represented queue. This avoids
-assuming that HINT_LEN always sees the initial source queue. These semantic proofs do not yet
-close the AIR gap: source/new node contents, head transitions, and length observations still need
-ledger authentication, alongside the WRITE and HINT_READ Memory footprints. Pointer field bounds
-must be explicit in the common resource profile; no content hash or trusted byte oracle is used.
+assuming that HINT_LEN always sees the initial source queue. `HintQueueRecords` uses bounded
+48-bit identities; its fixed source lookup proves node metadata belongs to the actual source
+store. `HostHintLengthChip` consumes the current node and full HostCall, advances the queue clock,
+and preserves the head. Its full host bridge keeps current-queue and node binding explicit;
+its constructor derives local completeness from successful execution and pointer/clock bounds.
+The components and their exact ledgers are closed, but mixed-ensemble installation, authorization
+of new WRITE/hook nodes, complete byte binding for HINT_READ, and derived head history remain open.
+Pointer bounds must enter the common resource profile; no content hash or trusted byte oracle is used.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and
@@ -494,8 +498,8 @@ rows directly from successful interpreter results and derives their completeness
 The instruction's structural exit limit is specifically KoalaBear; `HostControlCompatibility`
 proves it equals the native handler's full range at `SP1Prime`. This does not imply whole-core
 completeness for arbitrary field characteristics. These control handlers and the mutable banks
-still need installation and ordering in the mixed machine; the four remaining handlers are
-WRITE, HINT_LEN, HINT_READ, and VERIFY_SP1_PROOF.
+still need installation and ordering in the mixed machine. HINT_LEN's component is described
+above; the remaining handler components are WRITE, HINT_READ, and VERIFY_SP1_PROOF.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.
