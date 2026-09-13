@@ -100,7 +100,11 @@ Implemented foundations:
   ordered event tape. Covered replay clocks match the AIR timeline. `LocalCoreInstructionExecution`
   derives all 25 ordinary chips' step/frame facts: committed decode excludes ECALL, and the
   terminal-PC invariant plus an authenticated fetch proves the actual host is running.
-  `ground_of_system_steps` leaves only ROM preservation and HALT/syscall facts as semantic premises.
+  `LocalCoreHaltExecution` now derives HALT's committed ECALL and register observations, its actual
+  stateful host step and exit status, and its step/frame facts. Its `ground_of_host_steps` leaves
+  only ROM preservation and active SyscallInstrs facts as semantic premises. The host policy's
+  characteristic explicitly agrees with the AIR field. The legacy HALT row still restricts exits
+  to 16 bits, below the concrete host's canonical below-characteristic, 32-bit domain.
   `replay_of_finalTruth` recovers full-tape replay success and the returned PC/clock from grounded
   final State truth; it does not assume successful replay. Regressions check complete intermediate
   states, ordinary host preservation, endpoint extension, and rejection of a real step after HALT.
@@ -437,10 +441,11 @@ Still required before the native capstone can be claimed:
    `LocalCoreTrajectory` now instantiates the paired trajectory through `Model/Core/ExecutionReplay`,
    threading the actual host state and authenticating its covered clocks. Ordinary step/frame facts
    are derived through the registered component contracts, with running/non-ECALL guards discharged
-   from incoming State truth. `LocalCoreInstructionExecution.ground_of_system_steps` leaves only
-   ROM preservation and HALT/syscall semantic facts; final State truth supplies successful full-tape
-   replay and the returned PC/clock. The boot HALT facts use a stateless wrapper, so they still need
-   connection to the actual host transition and status. Constrain ROM
+   from incoming State truth. `LocalCoreHaltExecution.ground_of_host_steps` also derives the real
+   HALT host transition and status, leaving ROM preservation and active SyscallInstrs semantic
+   facts; final State truth supplies successful full-tape replay and the returned PC/clock.
+   Widen the legacy HALT row's 16-bit exit domain when integrating the full syscall/Exit path.
+   Constrain ROM
    preservation and actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded
    RAM writes, to close the remaining semantic facts. Terminal ECALL/Exit agreement and complete
    execution reconstruction, including ordinary normal retirement, remain open. No unconditional

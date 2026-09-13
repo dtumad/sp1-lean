@@ -800,10 +800,18 @@ ordered event tape. Its successful prefixes have exactly the clocks of the AIR t
 `LocalCoreInstructionExecution.GroundingCarrier.instruction_engineFacts` derives all ordinary
 step/frame facts on that replay. The running-host guard follows from the replay's terminal-PC
 invariant and authenticated code fetch; the non-ECALL guard follows from official decoding.
-`ground_of_system_steps` therefore needs only ROM preservation and the HALT/syscall semantic facts.
+`LocalCoreHaltExecution` additionally authenticates HALT's committed ECALL through the actual
+Program ledger. Its asserted zero code and upper exit limbs, together with incoming register
+currency, determine the current x5/x10/x11 and an actual stateful HALT transition. That transition
+records the exit status and preserves the complete host and Sail state except for the exit field
+and PC. The host policy characteristic explicitly agrees with the field. The existing HALT row's
+exit domain is only 16 bits; the concrete host permits canonical 32-bit exits below the characteristic.
+This remains a completeness restriction pending integration of the full syscall/Exit path.
+`ground_of_host_steps` therefore needs only ROM preservation and active SyscallInstrs semantic facts.
 It does not assume successful replay or an execution path. `replay_of_finalTruth` recovers successful
 full-tape replay and its complete returned state with the public PC/clock. Ordinary normal retirement,
-host effects, and complete outgoing-state agreement remain necessary for the execution theorem.
+the other host effects, terminal Exit-bus agreement, and complete outgoing-state agreement remain
+necessary for the execution theorem.
 The trajectory holds its endpoint after the tape; regressions distinguish that mathematical
 extension from appending an actual instruction, which fails after HALT.
 

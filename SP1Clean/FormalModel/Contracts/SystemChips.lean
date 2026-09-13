@@ -137,7 +137,7 @@ end MemoryBumpChip
 namespace HaltChip
 
 /-- The native Halt row — the provider-segment system table that witnesses the `HALT` ECALL of a
-halting shard (semantics-gap campaign, PR 2.4's inhabitation wave). One real row per halting shard:
+halting shard. One real row per halting shard:
 
 - its `CPUState` block pulls the pre-syscall state `(clk, pc)` and pushes the halted state
   `(clk + 264, pc = 1)` — SP1's syscall row duration and `HALT_PC` (`Model/Machine/Syscall.lean`'s
@@ -148,8 +148,8 @@ halting shard (semantics-gap campaign, PR 2.4's inhabitation wave). One real row
 - it reads registers `x5` (`t0`, the syscall code — constrained to `0 = SyscallCode::HALT`),
   `x10` (`a0`, the exit-code word), and `x11` (`a1`) through the standard register-access
   pull/push-back pairs at clock offsets `+4/+3/+2`; and
-- it pushes the **reduced** `x10` word on the Exit bus when real (its high limbs pinned zero —
-  the u32 exit code), and the zero code when padding; the state-boundary verifier's ungated
+- it pushes the **reduced** `x10` word on the Exit bus when real (all three upper limbs pinned zero,
+  restricting the exit code to 16 bits), and the zero code when padding; the state-boundary verifier's ungated
   `⟨exit_code⟩` pull balances against exactly one of them, forcing `exit_code = reduce(a0)` on
   halting shards and `exit_code = 0` on ordinary shards (see `Channels.ExitMsg`).
 
@@ -167,11 +167,12 @@ the proven `is_real`-binary fact. Then the `CPUState` clock byte bounds (at the 
 `next_pc = (1, 0, 0)`, `clk_inc = 264`), the three register-access timestamp byte bounds (access
 clocks `clk_low + 4/3/2` for `x5/x10/x11`), and — gated on `is_real = 1` — the program-pull-derived
 pc limb bounds plus the memory-pull-derived facts: the `x5` word is limb-wise zero (the syscall
-code is `HALT`), the `x10` word's high limbs are zero (the u32 exit code), the three read words
+code is `HALT`), all three upper `x10` limbs are zero (a 16-bit exit code), the three read words
 are u64, and the three pulled prior records' access clocks are 24-bit. The exit-bus payload is
 *definitionally* the reduced `x10` word (the pushed message), so with the high-limb zeros its
-value is exactly `w0 + w1·2^16 < 2^32`; the cross-row binding to the committed `exit_code` is
-ensemble balance, not a row-local claim. -/
+value is exactly `w0 < 2^16`; the cross-row binding to the committed `exit_code` is
+ensemble balance, not a row-local claim. This legacy restriction is stronger than the stateful
+host's canonical below-characteristic, 32-bit exit range. -/
 def Spec (r : Inputs (ZMod p)) : Prop :=
   (r.is_real = 0 ∨ r.is_real = 1) ∧
   Readers.CPUState.Spec

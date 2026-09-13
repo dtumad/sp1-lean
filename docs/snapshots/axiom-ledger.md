@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1802 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 224 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1818 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 227 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2026 released declarations are probed.
+- 2045 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,6 +35,22 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
+The stateful local HALT checkpoint adds 16 main declarations and three test anchors. Eight main
+additions use the logical baseline or a subset, two retain the existing 77-axiom Sail set, and six
+retain the existing 100-axiom registry set. All preceding 1802 main and 224 test dependency sets are
+unchanged, with no removals and no new main-library axiom names. The three new compiler-trusted
+constants are isolated to the active HALT, legacy exit-range, and forged-HALT test anchors.
+
+HALT's Program fetch, zero code, upper exit limbs, and incoming register currency now determine
+the actual stateful host transition and its exit status. The local grounding theorem derives its
+step/frame facts internally, retaining ROM preservation and active SyscallInstrs effects as
+semantic premises. The host policy characteristic explicitly agrees with the AIR field. The legacy
+HALT row remains restricted to 16-bit exits; regression confirms that 65536 is accepted by the
+concrete host but rejected by this row. Terminal Exit-bus agreement, full outgoing-state agreement,
+ordinary normal-retirement reconstruction, the other host effects, and compiler totality remain open.
+
+The following checkpoints record the claim boundary at each preceding stage.
+
 The local stateful-replay checkpoint adds 34 main declarations and three test anchors. Twenty
 main additions retain the existing 100-axiom registry set; ten retain the existing 77-axiom Sail
 set. The incoming-state ordinary engine interface uses 98 of the registry's existing axioms.
@@ -52,8 +68,6 @@ and HALT/syscall facts as semantic premises; it does not assume replay success. 
 recovers successful full-tape replay and the returned PC/clock. Normal-retirement reconstruction,
 actual host-effect constraints, complete outgoing-state agreement, and compiler totality remain
 open. Endpoint extension in the mathematical trajectory adds no execution steps.
-
-The following checkpoints record the claim boundary at each preceding stage.
 
 The local structural-grounding checkpoint adds 48 main declarations and four test anchors.
 Sixteen main additions use the logical baseline or a subset; 28 retain the existing 100-axiom

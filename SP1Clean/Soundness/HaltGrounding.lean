@@ -44,6 +44,40 @@ theorem HaltChip.codeZero_of_shallow
     ZMod.val_zero, zero_mul, add_zero]
   rfl
 
+private theorem halt_exit_assert_mem (input : Var HaltChip.Inputs (ZMod p)) (offset : ℕ)
+    (idx : Fin 3) : input.is_real * input.x10_memory.prev_value[idx.val + 1] ∈
+      ((HaltChip.main input).operations offset).shallowConstraints := by
+  fin_cases idx <;> simp only [HaltChip.main, circuit_norm, Operations.shallowConstraints,
+    List.mem_cons, true_or, or_true]
+
+/-- The legacy HALT row pins all three upper exit limbs to zero. This is a 16-bit restriction. -/
+theorem HaltChip.exitHighZero_of_shallow
+    (input : Var HaltChip.Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
+    (shallow : ConstraintsHold.Shallow env ((HaltChip.main input).operations offset))
+    (real : Expression.eval env input.is_real = 1) :
+    (Eval.eval env input).x10_memory.prev_value[1] = 0 ∧
+      (Eval.eval env input).x10_memory.prev_value[2] = 0 ∧
+      (Eval.eval env input).x10_memory.prev_value[3] = 0 := by
+  have zeros (idx : Fin 3) : Expression.eval env input.x10_memory.prev_value[idx.val + 1] = 0 := by
+    have checked : Expression.eval env (input.is_real * input.x10_memory.prev_value[idx.val + 1]) = 0 :=
+      (constraintsHold_shallow_iff_forall_mem.mp shallow).1 _ (halt_exit_assert_mem input offset idx)
+    change Expression.eval env input.is_real * Expression.eval env input.x10_memory.prev_value[idx.val + 1] = 0 at checked
+    rwa [real, one_mul] at checked
+  rcases input with ⟨state, five, ⟨value10, time10⟩, eleven, gate⟩
+  have z1 : Expression.eval env value10[1] = 0 := zeros 0
+  have z2 : Expression.eval env value10[2] = 0 := zeros 1
+  have z3 : Expression.eval env value10[3] = 0 := zeros 2
+  simp only [circuit_norm, z1, z2, z3, and_self]
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Memory hygiene supplies the low-limb bound; the three zero assertions leave a 16-bit exit. -/
+theorem HaltChip.exit_lt_of_highZero (value : Word (ZMod p)) (small : Word.isU64 value)
+    (high : value[1] = 0 ∧ value[2] = 0 ∧ value[3] = 0) :
+    (Word.toBitVec64 value).toNat < 2 ^ 16 := by
+  rw [Word.toBitVec64_toNat small, Word.toNat_def, high.1, high.2.1, high.2.2]
+  simp only [ZMod.val_zero, zero_mul, add_zero]
+  exact (Word.lt_cases_of_isU64 small).1
+
 private theorem pcPark_content (state : SailState) (loc : MemLoc) :
     locContent { state with regs := state.regs.insert Register.PC Machine.haltPc } loc =
       locContent state loc := by
@@ -123,21 +157,25 @@ private theorem halt_pair_current {row : HaltChip.Inputs (ZMod p)}
 
 /-- Canonical HALT supplies both generic engine facts from its checked clock and its PC-only step.
 The three prior records' hygiene and values enter only through the engine's incoming currency. -/
-theorem halt_engineFactsG (row : HaltChip.Inputs (ZMod p))
+theorem halt_engineFactsG_of_currencyStep (row : HaltChip.Inputs (ZMod p))
     (clock : ((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
       row.state.clk_16_24.val < 2 ^ 8)
     (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState) (timeline : Timeline)
     (timeStep : ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
       StateMsg.timeNat (HaltChip.statePushedMessage row) = timeline.start (n + 1))
-    (step : ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
+    (step : LocalStateTruthG program trajectory timeline (haltRowFacts row).statePull →
+      (∀ mp ∈ (haltRowFacts row).memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
+      ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
       trajectory (n + 1) = (trajectory n).map
         (fun state => { state with regs := state.regs.insert Register.PC Machine.haltPc })) :
     LocalStepFactG program trajectory initial timeline (haltRowFacts row) ∧
       FrameFactG program trajectory initial timeline (haltRowFacts row) := by
   constructor
   · intro stateTruth currency
+    have next := step stateTruth currency
     obtain ⟨n, source, before, time, _, rom, configured⟩ := stateTruth
-    have after := step n time
+    have after := next n time
     rw [before, Option.map_some] at after
     refine ⟨⟨n + 1, _, after, timeStep n time, ?_, rom, pcPark_configured source configured⟩, ?_⟩
     · change (source.regs.insert Register.PC Machine.haltPc).get? Register.PC =
@@ -158,15 +196,30 @@ theorem halt_engineFactsG (row : HaltChip.Inputs (ZMod p))
       · exact halt_pair_current clock before after time row.x5_memory 5 4 (by decide) ⟨a.1, a.2.2⟩
       · exact halt_pair_current clock before after time row.x10_memory 10 3 (by decide) ⟨b.1, b.2.2⟩
       · exact halt_pair_current clock before after time row.x11_memory 11 2 (by decide) ⟨c.1, c.2.2⟩
-  · intro stateTruth _ loc value _ current
+  · intro stateTruth currency loc value _ current
+    have next := step stateTruth currency
     obtain ⟨n, source, before, time, _⟩ := stateTruth
     change StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n at time
-    have after := step n time
+    have after := next n time
     rw [before, Option.map_some] at after
     rw [show (haltRowFacts row).statePull = HaltChip.statePulledMessage row from rfl, time] at current
     rw [show (haltRowFacts row).statePush = HaltChip.statePushedMessage row from rfl, timeStep n time]
     apply (localValueAtG_stepStart_iff after).mpr
     rw [pcPark_content]
     exact (localValueAtG_stepStart_iff before).mp current
+
+/-- Compatibility form for trajectories whose HALT successor is known unconditionally. -/
+theorem halt_engineFactsG (row : HaltChip.Inputs (ZMod p))
+    (clock : ((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
+      row.state.clk_16_24.val < 2 ^ 8)
+    (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState) (timeline : Timeline)
+    (timeStep : ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
+      StateMsg.timeNat (HaltChip.statePushedMessage row) = timeline.start (n + 1))
+    (step : ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
+      trajectory (n + 1) = (trajectory n).map
+        (fun state => { state with regs := state.regs.insert Register.PC Machine.haltPc })) :
+    LocalStepFactG program trajectory initial timeline (haltRowFacts row) ∧
+      FrameFactG program trajectory initial timeline (haltRowFacts row) :=
+  halt_engineFactsG_of_currencyStep row clock program trajectory initial timeline timeStep (fun _ _ => step)
 
 end SP1Clean.Soundness

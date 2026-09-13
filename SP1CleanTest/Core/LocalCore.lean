@@ -386,4 +386,53 @@ theorem hintReturnNeedsHostBinding :
         (fun output => output.1.sail.registers.get? LeanRV64D.Defs.Register.x5)) = some (some 3) := by
   native_decide
 
+private def haltSource (exit : ℕ) : ExecutionSnapshot :=
+  { syscallSource with
+    sail.registers := (syscallSource.sail.registers.insert .x5 0).insert .x10 (BitVec.ofNat 64 exit) }
+
+private def haltInput (exit : ℕ) : HaltChip.Inputs Fp :=
+  { state := ⟨0, 0, 9, #v[0, 1, 0]⟩
+    x5_memory := ⟨word 0, ⟨0, 12⟩⟩
+    x10_memory := ⟨word exit, ⟨0, 11⟩⟩
+    x11_memory := ⟨word 9, ⟨0, 10⟩⟩
+    is_real := 1 }
+
+private def haltPublic (exit : ℕ) : SP1PublicIO Fp :=
+  { syscallPublic with final_pc0 := 1, final_pc1 := 0, exit_code := exit }
+
+private def haltRows (exit : ℕ) : List Row :=
+  let sourceRow (previous index : ℕ) : Row :=
+    (0, (toElements (OrderedSnapshotProvider.populate
+      (SnapshotRegisterProvider.populate (haltSource exit).sail.memorySnapshot (BitVec.ofNat 5 index))
+      previous index)).toList)
+  [sourceRow 0 5, sourceRow 6 10, sourceRow 11 11, terminal 2 12,
+    (3, finalRecord 0 5 13 0), (3, finalRecord 6 10 12 exit), (3, finalRecord 11 11 11 9), terminal 5 12,
+    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) syscallImage (65536, 0x00000073) 1).map
+      (fun input => (toElements input).toList)).getD []),
+    (57, (toElements (haltInput exit)).toList)]
+
+/-- The complete local AIR accepts HALT at a non-boot source with the largest legacy exit code. -/
+theorem activeHaltLocalShard :
+    check syscallImage (haltSource 65535) (haltPublic 65535) (haltRows 65535) = true := by native_decide
+
+/-- The next exit code is valid for the concrete host but excluded by the legacy row's three
+upper-zero assertions. This is a completeness restriction, not an error in host dispatch. -/
+theorem legacyHaltExitRange :
+    check syscallImage (haltSource 65536) (haltPublic 65536) (haltRows 65536) = false ∧
+      (((haltSource 65536).host.run syscallPolicy (.ofSail (haltSource 65536).sail.realize)).map
+        (fun execution => execution.effect.state.exitCode)) = some (some 65536) := by
+  rw [← SailSnapshot.readContext_eq]
+  native_decide
+
+/-- HALT's actual register observations and public exit cannot be changed independently. -/
+theorem rejectsForgedHalt :
+    [check syscallImage { haltSource 65535 with
+        sail.registers := (haltSource 65535).sail.registers.insert .x5 1 }
+      (haltPublic 65535) (haltRows 65535),
+     check syscallImage { haltSource 65535 with
+        sail.registers := (haltSource 65535).sail.registers.insert .x11 8 }
+      (haltPublic 65535) (haltRows 65535),
+     check syscallImage (haltSource 65535) (haltPublic 65534) (haltRows 65535)] =
+      [false, false, false] := by native_decide
+
 end SP1CleanTest.Core.LocalCore

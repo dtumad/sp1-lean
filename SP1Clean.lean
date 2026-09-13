@@ -359,6 +359,7 @@ import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Model.Core.HostHalt
 import SP1Clean.Model.Core.ExecutionBoot
 import SP1Clean.Model.Core.ExecutionSnapshot
 import SP1Clean.Model.Core.SailRegisterEquality
@@ -399,6 +400,7 @@ import SP1Clean.Soundness.LocalCoreTransport
 import SP1Clean.Soundness.LocalCoreGrounding
 import SP1Clean.Soundness.LocalCoreTrajectory
 import SP1Clean.Soundness.LocalCoreInstructionExecution
+import SP1Clean.Soundness.LocalCoreHaltExecution
 import SP1Clean.Soundness.CoreRowTransport
 import SP1Clean.Soundness.CoreMemoryChronology
 import SP1Clean.Soundness.CoreRowBalance
@@ -689,6 +691,7 @@ import SP1Clean.Soundness.CoreProgramBalance
 import SP1Clean.Soundness.CoreExecutionRow
 import SP1Clean.Soundness.CoreExecutionEvents
 import SP1Clean.Soundness.CoreInstructionExecution
+import SP1Clean.Soundness.CoreHaltExecution
 import SP1Clean.Soundness.CoreTableProjection
 import SP1Clean.Soundness.NativeCoreMemory
 import SP1Clean.Soundness.SystemMemoryRows

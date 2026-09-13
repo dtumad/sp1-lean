@@ -285,8 +285,12 @@ facts using the registered chip contracts. At an incoming State truth, committed
 ECALL, and the replay's terminal-PC invariant proves the host is running: HALT parks at PC 1,
 where the checked ROM cannot fetch. No host-invariance or successful-replay premise is assumed.
 Final State truth yields successful replay of the full tape and its returned PC/clock through
-`replay_of_finalTruth`. The remaining premises are ROM preservation and HALT/syscall step/frame
-facts. Normal retirement for execution reconstruction, actual host effects, and complete outgoing
+`replay_of_finalTruth`. `LocalCoreHaltExecution` authenticates HALT through Program balance and
+incoming register currency, then proves its complete stateful host step and exit status.
+Its `ground_of_host_steps` retains only ROM preservation and active SyscallInstrs step/frame
+facts. The host policy characteristic explicitly equals the AIR field; the legacy HALT row's
+three zero upper exit limbs still restrict that table to 16-bit exits. Normal retirement for
+execution reconstruction, the other host effects, and complete outgoing
 snapshot agreement still require integration; replay success alone is not a normal-retirement theorem.
 
 The stopped-source clock constraint closes one concrete soundness gap: an active ADD previously
