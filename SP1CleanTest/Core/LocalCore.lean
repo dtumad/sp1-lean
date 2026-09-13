@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.LocalCoreMemory
+import SP1Clean.Soundness.LocalCoreOrder
 import SP1Clean.Model.Core.HostSnapshot
 import SP1CleanTest.Audit.OneAddNativePremises
 import ToClean.Air.EnsembleExport
@@ -181,6 +181,52 @@ theorem rejectsBrokenInventory :
 /-- A forged final value cannot be hidden by keeping the same canonical address and clock. -/
 theorem rejectsWrongFinalValue :
     check image source publicInput (baseRows.set 5 (3, finalRecord 0 1 13 124)) = false := by native_decide
+
+/-- Fetch authentication rejects a missing ROM producer and an altered fixed lookup key. -/
+theorem rejectsUnauthenticatedFetch :
+    [check image source publicInput (baseRows.filter (fun row => row.1 != 6)),
+     check image source publicInput (baseRows.set 10 (6, programRow.2.set 0 4))] =
+      [false, false] := by native_decide
+
+private def twoImage : ProgramImage := ⟨[(65536, 0x003100b3), (65540, 0x003100b3)], 65536, []⟩
+
+private def twoSource : ExecutionSnapshot := { source with sail.memory := twoImage.initialMemory }
+
+private def secondAdd : Row := (7, TraceGenTests.rTypeEventInputs
+  { Audit.OneAddNativePremises.event with
+    clk := 17, pc := 65540, tsA := 21, prevTsA := 13, prevA := 123,
+    tsB := 20, prevTsB := 12, tsC := 19, prevTsC := 11 })
+
+private def paddingAdd : Row := (7, List.replicate (size AddChip.Inputs) 0)
+
+private def twoPublic : SP1PublicIO Fp :=
+  { publicInput with final_clk_0_16 := 25, final_pc0 := 8 }
+
+private def twoRows : List Row :=
+  [sourceRegister 0 1, sourceRegister 2 2, sourceRegister 3 3, terminal 2 4,
+    (3, finalRecord 0 1 21 123), (3, finalRecord 2 2 20 100), (3, finalRecord 3 3 19 23), terminal 5 4,
+    programRow, (6, ((DecodedProgramProvider.populate? (p := SP1Prime) twoImage (65540, 0x003100b3) 1).map
+      (fun input => (toElements input).toList)).getD []),
+    secondAdd, paddingAdd, (7, Audit.OneAddNativePremises.inputs),
+    (57, List.replicate (size HaltChip.Inputs) 0)]
+
+/-- The physical ADD rows are reversed, with padding between them; the ledger still closes
+for the two-step local segment. Duplicating an active occurrence invalidates it. -/
+theorem acceptsReorderedPaddedSegment :
+    check twoImage twoSource twoPublic twoRows = true ∧
+      check twoImage twoSource twoPublic (secondAdd :: twoRows) = false := by native_decide
+
+private def identityPublic : SP1PublicIO Fp :=
+  { publicInput with final_clk_0_16 := 9, final_pc0 := 0 }
+
+private def identityRows : List Row :=
+  [terminal 2 0, terminal 5 0, paddingAdd, (57, List.replicate (size HaltChip.Inputs) 0)]
+
+/-- A zero-step segment has equal State endpoints and empty touched inventories. The same
+identity is accepted for a stopped host; this does not permit a semantic step after HALT. -/
+theorem acceptsEmptySegments :
+    check image source identityPublic identityRows = true ∧
+      check image { source with host.exitCode := some 0 } identityPublic identityRows = true := by native_decide
 
 private def syscallImage : ProgramImage := ⟨[(65536, 0x00000073)], 65536, []⟩
 

@@ -1,8 +1,8 @@
-import SP1Clean.Soundness.NativeCoreMemory
-import SP1Clean.Soundness.NativeCoreDecode
+import SP1Clean.Soundness.LocalCoreMemory
+import SP1Clean.Soundness.LocalCoreDecode
 import SP1Clean.Soundness.CoreTableProjection
 
-/-! # Physical mixed rows of the authenticated native core
+/-! # Physical mixed rows of the local shard assembly
 
 The physical instruction and system tables decode into one execution-row carrier. Memory refresh
 pairs remain separate because they do not execute instructions. Exact ledger projections remove
@@ -11,8 +11,10 @@ This module establishes the row-level balance needed before refresh elimination 
 it does not assert an execution order or host semantics.
 -/
 
-namespace SP1Clean.Soundness.NativeCore
+namespace SP1Clean.Soundness.LocalCore
 
+open SP1Clean.Soundness.NativeCore (ExecutionRow typedTableInteractions_nil byteProvider_channel_silent
+  flatMap_split flatMap_filter_inactive pushesAt_flatMap pullsAt_flatMap verifier_state_interactions_of_main)
 open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
 open TimedGrounding
 
@@ -20,38 +22,38 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
-private theorem witness_length {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) : witness.tables.length = 59 := by
+private theorem witness_length {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) : witness.tables.length = 59 := by
   rw [← witness.same_length]
-  exact tables_length image
+  exact tables_length image source
 
 /-- The physical refresh, StateBump, HALT, and syscall tables, in their registered order. -/
-def systemTable {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image))
+def systemTable {image : ProgramImage} {source : ExecutionSnapshot} (witness : EnsembleWitness (ensemble (p := p) image source))
     (index : Fin 4) : Table (ZMod p) :=
   witness.tables[55 + index.val]'(by have := witness_length witness; omega)
 
-theorem systemTable_component {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) (index : Fin 4) :
+theorem systemTable_component {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 4) :
     (systemTable witness index).component =
       ([⟨MemoryBumpChip.circuit⟩, ⟨StateBumpChip.circuit⟩, ⟨HaltChip.circuit⟩,
         ⟨SyscallInstrsChip.circuit⟩] : List (Component (ZMod p)))[index.val] := by
   have same := witness.same_circuits (55 + index.val)
-    (by change 55 + index.val < (tables image).length; rw [tables_length]; omega)
+    (by change 55 + index.val < (tables image source).length; rw [tables_length]; omega)
   apply same.symm.trans
   fin_cases index <;> rfl
 
-theorem systemTable_mem {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) (index : Fin 4) :
+theorem systemTable_mem {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 4) :
     systemTable witness index ∈ witness.allTables :=
   witness.mem_allTables_of_mem_tables (List.getElem_mem _)
 
-theorem systemTable_constraints {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints)
+theorem systemTable_constraints {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
     (index : Fin 4) : (systemTable witness index).Constraints :=
   constraints _ (systemTable_mem witness index)
 
-private theorem systemTables_eq {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) :
+private theorem systemTables_eq {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
     witness.tables.drop 55 = [systemTable witness 0, systemTable witness 1,
       systemTable witness 2, systemTable witness 3] := by
   have length := witness_length witness
@@ -60,8 +62,8 @@ private theorem systemTables_eq {image : ProgramImage}
     List.drop_eq_nil_of_le (by omega)]
   rfl
 
-private theorem byteTables_memory_silent {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) :
+private theorem byteTables_memory_silent {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
     ((witness.tables.drop 32).take 23).flatMap (typedTableInteractionsWith · memoryChannel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
@@ -74,8 +76,8 @@ private theorem byteTables_memory_silent {image : ProgramImage}
 
 /-- The complete physical Memory interior: ordinary rows plus the three participating system
 tables. Fixed Program, Byte/Range, and StateBump are proved Memory-silent. -/
-theorem memoryInterior_split {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) :
+theorem memoryInterior_split {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
     memoryInterior witness =
       (instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel) ++
       typedTableInteractionsWith (systemTable witness 0) memoryChannel ++
@@ -101,26 +103,26 @@ theorem memoryInterior_split {image : ProgramImage}
     List.append_nil, List.append_assoc, instructionTables]
 
 /-- Active ordinary rows decoded from the unchanged physical instruction batch. -/
-noncomputable def activeInstructionRows {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) : List (DecodedInstructionRow p) :=
+noncomputable def activeInstructionRows {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) : List (DecodedInstructionRow p) :=
   (instructionRows witness).filter (fun row => (row.toChipRow witness.data).is_real = 1)
 
 /-- The complete physical event inventory, before State-bus ordering. -/
-noncomputable def executionRows {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) : List (ExecutionRow p) :=
+noncomputable def executionRows {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) : List (ExecutionRow p) :=
   (activeInstructionRows witness).map .instruction ++
     (activeSystemRows (systemTable witness 2) haltRow (·.is_real)).map .halt ++
     (activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)).map .syscall
 
 /-- Actual active refresh pairs, kept separate from instruction execution. -/
-noncomputable def memoryRefreshes {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) :
+noncomputable def memoryRefreshes {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
     List (MemoryMsg (ZMod p) × MemoryMsg (ZMod p)) :=
   (activeSystemRows (systemTable witness 0) memoryBumpRow (·.is_real)).flatMap MemoryBumpChip.memoryPairs
 
 /-- Selecting active ordinary rows preserves both complete Memory message lists. -/
-theorem activeInstructionRows_memory {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints) :
+theorem activeInstructionRows_memory {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints) :
     producedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel)) =
         (activeInstructionRows witness).flatMap (·.producedMemoryMessages witness.data) ∧
     consumedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel)) =
@@ -143,8 +145,8 @@ theorem activeInstructionRows_memory {image : ProgramImage}
 
 /-- The mixed execution carrier plus the separate refresh pairs accounts for exactly the
 interior's active Memory messages, at every location and with their full multiplicities. -/
-theorem executionRows_memory_projection {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem executionRows_memory_projection {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (loc : MemLoc) :
     pushesAt ((executionRows witness).map (ExecutionRow.facts witness.data)) loc +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
@@ -175,8 +177,8 @@ theorem executionRows_memory_projection {image : ProgramImage}
 
 /-- The authenticated Memory balance in the timed engine's row vocabulary. All active instruction,
 HALT, and syscall rows are absorbed exactly once; actual refresh pairs are the only side terms. -/
-theorem executionRows_memory_balance {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem executionRows_memory_balance {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) (loc : MemLoc) :
     optMS (memoryInitialFrontier witness loc) +
         pushesAt ((executionRows witness).map (ExecutionRow.facts witness.data)) loc +
@@ -190,4 +192,4 @@ theorem executionRows_memory_balance {image : ProgramImage}
     (executionRows_memory_projection witness constraints loc).2]
   exact memory_frontier_balance witness constraints balanced loc
 
-end SP1Clean.Soundness.NativeCore
+end SP1Clean.Soundness.LocalCore

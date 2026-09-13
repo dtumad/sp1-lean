@@ -767,6 +767,20 @@ permutation and per-location source/final equation, retaining all interior occur
 active syscalls. Component multiplicity and boundary algebra are shared with the boot proofs in
 `CoreMemoryBalance`; no Memory-truth, execution-order, or syscall-inactivity premise is added.
 
+Program authentication and State ordering are also proved for the local assembly.
+`LocalCoreProgram.program_pull_committed` authenticates any active fetch against the image's
+ROM/Sail decode through actual Program balance. `LocalCoreDecode` retains physical cells and
+constraints. `LocalCoreRows.executionRows_memory_balance` accounts for every active ordinary,
+HALT, and syscall occurrence, with actual refresh pairs separate. `LocalCoreState.state_endpointBalanced`
+and `LocalCoreOrder.executionRows_ordered` derive an exhaustive canonical State walk between the
+public endpoints. `ordered_rows_timing` gives each row's exact 8/264-tick duration and incoming clock
+residue. No ordering or syscall-inactivity premise is accepted. Component semantics and physical
+ledger algebra are shared with boot in `CoreProgramBalance`, `CoreExecutionRow`, and
+`CoreTableProjection`; the existing generic decoder and `StateChronology` prove the common
+algorithms. Regressions accept reversed physical instructions with padding and empty segments,
+and reject unauthenticated Program fetches. Local aligned touches, prior-record bounds, refresh
+elimination, and the mixed trajectory remain to be transported before semantic execution can close.
+
 The complete 59-table regression includes active HINT_LEN with nonzero source registers and a
 264-tick State edge. It also runs at the maximum 24-bit high clock using one refresh per touched
 register, without rows for the intervening epochs. Missing/duplicate touches and unmatched final

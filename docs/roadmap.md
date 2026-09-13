@@ -72,6 +72,15 @@ Implemented foundations:
   changes. It also records a concrete integration gap: changing the return and matching final record from 3 to 4
   remains AIR-valid while the supplied host returns 3. Stateful host-result binding is therefore
   still necessary; ledger balance alone does not imply semantic execution or final-value currency.
+- `LocalCoreProgram` authenticates every active Program pull through the unique checked-image
+  producer. `LocalCoreDecode` preserves physical instruction cells, constraints, and channel
+  guarantees. `LocalCoreRows` projects all ordinary/HALT/syscall occurrences and actual refresh
+  pairs into exact Memory balance. `LocalCoreState` derives their complete State ledger and endpoint
+  balance; `LocalCoreOrder` constructs an exhaustive canonical walk with exact 8/264-tick durations
+  and the incoming clock residue. No ordering or syscall-inactivity premise is supplied. These
+  adapters reuse `CoreProgramBalance`, `CoreExecutionRow`, `CoreTableProjection`, the existing
+  decoder, and `StateChronology`. Regressions cover reversed physical instructions with padding,
+  missing/forged Program rows, and empty local segments, including a stopped source.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -399,8 +408,10 @@ Still required before the native capstone can be claimed:
    identity segments; excluding active AIR rows after HALT remains part of mixed execution integration.
 2. Continue transporting the boot grounding to the local assembly and stateful execution. Local
    source genesis, final address/order facts, complete physical Memory balance, and both unique
-   frontiers are now closed. Transport Program authentication, the mixed row carrier, and State
-   ordering next. The following facts are already closed for the boot assembly: initial-record
+   frontiers are now closed. Program authentication, the mixed row carrier, its exact Memory
+   projection, and exhaustive State ordering/timing are also transported. Next derive aligned
+   touches, prior-record bounds, strict refresh ordering, the timeline, and the mixed trajectory
+   from the local assembly; retain its complete source throughout. The following facts are already closed for the boot assembly: initial-record
    meaning/uniqueness and physical Program-row authentication follow from constraints and balance. Final
    address/order facts and committed Program meaning at active pulls are also closed. The complete
    Memory ledger now yields unique per-location frontiers, their exact balance equation, and an

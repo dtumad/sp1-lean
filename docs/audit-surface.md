@@ -137,6 +137,15 @@ below. The local assembly's complete Sail/host endpoint binding and timed ground
 | `memory_interactions` | `SP1Clean/Soundness/LocalCoreMemory.lean` | Whether the local source/interior/final decomposition retains every actual Memory interaction |
 | `memory_records_perm` | `SP1Clean/Soundness/LocalCoreMemory.lean` | Whether source records plus all interior pushes permute to final records plus all interior pulls |
 | `memory_frontier_balance` | `SP1Clean/Soundness/LocalCoreMemory.lean` | Whether unique source/final frontiers satisfy the timed engine's per-location equation without semantic premises |
+| `program_pull_committed_of_sources` | `SP1Clean/Soundness/CoreProgramBalance.lean` | Whether checked ROM is the sole possible producer under actual count-bounded Program balance |
+| `ExecutionRow.edge_eq_facts` | `SP1Clean/Soundness/CoreExecutionRow.lean` | Whether both assemblies use identical State edges and Memory row facts |
+| `verifier_state_interactions_of_main` | `SP1Clean/Soundness/CoreTableProjection.lean` | Whether a verifier preserving the standard State circuit emits exactly the two public endpoints |
+| `program_pull_committed` | `SP1Clean/Soundness/LocalCoreProgram.lean` | Whether every active local fetch authenticates ROM/Sail membership without execution truth |
+| `instructionRows_constraints` | `SP1Clean/Soundness/LocalCoreDecode.lean` | Whether decoding retains original cells and raw constraints |
+| `executionRows_memory_balance` | `SP1Clean/Soundness/LocalCoreRows.lean` | Whether all mixed instruction occurrences and refresh pairs satisfy exact Memory frontier balance |
+| `state_endpointBalanced` | `SP1Clean/Soundness/LocalCoreState.lean` | Whether the actual local State ledger authenticates both endpoints |
+| `executionRows_ordered` | `SP1Clean/Soundness/LocalCoreOrder.lean` | Whether raw constraints and balance construct an exhaustive mixed State walk |
+| `ordered_rows_timing` | `SP1Clean/Soundness/LocalCoreOrder.lean` | Whether the local walk preserves the incoming clock residue and exact event widths |
 | `hintReturnNeedsHostBinding` | `SP1CleanTest/Core/LocalCore.lean` | Concrete AIR-valid forged HINT_LEN return against the supplied finite host; records the remaining host-result binding obligation |
 | `SourceValid` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Finite program/decoding validity, x0, and all source ROM bytes, including untouched code |
 | `checkSource_iff` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Whether executable source validation is exactly the semantic contract |

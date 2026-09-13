@@ -255,6 +255,19 @@ not final-value currency. The active syscall regression preserves all three regi
 exposes the pending host binding: matching a forged HINT_LEN return in both the instruction and
 final record still passes AIR checks, although finite host execution yields a different result.
 
+`LocalCoreProgram` authenticates active fetches from the checked image through the actual Program
+balance, including HALT and syscalls. `LocalCoreDecode` preserves the physical instruction batch.
+`LocalCoreRows` uses the same `ExecutionRow` carrier as the boot assembly, retaining every active
+ordinary/HALT/syscall occurrence and the separate Memory refresh pairs. `LocalCoreState` derives
+its exact State ledger, and `LocalCoreOrder.executionRows_ordered` constructs an exhaustive walk
+between the public endpoints with no supplied ordering. Each ordinary step costs 8 ticks; HALT and
+syscalls cost 264. Disabled padding contributes no event, and StateBump canonicalization cancels
+internally. `CoreProgramBalance`, `CoreExecutionRow`, and `CoreTableProjection` share component
+semantics and ledger algebra; the decoder and `StateChronology` ordering algorithm are unchanged.
+The regression accepts two instructions in reverse physical order with intervening padding and
+accepts empty identity segments. This is a State/Memory ledger result; local aligned grounding,
+full host execution, and final-state agreement still require integration.
+
 `NativeCoreMemory` retains the complete physical Memory ledger after the boundary inventories,
 including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicity proof turns Clean
 balance into an exact message permutation and then a per-location frontier equation. The initial

@@ -1,15 +1,16 @@
-import SP1Clean.Soundness.NativeCoreState
+import SP1Clean.Soundness.LocalCoreState
 import SP1Clean.Soundness.StateChronology
 
-/-! # Clock ordering of the authenticated native core
+/-! # Clock ordering of the local shard assembly
 
 Raw constraints and channel balance order every active ordinary, HALT, and syscall row between
 the public endpoints. The physical StateBump rows supply canonicalization, and cancel internally.
 The order retains every occurrence, including arbitrarily interleaved syscall rows.
 -/
 
-namespace SP1Clean.Soundness.NativeCore
+namespace SP1Clean.Soundness.LocalCore
 
+open SP1Clean.Soundness.NativeCore (ExecutionRow activeSystemRows_member syscall_halt_binary halt_advancing syscall_advancing)
 open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
@@ -17,8 +18,8 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-private theorem instructionRows_advancing {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem instructionRows_advancing {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p} (member : row ∈ activeInstructionRows witness) :
     StateChronology.Advancing ((ExecutionRow.instruction row).edge witness.data) ∧
@@ -35,8 +36,8 @@ private theorem instructionRows_advancing {image : ProgramImage}
   · exact supportedChip_statePcClassShape row.chip (mem_chip_of_mem_decodeInstructionTables decodedMem)
       witness.data row.physical byte active
 
-private theorem haltRows_advancing {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem haltRows_advancing {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : HaltChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 2) haltRow (·.is_real)) :
     StateChronology.Advancing ((ExecutionRow.halt row).edge witness.data) ∧
@@ -44,10 +45,10 @@ private theorem haltRows_advancing {image : ProgramImage}
         StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).1 + (ExecutionRow.halt row).duration := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact halt_advancing _ (haltRow_cpuState_bounds_of_component _ (systemTable_component witness 2)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 2)).1 physicalMem real)
+    (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 2)).1 physicalMem real)
 
-private theorem syscallRows_advancing {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem syscallRows_advancing {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : SyscallInstrsChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
     StateChronology.Advancing ((ExecutionRow.syscall row).edge witness.data) ∧
@@ -55,14 +56,14 @@ private theorem syscallRows_advancing {image : ProgramImage}
         StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).1 + (ExecutionRow.syscall row).duration := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact syscall_advancing _ (syscallInstrsRow_cpuState_bounds_of_component _ (systemTable_component witness 3)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 3)).1 physicalMem real)
+    (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 3)).1 physicalMem real)
     (syscall_halt_binary _ (systemTable_component witness 3) (systemTable_constraints witness constraints 3) physicalMem)
     real (syscallInstrsRow_pcArm_spec_of_component _ (systemTable_component witness 3)
       (systemTable_constraints witness constraints 3) physicalMem)
 
 /-- Clock progress and the PC preservation/range-check dichotomy come from each physical row. -/
-theorem executionRows_advancing {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem executionRows_advancing {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : ExecutionRow p} (member : row ∈ executionRows witness) :
     StateChronology.Advancing (row.edge witness.data) ∧
@@ -74,23 +75,23 @@ theorem executionRows_advancing {image : ProgramImage}
   · exact haltRows_advancing witness constraints balanced member
   · exact syscallRows_advancing witness constraints balanced member
 
-private theorem stateBumps_spec {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem stateBumps_spec {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : StateBumpChip.Inputs (ZMod p)} (member : row ∈ stateBumps witness) :
     StateBumpChip.Spec row ∧ row.is_real = 1 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact ⟨stateBumpTable_spec_of_component _ (systemTable_component witness 1)
     (systemTable_constraints witness constraints 1)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 1)).1 _ physicalMem, real⟩
+    (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 1)).1 _ physicalMem, real⟩
 
 /-- Both endpoints of every active event have the bounds needed for semantic canonicalization. -/
-theorem executionRows_good {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem executionRows_good {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : ExecutionRow p} (member : row ∈ executionRows witness) :
     StateChronology.Good (row.edge witness.data).1 ∧ StateChronology.Good (row.edge witness.data).2 := by
-  have bounds := (public_boot witness constraints balanced).1
+  have bounds := (public_boundary witness constraints balanced).1
   have initial := initialBoundaryStateMessage_bounds witness.publicInput bounds
   have final := finalBoundaryStateMessage_bounds witness.publicInput bounds
   exact (StateChronology.good_and_bumps_cancel _ _ _ _ _ (state_endpointBalanced witness constraints balanced)
@@ -100,13 +101,13 @@ theorem executionRows_good {image : ProgramImage}
 
 /-- Constraints and balance construct an exhaustive ordering of the complete mixed inventory.
 No ordering, canonicalization, or system-row inactivity premise is supplied by the caller. -/
-theorem executionRows_ordered {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem executionRows_ordered {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ ordered : List (ExecutionRow p), ordered.Perm (executionRows witness) ∧
       Walk.IsWalk (ExecutionRow.canonEdge witness.data)
         (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered := by
-  have bounds := (public_boot witness constraints balanced).1
+  have bounds := (public_boundary witness constraints balanced).1
   have initial := initialBoundaryStateMessage_bounds witness.publicInput bounds
   have final := finalBoundaryStateMessage_bounds witness.publicInput bounds
   obtain ⟨ordered, walk, exhaustive⟩ := StateChronology.exhaustiveTrail _ _ _ _ _
@@ -118,9 +119,9 @@ theorem executionRows_ordered {image : ProgramImage}
     canonState_eq_self final.2.1 final.2.2.1 final.2.2.2.1] at walk
   exact ⟨ordered, exhaustive, walk⟩
 
-/-- Every event in an exhaustive State walk keeps the boot clock residue and its exact duration. -/
-theorem ordered_rows_timing {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+/-- Every event in an exhaustive State walk keeps the incoming clock residue and its exact duration. -/
+theorem ordered_rows_timing {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -146,4 +147,4 @@ theorem ordered_rows_timing {image : ProgramImage}
   rw [timeNat_canonState good.1.1] at align
   exact ⟨align, (executionRows_advancing witness constraints balanced (exhaustive.mem_iff.mp member)).2⟩
 
-end SP1Clean.Soundness.NativeCore
+end SP1Clean.Soundness.LocalCore

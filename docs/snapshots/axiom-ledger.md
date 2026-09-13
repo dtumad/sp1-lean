@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1665 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 214 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1720 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 217 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1879 released declarations are probed.
+- 1937 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,22 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The local Program/State checkpoint adds 55 main declarations and three test anchors. Thirteen
+main additions use the logical baseline or a subset; 36 retain the existing 100-axiom registry set,
+and four shared row definitions retain the existing 77-axiom Sail set. The generic Program
+matching theorem uses the baseline plus the already disclosed experimental-extension hook.
+Byte/Range component silence uses the baseline plus two existing Clean bit-vector constants.
+All preceding 1665 main and 214 test dependency sets are unchanged. There are no removals and no
+new main-library axiom names; the three new compiler-trusted constants belong only to the local
+reordered/padded, empty-segment, and unauthenticated-fetch regressions.
+
+The local AIR now authenticates every active Program fetch and derives exact mixed Memory/State
+ledgers, an exhaustive canonical State walk, and exact event durations, without caller-supplied
+ordering or syscall inactivity. The shared row carrier, Program source proof, provider silence,
+and verifier endpoint projection also serve the boot assembly. Local aligned grounding, stateful
+host-result binding, exclusion of active execution after HALT, and complete outgoing-state agreement
+remain open; no unconditional local execution or AIR equivalence is claimed.
 
 The local Memory-ledger checkpoint adds 21 main declarations and four test anchors. Six main
 additions use exactly the logical baseline; fifteen retain the existing 100-axiom registry set

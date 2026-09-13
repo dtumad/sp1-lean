@@ -39,6 +39,23 @@ def viewFor : TableId → TransitionView (OrderedBoundary.channel (p := p) chann
   | .ram => ramView
   | .terminal => OrderedMemoryEnsemble.terminalView channelName (by decide)
 
+/-- Final rows use only Byte, Memory, and their own private ordering channel. -/
+theorem view_channels_subset (id : TableId) :
+    (viewFor (p := p) id).component.circuit.channels ⊆
+      [byteChannel.toRaw, memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] := by
+  cases id
+  · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+      byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
+      memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] ⊆ _
+    simp
+  · change [byteChannel.toRaw, byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+      byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
+      memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] ⊆ _
+    simp
+  · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+      (OrderedBoundary.channel channelName).toRaw] ⊆ _
+    simp
+
 /-- Finalizer semantics require only raw constraints and Byte guarantees, before Memory grounding. -/
 theorem view_spec (id : TableId) (env : Environment (ZMod p))
     (constraints : (viewFor id).component.operations.ConstraintsHold env)

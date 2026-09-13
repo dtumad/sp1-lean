@@ -79,6 +79,15 @@ nonzero shard clocks, without historical last-access claims. `LocalCoreFinalBoun
 final records and unique locations; `LocalCoreMemory` proves the exact physical Memory decomposition,
 signed-unit multiplicities, complete record permutation, and per-location frontier equation, including
 active syscalls. `CoreMemoryBalance` shares component and boundary algebra with the boot proofs.
+`LocalCoreProgram` and `LocalCoreDecode` authenticate all active Program fetches and preserve
+physical instruction cells/constraints. `LocalCoreRows` projects the shared mixed carrier into exact
+Memory balance, including all active syscalls. `LocalCoreState` derives exact State endpoint balance;
+`LocalCoreOrder` constructs an exhaustive canonical walk and its 8/264-tick timing without ordering
+or inactivity premises. Shared component semantics and physical projections live in
+`CoreProgramBalance`, `CoreExecutionRow`, and `CoreTableProjection`; the generic decoder and
+`StateChronology` remain the common algorithms. Local aligned touches, prior bounds, refresh
+ordering, and the mixed trajectory are the next transport steps. Regressions include reversed
+physical instructions with padding and empty segments.
 The full HINT_LEN regression records the remaining host-result gap: changing both the instruction's
 return and its final record still passes AIR checks despite disagreeing with finite host execution.
 Full outgoing Sail/host agreement,
