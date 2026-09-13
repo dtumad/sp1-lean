@@ -29,6 +29,18 @@ selected host effects remain open.
 
 Implemented foundations:
 
+- `ExecutionSnapshot.lean` represents complete Sail/host/clock boundaries with finite register
+  maps and sparse RAM. Its executable comparison is proved equivalent to literal equality of
+  realized execution states, including nextPC, retirement bookkeeping, runtime counters/output,
+  and absent register keys. The bounded memory realization has all supported bytes present and
+  every outside address absent; it is not a quotient that ignores extra Sail-memory entries.
+  Boot has a proved representation, and initialized snapshots project to the existing source
+  providers. Exact comparison suffices for semantic identity and composition.
+  `HostSnapshot.lean` computes host transitions directly on finite data and proves soundness and
+  completeness against the full-state Sail host adapter. Its byte-write proof covers all hint
+  padding and preserves untouched state. Regressions reject bookkeeping, host, and untouched RAM
+  mutations and derive a genuine semantic HINT_READ step from the sparse interpreter. Complete
+  incoming/outgoing snapshot authentication by AIR constraints remains open.
 - `MemorySnapshot.lean` represents all 32 integer registers and complete sparse RAM for a local
   source boundary. Its Sail representation relation covers every supported byte; its executable
   extensional comparison checks the union of finite supports, including untouched locations,
@@ -367,9 +379,11 @@ Host integration must account for these source-backed details in v6.4.0:
 
 Still required before the native capstone can be claimed:
 
-1. Complete the local assembly's boundary encoding. The snapshot providers and arbitrary PC/clock
+1. Bind complete snapshots into the local assembly. The full finite representation, exact equality,
+   provider projection, boot representation, and sparse host execution bridge are proved.
+   The snapshot providers and arbitrary PC/clock
    verifier are installed, and raw constraints/balance derive source authenticity, uniqueness, and
-   finite program/source validity. Bind the complete Sail/host state, including untouched locations
+   finite program/source validity. Constrain the complete Sail/host state, including untouched locations
    and Sail bookkeeping; derive incoming record admissibility and final-state agreement internally.
    Retain boot initialization as a specialization.
 2. Generalize the boot assembly's existing grounding to the local assembly and stateful execution.

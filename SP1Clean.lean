@@ -355,10 +355,13 @@ import SP1Clean.Model.Core.HostExecution
 import SP1Clean.Model.Core.HostExecutionLaws
 import SP1Clean.Model.Core.HostTerminal
 import SP1Clean.Model.Core.HostSail
+import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
 import SP1Clean.Model.Core.ExecutionBoot
+import SP1Clean.Model.Core.ExecutionSnapshot
+import SP1Clean.Model.Core.SailRegisterEquality
 import SP1Clean.Model.Core.MemorySpan
 import SP1Clean.Model.Core.HostFootprint
 import SP1Clean.Model.Core.SyscallCode

@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1607 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 201 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1629 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 208 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1808 released declarations are probed.
+- 1837 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,17 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The complete finite-boundary checkpoint adds 22 main declarations and seven test declarations.
+Nineteen main additions use only the logical baseline; three retain the existing 77-axiom Sail
+dependency set through the semantic step/segment relation. No new main axiom name appears, and
+all preceding 1607 main and 201 test dependency sets are unchanged. Six new compiler-trusted
+constants belong only to the snapshot regressions; the seventh test derives an actual HINT_READ
+semantic step from its checked finite execution through the general soundness theorem.
+The results cover exact full Sail/host/clock comparison, provider projection, boot representation,
+semantic identity/composition, and sparse host execution with complete padded-memory effects.
+They do not authenticate complete AIR boundaries or close the ordinary compiler or native witness
+composition theorem.
 
 The local snapshot-assembly checkpoint adds 21 main declarations and six test declarations.
 Ten main additions use only the logical baseline (one omits `Classical.choice`); eleven retain the

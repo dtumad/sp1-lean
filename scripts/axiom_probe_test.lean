@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.ExecutionSnapshot
 import SP1CleanTest.Core.LocalCore
 import SP1CleanTest.Core.SnapshotBoundary
 import SP1CleanTest.Core.ExecutionPath
@@ -32,6 +33,13 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.ExecutionSnapshot.rejectsBookkeepingChanges
+#print axioms SP1CleanTest.Core.ExecutionSnapshot.rejectsRuntimeAndHostChanges
+#print axioms SP1CleanTest.Core.ExecutionSnapshot.comparesCompleteMemory
+#print axioms SP1CleanTest.Core.ExecutionSnapshot.comparesMissingKeys
+#print axioms SP1CleanTest.Core.ExecutionSnapshot.executesPaddedHint
+#print axioms SP1CleanTest.Core.ExecutionSnapshot.paddedHint_semanticStep
+#print axioms SP1CleanTest.Core.ExecutionSnapshot.rejectsAfterHalt
 #print axioms SP1CleanTest.Core.LocalCore.activeLocalShard
 #print axioms SP1CleanTest.Core.LocalCore.rejectsWrongEndpoints
 #print axioms SP1CleanTest.Core.LocalCore.rejectsWrongSource

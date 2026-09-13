@@ -754,6 +754,23 @@ This is executable AIR conformance, not a whole-execution proof. Binding the ful
 and final memory, justifying local source timestamps, and generalizing the boot assembly's timed
 grounding remain integration obligations. No arbitrary-boundary AIR equivalence is claimed.
 
+`Model/Core/ExecutionSnapshot.lean` now represents full execution boundaries with finite data.
+It preserves every Sail register and missing key, runtime cycle count and output, all host fields,
+and execution clock. Sparse RAM realizes exactly the bounded Sail map: bytes inside the window
+are present, and outside addresses are absent. Executable comparison is proved equivalent to
+literal equality of realized `ExecutionState`s. It detects changes to `nextPC` and `minstret` even
+when the integer-register/RAM projection agrees. Resetting those bookkeeping fields at a shard cut
+would not preserve the existing exact-state path semantics. Boot has a proved representation;
+initialized full snapshots project to the source-provider representation.
+
+`Model/Core/HostSnapshot.lean` executes host calls on the finite representation. Its commuting
+theorem, soundness, and completeness match the Sail host adapter on the complete state, under the
+native policy's fixed memory window. Padded HINT_READ writes are included, and all untouched fields
+are preserved. The active regression computes a padded hint read and derives a semantic step via
+that bridge without evaluating dense memory. Exact finite equality now supports semantic identity
+and composition; it is not yet an AIR constraint or a Rust boundary serializer. Complete snapshot
+authentication, ordinary-step finite compilation, and full native witness composition remain open.
+
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL
 encoding. `Model/Core/ProgramTable.lean` constructs complete fixed messages, proves that projection

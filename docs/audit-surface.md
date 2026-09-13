@@ -36,6 +36,13 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `WitnessRelation.FunctionalCompleteness` | `SP1Clean/FormalModel/Relations.lean` | The proof-independent reverse witness map; no witness-preservation law is implicit |
 | `WitnessRelation.Correct` | `SP1Clean/FormalModel/Relations.lean` | Both existential directions, hence public-language equality rather than witness inversion |
 | `ExecutionState` | `SP1Clean/Model/Core/Execution.lean` | Complete Sail/host/clock continuity, including RAM and terminal status; not yet an authenticated AIR boundary encoding |
+| `ExecutionSnapshot` | `SP1Clean/Model/Core/ExecutionSnapshot.lean` | Complete finite boundary data, including all Sail registers and runtime/host state |
+| `ExecutionSnapshot.equivalent_iff` | `SP1Clean/Model/Core/ExecutionSnapshot.lean` | Whether finite comparison is literal equality of complete realized execution states |
+| `memorySnapshot_realizes` | `SP1Clean/Model/Core/ExecutionSnapshot.lean` | Whether initialized full snapshots supply the existing source providers' complete register/RAM observations |
+| `ExecutionSnapshot.hostStep?` | `SP1Clean/Model/Core/HostSnapshot.lean` | Which host transition is computed directly from finite source data |
+| `ExecutionSnapshot.hostStep?_realize` | `SP1Clean/Model/Core/HostSnapshot.lean` | Whether sparse host execution agrees with the Sail adapter on the full state, including padded writes |
+| `ExecutionSnapshot.hostStep?_sound` | `SP1Clean/Model/Core/HostSnapshot.lean` | Whether successful finite host execution yields the genuine semantic transition |
+| `ExecutionSnapshot.hostStep?_complete` | `SP1Clean/Model/Core/HostSnapshot.lean` | Whether successful Sail host execution has a computed finite successor without a readiness witness |
 | `MemorySnapshot.Realizes` | `SP1Clean/Model/Core/MemorySnapshot.lean` | All integer registers and every supported byte agree with Sail; excludes other Sail/host/clock state and is not an added ensemble premise |
 | `equivalent_iff` | `SP1Clean/Model/Core/MemorySnapshot.lean` | Finite executable comparison is exact RAM/register equality, including untouched locations and zero-default gaps |
 | `SnapshotSpec` | `SP1Clean/FormalModel/Contracts/SnapshotMemory.lean` | Canonical zero-time local source record authenticated against a fixed finite snapshot; no historical timestamp claim |

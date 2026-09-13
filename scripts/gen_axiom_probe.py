@@ -40,6 +40,33 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete finite Sail/host boundaries and the sparse host-execution commuting square.
+    ("SP1Clean/Model/Core/SailRegisterEquality.lean", "equivalent_iff"),
+    ("SP1Clean/Model/Core/SailMemory.lean", "toSailMemory_eq_iff"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "realize"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "realize_capture"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "realize_eq_iff"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "equivalent_iff"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "memorySnapshot_realizes"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "memorySnapshot_valid"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "capture_realize"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "zero_iff"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "compose"),
+    ("SP1Clean/Model/Core/ExecutionSnapshot.lean", "ProgramImage.executionBootSnapshot_realize"),
+    ("SP1Clean/Model/Core/HostSnapshot.lean", "SailSnapshot.readContext_eq"),
+    ("SP1Clean/Model/Core/HostSnapshot.lean", "HostMemoryWrite.realize"),
+    ("SP1Clean/Model/Core/HostSnapshot.lean", "HostExecution.applySnapshot_realize"),
+    ("SP1Clean/Model/Core/HostSnapshot.lean", "ExecutionSnapshot.hostStep?"),
+    ("SP1Clean/Model/Core/HostSnapshot.lean", "ExecutionSnapshot.hostStep?_realize"),
+    ("SP1Clean/Model/Core/HostSnapshot.lean", "ExecutionSnapshot.hostStep?_sound"),
+    ("SP1Clean/Model/Core/HostSnapshot.lean", "ExecutionSnapshot.hostStep?_complete"),
+    ("SP1CleanTest/Core/ExecutionSnapshot.lean", "rejectsBookkeepingChanges"),
+    ("SP1CleanTest/Core/ExecutionSnapshot.lean", "rejectsRuntimeAndHostChanges"),
+    ("SP1CleanTest/Core/ExecutionSnapshot.lean", "comparesCompleteMemory"),
+    ("SP1CleanTest/Core/ExecutionSnapshot.lean", "comparesMissingKeys"),
+    ("SP1CleanTest/Core/ExecutionSnapshot.lean", "executesPaddedHint"),
+    ("SP1CleanTest/Core/ExecutionSnapshot.lean", "paddedHint_semanticStep"),
+    ("SP1CleanTest/Core/ExecutionSnapshot.lean", "rejectsAfterHalt"),
     # Local-shard assembly, finite source/ROM validation, and exact physical source ledger.
     ("ToClean/Air/ComponentOutput.lean", "rowOutput_mk"),
     ("SP1Clean/Model/Core/SourceSnapshot.lean", "checkSource_iff"),

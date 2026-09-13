@@ -74,7 +74,12 @@ Its verifier checks finite program validity, supported decoding, x0, and all sou
 ledger, and public/source validity from raw constraints and balance. Full Sail/host endpoint binding,
 final-state agreement, and source-timestamp admissibility remain open; the timed grounding below
 still targets the boot assembly. These results do not yet authenticate complete boundaries between
-separate AIR witnesses. The generic
+separate AIR witnesses. `ExecutionSnapshot` now gives a complete finite representation and an
+executable comparison proved equivalent to exact Sail/host/clock equality. It retains all Sail
+registers (including absent keys), runtime counters/output, and host state; only the bounded RAM
+map uses sparse realization. `HostSnapshot` executes host calls on that finite representation and
+proves full-state soundness/completeness against the Sail host adapter, including padded writes.
+Binding these complete snapshots into the AIR remains open. The generic
 interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are

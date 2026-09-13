@@ -36,6 +36,23 @@ theorem toSailMemory_get? (memory : ByteMemory) (limit query : ℕ) :
       if query < limit then some (memory.read query) else none := by
   simpa only [toSailMemory, List.mem_range] using get?_foldr memory (List.range limit) query
 
+/-- Exact Sail-map equality is extensional equality of the supported sparse bytes. All addresses
+outside the window are absent on both sides; equality never ignores an extra Sail-memory entry. -/
+theorem toSailMemory_eq_iff (left right : ByteMemory) (limit : ℕ) :
+    left.toSailMemory limit = right.toSailMemory limit ↔
+      ∀ address < limit, left.read address = right.read address := by
+  constructor
+  · intro equal address bound
+    have observed := congrArg (fun memory : Std.ExtHashMap ℕ (BitVec 8) => memory.get? address) equal
+    simpa only [toSailMemory_get?, if_pos bound, Option.some.injEq] using observed
+  · intro equal
+    apply Std.ExtHashMap.ext_getElem?
+    intro address
+    change (left.toSailMemory limit).get? address = (right.toSailMemory limit).get? address
+    by_cases bound : address < limit
+    · simp only [toSailMemory_get?, if_pos bound, equal address bound]
+    · simp only [toSailMemory_get?, if_neg bound]
+
 /-- In-range sparse updates agree with Sail's actual memory-map insertion. -/
 theorem toSailMemory_write (memory : ByteMemory) (limit address : ℕ) (value : BitVec 8)
     (inside : address < limit) :

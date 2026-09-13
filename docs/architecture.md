@@ -216,6 +216,17 @@ final-state agreement must still be derived. Each provider
 instance uses one source snapshot; simultaneous differently bound fixed tables require distinct
 export names.
 
+`ExecutionSnapshot.lean` retains the complete boundary: every Sail register and its presence,
+runtime cycle count and output, the full host state, and execution clock. Sparse RAM realizes an
+exact Sail map, including absence outside the native window. `equivalent_iff` proves that finite
+comparison is exactly equality of these realized execution states; no bookkeeping is reset at
+a shard cut. `memorySnapshot_realizes` connects initialized full snapshots to the existing source
+provider representation. `HostSnapshot.lean` reads and updates finite snapshots directly, proving
+the resulting complete state agrees with the Sail host adapter. This handles full padded writes
+without evaluating the dense Sail memory. These are representation and semantic execution results;
+the AIR must still authenticate complete source/target snapshots and derive their agreement with
+its reconstructed execution.
+
 `LocalCore.ensemble` installs these snapshot providers in a 59-table local assembly, reusing
 `NativeCore.afterInitialTables` for the instruction/finalizer/provider suffix. The local verifier
 range checks arbitrary PC/clock endpoints and checks finite program validity, supported decoding,
