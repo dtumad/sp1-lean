@@ -332,8 +332,17 @@ Implemented foundations:
   fields, reordered/dropped/duplicated allocations, and forged frontier endpoints. A separate
   regression records that identical node metadata cannot authenticate different equal-length bytes.
   These are component results; allocation does not yet publish a node or a host-authorized transition.
+  `HintQueueWords` now gives the exact padded word contents and proves that complete word coverage
+  plus authenticated length determines every byte. The word values are exactly the semantic RAM
+  write, including its mandatory final word. `HintQueueWordSource` authenticates original contents
+  through a fixed source lookup, with no incoming byte premise and zero witness cells; its exact
+  ledger is proved. Positions beyond the 48-bit key range are omitted, never aliased. Permitted
+  native-window writes derive the needed position bound. `HintNodeWords` binds generated contents
+  to the checked fresh allocation identity. Regressions reject same-length content changes,
+  wrong keys, missing/forged padding, and length changes hidden by zero padding. Historical source
+  words remain usable; new nodes correctly fail the source lookup until separately authorized.
   The next queue step must install source and handler components, authorize new WRITE/hook nodes
-  and their bytes, derive ordered head history, and connect HINT_READ's full padded write to the
+  and their words, derive ordered head history, and constrain HINT_READ's full padded word cover on the
   same node identities. Include the 48-bit identity bound in the shared resource profile.
   The full-AIR forged HINT_LEN return regression remains open until that integration.
 

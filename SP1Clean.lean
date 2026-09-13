@@ -367,6 +367,12 @@ import SP1Clean.Model.Core.MemoryWord
 import SP1Clean.Model.Core.HostIO
 import SP1Clean.Model.Core.HintQueue
 import SP1Clean.Model.Core.HintQueueRecords
+import SP1Clean.Model.Core.HintQueueWords
+import SP1Clean.Model.Core.HintQueueWordRecords
+import SP1Clean.FormalModel.Contracts.HintWords
+import SP1Clean.Native.Operations.HintQueueWordSource
+import SP1Clean.Proofs.Operations.HintQueueWordSource
+import SP1Clean.Proofs.Operations.HintNodeWords
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Proofs.Operations.HintNodeAllocate

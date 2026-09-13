@@ -747,9 +747,21 @@ constructs ordered prefixes with exact row count, checked cursor continuity, and
 endpoint representation under a capacity bound. The internal operation exports 212 witness cells
 and emits only three Byte requests. Byte authorization and node publication remain the enclosing
 handler's responsibility; a regression demonstrates the ambiguity of equal-length metadata.
-Mixed-AIR installation, new WRITE/hook node authorization, complete HINT_READ
-byte binding, and ordered head-history derivation remain open. Pointer bounds must also enter the
+Mixed-AIR installation, new WRITE/hook node authorization, constrained complete HINT_READ
+word coverage, and ordered head-history derivation remain open. Pointer bounds must also enter the
 shared resource profile. The full-AIR forged HINT_LEN return counterexample is not yet closed.
+
+Original hint contents now have a native fixed word provider computed from source hints.
+`HintQueueWords` and `HintQueueWordRecords` prove that the complete padded word cover plus the
+authenticated length recovers all bytes, and that these values match the actual semantic RAM
+write. Length is independently necessary because trailing zero bytes can have identical padded
+word contents. The metadata-to-natural-length theorem discloses its below-`2^64` premise.
+The source provider has no incoming byte assumption, exact ledgers, and zero witness cells.
+Its bounded position inventory never wraps; a permitted native-window write derives the needed
+position bound. Generated allocation words share the checked fresh node's identity. Regressions
+reject content changes, wrong keys, missing/forged padding, and length substitutions, while
+retaining historical source words. Authorized new-word publication, complete HINT_READ AIR
+coverage, and mixed-ensemble installation remain open.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

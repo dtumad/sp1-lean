@@ -420,8 +420,20 @@ bytes and publish the authorized node and queue transition. Equal lengths do not
 HINT_LEN's full host bridge keeps current-queue and node binding explicit;
 its constructor derives local completeness from successful execution and pointer/clock bounds.
 The components and their exact ledgers are closed, but mixed-ensemble installation, authorization
-of new WRITE/hook nodes, complete byte binding for HINT_READ, and derived head history remain open.
+of new WRITE/hook nodes, constrained complete HINT_READ word coverage, and derived head history remain open.
 Pointer bounds must enter the common resource profile; no content hash or trusted byte oracle is used.
+
+`HintQueueWordSource` now supplies original node contents within the bounded word-key domain
+through a fixed lookup computed from source hints. Records carry a canonical node identity, word position, and full
+64-bit value. `HintQueueWords` matches these words to the semantic RAM write, including the
+mandatory final padding word. Complete word coverage plus the separately authenticated length
+determines every hint byte; padded word values alone do not determine length. The metadata's
+natural-length theorem explicitly requires the actual length below `2^64`. Source word positions
+are capped at the 48-bit key domain without wrapping; a permitted write in the native address
+window supplies a stronger word-count bound. `HintNodeWords` ties generated word contents to the
+checked allocation's exact identity while preserving historical nodes. This closes source-word
+authentication and the semantic content bridge; authorized new-word publication, constrained
+HINT_READ coverage, and installation in the mixed ensemble remain open.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and

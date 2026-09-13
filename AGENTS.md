@@ -145,8 +145,14 @@ empty head; HINT_LEN preserves it. `HintNodeAllocate` checks the actual successo
 `HintQueuePrepend` compiles ordered prefixes into these checked allocations, with exact row count,
 cursor continuity, and full byte-level queue representation under one capacity bound. Allocation
 does not itself authenticate bytes or publish nodes: those remain enclosing-handler obligations.
+`HintQueueWords` and `HintQueueWordRecords` now describe complete padded word contents with
+canonical node/position keys. The fixed `HintQueueWordSource` circuit authenticates original words
+from the actual source hints, with exact ledgers and no incoming byte premise. Complete word
+coverage plus the authenticated length recovers all bytes and matches the semantic HINT_READ RAM
+write, including mandatory final padding. Generated allocation words share the checked fresh node
+identity. New-word authorization, complete AIR consumer coverage, and mixed installation remain open.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
-node-byte binding for HINT_READ, and ordered head-history derivation. The shared resource profile
+node-word coverage for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.
 The bank subsystem's zero genesis also needs generalization to the actual local source banks.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,

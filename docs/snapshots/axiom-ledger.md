@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2002 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 249 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2036 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 256 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2251 released declarations are probed.
+- 2292 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,24 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The source-word checkpoint adds 34 main declarations and seven test anchors. Every main
+addition uses only the logical baseline or a subset. All preceding 2002 main and 249 test
+dependency sets are unchanged, with no removals or new main-library axiom names. Seven new
+compiler-trusted constants are isolated to the source-content and padded-write regressions.
+
+`HintQueueWords` and `HintQueueWordRecords` prove that complete padded word coverage plus the
+authenticated length determines every hint byte and matches the semantic RAM write. Length
+authentication is independent: trailing zeros can yield identical word contents, and the
+metadata's natural-length theorem requires the actual hint length below `2^64`. The fixed
+`HintQueueWordSource` authenticates source words without an incoming byte premise; its exact
+ledger and zero-cell witness export are closed. Word positions outside the 48-bit key domain
+are omitted without aliasing; permitted native-window writes derive the needed bound.
+`HintNodeWords` binds generated contents to the checked fresh node identity. Regressions reject
+changed contents, wrong keys, missing/forged padding, and length substitutions, and distinguish
+historical source identities from fresh nodes. Authorized new-word publication, constrained
+complete HINT_READ coverage, and mixed-ensemble installation remain open. The full-AIR forged
+HINT_LEN return remains open.
 
 The fresh-allocation checkpoint adds 26 main declarations and seven test anchors. Every main
 addition uses only the logical baseline or a subset. All preceding 1976 main and 242 test

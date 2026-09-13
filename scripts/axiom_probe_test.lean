@@ -12,6 +12,7 @@ import SP1CleanTest.Core.HostCall
 import SP1CleanTest.Core.HostRamAccess
 import SP1CleanTest.Core.HostHintLength
 import SP1CleanTest.Core.HintNodeAllocate
+import SP1CleanTest.Core.HintQueueWords
 import SP1CleanTest.Core.HostQueue
 import SP1CleanTest.Core.HostExecution
 import SP1CleanTest.Core.HostFootprint
@@ -152,6 +153,13 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.HintNodeAllocate.orderedPrefixes
 #print axioms SP1CleanTest.Core.HintNodeAllocate.cursorTampering
 #print axioms SP1CleanTest.Core.HintNodeAllocate.headerIsNotByteAuthentication
+#print axioms SP1CleanTest.Core.HintQueueWords.completeRequests
+#print axioms SP1CleanTest.Core.HintQueueWords.changedContents
+#print axioms SP1CleanTest.Core.HintQueueWords.completePadding
+#print axioms SP1CleanTest.Core.HintQueueWords.lengthIsRequired
+#print axioms SP1CleanTest.Core.HintQueueWords.forgedWords
+#print axioms SP1CleanTest.Core.HintQueueWords.actualPaddedWrites
+#print axioms SP1CleanTest.Core.HintQueueWords.historicalAndFresh
 #print axioms SP1CleanTest.Core.HostQueue.changingQueue
 #print axioms SP1CleanTest.Core.HostQueue.historicalHeads
 #print axioms SP1CleanTest.Core.HostQueue.rejectsMalformedAndDistinguishesBytes
