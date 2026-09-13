@@ -91,14 +91,20 @@ strict refresh order, canonical carrier, and timeline are now derived through `L
 combinator supplies source State/Memory truth internally and derives final State/value truth from
 original-event step/frame facts. Shared proofs live in `CoreRowBalance`, `CoreTouches`,
 `CoreMemoryChronology`, and `CoreRowTransport`; `ExecutionCarrier` keeps concrete source values out
-of structure elaboration. The next trajectory must thread the complete host state through
-`Model/Core/ExecutionReplay`. Regressions include reversed/padded instructions, repeated-register
+of structure elaboration. `LocalCoreTrajectory` now constructs that trajectory through
+`Model/Core/ExecutionReplay`, threading the actual full host state and matching its covered clocks
+to the AIR timeline. `LocalCoreInstructionExecution.ground_of_system_steps` derives every ordinary
+chip's step/frame facts on this replay; only ROM preservation and HALT/syscall effects remain
+semantic premises. Running-host and non-ECALL guards follow inside incoming State truth, not from
+caller assumptions. Final State truth also recovers successful replay of the full tape and its
+returned PC/clock; normal-retirement reconstruction and full outgoing snapshot agreement remain
+separate. Regressions include reversed/padded instructions, repeated-register
 touches, actual State clock carries, and identities. Active CPU clock phase (1 modulo 8) must be
 explicit in the shared semantic compiler profile; source range validation alone is broader.
 The full HINT_LEN regression records the remaining host-result gap: changing both the instruction's
 return and its final record still passes AIR checks despite disagreeing with finite host execution.
 Full outgoing Sail/host agreement,
-active host effects, and transport of later boot grounding stages remain open; separate AIR witnesses
+active host effects, and stateful HALT/Exit agreement remain open; separate AIR witnesses
 are not yet proved composable. `ExecutionSnapshot` gives finite data and an executable comparison
 proved equivalent to literal Sail/host/clock equality, preserving every register and missing key,
 runtime counters/output, and host state. `HostSnapshot` computes sparse host execution with full-state

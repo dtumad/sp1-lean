@@ -711,8 +711,10 @@ the engine's final-time bound. `NativeCoreInstructionExecution` now derives ever
 instruction's step/frame facts through the component-local contracts for all 25 chips and the
 carrier's proved successor timing. `GroundingCarrier.ground_of_system_steps` exposes the remaining
 premises: HALT/syscall step/frame facts, the trajectory's ordinary `stepOnce` equation, and ROM
-preservation. Constructing the mixed trajectory and constraining ROM protection, host effects,
-and terminal behavior remain open. No unconditional boot-to-HALT execution theorem is claimed.
+preservation. `NativeCoreTrajectory` and `NativeCoreHaltExecution` supply the ordinary successor
+and HALT facts for the boot assembly's stateless handler wrapper. ROM protection, actual stateful
+host effects, and terminal agreement remain open. The local stateful replay is described below;
+no unconditional boot-to-HALT execution theorem is claimed.
 
 The new semantic target is an arbitrary local segment. `Model/Core/Execution.lean` threads complete
 Sail, host, and clock states through normally retiring instructions and concrete host calls.
@@ -756,7 +758,7 @@ incoming registers, executes Byte/Range providers, and checks constraints, fixed
 membership, count bounds, and full-message balance. It rejects missing registers, invalid platform
 configuration, unbound source PC/clock, out-of-range sources, and changed untouched ROM.
 These are source-grounding and executable AIR results. Complete outgoing Sail/host agreement,
-active host effects, and the stateful execution trajectory remain open. Source validity
+active host effects, and stateful HALT/Exit agreement remain open. Source validity
 allows a stopped host for empty segments. The verifier now freezes that source's clock, and
 strict State ordering proves absence of all active rows after HALT.
 No arbitrary-boundary AIR equivalence is claimed.
@@ -792,6 +794,18 @@ clock. `ground_of_steps` derives initial truth internally and concludes final St
 physical final-record value currency from original-event step/frame facts. This is an explicitly
 conditional grounding theorem; stateful execution, host effects, ROM preservation, and complete
 outgoing-state agreement remain to be closed.
+
+`LocalCoreTrajectory` now fixes the paired Sail/host replay from the complete source and the
+ordered event tape. Its successful prefixes have exactly the clocks of the AIR timeline.
+`LocalCoreInstructionExecution.GroundingCarrier.instruction_engineFacts` derives all ordinary
+step/frame facts on that replay. The running-host guard follows from the replay's terminal-PC
+invariant and authenticated code fetch; the non-ECALL guard follows from official decoding.
+`ground_of_system_steps` therefore needs only ROM preservation and the HALT/syscall semantic facts.
+It does not assume successful replay or an execution path. `replay_of_finalTruth` recovers successful
+full-tape replay and its complete returned state with the public PC/clock. Ordinary normal retirement,
+host effects, and complete outgoing-state agreement remain necessary for the execution theorem.
+The trajectory holds its endpoint after the tape; regressions distinguish that mathematical
+extension from appending an actual instruction, which fails after HALT.
 
 The local verifier now constrains a stopped source to have equal incoming/final clock limbs.
 `LocalCoreMemoryOrder.executionRows_nil_of_stopped` uses strict State progress to exclude every

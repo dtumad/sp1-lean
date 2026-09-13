@@ -276,8 +276,18 @@ premises. Its type uses `CoreRowTransport.ExecutionCarrier` over opaque event/bo
 keeping the concrete source out of structure elaboration. `LocalCoreGrounding` derives the timeline
 from State edges, binds its start to the full source's clock, and supplies genesis truth internally.
 `ground_of_steps` reaches final State truth and currency of the physical final records if each
-original event has its semantic step/frame facts on that trajectory. It does not yet construct
-the stateful execution or authenticate a complete outgoing snapshot.
+original event has its semantic step/frame facts on that trajectory.
+
+`LocalCoreTrajectory` now selects the paired Sail/host replay from the complete source and the
+carrier's ordered event tape. It proves the covered replay clocks equal the derived AIR timeline.
+`LocalCoreInstructionExecution.ground_of_system_steps` supplies every ordinary row's semantic
+facts using the registered chip contracts. At an incoming State truth, committed decoding excludes
+ECALL, and the replay's terminal-PC invariant proves the host is running: HALT parks at PC 1,
+where the checked ROM cannot fetch. No host-invariance or successful-replay premise is assumed.
+Final State truth yields successful replay of the full tape and its returned PC/clock through
+`replay_of_finalTruth`. The remaining premises are ROM preservation and HALT/syscall step/frame
+facts. Normal retirement for execution reconstruction, actual host effects, and complete outgoing
+snapshot agreement still require integration; replay success alone is not a normal-retirement theorem.
 
 The stopped-source clock constraint closes one concrete soundness gap: an active ADD previously
 passed with `source.host.exitCode = some 0`. `executionRows_nil_of_stopped` now excludes all active
@@ -352,9 +362,9 @@ commitment banks, hint and hook-reply queues, outputs, recorded requests, and te
 `HostExecutionLaws.lean` characterizes successful observations and writes; `HostSail.lean` supplies
 actual Sail observations and proves the resulting ECALL row law, endpoint agreement, memory
 readback/frame, register frame, and ROM preservation. The concrete handler is indexed by the
-incoming host state. Machine integration must thread the returned state between calls and add
-AIR-authenticated host accesses to the grounding footprint; the existing mixed trajectory does
-neither yet. Mutable commitment updates use the native historical providers described below. The
+incoming host state. `LocalCoreTrajectory` threads the returned state between calls. Adding
+AIR-authenticated host accesses to its grounding footprint remains open. Mutable commitment
+updates use the native historical providers described below. The
 exact AIR still binds every commit in a shard to one public digest, so distinct overwrites are a
 disclosed exact-completeness obstacle. Proof requests record observed digests;
 they do not assert recursive proof verification.

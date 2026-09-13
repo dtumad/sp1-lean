@@ -366,7 +366,7 @@ theorem DecodedInstructionRow.dynamicGroundedG_of_weakCurrency
 /-- Component-local ordinary execution facts on any trajectory whose successor at this row is
 Sail's `stepOnce`. Wiring, chip semantics, and readiness are derived inside incoming Memory
 currency; the enclosing assembly supplies only physical evidence, decode, and timeline position. -/
-theorem ChipGroundingContracts.engineFactsLocalG
+theorem ChipGroundingContracts.engineFactsLocalG_of_stateStep
     {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
     (proverData : ProverData (ZMod p))
     (decoded : DecodedInstructionRow p) (hchip : decoded.chip = chip)
@@ -381,7 +381,9 @@ theorem ChipGroundingContracts.engineFactsLocalG
         Target.SailStep st nx → Target.RomLoaded program st → Target.RomLoaded program nx)
     (timeStep : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
       tl.start (n + 1) = tl.start n + 8)
-    (step : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
+    (step : Semantics.LocalStateTruthG program trajectory tl
+        (decoded.ordinaryRowFacts proverData).statePull →
+      ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
       trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
     Semantics.LocalStepFactG program
         trajectory initial
@@ -416,14 +418,41 @@ theorem ChipGroundingContracts.engineFactsLocalG
       (contracts.wiringLocal proverData decoded hchip staticInputs real program decode inputs)
       advance real (staticInputs.chipSpec inputs) decode
       (contracts.readinessLocal proverData decoded hchip staticInputs real guard program decode inputs)
-      trajectory initial tl codeMemoryCompatible timeStep step hpull hcurr
+      trajectory initial tl codeMemoryCompatible timeStep (step hpull) hpull hcurr
   · intro hpull hcurr loc value pushes current
     have inputs := mkOpenInputs hcurr
     exact ordinaryFrameFactG_of_advanceOnTrajectory
       (contracts.wiringLocal proverData decoded hchip staticInputs real program decode inputs)
       advance real (staticInputs.chipSpec inputs) decode
       (contracts.readinessLocal proverData decoded hchip staticInputs real guard program decode inputs)
-      trajectory initial tl timeStep step hpull hcurr loc value pushes current
+      trajectory initial tl timeStep (step hpull) hpull hcurr loc value pushes current
+
+/-- The unguarded successor interface remains a specialization of incoming-state replay. -/
+theorem ChipGroundingContracts.engineFactsLocalG
+    {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
+    (proverData : ProverData (ZMod p))
+    (decoded : DecodedInstructionRow p) (hchip : decoded.chip = chip)
+    (staticInputs : DecodedRowStaticInputs decoded proverData)
+    (real : (decoded.toChipRow proverData).is_real = 1)
+    (program : Target.GuestProgram)
+    (decode : Target.decodedInROM program
+      (programAccess (decoded.toChipRow proverData).view).toRow)
+    (trajectory : Semantics.Trajectory) (initial : SailState) (tl : Semantics.Timeline)
+    (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
+      trajectory m = some st →
+        Target.SailStep st nx → Target.RomLoaded program st → Target.RomLoaded program nx)
+    (timeStep : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
+      tl.start (n + 1) = tl.start n + 8)
+    (step : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
+      trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
+    Semantics.LocalStepFactG program
+        trajectory initial
+        tl (decoded.ordinaryRowFacts proverData) ∧
+      Semantics.FrameFactG program
+        trajectory initial
+        tl (decoded.ordinaryRowFacts proverData) := by
+  exact contracts.engineFactsLocalG_of_stateStep proverData decoded hchip staticInputs real program decode
+    trajectory initial tl codeMemoryCompatible timeStep (fun _ => step)
 
 /-- The legacy ensemble and event transcript specialize the component-local engine facts. -/
 theorem ChipGroundingContracts.engineFactsG

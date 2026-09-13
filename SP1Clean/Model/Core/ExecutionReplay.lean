@@ -58,6 +58,65 @@ noncomputable def replayStep? (policy : HostPolicy) (program : GuestProgram)
         ⟨sail, source.host, source.clock + ordinarySchedule.duration⟩
   | .syscall event => replayHost? policy program source event
 
+/-- On a running non-ECALL source, replay preserves the host and executes official Sail. -/
+theorem replayStep?_ordinary (policy : HostPolicy) (program : GuestProgram)
+    (source : ExecutionState) (running : source.host.exitCode = none)
+    (notEcall : ¬ AboutToExecuteEcall program source.sail) :
+    replayStep? policy program source .ordinary =
+      (stepOnce source.sail).map (fun sail =>
+        ⟨sail, source.host, source.clock + ordinarySchedule.duration⟩) := by
+  have atEcall : source.atEcall program = false :=
+    Bool.eq_false_iff.mpr (fun atEcall => notEcall ((source.atEcall_iff program).mp atEcall))
+  simp only [replayStep?, running, Option.isSome_none, atEcall, Bool.false_or, Bool.false_eq_true, ↓reduceIte]
+
+/-- The guarded ordinary replay projects to exactly the same Sail step. -/
+theorem replayStep?_ordinary_sail (policy : HostPolicy) (program : GuestProgram)
+    (source : ExecutionState) (running : source.host.exitCode = none)
+    (notEcall : ¬ AboutToExecuteEcall program source.sail) :
+    (replayStep? policy program source .ordinary).map ExecutionState.sail = stepOnce source.sail := by
+  rw [replayStep?_ordinary policy program source running notEcall]
+  simp only [Option.map_map, Function.comp_def, Option.map_id']
+
+/-- Successful replay authenticates the event's clock cost even before normal retirement is proved. -/
+theorem replayStep?_clock {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {event : ExecutionEvent}
+    (success : replayStep? policy program source event = some target) :
+    target.clock = source.clock + event.duration := by
+  cases event with
+  | ordinary =>
+    simp only [replayStep?] at success
+    split_ifs at success
+    obtain ⟨next, _, rfl⟩ := Option.map_eq_some_iff.mp success
+    rfl
+  | syscall event => exact ((replayHost?_eq_some_iff _ _ _ _ _).mp success).clock
+
+/-- Replay can create terminal status only together with the reserved HALT PC. -/
+theorem replayStep?_terminal_pc {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {event : ExecutionEvent}
+    (success : replayStep? policy program source event = some target)
+    (stopped : target.host.exitCode ≠ none) :
+    target.sail.regs.get? LeanRV64D.Defs.Register.PC = some haltPc := by
+  cases event with
+  | ordinary =>
+    simp only [replayStep?] at success
+    split_ifs at success with blocked
+    obtain ⟨next, _, rfl⟩ := Option.map_eq_some_iff.mp success
+    have running : source.host.exitCode = none := by
+      cases status : source.host.exitCode with
+      | none => rfl
+      | some code => simp only [status, Option.isSome_some, Bool.true_or, not_true_eq_false] at blocked
+    exact (stopped running).elim
+  | syscall event =>
+    have step := (replayHost?_eq_some_iff _ _ _ _ _).mp success
+    cases step with
+    | syscall ran =>
+      obtain ⟨pc, execution, _, _, run, rfl, rfl, _⟩ := HostState.step_observations ran
+      have exit := HostState.run_exit run
+      have halt : execution.kind = .halt := by
+        by_contra other
+        exact stopped (by simpa only [other, ↓reduceIte] using exit)
+      simp only [HostExecution.apply, Std.ExtDHashMap.get?_insert_self, HostExecution.nextPc, halt, ↓reduceIte]
+
 /-- Every semantic transition is reconstructed from its event label and incoming whole state. -/
 theorem ExecutionStep.replay {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {event : ExecutionEvent}
@@ -88,6 +147,47 @@ theorem replayEvents?_append (policy : HostPolicy) (program : GuestProgram)
   | nil => rfl
   | cons event rest ih => simp only [List.cons_append, replayEvents?, ih, Option.bind_assoc]
 
+/-- Replay counts actual event widths, independently of table height or padding. -/
+theorem replayEvents?_clock {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {events : List ExecutionEvent}
+    (success : replayEvents? policy program source events = some target) :
+    target.clock = source.clock + (events.map ExecutionEvent.duration).sum := by
+  induction events generalizing source with
+  | nil => cases success; simp
+  | cons event rest ih =>
+    obtain ⟨middle, step, suffix⟩ := Option.bind_eq_some_iff.mp success
+    rw [ih suffix, replayStep?_clock step]
+    simp only [List.map_cons, List.sum_cons, Nat.add_assoc]
+
+/-- The terminal-PC invariant propagates through replay, including the empty tape. -/
+theorem replayEvents?_terminal_pc {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {events : List ExecutionEvent}
+    (initial : source.host.exitCode ≠ none →
+      source.sail.regs.get? LeanRV64D.Defs.Register.PC = some haltPc)
+    (success : replayEvents? policy program source events = some target)
+    (stopped : target.host.exitCode ≠ none) :
+    target.sail.regs.get? LeanRV64D.Defs.Register.PC = some haltPc := by
+  induction events generalizing source with
+  | nil => cases success; exact initial stopped
+  | cons event rest ih =>
+    obtain ⟨middle, step, suffix⟩ := Option.bind_eq_some_iff.mp success
+    exact ih (replayStep?_terminal_pc step) suffix
+
+/-- A replayed state that can fetch committed code is still running. The reserved HALT PC
+cannot occur in the program image, so this guard follows from incoming State/Program truth. -/
+theorem replayEvents?_running_of_fetch {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {events : List ExecutionEvent}
+    (initial : source.host.exitCode = none)
+    (success : replayEvents? policy program source events = some target)
+    {pc : BitVec 64} {word : BitVec 32}
+    (atPc : target.sail.regs.get? LeanRV64D.Defs.Register.PC = some pc)
+    (fetched : program.fetchWord pc = some word) : target.host.exitCode = none := by
+  by_contra stopped
+  have parked := replayEvents?_terminal_pc (fun stopped => (stopped initial).elim) success stopped
+  have same : pc = haltPc := Option.some.inj (atPc.symm.trans parked)
+  rw [same, program.fetchWord_low_none (by decide : haltPc.toNat < 2 ^ 16)] at fetched
+  contradiction
+
 theorem ExecutionPath.replay {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {events : List ExecutionEvent}
     (path : ExecutionPath policy program source events target) :
@@ -105,6 +205,25 @@ noncomputable def executionTrajectory (policy : HostPolicy) (program : GuestProg
 @[simp] theorem executionTrajectory_zero (policy : HostPolicy) (program : GuestProgram)
     (source : ExecutionState) (events : List ExecutionEvent) :
     executionTrajectory policy program source events 0 = some source := rfl
+
+/-- At an actual event position, the paired trajectory executes exactly that event. -/
+theorem executionTrajectory_succ (policy : HostPolicy) (program : GuestProgram)
+    (source : ExecutionState) (events : List ExecutionEvent) {position : ℕ} {event : ExecutionEvent}
+    (present : events[position]? = some event) :
+    executionTrajectory policy program source events (position + 1) =
+      (executionTrajectory policy program source events position).bind
+        (fun state => replayStep? policy program state event) := by
+  have take : events.take (position + 1) = events.take position ++ [event] := by
+    rw [List.take_succ_eq_append_getElem (List.getElem?_eq_some_iff.mp present).1,
+      (List.getElem?_eq_some_iff.mp present).2]
+  simp only [executionTrajectory, take, replayEvents?_append, replayEvents?, Option.bind_fun_some]
+
+/-- Past the finite tape, the trajectory holds its endpoint without adding execution steps. -/
+theorem executionTrajectory_after (policy : HostPolicy) (program : GuestProgram)
+    (source : ExecutionState) (events : List ExecutionEvent) (position : ℕ)
+    (covered : events.length ≤ position) :
+    executionTrajectory policy program source events position = replayEvents? policy program source events := by
+  simp only [executionTrajectory, List.take_of_length_le covered]
 
 /-- Valid paths authenticate the state returned at every semantic cut. -/
 theorem ExecutionPath.replay_split {policy : HostPolicy} {program : GuestProgram}

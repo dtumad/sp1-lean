@@ -96,6 +96,14 @@ Implemented foundations:
   a real 24-bit State clock carry, and the distinction between source clock range checks and the
   active CPU's 1-mod-8 clock phase. That phase belongs in the eventual shared semantic profile;
   the broader pure execution path does not impose it.
+- `LocalCoreTrajectory` constructs paired Sail/host replay from the full source and the exact
+  ordered event tape. Covered replay clocks match the AIR timeline. `LocalCoreInstructionExecution`
+  derives all 25 ordinary chips' step/frame facts: committed decode excludes ECALL, and the
+  terminal-PC invariant plus an authenticated fetch proves the actual host is running.
+  `ground_of_system_steps` leaves only ROM preservation and HALT/syscall facts as semantic premises.
+  `replay_of_finalTruth` recovers full-tape replay success and the returned PC/clock from grounded
+  final State truth; it does not assume successful replay. Regressions check complete intermediate
+  states, ordinary host preservation, endpoint extension, and rejection of a real step after HALT.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -422,19 +430,21 @@ Still required before the native capstone can be claimed:
    boot initialization as a specialization. Source validation permits stopped host states for empty
    identity segments; the stopped-source verifier condition and strict State ordering now exclude
    every active instruction and syscall row after HALT.
-2. Construct the stateful mixed trajectory and derive its execution facts for the local assembly.
+2. Derive the remaining system execution facts for the local assembly.
    The structural path is now transported: complete source genesis, Program authentication,
    both unique Memory frontiers and their exact balance, exhaustive State ordering, aligned touches,
    prior bounds, strict refresh order, canonical carrier, and derived timeline are closed.
-   `LocalCoreGrounding.GroundingCarrier.ground_of_steps` exposes only original-event step/frame
-   facts on a trajectory starting at the complete source. Instantiate that trajectory through
-   `Model/Core/ExecutionReplay`, threading the actual host state, then derive ordinary chip facts
-   through the existing component contracts. The boot assembly already derives ordinary successor
-   equations, HALT step/frame facts, and the active syscall post-grounding `EventStep` bridge, but
-   its stateless non-HALT handler is not the desired local stateful execution. Constrain ROM
+   `LocalCoreTrajectory` now instantiates the paired trajectory through `Model/Core/ExecutionReplay`,
+   threading the actual host state and authenticating its covered clocks. Ordinary step/frame facts
+   are derived through the registered component contracts, with running/non-ECALL guards discharged
+   from incoming State truth. `LocalCoreInstructionExecution.ground_of_system_steps` leaves only
+   ROM preservation and HALT/syscall semantic facts; final State truth supplies successful full-tape
+   replay and the returned PC/clock. The boot HALT facts use a stateless wrapper, so they still need
+   connection to the actual host transition and status. Constrain ROM
    preservation and actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded
    RAM writes, to close the remaining semantic facts. Terminal ECALL/Exit agreement and complete
-   execution reconstruction remain open. No unconditional local execution theorem is claimed.
+   execution reconstruction, including ordinary normal retirement, remain open. No unconditional
+   local execution theorem is claimed.
 3. Integrate the paired semantic replay with the mixed carrier, the full-code-checked
    syscall chip, host effects, and ordinary ROM-write exclusion into
    the AIR and mixed timed grounding. Extending the Memory footprint must preserve host accesses

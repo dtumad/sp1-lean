@@ -156,6 +156,12 @@ below. The local assembly's complete Sail/host endpoint binding and timed ground
 | `grounding_carrier` | `SP1Clean/Soundness/LocalCoreTransport.lean` | Whether local AIR constructs the canonical structural carrier without semantic premises |
 | `GroundingCarrier.timeline_source` | `SP1Clean/Soundness/LocalCoreGrounding.lean` | Whether the derived timeline begins at the complete source clock |
 | `GroundingCarrier.ground_of_steps` | `SP1Clean/Soundness/LocalCoreGrounding.lean` | Exactly which original-event semantic facts remain for grounding and final-record currency |
+| `replayEvents?_running_of_fetch` | `SP1Clean/Model/Core/ExecutionReplay.lean` | Whether an authenticated fetch excludes terminal host status on the actual replay |
+| `GroundingCarrier.pairedTrajectory` | `SP1Clean/Soundness/LocalCoreTrajectory.lean` | Whether every event uses the evolving full Sail/host state and actual source |
+| `GroundingCarrier.pairedTrajectory_clock` | `SP1Clean/Soundness/LocalCoreTrajectory.lean` | Whether successful covered prefixes carry the clock derived from the AIR ledger |
+| `GroundingCarrier.replay_of_finalTruth` | `SP1Clean/Soundness/LocalCoreTrajectory.lean` | Whether grounded final State truth yields successful full-tape replay and public PC/clock agreement |
+| `GroundingCarrier.instruction_engineFacts` | `SP1Clean/Soundness/LocalCoreInstructionExecution.lean` | Whether all ordinary chip facts derive on stateful replay without caller-supplied replay guards |
+| `GroundingCarrier.ground_of_system_steps` | `SP1Clean/Soundness/LocalCoreInstructionExecution.lean` | The remaining ROM and system-row semantic premises after local trajectory and ordinary grounding |
 | `hintReturnNeedsHostBinding` | `SP1CleanTest/Core/LocalCore.lean` | Concrete AIR-valid forged HINT_LEN return against the supplied finite host; records the remaining host-result binding obligation |
 | `SourceValid` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Finite program/decoding validity, x0, and all source ROM bytes, including untouched code |
 | `checkSource_iff` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Whether executable source validation is exactly the semantic contract |

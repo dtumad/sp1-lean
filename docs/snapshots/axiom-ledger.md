@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1768 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 221 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1802 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 224 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1989 released declarations are probed.
+- 2026 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,6 +35,26 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
+The local stateful-replay checkpoint adds 34 main declarations and three test anchors. Twenty
+main additions retain the existing 100-axiom registry set; ten retain the existing 77-axiom Sail
+set. The incoming-state ordinary engine interface uses 98 of the registry's existing axioms.
+Two shared projection/ordering proofs use subsets of the logical baseline; the non-ECALL proof
+adds only the already disclosed experimental-extension hook to that baseline. All preceding
+1768 main and 221 test dependency sets are unchanged, with no removals or new axiom names in
+either scope. The three tests are kernel proofs reusing existing execution fixtures, with no
+new compiler-trusted proof constants.
+
+The local AIR's ordered tape now drives paired replay of the complete source state. Covered
+replay clocks agree with the AIR timeline, and all ordinary chip step/frame facts are derived
+on the actual Sail projection. Running-host and non-ECALL guards follow from incoming State
+truth and committed decoding. The conditional grounding theorem retains only ROM preservation
+and HALT/syscall facts as semantic premises; it does not assume replay success. Final State truth
+recovers successful full-tape replay and the returned PC/clock. Normal-retirement reconstruction,
+actual host-effect constraints, complete outgoing-state agreement, and compiler totality remain
+open. Endpoint extension in the mathematical trajectory adds no execution steps.
+
+The following checkpoints record the claim boundary at each preceding stage.
+
 The local structural-grounding checkpoint adds 48 main declarations and four test anchors.
 Sixteen main additions use the logical baseline or a subset; 28 retain the existing 100-axiom
 registry set, and one retains the existing 77-axiom Sail set. The shared ordinary alignment theorem
@@ -52,8 +72,6 @@ active events, fixing the reproduced ADD-after-HALT gap while preserving identit
 Stateful host-result binding, ROM preservation, complete outgoing-state agreement, and compiler
 totality remain open. The active clock phase must be explicit in the shared compiler profile.
 No unconditional local execution or AIR equivalence is claimed.
-
-The following checkpoints record the claim boundary at each preceding stage.
 
 The local Program/State checkpoint adds 55 main declarations and three test anchors. Thirteen
 main additions use the logical baseline or a subset; 36 retain the existing 100-axiom registry set,

@@ -1,7 +1,7 @@
+import SP1CleanTest.Core.ExecutionPath
 import SP1CleanTest.Core.LocalCore
 import SP1CleanTest.Core.ExecutionSnapshot
 import SP1CleanTest.Core.SnapshotBoundary
-import SP1CleanTest.Core.ExecutionPath
 import SP1CleanTest.Core.HostBuffer32
 import SP1CleanTest.Core.HostRamBytes
 import SP1CleanTest.Core.HostRamRead
@@ -33,6 +33,9 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.ExecutionPath.replayPrefixStates
+#print axioms SP1CleanTest.Core.ExecutionPath.replayStopsAfterHalt
+#print axioms SP1CleanTest.Core.ExecutionPath.replayOrdinaryPreservesHost
 #print axioms SP1CleanTest.Core.LocalCore.acceptsSameRegisterTouches
 #print axioms SP1CleanTest.Core.LocalCore.acceptsStateClockCarry
 #print axioms SP1CleanTest.Core.LocalCore.clockPhaseNeedsProfile

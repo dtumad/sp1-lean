@@ -397,6 +397,8 @@ import SP1Clean.Soundness.LocalCoreTouches
 import SP1Clean.Soundness.LocalCoreMemoryOrder
 import SP1Clean.Soundness.LocalCoreTransport
 import SP1Clean.Soundness.LocalCoreGrounding
+import SP1Clean.Soundness.LocalCoreTrajectory
+import SP1Clean.Soundness.LocalCoreInstructionExecution
 import SP1Clean.Soundness.CoreRowTransport
 import SP1Clean.Soundness.CoreMemoryChronology
 import SP1Clean.Soundness.CoreRowBalance
@@ -685,6 +687,8 @@ import SP1Clean.Soundness.NativeCoreDecode
 import SP1Clean.Soundness.CoreMemoryBalance
 import SP1Clean.Soundness.CoreProgramBalance
 import SP1Clean.Soundness.CoreExecutionRow
+import SP1Clean.Soundness.CoreExecutionEvents
+import SP1Clean.Soundness.CoreInstructionExecution
 import SP1Clean.Soundness.CoreTableProjection
 import SP1Clean.Soundness.NativeCoreMemory
 import SP1Clean.Soundness.SystemMemoryRows

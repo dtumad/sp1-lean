@@ -145,4 +145,29 @@ theorem rejectsRunnableAfterHalt :
   ⟨Audit.ActiveNativeCompleteness.activeTarget_effect.normal,
     ExecutionStep.not_of_halted (by decide)⟩
 
+/-- Prefix replay observes the complete intermediate host/Sail state and holds the exact endpoint
+past the tape. Holding that endpoint does not permit a further ordinary instruction. -/
+theorem replayPrefixStates :
+    let events := [.syscall (enter.toEvent source.clock 65536), .syscall (halt.toEvent middle.clock 65540)]
+    executionTrajectory policy program source events 1 = some middle ∧
+      executionTrajectory policy program source events 2 = some target ∧
+      executionTrajectory policy program source events 5 = some target := by
+  refine ⟨(ExecutionPath.cons enter_step (.nil _)).replay, replayJoinedShards, ?_⟩
+  exact (executionTrajectory_after _ _ _ _ _ (by decide)).trans replayJoinedShards
+
+/-- Appending a real event after HALT fails, in contrast to the mathematical endpoint extension. -/
+theorem replayStopsAfterHalt :
+    replayEvents? policy program source
+      ([.syscall (enter.toEvent source.clock 65536), .syscall (halt.toEvent middle.clock 65540)] ++ [.ordinary]) = none := by
+  rw [replayEvents?_append, replayJoinedShards, Option.bind_some]
+  simp only [replayEvents?, replayStep?, show target.host.exitCode = some 70000 from rfl,
+    Option.isSome_some, Bool.true_or, ↓reduceIte, Option.bind_none]
+
+/-- Official ordinary replay threads any running host unchanged, with its full state and clock. -/
+theorem replayOrdinaryPreservesHost (host : HostState) (running : host.exitCode = none) (clock : ℕ) :
+    executionTrajectory policy Audit.JointNonVacuity.anchorProgram
+      ⟨Audit.JointNonVacuity.anchorState, host, clock⟩ [.ordinary] 1 =
+        some ⟨Audit.ActiveNativeCompleteness.activeTarget, host, clock + 8⟩ :=
+  (ExecutionPath.cons (ordinaryContinues host running clock) (.nil _)).replay
+
 end SP1CleanTest.Core.ExecutionPath
