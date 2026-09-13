@@ -1,4 +1,5 @@
 import SP1Clean.Model.Machine.Execution
+import ToMathlib.ExtDHashMapOfFintype
 
 /-! # Canonical SP1 register initialization
 
@@ -22,49 +23,27 @@ set_option maxRecDepth 800 in
 deriving instance Fintype for Register
 
 /-- Every register's value type is inhabited, so a register can be default-filled. -/
-noncomputable def regDefault : (r : Register) → RegisterType r := fun r => by cases r <;> exact default
+def regDefault : (r : Register) → RegisterType r := fun r => by cases r <;> exact default
 
-/-- The fully-initialized register map: every register present, holding its `default` value. -/
-noncomputable def fullRegs : Std.ExtDHashMap Register RegisterType :=
-  (Finset.univ : Finset Register).toList.foldr
-    (fun r (m : Std.ExtDHashMap Register RegisterType) => m.insert r (regDefault r)) ∅
+/-- The fully initialized register map: every register present, holding its `default` value.
+The finite fold is executable; proofs use its lookup lemmas to avoid normalizing the whole map. -/
+@[irreducible] def fullRegs : Std.ExtDHashMap Register RegisterType := Std.ExtDHashMap.ofFintype regDefault
 
-private lemma mem_foldr_insert {l : List Register} {r : Register} (h : r ∈ l) :
-    r ∈ l.foldr (fun r (m : Std.ExtDHashMap Register RegisterType) => m.insert r (regDefault r)) ∅ := by
-  induction l with
-  | nil => simp at h
-  | cons a t ih =>
-    simp only [List.foldr_cons, Std.ExtDHashMap.mem_insert]
-    rcases List.mem_cons.mp h with rfl | hmem
-    · exact Or.inl (by simp)
-    · exact Or.inr (ih hmem)
+/-- Every register is a key of `fullRegs`. -/
+lemma mem_fullRegs (r : Register) : r ∈ fullRegs := by
+  have present : fullRegs.get? r = some (regDefault r) := by
+    unfold fullRegs
+    exact Std.ExtDHashMap.get?_ofFintype _ _
+  exact Std.ExtDHashMap.mem_iff_isSome_get?.mpr (Option.isSome_of_eq_some present)
 
-/-- Every register is a key of `fullRegs` (`r ∈ univ`, and the fold inserts every list element). -/
-lemma mem_fullRegs (r : Register) : r ∈ fullRegs :=
-  mem_foldr_insert (Finset.mem_toList.mpr (Finset.mem_univ r))
-
-private lemma get?_foldr_insert {l : List Register} {r : Register} (h : r ∈ l) :
-    (l.foldr (fun r (m : Std.ExtDHashMap Register RegisterType) => m.insert r (regDefault r)) ∅).get? r
-      = some (regDefault r) := by
-  induction l with
-  | nil => simp at h
-  | cons a t ih =>
-    simp only [List.foldr_cons]
-    rcases List.mem_cons.mp h with rfl | hmem
-    · rw [Std.ExtDHashMap.get?_insert_self]
-    · rw [Std.ExtDHashMap.get?_insert]
-      split
-      · rename_i hEq; obtain rfl := beq_iff_eq.mp hEq; simp
-      · exact ih hmem
-
-/-- Each register's value in `fullRegs` is its `default` (the fold inserts `regDefault r` for every `r`,
-and each key is inserted with that same value, so whichever insert wins the value is `regDefault r`). -/
-lemma get?_fullRegs (r : Register) : fullRegs.get? r = some (regDefault r) :=
-  get?_foldr_insert (Finset.mem_toList.mpr (Finset.mem_univ r))
+/-- Each register's value in `fullRegs` is its `default`, independently of insertion order. -/
+lemma get?_fullRegs (r : Register) : fullRegs.get? r = some (regDefault r) := by
+  unfold fullRegs
+  exact Std.ExtDHashMap.get?_ofFintype _ _
 
 /-- A runnable initial Sail state: every register initialized, PC pinned to `pc`, machine mode, and the
 SP1 PMA region configured (the one non-default the strengthened `SailConfigured` requires). -/
-noncomputable def configuredState (pc : BitVec 64) : SailState :=
+def configuredState (pc : BitVec 64) : SailState :=
   { (default : SailState) with
     regs := (((fullRegs.insert Register.misa 4096#64).insert Register.PC pc).insert
       Register.cur_privilege Privilege.Machine).insert

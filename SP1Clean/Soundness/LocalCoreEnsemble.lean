@@ -1,18 +1,19 @@
 import SP1Clean.Soundness.NativeCoreEnsemble
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
-import SP1Clean.Model.Core.SourceSnapshot
+import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
 
-/-! # Native local-shard assembly with an authenticated source snapshot
+/-! # Native local-shard assembly with a checked complete source
 
-This assembly installs the actual snapshot register/RAM tables alongside the existing finalizers,
-fixed ROM, instructions, and providers. Its public PC/clock endpoints are range checked rather
-than fixed to boot. The verifier checks the finite program, supported decoding, source x0, and
-every ROM byte in source memory, including bytes absent from the touched inventory.
+This assembly installs source register/RAM tables alongside the existing finalizers, fixed ROM,
+instructions, and providers. The verifier checks the finite program, supported decoding, complete
+Sail platform configuration and register initialization, source ROM, and 48-bit source PC/clock.
+It binds the public incoming State token to that actual PC and clock; outgoing fields are range
+checked. ROM is checked even at bytes absent from the touched inventory.
 
-Byte and Program closure are proved from this assembly's own raw ledger. This is not yet an
-execution theorem: complete Sail/host endpoint binding, final-state agreement, source-time
-admissibility, and the mixed host walk remain to be connected. The boot assembly remains a proved
-specialized client of the same instruction/provider suffix during that transport.
+Byte and Program closure follow from this assembly's own raw ledger. Source State truth and the
+initial memory invariant are derived in `LocalCoreSourceGrounding`. The mixed host walk, complete
+outgoing state, and witness composition remain open; this assembly is not yet an execution theorem.
+Host state and Sail bookkeeping are retained source data, without a reset at a shard cut.
 -/
 
 namespace SP1Clean.Soundness.LocalCore
@@ -23,48 +24,55 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
-def verifierMain (image : ProgramImage) (snapshot : MemorySnapshot)
+def verifierMain (image : ProgramImage) (source : ExecutionSnapshot)
     (input : Var SP1PublicIO (ZMod p)) : Circuit (ZMod p) Unit := do
   let _ ← sp1StateVerifier input
-  assertZero (.const (if checkSource image snapshot then 0 else 1))
+  assertZero (.const (if checkExecutionSource image source then 0 else 1))
+  assertZero (input.init_clk_high - .const (source.clock / 2 ^ 24 : ℕ))
+  assertZero (input.init_clk_low - .const (source.clock % 2 ^ 24 : ℕ))
+  assertZero (input.init_pc0 - .const (Target.bitVecToWord source.pc)[0])
+  assertZero (input.init_pc1 - .const (Target.bitVecToWord source.pc)[1])
+  assertZero (input.init_pc2 - .const (Target.bitVecToWord source.pc)[2])
   let _ ← OrderedBoundaryVerifier.circuit SnapshotMemoryEnsemble.channelName
     OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey ()
   let _ ← OrderedBoundaryVerifier.circuit OrderedFinalProvider.channelName
     OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey ()
 
-def verifier (image : ProgramImage) (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
-  main := verifierMain image snapshot
-  Spec input _ _ := input.LimbBounds ∧ SourceValid image snapshot
+def verifier (image : ProgramImage) (source : ExecutionSnapshot) : GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
+  main := verifierMain image source
+  Spec input _ _ := input.LimbBounds ∧ ExecutionSourceValid image source ∧ input.SourceFor source
   ProverAssumptions input data hint :=
-    sp1StateVerifier.ProverAssumptions input data hint ∧ SourceValid image snapshot
+    sp1StateVerifier.ProverAssumptions input data hint ∧ ExecutionSourceValid image source ∧ input.SourceFor source
   channelsWithRequirements := []
   soundness := by
-    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit]
-    by_cases valid : checkSource image snapshot = true
-    · exact ⟨h_holds.1, (checkSource_iff image snapshot).mp valid⟩
+    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit, SP1PublicIO.SourceFor]
+    by_cases valid : checkExecutionSource image source = true
+    · exact ⟨h_holds.1, (checkExecutionSource_iff image source).mp valid,
+        by simpa only [sub_eq_zero] using h_holds.2.2⟩
     · simp [valid] at h_holds
   completeness := by
-    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit]
-    exact ⟨h_assumptions.1, by simp [(checkSource_iff image snapshot).mpr h_assumptions.2]⟩
+    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit, SP1PublicIO.SourceFor]
+    exact ⟨h_assumptions.1, by simp [(checkExecutionSource_iff image source).mpr h_assumptions.2.1],
+      by simpa only [sub_eq_zero] using h_assumptions.2.2⟩
 
-def tables (image : ProgramImage) (snapshot : MemorySnapshot) : List (Component (ZMod p)) :=
-  (SnapshotMemoryEnsemble.inventory snapshot).views.map (·.component) ++ NativeCore.afterInitialTables image
+def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
+  (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++ NativeCore.afterInitialTables image
 
-def ensemble (image : ProgramImage) (snapshot : MemorySnapshot) : Ensemble (ZMod p) SP1PublicIO where
-  tables := tables image snapshot
+def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO where
+  tables := tables image source
   channels := (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ::
     (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw :: sp1Ensemble.channels
-  verifier := verifier image snapshot
+  verifier := verifier image source
   verifier_length_zero := by intros; rfl
 
-theorem tables_length (image : ProgramImage) (snapshot : MemorySnapshot) :
-    (tables (p := p) image snapshot).length = 59 := by
+theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) :
+    (tables (p := p) image source).length = 59 := by
   simp [tables, SnapshotMemoryEnsemble.inventory, NativeCore.afterInitialTables,
     OrderedMemoryEnsemble.Inventory.views, FinalMemoryEnsemble.inventory,
     sp1Tables_length, sp1ProviderTables_length]
 
-private theorem source_requirements (snapshot : MemorySnapshot) (component : Component (ZMod p))
-    (member : component ∈ (SnapshotMemoryEnsemble.inventory snapshot).views.map (·.component)) :
+private theorem source_requirements (source : ExecutionSnapshot) (component : Component (ZMod p))
+    (member : component ∈ (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component)) :
     component.circuit.channelsWithRequirements ⊆
       [memoryChannel.toRaw, (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw] := by
   simp only [SnapshotMemoryEnsemble.views_eq, List.map_cons, List.map_nil,
@@ -75,8 +83,8 @@ private theorem source_requirements (snapshot : MemorySnapshot) (component : Com
       OrderedMemoryEnsemble.terminalView, OrderedMemoryProvider.circuit,
       OrderedBoundaryEnd.circuit, SnapshotRegisterProvider.circuit, SnapshotRamProvider.circuit]
 
-private theorem component_finished_requirements (image : ProgramImage) (snapshot : MemorySnapshot)
-    (component : Component (ZMod p)) (member : component ∈ (ensemble image snapshot).allTables)
+private theorem component_finished_requirements (image : ProgramImage) (source : ExecutionSnapshot)
+    (component : Component (ZMod p)) (member : component ∈ (ensemble image source).allTables)
     (channel : RawChannel (ZMod p))
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
@@ -91,25 +99,25 @@ private theorem component_finished_requirements (image : ProgramImage) (snapshot
   rcases member with rfl | member | member
   · exact absent (by simp [Ensemble.verifierTable, verifier])
   · exact absent (fun required => outside (by
-      have used := source_requirements snapshot component member required
+      have used := source_requirements source component member required
       simp only [List.mem_cons, List.not_mem_nil, or_false] at used ⊢
       tauto))
   · exact NativeCore.afterInitialTables_finished_requirements image component member channel outside env constraints
 
 /-- The local assembly supplies its own Byte and Program guarantees, including for both
-snapshot providers. No provider validity or memory-content premise is accepted here. -/
-theorem finishedChannel_guarantees (image : ProgramImage) (snapshot : MemorySnapshot)
-    (witness : EnsembleWitness (ensemble (p := p) image snapshot))
+source providers. No provider validity or memory-content premise is accepted here. -/
+theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSnapshot)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ table ∈ witness.allTables,
       table.ChannelGuarantees byteChannel.toRaw ∧ table.ChannelGuarantees programChannel.toRaw := by
   have closed (channel : RawChannel (ZMod p)) [channel.Consistent]
-      (member : channel ∈ (ensemble (p := p) image snapshot).channels)
+      (member : channel ∈ (ensemble (p := p) image source).channels)
       (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
         (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
         (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]) :=
     witness.channelGuarantees_of_component_requirements channel constraints (balanced channel member)
-      (fun component mem env holds => component_finished_requirements image snapshot component mem channel outside env holds)
+      (fun component mem env holds => component_finished_requirements image source component mem channel outside env holds)
   have byte := closed byteChannel.toRaw (by simp [ensemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
       OrderedFinalProvider.channelName, byteChannel])

@@ -738,21 +738,27 @@ aligned address. Both have sound/complete ordered wrappers, proof-independent co
 exportable witness programs. Boot RAM uses this same implementation. Regressions reject forged
 limbs, substituted indices, changed source bytes, unrelated ordering keys, and untouched-memory
 mutations. The local 59-table assembly shares the boot assembly's instruction/finalizer/provider
-suffix but admits arbitrary public PC/clock endpoints. `LocalCoreBoundaries.lean` derives source
-record authenticity, uniqueness, the exact physical Memory ledger, and canonical public fields
+suffix and binds its incoming public PC/clock to a supplied complete execution snapshot.
+`LocalCoreBoundaries.lean` derives source-record authenticity, uniqueness, the exact physical Memory ledger, and canonical public fields
 from raw constraints and balance, without caller-supplied provider or source-truth premises.
 
-The local verifier also performs finite source validation: program validity, supported decoding,
-x0, and agreement of every committed ROM byte with source RAM. Source-provider authentication alone
-would leave code bytes unconstrained against the Program table if the shard never reads them as
-data. `checkSource_iff` in `Model/Core/SourceSnapshot.lean` proves the executable check equivalent to that semantic
-contract; `SourceValid.romLoaded` transports it to Sail when representing the snapshot there.
-The complete assembly regression runs an active ADD at clock 9 with nonzero incoming registers,
-executes the actual Byte/Range providers, and checks assertions, fixed lookups, channel membership,
-count bounds, and full-message balance. It rejects changed ROM even when no RAM row reads it.
-This is executable AIR conformance, not a whole-execution proof. Binding the full Sail/host state
-and final memory, justifying local source timestamps, and generalizing the boot assembly's timed
-grounding remain integration obligations. No arbitrary-boundary AIR equivalence is claimed.
+The local verifier's `checkExecutionSource` checks program validity, supported decoding, all Sail
+registers present, the existing platform configuration, all committed ROM bytes in source RAM, and
+48-bit source PC/clock bounds. Source-provider authentication alone would leave code bytes
+unconstrained against the Program table when the shard never reads them as data. The executable
+checker has a proved semantic contract, and `SourceFor.clock`/`SourceFor.pc` prove that the incoming
+field token decodes to the actual source clock and Sail PC without aliases.
+`LocalCoreSourceGrounding.initialStateTruth` and `memoryInitialFrontier_liveOK` derive the initial
+State and live-memory facts from raw constraints and balance for any trajectory starting at that
+source. Zero-time source records are admissible local seeds at nonzero shard clocks; they do not
+claim historical last-access times. The full assembly regression runs ADD at clock 9 with nonzero
+incoming registers, executes Byte/Range providers, and checks constraints, fixed lookups, channel
+membership, count bounds, and full-message balance. It rejects missing registers, invalid platform
+configuration, unbound source PC/clock, out-of-range sources, and changed untouched ROM.
+These are source-grounding and executable AIR results. Complete outgoing Sail/host agreement,
+active host effects, and transport of the later boot grounding stages remain open. Source validity
+allows a stopped host for empty segments; it does not yet prohibit active AIR rows after HALT.
+No arbitrary-boundary AIR equivalence is claimed.
 
 `Model/Core/ExecutionSnapshot.lean` now represents full execution boundaries with finite data.
 It preserves every Sail register and missing key, runtime cycle count and output, all host fields,
@@ -768,8 +774,8 @@ theorem, soundness, and completeness match the Sail host adapter on the complete
 native policy's fixed memory window. Padded HINT_READ writes are included, and all untouched fields
 are preserved. The active regression computes a padded hint read and derives a semantic step via
 that bridge without evaluating dense memory. Exact finite equality now supports semantic identity
-and composition; it is not yet an AIR constraint or a Rust boundary serializer. Complete snapshot
-authentication, ordinary-step finite compilation, and full native witness composition remain open.
+and composition; it is not yet an AIR constraint or a Rust boundary serializer. Complete outgoing
+snapshot authentication, ordinary-step finite compilation, and native witness composition remain open.
 
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL

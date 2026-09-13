@@ -40,7 +40,7 @@ Implemented foundations:
   completeness against the full-state Sail host adapter. Its byte-write proof covers all hint
   padding and preserves untouched state. Regressions reject bookkeeping, host, and untouched RAM
   mutations and derive a genuine semantic HINT_READ step from the sparse interpreter. Complete
-  incoming/outgoing snapshot authentication by AIR constraints remains open.
+  outgoing snapshot authentication and host-effect integration by AIR constraints remain open.
 - `MemorySnapshot.lean` represents all 32 integer registers and complete sparse RAM for a local
   source boundary. Its Sail representation relation covers every supported byte; its executable
   extensional comparison checks the union of finite supports, including untouched locations,
@@ -48,19 +48,18 @@ Implemented foundations:
   four value limbs against a fixed snapshot table. `SnapshotRamProvider` authenticates arbitrary
   snapshot RAM; the old boot provider specializes the same circuit. Both compose with the existing
   ordering wrapper, have proved row constructors, and export their witness programs.
-- `LocalCore.ensemble` installs those providers in 59 tables with arbitrary public PC/clock
-  endpoints, sharing the existing instruction/finalizer/provider suffix with the boot assembly.
-  `LocalCoreBoundaries.lean` derives source-record authenticity, per-location uniqueness, the exact
-  physical Memory projection, and public/source validity from raw constraints and balance.
-  The verifier's finite `checkSource` validates the program, supported decoding, x0, and every
-  committed instruction byte in source RAM. This closes a gap that source-provider checks alone
-  leave: code bytes could disagree with the Program table when no RAM row reads them. An active
-  ADD regression checks the complete physical assembly at a non-boot clock with nonzero incoming
-  registers; it rejects altered endpoints, source/final values, inventory gaps/duplicates, and
-  changed ROM even with no RAM rows. Complete AIR endpoint binding remains open: Sail bookkeeping,
-  host state, final-state agreement, and incoming timestamp admissibility must still be connected.
-  Snapshot equality alone is not full machine-state equality. The timed-grounding results below
-  currently target `NativeCore.ensemble`, whose verifier specializes to boot.
+- `LocalCore.ensemble` now takes the complete `ExecutionSnapshot`, projects it to the source
+  providers, and binds the incoming public token to its actual PC and clock. `checkExecutionSource`
+  checks complete register initialization, the existing Sail platform configuration, finite program
+  validity and decoding, all ROM bytes, and 48-bit source PC/clock bounds. `LocalCoreBoundaries`
+  derives source-record authenticity, uniqueness, exact physical Memory projection, and source/public
+  validity from raw constraints and balance. `LocalCoreSourceGrounding` then derives initial State
+  truth and the complete live-memory invariant for any trajectory beginning at that source. Local
+  zero-time seed records are admissible even at a nonzero start clock; they make no historical
+  last-access claim. The complete 59-table ADD regression rejects unrelated source/public endpoints,
+  out-of-range sources, missing registers, invalid platform state, wrong values, broken inventories,
+  and changed ROM even with no RAM rows. Full outgoing Sail/host agreement and the mixed host walk
+  remain open. The boot assembly's later grounding stages still need transport to this local one.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -379,13 +378,13 @@ Host integration must account for these source-backed details in v6.4.0:
 
 Still required before the native capstone can be claimed:
 
-1. Bind complete snapshots into the local assembly. The full finite representation, exact equality,
-   provider projection, boot representation, and sparse host execution bridge are proved.
-   The snapshot providers and arbitrary PC/clock
-   verifier are installed, and raw constraints/balance derive source authenticity, uniqueness, and
-   finite program/source validity. Constrain the complete Sail/host state, including untouched locations
-   and Sail bookkeeping; derive incoming record admissibility and final-state agreement internally.
-   Retain boot initialization as a specialization.
+1. Finish complete boundary agreement. The full source is now the local ensemble parameter;
+   configuration, initialization, ROM, PC/clock binding, and the authentic genesis State/Memory
+   invariant follow from raw AIR constraints and balance. Exact finite state comparison, boot
+   representation, and sparse host execution are also proved. Bind the complete outgoing Sail/host
+   state, including untouched locations and bookkeeping, to the reconstructed execution. Retain
+   boot initialization as a specialization. Source validation permits stopped host states for empty
+   identity segments; excluding active AIR rows after HALT remains part of mixed execution integration.
 2. Generalize the boot assembly's existing grounding to the local assembly and stateful execution.
    The following facts are already closed for the boot assembly: initial-record meaning/uniqueness and
    physical Program-row authentication now follow from its constraints and balance. Final

@@ -373,6 +373,8 @@ import SP1Clean.Model.Core.SailMemory
 import SP1Clean.Model.Core.Boot
 import SP1Clean.Model.Core.MemorySnapshot
 import SP1Clean.Model.Core.SourceSnapshot
+import SP1Clean.Model.Core.SourceExecution
+import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
 import SP1Clean.Model.Core.MemoryEquality
 import SP1Clean.Model.Core.RegisterSnapshotTable
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
@@ -382,6 +384,7 @@ import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Soundness.LocalCoreEnsemble
 import SP1Clean.Soundness.LocalCoreBoundaries
+import SP1Clean.Soundness.LocalCoreSourceGrounding
 import SP1Clean.Model.Machine.Schedule
 import SP1Clean.Model.Machine.Syscall
 import SP1Clean.Model.Machine.EventExecution

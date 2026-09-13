@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1629 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 208 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1644 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 210 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1837 released declarations are probed.
+- 1854 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,19 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The complete-source grounding checkpoint adds 15 main declarations and two test anchors.
+Ten main additions use exactly the logical baseline; five retain the existing 100-axiom registry
+set through their assembly-indexed types and proofs. All preceding 1629 main and 208 test dependency
+sets are unchanged, with no removals or new main-library axiom names. The two new compiler-trusted
+constants belong only to the local assembly's source-binding and platform-rejection regressions.
+The initialized Sail register map is now computable through a proved order-independent finite-map
+fold, preserving its existing lookup and configuration theorems. The complete source is the local
+ensemble parameter; its finite configuration/ROM/range checks and actual incoming PC/clock binding
+supply initial State truth and the full live-memory invariant directly from raw constraints and
+balance. Source timestamps are admissible local genesis seeds, including at nonzero clocks.
+Complete outgoing-state agreement, active host integration, post-HALT AIR exclusion, and certified
+native witness composition remain open.
 
 The complete finite-boundary checkpoint adds 22 main declarations and seven test declarations.
 Nineteen main additions use only the logical baseline; three retain the existing 77-axiom Sail

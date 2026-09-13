@@ -120,10 +120,19 @@ below. The local assembly's complete Sail/host endpoint binding and timed ground
 | `initial_records_authentic` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether raw AIR constraints and balance authenticate boot memory |
 | `initial_records_locations_nodup` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether the actual ledger forbids duplicate initial locations |
 | `program_row_committed` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether physical Program rows match the checked ROM and official Sail |
+| `ExecutionSourceValid` | `SP1Clean/Model/Core/SourceExecution.lean` | Complete source initialization/configuration, program and ROM validity, and PC/clock ranges |
+| `checkExecutionSource_iff` | `SP1Clean/Model/Core/SourceExecution.lean` | Whether the finite source checker is exactly its semantic contract |
+| `SourceFor` | `SP1Clean/FormalModel/Contracts/LocalCoreBoundary.lean` | How the actual source PC/clock is bound into the public incoming State token |
+| `SourceFor.clock` | `SP1Clean/FormalModel/Contracts/LocalCoreBoundary.lean` | Whether field decoding recovers the source clock without aliases |
+| `SourceFor.pc` | `SP1Clean/FormalModel/Contracts/LocalCoreBoundary.lean` | Whether three PC limbs recover the actual checked Sail PC |
+| `source_state_encoding` | `SP1Clean/Soundness/LocalCoreSourceGrounding.lean` | Whether raw local AIR constraints and balance bind the incoming State message to the complete source |
+| `initialStateTruth` | `SP1Clean/Soundness/LocalCoreSourceGrounding.lean` | Whether the checked source supplies State truth on any trajectory starting there |
+| `memoryInitialFrontier_content` | `SP1Clean/Soundness/LocalCoreSourceGrounding.lean` | Whether physical source records authenticate actual complete-state Sail contents |
+| `memoryInitialFrontier_liveOK` | `SP1Clean/Soundness/LocalCoreSourceGrounding.lean` | Whether local genesis currency and source-timestamp admissibility follow without semantic premises |
 | `SourceValid` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Finite program/decoding validity, x0, and all source ROM bytes, including untouched code |
 | `checkSource_iff` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Whether executable source validation is exactly the semantic contract |
-| `ensemble` | `SP1Clean/Soundness/LocalCoreEnsemble.lean` | The 59-table snapshot assembly with arbitrary public PC/clock endpoints |
-| `verifier` | `SP1Clean/Soundness/LocalCoreEnsemble.lean` | Which public ranges, finite source checks, and inventory endpoints are constrained |
+| `ensemble` | `SP1Clean/Soundness/LocalCoreEnsemble.lean` | The 59-table assembly with a complete source and its bound incoming PC/clock |
+| `verifier` | `SP1Clean/Soundness/LocalCoreEnsemble.lean` | Which source configuration/ranges, actual incoming token, and inventory endpoints are constrained |
 | `source_records_authentic` | `SP1Clean/Soundness/LocalCoreBoundaries.lean` | Whether raw AIR constraints and balance authenticate arbitrary source records |
 | `source_records_locations_nodup` | `SP1Clean/Soundness/LocalCoreBoundaries.lean` | Whether the actual local ledger forbids duplicate source locations |
 | `source_memory_interactions` | `SP1Clean/Soundness/LocalCoreBoundaries.lean` | Whether the physical source Memory ledger is exactly the decoded unit pushes |

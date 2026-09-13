@@ -68,19 +68,21 @@ corollary, not the primary shard relation. `Model/Core/Execution{,Path,Replay,Bo
 the stateful semantic path, split/join and PolyFun equivalence, paired replay, and semantic boot/HALT
 corollaries. `MemorySnapshot` and the ordered snapshot register/RAM providers now authenticate
 arbitrary finite source values, with an executable extensional RAM/register comparison. The assembly
-`LocalCore.ensemble` installs these providers in 59 tables with arbitrary public PC/clock endpoints.
-Its verifier checks finite program validity, supported decoding, x0, and all source ROM bytes.
-`LocalCoreBoundaries.lean` derives source-record authenticity, uniqueness, the exact physical Memory
-ledger, and public/source validity from raw constraints and balance. Full Sail/host endpoint binding,
-final-state agreement, and source-timestamp admissibility remain open; the timed grounding below
-still targets the boot assembly. These results do not yet authenticate complete boundaries between
-separate AIR witnesses. `ExecutionSnapshot` now gives a complete finite representation and an
-executable comparison proved equivalent to exact Sail/host/clock equality. It retains all Sail
-registers (including absent keys), runtime counters/output, and host state; only the bounded RAM
-map uses sparse realization. `HostSnapshot` executes host calls on that finite representation and
-proves full-state soundness/completeness against the Sail host adapter, including padded writes.
-Binding these complete snapshots into the AIR remains open. The generic
-interfaces, finite-image/host-I/O substrate, executable instruction decoder,
+`LocalCore.ensemble` takes the complete `ExecutionSnapshot`, projects its register/RAM providers,
+and binds the public incoming PC/clock to that actual source. Its verifier checks complete register
+initialization, Sail platform configuration, finite program validity, supported decoding, every ROM
+byte, and 48-bit source PC/clock ranges. `LocalCoreBoundaries.lean` derives source-record authenticity,
+uniqueness, exact Memory projection, and source/public validity from raw constraints and balance.
+`LocalCoreSourceGrounding.lean` derives the initial State truth and live-memory invariant on a
+trajectory beginning at that source. Zero-time source records are admissible local seeds even at
+nonzero shard clocks, without historical last-access claims. Full outgoing Sail/host agreement,
+active host effects, and transport of later boot grounding stages remain open; separate AIR witnesses
+are not yet proved composable. `ExecutionSnapshot` gives finite data and an executable comparison
+proved equivalent to literal Sail/host/clock equality, preserving every register and missing key,
+runtime counters/output, and host state. `HostSnapshot` computes sparse host execution with full-state
+soundness/completeness against the Sail adapter, including padded writes. Source validation allows
+stopped hosts for empty identity segments; ruling out active AIR rows after HALT remains open.
+The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are
 explicitly excluded from the checked parser. The integrated native capstone remains open. Its remaining work

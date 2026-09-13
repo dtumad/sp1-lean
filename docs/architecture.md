@@ -211,8 +211,8 @@ snapshots is not equality of complete execution states. The new `SnapshotRegiste
 `SnapshotRamProvider` authenticate source values through fixed lookups and compose with
 `OrderedMemoryProvider`; their constructors discharge internal witness conditions. Boot RAM now
 specializes the same implementation. The zero-time source records are local ledger seeds, not
-claims about the preceding shard's last-access timestamps. Their timing admissibility and complete
-final-state agreement must still be derived. Each provider
+claims about the preceding shard's last-access timestamps. `LocalCoreSourceGrounding` derives their
+timing admissibility and genesis currency; complete final-state agreement remains open. Each provider
 instance uses one source snapshot; simultaneous differently bound fixed tables require distinct
 export names.
 
@@ -224,19 +224,25 @@ a shard cut. `memorySnapshot_realizes` connects initialized full snapshots to th
 provider representation. `HostSnapshot.lean` reads and updates finite snapshots directly, proving
 the resulting complete state agrees with the Sail host adapter. This handles full padded writes
 without evaluating the dense Sail memory. These are representation and semantic execution results;
-the AIR must still authenticate complete source/target snapshots and derive their agreement with
-its reconstructed execution.
+the local AIR now checks and binds the source as described below. Complete target agreement with
+the reconstructed execution and host-effect integration remain open.
 
-`LocalCore.ensemble` installs these snapshot providers in a 59-table local assembly, reusing
-`NativeCore.afterInitialTables` for the instruction/finalizer/provider suffix. The local verifier
-range checks arbitrary PC/clock endpoints and checks finite program validity, supported decoding,
-x0, and every source ROM byte through `checkSource`. That last check is necessary even for code
-absent from the touched inventory: authentic source RAM alone does not bind instruction fetches
-to the separate fixed Program table. `LocalCoreBoundaries` derives source-record authenticity,
-uniqueness, their exact physical Memory ledger, and source/public validity from this assembly's
-raw constraints and balance. The active regression executes ADD with nonzero source registers at
-clock 9 and checks the entire actual ledger. Full Sail/host endpoint binding remains open;
-the grounding modules below still target the boot assembly and must be generalized to the local one.
+`LocalCore.ensemble` takes the complete `ExecutionSnapshot` as fixed instance data and installs
+its projected register/RAM providers in 59 tables. It reuses `NativeCore.afterInitialTables` for
+the instruction/finalizer/provider suffix. `checkExecutionSource` validates the program, supported
+decoding, complete Sail register initialization and platform configuration, all source ROM bytes,
+and 48-bit source PC/clock ranges. Five field equalities bind the incoming public State token to
+the actual source PC/clock; their decoding theorems exclude modular aliases. All ROM bytes are
+checked even when absent from the touched inventory, binding instruction fetches to source RAM.
+`LocalCoreBoundaries` derives source-record authenticity, uniqueness, the exact Memory ledger, and
+source/public validity from raw constraints and balance. `LocalCoreSourceGrounding` supplies the
+generic timed engine's initial State truth and live-memory invariant on any trajectory beginning
+at that complete source. No semantic boundary or historical source-timestamp premise is supplied.
+The active ADD regression at clock 9 checks all physical assertions and balances, including
+rejections for invalid configuration, missing registers, and unrelated source/public endpoints.
+Full outgoing Sail/host agreement and the mixed execution walk remain open. In particular, source
+validation allows an already stopped host for identity segments; the AIR must still exclude active
+steps from such a source through the execution integration.
 
 `NativeCoreMemory` retains the complete physical Memory ledger after the boundary inventories,
 including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicity proof turns Clean

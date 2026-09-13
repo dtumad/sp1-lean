@@ -21,9 +21,13 @@ private abbrev Ledger := List (String × List Fp × Fp)
 
 private def image : ProgramImage := ⟨[(65536, 0x003100b3)], 65536, []⟩
 
-private def snapshot : MemorySnapshot :=
-  ⟨Vector.ofFn (fun index => if index.val = 2 then 100 else if index.val = 3 then 23 else 0),
-    image.initialMemory⟩
+private def source : ExecutionSnapshot where
+  sail := { registers := ((configuredState 65536).regs.insert .x2 100).insert .x3 23
+            memory := image.initialMemory }
+  host := {}
+  clock := 9
+
+private def snapshot : MemorySnapshot := source.sail.memorySnapshot
 
 private def publicInput : SP1PublicIO Fp where
   init_clk_0_16 := 9
@@ -77,12 +81,12 @@ private def baseRows : List Row :=
 private def withoutRam : List Row :=
   baseRows.filter (fun row => !([1, 2, 4, 5].contains row.1)) ++ [terminal 2 4, terminal 5 4]
 
-private def evaluate (source : MemorySnapshot) (component : Component Fp) (inputs : List Fp) : Bool × Ledger :=
+private def evaluate (source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp) : Bool × Ledger :=
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
-  let fixed := [FiniteLookup.ofStatic (source.registerTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (source.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
+  let fixed := [FiniteLookup.ofStatic (source.sail.memorySnapshot.registerTable (p := SP1Prime)),
+    FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
     FiniteLookup.ofStatic (image.programTable (p := SP1Prime))]
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
@@ -93,7 +97,7 @@ private def evaluate (source : MemorySnapshot) (component : Component Fp) (input
   (valid, (FlatOperation.interactions operations).map fun interaction =>
     (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
 
-private def evaluateRow (source : MemorySnapshot) (row : Row) : Bool × Ledger :=
+private def evaluateRow (source : ExecutionSnapshot) (row : Row) : Bool × Ledger :=
   match (Soundness.LocalCore.tables image source)[row.1]? with
   | none => (false, [])
   | some component => evaluate source component row.2
@@ -111,7 +115,7 @@ private def byteProvider (entry : String × List Fp × Fp) : Option Row :=
     else some (59, [])
   | _ => some (59, [])
 
-private def check (source : MemorySnapshot) (pi : SP1PublicIO Fp) (rows : List Row) : Bool :=
+private def check (source : ExecutionSnapshot) (pi : SP1PublicIO Fp) (rows : List Row) : Bool :=
   let head := evaluate source ⟨Soundness.LocalCore.verifier image source⟩ (toElements pi).toList
   let initial := head :: rows.map (evaluateRow source)
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
@@ -125,40 +129,55 @@ private def check (source : MemorySnapshot) (pi : SP1PublicIO Fp) (rows : List R
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
-#assert_exportable (Soundness.LocalCore.verifier (p := SP1Prime) image snapshot)
+#assert_exportable (Soundness.LocalCore.verifier (p := SP1Prime) image source)
 
 /-- The full local fixture has an active instruction, nonzero incoming registers, and no boot clock. -/
-theorem activeLocalShard : check snapshot publicInput baseRows = true := by native_decide
+theorem activeLocalShard : check source publicInput baseRows = true := by native_decide
 
 /-- State endpoints are bound to the physical instruction ledger, not chosen independently. -/
 theorem rejectsWrongEndpoints :
-    [check snapshot { publicInput with init_clk_0_16 := 1 } baseRows,
-     check snapshot { publicInput with final_clk_0_16 := 18 } baseRows,
-     check snapshot { publicInput with final_pc0 := 8 } baseRows] = [false, false, false] := by native_decide
+    [check source { publicInput with init_clk_0_16 := 1 } baseRows,
+     check source { publicInput with final_clk_0_16 := 18 } baseRows,
+     check source { publicInput with final_pc0 := 8 } baseRows] = [false, false, false] := by native_decide
 
-/-- Changing fixed incoming values or x0 invalidates this same physical witness. -/
+/-- Changing fixed incoming values or removing a register invalidates this physical witness. -/
 theorem rejectsWrongSource :
-    [check { snapshot with registers := snapshot.registers.set! 2 101 } publicInput baseRows,
-     check { snapshot with registers := snapshot.registers.set! 0 1 } publicInput baseRows,
-     check { snapshot with memory := snapshot.memory.write 65536 0 } publicInput baseRows] =
+    [check { source with sail.registers := source.sail.registers.insert .x2 101 } publicInput baseRows,
+     check { source with sail.registers := source.sail.registers.erase .x2 } publicInput baseRows,
+     check { source with sail.memory := source.sail.memory.write 65536 0 } publicInput baseRows] =
+      [false, false, false] := by native_decide
+
+/-- The source's actual PC and clock cannot differ from the public incoming token. -/
+theorem rejectsUnboundSource :
+    [check { source with clock := 10 } publicInput baseRows,
+     check { source with sail.registers := source.sail.registers.insert .PC 65540 } publicInput baseRows,
+     check { source with clock := 2 ^ 48 + 9 } publicInput baseRows,
+     check { source with sail.registers := source.sail.registers.insert .PC (2 ^ 48 + 65536) }
+       publicInput baseRows] = [false, false, false, false] := by native_decide
+
+/-- Platform configuration is checked even when the affected register is untouched by the row. -/
+theorem rejectsInvalidPlatform :
+    [check { source with sail.registers := source.sail.registers.insert .misa 0 } publicInput baseRows,
+     check { source with sail.registers := source.sail.registers.insert .mstatus 8 } publicInput baseRows,
+     check { source with sail.registers := source.sail.registers.erase .pma_regions } publicInput baseRows] =
       [false, false, false] := by native_decide
 
 /-- ROM agreement is enforced even when no source/final RAM row reads the changed code byte. -/
 theorem checksUntouchedRom :
-    check snapshot publicInput withoutRam = true ∧
-      check { snapshot with memory := snapshot.memory.write 65536 0 } publicInput withoutRam = false := by
+    check source publicInput withoutRam = true ∧
+      check { source with sail.memory := source.sail.memory.write 65536 0 } publicInput withoutRam = false := by
   native_decide
 
 /-- Missing or duplicate source records fail the actual Memory/order balances. -/
 theorem rejectsBrokenInventory :
-    [check snapshot publicInput (baseRows.drop 1),
-     check snapshot publicInput (sourceRegister 0 1 :: baseRows),
-     check snapshot publicInput (baseRows.filter (fun row => row.1 != 2)),
-     check snapshot publicInput (baseRows.filter (fun row => row.1 != 4))] =
+    [check source publicInput (baseRows.drop 1),
+     check source publicInput (sourceRegister 0 1 :: baseRows),
+     check source publicInput (baseRows.filter (fun row => row.1 != 2)),
+     check source publicInput (baseRows.filter (fun row => row.1 != 4))] =
       [false, false, false, false] := by native_decide
 
 /-- A forged final value cannot be hidden by keeping the same canonical address and clock. -/
 theorem rejectsWrongFinalValue :
-    check snapshot publicInput (baseRows.set 5 (3, finalRecord 0 1 13 124)) = false := by native_decide
+    check source publicInput (baseRows.set 5 (3, finalRecord 0 1 13 124)) = false := by native_decide
 
 end SP1CleanTest.Core.LocalCore

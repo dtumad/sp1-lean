@@ -24,7 +24,8 @@ noncomputable def initialSailState (input : ProgramImage) : SailState :=
   { configuredState input.entry with mem := input.initialMemory.toSailMemory (2 ^ 48) }
 
 private theorem initialSailState_regs (input : ProgramImage) :
-    input.initialSailState.regs = (configuredState input.entry).regs := rfl
+    input.initialSailState.regs = (configuredState input.entry).regs :=
+  Eq.refl (configuredState input.entry).regs
 
 /-- Every guest byte has its canonical initial value; missing sparse-image bytes are zero. -/
 theorem initialSailState_memory (input : ProgramImage) (address : ℕ) (bound : address < 2 ^ 48) :
