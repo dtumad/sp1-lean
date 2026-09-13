@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.NativeCoreRows
+import SP1Clean.Soundness.LocalCoreRows
 import SP1Clean.Soundness.CoreRowBalance
 
 /-! # Memory balance through mixed-row alignment and refresh elimination
@@ -8,15 +8,16 @@ ordinary `AlignsWith` relation also requires all original reads at the row start
 imposed on syscall rows. `RowMemoryPermutation` states only the two ledger equalities and admits
 the syscall carrier unchanged. It is an internal transport interface, not an AIR premise.
 
-The raw combined AIR supplies the balance. Refresh elimination additionally needs strict order
+The raw local AIR supplies the balance. Refresh elimination additionally needs strict order
 of the actual refresh timestamps and the aligned rows' structural `RowOKCore` facts. Those
-chronology obligations form the reusable interface discharged by `NativeCoreMemoryOrder`. The result
+chronology obligations form the reusable interface discharged by `LocalCoreMemoryOrder`. The result
 is the exact refresh-free Memory equation for the generic timed walk, without an inactivity or
 semantic-boundary assumption.
 -/
 
-namespace SP1Clean.Soundness.NativeCore
+namespace SP1Clean.Soundness.LocalCore
 
+open SP1Clean.Soundness.NativeCore (ExecutionRow RowMemoryPermutation rowAggregates_of_permutation rowTouches refresh_free_of_balance)
 open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
 open TimedGrounding
 
@@ -26,8 +27,8 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 
 /-- Reordering the exact mixed inventory and aligning each occurrence's Memory messages preserves
 the authenticated balance. No ordinary-row currency restriction is imposed on system rows. -/
-theorem memory_balance_of_row_projection {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem memory_balance_of_row_projection {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
     (rows : List (RowFacts p))
@@ -44,8 +45,8 @@ theorem memory_balance_of_row_projection {image : ProgramImage}
   exact executionRows_memory_balance witness constraints balanced loc
 
 /-- Each actual refresh preserves the complete value and location, independently of its clocks. -/
-theorem memoryRefreshes_preserve {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) :
+theorem memoryRefreshes_preserve {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
     ∀ pair ∈ memoryRefreshes witness,
       (MemoryMsg.locOf pair.1, pair.1.value) = (MemoryMsg.locOf pair.2, pair.2.value) := by
   intro pair member
@@ -58,8 +59,8 @@ Each aligned input row survives, with its State edge and fetch unchanged, and ea
 rewritten only to an equal-value record at the same location and a no-later time. Final records
 retain the same value/location relation to the returned frontier. This supplies the generic walk's
 Memory balance; it does not discharge its State, step, frame, or timeline premises. -/
-theorem memory_refresh_free_of_chronology {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem memory_refresh_free_of_chronology {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
     (rows : List (RowFacts p))
@@ -80,4 +81,4 @@ theorem memory_refresh_free_of_chronology {image : ProgramImage}
     (memory_balance_of_row_projection witness constraints balanced ordered exhaustive rows projection)
     (memoryRefreshes_preserve witness) refreshOrder
 
-end SP1Clean.Soundness.NativeCore
+end SP1Clean.Soundness.LocalCore

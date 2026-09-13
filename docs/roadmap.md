@@ -81,6 +81,21 @@ Implemented foundations:
   adapters reuse `CoreProgramBalance`, `CoreExecutionRow`, `CoreTableProjection`, the existing
   decoder, and `StateChronology`. Regressions cover reversed physical instructions with padding,
   missing/forged Program rows, and empty local segments, including a stopped source.
+- The local structural grounding path is closed through `LocalCoreTouches`, `LocalCoreMemoryOrder`,
+  `LocalCoreTransport`, and `LocalCoreGrounding`. It derives aligned touches, both prior clock-limb
+  bounds, final clock bounds, strict refresh order, an exhaustive carrier with canonical State
+  messages, and its timeline. `GroundingCarrier.ground_of_steps` derives source State/Memory truth
+  internally and concludes final State truth and physical final-record value currency, conditional
+  only on the original event step/frame facts for a trajectory starting at the complete source.
+  The carrier's timeline starts at that source's actual clock. Shared component and rewrite proofs
+  live in `CoreRowBalance`, `CoreTouches`, `CoreMemoryChronology`, and `CoreRowTransport`.
+- The local verifier now freezes the clock when the source host has an exit status.
+  `executionRows_nil_of_stopped` derives absence of all active ordinary/HALT/syscall rows from
+  strict State ordering. This closes the reproduced active-ADD-after-HALT gap while retaining
+  stopped-source identity segments. Regressions also cover three touches to the same register,
+  a real 24-bit State clock carry, and the distinction between source clock range checks and the
+  active CPU's 1-mod-8 clock phase. That phase belongs in the eventual shared semantic profile;
+  the broader pure execution path does not impose it.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -405,29 +420,21 @@ Still required before the native capstone can be claimed:
    representation, and sparse host execution are also proved. Bind the complete outgoing Sail/host
    state, including untouched locations and bookkeeping, to the reconstructed execution. Retain
    boot initialization as a specialization. Source validation permits stopped host states for empty
-   identity segments; excluding active AIR rows after HALT remains part of mixed execution integration.
-2. Continue transporting the boot grounding to the local assembly and stateful execution. Local
-   source genesis, final address/order facts, complete physical Memory balance, and both unique
-   frontiers are now closed. Program authentication, the mixed row carrier, its exact Memory
-   projection, and exhaustive State ordering/timing are also transported. Next derive aligned
-   touches, prior-record bounds, strict refresh ordering, the timeline, and the mixed trajectory
-   from the local assembly; retain its complete source throughout. The following facts are already closed for the boot assembly: initial-record
-   meaning/uniqueness and physical Program-row authentication follow from constraints and balance. Final
-   address/order facts and committed Program meaning at active pulls are also closed. The complete
-   Memory ledger now yields unique per-location frontiers, their exact balance equation, and an
-   authentic genesis invariant. Its mixed-row projection and conditional refresh-elimination
-   adapter are closed. State-bus ordering, aligned `RowOKCore`, prior-record bounds, and strict
-   refresh order now follow from the combined AIR. The mixed carrier's rewrite transport,
-   canonical State walk, derived timeline, and generic grounding connection are also closed.
-   Ordinary instruction step/frame facts now follow through component-local chip contracts.
-   The mixed trajectory, its ordinary successor equations, and HALT step/frame facts are now
-   constructed internally. Active syscall row laws and their post-grounding `EventStep` bridge
-   are closed, without a caller-supplied no-carry premise. Constrain ROM preservation and derive
-   active syscall step/frame facts from the host environment and its AIR tables, including WRITE's
-   x12/buffer reads and HINT_READ's padded RAM writes. Final-value currency follows under these
-   two remaining semantic premises; terminal ECALL/Exit agreement and execution reconstruction remain open.
-   The older 55-table execution theorem still carries its semantic boundary premise; no execution
-   theorem has yet replaced it for the new assembly.
+   identity segments; the stopped-source verifier condition and strict State ordering now exclude
+   every active instruction and syscall row after HALT.
+2. Construct the stateful mixed trajectory and derive its execution facts for the local assembly.
+   The structural path is now transported: complete source genesis, Program authentication,
+   both unique Memory frontiers and their exact balance, exhaustive State ordering, aligned touches,
+   prior bounds, strict refresh order, canonical carrier, and derived timeline are closed.
+   `LocalCoreGrounding.GroundingCarrier.ground_of_steps` exposes only original-event step/frame
+   facts on a trajectory starting at the complete source. Instantiate that trajectory through
+   `Model/Core/ExecutionReplay`, threading the actual host state, then derive ordinary chip facts
+   through the existing component contracts. The boot assembly already derives ordinary successor
+   equations, HALT step/frame facts, and the active syscall post-grounding `EventStep` bridge, but
+   its stateless non-HALT handler is not the desired local stateful execution. Constrain ROM
+   preservation and actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded
+   RAM writes, to close the remaining semantic facts. Terminal ECALL/Exit agreement and complete
+   execution reconstruction remain open. No unconditional local execution theorem is claimed.
 3. Integrate the paired semantic replay with the mixed carrier, the full-code-checked
    syscall chip, host effects, and ordinary ROM-write exclusion into
    the AIR and mixed timed grounding. Extending the Memory footprint must preserve host accesses
@@ -435,7 +442,8 @@ Still required before the native capstone can be claimed:
 4. Prove the event compiler total on shared semantic resource bounds; construct all native tables
    and close soundness and completeness for the same arbitrary local-segment domain. Prove
    erasure of inactive padding and architectural preservation by administrative rows, including
-   the zero-step case; keep semantic steps, weighted clock cost, and table height distinct.
+   the zero-step case; keep semantic steps, weighted clock cost, and table height distinct. Make
+   the active source clock phase explicit alongside ranges and capacity, while preserving identities.
 5. Lift semantic split/join to certified native shards through complete boundary continuity.
    Prove identity, associativity, split/recompile, and composition across host effects. Derive
    boot prefixes and single-/multi-shard boot-to-HALT corollaries. Each shard has its own resource

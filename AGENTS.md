@@ -85,9 +85,16 @@ Memory balance, including all active syscalls. `LocalCoreState` derives exact St
 `LocalCoreOrder` constructs an exhaustive canonical walk and its 8/264-tick timing without ordering
 or inactivity premises. Shared component semantics and physical projections live in
 `CoreProgramBalance`, `CoreExecutionRow`, and `CoreTableProjection`; the generic decoder and
-`StateChronology` remain the common algorithms. Local aligned touches, prior bounds, refresh
-ordering, and the mixed trajectory are the next transport steps. Regressions include reversed
-physical instructions with padding and empty segments.
+`StateChronology` remain the common algorithms. Local aligned touches, prior/final clock bounds,
+strict refresh order, canonical carrier, and timeline are now derived through `LocalCoreTouches`,
+`LocalCoreMemoryOrder`, `LocalCoreTransport`, and `LocalCoreGrounding`. The explicit `ground_of_steps`
+combinator supplies source State/Memory truth internally and derives final State/value truth from
+original-event step/frame facts. Shared proofs live in `CoreRowBalance`, `CoreTouches`,
+`CoreMemoryChronology`, and `CoreRowTransport`; `ExecutionCarrier` keeps concrete source values out
+of structure elaboration. The next trajectory must thread the complete host state through
+`Model/Core/ExecutionReplay`. Regressions include reversed/padded instructions, repeated-register
+touches, actual State clock carries, and identities. Active CPU clock phase (1 modulo 8) must be
+explicit in the shared semantic compiler profile; source range validation alone is broader.
 The full HINT_LEN regression records the remaining host-result gap: changing both the instruction's
 return and its final record still passes AIR checks despite disagreeing with finite host execution.
 Full outgoing Sail/host agreement,
@@ -96,7 +103,9 @@ are not yet proved composable. `ExecutionSnapshot` gives finite data and an exec
 proved equivalent to literal Sail/host/clock equality, preserving every register and missing key,
 runtime counters/output, and host state. `HostSnapshot` computes sparse host execution with full-state
 soundness/completeness against the Sail adapter, including padded writes. Source validation allows
-stopped hosts for empty identity segments; ruling out active AIR rows after HALT remains open.
+stopped hosts for empty identity segments. The local verifier freezes a stopped source's clock,
+and `executionRows_nil_of_stopped` proves its active event inventory empty, closing the reproduced
+ADD-after-HALT gap. The full HINT_LEN forged-return gap remains open.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are

@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.LocalCoreOrder
+import SP1Clean.Soundness.LocalCoreGrounding
 import SP1Clean.Model.Core.HostSnapshot
 import SP1CleanTest.Audit.OneAddNativePremises
 import ToClean.Air.EnsembleExport
@@ -10,7 +10,9 @@ at their actual indices in the 59-table local assembly. All assertions, fixed lo
 verifier constraints, channel membership, count bounds, and full-message balances are checked.
 Byte/Range demands are closed by executing the actual provider circuits. An active HINT_LEN fixture
 checks the wide syscall edge and all three Memory pairs, and records the unclosed host-result
-binding with a concrete forged-return example. This is AIR conformance, not an execution theorem.
+binding with a concrete forged-return example. Same-register accesses and a real State clock carry
+exercise the grounding interfaces; stopped-source rows are rejected while identities remain valid.
+This is AIR conformance, not an execution theorem.
 -/
 
 namespace SP1CleanTest.Core.LocalCore
@@ -227,6 +229,77 @@ identity is accepted for a stopped host; this does not permit a semantic step af
 theorem acceptsEmptySegments :
     check image source identityPublic identityRows = true ∧
       check image { source with host.exitCode := some 0 } identityPublic identityRows = true := by native_decide
+
+private def aliasImage : ProgramImage := ⟨[(65536, 0x001080b3)], 65536, []⟩
+
+private def aliasSource : ExecutionSnapshot :=
+  { source with
+    sail.registers := source.sail.registers.insert .x1 100
+    sail.memory := aliasImage.initialMemory }
+
+private def aliasEvent : TraceGenTests.AluEventRec :=
+  { Audit.OneAddNativePremises.event with
+    a := 200, c := 100, opB := 1, opC := 1, prevA := 100, prevTsA := 12, prevTsB := 11 }
+
+private def aliasRows : List Row :=
+  [(0, (toElements (OrderedSnapshotProvider.populate
+    (SnapshotRegisterProvider.populate aliasSource.sail.memorySnapshot 1#5) 0 1)).toList), terminal 2 2,
+    (3, finalRecord 0 1 13 200), terminal 5 2,
+    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) aliasImage (65536, 0x001080b3) 1).map
+      (fun input => (toElements input).toList)).getD []),
+    (7, TraceGenTests.rTypeEventInputs aliasEvent), (57, List.replicate (size HaltChip.Inputs) 0)]
+
+/-- ADD x1,x1,x1 uses one source/final location and three consecutive touches within the row.
+Skipping either intermediate prior record breaks the complete physical Memory ledger. -/
+theorem acceptsSameRegisterTouches :
+    check aliasImage aliasSource publicInput aliasRows = true ∧
+      check aliasImage aliasSource publicInput
+        (aliasRows.set 5 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsA := 0 })) = false ∧
+      check aliasImage aliasSource publicInput
+        (aliasRows.set 5 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsB := 0 })) = false := by
+  native_decide
+
+private def clockEvent (clock : ℕ) : TraceGenTests.AluEventRec :=
+  { Audit.OneAddNativePremises.event with clk := clock, tsA := clock + 4, tsB := clock + 3, tsC := clock + 2 }
+
+private def clockPublic (clock : ℕ) : SP1PublicIO Fp :=
+  { publicInput with
+    init_clk_0_16 := (clock % 65536 : ℕ)
+    init_clk_16_24 := (clock / 65536 % 256 : ℕ)
+    final_clk_0_16 := ((clock + 8) % 65536 : ℕ)
+    final_clk_16_24 := ((clock + 8) / 65536 % 256 : ℕ)
+    final_clk_24_32 := ((clock + 8) / 2 ^ 24 : ℕ) }
+
+private def clockRows (clock : ℕ) : List Row :=
+  [sourceRegister 0 1, sourceRegister 2 2, sourceRegister 3 3, terminal 2 4,
+    (3, finalRecord 0 1 (clock + 4) 123), (3, finalRecord 2 2 (clock + 3) 100),
+    (3, finalRecord 3 3 (clock + 2) 23), terminal 5 4, programRow,
+    (7, TraceGenTests.rTypeEventInputs (clockEvent clock)), (57, List.replicate (size HaltChip.Inputs) 0)]
+
+private def clockCarry : Row := (56, (toElements ({
+    next_clk_32_48 := 0, next_clk_24_32 := 1, next_clk_16_24 := 0, next_clk_0_16 := 1,
+    clk_high := 0, clk_low := 2 ^ 24 + 1, next_pc0 := 4, next_pc1 := 1, next_pc2 := 0,
+    pc0 := 4, pc1 := 1, pc2 := 0, is_clk := 1, is_real := 1 } : StateBumpChip.Inputs Fp)).toList)
+
+/-- A row crossing the 24-bit epoch needs the actual StateBump link to its canonical public end.
+The three Memory touches still precede the carry and preserve their original timestamps. -/
+theorem acceptsStateClockCarry :
+    let clock := 2 ^ 24 - 7
+    check image { source with clock := clock } (clockPublic clock) (clockCarry :: clockRows clock) = true ∧
+      check image { source with clock := clock } (clockPublic clock) (clockRows clock) = false := by
+  native_decide
+
+/-- Source validation checks clock range, while active CPU rows additionally require SP1's
+1-mod-8 clock phase. Shared semantic compiler bounds must account for this profile condition. -/
+theorem clockPhaseNeedsProfile :
+    checkExecutionSource image { source with clock := 10 } = true ∧
+      check image { source with clock := 10 } (clockPublic 10) (clockRows 10) = false := by
+  native_decide
+
+/-- The stopped-source clock constraints reject this formerly accepted active ADD. Empty
+segments at stopped sources remain valid, as checked by `acceptsEmptySegments`. -/
+theorem rejectsActiveRowsAfterHalt :
+    check image { source with host.exitCode := some 0 } publicInput baseRows = false := by native_decide
 
 private def syscallImage : ProgramImage := ⟨[(65536, 0x00000073)], 65536, []⟩
 

@@ -122,6 +122,7 @@ below. The local assembly's complete Sail/host endpoint binding and timed ground
 | `program_row_committed` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether physical Program rows match the checked ROM and official Sail |
 | `ExecutionSourceValid` | `SP1Clean/Model/Core/SourceExecution.lean` | Complete source initialization/configuration, program and ROM validity, and PC/clock ranges |
 | `checkExecutionSource_iff` | `SP1Clean/Model/Core/SourceExecution.lean` | Whether the finite source checker is exactly its semantic contract |
+| `PreservesStoppedClock` | `SP1Clean/FormalModel/Contracts/LocalCoreBoundary.lean` | How a stopped host prevents clock advance while preserving identities |
 | `SourceFor` | `SP1Clean/FormalModel/Contracts/LocalCoreBoundary.lean` | How the actual source PC/clock is bound into the public incoming State token |
 | `SourceFor.clock` | `SP1Clean/FormalModel/Contracts/LocalCoreBoundary.lean` | Whether field decoding recovers the source clock without aliases |
 | `SourceFor.pc` | `SP1Clean/FormalModel/Contracts/LocalCoreBoundary.lean` | Whether three PC limbs recover the actual checked Sail PC |
@@ -146,6 +147,15 @@ below. The local assembly's complete Sail/host endpoint binding and timed ground
 | `state_endpointBalanced` | `SP1Clean/Soundness/LocalCoreState.lean` | Whether the actual local State ledger authenticates both endpoints |
 | `executionRows_ordered` | `SP1Clean/Soundness/LocalCoreOrder.lean` | Whether raw constraints and balance construct an exhaustive mixed State walk |
 | `ordered_rows_timing` | `SP1Clean/Soundness/LocalCoreOrder.lean` | Whether the local walk preserves the incoming clock residue and exact event widths |
+| `refresh_free_of_balance` | `SP1Clean/Soundness/CoreRowBalance.lean` | Whether frontier balance and strict value-preserving refreshes admit a complete refresh-free representation |
+| `ordinary_aligned` | `SP1Clean/Soundness/CoreTouches.lean` | Whether supported component contracts align ordinary touches without execution truth |
+| `ordered_aligned_rows` | `SP1Clean/Soundness/LocalCoreTouches.lean` | Whether local AIR derives aligned ordinary/HALT/syscall touches preserving exact Memory messages |
+| `memory_consumed_bounds` | `SP1Clean/Soundness/LocalCoreMemoryOrder.lean` | Whether actual produced-side bounds transfer to every prior and final record |
+| `memory_refresh_free` | `SP1Clean/Soundness/LocalCoreMemoryOrder.lean` | Whether local AIR eliminates actual refresh rows with all rewrite properties retained |
+| `executionRows_nil_of_stopped` | `SP1Clean/Soundness/LocalCoreMemoryOrder.lean` | Whether the stopped-source clock constraints and strict State progress exclude all active event kinds |
+| `grounding_carrier` | `SP1Clean/Soundness/LocalCoreTransport.lean` | Whether local AIR constructs the canonical structural carrier without semantic premises |
+| `GroundingCarrier.timeline_source` | `SP1Clean/Soundness/LocalCoreGrounding.lean` | Whether the derived timeline begins at the complete source clock |
+| `GroundingCarrier.ground_of_steps` | `SP1Clean/Soundness/LocalCoreGrounding.lean` | Exactly which original-event semantic facts remain for grounding and final-record currency |
 | `hintReturnNeedsHostBinding` | `SP1CleanTest/Core/LocalCore.lean` | Concrete AIR-valid forged HINT_LEN return against the supplied finite host; records the remaining host-result binding obligation |
 | `SourceValid` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Finite program/decoding validity, x0, and all source ROM bytes, including untouched code |
 | `checkSource_iff` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Whether executable source validation is exactly the semantic contract |

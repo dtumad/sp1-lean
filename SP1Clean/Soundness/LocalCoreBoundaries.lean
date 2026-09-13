@@ -127,10 +127,11 @@ theorem source_memory_interactions {image : ProgramImage} {source : ExecutionSna
 
 /-- Public endpoints are canonical, the incoming token matches the full source, and its finite
 program, platform, initialization, ROM, and range checks pass without caller-supplied truth. -/
-theorem public_boundary {image : ProgramImage} {source : ExecutionSnapshot}
+theorem public_contract {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    witness.publicInput.LimbBounds ∧ ExecutionSourceValid image source ∧ witness.publicInput.SourceFor source := by
+    witness.publicInput.LimbBounds ∧ ExecutionSourceValid image source ∧
+      witness.publicInput.SourceFor source ∧ witness.publicInput.PreservesStoppedClock source := by
   have spec : witness.verifierTable.Spec := by
     intro row member
     exact NativeCore.component_spec_of_byte (⟨verifier image source⟩ : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
@@ -138,5 +139,23 @@ theorem public_boundary {image : ProgramImage} {source : ExecutionSnapshot}
       ((finishedChannel_guarantees image source witness constraints balanced _
         witness.mem_allTables_verifierTable).1 row member)
   exact EnsembleWitness.verifierSpec_iff_verifierTable_spec.mpr spec
+
+/-- Canonical public endpoints, complete source validity, and incoming-state binding. -/
+theorem public_boundary {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    witness.publicInput.LimbBounds ∧ ExecutionSourceValid image source ∧ witness.publicInput.SourceFor source := by
+  have checked := public_contract witness constraints balanced
+  exact ⟨checked.1, checked.2.1, checked.2.2.1⟩
+
+/-- A stopped source cannot advance the natural State clock. -/
+theorem stopped_clock {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (stopped : source.host.exitCode ≠ none) :
+    clkNat witness.publicInput.final_clk_high witness.publicInput.final_clk_low =
+      clkNat witness.publicInput.init_clk_high witness.publicInput.init_clk_low := by
+  have same := (public_contract witness constraints balanced).2.2.2 stopped
+  rw [same.1, same.2]
 
 end SP1Clean.Soundness.LocalCore

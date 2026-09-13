@@ -241,8 +241,8 @@ at that complete source. No semantic boundary or historical source-timestamp pre
 The active ADD regression at clock 9 checks all physical assertions and balances, including
 rejections for invalid configuration, missing registers, and unrelated source/public endpoints.
 Full outgoing Sail/host agreement and the mixed execution walk remain open. In particular, source
-validation allows an already stopped host for identity segments; the AIR must still exclude active
-steps from such a source through the execution integration.
+validation allows an already stopped host for identity segments. The verifier freezes its public
+clock; strict State progress now proves that every active ordinary/HALT/syscall inventory is empty.
 
 `LocalCoreFinalBoundary` obtains canonical final records and per-location uniqueness directly
 from this local assembly's constraints and Byte/order balances. Its proof view keeps the physical
@@ -265,8 +265,27 @@ syscalls cost 264. Disabled padding contributes no event, and StateBump canonica
 internally. `CoreProgramBalance`, `CoreExecutionRow`, and `CoreTableProjection` share component
 semantics and ledger algebra; the decoder and `StateChronology` ordering algorithm are unchanged.
 The regression accepts two instructions in reverse physical order with intervening padding and
-accepts empty identity segments. This is a State/Memory ledger result; local aligned grounding,
-full host execution, and final-state agreement still require integration.
+accepts empty identity segments. These are structural State/Memory results; full host execution and complete final-state agreement
+still require integration.
+
+`LocalCoreTouches` and `LocalCoreMemoryOrder` derive alignment and chronology from that local
+ledger. Both clock limbs of all prior and final records are bounded, every actual refresh strictly
+advances time, and refresh elimination retains all read times, pushed records, values, and locations.
+`LocalCoreTransport.grounding_carrier` constructs the final canonical carrier without semantic
+premises. Its type uses `CoreRowTransport.ExecutionCarrier` over opaque event/boundary values,
+keeping the concrete source out of structure elaboration. `LocalCoreGrounding` derives the timeline
+from State edges, binds its start to the full source's clock, and supplies genesis truth internally.
+`ground_of_steps` reaches final State truth and currency of the physical final records if each
+original event has its semantic step/frame facts on that trajectory. It does not yet construct
+the stateful execution or authenticate a complete outgoing snapshot.
+
+The stopped-source clock constraint closes one concrete soundness gap: an active ADD previously
+passed with `source.host.exitCode = some 0`. `executionRows_nil_of_stopped` now excludes all active
+event kinds, and the regression retains empty stopped-source segments. A separate regression makes
+the clock profile explicit: source validation accepts clock 10, but an active CPU row requires
+clock congruent to 1 modulo 8. The shared compiler domain must include that profile condition for
+nonempty segments. Same-register touches and a 24-bit State clock carry also exercise the full
+local AIR. Stateful HINT_LEN result binding remains open.
 
 `NativeCoreMemory` retains the complete physical Memory ledger after the boundary inventories,
 including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicity proof turns Clean

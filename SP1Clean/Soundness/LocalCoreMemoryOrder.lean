@@ -1,7 +1,7 @@
-import SP1Clean.Soundness.NativeCoreTouches
+import SP1Clean.Soundness.LocalCoreTouches
 import SP1Clean.Soundness.CoreMemoryChronology
 
-/-! # Prior-record bounds and refresh chronology of the native core
+/-! # Prior-record bounds and refresh chronology of a local shard
 
 Every produced Memory record has two bounded clock limbs: initial records have time zero,
 execution writes lie inside the State walk's bounded clock interval, and refresh writes carry
@@ -10,8 +10,9 @@ including refresh priors and the final frontier. This closes the timestamp-compa
 without assuming Memory truth, and supplies refresh elimination with its complete chronology.
 -/
 
-namespace SP1Clean.Soundness.NativeCore
+namespace SP1Clean.Soundness.LocalCore
 
+open SP1Clean.Soundness.NativeCore (ExecutionRow AlignedFacts MemoryClockBounds rowTouches walk_rank_bound memoryBump_row_order)
 open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
@@ -20,8 +21,8 @@ local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- Every active event's complete access window precedes the public final clock. -/
-theorem ordered_rows_window_bound {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem ordered_rows_window_bound {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -45,9 +46,31 @@ theorem ordered_rows_window_bound {image : ProgramImage}
   dsimp only at step upper
   omega
 
+/-- Strict State progress and the stopped-source verifier condition exclude every active
+ordinary, HALT, and syscall occurrence. Padding and administrative rows remain admissible. -/
+theorem executionRows_nil_of_stopped {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (stopped : source.host.exitCode ≠ none) : executionRows witness = [] := by
+  obtain ⟨ordered, exhaustive, walk⟩ := executionRows_ordered witness constraints balanced
+  cases ordered with
+  | nil => exact List.perm_nil.mp exhaustive.symm
+  | cons event rest =>
+    have upper := ordered_rows_window_bound witness constraints balanced (event :: rest)
+      exhaustive walk event List.mem_cons_self
+    have good := executionRows_good witness constraints balanced (exhaustive.mem_iff.mp List.mem_cons_self)
+    have first := congrArg StateMsg.timeNat walk.1
+    change StateMsg.timeNat (canonState (event.edge witness.data).1) = _ at first
+    rw [timeNat_canonState good.1.1, ExecutionRow.edge_eq_facts] at first
+    have same : StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) =
+        StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput) :=
+      stopped_clock witness constraints balanced stopped
+    dsimp only at first
+    omega
+
 /-- Every actual MemoryBump push has canonical clock limbs, before any received Memory fact. -/
-theorem memoryRefreshes_push_bounds {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem memoryRefreshes_push_bounds {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.2 := by
   intro pair member
@@ -57,11 +80,11 @@ theorem memoryRefreshes_push_bounds {image : ProgramImage}
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   exact memoryBump_pushedMessage_clkFacts_of_component _ (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 0)).1
+    (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 0)).1
     physicalMem (of_decide_eq_true real)
 
-private theorem aligned_push_bounds {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem aligned_push_bounds {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -69,7 +92,7 @@ private theorem aligned_push_bounds {image : ProgramImage}
     (rows : List (RowFacts p))
     (alignment : List.Forall₂ AlignedFacts rows (ordered.map (ExecutionRow.facts witness.data))) :
     ∀ row ∈ rows, ∀ message ∈ row.memPushes, MemoryClockBounds message := by
-  have finalBounds := finalBoundaryStateMessage_bounds _ (public_boot witness constraints balanced).1
+  have finalBounds := finalBoundaryStateMessage_bounds _ (public_boundary witness constraints balanced).1
   have finalTime : StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) < 2 ^ 48 :=
     clkNat_lt_of_limbs finalBounds.1 finalBounds.2.1
   intro row rowMem message messageMem
@@ -83,8 +106,8 @@ private theorem aligned_push_bounds {image : ProgramImage}
 
 /-- Clock bounds for every record consumed by the exact per-location ledger. In particular this
 includes final records, although the final tables make no received Memory guarantee. -/
-theorem memory_consumed_bounds {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem memory_consumed_bounds {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -102,7 +125,7 @@ theorem memory_consumed_bounds {image : ProgramImage}
   intro message member
   rcases Multiset.mem_add.mp member with member | refresh
   · rcases Multiset.mem_add.mp member with initial | push
-    · have authentic := (memoryInitialFrontier_authentic witness constraints balanced (mem_optMS.mp initial)).2
+    · have authentic := (memoryInitialFrontier_content witness constraints balanced (mem_optMS.mp initial)).2.1
       exact ⟨authentic.2.1, clkHigh_lt_of_timeNat_le (le_of_eq authentic.2.2.1) (by norm_num)⟩
     · obtain ⟨row, rowMem, messageMem, _⟩ := mem_pushesAt.mp push
       exact pushBounds row rowMem message messageMem
@@ -111,8 +134,8 @@ theorem memory_consumed_bounds {image : ProgramImage}
 
 -- Specialize at the physical table before introducing prior bounds; substituting a fully
 -- decoded row through those bounds otherwise forces expensive circuit normalization.
-private theorem active_refresh_order {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem active_refresh_order {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : MemoryBumpChip.Inputs (ZMod p)}
     (member : row ∈ activeSystemRows (systemTable witness 0) memoryBumpRow (·.is_real)) :
@@ -122,11 +145,11 @@ private theorem active_refresh_order {image : ProgramImage}
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   exact memoryBump_row_order _ (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 0)).1
+    (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 0)).1
     physicalMem (of_decide_eq_true real)
 
-private theorem refresh_order_of_bounds {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem refresh_order_of_bounds {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (prior : ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.1) :
     ∀ pair ∈ memoryRefreshes witness, MemoryMsg.timeNat pair.1 < MemoryMsg.timeNat pair.2 := by
@@ -138,8 +161,8 @@ private theorem refresh_order_of_bounds {image : ProgramImage}
 
 /-- The complete local chronology supplied to the mixed-row grounding engine. Clock facts on
 priors and final records are conclusions of balance, separate from their eventual value truth. -/
-structure MemoryChronology {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) (rows : List (RowFacts p)) : Prop where
+structure MemoryChronology {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (rows : List (RowFacts p)) : Prop where
   rowOK : ∀ row ∈ rows, RowOKCore (StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput)) row
   priorBounds : ∀ row ∈ rows, ∀ pull ∈ row.memPulls, MemoryClockBounds pull.1
   refreshBounds : ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.1
@@ -148,8 +171,8 @@ structure MemoryChronology {image : ProgramImage}
 
 /-- Memory balance discharges the prior-record bounds and every actual refresh comparison,
 completing the aligned rows' structural contract for timed grounding. -/
-theorem ordered_rows_chronology {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem ordered_rows_chronology {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -182,8 +205,8 @@ theorem ordered_rows_chronology {image : ProgramImage}
 
 /-- Raw constraints and balance construct an exhaustive State walk with aligned Memory rows and
 complete chronology. All prior bounds and refresh comparisons are derived internally. -/
-theorem ordered_memory_rows {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem ordered_memory_rows {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ (ordered : List (ExecutionRow p)) (rows : List (RowFacts p)),
       ordered.Perm (executionRows witness) ∧
@@ -197,8 +220,8 @@ theorem ordered_memory_rows {image : ProgramImage} (valid : image.Valid)
 
 /-- The original physical execution rows' prior clocks are bounded, regardless of their touch
 order or read currency points. This includes every active syscall row. -/
-theorem executionRows_prior_bounds {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem executionRows_prior_bounds {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ event ∈ executionRows witness, ∀ pull ∈ (event.facts witness.data).memPulls,
       MemoryClockBounds pull.1 := by
@@ -211,19 +234,19 @@ theorem executionRows_prior_bounds {image : ProgramImage} (valid : image.Valid)
   exact same ▸ chronology.priorBounds row rowMem prior priorMem
 
 /-- Every actual refresh advances natural time, from the checked image and raw AIR alone. -/
-theorem memoryRefreshes_ordered {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem memoryRefreshes_ordered {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ pair ∈ memoryRefreshes witness, MemoryMsg.timeNat pair.1 < MemoryMsg.timeNat pair.2 := by
   obtain ⟨_, _, _, _, _, chronology⟩ := ordered_memory_rows valid witness constraints balanced
   exact chronology.refreshOrder
 
-/-- The native AIR constructs a refresh-free Memory ledger in exhaustive execution order.
+/-- The local AIR constructs a refresh-free Memory ledger in exhaustive execution order.
 Rewrites retain each read time and pushed record, preserve prior/final values and locations,
 and only move prior/final timestamps earlier. The execution step/frame and host proofs remain
 separate consumers of this structural result. -/
-theorem memory_refresh_free {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem memory_refresh_free {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ (ordered : List (ExecutionRow p)) (rows : List (RowFacts p))
       (touches : List (List (Touch p))) (final : MemLoc → Option (MemoryMsg (ZMod p))),
@@ -247,4 +270,4 @@ theorem memory_refresh_free {image : ProgramImage} (valid : image.Valid)
   exact ⟨ordered, rows, touches, final, exhaustive, walk, alignment, chronology,
     rewrite, balance, occurrences, finalRewrite⟩
 
-end SP1Clean.Soundness.NativeCore
+end SP1Clean.Soundness.LocalCore

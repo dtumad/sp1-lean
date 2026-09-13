@@ -8,7 +8,9 @@ This assembly installs source register/RAM tables alongside the existing finaliz
 instructions, and providers. The verifier checks the finite program, supported decoding, complete
 Sail platform configuration and register initialization, source ROM, and 48-bit source PC/clock.
 It binds the public incoming State token to that actual PC and clock; outgoing fields are range
-checked. ROM is checked even at bytes absent from the touched inventory.
+checked. A stopped source must retain the same clock at the public end, excluding active events
+through strict State ordering while admitting identity segments. ROM is checked even at bytes
+absent from the touched inventory.
 
 Byte and Program closure follow from this assembly's own raw ledger. Source State truth and the
 initial memory invariant are derived in `LocalCoreSourceGrounding`. The mixed host walk, complete
@@ -33,6 +35,9 @@ def verifierMain (image : ProgramImage) (source : ExecutionSnapshot)
   assertZero (input.init_pc0 - .const (Target.bitVecToWord source.pc)[0])
   assertZero (input.init_pc1 - .const (Target.bitVecToWord source.pc)[1])
   assertZero (input.init_pc2 - .const (Target.bitVecToWord source.pc)[2])
+  let stopped : Expression (ZMod p) := .const (if source.host.exitCode = none then 0 else 1)
+  assertZero (stopped * (input.final_clk_high - input.init_clk_high))
+  assertZero (stopped * (input.final_clk_low - input.init_clk_low))
   let _ ← OrderedBoundaryVerifier.circuit SnapshotMemoryEnsemble.channelName
     OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey ()
   let _ ← OrderedBoundaryVerifier.circuit OrderedFinalProvider.channelName
@@ -40,20 +45,40 @@ def verifierMain (image : ProgramImage) (source : ExecutionSnapshot)
 
 def verifier (image : ProgramImage) (source : ExecutionSnapshot) : GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
   main := verifierMain image source
-  Spec input _ _ := input.LimbBounds ∧ ExecutionSourceValid image source ∧ input.SourceFor source
+  Spec input _ _ := input.LimbBounds ∧ ExecutionSourceValid image source ∧
+    input.SourceFor source ∧ input.PreservesStoppedClock source
   ProverAssumptions input data hint :=
-    sp1StateVerifier.ProverAssumptions input data hint ∧ ExecutionSourceValid image source ∧ input.SourceFor source
+    sp1StateVerifier.ProverAssumptions input data hint ∧ ExecutionSourceValid image source ∧
+      input.SourceFor source ∧ input.PreservesStoppedClock source
   channelsWithRequirements := []
   soundness := by
-    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit, SP1PublicIO.SourceFor]
-    by_cases valid : checkExecutionSource image source = true
-    · exact ⟨h_holds.1, (checkExecutionSource_iff image source).mp valid,
-        by simpa only [sub_eq_zero] using h_holds.2.2⟩
-    · simp [valid] at h_holds
+    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit,
+      SP1PublicIO.SourceFor, SP1PublicIO.PreservesStoppedClock]
+    obtain ⟨bounds, checked, hi, lo, pc0, pc1, pc2, stoppedHi, stoppedLo⟩ := h_holds
+    have valid : ExecutionSourceValid image source := by
+      by_cases valid : checkExecutionSource image source = true
+      · exact (checkExecutionSource_iff image source).mp valid
+      · simp [valid] at checked
+    refine ⟨bounds, valid, ?_, ?_⟩
+    · exact ⟨sub_eq_zero.mp hi, sub_eq_zero.mp lo, sub_eq_zero.mp pc0,
+        sub_eq_zero.mp pc1, sub_eq_zero.mp pc2⟩
+    · intro stopped
+      simpa [stopped, sub_eq_zero] using And.intro stoppedHi stoppedLo
   completeness := by
-    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit, SP1PublicIO.SourceFor]
-    exact ⟨h_assumptions.1, by simp [(checkExecutionSource_iff image source).mpr h_assumptions.2.1],
-      by simpa only [sub_eq_zero] using h_assumptions.2.2⟩
+    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit,
+      SP1PublicIO.SourceFor, SP1PublicIO.PreservesStoppedClock]
+    obtain ⟨ordinary, valid, binding, stopped⟩ := h_assumptions
+    have fields := binding
+    refine ⟨ordinary, by simp [(checkExecutionSource_iff image source).mpr valid],
+      sub_eq_zero.mpr fields.1, sub_eq_zero.mpr fields.2.1,
+      sub_eq_zero.mpr fields.2.2.1, sub_eq_zero.mpr fields.2.2.2.1,
+      sub_eq_zero.mpr fields.2.2.2.2, ?_, ?_⟩
+    · by_cases running : source.host.exitCode = none
+      · simp [running]
+      · simp [running, (stopped running).1]
+    · by_cases running : source.host.exitCode = none
+      · simp [running]
+      · simp [running, (stopped running).2]
 
 def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
   (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++ NativeCore.afterInitialTables image

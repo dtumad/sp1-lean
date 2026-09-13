@@ -8,7 +8,8 @@ import SP1Clean.Model.Semantics.MicroTime
 The source snapshot is fixed instance data. Its actual PC and execution clock determine the
 public incoming State token; the verifier may not choose unrelated endpoints. The ordinary public
 limb checks and the source's 48-bit ranges make these equalities canonical, without field aliases.
-The full outgoing snapshot and host-effect accounting remain separate integration work.
+A stopped source also requires unchanged clock endpoints. The full outgoing snapshot and
+host-effect accounting remain separate integration work.
 -/
 
 namespace SP1Clean.SP1PublicIO
@@ -24,6 +25,12 @@ def SourceFor (source : ExecutionSnapshot) (input : SP1PublicIO (ZMod p)) : Prop
     input.init_pc0 = (bitVecToWord source.pc)[0] ∧
     input.init_pc1 = (bitVecToWord source.pc)[1] ∧
     input.init_pc2 = (bitVecToWord source.pc)[2]
+
+/-- A stopped host permits an identity segment but no further clock advance. The State walk
+turns this endpoint condition into absence of active instruction and syscall rows. -/
+def PreservesStoppedClock (source : ExecutionSnapshot) (input : SP1PublicIO (ZMod p)) : Prop :=
+  source.host.exitCode ≠ none →
+    input.final_clk_high = input.init_clk_high ∧ input.final_clk_low = input.init_clk_low
 
 /-- The incoming field clock decodes to the actual source clock, without modular aliases. -/
 theorem SourceFor.clock [Fact (2 ^ 24 < p)] {source : ExecutionSnapshot}

@@ -33,6 +33,10 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.LocalCore.acceptsSameRegisterTouches
+#print axioms SP1CleanTest.Core.LocalCore.acceptsStateClockCarry
+#print axioms SP1CleanTest.Core.LocalCore.clockPhaseNeedsProfile
+#print axioms SP1CleanTest.Core.LocalCore.rejectsActiveRowsAfterHalt
 #print axioms SP1CleanTest.Core.LocalCore.rejectsUnauthenticatedFetch
 #print axioms SP1CleanTest.Core.LocalCore.acceptsReorderedPaddedSegment
 #print axioms SP1CleanTest.Core.LocalCore.acceptsEmptySegments

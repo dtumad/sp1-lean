@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1720 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 217 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1768 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 221 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1937 released declarations are probed.
+- 1989 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,26 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The local structural-grounding checkpoint adds 48 main declarations and four test anchors.
+Sixteen main additions use the logical baseline or a subset; 28 retain the existing 100-axiom
+registry set, and one retains the existing 77-axiom Sail set. The shared ordinary alignment theorem
+uses 98 of the registry's existing axioms. Two syscall decoding/window proofs use the baseline
+plus the already disclosed experimental-extension hook. All preceding 1720 main and 217 test
+dependency sets are unchanged, with no removals or new main-library axiom names. The four new
+compiler-trusted constants belong only to the repeated-register, State-carry, clock-phase, and
+stopped-source regressions.
+
+The local AIR now derives aligned touches, prior/final clock bounds, strict refresh order, a
+canonical carrier, and its source-bound timeline. `GroundingCarrier.ground_of_steps` connects that
+carrier to the grounding engine while explicitly retaining original-event step/frame premises.
+Two verifier assertions freeze a stopped source's clock; strict State ordering then excludes all
+active events, fixing the reproduced ADD-after-HALT gap while preserving identity segments.
+Stateful host-result binding, ROM preservation, complete outgoing-state agreement, and compiler
+totality remain open. The active clock phase must be explicit in the shared compiler profile.
+No unconditional local execution or AIR equivalence is claimed.
+
+The following checkpoints record the claim boundary at each preceding stage.
 
 The local Program/State checkpoint adds 55 main declarations and three test anchors. Thirteen
 main additions use the logical baseline or a subset; 36 retain the existing 100-axiom registry set,

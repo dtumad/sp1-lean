@@ -5,7 +5,8 @@ import SP1Clean.Model.Core.SourceSnapshot
 
 The source is finite data. Its platform configuration, initialized register file, committed ROM,
 and endpoint ranges are checked before grounding. The check permits a stopped host state so an
-empty terminal segment remains an identity; excluding active steps after HALT belongs to execution.
+empty terminal segment remains an identity. The enclosing local verifier separately requires equal
+clock endpoints for stopped sources; strict State progress then excludes active AIR rows.
 -/
 
 namespace SP1Clean.Model.Core

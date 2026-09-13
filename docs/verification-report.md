@@ -756,8 +756,9 @@ incoming registers, executes Byte/Range providers, and checks constraints, fixed
 membership, count bounds, and full-message balance. It rejects missing registers, invalid platform
 configuration, unbound source PC/clock, out-of-range sources, and changed untouched ROM.
 These are source-grounding and executable AIR results. Complete outgoing Sail/host agreement,
-active host effects, and transport of the later boot grounding stages remain open. Source validity
-allows a stopped host for empty segments; it does not yet prohibit active AIR rows after HALT.
+active host effects, and the stateful execution trajectory remain open. Source validity
+allows a stopped host for empty segments. The verifier now freezes that source's clock, and
+strict State ordering proves absence of all active rows after HALT.
 No arbitrary-boundary AIR equivalence is claimed.
 
 The local assembly's finalizer contracts, canonical locations, per-location uniqueness, and exact
@@ -778,8 +779,28 @@ residue. No ordering or syscall-inactivity premise is accepted. Component semant
 ledger algebra are shared with boot in `CoreProgramBalance`, `CoreExecutionRow`, and
 `CoreTableProjection`; the existing generic decoder and `StateChronology` prove the common
 algorithms. Regressions accept reversed physical instructions with padding and empty segments,
-and reject unauthenticated Program fetches. Local aligned touches, prior-record bounds, refresh
-elimination, and the mixed trajectory remain to be transported before semantic execution can close.
+and reject unauthenticated Program fetches. Aligned touches, prior-record bounds, and refresh
+elimination are now transported; the remaining execution trajectory must thread the actual host state.
+
+`LocalCoreMemoryOrder.ordered_memory_rows` derives complete aligned row contracts and both
+24-bit clock bounds on prior, refresh, and final records from the produced side of Memory balance.
+`memory_refresh_free` eliminates actual refresh pairs while preserving read times and pushed
+records, moving only equal-value priors/finals at the same location to earlier timestamps.
+`LocalCoreTransport.grounding_carrier` then supplies the canonical State walk and both balances.
+`LocalCoreGrounding.GroundingCarrier.timeline_source` binds its timeline to the complete source's
+clock. `ground_of_steps` derives initial truth internally and concludes final State truth and
+physical final-record value currency from original-event step/frame facts. This is an explicitly
+conditional grounding theorem; stateful execution, host effects, ROM preservation, and complete
+outgoing-state agreement remain to be closed.
+
+The local verifier now constrains a stopped source to have equal incoming/final clock limbs.
+`LocalCoreMemoryOrder.executionRows_nil_of_stopped` uses strict State progress to exclude every
+active ordinary, HALT, and syscall row. This fixes the reproduced AIR-valid ADD-after-HALT case,
+while `acceptsEmptySegments` retains stopped-source identities. Additional regressions exercise
+three touches to one register and actual 24-bit State clock canonicalization. `clockPhaseNeedsProfile`
+records a domain condition for completeness: clock range validation alone admits 10, whereas the
+active CPU requires the SP1 1-mod-8 phase. The pure semantic execution path remains broader; the
+shared native compiler profile must state that phase for nonempty segments.
 
 The complete 59-table regression includes active HINT_LEN with nonzero source registers and a
 264-tick State edge. It also runs at the maximum 24-bit high clock using one refresh per touched

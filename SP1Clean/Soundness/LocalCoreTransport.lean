@@ -1,7 +1,7 @@
-import SP1Clean.Soundness.NativeCoreMemoryOrder
+import SP1Clean.Soundness.LocalCoreMemoryOrder
 import SP1Clean.Soundness.CoreRowTransport
 
-/-! # The native mixed carrier after refresh elimination
+/-! # The local mixed carrier after refresh elimination
 
 The carrier passed to grounding keeps every ordinary/HALT/syscall occurrence, rewrites only prior
 Memory records, and uses canonical State endpoints. Its complete structural row contract and
@@ -9,8 +9,10 @@ semantic step/frame transport are derived from the checked image and raw constra
 The original rows' actual execution facts remain the next semantic obligation.
 -/
 
-namespace SP1Clean.Soundness.NativeCore
+namespace SP1Clean.Soundness.LocalCore
 
+open SP1Clean.Soundness.NativeCore (ExecutionRow canonicalRow rewrittenRows rewritten_core
+  rewriteRows_forall₂ rewritten_memory syscall_readsInWindow_of_committed)
 open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
@@ -18,8 +20,8 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-private theorem syscallRows_readsInWindow {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem syscallRows_readsInWindow {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
@@ -31,8 +33,8 @@ private theorem syscallRows_readsInWindow {image : ProgramImage} (valid : image.
 
 /-- All original execution reads lie within their location's pre-effect window, with syscall
 read times retained. Operand addresses for system rows come from the checked Program ledger. -/
-theorem executionRows_readsInWindow {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem executionRows_readsInWindow {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {event : ExecutionRow p} (member : event ∈ executionRows witness) :
     ReadsInWindow (event.facts witness.data) := by
@@ -46,8 +48,8 @@ theorem executionRows_readsInWindow {image : ProgramImage} (valid : image.Valid)
     exact ⟨le_rfl, Nat.le_add_right _ _⟩
   · exact syscallRows_readsInWindow valid witness constraints balanced member
 
-private theorem canonical_times {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem canonical_times {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {event : ExecutionRow p} (member : event ∈ executionRows witness) :
     StateMsg.timeNat (canonState (event.facts witness.data).statePull) = StateMsg.timeNat (event.facts witness.data).statePull ∧
@@ -61,26 +63,16 @@ private theorem canonical_times {image : ProgramImage}
 
 /-- A complete structural carrier for the generic grounding walk. The semantic alignment points
 back to the actual event rows, so later step/frame proofs do not depend on refresh implementation. -/
-structure GroundingCarrier {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) where
-  ordered : List (ExecutionRow p)
-  rows : List (RowFacts p)
-  final : MemLoc → Option (MemoryMsg (ZMod p))
-  exhaustive : ordered.Perm (executionRows witness)
-  aligned : List.Forall₂ WindowAligned rows (ordered.map (ExecutionRow.facts witness.data))
-  rowOK : ∀ row ∈ rows, RowOKCore (StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput)) row
-  stateWalk : Walk.IsWalk (fun row : RowFacts p => (row.statePull, row.statePush))
-    (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) rows
-  memoryBalance : ∀ loc, optMS (memoryInitialFrontier witness loc) + pushesAt rows loc =
-    optMS (final loc) + pullsAt rows loc
-  finalRewrite : ∀ loc message, memoryFinalFrontier witness loc = some message →
-    ∃ earlier, final loc = some earlier ∧ MemoryMsg.locOf earlier = MemoryMsg.locOf message ∧
-      earlier.value = message.value ∧ MemoryMsg.timeNat earlier ≤ MemoryMsg.timeNat message
+abbrev GroundingCarrier {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :=
+  NativeCore.ExecutionCarrier witness.data (executionRows witness)
+    (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput)
+    (memoryInitialFrontier witness) (memoryFinalFrontier witness)
 
 /-- The checked image and raw AIR construct the final structural carrier. No row order, touch
 permutation, prior bounds, refresh order, or semantic boundary is supplied by the caller. -/
-theorem grounding_carrier {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem grounding_carrier {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     Nonempty (GroundingCarrier witness) := by
   obtain ⟨ordered, rows, touches, final, exhaustive, walk, alignment, chronology,
@@ -125,8 +117,8 @@ theorem grounding_carrier {image : ProgramImage} (valid : image.Valid)
     exact balance loc
 
 /-- The final carrier supplies exactly the generic engine's State multiset equation. -/
-theorem GroundingCarrier.stateBalance {image : ProgramImage}
-    {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness) :
+theorem GroundingCarrier.stateBalance {image : ProgramImage} {source : ExecutionSnapshot}
+    {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness) :
     initialBoundaryStateMessage witness.publicInput ::ₘ
         (↑(carrier.rows.map (·.statePush)) : Multiset (StateMsg (ZMod p))) =
       finalBoundaryStateMessage witness.publicInput ::ₘ ↑(carrier.rows.map (·.statePull)) :=
@@ -134,8 +126,8 @@ theorem GroundingCarrier.stateBalance {image : ProgramImage}
 
 /-- Per-event step and frame facts transport to the final carrier uniformly, over any trajectory
 and timeline. These semantic premises are explicitly separate from carrier construction. -/
-theorem GroundingCarrier.engineFacts {image : ProgramImage}
-    {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness)
+theorem GroundingCarrier.engineFacts {image : ProgramImage} {source : ExecutionSnapshot}
+    {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness)
     (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState) (timeline : Timeline)
     (facts : ∀ event ∈ executionRows witness,
       LocalStepFactG program trajectory initial timeline (event.facts witness.data) ∧
@@ -148,4 +140,4 @@ theorem GroundingCarrier.engineFacts {image : ProgramImage}
   have semantic := facts event (carrier.exhaustive.mem_iff.mp eventMem)
   exact ⟨aligned.stepFact semantic.1, aligned.frameFact semantic.2⟩
 
-end SP1Clean.Soundness.NativeCore
+end SP1Clean.Soundness.LocalCore

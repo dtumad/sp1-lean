@@ -1,18 +1,19 @@
-import SP1Clean.Soundness.NativeCoreOrder
-import SP1Clean.Soundness.NativeCoreRowBalance
+import SP1Clean.Soundness.LocalCoreOrder
+import SP1Clean.Soundness.LocalCoreRowBalance
 import SP1Clean.Soundness.CoreTouches
 
-/-! # Aligned touches of the authenticated native core
+/-! # Aligned touches of the local shard assembly
 
 The checked image fixes register operands; the closed Byte channel fixes access windows and
 timestamp differences. Every mixed execution row therefore admits paired Memory touches without
 changing its State edge, fetch, or complete Memory multiset. Prior-record timestamp bounds remain
-conditional in this local interface; `NativeCoreMemoryOrder` discharges them from Memory balance
+conditional in this local interface; `LocalCoreMemoryOrder` discharges them from Memory balance
 and eliminates the actual refresh rows.
 -/
 
-namespace SP1Clean.Soundness.NativeCore
+namespace SP1Clean.Soundness.LocalCore
 
+open SP1Clean.Soundness.NativeCore (ExecutionRow AlignedFacts syscall_operands_of_committed halt_aligned syscall_aligned ordinary_aligned align_rows)
 open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
@@ -21,8 +22,8 @@ local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- Every active physical syscall fetch belongs to the checked image. -/
-theorem syscall_program_committed {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem syscall_program_committed {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {physical : Array (ZMod p)} (member : physical ∈ (systemTable witness 3).table)
     (real : (syscallInstrsRow (systemTable witness 3) physical).is_real = 1) :
@@ -40,8 +41,8 @@ theorem syscall_program_committed {image : ProgramImage} (valid : image.Valid)
   exact program_pull_committed valid witness constraints balanced message interaction emitted
     (by change -row.is_real = -1; rw [real]) rfl
 
-private theorem syscall_operands {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem syscall_operands {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {physical : Array (ZMod p)} (member : physical ∈ (systemTable witness 3).table)
     (real : (syscallInstrsRow (systemTable witness 3) physical).is_real = 1) :
@@ -50,8 +51,8 @@ private theorem syscall_operands {image : ProgramImage} (valid : image.Valid)
       (syscallInstrsRow (systemTable witness 3) physical).op_c = 11 :=
   syscall_operands_of_committed _ _ (syscall_program_committed valid witness constraints balanced member real)
 
-private theorem ordinaryRows_aligned {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem ordinaryRows_aligned {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p} (member : row ∈ activeInstructionRows witness) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.instruction row).facts witness.data) := by
@@ -63,27 +64,27 @@ private theorem ordinaryRows_aligned {image : ProgramImage} (valid : image.Valid
   have committed := instructionRows_program_committed valid witness constraints balanced decodedMem active
   exact ordinary_aligned witness.data row chipMem active checked byte (image.toGuestProgram valid) committed
 
-private theorem haltRows_aligned {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem haltRows_aligned {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : HaltChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 2) haltRow (·.is_real)) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.halt row).facts witness.data) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  have byte := (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 2)).1
+  have byte := (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 2)).1
   exact halt_aligned _ (haltRow_cpuState_bounds_of_component _ (systemTable_component witness 2)
     byte physicalMem (of_decide_eq_true real))
     (haltRow_accessTimestamp_bounds_of_component _ (systemTable_component witness 2)
       byte physicalMem (of_decide_eq_true real))
 
-private theorem syscallRows_aligned {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+private theorem syscallRows_aligned {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : SyscallInstrsChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.syscall row).facts witness.data) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  have byte := (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 3)).1
+  have byte := (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 3)).1
   exact syscall_aligned _ (syscallInstrsRow_cpuState_bounds_of_component _ (systemTable_component witness 3)
     byte physicalMem (of_decide_eq_true real))
     (syscallInstrsRow_accessTimestamp_bounds_of_component _ (systemTable_component witness 3)
@@ -91,8 +92,8 @@ private theorem syscallRows_aligned {image : ProgramImage} (valid : image.Valid)
     (syscall_operands valid witness constraints balanced physicalMem (of_decide_eq_true real))
 
 /-- All active event kinds admit aligned touches from raw constraints, balance, and a checked image. -/
-theorem executionRows_aligned {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem executionRows_aligned {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : ExecutionRow p} (member : row ∈ executionRows witness) :
     ∃ aligned, AlignedFacts aligned (row.facts witness.data) := by
@@ -104,8 +105,8 @@ theorem executionRows_aligned {image : ProgramImage} (valid : image.Valid)
 
 /-- One assembly statement: an exhaustive State order and aligned, ledger-preserving Memory rows.
 Instruction cases, system-table positions, and per-row touch permutations are internal. -/
-theorem ordered_aligned_rows {image : ProgramImage} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble (p := p) image))
+theorem ordered_aligned_rows {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ (ordered : List (ExecutionRow p)) (rows : List (RowFacts p)),
       ordered.Perm (executionRows witness) ∧
@@ -125,4 +126,4 @@ theorem ordered_aligned_rows {image : ProgramImage} (valid : image.Valid)
     memory_balance_of_row_projection witness constraints balanced ordered exhaustive rows
       (alignment.imp (fun _ _ aligned => aligned.memory))⟩
 
-end SP1Clean.Soundness.NativeCore
+end SP1Clean.Soundness.LocalCore

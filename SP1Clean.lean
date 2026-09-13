@@ -392,6 +392,15 @@ import SP1Clean.Soundness.LocalCoreDecode
 import SP1Clean.Soundness.LocalCoreRows
 import SP1Clean.Soundness.LocalCoreState
 import SP1Clean.Soundness.LocalCoreOrder
+import SP1Clean.Soundness.LocalCoreRowBalance
+import SP1Clean.Soundness.LocalCoreTouches
+import SP1Clean.Soundness.LocalCoreMemoryOrder
+import SP1Clean.Soundness.LocalCoreTransport
+import SP1Clean.Soundness.LocalCoreGrounding
+import SP1Clean.Soundness.CoreRowTransport
+import SP1Clean.Soundness.CoreMemoryChronology
+import SP1Clean.Soundness.CoreRowBalance
+import SP1Clean.Soundness.CoreTouches
 import SP1Clean.Model.Machine.Schedule
 import SP1Clean.Model.Machine.Syscall
 import SP1Clean.Model.Machine.EventExecution
