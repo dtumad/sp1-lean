@@ -727,7 +727,8 @@ totality, native witness composition, and complete event-tape export remain open
 regression composes ENTER and HALT at a non-boot clock and rejects changed host/RAM endpoints,
 forged host events, and positive-length execution after HALT.
 
-Arbitrary source-provider components are now proved separately. `MemorySnapshot.Realizes` compares
+Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
+`MemorySnapshot.Realizes` compares
 all integer registers and every byte below `2^48` with Sail, including locations absent from a
 shard's touched inventory. `MemorySnapshot.equivalent_iff` proves that executable comparison over
 the finite sparse supports is exactly this RAM/register equality. It does not compare the full
@@ -736,10 +737,22 @@ a 32-row fixed lookup; the RAM provider authenticates the snapshot's eight bytes
 aligned address. Both have sound/complete ordered wrappers, proof-independent constructors, and
 exportable witness programs. Boot RAM uses this same implementation. Regressions reject forged
 limbs, substituted indices, changed source bytes, unrelated ordering keys, and untouched-memory
-mutations. The 59-table assembly still uses boot-specific boundaries: no new caller-supplied
-representation premise has been added to its relation, and no arbitrary-boundary AIR theorem is
-claimed. Binding the full machine state and final memory, and justifying local source timestamps,
-remain integration obligations.
+mutations. The local 59-table assembly shares the boot assembly's instruction/finalizer/provider
+suffix but admits arbitrary public PC/clock endpoints. `LocalCoreBoundaries.lean` derives source
+record authenticity, uniqueness, the exact physical Memory ledger, and canonical public fields
+from raw constraints and balance, without caller-supplied provider or source-truth premises.
+
+The local verifier also performs finite source validation: program validity, supported decoding,
+x0, and agreement of every committed ROM byte with source RAM. Source-provider authentication alone
+would leave code bytes unconstrained against the Program table if the shard never reads them as
+data. `checkSource_iff` in `Model/Core/SourceSnapshot.lean` proves the executable check equivalent to that semantic
+contract; `SourceValid.romLoaded` transports it to Sail when representing the snapshot there.
+The complete assembly regression runs an active ADD at clock 9 with nonzero incoming registers,
+executes the actual Byte/Range providers, and checks assertions, fixed lookups, channel membership,
+count bounds, and full-message balance. It rejects changed ROM even when no RAM row reads it.
+This is executable AIR conformance, not a whole-execution proof. Binding the full Sail/host state
+and final memory, justifying local source timestamps, and generalizing the boot assembly's timed
+grounding remain integration obligations. No arbitrary-boundary AIR equivalence is claimed.
 
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL

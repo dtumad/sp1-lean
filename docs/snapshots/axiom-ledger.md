@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1586 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 195 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1607 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 201 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1781 released declarations are probed.
+- 1808 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,16 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The local snapshot-assembly checkpoint adds 21 main declarations and six test declarations.
+Ten main additions use only the logical baseline (one omits `Classical.choice`); eleven retain the
+existing 100-axiom registry set through their assembly-indexed types and proofs. No new main axiom
+constant appears, and all preceding 1586 main and 195 test dependency sets are unchanged. The six
+new compiler-trusted constants belong only to the complete local-assembly regression anchors.
+These results cover finite source/program/ROM validation, source-record authentication and
+uniqueness, the exact physical Memory projection, and Byte/Program closure for arbitrary local
+PC/clock endpoints. Complete Sail/host endpoint binding, local timed grounding, final-state
+agreement, and certified native witness composition remain open.
 
 The arbitrary source-snapshot checkpoint adds 30 main declarations and seven test declarations.
 All main additions use only the logical baseline; three omit `Classical.choice`. No new main

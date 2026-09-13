@@ -200,9 +200,8 @@ The semantic target now centers on `Model/Core/ExecutionPath.lean`: arbitrary fi
 complete Sail/host/clock states, with split/join and an equivalent PolyFun finite-prefix view.
 `ExecutionReplay.lean` threads actual host effects when reconstructing an event tape. HALT is a
 real terminal transition; empty segments are identities and positive-length segments cannot resume
-after HALT. `ExecutionBoot.lean` supplies the boot-to-HALT endpoint corollary. The new assembly's
-boundary verifier and provider inventories still specialize to boot, and semantic path composition
-alone does not authenticate the continuity of separately certified AIR witnesses.
+after HALT. `ExecutionBoot.lean` supplies the boot-to-HALT endpoint corollary. Semantic path
+composition alone does not authenticate the continuity of separately certified AIR witnesses.
 
 `MemorySnapshot.lean` supplies the finite register/RAM part of an arbitrary source boundary.
 `Realizes` covers every supported byte and all 32 integer registers; the finite `equivalent` check
@@ -213,9 +212,20 @@ snapshots is not equality of complete execution states. The new `SnapshotRegiste
 `OrderedMemoryProvider`; their constructors discharge internal witness conditions. Boot RAM now
 specializes the same implementation. The zero-time source records are local ledger seeds, not
 claims about the preceding shard's last-access timestamps. Their timing admissibility and complete
-final-state agreement must still be derived when the assembly is generalized. Each provider
+final-state agreement must still be derived. Each provider
 instance uses one source snapshot; simultaneous differently bound fixed tables require distinct
-export names and are not introduced by this component change.
+export names.
+
+`LocalCore.ensemble` installs these snapshot providers in a 59-table local assembly, reusing
+`NativeCore.afterInitialTables` for the instruction/finalizer/provider suffix. The local verifier
+range checks arbitrary PC/clock endpoints and checks finite program validity, supported decoding,
+x0, and every source ROM byte through `checkSource`. That last check is necessary even for code
+absent from the touched inventory: authentic source RAM alone does not bind instruction fetches
+to the separate fixed Program table. `LocalCoreBoundaries` derives source-record authenticity,
+uniqueness, their exact physical Memory ledger, and source/public validity from this assembly's
+raw constraints and balance. The active regression executes ADD with nonzero source registers at
+clock 9 and checks the entire actual ledger. Full Sail/host endpoint binding remains open;
+the grounding modules below still target the boot assembly and must be generalized to the local one.
 
 `NativeCoreMemory` retains the complete physical Memory ledger after the boundary inventories,
 including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicity proof turns Clean

@@ -35,10 +35,20 @@ Implemented foundations:
   while ignoring obsolete writes. `SnapshotRegisterProvider` authenticates the index and all
   four value limbs against a fixed snapshot table. `SnapshotRamProvider` authenticates arbitrary
   snapshot RAM; the old boot provider specializes the same circuit. Both compose with the existing
-  ordering wrapper, have proved row constructors, and export their witness programs. These are
-  source-provider components, not complete AIR endpoint binding: the assembly still uses boot
-  boundaries, and Sail bookkeeping, host state, final-state agreement, and incoming timestamp
-  admissibility remain to be connected. Snapshot equality alone is not full machine-state equality.
+  ordering wrapper, have proved row constructors, and export their witness programs.
+- `LocalCore.ensemble` installs those providers in 59 tables with arbitrary public PC/clock
+  endpoints, sharing the existing instruction/finalizer/provider suffix with the boot assembly.
+  `LocalCoreBoundaries.lean` derives source-record authenticity, per-location uniqueness, the exact
+  physical Memory projection, and public/source validity from raw constraints and balance.
+  The verifier's finite `checkSource` validates the program, supported decoding, x0, and every
+  committed instruction byte in source RAM. This closes a gap that source-provider checks alone
+  leave: code bytes could disagree with the Program table when no RAM row reads them. An active
+  ADD regression checks the complete physical assembly at a non-boot clock with nonzero incoming
+  registers; it rejects altered endpoints, source/final values, inventory gaps/duplicates, and
+  changed ROM even with no RAM rows. Complete AIR endpoint binding remains open: Sail bookkeeping,
+  host state, final-state agreement, and incoming timestamp admissibility must still be connected.
+  Snapshot equality alone is not full machine-state equality. The timed-grounding results below
+  currently target `NativeCore.ensemble`, whose verifier specializes to boot.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -357,12 +367,13 @@ Host integration must account for these source-backed details in v6.4.0:
 
 Still required before the native capstone can be claimed:
 
-1. Install the proved arbitrary snapshot providers in the assembly and generalize its boot-specific
-   verifier to local boundaries. Bind the complete Sail/host state, including untouched locations
+1. Complete the local assembly's boundary encoding. The snapshot providers and arbitrary PC/clock
+   verifier are installed, and raw constraints/balance derive source authenticity, uniqueness, and
+   finite program/source validity. Bind the complete Sail/host state, including untouched locations
    and Sail bookkeeping; derive incoming record admissibility and final-state agreement internally.
-   The finite RAM/register comparison and source providers are closed, but their integration and
-   complete endpoint encoding are open. Retain boot initialization as a specialization.
-2. Connect the assembly to stateful timed grounding. Initial-record meaning/uniqueness and
+   Retain boot initialization as a specialization.
+2. Generalize the boot assembly's existing grounding to the local assembly and stateful execution.
+   The following facts are already closed for the boot assembly: initial-record meaning/uniqueness and
    physical Program-row authentication now follow from its constraints and balance. Final
    address/order facts and committed Program meaning at active pulls are also closed. The complete
    Memory ledger now yields unique per-location frontiers, their exact balance equation, and an

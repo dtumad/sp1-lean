@@ -90,10 +90,10 @@ private theorem boundary_requirements (image : ProgramImage) (component : Compon
       InitialRegisterProvider.circuit, InitialRamProvider.circuit,
       FinalRegisterProvider.circuit, FinalRamProvider.circuit]
 
-/-- New boundary tables preserve closure of Byte/Program: their only outgoing nontrivial
-requirements are Memory. The fixed Program provider proves its own requirements. -/
-private theorem component_finished_requirements (image : ProgramImage)
-    (component : Component (ZMod p)) (member : component ∈ (ensemble image).allTables)
+/-- The shared instruction/finalizer/provider suffix closes Byte and Program requirements.
+This proof is independent of the choice of source inventory and boot/local verifier. -/
+theorem afterInitialTables_finished_requirements (image : ProgramImage)
+    (component : Component (ZMod p)) (member : component ∈ afterInitialTables (p := p) image)
     (channel : RawChannel (ZMod p))
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
@@ -108,12 +108,9 @@ private theorem component_finished_requirements (image : ProgramImage)
     sp1_component_finished_requirements component member channel
       (fun mem => outside (by simp only [List.mem_cons, List.not_mem_nil, or_false] at mem ⊢; tauto))
       env constraints
-  simp only [Ensemble.allTables, ensemble, tables, afterInitialTables, List.mem_cons, List.mem_append,
+  simp only [afterInitialTables, List.mem_cons, List.mem_append,
     List.not_mem_nil, or_false] at member
-  rcases member with rfl | member | ((member | rfl) | member) | member
-  · exact absent (by simp [Ensemble.verifierTable, verifier])
-  · exact absent (fun required => outside (List.mem_cons_of_mem _
-      (boundary_requirements image component (List.mem_append_left _ member) required)))
+  rcases member with ((member | rfl) | member) | member
   · exact absent (fun required => outside (List.mem_cons_of_mem _
       (boundary_requirements image component (List.mem_append_right _ member) required)))
   · have required := (Component.weakSoundness_of_no_guarantees
@@ -127,6 +124,27 @@ private theorem component_finished_requirements (image : ProgramImage)
       · exact List.mem_of_mem_drop member
     exact old (Ensemble.mem_allTables_of_mem_tables (by
       rw [sp1Ensemble_tables]; exact List.mem_append_right _ providerMem))
+
+/-- New boundary tables preserve closure of Byte/Program: their only outgoing nontrivial
+requirements are Memory. The fixed Program provider proves its own requirements. -/
+private theorem component_finished_requirements (image : ProgramImage)
+    (component : Component (ZMod p)) (member : component ∈ (ensemble image).allTables)
+    (channel : RawChannel (ZMod p))
+    (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
+      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw])
+    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
+    component.operations.ChannelRequirements channel env := by
+  have absent (notRequired : channel ∉ component.circuit.channelsWithRequirements) :
+      component.operations.ChannelRequirements channel env :=
+    Operations.requirements_of_not_mem _ _ _
+      (component.inChannelsOrRequirements_of_constraints env constraints) channel notRequired
+  simp only [Ensemble.allTables, ensemble, tables, List.mem_cons, List.mem_append] at member
+  rcases member with rfl | member | member
+  · exact absent (by simp [Ensemble.verifierTable, verifier])
+  · exact absent (fun required => outside (List.mem_cons_of_mem _
+      (boundary_requirements image component (List.mem_append_left _ member) required)))
+  · exact afterInitialTables_finished_requirements image component member channel outside env constraints
 
 /-- Every table in the combined assembly receives proved Byte and Program guarantees from
 raw constraints and actual channel balance. This includes the new memory boundary circuits. -/

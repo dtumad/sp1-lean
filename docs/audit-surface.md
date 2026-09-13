@@ -102,8 +102,9 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 
 ## The assumed semantic boundary
 
-The new image-authenticated assembly derives the following boundary facts directly. It has not
-yet replaced the older execution theorem whose assumptions are listed below.
+The image-authenticated boot assembly and the local snapshot assembly derive the following boundary
+facts directly. Neither has yet replaced the older execution theorem whose assumptions are listed
+below. The local assembly's complete Sail/host endpoint binding and timed grounding remain open.
 
 | Declaration | File | Question it decides |
 |---|---|---|
@@ -112,6 +113,14 @@ yet replaced the older execution theorem whose assumptions are listed below.
 | `initial_records_authentic` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether raw AIR constraints and balance authenticate boot memory |
 | `initial_records_locations_nodup` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether the actual ledger forbids duplicate initial locations |
 | `program_row_committed` | `SP1Clean/Soundness/NativeCoreBoundaries.lean` | Whether physical Program rows match the checked ROM and official Sail |
+| `SourceValid` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Finite program/decoding validity, x0, and all source ROM bytes, including untouched code |
+| `checkSource_iff` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Whether executable source validation is exactly the semantic contract |
+| `ensemble` | `SP1Clean/Soundness/LocalCoreEnsemble.lean` | The 59-table snapshot assembly with arbitrary public PC/clock endpoints |
+| `verifier` | `SP1Clean/Soundness/LocalCoreEnsemble.lean` | Which public ranges, finite source checks, and inventory endpoints are constrained |
+| `source_records_authentic` | `SP1Clean/Soundness/LocalCoreBoundaries.lean` | Whether raw AIR constraints and balance authenticate arbitrary source records |
+| `source_records_locations_nodup` | `SP1Clean/Soundness/LocalCoreBoundaries.lean` | Whether the actual local ledger forbids duplicate source locations |
+| `source_memory_interactions` | `SP1Clean/Soundness/LocalCoreBoundaries.lean` | Whether the physical source Memory ledger is exactly the decoded unit pushes |
+| `public_boundary` | `SP1Clean/Soundness/LocalCoreBoundaries.lean` | Whether raw constraints and balance imply canonical public fields and finite source validity |
 
 The public premise `SemanticBoundaryBinding` is regrouped for reading: three commitment facts
 (program well-formedness, `Commit.StatementFor`, the committed initial clock), the 3-field

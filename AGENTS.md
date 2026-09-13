@@ -68,8 +68,13 @@ corollary, not the primary shard relation. `Model/Core/Execution{,Path,Replay,Bo
 the stateful semantic path, split/join and PolyFun equivalence, paired replay, and semantic boot/HALT
 corollaries. `MemorySnapshot` and the ordered snapshot register/RAM providers now authenticate
 arbitrary finite source values, with an executable extensional RAM/register comparison. The assembly
-still specializes to boot; full Sail/host endpoint binding and source-timestamp admissibility remain
-open. These components do not yet authenticate separate AIR witnesses or their complete boundaries. The generic
+`LocalCore.ensemble` installs these providers in 59 tables with arbitrary public PC/clock endpoints.
+Its verifier checks finite program validity, supported decoding, x0, and all source ROM bytes.
+`LocalCoreBoundaries.lean` derives source-record authenticity, uniqueness, the exact physical Memory
+ledger, and public/source validity from raw constraints and balance. Full Sail/host endpoint binding,
+final-state agreement, and source-timestamp admissibility remain open; the timed grounding below
+still targets the boot assembly. These results do not yet authenticate complete boundaries between
+separate AIR witnesses. The generic
 interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are

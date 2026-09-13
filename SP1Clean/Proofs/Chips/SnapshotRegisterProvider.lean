@@ -52,7 +52,10 @@ def main (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) :
   return record
 
 instance elaborated (snapshot : MemorySnapshot) :
-    ElaboratedCircuit (ZMod p) Inputs MemoryMsg (main snapshot) := by elaborate_circuit
+    ElaboratedCircuit (ZMod p) Inputs MemoryMsg (main snapshot) where
+  localLength _ := 0
+  output input _ := message input
+  channelsWithGuarantees := []
 
 omit [Fact (2 ^ 17 < p)] in
 theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) (offset : ℕ) :
