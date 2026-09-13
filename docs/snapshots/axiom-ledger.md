@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1556 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 188 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1586 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 195 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1744 released declarations are probed.
+- 1781 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,15 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The arbitrary source-snapshot checkpoint adds 30 main declarations and seven test declarations.
+All main additions use only the logical baseline; three omit `Classical.choice`. No new main
+axiom constant appears, and all preceding 1556 main and 188 test dependency sets are unchanged,
+including the generalized boot RAM provider. The seven new compiler-trusted constants belong
+only to the snapshot regression anchors. The results cover complete finite RAM/register comparison,
+snapshot-to-Sail content transport, source-value authentication, ordered provider composition,
+and their constructors. They do not establish full machine-state endpoint encoding, arbitrary
+native AIR shard composition, or incoming timestamp admissibility.
 
 The stateful local-path checkpoint adds 51 main declarations and 15 test declarations. Nine of the
 main additions use only the logical baseline (three omit `Classical.choice`); 42 retain the existing

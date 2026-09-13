@@ -36,6 +36,12 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `WitnessRelation.FunctionalCompleteness` | `SP1Clean/FormalModel/Relations.lean` | The proof-independent reverse witness map; no witness-preservation law is implicit |
 | `WitnessRelation.Correct` | `SP1Clean/FormalModel/Relations.lean` | Both existential directions, hence public-language equality rather than witness inversion |
 | `ExecutionState` | `SP1Clean/Model/Core/Execution.lean` | Complete Sail/host/clock continuity, including RAM and terminal status; not yet an authenticated AIR boundary encoding |
+| `MemorySnapshot.Realizes` | `SP1Clean/Model/Core/MemorySnapshot.lean` | All integer registers and every supported byte agree with Sail; excludes other Sail/host/clock state and is not an added ensemble premise |
+| `equivalent_iff` | `SP1Clean/Model/Core/MemorySnapshot.lean` | Finite executable comparison is exact RAM/register equality, including untouched locations and zero-default gaps |
+| `SnapshotSpec` | `SP1Clean/FormalModel/Contracts/SnapshotMemory.lean` | Canonical zero-time local source record authenticated against a fixed finite snapshot; no historical timestamp claim |
+| `circuit` | `SP1Clean/Proofs/Chips/SnapshotRegisterProvider.lean` | Fixed lookup binds the register index and all four value limbs; soundness, completeness, and a total semantic-index constructor |
+| `circuit` | `SP1Clean/Proofs/Chips/SnapshotRamProvider.lean` | Authenticated arbitrary source RAM and exact aligned-address constructor domain; boot is a specialization |
+| `circuit` | `SP1Clean/Proofs/Chips/OrderedSnapshotProvider.lean` | Existing canonical ordering wrapper instantiated for snapshot records, with internal constructor obligations discharged |
 | `ExecutionStep` | `SP1Clean/Model/Core/Execution.lean` | Normal official-Sail retirement or concrete stateful host execution, with no transition from a halted source |
 | `ExecutionSegment` | `SP1Clean/Model/Core/ExecutionPath.lean` | Exactly the requested number of local semantic steps, independent of boot, HALT, padding, and AIR witness layout |
 | `executionSystem` | `SP1Clean/Model/Core/ExecutionPath.lean` | The equivalent PolyFun finite-path view; directions are actual semantic steps |

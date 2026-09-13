@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.SnapshotBoundary
 import SP1CleanTest.Core.ExecutionPath
 import SP1CleanTest.Core.HostBuffer32
 import SP1CleanTest.Core.HostRamBytes
@@ -30,6 +31,13 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.SnapshotBoundary.constructedRegisters
+#print axioms SP1CleanTest.Core.SnapshotBoundary.rejectsForgedRegisters
+#print axioms SP1CleanTest.Core.SnapshotBoundary.constructedRam
+#print axioms SP1CleanTest.Core.SnapshotBoundary.rejectsForgedRam
+#print axioms SP1CleanTest.Core.SnapshotBoundary.rejectsUnrelatedKey
+#print axioms SP1CleanTest.Core.SnapshotBoundary.equivalentHistories
+#print axioms SP1CleanTest.Core.SnapshotBoundary.rejectsUntouchedMutations
 #print axioms SP1CleanTest.Core.ExecutionPath.continuingShard
 #print axioms SP1CleanTest.Core.ExecutionPath.terminalShard
 #print axioms SP1CleanTest.Core.ExecutionPath.joinedShards

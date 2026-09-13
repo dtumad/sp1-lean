@@ -201,8 +201,21 @@ complete Sail/host/clock states, with split/join and an equivalent PolyFun finit
 `ExecutionReplay.lean` threads actual host effects when reconstructing an event tape. HALT is a
 real terminal transition; empty segments are identities and positive-length segments cannot resume
 after HALT. `ExecutionBoot.lean` supplies the boot-to-HALT endpoint corollary. The new assembly's
-boot-specific boundary circuits have not yet been generalized to this target, and semantic path
-composition alone does not authenticate the continuity of separately certified AIR witnesses.
+boundary verifier and provider inventories still specialize to boot, and semantic path composition
+alone does not authenticate the continuity of separately certified AIR witnesses.
+
+`MemorySnapshot.lean` supplies the finite register/RAM part of an arbitrary source boundary.
+`Realizes` covers every supported byte and all 32 integer registers; the finite `equivalent` check
+ignores obsolete sparse writes while detecting mutations at untouched addresses. This type does
+not encode PC, platform registers, Sail bookkeeping, host state, or clock, and equality of these
+snapshots is not equality of complete execution states. The new `SnapshotRegisterProvider` and
+`SnapshotRamProvider` authenticate source values through fixed lookups and compose with
+`OrderedMemoryProvider`; their constructors discharge internal witness conditions. Boot RAM now
+specializes the same implementation. The zero-time source records are local ledger seeds, not
+claims about the preceding shard's last-access timestamps. Their timing admissibility and complete
+final-state agreement must still be derived when the assembly is generalized. Each provider
+instance uses one source snapshot; simultaneous differently bound fixed tables require distinct
+export names and are not introduced by this component change.
 
 `NativeCoreMemory` retains the complete physical Memory ledger after the boundary inventories,
 including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicity proof turns Clean

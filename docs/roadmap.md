@@ -29,6 +29,16 @@ selected host effects remain open.
 
 Implemented foundations:
 
+- `MemorySnapshot.lean` represents all 32 integer registers and complete sparse RAM for a local
+  source boundary. Its Sail representation relation covers every supported byte; its executable
+  extensional comparison checks the union of finite supports, including untouched locations,
+  while ignoring obsolete writes. `SnapshotRegisterProvider` authenticates the index and all
+  four value limbs against a fixed snapshot table. `SnapshotRamProvider` authenticates arbitrary
+  snapshot RAM; the old boot provider specializes the same circuit. Both compose with the existing
+  ordering wrapper, have proved row constructors, and export their witness programs. These are
+  source-provider components, not complete AIR endpoint binding: the assembly still uses boot
+  boundaries, and Sail bookkeeping, host state, final-state agreement, and incoming timestamp
+  admissibility remain to be connected. Snapshot equality alone is not full machine-state equality.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -347,10 +357,11 @@ Host integration must account for these source-backed details in v6.4.0:
 
 Still required before the native capstone can be claimed:
 
-1. Generalize the new assembly's boot-specific providers/verifier to arbitrary authenticated local
-   boundaries. Bind complete finite register/RAM/host snapshots, including untouched locations;
-   derive incoming record admissibility and final-state agreement internally. PC/clock equality
-   alone is not boundary continuity. Retain boot initialization as a specialization.
+1. Install the proved arbitrary snapshot providers in the assembly and generalize its boot-specific
+   verifier to local boundaries. Bind the complete Sail/host state, including untouched locations
+   and Sail bookkeeping; derive incoming record admissibility and final-state agreement internally.
+   The finite RAM/register comparison and source providers are closed, but their integration and
+   complete endpoint encoding are open. Retain boot initialization as a specialization.
 2. Connect the assembly to stateful timed grounding. Initial-record meaning/uniqueness and
    physical Program-row authentication now follow from its constraints and balance. Final
    address/order facts and committed Program meaning at active pulls are also closed. The complete

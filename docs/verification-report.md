@@ -727,6 +727,20 @@ totality, native witness composition, and complete event-tape export remain open
 regression composes ENTER and HALT at a non-boot clock and rejects changed host/RAM endpoints,
 forged host events, and positive-length execution after HALT.
 
+Arbitrary source-provider components are now proved separately. `MemorySnapshot.Realizes` compares
+all integer registers and every byte below `2^48` with Sail, including locations absent from a
+shard's touched inventory. `MemorySnapshot.equivalent_iff` proves that executable comparison over
+the finite sparse supports is exactly this RAM/register equality. It does not compare the full
+Sail/host/clock state. The snapshot register provider authenticates index and complete value through
+a 32-row fixed lookup; the RAM provider authenticates the snapshot's eight bytes and canonical
+aligned address. Both have sound/complete ordered wrappers, proof-independent constructors, and
+exportable witness programs. Boot RAM uses this same implementation. Regressions reject forged
+limbs, substituted indices, changed source bytes, unrelated ordering keys, and untouched-memory
+mutations. The 59-table assembly still uses boot-specific boundaries: no new caller-supplied
+representation premise has been added to its relation, and no arbitrary-boundary AIR theorem is
+claimed. Binding the full machine state and final memory, and justifying local source timestamps,
+remain integration obligations.
+
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL
 encoding. `Model/Core/ProgramTable.lean` constructs complete fixed messages, proves that projection

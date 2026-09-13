@@ -368,6 +368,13 @@ import SP1Clean.Model.Core.ProgramTable
 import SP1Clean.Model.Core.ProgramImage
 import SP1Clean.Model.Core.SailMemory
 import SP1Clean.Model.Core.Boot
+import SP1Clean.Model.Core.MemorySnapshot
+import SP1Clean.Model.Core.MemoryEquality
+import SP1Clean.Model.Core.RegisterSnapshotTable
+import SP1Clean.FormalModel.Contracts.SnapshotMemory
+import SP1Clean.Proofs.Chips.SnapshotRamProvider
+import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
+import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Model.Machine.Schedule
 import SP1Clean.Model.Machine.Syscall
 import SP1Clean.Model.Machine.EventExecution

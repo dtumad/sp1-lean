@@ -66,7 +66,10 @@ bounded local execution segments, with authenticated complete boundaries, constr
 effects, native shard composition, and generic whole-ensemble export. Boot-to-HALT is an endpoint
 corollary, not the primary shard relation. `Model/Core/Execution{,Path,Replay,Boot}.lean` supplies
 the stateful semantic path, split/join and PolyFun equivalence, paired replay, and semantic boot/HALT
-corollaries. These do not yet authenticate separate AIR witnesses or their boundaries. The generic
+corollaries. `MemorySnapshot` and the ordered snapshot register/RAM providers now authenticate
+arbitrary finite source values, with an executable extensional RAM/register comparison. The assembly
+still specializes to boot; full Sail/host endpoint binding and source-timestamp admissibility remain
+open. These components do not yet authenticate separate AIR witnesses or their complete boundaries. The generic
 interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are
