@@ -2,15 +2,19 @@
 
 The native 25-chip soundness theorem, every registered chip contract, and every whole-chip
 faithfulness proof are closed. The current development target is a self-contained native Clean
-ensemble with soundness and constructive completeness for bounded boot-to-HALT execution,
-including constrained inline syscalls. Exact upstream Core refinement remains a separate workstream.
+ensemble with soundness and constructive completeness for bounded local execution segments,
+including constrained inline syscalls and native shard composition. Boot-to-HALT is a corollary
+obtained by fixing the first and last boundaries. Exact upstream Core refinement remains separate.
 
 ## Native Clean core
 
-The target is equality between the raw Clean ensemble statement and a bounded RISC-V execution
-relation over checked finite inputs. Ordinary steps use official Sail; syscalls use an explicit
-host environment. Program, initial memory, and host transcript are inputs; exit code, public bytes,
-commitment banks, and host requests are outputs. The native profile protects instruction bytes
+The target is equality between the raw Clean ensemble statement and a bounded local RISC-V
+execution relation over checked finite inputs and complete incoming/outgoing states. Ordinary steps
+use official Sail; syscalls thread the concrete host state. Boundaries account for registers, RAM,
+host queues/transcript position, accumulated outputs/requests, commitment banks, terminal status,
+and execution clock. Program and platform identity are fixed across the chain. Native composition
+uses explicit state boundaries; succinct commitment binding belongs to later recursion work.
+The native profile protects instruction bytes
 against both ordinary stores and host writes. Neither direction may depend on a caller proving
 provider validity, compiler readiness, syscall inactivity, or an execution-dependent totality bundle.
 
@@ -25,6 +29,16 @@ selected host effects remain open.
 
 Implemented foundations:
 
+- `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
+  transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
+  ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
+  creates an exit status. `ExecutionPath.lean` proves local path/segment split and join, identity,
+  determinism, weighted clock accounting, and equivalence to PolyFun finite reachability. Terminal
+  paths end with a real HALT; no positive-length segment can follow it. `ExecutionReplay.lean`
+  reconstructs the paired trajectory from event data and authenticates every supplied host event;
+  `ExecutionBoot.lean` makes boot-to-HALT a semantic endpoint corollary. These are semantic results,
+  not a completed native AIR equivalence or composition theorem. The two-ECALL regression joins a
+  continuing shard to a terminal shard and rejects forged host/RAM boundaries and post-HALT steps.
 - `ToClean/Air/CompleteEnsemble.lean` packages both correctness directions and a proof-independent
   compiler whose success domain is proved equal to an independent execution relation.
 - `ToClean/Air/EnsembleExport.lean` exports all components, verifier, channels, and fixed lookups;
@@ -333,7 +347,11 @@ Host integration must account for these source-backed details in v6.4.0:
 
 Still required before the native capstone can be claimed:
 
-1. Connect the new 59-table assembly to timed grounding. Initial-record meaning/uniqueness and
+1. Generalize the new assembly's boot-specific providers/verifier to arbitrary authenticated local
+   boundaries. Bind complete finite register/RAM/host snapshots, including untouched locations;
+   derive incoming record admissibility and final-state agreement internally. PC/clock equality
+   alone is not boundary continuity. Retain boot initialization as a specialization.
+2. Connect the assembly to stateful timed grounding. Initial-record meaning/uniqueness and
    physical Program-row authentication now follow from its constraints and balance. Final
    address/order facts and committed Program meaning at active pulls are also closed. The complete
    Memory ledger now yields unique per-location frontiers, their exact balance equation, and an
@@ -350,13 +368,19 @@ Still required before the native capstone can be claimed:
    two remaining semantic premises; terminal ECALL/Exit agreement and execution reconstruction remain open.
    The older 55-table execution theorem still carries its semantic boundary premise; no execution
    theorem has yet replaced it for the new assembly.
-2. Thread the executable host state through mixed execution; integrate the full-code-checked
+3. Integrate the paired semantic replay with the mixed carrier, the full-code-checked
    syscall chip, host effects, and ordinary ROM-write exclusion into
    the AIR and mixed timed grounding. Extending the Memory footprint must preserve host accesses
    in the balanced ledger rather than projecting back to the instruction-only footprint.
-3. Prove the event compiler total on shared semantic resource bounds; construct all native tables
-   and close soundness and completeness for the same boot-to-HALT domain.
-4. Export event routing and provider-assembly recipes and instantiate the generic exporter for the
+4. Prove the event compiler total on shared semantic resource bounds; construct all native tables
+   and close soundness and completeness for the same arbitrary local-segment domain. Prove
+   erasure of inactive padding and architectural preservation by administrative rows, including
+   the zero-step case; keep semantic steps, weighted clock cost, and table height distinct.
+5. Lift semantic split/join to certified native shards through complete boundary continuity.
+   Prove identity, associativity, split/recompile, and composition across host effects. Derive
+   boot prefixes and single-/multi-shard boot-to-HALT corollaries. Each shard has its own resource
+   bound; the composed path need not fit in one shard.
+6. Export event routing and provider-assembly recipes and instantiate the generic exporter for the
    complete native core. The current Rust `build_rows` API consumes assembled inputs; it is not yet
    the planned event-tape compiler.
 
@@ -377,7 +401,7 @@ predecessor PRs. Preserve that history and implement the remaining work as revie
 there is no need to replay or merge the predecessors individually.
 
 The public API will instantiate `CompleteEnsemble` and `EnsembleCompiler` for the same independent
-bounded boot-to-HALT relation. Checked inputs and semantic resource limits determine the instance;
+bounded local-segment relation. Checked inputs and semantic resource limits determine the instance;
 public outputs have canonical bounded encodings. Give the exported core a concrete `SP1Prime`
 specialization while retaining generic underlying proofs. Both directions must close without a
 decoder certificate, semantic boundary binding, provider-validity premise, syscall-inactivity
@@ -392,16 +416,18 @@ range rather than the legacy Halt table's 16-bit restriction. External hook and 
 requests remain transcript interactions, not claims that their implementations are verified.
 
 Publication is gated on the closed theorem, the complete core export, and the final audit. Before
-opening the combined PR, construct a joint compiled boot-to-HALT regression with memory and host
-effects, compare complete Lean/Rust trace assembly, retain all instruction dump-conformance gates,
+opening the combined PR, construct joint compiled local shards whose composition reaches HALT from
+boot, with memory and host effects across the cuts. Compare complete Lean/Rust trace assembly,
+retain all instruction dump-conformance gates,
 and review the propositions and trust boundaries themselves. Finish with clean build/test/lint,
 regeneration, axiom-audit, and fresh-build CI results. Align the maintained documentation around the
 actual theorem, remove obsolete scaffolding and plan-number vocabulary with consumer checks, and
 preserve provenance and review attribution. The combined PR will link the eight predecessors;
 merging into `main` remains a later review decision.
 
-Exact upstream Core refinement, cross-shard composition, and cryptographic verifier soundness
-remain separate follow-on workstreams. Historical exact-Core sequencing below does not override
+Exact upstream Core refinement, authenticated succinct boundary commitments, and cryptographic
+verifier soundness remain separate follow-on workstreams. Native shard composition is part of
+this capstone. Historical exact-Core sequencing below does not override
 the native capstone's current priority or authorize a dependency re-pin.
 
 ## Current checkpoint

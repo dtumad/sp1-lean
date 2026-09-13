@@ -194,7 +194,15 @@ locations; and ROM/Sail membership for every active Program pull. Finalizers use
 emissions without local Memory guarantees, so their location proofs precede timed grounding.
 `NativeCoreDecode` carries the actual ordinary rows and their interactions into the semantic
 decoder without reconstructing another witness. Final values, mixed host effects, and a closed
-boot-to-HALT soundness/completeness instance remain work in progress; see [the roadmap](roadmap.md).
+local-segment soundness/completeness instance remain work in progress; see [the roadmap](roadmap.md).
+
+The semantic target now centers on `Model/Core/ExecutionPath.lean`: arbitrary finite paths through
+complete Sail/host/clock states, with split/join and an equivalent PolyFun finite-prefix view.
+`ExecutionReplay.lean` threads actual host effects when reconstructing an event tape. HALT is a
+real terminal transition; empty segments are identities and positive-length segments cannot resume
+after HALT. `ExecutionBoot.lean` supplies the boot-to-HALT endpoint corollary. The new assembly's
+boot-specific boundary circuits have not yet been generalized to this target, and semantic path
+composition alone does not authenticate the continuity of separately certified AIR witnesses.
 
 `NativeCoreMemory` retains the complete physical Memory ledger after the boundary inventories,
 including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicity proof turns Clean

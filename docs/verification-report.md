@@ -714,6 +714,19 @@ premises: HALT/syscall step/frame facts, the trajectory's ordinary `stepOnce` eq
 preservation. Constructing the mixed trajectory and constraining ROM protection, host effects,
 and terminal behavior remain open. No unconditional boot-to-HALT execution theorem is claimed.
 
+The new semantic target is an arbitrary local segment. `Model/Core/Execution.lean` threads complete
+Sail, host, and clock states through normally retiring instructions and concrete host calls.
+`ExecutionPath.lean` proves identity, split/join, determinism, weighted clock accounting, and
+equivalence with PolyFun finite reachability. `HostTerminal.lean` proves that only HALT produces an
+exit flag; the path relation prohibits both ordinary and host steps afterward. `ExecutionReplay.lean`
+checks host event data against the interpreter and threads the resulting host state. Its ordinary
+Sail replay requires normal-retirement evidence before its success can be read as a semantic step.
+`ExecutionBoot.lean` makes boot-to-HALT an endpoint specialization. These results do not close AIR
+soundness/completeness: arbitrary finite boundary authentication, host AIR integration, compiler
+totality, native witness composition, and complete event-tape export remain open. The semantic
+regression composes ENTER and HALT at a non-boot clock and rejects changed host/RAM endpoints,
+forged host events, and positive-length execution after HALT.
+
 `Model/Core/InstructionDecode.lean` now computes the supported instruction AST from a 32-bit word;
 its `decode_supported` theorem limits successful parses to the routed image or the exact ECALL
 encoding. `Model/Core/ProgramTable.lean` constructs complete fixed messages, proves that projection

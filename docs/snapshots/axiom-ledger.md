@@ -1,15 +1,15 @@
 # Axiom and trust ledger
 
-Checked against the consolidated stack on 2026-09-11. Each raw file retains the source revision
+Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1505 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 173 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1556 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 188 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1678 released declarations are probed.
+- 1744 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,16 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The stateful local-path checkpoint adds 51 main declarations and 15 test declarations. Nine of the
+main additions use only the logical baseline (three omit `Classical.choice`); 42 retain the existing
+77-axiom official-Sail dependency set through the step/run semantics. No new main-library axiom
+constant is introduced, and all preceding 1505 main and 173 test dependency sets are unchanged.
+The new tests add eleven compiler-trusted constants, confined to `SP1CleanTest`.
+The probed results cover complete-state local path composition, split/join, determinism, PolyFun
+finite reachability, stateful replay, post-HALT exclusion, and semantic boot/HALT corollaries.
+They do not establish arbitrary native AIR boundary authentication, host-table integration,
+compiler totality, native witness composition, or full event-tape export.
 
 The uniform decoder agreement checkpoint added five main proofs. The ROM-fetch and hint-exclusion
 lemmas use subsets of the ordinary logical baseline. `SailDecode.instructionDecode_agrees` and

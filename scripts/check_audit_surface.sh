@@ -41,7 +41,9 @@ while IFS=$'\t' read -r decl file; do
   decl_re="${decl_re//\?/\\?}"
   bare_re="${bare//\?/\\?}"
   kw='(def|abbrev|structure|inductive|theorem|class|instance)'
-  if grep -qE "^[[:space:]]*(private |protected |noncomputable )*${kw} (${decl_re}|${bare_re})\b" "$file"; then
+  # A trailing '?' is part of a Lean identifier. A regex word boundary after it would miss
+  # `def replayStep? (` but falsely accept the prefix of `theorem replayStep?_other`.
+  if grep -qE "^[[:space:]]*(private |protected |noncomputable )*${kw} (${decl_re}|${bare_re})([[:space:]({:]|$)" "$file"; then
     continue
   fi
 

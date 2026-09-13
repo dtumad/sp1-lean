@@ -35,6 +35,13 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `WitnessRelation.Complete` | `SP1Clean/FormalModel/Relations.lean` | Direction and shape of the completeness claim |
 | `WitnessRelation.FunctionalCompleteness` | `SP1Clean/FormalModel/Relations.lean` | The proof-independent reverse witness map; no witness-preservation law is implicit |
 | `WitnessRelation.Correct` | `SP1Clean/FormalModel/Relations.lean` | Both existential directions, hence public-language equality rather than witness inversion |
+| `ExecutionState` | `SP1Clean/Model/Core/Execution.lean` | Complete Sail/host/clock continuity, including RAM and terminal status; not yet an authenticated AIR boundary encoding |
+| `ExecutionStep` | `SP1Clean/Model/Core/Execution.lean` | Normal official-Sail retirement or concrete stateful host execution, with no transition from a halted source |
+| `ExecutionSegment` | `SP1Clean/Model/Core/ExecutionPath.lean` | Exactly the requested number of local semantic steps, independent of boot, HALT, padding, and AIR witness layout |
+| `executionSystem` | `SP1Clean/Model/Core/ExecutionPath.lean` | The equivalent PolyFun finite-path view; directions are actual semantic steps |
+| `replayHost?` | `SP1Clean/Model/Core/ExecutionReplay.lean` | Checks the full event against actual interpreter observations and threads the next host state |
+| `replayStep?` | `SP1Clean/Model/Core/ExecutionReplay.lean` | Replays source/event data; ordinary success still needs normal-retirement evidence, unlike the host success equivalence |
+| `BootToHalt` | `SP1Clean/Model/Core/ExecutionBoot.lean` | Boot and terminal status as endpoint conditions on the same local semantic segment; not yet a native AIR corollary |
 | `SupportedCoreStatement` | `SP1Clean/FormalModel/Execution.lean` | The one program/public-boundary statement shared by both proof directions |
 | `CoreProfile.WithinOrdinaryRowLimit` | `SP1Clean/FormalModel/CoreProfile.lean` | The one numeric Core row-budget policy used by both witness representations |
 | `SupportedCoreNativeRelation` | `SP1Clean/Soundness/AIR.lean` | The hypothesis side: the ensemble algebra, the semantic boundary binding, and the interim `SyscallTableInactive` placeholder |

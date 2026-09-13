@@ -36,8 +36,9 @@ and [`blueprint`](https://github.com/Verified-zkEVM/leanerVM/blob/4b95a607259f9a
 
 **Keep the public execution relation small and independent.** leanerVM's semantic boundary can be
 read without its AIR implementation. Our target remains the same kind of presentation: checked
-program and host inputs, bounded boot-to-HALT execution, and a raw Clean statement equivalent to
-that relation. Their proposed `SatisfiedBy` also carries seed/bytecode identity, row-index, capacity,
+program/host data, bounded local execution between complete boundaries, and a raw Clean statement
+equivalent to that relation. Boot-to-HALT is an endpoint corollary. Their proposed `SatisfiedBy`
+also carries seed/bytecode identity, row-index, capacity,
 and count conditions outside raw ensemble satisfaction. It would not discharge our outstanding
 provider or totality obligations merely by adopting that interface.
 
@@ -67,6 +68,17 @@ blocked by this issue; neither their generic syntax nor our Rust field interface
 binary-field implementation.
 
 ## Decisions
+
+A focused follow-up on 13 September 2026 checked main at
+[`849806e7`](https://github.com/Verified-zkEVM/leanerVM/tree/849806e74f149139764f49061ce34c57c7967ba7),
+which includes the bus-channel PR. Its execution model already supports arbitrary-start `run` and
+proves `run_add`/`run_prefix`; its public `ValidExecution` still fixes the initial and terminal
+registers. The AIR blueprint's closed-walk padding and whole-machine correspondence remain planned;
+the protocol blueprint explicitly leaves recursion/aggregation to later work. No completed
+shard-composition interface was found. Our existing pinned PolyFun finite-prefix interface is
+sufficient for local semantic paths; the native capstone now includes explicit-boundary shard
+composition, while succinct commitment authentication remains a later adapter. The substantive
+additional obligation is complete RAM/host-state continuity, not a new path library.
 
 For this capstone, retain the audited Clean/Lean/Sail pins and finish authenticated provider
 closure, host footprints and terminal semantics, compiler totality, and whole-core export. Use the

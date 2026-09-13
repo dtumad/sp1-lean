@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.ExecutionPath
 import SP1CleanTest.Core.HostBuffer32
 import SP1CleanTest.Core.HostRamBytes
 import SP1CleanTest.Core.HostRamRead
@@ -29,6 +30,21 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.ExecutionPath.continuingShard
+#print axioms SP1CleanTest.Core.ExecutionPath.terminalShard
+#print axioms SP1CleanTest.Core.ExecutionPath.joinedShards
+#print axioms SP1CleanTest.Core.ExecutionPath.splitJoinedShards
+#print axioms SP1CleanTest.Core.ExecutionPath.polyFunPath
+#print axioms SP1CleanTest.Core.ExecutionPath.terminalIdentity
+#print axioms SP1CleanTest.Core.ExecutionPath.rejectsAfterHalt
+#print axioms SP1CleanTest.Core.ExecutionPath.rejectsPositiveTerminalSegment
+#print axioms SP1CleanTest.Core.ExecutionPath.rejectsForgedHost
+#print axioms SP1CleanTest.Core.ExecutionPath.rejectsForgedMemory
+#print axioms SP1CleanTest.Core.ExecutionPath.observableResults
+#print axioms SP1CleanTest.Core.ExecutionPath.replayJoinedShards
+#print axioms SP1CleanTest.Core.ExecutionPath.rejectsForgedEvent
+#print axioms SP1CleanTest.Core.ExecutionPath.ordinaryContinues
+#print axioms SP1CleanTest.Core.ExecutionPath.rejectsRunnableAfterHalt
 #print axioms SP1CleanTest.Core.HostBuffer32.allAlignments
 #print axioms SP1CleanTest.Core.HostBuffer32.windowBounds
 #print axioms SP1CleanTest.Core.HostBuffer32.rejectsChangedMessage

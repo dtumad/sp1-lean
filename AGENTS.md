@@ -61,9 +61,13 @@ These layers are parallel workstreams and may be owned by different developers. 
 Plonk, and Groth16 are separate verifier targets; pin **Core** first. Parsing may initially be delegated
 to a canonical Rust exporter so it does not obscure the verifier/refinement boundary.
 
-**This workstream's current priority:** close the native Clean boot-to-HALT soundness/completeness
-capstone with checked finite inputs, constrained inline host effects, and generic whole-ensemble
-export. The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
+**This workstream's current priority:** close native Clean soundness/completeness for arbitrary
+bounded local execution segments, with authenticated complete boundaries, constrained inline host
+effects, native shard composition, and generic whole-ensemble export. Boot-to-HALT is an endpoint
+corollary, not the primary shard relation. `Model/Core/Execution{,Path,Replay,Boot}.lean` supplies
+the stateful semantic path, split/join and PolyFun equivalence, paired replay, and semantic boot/HALT
+corollaries. These do not yet authenticate separate AIR witnesses or their boundaries. The generic
+interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are
 explicitly excluded from the checked parser. The integrated native capstone remains open. Its remaining work
