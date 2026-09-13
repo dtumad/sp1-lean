@@ -78,6 +78,24 @@ def inventory (snapshot : MemorySnapshot) :
 theorem views_eq (snapshot : MemorySnapshot) :
     (inventory (p := p) snapshot).views = [registerView snapshot, ramView snapshot, terminalView] := rfl
 
+/-- Source rows use only Byte, Memory, and their own private ordering channel. -/
+theorem view_channels_subset (snapshot : MemorySnapshot) (id : TableId) :
+    (viewFor (p := p) snapshot id).component.circuit.channels ⊆
+      [byteChannel.toRaw, memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] := by
+  cases id
+  · change (byteChannel.toRaw :: (OrderedBoundary.channel channelName).toRaw ::
+      [byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
+        memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
+    simp
+  · change (List.replicate 42 byteChannel.toRaw ++ [(OrderedBoundary.channel channelName).toRaw] ++
+      List.replicate 4 byteChannel.toRaw ++ [memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
+    generalize (byteChannel (p := p)).toRaw = byte, (memoryChannel (p := p)).toRaw = memory,
+      (OrderedBoundary.channel (p := p) channelName).toRaw = control
+    simp
+  · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+      (OrderedBoundary.channel channelName).toRaw] ⊆ _
+    simp
+
 /-- Each decoded record is precisely the unit-multiplicity push from its physical provider row. -/
 theorem recordFor_interactions (snapshot : MemorySnapshot) (id : TableId) (env : Environment (ZMod p)) :
     (viewFor snapshot id).component.operations.interactionValuesWith memoryChannel.toRaw env =

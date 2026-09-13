@@ -40,6 +40,10 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.ExecutionSnapshot.executesPaddedHint
 #print axioms SP1CleanTest.Core.ExecutionSnapshot.paddedHint_semanticStep
 #print axioms SP1CleanTest.Core.ExecutionSnapshot.rejectsAfterHalt
+#print axioms SP1CleanTest.Core.LocalCore.activeSyscallLocalShard
+#print axioms SP1CleanTest.Core.LocalCore.rejectsBrokenSyscallLedger
+#print axioms SP1CleanTest.Core.LocalCore.hintReturnNeedsHostBinding
+#print axioms SP1CleanTest.Core.LocalCore.acceptsDistantSourceEpochs
 #print axioms SP1CleanTest.Core.LocalCore.rejectsUnboundSource
 #print axioms SP1CleanTest.Core.LocalCore.rejectsInvalidPlatform
 #print axioms SP1CleanTest.Core.LocalCore.activeLocalShard

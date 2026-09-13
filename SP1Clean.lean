@@ -385,6 +385,8 @@ import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Soundness.LocalCoreEnsemble
 import SP1Clean.Soundness.LocalCoreBoundaries
 import SP1Clean.Soundness.LocalCoreSourceGrounding
+import SP1Clean.Soundness.LocalCoreFinalBoundary
+import SP1Clean.Soundness.LocalCoreMemory
 import SP1Clean.Model.Machine.Schedule
 import SP1Clean.Model.Machine.Syscall
 import SP1Clean.Model.Machine.EventExecution
@@ -666,6 +668,7 @@ import SP1Clean.Soundness.NativeCoreBoundaries
 import SP1Clean.Soundness.NativeCoreFinalBoundary
 import SP1Clean.Soundness.NativeCoreProgram
 import SP1Clean.Soundness.NativeCoreDecode
+import SP1Clean.Soundness.CoreMemoryBalance
 import SP1Clean.Soundness.NativeCoreMemory
 import SP1Clean.Soundness.SystemMemoryRows
 import SP1Clean.Soundness.NativeCoreRows

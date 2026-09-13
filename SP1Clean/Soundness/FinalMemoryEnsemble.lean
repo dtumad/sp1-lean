@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.OrderedMemoryEnsemble
+import ToClean.Air.ChannelClosure
 import SP1Clean.Proofs.Chips.OrderedFinalProvider
 
 /-! # Native final-memory inventory
@@ -37,6 +38,30 @@ def viewFor : TableId → TransitionView (OrderedBoundary.channel (p := p) chann
   | .registers => registerView
   | .ram => ramView
   | .terminal => OrderedMemoryEnsemble.terminalView channelName (by decide)
+
+/-- Finalizer semantics require only raw constraints and Byte guarantees, before Memory grounding. -/
+theorem view_spec (id : TableId) (env : Environment (ZMod p))
+    (constraints : (viewFor id).component.operations.ConstraintsHold env)
+    (byte : (viewFor id).component.operations.ChannelGuarantees byteChannel.toRaw env) :
+    (viewFor id).component.Spec env := by
+  have assumptions : (viewFor (p := p) id).component.Assumptions env := by cases id <;> trivial
+  have channels : (viewFor (p := p) id).component.circuit.channelsWithGuarantees ⊆
+      [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] := by
+    cases id
+    · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+        byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw] ⊆ _
+      simp
+    · change [byteChannel.toRaw, byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+        byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw] ⊆ _
+      simp
+    · exact List.Subset.refl _
+  apply (Component.weakSoundness assumptions constraints ?_).1
+  rw [Operations.guarantees_iff _ _ _ ((viewFor id).component.inChannelsOrGuarantees env)]
+  intro channel member
+  rcases List.mem_cons.mp (channels member) with rfl | member
+  · exact byte
+  · obtain rfl := List.mem_singleton.mp member
+    exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
 
 def recordFor (id : TableId) (env : Environment (ZMod p)) : Option (MemoryMsg (ZMod p)) :=
   match id with

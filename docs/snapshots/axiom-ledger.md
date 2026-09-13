@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1644 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 210 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1665 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 214 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 1854 released declarations are probed.
+- 1879 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,22 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The local Memory-ledger checkpoint adds 21 main declarations and four test anchors. Six main
+additions use exactly the logical baseline; fifteen retain the existing 100-axiom registry set
+through their assembly-indexed types. The component multiplicity proof moved to the shared
+`CoreMemoryBalance` module without changing its public name. All preceding 1644 main and 210 test
+dependency sets are unchanged, with no removals or new main-library axiom names. Four new
+compiler-trusted constants belong only to `SP1CleanTest.Core.LocalCore`.
+
+The local AIR now supplies canonical and unique final records, the exact physical Memory ledger,
+signed-unit multiplicities, complete record permutation, and the per-location source/final equation.
+The shared rules also replace duplicated boot-only boundary algebra. Full-ledger regressions exercise
+active HINT_LEN and distant clock epochs, with one refresh per touched register at the maximum
+24-bit high clock. They also record a concrete remaining host-binding gap: jointly forging HINT_LEN's
+return and final register record preserves current AIR validity while disagreeing with finite host
+execution. These results establish ledger structure, not final-value currency or native execution
+soundness. Host integration and transport of the later boot grounding stages remain open.
 
 The complete-source grounding checkpoint adds 15 main declarations and two test anchors.
 Ten main additions use exactly the logical baseline; five retain the existing 100-axiom registry

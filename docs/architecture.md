@@ -244,6 +244,17 @@ Full outgoing Sail/host agreement and the mixed execution walk remain open. In p
 validation allows an already stopped host for identity segments; the AIR must still exclude active
 steps from such a source through the execution integration.
 
+`LocalCoreFinalBoundary` obtains canonical final records and per-location uniqueness directly
+from this local assembly's constraints and Byte/order balances. Its proof view keeps the physical
+suffix and public final-order endpoints unchanged. `LocalCoreMemory` then gives the complete
+source/interior/final Memory decomposition, signed-unit multiplicities, record permutation, and
+per-location frontier equation. The source frontier is the same one used by the genesis proof.
+`CoreMemoryBalance` shares the component multiplicity and boundary algebra with the boot assembly;
+finalizer semantics also have one shared proof. These are algebraic and structural conclusions,
+not final-value currency. The active syscall regression preserves all three register touches and
+exposes the pending host binding: matching a forged HINT_LEN return in both the instruction and
+final record still passes AIR checks, although finite host execution yields a different result.
+
 `NativeCoreMemory` retains the complete physical Memory ledger after the boundary inventories,
 including ordinary, refresh, HALT, and active syscall rows. Its unit-multiplicity proof turns Clean
 balance into an exact message permutation and then a per-location frontier equation. The initial

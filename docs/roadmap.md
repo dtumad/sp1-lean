@@ -60,6 +60,18 @@ Implemented foundations:
   out-of-range sources, missing registers, invalid platform state, wrong values, broken inventories,
   and changed ROM even with no RAM rows. Full outgoing Sail/host agreement and the mixed host walk
   remain open. The boot assembly's later grounding stages still need transport to this local one.
+- `LocalCoreFinalBoundary` now derives finalizer contracts, canonical addresses, unique locations,
+  and the exact negative Memory ledger from the local assembly's constraints and Byte/order balance.
+  `LocalCoreMemory` retains every physical interior interaction and derives signed-unit multiplicities,
+  complete source-plus-push/final-plus-pull permutation, and the per-location frontier equation.
+  No Memory truth, execution order, or syscall inactivity premise is used. Component multiplicity
+  and boundary algebra now live in `CoreMemoryBalance`, shared with the existing boot proofs.
+  A full 59-table HINT_LEN regression exercises an active syscall, all three Memory pairs, and its
+  264-tick edge. At the largest 24-bit high clock, one refresh per touched register suffices; no
+  earlier-epoch history is replayed. It rejects damaged inventories and unmatched result/time/value
+  changes. It also records a concrete integration gap: changing the return and matching final record from 3 to 4
+  remains AIR-valid while the supplied host returns 3. Stateful host-result binding is therefore
+  still necessary; ledger balance alone does not imply semantic execution or final-value currency.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -385,9 +397,11 @@ Still required before the native capstone can be claimed:
    state, including untouched locations and bookkeeping, to the reconstructed execution. Retain
    boot initialization as a specialization. Source validation permits stopped host states for empty
    identity segments; excluding active AIR rows after HALT remains part of mixed execution integration.
-2. Generalize the boot assembly's existing grounding to the local assembly and stateful execution.
-   The following facts are already closed for the boot assembly: initial-record meaning/uniqueness and
-   physical Program-row authentication now follow from its constraints and balance. Final
+2. Continue transporting the boot grounding to the local assembly and stateful execution. Local
+   source genesis, final address/order facts, complete physical Memory balance, and both unique
+   frontiers are now closed. Transport Program authentication, the mixed row carrier, and State
+   ordering next. The following facts are already closed for the boot assembly: initial-record
+   meaning/uniqueness and physical Program-row authentication follow from constraints and balance. Final
    address/order facts and committed Program meaning at active pulls are also closed. The complete
    Memory ledger now yields unique per-location frontiers, their exact balance equation, and an
    authentic genesis invariant. Its mixed-row projection and conditional refresh-elimination

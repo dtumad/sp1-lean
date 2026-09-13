@@ -760,6 +760,23 @@ active host effects, and transport of the later boot grounding stages remain ope
 allows a stopped host for empty segments; it does not yet prohibit active AIR rows after HALT.
 No arbitrary-boundary AIR equivalence is claimed.
 
+The local assembly's finalizer contracts, canonical locations, per-location uniqueness, and exact
+negative Memory ledger now follow from raw constraints and its Byte/order balances.
+`LocalCoreMemory.memory_records_perm` and `memory_frontier_balance` establish the complete-message
+permutation and per-location source/final equation, retaining all interior occurrences, including
+active syscalls. Component multiplicity and boundary algebra are shared with the boot proofs in
+`CoreMemoryBalance`; no Memory-truth, execution-order, or syscall-inactivity premise is added.
+
+The complete 59-table regression includes active HINT_LEN with nonzero source registers and a
+264-tick State edge. It also runs at the maximum 24-bit high clock using one refresh per touched
+register, without rows for the intervening epochs. Missing/duplicate touches and unmatched final
+values or times are rejected. The regression also reproduces the unclosed host boundary: the supplied host's next hint has length 3, but
+changing the instruction return and corresponding final register record together to 4 still
+passes every current AIR check. `hintReturnNeedsHostBinding` records this mismatch against the
+finite host interpreter. Thus these ledger results do not establish final-value currency or an
+AIR-to-execution implication; stateful host-result constraints and the mixed execution walk remain
+required for the capstone.
+
 `Model/Core/ExecutionSnapshot.lean` now represents full execution boundaries with finite data.
 It preserves every Sail register and missing key, runtime cycle count and output, all host fields,
 and execution clock. Sparse RAM realizes exactly the bounded Sail map: bytes inside the window

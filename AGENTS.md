@@ -75,7 +75,13 @@ byte, and 48-bit source PC/clock ranges. `LocalCoreBoundaries.lean` derives sour
 uniqueness, exact Memory projection, and source/public validity from raw constraints and balance.
 `LocalCoreSourceGrounding.lean` derives the initial State truth and live-memory invariant on a
 trajectory beginning at that source. Zero-time source records are admissible local seeds even at
-nonzero shard clocks, without historical last-access claims. Full outgoing Sail/host agreement,
+nonzero shard clocks, without historical last-access claims. `LocalCoreFinalBoundary` derives canonical
+final records and unique locations; `LocalCoreMemory` proves the exact physical Memory decomposition,
+signed-unit multiplicities, complete record permutation, and per-location frontier equation, including
+active syscalls. `CoreMemoryBalance` shares component and boundary algebra with the boot proofs.
+The full HINT_LEN regression records the remaining host-result gap: changing both the instruction's
+return and its final record still passes AIR checks despite disagreeing with finite host execution.
+Full outgoing Sail/host agreement,
 active host effects, and transport of later boot grounding stages remain open; separate AIR witnesses
 are not yet proved composable. `ExecutionSnapshot` gives finite data and an executable comparison
 proved equivalent to literal Sail/host/clock equality, preserving every register and missing key,
@@ -91,8 +97,9 @@ includes mixed-row grounding and host/terminal completion for the new 59-table
 memory providers, fixes the boot PC/time and both ordering endpoints, and closes Byte/Program.
 `NativeCoreBoundaries.lean` derives initial-record authenticity/uniqueness, their exact physical Memory
 projection, public boot fields, and physical Program-row ROM/Sail membership from raw constraints and
-balance. Finalizer specifications/uniqueness still require Memory grounding; the older 55-table
-execution theorem has not been transported to this assembly. The detailed remaining work
+balance. Finalizer specifications/uniqueness and exact frontier balances are closed; final-value currency
+and the remaining mixed host walk still require integration. The older 55-table execution theorem
+has not been transported to this assembly. The detailed remaining work
 is in `docs/roadmap.md` under "Native Clean core". Preserve the 25 instruction faithfulness anchors;
 exact v6.4.0 Core AIR refinement remains separate. Native
 timed grounding, every one of the 25 chip contracts, and `supported_core_native_sound` are closed. The

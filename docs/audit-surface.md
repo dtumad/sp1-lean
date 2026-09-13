@@ -129,6 +129,15 @@ below. The local assembly's complete Sail/host endpoint binding and timed ground
 | `initialStateTruth` | `SP1Clean/Soundness/LocalCoreSourceGrounding.lean` | Whether the checked source supplies State truth on any trajectory starting there |
 | `memoryInitialFrontier_content` | `SP1Clean/Soundness/LocalCoreSourceGrounding.lean` | Whether physical source records authenticate actual complete-state Sail contents |
 | `memoryInitialFrontier_liveOK` | `SP1Clean/Soundness/LocalCoreSourceGrounding.lean` | Whether local genesis currency and source-timestamp admissibility follow without semantic premises |
+| `view_spec` | `SP1Clean/Soundness/FinalMemoryEnsemble.lean` | Whether finalizer contracts follow from raw constraints and Byte guarantees before Memory grounding |
+| `memoryBoundary_records_perm` | `SP1Clean/Soundness/CoreMemoryBalance.lean` | Shared reduction of complete-message balance with unit boundary records to an exact permutation |
+| `final_records_canonical` | `SP1Clean/Soundness/LocalCoreFinalBoundary.lean` | Whether the local assembly authenticates final addresses independently of value/clock currency |
+| `final_records_locations_nodup` | `SP1Clean/Soundness/LocalCoreFinalBoundary.lean` | Whether local final ordering excludes repeated locations across all finalizer rows |
+| `final_memory_interactions` | `SP1Clean/Soundness/LocalCoreFinalBoundary.lean` | Whether final records are exactly the physical negative Memory ledger |
+| `memory_interactions` | `SP1Clean/Soundness/LocalCoreMemory.lean` | Whether the local source/interior/final decomposition retains every actual Memory interaction |
+| `memory_records_perm` | `SP1Clean/Soundness/LocalCoreMemory.lean` | Whether source records plus all interior pushes permute to final records plus all interior pulls |
+| `memory_frontier_balance` | `SP1Clean/Soundness/LocalCoreMemory.lean` | Whether unique source/final frontiers satisfy the timed engine's per-location equation without semantic premises |
+| `hintReturnNeedsHostBinding` | `SP1CleanTest/Core/LocalCore.lean` | Concrete AIR-valid forged HINT_LEN return against the supplied finite host; records the remaining host-result binding obligation |
 | `SourceValid` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Finite program/decoding validity, x0, and all source ROM bytes, including untouched code |
 | `checkSource_iff` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Whether executable source validation is exactly the semantic contract |
 | `ensemble` | `SP1Clean/Soundness/LocalCoreEnsemble.lean` | The 59-table assembly with a complete source and its bound incoming PC/clock |
