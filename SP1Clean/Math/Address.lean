@@ -24,6 +24,12 @@ def ofNat (address : ℕ) : fields 3 (ZMod p) :=
 def offset {F : Type} [Add F] (address : fields 3 F) (index : F) : fields 3 F :=
   #v[address[0] + index, address[1], address[2]]
 
+theorem offset_zero {F : Type} [AddZeroClass F] (address : fields 3 F) :
+    offset address 0 = address := by
+  ext index hi
+  have cases : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+  rcases cases with rfl | rfl | rfl <;> simp [offset]
+
 variable [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 theorem bounded_ofNat (address : ℕ) : Bounded (ofNat (p := p) address) := by

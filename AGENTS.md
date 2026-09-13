@@ -104,11 +104,13 @@ ledgers unchanged, and the provider's proof-independent constructor succeeds exa
 retain partial writes beside ROM in one RAM cell, store padding, and stopped identities. Its full
 witness projection now preserves the original constraints, old ledgers, public input, and data.
 `ProtectedLocalCorePermissions` authenticates every active permission pull from the fixed provider
-and this ensemble's own balance, using an exhaustive component source classification. Identifying
-those requests with decoded stores' semantic byte footprints and transporting them into grounding
-remain open; `RowEffect.romLoaded_of_writePermission` supplies the byte-frame implication. The existing local
-execution theorem therefore still has its ROM premise. Keep this native profile strengthening
-separate from the unchanged original SP1 chip faithfulness anchors.
+and this ensemble's own balance, using an exhaustive component source classification.
+`ProtectedStoreFootprints` relates the authenticated requests to every committed write byte;
+`ProtectedLocalCoreRom` transports that result through physical decoder provenance for all 25 kinds.
+`ProtectedLocalCore.ground_of_host_steps` now derives ordinary ROM preservation from those row effects
+and derives HALT internally, retaining only active SyscallInstrs step/frame effects as semantic
+premises. Full outgoing-state and terminal Exit agreement and compiler totality remain open.
+Keep this native profile strengthening separate from the unchanged original SP1 chip faithfulness anchors.
 The host policy characteristic explicitly equals the AIR field. HALT's legacy row still has a
 16-bit exit domain, stronger than the concrete host's canonical below-characteristic, 32-bit range.
 Running-host and non-ECALL guards follow inside incoming State truth, not from caller assumptions.

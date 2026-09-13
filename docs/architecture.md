@@ -310,12 +310,15 @@ are unchanged. `ProtectedLocalCoreProjection` now projects the complete physical
 classification in `ProtectedLocalCorePermissions` proves that the fixed interval provider is the
 only permission source; count-bounded balance authenticates every active pull, including the
 `row_pull_permitted` physical-row interface. No provider-validity premise is supplied externally.
-The remaining step identifies these requested bytes with each decoded store's semantic footprint
-and transports that permission through timed grounding.
-`RowEffect.romLoaded_of_writePermission` supplies the byte-frame implication, but the current
-`ground_of_host_steps` still takes ROM preservation as a premise. Active host-memory writes must
-join this permission interface when their effects are integrated. Full local soundness/completeness
-is not yet claimed.
+`ProtectedStoreFootprints` identifies those requests with every byte covered by the four stores'
+committed `MemWrite`; `ProtectedLocalCoreRom.instructionRows_write_permitted` transports the result
+to every decoded instruction using its physical table provenance. The row-effect grounding interface
+uses `RowEffect.romLoaded_of_writePermission` internally. Consequently
+`ProtectedLocalCore.ground_of_host_steps` derives ordinary and HALT step/frame facts without a
+ROM-preservation premise. Active SyscallInstrs step/frame effects remain explicit. Host-memory writes
+must join the same permission interface when their effects are integrated. Complete outgoing-state
+agreement, terminal Exit agreement, and compiler totality remain open; full local
+soundness/completeness is not yet claimed.
 
 The stopped-source clock constraint closes one concrete soundness gap: an active ADD previously
 passed with `source.host.exitCode = some 0`. `executionRows_nil_of_stopped` now excludes all active

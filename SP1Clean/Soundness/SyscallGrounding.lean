@@ -270,7 +270,7 @@ theorem handlerRun_of_eventTrajectory_syscall (handler : ExecutableSyscallHandle
 /-- An ordinary chip's semantic step on a trajectory whose successor at this row is Sail's
 `stepOnce`. The timeline supplies this row's eight-tick duration; other rows may have any duration.
 The proof uses the registered `advance` payload and the actual Memory pulls and pushes. -/
-theorem ordinaryStepFactG_of_advanceOnTrajectory {kind : ChipKind p}
+theorem ordinaryStepFactG_of_rowEffect {kind : ChipKind p}
     {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
     (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
     {data : ProverData (ZMod p)} {program : GuestProgram}
@@ -282,7 +282,7 @@ theorem ordinaryStepFactG_of_advanceOnTrajectory {kind : ChipKind p}
         kind.advanceReady inp cols program s)
     (trajectory : Trajectory) (initial : SailState) (tl : Timeline)
     (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
-      trajectory m = some st → SailStep st nx →
+      trajectory m = some st → RowEffect program (kind.view inp cols) st nx →
         RomLoaded program st → RomLoaded program nx)
     (timeStep : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
       tl.start (n + 1) = tl.start n + 8)
@@ -306,7 +306,7 @@ theorem ordinaryStepFactG_of_advanceOnTrajectory {kind : ChipKind p}
     have hc := (hcurr mp hmp).2.2
     rw [wiring.readTime mp hmp, htime] at hc
     exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
-  refine ⟨⟨n + 1, s', hsucc, hpushTime, ?_, codeMemoryCompatible htraj hstep hrom,
+  refine ⟨⟨n + 1, s', hsucc, hpushTime, ?_, codeMemoryCompatible htraj heff hrom,
     heff.cfg hcfg⟩, ?_⟩
   · rw [wiring.statePush_eq]
     show s'.regs.get? Register.PC
@@ -390,6 +390,30 @@ theorem ordinaryStepFactG_of_advanceOnTrajectory {kind : ChipKind p}
       rw [TimedGrounding.microValueG_ram_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
         Option.bind_some]
       exact hpost heff hpulls
+
+/-- The original trajectory-wide ROM contract specializes to the selected row's effect. -/
+theorem ordinaryStepFactG_of_advanceOnTrajectory {kind : ChipKind p}
+    {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
+    (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
+    {data : ProverData (ZMod p)} {program : GuestProgram}
+    (real : (kind.view inp cols).is_real = 1)
+    (spec : kind.chipSpec inp cols data)
+    (decode : Target.decodedInROM program (programAccess (kind.view inp cols)).toRow)
+    (ready : ∀ s : SailState, ValueOperandsBound (kind.view inp cols) s →
+      SourceAValueBound (kind.view inp cols) s → MemoryPullsBound rf s →
+        kind.advanceReady inp cols program s)
+    (trajectory : Trajectory) (initial : SailState) (tl : Timeline)
+    (codeMemoryCompatible : ∀ {m : ℕ} {st nx : SailState},
+      trajectory m = some st → SailStep st nx →
+        RomLoaded program st → RomLoaded program nx)
+    (timeStep : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
+      tl.start (n + 1) = tl.start n + 8)
+    (step : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
+      trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
+    LocalStepFactG program trajectory initial
+      tl rf := by
+  exact ordinaryStepFactG_of_rowEffect wiring advance real spec decode ready trajectory initial tl
+    (fun present effect => codeMemoryCompatible present effect.normal.sailStep) timeStep step
 
 /-- Event-transcript specialization, retaining the original public statement. -/
 theorem ordinaryStepFactG_of_advance {kind : ChipKind p}

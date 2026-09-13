@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.RowEffectDefs
-import SP1Clean.Model.Core.WritePermission
+import SP1Clean.FormalModel.Contracts.WritePermission
 
 /-! # ROM preservation from the actual byte footprint
 
@@ -18,6 +18,22 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 def RowWritePermitted (image : ProgramImage) (row : Trace.RowView (ZMod p)) : Prop :=
   ∀ write, row.commit.memWrite = some write →
     ∀ address, write.covers address → image.readOnly address = false
+
+/-- The byte requests cover the semantic write range, including its final byte. -/
+theorem write_readOnly_false_of_permissions (image : ProgramImage)
+    (write : Trace.MemWrite (ZMod p)) (widthBound : write.width ≤ 2 ^ 16)
+    (permissions : ∀ index : Fin write.width,
+      WritePermissionProvider.Permitted image (Address.offset write.addr (index.val : ZMod p)))
+    (address : ℕ) (covered : write.covers address) : image.readOnly address = false := by
+  change Address.toNat write.addr ≤ address ∧ address < Address.toNat write.addr + write.width at covered
+  have positive : 0 < write.width := by omega
+  have bounded : Address.Bounded write.addr := by
+    simpa only [Nat.cast_zero, Address.offset_zero] using (permissions ⟨0, positive⟩).1
+  let index : Fin write.width := ⟨address - Address.toNat write.addr, by omega⟩
+  have permitted := (permissions index).2.2
+  rw [Address.toNat_offset write.addr bounded index.val (by have := index.isLt; omega)] at permitted
+  have same : Address.toNat write.addr + index.val = address := by dsimp only [index]; omega
+  rwa [same] at permitted
 
 theorem RowEffect.romLoaded_of_writePermission {image : ProgramImage} (valid : image.Valid)
     {row : Trace.RowView (ZMod p)} {state next : SailState}

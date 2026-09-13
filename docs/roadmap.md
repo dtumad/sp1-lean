@@ -118,10 +118,12 @@ Implemented foundations:
   proves ROM preservation from allowed writes. The complete witness projection now preserves
   constraints, exact old ledgers, data, and public input; `statement_implies_local` proves refinement
   to the original local AIR. Exhaustive source classification and count-bounded balance authenticate
-  every active permission request, with a physical-row interface. Identifying those requests with
-  decoded stores' semantic byte footprints and grounding transport remain open, so the current
-  local execution combinator retains its ROM premise. This strengthens the native immutable-code
-  profile without changing the original SP1 chip faithfulness statements.
+  every active permission request, with a physical-row interface. `ProtectedStoreFootprints` now
+  identifies those requests with every byte in the committed store footprint, and
+  `ProtectedLocalCoreRom` transports the result to all 25 decoded instruction kinds using physical
+  provenance. `ProtectedLocalCore.ground_of_host_steps` derives ordinary ROM preservation and HALT
+  internally; only active SyscallInstrs step/frame effects remain semantic premises. This strengthens
+  the native immutable-code profile without changing the original SP1 chip faithfulness statements.
 - `Model/Core/Execution.lean` defines complete Sail/host/clock states and deterministic mixed
   transitions, with normal Sail retirement and the concrete eight-call host interpreter. Both
   ordinary and syscall steps require a running source. `HostTerminal.lean` proves that only HALT
@@ -460,17 +462,17 @@ Still required before the native capstone can be claimed:
    facts; final State truth supplies successful full-tape replay and the returned PC/clock.
    Widen the legacy HALT row's 16-bit exit domain when integrating the full syscall/Exit path.
    The 60-table `ProtectedLocalCore` witness now projects to the original local assembly with
-   preserved constraints and balance, and every active permission request is authenticated from
-   the fixed provider. Relate these requests to each decoded store's semantic byte footprint and
-   feed the resulting `RowEffect` ROM preservation into grounding. The current combinator still
-   takes that premise.
+   preserved constraints and balance. Every active permission request is authenticated from
+   the fixed provider and connected to its decoded store's semantic byte footprint.
+   `ProtectedLocalCore.ground_of_host_steps` now derives ordinary ROM preservation through the
+   registered row effects and includes stateful HALT, leaving active SyscallInstrs effects explicit.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM
    writes; the latter must use the same byte-permission interface. Terminal ECALL/Exit agreement and complete
    execution reconstruction, including ordinary normal retirement, remain open. No unconditional
    local execution theorem is claimed.
 3. Integrate the paired semantic replay with the mixed carrier, the full-code-checked
-   syscall chip, host effects, and ordinary ROM-write exclusion into
-   the AIR and mixed timed grounding. Extending the Memory footprint must preserve host accesses
+   syscall chip and host effects into the AIR and mixed timed grounding. Ordinary ROM-write
+   exclusion is already integrated through `ProtectedLocalCore`. Extending the Memory footprint must preserve host accesses
    in the balanced ledger rather than projecting back to the instruction-only footprint.
 4. Prove the event compiler total on shared semantic resource bounds; construct all native tables
    and close soundness and completeness for the same arbitrary local-segment domain. Prove

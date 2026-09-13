@@ -72,6 +72,21 @@ def localWitness {image : ProgramImage} {source : ExecutionSnapshot}
     EnsembleWitness (LocalCore.ensemble (p := p) image source) :=
   witness.project (LocalCore.ensemble image source) (projectionLength image source)
 
+/-- Each projected table retains its original physical arrays and prover data. -/
+theorem localWitness_table {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 59) :
+    (localWitness witness).tables[index.val]'(by
+      rw [← (localWitness witness).same_length]
+      change index.val < (LocalCore.tables (p := p) image source).length
+      rw [LocalCore.tables_length]; exact index.isLt) =
+      (witness.tables[index.val]'(by
+        rw [← witness.same_length]; change index.val < (tables image source).length
+        rw [tables_length]; omega)).withComponent
+        ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)) :=
+  witness.project_getElem (target := LocalCore.ensemble image source) (projectionLength image source)
+    ⟨index.val, by change index.val < (LocalCore.tables image source).length
+                   rw [LocalCore.tables_length]; exact index.isLt⟩
+
 theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) : (localWitness witness).Constraints := by

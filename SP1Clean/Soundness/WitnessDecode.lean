@@ -137,6 +137,26 @@ noncomputable def decodeInstructionTables :
       table.table.map (⟨chip, ·⟩) ++ decodeInstructionTables chips tables
   | _, _ => []
 
+/-- A decoded row retains both its descriptor's position and the corresponding physical row.
+This provenance survives component extensions whose additional channels are absent from the decoder. -/
+theorem position_of_mem_decodeInstructionTables
+    {chips : List (SupportedChip p)} {tables : List (Table (ZMod p))}
+    {decoded : DecodedInstructionRow p} (member : decoded ∈ decodeInstructionTables chips tables) :
+    ∃ index, ∃ chipBound : index < chips.length, ∃ tableBound : index < tables.length,
+      decoded.chip = chips[index] ∧ decoded.physical ∈ tables[index].table := by
+  induction chips generalizing tables with
+  | nil => simp [decodeInstructionTables] at member
+  | cons chip chips ih =>
+      cases tables with
+      | nil => simp [decodeInstructionTables] at member
+      | cons table tables =>
+          rw [decodeInstructionTables, List.mem_append] at member
+          rcases member with first | rest
+          · obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp first
+            exact ⟨0, by simp, by simp, rfl, physicalMem⟩
+          · obtain ⟨index, chipBound, tableBound, same, physicalMem⟩ := ih rest
+            exact ⟨index + 1, by simpa using chipBound, by simpa using tableBound, same, physicalMem⟩
+
 /-- The canonical physical instruction rows of the stable first 25 witness tables. -/
 noncomputable def decodedInstructionRows (tables : List (Table (ZMod p))) :
     List (DecodedInstructionRow p) :=

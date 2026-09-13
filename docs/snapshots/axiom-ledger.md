@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1894 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 1907 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 233 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2127 released declarations are probed.
+- 2140 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,6 +35,19 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
+The protected-ROM grounding checkpoint adds 13 main declarations and no test anchors. Two
+additions use the logical baseline or a subset, two retain the existing 77-axiom Sail set, one
+retains the existing 98-axiom set, and eight retain the existing 100-axiom registry set. All preceding
+1894 main and 233 test dependency sets are unchanged, with no removals or new axiom names.
+
+`ProtectedStoreFootprints` proves byte-exact write permission for each of the four store widths.
+`ProtectedLocalCoreRom` follows physical decoder provenance and hides all instruction dispatch behind
+`instructionRows_write_permitted`. The row-effect grounding interface preserves the original
+trajectory-wide APIs as specializations. `ProtectedLocalCore.ground_of_host_steps` now derives
+ordinary ROM preservation and stateful HALT internally, leaving active SyscallInstrs step/frame
+effects as its sole semantic step/frame premise. Complete outgoing Sail/host agreement, terminal
+Exit agreement, and compiler totality remain open. Original SP1 faithfulness statements are unchanged.
+
 The protected-ledger authentication checkpoint adds 31 main declarations and no test anchors.
 Twenty-one additions use only the logical baseline. The ten concrete ensemble declarations retain
 the existing 100-axiom registry set. All preceding 1863 main and 233 test dependency sets are
@@ -46,10 +59,10 @@ ledgers, public input, and prover data; `statement_implies_local` proves refinem
 relation. The reusable projection transport lives in `ToClean/Air/EnsembleProjection.lean`.
 `ProtectedLocalCorePermissions` exhaustively classifies the full assembly's permission sources and
 uses its own count-bounded balance to authenticate every active pull. The physical-row theorem
-`row_pull_permitted` requires no caller-supplied provider semantics. The remaining ROM step connects
-these requested addresses to decoded stores' semantic footprints and uses the byte-frame lemma
-inside grounding. The current execution combinator still takes ROM preservation; host effects,
-full outgoing-state agreement, and compiler totality remain open.
+`row_pull_permitted` requires no caller-supplied provider semantics. At that checkpoint, connecting
+these requested addresses to decoded stores' semantic footprints and grounding remained open;
+the protected-ROM grounding checkpoint above closes both. Host effects, full outgoing-state
+agreement, and compiler totality remain open.
 
 The native ROM-permission checkpoint adds 45 main declarations and six test anchors. Forty-two
 main additions use the logical baseline or a subset. The new ensemble and its table-count theorem
@@ -67,8 +80,9 @@ partial writes beside code, store padding, and stopped identities. This is an ex
 immutable-code profile restriction, separate from the original Rust-faithfulness claims.
 
 At that checkpoint, projection to the existing local witness and permission source authentication
-were still open; the protected-ledger checkpoint above closes both. Grounding still needs the
-semantic-footprint connection. Host-memory writes, complete outgoing-state agreement, terminal
+were still open; the protected-ledger checkpoint above closes both. The subsequent protected-ROM
+checkpoint also closes the semantic-footprint connection and ordinary grounding. Host-memory writes,
+complete outgoing-state agreement, terminal
 Exit agreement, and compiler totality remain open.
 
 The stateful local HALT checkpoint adds 16 main declarations and three test anchors. Eight main
