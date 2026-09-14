@@ -974,6 +974,12 @@ final-plus-pulls permutation from raw AIR constraints and balance, without a cal
 Memory guarantee or multiplicity condition. `word_memory_sublist` retains every consumer pair,
 including padding and duplicate occurrences. These statements establish complete-record
 conservation; identifying the current predecessor value still requires mixed timed grounding.
+`Soundness/HostRamTouches.lean` derives canonical RAM keys, new-word and clock bounds, and a
+read at the call clock followed by a write at clock plus one, using constraints and Byte
+guarantees alone. `HostHintReadLocalMemory.source_word_touches` closes these facts for the actual
+installed word tables; `call_word_touches` places selected accesses in their handler's window.
+Strict predecessor order needs the prior low-clock bound, still to be transferred through the
+complete mixed ledger. These access facts do not supply previous-value truth.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

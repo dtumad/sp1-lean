@@ -258,7 +258,11 @@ and preserves the two boundary inventories as complete tables. `HostHintReadLoca
 the installed source-backed assembly's complete record permutation from raw constraints and
 balance, with no caller multiplicity or Memory-guarantee premise; every padded word pair is an
 occurrence-preserving sublist of that interior. This is record conservation, not predecessor
-currency. The combined handoff regression uses real
+currency. `HostRamTouches` derives canonical RAM locations, new-word and pushed-clock bounds,
+and read/write timing from constraints and Byte guarantees alone. `HostHintReadLocalMemory`
+connects these to every installed physical word and its selected call window. Prior low-clock
+bounds and predecessor currency still need the complete mixed-ledger grounding.
+The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.
 No static-source-queue restriction is added to the full capstone objective.

@@ -53,7 +53,8 @@ private theorem reader_assumptions (input : Inputs (ZMod p))
     (high : input.clk_16_24.val < 2 ^ 8) : Readers.MemoryAccess.Assumptions input.reader :=
   ⟨Or.inr rfl, fun _ => word, Readers.ClkDiscipline.of_cpuState_spec (fun _ => ⟨low, high⟩)⟩
 
-private theorem pushed_time (input : Inputs (ZMod p))
+/-- The locally checked low-clock discipline places the host write at the call clock plus one. -/
+theorem pushed_time (input : Inputs (ZMod p))
     (discipline : Readers.ClkDiscipline input.clockLow (1 : ZMod p)) :
     Semantics.MemoryMsg.timeNat input.pushed = Semantics.clkNat input.clk_high input.clockLow + 1 := by
   have low := discipline 0 0 (ZMod.val_zero) (by omega) rfl
@@ -69,7 +70,8 @@ private theorem zero_word : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) := by
   apply Word.isU64_of_cases <;> norm_num
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem ram_key (record : MemoryMsg (ZMod p))
+/-- The existing address gadget and canonical limbs establish an aligned native RAM key. -/
+theorem ram_key (record : MemoryMsg (ZMod p))
     (bound : Word.isU64 (MemoryBoundary.address record))
     (output : Extracted.AddressOperation (ZMod p))
     (checked : AddressOperation.Spec (FinalRamProvider.addressInput record) output) : RamKey record := by

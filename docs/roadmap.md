@@ -479,6 +479,11 @@ Implemented foundations:
   operand indices. The hint dispatch theorem consumes the engine's incoming register currency
   on the actual prefix trajectory; all three observations and the matching clock are derived.
   Preceding replay, running status, and incoming currency are still premises.
+  `HostRamTouches.of_constraints` derives canonical RAM keys, bounded pushed words/clocks, and
+  aligned touches from the actual RAM circuit and Byte guarantees. `HostHintReadLocalMemory`
+  instantiates these facts for every physical word in the installed source assembly and aligns
+  selected words to their handler clock. Strict predecessor order remains conditional on the
+  prior low-clock bound; the full mixed ledger must derive that bound before value grounding.
   **Next:** derive Memory predecessor currency through mixed grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments

@@ -439,6 +439,10 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Composition.extracted_instructionTables_constraints
 #print axioms SP1Clean.Composition.signedSum_eq_sent_sub_received
 #print axioms SP1Clean.Composition.signedSum_eq_zero
+#print axioms SP1Clean.Soundness.HostRamTouches.of_constraints
+#print axioms SP1Clean.Soundness.HostHintReadLocal.word_touches
+#print axioms SP1Clean.Soundness.HostHintReadLocal.call_word_touches
+#print axioms SP1Clean.Soundness.HostHintReadLocal.source_word_touches
 #print axioms SP1Clean.Semantics.eventTimeline_start_le
 #print axioms SP1Clean.Soundness.HostCallProjection.other_interactions
 #print axioms SP1Clean.Soundness.HostLocalCore.localWitness_program
@@ -1277,6 +1281,8 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.HostCallChip.host_values_of_constraints
 #print axioms SP1Clean.HostCallChip.populate
 #print axioms SP1Clean.HostCallChip.populate_assumptions
+#print axioms SP1Clean.HostRamAccessChip.pushed_time
+#print axioms SP1Clean.HostRamAccessChip.ram_key
 #print axioms SP1Clean.HostRamAccessChip.main_memory_interactions
 #print axioms SP1Clean.HostRamAccessChip.main_host_interactions
 #print axioms SP1Clean.HostRamAccessChip.memory_values

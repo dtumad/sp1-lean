@@ -40,6 +40,11 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Physical host RAM touches before previous-value grounding.
+    ("SP1Clean/Soundness/HostRamTouches.lean", "of_constraints"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "word_touches"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "call_word_touches"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "source_word_touches"),
     # Actual host-call register observations from the retained Program ledger and grounded reads.
     ("SP1Clean/Model/Semantics/EventTime.lean", "eventTimeline_start_le"),
     ("SP1Clean/Soundness/HostCallProjection.lean", "other_interactions"),
@@ -1024,6 +1029,8 @@ EXACT_REQUIRED_THEOREMS = [
     ("SP1CleanTest/Core/HostCall.lean", "gatedReads"),
     ("SP1CleanTest/Core/HostCall.lean", "rejectedAliases"),
     ("SP1Clean/Proofs/Chips/HostRamAccessChip/Formal.lean", "soundness"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Formal.lean", "pushed_time"),
+    ("SP1Clean/Proofs/Chips/HostRamAccessChip/Formal.lean", "ram_key"),
     ("SP1Clean/Proofs/Chips/HostRamAccessChip/Formal.lean", "completeness"),
     ("SP1Clean/Proofs/Chips/HostRamAccessChip/Formal.lean", "circuit"),
     ("SP1Clean/Proofs/Chips/HostRamAccessChip/Ledger.lean", "main_memory_interactions"),

@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2459 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2465 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 301 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2760 released declarations are probed.
+- 2766 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,17 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The host Program/register integration adds seven main declarations: two use the logical baseline,
+The host RAM-touch integration adds six main declarations: three use the logical baseline,
+and three retain the installed assembly's existing 100-dependency set. All preceding 2459 main
+and 301 test dependency sets are unchanged, with no removals or new axiom names.
+`HostRamTouches.of_constraints` derives canonical RAM keys, new-word and clock bounds, and
+aligned access timing without Memory guarantees. `HostHintReadLocal.source_word_touches`
+instantiates these facts for every actual word in the source/queue assembly, and
+`call_word_touches` places selected words in the handler's window. Strict predecessor order
+still needs the prior low-clock bound from the full mixed ledger; previous-value truth and
+complete host execution grounding remain open.
+
+The preceding host Program/register integration added seven main declarations: two use the logical baseline,
 and five retain the installed assembly's existing 100-dependency set. All preceding 2452 main
 and 301 test dependency sets are unchanged, with no removals or new axiom names.
 `HostQueueCurrent.run_of_source_prefix` now derives x5/x10/x11 observations from the actual
