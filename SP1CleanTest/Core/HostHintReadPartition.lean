@@ -3,6 +3,7 @@ import SP1Clean.Soundness.HostHintReadLocalPermissions
 import SP1Clean.Soundness.HostHintReadLocalRecords
 import SP1Clean.Soundness.HostHintReadLocalExecution
 import SP1Clean.Soundness.HostHintReadLocalQueue
+import SP1Clean.Soundness.HostHintQueueBoundary
 import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -336,5 +337,38 @@ theorem missingQueueEndpoints :
         queueEndpoint { final with head := Address.ofNat 1 } (-1) :: actual) = false ∧
       HintReadFixtures.balanced (queueEndpoint initial 1 ::
         queueEndpoint { final with allocated := Address.ofNat 0 } (-1) :: actual) = false := by native_decide
+
+private def withQueueBoundary (actual : List Bytes) (final : HostHintQueue.State Fp)
+    (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
+    (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) :
+    EnsembleWitness (Soundness.HostHintQueueBoundary.ensemble image (recordSnapshot actual) final
+      HostCallReceivers.available (HostHintReadLocal.sourceResources actual) []) :=
+  let original := withSources actual calls rows nodes records
+  EnsembleWitness.ofTables _ original.tables original.data original.publicInput
+    original.tables_map_component original.same_data
+
+/-- The actual verifier closes queue balance exactly once. Duplicate handler chains, a forged
+final head, and a reset frontier fail; zero-event identities work. Other AIR channels remain
+outside this fixture, so this is not yet a full mixed-execution non-vacuity proof. -/
+theorem installedQueueEndpoints :
+    let rows := (calls.flatMap words).reverse
+    let nodes := calls.map (·.node)
+    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
+    let final := (call 1 265 (2 ^ 24 + 1) (2 ^ 48 - 8)).next
+    let witness := withQueueBoundary hints final calls rows nodes records
+    let expanded := Soundness.HostHintQueueBoundary.expanded witness
+    witness.tables.length = 85 ∧ expanded.tables.length = 86 ∧
+      witness.verifierTable.table.length = 1 ∧
+      HintReadFixtures.balanced (queueLedger witness.allTables) = true ∧
+      HintReadFixtures.balanced (queueLedger expanded.allTables) = true ∧
+      recordLedger witness.allTables = recordLedger expanded.allTables ∧
+      HintReadFixtures.balanced (queueLedger
+        (withQueueBoundary hints final (calls ++ calls) rows nodes records).allTables) = false ∧
+      HintReadFixtures.balanced (queueLedger
+        (withQueueBoundary hints { final with head := Address.ofNat 1 } calls rows nodes records).allTables) = false ∧
+      HintReadFixtures.balanced (queueLedger
+        (withQueueBoundary hints { final with allocated := Address.ofNat 0 } calls rows nodes records).allTables) = false ∧
+      HintReadFixtures.balanced (queueLedger (withQueueBoundary hints
+        (SP1Clean.HostHintQueueBoundary.initial hints) [] [] [] []).allTables) = true := by native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

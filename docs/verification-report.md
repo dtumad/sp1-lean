@@ -917,14 +917,26 @@ the actual cursor ledger rejects its use by the earlier call. This is also a sub
 complete queue tokens. `HostHintReadLocalQueue.queue_interactions` retains the full installed
 ledger, including every extra resource contribution. Its `queue_specs` derives the three handler
 contracts without Memory premises. `queue_ordered_of_endpoints` proves the exhaustive token path
-conditionally on the actual resource endpoint ledger; semantic endpoint authentication remains open.
+conditionally on the actual resource endpoint ledger; that interface does not construct or
+authenticate endpoints.
 The stronger negative result `source_queue_rows_nil` proves that the fixed node/word source
 assembly, with full AIR constraints and balance, forces all three queue-handler tables inactive.
 Thus its active 85-table record fixtures cannot be complete AIR witnesses. `missingQueueEndpoints`
 checks their record balance succeeds while queue balance fails; adding the correct explicit endpoint
 pair closes that ledger, and altering its final head breaks it again. The pair in this regression
-is not an installed verifier. The next integration step must construct source/final queue endpoints
-bound to the full snapshots and propagate semantic head truth along the path. The queue's positive
+is not an installed verifier. The new `Soundness/HostHintQueueBoundary.lean` assembly now runs the
+endpoint circuit exactly once in the actual verifier. The source cursor binds to the full incoming
+hints under a circuit-checked capacity bound; the final cursor is a fixed ensemble parameter.
+Generic `ClosedVerifier` transport preserves raw constraints in both directions and the complete
+ledger on every channel, including count bounds. It requires static offset/environment transport
+laws, proved by the endpoint circuit; zero witness length alone would not imply those laws.
+`source_queue_ordered` orders all actual HINT_READ and both HINT_LEN rows from the installed AIR's
+constraints and balance alone. `installedQueueEndpoints` checks the real verifier closes queue
+balance and its derived singleton preserves it, while duplicate chains, forged heads, and reset
+frontiers fail; the zero-event identity succeeds. These remain subsystem checks. No outgoing
+snapshot binding follows merely from fixing a final cursor. Semantic head history, authenticated
+WRITE/hook allocation edges, and final byte agreement remain open; the three-handler ordering
+theorem only applies when the other resources are queue-silent. The queue's positive
 event-clock requirement falls under the existing active 1-mod-8 compiler profile; it does not
 require rejecting zero-step identities at clock zero.
 

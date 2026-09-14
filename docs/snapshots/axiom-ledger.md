@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2343 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 294 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2379 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 295 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2637 released declarations are probed.
+- 2674 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,32 +35,37 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The queue-chronology checkpoint adds 23 main declarations and one test anchor. Twelve main
-additions use subsets of the logical baseline (including the axiom-free registry list); the
-11 installed-ledger results have exactly the preceding local ordering theorem's 100 dependencies.
-All preceding 2320 main and 293 test dependency sets are unchanged, with no removals or new
-main-library axiom names. The new compiler-trusted constant occurs only in `missingQueueEndpoints`.
+The verifier-owned queue-boundary checkpoint adds 36 main declarations and one test anchor.
+Twenty-five main additions use subsets of the logical baseline; the other 11 have exactly the
+preceding installed ordering theorem's 100 dependencies. All preceding 2343 main and 294 test
+dependency sets are unchanged, with no removals or new main-library axiom names. The new
+compiler-trusted constant occurs only in `installedQueueEndpoints`.
 
-`HostQueueOrder` derives an exhaustive ordered token path from actual HINT_READ and both HINT_LEN
-tables. `HostHintReadLocalQueue` accounts for every installed queue interaction and derives all
-three handler specifications without Memory premises. `queue_ordered_of_endpoints` retains the
-actual extra-resource endpoint ledger explicitly; it does not assume an authenticated semantic
-queue history or claim a completed endpoint construction.
+`ClosedVerifier` composes a closed circuit into an ensemble's verifier and represents that exact
+invocation as a derived singleton table. Raw constraints are equivalent in both representations,
+and every channel's complete interaction ledger is preserved up to permutation, hence balance
+and count bounds are equivalent. Static offset/environment transport laws are explicit in the
+interface; zero witness length alone would not justify them. The native constant endpoint circuit
+proves both laws and its soundness/completeness without additional axioms.
 
-`source_queue_rows_nil` establishes the concrete missing-boundary limitation: full constraints
-and balance force all queue-handler tables inactive in the fixed node/word source assembly.
-The active 85-table record-subsystem fixtures therefore cannot be complete AIR witnesses.
-The new regression checks record balance succeeds while queue balance fails, then checks the
-explicit endpoint pair closes the queue ledger and rejects a forged final head or reset allocation
-frontier. Those endpoint messages are not an installed verifier. Positive queue-event clocks agree
-with the existing active 1-mod-8 compiler profile; range-only source checks can still admit identity
-segments at clock zero.
+`HostHintQueueBoundary.ensemble` retains every ordinary table and adds the source/final queue pair
+only in the verifier. `source_binding` derives the incoming cursor's binding to the complete source
+hints, including the allocation frontier, from a circuit-checked capacity bound.
+`source_queue_ordered` orders every actual HINT_READ and both HINT_LEN row from the installed AIR's
+constraints and balance alone. Its final cursor is fixed by the ensemble instance, not yet bound
+to the outgoing snapshot's bytes. Generic installation permits arbitrary resources; the present
+three-handler ordering theorem requires other resources to be queue-silent and therefore does
+not yet cover WRITE/hook allocation edges.
 
-Current-frontier record restriction and the combined HINT_READ dispatch/write theorem remain
-proved. Next install source/final queue endpoints bound to full snapshots and derive semantic
-head history along the actual path. WRITE/hook authorization, Memory predecessor currency, mixed
-grounding, and complete outgoing state remain open. The full-AIR HINT_LEN counterexample and
-canonical export channel inventory are unchanged.
+The earlier `source_queue_rows_nil` diagnosis remains true for the assembly without endpoints.
+`installedQueueEndpoints` checks that the actual verifier now closes queue balance, its singleton
+representation preserves record and queue accounting, duplicate handler chains and forged final
+heads/frontiers fail, and zero-event identities work. These are subsystem checks rather than full
+mixed-AIR non-vacuity witnesses. No complete outgoing snapshot or semantic head-history theorem is
+claimed. The next work is to propagate semantic queue truth, authenticate allocation edges, and
+bind final bytes; Memory predecessor currency, mixed grounding, and complete outgoing state also
+remain open. The full-AIR forged HINT_LEN regression and canonical export channel inventory remain
+unchanged.
 
 The preceding installed HINT_READ cursor/permission checkpoint added 24 main declarations and two test
 anchors. Six main additions use exactly the logical baseline; the other 18 have exactly the

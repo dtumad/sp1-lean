@@ -533,12 +533,20 @@ alone; the State walk supplies the missing event uniqueness.
 tables, retaining the entire queue token and allocation frontier. `HostHintReadLocalQueue` derives
 their specifications and the complete installed queue ledger; every other contribution is retained
 in the actual extra resource tables. `queue_ordered_of_endpoints` exposes those resources' endpoint
-ledger as an unclosed premise. The absence of endpoints is not merely missing proof plumbing:
-`source_queue_rows_nil` proves the fixed node/word source registration has no active queue handlers
-under full AIR constraints and balance. The existing active fixtures satisfy selected subsystems
-only. Source/final queue endpoints must be installed and bound to the complete snapshots before
-semantic queue history can close. Positive handler clocks agree with the existing active 1-mod-8
-profile; range-only validation can still admit zero-step identity segments at clock zero.
+ledger explicitly for the older assembly. `source_queue_rows_nil` proves that assembly cannot have
+active queue handlers under full constraints and balance. `HostHintQueueBoundary.ensemble` now
+installs a single endpoint pair in the actual verifier. Its source cursor is computed from, and
+proved bound to, the full incoming hints; its final cursor is an ensemble parameter.
+`ToClean/Air/VerifierExtension.lean` represents that invocation as a derived singleton for existing
+table proofs, with constraints and every channel's balance equivalent in both representations.
+The witness cannot omit or duplicate the derived boundary row. `source_queue_ordered` consequently
+needs only the new ensemble's constraints and balance to order all three queue-handler variants.
+The general installer retains arbitrary handlers/resources; the current ordering theorem requires
+other resources to be queue-silent, so it does not yet cover allocation edges. Binding the final
+cursor to the outgoing snapshot's bytes and deriving semantic head history remain open. The
+installed regressions still establish selected subsystems, not a complete mixed-AIR witness.
+Positive handler clocks agree with the existing active 1-mod-8 profile; range-only validation can
+still admit zero-step identity segments at clock zero.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and

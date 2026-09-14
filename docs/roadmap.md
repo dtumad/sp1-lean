@@ -436,14 +436,18 @@ Implemented foundations:
   the actual cursor rejects words borrowed from a later, byte-identical node.
   `HostQueueOrder` now proves an exhaustive path through the actual HINT_READ and both HINT_LEN
   tables. `HostHintReadLocalQueue` derives their complete queue ledger and specifications from the
-  installed AIR. `queue_ordered_of_endpoints` still takes the actual extra-resource endpoint ledger
-  explicitly; no endpoint construction or semantic head history is claimed. The missing boundary
-  is load-bearing: `source_queue_rows_nil` proves that the fixed node/word source registration,
-  under full constraints and balance, forces every queue-handler table inactive. Its active
-  record-only fixtures therefore cannot be full-AIR witnesses. The regression checks this missing
-  balance and rejects a forged final head even after supplying the explicit endpoint pair.
-  **Next:** construct and install source/final queue endpoints bound to the complete shard
-  snapshots, then derive semantic head history along the physical path. Preserve identity segments
+  installed AIR. `source_queue_rows_nil` proves the old fixed-source registration without endpoints
+  cannot have active queue handlers under full constraints and balance. The new
+  `HostHintQueueBoundary.ensemble` installs one endpoint pair in the actual verifier; generic
+  `ClosedVerifier` transport derives a singleton representation preserving every constraint and
+  channel balance. The source cursor binds to the incoming snapshot's hints. `source_queue_ordered`
+  now closes the exhaustive token-path theorem from full constraints and balance without separate
+  endpoint or authentication premises. The final cursor is fixed by the ensemble instance, and
+  semantic final-byte binding is not yet proved. Installed subsystem regressions check duplicate
+  chains, forged heads/frontiers, and zero-event identities; they are not full-AIR witnesses.
+  **Next:** propagate semantic head truth along the physical path and bind the final cursor to the
+  outgoing snapshot. Extend ordering to authenticated WRITE/hook allocation edges; the current
+  three-handler theorem requires the other resources to be queue-silent. Preserve identity segments
   and use the already-required active 1-mod-8 clock profile; range-only source validation permits
   zero, while an active queue handler requires a positive clock. This is part of the shared compiler
   profile obligation, not a new reason to exclude zero-step segments.
@@ -615,9 +619,10 @@ Still required before the native capstone can be claimed:
    the fixed provider and connected to its decoded store's semantic byte footprint.
    `ProtectedLocalCore.ground_of_host_steps` now derives ordinary ROM preservation through the
    registered row effects and includes stateful HALT, leaving active SyscallInstrs effects explicit.
-   The persistent hint-queue compiler covers all eight semantic calls. Install its fixed source
-   node provider and HINT_LEN handler, then authenticate new nodes and derive head history,
-   including WRITE/hook prepends and HINT_READ pops with their complete bytes.
+   The persistent hint-queue compiler covers all eight semantic calls. Fixed record providers,
+   HINT_LEN/HINT_READ handlers, and verifier-owned queue endpoints now have an installed token-path
+   theorem. Authenticate new nodes and derive head history, including WRITE/hook prepends and
+   HINT_READ pops with their complete bytes, then bind the final cursor to the outgoing snapshot.
    Parameterize the bank subsystem's currently zero genesis with the complete local source
    commitment/deferred values before installing it in arbitrary continuation shards.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM
