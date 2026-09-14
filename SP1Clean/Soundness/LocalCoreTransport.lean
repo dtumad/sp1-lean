@@ -107,7 +107,7 @@ theorem grounding_carrier {image : ProgramImage} {source : ExecutionSnapshot} (v
     · exact congrArg canonState localAlignment.statePull
     · exact congrArg canonState localAlignment.statePush
   refine ⟨⟨ordered, rewrittenRows rows touches, final, exhaustive,
-    paired.imp (fun _ _ facts => facts.1), ?_, ?_, ?_, finalRewrite⟩⟩
+    paired.imp (fun _ _ facts => facts.1), ?_, ?_, ?_, ?_, finalRewrite⟩⟩
   · intro row member
     obtain ⟨_, _, facts⟩ := forall₂_exists_right paired row member
     exact facts.2.1
@@ -121,6 +121,8 @@ theorem grounding_carrier {image : ProgramImage} {source : ExecutionSnapshot} (v
         dsimp only [ExecutionRow.canonEdge]
         rw [ExecutionRow.edge_eq_facts]
         exact Prod.ext related.1.symm related.2.symm) edges.flip walk
+  · rw [ExecutionRow.canonEdge_facts]
+    exact walk
   · intro loc
     rw [(rewritten_memory rows touches loc).1, (rewritten_memory rows touches loc).2]
     exact balance loc

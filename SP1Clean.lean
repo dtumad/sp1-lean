@@ -433,6 +433,7 @@ import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Soundness.HostHintReadExecutionRows
 import SP1Clean.Soundness.HostHintReadMemoryOrder
 import SP1Clean.Soundness.HostHintReadGrounding
+import SP1Clean.Soundness.HostHintReadTrajectory
 import SP1Clean.Soundness.HostLocalCoreRows
 import SP1Clean.Soundness.HostRamTouches
 import SP1Clean.Model.Core.HintQueueEvent
@@ -802,6 +803,7 @@ import SP1Clean.Soundness.CoreMemoryBalance
 import SP1Clean.Soundness.CoreProgramBalance
 import SP1Clean.Soundness.CoreExecutionRow
 import SP1Clean.Soundness.CoreExecutionEvents
+import SP1Clean.Soundness.CoreExecutionTrajectory
 import SP1Clean.Soundness.CoreInstructionExecution
 import SP1Clean.Soundness.CoreHaltExecution
 import SP1Clean.Soundness.CoreTableProjection

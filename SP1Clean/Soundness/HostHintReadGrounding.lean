@@ -114,6 +114,22 @@ abbrev GroundingCarrier
     (LocalCore.memoryInitialFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
     (LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
 
+private theorem eventFacts_canonEdge (data : ProverData (ZMod p)) (words : List (HintReadCoverage.Row (p := p))) :
+    (fun event => (canonState (eventFacts data words event).statePull,
+      canonState (eventFacts data words event).statePush)) = ExecutionRow.canonEdge data := by
+  simp only [(eventFacts_state_fetch _ _ _).1, (eventFacts_state_fetch _ _ _).2.1]
+  exact ExecutionRow.canonEdge_facts data
+
+/-- The same ordered CPU tape supplies both memory grounding and queue-prefix replay. -/
+theorem GroundingCarrier.cpuWalk
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness) :
+    Walk.IsWalk (ExecutionRow.canonEdge witness.data) (initialBoundaryStateMessage witness.publicInput)
+      (finalBoundaryStateMessage witness.publicInput) carrier.ordered := by
+  have walk := carrier.eventWalk
+  rw [eventFacts_canonEdge] at walk
+  exact walk
+
 /-- The installed host AIR supplies the final carrier, with all host Memory accesses retained.
 Ordering, read alignment, refresh elimination, and canonical State transport are internal. -/
 theorem source_grounding_carrier (valid : image.Valid)
@@ -147,7 +163,7 @@ theorem source_grounding_carrier (valid : image.Valid)
     · exact congrArg canonState localAlignment.statePull
     · exact congrArg canonState localAlignment.statePush
   refine ⟨⟨ordered, rewrittenRows rows touches, frontier, exhaustive,
-    paired.imp (fun _ _ facts => facts.1), ?_, ?_, ?_, finalRewrite⟩⟩
+    paired.imp (fun _ _ facts => facts.1), ?_, ?_, ?_, ?_, finalRewrite⟩⟩
   · intro row member
     obtain ⟨_, _, facts⟩ := forall₂_exists_right paired row member
     exact facts.2.1
@@ -162,6 +178,8 @@ theorem source_grounding_carrier (valid : image.Valid)
         dsimp only [ExecutionRow.canonEdge]
         rw [ExecutionRow.edge_eq_facts]
         exact Prod.ext related.1.symm related.2.symm) edges.flip walk
+  · rw [eventFacts_canonEdge]
+    exact walk
   · intro loc
     rw [(rewritten_memory rows touches loc).1, (rewritten_memory rows touches loc).2]
     exact balance loc

@@ -288,6 +288,13 @@ operand currency plus final State/frontier value truth. Its remaining premises a
 per-event step/frame facts on a trajectory beginning at the source; actual paired replay and
 host-step proofs must still discharge them. No prior-record historical truth is inferred from a
 refresh rewrite. Complete outgoing snapshot agreement and the full eight-call integration remain open.
+`HostHintReadTrajectory` now uses that carrier's original CPU walk for the actual paired replay.
+`hintLength_result` proves the observation of the host queue at the exact event position from
+incoming State truth; `hintRead_run` consumes original operand currency and proves dispatch and
+the exact padded writes there. Preceding replay and running status are derived internally.
+`CoreExecutionTrajectory` shares occurrence lookup, replay, and full timeline agreement with the
+ordinary local assembly. Complete RAM post-state/frame facts and outgoing snapshot agreement
+still need to be connected before claiming unconditional host execution.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

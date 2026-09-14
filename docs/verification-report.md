@@ -1020,6 +1020,17 @@ values at the actual read times, final State truth, and physical final-frontier 
 outgoing clock. The proof hides alignment and refresh rewriting. It does not infer truth at an
 original prior record's historical timestamp. Actual event semantics on paired replay, complete
 outgoing snapshot agreement, and integration of the remaining host effects are still open.
+`Soundness/HostHintReadTrajectory.lean` now instantiates actual paired Sail/host replay on that
+carrier. For a handler matched to its CPU occurrence, `GroundingCarrier.hintLength_result`
+derives the actual queue-length observation from
+incoming State truth. `GroundingCarrier.hintRead_run` derives concrete HINT_READ dispatch and
+the exact padded-word inventory from that truth and original operand currency. Both conclusions
+identify the physical CPU event at the returned prefix position. No preceding-replay or
+running-host premise is supplied: the former follows from incoming State truth, and the latter
+from the checked source and authenticated ECALL fetch. The shared `CoreExecutionTrajectory`
+proof identifies the carrier and semantic event timelines at every index, including the
+non-executing extension past the tape. RAM post-state/frame facts remain necessary to close the
+grounding induction; these dispatch results are not an unconditional whole-shard execution theorem.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

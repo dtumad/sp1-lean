@@ -510,8 +510,15 @@ Implemented foundations:
   State/Memory truth internally, and returns original register/RAM operand currency and final
   State/frontier value truth. Timeline and transport proofs are shared with the ordinary local
   assembly. Complete per-event step/frame facts remain explicit premises.
-  **Next:** discharge those premises on the actual paired replay and bind the complete outgoing
-  snapshot. Extend ordering and semantic advancement
+  `HostHintReadTrajectory` now runs the actual paired Sail/host replay in that same CPU order.
+  Its `hintLength_result` derives the current host queue observation from incoming State truth;
+  `hintRead_run` additionally consumes original operand currency and proves concrete dispatch
+  with the exact padded-write inventory. Both identify the exact event position. Prior replay
+  and running status are derived internally, and the carrier and event timelines agree even
+  beyond the finite tape. These results still require an incoming grounding invariant.
+  **Next:** use dispatch and write coverage to prove the complete step/frame facts on that
+  replay, including RAM post-state and untouched locations, and bind the outgoing snapshot.
+  Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
   and use the already-required active 1-mod-8 clock profile; range-only source validation permits

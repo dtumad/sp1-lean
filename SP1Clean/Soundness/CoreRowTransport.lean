@@ -114,6 +114,14 @@ theorem rewritten_memory (rows : List (RowFacts p)) (touches : List (List (Touch
   simp only [rewrittenRows, pushesAt, pullsAt, List.map_map, Function.comp_def, rowPushesAt, rowPullsAt,
     canonicalRow, stateRespell_memPushes, stateRespell_memPulls, and_self]
 
+/-- Canonical edges can be read from the semantic facts without unfolding a physical decoder. -/
+theorem ExecutionRow.canonEdge_facts (data : ProverData (ZMod p)) :
+    (fun event : ExecutionRow p =>
+      (canonState (event.facts data).statePull, canonState (event.facts data).statePush)) =
+      ExecutionRow.canonEdge data := by
+  funext event
+  rw [ExecutionRow.canonEdge, ExecutionRow.edge_eq_facts]
+
 /-- A structural grounding carrier over opaque event and boundary values. Keeping the concrete
 ensemble out of the carrier type avoids normalizing the complete source during structure elaboration.
 The event facts explicitly include the complete instruction and host Memory footprint. -/
@@ -128,6 +136,8 @@ structure ExecutionCarrier (facts : ExecutionRow p → RowFacts p) (events : Lis
   rowOK : ∀ row ∈ rows, RowOKCore (StateMsg.timeNat incoming) row
   stateWalk : Walk.IsWalk (fun row : RowFacts p => (row.statePull, row.statePush))
     incoming outgoing rows
+  eventWalk : Walk.IsWalk (fun event =>
+    (canonState (facts event).statePull, canonState (facts event).statePush)) incoming outgoing ordered
   memoryBalance : ∀ loc, optMS (initialFrontier loc) + pushesAt rows loc =
     optMS (final loc) + pullsAt rows loc
   finalRewrite : ∀ loc message, physicalFinal loc = some message →

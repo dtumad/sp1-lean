@@ -1,6 +1,5 @@
 import SP1Clean.Soundness.LocalCoreGrounding
-import SP1Clean.Soundness.CoreExecutionEvents
-import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Soundness.CoreExecutionTrajectory
 
 /-! # Stateful replay of the local AIR's ordered events
 
@@ -25,29 +24,20 @@ noncomputable def GroundingCarrier.events {image : ProgramImage} {source : Execu
 
 theorem GroundingCarrier.events_length {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness) :
-    carrier.events.length = carrier.rows.length := by
-  simpa only [events, List.length_map] using carrier.aligned.length_eq.symm
+    carrier.events.length = carrier.rows.length := NativeCore.ExecutionCarrier.events_length carrier
 
 /-- The actual event occurrence is identified by its natural State clock. -/
 theorem GroundingCarrier.ordered_at {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness)
     {event : ExecutionRow p} (member : event ∈ executionRows witness) {n : ℕ}
     (atIndex : StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n) :
-    carrier.ordered[n]? = some event := by
-  apply ordered_at_of_alignment (p := p) (ExecutionRow.facts witness.data)
-    (incoming := initialBoundaryStateMessage witness.publicInput)
-    (outgoing := finalBoundaryStateMessage witness.publicInput)
-    (ordered := carrier.ordered) (rows := carrier.rows) (event := event) (n := n)
-    carrier.aligned carrier.stateWalk (fun row member => (carrier.rowOK row member).timeGap)
-    (carrier.exhaustive.mem_iff.mpr member)
-  exact atIndex
+    carrier.ordered[n]? = some event := NativeCore.ExecutionCarrier.ordered_at carrier member atIndex
 
 theorem GroundingCarrier.event_at {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness)
     {event : ExecutionRow p} (member : event ∈ executionRows witness) {n : ℕ}
     (atIndex : StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n) :
-    carrier.events[n]? = some event.event := by
-  simp only [events, List.getElem?_map, carrier.ordered_at member atIndex, Option.map_some]
+    carrier.events[n]? = some event.event := NativeCore.ExecutionCarrier.event_at carrier member atIndex
 
 /-- The full source, including its actual host queues and exit status, initializes replay. -/
 noncomputable def GroundingCarrier.pairedTrajectory {image : ProgramImage} {source : ExecutionSnapshot}
@@ -80,39 +70,15 @@ theorem GroundingCarrier.pairedTrajectory_succ {image : ProgramImage} {source : 
     carrier.pairedTrajectory valid policy (n + 1) =
       (carrier.pairedTrajectory valid policy n).bind
         (fun state => replayStep? policy (image.toGuestProgram valid) state event.event) :=
-  executionTrajectory_succ _ _ _ _ (carrier.event_at member atIndex)
+  NativeCore.ExecutionCarrier.pairedTrajectory_succ carrier policy (image.toGuestProgram valid) source.realize member atIndex
 
 /-- Original physical State successors occur at the next timeline position. -/
 theorem GroundingCarrier.originalTimeStep {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness)
     {event : ExecutionRow p} (member : event ∈ executionRows witness) :
     ∀ n, StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n →
-      StateMsg.timeNat (event.facts witness.data).statePush = carrier.timeline.start (n + 1) := by
-  have originalMem := List.mem_map_of_mem (f := ExecutionRow.facts witness.data)
-    (carrier.exhaustive.mem_iff.mpr member)
-  obtain ⟨row, rowMem, aligned⟩ := forall₂_exists_right carrier.aligned.flip _ originalMem
-  intro n time
-  rw [← aligned.pushTime]
-  exact carrier.timeStep row rowMem n (aligned.pullTime.trans time)
-
-private theorem event_durations {image : ProgramImage} {source : ExecutionSnapshot}
-    {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    carrier.rows.map rowDuration = carrier.events.map Machine.ExecutionEvent.duration := by
-  rw [GroundingCarrier.events, List.map_map]
-  apply List.ext_getElem
-  · simpa only [List.length_map] using carrier.aligned.length_eq
-  · intro n left right
-    have leftBound : n < carrier.rows.length := by simpa only [List.length_map] using left
-    have rightBound : n < carrier.ordered.length := by simpa only [List.length_map] using right
-    have aligned := carrier.aligned.get leftBound (by simpa only [List.length_map] using rightBound)
-    simp only [List.get_eq_getElem, List.getElem_map, Function.comp_apply] at aligned ⊢
-    have duration := (executionRows_advancing witness constraints balanced
-      (carrier.exhaustive.mem_iff.mp (List.getElem_mem rightBound))).2
-    rw [ExecutionRow.edge_eq_facts] at duration
-    dsimp only at duration
-    rw [rowDuration, aligned.pushTime, aligned.pullTime, duration, Nat.add_sub_cancel_left,
-      ExecutionRow.event_duration]
+      StateMsg.timeNat (event.facts witness.data).statePush = carrier.timeline.start (n + 1) :=
+  NativeCore.ExecutionCarrier.originalTimeStep carrier member
 
 /-- The AIR timeline counts semantic event widths, without counting providers or inactive rows. -/
 theorem GroundingCarrier.timeline_events {image : ProgramImage} {source : ExecutionSnapshot}
@@ -120,11 +86,14 @@ theorem GroundingCarrier.timeline_events {image : ProgramImage} {source : Execut
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (n : ℕ) (covered : n ≤ carrier.events.length) :
     carrier.timeline.start n = source.clock + ((carrier.events.take n).map Machine.ExecutionEvent.duration).sum := by
-  rw [timeline, NativeCore.ExecutionCarrier.timeline, rowTimeline, Timeline.ofDurations_start_le _ _ _ (by
-    simpa only [List.length_map, carrier.events_length] using covered),
-    event_durations carrier constraints balanced, ← List.map_take]
-  exact congrArg (fun clock => clock + ((carrier.events.take n).map Machine.ExecutionEvent.duration).sum)
-    (source_state_encoding witness constraints balanced).1
+  have same := NativeCore.ExecutionCarrier.timeline_eq_events carrier source.clock
+    (source_state_encoding witness constraints balanced).1 (by
+      intro event member
+      have duration := (executionRows_advancing witness constraints balanced member).2
+      rwa [ExecutionRow.edge_eq_facts] at duration)
+  change (NativeCore.ExecutionCarrier.timeline carrier).start n = _
+  rw [same]
+  exact eventTimeline_start_le carrier.events source.clock n covered
 
 /-- A successful paired prefix carries exactly the clock selected by the AIR walk. -/
 theorem GroundingCarrier.pairedTrajectory_clock {image : ProgramImage} {source : ExecutionSnapshot}

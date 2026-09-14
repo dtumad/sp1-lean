@@ -40,6 +40,25 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Actual paired replay on the complete carrier and incoming-truth hint dispatch.
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionRow.canonEdge_facts"),
+    ("SP1Clean/Soundness/HostHintReadGrounding.lean", "GroundingCarrier.cpuWalk"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.events"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.events_length"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.ordered_at"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.event_at"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.pairedTrajectory"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.trajectory"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.trajectory_zero"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.pairedTrajectory_succ"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.originalTimeStep"),
+    ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.timeline_eq_events"),
+    ("SP1Clean/Soundness/HostHintReadTrajectory.lean", "GroundingCarrier.timeline_events"),
+    ("SP1Clean/Soundness/HostHintReadTrajectory.lean", "GroundingCarrier.pairedTrajectory"),
+    ("SP1Clean/Soundness/HostHintReadTrajectory.lean", "GroundingCarrier.trajectory"),
+    ("SP1Clean/Soundness/HostHintReadTrajectory.lean", "GroundingCarrier.trajectory_zero"),
+    ("SP1Clean/Soundness/HostHintReadTrajectory.lean", "GroundingCarrier.hintLength_result"),
+    ("SP1Clean/Soundness/HostHintReadTrajectory.lean", "GroundingCarrier.hintRead_run"),
     # Ground the complete host footprint and return original operand currency.
     ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier"),
     ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.timeline"),
