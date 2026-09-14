@@ -434,9 +434,21 @@ Implemented foundations:
   authenticated persistent store, actual Memory representation guarantees, and current register
   observations. The future-node regression preserves record balance and valid source bytes while
   the actual cursor rejects words borrowed from a later, byte-identical node.
-  The next queue step is ordered head-history derivation, followed by installing these RAM rows
-  in mixed grounding, including Memory guarantees, predecessor currency, and full outgoing Memory agreement.
-  New WRITE/hook node and word authorization and ordered
+  `HostQueueOrder` now proves an exhaustive path through the actual HINT_READ and both HINT_LEN
+  tables. `HostHintReadLocalQueue` derives their complete queue ledger and specifications from the
+  installed AIR. `queue_ordered_of_endpoints` still takes the actual extra-resource endpoint ledger
+  explicitly; no endpoint construction or semantic head history is claimed. The missing boundary
+  is load-bearing: `source_queue_rows_nil` proves that the fixed node/word source registration,
+  under full constraints and balance, forces every queue-handler table inactive. Its active
+  record-only fixtures therefore cannot be full-AIR witnesses. The regression checks this missing
+  balance and rejects a forged final head even after supplying the explicit endpoint pair.
+  **Next:** construct and install source/final queue endpoints bound to the complete shard
+  snapshots, then derive semantic head history along the physical path. Preserve identity segments
+  and use the already-required active 1-mod-8 clock profile; range-only source validation permits
+  zero, while an active queue handler requires a positive clock. This is part of the shared compiler
+  profile obligation, not a new reason to exclude zero-step segments.
+  Then install RAM rows in mixed grounding, including Memory guarantees, predecessor currency,
+  and full outgoing Memory agreement. New WRITE/hook node and word authorization and semantic
   head history remain open. Include the 48-bit
   identity bound in the shared resource profile.
   The full-AIR forged HINT_LEN return regression remains open until that integration.

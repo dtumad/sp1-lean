@@ -529,6 +529,17 @@ WRITE/VERIFY handlers, authenticated queue resources, predecessor
 currency, and host RAM rows in mixed grounding remain required for complete outgoing state. Duplicating both sides balances the handoff
 alone; the State walk supplies the missing event uniqueness.
 
+`HostQueueOrder` gives an exhaustive ordered path through the actual HINT_READ and both HINT_LEN
+tables, retaining the entire queue token and allocation frontier. `HostHintReadLocalQueue` derives
+their specifications and the complete installed queue ledger; every other contribution is retained
+in the actual extra resource tables. `queue_ordered_of_endpoints` exposes those resources' endpoint
+ledger as an unclosed premise. The absence of endpoints is not merely missing proof plumbing:
+`source_queue_rows_nil` proves the fixed node/word source registration has no active queue handlers
+under full AIR constraints and balance. The existing active fixtures satisfy selected subsystems
+only. Source/final queue endpoints must be installed and bound to the complete snapshots before
+semantic queue history can close. Positive handler clocks agree with the existing active 1-mod-8
+profile; range-only validation can still admit zero-step identity segments at clock zero.
+
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and
 write cells. Execution derives coverage, window bounds, and existence of this inventory;

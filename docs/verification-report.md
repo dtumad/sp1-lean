@@ -913,6 +913,21 @@ and current register observations remain explicit. The `futureNodeConsumers` reg
 a later node with identical bytes: source checks and complete record balance still pass, but
 the actual cursor ledger rejects its use by the earlier call. This is also a subsystem regression.
 
+`Soundness/HostQueueOrder.lean` now orders all physical HINT_READ and both HINT_LEN rows by their
+complete queue tokens. `HostHintReadLocalQueue.queue_interactions` retains the full installed
+ledger, including every extra resource contribution. Its `queue_specs` derives the three handler
+contracts without Memory premises. `queue_ordered_of_endpoints` proves the exhaustive token path
+conditionally on the actual resource endpoint ledger; semantic endpoint authentication remains open.
+The stronger negative result `source_queue_rows_nil` proves that the fixed node/word source
+assembly, with full AIR constraints and balance, forces all three queue-handler tables inactive.
+Thus its active 85-table record fixtures cannot be complete AIR witnesses. `missingQueueEndpoints`
+checks their record balance succeeds while queue balance fails; adding the correct explicit endpoint
+pair closes that ledger, and altering its final head breaks it again. The pair in this regression
+is not an installed verifier. The next integration step must construct source/final queue endpoints
+bound to the full snapshots and propagate semantic head truth along the path. The queue's positive
+event-clock requirement falls under the existing active 1-mod-8 compiler profile; it does not
+require rejecting zero-step identities at clock zero.
+
 The extended assembly's automatic channel list retains duplicates. Repeating a balance
 requirement does not change the Lean relation, but this list fails the exporter's unique-name
 requirement. Exporting this assembly still needs a canonical channel inventory with proved

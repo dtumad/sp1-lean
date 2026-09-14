@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2320 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 293 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2343 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 294 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2613 released declarations are probed.
+- 2637 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,31 +35,32 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The current-frontier checkpoint adds five main declarations and one test anchor. The three
-store-restriction lemmas use subsets of the logical baseline; the two installed execution
-results have exactly the preceding local ordering theorem's 100 dependencies. All preceding
-2315 main and 292 test dependency sets are unchanged, with no removals or new main-library
-axiom names. The new compiler-trusted constant occurs only in the future-node regression.
+The queue-chronology checkpoint adds 23 main declarations and one test anchor. Twelve main
+additions use subsets of the logical baseline (including the axiom-free registry list); the
+11 installed-ledger results have exactly the preceding local ordering theorem's 100 dependencies.
+All preceding 2320 main and 293 test dependency sets are unchanged, with no removals or new
+main-library axiom names. The new compiler-trusted constant occurs only in `missingQueueEndpoints`.
 
-`HostHintReadLocalRecords` authenticates every actual node/word pull from complete record balance.
-Fixed source tables establish canonical validity and immutable binding from the complete snapshot's
-hint bytes. `RecordAuthentication` covers actual physical source rows; dynamic allocations can
-use prior grounding facts to establish it. Requiring raw constraints alone for every possible
-allocation row would be too strong. The generic transport is pure Clean material in `ToClean/`.
-`HostHintReadLocalExecution.current_records` restricts these bindings to the current allocation
-frontier: current queue truth bounds the head, and the actual cursor path fixes every selected
-word's node. `run_of_authenticated_witness` derives local specifications and individual bindings
-before proving concrete dispatch and complete padded writes. Current queue truth, persistent
-store extension and authentication, actual Memory guarantees, and register observations remain
-explicit inputs.
+`HostQueueOrder` derives an exhaustive ordered token path from actual HINT_READ and both HINT_LEN
+tables. `HostHintReadLocalQueue` accounts for every installed queue interaction and derives all
+three handler specifications without Memory premises. `queue_ordered_of_endpoints` retains the
+actual extra-resource endpoint ledger explicitly; it does not assume an authenticated semantic
+queue history or claim a completed endpoint construction.
 
-The 85-table source regression rejects missing sources and changed fixed bytes; another rejects
-a noncanonical length despite agreement of its decoded 64-bit value. The new future-node test
-preserves source checks and complete record balance when substituting a later node with identical
-bytes, but the actual cursor ledger rejects that substitution. These are subsystem regressions.
-Ordered queue heads, WRITE/hook authorization, Memory predecessor currency, mixed grounding, and
-complete outgoing state remain open. The full-AIR HINT_LEN counterexample and canonical export
-channel inventory are unchanged.
+`source_queue_rows_nil` establishes the concrete missing-boundary limitation: full constraints
+and balance force all queue-handler tables inactive in the fixed node/word source assembly.
+The active 85-table record-subsystem fixtures therefore cannot be complete AIR witnesses.
+The new regression checks record balance succeeds while queue balance fails, then checks the
+explicit endpoint pair closes the queue ledger and rejects a forged final head or reset allocation
+frontier. Those endpoint messages are not an installed verifier. Positive queue-event clocks agree
+with the existing active 1-mod-8 compiler profile; range-only source checks can still admit identity
+segments at clock zero.
+
+Current-frontier record restriction and the combined HINT_READ dispatch/write theorem remain
+proved. Next install source/final queue endpoints bound to full snapshots and derive semantic
+head history along the actual path. WRITE/hook authorization, Memory predecessor currency, mixed
+grounding, and complete outgoing state remain open. The full-AIR HINT_LEN counterexample and
+canonical export channel inventory are unchanged.
 
 The preceding installed HINT_READ cursor/permission checkpoint added 24 main declarations and two test
 anchors. Six main additions use exactly the logical baseline; the other 18 have exactly the

@@ -2,6 +2,7 @@ import SP1Clean.Soundness.HostHintReadPartition
 import SP1Clean.Soundness.HostHintReadLocalPermissions
 import SP1Clean.Soundness.HostHintReadLocalRecords
 import SP1Clean.Soundness.HostHintReadLocalExecution
+import SP1Clean.Soundness.HostHintReadLocalQueue
 import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -306,5 +307,34 @@ theorem futureNodeConsumers :
       HintReadFixtures.balanced (recordLedger (withSources actual [earlier] rows nodes records).allTables) = true ∧
       (consumers rows).all (fun table => (checked table).1) = true ∧
       shared [earlier] (words earlier) = true ∧ shared [earlier] rows = false := by native_decide
+
+private def queueLedger (tables : List (Table Fp)) : Ledger :=
+  tables.flatMap fun table => table.table.flatMap fun physical =>
+    let env := table.environment physical
+    (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
+      if interaction.channel.name == "sp1.native.hint_queue_state" then
+        some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult) else none
+
+private def queueEndpoint (state : HostHintQueue.State Fp) (multiplicity : Fp) : String × List Fp × Fp :=
+  ("sp1.native.hint_queue_state", (toElements state).toList, multiplicity)
+
+/-- Active fixed-source fixtures satisfy their record subsystem but lack queue endpoints.
+The explicit pair closes only that ledger; forged final heads or reset allocation frontiers fail. -/
+theorem missingQueueEndpoints :
+    let rows := (calls.flatMap words).reverse
+    let nodes := calls.map (·.node)
+    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
+    let witness := withSources hints calls rows nodes records
+    let actual := queueLedger witness.allTables
+    let initial := (call 3 0 1 65536).previous
+    let final := (call 1 265 (2 ^ 24 + 1) (2 ^ 48 - 8)).next
+    sourceRowsChecked hints nodes records = true ∧
+      HintReadFixtures.balanced (recordLedger witness.allTables) = true ∧
+      HintReadFixtures.balanced actual = false ∧
+      HintReadFixtures.balanced (queueEndpoint initial 1 :: queueEndpoint final (-1) :: actual) = true ∧
+      HintReadFixtures.balanced (queueEndpoint initial 1 ::
+        queueEndpoint { final with head := Address.ofNat 1 } (-1) :: actual) = false ∧
+      HintReadFixtures.balanced (queueEndpoint initial 1 ::
+        queueEndpoint { final with allocated := Address.ofNat 0 } (-1) :: actual) = false := by native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

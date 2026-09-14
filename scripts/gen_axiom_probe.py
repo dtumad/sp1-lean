@@ -40,6 +40,31 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete installed queue ledger and the missing-endpoint non-vacuity boundary.
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "readView"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "lengthView"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "indices"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "view"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "edge"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "time"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "view_strict"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "rows_spec"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "interactions"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "ordered"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "rows_nil_of_balanced"),
+    ("SP1Clean/Soundness/HostQueueOrder.lean", "positive_event_time"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "queueTables"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "extraTables"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "queueTables_components"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "queueTables_aligned"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "queueTables_mem"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "extraTables_components"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "queue_interactions"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "queue_specs"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "queue_ordered_of_endpoints"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "queue_rows_nil_of_silent_resources"),
+    ("SP1Clean/Soundness/HostHintReadLocalQueue.lean", "source_queue_rows_nil"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "missingQueueEndpoints"),
     # Current-frontier authentication and installed HINT_READ execution.
     ("SP1Clean/Model/Core/HintQueue.lean", "Extends.read_of_bound"),
     ("SP1Clean/Model/Core/HintQueueRecords.lean", "NodeRecord.Binds.restrict"),

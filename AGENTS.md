@@ -218,6 +218,14 @@ specifications and all individual record bindings before proving dispatch and co
 writes. Its remaining inputs include current queue truth, persistent-store extension and source
 authentication, actual Memory guarantees, and current register observations. Current-head history,
 dynamic allocation authentication, predecessor currency, and mixed grounding remain open.
+`HostQueueOrder` and `HostHintReadLocalQueue` now derive the physical queue-token path and complete
+installed ledger for HINT_READ and both HINT_LEN variants. The endpoint construction is still
+missing: `source_queue_rows_nil` proves full constraints/balance force all these tables inactive
+when only the fixed node/word sources are appended. Active record-subsystem fixtures are therefore
+not full-AIR witnesses. `queue_ordered_of_endpoints` retains the actual resource-endpoint ledger
+as an explicit premise. Next install source/final queue endpoints bound to the complete snapshots
+and derive semantic head history. Active queue clocks are positive, consistent with the existing
+1-mod-8 compiler-profile obligation; range-only source validation still permits zero-step identities.
 Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
 allocation-ledger node-word authentication for HINT_READ, and ordered head-history derivation. The shared resource profile
