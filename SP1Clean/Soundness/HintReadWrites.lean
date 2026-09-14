@@ -66,7 +66,7 @@ private theorem word_facts (last : Bool) (input : HintReadWordChip.Inputs (ZMod 
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem row_steps (last : Bool) (input : HintReadWordChip.Inputs (ZMod p))
-    (valid : HintReadWordChip.Spec last input) (store : Store) (node : Node)
+    (valid : HintReadStep.Spec last (input.step last)) (store : Store) (node : Node)
     (binding : (input.step last).word.Binds store)
     (read : node? store (Address.toNat input.pointer) = some node) :
     Address.toNat input.index < wordCount node.bytes ∧
@@ -75,8 +75,8 @@ private theorem row_steps (last : Bool) (input : HintReadWordChip.Inputs (ZMod p
         (if Address.toNat input.index + 1 = wordCount node.bytes then 0 else 8) ∧
       Word.toBitVec64 input.ram.new_value = wordValue node.bytes (Address.toNat input.index) := by
   have words := word_facts last input store node binding read
-  refine ⟨words.1, valid.2.2.2.2.2.1, ?_, words.2.2⟩
-  have advance := valid.2.2.2.2.2.2.2
+  refine ⟨words.1, valid.2.2.2.2.1, ?_, words.2.2⟩
+  have advance := valid.2.2.2.2.2.2
   change Address.toNat input.nextAddress = Address.toNat input.address + (if last then 0 else 8) at advance
   simpa only [words.2.1] using advance
 
@@ -110,7 +110,7 @@ private theorem writes_of_walk {R V : Type*} (edge : R → V × V)
 theorem ordered_writes (tables : List (Table (ZMod p)))
     (initial final : HintReadWordChip.State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec)
+    (valid : Steps tables)
     (balanced : BalancedInteractions
       ([HintReadWordChip.stateChannel.pushedValue initial, HintReadWordChip.stateChannel.pulledValue final] ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
@@ -133,7 +133,7 @@ theorem ordered_writes (tables : List (Table (ZMod p)))
       intro row member
       have pointer := congrArg (fun c => c.2.2) (same row member)
       change (rowInput row).pointer = initial.pointer at pointer
-      exact row_steps row.1 (rowInput row) (rows_spec tables aligned valid row (perm.mem_iff.mp member))
+      exact row_steps row.1 (rowInput row) (valid row (perm.mem_iff.mp member))
         store node (bindings row (perm.mem_iff.mp member)) (by rwa [pointer])) zero
   exact ⟨path, perm, walk, written.1, fun row member => ⟨same row member, written.2 row member⟩⟩
 

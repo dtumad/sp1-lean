@@ -1,6 +1,7 @@
 import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
 import SP1Clean.Soundness.RankedGrounding
 import ToClean.Air.TransitionView
+import ToClean.Air.MessageFilter
 
 /-! # Complete successive hint word coverage from physical table balance
 
@@ -63,6 +64,26 @@ theorem rows_spec (tables : List (Table (ZMod p)))
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
   exact TransitionView.readIndexedRows_spec variants view tables alignment valid
+
+/-- Coverage uses authenticated words and exact index/address successors. The prior RAM values
+and timestamps are separate facts to be established by Memory grounding. -/
+def Steps (tables : List (Table (ZMod p))) : Prop :=
+  ∀ row ∈ TransitionView.readIndexedRows variants tables,
+    HintReadStep.Spec row.1 ((rowInput row).step row.1)
+
+theorem steps_of_specs (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
+    (valid : ∀ table ∈ tables, table.Spec) : Steps tables :=
+  fun row member => (rows_spec tables aligned valid row member).2
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Selecting one call retains exactly the corresponding word-step facts. -/
+theorem Steps.select {tables : List (Table (ZMod p))} (valid : Steps tables)
+    (keep : Bool → Environment (ZMod p) → Bool) :
+    Steps (TransitionView.selectTables variants tables keep) := by
+  intro row member
+  rw [TransitionView.readIndexedRows_selectTables] at member
+  exact valid row (List.mem_filter.mp member).1
 
 theorem rows_balanced (tables : List (Table (ZMod p)))
     (initial final : State (ZMod p))
@@ -127,8 +148,9 @@ private theorem context_of_walk {R V C : Type*} (edge : R → V × V) (context :
     · exact (result.2 other member).trans same
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem successor_of_spec (last : Bool) (input : Inputs (ZMod p)) (valid : Spec last input) :
-    Address.toNat input.next.index = Address.toNat input.previous.index + 1 := valid.2.2.2.2.2.1
+private theorem successor_of_spec (last : Bool) (input : Inputs (ZMod p))
+    (valid : HintReadStep.Spec last (input.step last)) :
+    Address.toNat input.next.index = Address.toNat input.previous.index + 1 := valid.2.2.2.2.1
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem ranked_cover {R V C : Type*} (edge : R → V × V) (index : V → ℕ) (context : V → C)
@@ -172,7 +194,7 @@ private theorem nil_of_closed {R V : Type*} (edge : R → V × V) (index : V →
 /-- A balanced set of consumers without any handler endpoints must be empty. -/
 theorem rows_nil_of_balanced (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec)
+    (valid : Steps tables)
     (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
     TransitionView.readIndexedRows variants tables = [] := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
@@ -186,13 +208,13 @@ theorem rows_nil_of_balanced (tables : List (Table (ZMod p)))
     (TransitionView.readIndexedRows variants tables) edge).mp balanced
   exact nil_of_closed edge (fun state : State (ZMod p) => Address.toNat state.index)
     (TransitionView.readIndexedRows variants tables) closed.2
-    (fun row member => successor_of_spec row.1 (rowInput row) (rows_spec tables aligned valid row member))
+    (fun row member => successor_of_spec row.1 (rowInput row) (valid row member))
 
 /-- Every physical word row occurs exactly once, with successive indices and a fixed call/node.
-The hypotheses concern actual table specifications and ledger balance, not a supplied row order. -/
+Authenticated word-step contracts and ledger balance determine the order internally. -/
 theorem ordered_cover (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec)
+    (valid : Steps tables)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
         tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
@@ -208,14 +230,49 @@ theorem ordered_cover (tables : List (Table (ZMod p))) (initial final : State (Z
     (TransitionView.readIndexedRows variants tables) initial final
     (rows_balanced tables initial final aligned balanced)
   · intro row member
-    exact successor_of_spec row.1 (rowInput row) (rows_spec tables aligned valid row member)
+    exact successor_of_spec row.1 (rowInput row) (valid row member)
   · intro row _
     exact context_preserve (rowInput row)
+
+omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
+private theorem lower_of_walk {R V : Type*} (edge : R → V × V) (address : V → ℕ)
+    (initial final : V) (path : List R) (walk : Walk.IsWalk edge initial final path)
+    (steps : ∀ row ∈ path, address (edge row).1 ≤ address (edge row).2) :
+    ∀ row ∈ path, address initial ≤ address (edge row).1 := by
+  induction path generalizing initial with
+  | nil => simp
+  | cons row rest ih =>
+    obtain ⟨source, tail⟩ := walk
+    intro other member
+    rcases List.mem_cons.mp member with rfl | member
+    · rw [source]
+    · exact le_trans (by rw [← source]; exact steps row (List.mem_cons_self ..))
+        (ih _ tail (fun r h => steps r (List.mem_cons_of_mem _ h)) other member)
+
+/-- Every consumer address is at least the handler's start address. This needs only the
+authenticated successor constraints, independently of the prior RAM word or timestamp. -/
+theorem address_lower (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
+    (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
+    (valid : Steps tables)
+    (balanced : BalancedInteractions
+      ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
+        tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
+    ∀ row ∈ TransitionView.readIndexedRows variants tables,
+      Address.toNat initial.address ≤ Address.toNat (rowInput row).address := by
+  obtain ⟨path, perm, walk, _⟩ := ordered_cover tables initial final aligned valid balanced
+  have lower := lower_of_walk edge (fun state : State (ZMod p) => Address.toNat state.address)
+    initial final path walk (by
+      intro row member
+      have advance := (valid row (perm.mem_iff.mp member)).2.2.2.2.2.2
+      change Address.toNat (rowInput row).address ≤ Address.toNat (rowInput row).nextAddress
+      change Address.toNat (rowInput row).nextAddress = Address.toNat (rowInput row).address + _ at advance
+      omega)
+  exact fun row member => lower row (perm.mem_iff.mpr member)
 
 /-- Zero-based endpoints force exactly the full count, independently of physical row order. -/
 theorem complete_indices (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec)
+    (valid : Steps tables)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
         tables.flatMap (·.interactionsWith stateChannel.toRaw)))

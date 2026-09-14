@@ -159,13 +159,12 @@ private theorem read_edge (env : Environment (ZMod p)) :
     edge (none, env) = ((HostHintReadCoverage.input env).previous, (HostHintReadCoverage.input env).next) := rfl
 
 /-- HINT_READ dispatch and its exact padded RAM writes now use the actual replayed host queue.
-Only Memory guarantees and current register/running observations remain semantic inputs. -/
+The preceding replay and current register/running observations remain semantic inputs;
+the dispatch and write inventory need no prior Memory-channel guarantees. -/
 theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (memory : ∀ table ∈ wordTables (HostHintQueueBoundary.expanded witness),
-      table.ChannelGuarantees Channels.memoryChannel.toRaw)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))))
     (cpuWalk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -204,7 +203,7 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} (valid : ima
     (HostHintQueueBoundary.expanded witness) interface (source_permission_pulls source final)
     (HostHintQueueBoundary.expanded_constraints witness constraints)
     (HostHintQueueBoundary.expanded_balanced witness balanced) _
-    (HostHintQueueBoundary.source_authentication witness constraints) memory env member
+    (HostHintQueueBoundary.source_authentication witness constraints) env member
     current.host store extension binding running (.ofSail current.sail) code arg1 arg2
   exact ⟨store, bytes, remaining, extension, hints, next, executed, writes⟩
 

@@ -162,7 +162,7 @@ theorem balanced_for (handlers : Table (ZMod p)) (component : handlers.component
 theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.component = handler)
     (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
-      HintReadCoverage.variants tables) (valid : ∀ table ∈ tables, table.Spec)
+      HintReadCoverage.variants tables) (valid : HintReadCoverage.Steps tables)
     (balanced : BalancedInteractions
       (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
@@ -188,7 +188,7 @@ theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.c
   rw [List.filter_append, noEndpoints, List.nil_append, ← cursor_for key tables aligned] at selected
   have alignment := TransitionView.selectTables_aligned _ _
     (fun last => (HintReadCoverage.view last).component) (keepWord key) aligned
-  have specs := TransitionView.selectTables_spec HintReadCoverage.variants tables (keepWord key) valid
+  have specs := valid.select (keepWord key)
   have empty := HintReadCoverage.rows_nil_of_balanced (tablesFor key tables) alignment specs selected
   have included : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor key tables) := by
     rw [rows_for]
@@ -201,7 +201,7 @@ Unique handler clocks and authenticated records/permissions remain enclosing-ens
 theorem run_of_shared_tables (handlers : Table (ZMod p)) (component : handlers.component = handler)
     (handlerSpecs : handlers.Spec) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
-      HintReadCoverage.variants tables) (wordSpecs : ∀ table ∈ tables, table.Spec)
+      HintReadCoverage.variants tables) (wordSpecs : HintReadCoverage.Steps tables)
     (env : Environment (ZMod p)) (member : env ∈ handlers.table.map handlers.environment)
     (unique : ((handlers.table.map handlers.environment).map callClock).Nodup)
     (balanced : BalancedInteractions
@@ -229,7 +229,7 @@ theorem run_of_shared_tables (handlers : Table (ZMod p)) (component : handlers.c
     exact handlerSpecs physical present
   have alignment := TransitionView.selectTables_aligned _ _
     (fun last => (HintReadCoverage.view last).component) (keepWord (callClock env)) aligned
-  have specs := TransitionView.selectTables_spec HintReadCoverage.variants tables (keepWord (callClock env)) wordSpecs
+  have specs := wordSpecs.select (keepWord (callClock env))
   have selectedPermissions := TransitionView.selectTables_interactions_sublist HintReadCoverage.variants tables
     (fun last => (HintReadCoverage.view last).component) (keepWord (callClock env))
     WritePermissionProvider.channel.toRaw aligned

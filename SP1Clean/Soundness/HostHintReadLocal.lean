@@ -217,10 +217,10 @@ theorem balanced_for (witness : EnsembleWitness (ensemble image source others re
     (handler_clocks_nodup witness interface constraints balanced) (cursor_balanced witness interface balanced)
 
 /-- An installed consumer cannot belong to a call absent from the physical handler table.
-Local word specifications are still required; record authentication and Memory currency are separate. -/
+Authenticated word-step contracts suffice; prior Memory values and timestamps are separate. -/
 theorem consumer_has_handler (witness : EnsembleWitness (ensemble image source others resources channels))
     (interface : ExtensionInterface others resources) (balanced : witness.BalancedChannels)
-    (wordSpecs : ∀ table ∈ wordTables witness, table.Spec)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
     ∃ env ∈ (handlerTable witness).table.map (handlerTable witness).environment,

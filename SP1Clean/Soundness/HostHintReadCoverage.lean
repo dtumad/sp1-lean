@@ -35,7 +35,7 @@ theorem complete_indices (env : Environment (ZMod p)) (tables : List (Table (ZMo
     (valid : handler.Spec env)
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables)
-    (wordSpecs : ∀ table ∈ tables, table.Spec)
+    (wordSpecs : HintReadCoverage.Steps tables)
     (balanced : BalancedInteractions
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))

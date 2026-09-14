@@ -95,7 +95,7 @@ private theorem consumer_pull_mem (witness : EnsembleWitness (ensemble image sou
 
 private theorem consumer_pointer (witness : EnsembleWitness (ensemble image source others resources channels))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannels) (wordSpecs : ∀ table ∈ wordTables witness, table.Spec)
+    (balanced : witness.BalancedChannels) (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (handlerTable witness).environment)
     (row : HintReadCoverage.Row (p := p))
@@ -108,8 +108,7 @@ private theorem consumer_pointer (witness : EnsembleWitness (ensemble image sour
   have alignment := TransitionView.selectTables_aligned _ _
     (fun last => (HintReadCoverage.view last).component)
     (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) (wordTables_aligned witness)
-  have specs := TransitionView.selectTables_spec HintReadCoverage.variants (wordTables witness)
-    (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) wordSpecs
+  have specs := wordSpecs.select (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env))
   obtain ⟨path, perm, _, _, _, _, same⟩ := HintReadCoverage.ordered_cover _ _ _ alignment specs selected
   have included : row ∈ path := by
     apply perm.mem_iff.mpr
@@ -123,7 +122,7 @@ current frontier. The cursor enforces that all selected words refer to this same
 theorem current_records (witness : EnsembleWitness (ensemble image source others resources channels))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) (handlerSpecs : (handlerTable witness).Spec)
-    (wordSpecs : ∀ table ∈ wordTables witness, table.Spec)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (store finalStore : Store) (extension : Extends store finalStore)
     (authenticated : RecordAuthentication witness finalStore)
     (env : Environment (ZMod p))
@@ -152,14 +151,13 @@ theorem current_records (witness : EnsembleWitness (ensemble image source others
   exact bound
 
 /-- Actual AIR constraints and balance give successful HINT_READ dispatch and the complete padded
-write inventory. Source authentication and current queue/register/Memory grounding remain explicit;
+write inventory. Source authentication and current queue/register grounding remain explicit;
 no local specifications or per-record binding premises are supplied by the caller. -/
 theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image source others resources channels))
     (interface : ExtensionInterface others resources)
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (finalStore : Store) (authenticated : RecordAuthentication witness finalStore)
-    (memory : ∀ table ∈ wordTables witness, table.ChannelGuarantees Channels.memoryChannel.toRaw)
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (handlerTable witness).environment)
     (host : HostState) (store : Store) (extension : Extends store finalStore)
@@ -174,7 +172,7 @@ theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image 
         (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness))).map
         HintReadWrites.produced).Perm (wordWrites (Address.toNat (input env).span.start) bytes) := by
   have handlerSpecs := handler_spec witness interface finalStore authenticated constraints balanced
-  have wordSpecs := word_spec witness interface finalStore authenticated constraints balanced memory
+  have wordSpecs := word_steps witness interface finalStore authenticated constraints balanced
   obtain ⟨header, ending, words⟩ := current_records witness interface constraints balanced handlerSpecs wordSpecs
     store finalStore extension authenticated env member host.io.hints current
   exact run_of_witness witness interface pulls constraints balanced handlerSpecs wordSpecs env member

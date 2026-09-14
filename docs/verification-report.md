@@ -875,7 +875,8 @@ excludes orphan word consumers using their local specifications and strict index
 the sole positive permission source when host auxiliaries are unit consumers. The two physical
 word variants have those proved unit ledgers. `Soundness/HostHintReadLocalPermissions.lean`
 theorem `word_permission_policy` combines provider-authenticated writability and the upper bound
-with the RAM contract's lower native-window bound. Its `run_of_witness` theorem derives concrete
+with the checked handler span's lower native-window bound, propagated through the authenticated
+consumer path. Its `run_of_witness` theorem derives concrete
 HINT_READ dispatch and the exact padded word inventory without separate handoff/cursor balance,
 table alignment, clock uniqueness, or per-byte permission premises. Local row specifications,
 current queue/node/word bindings, and current register observations remain explicit. A `Binds`
@@ -896,7 +897,9 @@ constraints; future allocation providers may need prior grounding facts to prove
 The current handler registry and both word consumers cannot create node or word sources.
 `source_record_authentication` closes the fixed-source registration using the complete snapshot's
 hint bytes, with binding preserved under persistent store extension. `handler_spec` derives the
-local handler contract; `word_spec` still requires the word tables' actual Memory guarantees.
+local handler contract. `word_steps` extracts the bundled step circuit's soundness using only
+Byte and authenticated word guarantees. The coverage and permission proofs consume this weaker
+contract; `word_spec` retains the Memory guarantees needed for the full RAM contract.
 
 The `installedRecords` regression uses the actual 85-table source registration with repeated
 demand and reversed rows. Missing source rows fail record balance. Changing fixed source bytes
@@ -908,8 +911,9 @@ at an earlier call. `HostHintReadLocalExecution.current_records` supplies the mi
 from the current queue head, store extension, and actual per-call cursor path. Its
 `run_of_authenticated_witness` theorem proves concrete dispatch and the complete padded write
 inventory without caller-supplied local specifications or individual node/word bindings.
-Current queue truth, authentication of the persistent store, Memory representation guarantees,
-and current register observations remain explicit. The `futureNodeConsumers` regression substitutes
+Current queue truth, authentication of the persistent store,
+and current register observations remain explicit; prior Memory guarantees are not required.
+The `futureNodeConsumers` regression substitutes
 a later node with identical bytes: source checks and complete record balance still pass, but
 the actual cursor ledger rejects its use by the earlier call. This is also a subsystem regression.
 
@@ -953,7 +957,8 @@ at this interface. `Soundness/HostQueueCurrent.lean` now proves that those bytes
 host's hints after successful replay of the preceding CPU prefix. The complete receiver inventory
 excludes WRITE and identifies the full semantic queue-action sequence. The HINT_READ execution
 theorem consumes this equality, deriving current queue and record binding internally; its remaining
-semantic inputs are Memory guarantees and current register/running observations. The companion
+semantic inputs are the preceding replay and current register/running observations. Dispatch and
+padded-write coverage no longer require prior Memory guarantees. The companion
 HINT_LEN theorem derives the actual host observation without Memory guarantees. These statements
 assume replay of the preceding prefix, not success of the current call or the remaining tape.
 Authenticated allocation edges, mixed Memory grounding, and outgoing snapshot binding remain open.

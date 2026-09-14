@@ -423,16 +423,17 @@ Implemented foundations:
   close that authentication from snapshot bytes. The physical-table interface permits dynamic
   allocation proofs to use earlier grounding facts; the stronger raw-component interface alone
   would not suffice for those providers. `handler_spec` follows from this interface and AIR;
-  `word_spec` isolates the remaining actual Memory-channel guarantees. The 85-table regression
-  rejects missing source rows and changed fixed bytes, and a separate regression shows that equal
+  `word_spec` isolates the actual Memory-channel guarantees for the full RAM contract.
+  `word_steps` derives the authenticated step independently; coverage and permissions use it,
+  obtaining the lower address bound from the checked handler span and its actual cursor path.
+  The 85-table regression rejects missing source rows and changed fixed bytes, and a separate regression shows that equal
   semantic length words need not have canonical encodings.
   `HostHintReadLocalExecution.current_records` now restricts persistent-store bindings to each
   call's current allocation frontier: its current head bounds the node, and the balanced cursor
   path forces every selected word to use that node. `run_of_authenticated_witness` derives the
   local specifications and individual record bindings internally, proving concrete dispatch and
   the complete padded write inventory. It still requires current queue truth, extension into an
-  authenticated persistent store, actual Memory representation guarantees, and current register
-  observations. The future-node regression preserves record balance and valid source bytes while
+  authenticated persistent store and current register observations. The future-node regression preserves record balance and valid source bytes while
   the actual cursor rejects words borrowed from a later, byte-identical node.
   `HostQueueOrder` now proves an exhaustive path through the actual HINT_READ and both HINT_LEN
   tables. `HostHintReadLocalQueue` derives their complete queue ledger and specifications from the
@@ -472,7 +473,9 @@ Implemented foundations:
   no caller multiplicity or Memory-guarantee premise remains in this statement. Every physical
   word pair, including padding and duplicate occurrences, is retained by `word_memory_sublist`.
   Predecessor currency and chronological grounding are still required.
-  **Next:** derive the remaining Memory guarantees and current register observations through mixed
+  `HostQueueCurrent.run_of_source_prefix` now consumes that weaker step contract throughout
+  HINT_READ dispatch and padded-write coverage, without assuming prior Memory guarantees.
+  **Next:** derive Memory predecessor currency and current register observations through mixed
   grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments

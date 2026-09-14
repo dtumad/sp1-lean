@@ -201,23 +201,26 @@ cursor silence. `HostLocalCorePermissions` retains the fixed image provider as t
 permission source when appended components are unit consumers; the real HINT_READ word variants
 satisfy this. `HostHintReadLocalPermissions.run_of_witness` derives concrete dispatch and exact
 padded writes without caller handoff, cursor, alignment, clock-uniqueness, or byte-permission
-premises. The fixed provider supplies writability and the upper address bound; local RAM specs
-supply the lower native-window bound. Local row specifications, current queue/node/word binding,
-and incoming register observations remain explicit. Binding alone does not imply canonical
+premises. The fixed provider supplies writability and the upper address bound; the checked handler
+span and authenticated cursor successors supply the lower native-window bound. Local handler and
+word-step specifications, current queue/node/word binding, and incoming register observations
+remain explicit. Binding alone does not imply canonical
 field encodings. `HostHintReadLocalRecords` now authenticates every physical node/word pull
 through the whole installed ledger and derives the handler specification. Fixed source nodes
 and words close both canonical validity and binding from actual lookup constraints;
 `source_record_authentication` uses the complete snapshot's hint bytes. `word_spec` isolates the
-remaining Memory-channel representation guarantees. `RecordAuthentication` concerns actual
-physical source rows, so future allocation proofs can consume prior grounding facts; requiring
+remaining Memory-channel representation guarantees for the full RAM contract. `word_steps` derives
+the authenticated word and exact successor from the bundled step circuit without that premise.
+Coverage, byte permissions, and dispatch consume this weaker contract. `RecordAuthentication`
+concerns actual physical source rows, so future allocation proofs can consume prior grounding facts; requiring
 raw constraints alone for every possible allocation row would be too strong. A record bound in
 a persistent store restricts to the current frontier via
 `HostHintReadLocalExecution.current_records`: current-head truth bounds the node and the actual
 cursor path fixes every consumer's pointer. `run_of_authenticated_witness` now derives local
 specifications and all individual record bindings before proving dispatch and complete padded
 writes. Its remaining inputs include current queue truth, persistent-store extension and source
-authentication, actual Memory guarantees, and current register observations. Alignment with the
-CPU/host timeline, dynamic allocation authentication, predecessor currency, and mixed grounding
+authentication and current register observations. Prior Memory guarantees are no longer required
+for dispatch or the padded-write inventory. Alignment with the CPU/host timeline, dynamic allocation authentication, predecessor currency, and mixed grounding
 remain open.
 `HostQueueOrder` and `HostHintReadLocalQueue` now derive the physical queue-token path and complete
 installed ledger for HINT_READ and both HINT_LEN variants. `source_queue_rows_nil` proves the old

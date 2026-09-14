@@ -174,6 +174,65 @@ theorem handler_spec (witness : EnsembleWitness (ensemble image source others re
   rw [handlerTable_component] at checked byte node word ⊢
   exact handler_spec_of_channels _ checked byte node word
 
+private theorem word_step_of_channels (last : Bool) (input : Var HintReadWordChip.Inputs (ZMod p))
+    (offset : ℕ) (env : Environment (ZMod p))
+    (constraints : ((HintReadWordChip.main last input).operations offset).ConstraintsHold env)
+    (bytes : ((HintReadWordChip.main last input).operations offset).ChannelGuarantees Channels.byteChannel.toRaw env)
+    (words : ((HintReadWordChip.main last input).operations offset).ChannelGuarantees wordChannel.toRaw env) :
+    HintReadStep.Spec last ((eval env input).step last) := by
+  let stepOffset := offset + HostRamAccessChip.circuit.localLength input.ram
+  have retained : ⟨stepOffset, (HintReadStep.circuit last).toSubcircuit stepOffset (input.step last)⟩ ∈
+      ((HintReadWordChip.main last input).operations offset).subcircuits := by
+    simp only [HintReadWordChip.main, circuit_norm, Operations.subcircuits, stepOffset]
+    simp
+  have checked := constraintsHold_generalSubcircuit_of_mem env _ (HintReadStep.circuit last)
+    (input.step last) stepOffset retained constraints
+  have guarantees : (((HintReadStep.circuit last).main (input.step last)).operations stepOffset).FullGuarantees env := by
+    rw [(HintReadStep.circuit last).guarantees_iff]
+    intro channel member
+    have parent : ((HintReadWordChip.main last input).operations offset).ChannelGuarantees channel env := by
+      change channel ∈ [wordChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw] at member
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      rcases member with rfl | rfl | rfl
+      · exact words
+      · exact bytes
+      · exact bytes
+    exact (channelGuarantees_toSubcircuit_generalFormalCircuit channel env (HintReadStep.circuit last)
+      stepOffset (input.step last)).mp
+      (channelGuarantees_subcircuit_of_mem channel env _ _ retained parent)
+  have valid := ((HintReadStep.circuit last).original_full_soundness stepOffset env
+    (input.step last) (by trivial) checked guarantees).1
+  have evaluated : eval env (input.step last) = (eval env input).step last := by
+    rcases input with ⟨ram, pointer, index, nextIndex, nextAddress⟩
+    rcases ram with ⟨access, high, low0, low1, addr0, addr1, addr2, value⟩
+    cases last <;> simp only [HintReadWordChip.Inputs.step, HintReadWordChip.Inputs.address, circuit_norm]
+  change HintReadStep.Spec last (eval env (input.step last)) at valid
+  rwa [evaluated] at valid
+
+/-- Every installed consumer's authenticated word and exact successor follow from Byte/record
+balance and the bundled step circuit. No prior RAM representation guarantee is required. -/
+theorem word_steps (witness : EnsembleWitness (ensemble image source others resources channels))
+    (interface : ExtensionInterface others resources) (store : Store)
+    (authenticated : RecordAuthentication witness store)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    HintReadCoverage.Steps (wordTables witness) := by
+  intro row member
+  obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
+  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
+  have component := List.forall₂_zip (wordTables_aligned witness) paired
+  have present := wordTables_mem witness table (List.of_mem_zip paired).2
+  have checked := constraints table present physical physicalMem
+  have bytes := byte_guarantees witness interface constraints balanced table present physical physicalMem
+  have words := word_guarantees witness store authenticated balanced table present physical physicalMem
+  rw [← component] at checked bytes words
+  rw [Component.constraintsHold_iff] at checked
+  rw [Component.channelGuarantees_iff] at bytes words
+  simp only [HintReadCoverage.view, Component.rowOperations,
+    HintReadWordChip.circuit] at checked bytes words
+  have valid := word_step_of_channels last (varFromOffset HintReadWordChip.Inputs 0)
+    (size HintReadWordChip.Inputs) (table.environment physical) checked bytes words
+  simpa only [eval_varFromOffset_valueFromOffset, HintReadCoverage.rowInput] using valid
+
 private theorem word_spec_of_channels (last : Bool) (env : Environment (ZMod p))
     (constraints : (HintReadCoverage.view last).component.operations.ConstraintsHold env)
     (bytes : (HintReadCoverage.view last).component.operations.ChannelGuarantees Channels.byteChannel.toRaw env)

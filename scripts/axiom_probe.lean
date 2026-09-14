@@ -601,6 +601,7 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Soundness.HostHintReadLocal.byte_guarantees
 #print axioms SP1Clean.Soundness.HostHintReadLocal.handler_spec
 #print axioms SP1Clean.Soundness.HostHintReadLocal.word_spec
+#print axioms SP1Clean.Soundness.HostHintReadLocal.word_steps
 #print axioms SP1Clean.Soundness.HostHintReadLocal.sourceResources
 #print axioms SP1Clean.Soundness.HostHintReadLocal.source_record_sources
 #print axioms SP1Clean.Soundness.HostHintReadLocal.source_record_authentication
@@ -1464,6 +1465,10 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.HintReadWordChip.access_balance
 #print axioms SP1Clean.Soundness.HintReadCoverage.view
 #print axioms SP1Clean.Soundness.HintReadCoverage.rows_spec
+#print axioms SP1Clean.Soundness.HintReadCoverage.Steps
+#print axioms SP1Clean.Soundness.HintReadCoverage.steps_of_specs
+#print axioms SP1Clean.Soundness.HintReadCoverage.Steps.select
+#print axioms SP1Clean.Soundness.HintReadCoverage.address_lower
 #print axioms SP1Clean.Soundness.HintReadCoverage.rows_balanced
 #print axioms SP1Clean.Soundness.HintReadCoverage.ordered_cover
 #print axioms SP1Clean.Soundness.HintReadCoverage.complete_indices

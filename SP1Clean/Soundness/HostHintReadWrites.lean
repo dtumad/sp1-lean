@@ -24,7 +24,7 @@ theorem complete_writes (env : Environment (ZMod p)) (tables : List (Table (ZMod
     (valid : handler.Spec env)
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables)
-    (wordSpecs : ∀ table ∈ tables, table.Spec)
+    (wordSpecs : HintReadCoverage.Steps tables)
     (balanced : BalancedInteractions
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
@@ -71,7 +71,7 @@ theorem run_of_tables (env : Environment (ZMod p)) (tables : List (Table (ZMod p
     (valid : handler.Spec env)
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables)
-    (wordSpecs : ∀ table ∈ tables, table.Spec)
+    (wordSpecs : HintReadCoverage.Steps tables)
     (balanced : BalancedInteractions
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))

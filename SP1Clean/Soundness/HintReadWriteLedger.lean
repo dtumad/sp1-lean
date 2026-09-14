@@ -89,7 +89,7 @@ theorem permission_ledger (tables : List (Table (ZMod p)))
 /-- Authenticating the actual byte pulls permits the complete semantic write, including padding. -/
 theorem permitted_of_inventory (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec) (policy : HostMemoryPolicy) (address : ℕ) (bytes : Bytes)
+    (valid : Steps tables) (policy : HostMemoryPolicy) (address : ℕ) (bytes : Bytes)
     (inventory : ((TransitionView.readIndexedRows variants tables).map HintReadWrites.produced).Perm
       (wordWrites address bytes))
     (permissions : ∀ request, WritePermissionProvider.channel.pulledValue request ∈
@@ -106,7 +106,7 @@ theorem permitted_of_inventory (tables : List (Table (ZMod p)))
     exact List.mem_flatMap.mpr ⟨row, member, List.mem_ofFn.mpr ⟨slot, rfl⟩⟩)
   have addressEqual := congrArg Prod.fst equal
   change Address.toNat (rowInput row).address = address + index * 8 at addressEqual
-  have bounded : Address.Bounded (rowInput row).address := (rows_spec tables aligned valid row member).2.2.2.1
+  have bounded : Address.Bounded (rowInput row).address := (valid row member).2.2.1
   rw [Address.toNat_offset _ bounded
     slot.val (by have := slot.isLt; omega), addressEqual] at requested
   exact requested

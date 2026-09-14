@@ -6,7 +6,8 @@ import SP1Clean.Soundness.HostLocalCorePermissions
 The real word consumers emit exactly eight unit permission pulls. All other installed host
 components must likewise be consumers or silent, so the retained fixed image provider is the
 only source. Its raw constraints and the ensemble's own balance authenticate each physical
-byte request. Local RAM specifications supply the lower native-window bound independently.
+byte request. The handler span and authenticated successor path supply the lower native-window
+bound independently of prior RAM values and timestamps.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadLocal
@@ -71,16 +72,37 @@ theorem word_permission_permitted (witness : EnsembleWitness (ensemble image sou
   obtain ⟨table, tableMem, member⟩ := List.mem_flatMap.mp member
   exact EnsembleWitness.mem_interactionsWith.mpr ⟨table, wordTables_mem witness table tableMem, member⟩
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem row_address_lower (last : Bool) (input : HintReadWordChip.Inputs (ZMod p))
-    (valid : HintReadWordChip.Spec last input) : 2 ^ 16 ≤ Address.toNat input.address := by
-  have lower := valid.1.2.1.1
-  change 2 ^ 16 ≤ Word.toNat (Address.asWord input.address) at lower
-  simpa only [Address.toNat_asWord] using lower
+private theorem row_address_lower (witness : EnsembleWitness (ensemble image source others resources channels))
+    (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannels) (handlerSpecs : (handlerTable witness).Spec)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
+    (row : HintReadCoverage.Row (p := p))
+    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
+    2 ^ 16 ≤ Address.toNat (HintReadCoverage.rowInput row).address := by
+  obtain ⟨env, handlerMem, clock⟩ := consumer_has_handler witness interface balanced wordSpecs row member
+  have selected := balanced_for witness interface constraints balanced env handlerMem
+  rw [HostHintReadCoverage.handler_cursor] at selected
+  have lower := HintReadCoverage.address_lower _ _ _
+    (TransitionView.selectTables_aligned _ _ (fun last => (HintReadCoverage.view last).component)
+      (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) (wordTables_aligned witness))
+    (wordSpecs.select (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env))) selected row (by
+      rw [TransitionView.readIndexedRows_selectTables]
+      exact List.mem_filter.mpr ⟨member, by
+        simp only [HostHintReadPartition.keepWord, HostHintReadPartition.keepState,
+          HintReadCoverage.rowInput, decide_eq_true_eq]
+        exact clock.symm⟩)
+  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handlerMem
+  have valid := handlerSpecs physical physicalMem
+  rw [handlerTable_component] at valid
+  have span : HintReadSpan.Spec (HostHintReadCoverage.input ((handlerTable witness).environment physical)).span :=
+    valid.2.2.2.2.2.2.2.2.1
+  exact le_trans span.2.2.1.1 lower
 
 private theorem permission_request_lower (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
-      HintReadCoverage.variants tables) (wordSpecs : ∀ table ∈ tables, table.Spec)
+      HintReadCoverage.variants tables) (wordSpecs : HintReadCoverage.Steps tables)
+    (lower : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables,
+      2 ^ 16 ≤ Address.toNat (HintReadCoverage.rowInput row).address)
     (address : fields 3 (ZMod p))
     (member : WritePermissionProvider.channel.pulledValue address ∈
       tables.flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw))
@@ -90,11 +112,11 @@ private theorem permission_request_lower (tables : List (Table (ZMod p)))
   obtain ⟨index, equal⟩ := List.mem_ofFn.mp present
   have addressEq := congrArg (fromElements (M := fields 3)) (Vector.toArray_inj.mp (congrArg Interaction.msg equal))
   simp only [ProvableType.fromElements_toElements] at addressEq
-  have valid := HintReadCoverage.rows_spec _ aligned wordSpecs row rowMem
-  have lower := row_address_lower row.1 (HintReadCoverage.rowInput row) valid
+  have valid := wordSpecs row rowMem
+  have lower := lower row rowMem
   have offset : Address.toNat address = Address.toNat (HintReadCoverage.rowInput row).address + index.val := by
     rw [← addressEq]
-    exact Address.toNat_offset (HintReadCoverage.rowInput row).address valid.2.2.2.1
+    exact Address.toNat_offset (HintReadCoverage.rowInput row).address valid.2.2.1
       index.val (by have := index.isLt; omega)
   rw [offset]
   exact le_trans lower (Nat.le_add_right _ _)
@@ -109,18 +131,21 @@ private theorem byte_permitted (readOnly : ℕ → Bool) (address : ℕ)
   have zero : byte = 0 := by omega
   simpa only [zero, Nat.add_zero] using writable
 
-/-- Fixed-provider writability and the RAM row's native-window bound yield the actual host policy. -/
+/-- Fixed-provider writability and the checked handler span yield the actual host policy. -/
 theorem word_permission_policy (witness : EnsembleWitness (ensemble image source others resources channels))
+    (interface : ExtensionInterface others resources)
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (wordSpecs : ∀ table ∈ wordTables witness, table.Spec)
+    (handlerSpecs : (handlerTable witness).Spec)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (address : fields 3 (ZMod p))
     (member : WritePermissionProvider.channel.pulledValue address ∈
       (wordTables witness).flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw)) :
     (HostMemoryPolicy.mk image.readOnly (2 ^ 16) (2 ^ 48)).permits (Address.toNat address) 1 = true := by
   have permitted := word_permission_permitted witness pulls constraints balanced address member
   exact byte_permitted image.readOnly (Address.toNat address)
-    (permission_request_lower (wordTables witness) (wordTables_aligned witness) wordSpecs address member)
+    (permission_request_lower (wordTables witness) (wordTables_aligned witness) wordSpecs
+      (row_address_lower witness interface constraints balanced handlerSpecs wordSpecs) address member)
     permitted.2.1 permitted.2.2
 
 /-- The installed AIR supplies all handoff/cursor accounting for concrete HINT_READ execution.
@@ -131,7 +156,7 @@ theorem run_of_witness (witness : EnsembleWitness (ensemble image source others 
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
     (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) (handlerSpecs : (handlerTable witness).Spec)
-    (wordSpecs : ∀ table ∈ wordTables witness, table.Spec)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (handlerTable witness).environment)
     (host : HostState) (store : HintQueue.Store)
@@ -154,7 +179,7 @@ theorem run_of_witness (witness : EnsembleWitness (ensemble image source others 
     handlerSpecs (wordTables witness) (wordTables_aligned witness) wordSpecs env member
     (handler_clocks_nodup witness interface constraints balanced) (cursor_balanced witness interface balanced)
     host store current header ending words running ⟨{ readOnly := image.readOnly }, p⟩ context
-    (word_permission_policy witness pulls constraints balanced wordSpecs) code arg1 arg2
+    (word_permission_policy witness interface pulls constraints balanced handlerSpecs wordSpecs) code arg1 arg2
 
 
 end SP1Clean.Soundness.HostHintReadLocal
