@@ -2,6 +2,7 @@ import SP1Clean.Soundness.HostLocalCore
 import SP1Clean.Soundness.LocalCoreProgram
 import SP1Clean.Soundness.SyscallGrounding
 import SP1Clean.Soundness.CoreTouches
+import SP1Clean.Soundness.SyscallInputs
 
 /-! # Program authentication and register reads in the host assembly
 
@@ -160,5 +161,38 @@ theorem hostCall_registers (valid : image.Valid)
   have committed := hostCall_program_committed valid witness silent constraints balanced env member
   have operands := NativeCore.syscall_operands_of_committed _ _ committed
   exact registers_of_currency _ operands trajectory initial current timeline n atState atTime currency
+
+/-- The actual host wrapper inherits its instruction row law and semantic clock, using
+incoming operand bounds and only the preserved Program balance. -/
+theorem hostCall_eventLaw
+    (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (interface : AuxiliaryInterface auxiliary)
+    (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness))
+    (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env).instruction).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
+    (syscallEventOfRow (HostCallLedger.input env).instruction).RowLaw ∧
+      (syscallEventOfRow (HostCallLedger.input env).instruction).clock =
+        StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (HostCallLedger.input env).instruction) := by
+  have active : (HostCallLedger.input env).instruction ∈
+      activeSystemRows (LocalCore.systemTable (localWitness witness) 3) syscallInstrsRow (·.is_real) := by
+    rw [← hostCallTable_projection witness]
+    exact List.mem_map_of_mem member
+  obtain ⟨physical, physicalMem, same, real⟩ := NativeCore.activeSystemRows_member _ _ _ active
+  have checked := localWitness_constraints witness constraints
+  have ordering := orderingChannels witness interface constraints balanced
+  have balance : (localWitness witness).BalancedChannel programChannel.toRaw := by
+    change BalancedInteractions ((localWitness witness).interactionsWith programChannel.toRaw)
+    rw [localWitness_program witness silent]
+    exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
+  have program := LocalCore.program_guarantees_of_balance image source (localWitness witness) checked balance
+  have contract := syscallInstrsRow_contract_of_component _ (LocalCore.systemTable_component (localWitness witness) 3)
+    (LocalCore.systemTable_constraints (localWitness witness) checked 3)
+    (ordering.byte _ (LocalCore.systemTable_mem (localWitness witness) 3))
+    (program _ (LocalCore.systemTable_mem (localWitness witness) 3)) physicalMem (by rwa [same])
+  rw [same] at contract
+  exact ⟨rowLaw_of_spec_and_pulledFacts _ contract.1 contract.1.selectorsValid contract.2 real,
+    syscallEvent_startsAt _ (Fact.out (p := 2 ^ 24 < p)) contract.1 real⟩
 
 end SP1Clean.Soundness.HostLocalCore

@@ -516,8 +516,13 @@ Implemented foundations:
   with the exact padded-write inventory. Both identify the exact event position. Prior replay
   and running status are derived internally, and the carrier and event timelines agree even
   beyond the finite tape. These results still require an incoming grounding invariant.
-  **Next:** use dispatch and write coverage to prove the complete step/frame facts on that
-  replay, including RAM post-state and untouched locations, and bind the outgoing snapshot.
+  `HostHintReadMemoryEffect` now proves `GroundingCarrier.hintRead_step`, deriving the full-state HINT_READ transition
+  and its exact successor on that paired replay from incoming State and operand currency.
+  Complete HostCall agreement, the instruction contract, and range-checked clock recombination
+  authenticate every event field. The successor realizes every physical RAM push, including
+  mandatory padding, and preserves every other RAM cell without assuming overwritten values.
+  **Next:** assemble the complete timed step/frame facts from these event effects and the
+  register, ROM, and configuration facts, then bind the outgoing snapshot.
   Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments

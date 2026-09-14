@@ -1018,7 +1018,7 @@ the verifier, source constraints, and Byte guarantees. Given the complete origin
 step/frame facts on a trajectory starting at that source, it derives their register/RAM operand
 values at the actual read times, final State truth, and physical final-frontier values at the
 outgoing clock. The proof hides alignment and refresh rewriting. It does not infer truth at an
-original prior record's historical timestamp. Actual event semantics on paired replay, complete
+original prior record's historical timestamp. Complete event semantics on paired replay, complete
 outgoing snapshot agreement, and integration of the remaining host effects are still open.
 `Soundness/HostHintReadTrajectory.lean` now instantiates actual paired Sail/host replay on that
 carrier. For a handler matched to its CPU occurrence, `GroundingCarrier.hintLength_result`
@@ -1029,8 +1029,16 @@ identify the physical CPU event at the returned prefix position. No preceding-re
 running-host premise is supplied: the former follows from incoming State truth, and the latter
 from the checked source and authenticated ECALL fetch. The shared `CoreExecutionTrajectory`
 proof identifies the carrier and semantic event timelines at every index, including the
-non-executing extension past the tape. RAM post-state/frame facts remain necessary to close the
-grounding induction; these dispatch results are not an unconditional whole-shard execution theorem.
+non-executing extension past the tape.
+`Soundness/HostHintReadMemoryEffect.lean` now proves `GroundingCarrier.hintRead_step`: incoming
+State and operand currency imply an actual full-state HINT_READ transition to the next paired
+replay state, with exact values for every physical RAM push and preservation of every other RAM
+cell. Complete HostCall agreement supplies the arguments/result; the instruction contract and
+clock bounds supply the PC law and non-wrapping clock recombination. The physical write inventory
+includes the mandatory padded word and does not require an assumption about overwritten bytes.
+The complete timed step/frame bundle, other host effects, and outgoing snapshot authentication
+remain necessary to close whole-shard grounding. No unconditional whole-shard execution theorem
+is claimed here.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

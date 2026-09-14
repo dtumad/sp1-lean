@@ -293,8 +293,10 @@ refresh rewrite. Complete outgoing snapshot agreement and the full eight-call in
 incoming State truth; `hintRead_run` consumes original operand currency and proves dispatch and
 the exact padded writes there. Preceding replay and running status are derived internally.
 `CoreExecutionTrajectory` shares occurrence lookup, replay, and full timeline agreement with the
-ordinary local assembly. Complete RAM post-state/frame facts and outgoing snapshot agreement
-still need to be connected before claiming unconditional host execution.
+ordinary local assembly. `HostHintReadMemoryEffect` now proves `GroundingCarrier.hintRead_step`, deriving
+the actual HINT_READ transition and next paired state, with every physical RAM push and preservation
+of all other RAM cells. The instruction contract and clock bounds authenticate its complete event.
+The complete timed step/frame bundle and outgoing snapshot agreement remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

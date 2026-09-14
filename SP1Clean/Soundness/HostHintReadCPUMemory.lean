@@ -163,6 +163,24 @@ private theorem wordsAt_tables (data : ProverData (ZMod p)) (tables : List (Tabl
   rw [HostHintReadPartition.rows_for]
   rfl
 
+/-- Full HostCall agreement identifies the actual CPU group's physical handler words. -/
+theorem handler_wordsAt
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p) (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness witness))
+    (env : Environment (ZMod p))
+    (handler : env ∈ (handlerTable witness).table.map (handlerTable witness).environment)
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
+    wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) event =
+      TransitionView.readIndexedRows HintReadCoverage.variants
+        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness)) := by
+  obtain ⟨physical, _, sameCall, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at witness interface
+    constraints balanced (none, env) (handler_queue_member witness env handler) event member clock
+  have same := congrArg (fun message : HostCallChip.Message (ZMod p) =>
+    (message.clk_high, message.clk_low)) sameCall
+  rw [wordsAt_tables, sameEvent, wrapper_call_clock, same, queue_read_call, handler_clock]
+
 /-- A CPU event's hint writes have distinct destinations. Immutable word authentication
 excludes repeated addresses even though the final consumer retains its address in the cursor. -/
 theorem wordsAt_addresses_nodup
@@ -196,7 +214,8 @@ private theorem word_address (input : HintReadWordChip.Inputs (ZMod p)) :
     Word.toNat, Address.toNat]
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem address_loc (row : HintReadCoverage.Row (p := p))
+/-- The authenticated physical address is the canonical Memory location's bus address. -/
+theorem address_loc (row : HintReadCoverage.Row (p := p))
     (facts : HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram) :
     (HintReadWrites.produced row).1 = (MemoryMsg.locOf (touch row).2).busAddress := by
   simp only [HintReadWrites.produced, touch]

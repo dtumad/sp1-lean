@@ -151,6 +151,17 @@ theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSna
       OrderedFinalProvider.channelName, programChannel])
   exact fun table member => ⟨byte table member, program table member⟩
 
+/-- Program guarantees use only this channel's balance, so host extensions can retain their
+complete Memory ledger while reusing the fixed program provider. -/
+theorem program_guarantees_of_balance (image : ProgramImage) (source : ExecutionSnapshot)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw) :
+    ∀ table ∈ witness.allTables, table.ChannelGuarantees programChannel.toRaw :=
+  witness.channelGuarantees_of_component_requirements programChannel.toRaw constraints balanced
+    (fun component mem env holds => component_finished_requirements image source component mem
+      programChannel.toRaw (by simp [circuit_norm, OrderedBoundary.channel,
+        SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, programChannel]) env holds)
+
 /-- Exactly the channel facts used by chronology. Byte guarantees may be transported from a
 larger ensemble without projecting its Byte multiplicities or its Memory effects. -/
 structure OrderingChannels {image : ProgramImage} {source : ExecutionSnapshot}

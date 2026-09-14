@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2558 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2565 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 302 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2860 released declarations are probed.
+- 2867 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,21 +35,21 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The paired-replay hint integration adds 18 main probes: eleven retain the shared carrier's
-existing 77-dependency set, and seven retain the installed assembly's existing 100-dependency set.
-All preceding 2540 main and 302 test dependency sets are unchanged, with no removals or new axiom
-names. `HostHintReadCPU.GroundingCarrier.hintLength_result` derives the actual host queue-length
-observation from incoming State truth. `hintRead_run` also consumes original operand currency
-and derives concrete dispatch with the exact padded-write inventory. Both identify the exact
-CPU event at the returned replay position; neither assumes preceding replay or a running host.
-`CoreExecutionTrajectory` shares occurrence lookup, replay, and full timeline agreement with the
-ordinary local assembly. The carrier retains its already-proved original CPU walk.
+The HINT_READ successor proof adds seven main probes: two use only the logical baseline,
+one retains the shared carrier's existing 77-dependency set, and four retain the installed
+assembly's existing 100-dependency set. All preceding 2558 main and 302 test dependency sets are
+unchanged, with no removals or new axiom names. `HostHintReadCPU.GroundingCarrier.hintRead_step`
+derives the actual full-state transition at the exact next paired-replay position from incoming
+State and operand currency. It proves every grouped RAM push, including mandatory padding, and
+preservation of every other RAM cell. Full HostCall agreement, the instruction contract, and
+non-wrapping clock recombination authenticate the complete event. The pure RAM-effect theorem
+uses only the logical baseline and needs no assumption about overwritten values.
 
-The preceding complete-footprint grounding proof still requires complete per-event step/frame
-facts. It supplies source genesis and returns original register/RAM operand currency and final
-State/frontier value truth. The new dispatch results remove specific host obligations, but RAM
-post-state/frame facts, full outgoing snapshot agreement, and the eight-call integration remain
-open. Refresh rewriting does not authenticate an original prior record's historical timestamp.
+The complete-footprint grounding proof still requires the complete timed step/frame bundle.
+It supplies source genesis and returns original register/RAM operand currency and final
+State/frontier value truth. Register micro-time facts, ROM/configuration preservation, complete
+outgoing snapshot agreement, and the eight-call integration remain to be assembled. Refresh
+rewriting does not authenticate an original prior record's historical timestamp.
 
 The preceding host Program/register integration added seven main declarations: two use the logical baseline,
 and five retain the installed assembly's existing 100-dependency set. All preceding 2452 main

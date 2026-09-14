@@ -45,6 +45,21 @@ theorem ExecutionCarrier.event_at
     carrier.events[n]? = some event.event := by
   simp only [events, List.getElem?_map, carrier.ordered_at member atIndex, Option.map_some]
 
+/-- An actual ordered occurrence has the incoming clock of that same trajectory position. -/
+theorem ExecutionCarrier.time_of_ordered_at
+    (carrier : ExecutionCarrier facts inventory incoming outgoing initialFrontier physicalFinal)
+    {event : ExecutionRow p} {n : ℕ} (present : carrier.ordered[n]? = some event) :
+    StateMsg.timeNat (facts event).statePull = carrier.timeline.start n := by
+  obtain ⟨bound, atEvent⟩ := List.getElem?_eq_some_iff.mp present
+  have leftBound : n < carrier.rows.length := by
+    have lengths := carrier.aligned.length_eq
+    simp only [List.length_map] at lengths
+    omega
+  have related := carrier.aligned.get leftBound (by simpa only [List.length_map] using bound)
+  simp only [List.get_eq_getElem, List.getElem_map, atEvent] at related
+  exact related.pullTime.symm.trans (rowTimeline_pullTime_of_getElem? carrier.stateWalk
+    (fun row member => (carrier.rowOK row member).timeGap) (List.getElem?_eq_getElem leftBound))
+
 /-- The actual full source initializes replay; no intermediate host state is chosen by a row. -/
 noncomputable def ExecutionCarrier.pairedTrajectory
     (carrier : ExecutionCarrier facts inventory incoming outgoing initialFrontier physicalFinal)
