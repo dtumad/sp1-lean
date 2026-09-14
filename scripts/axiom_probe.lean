@@ -454,6 +454,8 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Soundness.HostHintReadCPU.sourceExecutionRows
 #print axioms SP1Clean.Soundness.HostHintReadCPU.source_execution_memory_projection
 #print axioms SP1Clean.Soundness.HostHintReadCPU.source_execution_memory_balance
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_event_aligned
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_ordered_aligned_rows
 #print axioms List.flatMap_filter_key_perm
 #print axioms SP1Clean.Soundness.HostHintReadWrites.writes_of_records
 #print axioms SP1Clean.Soundness.HostHintReadLocal.consumer_word_binding

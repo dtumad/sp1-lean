@@ -496,9 +496,12 @@ Implemented foundations:
   words to each CPU event and proves that the enlarged rows and actual refresh pairs balance the
   complete source/final record inventories. The general `HostLocalCoreRows` decomposition retains
   WRITE's x12 pair; the current source registry derives its zero gate. This closes record accounting,
-  not value currency or execution grounding.
-  **Next:** align the combined register/RAM touches, transport boundary and refresh facts from the
-  complete ledger, and use the enlarged footprint in the existing Memory grounding walk. Derive
+  not value currency or execution grounding. `source_ordered_aligned_rows` now supplies an exhaustive
+  CPU walk with combined register/RAM alignment and unchanged complete Memory aggregates. Actual
+  call ownership and authenticated ECALL operands establish the disjoint footprints; the existing
+  per-location chain law then survives their combination.
+  **Next:** transport boundary and refresh facts from the complete ledger, eliminate refreshes,
+  and use the enlarged footprint in the existing Memory grounding walk. Derive
   predecessor currency and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments

@@ -56,6 +56,8 @@ EXACT_REQUIRED_THEOREMS = [
     ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "sourceExecutionRows"),
     ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "source_execution_memory_projection"),
     ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "source_execution_memory_balance"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "source_event_aligned"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "source_ordered_aligned_rows"),
     # Occurrence-preserving CPU groups and canonical per-call host RAM locations.
     ("ToMathlib/ListChronology.lean", "flatMap_filter_key_perm"),
     ("SP1Clean/Soundness/HostHintReadWrites.lean", "writes_of_records"),

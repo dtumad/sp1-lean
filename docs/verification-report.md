@@ -1000,8 +1000,12 @@ CPU events while preserving State edges and fetches. `source_execution_memory_ba
 conservation of the complete source/final record inventories through those enlarged rows and real
 refresh pairs. `HostLocalCoreRows.memoryInterior_perm` retains the wrapper's x12 accesses in the
 general decomposition; their zero gate follows from the installed source registry's full-call
-projection. Future WRITE installation must retain its active pair. Combined-touch alignment,
-refresh elimination, previous-value truth, and the mixed grounding walk remain open.
+projection. Future WRITE installation must retain its active pair. `source_ordered_aligned_rows`
+derives an exhaustive CPU walk with aligned combined touches and unchanged complete Memory
+aggregates. Word ownership identifies each nonempty group with its actual syscall; authenticated
+ECALL operands restrict the original footprint to registers, disjoint from those RAM words.
+The existing per-location chain rule therefore applies to the enlarged rows. Refresh elimination,
+previous-value truth, and the mixed grounding walk remain open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an
