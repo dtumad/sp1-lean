@@ -4,6 +4,7 @@ import SP1Clean.Model.SP1Field
 import ToClean.Air.EnsembleExport
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import SP1CleanTest.Core.HintReadFixtures
 import ToClean.Air.TableBuild
 
@@ -141,9 +142,9 @@ private def hintHandler (clock : ℕ) : HostHintReadChip.Inputs Fp :=
     ⟨.hintRead, 0, 0, 0, ⟨host, none⟩⟩
   HostHintReadChip.populate (HintQueue.ofList [[]]).1 1 0 clock executed
 
-private def hintInstruction (message : HostCallChip.Message Fp) : Inputs Fp :=
-  let base := (row 241).instruction
-  { (row 241) with instruction :=
+private def instructionOfCall (message : HostCallChip.Message Fp) : Inputs Fp :=
+  let base := (row message.code[0].val).instruction
+  { (row message.code[0].val) with instruction :=
     { base with
       state := { base.state with
         clk_high := message.clk_high
@@ -173,7 +174,7 @@ private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHint
 The instruction rows also pass the existing assertion, lookup, and local-channel checker. -/
 theorem physicalHandoff :
     let handlers := [hintHandler 1, hintHandler (2 ^ 24 + 1)]
-    let instructions := handlers.map fun handler => hintInstruction handler.call
+    let instructions := handlers.map fun handler => instructionOfCall handler.call
     let padding := { (row 2) with instruction := { (row 2).instruction with is_real := 0 } }
     instructions.all (fun input => (evaluate input).1) = true ∧
       handoff (padding :: instructions ++ [padding]) handlers.reverse = true ∧
@@ -184,7 +185,7 @@ theorem physicalHandoff :
 Duplicating both sides still balances, showing why CPU event uniqueness is essential. -/
 theorem duplicateAndForgedHandoff :
     let handler := hintHandler 1
-    let instruction := hintInstruction handler.call
+    let instruction := instructionOfCall handler.call
     handoff [instruction] [handler, handler] = false ∧
       handoff [instruction] [{ handler with call := { handler.call with result := #v[241, 0, 0, 1] } }] = false ∧
       handoff [instruction, instruction] [handler, handler] = true ∧
@@ -236,5 +237,42 @@ theorem installedMemoryProjection :
       memory.length = 8 ∧ originalMemory.length = 6 ∧
       HintReadFixtures.balanced (memory ++ frontier) = true ∧
       HintReadFixtures.balanced (originalMemory ++ frontier) = false := by native_decide
+
+private def lengthHandler : HostHintLengthChip.Inputs Fp :=
+  let host : HostState := { io := ⟨[[1, 2, 3]], []⟩ }
+  let context : HostReadContext := ⟨fun index => if index == 5 then some 240 else some 0, fun _ => none⟩
+  let executed := (host.run ⟨{ readOnly := fun _ => false }, SP1Prime⟩ context).getD
+    ⟨.hintLength, 0, 0, 0, ⟨host, none⟩⟩
+  HostHintLengthChip.populate (HintQueue.ofList [[1, 2, 3]]).1 1 0 (2 ^ 24 + 1) executed
+
+private def enterMessage : HostCallChip.Message Fp :=
+  HostControl.enter 17 ⟨.enterUnconstrained, 0, 0, 0, ⟨{}, none⟩⟩
+
+/-- Physical tables in the real 21-handler registry order, with three different active kinds. -/
+private def registeredTables : List (Table Fp) :=
+  (Soundness.HostHintReadHandoff.registeredReceivers (p := SP1Prime)).zipIdx.map fun (view, index) =>
+    let physical := if index == 0 then handlerTable [hintHandler 1]
+      else if index == 2 then Table.build (Soundness.HostCallReceivers.enter (p := SP1Prime)).component
+        [enterMessage] (fun _ _ => #[]) (ProverHint.empty Fp)
+      else if index == 19 then Table.build (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
+        [lengthHandler] (fun _ _ => #[]) (ProverHint.empty Fp)
+      else Table.build view.component [] (fun _ _ => #[]) (ProverHint.empty Fp)
+    physical.withComponent view.component
+
+/-- The actual heterogeneous registry reads every full call and balances reversed instructions
+with padding. Removing or duplicating a handler fails the physical ledger. This is a handoff
+regression; it does not claim that all the other channels form a complete execution witness. -/
+theorem registeredReceiverHandoff :
+    let views := Soundness.HostHintReadHandoff.registeredReceivers (p := SP1Prime)
+    let messages := [(hintHandler 1).call, enterMessage, lengthHandler.call]
+    let padding := { (row 2) with instruction := { (row 2).instruction with is_real := 0 } }
+    let instructions := instructionTable (padding :: (messages.map instructionOfCall).reverse ++ [padding])
+    let ledger := registeredTables.flatMap fun table => physicalLedger table "sp1.native.host_call"
+    views.length = 21 ∧ registeredTables.all physicalChecks = true ∧ physicalChecks instructions = true ∧
+      (ReceiverView.messages views registeredTables).map toElements = messages.map toElements ∧
+      HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger) = true ∧
+      HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger.drop 1) = false ∧
+      HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger ++ ledger.take 1) = false := by
+  native_decide
 
 end SP1CleanTest.Core.HostCall

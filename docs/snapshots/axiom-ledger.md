@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2218 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 287 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2257 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 288 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2505 released declarations are probed.
+- 2545 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,27 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The installed host-wrapper checkpoint adds 49 main declarations and one test anchor.
+The complete receiver-accounting checkpoint adds 39 main declarations and one test anchor.
+Eighteen main additions use exactly the logical baseline; the other 21 have exactly the same
+100 dependencies as the preceding local ordering theorem. All preceding 2218 main and 287 test
+dependency sets are unchanged, with no removals or new main-library axiom names. The new
+compiler-trusted constant belongs only to the heterogeneous receiver-registry regression.
+
+`LocalCoreChannels` classifies every retained component's channels. `HostLocalCoreLedger`
+then proves the complete physical HostCall split; no caller supplies a ledger equation.
+`HostLocalHandoff.calls_perm` identifies the actual receiver inventory with active instruction
+calls using this ensemble's own balance, including complete words and the original count bound.
+`ReceiverView` is the generic Clean-only heterogeneous reader and uniqueness transport.
+The real receiver views cover HALT, ENTER, all commitment slots, both HINT_LEN variants, and
+HINT_READ. Their static chronology interface and word-resource HostCall silence are proved.
+The `_of_registered` HINT_READ corollaries remove the caller's handoff accounting equations;
+shared cursor balance, record/permission authentication, predecessor currency, mixed grounding,
+and full outgoing state remain open. WRITE and VERIFY handlers remain unimplemented.
+The new test checks three real handler kinds in the 21-handler registry with reversed
+instructions and padding; missing or duplicate handlers fail handoff balance. It is a subsystem
+regression, not a complete host-execution witness. The full-AIR HINT_LEN counterexample remains open.
+
+The preceding installed host-wrapper checkpoint added 49 main declarations and one test anchor.
 Seventeen main additions use exactly the logical baseline. The other 32 have exactly the same
 100 dependencies as the preceding `LocalCore.executionRows_ordered`, including the already
 disclosed Sail hooks and bit-vector proof constants. All preceding 2169 main and 286 test
@@ -55,7 +75,7 @@ valid original constraints, and the State edge, but demonstrates that the same c
 frontier fails after the wrapper's x12 pair is dropped. This is a projection regression, not a
 full host-execution witness. `HostHintReadHandoff.handler_clocks_nodup_of_hostLocal` and
 `balanced_for_of_hostLocal` use the derived physical projection and actual handoff balance;
-exact accounting of the other handlers' unit pulls remains explicit.
+their explicit unit-pull accounting premise is discharged by the registered variants above.
 Record/permission authentication, predecessor currency, mixed host grounding, and full outgoing
 state remain open, as does the full-AIR HINT_LEN counterexample.
 

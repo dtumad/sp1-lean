@@ -40,6 +40,47 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete physical host receiver accounting.
+    ("SP1Clean/Soundness/LocalCoreChannels.lean", "component_channels_subset"),
+    ("SP1Clean/Soundness/HostLocalCoreLedger.lean", "auxiliaryTables"),
+    ("SP1Clean/Soundness/HostLocalCoreLedger.lean", "auxiliaryTables_components"),
+    ("SP1Clean/Soundness/HostLocalCoreLedger.lean", "interactions_split_new"),
+    ("SP1Clean/Soundness/HostLocalCoreLedger.lean", "hostCall_fresh"),
+    ("SP1Clean/Soundness/HostLocalCoreLedger.lean", "hostCall_interactions"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "ensemble"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "receiverTables"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "resourceTables"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "receiverTables_components"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "resourceTables_components"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "receiverTables_aligned"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "receiverTable"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "receiverTable_component"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "calls"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "hostCall_interactions"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "calls_perm"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "calls_clocks_nodup"),
+    ("SP1Clean/Soundness/HostLocalHandoff.lean", "receiver_clocks_nodup"),
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "halt"),
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "enter"),
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "commit"),
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "hintLength"),
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "available"),
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "auxiliaryInterface"),
+    ("ToClean/Air/ReceiverView.lean", "tableMessages"),
+    ("ToClean/Air/ReceiverView.lean", "messages"),
+    ("ToClean/Air/ReceiverView.lean", "messages_cons"),
+    ("ToClean/Air/ReceiverView.lean", "aligned_of_map_eq"),
+    ("ToClean/Air/ReceiverView.lean", "messages_interactions"),
+    ("ToClean/Air/ReceiverView.lean", "tableMessages_sublist"),
+    ("ToClean/Air/ReceiverView.lean", "tableMessages_keys_nodup"),
+    ("SP1Clean/Soundness/HostHintReadHandoff.lean", "receiver"),
+    ("SP1Clean/Soundness/HostHintReadHandoff.lean", "registeredReceivers"),
+    ("SP1Clean/Soundness/HostHintReadHandoff.lean", "wordResources"),
+    ("SP1Clean/Soundness/HostHintReadHandoff.lean", "registeredInterface"),
+    ("SP1Clean/Soundness/HostHintReadHandoff.lean", "wordResources_hostCall_silent"),
+    ("SP1Clean/Soundness/HostHintReadHandoff.lean", "handler_clocks_nodup_of_registered"),
+    ("SP1Clean/Soundness/HostHintReadHandoff.lean", "balanced_for_of_registered"),
+    ("SP1CleanTest/Core/HostCall.lean", "registeredReceiverHandoff"),
     # State/Byte chronology and the installed host-call wrapper.
     ("SP1Clean/Proofs/Chips/CoreSyscallChip/Bridge.lean", "main_constraints_original"),
     ("SP1Clean/Soundness/HostCallOrder.lean", "hostCalls_clocks_nodup_of_orderingChannels"),
@@ -1713,7 +1754,7 @@ EXACT_REQUIRED_THEOREMS = [
 ]
 
 EXACT_REQUIRED_TARGETS = [
-    (path, rf"(?:theorem|def)\s+({re.escape(name)})(?=\s|[({{:]|$)")
+    (path, rf"(?:theorem|def|abbrev)\s+({re.escape(name)})(?=\s|[({{:]|$)")
     for path, name in EXACT_REQUIRED_THEOREMS
 ]
 

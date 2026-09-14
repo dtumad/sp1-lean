@@ -843,14 +843,29 @@ original assertions/lookups and State edges survive, but a frontier that balance
 Memory ledger fails after the x12 pair is dropped. The earlier local-witness corollaries remain
 available with their original stronger hypotheses.
 
-`Soundness/HostHintReadHandoff.lean` theorem `handler_clocks_nodup_of_hostLocal` uses the
-installed wrapper and the ensemble's own handoff balance. Its `balanced_for_of_hostLocal`
-companion derives per-call word-table balance from the shared cursor ledger. Exact accounting
-of the other handlers' unit pulls remains explicit. Other executed tests cover physical padding
-and clock carries, reject duplicated handlers and forged high return-word limbs, and confirm
-that duplicating both inventories balances the handoff alone. CPU ordering excludes that case.
+`Soundness/HostLocalHandoff.lean` theorem `calls_perm` now derives the complete instruction/
+handler permutation from the actual registered tables and this ensemble's own balance.
+`Soundness/LocalCoreChannels.lean` and `Soundness/HostLocalCoreLedger.lean` prove silence of
+all retained non-wrapper tables. `ToClean/Air/ReceiverView.lean` provides the generic typed
+receiver inventory and its exact physical ledger equation. Resources must be statically silent
+on HostCall, so they cannot hide an omitted or extra handler. Complete messages, multiplicities,
+and the original characteristic count bound are retained.
 
-Full integration must close that complete handler accounting, derive record/permission bindings
+`Soundness/HostCallReceivers.lean` supplies the actual HALT, ENTER, both eight-slot commitment
+families, and empty/nonempty HINT_LEN receivers. `Soundness/HostHintReadHandoff.lean` adds
+HINT_READ and proves the 21-handler chronology interface and both word consumers' HostCall
+silence. Its `handler_clocks_nodup_of_registered` and `balanced_for_of_registered` corollaries
+remove caller-supplied handoff accounting equations. Shared cursor balance and consumer-table
+alignment remain explicit. WRITE and VERIFY handlers are not yet implemented or covered by
+this registry's completeness.
+
+The `registeredReceiverHandoff` regression in `SP1CleanTest/Core/HostCall.lean` checks actual
+rows from three handler kinds in the real registry, reversed instructions, and padding; missing
+or duplicate receivers fail HostCall balance. This checks the handoff subsystem, not a complete
+host-execution witness. Earlier tests reject forged return limbs and show that duplicating both
+inventories balances handoff alone; CPU ordering excludes that case.
+
+Full integration must derive the shared cursor ledger and record/permission bindings
 from queue history and shard-wide ledgers, and incorporate the host Memory transfers into mixed
 grounding with predecessor currency and complete outgoing-state agreement. The full HINT_LEN
 counterexample remains open.

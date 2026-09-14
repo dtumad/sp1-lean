@@ -7,7 +7,7 @@ import ToClean.Air.UnitBalance
 The physical wrapper emits one complete message per active instruction. Binary activity is
 derived from its raw constraints; padding contributes zero. A balanced handoff to unit handler
 pulls therefore identifies their complete messages with the actual active instruction inventory.
-Installing the wrapper and accounting for every handler in the full ensemble remain separate.
+`HostLocalHandoff` instantiates this algebra over the installed ensemble and its physical receiver registry.
 -/
 
 namespace SP1Clean.Soundness.HostCallLedger

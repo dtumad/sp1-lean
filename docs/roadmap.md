@@ -391,13 +391,19 @@ Implemented foundations:
   ensemble's own constraints and balance. Auxiliary components prove their Byte requirements and
   CPU State silence statically; the real HINT_READ handler and both RAM consumer variants satisfy
   that interface. No projected Byte or Memory balance is required or claimed.
-  `HostHintReadHandoff.handler_clocks_nodup_of_hostLocal` and `balanced_for_of_hostLocal` use
-  this installation. Exact accounting of all other handlers' unit HostCall pulls remains explicit.
+  `HostLocalHandoff.calls_perm` now derives complete instruction/handler call permutation from
+  the actual physical receiver registry and this ensemble's own balance. `ReceiverView` provides
+  the generic heterogeneous reader; `LocalCoreChannels` and `HostLocalCoreLedger` prove the
+  complete retained-table inventory silent on HostCall. The implemented registry contains HALT,
+  ENTER, all 16 commitment variants, both HINT_LEN variants, and HINT_READ, with proved static
+  chronology interfaces and word-resource silence. `handler_clocks_nodup_of_registered` and
+  `balanced_for_of_registered` remove the caller's handoff inventory/accounting equations.
+  WRITE and VERIFY handlers remain unimplemented; the registry does not claim their completeness.
   Regressions cover padding, clock carries, duplicate/forged handoffs, and the installed WRITE
   projection: the same closing Memory frontier balances the wrapper but fails after dropping
   its x12 pair, despite unchanged State edges and valid original constraints.
-  The next queue step must close the full handler ledger accounting, authenticate records and
-  permissions from the global source/handler ledger,
+  The next queue step must derive the shared cursor ledger from installed resources, authenticate
+  records and permissions from the global source/handler ledger,
   and install these RAM rows in mixed grounding, including predecessor currency and full outgoing
   Memory agreement. Local table specifications and the record bindings remain explicit
   premises of the subsystem results. New WRITE/hook node and word authorization and ordered

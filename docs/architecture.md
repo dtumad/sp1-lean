@@ -492,9 +492,16 @@ HINT_READ handler and both RAM-writing variants satisfy this interface.
 The projection does not claim Byte or Memory balance. The installed WRITE regression shows why:
 the x12 pair is absent from the original instruction ledger, so a frontier that closes the
 wrapper fails after projection while the State edge remains unchanged.
-`HostHintReadHandoff.handler_clocks_nodup_of_hostLocal` transfers that derived CPU uniqueness
-to the handler rows; `balanced_for_of_hostLocal` supplies per-call cursor balance. Their remaining
-handoff premise accounts exactly for all other handlers' unit pulls in the actual ensemble ledger.
+`HostLocalHandoff` registers heterogeneous unit receivers followed by resources that are silent
+on HostCall. `LocalCoreChannels` and `HostLocalCoreLedger` classify every retained table and
+prove the exact physical ledger split. The generic `ReceiverView` reads all receiver occurrences;
+`calls_perm` identifies them with the actual active instruction calls, including complete words.
+`calls_clocks_nodup` transfers CPU uniqueness to the entire registry. The implemented receiver
+views cover HALT, ENTER, all commitment slots, both HINT_LEN cases, and HINT_READ; their static
+chronology interface and the two word consumers' HostCall silence are proved.
+`HostHintReadHandoff.handler_clocks_nodup_of_registered` and `balanced_for_of_registered` now
+need no handoff accounting equations. Shared cursor balance still concerns the actual consumer
+tables. WRITE and VERIFY handlers and the authenticated queue resources remain to be installed.
 Global record/permission authentication, predecessor currency, and host RAM rows in mixed grounding
 are still required for the complete outgoing state. Duplicating both sides balances the handoff
 alone; the State walk supplies the missing event uniqueness.

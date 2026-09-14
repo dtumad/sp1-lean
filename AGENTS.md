@@ -186,8 +186,14 @@ properties; `HostHintReadHandoff.auxiliaryInterface` proves them for the real ha
 RAM consumer variants. No projected Byte or Memory balance is claimed. The installed WRITE
 regression checks that the x12 pair is lost by original projection: State survives, but the same
 closing Memory frontier no longer balances.
-`HostHintReadHandoff.handler_clocks_nodup_of_hostLocal` and `balanced_for_of_hostLocal` use
-this derived projection. Exact accounting of the other handlers' unit HostCall pulls remains open.
+`HostLocalHandoff` now derives complete full-call permutation from this ensemble's physical
+receiver registry and its own balance. `LocalCoreChannels` and `HostLocalCoreLedger` classify
+all retained tables; `ToClean/Air/ReceiverView` reads every heterogeneous receiver occurrence.
+`HostCallReceivers` supplies HALT, ENTER, both eight-slot commitment families, and both HINT_LEN
+variants; `HostHintReadHandoff.registeredReceivers` adds HINT_READ. Static channel proofs close
+their chronology interface and the word resources' HostCall silence. The `_of_registered`
+corollaries derive handler clock uniqueness and per-call word balance without caller handoff
+accounting equations. Shared cursor balance and record authentication remain separate.
 Record/permission authentication, predecessor currency, and mixed installation remain open.
 Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete

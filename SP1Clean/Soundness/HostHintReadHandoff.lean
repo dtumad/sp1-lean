@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostCallOrder
-import SP1Clean.Soundness.HostLocalCore
+import SP1Clean.Soundness.HostLocalHandoff
+import SP1Clean.Soundness.HostCallReceivers
 import SP1Clean.Soundness.HostHintReadPartition
 
 /-! # HINT_READ handler uniqueness from the instruction handoff
@@ -35,6 +36,12 @@ theorem handler_values (env : Environment (ZMod p)) :
     (size HostHintReadChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
   rw [HostHintReadChip.host_values, eval_call, eval_varFromOffset_valueFromOffset]
   rfl
+
+/-- The real HINT_READ handler consumes one complete HostCall per physical row. -/
+def receiver : HostLocalHandoff.Receiver (p := p) where
+  component := handler
+  message env := (input env).call
+  interactions := handler_values
 
 theorem table_values (table : Table (ZMod p)) (component : table.component = handler) :
     table.interactionsWith HostCallChip.channel.toRaw = (calls table).map HostCallChip.channel.pulledValue := by
@@ -84,6 +91,41 @@ theorem auxiliaryInterface : HostLocalCore.AuxiliaryInterface
     have present := List.contains_iff_mem.mpr names
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl <;> change false = true at present <;> contradiction
+
+/-- The implemented handler registry includes the real HINT_READ receiver and all control,
+commitment, and HINT_LEN variants. WRITE and VERIFY handlers are not yet registered. -/
+def registeredReceivers : List (HostLocalHandoff.Receiver (p := p)) :=
+  receiver :: HostCallReceivers.available
+
+def wordResources : List (Component (ZMod p)) :=
+  [(HintReadCoverage.view false).component, (HintReadCoverage.view true).component]
+
+/-- The actual handler registry and word consumers satisfy the chronology interface. -/
+theorem registeredInterface : HostLocalCore.AuxiliaryInterface
+    ((registeredReceivers (p := p)).map (·.component) ++ wordResources) := by
+  have member_split (component : Component (ZMod p))
+      (member : component ∈ (registeredReceivers (p := p)).map (·.component) ++ wordResources) :
+      component ∈ [handler, (HintReadCoverage.view false).component, (HintReadCoverage.view true).component] ∨
+        component ∈ (HostCallReceivers.available (p := p)).map (·.component) := by
+    simpa only [registeredReceivers, List.map_cons, List.mem_append, List.mem_cons,
+      wordResources, receiver, List.not_mem_nil, or_false, or_assoc, or_left_comm, or_comm] using member
+  constructor
+  · intro component member env constraints
+    rcases member_split component member with hint | other
+    · exact auxiliaryInterface.byte component hint env constraints
+    · exact HostCallReceivers.auxiliaryInterface.byte component other env constraints
+  · intro component member
+    rcases member_split component member with hint | other
+    · exact auxiliaryInterface.state component hint
+    · exact HostCallReceivers.auxiliaryInterface.state component other
+
+/-- RAM word resources cannot forge or cancel any instruction-to-handler call. -/
+theorem wordResources_hostCall_silent : ∀ component ∈ wordResources (p := p),
+    HostCallChip.channel.toRaw ∉ component.circuit.channels := by
+  intro component member used
+  have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
+  simp only [wordResources, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl <;> change false = true at present <;> contradiction
 
 /-- Local AIR clock ordering and actual instruction handoff derive handler uniqueness.
 The remaining projection premise is exact equality of physical active instruction inventories. -/
@@ -190,5 +232,59 @@ theorem balanced_for_of_hostLocal {image : Model.Core.ProgramImage} {source : Mo
   HostHintReadPartition.balanced_for handlers component tables aligned env member
     (handler_clocks_nodup_of_hostLocal witness interface constraints balanced handlers component
       others otherCalls otherLedger ledger) cursor
+
+private theorem callClock_nodup_of_receiver (table : Table (ZMod p))
+    (unique : ((ReceiverView.tableMessages receiver table).map HostCallLedger.clock).Nodup) :
+    ((table.table.map table.environment).map HostHintReadPartition.callClock).Nodup := by
+  simpa only [ReceiverView.tableMessages, receiver, List.map_map, Function.comp_def,
+    HostCallLedger.clock, HostHintReadPartition.callClock, HostHintReadPartition.clock,
+    HostHintReadChip.Inputs.first] using unique
+
+/-- Registration fixes the handler's physical table. Its clocks are unique by the installed
+ensemble's complete HostCall ledger and CPU chronology, with no caller-supplied accounting. -/
+theorem handler_clocks_nodup_of_registered {image : Model.Core.ProgramImage} {source : Model.Core.ExecutionSnapshot}
+    {receivers : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
+    {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (HostLocalHandoff.ensemble image source receivers resources channels))
+    (interface : HostLocalCore.AuxiliaryInterface (receivers.map (·.component) ++ resources))
+    (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (index : Fin receivers.length) (registered : receivers[index.val] = receiver) :
+    let handlers := HostLocalHandoff.receiverTable witness index
+    ((handlers.table.map handlers.environment).map HostHintReadPartition.callClock).Nodup := by
+  have unique := HostLocalHandoff.receiver_clocks_nodup witness interface silent constraints balanced
+    index.val index.isLt
+  rw [registered] at unique
+  exact callClock_nodup_of_receiver (HostLocalHandoff.receiverTable witness index) unique
+
+/-- Complete installed handler accounting and the shared cursor ledger give per-call word balance.
+The remaining cursor premise concerns the actual RAM consumer tables, not the HostCall inventory. -/
+theorem balanced_for_of_registered {image : Model.Core.ProgramImage} {source : Model.Core.ExecutionSnapshot}
+    {receivers : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
+    {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (HostLocalHandoff.ensemble image source receivers resources channels))
+    (interface : HostLocalCore.AuxiliaryInterface (receivers.map (·.component) ++ resources))
+    (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (index : Fin receivers.length) (registered : receivers[index.val] = receiver)
+    (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
+      HintReadCoverage.variants tables)
+    (env : Environment (ZMod p))
+    (member : env ∈ (HostLocalHandoff.receiverTable witness index).table.map
+      (HostLocalHandoff.receiverTable witness index).environment)
+    (cursor : BalancedInteractions
+      ((HostLocalHandoff.receiverTable witness index).interactionsWith HintReadWordChip.stateChannel.toRaw ++
+        tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw))) :
+    BalancedInteractions
+      (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
+        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) tables).flatMap
+          (·.interactionsWith HintReadWordChip.stateChannel.toRaw)) := by
+  have component : (HostLocalHandoff.receiverTable witness index).component = handler := by
+    rw [HostLocalHandoff.receiverTable_component, registered]
+    rfl
+  exact HostHintReadPartition.balanced_for (HostLocalHandoff.receiverTable witness index)
+    component tables aligned env member
+    (handler_clocks_nodup_of_registered witness interface silent constraints balanced index registered) cursor
 
 end SP1Clean.Soundness.HostHintReadHandoff

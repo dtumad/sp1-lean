@@ -409,6 +409,9 @@ import SP1Clean.Soundness.HostHintReadPartition
 import SP1Clean.Soundness.HostCallLedger
 import SP1Clean.Soundness.HostCallProjection
 import SP1Clean.Soundness.HostLocalCore
+import SP1Clean.Soundness.HostLocalCoreLedger
+import SP1Clean.Soundness.HostLocalHandoff
+import SP1Clean.Soundness.HostCallReceivers
 import SP1Clean.Soundness.HostCallOrder
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
@@ -461,6 +464,7 @@ import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
 import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Soundness.LocalCoreEnsemble
+import SP1Clean.Soundness.LocalCoreChannels
 import SP1Clean.Soundness.LocalCoreBoundaries
 import SP1Clean.Soundness.LocalCoreSourceGrounding
 import SP1Clean.Soundness.LocalCoreFinalBoundary
