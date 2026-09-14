@@ -357,10 +357,19 @@ Implemented foundations:
   A checked span derives the constructor's successor bounds. Executed regressions retain row
   reordering and final-cell writes and reject omissions, repetitions, wrong clocks, forged
   contents/end markers, and missing or read-only padding permissions.
-  The next queue step must authenticate HINT_READ's cursor endpoints and actual node end, derive
-  each call's cursor balance and content binding from the global source/handler ledger, and install
-  these RAM rows in mixed grounding. The two-table coverage theorem currently takes its endpoint
-  and local-table premises explicitly. New WRITE/hook node and word authorization and ordered
+  `HostHintReadChip` now checks the complete call, current head, padded span, and final-word
+  request. It pops the queue to the authenticated tail, preserves the allocation frontier, and
+  emits both real word-cursor endpoints. Its 302-cell witness program is exportable. The host
+  bridge derives the true natural length and complete padded-write request from authenticated
+  records, permissions, and register observations; successful semantic dispatch constructs all
+  arithmetic columns under store/clock capacity bounds. `HostHintReadCoverage` derives the exact
+  actual-node word inventory using those physical handler endpoints and consumer-table balance.
+  Executed checks join the instruction handoff, handler, fixed sources, RAM consumers, and
+  permissions; they reject incomplete words, forged final contents, and altered queue boundaries.
+  The next queue step must derive each call's cursor balance and record binding from the global
+  source/handler ledger, prove the complete word-address/write agreement, and install these RAM
+  rows in mixed grounding. Local table specifications and the record bindings remain explicit
+  premises of the subsystem results. New WRITE/hook node and word authorization and ordered
   head history remain open. Include the 48-bit
   identity bound in the shared resource profile.
   The full-AIR forged HINT_LEN return regression remains open until that integration.
@@ -466,7 +475,7 @@ Implemented foundations:
   cover exits through `SP1Prime - 1`, unrestricted unused arguments, forged handoffs, corrupted
   witnesses, full interpreter effects, and constructor clocks crossing 24-bit limb boundaries.
   Witness export uses 64 cells for HALT and zero for ENTER. Installation in the mixed machine
-  remains open, together with the three remaining handler components: WRITE, HINT_READ, and
+  remains open, together with the two remaining handler components: WRITE and
   VERIFY_SP1_PROOF. HINT_LEN's component and explicit queue obligations are described above.
   The host-row tests establish local checks and joint handoff balance, not a complete boot-to-HALT
   witness.

@@ -2,6 +2,7 @@ import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
 import SP1Clean.Model.Core.HostQueue
 import SP1Clean.Proofs.Operations.HintQueueCursor
 import SP1Clean.Proofs.Chips.HostControlPopulate
+import SP1Clean.Proofs.Operations.ClockOrderPopulate
 
 /-! # HINT_LEN rows from successful host execution
 
@@ -26,16 +27,8 @@ def populate (store : HintQueue.Store) (head previousClock clock : ℕ)
 
 private theorem clock_spec (store : HintQueue.Store) (head previousClock clock : ℕ)
     (executed : HostExecution) (fits : clock < 2 ^ 48) (order : previousClock < clock) :
-    ClockOrder.Spec (populate (p := p) store head previousClock clock executed).clock := by
-  have hp := Fact.out (p := 2 ^ 25 < p)
-  have previousHigh : previousClock / 2 ^ 24 < p := by omega
-  have previousLow : previousClock % 2 ^ 24 < p := by omega
-  have currentHigh : clock / 2 ^ 24 < p := by omega
-  have currentLow : clock % 2 ^ 24 < p := by omega
-  simp only [ClockOrder.Spec, populate, HostHintQueue.State.encode, Inputs.clock, HostControl.message, Semantics.clkNat,
-    ZMod.val_natCast_of_lt previousHigh, ZMod.val_natCast_of_lt previousLow,
-    ZMod.val_natCast_of_lt currentHigh, ZMod.val_natCast_of_lt currentLow]
-  omega
+    ClockOrder.Spec (populate (p := p) store head previousClock clock executed).clock :=
+  ClockOrder.encode_spec previousClock clock fits order
 
 /-- The actual semantic call constructs both routing and the complete handler domain. -/
 theorem populate_spec_of_run (store : HintQueue.Store) (head previousClock clock : ℕ)

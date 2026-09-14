@@ -1,9 +1,4 @@
-import SP1CleanTest.Core.HostChecks
-import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
-import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
-import SP1Clean.Native.Operations.HintQueueWordSource
-import SP1Clean.Native.Operations.WritePermission
-
+import SP1CleanTest.Core.HintReadFixtures
 /-! # Executed physical hint word coverage
 
 Run the real consumer, fixed source-word lookup, and fixed writable-interval provider. Boundary
@@ -14,70 +9,7 @@ This exercises the word subsystem, not instruction/queue authorization or mixed-
 
 namespace SP1CleanTest.Core.HintReadWord
 
-open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks
-
-private abbrev Fp := ZMod SP1Prime
-private abbrev Row := Bool × HintReadWordChip.Inputs Fp
-
-private def image : ProgramImage := ⟨[(131072, 0x00000073)], 131072, []⟩
-
-private def bytes (length : ℕ) : Bytes := (List.range length).map fun i => BitVec.ofNat 8 (19 * i + 3)
-
-private def oldWord : Word Fp := Soundness.Target.bitVecToWord (BitVec.allOnes 64)
-
-private def row (address : ℕ) (actual : Bytes) (index : ℕ) : Row :=
-  let key := Address.ofNat (p := SP1Prime) (address + 8 * index)
-  let word := WordRecord.encode (p := SP1Prime) 1 actual index
-  let ram := HostRamAccessChip.populate ⟨0, 0, key[0], key[1], key[2], oldWord⟩ 0 1 0 word.value
-  let last := decide (index + 1 = wordCount actual)
-  (last, HintReadWordChip.populate last ram word.pointer word.index)
-
-private def rows (address : ℕ) (actual : Bytes) : List Row :=
-  (List.range (wordCount actual)).map (row address actual)
-
-private def checked (row : Row) (corrupt : Option ℕ := none) : Bool × Ledger :=
-  evaluateProgram (HintReadWordChip.main row.1 (varFromOffset HintReadWordChip.Inputs 0))
-    (toElements row.2).toList corrupt
-
-private def source (actual : Bytes) (record : WordRecord Fp) : Bool × Ledger :=
-  evaluateProgram (HostHintQueue.sourceWordMain [actual] (varFromOffset WordRecord 0))
-    (toElements record).toList none [FiniteLookup.ofStatic (sourceWordTable [actual])]
-
-private def permission (image : ProgramImage) (address : ℕ) : Bool × Ledger :=
-  match WritePermissionProvider.populate? (p := SP1Prime) image address with
-  | none => (false, [])
-  | some input =>
-    evaluateProgram (WritePermissionProvider.main image (varFromOffset WritePermissionProvider.Inputs 0))
-      (toElements input).toList none [FiniteLookup.ofStatic image.writePermissionTable]
-
-private def balanced (ledger : Ledger) : Bool :=
-  let selected := ledger.filter (fun item => item.1 != "SP1Byte")
-  selected.length < SP1Prime && selected.all fun key =>
-    ((selected.filter (fun item => item.1 == key.1 && item.2.1 == key.2.1)).map (·.2.2)).sum == 0
-
-private def boundaries (address : ℕ) (actual : Bytes) : Ledger :=
-  let count := wordCount actual
-  let memory := (ByteMemory.mk []).writeBytes address (List.replicate (8 * count) 255)
-  let after := memory.writeBytes address (hintWriteBytes actual)
-  (evaluateProgram (do
-    HintReadWordChip.stateChannel.push (const (⟨0, 1, Address.ofNat 1, 0, Address.ofNat address⟩ : HintReadWordChip.State Fp))
-    HintReadWordChip.stateChannel.pull (const (⟨0, 1, Address.ofNat 1, Address.ofNat count,
-      Address.ofNat (address + 8 * (count - 1))⟩ : HintReadWordChip.State Fp))
-    Circuit.forEach (Vector.ofFn fun index : Fin count => index.val) fun index => do
-      let key := Address.ofNat (p := SP1Prime) (address + 8 * index)
-      Channels.memoryChannel.push (const ⟨0, 0, key[0], key[1], key[2], oldWord⟩)
-      Channels.memoryChannel.pull (const ⟨0, 2, key[0], key[1], key[2],
-        Soundness.Target.bitVecToWord (after.readWord (address + 8 * index))⟩)) []).2
-
-private def check (image : ProgramImage) (address : ℕ) (actual : Bytes) (rows : List Row)
-    (missingPermission : Option ℕ := none) : Bool :=
-  let consumers := rows.map checked
-  let sources := rows.map fun row => source actual (row.2.step row.1).word
-  let permissions := rows.flatMap fun row => (List.range 8).filterMap fun index =>
-    let target := Address.toNat row.2.address + index
-    if missingPermission == some target then none else some (permission image target)
-  consumers.all (·.1) && sources.all (·.1) && permissions.all (·.1) &&
-    balanced (boundaries address actual ++ consumers.flatMap (·.2) ++ sources.flatMap (·.2) ++ permissions.flatMap (·.2))
+open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks HintReadFixtures
 
 /-- Empty, partial, and aligned hints balance every physical word and padding transfer. -/
 theorem completeWrites : (List.range 18).all (fun length =>

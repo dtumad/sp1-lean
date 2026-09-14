@@ -780,10 +780,22 @@ consumer tables and an exact consecutive index inventory from their own unit cur
 `balanced_of_walk` proves the converse under Clean's characteristic count guard. The constructor's
 successor bounds follow from a checked span. Regressions retain physical row reordering and writes
 at the address ceiling while rejecting missing/repeated words, wrong clocks, forged values/end
-markers, and absent or read-only padding permissions. The subsystem still takes its authenticated
-endpoints and table premises explicitly. Full integration must derive per-call balance and word
-binding from the shard-wide source/handler ledger and incorporate these Memory transfers into
-mixed grounding; the full HINT_LEN counterexample remains open.
+markers, and absent or read-only padding permissions.
+
+`HostHintReadChip` now connects the full call, current queue head, checked span, and authenticated
+final-word request. Its circuit has closed soundness/completeness proofs and exports 302 witness
+cells. The host bridge derives the exact natural length, queue pop, and complete padded-write
+request from bound records, register observations, and writable permission; successful dispatch
+constructs all row assumptions under the stated store/clock bounds.
+`HostHintReadCoverage.complete_indices` uses the physical handler's own cursor interactions and
+the consumer tables' balance to derive the exact actual-node word inventory. Executed regressions
+join the instruction handoff, handler, fixed sources, word consumers, and permission providers;
+the instruction's other channels remain external. They retain reordered rows and final-cell
+writes and reject omitted/repeated words, locally valid forged final contents, malformed spans,
+and changed queue frontiers. The local specifications and current-queue/node/word bindings remain
+explicit premises of the subsystem theorems. Full integration must derive each call's balance and
+bindings from the shard-wide ledger, prove complete word-address/write agreement, and incorporate
+these Memory transfers into mixed grounding; the full HINT_LEN counterexample remains open.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

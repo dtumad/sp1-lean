@@ -1,12 +1,13 @@
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Model.SP1Field
+import SP1Clean.Math.Address
 import ToClean.Air.EnsembleExport
 
 /-! # Executing native host-circuit regressions
 
 Evaluate complete witness programs, local assertions, and the fixed syscall lookup. Byte and
 Memory and host-read guarantees are checked directly; Program messages must be the fixture's canonical ECALL
-at address `2^16`. Structural-channel messages are retained for each test's ledger assertions.
+at the supplied address (default `2^16`). Structural-channel messages are retained for each test's ledger assertions.
 These fixture checks do not assert whole-machine balance or authentic boot-memory contents.
 -/
 
@@ -28,7 +29,8 @@ private def byteValid (values : List Fp) : Bool :=
   | _ => false
 
 def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
-    (corrupt : Option ℕ := none) (lookups : List (FiniteLookup Fp) := []) : Bool × Ledger :=
+    (corrupt : Option ℕ := none) (lookups : List (FiniteLookup Fp) := [])
+    (programAddress : ℕ := 2 ^ 16) : Bool × Ledger :=
   let honest := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let env : Environment Fp := { honest with get := fun i =>
     if corrupt == (some (i - inputs.length)) && inputs.length ≤ i then honest.get i + 1 else honest.get i }
@@ -49,7 +51,8 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
           low.val < 2 ^ 24 && [a, b, c, d].all (fun limb => limb.val < 65536)
         | _ => false
       else if interaction.channel.name == "SP1Program" then
-        (interaction.msg.map env).toList == [0, 1, 0, 50, 5, 10, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0]
+        (interaction.msg.map env).toList ==
+          (Address.ofNat programAddress).toList ++ [50, 5, 10, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0]
       else if interaction.channel.name == "sp1.native.host_ram_read" then
         match (interaction.msg.map env).toList with
         | [_, _, addr0, addr1, addr2, a, b, c, d] =>

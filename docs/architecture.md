@@ -454,8 +454,16 @@ are proved, and the internal RAM-access coordination pair cancels. `HintReadCove
 an exhaustive path and exact consecutive index inventory from these actual tables and their
 cursor balance, with a converse for constructed walks. A checked span supplies the constructor's
 nonwrapping bounds. These are subsystem results with explicit endpoints and local table facts.
-The main handler must still authenticate the endpoints and node contents, derive per-call balance
-from the shard-wide ledger, and retain the host RAM rows in mixed grounding.
+`HostHintReadChip` supplies the actual endpoints by composing the checked span and final-word
+step with the complete instruction handoff and current queue head. It consumes the node and final
+word, advances the queue to its tail without resetting the frontier, and emits the zero/count
+cursor pair. Its 302-cell witness program is exportable. The host bridge authenticates the natural
+length and full padded-write request from bound records and writable permission, while successful
+semantic dispatch constructs the entire row domain under the explicit store and clock bounds.
+`HostHintReadCoverage` connects those physical endpoints to the exact actual-node word inventory.
+The subsystem still needs global per-call balance and record authentication, complete word-address
+and write agreement, and host RAM rows in mixed grounding. Neither local contracts nor endpoint
+coverage alone establish these remaining execution facts.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and
@@ -542,7 +550,7 @@ The instruction's structural exit limit is specifically KoalaBear; `HostControlC
 proves it equals the native handler's full range at `SP1Prime`. This does not imply whole-core
 completeness for arbitrary field characteristics. These control handlers and the mutable banks
 still need installation and ordering in the mixed machine. HINT_LEN's component is described
-above; the remaining handler components are WRITE, HINT_READ, and VERIFY_SP1_PROOF.
+above; the remaining handler components are WRITE and VERIFY_SP1_PROOF.
 
 The existing released execution theorem still uses the 55-table assembly described below and
 retains its explicit semantic-boundary and syscall-inactivity premises.

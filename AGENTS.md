@@ -160,8 +160,13 @@ word count to the checked span. This closes the modulo-length alias at the compo
 permissions, with an exact successor cursor and exportable 265-cell witnesses. The physical
 two-table subsystem derives an exhaustive consecutive word inventory and fixed clock/node from
 cursor balance; its converse balances a constructed walk. A checked span supplies the constructor's
-successor bounds. The main handler still needs to authenticate the cursor endpoints and content,
-derive each call's balance from the global ledger, and install the subsystem in mixed grounding.
+successor bounds. `HostHintReadChip` now checks the full instruction handoff, current head, span,
+and final-word request, pops to the node's tail while preserving the frontier, and emits the real
+cursor endpoints. Its host bridge derives exact natural length and the complete padded-write
+request from bound records and permissions; successful execution constructs its full domain.
+`HostHintReadCoverage` derives the exact node inventory using those physical handler endpoints.
+Global per-call balance, record binding, full word-address/write agreement, and mixed grounding
+remain integration obligations.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
 node-word coverage for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.
