@@ -442,8 +442,8 @@ Implemented foundations:
   `ClosedVerifier` transport derives a singleton representation preserving every constraint and
   channel balance. The source cursor binds to the incoming snapshot's hints. `source_queue_ordered`
   now closes the exhaustive token-path theorem from full constraints and balance without separate
-  endpoint or authentication premises. The final cursor is fixed by the ensemble instance, and
-  semantic final-byte binding is not yet proved. Installed subsystem regressions check duplicate
+  endpoint or authentication premises. The final cursor is fixed by the ensemble instance;
+  agreement with a claimed outgoing snapshot remains open. Installed subsystem regressions check duplicate
   chains, forged heads/frontiers, and zero-event identities; they are not full-AIR witnesses.
   `HostHintQueueHistory.source_history` now derives semantic byte replay and head/frontier truth at
   every prefix of that path. `terminal_bytes` proves that replay's remaining bytes are exactly the
@@ -452,9 +452,16 @@ Implemented foundations:
   eight successful semantic host calls. A physically decoded interleaved length/read regression
   rejects a stale return even when the forged result and metadata preserve local assertions and
   token balance; source authentication also rejects it. This is still a subsystem regression.
-  **Next:** align the queue-prefix history with the mixed CPU/host replay and bind the outgoing
-  snapshot. Extend ordering and semantic advancement to authenticated WRITE/hook allocation edges;
-  the current three-handler theorem requires the other resources to be queue-silent. Preserve identity segments
+  `HostQueueCPUOrder.source_history` now connects those queue events to the actual CPU walk:
+  full-call handoff identifies each physical active syscall, strict clocks prove subsequence order,
+  and `CurrentQueues` recovers bytes/frontier by replaying exactly the queue events in each
+  preceding CPU prefix. No ordering or per-call current-head premise is supplied by the caller.
+  The handoff regression uses 264-tick spacing, intervening ENTER calls, reversed/padded tables,
+  and a 24-bit carry; changing the returned word at the same clock breaks full-call balance.
+  **Next:** prove this CPU-prefix queue replay agrees with the evolving whole-host state, alongside
+  mixed Memory grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
+  to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
+  other resources to be queue-silent. Preserve identity segments
   and use the already-required active 1-mod-8 clock profile; range-only source validation permits
   zero, while an active queue handler requires a positive clock. This is part of the shared compiler
   profile obligation, not a new reason to exclude zero-step segments.
@@ -628,8 +635,9 @@ Still required before the native capstone can be claimed:
    registered row effects and includes stateful HALT, leaving active SyscallInstrs effects explicit.
    The persistent hint-queue compiler covers all eight semantic calls. Fixed record providers,
    HINT_LEN/HINT_READ handlers, and verifier-owned queue endpoints now have an installed token-path
-   theorem and byte-exact queue-prefix history. Connect it to the mixed CPU/host replay, authenticate
-   new nodes, and extend it to WRITE/hook prepends before claiming complete outgoing snapshot agreement.
+   theorem and byte-exact queue-prefix history in actual CPU order. Prove that CPU-prefix byte
+   replay agrees with the evolving whole-host state, authenticate new nodes, and extend it to
+   WRITE/hook prepends before claiming complete outgoing snapshot agreement.
    Parameterize the bank subsystem's currently zero genesis with the complete local source
    commitment/deferred values before installing it in arbitrary continuation shards.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM

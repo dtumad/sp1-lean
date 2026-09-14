@@ -53,6 +53,19 @@ theorem messages_interactions (views : List (ReceiverView channel)) (tables : Li
   simp only [interactions, messages, List.map_map, Function.comp_def]
   exact List.flatMap_pure_eq_map _ _
 
+/-- An actual unit pull identifies its complete typed message in the receiver inventory. -/
+theorem message_mem_of_pull_mem (views : List (ReceiverView channel)) (tables : List (Table F))
+    (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables)
+    (message : Message F)
+    (member : channel.pulledValue message ∈ tables.flatMap (·.interactionsWith channel.toRaw)) :
+    message ∈ messages views tables := by
+  rw [messages_interactions views tables aligned] at member
+  obtain ⟨other, present, equal⟩ := List.mem_map.mp member
+  have encoded := Vector.toArray_inj.mp (congrArg Interaction.msg equal)
+  have same : other = message := by
+    simpa only [ProvableType.fromElements_toElements] using congrArg fromElements encoded
+  exact same ▸ present
+
 /-- A registered receiver's physical occurrences form a sublist of the complete inventory. -/
 theorem tableMessages_sublist (views : List (ReceiverView channel)) (tables : List (Table F))
     (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables)

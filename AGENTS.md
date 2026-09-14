@@ -234,8 +234,16 @@ and exact HINT_READ lengths are checked by replay, and `terminal_bytes` identifi
 bytes decoded at the final cursor. `HintQueueHistory.of_walk` permits growing persistent stores;
 `HostState.hintEvent_sound` covers all eight successful semantic calls, including WRITE/hook
 prepends. The installed instance still covers only the three existing queue-handler variants.
-Alignment with the full CPU/host timeline, outgoing snapshot binding, and authenticated allocation
-edges remain open; no static-source-queue restriction is added to the full capstone objective.
+`HostQueueCPUOrder.source_history` now derives both exhaustive paths and their order agreement
+from the installed AIR. Every queue row consumes the full call of a physical active syscall;
+`call_cpu_at` recovers that exact instruction at its unique CPU clock. Queue clocks form a
+subsequence of every exhaustive CPU walk, and `CurrentQueues` recovers current bytes/frontier
+from queue events in each preceding CPU prefix. This is structural and byte-replay agreement;
+equality with the evolving whole-host state, mixed Memory grounding, outgoing snapshot binding,
+and authenticated allocation edges remain open. The combined handoff regression uses real
+264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
+carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.
+No static-source-queue restriction is added to the full capstone objective.
 Active queue clocks are positive, consistent with the existing 1-mod-8 compiler-profile obligation;
 range-only source validation still permits zero-step identities.
 Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.

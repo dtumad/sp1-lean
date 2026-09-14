@@ -297,4 +297,21 @@ theorem sourceRanks_nodup_of_isWalk (edge : Edge → Vertex × Vertex) (rank : V
     (path.map fun row => rank (edge row).1).Nodup :=
   (sources_pairwise_of_isWalk edge rank walk increases).2.imp ne_of_lt
 
+omit [DecidableEq Edge] [DecidableEq Vertex] in
+/-- Incoming ranks follow the order of the walk, not the physical table order. -/
+theorem sourceRanks_pairwise_of_isWalk (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ)
+    {initial final : Vertex} {path : List Edge} (walk : IsWalk edge initial final path)
+    (increases : ∀ row ∈ path, rank (edge row).1 < rank (edge row).2) :
+    (path.map fun row => rank (edge row).1).Pairwise (· < ·) :=
+  (sources_pairwise_of_isWalk edge rank walk increases).2
+
+omit [DecidableEq Edge] [DecidableEq Vertex] in
+/-- Destination ranks also follow the walk; a protocol can stamp its successor with event time. -/
+theorem targetRanks_pairwise_of_isWalk (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ)
+    {initial final : Vertex} {path : List Edge} (walk : IsWalk edge initial final path)
+    (increases : ∀ row ∈ path, rank (edge row).1 < rank (edge row).2) :
+    (path.map fun row => rank (edge row).2).Pairwise (· < ·) := by
+  simpa only [List.pairwise_map] using
+    (targets_pairwise_of_isWalk edge rank walk increases).2
+
 end SP1Clean.Soundness.RankedGrounding

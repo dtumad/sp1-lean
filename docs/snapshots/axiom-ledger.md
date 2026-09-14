@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2399 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 297 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2418 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 298 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2696 released declarations are probed.
+- 2716 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,25 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The byte-exact queue-history checkpoint adds 20 main declarations and two test anchors.
+The CPU/queue-order checkpoint adds 19 main declarations and one test anchor. Nine main
+additions use subsets of the logical baseline; five retain the existing chip-registry
+77-dependency set, and five retain the installed history theorem's 100-dependency set.
+All preceding 2399 main and 297 test dependency sets are unchanged, with no removals or new
+main-library axiom names. The only new compiler-trusted constant belongs to `queueCPUHandoff`.
+
+`HostQueueCPUOrder.source_history` connects byte-exact queue history to the exhaustive CPU walk.
+Complete physical HostCall pulls identify matching active instruction rows, and derived strict
+clocks make the queue events a subsequence of CPU execution. `CurrentQueues` recovers bytes and
+frontier by replaying exactly those queue events in the preceding CPU prefix. No ordering or
+per-call current-head premise is supplied by its caller. The generic prefix selection and typed
+receiver membership lemmas live in `ToMathlib` and `ToClean`, respectively.
+
+`queueCPUHandoff` uses physically built wrapper and handler tables, reversed rows, inactive
+padding, intervening ENTER calls, 264-tick syscall spacing, and a 24-bit clock carry. It checks
+full-call handoff and queue balance/replay, rejecting changed return words even at unchanged
+clocks. This remains a subsystem fixture; full State and Memory balance are not established.
+
+The preceding byte-exact queue-history checkpoint added 20 main declarations and two test anchors.
 Sixteen main additions use subsets of the logical baseline; the other four have exactly the
 preceding installed ordering theorem's 100 dependencies. All preceding 2379 main and 295 test
 dependency sets are unchanged, with no removals or new main-library axiom names. The two new
@@ -56,9 +74,10 @@ and full balance. It needs no caller-supplied current-head or per-record binding
 `History.current` supplies a current store/frontier when the host queue agrees with prefix replay.
 
 The generic history engine supports growing inventories; the installed instance still covers only
-HINT_READ and both HINT_LEN variants, with extra resources queue-silent. Alignment with the mixed
-CPU/host replay, authenticated WRITE/hook allocation edges, Memory predecessor currency, and
-complete outgoing snapshot agreement remain open. Identifying terminal reachable bytes is not
+HINT_READ and both HINT_LEN variants, with extra resources queue-silent. Equality of the derived
+CPU-prefix queue bytes with the evolving whole-host state, authenticated WRITE/hook allocation
+edges, Memory predecessor currency, and complete outgoing snapshot agreement remain open.
+Identifying terminal reachable bytes is not
 itself a proof that a claimed outgoing snapshot contains those bytes.
 
 `physicalQueueHistory` decodes interleaved observations and pops from the actual handler tables,

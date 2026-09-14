@@ -41,6 +41,7 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostHintReadPartition.queueCPUHandoff
 #print axioms SP1CleanTest.Core.HostHintReadPartition.physicalQueueHistory
 #print axioms SP1CleanTest.Core.HostHintReadPartition.queueReplayPrepends
 #print axioms SP1CleanTest.Core.HostHintReadPartition.installedQueueEndpoints

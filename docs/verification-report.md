@@ -942,8 +942,15 @@ replay's remaining queue. `History.current` exposes current-store binding for la
 The generic `HintQueueHistory.of_walk` permits persistent inventory growth; the model's
 `HostState.hintEvent_sound` covers all eight successful host calls, including complete WRITE/hook
 prepends. The installed instance only covers HINT_READ and the two HINT_LEN variants with other
-resources queue-silent. Aligning this queue history with the mixed CPU/host replay, authenticating
-allocation edges, and binding a claimed outgoing snapshot remain open.
+resources queue-silent. `Soundness/HostQueueCPUOrder.lean` now derives the structural alignment
+with CPU execution: every physical queue row consumes a complete call from the active instruction
+wrapper, and the queue clock sequence is a subsequence of every exhaustive CPU walk.
+`call_cpu_at` identifies the exact instruction at the matched clock. Its combined `source_history`
+theorem derives both paths, byte replay, and `CurrentQueues` from the installed constraints and
+balance. The latter recovers current bytes/frontier by replaying exactly those queue events whose
+CPU events precede the selected syscall. No caller-supplied ordering or current-head premise remains
+at this interface. Equality with the evolving whole-host state, authenticated allocation edges,
+mixed Memory grounding, and binding a claimed outgoing snapshot remain open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an
@@ -952,15 +959,18 @@ token balance satisfied but fails the source lookup and semantic replay. `queueR
 checks allocation-compatible byte replay and the empty-hint/empty-queue distinction. These tests
 still do not construct a full mixed-AIR witness. The queue's positive
 event-clock requirement falls under the existing active 1-mod-8 compiler profile; it does not
-require rejecting zero-step identities at clock zero.
+require rejecting zero-step identities at clock zero. `queueCPUHandoff` adds a physical-wrapper
+handoff check with 264-tick syscall spacing, two intervening ENTER calls, reversed tables, padding,
+and a 24-bit clock carry. It checks queue replay and rejects a changed full call despite unchanged
+clocks. This fixture still does not establish complete State or Memory balance.
 
 The extended assembly's automatic channel list retains duplicates. Repeating a balance
 requirement does not change the Lean relation, but this list fails the exporter's unique-name
 requirement. Exporting this assembly still needs a canonical channel inventory with proved
 coverage and name identity; no full-assembly export instance is claimed here.
 
-Full integration must align the derived queue history with the CPU/host replay and authenticate
-new WRITE/hook allocations, then incorporate host Memory transfers into mixed grounding with
+Full integration must identify the derived CPU-prefix queue bytes with the evolving host state
+and authenticate new WRITE/hook allocations, then incorporate host Memory transfers into mixed grounding with
 predecessor currency and complete outgoing-state agreement. The full HINT_LEN counterexample
 remains open.
 

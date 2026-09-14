@@ -5,6 +5,7 @@ import SP1Clean.Soundness.HostHintReadLocalExecution
 import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Soundness.HostHintQueueHistory
+import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
@@ -426,5 +427,86 @@ theorem queueReplayPrepends :
       HintQueue.replay? [.length (BitVec.allOnes 64)] [] = some [] ∧
       HintQueue.replay? [.length 0] [] = none ∧
       HintQueue.replay? [.read 0] [] = none := by native_decide
+
+private def cpuTime (index : ℕ) : ℕ := 2 ^ 24 - 263 + 264 * index
+
+private def cpuQueueTables : List (Table Fp) :=
+  [handlers [call 1 (cpuTime 6) (cpuTime 7) 65536,
+      call 2 (cpuTime 3) (cpuTime 5) 65536, call 3 (cpuTime 0) (cpuTime 2) 65536],
+   Table.build ⟨HostHintLengthChip.circuit false⟩
+     [lengthCall 1 (cpuTime 5) (cpuTime 6), lengthCall 2 (cpuTime 2) (cpuTime 3), lengthCall 3 0 (cpuTime 0)]
+     (fun _ _ => #[]) (ProverHint.empty Fp),
+   Table.build ⟨HostHintLengthChip.circuit true⟩ [lengthCall 0 (cpuTime 7) (cpuTime 8)]
+     (fun _ _ => #[]) (ProverHint.empty Fp)]
+
+private def cpuQueuePath : List (HostQueueOrder.Row (p := SP1Prime)) :=
+  (TransitionView.readIndexedRows HostQueueOrder.indices cpuQueueTables).mergeSort
+    (fun first second => HostQueueCPUOrder.eventTime first ≤ HostQueueCPUOrder.eventTime second)
+
+private def enterCall (index : ℕ) : HostCallChip.Message Fp :=
+  ⟨(cpuTime index / 2 ^ 24 : ℕ), (cpuTime index % 2 ^ 24 : ℕ), #v[3, 0, 0, 0], 0, 0, 0, 0⟩
+
+private def queueInstruction (message : HostCallChip.Message Fp) : HostCallChip.Inputs Fp :=
+  let code := message.code[0]
+  let input : SyscallInstrsChip.Inputs Fp :=
+    { state := ⟨message.clk_high, (message.clk_low.val / 65536 : ℕ),
+        (message.clk_low.val % 65536 : ℕ), #v[0, 1, 0]⟩
+      op_a := 5, op_a_memory := ⟨message.code, ⟨0, ((message.clk_low.val + 3) % 65536 : ℕ)⟩⟩, op_a_0 := 0
+      op_b := 10, op_b_memory := ⟨message.arg1, ⟨0, ((message.clk_low.val + 2) % 65536 : ℕ)⟩⟩
+      op_c := 11, op_c_memory := ⟨message.arg2, ⟨0, ((message.clk_low.val + 1) % 65536 : ℕ)⟩⟩
+      next_pc := #v[4, 1, 0], is_halt := 0, op_a_value := message.result
+      syscall_id_bytes := U16toU8OperationSafe.populate message.code
+      is_enter_unconstrained := IsZeroOperation.populate (code - 3)
+      is_hint_len := IsZeroOperation.populate (code - 240), is_halt_zero := IsZeroOperation.populate code
+      is_commit := IsZeroOperation.populate (code - 16), is_commit_deferred := IsZeroOperation.populate (code - 26)
+      digest_index_bits := 0, digest_word := 0, op_b_cmp := ⟨1⟩, op_c_cmp := ⟨1⟩, is_real := 1 }
+  HostCallChip.populate input 0 0
+
+private def cpuCalls : List (HostCallChip.Message Fp) :=
+  ((cpuQueuePath.map HostQueueCPUOrder.call) ++ [enterCall 1, enterCall 4]).mergeSort
+    (fun first second => Semantics.clkNat first.clk_high first.clk_low ≤
+      Semantics.clkNat second.clk_high second.clk_low)
+
+private def cpuInstructions (messages : List (HostCallChip.Message Fp)) : Table Fp :=
+  let padding := queueInstruction (enterCall 1)
+  let padding := { padding with instruction := { padding.instruction with is_real := 0 } }
+  Table.build HostCallLedger.producer (padding :: (messages.map queueInstruction).reverse ++ [padding])
+    (fun _ _ => #[]) (ProverHint.empty Fp)
+
+private def callLedger (tables : List (Table Fp)) : Ledger :=
+  tables.flatMap fun table => table.table.flatMap fun physical =>
+    let env := table.environment physical
+    (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
+      if interaction.channel.name == "sp1.native.host_call" then
+        some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult) else none
+
+private def cpuHandoff (messages : List (HostCallChip.Message Fp)) : Bool :=
+  let enters := Table.build ⟨HostEnterChip.circuit⟩ [enterCall 4, enterCall 1]
+    (fun _ _ => #[]) (ProverHint.empty Fp)
+  HintReadFixtures.balanced (callLedger (cpuInstructions messages :: enters :: cpuQueueTables))
+
+/-- The physical wrapper handoff agrees with queue chronology despite reversed tables, padding,
+two intervening ENTER calls, and a 24-bit clock carry. Equal clocks do not permit changing a
+complete call. This fixture checks handoff/queue protocols, not complete CPU/Memory balance. -/
+theorem queueCPUHandoff :
+    let decoded := HostCallLedger.calls (cpuInstructions cpuCalls)
+    let stamps := decoded.reverse.map (fun message => Semantics.clkNat message.clk_high message.clk_low)
+    let queueStamps := cpuQueuePath.map HostQueueCPUOrder.eventTime
+    let changed := cpuCalls.map fun message => if message.code[0] == 240 then
+      { message with result := Soundness.Target.bitVecToWord 99 } else message
+    let boundary := (SP1Clean.HostHintQueueBoundary.closed hints (lengthCall 0 (cpuTime 7) (cpuTime 8)).next).singleton
+      (fun _ _ => #[])
+    (cpuInstructions cpuCalls).table.length = 11 ∧ decoded.length = 9 ∧
+      stamps = (List.range 9).map cpuTime ∧
+      queueStamps = [0, 2, 3, 5, 6, 7, 8].map cpuTime ∧
+      decide (queueStamps.Sublist stamps) = true ∧
+      (cpuCalls.map queueInstruction).all (fun row => (evaluateProgram
+        (HostCallChip.main (varFromOffset HostCallChip.Inputs 0)) (toElements row).toList).1) = true ∧
+      cpuQueueTables.all (fun table => (checked table).1) = true ∧
+      HintReadFixtures.balanced (queueLedger (boundary :: cpuQueueTables)) = true ∧
+      cpuHandoff cpuCalls = true ∧ cpuHandoff changed = false ∧
+      HintQueue.replay? ((cpuQueuePath.filter (fun row => HostQueueCPUOrder.eventTime row < cpuTime 3)).map
+        HostQueueHistory.event) hints = some (hints.drop 1) ∧
+      HintQueue.replay? (cpuQueuePath.map HostQueueHistory.event) hints = some [] := by native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

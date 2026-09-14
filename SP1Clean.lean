@@ -429,6 +429,7 @@ import SP1Clean.Model.Core.HintQueueEvent
 import SP1Clean.Soundness.HintQueueHistory
 import SP1Clean.Soundness.HostQueueHistory
 import SP1Clean.Soundness.HostHintQueueHistory
+import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Proofs.Operations.HintNodeAllocate

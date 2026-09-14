@@ -40,6 +40,27 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Queue history follows actual CPU order and every preceding CPU prefix.
+    ("ToMathlib/ListChronology.lean", "filter_lt_eq_prefix"),
+    ("ToMathlib/ListChronology.lean", "filter_mem_prefix_eq_filter_lt"),
+    ("ToClean/Air/ReceiverView.lean", "message_mem_of_pull_mem"),
+    ("SP1Clean/Soundness/RankedGrounding.lean", "sourceRanks_pairwise_of_isWalk"),
+    ("SP1Clean/Soundness/RankedGrounding.lean", "targetRanks_pairwise_of_isWalk"),
+    ("SP1Clean/Soundness/LocalCoreEventUniqueness.lean", "ordered_times_pairwise"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "call"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "eventTime"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "call_time"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "call_cpu"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "call_cpu_at"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "times_pairwise"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "clocks_sublist"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "beforeCPU"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "beforeCPU_eq_prior"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "current_at_cpu"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "CurrentQueues"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "currentQueues_of_order"),
+    ("SP1Clean/Soundness/HostQueueCPUOrder.lean", "source_history"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "queueCPUHandoff"),
     # Byte-exact queue replay and installed prefix history.
     ("SP1Clean/Model/Core/HintQueueEvent.lean", "Event.apply?"),
     ("SP1Clean/Model/Core/HintQueueEvent.lean", "replay?"),

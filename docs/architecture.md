@@ -551,9 +551,17 @@ bytes. The semantic `HintQueue.Event` projection checks length observations and 
 and also supports complete prepends. Every successful call in the existing eight-call host
 interpreter produces a valid event. `HintQueueHistory.of_walk` supports growing stores and retains
 extension into an authenticated upper inventory, so the history engine does not assume static
-queues. The current installed instance still needs authenticated allocation rows, alignment with
-the complete CPU/host timeline, and binding to the claimed outgoing snapshot. Installed regressions
-establish selected subsystems, not a complete mixed-AIR witness.
+queues. `HostQueueCPUOrder.source_history` now aligns the physical queue path with the exhaustive
+CPU walk. `call_cpu` reads complete matching calls from physical active wrapper rows, and
+`call_cpu_at` uses derived clock uniqueness to identify the exact instruction at a CPU position.
+Strict queue successor clocks and CPU incoming clocks give a subsequence. `CurrentQueues`
+replays exactly the queue events selected by each preceding CPU prefix to recover its current
+bytes and allocation frontier. This theorem consumes the installed AIR's constraints and full
+balance; it retains host Memory effects in that full witness.
+Agreement with the evolving whole-host state, authenticated allocation rows, mixed Memory
+grounding, and binding to the claimed outgoing snapshot remain open. The combined handoff
+regression includes intervening ENTER calls, real syscall spacing, padding/reversed tables, and
+a clock carry; it establishes selected subsystems, not a complete mixed-AIR witness.
 Positive handler clocks agree with the existing active 1-mod-8 profile; range-only validation can
 still admit zero-step identity segments at clock zero.
 

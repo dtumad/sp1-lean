@@ -56,6 +56,26 @@ theorem executionRows_times_nodup {image : ProgramImage} {source : ExecutionSnap
   executionRows_times_nodup_of_orderingChannels witness constraints
     (orderingChannels_of_balanced witness constraints balanced)
 
+/-- Every exhaustive CPU walk is strictly ordered by the original incoming event clocks.
+Only State balance and Byte guarantees are projected; host Memory effects can remain installed. -/
+theorem ordered_times_pairwise {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (channels : OrderingChannels witness)
+    {ordered : List (ExecutionRow p)} (exhaustive : ordered.Perm (executionRows witness))
+    (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
+      (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered) :
+    (ordered.map fun row => StateMsg.timeNat (row.edge witness.data).1).Pairwise (· < ·) := by
+  have times (row : ExecutionRow p) (member : row ∈ ordered) :
+      StateMsg.timeNat (row.canonEdge witness.data).1 = StateMsg.timeNat (row.edge witness.data).1 ∧
+      StateMsg.timeNat (row.canonEdge witness.data).2 = StateMsg.timeNat (row.edge witness.data).2 := by
+    have good := executionRows_good_of_orderingChannels witness constraints channels (exhaustive.mem_iff.mp member)
+    exact ⟨timeNat_canonState good.1.1, timeNat_canonState good.2.1⟩
+  have sorted := RankedGrounding.sourceRanks_pairwise_of_isWalk
+    (ExecutionRow.canonEdge witness.data) StateMsg.timeNat walk (fun row member => by
+      rw [(times row member).1, (times row member).2]
+      exact (executionRows_advancing_of_orderingChannels witness constraints channels (exhaustive.mem_iff.mp member)).1.1)
+  rwa [List.map_congr_left (fun row member => (times row member).1)] at sorted
+
 /-- Complete channel balance supplies the State/Byte ordering interface. -/
 theorem executionRows_clocks_nodup {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
