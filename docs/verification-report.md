@@ -985,8 +985,17 @@ local bounds. `HostHintReadLocalMemory.source_memory_push_bound` closes those pr
 installed source assembly; `source_memory_prior_bound` transfers them through its complete
 record permutation to every consumed interior record. `source_word_order` consequently proves
 strict predecessor order for every physical hint write, including padding. No prior Memory
-guarantee or instruction-only Memory balance is supplied. Previous-value truth and the mixed
-grounding walk remain open.
+guarantee or instruction-only Memory balance is supplied.
+`Soundness/HostHintReadCPUMemory.lean` groups the actual physical words by their owning CPU events:
+cursor balance supplies the handler, full HostCall balance supplies its instruction, and unique
+CPU clocks make the groups an exact occurrence-preserving partition. `source_memory_partition`
+retains the complete raw Memory ledger of both word tables. Authenticated node/word coverage
+fixes each call's padded write inventory before identifying the current host queue, proving
+distinct canonical locations and the grounding engine's per-location chain condition. Grouped
+touches retain their CPU-relative timing and strict predecessor order. The `cpuWordGrouping`
+regression covers reversed tables, intervening ENTER calls, final padding, a clock carry, and
+duplicated consumers that selection must retain. It remains a protocol fixture, not a full
+mixed-AIR witness. Previous-value truth and the mixed grounding walk remain open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

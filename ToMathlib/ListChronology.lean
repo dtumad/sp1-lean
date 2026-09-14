@@ -1,4 +1,5 @@
 import Mathlib.Data.List.Sort
+import Mathlib.Data.List.Perm.Basic
 
 /-! # Recovering prefixes from strictly ordered keys
 
@@ -6,6 +7,8 @@ Mathlib supplies pairwise ordering and sublist transport, but not the prefix cha
 used when two heterogeneous event lists share ordered keys. A strict key cutoff recovers the
 prefix before an event; membership in that prefix selects the same rows from any list whose
 keys occur in the larger list. These additions belong beside the list ordering lemmas upstream.
+Grouping a physical inventory by distinct covered keys also preserves every occurrence; this
+partition lemma keeps duplicate items while allowing the groups to change their order.
 -/
 
 namespace List
@@ -42,5 +45,41 @@ theorem filter_mem_prefix_eq_filter_lt (key : α → γ) (otherKey : β → γ)
   simp only [decide_eq_true_eq]
   rw [← before, mem_filter, decide_eq_true_eq]
   exact and_iff_right (included (mem_map_of_mem (f := otherKey) member))
+
+omit [LinearOrder γ] in
+/-- Grouping an inventory by distinct keys preserves every occurrence, including duplicates. -/
+theorem flatMap_filter_key_perm {κ : Type*} [DecidableEq κ] (keys : List κ) (items : List α)
+    (key : α → κ) (unique : keys.Nodup) (covered : ∀ item ∈ items, key item ∈ keys) :
+    (keys.flatMap (fun k => items.filter (fun item => decide (key item = k)))).Perm items := by
+  have singleton (item : α) (member : key item ∈ keys) :
+      keys.flatMap (fun k => if key item = k then [item] else []) = [item] := by
+    have selected : keys.flatMap (fun k => if key item = k then [item] else []) =
+        (keys.filter (fun k => decide (k = key item))).map (fun _ => item) := by
+      clear unique covered member
+      induction keys with
+      | nil => rfl
+      | cons k ks ih =>
+        simp only [flatMap_cons, ih, filter_cons]
+        by_cases same : key item = k
+        · rw [if_pos same, if_pos (decide_eq_true same.symm)]
+          rfl
+        · rw [if_neg same, if_neg (show ¬decide (k = key item) = true by
+            simpa only [decide_eq_true_eq] using Ne.symm same)]
+          rfl
+    rw [selected, filter_eq, count_eq_one_of_mem unique member]
+    rfl
+  induction items with
+  | nil => simp
+  | cons item rest ih =>
+    have split : keys.flatMap (fun k => (item :: rest).filter (fun item => decide (key item = k))) =
+        keys.flatMap (fun k => (if key item = k then [item] else []) ++
+          rest.filter (fun item => decide (key item = k))) := by
+      congr 1
+      funext k
+      by_cases same : key item = k <;> simp [same]
+    rw [split]
+    exact (flatMap_append_perm keys _ _).symm.trans
+      ((Perm.of_eq (singleton item (covered item mem_cons_self))).append
+        (ih (fun other member => covered other (mem_cons_of_mem _ member))))
 
 end List

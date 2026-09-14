@@ -19,6 +19,33 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
+/-- The handler's authenticated node fixes its complete padded write inventory before the
+execution walk identifies that node with the current host queue. -/
+theorem writes_of_records (env : Environment (ZMod p)) (tables : List (Table (ZMod p)))
+    (valid : handler.Spec env)
+    (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
+      HintReadCoverage.variants tables)
+    (wordSpecs : HintReadCoverage.Steps tables)
+    (balanced : BalancedInteractions
+      (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
+        tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
+    (store : Store) (header : (input env).node.Binds store) (ending : (input env).endStep.word.Binds store)
+    (words : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables,
+      ((HintReadCoverage.rowInput row).step row.1).word.Binds store) :
+    ∃ node, node? store (Address.toNat (input env).node.pointer) = some node ∧
+      ((TransitionView.readIndexedRows HintReadCoverage.variants tables).map HintReadWrites.produced).Perm
+        (wordWrites (Address.toNat (input env).span.start) node.bytes) := by
+  have headerBinding := header
+  obtain ⟨node, read, _, _⟩ := header
+  obtain ⟨_, _, _, _, _, nodeLength, _, _, span, endStep, nodeValid⟩ := valid
+  have count := (span.node_end (input env).node headerBinding nodeValid nodeLength (input env).endStep.word
+    ending endStep.1 rfl rfl read).2.1
+  rw [handler_cursor] at balanced
+  obtain ⟨path, perm, _, inventory, _⟩ := HintReadWrites.ordered_writes tables
+    (input env).first (input env).final aligned wordSpecs balanced store node read words
+    (by simp [HostHintReadChip.Inputs.first, Address.toNat]) count
+  exact ⟨node, read, (perm.map HintReadWrites.produced).symm.trans (List.Perm.of_eq inventory)⟩
+
 /-- The actual handler and authenticated consumers produce exactly the current hint's padded words. -/
 theorem complete_writes (env : Environment (ZMod p)) (tables : List (Table (ZMod p)))
     (valid : handler.Spec env)

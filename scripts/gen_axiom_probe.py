@@ -40,6 +40,27 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Occurrence-preserving CPU groups and canonical per-call host RAM locations.
+    ("ToMathlib/ListChronology.lean", "flatMap_filter_key_perm"),
+    ("SP1Clean/Soundness/HostHintReadWrites.lean", "writes_of_records"),
+    ("SP1Clean/Soundness/HostHintReadLocalExecution.lean", "consumer_word_binding"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "wordTime"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "wordClock"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "cpuClock"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "wordsAt"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "touch"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "word_cpu"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "handler_writes"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "wordsAt_addresses_nodup"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "wordsAt_locations_nodup"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "source_word_steps"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "words_partition"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "source_words_partition"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "source_memory_partition"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "source_locations_nodup"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "source_touches_chain"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "source_touches_at"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "cpuWordGrouping"),
     # Prior low clocks and strict host RAM ordering from the complete physical Memory ledger.
     ("SP1Clean/Soundness/HostCallProjection.lean", "memory_values"),
     ("SP1Clean/Soundness/LocalCoreBoundaries.lean", "sourceTables_spec_of_byte"),

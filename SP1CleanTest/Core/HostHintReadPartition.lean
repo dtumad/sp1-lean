@@ -7,6 +7,7 @@ import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Soundness.HostHintQueueHistory
 import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.Soundness.HostQueueCPUReplay
+import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
@@ -522,6 +523,34 @@ theorem queueCPUProjection :
         | .syscall call => call.rawCode != SyscallKind.write.code) = true ∧
       HintQueue.replay? (events.filterMap queueEvent?) hints = some [] := by
   simp only [List.map_map, Function.comp_def, NativeCore.ExecutionRow.event, syscallEventOfRow]
+  native_decide
+
+private def callWords (physical : List (HintReadCoverage.Row (p := SP1Prime)))
+    (env : Environment Fp) : List (HintReadCoverage.Row (p := SP1Prime)) :=
+  physical.filter (fun row => decide (HostHintReadCPU.wordClock row =
+    ((HostCallLedger.call env).clk_high, (HostCallLedger.call env).clk_low)))
+
+private theorem callWords_eq (physical : List (HintReadCoverage.Row (p := SP1Prime)))
+    (env : Environment Fp) :
+    HostHintReadCPU.wordsAt (fun _ _ => #[]) physical
+      (.syscall (HostCallLedger.input env).instruction) = callWords physical env := rfl
+
+/-- CPU grouping retains final padding through reversed physical tables and a clock carry.
+Duplicating the word inventory doubles every group's count and exposes duplicate locations;
+selection itself must never erase those occurrences. The fixture remains a protocol test. -/
+theorem cpuWordGrouping :
+    let rows := (HostCallLedger.activeRows (cpuInstructions cpuCalls)).reverse.map fun env =>
+      NativeCore.ExecutionRow.syscall (HostCallLedger.input env).instruction
+    let table := consumers (([call 3 (cpuTime 0) (cpuTime 2) 65536,
+      call 2 (cpuTime 3) (cpuTime 5) 65536, call 1 (cpuTime 6) (cpuTime 7) 65536].flatMap words).reverse)
+    let physical := TransitionView.readIndexedRows HintReadCoverage.variants table
+    let groups := rows.map (HostHintReadCPU.wordsAt (fun _ _ => #[]) physical)
+    let duplicates := rows.map (HostHintReadCPU.wordsAt (fun _ _ => #[]) (physical ++ physical))
+    groups.map List.length = [0, 0, 3, 0, 0, 2, 0, 1, 0] ∧
+      groups.all (fun group => decide ((group.map (fun row => (HintReadWrites.produced row).1)).Nodup)) = true ∧
+      duplicates.map List.length = [0, 0, 6, 0, 0, 4, 0, 2, 0] ∧
+      duplicates.all (fun group => decide ((group.map (fun row => (HintReadWrites.produced row).1)).Nodup)) = false := by
+  simp only [List.map_map, Function.comp_def, callWords_eq]
   native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

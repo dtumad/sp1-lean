@@ -486,9 +486,16 @@ Implemented foundations:
   low-clock bounds without projected Memory balance, including WRITE's x12 pair. The installed
   source assembly closes the auxiliary bounds and transfers them through its complete record
   permutation. `source_memory_prior_bound` now bounds every consumed interior record, and
-  `source_word_order` proves strict predecessor order for every physical word. Value currency
-  and the complete mixed grounding walk remain open.
-  **Next:** derive Memory predecessor currency through mixed grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
+  `source_word_order` proves strict predecessor order for every physical word.
+  `HostHintReadCPUMemory` now groups those physical words by actual CPU events. Cursor and full
+  HostCall balance derive ownership; CPU clock uniqueness gives an occurrence-preserving partition
+  of both word tables and their complete raw Memory ledger. Authenticated node/word coverage
+  derives distinct canonical destinations within each call, including final padding, and hence
+  the engine's per-location chain law. No successful current call, prior replay, or Memory-value
+  guarantee is assumed by these structural facts. Value currency and the complete mixed grounding
+  walk remain open.
+  **Next:** install these CPU-grouped accesses in the existing Memory grounding walk, derive
+  predecessor currency, and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
   and use the already-required active 1-mod-8 clock profile; range-only source validation permits

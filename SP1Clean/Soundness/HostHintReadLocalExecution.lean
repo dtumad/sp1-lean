@@ -93,6 +93,14 @@ private theorem consumer_pull_mem (witness : EnsembleWitness (ensemble image sou
   obtain ⟨table, tableMem, present⟩ := List.mem_flatMap.mp present
   exact EnsembleWitness.mem_interactionsWith.mpr ⟨table, wordTables_mem witness table tableMem, present⟩
 
+/-- Every actual consumer's word is bound to the authenticated store, before RAM grounding. -/
+theorem consumer_word_binding (witness : EnsembleWitness (ensemble image source others resources channels))
+    (store : Store) (authenticated : RecordAuthentication witness store) (balanced : witness.BalancedChannels)
+    (row : HintReadCoverage.Row (p := p))
+    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
+    ((HintReadCoverage.rowInput row).step row.1).word.Binds store :=
+  (word_authenticated witness store authenticated balanced _ (consumer_pull_mem witness row member)).2
+
 private theorem consumer_pointer (witness : EnsembleWitness (ensemble image source others resources channels))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) (wordSpecs : HintReadCoverage.Steps (wordTables witness))
@@ -146,7 +154,7 @@ theorem current_records (witness : EnsembleWitness (ensemble image source others
     (handler_pull_mem witness env member _ _ (by rw [(handler_records env).2]; exact List.mem_cons_self ..))).2
   refine ⟨node.restrict extension bound, ending.restrict extension bound, ?_⟩
   intro row rowMem clock
-  apply ((word_authenticated witness finalStore authenticated balanced _ (consumer_pull_mem witness row rowMem)).2).restrict extension
+  apply (consumer_word_binding witness finalStore authenticated balanced row rowMem).restrict extension
   rw [consumer_pointer witness interface constraints balanced wordSpecs env member row rowMem clock]
   exact bound
 

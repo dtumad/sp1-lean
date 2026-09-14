@@ -429,6 +429,7 @@ import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Native.Operations.HintQueueBoundary
 import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Soundness.HostHintReadLocalMemory
+import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Soundness.HostRamTouches
 import SP1Clean.Model.Core.HintQueueEvent
 import SP1Clean.Model.Core.QueueReplay

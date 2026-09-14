@@ -264,8 +264,12 @@ connects these to every installed physical word and its selected call window.
 `HostLocalCoreMemoryBounds` derives all interior push low-clock bounds from constraints, Byte
 guarantees, Program balance, and local auxiliary push bounds. The installed source assembly closes
 these premises and transfers the bounds through its full record permutation: `source_memory_prior_bound`
-and `source_word_order` derive prior low clocks and strict word-access order. Predecessor value
-currency and the mixed grounding walk remain open.
+and `source_word_order` derive prior low clocks and strict word-access order. `HostHintReadCPUMemory`
+groups every physical hint word with its actual CPU event through cursor and full HostCall balance.
+The grouping preserves the complete raw word Memory ledger and duplicate occurrences. Authenticated
+node/word coverage gives distinct canonical locations within each call and the timed engine's
+per-location chain law. The source assembly supplies these facts without prior Memory guarantees
+or successful replay premises. Predecessor value currency and the mixed grounding walk remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

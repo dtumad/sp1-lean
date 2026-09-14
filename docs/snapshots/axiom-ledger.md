@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2477 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 301 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2496 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 302 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2778 released declarations are probed.
+- 2798 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,16 +35,17 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The host predecessor-clock integration adds twelve main declarations: two use the logical baseline,
-and ten retain the installed assembly's existing 100-dependency set. All preceding 2465 main
-and 301 test dependency sets are unchanged, with no removals or new axiom names.
-`HostLocalCore.memoryInterior_push_bound` covers original instruction/refresh rows, WRITE's
-x12 pair, and locally bounded auxiliary pushes without projecting Memory balance.
-`HostHintReadLocal.source_memory_push_bound` closes those premises for the installed source
-assembly. Its complete record permutation yields `source_memory_prior_bound` for every consumed
-interior record, and `source_word_order` proves strict prior/write order for every physical hint
-word, including padding. The existing canonical keys, word bounds, and aligned touches are retained.
-Previous-value truth and complete host execution grounding remain open.
+The CPU word-grouping integration adds nineteen main declarations: five use the logical baseline,
+two retain the existing 77-dependency execution-view set, and twelve retain the installed assembly's
+existing 100-dependency set. All preceding 2477 main and 301 test dependency sets are unchanged,
+with no removals or new main-library axioms. The added `cpuWordGrouping` protocol regression has
+one new compiler-trusted constant, `cpuWordGrouping._native.native_decide.ax_1_1`, confined to
+the test library. `HostHintReadCPU.source_memory_partition` preserves the complete raw word
+Memory ledger when grouping physical accesses by their actual CPU events. Authenticated node/word
+coverage derives distinct canonical locations and the timed engine's per-location chain law.
+The existing clock bounds and strict predecessor order carry over to each group. These facts
+do not assume successful replay or prior Memory guarantees; predecessor value truth and complete
+host execution grounding remain open.
 
 The preceding host Program/register integration added seven main declarations: two use the logical baseline,
 and five retain the installed assembly's existing 100-dependency set. All preceding 2452 main
