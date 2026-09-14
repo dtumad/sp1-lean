@@ -265,4 +265,36 @@ theorem rankedKeys_nodup_list (rows : List Edge) (edge : Edge → Vertex × Vert
   exact keys_nodup_of_endpointBalanced _ edge rank
     (fun row => rank (edge row).2) id initial final balanced strict (fun _ _ => rfl)
 
+omit [DecidableEq Edge] [DecidableEq Vertex] in
+private theorem sources_pairwise_of_isWalk (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ)
+    {initial final : Vertex} {path : List Edge} (walk : IsWalk edge initial final path)
+    (increases : ∀ row ∈ path, rank (edge row).1 < rank (edge row).2) :
+    (∀ row ∈ path, rank initial ≤ rank (edge row).1) ∧
+      (path.map fun row => rank (edge row).1).Pairwise (· < ·) := by
+  induction path generalizing initial with
+  | nil => simp
+  | cons row rest ih =>
+    obtain ⟨source, tail⟩ := walk
+    have next := increases row (List.mem_cons_self ..)
+    have suffix := ih tail (fun other member => increases other (List.mem_cons_of_mem _ member))
+    constructor
+    · intro other member
+      rcases List.mem_cons.mp member with rfl | member
+      · exact le_of_eq (congrArg rank source.symm)
+      · exact le_trans (le_of_lt (source ▸ next)) (suffix.1 other member)
+    · rw [List.map_cons, List.pairwise_cons]
+      refine ⟨?_, suffix.2⟩
+      intro value member
+      obtain ⟨other, otherMember, rfl⟩ := List.mem_map.mp member
+      exact lt_of_lt_of_le next (suffix.1 other otherMember)
+
+omit [DecidableEq Edge] [DecidableEq Vertex] in
+/-- Strict clock progress makes every event's incoming rank distinct, including duplicate
+physical occurrences. No assumption about the initial rank or a terminal instruction is needed. -/
+theorem sourceRanks_nodup_of_isWalk (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ)
+    {initial final : Vertex} {path : List Edge} (walk : IsWalk edge initial final path)
+    (increases : ∀ row ∈ path, rank (edge row).1 < rank (edge row).2) :
+    (path.map fun row => rank (edge row).1).Nodup :=
+  (sources_pairwise_of_isWalk edge rank walk increases).2.imp ne_of_lt
+
 end SP1Clean.Soundness.RankedGrounding

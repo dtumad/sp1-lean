@@ -378,8 +378,21 @@ Implemented foundations:
   execution theorem uses this shared ledger directly. Executed checks cover interleaved calls,
   reversed rows, clock carries, and missing handlers/consumers. Duplicating complete calls still
   balances the cursor, so the handler-clock uniqueness premise is necessary here.
-  The next queue step must derive that uniqueness from the actual instruction handoff or ordered
-  queue history, authenticate records and permissions from the global source/handler ledger,
+  `LocalCoreEventUniqueness.lean` now derives distinct incoming clocks for all active ordinary,
+  HALT, and syscall occurrences from actual local constraints and balance, with arbitrary shard
+  endpoints. `HostCallLedger.lean` derives binary activity from raw wrapper constraints and proves
+  complete typed call permutation from the actual padded handoff ledger. `HostCallOrder.lean`
+  transfers CPU uniqueness under exact projection onto the local syscall inventory;
+  `HostHintReadHandoff.handler_clocks_nodup_of_local` then derives handler uniqueness, and
+  `balanced_for_of_local` supplies each selected physical word table's balance. Installation
+  still must prove that physical projection and account for the other handlers' unit call pulls.
+  Regressions check actual instruction/handler tables, padding, clock carries, duplicate handlers,
+  and forged return limbs. Duplicating both sides balances the handoff but violates CPU uniqueness.
+  The local-witness corollary still assumes the original local ensemble's complete balance.
+  Reuse State/Byte chronology directly when installing active RAM effects: dropping their tables
+  does not generally preserve Memory balance. This is an installation obligation, not a proved
+  projection of the expanded machine.
+  The next queue step must install that handoff, authenticate records and permissions from the global source/handler ledger,
   and install these RAM rows in mixed grounding, including predecessor currency and full outgoing
   Memory agreement. Local table specifications and the record bindings remain explicit
   premises of the subsystem results. New WRITE/hook node and word authorization and ordered

@@ -172,10 +172,17 @@ Cursor balance alone admits swapped markers and repeated addresses; an executed 
 why every consumer word must be authenticated. `HostHintReadPartition` now derives per-call
 balance from the shared physical handler/consumer cursor ledger and unique handler clocks;
 it also proves every consumer has a handler and retains the original rows on all channels.
-`run_of_shared_tables` carries this through to concrete dispatch and padded writes. Handler-clock
-uniqueness, record/permission authentication, predecessor currency, and mixed installation still
-need derivation from the complete ensemble. Duplicating whole calls can preserve cursor balance,
-so event uniqueness must come from the instruction handoff or ordered queue history.
+`run_of_shared_tables` carries this through to concrete dispatch and padded writes.
+`LocalCoreEventUniqueness` derives distinct incoming event clocks from actual local AIR constraints
+and balance. `HostCallLedger` identifies complete handler calls with the physical wrapper's active
+instruction inventory, deriving its binary gate from raw constraints and retaining padding in the
+original count bound. `HostHintReadHandoff.handler_clocks_nodup_of_local` transfers CPU uniqueness
+to the actual handlers. Installation must still identify the wrapper's decoded active instructions
+with the local syscall table and account for every other handler's unit HostCall pulls.
+The local-witness corollary assumes the original ensemble's complete balance. Reuse State/Byte
+chronology when installing active RAM effects; dropping effect tables does not preserve Memory balance.
+Record/permission authentication, predecessor currency, and mixed installation remain open.
+Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
 global node-word authentication for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.

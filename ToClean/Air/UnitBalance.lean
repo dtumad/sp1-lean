@@ -11,6 +11,18 @@ The intended upstream home is `Clean/Air/Balance.lean`, beside its constant-mult
 counting lemmas. No existing Clean declaration is changed.
 -/
 
+/-- Removing disabled interactions preserves balance and weakens its characteristic count bound. -/
+theorem BalancedInteractions.filter_nonzero {F : Type} [FiniteField F] [DecidableEq F]
+    {interactions : List (Interaction F)} (balanced : BalancedInteractions interactions) :
+    BalancedInteractions (interactions.filter fun interaction => decide (interaction.mult ≠ 0)) := by
+  refine ⟨balanced.1.imp (lt_of_le_of_lt (List.length_filter_le ..)) id, ?_⟩
+  intro message
+  have zero : balanceOf (interactions.filter fun interaction => decide (interaction.mult = 0)) message = 0 :=
+    balanceOf_eq_of_const_zero (fun _ member => of_decide_eq_true (List.mem_filter.mp member).2)
+  have split := balanceOf_eq_add_filter (interactions := interactions) (msg := message) (· = 0)
+  rw [balanced.2, zero, zero_add] at split
+  exact split.symm
+
 namespace Channel
 
 variable {F : Type} [FiniteField F] [DecidableEq F]
@@ -143,5 +155,41 @@ theorem transitionLedger_balanced_iff {Row : Type*} (channel : Channel F Message
       fun valid => balancedInteractions_of_perm valid perm.symm⟩
   rw [transport, balanced_unit_iff]
   simp only [List.length_cons, List.length_map, two_mul]
+
+/-- A binary-gated producer inventory and unit consumers agree on complete typed messages.
+Disabled physical rows may remain in the original ledger and its count bound. -/
+theorem gated_unit_perm_of_balanced {Row : Type*} (channel : Channel F Message)
+    (rows : List Row) (gate : Row → F) (message : Row → Message F) (consumed : List (Message F))
+    (binary : ∀ row ∈ rows, gate row = 0 ∨ gate row = 1)
+    (balanced : BalancedInteractions
+      (rows.map (fun row => channel.pushedIfValue (gate row) (message row)) ++
+        consumed.map channel.pulledValue)) :
+    ((rows.filter fun row => decide (gate row = 1)).map message).Perm consumed := by
+  have producers :
+      ((rows.map fun row => channel.pushedIfValue (gate row) (message row)).filter
+        fun interaction => decide (interaction.mult ≠ 0)) =
+      (rows.filter fun row => decide (gate row = 1)).map (fun row => channel.pushedValue (message row)) := by
+    clear balanced
+    induction rows with
+    | nil => rfl
+    | cons row rest ih =>
+      have tail := ih (fun other member => binary other (List.mem_cons_of_mem _ member))
+      rcases binary row (List.mem_cons_self ..) with equal | equal <;>
+        simp only [List.map_cons, List.filter_cons, pushedIfValue, equal, ne_eq,
+          not_true_eq_false, decide_false, Bool.false_eq_true, ↓reduceIte,
+          zero_ne_one, one_ne_zero, not_false_eq_true, decide_true, List.map_cons,
+          pushedValue]
+      · exact tail
+      · exact congrArg (List.cons _) tail
+  have consumers : ((consumed.map channel.pulledValue).filter
+      fun interaction => decide (interaction.mult ≠ 0)) = consumed.map channel.pulledValue := by
+    apply List.filter_eq_self.mpr
+    intro interaction member
+    obtain ⟨value, _, rfl⟩ := List.mem_map.mp member
+    simp [pulledValue]
+  have selected := balanced.filter_nonzero
+  rw [List.filter_append, producers, consumers] at selected
+  apply ((channel.balanced_unit_iff _ consumed).mp ?_).2
+  simpa only [List.map_map, Function.comp_def] using selected
 
 end Channel

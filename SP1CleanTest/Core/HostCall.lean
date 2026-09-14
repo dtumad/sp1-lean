@@ -2,6 +2,10 @@ import SP1Clean.Proofs.Chips.HostCallChip.Ledger
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Model.SP1Field
 import ToClean.Air.EnsembleExport
+import SP1Clean.Soundness.HostHintReadHandoff
+import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+import SP1CleanTest.Core.HintReadFixtures
+import ToClean.Air.TableBuild
 
 /-! # Executed instruction-to-host handoff regressions
 
@@ -127,5 +131,64 @@ theorem rejectedAliases :
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
 #assert_exportable (Readers.RegisterRead.circuit (p := SP1Prime))
+
+private def hintHandler (clock : ℕ) : HostHintReadChip.Inputs Fp :=
+  let host : HostState := { io := ⟨[[]], []⟩ }
+  let context : HostReadContext :=
+    ⟨fun index => if index == 5 then some 241
+      else if index == 10 then some 65536 else if index == 11 then some 0 else none, fun _ => none⟩
+  let executed := (host.run ⟨{ readOnly := fun _ => false }, SP1Prime⟩ context).getD
+    ⟨.hintRead, 0, 0, 0, ⟨host, none⟩⟩
+  HostHintReadChip.populate (HintQueue.ofList [[]]).1 1 0 clock executed
+
+private def hintInstruction (message : HostCallChip.Message Fp) : Inputs Fp :=
+  let base := (row 241).instruction
+  { (row 241) with instruction :=
+    { base with
+      state := { base.state with
+        clk_high := message.clk_high
+        clk_0_16 := (message.clk_low.val % 65536 : ℕ)
+        clk_16_24 := (message.clk_low.val / 65536 : ℕ) }
+      op_a_memory := ⟨message.code, ⟨0, message.clk_low + 3⟩⟩
+      op_b_memory := ⟨message.arg1, ⟨0, message.clk_low + 2⟩⟩
+      op_c_memory := ⟨message.arg2, ⟨0, message.clk_low + 1⟩⟩
+      op_a_value := message.result } }
+
+private def instructionTable (rows : List (Inputs Fp)) : Table Fp :=
+  Table.build Soundness.HostCallLedger.producer rows (fun _ _ => #[]) (ProverHint.empty Fp)
+
+private def handlerTable (rows : List (HostHintReadChip.Inputs Fp)) : Table Fp :=
+  Table.build Soundness.HostHintReadCoverage.handler rows (fun _ _ => #[]) (ProverHint.empty Fp)
+
+private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHintReadChip.Inputs Fp)) : Bool :=
+  let ledger := [instructionTable instructions, handlerTable handlers].flatMap fun table =>
+    table.table.flatMap fun physical =>
+      let env := table.environment physical
+      (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
+        if interaction.channel.name == "sp1.native.host_call" then
+          some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult) else none
+  HintReadFixtures.balanced ledger
+
+/-- Physical decoding and the full handoff retain two clock epochs and discard only padding.
+The instruction rows also pass the existing assertion, lookup, and local-channel checker. -/
+theorem physicalHandoff :
+    let handlers := [hintHandler 1, hintHandler (2 ^ 24 + 1)]
+    let instructions := handlers.map fun handler => hintInstruction handler.call
+    let padding := { (row 2) with instruction := { (row 2).instruction with is_real := 0 } }
+    instructions.all (fun input => (evaluate input).1) = true ∧
+      handoff (padding :: instructions ++ [padding]) handlers.reverse = true ∧
+      ((Soundness.HostCallLedger.calls (instructionTable (padding :: instructions ++ [padding]))).map
+        Soundness.HostCallLedger.clock) = [(0, 1), (1, 1)] := by native_decide
+
+/-- An extra handler or a changed full return word cannot balance one instruction.
+Duplicating both sides still balances, showing why CPU event uniqueness is essential. -/
+theorem duplicateAndForgedHandoff :
+    let handler := hintHandler 1
+    let instruction := hintInstruction handler.call
+    handoff [instruction] [handler, handler] = false ∧
+      handoff [instruction] [{ handler with call := { handler.call with result := #v[241, 0, 0, 1] } }] = false ∧
+      handoff [instruction, instruction] [handler, handler] = true ∧
+      decide (((Soundness.HostCallLedger.calls (instructionTable [instruction, instruction])).map
+        Soundness.HostCallLedger.clock).Nodup) = false := by native_decide
 
 end SP1CleanTest.Core.HostCall

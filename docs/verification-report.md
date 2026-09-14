@@ -816,10 +816,29 @@ Executed tests retain different nodes, lengths,
 destinations, reversed physical rows, and clock carries, and reject missing handlers and consumers.
 Another regression duplicates complete calls: the cursor still balances, while handler-clock
 uniqueness fails. This records a required integration condition, not a new full-AIR counterexample.
-Full integration must derive unique handler events and record/permission bindings from the
-instruction handoff, queue history, and shard-wide ledgers, then incorporate these Memory transfers
+`Soundness/LocalCoreEventUniqueness.lean` theorem `executionRows_clocks_nodup` now derives distinct
+incoming clocks for every active ordinary, HALT, and syscall occurrence from actual local AIR
+constraints and balance. It does not require a boot source or HALT endpoint.
+`Soundness/HostCallLedger.lean` theorem `calls_perm` derives complete typed call permutation from
+the actual wrapper handoff and unit consumer pulls. The binary gate follows from raw constraints;
+padding remains in the original characteristic count bound. `Soundness/HostCallOrder.lean`
+transfers clock uniqueness under exact projection of active wrapper instructions onto the local
+syscall inventory. `Soundness/HostHintReadHandoff.lean` theorem `handler_clocks_nodup_of_local`
+then derives uniqueness for the actual HINT_READ handler table, accounting separately for the
+other handlers' complete unit-pull ledger. Its `balanced_for_of_local` theorem supplies the actual
+per-call word-table balance from these local and shared ledgers. Executed tests cover physical padding and clock carries,
+reject duplicated handlers and forged high return-word limbs, and confirm that duplicating both
+producer and consumer inventories balances the handoff alone. CPU ordering excludes that case.
+
+The current local ensemble still registers the original syscall component. Full integration must
+install the wrapper and discharge its exact physical projection and complete handler ledger,
+derive record/permission bindings from queue history and shard-wide ledgers, then incorporate these Memory transfers
 into mixed grounding with predecessor currency and complete outgoing-state agreement. The full
 HINT_LEN counterexample remains open.
+The local-witness corollary also assumes the original ensemble's complete balance; dropping active
+host RAM-effect tables does not generally preserve its Memory ledger. Installation must reuse the
+State/Byte chronology directly, rather than treat that corollary as an already proved projection
+of the expanded machine.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

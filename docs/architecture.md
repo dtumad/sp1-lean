@@ -476,10 +476,20 @@ Word bindings are relative to the selected call's current store; later calls may
 nodes, so the statement does not require a single unchanged store for the shared tables.
 The generic payload filter in `ToClean/Air/MessageFilter.lean` preserves Clean's characteristic count
 guard, and its table selection preserves component, data, environments, and interaction provenance.
-The subsystem still needs handler-clock uniqueness from the instruction handoff or queue history,
-global record/permission authentication, predecessor currency, and host RAM rows in mixed grounding
-to establish the complete outgoing state. Duplicating complete calls balances the cursor alone;
-the event-uniqueness regression records why that integration condition remains explicit.
+`LocalCoreEventUniqueness.lean` derives distinct incoming event clocks from the actual local State
+walk, including active syscalls and arbitrary endpoints. `HostCallLedger.lean` proves complete
+typed call permutation from the wrapper's actual handoff ledger; raw constraints derive binary
+activity, and removing disabled interactions preserves Clean's count guard.
+`HostHintReadHandoff.handler_clocks_nodup_of_local` transfers CPU uniqueness to the actual handler
+rows. Its installation premises identify the wrapper's active instructions exactly with the local
+syscall inventory and account for all other handlers' unit pulls. The current local ensemble still
+registers the original syscall component, so those physical connections remain open.
+The local-witness corollary assumes that ensemble's complete balance. Active host RAM effects
+require reusing State/Byte chronology directly; removing their tables does not generally preserve
+Memory balance in the original assembly.
+Global record/permission authentication, predecessor currency, and host RAM rows in mixed grounding
+are still required for the complete outgoing state. Duplicating both sides balances the handoff
+alone; the State walk supplies the missing event uniqueness.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and

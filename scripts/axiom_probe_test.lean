@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HostCall
 import SP1CleanTest.Core.LocalCore
 import SP1CleanTest.Core.ExecutionPath
 import SP1CleanTest.Core.ExecutionSnapshot
@@ -8,7 +9,6 @@ import SP1CleanTest.Core.HostRamRead
 import SP1CleanTest.Core.HostControl
 import SP1CleanTest.Core.HostCommitBoundary
 import SP1CleanTest.Core.HostCommit
-import SP1CleanTest.Core.HostCall
 import SP1CleanTest.Core.HostRamAccess
 import SP1CleanTest.Core.HostHintLength
 import SP1CleanTest.Core.HintNodeAllocate
@@ -41,6 +41,8 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostCall.physicalHandoff
+#print axioms SP1CleanTest.Core.HostCall.duplicateAndForgedHandoff
 #print axioms SP1CleanTest.Core.LocalCore.unguardedStoreIntoRom
 #print axioms SP1CleanTest.Core.LocalCore.protectedRejectsStoreIntoRom
 #print axioms SP1CleanTest.Core.LocalCore.protectedPartialStoreBesideRom

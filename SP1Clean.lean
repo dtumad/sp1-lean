@@ -406,6 +406,9 @@ import SP1Clean.Proofs.Operations.ClockOrderPopulate
 import SP1Clean.Soundness.HostHintReadCoverage
 import SP1Clean.Soundness.HostHintReadWrites
 import SP1Clean.Soundness.HostHintReadPartition
+import SP1Clean.Soundness.HostCallLedger
+import SP1Clean.Soundness.HostCallOrder
+import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Proofs.Operations.HintNodeAllocate
@@ -465,6 +468,7 @@ import SP1Clean.Soundness.LocalCoreDecode
 import SP1Clean.Soundness.LocalCoreRows
 import SP1Clean.Soundness.LocalCoreState
 import SP1Clean.Soundness.LocalCoreOrder
+import SP1Clean.Soundness.LocalCoreEventUniqueness
 import SP1Clean.Soundness.LocalCoreRowBalance
 import SP1Clean.Soundness.LocalCoreTouches
 import SP1Clean.Soundness.LocalCoreMemoryOrder

@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2146 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 284 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2169 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 286 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2430 released declarations are probed.
+- 2455 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,29 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The shared HINT_READ ledger checkpoint adds 26 main declarations and three test anchors. Every
+The instruction-handoff uniqueness checkpoint adds 23 main declarations and two test anchors.
+Eighteen main additions use only the logical baseline or a subset. The five local-ensemble
+corollaries have exactly the same 100 dependencies as the preceding
+`LocalCore.executionRows_ordered`, including its already disclosed Sail hooks and bit-vector
+proof constants. All preceding 2146 main and 284 test dependency sets are unchanged, with no
+removals or new main-library axiom names. Two new compiler-trusted constants occur only in tests.
+
+`LocalCore.executionRows_clocks_nodup` derives distinct incoming clocks for the actual mixed
+event inventory from constraints and balance. `HostCallLedger.calls_perm` recovers complete typed
+calls from the actual padded wrapper ledger, deriving binary activity from raw constraints.
+`HostHintReadHandoff.handler_clocks_nodup_of_local` transfers CPU uniqueness to physical handlers;
+`balanced_for_of_local` supplies their selected word-table balance from the shared cursor ledger.
+The local corollaries retain exact active-instruction projection, the other handlers' complete
+unit-pull ledger, and the original local ensemble's constraints and complete balance as premises.
+Installing active RAM effects must reuse State/Byte chronology directly: dropping their tables
+does not generally preserve the original Memory balance. This projection has not been proved.
+Record/permission authentication, predecessor currency, and complete outgoing-state agreement
+remain open, as does the full-AIR HINT_LEN counterexample. Executed physical-table tests cover
+padding and clock carries, reject duplicate handlers and forged return limbs, and confirm that
+duplicating both instruction and handler inventories balances the handoff alone. CPU ordering
+excludes that case; the test is not a new full-AIR counterexample.
+
+The shared HINT_READ ledger checkpoint added 26 main declarations and three test anchors. Every
 main addition uses only the logical baseline or a subset. All preceding 2120 main and 281 test
 dependency sets are unchanged, with no removals or new main-library axiom names. Three new
 compiler-trusted constants occur only in the shared-table regressions.
@@ -51,8 +73,8 @@ Clean additions under `ToClean/`; no dependency pin changes.
 Regressions build actual shared tables with different nodes, lengths, destinations, and clocks,
 including reversed rows and clock carries. Missing handlers and consumers fail cursor balance.
 Duplicating whole calls still balances that channel but violates handler-clock uniqueness, so
-uniqueness remains an explicit integration condition, to derive from the instruction handoff or
-ordered queue history. Global record/permission authentication, host RAM grounding, predecessor
+uniqueness remained an explicit integration condition at that checkpoint; the handoff result above
+now derives it under the stated installation premises. Global record/permission authentication, host RAM grounding, predecessor
 currency, and complete outgoing-state agreement remain open. The full-AIR HINT_LEN counterexample
 is unchanged.
 
