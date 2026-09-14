@@ -111,6 +111,25 @@ theorem finalWordAuthentication :
     (evaluate forged).1 = true ∧ (HintReadFixtures.source actual forged.endStep.word).1 = false ∧
       joint actual 65536 forged (HintReadFixtures.rows 65536 actual) = false := by native_decide
 
+/-- Cursor balance alone admits an early stop followed by a late advance at a repeated address.
+Authenticating each consumer's marker rejects this even when the handler's end word is honest. -/
+theorem consumerMarkerAuthentication :
+    let actual := HintReadFixtures.bytes 8
+    let first := (HintReadFixtures.row 65536 actual 0).2
+    let second := (HintReadFixtures.row 65528 actual 1).2
+    let early := (true, HintReadWordChip.populate true first.ram first.pointer first.index)
+    let late := (false, HintReadWordChip.populate false second.ram second.pointer second.index)
+    let handler := input actual 65536
+    (HintReadFixtures.checked early).1 = true ∧ (HintReadFixtures.checked late).1 = true ∧
+      HintReadFixtures.balanced
+        (((evaluate handler).2 ++ (HintReadFixtures.checked early).2 ++
+          (HintReadFixtures.checked late).2).filter (fun item => item.1 == "sp1.native.hint_read_state")) = true ∧
+      Address.toNat early.2.address = Address.toNat late.2.address ∧
+      (HintReadFixtures.source actual handler.endStep.word).1 = true ∧
+      (HintReadFixtures.source actual (early.2.step true).word).1 = false ∧
+      (HintReadFixtures.source actual (late.2.step false).word).1 = false ∧
+      joint actual 65536 handler [early, late] = false := by native_decide
+
 /-- The actual host loses one hint and preserves all unrelated state across clock boundaries. -/
 theorem semanticRows : [[], [1, 2, 3], [1, 2, 3, 4, 5, 6, 7, 8]].all (fun actual =>
     [(0, 1), (2 ^ 24 - 1, 2 ^ 24 + 1), (2 ^ 48 - 9, 2 ^ 48 - 1)].all fun (before, now) =>

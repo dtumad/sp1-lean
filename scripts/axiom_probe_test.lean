@@ -183,6 +183,7 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.HostHintRead.wordCoverage
 #print axioms SP1CleanTest.Core.HostHintRead.finalCell
 #print axioms SP1CleanTest.Core.HostHintRead.finalWordAuthentication
+#print axioms SP1CleanTest.Core.HostHintRead.consumerMarkerAuthentication
 #print axioms SP1CleanTest.Core.HostHintRead.semanticRows
 #print axioms SP1CleanTest.Core.HostHintRead.historicalHeads
 #print axioms SP1CleanTest.Core.HostHintRead.malformedRows

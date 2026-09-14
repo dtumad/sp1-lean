@@ -434,8 +434,8 @@ final word now derives that bound. Source word positions
 are capped at the 48-bit key domain without wrapping; a permitted write in the native address
 window supplies a stronger word-count bound. `HintNodeWords` ties generated word contents to the
 checked allocation's exact identity while preserving historical nodes. This closes source-word
-authentication and the semantic content bridge; authorized new-word publication, constrained
-HINT_READ coverage, and installation in the mixed ensemble remain open.
+authentication and the semantic content bridge; authorized new-word publication, shard-wide
+HINT_READ authorization, and installation in the mixed ensemble remain open.
 
 `HintReadSpan` composes canonical division by eight, address ordering, and bounded addition to
 check the exact positive padded count and last written word address. Using the last address
@@ -461,9 +461,15 @@ cursor pair. Its 302-cell witness program is exportable. The host bridge authent
 length and full padded-write request from bound records and writable permission, while successful
 semantic dispatch constructs the entire row domain under the explicit store and clock bounds.
 `HostHintReadCoverage` connects those physical endpoints to the exact actual-node word inventory.
-The subsystem still needs global per-call balance and record authentication, complete word-address
-and write agreement, and host RAM rows in mixed grounding. Neither local contracts nor endpoint
-coverage alone establish these remaining execution facts.
+`HostHintReadWrites.run_of_tables` combines successful concrete host execution and exact padded
+word-write agreement. The proof derives consecutive addresses from each consumer's authenticated
+final marker, hiding the variant split and clipped final cursor inside `HintReadWrites`.
+`HintReadWriteLedger` projects the actual Memory pairs and eight permission pulls per row,
+proves readback against the semantic byte update, and derives whole-span permission from those
+byte requests. Cursor balance alone can accept swapped markers and repeated addresses even with
+an honest handler final word; the regression rejects this through consumer authentication.
+The subsystem still needs global per-call balance and record/permission authentication, predecessor
+currency, and host RAM rows in mixed grounding to establish the complete outgoing state.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and

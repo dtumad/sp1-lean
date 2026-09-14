@@ -394,6 +394,8 @@ import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
 import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
 import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
 import SP1Clean.Soundness.HintReadCoverage
+import SP1Clean.Soundness.HintReadWrites
+import SP1Clean.Soundness.HintReadWriteLedger
 import SP1Clean.FormalModel.Contracts.HostHintRead
 import SP1Clean.Native.Chips.HostHintReadChip.Defs
 import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
@@ -402,6 +404,7 @@ import SP1Clean.Proofs.Chips.HostHintReadChip.Ledger
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Proofs.Operations.ClockOrderPopulate
 import SP1Clean.Soundness.HostHintReadCoverage
+import SP1Clean.Soundness.HostHintReadWrites
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Proofs.Operations.HintNodeAllocate

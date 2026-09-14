@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2105 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 280 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2120 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 281 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2385 released declarations are probed.
+- 2401 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,25 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The HINT_READ handler checkpoint adds 18 main declarations and eight test anchors. Every main
+The HINT_READ write-agreement checkpoint adds 15 main declarations and one test anchor. Every
+main addition uses only the logical baseline or a subset. All preceding 2105 main and 280 test
+dependency sets are unchanged, with no removals or new main-library axiom names. The one new
+compiler-trusted constant belongs only to the consumer-marker regression.
+
+`HostHintReadWrites.run_of_tables` combines successful concrete host execution with the exact
+physical padded word-write inventory. Authenticated consumer records determine every address
+and value. The Memory and permission projections retain all physical occurrences; word readback
+agrees with the semantic byte update, and permissions for the actual byte pulls cover the entire
+padded request. The new regression balances swapped consumer markers against honest handler
+endpoints while repeating a destination, then rejects both markers through immutable source
+authentication. It explains an essential premise, without claiming a new full-AIR counterexample.
+Local specifications, per-call cursor balance, record/permission authentication, and incoming
+register observations remain explicit. Deriving those facts from the shard-wide ledger,
+authenticating Memory predecessors, mixed grounding, complete outgoing-state agreement, new
+WRITE/hook authorization, and queue history remain open. The full-AIR forged HINT_LEN return
+remains open.
+
+The HINT_READ handler checkpoint added 18 main declarations and eight test anchors. Every main
 addition uses only the logical baseline or a subset. All preceding 2087 main and 272 test
 dependency sets are unchanged, with no removals or new main-library axiom names. Eight new
 compiler-trusted constants occur only in the handler integration regressions. Sharing the
@@ -55,7 +73,8 @@ and Memory endpoints; the instruction's remaining channels stay external. They r
 hints, historical heads, nonempty suffixes, reordered rows, and final-cell writes, and reject
 incomplete words, locally valid forged final contents, malformed spans, and changed frontiers.
 Local specifications and current-queue/node/word bindings remain explicit subsystem premises.
-Global per-call balance and binding, complete word-address/write agreement, mixed grounding,
+The write-agreement checkpoint above closes the per-call word-address/value gap.
+Global per-call balance and binding, mixed grounding,
 authorized new WRITE/hook words, and queue history remain open. The full-AIR forged HINT_LEN
 return is unchanged and remains open.
 
@@ -75,7 +94,7 @@ circuits, fixed source and permission providers, and their complete non-Byte led
 semantic RAM boundary fixtures and direct Byte-guarantee checks. They reject missing/repeated
 words, locally valid forged contents/end markers, changed call identity, and protected padding.
 The handler checkpoint above supplies the physical endpoints. Each call's balance and content
-binding still need derivation from the shard-wide ledger. Full padded-write semantics, mixed grounding, authorized
+binding still need derivation from the shard-wide ledger. Mixed grounding, authorized
 new WRITE/hook word publication, and queue history remain integration work. The full-AIR forged
 HINT_LEN return remains open.
 

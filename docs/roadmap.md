@@ -366,9 +366,15 @@ Implemented foundations:
   actual-node word inventory using those physical handler endpoints and consumer-table balance.
   Executed checks join the instruction handoff, handler, fixed sources, RAM consumers, and
   permissions; they reject incomplete words, forged final contents, and altered queue boundaries.
+  `HostHintReadWrites.run_of_tables` now combines the full host call with exact padded word-write
+  agreement. Consumer word authentication derives every destination address, with no repeated
+  cell; the actual Memory projection agrees with the semantic byte update. Authenticating each
+  actual byte-permission pull permits the entire padded span. A regression shows why checking
+  only the handler's final word is insufficient: swapped consumer markers can balance the cursor
+  while repeating an address. Each consumer's immutable source rejects that substitution.
   The next queue step must derive each call's cursor balance and record binding from the global
-  source/handler ledger, prove the complete word-address/write agreement, and install these RAM
-  rows in mixed grounding. Local table specifications and the record bindings remain explicit
+  source/handler ledger and install these RAM rows in mixed grounding, including predecessor
+  currency and full outgoing Memory agreement. Local table specifications and the record bindings remain explicit
   premises of the subsystem results. New WRITE/hook node and word authorization and ordered
   head history remain open. Include the 48-bit
   identity bound in the shared resource profile.

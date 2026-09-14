@@ -1081,6 +1081,11 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Model.Core.HintQueue.wordCount
 #print axioms SP1Clean.Model.Core.HintQueue.wordBytes
 #print axioms SP1Clean.Model.Core.HintQueue.wordValue
+#print axioms SP1Clean.Model.Core.HintQueue.wordWrites
+#print axioms SP1Clean.Model.Core.HintQueue.wordWrites_length
+#print axioms SP1Clean.Model.Core.HintQueue.wordWrites_addresses_nodup
+#print axioms SP1Clean.Model.Core.HintQueue.permits_of_word_bytes
+#print axioms SP1Clean.Model.Core.HintQueue.wordWrites_readback
 #print axioms SP1Clean.Model.Core.HintQueue.wordCount_pos
 #print axioms SP1Clean.Model.Core.HintQueue.wordCount_length
 #print axioms SP1Clean.Model.Core.HintQueue.wordCount_bound_of_permitted
@@ -1162,6 +1167,14 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Soundness.HintReadCoverage.ordered_cover
 #print axioms SP1Clean.Soundness.HintReadCoverage.complete_indices
 #print axioms SP1Clean.Soundness.HintReadCoverage.balanced_of_walk
+#print axioms SP1Clean.Soundness.HintReadWrites.produced
+#print axioms SP1Clean.Soundness.HintReadWrites.ordered_writes
+#print axioms SP1Clean.Soundness.HintReadWriteLedger.row_memory_values
+#print axioms SP1Clean.Soundness.HintReadWriteLedger.row_permission_values
+#print axioms SP1Clean.Soundness.HintReadWriteLedger.memory_ledger
+#print axioms SP1Clean.Soundness.HintReadWriteLedger.permission_ledger
+#print axioms SP1Clean.Soundness.HintReadWriteLedger.permitted_of_inventory
+#print axioms SP1Clean.Soundness.HintReadWriteLedger.memory_readback
 #print axioms SP1Clean.ClockOrder.encode
 #print axioms SP1Clean.ClockOrder.encode_spec
 #print axioms SP1Clean.HostHintReadChip.node_effect_of_spec
@@ -1179,6 +1192,8 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.HostHintReadChip.cursor_values
 #print axioms SP1Clean.Soundness.HostHintReadCoverage.handler_cursor
 #print axioms SP1Clean.Soundness.HostHintReadCoverage.complete_indices
+#print axioms SP1Clean.Soundness.HostHintReadWrites.complete_writes
+#print axioms SP1Clean.Soundness.HostHintReadWrites.run_of_tables
 #print axioms SP1Clean.Model.Core.HostIO.readHint_eq_some_iff
 #print axioms SP1Clean.Model.Core.HostIO.readHint_preserves_readOnly
 #print axioms SP1Clean.Model.Core.HostIO.applyHook_eq_some_iff

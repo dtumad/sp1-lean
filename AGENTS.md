@@ -165,10 +165,14 @@ and final-word request, pops to the node's tail while preserving the frontier, a
 cursor endpoints. Its host bridge derives exact natural length and the complete padded-write
 request from bound records and permissions; successful execution constructs its full domain.
 `HostHintReadCoverage` derives the exact node inventory using those physical handler endpoints.
-Global per-call balance, record binding, full word-address/write agreement, and mixed grounding
-remain integration obligations.
+`HostHintReadWrites.run_of_tables` now combines successful host dispatch with exact physical
+padded word writes. Authenticated consumer markers derive every destination address; the actual
+Memory ledger and byte permissions give word readback and permission for the full padded request.
+Cursor balance alone admits swapped markers and repeated addresses; an executed regression shows
+why every consumer word must be authenticated. Global per-call balance, record binding,
+predecessor currency, and mixed grounding remain integration obligations.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
-node-word coverage for HINT_READ, and ordered head-history derivation. The shared resource profile
+global node-word authentication for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.
 The bank subsystem's zero genesis also needs generalization to the actual local source banks.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,

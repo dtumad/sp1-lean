@@ -792,10 +792,21 @@ the consumer tables' balance to derive the exact actual-node word inventory. Exe
 join the instruction handoff, handler, fixed sources, word consumers, and permission providers;
 the instruction's other channels remain external. They retain reordered rows and final-cell
 writes and reject omitted/repeated words, locally valid forged final contents, malformed spans,
-and changed queue frontiers. The local specifications and current-queue/node/word bindings remain
-explicit premises of the subsystem theorems. Full integration must derive each call's balance and
-bindings from the shard-wide ledger, prove complete word-address/write agreement, and incorporate
-these Memory transfers into mixed grounding; the full HINT_LEN counterexample remains open.
+and changed queue frontiers.
+
+`HostHintReadWrites.run_of_tables` combines successful concrete host execution with exact physical
+word-write agreement, including all padding. `HintReadWrites.ordered_writes` derives every word's
+address and value from the exhaustive walk and its authenticated records. `HintReadWriteLedger`
+projects the actual Memory pairs and byte-permission pulls; its `memory_readback` agrees with the
+semantic byte update, and `permitted_of_inventory` derives permission for the complete padded span.
+Authenticating only the handler's final word does not suffice: an executed regression swaps the
+consumer markers, balances the cursor, and repeats a destination address. Authenticating every
+consumer word rejects this substitution. This is a subsystem-premise regression, not a new full-AIR
+counterexample. Local specifications, current-queue/node/word bindings, incoming register observations,
+and permission authentication remain explicit premises. Full integration must derive each call's
+balance and bindings from the shard-wide ledger and incorporate these Memory transfers into mixed
+grounding, including predecessor currency and complete outgoing-state agreement. The full HINT_LEN
+counterexample remains open.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

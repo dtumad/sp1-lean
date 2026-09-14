@@ -18,12 +18,47 @@ def wordBytes (bytes : Bytes) (index : ℕ) : Vector (BitVec 8) 8 :=
 
 def wordValue (bytes : Bytes) (index : ℕ) : BitVec 64 := Word.bytesValue (wordBytes bytes index)
 
+/-- The complete aligned word inventory of the semantic padded write, in address order. -/
+def wordWrites (address : ℕ) (bytes : Bytes) : List (ℕ × BitVec 64) :=
+  (List.range (wordCount bytes)).map fun index => (address + index * 8, wordValue bytes index)
+
+theorem wordWrites_length (address : ℕ) (bytes : Bytes) :
+    (wordWrites address bytes).length = wordCount bytes := by simp [wordWrites]
+
+/-- Each destination cell occurs exactly once, regardless of repeated or zero word contents. -/
+theorem wordWrites_addresses_nodup (address : ℕ) (bytes : Bytes) :
+    ((wordWrites address bytes).map Prod.fst).Nodup := by
+  simp only [wordWrites, List.map_map, Function.comp_def]
+  apply List.Nodup.map _ List.nodup_range
+  intro left right equal
+  dsimp only at equal
+  omega
+
 theorem wordCount_pos (bytes : Bytes) : 0 < wordCount bytes := by
   unfold wordCount
   omega
 
 theorem wordCount_length (bytes : Bytes) : (hintWriteBytes bytes).length = 8 * wordCount bytes :=
   hintWriteBytes_length bytes
+
+/-- Permissions for every byte of every word cover the entire padded host request. -/
+theorem permits_of_word_bytes (policy : HostMemoryPolicy) (address : ℕ) (bytes : Bytes)
+    (permissions : ∀ index < wordCount bytes, ∀ slot : Fin 8,
+      policy.permits (address + index * 8 + slot.val) 1 = true) :
+    policy.permits address (hintWriteBytes bytes).length = true := by
+  have first := (policy.permits_iff _ _).mp (permissions 0 (wordCount_pos bytes) 0)
+  have last := (policy.permits_iff _ _).mp
+    (permissions (wordCount bytes - 1) (by have := wordCount_pos bytes; omega) 7)
+  apply (policy.permits_iff _ _).mpr
+  rw [wordCount_length]
+  refine ⟨by simpa using first.1, by have := wordCount_pos bytes; omega, ?_⟩
+  intro offset bound
+  have slot : offset % 8 < 8 := Nat.mod_lt _ (by decide)
+  have permitted := (policy.permits_iff _ _).mp
+    (permissions (offset / 8) (by omega) ⟨offset % 8, slot⟩)
+  have excluded := permitted.2.2 0 (by decide)
+  simpa only [Nat.add_zero, show address + offset / 8 * 8 + offset % 8 = address + offset by omega]
+    using excluded
 
 /-- A permitted write in the native address window supplies the complete word-position bound. -/
 theorem wordCount_bound_of_permitted (bytes : Bytes) (policy : HostMemoryPolicy) (address : ℕ)
@@ -79,5 +114,12 @@ theorem readWord_writeHint (memory : ByteMemory) (address : ℕ) (bytes : Bytes)
   exact (wordValue_byte bytes bound ⟨slot, small⟩).symm.trans (by
     rw [wordValue, Word.bytesValue_extract]
     simp only [wordBytes, Fin.getElem_fin, Vector.getElem_ofFn])
+
+/-- Every entry in the complete inventory agrees with the actual byte-memory update. -/
+theorem wordWrites_readback (memory : ByteMemory) (address : ℕ) (bytes : Bytes)
+    (entry : ℕ × BitVec 64) (member : entry ∈ wordWrites address bytes) :
+    (memory.writeBytes address (hintWriteBytes bytes)).readWord entry.1 = entry.2 := by
+  obtain ⟨index, bound, rfl⟩ := List.mem_map.mp member
+  exact readWord_writeHint memory address bytes (List.mem_range.mp bound)
 
 end SP1Clean.Model.Core.HintQueue
