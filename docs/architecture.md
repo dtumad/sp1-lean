@@ -519,8 +519,13 @@ and immutable binding for every actual pull from the complete record ledger. Fix
 allows future allocation providers to use prior grounding facts; the component-local form is a
 stronger sufficient condition for fixed lookups and unit consumers. `handler_spec` is therefore
 derived, while `word_spec` still requires the word tables' Memory representation guarantees.
-The authenticated store may contain future allocations; current-head history and restriction to
-the call's own allocation frontier remain separate. WRITE/VERIFY handlers, authenticated queue resources, predecessor
+The authenticated store may contain future allocations. `HostHintReadLocalExecution.current_records`
+restricts each requested record to the call's current allocation frontier: the current queue bounds
+the head and the actual cursor path fixes the consumers' node. `run_of_authenticated_witness`
+derives local specifications and individual bindings, then proves dispatch and the full padded
+write inventory. Current queue truth, extension into the authenticated store, actual Memory
+guarantees, and current register observations remain explicit. Ordered current-head history,
+WRITE/VERIFY handlers, authenticated queue resources, predecessor
 currency, and host RAM rows in mixed grounding remain required for complete outgoing state. Duplicating both sides balances the handoff
 alone; the State walk supplies the missing event uniqueness.
 

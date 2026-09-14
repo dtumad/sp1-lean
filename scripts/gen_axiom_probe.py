@@ -40,6 +40,13 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Current-frontier authentication and installed HINT_READ execution.
+    ("SP1Clean/Model/Core/HintQueue.lean", "Extends.read_of_bound"),
+    ("SP1Clean/Model/Core/HintQueueRecords.lean", "NodeRecord.Binds.restrict"),
+    ("SP1Clean/Model/Core/HintQueueWordRecords.lean", "WordRecord.Binds.restrict"),
+    ("SP1Clean/Soundness/HostHintReadLocalExecution.lean", "current_records"),
+    ("SP1Clean/Soundness/HostHintReadLocalExecution.lean", "run_of_authenticated_witness"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "futureNodeConsumers"),
     # Installed immutable-record authentication and source closure.
     ("ToClean/Air/Authentication.lean", "Component.Authenticates"),
     ("ToClean/Air/Authentication.lean", "Component.Authenticates.of_pulls"),

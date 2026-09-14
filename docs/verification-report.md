@@ -903,15 +903,22 @@ demand and reversed rows. Missing source rows fail record balance. Changing fixe
 leaves the claimed ledger balanced but fails the lookup. `noncanonicalNodeLength` exhibits a
 length whose decoded 64-bit value agrees with the honest record while its field encoding is
 rejected by the source lookup. These tests concern the record subsystem, not full AIR satisfaction.
-Record authentication in a persistent store does not establish that a pointer was available
-at an earlier call. The current-frontier restriction and ordered queue-head history remain open.
+Record authentication in a persistent store alone does not establish that a pointer was available
+at an earlier call. `HostHintReadLocalExecution.current_records` supplies the missing restriction
+from the current queue head, store extension, and actual per-call cursor path. Its
+`run_of_authenticated_witness` theorem proves concrete dispatch and the complete padded write
+inventory without caller-supplied local specifications or individual node/word bindings.
+Current queue truth, authentication of the persistent store, Memory representation guarantees,
+and current register observations remain explicit. The `futureNodeConsumers` regression substitutes
+a later node with identical bytes: source checks and complete record balance still pass, but
+the actual cursor ledger rejects its use by the earlier call. This is also a subsystem regression.
 
 The extended assembly's automatic channel list retains duplicates. Repeating a balance
 requirement does not change the Lean relation, but this list fails the exporter's unique-name
 requirement. Exporting this assembly still needs a canonical channel inventory with proved
 coverage and name identity; no full-assembly export instance is claimed here.
 
-Full integration must authenticate current-head history, current-frontier record use, and new
+Full integration must authenticate current-head history and new
 WRITE/hook allocations, then incorporate host Memory transfers into mixed grounding
 with predecessor currency and complete outgoing-state agreement. The full HINT_LEN counterexample
 remains open.

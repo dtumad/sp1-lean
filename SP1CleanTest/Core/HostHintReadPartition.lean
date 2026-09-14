@@ -1,6 +1,7 @@
 import SP1Clean.Soundness.HostHintReadPartition
 import SP1Clean.Soundness.HostHintReadLocalPermissions
 import SP1Clean.Soundness.HostHintReadLocalRecords
+import SP1Clean.Soundness.HostHintReadLocalExecution
 import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -290,5 +291,20 @@ theorem noncanonicalNodeLength :
     let forged : NodeRecord Fp := { node with length := node.length.set 3 (node.length[3] + 65536) }
     Word.toBitVec64 forged.length = Word.toBitVec64 node.length ∧
       sourceRowsChecked hints [node] [] = true ∧ sourceRowsChecked hints [forged] [] = false := by native_decide
+
+/-- Future nodes can have identical bytes and valid source records. Complete record balance still
+does not authorize their use by an earlier call: its actual cursor ledger rejects the substitution. -/
+theorem futureNodeConsumers :
+    let earlier := call 3 0 1 65536
+    let actual := HintReadFixtures.bytes 16 :: hints
+    let rows := (words earlier).map fun row => (row.1, { row.2 with pointer := Address.ofNat 4 })
+    let nodes := [earlier.node]
+    let records := earlier.endStep.word :: rows.map (fun row => (row.2.step row.1).word)
+    node? (ofList hints).1 4 = none ∧
+      node? (ofList actual).1 4 = some ⟨HintReadFixtures.bytes 16, 3⟩ ∧
+      sourceRowsChecked actual nodes records = true ∧
+      HintReadFixtures.balanced (recordLedger (withSources actual [earlier] rows nodes records).allTables) = true ∧
+      (consumers rows).all (fun table => (checked table).1) = true ∧
+      shared [earlier] (words earlier) = true ∧ shared [earlier] rows = false := by native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

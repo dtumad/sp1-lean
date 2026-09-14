@@ -211,7 +211,12 @@ and words close both canonical validity and binding from actual lookup constrain
 remaining Memory-channel representation guarantees. `RecordAuthentication` concerns actual
 physical source rows, so future allocation proofs can consume prior grounding facts; requiring
 raw constraints alone for every possible allocation row would be too strong. A record bound in
-a persistent store is not yet proved current at an earlier queue frontier. Current-head history,
+a persistent store restricts to the current frontier via
+`HostHintReadLocalExecution.current_records`: current-head truth bounds the node and the actual
+cursor path fixes every consumer's pointer. `run_of_authenticated_witness` now derives local
+specifications and all individual record bindings before proving dispatch and complete padded
+writes. Its remaining inputs include current queue truth, persistent-store extension and source
+authentication, actual Memory guarantees, and current register observations. Current-head history,
 dynamic allocation authentication, predecessor currency, and mixed grounding remain open.
 Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete

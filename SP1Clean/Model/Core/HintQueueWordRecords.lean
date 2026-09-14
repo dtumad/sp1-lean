@@ -66,6 +66,14 @@ theorem WordRecord.Binds.extend {old new : Store} {record : WordRecord (ZMod p)}
   exact ⟨node, extension _ _ read, position, value, last⟩
 
 omit [Fact (2 ^ 17 < p)] in
+/-- A persistent word belongs to the current store once its node is within the current frontier. -/
+theorem WordRecord.Binds.restrict {old new : Store} {record : WordRecord (ZMod p)}
+    (binding : record.Binds new) (extension : Extends old new)
+    (bound : Address.toNat record.pointer ≤ old.size) : record.Binds old := by
+  obtain ⟨node, read, position, value, last⟩ := binding
+  exact ⟨node, extension.read_of_bound read bound, position, value, last⟩
+
+omit [Fact (2 ^ 17 < p)] in
 /-- The complete word value is fixed by its node and position, not by metadata length alone. -/
 theorem WordRecord.Binds.value {store : Store} {record : WordRecord (ZMod p)}
     (binding : record.Binds store) {node : Node}

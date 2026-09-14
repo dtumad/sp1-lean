@@ -439,6 +439,11 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Composition.extracted_instructionTables_constraints
 #print axioms SP1Clean.Composition.signedSum_eq_sent_sub_received
 #print axioms SP1Clean.Composition.signedSum_eq_zero
+#print axioms SP1Clean.Model.Core.HintQueue.Extends.read_of_bound
+#print axioms SP1Clean.Model.Core.HintQueue.NodeRecord.Binds.restrict
+#print axioms SP1Clean.Model.Core.HintQueue.WordRecord.Binds.restrict
+#print axioms SP1Clean.Soundness.HostHintReadLocal.current_records
+#print axioms SP1Clean.Soundness.HostHintReadLocal.run_of_authenticated_witness
 #print axioms Air.Flat.Component.Authenticates
 #print axioms Air.Flat.Component.Authenticates.of_pulls
 #print axioms Air.Flat.Component.Authenticates.of_silent

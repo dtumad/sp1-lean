@@ -41,6 +41,7 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostHintReadPartition.futureNodeConsumers
 #print axioms SP1CleanTest.Core.HostHintReadPartition.installedRecords
 #print axioms SP1CleanTest.Core.HostHintReadPartition.noncanonicalNodeLength
 #print axioms SP1CleanTest.Core.HostHintReadPartition.installedCursor

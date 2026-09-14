@@ -426,11 +426,16 @@ Implemented foundations:
   `word_spec` isolates the remaining actual Memory-channel guarantees. The 85-table regression
   rejects missing source rows and changed fixed bytes, and a separate regression shows that equal
   semantic length words need not have canonical encodings.
-  The next queue step must derive ordered head history and restrict persistent-store record
-  bindings to each call's current allocation frontier, then install these RAM rows in mixed
-  grounding, including Memory guarantees, predecessor currency, and full outgoing Memory agreement.
-  The combined execution corollary still takes current queue/node/word bindings and row specifications;
-  connect the new source theorems after deriving that current-frontier restriction.
+  `HostHintReadLocalExecution.current_records` now restricts persistent-store bindings to each
+  call's current allocation frontier: its current head bounds the node, and the balanced cursor
+  path forces every selected word to use that node. `run_of_authenticated_witness` derives the
+  local specifications and individual record bindings internally, proving concrete dispatch and
+  the complete padded write inventory. It still requires current queue truth, extension into an
+  authenticated persistent store, actual Memory representation guarantees, and current register
+  observations. The future-node regression preserves record balance and valid source bytes while
+  the actual cursor rejects words borrowed from a later, byte-identical node.
+  The next queue step is ordered head-history derivation, followed by installing these RAM rows
+  in mixed grounding, including Memory guarantees, predecessor currency, and full outgoing Memory agreement.
   New WRITE/hook node and word authorization and ordered
   head history remain open. Include the 48-bit
   identity bound in the shared resource profile.

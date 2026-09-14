@@ -7,8 +7,8 @@ The retained core is silent on immutable hint records. The handler, word consume
 non-RAM handlers cannot create records. Fixed source components establish their own contracts;
 future allocation providers must prove the same source interface. Actual whole-witness balance
 therefore establishes both local channel guarantees and immutable contents for every requested
-record. The store here may include future allocations; current-head history and restriction to
-an earlier allocation frontier remain separate obligations.
+record. The store here may include future allocations; `HostHintReadLocalExecution` restricts
+bindings to the current frontier using current-head truth and the actual cursor path.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadLocal

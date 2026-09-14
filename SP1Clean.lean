@@ -420,6 +420,7 @@ import SP1Clean.Soundness.HostHintReadLocalPermissions
 import SP1Clean.Soundness.HostLocalCoreAuthentication
 import SP1Clean.Soundness.HostHintRecordSources
 import SP1Clean.Soundness.HostHintReadLocalRecords
+import SP1Clean.Soundness.HostHintReadLocalExecution
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Proofs.Operations.HintNodeAllocate

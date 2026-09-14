@@ -68,6 +68,14 @@ theorem NodeRecord.Binds.extend {old new : Store} {record : NodeRecord (ZMod p)}
   obtain ⟨node, read, tail, length⟩ := binding
   exact ⟨node, extension _ _ read, tail, length⟩
 
+omit [Fact (2 ^ 17 < p)] in
+/-- Authentication restricts to an earlier store when the pointer was already allocated. -/
+theorem NodeRecord.Binds.restrict {old new : Store} {record : NodeRecord (ZMod p)}
+    (binding : record.Binds new) (extension : Extends old new)
+    (bound : Address.toNat record.pointer ≤ old.size) : record.Binds old := by
+  obtain ⟨node, read, tail, length⟩ := binding
+  exact ⟨node, extension.read_of_bound read bound, tail, length⟩
+
 /-- Initial node identities are local to the shard; an oversized source never wraps into aliases. -/
 def sourceRows (hints : List Bytes) : List (NodeRecord (ZMod p)) :=
   if hints.length < 2 ^ 48 then

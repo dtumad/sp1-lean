@@ -56,6 +56,18 @@ theorem node?_bound {store : Store} {pointer : ℕ} {node : Node}
     have bound := (Array.getElem?_eq_some_iff.mp read).1
     omega
 
+/-- A later store authenticates an earlier read only inside the earlier allocation frontier. -/
+theorem Extends.read_of_bound {old new : Store} (extension : Extends old new)
+    {pointer : ℕ} {node : Node} (read : node? new pointer = some node)
+    (bound : pointer ≤ old.size) : node? old pointer = some node := by
+  cases pointer with
+  | zero => contradiction
+  | succ index =>
+    have atIndex : index < old.size := by omega
+    have previous : node? old (index + 1) = some old[index] := Array.getElem?_eq_getElem atIndex
+    have equal := Option.some.inj ((extension _ _ previous).symm.trans read)
+    exact previous.trans (congrArg some equal)
+
 theorem Represents.bound {store : Store} {pointer : ℕ} {hints : List Bytes}
     (represents : Represents store pointer hints) : pointer ≤ store.size := by
   cases represents with
