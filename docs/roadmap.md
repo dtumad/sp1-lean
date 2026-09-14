@@ -475,8 +475,11 @@ Implemented foundations:
   Predecessor currency and chronological grounding are still required.
   `HostQueueCurrent.run_of_source_prefix` now consumes that weaker step contract throughout
   HINT_READ dispatch and padded-write coverage, without assuming prior Memory guarantees.
-  **Next:** derive Memory predecessor currency and current register observations through mixed
-  grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
+  `HostLocalCoreProgram` now preserves the Program ledger and authenticates the wrapper's ECALL
+  operand indices. The hint dispatch theorem consumes the engine's incoming register currency
+  on the actual prefix trajectory; all three observations and the matching clock are derived.
+  Preceding replay, running status, and incoming currency are still premises.
+  **Next:** derive Memory predecessor currency through mixed grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
   and use the already-required active 1-mod-8 clock profile; range-only source validation permits

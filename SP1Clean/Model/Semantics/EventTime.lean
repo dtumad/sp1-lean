@@ -129,6 +129,23 @@ def eventTimeline (events : List ExecutionEvent) (initialClock : ℕ) : Timeline
     (eventTimeline events initialClock).start n =
       initialClock + ((List.range n).map (durationAt events)).sum := rfl
 
+/-- Within the transcript, the clock is the sum of the preceding semantic event widths. -/
+theorem eventTimeline_start_le (events : List ExecutionEvent) (initialClock n : ℕ)
+    (covered : n ≤ events.length) :
+    (eventTimeline events initialClock).start n =
+      initialClock + ((events.take n).map ExecutionEvent.duration).sum := by
+  induction n with
+  | zero => simp [eventTimeline_start]
+  | succ n ih =>
+    have inside : n < events.length := by omega
+    have prior := ih (by omega)
+    rw [eventTimeline_start, List.range_succ, List.map_append, List.sum_append,
+      List.take_succ_eq_append_getElem inside, List.map_append, List.sum_append]
+    simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
+      durationAt, List.getElem?_eq_getElem inside] at ⊢
+    rw [eventTimeline_start] at prior
+    omega
+
 /-- **The bridge.** An all-ordinary transcript's timeline *is* the uniform eight-tick timeline —
 including past the end of the transcript, which is why `durationAt` defaults to eight. -/
 theorem eventTimeline_allOrdinary (events : List ExecutionEvent) (initialClock : ℕ)

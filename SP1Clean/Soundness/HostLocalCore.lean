@@ -216,6 +216,50 @@ theorem localWitness_state {image : ProgramImage} {source : ExecutionSnapshot}
       simp [stateChannel, WritePermissionProvider.channel, Channel.toRaw]
     · exact interface.state table.component extra
 
+private theorem component_program (image : ProgramImage) (source : ExecutionSnapshot)
+    (auxiliary : List (Component (ZMod p))) (index : Fin 59) :
+    ((LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)).operations.interactionsWith programChannel.toRaw =
+      ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).operations.interactionsWith programChannel.toRaw := by
+  rw [core_component]
+  by_cases wrapper : 58 = index.val
+  · have same : index = ⟨58, by decide⟩ := Fin.ext wrapper.symm
+    subst index
+    simp only [↓reduceIte]
+    exact HostCallProjection.other_interactions programChannel.toRaw
+      (by simp [programChannel, byteChannel, Channel.toRaw])
+      (by simp [programChannel, memoryChannel, Channel.toRaw])
+      (by simp [programChannel, HostCallChip.channel, Channel.toRaw])
+  · rw [if_neg wrapper]
+    exact ((ProtectedLocalCore.component_projection (p := p) image source index).2.2 programChannel.toRaw
+      (by simp [programChannel, WritePermissionProvider.channel, Channel.toRaw])).symm
+
+/-- The full Program ledger survives projection when host auxiliaries do not emit fetches.
+This preserves its count bound without projecting the extended Byte or Memory balance. -/
+theorem localWitness_program {image : ProgramImage} {source : ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels) :
+    (localWitness witness).interactionsWith programChannel.toRaw = witness.interactionsWith programChannel.toRaw := by
+  apply witness.project_interactions (target := LocalCore.ensemble image source)
+    (projectionLength image source auxiliary channels) rfl programChannel.toRaw ?_ ?_
+  · intro index
+    exact component_program image source auxiliary ⟨index.val, by
+      simpa only [LocalCore.ensemble, LocalCore.tables_length] using index.isLt⟩
+  · change (witness.tables.drop (LocalCore.tables image source).length).flatMap _ = []
+    rw [LocalCore.tables_length]
+    apply List.flatMap_eq_nil_iff.mpr
+    intro table member
+    have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+    rw [List.map_drop, witness.tables_map_component] at mapped
+    change table.component ∈ (tables image source auxiliary).drop 59 at mapped
+    rw [suffix_components] at mapped
+    apply table.interactionsWith_nil_of_channel_not_mem
+    rcases List.mem_cons.mp mapped with same | extra
+    · rw [same]
+      change programChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
+      simp [programChannel, WritePermissionProvider.channel, Channel.toRaw]
+    · exact silent table.component extra
+
 /-- Raw constraints and the extended ensemble's own balance supply exactly the facts chronology uses. -/
 theorem orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}

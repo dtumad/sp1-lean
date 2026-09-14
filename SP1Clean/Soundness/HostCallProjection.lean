@@ -125,12 +125,13 @@ theorem constraints_original (env : Environment (ZMod p))
     (size SyscallInstrsChip.Inputs), Circuit.constraintsHold_toFlat_iff] at kept
   exact (Component.constraintsHold_iff env).mpr kept
 
-private theorem main_state_interactions (row : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ) :
-    ((SyscallInstrsChip.main row.instruction).operations offset).interactionsWith stateChannel.toRaw =
-      ((HostCallChip.main row).operations offset).interactionsWith stateChannel.toRaw := by
-  rw [HostCallChip.main_other_interactions _ (by simp [stateChannel, byteChannel, Channel.toRaw])
-    (by simp [stateChannel, memoryChannel, Channel.toRaw])
-    (by simp [stateChannel, HostCallChip.channel, Channel.toRaw])]
+private theorem main_other_interactions (channel : RawChannel (ZMod p))
+    (byte : channel ≠ byteChannel.toRaw) (memory : channel ≠ memoryChannel.toRaw)
+    (host : channel ≠ HostCallChip.channel.toRaw)
+    (row : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ) :
+    ((SyscallInstrsChip.main row.instruction).operations offset).interactionsWith channel =
+      ((HostCallChip.main row).operations offset).interactionsWith channel := by
+  rw [HostCallChip.main_other_interactions channel byte memory host]
   simp only [CoreSyscallChip.circuit, CoreSyscallChip.main, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
     SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit,
@@ -163,12 +164,23 @@ theorem byte_guarantees (env : Environment (ZMod p))
     original.operations.ChannelGuarantees byteChannel.toRaw env :=
   Operations.channelGuarantees_of_interactionsWith_subset _ _ _ byte_subset env guarantees
 
-/-- The full State interaction list is unchanged by the wrapper. -/
-theorem state_interactions : (original (p := p)).operations.interactionsWith stateChannel.toRaw =
-    producer.operations.interactionsWith stateChannel.toRaw := by
+/-- The wrapper changes only Byte, Memory, and HostCall interactions. Every other channel
+retains the complete original physical ledger, including disabled rows. -/
+theorem other_interactions (channel : RawChannel (ZMod p))
+    (byte : channel ≠ byteChannel.toRaw) (memory : channel ≠ memoryChannel.toRaw)
+    (host : channel ≠ HostCallChip.channel.toRaw) :
+    (original (p := p)).operations.interactionsWith channel =
+      producer.operations.interactionsWith channel := by
   simp only [original, producer, Component.interactionsWith_eq, Component.rowOperations_mk,
     HostCallChip.circuit, SyscallInstrsChip.circuit]
-  rw [← main_state_interactions, instruction_var]
+  rw [← main_other_interactions channel byte memory host, instruction_var]
   simp only [Operations.interactionsWith, ← Operations.interactions_toFlat, original_offset (b := 0)]
+
+/-- The full State interaction list is unchanged by the wrapper. -/
+theorem state_interactions : (original (p := p)).operations.interactionsWith stateChannel.toRaw =
+    producer.operations.interactionsWith stateChannel.toRaw :=
+  other_interactions stateChannel.toRaw (by simp [stateChannel, byteChannel, Channel.toRaw])
+    (by simp [stateChannel, memoryChannel, Channel.toRaw])
+    (by simp [stateChannel, HostCallChip.channel, Channel.toRaw])
 
 end SP1Clean.Soundness.HostCallProjection

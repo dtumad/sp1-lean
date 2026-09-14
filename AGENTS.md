@@ -247,8 +247,12 @@ inventory. `HostQueueCurrent.source_current` proves equality with the evolving w
 after successful prefix replay. `run_of_source_prefix` consumes that result in HINT_READ dispatch
 and exact padded-write coverage without independent current-queue/store/authentication premises;
 `length_of_source_prefix` identifies HINT_LEN's current-host return without Memory guarantees.
-The current call's success is not assumed. Mixed Memory/register grounding, outgoing snapshot
-binding, and authenticated allocation edges remain open. `HostLocalCoreMemory` now retains the
+`HostLocalCoreProgram` preserves Program balance and authenticates the physical wrapper's ECALL
+operands. `run_of_source_prefix` now derives x5/x10/x11 observations from the engine's incoming
+currency on the actual prefix trajectory; event position and clock are internal. The preceding
+replay, running status, and that currency remain premises. The current call's success is not
+assumed. Mixed Memory grounding, outgoing snapshot binding, and authenticated allocation edges
+remain open. `HostLocalCoreMemory` now retains the
 entire physical Memory interior, including WRITE's extra x12 pair and appended host RAM accesses,
 and preserves the two boundary inventories as complete tables. `HostHintReadLocalMemory` closes
 the installed source-backed assembly's complete record permutation from raw constraints and

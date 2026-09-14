@@ -411,6 +411,7 @@ import SP1Clean.Soundness.HostCallProjection
 import SP1Clean.Soundness.HostLocalCore
 import SP1Clean.Soundness.HostLocalCoreLedger
 import SP1Clean.Soundness.HostLocalCoreMemory
+import SP1Clean.Soundness.HostLocalCoreProgram
 import SP1Clean.Soundness.HostLocalCorePermissions
 import SP1Clean.Soundness.HostLocalHandoff
 import SP1Clean.Soundness.HostCallReceivers

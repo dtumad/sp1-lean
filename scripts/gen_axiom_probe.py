@@ -40,6 +40,14 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Actual host-call register observations from the retained Program ledger and grounded reads.
+    ("SP1Clean/Model/Semantics/EventTime.lean", "eventTimeline_start_le"),
+    ("SP1Clean/Soundness/HostCallProjection.lean", "other_interactions"),
+    ("SP1Clean/Soundness/HostLocalCore.lean", "localWitness_program"),
+    ("SP1Clean/Soundness/HostLocalCoreProgram.lean", "program_pull_committed"),
+    ("SP1Clean/Soundness/HostLocalCoreProgram.lean", "hostCall_program_committed"),
+    ("SP1Clean/Soundness/HostLocalCoreProgram.lean", "executionRow_time"),
+    ("SP1Clean/Soundness/HostLocalCoreProgram.lean", "hostCall_registers"),
     # The actual host-enabled Memory ledger, including x12 and padded RAM writes.
     ("ToClean/Air/EnsembleProjection.lean", "project_take"),
     ("SP1Clean/Soundness/CoreMemoryBalance.lean", "memoryBinary_of_silent"),

@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.HostQueueCPUReplay
+import SP1Clean.Soundness.HostLocalCoreProgram
 
 /-! # Current host hints derived from installed queue history
 
@@ -158,9 +159,86 @@ private theorem read_member
 private theorem read_edge (env : Environment (ZMod p)) :
     edge (none, env) = ((HostHintReadCoverage.input env).previous, (HostHintReadCoverage.input env).next) := rfl
 
+private theorem source_program_silent (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) :
+    ∀ component ∈ (HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++ [⟨(HostHintQueueBoundary.boundary source final).circuit⟩])),
+      Channels.programChannel.toRaw ∉ component.circuit.channels := by
+  have checked : ((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
+      (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
+      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++
+        [(⟨(HostHintQueueBoundary.boundary source final).circuit⟩ : Component (ZMod p))]))).all
+      (fun component => !(component.circuit.channels.map RawChannel.name).contains
+        (Channels.programChannel (p := p)).toRaw.name) = true := rfl
+  intro component member used
+  have silent := List.all_eq_true.mp checked component member
+  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
+  contradiction
+
+private theorem timeline_at_prefix (initialClock : ℕ) (cpu prior rest : List (ExecutionRow p))
+    (event : ExecutionRow p) (split : cpu = prior ++ event :: rest) :
+    (eventTimeline (cpu.map ExecutionRow.event) initialClock).start prior.length =
+      initialClock + (prior.map ExecutionRow.duration).sum := by
+  rw [eventTimeline_start_le _ _ _ (by simp only [List.length_map, split, List.length_append, List.length_cons]; omega)]
+  rw [← List.map_take, split, List.take_left, List.map_map]
+  simp only [Function.comp_def, ExecutionRow.event_duration]
+
+private theorem trajectory_at_prefix (policy : HostPolicy) (program : Target.GuestProgram)
+    (source : ExecutionState) (cpu prior rest : List (ExecutionRow p)) (event : ExecutionRow p)
+    (split : cpu = prior ++ event :: rest) :
+    executionTrajectory policy program source (cpu.map ExecutionRow.event) prior.length =
+      replayEvents? policy program source (prior.map ExecutionRow.event) := by
+  simp only [executionTrajectory, ← List.map_take, split, List.take_left]
+
+private theorem registers_of_prefix (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (silent : ∀ component ∈ (HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources), Channels.programChannel.toRaw ∉ component.circuit.channels)
+    (data : ProverData (ZMod p)) (sameData : witness.data = data)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {cpu : List (ExecutionRow p)}
+    (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness)))
+    (cpuWalk : Walk.IsWalk (ExecutionRow.canonEdge data)
+      (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
+    (prior rest : List (ExecutionRow p)) (event : ExecutionRow p) (split : cpu = prior ++ event :: rest)
+    (env : Environment (ZMod p))
+    (member : env ∈ (handlerTable witness).table.map
+      (handlerTable witness).environment)
+    (clock : StateMsg.timeNat (event.edge data).1 = eventTime (none, env))
+    (current : ExecutionState)
+    (replayed : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize (prior.map ExecutionRow.event) = some current)
+    (currency : ∀ mp ∈ (event.facts data).memPulls,
+      LocalValueAtG (fun n => (executionTrajectory ⟨{ readOnly := image.readOnly }, p⟩
+        (image.toGuestProgram valid) source.realize (cpu.map ExecutionRow.event) n).map ExecutionState.sail)
+        source.sail.realize (eventTimeline (cpu.map ExecutionRow.event) source.clock)
+        (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+    (HostReadContext.ofSail current.sail).register 5 = some (Word.toBitVec64 (HostHintReadCoverage.input env).call.code) ∧
+      (HostReadContext.ofSail current.sail).register 10 = some (Word.toBitVec64 (HostHintReadCoverage.input env).call.arg1) ∧
+      (HostReadContext.ofSail current.sail).register 11 = some (Word.toBitVec64 (HostHintReadCoverage.input env).call.arg2) := by
+  subst data
+  have cpuMember : event ∈ LocalCore.executionRows (HostLocalCore.localWitness witness) := by
+    apply cpuExhaustive.mem_iff.mp
+    rw [split]
+    exact List.mem_append_right _ List.mem_cons_self
+  obtain ⟨physical, active, sameCall, sameEvent⟩ := call_cpu_at witness
+    interface constraints balanced (none, env) (read_member _ env member) event cpuMember clock
+  have time := HostLocalCore.executionRow_time witness
+    (auxiliaryInterface interface) constraints balanced cpuExhaustive cpuWalk prior rest event split
+  have atTime := time.trans (timeline_at_prefix source.clock cpu prior rest event split).symm
+  have atState := (trajectory_at_prefix ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+    source.realize cpu prior rest event split).trans replayed
+  rw [sameEvent] at atTime currency
+  have registers := HostLocalCore.hostCall_registers valid witness
+    silent constraints balanced physical active _ source.sail.realize current.sail _ prior.length
+    (congrArg (Option.map ExecutionState.sail) atState) atTime currency
+  rw [sameCall] at registers
+  exact registers
+
 /-- HINT_READ dispatch and its exact padded RAM writes now use the actual replayed host queue.
-The preceding replay and current register/running observations remain semantic inputs;
-the dispatch and write inventory need no prior Memory-channel guarantees. -/
+The preceding replay, running status, and the grounding engine's register currency remain
+semantic inputs. Program balance authenticates the operand indices and currency supplies all
+three current observations; dispatch and write inventory need no prior Memory guarantees. -/
 theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
@@ -178,12 +256,11 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} (valid : ima
     (replayed : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize (prior.map ExecutionRow.event) = some current)
     (running : current.host.exitCode = none)
-    (code : (HostReadContext.ofSail current.sail).register 5 =
-      some (Word.toBitVec64 (HostHintReadCoverage.input env).call.code))
-    (arg1 : (HostReadContext.ofSail current.sail).register 10 =
-      some (Word.toBitVec64 (HostHintReadCoverage.input env).call.arg1))
-    (arg2 : (HostReadContext.ofSail current.sail).register 11 =
-      some (Word.toBitVec64 (HostHintReadCoverage.input env).call.arg2)) :
+    (currency : ∀ mp ∈ (event.facts witness.data).memPulls,
+      LocalValueAtG (fun n => (executionTrajectory ⟨{ readOnly := image.readOnly }, p⟩
+        (image.toGuestProgram valid) source.realize (cpu.map ExecutionRow.event) n).map ExecutionState.sail)
+        source.sail.realize (eventTimeline (cpu.map ExecutionRow.event) source.clock)
+        (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ store bytes remaining, HintQueue.Extends store (HintQueue.ofList source.host.io.hints).1 ∧
       current.host.io.hints = bytes :: remaining ∧
       (HostHintReadCoverage.input env).next.Binds store remaining ∧
@@ -193,18 +270,22 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} (valid : ima
         (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env)
           (wordTables (HostHintQueueBoundary.expanded witness)))).map HintReadWrites.produced).Perm
         (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes) := by
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+    (source_interface (p := p) source.host.io.hints)
+  have registers := registers_of_prefix valid (HostHintQueueBoundary.expanded witness) interface
+    (source_program_silent source final) witness.data rfl (HostHintQueueBoundary.expanded_constraints witness constraints)
+    (HostHintQueueBoundary.expanded_balanced witness balanced) cpuExhaustive cpuWalk
+    prior rest event split env member clock current replayed currency
   obtain ⟨store, extension, binding⟩ := source_current witness constraints balanced cpuExhaustive cpuWalk
     prior rest event split (none, env) (read_member (HostHintQueueBoundary.expanded witness) env member)
     clock _ _ current replayed
   rw [read_edge] at binding
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
-    (source_interface (p := p) source.host.io.hints)
   obtain ⟨bytes, remaining, hints, next, executed, writes⟩ := run_of_authenticated_witness
     (HostHintQueueBoundary.expanded witness) interface (source_permission_pulls source final)
     (HostHintQueueBoundary.expanded_constraints witness constraints)
     (HostHintQueueBoundary.expanded_balanced witness balanced) _
     (HostHintQueueBoundary.source_authentication witness constraints) env member
-    current.host store extension binding running (.ofSail current.sail) code arg1 arg2
+    current.host store extension binding running (.ofSail current.sail) registers.1 registers.2.1 registers.2.2
   exact ⟨store, bytes, remaining, extension, hints, next, executed, writes⟩
 
 /-- An installed HINT_LEN return is the actual current host queue's observation, derived from

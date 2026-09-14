@@ -957,8 +957,11 @@ at this interface. `Soundness/HostQueueCurrent.lean` now proves that those bytes
 host's hints after successful replay of the preceding CPU prefix. The complete receiver inventory
 excludes WRITE and identifies the full semantic queue-action sequence. The HINT_READ execution
 theorem consumes this equality, deriving current queue and record binding internally; its remaining
-semantic inputs are the preceding replay and current register/running observations. Dispatch and
-padded-write coverage no longer require prior Memory guarantees. The companion
+semantic inputs are the preceding replay, running status, and register currency on that same
+prefix trajectory. `HostLocalCoreProgram` authenticates the wrapper's ECALL operands from the
+preserved Program ledger; the dispatch proof derives all three current register observations
+and their position/clock internally. Dispatch and padded-write coverage require no prior Memory
+guarantees, but incoming value currency still needs the complete mixed grounding proof. The companion
 HINT_LEN theorem derives the actual host observation without Memory guarantees. These statements
 assume replay of the preceding prefix, not success of the current call or the remaining tape.
 Authenticated allocation edges, mixed Memory grounding, and outgoing snapshot binding remain open.
