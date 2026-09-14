@@ -383,6 +383,17 @@ import SP1Clean.Proofs.Operations.HintReadSpan
 import SP1Clean.Proofs.Operations.HintReadSpanPopulate
 import SP1Clean.Proofs.Operations.HintReadSpanLedger
 import SP1Clean.Proofs.Operations.HintReadSpanNode
+import SP1Clean.FormalModel.Contracts.HintReadStep
+import SP1Clean.Native.Operations.HintReadStep
+import SP1Clean.Proofs.Operations.HintReadStep
+import SP1Clean.Proofs.Operations.HintReadStepLedger
+import SP1Clean.Proofs.Operations.HintReadStepPopulate
+import SP1Clean.FormalModel.Contracts.HintReadWord
+import SP1Clean.Native.Chips.HintReadWordChip.Defs
+import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
+import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
+import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
+import SP1Clean.Soundness.HintReadCoverage
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Proofs.Operations.HintNodeAllocate

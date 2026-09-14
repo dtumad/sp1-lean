@@ -156,7 +156,12 @@ writes whose one-past endpoint is exactly `2^48`. Its semantic constructor cover
 native-window writes. Word records authenticate an `isLast` marker: a bounded final word derives
 the actual node length below `2^64`, and `HintReadSpan.Spec.node_end` ties that natural length and
 word count to the checked span. This closes the modulo-length alias at the component boundary;
-HINT_READ still needs to consume this binding and derive the full word walk from AIR balance.
+`HintReadWordChip` now binds each word pull to one physical RAM transfer and all eight byte
+permissions, with an exact successor cursor and exportable 265-cell witnesses. The physical
+two-table subsystem derives an exhaustive consecutive word inventory and fixed clock/node from
+cursor balance; its converse balances a constructed walk. A checked span supplies the constructor's
+successor bounds. The main handler still needs to authenticate the cursor endpoints and content,
+derive each call's balance from the global ledger, and install the subsystem in mixed grounding.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
 node-word coverage for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.

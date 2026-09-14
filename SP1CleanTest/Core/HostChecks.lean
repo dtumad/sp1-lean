@@ -78,7 +78,8 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
           [a, b, c, d, e, f, w, x, y, z].all (fun limb => limb.val < 65536) &&
             0 < a.val + b.val * 65536 + c.val * 65536 ^ 2 && (last == 0 || last == 1)
         | _ => false
-      else ["sp1.native.hint_queue_state", "SP1State", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
+      else ["sp1.native.hint_queue_state", "sp1.native.hint_read_state", "SP1WritePermission",
+        "SP1State", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
         "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access"].contains
           interaction.channel.name
   (valid, (FlatOperation.interactions operations).filterMap fun interaction =>

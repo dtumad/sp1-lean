@@ -772,8 +772,18 @@ final word to recover the natural node length and complete padded count. This au
 necessary: a length of `2^64` has the same encoded length word as zero and would otherwise pass a
 one-word span. A symbolic regression proves such a node has no bounded authenticated final word;
 executable regressions reject forged markers, counts, endpoints, and out-of-window padding.
-These are endpoint and content-binding results. HINT_READ's full AIR consumer still needs a
-balance-derived word walk, writable-byte permissions, and the corresponding RAM transfers.
+The physical `HintReadWordChip` consumer now connects each immutable word pull to one actual
+RAM transfer and all eight byte-permission requests, including padding. Its exact cursor advances
+the word index without wrap and preserves the call clock and node identity. Both variants export
+265 witness cells. `HintReadCoverage.ordered_cover` derives an exhaustive walk of the physical
+consumer tables and an exact consecutive index inventory from their own unit cursor balance;
+`balanced_of_walk` proves the converse under Clean's characteristic count guard. The constructor's
+successor bounds follow from a checked span. Regressions retain physical row reordering and writes
+at the address ceiling while rejecting missing/repeated words, wrong clocks, forged values/end
+markers, and absent or read-only padding permissions. The subsystem still takes its authenticated
+endpoints and table premises explicitly. Full integration must derive per-call balance and word
+binding from the shard-wide source/handler ledger and incorporate these Memory transfers into
+mixed grounding; the full HINT_LEN counterexample remains open.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

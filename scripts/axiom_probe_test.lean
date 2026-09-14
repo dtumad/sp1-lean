@@ -14,6 +14,7 @@ import SP1CleanTest.Core.HostHintLength
 import SP1CleanTest.Core.HintNodeAllocate
 import SP1CleanTest.Core.HintQueueWords
 import SP1CleanTest.Core.HintReadSpan
+import SP1CleanTest.Core.HintReadWord
 import SP1CleanTest.Core.HostQueue
 import SP1CleanTest.Core.HostExecution
 import SP1CleanTest.Core.HostFootprint
@@ -170,6 +171,13 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.HintReadSpan.rejectsForgedEndpoints
 #print axioms SP1CleanTest.Core.HintReadSpan.sourceWordCover
 #print axioms SP1CleanTest.Core.HintReadSpan.lengthWordNeedsNodeEnd
+#print axioms SP1CleanTest.Core.HintReadWord.completeWrites
+#print axioms SP1CleanTest.Core.HintReadWord.coverageTampering
+#print axioms SP1CleanTest.Core.HintReadWord.finalCell
+#print axioms SP1CleanTest.Core.HintReadWord.callIdentity
+#print axioms SP1CleanTest.Core.HintReadWord.wordTampering
+#print axioms SP1CleanTest.Core.HintReadWord.paddingPermission
+#print axioms SP1CleanTest.Core.HintReadWord.localTampering
 #print axioms SP1CleanTest.Core.HostQueue.changingQueue
 #print axioms SP1CleanTest.Core.HostQueue.historicalHeads
 #print axioms SP1CleanTest.Core.HostQueue.rejectsMalformedAndDistinguishesBytes

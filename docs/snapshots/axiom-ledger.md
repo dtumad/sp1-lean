@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2060 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 265 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2087 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 272 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2325 released declarations are probed.
+- 2359 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,27 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The padded-span checkpoint adds 24 main declarations and nine test anchors. Every main addition
+The word-consumer checkpoint adds 27 main declarations and seven test anchors. Every main addition
+uses only the logical baseline or a subset. All preceding 2060 main and 265 test dependency sets
+are unchanged, with no removals or new main-library axiom names. Seven new compiler-trusted
+constants are isolated to the executable word-transfer, coverage, and permission regressions.
+
+`HintReadWordChip` binds each written RAM word to its full immutable-word request, consumes its
+internal RAM coordination record, requests permission for all eight written bytes, and advances
+a private cursor preserving the actual call clock and node. Both variants export 265 witness
+cells; the last variant retains the last written address so writes may end exactly at `2^48`.
+The checked span derives the constructor's index and address bounds. `HintReadCoverage` derives
+an exhaustive consecutive-index walk from the two physical tables' specifications and actual
+cursor balance, and proves the converse balance construction. Tests execute the component
+circuits, fixed source and permission providers, and their complete non-Byte ledgers, with
+semantic RAM boundary fixtures and direct Byte-guarantee checks. They reject missing/repeated
+words, locally valid forged contents/end markers, changed call identity, and protected padding.
+The handler must still authenticate the endpoints and obtain each call's balance and content
+binding from the shard-wide ledger. Full padded-write semantics, mixed grounding, authorized
+new WRITE/hook word publication, and queue history remain integration work. The full-AIR forged
+HINT_LEN return remains open.
+
+The padded-span checkpoint added 24 main declarations and nine test anchors. Every main addition
 uses only the logical baseline or a subset, with no new main-library axiom names. The strengthened
 word-binding predicate adds `Classical.choice` to `WordRecord.Binds.extend` and `.value`; both
 remain within the logical baseline. All other preceding 2034 main and all 256 test dependency
@@ -48,9 +68,10 @@ native-window writes, and its 116-cell witness program uses only six Byte pulls.
 authenticate the actual final-word marker: a bounded final word derives the natural node length
 below `2^64`, and `Spec.node_end` ties that length and count to the checked span. This prevents a
 modulo-length alias when the consumer authenticates the end; the span alone cannot do so.
-The consumer still needs to derive its bindings and complete word walk from AIR balance, connect
-RAM transfers and writable-byte permissions, and join the mixed ensemble. New WRITE/hook word
-publication and queue history remain open, as does the full-AIR forged HINT_LEN return.
+At that checkpoint, the consumer's complete walk, RAM transfers, and writable-byte permissions
+remained open; the word-consumer checkpoint above supplies those subsystem proofs. Its bindings
+and mixed-ensemble integration remain open, along with new WRITE/hook word publication, queue
+history, and the full-AIR forged HINT_LEN return.
 
 The source-word checkpoint added 34 main declarations and seven test anchors. Every main
 addition uses only the logical baseline or a subset. All preceding 2002 main and 249 test

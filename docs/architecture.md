@@ -444,8 +444,18 @@ Aligned permitted native-window writes construct all columns and the completenes
 the circuit exports 116 witness cells and emits only six Byte pulls. Its node bridge combines
 authenticated metadata and a final word to derive the actual natural length and exact word count.
 This matters because a hint length of `2^64` encodes the same length word as zero: span constraints
-alone do not authenticate node extent. The full consumer must still derive these bindings and
-the complete word walk from its ledgers, alongside writable-byte permission and RAM transfers.
+alone do not authenticate node extent.
+
+`HintReadWordChip` composes a physical RAM transfer with a checked successor. It consumes the
+same immutable word it writes, requests all eight byte permissions, and retains clock and node
+in its private cursor. The final variant advances the index while retaining the last address.
+Both variants export 265 witness cells; their Memory, word, permission, and cursor projections
+are proved, and the internal RAM-access coordination pair cancels. `HintReadCoverage` derives
+an exhaustive path and exact consecutive index inventory from these actual tables and their
+cursor balance, with a converse for constructed walks. A checked span supplies the constructor's
+nonwrapping bounds. These are subsystem results with explicit endpoints and local table facts.
+The main handler must still authenticate the endpoints and node contents, derive per-call balance
+from the shard-wide ledger, and retain the host RAM rows in mixed grounding.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and

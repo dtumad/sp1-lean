@@ -349,10 +349,19 @@ Implemented foundations:
   restricting unrelated source hints. `HintReadSpan.Spec.node_end` binds the checked span to that
   exact node extent. Regressions cover carries, the address ceiling, forged endpoints and markers,
   and the fact that a wrapped length word alone can pass the span while miscounting actual bytes.
-  The next queue step must install source and handler components, authorize new WRITE/hook nodes
-  and their words, derive ordered head history, and constrain HINT_READ's full padded word cover on the
-  same node identities. The consumer must derive its authenticated final-word binding and complete
-  walk from AIR balance; the endpoint theorem alone does not prove coverage. Include the 48-bit
+  `HintReadWordChip` now composes the physical RAM transfer and exact word-index successor,
+  pulling the immutable word and permission for every written byte, including padding. Its
+  265-cell witness program and all non-Byte ledgers are proved. `HintReadCoverage` derives an
+  exhaustive consecutive inventory from the actual two consumer tables and cursor balance,
+  preserving the call clock and node identity; a constructed walk gives the converse balance.
+  A checked span derives the constructor's successor bounds. Executed regressions retain row
+  reordering and final-cell writes and reject omissions, repetitions, wrong clocks, forged
+  contents/end markers, and missing or read-only padding permissions.
+  The next queue step must authenticate HINT_READ's cursor endpoints and actual node end, derive
+  each call's cursor balance and content binding from the global source/handler ledger, and install
+  these RAM rows in mixed grounding. The two-table coverage theorem currently takes its endpoint
+  and local-table premises explicitly. New WRITE/hook node and word authorization and ordered
+  head history remain open. Include the 48-bit
   identity bound in the shared resource profile.
   The full-AIR forged HINT_LEN return regression remains open until that integration.
 
