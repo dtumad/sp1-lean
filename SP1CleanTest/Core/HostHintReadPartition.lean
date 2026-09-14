@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostHintReadPartition
 import SP1Clean.Soundness.HostHintReadLocalPermissions
+import SP1Clean.Soundness.HostHintReadLocalRecords
 import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -9,8 +10,9 @@ import ToClean.Air.TableBuild
 
 Build the actual handler and consumer tables for different nodes, lengths, destinations, and
 clocks. Check their computed cells and cursor ledger, then decode each selected physical table
-back to the independent padded-write inventory. Source/permission authentication and the other
-channels remain external here; the existing handler battery exercises those connections.
+back to the independent padded-write inventory. Installed permission and record-source tests
+check their actual whole-witness ledgers and fixed lookups. These remain subsystem regressions:
+the other channels and complete mixed execution are not claimed satisfied by these fixtures.
 -/
 
 namespace SP1CleanTest.Core.HostHintReadPartition
@@ -206,5 +208,87 @@ theorem installedPermissions :
       HintReadFixtures.balanced (permissionLedger rom) = false ∧
       HintReadFixtures.balanced (permissionLedger (installed romCalls romRows forged)) = true ∧
       permissionRowsChecked forged = false := by native_decide
+
+private def sourceTableAt (actual : List Bytes) (calls : List (HostHintReadChip.Inputs Fp))
+    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
+    (component : Component Fp) (index : ℕ) : Table Fp :=
+  let table := if index == 83 then Table.build ⟨HostHintQueue.source actual⟩ nodes
+      (fun _ _ => #[]) (ProverHint.empty Fp)
+    else if index == 84 then Table.build ⟨HostHintQueue.sourceWord actual⟩ records
+      (fun _ _ => #[]) (ProverHint.empty Fp)
+    else installedTable calls rows [] component index
+  table.withComponent component
+
+private theorem sourceTableAt_component (actual : List Bytes) (calls : List (HostHintReadChip.Inputs Fp))
+    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
+    (component : Component Fp) (index : ℕ) :
+    (sourceTableAt actual calls rows nodes records component index).component = component := rfl
+
+private theorem sourceTableAt_data (actual : List Bytes) (calls : List (HostHintReadChip.Inputs Fp))
+    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
+    (component : Component Fp) (index : ℕ) :
+    (sourceTableAt actual calls rows nodes records component index).data = (fun _ _ => #[]) := by
+  simp only [sourceTableAt, Table.withComponent]
+  split_ifs
+  · rfl
+  · rfl
+  · exact installedTable_data calls rows [] component index
+
+private def recordSnapshot (actual : List Bytes) : ExecutionSnapshot :=
+  { source with host := { source.host with io := { source.host.io with hints := actual } } }
+
+private def withSources (actual : List Bytes) (calls : List (HostHintReadChip.Inputs Fp))
+    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) :
+    EnsembleWitness (HostHintReadLocal.ensemble (p := SP1Prime) image (recordSnapshot actual)
+      HostCallReceivers.available (HostHintReadLocal.sourceResources actual) []) :=
+  let ensemble := HostHintReadLocal.ensemble (p := SP1Prime) image (recordSnapshot actual) HostCallReceivers.available
+    (HostHintReadLocal.sourceResources actual) []
+  EnsembleWitness.ofTables ensemble (ensemble.tables.zipIdx.map fun (component, index) =>
+    sourceTableAt actual calls rows nodes records component index) (fun _ _ => #[])
+    (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[])))
+    (by simp only [List.map_map, Function.comp_def, sourceTableAt_component, List.zipIdx_map_fst])
+    (by
+      intro table member
+      obtain ⟨⟨component, index⟩, _, rfl⟩ := List.mem_map.mp member
+      exact sourceTableAt_data actual calls rows nodes records component index)
+
+private def recordLedger (tables : List (Table Fp)) : Ledger :=
+  tables.flatMap fun table => table.table.flatMap fun physical =>
+    let env := table.environment physical
+    (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
+      if interaction.channel.name == "sp1.native.hint_node" || interaction.channel.name == "sp1.native.hint_word" then
+        some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult) else none
+
+private def sourceRowsChecked (actual : List Bytes) (nodes : List (NodeRecord Fp))
+    (records : List (WordRecord Fp)) : Bool :=
+  nodes.all (fun node => (evaluateProgram
+    (HostHintQueue.sourceMain actual (varFromOffset NodeRecord 0)) (toElements node).toList none
+    [FiniteLookup.ofStatic (sourceTable actual)]).1) &&
+  records.all (fun record => (evaluateProgram
+    (HostHintQueue.sourceWordMain actual (varFromOffset WordRecord 0)) (toElements record).toList none
+    [FiniteLookup.ofStatic (sourceWordTable actual)]).1)
+
+/-- The installed fixed sources authenticate every handler/consumer request, with duplicate demand
+and reversed physical rows. Missing providers fail balance; changing fixed bytes preserves the
+claimed ledger but fails the source lookup. Other channels are outside this regression. -/
+theorem installedRecords :
+    let rows := (calls.flatMap words).reverse
+    let nodes := calls.map (·.node)
+    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
+    let witness := withSources hints calls rows nodes records
+    let changed := [[99] ++ (HintReadFixtures.bytes 16).drop 1, HintReadFixtures.bytes 8, []]
+    witness.tables.length = 85 ∧ sourceRowsChecked hints nodes records = true ∧
+      HintReadFixtures.balanced (recordLedger witness.allTables) = true ∧
+      HintReadFixtures.balanced (recordLedger (withSources hints calls rows (nodes.drop 1) records).allTables) = false ∧
+      HintReadFixtures.balanced (recordLedger (withSources hints calls rows nodes (records.drop 1)).allTables) = false ∧
+      HintReadFixtures.balanced (recordLedger (withSources changed calls rows nodes records).allTables) = true ∧
+      sourceRowsChecked changed nodes records = false := by native_decide
+
+/-- Semantic 64-bit agreement does not establish canonical field limbs. -/
+theorem noncanonicalNodeLength :
+    let node := (call 3 0 1 65536).node
+    let forged : NodeRecord Fp := { node with length := node.length.set 3 (node.length[3] + 65536) }
+    Word.toBitVec64 forged.length = Word.toBitVec64 node.length ∧
+      sourceRowsChecked hints [node] [] = true ∧ sourceRowsChecked hints [forged] [] = false := by native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

@@ -204,10 +204,18 @@ padded writes without caller handoff, cursor, alignment, clock-uniqueness, or by
 premises. The fixed provider supplies writability and the upper address bound; local RAM specs
 supply the lower native-window bound. Local row specifications, current queue/node/word binding,
 and incoming register observations remain explicit. Binding alone does not imply canonical
-field encodings. Current-head/record authentication, predecessor currency, and mixed grounding remain open.
+field encodings. `HostHintReadLocalRecords` now authenticates every physical node/word pull
+through the whole installed ledger and derives the handler specification. Fixed source nodes
+and words close both canonical validity and binding from actual lookup constraints;
+`source_record_authentication` uses the complete snapshot's hint bytes. `word_spec` isolates the
+remaining Memory-channel representation guarantees. `RecordAuthentication` concerns actual
+physical source rows, so future allocation proofs can consume prior grounding facts; requiring
+raw constraints alone for every possible allocation row would be too strong. A record bound in
+a persistent store is not yet proved current at an earlier queue frontier. Current-head history,
+dynamic allocation authentication, predecessor currency, and mixed grounding remain open.
 Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
-global node-word authentication for HINT_READ, and ordered head-history derivation. The shared resource profile
+allocation-ledger node-word authentication for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.
 The bank subsystem's zero genesis also needs generalization to the actual local source banks.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,

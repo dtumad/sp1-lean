@@ -9,6 +9,7 @@ import ToClean.Circuit.EmittedInteraction
 import ToClean.Gadgets.ComputableWitnesses
 import ToClean.Air.EnsembleBuild
 import ToClean.Air.ChannelClosure
+import ToClean.Air.Authentication
 import ToClean.Air.CompleteEnsemble
 import ToClean.Air.ComponentOutput
 import ToClean.Air.EnsembleExport

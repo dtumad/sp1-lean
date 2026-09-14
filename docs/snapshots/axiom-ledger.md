@@ -1,15 +1,15 @@
 # Axiom and trust ledger
 
-Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
+Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2281 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 290 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2315 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 292 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2571 released declarations are probed.
+- 2607 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,25 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The installed HINT_READ cursor/permission checkpoint adds 24 main declarations and two test
+The immutable-record authentication checkpoint adds 34 main declarations and two test anchors.
+Twenty-two main additions use exactly the logical baseline; the other 12 have exactly the same
+100 dependencies as the preceding local ordering theorem. All preceding 2281 main and 290 test
+dependency sets are unchanged, with no removals or new main-library axiom names. The two new
+compiler-trusted constants occur only in the source-registration and noncanonical-length regressions.
+
+`HostHintReadLocalRecords` authenticates every actual node/word pull from complete record balance.
+Fixed source tables establish canonical validity and immutable binding from the complete snapshot's
+hint bytes. `RecordAuthentication` covers actual physical source rows; dynamic allocations can
+use prior grounding facts to establish it. Requiring raw constraints alone for every possible
+allocation row would be too strong. The generic transport is pure Clean material in `ToClean/`.
+`handler_spec` derives the handler contract, while `word_spec` isolates the remaining Memory
+representation guarantees. The 85-table regression rejects missing sources and changed fixed bytes;
+a separate test rejects a noncanonical length despite agreement of its decoded 64-bit value.
+These are subsystem regressions. Current-frontier restriction, ordered queue heads, WRITE/hook
+authorization, Memory predecessor currency, mixed grounding, and complete outgoing state remain
+open. The full-AIR HINT_LEN counterexample and canonical export channel inventory are unchanged.
+
+The preceding installed HINT_READ cursor/permission checkpoint added 24 main declarations and two test
 anchors. Six main additions use exactly the logical baseline; the other 18 have exactly the
 same 100 dependencies as the preceding local ordering theorem. All preceding 2257 main and
 288 test dependency sets are unchanged, with no removals or new main-library axiom names.

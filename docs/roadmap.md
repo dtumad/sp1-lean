@@ -418,10 +418,20 @@ Implemented foundations:
   extended assembly, construct a canonical inventory and prove that it retains every channel.
   Deduplicating by name alone is insufficient without proving that equal names identify equal
   channel records, including their requirements and guarantees.
-  The next queue step must authenticate node/word records and ordered head history from the global
-  source/handler ledger, then install these RAM rows in mixed grounding, including predecessor currency and full outgoing
-  Memory agreement. Local table specifications and the record bindings remain explicit
-  premises of the subsystem results. New WRITE/hook node and word authorization and ordered
+  `HostHintReadLocalRecords` now authenticates all actual node/word pulls, including canonical
+  encodings, from complete ledger balance and physical source authentication. Fixed source tables
+  close that authentication from snapshot bytes. The physical-table interface permits dynamic
+  allocation proofs to use earlier grounding facts; the stronger raw-component interface alone
+  would not suffice for those providers. `handler_spec` follows from this interface and AIR;
+  `word_spec` isolates the remaining actual Memory-channel guarantees. The 85-table regression
+  rejects missing source rows and changed fixed bytes, and a separate regression shows that equal
+  semantic length words need not have canonical encodings.
+  The next queue step must derive ordered head history and restrict persistent-store record
+  bindings to each call's current allocation frontier, then install these RAM rows in mixed
+  grounding, including Memory guarantees, predecessor currency, and full outgoing Memory agreement.
+  The combined execution corollary still takes current queue/node/word bindings and row specifications;
+  connect the new source theorems after deriving that current-frontier restriction.
+  New WRITE/hook node and word authorization and ordered
   head history remain open. Include the 48-bit
   identity bound in the shared resource profile.
   The full-AIR forged HINT_LEN return regression remains open until that integration.

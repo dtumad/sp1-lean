@@ -888,13 +888,31 @@ Padding into ROM can still balance the cursor; valid provider constraints and pe
 reject it. Forged provider rows restore the permission ledger only by failing those constraints.
 These are channel/subsystem regressions, not complete host-execution witnesses.
 
+`Soundness/HostHintReadLocalRecords.lean` now authenticates every actual node and word pull,
+including canonical field encodings, through the complete installed ledger. The pure Clean
+rules in `ToClean/Air/Authentication.lean` distinguish component-local authentication from
+authentication of actual physical table rows. Fixed sources prove the former from raw lookup
+constraints; future allocation providers may need prior grounding facts to prove the latter.
+The current handler registry and both word consumers cannot create node or word sources.
+`source_record_authentication` closes the fixed-source registration using the complete snapshot's
+hint bytes, with binding preserved under persistent store extension. `handler_spec` derives the
+local handler contract; `word_spec` still requires the word tables' actual Memory guarantees.
+
+The `installedRecords` regression uses the actual 85-table source registration with repeated
+demand and reversed rows. Missing source rows fail record balance. Changing fixed source bytes
+leaves the claimed ledger balanced but fails the lookup. `noncanonicalNodeLength` exhibits a
+length whose decoded 64-bit value agrees with the honest record while its field encoding is
+rejected by the source lookup. These tests concern the record subsystem, not full AIR satisfaction.
+Record authentication in a persistent store does not establish that a pointer was available
+at an earlier call. The current-frontier restriction and ordered queue-head history remain open.
+
 The extended assembly's automatic channel list retains duplicates. Repeating a balance
 requirement does not change the Lean relation, but this list fails the exporter's unique-name
 requirement. Exporting this assembly still needs a canonical channel inventory with proved
 coverage and name identity; no full-assembly export instance is claimed here.
 
-Full integration must authenticate current-head history and immutable node/word records from
-shard-wide source/allocation ledgers, then incorporate host Memory transfers into mixed grounding
+Full integration must authenticate current-head history, current-frontier record use, and new
+WRITE/hook allocations, then incorporate host Memory transfers into mixed grounding
 with predecessor currency and complete outgoing-state agreement. The full HINT_LEN counterexample
 remains open.
 

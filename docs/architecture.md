@@ -513,7 +513,14 @@ The provider proves writability below the upper limit; RAM specifications supply
 native-window bound. `HostHintReadLocalPermissions.run_of_witness` combines these facts with
 concrete dispatch and exact padded writes. Local specifications, current queue/node/word bindings,
 and incoming register observations remain explicit. Record binding alone does not establish
-canonical field encodings. WRITE/VERIFY handlers, authenticated queue resources, predecessor
+canonical field encodings. `HostHintReadLocalRecords` now derives canonical node/word guarantees
+and immutable binding for every actual pull from the complete record ledger. Fixed sources close
+`RecordAuthentication` from snapshot bytes and raw lookup constraints. Its physical-table form
+allows future allocation providers to use prior grounding facts; the component-local form is a
+stronger sufficient condition for fixed lookups and unit consumers. `handler_spec` is therefore
+derived, while `word_spec` still requires the word tables' Memory representation guarantees.
+The authenticated store may contain future allocations; current-head history and restriction to
+the call's own allocation frontier remain separate. WRITE/VERIFY handlers, authenticated queue resources, predecessor
 currency, and host RAM rows in mixed grounding remain required for complete outgoing state. Duplicating both sides balances the handoff
 alone; the State walk supplies the missing event uniqueness.
 
