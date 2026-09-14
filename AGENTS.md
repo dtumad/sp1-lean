@@ -169,8 +169,13 @@ request from bound records and permissions; successful execution constructs its 
 padded word writes. Authenticated consumer markers derive every destination address; the actual
 Memory ledger and byte permissions give word readback and permission for the full padded request.
 Cursor balance alone admits swapped markers and repeated addresses; an executed regression shows
-why every consumer word must be authenticated. Global per-call balance, record binding,
-predecessor currency, and mixed grounding remain integration obligations.
+why every consumer word must be authenticated. `HostHintReadPartition` now derives per-call
+balance from the shared physical handler/consumer cursor ledger and unique handler clocks;
+it also proves every consumer has a handler and retains the original rows on all channels.
+`run_of_shared_tables` carries this through to concrete dispatch and padded writes. Handler-clock
+uniqueness, record/permission authentication, predecessor currency, and mixed installation still
+need derivation from the complete ensemble. Duplicating whole calls can preserve cursor balance,
+so event uniqueness must come from the instruction handoff or ordered queue history.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
 global node-word authentication for HINT_READ, and ordered head-history derivation. The shared resource profile
 must include the identity bounds; no static-source-queue assumption is admissible.

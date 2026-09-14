@@ -372,9 +372,16 @@ Implemented foundations:
   actual byte-permission pull permits the entire padded span. A regression shows why checking
   only the handler's final word is insufficient: swapped consumer markers can balance the cursor
   while repeating an address. Each consumer's immutable source rejects that substitution.
-  The next queue step must derive each call's cursor balance and record binding from the global
-  source/handler ledger and install these RAM rows in mixed grounding, including predecessor
-  currency and full outgoing Memory agreement. Local table specifications and the record bindings remain explicit
+  `HostHintReadPartition` now derives per-call balance from one shared physical cursor ledger
+  and unique handler clocks. Selection preserves all original row cells, data, and interactions;
+  strict word-index progress also proves that no consumer can lack a handler. Its combined
+  execution theorem uses this shared ledger directly. Executed checks cover interleaved calls,
+  reversed rows, clock carries, and missing handlers/consumers. Duplicating complete calls still
+  balances the cursor, so the handler-clock uniqueness premise is necessary here.
+  The next queue step must derive that uniqueness from the actual instruction handoff or ordered
+  queue history, authenticate records and permissions from the global source/handler ledger,
+  and install these RAM rows in mixed grounding, including predecessor currency and full outgoing
+  Memory agreement. Local table specifications and the record bindings remain explicit
   premises of the subsystem results. New WRITE/hook node and word authorization and ordered
   head history remain open. Include the 48-bit
   identity bound in the shared resource profile.

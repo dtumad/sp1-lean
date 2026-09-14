@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2120 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 281 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2146 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 284 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2401 released declarations are probed.
+- 2430 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,28 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The HINT_READ write-agreement checkpoint adds 15 main declarations and one test anchor. Every
+The shared HINT_READ ledger checkpoint adds 26 main declarations and three test anchors. Every
+main addition uses only the logical baseline or a subset. All preceding 2120 main and 281 test
+dependency sets are unchanged, with no removals or new main-library axiom names. Three new
+compiler-trusted constants occur only in the shared-table regressions.
+
+`HostHintReadPartition.balanced_for` derives per-call balance from the actual shared handler and
+consumer cursor ledger, under unique handler clocks. `consumer_has_handler` excludes orphan
+consumers using strict index progress, without assuming handler uniqueness. Physical selection
+preserves original row cells, data, environments, and all-channel interaction provenance.
+`run_of_shared_tables` combines this with concrete host dispatch and exact padded word writes.
+Word bindings refer only to the selected call's current store, allowing later WRITE/hook allocations.
+The generic payload filtering, physical selection, and paired unit-balance transports are pure
+Clean additions under `ToClean/`; no dependency pin changes.
+Regressions build actual shared tables with different nodes, lengths, destinations, and clocks,
+including reversed rows and clock carries. Missing handlers and consumers fail cursor balance.
+Duplicating whole calls still balances that channel but violates handler-clock uniqueness, so
+uniqueness remains an explicit integration condition, to derive from the instruction handoff or
+ordered queue history. Global record/permission authentication, host RAM grounding, predecessor
+currency, and complete outgoing-state agreement remain open. The full-AIR HINT_LEN counterexample
+is unchanged.
+
+The HINT_READ write-agreement checkpoint added 15 main declarations and one test anchor. Every
 main addition uses only the logical baseline or a subset. All preceding 2105 main and 280 test
 dependency sets are unchanged, with no removals or new main-library axiom names. The one new
 compiler-trusted constant belongs only to the consumer-marker regression.
@@ -73,8 +94,9 @@ and Memory endpoints; the instruction's remaining channels stay external. They r
 hints, historical heads, nonempty suffixes, reordered rows, and final-cell writes, and reject
 incomplete words, locally valid forged final contents, malformed spans, and changed frontiers.
 Local specifications and current-queue/node/word bindings remain explicit subsystem premises.
-The write-agreement checkpoint above closes the per-call word-address/value gap.
-Global per-call balance and binding, mixed grounding,
+The write-agreement checkpoint above closes the per-call word-address/value gap, and the shared
+ledger checkpoint derives per-call balance under unique handler clocks.
+Global handler-event uniqueness and binding, mixed grounding,
 authorized new WRITE/hook words, and queue history remain open. The full-AIR forged HINT_LEN
 return is unchanged and remains open.
 

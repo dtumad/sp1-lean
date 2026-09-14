@@ -468,8 +468,18 @@ final marker, hiding the variant split and clipped final cursor inside `HintRead
 proves readback against the semantic byte update, and derives whole-span permission from those
 byte requests. Cursor balance alone can accept swapped markers and repeated addresses even with
 an honest handler final word; the regression rejects this through consumer authentication.
-The subsystem still needs global per-call balance and record/permission authentication, predecessor
-currency, and host RAM rows in mixed grounding to establish the complete outgoing state.
+`HostHintReadPartition` now selects each event's original physical rows from shared consumer
+tables and derives per-call cursor balance under unique handler clocks. Its no-orphan theorem
+uses strict index progress to show that every consumer has a matching handler. The combined
+`run_of_shared_tables` statement reaches the same host execution and exact write inventory.
+Word bindings are relative to the selected call's current store; later calls may allocate new
+nodes, so the statement does not require a single unchanged store for the shared tables.
+The generic payload filter in `ToClean/Air/MessageFilter.lean` preserves Clean's characteristic count
+guard, and its table selection preserves component, data, environments, and interaction provenance.
+The subsystem still needs handler-clock uniqueness from the instruction handoff or queue history,
+global record/permission authentication, predecessor currency, and host RAM rows in mixed grounding
+to establish the complete outgoing state. Duplicating complete calls balances the cursor alone;
+the event-uniqueness regression records why that integration condition remains explicit.
 
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and

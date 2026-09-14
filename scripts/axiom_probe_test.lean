@@ -15,6 +15,7 @@ import SP1CleanTest.Core.HintNodeAllocate
 import SP1CleanTest.Core.HintQueueWords
 import SP1CleanTest.Core.HintReadSpan
 import SP1CleanTest.Core.HintReadWord
+import SP1CleanTest.Core.HostHintReadPartition
 import SP1CleanTest.Core.HostHintRead
 import SP1CleanTest.Core.HostQueue
 import SP1CleanTest.Core.HostExecution
@@ -179,6 +180,9 @@ Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh
 #print axioms SP1CleanTest.Core.HintReadWord.wordTampering
 #print axioms SP1CleanTest.Core.HintReadWord.paddingPermission
 #print axioms SP1CleanTest.Core.HintReadWord.localTampering
+#print axioms SP1CleanTest.Core.HostHintReadPartition.sharedCalls
+#print axioms SP1CleanTest.Core.HostHintReadPartition.missingAndOrphanRows
+#print axioms SP1CleanTest.Core.HostHintReadPartition.duplicateHandlers
 #print axioms SP1CleanTest.Core.HostHintRead.jointLedgers
 #print axioms SP1CleanTest.Core.HostHintRead.wordCoverage
 #print axioms SP1CleanTest.Core.HostHintRead.finalCell

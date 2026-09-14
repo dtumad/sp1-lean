@@ -154,6 +154,40 @@ private theorem ranked_cover {R V C : Type*} (edge : R → V × V) (index : V �
 omit [Fact (2 ^ 25 < p)] in
 private theorem context_preserve (input : Inputs (ZMod p)) : context input.next = context input.previous := rfl
 
+omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
+private theorem nil_of_closed {R V : Type*} (edge : R → V × V) (index : V → ℕ) (rows : List R)
+    (closed : (rows.map (fun row => (edge row).2)).Perm (rows.map (fun row => (edge row).1)))
+    (successors : ∀ row ∈ rows, index (edge row).2 = index (edge row).1 + 1) : rows = [] := by
+  classical
+  cases rows with
+  | nil => rfl
+  | cons row rest =>
+    have balanced : EndpointBalanced (↑(row :: rest)) edge (edge row).1 (edge row).1 := by
+      simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using
+        closed.cons (edge row).1
+    have empty := eq_zero_of_endpointBalanced_self (↑(row :: rest)) edge index
+      (fun current member => by rw [successors current (Multiset.mem_coe.mp member)]; omega) balanced
+    simp at empty
+
+/-- A balanced set of consumers without any handler endpoints must be empty. -/
+theorem rows_nil_of_balanced (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
+    (valid : ∀ table ∈ tables, table.Spec)
+    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
+    TransitionView.readIndexedRows variants tables = [] := by
+  have alignment : List.Forall₂ (fun view table => view.component = table.component)
+      (variants.map view) tables := by
+    simpa only [List.forall₂_map_left_iff] using aligned
+  have projected := TransitionView.readRows_interactions (variants.map view) tables alignment
+  rw [TransitionView.readRows_eq_indexed] at projected
+  simp only [List.flatMap_map] at projected
+  rw [projected] at balanced
+  have closed := (stateChannel.pairedLedger_balanced_iff
+    (TransitionView.readIndexedRows variants tables) edge).mp balanced
+  exact nil_of_closed edge (fun state : State (ZMod p) => Address.toNat state.index)
+    (TransitionView.readIndexedRows variants tables) closed.2
+    (fun row member => successor_of_spec row.1 (rowInput row) (rows_spec tables aligned valid row member))
+
 /-- Every physical word row occurs exactly once, with successive indices and a fixed call/node.
 The hypotheses concern actual table specifications and ledger balance, not a supplied row order. -/
 theorem ordered_cover (tables : List (Table (ZMod p))) (initial final : State (ZMod p))

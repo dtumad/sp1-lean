@@ -803,10 +803,23 @@ Authenticating only the handler's final word does not suffice: an executed regre
 consumer markers, balances the cursor, and repeats a destination address. Authenticating every
 consumer word rejects this substitution. This is a subsystem-premise regression, not a new full-AIR
 counterexample. Local specifications, current-queue/node/word bindings, incoming register observations,
-and permission authentication remain explicit premises. Full integration must derive each call's
-balance and bindings from the shard-wide ledger and incorporate these Memory transfers into mixed
-grounding, including predecessor currency and complete outgoing-state agreement. The full HINT_LEN
-counterexample remains open.
+and permission authentication remain explicit premises.
+
+`HostHintReadPartition.run_of_shared_tables` now derives the per-call balance internally from
+the actual shared handler/consumer cursor ledger and unique handler clocks. Selecting an event
+retains its original table rows, data, and all-channel interaction provenance. Its
+`consumer_has_handler` theorem also excludes orphan consumers, using their strict index progress.
+The generic `ToClean/Air/MessageFilter.lean` transport preserves the characteristic count guard when
+restricting balance to complete message classes. Word authentication refers to the selected call's
+current store, allowing later WRITE/hook allocations instead of assuming a static queue store.
+Executed tests retain different nodes, lengths,
+destinations, reversed physical rows, and clock carries, and reject missing handlers and consumers.
+Another regression duplicates complete calls: the cursor still balances, while handler-clock
+uniqueness fails. This records a required integration condition, not a new full-AIR counterexample.
+Full integration must derive unique handler events and record/permission bindings from the
+instruction handoff, queue history, and shard-wide ledgers, then incorporate these Memory transfers
+into mixed grounding with predecessor currency and complete outgoing-state agreement. The full
+HINT_LEN counterexample remains open.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

@@ -49,6 +49,21 @@ private theorem balanceOf_pulls (channel : Channel F Message) (messages : List (
   simp only [List.countP_map, List.count_eq_countP, Function.comp_def, pulledValue, compare]
 
 omit [DecidableEq F] in
+/-- Collecting unit transition pairs preserves every interaction occurrence. -/
+theorem pairedLedger_perm {Row : Type*} (channel : Channel F Message)
+    (rows : List Row) (edge : Row → Message F × Message F) :
+    (rows.flatMap (fun row => [channel.pulledValue (edge row).1,
+      channel.pushedValue (edge row).2])).Perm
+      ((rows.map (fun row => channel.pushedValue (edge row).2)) ++
+       (rows.map (fun row => channel.pulledValue (edge row).1))) := by
+  induction rows with
+  | nil => exact .refl _
+  | cons row rest ih =>
+    simp only [List.flatMap_cons, List.map_cons, List.cons_append, List.nil_append]
+    exact ((ih.cons _).cons _).trans
+      ((List.Perm.swap _ _ _).trans (List.perm_middle.symm.cons _))
+
+omit [DecidableEq F] in
 /-- Collecting unit pushes and pulls changes only the order of the real interaction list. -/
 theorem transitionLedger_perm {Row : Type*} (channel : Channel F Message)
     (initial final : Message F) (rows : List Row) (edge : Row → Message F × Message F) :
@@ -56,16 +71,7 @@ theorem transitionLedger_perm {Row : Type*} (channel : Channel F Message)
       (((initial :: rows.map (fun row => (edge row).2)).map channel.pushedValue) ++
        ((final :: rows.map (fun row => (edge row).1)).map channel.pulledValue)) := by
   unfold transitionLedger
-  have split : (rows.flatMap (fun row => [channel.pulledValue (edge row).1,
-      channel.pushedValue (edge row).2])).Perm
-      ((rows.map (fun row => channel.pushedValue (edge row).2)) ++
-       (rows.map (fun row => channel.pulledValue (edge row).1))) := by
-    induction rows with
-    | nil => exact .refl _
-    | cons row rest ih =>
-      simp only [List.flatMap_cons, List.map_cons, List.cons_append, List.nil_append]
-      exact ((ih.cons _).cons _).trans
-        ((List.Perm.swap _ _ _).trans (List.perm_middle.symm.cons _))
+  have split := channel.pairedLedger_perm rows edge
   simpa only [List.map_cons, List.map_map, Function.comp_def, List.cons_append, List.nil_append] using
     (split.cons (channel.pulledValue final) |>.cons (channel.pushedValue initial)).trans
       (List.perm_middle.symm.cons _)
@@ -103,6 +109,24 @@ theorem balanced_unit_iff (channel : Channel F Message) (produced consumed : Lis
     intro msg
     rw [balanceOf_append, balanceOf_pushes, balanceOf_pulls,
       (perm.map (fun value => (toElements value).toArray)).count_eq msg, add_neg_cancel]
+
+/-- A closed unit-transition ledger has exactly the same produced and consumed typed messages. -/
+theorem pairedLedger_balanced_iff {Row : Type*} (channel : Channel F Message)
+    (rows : List Row) (edge : Row → Message F × Message F) :
+    BalancedInteractions (rows.flatMap (fun row =>
+      [channel.pulledValue (edge row).1, channel.pushedValue (edge row).2])) ↔
+      (2 * rows.length < ringChar F ∨ ringChar F = 0) ∧
+        (rows.map (fun row => (edge row).2)).Perm (rows.map (fun row => (edge row).1)) := by
+  have perm := channel.pairedLedger_perm rows edge
+  have transport : BalancedInteractions (rows.flatMap (fun row =>
+      [channel.pulledValue (edge row).1, channel.pushedValue (edge row).2])) ↔
+      BalancedInteractions ((rows.map (fun row => channel.pushedValue (edge row).2)) ++
+        (rows.map (fun row => channel.pulledValue (edge row).1))) :=
+    ⟨fun valid => balancedInteractions_of_perm valid perm,
+      fun valid => balancedInteractions_of_perm valid perm.symm⟩
+  rw [transport]
+  simpa only [List.map_map, Function.comp_def, List.length_map, two_mul] using
+    channel.balanced_unit_iff (rows.map fun row => (edge row).2) (rows.map fun row => (edge row).1)
 
 /-- A balanced transition ledger yields the endpoint permutation needed by a ranked walk. -/
 theorem transitionLedger_balanced_iff {Row : Type*} (channel : Channel F Message)
