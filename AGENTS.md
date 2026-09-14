@@ -268,8 +268,12 @@ and `source_word_order` derive prior low clocks and strict word-access order. `H
 groups every physical hint word with its actual CPU event through cursor and full HostCall balance.
 The grouping preserves the complete raw word Memory ledger and duplicate occurrences. Authenticated
 node/word coverage gives distinct canonical locations within each call and the timed engine's
-per-location chain law. The source assembly supplies these facts without prior Memory guarantees
-or successful replay premises. Predecessor value currency and the mixed grounding walk remain open.
+per-location chain law. `HostHintReadExecutionRows` adds those words to each CPU event and proves
+complete source/final record balance for the enlarged rows and actual refresh pairs.
+`HostLocalCoreRows` retains the wrapper's x12 pair in the general ledger decomposition; the current
+source registry derives its zero gate. The source assembly supplies these facts without prior
+Memory guarantees or successful replay premises. Combined-touch alignment, refresh elimination,
+predecessor value currency, and the mixed grounding walk remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

@@ -40,6 +40,22 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # The complete host ledger absorbed into CPU rows, with real refresh pairs retained.
+    ("SP1Clean/Soundness/HostLocalCoreMemory.lean", "localWitness_table"),
+    ("SP1Clean/Soundness/HostLocalCoreMemory.lean", "wrapper_memory_interactions"),
+    ("SP1Clean/Soundness/HostLocalCoreRows.lean", "wrapperMemory"),
+    ("SP1Clean/Soundness/HostLocalCoreRows.lean", "auxiliaryMemory"),
+    ("SP1Clean/Soundness/HostLocalCoreRows.lean", "memoryInterior_perm"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "source_memory_silent"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "eventFacts"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "eventFacts_state_fetch"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "eventFacts_memory"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "word_memory_messages"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "wrapper_disabled"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "source_memory_messages"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "sourceExecutionRows"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "source_execution_memory_projection"),
+    ("SP1Clean/Soundness/HostHintReadExecutionRows.lean", "source_execution_memory_balance"),
     # Occurrence-preserving CPU groups and canonical per-call host RAM locations.
     ("ToMathlib/ListChronology.lean", "flatMap_filter_key_perm"),
     ("SP1Clean/Soundness/HostHintReadWrites.lean", "writes_of_records"),

@@ -33,6 +33,34 @@ private theorem boundary_components (index : Fin 6) :
     List.getElem_set_ne (show 26 ≠ index.val by omega),
     List.getElem_set_ne (show 25 ≠ index.val by omega)]
 
+/-- The original component view retains each physical table and its prover data. -/
+theorem localWitness_table (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (index : Fin 59) :
+    (localWitness witness).tables[index.val]'(by
+      rw [← (localWitness witness).same_length]; change index.val < (LocalCore.tables image source).length
+      rw [LocalCore.tables_length]; exact index.isLt) =
+    (witness.tables[index.val]'(by
+      rw [← witness.same_length]; change index.val < (tables image source auxiliary).length
+      rw [tables_length]; omega)).withComponent
+      ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)) :=
+  witness.project_getElem _ ⟨index.val, by
+    change index.val < (LocalCore.tables image source).length
+    rw [LocalCore.tables_length]; exact index.isLt⟩
+
+/-- The typed wrapper ledger retains the original row plus the actual gated x12 pair. -/
+theorem wrapper_memory_interactions (env : Environment (ZMod p))
+    (constraints : HostCallLedger.producer.operations.ConstraintsHold env) :
+    typedInteractionValuesWith HostCallLedger.producer.operations memoryChannel env =
+      typedInteractionValuesWith HostCallProjection.original.operations memoryChannel env ++
+      [TypedInteraction.pulledIfValue memoryChannel (HostCallProjection.extraRead env).is_real
+        (HostCallProjection.extraRead env).prior,
+       TypedInteraction.pushedIfValue memoryChannel (HostCallProjection.extraRead env).is_real
+        (HostCallProjection.extraRead env).pushed] := by
+  apply List.map_injective_iff.mpr TypedInteraction.raw_injective
+  simp only [List.map_append, typedInteractionValuesWith_raw, List.map_cons, List.map_nil,
+    TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw]
+  exact HostCallProjection.memory_values env constraints
+
 /-- Both boundary inventories retain their components, physical arrays, and prover data. -/
 theorem boundary_tables (witness : EnsembleWitness (ensemble image source auxiliary channels)) :
     (localWitness witness).tables.take 6 = witness.tables.take 6 := by

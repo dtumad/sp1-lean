@@ -18,19 +18,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-private theorem wrapper_row_memory (env : Environment (ZMod p))
-    (constraints : HostCallLedger.producer.operations.ConstraintsHold env) :
-    typedInteractionValuesWith HostCallLedger.producer.operations memoryChannel env =
-      typedInteractionValuesWith HostCallProjection.original.operations memoryChannel env ++
-      [TypedInteraction.pulledIfValue memoryChannel (HostCallProjection.extraRead env).is_real
-        (HostCallProjection.extraRead env).prior,
-       TypedInteraction.pushedIfValue memoryChannel (HostCallProjection.extraRead env).is_real
-        (HostCallProjection.extraRead env).pushed] := by
-  apply List.map_injective_iff.mpr TypedInteraction.raw_injective
-  simp only [List.map_append, typedInteractionValuesWith_raw, List.map_cons, List.map_nil,
-    TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw]
-  exact HostCallProjection.memory_values env constraints
-
 private theorem wrapper_extra_bound (table : Table (ZMod p))
     (component : table.component = HostCallLedger.producer)
     (bytes : table.ChannelGuarantees byteChannel.toRaw)
@@ -64,7 +51,7 @@ private theorem wrapper_push_bound (table : Table (ZMod p))
   obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp member
   have checked := constraints physical physicalMem
   rw [component] at checked emitted
-  rw [wrapper_row_memory _ checked, producedMessages_append] at emitted
+  rw [wrapper_memory_interactions _ checked, producedMessages_append] at emitted
   rcases List.mem_append.mp emitted with old | extra
   · apply original
     rw [typedTableInteractionsWith, producedMessages_flatMap]
@@ -93,19 +80,6 @@ private theorem wrapper_push_bound (table : Table (ZMod p))
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
-
-private theorem local_table (witness : EnsembleWitness (ensemble image source auxiliary channels))
-    (index : Fin 59) :
-    (localWitness witness).tables[index.val]'(by
-      rw [← (localWitness witness).same_length]; change index.val < (LocalCore.tables image source).length
-      rw [LocalCore.tables_length]; exact index.isLt) =
-    (witness.tables[index.val]'(by
-      rw [← witness.same_length]; change index.val < (tables image source auxiliary).length
-      rw [tables_length]; omega)).withComponent
-      ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)) :=
-  witness.project_getElem _ ⟨index.val, by
-    change index.val < (LocalCore.tables image source).length
-    rw [LocalCore.tables_length]; exact index.isLt⟩
 
 private theorem original_table_bound (witness : EnsembleWitness (ensemble image source auxiliary channels))
     (bounded : ∀ message ∈ producedMessages (LocalCore.memoryInterior (localWitness witness)),
@@ -148,7 +122,7 @@ theorem memoryInterior_push_bound (valid : image.Valid)
   have present := witness.mem_allTables_of_mem_tables (List.getElem_mem (l := witness.tables) (n := i + 6) bound)
   by_cases old : i + 6 < 59
   · have bounded := original_table_bound witness original ⟨i + 6, old⟩ (by change 6 ≤ i + 6; omega)
-    rw [local_table] at bounded
+    rw [localWitness_table] at bounded
     by_cases wrapper : i + 6 = 58
     · have component : (witness.tables[i + 6]).component = HostCallLedger.producer := by
         rw [← witness.same_circuits]

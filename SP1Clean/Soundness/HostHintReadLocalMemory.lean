@@ -157,7 +157,8 @@ private theorem word_push_bound (last : Bool) (table : Table (ZMod p))
   simp [producedMessages, pos, neg] at emitted
   exact emitted ▸ bounds.pushLow
 
-private theorem source_memory_silent (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) :
+/-- The installed source registry's non-word auxiliaries are statically Memory-silent. -/
+theorem source_memory_silent (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) :
     ∀ component ∈ (receiver :: HostCallReceivers.available).map (·.component) ++
       (sourceResources source.host.io.hints ++ [⟨(HostHintQueueBoundary.boundary source final).circuit⟩]),
       memoryChannel.toRaw ∉ component.circuit.channels := by

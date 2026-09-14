@@ -995,7 +995,13 @@ distinct canonical locations and the grounding engine's per-location chain condi
 touches retain their CPU-relative timing and strict predecessor order. The `cpuWordGrouping`
 regression covers reversed tables, intervening ENTER calls, final padding, a clock carry, and
 duplicated consumers that selection must retain. It remains a protocol fixture, not a full
-mixed-AIR witness. Previous-value truth and the mixed grounding walk remain open.
+mixed-AIR witness. `Soundness/HostHintReadExecutionRows.lean` adds the grouped words to the actual
+CPU events while preserving State edges and fetches. `source_execution_memory_balance` proves
+conservation of the complete source/final record inventories through those enlarged rows and real
+refresh pairs. `HostLocalCoreRows.memoryInterior_perm` retains the wrapper's x12 accesses in the
+general decomposition; their zero gate follows from the installed source registry's full-call
+projection. Future WRITE installation must retain its active pair. Combined-touch alignment,
+refresh elimination, previous-value truth, and the mixed grounding walk remain open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

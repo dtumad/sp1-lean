@@ -492,17 +492,20 @@ Implemented foundations:
   of both word tables and their complete raw Memory ledger. Authenticated node/word coverage
   derives distinct canonical destinations within each call, including final padding, and hence
   the engine's per-location chain law. No successful current call, prior replay, or Memory-value
-  guarantee is assumed by these structural facts. Value currency and the complete mixed grounding
-  walk remain open.
-  **Next:** install these CPU-grouped accesses in the existing Memory grounding walk, derive
-  predecessor currency, and bind the outgoing snapshot. Extend ordering and semantic advancement
+  guarantee is assumed by these structural facts. `HostHintReadExecutionRows` now adds the grouped
+  words to each CPU event and proves that the enlarged rows and actual refresh pairs balance the
+  complete source/final record inventories. The general `HostLocalCoreRows` decomposition retains
+  WRITE's x12 pair; the current source registry derives its zero gate. This closes record accounting,
+  not value currency or execution grounding.
+  **Next:** align the combined register/RAM touches, transport boundary and refresh facts from the
+  complete ledger, and use the enlarged footprint in the existing Memory grounding walk. Derive
+  predecessor currency and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
   and use the already-required active 1-mod-8 clock profile; range-only source validation permits
   zero, while an active queue handler requires a positive clock. This is part of the shared compiler
   profile obligation, not a new reason to exclude zero-step segments.
-  Then install RAM rows in mixed grounding, including Memory guarantees, predecessor currency,
-  and full outgoing Memory agreement. New WRITE/hook node and word authorization and their
+  New WRITE/hook node and word authorization and their
   integration into the existing head-history engine remain open. Include the 48-bit
   identity bound in the shared resource profile.
   The full-AIR forged HINT_LEN return regression remains open until that integration.
