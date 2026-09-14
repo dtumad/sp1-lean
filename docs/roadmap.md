@@ -465,6 +465,13 @@ Implemented foundations:
   eliminating independent current-queue, store-extension, and record-authentication premises.
   `length_of_source_prefix` derives HINT_LEN's actual current-host return without Memory guarantees.
   Neither assumes successful execution of the current call or the remaining tape.
+  `HostLocalCoreMemory` now reads the full physical Memory interior, including the wrapper's
+  x12 pairs and appended RAM rows, while preserving both boundary inventories. Its signed-unit
+  proof does not exclude WRITE. `HostHintReadLocalMemory.source_memory_records_perm` instantiates
+  record conservation from the installed source-backed assembly's own constraints and balance;
+  no caller multiplicity or Memory-guarantee premise remains in this statement. Every physical
+  word pair, including padding and duplicate occurrences, is retained by `word_memory_sublist`.
+  Predecessor currency and chronological grounding are still required.
   **Next:** derive the remaining Memory guarantees and current register observations through mixed
   grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
@@ -646,6 +653,9 @@ Still required before the native capstone can be claimed:
    agreement with the actual replayed host, consumes it in HINT_READ dispatch, and derives the
    HINT_LEN result. Integrate the remaining Memory/register currency, authenticate new nodes, and extend it to
    WRITE/hook prepends before claiming complete outgoing snapshot agreement.
+   The extended Memory ledger and its complete record permutation are now derived for the
+   installed hint assembly, retaining actual wrapper/word accesses. Use that ledger in grounding;
+   the smaller instruction-only witness does not inherit its Memory balance.
    Parameterize the bank subsystem's currently zero genesis with the complete local source
    commitment/deferred values before installing it in arbitrary continuation shards.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM

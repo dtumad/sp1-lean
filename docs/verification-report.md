@@ -958,6 +958,15 @@ HINT_LEN theorem derives the actual host observation without Memory guarantees. 
 assume replay of the preceding prefix, not success of the current call or the remaining tape.
 Authenticated allocation edges, mixed Memory grounding, and outgoing snapshot binding remain open.
 
+`Soundness/HostLocalCoreMemory.lean` reads the actual extended Memory interior and preserves the
+two boundary inventories as complete physical tables. It retains the wrapper's x12 pairs and all
+appended RAM accesses; its multiplicity proof permits WRITE. The installed source-backed instance,
+`HostHintReadLocalMemory.source_memory_records_perm`, derives the exact source-plus-pushes /
+final-plus-pulls permutation from raw AIR constraints and balance, without a caller-supplied
+Memory guarantee or multiplicity condition. `word_memory_sublist` retains every consumer pair,
+including padding and duplicate occurrences. These statements establish complete-record
+conservation; identifying the current predecessor value still requires mixed timed grounding.
+
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an
 empty queue. A stale length forged in both return and metadata keeps local assertions and queue

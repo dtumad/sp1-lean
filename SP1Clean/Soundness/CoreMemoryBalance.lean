@@ -25,7 +25,8 @@ def MemoryBinary (component : Component (ZMod p)) : Prop :=
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1
 
 omit [Fact (2 ^ 24 < p)] in
-private theorem memoryBinary_of_silent (component : Component (ZMod p))
+/-- Components with no Memory interactions satisfy the multiplicity condition without constraints. -/
+theorem memoryBinary_of_silent (component : Component (ZMod p))
     (silent : memoryChannel.toRaw ∉ component.circuit.channels) : MemoryBinary component := by
   intro data physical _ interaction member
   rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member

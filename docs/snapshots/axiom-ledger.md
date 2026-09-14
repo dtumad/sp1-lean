@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2437 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2447 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 301 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2738 released declarations are probed.
+- 2748 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,14 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The queue/host replay checkpoint adds 19 main declarations and three test anchors. Nine main
+The host Memory accounting checkpoint adds ten main declarations. Two use the logical baseline;
+eight retain the installed assembly's existing 100-dependency set. All preceding 2437 main and
+301 test dependency sets are unchanged, with no removals or new axiom names in either library.
+`HostHintReadLocal.source_memory_records_perm` derives the complete installed Memory record
+permutation from raw constraints and balance, retaining host RAM and wrapper accesses. This closes
+record conservation; predecessor value currency and mixed execution grounding remain open.
+
+The queue/host replay checkpoint added 19 main declarations and three test anchors. Nine main
 additions use subsets of the logical baseline, three use the existing 77-dependency Sail replay
 set, and seven use the installed history theorem's existing 100-dependency set. All preceding
 2418 main and 298 test dependency sets are unchanged; no declarations are removed and no new

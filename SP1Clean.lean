@@ -410,6 +410,7 @@ import SP1Clean.Soundness.HostCallLedger
 import SP1Clean.Soundness.HostCallProjection
 import SP1Clean.Soundness.HostLocalCore
 import SP1Clean.Soundness.HostLocalCoreLedger
+import SP1Clean.Soundness.HostLocalCoreMemory
 import SP1Clean.Soundness.HostLocalCorePermissions
 import SP1Clean.Soundness.HostLocalHandoff
 import SP1Clean.Soundness.HostCallReceivers
@@ -425,6 +426,7 @@ import SP1Clean.Soundness.HostQueueOrder
 import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Native.Operations.HintQueueBoundary
 import SP1Clean.Soundness.HostHintQueueBoundary
+import SP1Clean.Soundness.HostHintReadLocalMemory
 import SP1Clean.Model.Core.HintQueueEvent
 import SP1Clean.Model.Core.QueueReplay
 import SP1Clean.Soundness.HintQueueHistory

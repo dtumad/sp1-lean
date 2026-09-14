@@ -101,6 +101,25 @@ theorem project_verifierTable (witness : EnsembleWitness source)
     (witness.project target length).verifierTable = witness.verifierTable :=
   Ensemble.verifierTable_ext verifier rfl rfl
 
+/-- A projection preserves an unchanged initial inventory as complete physical tables. -/
+theorem project_take (witness : EnsembleWitness source)
+    (length : target.tables.length ≤ source.tables.length) (count : ℕ)
+    (bound : count ≤ target.tables.length)
+    (same : ∀ index : Fin count,
+      target.tables[index.val]'(by omega) = source.tables[index.val]'(by omega)) :
+    (witness.project target length).tables.take count = witness.tables.take count := by
+  have projectedLength := (witness.project target length).same_length
+  have sourceLength := witness.same_length
+  apply List.ext_getElem
+  · simp only [List.length_take, ← projectedLength, ← sourceLength]
+    omega
+  · intro index hi hj
+    have within : index < count := lt_of_lt_of_le hi (List.length_take_le ..)
+    simp only [List.getElem_take]
+    rw [project_getElem witness length ⟨index, by omega⟩]
+    rw [same ⟨index, within⟩, witness.same_circuits]
+    rfl
+
 theorem project_constraints (witness : EnsembleWitness source)
     (length : target.tables.length ≤ source.tables.length)
     (verifier : target.verifier = source.verifier)
