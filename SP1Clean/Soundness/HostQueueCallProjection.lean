@@ -1,0 +1,262 @@
+import SP1Clean.Soundness.HostQueueCPUOrder
+import SP1Clean.Soundness.HostCommitBank
+import SP1Clean.Model.Core.QueueReplay
+
+/-! # Queue actions in the complete installed HostCall inventory
+
+The installed control handlers preserve the hint queue and exclude WRITE. The remaining
+receivers are exactly HINT_READ and the two HINT_LEN variants. Their physical rows determine
+the semantic queue actions, including the natural read length rather than its modular image.
+-/
+
+namespace SP1Clean.Soundness.HostQueueCallProjection
+
+open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueOrder HostQueueCPUOrder Semantics
+
+variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+
+local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+
+def project (message : HostCallChip.Message (ZMod p)) : Option HintQueue.Event :=
+  queueCallEvent? (Word.toBitVec64 message.code) (Word.toBitVec64 message.arg2)
+    (Word.toBitVec64 message.result)
+
+def safe (message : HostCallChip.Message (ZMod p)) : Prop :=
+  Word.toBitVec64 message.code ≠ SyscallKind.write.code
+
+private def ControlCode (code : Word (ZMod p)) : Prop :=
+  code = 0 ∨ code = HostEnterChip.codeWord ∨
+    code = HostCommitChip.codeWord false ∨ code = HostCommitChip.codeWord true
+
+private theorem halt_message (env : Environment (ZMod p)) :
+    (HostCallReceivers.halt (p := p)).message env = (valueFromOffset HostHaltChip.Inputs 0 env).call := by
+  have evaluated (input : Var HostHaltChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
+    cases input
+    simp only [circuit_norm]
+  simp only [HostCallReceivers.halt, evaluated, eval_varFromOffset_valueFromOffset]
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem enter_message (env : Environment (ZMod p)) :
+    (HostCallReceivers.enter (p := p)).message env = valueFromOffset HostEnterChip.Inputs 0 env := by
+  simp only [HostCallReceivers.enter, eval_varFromOffset_valueFromOffset]
+
+private theorem commit_message (deferred : Bool) (slot : Fin 8) (env : Environment (ZMod p)) :
+    (HostCallReceivers.commit (p := p) deferred slot).message env =
+      (valueFromOffset HostCommitChip.Inputs 0 env).call := by
+  have evaluated (input : Var HostCommitChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
+    cases input
+    simp only [circuit_norm]
+  simp only [HostCallReceivers.commit, evaluated, eval_varFromOffset_valueFromOffset]
+
+private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
+    (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
+    (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env) :
+    ControlCode (receiver.message env).code := by
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+    (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
+    (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
+  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
+  rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
+  · have valid := HostHaltChip.component_spec_of_byte env constraints bytes
+    change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
+    rw [halt_message]
+    exact Or.inl valid.1
+  · have valid := HostEnterChip.component_spec_of_constraints env constraints
+    change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
+    rw [enter_message]
+    exact Or.inr (Or.inl valid.1)
+  · have valid := HostCommitBank.view_spec_of_byte false (some slot) env constraints bytes
+    change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
+    rw [commit_message]
+    exact Or.inr (Or.inr (Or.inl valid.1.1))
+  · have valid := HostCommitBank.view_spec_of_byte true (some slot) env constraints bytes
+    change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
+    rw [commit_message]
+    exact Or.inr (Or.inr (Or.inr valid.1.1))
+
+private theorem control_projection (message : HostCallChip.Message (ZMod p))
+    (code : ControlCode message.code) : safe message ∧ project message = none := by
+  have small (n : ℕ) (bound : n < 2 ^ 17) : ((n : ℕ) : ZMod p).val = n :=
+    ZMod.val_natCast_of_lt (lt_trans bound (Fact.out (p := 2 ^ 17 < p)))
+  have three : (3 : ZMod p).val = 3 := small 3 (by decide)
+  have sixteen : (16 : ZMod p).val = 16 := small 16 (by decide)
+  have twentySix : (26 : ZMod p).val = 26 := small 26 (by decide)
+  rcases code with code | code | code | code
+  all_goals
+    simp [safe, project, code, HostEnterChip.codeWord, HostCommitChip.codeWord,
+      Word.toBitVec64, Word.toNat, three, sixteen, twentySix, queueCallEvent?, SyscallKind.code]
+
+/-- Both queue operations have the exact action decoded from their complete call. -/
+theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Spec row.2) :
+    safe (call row) ∧ project (call row) = some (HostQueueHistory.event row) := by
+  rcases row with ⟨index, env⟩
+  cases index with
+  | none =>
+    change HostHintReadChip.Spec (HostHintReadCoverage.input env) at valid
+    have length : Word.isU64 (HostHintReadCoverage.input env).call.arg2 := by
+      rw [valid.2.2.2.2.1]
+      exact valid.2.2.2.2.2.2.2.2.1.2.1
+    simp only [safe, project, call, valid.1, HostHintReadChip.codeWord,
+      Target.toBitVec64_bitVecToWord, queueCallEvent?, SyscallKind.code,
+      BitVec.reduceEq, ↓reduceIte, Word.toBitVec64_toNat length, HostQueueHistory.event]
+    decide
+  | some empty =>
+    change HostHintLengthChip.Spec empty (valueFromOffset HostHintLengthChip.Inputs 0 env) at valid
+    simp only [safe, project, call, valid.1, HostHintLengthChip.codeWord,
+      Target.toBitVec64_bitVecToWord, queueCallEvent?, SyscallKind.code,
+      ↓reduceIte, HostQueueHistory.event]
+    decide
+
+private theorem controls_projection (receivers : List (HostLocalHandoff.Receiver (p := p)))
+    (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun receiver table => receiver.component = table.component) receivers tables)
+    (registered : ∀ receiver ∈ receivers, receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (constraints : ∀ table ∈ tables, table.Constraints)
+    (bytes : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw) :
+    ∀ message ∈ ReceiverView.messages receivers tables, safe message ∧ project message = none := by
+  induction aligned with
+  | nil => simp [ReceiverView.messages, TransitionView.readIndexedRows]
+  | @cons receiver table receivers tables same aligned ih =>
+    intro message member
+    rw [ReceiverView.messages_cons] at member
+    rcases List.mem_append.mp member with first | rest
+    · obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp first
+      apply control_projection
+      apply control_code receiver (registered receiver (List.mem_cons_self ..))
+      · rw [same]
+        exact constraints table (List.mem_cons_self ..) physical physicalMem
+      · rw [same]
+        exact bytes table (List.mem_cons_self ..) physical physicalMem
+    · exact ih (fun receiver member => registered receiver (List.mem_cons_of_mem _ member))
+        (fun table member => constraints table (List.mem_cons_of_mem _ member))
+        (fun table member => bytes table (List.mem_cons_of_mem _ member)) message rest
+
+private def queueReceiver : Index → HostLocalHandoff.Receiver (p := p)
+  | none => HostHintReadHandoff.receiver
+  | some empty => HostCallReceivers.hintLength empty
+
+private theorem queue_message (index : Index) (env : Environment (ZMod p)) :
+    (queueReceiver index).message env = call (index, env) := by
+  cases index with
+  | none => simp only [queueReceiver, HostHintReadHandoff.receiver, call]
+  | some empty =>
+    have evaluated (input : Var HostHintLengthChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
+      cases input
+      simp only [circuit_norm]
+    simp only [queueReceiver, HostCallReceivers.hintLength, evaluated, eval_varFromOffset_valueFromOffset]
+    rfl
+
+private theorem queue_messages (tables : List (Table (ZMod p))) :
+    ReceiverView.messages (indices.map queueReceiver) tables =
+      (TransitionView.readIndexedRows indices tables).map call := by
+  simp only [ReceiverView.messages, TransitionView.readIndexedRows, List.zip_map_left,
+    List.flatMap_map, List.map_flatMap, List.map_map, Function.comp_def]
+  apply List.flatMap_congr
+  intro pair _
+  apply List.map_congr_left
+  intro physical _
+  exact queue_message pair.1 (pair.2.environment physical)
+
+variable {image : ProgramImage} {source : ExecutionSnapshot}
+  {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+
+private def controlTables
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels)) :=
+  ((HostLocalHandoff.receiverTables witness).drop 1).take 18
+
+private theorem calls_split
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels)) :
+    (HostLocalHandoff.calls witness).Perm
+      ((TransitionView.readIndexedRows indices (queueTables witness)).map call ++
+        ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness)) := by
+  have head : HostLocalHandoff.receiverTables witness =
+      handlerTable witness :: (HostLocalHandoff.receiverTables witness).drop 1 := by
+    have bound := (HostLocalHandoff.receiverTables_aligned witness).length_eq
+    change (HostHintReadHandoff.receiver :: HostCallReceivers.available).length =
+      (HostLocalHandoff.receiverTables witness).length at bound
+    exact (List.cons_getElem_drop_succ (l := HostLocalHandoff.receiverTables witness) (n := 0)
+      (h := by simp only [List.length_cons] at bound; omega)).symm
+  rw [← queue_messages, queueTables]
+  change (ReceiverView.messages (HostHintReadHandoff.receiver :: HostCallReceivers.available)
+    (HostLocalHandoff.receiverTables witness)).Perm _
+  conv_lhs => rw [head, ReceiverView.messages_cons,
+    ReceiverView.messages_take_drop HostCallReceivers.available _ 18]
+  change List.Perm (α := HostCallChip.Message (ZMod p)) (_ ++ (_ ++ _))
+    ((ReceiverView.messages (HostHintReadHandoff.receiver :: [HostCallReceivers.hintLength false,
+      HostCallReceivers.hintLength true]) (handlerTable witness ::
+        (HostLocalHandoff.receiverTables witness).drop 19)) ++ _)
+  rw [ReceiverView.messages_cons]
+  simp only [List.drop_drop]
+  exact (List.Perm.refl _).append List.perm_append_comm |>.trans
+    (List.Perm.of_eq (List.append_assoc _ _ _).symm)
+
+private theorem control_calls
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ message ∈ ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness),
+      safe message ∧ project message = none := by
+  have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.available (p := p)).take 18)
+    (controlTables witness) (by
+      simp only [controlTables, List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
+        List.map_cons, List.drop_succ_cons, List.drop_zero])
+  have member (table : Table (ZMod p)) (present : table ∈ controlTables witness) : table ∈ witness.allTables :=
+    witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop (List.mem_of_mem_take
+      (List.mem_of_mem_drop (List.mem_of_mem_take present))))
+  exact controls_projection _ _ aligned (fun _ present => present)
+    (fun table present => constraints table (member table present))
+    (fun table present => byte_guarantees witness interface constraints balanced table (member table present))
+
+/-- Keep the call clock with its queue observation, so order comparison retains event contents. -/
+def stamped (message : HostCallChip.Message (ZMod p)) : Option (ℕ × HintQueue.Event) :=
+  (project message).map fun event => (clkNat message.clk_high message.clk_low, event)
+
+private theorem projection_of_split {Message Row Label : Type*}
+    (safe : Message → Prop) (stamped : Message → Option Label) (call : Row → Message) (label : Row → Label)
+    (messages control : List Message) (rows : List Row) (split : messages.Perm (rows.map call ++ control))
+    (queue : ∀ row ∈ rows, safe (call row) ∧ stamped (call row) = some (label row))
+    (controls : ∀ message ∈ control, safe message ∧ stamped message = none) :
+    (∀ message ∈ messages, safe message) ∧
+      (messages.filterMap stamped).Perm (rows.map label) := by
+  constructor
+  · intro message member
+    rcases List.mem_append.mp (split.mem_iff.mp member) with queueMem | controlMem
+    · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp queueMem
+      exact (queue row rowMem).1
+    · exact (controls message controlMem).1
+  · have projected := split.filterMap stamped
+    have silent : control.filterMap stamped = [] := by
+      apply List.filterMap_eq_nil_iff.mpr
+      intro message member
+      exact (controls message member).2
+    rw [List.filterMap_append, silent, List.append_nil, List.filterMap_map] at projected
+    simp only [Function.comp_def] at projected
+    have actual : rows.filterMap (fun row => stamped (call row)) = rows.map label := by
+      apply List.filterMap_eq_map_iff_forall_eq_some.mpr
+      intro row member
+      exact (queue row member).2
+    rwa [actual] at projected
+
+/-- The complete installed receiver inventory excludes WRITE and projects to precisely the
+physical queue-handler actions. No successful host execution is a premise. -/
+theorem calls_projection
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (specs : ∀ table ∈ queueTables witness, table.Spec) :
+    (∀ message ∈ HostLocalHandoff.calls witness, safe message) ∧
+      ((HostLocalHandoff.calls witness).filterMap stamped).Perm
+        ((TransitionView.readIndexedRows indices (queueTables witness)).map fun row =>
+          (eventTime row, HostQueueHistory.event row)) := by
+  apply projection_of_split safe stamped call (fun row => (eventTime row, HostQueueHistory.event row))
+    _ _ _ (calls_split witness)
+  · intro row member
+    have facts := queue_projection row (rows_spec _ (queueTables_aligned witness) specs row member)
+    refine ⟨facts.1, ?_⟩
+    simp only [stamped, facts.2, Option.map_some, call_time]
+  · intro message member
+    have facts := control_calls witness interface constraints balanced message member
+    exact ⟨facts.1, by simp only [stamped, facts.2, Option.map_none]⟩
+
+end SP1Clean.Soundness.HostQueueCallProjection

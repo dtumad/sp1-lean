@@ -1,4 +1,5 @@
 import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Model.Core.QueueReplay
 import SP1Clean.Model.SP1Field
 import SP1CleanTest.Audit.ActiveNativeCompleteness
 
@@ -169,5 +170,60 @@ theorem replayOrdinaryPreservesHost (host : HostState) (running : host.exitCode 
       ⟨Audit.JointNonVacuity.anchorState, host, clock⟩ [.ordinary] 1 =
         some ⟨Audit.ActiveNativeCompleteness.activeTarget, host, clock + 8⟩ :=
   (ExecutionPath.cons (ordinaryContinues host running clock) (.nil _)).replay
+
+private def queueProgram : GuestProgram where
+  rom := [(65536, 0x73), (65540, 0x73), (65544, 0x73)]
+  pc_start := 65536
+  memImage := []
+  rom_nodup := by decide
+  rom_aligned := by simp
+  rom_in_window := by simp
+  rom_full_width := by simp
+
+private def queueSource : ExecutionState where
+  sail := { (default : SailState) with
+    regs := ((((default : SailState).regs.insert Register.PC 65536).insert Register.x5 241).insert
+      Register.x10 65552).insert Register.x11 8
+    mem := (∅ : Std.ExtHashMap ℕ (BitVec 8)).insert 65576 42 }
+  host := { io := ⟨[[1, 2, 3, 4, 5, 6, 7, 8], [11, 12, 13, 14, 15, 16, 17, 18]], [9]⟩ }
+  clock := 2 ^ 24 - 263
+
+private def readEvent (index : ℕ) : CoreSyscallEvent where
+  clock := queueSource.clock + 264 * index
+  pc := BitVec.ofNat 64 (65536 + 4 * index)
+  nextPc := BitVec.ofNat 64 (65540 + 4 * index)
+  rawCode := 241
+  arg1 := 65552
+  arg2 := 8
+  result := 241
+
+private def queueObserved (state : ExecutionState) :=
+  (state.clock, state.host.io.hints, state.host.io.publicOutput,
+    [65552, 65559, 65560, 65567, 65576].map fun address => state.sail.mem.get? address)
+
+/-- Consecutive real HINT_READ replays consume the current hints, overwrite the same RAM span,
+write the mandatory extra padding word, preserve unrelated RAM/output, and cross a 24-bit clock.
+The third committed call fails on an empty queue. This is a semantic replay regression, not an AIR witness. -/
+theorem queueHostReplay :
+    let events := [.syscall (readEvent 0), .syscall (readEvent 1)]
+    (replayEvents? policy queueProgram queueSource (events.take 1)).map queueObserved =
+      some (queueSource.clock + 264, [[11, 12, 13, 14, 15, 16, 17, 18]], [9],
+        [some 1, some 8, some 0, some 0, some 42]) ∧
+      (replayEvents? policy queueProgram queueSource events).map queueObserved =
+        some (queueSource.clock + 528, [], [9], [some 11, some 18, some 0, some 0, some 42]) ∧
+      (replayEvents? policy queueProgram queueSource (events ++ [.syscall (readEvent 2)])).isNone = true ∧
+      events.filterMap queueEvent? = [.read 8, .read 8] ∧
+      HintQueue.replay? (events.filterMap queueEvent?) queueSource.host.io.hints = some [] := by
+  simp only [List.take_succ_cons, List.take_zero, List.cons_append, List.nil_append, replayEvents?, replayStep?]
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+/-- WRITE may prepend hints despite having no label-only queue projection; the replay guard
+must reject erasing this event. Allocation-aware replay remains the separate general model. -/
+theorem queueWriteNeedsAllocation :
+    let writing := .syscall { readEvent 0 with rawCode := 2, arg1 := 14, result := 2 }
+    ¬ QueueProjectionSafe writing ∧ queueEvent? writing = none ∧
+      (queueSource.host.writeOutput 14 [99]).map (·.io.hints) = some ([99] :: queueSource.host.io.hints) := by
+  unfold QueueProjectionSafe
+  native_decide
 
 end SP1CleanTest.Core.ExecutionPath

@@ -238,9 +238,14 @@ prepends. The installed instance still covers only the three existing queue-hand
 from the installed AIR. Every queue row consumes the full call of a physical active syscall;
 `call_cpu_at` recovers that exact instruction at its unique CPU clock. Queue clocks form a
 subsequence of every exhaustive CPU walk, and `CurrentQueues` recovers current bytes/frontier
-from queue events in each preceding CPU prefix. This is structural and byte-replay agreement;
-equality with the evolving whole-host state, mixed Memory grounding, outgoing snapshot binding,
-and authenticated allocation edges remain open. The combined handoff regression uses real
+from queue events in each preceding CPU prefix. `HostQueueCallProjection` and `HostQueueCPUReplay`
+derive the complete semantic queue-action sequence and exclude WRITE from the actual receiver
+inventory. `HostQueueCurrent.source_current` proves equality with the evolving whole-host state
+after successful prefix replay. `run_of_source_prefix` consumes that result in HINT_READ dispatch
+and exact padded-write coverage without independent current-queue/store/authentication premises;
+`length_of_source_prefix` identifies HINT_LEN's current-host return without Memory guarantees.
+The current call's success is not assumed. Mixed Memory/register grounding, outgoing snapshot
+binding, and authenticated allocation edges remain open. The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.
 No static-source-queue restriction is added to the full capstone objective.

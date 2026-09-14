@@ -40,6 +40,29 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Queue actions and current whole-host hints in actual CPU replay.
+    ("SP1Clean/Model/Core/QueueReplay.lean", "queueCallEvent?"),
+    ("SP1Clean/Model/Core/QueueReplay.lean", "queueEvent?"),
+    ("SP1Clean/Model/Core/QueueReplay.lean", "QueueProjectionSafe"),
+    ("SP1Clean/Model/Core/QueueReplay.lean", "HostState.run_queueReplay"),
+    ("SP1Clean/Model/Core/QueueReplay.lean", "replayStep?_queue"),
+    ("SP1Clean/Model/Core/QueueReplay.lean", "replayEvents?_queue"),
+    ("ToClean/Air/ReceiverView.lean", "messages_take_drop"),
+    ("SP1Clean/Soundness/HostQueueCallProjection.lean", "project"),
+    ("SP1Clean/Soundness/HostQueueCallProjection.lean", "safe"),
+    ("SP1Clean/Soundness/HostQueueCallProjection.lean", "queue_projection"),
+    ("SP1Clean/Soundness/HostQueueCallProjection.lean", "stamped"),
+    ("SP1Clean/Soundness/HostQueueCallProjection.lean", "calls_projection"),
+    ("SP1Clean/Soundness/HostQueueCPUReplay.lean", "stampedCPU"),
+    ("SP1Clean/Soundness/HostQueueCPUReplay.lean", "cpu_safe"),
+    ("SP1Clean/Soundness/HostQueueCPUReplay.lean", "cpu_projection"),
+    ("SP1Clean/Soundness/HostQueueCurrent.lean", "of_prefix"),
+    ("SP1Clean/Soundness/HostQueueCurrent.lean", "source_current"),
+    ("SP1Clean/Soundness/HostQueueCurrent.lean", "run_of_source_prefix"),
+    ("SP1Clean/Soundness/HostQueueCurrent.lean", "length_of_source_prefix"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "queueCPUProjection"),
+    ("SP1CleanTest/Core/ExecutionPath.lean", "queueHostReplay"),
+    ("SP1CleanTest/Core/ExecutionPath.lean", "queueWriteNeedsAllocation"),
     # Queue history follows actual CPU order and every preceding CPU prefix.
     ("ToMathlib/ListChronology.lean", "filter_lt_eq_prefix"),
     ("ToMathlib/ListChronology.lean", "filter_mem_prefix_eq_filter_lt"),

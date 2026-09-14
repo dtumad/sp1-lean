@@ -38,6 +38,15 @@ theorem messages_cons (view : ReceiverView channel) (views : List (ReceiverView 
   simp only [messages, TransitionView.readIndexedRows, List.zip_cons_cons, List.flatMap_cons,
     List.map_append, List.map_map, Function.comp_def, tableMessages]
 
+/-- Split the physical receiver inventory at a registration boundary. -/
+theorem messages_take_drop (views : List (ReceiverView channel)) (tables : List (Table F)) (n : ℕ) :
+    messages views tables = messages (views.take n) (tables.take n) ++
+      messages (views.drop n) (tables.drop n) := by
+  unfold messages TransitionView.readIndexedRows
+  conv_lhs => rw [← List.take_append_drop n (views.zip tables)]
+  simp only [List.zip_eq_zipWith, List.take_zipWith, List.drop_zipWith,
+    List.flatMap_append, List.map_append]
+
 theorem aligned_of_map_eq (views : List (ReceiverView channel)) (tables : List (Table F))
     (aligned : views.map (·.component) = tables.map (·.component)) :
     List.Forall₂ (fun view table => view.component = table.component) views tables := by

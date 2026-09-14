@@ -6,6 +6,7 @@ import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Soundness.HostHintQueueHistory
 import SP1Clean.Soundness.HostQueueCPUOrder
+import SP1Clean.Soundness.HostQueueCPUReplay
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
@@ -508,5 +509,19 @@ theorem queueCPUHandoff :
       HintQueue.replay? ((cpuQueuePath.filter (fun row => HostQueueCPUOrder.eventTime row < cpuTime 3)).map
         HostQueueHistory.event) hints = some (hints.drop 1) ∧
       HintQueue.replay? (cpuQueuePath.map HostQueueHistory.event) hints = some [] := by native_decide
+
+/-- The shared semantic decoder retains every physical queue action and erases the two ENTERs.
+This strengthens the handoff fixture with event contents; it still does not claim full Memory balance. -/
+theorem queueCPUProjection :
+    let rows := (HostCallLedger.activeRows (cpuInstructions cpuCalls)).reverse.map fun env =>
+      NativeCore.ExecutionRow.syscall (HostCallLedger.input env).instruction
+    let events := rows.map NativeCore.ExecutionRow.event
+    events.filterMap queueEvent? = cpuQueuePath.map HostQueueHistory.event ∧
+      events.all (fun event => match event with
+        | .ordinary => true
+        | .syscall call => call.rawCode != SyscallKind.write.code) = true ∧
+      HintQueue.replay? (events.filterMap queueEvent?) hints = some [] := by
+  simp only [List.map_map, Function.comp_def, NativeCore.ExecutionRow.event, syscallEventOfRow]
+  native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

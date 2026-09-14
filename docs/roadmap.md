@@ -458,8 +458,15 @@ Implemented foundations:
   preceding CPU prefix. No ordering or per-call current-head premise is supplied by the caller.
   The handoff regression uses 264-tick spacing, intervening ENTER calls, reversed/padded tables,
   and a 24-bit carry; changing the returned word at the same clock breaks full-call balance.
-  **Next:** prove this CPU-prefix queue replay agrees with the evolving whole-host state, alongside
-  mixed Memory grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
+  `HostQueueCurrent.source_current` now identifies those bytes with the actual host state after
+  successful replay of the preceding CPU prefix. Complete receiver accounting derives the absence
+  of WRITE in the installed registry and the exact semantic queue-action sequence.
+  `run_of_source_prefix` consumes this result in HINT_READ dispatch and padded-write coverage,
+  eliminating independent current-queue, store-extension, and record-authentication premises.
+  `length_of_source_prefix` derives HINT_LEN's actual current-host return without Memory guarantees.
+  Neither assumes successful execution of the current call or the remaining tape.
+  **Next:** derive the remaining Memory guarantees and current register observations through mixed
+  grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
   and use the already-required active 1-mod-8 clock profile; range-only source validation permits
@@ -635,8 +642,9 @@ Still required before the native capstone can be claimed:
    registered row effects and includes stateful HALT, leaving active SyscallInstrs effects explicit.
    The persistent hint-queue compiler covers all eight semantic calls. Fixed record providers,
    HINT_LEN/HINT_READ handlers, and verifier-owned queue endpoints now have an installed token-path
-   theorem and byte-exact queue-prefix history in actual CPU order. Prove that CPU-prefix byte
-   replay agrees with the evolving whole-host state, authenticate new nodes, and extend it to
+   theorem and byte-exact queue-prefix history in actual CPU order. `HostQueueCurrent` now proves
+   agreement with the actual replayed host, consumes it in HINT_READ dispatch, and derives the
+   HINT_LEN result. Integrate the remaining Memory/register currency, authenticate new nodes, and extend it to
    WRITE/hook prepends before claiming complete outgoing snapshot agreement.
    Parameterize the bank subsystem's currently zero genesis with the complete local source
    commitment/deferred values before installing it in arbitrary continuation shards.

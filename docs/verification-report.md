@@ -949,8 +949,14 @@ wrapper, and the queue clock sequence is a subsequence of every exhaustive CPU w
 theorem derives both paths, byte replay, and `CurrentQueues` from the installed constraints and
 balance. The latter recovers current bytes/frontier by replaying exactly those queue events whose
 CPU events precede the selected syscall. No caller-supplied ordering or current-head premise remains
-at this interface. Equality with the evolving whole-host state, authenticated allocation edges,
-mixed Memory grounding, and binding a claimed outgoing snapshot remain open.
+at this interface. `Soundness/HostQueueCurrent.lean` now proves that those bytes are the evolving
+host's hints after successful replay of the preceding CPU prefix. The complete receiver inventory
+excludes WRITE and identifies the full semantic queue-action sequence. The HINT_READ execution
+theorem consumes this equality, deriving current queue and record binding internally; its remaining
+semantic inputs are Memory guarantees and current register/running observations. The companion
+HINT_LEN theorem derives the actual host observation without Memory guarantees. These statements
+assume replay of the preceding prefix, not success of the current call or the remaining tape.
+Authenticated allocation edges, mixed Memory grounding, and outgoing snapshot binding remain open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an
@@ -962,15 +968,18 @@ event-clock requirement falls under the existing active 1-mod-8 compiler profile
 require rejecting zero-step identities at clock zero. `queueCPUHandoff` adds a physical-wrapper
 handoff check with 264-tick syscall spacing, two intervening ENTER calls, reversed tables, padding,
 and a 24-bit clock carry. It checks queue replay and rejects a changed full call despite unchanged
-clocks. This fixture still does not establish complete State or Memory balance.
+clocks. `queueCPUProjection` additionally checks the shared decoder's complete queue actions.
+`queueHostReplay` executes two consecutive HINT_READ calls against the actual paired host/Sail
+state, checking successive queues, overwritten RAM, the extra padding word, unrelated RAM/output,
+and failure of a third read on the empty queue. `queueWriteNeedsAllocation` checks why erasing
+WRITE would lose real prepends. These fixtures still do not establish complete State/Memory AIR balance.
 
 The extended assembly's automatic channel list retains duplicates. Repeating a balance
 requirement does not change the Lean relation, but this list fails the exporter's unique-name
 requirement. Exporting this assembly still needs a canonical channel inventory with proved
 coverage and name identity; no full-assembly export instance is claimed here.
 
-Full integration must identify the derived CPU-prefix queue bytes with the evolving host state
-and authenticate new WRITE/hook allocations, then incorporate host Memory transfers into mixed grounding with
+Full integration must authenticate new WRITE/hook allocations and incorporate host Memory transfers into mixed grounding with
 predecessor currency and complete outgoing-state agreement. The full HINT_LEN counterexample
 remains open.
 
