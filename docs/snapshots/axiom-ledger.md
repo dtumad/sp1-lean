@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2379 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 295 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2399 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 297 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2674 released declarations are probed.
+- 2696 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,37 +35,42 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The verifier-owned queue-boundary checkpoint adds 36 main declarations and one test anchor.
-Twenty-five main additions use subsets of the logical baseline; the other 11 have exactly the
-preceding installed ordering theorem's 100 dependencies. All preceding 2343 main and 294 test
-dependency sets are unchanged, with no removals or new main-library axiom names. The new
-compiler-trusted constant occurs only in `installedQueueEndpoints`.
+The byte-exact queue-history checkpoint adds 20 main declarations and two test anchors.
+Sixteen main additions use subsets of the logical baseline; the other four have exactly the
+preceding installed ordering theorem's 100 dependencies. All preceding 2379 main and 295 test
+dependency sets are unchanged, with no removals or new main-library axiom names. The two new
+compiler-trusted constants occur only in `physicalQueueHistory` and `queueReplayPrepends`.
 
-`ClosedVerifier` composes a closed circuit into an ensemble's verifier and represents that exact
-invocation as a derived singleton table. Raw constraints are equivalent in both representations,
-and every channel's complete interaction ledger is preserved up to permutation, hence balance
-and count bounds are equivalent. Static offset/environment transport laws are explicit in the
-interface; zero witness length alone would not justify them. The native constant endpoint circuit
-proves both laws and its soundness/completeness without additional axioms.
+`HostState.hintEvent_sound` derives successful semantic queue replay from every successful call
+in the existing eight-call interpreter. Events check HINT_LEN's observed word, HINT_READ's exact
+natural length, and complete ordered prepends. `HintQueueHistory.of_walk` lifts token continuity
+to byte replay and current head/frontier binding at every prefix, allowing stores to grow while
+preserving old nodes and remaining inside an authenticated upper inventory.
 
-`HostHintQueueBoundary.ensemble` retains every ordinary table and adds the source/final queue pair
-only in the verifier. `source_binding` derives the incoming cursor's binding to the complete source
-hints, including the allocation frontier, from a circuit-checked capacity bound.
-`source_queue_ordered` orders every actual HINT_READ and both HINT_LEN row from the installed AIR's
-constraints and balance alone. Its final cursor is fixed by the ensemble instance, not yet bound
-to the outgoing snapshot's bytes. Generic installation permits arbitrary resources; the present
-three-handler ordering theorem requires other resources to be queue-silent and therefore does
-not yet cover WRITE/hook allocation edges.
+`HostQueueHistory.records_of_witness` authenticates the actual node and word pulls of every
+physical HINT_LEN/HINT_READ row. Their local advancement restricts later records to the current
+frontier before observing or popping the head. `HostHintQueueHistory.source_history` instantiates
+the history engine from the verifier-owned source boundary, fixed record providers, constraints,
+and full balance. It needs no caller-supplied current-head or per-record binding premise.
+`terminal_bytes` identifies the final cursor's decoded queue with replay's remaining bytes;
+`History.current` supplies a current store/frontier when the host queue agrees with prefix replay.
 
-The earlier `source_queue_rows_nil` diagnosis remains true for the assembly without endpoints.
-`installedQueueEndpoints` checks that the actual verifier now closes queue balance, its singleton
-representation preserves record and queue accounting, duplicate handler chains and forged final
-heads/frontiers fail, and zero-event identities work. These are subsystem checks rather than full
-mixed-AIR non-vacuity witnesses. No complete outgoing snapshot or semantic head-history theorem is
-claimed. The next work is to propagate semantic queue truth, authenticate allocation edges, and
-bind final bytes; Memory predecessor currency, mixed grounding, and complete outgoing state also
-remain open. The full-AIR forged HINT_LEN regression and canonical export channel inventory remain
-unchanged.
+The generic history engine supports growing inventories; the installed instance still covers only
+HINT_READ and both HINT_LEN variants, with extra resources queue-silent. Alignment with the mixed
+CPU/host replay, authenticated WRITE/hook allocation edges, Memory predecessor currency, and
+complete outgoing snapshot agreement remain open. Identifying terminal reachable bytes is not
+itself a proof that a claimed outgoing snapshot contains those bytes.
+
+`physicalQueueHistory` decodes interleaved observations and pops from the actual handler tables,
+including empty hints and the empty queue. Forging both an observed length and its node metadata
+can preserve local assertions and token balance, but the fixed source lookup and semantic replay
+reject it. The second anchor checks prepends and the distinction between empty hints and no hint.
+These remain subsystem regressions rather than full mixed-AIR witnesses. The full-AIR forged
+HINT_LEN regression and canonical export channel inventory remain open.
+
+The preceding boundary checkpoint proved generic verifier/singleton equivalence for raw constraints
+and all-channel balance/count bounds, then installed the fixed initial/final queue-token pair once
+in the verifier. Its source binding and exhaustive token-path theorem remain unchanged.
 
 The preceding installed HINT_READ cursor/permission checkpoint added 24 main declarations and two test
 anchors. Six main additions use exactly the logical baseline; the other 18 have exactly the

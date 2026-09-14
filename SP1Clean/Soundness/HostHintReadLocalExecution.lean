@@ -25,7 +25,8 @@ private theorem eval_records (env : Environment (ZMod p)) (row : Var HostHintRea
   cases node
   simp only [HostHintReadChip.Inputs.endStep, circuit_norm, and_self]
 
-private theorem handler_records (env : Environment (ZMod p)) :
+/-- The actual handler pulls both its node header and its terminal word record. -/
+theorem handler_records (env : Environment (ZMod p)) :
     handler.operations.interactionValuesWith nodeChannel.toRaw env =
       [nodeChannel.pulledValue (input env).node] ∧
     handler.operations.interactionValuesWith wordChannel.toRaw env =

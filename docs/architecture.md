@@ -419,8 +419,8 @@ operation emits only three Byte requests; the enclosing host handler must authen
 bytes and publish the authorized node and queue transition. Equal lengths do not bind bytes.
 HINT_LEN's full host bridge keeps current-queue and node binding explicit;
 its constructor derives local completeness from successful execution and pointer/clock bounds.
-The components and their exact ledgers are closed, but mixed-ensemble installation, authorization
-of new WRITE/hook nodes, constrained complete HINT_READ word coverage, and derived head history remain open.
+The components and their exact ledgers are closed. The installed HINT_LEN/HINT_READ queue history
+is derived below; authorization of new WRITE/hook nodes and mixed CPU/Memory grounding remain open.
 Pointer bounds must enter the common resource profile; no content hash or trusted byte oracle is used.
 
 `HintQueueWordSource` now supplies original node contents within the bounded word-key domain
@@ -524,9 +524,10 @@ restricts each requested record to the call's current allocation frontier: the c
 the head and the actual cursor path fixes the consumers' node. `run_of_authenticated_witness`
 derives local specifications and individual bindings, then proves dispatch and the full padded
 write inventory. Current queue truth, extension into the authenticated store, actual Memory
-guarantees, and current register observations remain explicit. Ordered current-head history,
-WRITE/VERIFY handlers, authenticated queue resources, predecessor
-currency, and host RAM rows in mixed grounding remain required for complete outgoing state. Duplicating both sides balances the handoff
+guarantees, and current register observations remain explicit at this interface. Queue history is
+derived below; its alignment with the CPU/host timeline, WRITE/VERIFY handlers, authenticated
+allocation resources, predecessor currency, and host RAM rows in mixed grounding remain required
+for complete outgoing state. Duplicating both sides balances the handoff
 alone; the State walk supplies the missing event uniqueness.
 
 `HostQueueOrder` gives an exhaustive ordered path through the actual HINT_READ and both HINT_LEN
@@ -542,9 +543,17 @@ table proofs, with constraints and every channel's balance equivalent in both re
 The witness cannot omit or duplicate the derived boundary row. `source_queue_ordered` consequently
 needs only the new ensemble's constraints and balance to order all three queue-handler variants.
 The general installer retains arbitrary handlers/resources; the current ordering theorem requires
-other resources to be queue-silent, so it does not yet cover allocation edges. Binding the final
-cursor to the outgoing snapshot's bytes and deriving semantic head history remain open. The
-installed regressions still establish selected subsystems, not a complete mixed-AIR witness.
+other resources to be queue-silent, so it does not yet cover allocation edges.
+`HostHintQueueHistory.source_history` now derives byte-exact replay from those rows and current
+queue/frontier truth at every prefix. `History.current` exposes that binding for grounding when
+its host queue agrees with the prefix replay; `terminal_bytes` identifies the final reachable
+bytes. The semantic `HintQueue.Event` projection checks length observations and exact read lengths,
+and also supports complete prepends. Every successful call in the existing eight-call host
+interpreter produces a valid event. `HintQueueHistory.of_walk` supports growing stores and retains
+extension into an authenticated upper inventory, so the history engine does not assume static
+queues. The current installed instance still needs authenticated allocation rows, alignment with
+the complete CPU/host timeline, and binding to the claimed outgoing snapshot. Installed regressions
+establish selected subsystems, not a complete mixed-AIR witness.
 Positive handler clocks agree with the existing active 1-mod-8 profile; range-only validation can
 still admit zero-step identity segments at clock zero.
 

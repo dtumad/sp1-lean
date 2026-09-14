@@ -216,8 +216,9 @@ a persistent store restricts to the current frontier via
 cursor path fixes every consumer's pointer. `run_of_authenticated_witness` now derives local
 specifications and all individual record bindings before proving dispatch and complete padded
 writes. Its remaining inputs include current queue truth, persistent-store extension and source
-authentication, actual Memory guarantees, and current register observations. Current-head history,
-dynamic allocation authentication, predecessor currency, and mixed grounding remain open.
+authentication, actual Memory guarantees, and current register observations. Alignment with the
+CPU/host timeline, dynamic allocation authentication, predecessor currency, and mixed grounding
+remain open.
 `HostQueueOrder` and `HostHintReadLocalQueue` now derive the physical queue-token path and complete
 installed ledger for HINT_READ and both HINT_LEN variants. `source_queue_rows_nil` proves the old
 fixed-source assembly without endpoints cannot have active queue handlers. The new
@@ -227,14 +228,21 @@ cursor bound to the complete incoming hints and a fixed final cursor parameter. 
 singleton table. `source_queue_ordered` closes the token-path theorem from full constraints and
 balance, without separate endpoint or record-authentication premises. The installed regression
 checks queue balance, duplicate chains, forged final heads/frontiers, and zero-event identities;
-it remains a subsystem fixture. Outgoing snapshot binding and semantic head history are still open,
-as are WRITE/hook allocation edges; the current three-handler ordering theorem does not cover them.
+it remains a subsystem fixture. `HostHintQueueHistory.source_history` now derives complete byte
+replay and current head/frontier truth at every queue-path prefix from that AIR. HINT_LEN observations
+and exact HINT_READ lengths are checked by replay, and `terminal_bytes` identifies the remaining
+bytes decoded at the final cursor. `HintQueueHistory.of_walk` permits growing persistent stores;
+`HostState.hintEvent_sound` covers all eight successful semantic calls, including WRITE/hook
+prepends. The installed instance still covers only the three existing queue-handler variants.
+Alignment with the full CPU/host timeline, outgoing snapshot binding, and authenticated allocation
+edges remain open; no static-source-queue restriction is added to the full capstone objective.
 Active queue clocks are positive, consistent with the existing 1-mod-8 compiler-profile obligation;
 range-only source validation still permits zero-step identities.
 Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
-allocation-ledger node-word authentication for HINT_READ, and ordered head-history derivation. The shared resource profile
-must include the identity bounds; no static-source-queue assumption is admissible.
+allocation-ledger node-word authentication for HINT_READ, and integration of allocation edges and
+queue history with full execution. The shared resource profile must include the identity bounds;
+no static-source-queue assumption is admissible.
 The bank subsystem's zero genesis also needs generalization to the actual local source banks.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail

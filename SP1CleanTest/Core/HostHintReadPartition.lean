@@ -4,6 +4,8 @@ import SP1Clean.Soundness.HostHintReadLocalRecords
 import SP1Clean.Soundness.HostHintReadLocalExecution
 import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Soundness.HostHintQueueBoundary
+import SP1Clean.Soundness.HostHintQueueHistory
+import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -370,5 +372,59 @@ theorem installedQueueEndpoints :
         (withQueueBoundary hints { final with allocated := Address.ofNat 0 } calls rows nodes records).allTables) = false ∧
       HintReadFixtures.balanced (queueLedger (withQueueBoundary hints
         (SP1Clean.HostHintQueueBoundary.initial hints) [] [] [] []).allTables) = true := by native_decide
+
+private def lengthCall (head previous now : ℕ) : HostHintLengthChip.Inputs Fp :=
+  let store := (ofList hints).1
+  let queue := (decode? store head).getD []
+  let host : HostState := { io := ⟨queue, []⟩ }
+  let context : HostReadContext :=
+    ⟨fun index => if index == 5 then some 240
+      else if index == 10 || index == 11 then some 0 else none, fun _ => none⟩
+  let executed := (host.run ⟨{ readOnly := fun _ => false }, SP1Prime⟩ context).getD
+    ⟨.hintLength, 0, 0, 0, ⟨host, none⟩⟩
+  HostHintLengthChip.populate store head previous now executed
+
+private def historyTables (forge : Bool) : List (Table Fp) :=
+  let lengths := [lengthCall 3 0 1, lengthCall 2 9 273, lengthCall 1 281 545]
+  let lengths := if forge then lengths.map fun row =>
+      if row.call.clk_low == 273 then
+        { row with
+          call := { row.call with result := Soundness.Target.bitVecToWord 16 }
+          node := { row.node with length := Soundness.Target.bitVecToWord 16 } }
+      else row
+    else lengths
+  [handlers [call 1 545 553 65536, call 2 273 281 65536, call 3 1 9 65536],
+   Table.build ⟨HostHintLengthChip.circuit false⟩ lengths.reverse (fun _ _ => #[]) (ProverHint.empty Fp),
+   Table.build ⟨HostHintLengthChip.circuit true⟩ [lengthCall 0 553 817] (fun _ _ => #[]) (ProverHint.empty Fp)]
+
+private def historyPath (forge : Bool) : List (HostQueueOrder.Row (p := SP1Prime)) :=
+  (TransitionView.readIndexedRows HostQueueOrder.indices (historyTables forge)).mergeSort
+    (fun first second => HostQueueOrder.time (HostQueueOrder.edge first).2 ≤
+      HostQueueOrder.time (HostQueueOrder.edge second).2)
+
+/-- Replay consumes physically decoded observations/pops across both HINT_LEN variants.
+A stale length forged in both result and metadata passes local assertions and token balance,
+but fails source authentication and semantic replay. These are queue-subsystem fixtures. -/
+theorem physicalQueueHistory :
+    let boundary := (SP1Clean.HostHintQueueBoundary.closed hints (lengthCall 0 553 817).next).singleton
+      (fun _ _ => #[])
+    let stale := lengthCall 2 9 273
+    let forged := { stale.node with length := Soundness.Target.bitVecToWord 16 }
+    (historyTables false).all (fun table => (checked table).1) = true ∧
+      (historyTables true).all (fun table => (checked table).1) = true ∧
+      HintReadFixtures.balanced (queueLedger (boundary :: historyTables false)) = true ∧
+      HintReadFixtures.balanced (queueLedger (boundary :: historyTables true)) = true ∧
+      sourceRowsChecked hints [stale.node] [] = true ∧ sourceRowsChecked hints [forged] [] = false ∧
+      (historyPath false).length = 7 ∧
+      HintQueue.replay? ((historyPath false).map HostQueueHistory.event) hints = some [] ∧
+      HintQueue.replay? ((historyPath true).map HostQueueHistory.event) hints = none := by native_decide
+
+/-- Byte replay supports new allocations and distinguishes an empty hint from an empty queue. -/
+theorem queueReplayPrepends :
+    HintQueue.replay? [.prepend [[99]], .length 1, .read 1, .length 16] hints = some hints ∧
+      HintQueue.replay? [.prepend [[]], .length 0, .read 0, .length 16] hints = some hints ∧
+      HintQueue.replay? [.length (BitVec.allOnes 64)] [] = some [] ∧
+      HintQueue.replay? [.length 0] [] = none ∧
+      HintQueue.replay? [.read 0] [] = none := by native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

@@ -40,6 +40,29 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Byte-exact queue replay and installed prefix history.
+    ("SP1Clean/Model/Core/HintQueueEvent.lean", "Event.apply?"),
+    ("SP1Clean/Model/Core/HintQueueEvent.lean", "replay?"),
+    ("SP1Clean/Model/Core/HintQueueEvent.lean", "replay?_cons"),
+    ("SP1Clean/Model/Core/HintQueueEvent.lean", "replay?_append"),
+    ("SP1Clean/Model/Core/HintQueueEvent.lean", "HostState.hintEvent"),
+    ("SP1Clean/Model/Core/HintQueueEvent.lean", "HostState.hintEvent_sound"),
+    ("SP1Clean/Soundness/HintQueueHistory.lean", "Prefixes"),
+    ("SP1Clean/Soundness/HintQueueHistory.lean", "Advances"),
+    ("SP1Clean/Soundness/HintQueueHistory.lean", "of_walk"),
+    ("SP1Clean/Soundness/HostQueueHistory.lean", "event"),
+    ("SP1Clean/Soundness/HostQueueHistory.lean", "Records"),
+    ("SP1Clean/Soundness/HostQueueHistory.lean", "advance"),
+    ("SP1Clean/Soundness/HostQueueHistory.lean", "records_of_witness"),
+    ("SP1Clean/Soundness/HostHintQueueHistory.lean", "History"),
+    ("SP1Clean/Soundness/HostHintQueueHistory.lean", "History.current"),
+    ("SP1Clean/Soundness/HostHintQueueHistory.lean", "terminal_bytes"),
+    ("SP1Clean/Soundness/HostHintQueueHistory.lean", "of_witness"),
+    ("SP1Clean/Soundness/HostHintQueueHistory.lean", "source_history"),
+    ("SP1Clean/Soundness/HostHintQueueBoundary.lean", "source_authentication"),
+    ("SP1Clean/Soundness/HostHintReadLocalExecution.lean", "handler_records"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "physicalQueueHistory"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "queueReplayPrepends"),
     # Verifier-owned queue endpoints and exact singleton transport.
     ("ToClean/Air/VerifierExtension.lean", "singleton"),
     ("ToClean/Air/VerifierExtension.lean", "singleton_constraints"),

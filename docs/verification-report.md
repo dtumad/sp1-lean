@@ -747,9 +747,9 @@ constructs ordered prefixes with exact row count, checked cursor continuity, and
 endpoint representation under a capacity bound. The internal operation exports 212 witness cells
 and emits only three Byte requests. Byte authorization and node publication remain the enclosing
 handler's responsibility; a regression demonstrates the ambiguity of equal-length metadata.
-Mixed-AIR installation, new WRITE/hook node authorization, constrained complete HINT_READ
-word coverage, and ordered head-history derivation remain open. Pointer bounds must also enter the
-shared resource profile. The full-AIR forged HINT_LEN return counterexample is not yet closed.
+Installed queue history and HINT_READ word coverage are derived below. New WRITE/hook node
+and word authorization, alignment with the CPU/host timeline, and mixed Memory grounding remain
+open. Pointer bounds must also enter the shared resource profile. The full-AIR forged HINT_LEN return counterexample is not yet closed.
 
 Original hint contents now have a native fixed word provider computed from source hints.
 `HintQueueWords` and `HintQueueWordRecords` prove that the complete padded word cover plus the
@@ -934,9 +934,23 @@ laws, proved by the endpoint circuit; zero witness length alone would not imply 
 constraints and balance alone. `installedQueueEndpoints` checks the real verifier closes queue
 balance and its derived singleton preserves it, while duplicate chains, forged heads, and reset
 frontiers fail; the zero-event identity succeeds. These remain subsystem checks. No outgoing
-snapshot binding follows merely from fixing a final cursor. Semantic head history, authenticated
-WRITE/hook allocation edges, and final byte agreement remain open; the three-handler ordering
-theorem only applies when the other resources are queue-silent. The queue's positive
+snapshot binding follows merely from fixing a final cursor. The new
+`Soundness/HostHintQueueHistory.lean` now derives complete semantic queue replay from that same AIR.
+Its `source_history` theorem records head/frontier truth at every prefix and checks each observed
+length and consumed natural length. `terminal_bytes` proves the final cursor's decoded bytes equal
+replay's remaining queue. `History.current` exposes current-store binding for later grounding.
+The generic `HintQueueHistory.of_walk` permits persistent inventory growth; the model's
+`HostState.hintEvent_sound` covers all eight successful host calls, including complete WRITE/hook
+prepends. The installed instance only covers HINT_READ and the two HINT_LEN variants with other
+resources queue-silent. Aligning this queue history with the mixed CPU/host replay, authenticating
+allocation edges, and binding a claimed outgoing snapshot remain open.
+
+`physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
+clock, and replays interleaved length observations and reads, including an empty hint and an
+empty queue. A stale length forged in both return and metadata keeps local assertions and queue
+token balance satisfied but fails the source lookup and semantic replay. `queueReplayPrepends`
+checks allocation-compatible byte replay and the empty-hint/empty-queue distinction. These tests
+still do not construct a full mixed-AIR witness. The queue's positive
 event-clock requirement falls under the existing active 1-mod-8 compiler profile; it does not
 require rejecting zero-step identities at clock zero.
 
@@ -945,9 +959,9 @@ requirement does not change the Lean relation, but this list fails the exporter'
 requirement. Exporting this assembly still needs a canonical channel inventory with proved
 coverage and name identity; no full-assembly export instance is claimed here.
 
-Full integration must authenticate current-head history and new
-WRITE/hook allocations, then incorporate host Memory transfers into mixed grounding
-with predecessor currency and complete outgoing-state agreement. The full HINT_LEN counterexample
+Full integration must align the derived queue history with the CPU/host replay and authenticate
+new WRITE/hook allocations, then incorporate host Memory transfers into mixed grounding with
+predecessor currency and complete outgoing-state agreement. The full HINT_LEN counterexample
 remains open.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.

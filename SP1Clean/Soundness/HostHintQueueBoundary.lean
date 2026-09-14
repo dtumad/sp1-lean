@@ -164,6 +164,23 @@ theorem queue_ordered
   queue_ordered_of_endpoints (expanded witness) (expanded_interface interface) store authenticated
     (expanded_constraints witness constraints) (expanded_balanced witness balanced) _ _ (endpoints witness silent)
 
+/-- The fixed providers and the derived boundary authenticate all actual immutable-record sources. -/
+theorem source_authentication
+    (witness : EnsembleWitness (ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels))
+    (constraints : witness.Constraints) :
+    RecordAuthentication (expanded witness) (HintQueue.ofList source.host.io.hints).1 := by
+  apply record_authentication_of_components (expanded witness) _ _ (expanded_constraints witness constraints)
+  intro component member
+  have split : component ∈ (HostCallReceivers.available (p := p)).map (·.component) ++
+      sourceResources source.host.io.hints ∨ component = ⟨(boundary source final).circuit⟩ := by
+    simpa only [List.mem_append, List.mem_singleton, or_assoc] using member
+  rcases split with old | rfl
+  · exact source_record_sources source.host.io.hints _ (.refl _) component old
+  · constructor <;> apply Component.Authenticates.of_silent
+    · exact boundary_silent _ (by simp [nodeChannel, stateChannel, Channel.toRaw])
+    · exact boundary_silent _ (by simp [wordChannel, stateChannel, Channel.toRaw])
+
 /-- The implemented source/HINT_LEN/HINT_READ registration needs no record-authentication or
 endpoint premise from its caller. This is a token-path theorem, not yet semantic head history. -/
 theorem source_queue_ordered
@@ -175,16 +192,7 @@ theorem source_queue_ordered
       Walk.IsWalk HostQueueOrder.edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path := by
   apply queue_ordered witness (source_interface source.host.io.hints) (HintQueue.ofList source.host.io.hints).1
     _ _ constraints balanced
-  · apply record_authentication_of_components (expanded witness) _ _ (expanded_constraints witness constraints)
-    intro component member
-    have split : component ∈ (HostCallReceivers.available (p := p)).map (·.component) ++
-        sourceResources source.host.io.hints ∨ component = ⟨(boundary source final).circuit⟩ := by
-      simpa only [List.mem_append, List.mem_singleton, or_assoc] using member
-    rcases split with old | rfl
-    · exact source_record_sources source.host.io.hints _ (.refl _) component old
-    · constructor <;> apply Component.Authenticates.of_silent
-      · exact boundary_silent _ (by simp [nodeChannel, stateChannel, Channel.toRaw])
-      · exact boundary_silent _ (by simp [wordChannel, stateChannel, Channel.toRaw])
+  · exact source_authentication witness constraints
   · intro component member used
     have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
     simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at member
