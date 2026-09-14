@@ -203,6 +203,24 @@ theorem source_program_silent (source : ExecutionSnapshot) (final : HostHintQueu
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
   contradiction
 
+private theorem source_boundary_silent (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p))
+    (name : String) (boundary : name ∈ [SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName]) :
+    ∀ component ∈ (receiver :: HostCallReceivers.available).map (·.component) ++
+      (wordResources ++ (sourceResources source.host.io.hints ++ [⟨(HostHintQueueBoundary.boundary source final).circuit⟩])),
+      (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels := by
+  have checked : ((receiver (p := p) :: HostCallReceivers.available).map
+      (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
+      (wordResources ++ (sourceResources source.host.io.hints ++
+        [(⟨(HostHintQueueBoundary.boundary source final).circuit⟩ : Component (ZMod p))]))).all
+      (fun component => !(component.circuit.channels.map RawChannel.name).contains
+        (OrderedBoundary.channel (p := p) name).toRaw.name) = true := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at boundary
+    rcases boundary with rfl | rfl <;> rfl
+  intro component member used
+  have silent := List.all_eq_true.mp checked component member
+  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
+  contradiction
+
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
   {channels : List (RawChannel (ZMod p))}
 
@@ -326,5 +344,24 @@ theorem source_word_order (valid : image.Valid)
     norm_num
   have consumed := TypedInteraction.message_mem_consumedMessages interaction _ present negative
   simpa only [typed, TypedInteraction.pulledIfValue_message] using consumed
+
+/-- Both physical boundary inventories are unique on the installed assembly's own private
+ordering channels, giving the full host Memory ledger its per-location frontier equation. -/
+theorem source_memory_frontier_balance
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) (loc : MemLoc) :
+    TimedGrounding.optMS (LocalCore.memoryInitialFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc) +
+        Multiset.filter (fun message => MemoryMsg.locOf message = loc)
+          (↑(producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.expanded witness))) : Multiset _) =
+      TimedGrounding.optMS (LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc) +
+        Multiset.filter (fun message => MemoryMsg.locOf message = loc)
+          (↑(consumedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.expanded witness))) : Multiset _) :=
+  HostLocalCore.memory_frontier_balance (HostHintQueueBoundary.expanded witness)
+    (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints)))
+    (source_boundary_silent source final _ (List.mem_cons_self ..))
+    (source_boundary_silent source final _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
+    (HostHintQueueBoundary.expanded_constraints witness constraints)
+    (HostHintQueueBoundary.expanded_balanced witness balanced) (source_memoryBinary source final) loc
 
 end SP1Clean.Soundness.HostHintReadLocal

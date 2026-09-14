@@ -456,6 +456,16 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Soundness.HostHintReadCPU.source_execution_memory_balance
 #print axioms SP1Clean.Soundness.HostHintReadCPU.source_event_aligned
 #print axioms SP1Clean.Soundness.HostHintReadCPU.source_ordered_aligned_rows
+#print axioms SP1Clean.Soundness.LocalCore.ordered_rows_window_bound_of_orderingChannels
+#print axioms SP1Clean.Soundness.LocalCore.memoryRefreshes_push_bounds_of_byte
+#print axioms SP1Clean.Soundness.LocalCore.memoryRefreshes_order_of_bounds
+#print axioms SP1Clean.Soundness.LocalCore.finalTables_spec_of_byte
+#print axioms SP1Clean.Soundness.HostLocalCore.localWitness_other
+#print axioms SP1Clean.Soundness.HostLocalCore.memory_frontier_balance
+#print axioms SP1Clean.Soundness.HostHintReadLocal.source_memory_frontier_balance
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_memory_chronology
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_ordered_memory_rows
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_memory_refresh_free
 #print axioms List.flatMap_filter_key_perm
 #print axioms SP1Clean.Soundness.HostHintReadWrites.writes_of_records
 #print axioms SP1Clean.Soundness.HostHintReadLocal.consumer_word_binding

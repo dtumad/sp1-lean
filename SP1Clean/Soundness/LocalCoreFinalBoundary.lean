@@ -33,9 +33,10 @@ def finalWitness {image : ProgramImage} {source : ExecutionSnapshot}
       exact witness.same_data table (List.mem_of_mem_drop member))
 
 /-- Finalizer contracts follow before any Memory guarantees or execution facts are available. -/
-theorem finalTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
+theorem finalTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints)
+    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ table ∈ (finalWitness witness).tables.take (FinalMemoryEnsemble.inventory (p := p)).views.length,
       table.Spec := by
   intro table member row rowMem
@@ -47,11 +48,20 @@ theorem finalTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
   have tableMem : table ∈ witness.allTables :=
     witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop (List.mem_of_mem_take member))
-  have byte := (finishedChannel_guarantees image source witness constraints balanced table tableMem).1 row rowMem
+  have byte := bytes table tableMem row rowMem
   have checked := constraints table tableMem row rowMem
   rw [← same] at byte checked ⊢
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
   exact FinalMemoryEnsemble.view_spec id _ checked byte
+
+/-- The complete local AIR closes the finalizers' Byte requirements. -/
+theorem finalTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ table ∈ (finalWitness witness).tables.take (FinalMemoryEnsemble.inventory (p := p)).views.length,
+      table.Spec :=
+  finalTables_spec_of_byte witness constraints
+    (fun table member => (finishedChannel_guarantees image source witness constraints balanced table member).1)
 
 /-- Every consumed final record has a canonical location, independently of its value and clock. -/
 theorem final_records_canonical {image : ProgramImage} {source : ExecutionSnapshot}

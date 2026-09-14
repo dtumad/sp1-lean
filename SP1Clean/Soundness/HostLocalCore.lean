@@ -216,35 +216,37 @@ theorem localWitness_state {image : ProgramImage} {source : ExecutionSnapshot}
       simp [stateChannel, WritePermissionProvider.channel, Channel.toRaw]
     · exact interface.state table.component extra
 
-private theorem component_program (image : ProgramImage) (source : ExecutionSnapshot)
-    (auxiliary : List (Component (ZMod p))) (index : Fin 59) :
-    ((LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)).operations.interactionsWith programChannel.toRaw =
-      ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).operations.interactionsWith programChannel.toRaw := by
+private theorem component_other_interactions (image : ProgramImage) (source : ExecutionSnapshot)
+    (auxiliary : List (Component (ZMod p))) (index : Fin 59) (channel : RawChannel (ZMod p))
+    (notByte : channel ≠ byteChannel.toRaw) (notMemory : channel ≠ memoryChannel.toRaw)
+    (notCall : channel ≠ HostCallChip.channel.toRaw) (notPermission : channel ≠ WritePermissionProvider.channel.toRaw) :
+    ((LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)).operations.interactionsWith channel =
+      ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).operations.interactionsWith channel := by
   rw [core_component]
   by_cases wrapper : 58 = index.val
   · have same : index = ⟨58, by decide⟩ := Fin.ext wrapper.symm
     subst index
     simp only [↓reduceIte]
-    exact HostCallProjection.other_interactions programChannel.toRaw
-      (by simp [programChannel, byteChannel, Channel.toRaw])
-      (by simp [programChannel, memoryChannel, Channel.toRaw])
-      (by simp [programChannel, HostCallChip.channel, Channel.toRaw])
+    exact HostCallProjection.other_interactions channel notByte notMemory notCall
   · rw [if_neg wrapper]
-    exact ((ProtectedLocalCore.component_projection (p := p) image source index).2.2 programChannel.toRaw
-      (by simp [programChannel, WritePermissionProvider.channel, Channel.toRaw])).symm
+    exact ((ProtectedLocalCore.component_projection (p := p) image source index).2.2 channel notPermission).symm
 
-/-- The full Program ledger survives projection when host auxiliaries do not emit fetches.
-This preserves its count bound without projecting the extended Byte or Memory balance. -/
-theorem localWitness_program {image : ProgramImage} {source : ExecutionSnapshot}
+/-- Channels untouched by the host wrappers retain their complete ledger when the appended
+components are silent. This includes Program and both private Memory-boundary ordering channels. -/
+theorem localWitness_other {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble image source auxiliary channels))
-    (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels) :
-    (localWitness witness).interactionsWith programChannel.toRaw = witness.interactionsWith programChannel.toRaw := by
+    (channel : RawChannel (ZMod p))
+    (notByte : channel ≠ byteChannel.toRaw) (notMemory : channel ≠ memoryChannel.toRaw)
+    (notCall : channel ≠ HostCallChip.channel.toRaw) (notPermission : channel ≠ WritePermissionProvider.channel.toRaw)
+    (silent : ∀ component ∈ auxiliary, channel ∉ component.circuit.channels) :
+    (localWitness witness).interactionsWith channel = witness.interactionsWith channel := by
   apply witness.project_interactions (target := LocalCore.ensemble image source)
-    (projectionLength image source auxiliary channels) rfl programChannel.toRaw ?_ ?_
+    (projectionLength image source auxiliary channels) rfl channel ?_ ?_
   · intro index
-    exact component_program image source auxiliary ⟨index.val, by
-      simpa only [LocalCore.ensemble, LocalCore.tables_length] using index.isLt⟩
+    exact component_other_interactions image source auxiliary ⟨index.val, by
+      simpa only [LocalCore.ensemble, LocalCore.tables_length] using index.isLt⟩ channel
+      notByte notMemory notCall notPermission
   · change (witness.tables.drop (LocalCore.tables image source).length).flatMap _ = []
     rw [LocalCore.tables_length]
     apply List.flatMap_eq_nil_iff.mpr
@@ -256,9 +258,22 @@ theorem localWitness_program {image : ProgramImage} {source : ExecutionSnapshot}
     apply table.interactionsWith_nil_of_channel_not_mem
     rcases List.mem_cons.mp mapped with same | extra
     · rw [same]
-      change programChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
-      simp [programChannel, WritePermissionProvider.channel, Channel.toRaw]
+      change channel ∉ [WritePermissionProvider.channel.toRaw]
+      simpa only [List.mem_singleton] using notPermission
     · exact silent table.component extra
+
+/-- The full Program ledger survives projection when host auxiliaries do not emit fetches.
+This preserves its count bound without projecting the extended Byte or Memory balance. -/
+theorem localWitness_program {image : ProgramImage} {source : ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels) :
+    (localWitness witness).interactionsWith programChannel.toRaw = witness.interactionsWith programChannel.toRaw :=
+  localWitness_other witness programChannel.toRaw
+    (by simp [programChannel, byteChannel, Channel.toRaw])
+    (by simp [programChannel, memoryChannel, Channel.toRaw])
+    (by simp [programChannel, HostCallChip.channel, Channel.toRaw])
+    (by simp [programChannel, WritePermissionProvider.channel, Channel.toRaw]) silent
 
 /-- Raw constraints and the extended ensemble's own balance supply exactly the facts chronology uses. -/
 theorem orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}

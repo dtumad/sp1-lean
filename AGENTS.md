@@ -274,8 +274,13 @@ complete source/final record balance for the enlarged rows and actual refresh pa
 source registry derives its zero gate. `source_ordered_aligned_rows` derives an exhaustive CPU walk
 with aligned register/RAM touches and unchanged complete Memory aggregates. Call ownership and
 authenticated ECALL operands separate the original register touches from the added RAM footprint.
-The source assembly supplies these facts without prior Memory guarantees or successful replay
-premises. Refresh elimination, predecessor value currency, and the mixed grounding walk remain open.
+`HostHintReadMemoryOrder` transfers both clock bounds through the complete record balance and
+derives strict order for every actual refresh. The unchanged private boundary ledgers derive
+unique source/final frontiers; `source_memory_refresh_free` then eliminates refreshes while
+retaining every CPU/host touch and preserving prior/final values and locations. It reuses
+`LocalCore.MemoryChronology` and the existing refresh algorithm. The source assembly supplies
+these facts without prior Memory guarantees or successful replay premises. Semantic transport
+through the rewritten rows, predecessor value currency, and the mixed grounding walk remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

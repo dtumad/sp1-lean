@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2513 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2523 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 302 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2815 released declarations are probed.
+- 2825 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,17 +35,16 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The CPU Memory-accounting and alignment integration adds seventeen main declarations: three use the logical
-baseline, three retain the existing 77-dependency execution-view set, and eleven retain the installed
-assembly's existing 100-dependency set. All preceding 2496 main and 302 test dependency sets are
-unchanged, with no removals or new axiom names. `HostHintReadCPU.source_execution_memory_balance`
-absorbs the actual hint words into their CPU events and proves complete source/final record
-conservation, retaining real refreshes. The general decomposition retains WRITE's x12 pair; the
-installed source registry derives its zero gate. `source_ordered_aligned_rows` additionally constructs
-the exhaustive CPU walk with aligned combined register/RAM touches and unchanged complete Memory
-aggregates. These results assume neither successful replay nor prior Memory guarantees. Refresh
-elimination, predecessor value truth, and complete host execution grounding remain open. The preceding grouping regression's
-compiler-trusted constant remains confined to the test library.
+The host refresh integration adds ten main declarations, all retaining the installed assembly's
+existing 100-dependency set. All preceding 2513 main and 302 test dependency sets are unchanged,
+with no removals or new axiom names. `HostHintReadCPU.source_memory_chronology` derives both prior
+and final clock bounds and strict refresh order from the complete ledger, including host RAM.
+The unchanged private boundary ordering channels supply unique source/final frontiers.
+`source_memory_refresh_free` applies the existing refresh algorithm to the enlarged CPU rows;
+every touch survives, and rewritten priors/final records preserve values and locations while
+moving clocks earlier. No instruction-only Memory balance, prior Memory truth, or caller
+chronology is assumed. Semantic transport through the rewritten rows, predecessor value truth,
+and complete host execution grounding remain open.
 
 The preceding host Program/register integration added seven main declarations: two use the logical baseline,
 and five retain the installed assembly's existing 100-dependency set. All preceding 2452 main

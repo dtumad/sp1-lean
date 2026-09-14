@@ -500,8 +500,13 @@ Implemented foundations:
   CPU walk with combined register/RAM alignment and unchanged complete Memory aggregates. Actual
   call ownership and authenticated ECALL operands establish the disjoint footprints; the existing
   per-location chain law then survives their combination.
-  **Next:** transport boundary and refresh facts from the complete ledger, eliminate refreshes,
-  and use the enlarged footprint in the existing Memory grounding walk. Derive
+  `HostHintReadMemoryOrder` now derives both prior/final clock bounds and strict refresh order
+  from the complete ledger. Only State/Byte facts and unchanged private boundary channels are
+  projected. Their ordering balance supplies unique source/final frontiers, and
+  `source_memory_refresh_free` eliminates actual refreshes using the existing algorithm while
+  preserving every CPU/host touch and prior/final values and locations.
+  **Next:** transport semantic facts through these rewritten rows and use the enlarged footprint
+  in the existing Memory grounding walk. Derive
   predecessor currency and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments

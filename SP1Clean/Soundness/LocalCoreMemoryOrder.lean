@@ -21,9 +21,9 @@ local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- Every active event's complete access window precedes the public final clock. -/
-theorem ordered_rows_window_bound {image : ProgramImage} {source : ExecutionSnapshot}
+theorem ordered_rows_window_bound_of_orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (ordering : OrderingChannels witness)
     (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered) :
@@ -31,20 +31,32 @@ theorem ordered_rows_window_bound {image : ProgramImage} {source : ExecutionSnap
       StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) := by
   have bounded := (walk_rank_bound _ StateMsg.timeNat walk (by
     intro row member
-    have good := executionRows_good witness constraints balanced (exhaustive.mem_iff.mp member)
+    have good := executionRows_good_of_orderingChannels witness constraints ordering (exhaustive.mem_iff.mp member)
     dsimp only [ExecutionRow.canonEdge]
     rw [timeNat_canonState good.1.1, timeNat_canonState good.2.1]
-    exact (executionRows_advancing witness constraints balanced (exhaustive.mem_iff.mp member)).1.1.le)).2
+    exact (executionRows_advancing_of_orderingChannels witness constraints ordering (exhaustive.mem_iff.mp member)).1.1.le)).2
   intro row member
   have upper := bounded row member
-  have good := executionRows_good witness constraints balanced (exhaustive.mem_iff.mp member)
+  have good := executionRows_good_of_orderingChannels witness constraints ordering (exhaustive.mem_iff.mp member)
   dsimp only [ExecutionRow.canonEdge] at upper
   rw [timeNat_canonState good.2.1] at upper
-  have step := (executionRows_advancing witness constraints balanced (exhaustive.mem_iff.mp member)).2
+  have step := (executionRows_advancing_of_orderingChannels witness constraints ordering (exhaustive.mem_iff.mp member)).2
   have duration : 8 ≤ row.duration := by cases row <;> norm_num [ExecutionRow.duration]
   rw [ExecutionRow.edge_eq_facts] at step upper
   dsimp only at step upper
   omega
+
+/-- The complete local AIR supplies the State/Byte inputs to the window bound. -/
+theorem ordered_rows_window_bound {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (ordered : List (ExecutionRow p)) (exhaustive : ordered.Perm (executionRows witness))
+    (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
+      (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered) :
+    ∀ row ∈ ordered, StateMsg.timeNat (row.facts witness.data).statePull + 8 ≤
+      StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) :=
+  ordered_rows_window_bound_of_orderingChannels witness constraints
+    (orderingChannels_of_balanced witness constraints balanced) ordered exhaustive walk
 
 /-- Strict State progress and the stopped-source verifier condition exclude every active
 ordinary, HALT, and syscall occurrence. Padding and administrative rows remain admissible. -/
@@ -69,9 +81,10 @@ theorem executionRows_nil_of_stopped {image : ProgramImage} {source : ExecutionS
     omega
 
 /-- Every actual MemoryBump push has canonical clock limbs, before any received Memory fact. -/
-theorem memoryRefreshes_push_bounds {image : ProgramImage} {source : ExecutionSnapshot}
+theorem memoryRefreshes_push_bounds_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints)
+    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.2 := by
   intro pair member
   obtain ⟨row, rowMem, pairMem⟩ := List.mem_flatMap.mp member
@@ -80,8 +93,16 @@ theorem memoryRefreshes_push_bounds {image : ProgramImage} {source : ExecutionSn
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   exact memoryBump_pushedMessage_clkFacts_of_component _ (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
-    (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 0)).1
+    (bytes _ (systemTable_mem witness 0))
     physicalMem (of_decide_eq_true real)
+
+/-- The complete local AIR supplies the Byte bounds of all physical refresh pushes. -/
+theorem memoryRefreshes_push_bounds {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.2 :=
+  memoryRefreshes_push_bounds_of_byte witness constraints
+    (orderingChannels_of_balanced witness constraints balanced).byte
 
 private theorem aligned_push_bounds {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
@@ -136,7 +157,8 @@ theorem memory_consumed_bounds {image : ProgramImage} {source : ExecutionSnapsho
 -- decoded row through those bounds otherwise forces expensive circuit normalization.
 private theorem active_refresh_order {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints)
+    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
     {row : MemoryBumpChip.Inputs (ZMod p)}
     (member : row ∈ activeSystemRows (systemTable witness 0) memoryBumpRow (·.is_real)) :
     MemoryClockBounds (MemoryBumpChip.pulledMessage row) →
@@ -145,19 +167,22 @@ private theorem active_refresh_order {image : ProgramImage} {source : ExecutionS
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   exact memoryBump_row_order _ (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
-    (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 0)).1
+    (bytes _ (systemTable_mem witness 0))
     physicalMem (of_decide_eq_true real)
 
-private theorem refresh_order_of_bounds {image : ProgramImage} {source : ExecutionSnapshot}
+/-- Byte-checked refresh comparisons become strict natural-time order once the enclosing
+Memory ledger bounds their actual prior records. -/
+theorem memoryRefreshes_order_of_bounds {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints)
+    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
     (prior : ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.1) :
     ∀ pair ∈ memoryRefreshes witness, MemoryMsg.timeNat pair.1 < MemoryMsg.timeNat pair.2 := by
   intro pair member
   have bounds := prior pair member
   obtain ⟨row, rowMem, pairMem⟩ := List.mem_flatMap.mp member
   obtain rfl := List.mem_singleton.mp pairMem
-  exact active_refresh_order witness constraints balanced rowMem bounds
+  exact active_refresh_order witness constraints bytes rowMem bounds
 
 /-- The complete local chronology supplied to the mixed-row grounding engine. Clock facts on
 priors and final records are conclusions of balance, separate from their eventual value truth. -/
@@ -189,7 +214,8 @@ theorem ordered_rows_chronology {image : ProgramImage} {source : ExecutionSnapsh
     intro pair pairMem
     exact consumed (MemoryMsg.locOf pair.1) pair.1 (Multiset.mem_add.mpr (Or.inr
       (Multiset.mem_filter.mpr ⟨Multiset.mem_coe.mpr (List.mem_map_of_mem pairMem), rfl⟩)))
-  refine ⟨?_, prior, refreshPrior, ?_, refresh_order_of_bounds witness constraints balanced refreshPrior⟩
+  refine ⟨?_, prior, refreshPrior, ?_, memoryRefreshes_order_of_bounds witness constraints
+    (orderingChannels_of_balanced witness constraints balanced).byte refreshPrior⟩
   · intro row rowMem
     obtain ⟨original, originalMem, aligned⟩ := forall₂_exists_right alignment row rowMem
     obtain ⟨event, eventMem, rfl⟩ := List.mem_map.mp originalMem

@@ -1004,8 +1004,15 @@ projection. Future WRITE installation must retain its active pair. `source_order
 derives an exhaustive CPU walk with aligned combined touches and unchanged complete Memory
 aggregates. Word ownership identifies each nonempty group with its actual syscall; authenticated
 ECALL operands restrict the original footprint to registers, disjoint from those RAM words.
-The existing per-location chain rule therefore applies to the enlarged rows. Refresh elimination,
-previous-value truth, and the mixed grounding walk remain open.
+The existing per-location chain rule therefore applies to the enlarged rows.
+`Soundness/HostHintReadMemoryOrder.lean` bounds both limbs of prior and final clocks from the
+complete host Memory balance and derives strict refresh order. The unchanged private boundary
+ledgers independently establish unique source/final records. `source_memory_refresh_free` uses
+the existing refresh algorithm and `LocalCore.MemoryChronology`: it retains every CPU/host touch
+and rewrites priors and final records only to equal-value, same-location records at no-later times.
+No instruction-only Memory balance, caller chronology, or prior Memory truth is assumed.
+Semantic transport through the rewritten rows, previous-value truth, and the mixed grounding
+walk remain open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an
