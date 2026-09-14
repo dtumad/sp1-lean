@@ -3,12 +3,10 @@ import SP1Clean.Soundness.LocalCoreEventUniqueness
 
 /-! # Instruction clock uniqueness at the host handoff
 
-Projection of the wrapper's physical active rows onto the local assembly's actual syscall
-inventory transfers the proved CPU clock uniqueness. The projection is an explicit installation
-seam: the current local ensemble still registers the original syscall component.
-The local-witness corollary assumes that ensemble's complete balance. Installation of active
-host RAM effects must reuse State/Byte chronology directly: dropping effect tables does not
-in general preserve the original ensemble's Memory balance.
+Projection of the wrapper's physical active rows transfers the proved CPU clock uniqueness.
+The primary theorem consumes only State balance and Byte guarantees; the older complete-balance
+corollary remains available. `HostLocalCore` installs the wrapper and proves this physical
+projection internally, retaining all host RAM effects in the extended Memory ledger.
 -/
 
 namespace SP1Clean.Soundness.LocalCore
@@ -22,19 +20,30 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 
 /-- Exact active-row projection identifies every wrapper call with a distinct actual CPU event.
 It neither assumes handler uniqueness nor changes the local shard's arbitrary endpoints. -/
-theorem hostCalls_clocks_nodup {image : ProgramImage} {source : ExecutionSnapshot}
+theorem hostCalls_clocks_nodup_of_orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (channels : OrderingChannels witness)
     (table : Table (ZMod p))
     (projected : ((HostCallLedger.activeRows table).map fun env => (HostCallLedger.input env).instruction) =
       activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
     ((HostCallLedger.calls table).map HostCallLedger.clock).Nodup := by
-  have unique := executionRows_clocks_nodup witness constraints balanced
+  have unique := executionRows_clocks_nodup_of_orderingChannels witness constraints channels
   simp only [executionRows, List.map_append, List.map_map, Function.comp_def] at unique
   have syscalls := (List.nodup_append.mp unique).2.1
   rw [← projected] at syscalls
   simpa only [HostCallLedger.calls, List.map_map, Function.comp_def, ExecutionRow.edge,
     SyscallInstrsChip.statePulledMessage, HostCallLedger.clock, HostCallLedger.call,
     HostCallChip.Inputs.message] using syscalls
+
+/-- Complete channel balance supplies the smaller ordering interface. -/
+theorem hostCalls_clocks_nodup {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (table : Table (ZMod p))
+    (projected : ((HostCallLedger.activeRows table).map fun env => (HostCallLedger.input env).instruction) =
+      activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
+    ((HostCallLedger.calls table).map HostCallLedger.clock).Nodup :=
+  hostCalls_clocks_nodup_of_orderingChannels witness constraints
+    (orderingChannels_of_balanced witness constraints balanced) table projected
 
 end SP1Clean.Soundness.LocalCore

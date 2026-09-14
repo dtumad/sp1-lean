@@ -407,6 +407,8 @@ import SP1Clean.Soundness.HostHintReadCoverage
 import SP1Clean.Soundness.HostHintReadWrites
 import SP1Clean.Soundness.HostHintReadPartition
 import SP1Clean.Soundness.HostCallLedger
+import SP1Clean.Soundness.HostCallProjection
+import SP1Clean.Soundness.HostLocalCore
 import SP1Clean.Soundness.HostCallOrder
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate

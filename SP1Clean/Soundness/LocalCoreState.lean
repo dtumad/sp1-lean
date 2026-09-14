@@ -183,9 +183,9 @@ private theorem instruction_selector_binary {image : ProgramImage} {source : Exe
     (instructionRows_constraints witness constraints row member)
 
 /-- State selectors are signed units or zero throughout the combined witness. -/
-theorem state_signedBinary {image : ProgramImage} {source : ExecutionSnapshot}
+theorem state_signedBinary_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
   rw [state_interactions]
@@ -197,7 +197,7 @@ theorem state_signedBinary {image : ProgramImage} {source : ExecutionSnapshot}
   · exact statePairs_signedBinary _ _ _
       (stateBumpRow_binary _ (systemTable_component witness 1)
         (systemTable_constraints witness constraints 1)
-        (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 1)).1)
+        (byte _ (systemTable_mem witness 1)))
       interaction bump
   · exact statePairs_signedBinary _ _ _
       (haltRow_binary _ (systemTable_component witness 2) (systemTable_constraints witness constraints 2))
@@ -217,21 +217,21 @@ private noncomputable def activeStateEdges {image : ProgramImage} {source : Exec
 
 private theorem activeStateEdges_balance {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (channels : OrderingChannels witness) :
     RankedGrounding.EndpointBalanced (↑(activeStateEdges witness)) id
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) := by
   classical
   have raw : BalancedInteractions ((typedEnsembleInteractionsWith witness stateChannel).map TypedInteraction.raw) := by
     rw [typedEnsembleInteractionsWith_raw]
-    exact balanced _ (by simp [ensemble, sp1Ensemble_channels])
+    exact channels.state
   have pairs := Multiset.coe_eq_coe.mpr (producedMessages_perm_consumedMessages _ raw
-    (state_signedBinary witness constraints balanced))
+    (state_signedBinary_of_byte witness constraints channels.byte))
   have ordinary := statePairs_projection _ _ (decodedStateEdge witness.data) (instruction_selector_binary witness constraints)
   have bump := statePairs_projection _ _ (fun physical =>
     let row := stateBumpRow (systemTable witness 1) physical
     (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row)) (stateBumpRow_binary _ (systemTable_component witness 1)
     (systemTable_constraints witness constraints 1)
-    (finishedChannel_guarantees image source witness constraints balanced _ (systemTable_mem witness 1)).1)
+    (channels.byte _ (systemTable_mem witness 1)))
   have halt := statePairs_projection _ _ (fun physical =>
     let row := haltRow (systemTable witness 2) physical
     (HaltChip.statePulledMessage row, HaltChip.statePushedMessage row))
@@ -250,9 +250,9 @@ private theorem activeStateEdges_balance {image : ProgramImage} {source : Execut
     ← Multiset.cons_coe] using pairs
 
 /-- Complete raw State balance on the mixed row inventory and actual canonicalization rows. -/
-theorem state_endpointBalanced {image : ProgramImage} {source : ExecutionSnapshot}
+theorem state_endpointBalanced_of_orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (channels : OrderingChannels witness) :
     RankedGrounding.EndpointBalanced
       ((↑((executionRows witness).map (ExecutionRow.edge witness.data)) : Multiset _) +
         (↑((stateBumps witness).map (fun row => (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row))) : Multiset _))
@@ -264,6 +264,24 @@ theorem state_endpointBalanced {image : ProgramImage} {source : ExecutionSnapsho
       Function.comp_def, ExecutionRow.edge, ← Multiset.coe_add]
     ac_rfl
   rw [← equal]
-  exact activeStateEdges_balance witness constraints balanced
+  exact activeStateEdges_balance witness constraints channels
+
+/-- Complete witnesses supply the Byte facts used to decode State multiplicities. -/
+theorem state_signedBinary {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
+      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 :=
+  state_signedBinary_of_byte witness constraints (orderingChannels_of_balanced witness constraints balanced).byte
+
+/-- Complete witnesses supply the State/Byte interface used by endpoint accounting. -/
+theorem state_endpointBalanced {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    RankedGrounding.EndpointBalanced
+      ((↑((executionRows witness).map (NativeCore.ExecutionRow.edge witness.data)) : Multiset _) +
+        (↑((stateBumps witness).map (fun row => (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row))) : Multiset _))
+      id (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) :=
+  state_endpointBalanced_of_orderingChannels witness constraints (orderingChannels_of_balanced witness constraints balanced)
 
 end SP1Clean.Soundness.LocalCore

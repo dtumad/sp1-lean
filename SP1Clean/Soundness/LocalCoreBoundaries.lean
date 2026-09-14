@@ -127,18 +127,26 @@ theorem source_memory_interactions {image : ProgramImage} {source : ExecutionSna
 
 /-- Public endpoints are canonical, the incoming token matches the full source, and its finite
 program, platform, initialization, ROM, and range checks pass without caller-supplied truth. -/
-theorem public_contract {image : ProgramImage} {source : ExecutionSnapshot}
+theorem public_contract_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (byte : witness.verifierTable.ChannelGuarantees byteChannel.toRaw) :
     witness.publicInput.LimbBounds ∧ ExecutionSourceValid image source ∧
       witness.publicInput.SourceFor source ∧ witness.publicInput.PreservesStoppedClock source := by
   have spec : witness.verifierTable.Spec := by
     intro row member
     exact NativeCore.component_spec_of_byte (⟨verifier image source⟩ : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
       (constraints _ witness.mem_allTables_verifierTable row member)
-      ((finishedChannel_guarantees image source witness constraints balanced _
-        witness.mem_allTables_verifierTable).1 row member)
+      (byte row member)
   exact EnsembleWitness.verifierSpec_iff_verifierTable_spec.mpr spec
+
+/-- The complete witness supplies the verifier's Byte guarantees. -/
+theorem public_contract {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    witness.publicInput.LimbBounds ∧ ExecutionSourceValid image source ∧
+      witness.publicInput.SourceFor source ∧ witness.publicInput.PreservesStoppedClock source :=
+  public_contract_of_byte witness constraints
+    ((finishedChannel_guarantees image source witness constraints balanced _ witness.mem_allTables_verifierTable).1)
 
 /-- Canonical public endpoints, complete source validity, and incoming-state binding. -/
 theorem public_boundary {image : ProgramImage} {source : ExecutionSnapshot}

@@ -7,7 +7,33 @@ their physical rows. An extension that adds only interactions needs this transpo
 prefix to its original components, prove preservation of assertions and lookups, and compare each
 retained channel's exact ledger. Neither row validity nor channel balance is assumed by the
 constructor. The lemmas below expose the corresponding proof obligations over opaque components.
+Pointwise constraint and channel-guarantee transports also support extensions that add witness
+cells or requirements. Individual channels can be retained without projecting global balance.
 -/
+
+namespace Operations
+
+variable {F : Type} [FiniteField F]
+
+/-- Retaining a subset of one channel's actual interactions retains its local guarantees. -/
+theorem channelGuarantees_of_interactionsWith_subset (original extended : Operations F)
+    (channel : RawChannel F) (subset : original.interactionsWith channel ⊆ extended.interactionsWith channel)
+    (env : Environment F) (guarantees : extended.ChannelGuarantees channel env) :
+    original.ChannelGuarantees channel env := by
+  intro interaction member same
+  have selected : interaction ∈ original.interactionsWith channel := List.mem_filter.mpr ⟨member, by simp [same]⟩
+  exact guarantees interaction (List.mem_filter.mp (subset selected)).1 same
+
+/-- The corresponding transport for local channel requirements. -/
+theorem channelRequirements_of_interactionsWith_subset (original extended : Operations F)
+    (channel : RawChannel F) (subset : original.interactionsWith channel ⊆ extended.interactionsWith channel)
+    (env : Environment F) (requirements : extended.ChannelRequirements channel env) :
+    original.ChannelRequirements channel env := by
+  intro interaction member same
+  have selected : interaction ∈ original.interactionsWith channel := List.mem_filter.mpr ⟨member, by simp [same]⟩
+  exact requirements interaction (List.mem_filter.mp (subset selected)).1 same
+
+end Operations
 
 namespace Air.Flat
 
@@ -29,6 +55,20 @@ theorem Table.withComponent_interactions (table : Table F) (component : Componen
       table.component.operations.interactionsWith channel) :
     (table.withComponent component).interactionsWith channel = table.interactionsWith channel := by
   simp only [interactionsWith, withComponent, environment, Operations.interactionValuesWith, same]
+
+/-- A stronger component can project constraints without equality of assertion lists. -/
+theorem Table.withComponent_constraints_of (table : Table F) (component : Component F)
+    (preserves : ∀ env, table.component.operations.ConstraintsHold env → component.operations.ConstraintsHold env)
+    (constraints : table.Constraints) : (table.withComponent component).Constraints :=
+  fun row member => preserves _ (constraints row member)
+
+/-- Local channel guarantees transport independently of the table's multiplicities on that channel. -/
+theorem Table.withComponent_channelGuarantees_of (table : Table F) (component : Component F)
+    (channel : RawChannel F)
+    (preserves : ∀ env, table.component.operations.ChannelGuarantees channel env →
+      component.operations.ChannelGuarantees channel env)
+    (guarantees : table.ChannelGuarantees channel) : (table.withComponent component).ChannelGuarantees channel :=
+  fun row member => preserves _ (guarantees row member)
 
 namespace EnsembleWitness
 
@@ -83,6 +123,46 @@ theorem project_constraints (witness : EnsembleWitness source)
       exact assertions index
     · rw [← witness.same_circuits]
       exact lookups index
+
+/-- Project a strengthened prefix using a static implication for each component's constraints. -/
+theorem project_constraints_of (witness : EnsembleWitness source)
+    (length : target.tables.length ≤ source.tables.length)
+    (verifier : target.verifier = source.verifier)
+    (preserves : ∀ index : Fin target.tables.length, ∀ env,
+      (source.tables[index.val]'(by omega)).operations.ConstraintsHold env →
+        target.tables[index.val].operations.ConstraintsHold env)
+    (constraints : witness.Constraints) : (witness.project target length).Constraints := by
+  rw [Constraints, forall_mem_allTables_iff]
+  refine ⟨?_, ?_⟩
+  · rw [project_verifierTable witness length verifier]
+    exact constraints _ witness.mem_allTables_verifierTable
+  · intro table member
+    obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
+    apply Table.withComponent_constraints_of
+    · rw [← witness.same_circuits]
+      exact preserves index
+    · exact constraints _ (witness.mem_allTables_of_mem_tables (List.getElem_mem _))
+
+/-- Guarantees from the larger witness survive per-component projection without channel balance
+in the projected witness. This permits extra Byte lookups and Memory effects in an extension. -/
+theorem project_channelGuarantees_of (witness : EnsembleWitness source)
+    (length : target.tables.length ≤ source.tables.length)
+    (verifier : target.verifier = source.verifier) (channel : RawChannel F)
+    (preserves : ∀ index : Fin target.tables.length, ∀ env,
+      (source.tables[index.val]'(by omega)).operations.ChannelGuarantees channel env →
+        target.tables[index.val].operations.ChannelGuarantees channel env)
+    (guarantees : ∀ table ∈ witness.allTables, table.ChannelGuarantees channel) :
+    ∀ table ∈ (witness.project target length).allTables, table.ChannelGuarantees channel := by
+  rw [forall_mem_allTables_iff]
+  refine ⟨?_, ?_⟩
+  · rw [project_verifierTable witness length verifier]
+    exact guarantees _ witness.mem_allTables_verifierTable
+  · intro table member
+    obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
+    apply Table.withComponent_channelGuarantees_of
+    · rw [← witness.same_circuits]
+      exact preserves index
+    · exact guarantees _ (witness.mem_allTables_of_mem_tables (List.getElem_mem _))
 
 theorem project_tables_interactions (witness : EnsembleWitness source)
     (length : target.tables.length ≤ source.tables.length) (channel : RawChannel F)

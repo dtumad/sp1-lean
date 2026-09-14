@@ -42,20 +42,23 @@ theorem constraints_profile (env : Environment (ZMod p))
   have spec := profile_of_constraints _ _ env ((Component.constraintsHold_iff env).mp constraints)
   simpa only [Component.rowInput, eval_varFromOffset_valueFromOffset] using spec
 
+/-- The full-code guard retains the original instruction constraints at any input offset. -/
+theorem main_constraints_original (input : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ)
+    (env : Environment (ZMod p))
+      (holds : ((main input).operations offset).ConstraintsHold env) :
+    ((SyscallInstrsChip.circuit.main input).operations offset).ConstraintsHold env := by
+  rw [← Circuit.constraintsHold_toFlat_iff] at holds ⊢
+  simp only [main, circuit_norm] at holds
+  have original := (FlatOperation.constraintsHold_append.mp holds).1
+  simpa only [GeneralFormalCircuit.toSubcircuit, GeneralFormalCircuit.toWithHint,
+    GeneralFormalCircuit.WithHint.toSubcircuit, circuit_norm] using original
+
 /-- Strengthening the instruction component preserves every original assertion and lookup. -/
 theorem constraints_original (env : Environment (ZMod p))
     (constraints : (⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
     (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env := by
-  have project (input : Var SyscallInstrsChip.Inputs (ZMod p)) (offset : ℕ)
-      (holds : ((main input).operations offset).ConstraintsHold env) :
-      ((SyscallInstrsChip.circuit.main input).operations offset).ConstraintsHold env := by
-    rw [← Circuit.constraintsHold_toFlat_iff] at holds ⊢
-    simp only [main, circuit_norm] at holds
-    have original := (FlatOperation.constraintsHold_append.mp holds).1
-    simpa only [GeneralFormalCircuit.toSubcircuit, GeneralFormalCircuit.toWithHint,
-      GeneralFormalCircuit.WithHint.toSubcircuit, circuit_norm] using original
   exact (Component.constraintsHold_iff env).mpr
-    (project _ _ ((Component.constraintsHold_iff env).mp constraints))
+    (main_constraints_original _ _ env ((Component.constraintsHold_iff env).mp constraints))
 
 /-- The additional code lookup changes no channel message or multiplicity. -/
 theorem interactions_original :

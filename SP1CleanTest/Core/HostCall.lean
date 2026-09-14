@@ -191,4 +191,50 @@ theorem duplicateAndForgedHandoff :
       decide (((Soundness.HostCallLedger.calls (instructionTable [instruction, instruction])).map
         Soundness.HostCallLedger.clock).Nodup) = false := by native_decide
 
+private def installed : Table Fp :=
+  let image : ProgramImage := ⟨[(65536, 0x73)], 65536, []⟩
+  let source : ExecutionSnapshot :=
+    { sail := { registers := (Soundness.Target.configuredState 65536).regs, memory := image.initialMemory }
+      host := {}, clock := 1 }
+  let padding := { (row 2) with instruction := { (row 2).instruction with is_real := 0 } }
+  (instructionTable [padding, row 2, padding]).withComponent
+    ((Soundness.HostLocalCore.tables image source [Soundness.HostHintReadCoverage.handler])[58]'(by
+      rw [Soundness.HostLocalCore.tables_length]; decide))
+
+private def physicalLedger (table : Table Fp) (name : String) : List (String × List Fp × Fp) :=
+  table.table.flatMap fun physical =>
+    let env := table.environment physical
+    (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
+      if interaction.channel.name == name && env interaction.mult != 0 then
+        some (name, (interaction.msg.map env).toList, env interaction.mult) else none
+
+private def physicalChecks (table : Table Fp) : Bool :=
+  let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
+  table.table.all fun physical =>
+    let env := table.environment physical
+    table.component.rowOperations.toFlat.all fun operation =>
+      match operation with
+      | .assert expression => env expression == 0
+      | .lookup lookup => lookup.table.name == fixed.table.name &&
+          fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+      | .witness .. | .interact .. => true
+
+/-- An installed WRITE row plus padding retains its physical data, original constraints, and State
+edge. Its extra x12 read makes full Memory projection invalid: the very same closing frontier
+balances the wrapper ledger and fails for the projected instruction ledger. -/
+theorem installedMemoryProjection :
+    let projected := installed.withComponent Soundness.HostCallProjection.original
+    let originalMemory := physicalLedger projected "SP1Memory"
+    let memory := physicalLedger installed "SP1Memory"
+    let frontier := originalMemory.map (fun item => (item.1, item.2.1, - item.2.2)) ++
+      [("SP1Memory", [0, 0, 12, 0, 0, 17, 2, 3, 4], 1),
+       ("SP1Memory", [0, 2, 12, 0, 0, 17, 2, 3, 4], -1)]
+    physicalChecks installed = true ∧ physicalChecks projected = true ∧
+      projected.table = installed.table ∧
+      physicalLedger projected "SP1State" = physicalLedger installed "SP1State" ∧
+      (physicalLedger installed "SP1State").length = 2 ∧
+      memory.length = 8 ∧ originalMemory.length = 6 ∧
+      HintReadFixtures.balanced (memory ++ frontier) = true ∧
+      HintReadFixtures.balanced (originalMemory ++ frontier) = false := by native_decide
+
 end SP1CleanTest.Core.HostCall

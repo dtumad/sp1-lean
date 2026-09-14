@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2169 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 286 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2218 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 287 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2455 released declarations are probed.
+- 2505 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,27 +35,35 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The instruction-handoff uniqueness checkpoint adds 23 main declarations and two test anchors.
-Eighteen main additions use only the logical baseline or a subset. The five local-ensemble
-corollaries have exactly the same 100 dependencies as the preceding
-`LocalCore.executionRows_ordered`, including its already disclosed Sail hooks and bit-vector
-proof constants. All preceding 2146 main and 284 test dependency sets are unchanged, with no
-removals or new main-library axiom names. Two new compiler-trusted constants occur only in tests.
+The installed host-wrapper checkpoint adds 49 main declarations and one test anchor.
+Seventeen main additions use exactly the logical baseline. The other 32 have exactly the same
+100 dependencies as the preceding `LocalCore.executionRows_ordered`, including the already
+disclosed Sail hooks and bit-vector proof constants. All preceding 2169 main and 286 test
+dependency sets are unchanged, with no removals or new main-library axiom names. The one new
+compiler-trusted constant belongs only to the executable Memory-projection regression.
 
-`LocalCore.executionRows_clocks_nodup` derives distinct incoming clocks for the actual mixed
-event inventory from constraints and balance. `HostCallLedger.calls_perm` recovers complete typed
-calls from the actual padded wrapper ledger, deriving binary activity from raw constraints.
-`HostHintReadHandoff.handler_clocks_nodup_of_local` transfers CPU uniqueness to physical handlers;
-`balanced_for_of_local` supplies their selected word-table balance from the shared cursor ledger.
-The local corollaries retain exact active-instruction projection, the other handlers' complete
-unit-pull ledger, and the original local ensemble's constraints and complete balance as premises.
-Installing active RAM effects must reuse State/Byte chronology directly: dropping their tables
-does not generally preserve the original Memory balance. This projection has not been proved.
-Record/permission authentication, predecessor currency, and complete outgoing-state agreement
-remain open, as does the full-AIR HINT_LEN counterexample. Executed physical-table tests cover
-padding and clock carries, reject duplicate handlers and forged return limbs, and confirm that
-duplicating both instruction and handler inventories balances the handoff alone. CPU ordering
-excludes that case; the test is not a new full-AIR counterexample.
+`LocalCore.OrderingChannels` isolates State balance and Byte guarantees. `HostLocalCore.ensemble`
+installs the HostCall wrapper at physical table 58 in the protected 60-table prefix and appends
+host components. Its physical projection derives original constraints, Byte guarantees, the exact
+State ledger, and active syscall inventory while preserving the source, verifier, data, and public
+input. `executionRows_ordered` and `hostCalls_clocks_nodup` therefore consume the extended
+ensemble's own constraints and balance. Auxiliary Byte requirements and CPU State silence are
+static circuit obligations; the real HINT_READ handler and both RAM consumer variants satisfy them.
+
+No projected Byte or Memory balance is claimed. The installed WRITE regression retains padding,
+valid original constraints, and the State edge, but demonstrates that the same closing Memory
+frontier fails after the wrapper's x12 pair is dropped. This is a projection regression, not a
+full host-execution witness. `HostHintReadHandoff.handler_clocks_nodup_of_hostLocal` and
+`balanced_for_of_hostLocal` use the derived physical projection and actual handoff balance;
+exact accounting of the other handlers' unit pulls remains explicit.
+Record/permission authentication, predecessor currency, mixed host grounding, and full outgoing
+state remain open, as does the full-AIR HINT_LEN counterexample.
+
+The preceding instruction-handoff checkpoint added 23 main declarations and two test anchors.
+Its 18 algebraic additions used only the logical baseline or a subset, and its five local corollaries
+had the same existing 100-dependency set. Earlier physical-table tests retain padding and clock
+carries, reject duplicate handlers and forged return limbs, and show why handoff balance alone
+does not exclude duplicated producer and consumer inventories. The State walk supplies uniqueness.
 
 The shared HINT_READ ledger checkpoint added 26 main declarations and three test anchors. Every
 main addition uses only the logical baseline or a subset. All preceding 2120 main and 281 test
@@ -118,7 +126,7 @@ incomplete words, locally valid forged final contents, malformed spans, and chan
 Local specifications and current-queue/node/word bindings remain explicit subsystem premises.
 The write-agreement checkpoint above closes the per-call word-address/value gap, and the shared
 ledger checkpoint derives per-call balance under unique handler clocks.
-Global handler-event uniqueness and binding, mixed grounding,
+Complete handler-ledger accounting and binding, mixed grounding,
 authorized new WRITE/hook words, and queue history remain open. The full-AIR forged HINT_LEN
 return is unchanged and remains open.
 

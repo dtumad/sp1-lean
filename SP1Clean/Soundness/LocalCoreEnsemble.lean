@@ -151,4 +151,38 @@ theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSna
       OrderedFinalProvider.channelName, programChannel])
   exact fun table member => ⟨byte table member, program table member⟩
 
+/-- Exactly the channel facts used by chronology. Byte guarantees may be transported from a
+larger ensemble without projecting its Byte multiplicities or its Memory effects. -/
+structure OrderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) : Prop where
+  byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw
+  state : witness.BalancedChannel stateChannel.toRaw
+
+/-- A static local-component interface for deriving Byte guarantees in a larger assembly. -/
+theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSnapshot)
+    (component : Component (ZMod p)) (member : component ∈ (ensemble image source).allTables)
+    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
+    component.operations.ChannelRequirements byteChannel.toRaw env := by
+  apply component_finished_requirements image source component member byteChannel.toRaw ?_ env constraints
+  simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
+    OrderedFinalProvider.channelName, byteChannel]
+
+/-- The local assembly derives the ordering interface from its Byte and State ledgers alone. -/
+theorem orderingChannels_of_constraints {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
+    (byte : witness.BalancedChannel byteChannel.toRaw) (state : witness.BalancedChannel stateChannel.toRaw) :
+    OrderingChannels witness := by
+  refine ⟨?_, state⟩
+  apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints byte
+  intro component member env checked
+  exact component_byte_requirements image source component member env checked
+
+/-- Existing complete witnesses supply the smaller chronology interface. -/
+theorem orderingChannels_of_balanced {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) : OrderingChannels witness :=
+  orderingChannels_of_constraints witness constraints
+    (balanced _ (by simp [ensemble, sp1Ensemble_channels]))
+    (balanced _ (by simp [ensemble, sp1Ensemble_channels]))
+
 end SP1Clean.Soundness.LocalCore

@@ -480,13 +480,21 @@ guard, and its table selection preserves component, data, environments, and inte
 walk, including active syscalls and arbitrary endpoints. `HostCallLedger.lean` proves complete
 typed call permutation from the wrapper's actual handoff ledger; raw constraints derive binary
 activity, and removing disabled interactions preserves Clean's count guard.
-`HostHintReadHandoff.handler_clocks_nodup_of_local` transfers CPU uniqueness to the actual handler
-rows. Its installation premises identify the wrapper's active instructions exactly with the local
-syscall inventory and account for all other handlers' unit pulls. The current local ensemble still
-registers the original syscall component, so those physical connections remain open.
-The local-witness corollary assumes that ensemble's complete balance. Active host RAM effects
-require reusing State/Byte chronology directly; removing their tables does not generally preserve
-Memory balance in the original assembly.
+`LocalCore.OrderingChannels` exposes exactly State balance and Byte guarantees. The
+`HostLocalCore.ensemble` extension installs the wrapper at physical table 58, retains the
+protected 60-table prefix and arbitrary complete source/public boundary, and appends host tables.
+`HostCallProjection` proves original constraints, retained Byte checks, and the unchanged State
+ledger despite the larger input and witness width. `HostLocalCore` transports those facts over
+the actual physical arrays, derives their active instruction inventory, and proves an exhaustive
+CPU walk and distinct call clocks from the extended ensemble's constraints and balance.
+Auxiliary components supply static Byte-requirement and CPU State-silence proofs; the real
+HINT_READ handler and both RAM-writing variants satisfy this interface.
+The projection does not claim Byte or Memory balance. The installed WRITE regression shows why:
+the x12 pair is absent from the original instruction ledger, so a frontier that closes the
+wrapper fails after projection while the State edge remains unchanged.
+`HostHintReadHandoff.handler_clocks_nodup_of_hostLocal` transfers that derived CPU uniqueness
+to the handler rows; `balanced_for_of_hostLocal` supplies per-call cursor balance. Their remaining
+handoff premise accounts exactly for all other handlers' unit pulls in the actual ensemble ledger.
 Global record/permission authentication, predecessor currency, and host RAM rows in mixed grounding
 are still required for the complete outgoing state. Duplicating both sides balances the handoff
 alone; the State walk supplies the missing event uniqueness.

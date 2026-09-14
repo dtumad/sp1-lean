@@ -381,18 +381,23 @@ Implemented foundations:
   `LocalCoreEventUniqueness.lean` now derives distinct incoming clocks for all active ordinary,
   HALT, and syscall occurrences from actual local constraints and balance, with arbitrary shard
   endpoints. `HostCallLedger.lean` derives binary activity from raw wrapper constraints and proves
-  complete typed call permutation from the actual padded handoff ledger. `HostCallOrder.lean`
-  transfers CPU uniqueness under exact projection onto the local syscall inventory;
-  `HostHintReadHandoff.handler_clocks_nodup_of_local` then derives handler uniqueness, and
-  `balanced_for_of_local` supplies each selected physical word table's balance. Installation
-  still must prove that physical projection and account for the other handlers' unit call pulls.
-  Regressions check actual instruction/handler tables, padding, clock carries, duplicate handlers,
-  and forged return limbs. Duplicating both sides balances the handoff but violates CPU uniqueness.
-  The local-witness corollary still assumes the original local ensemble's complete balance.
-  Reuse State/Byte chronology directly when installing active RAM effects: dropping their tables
-  does not generally preserve Memory balance. This is an installation obligation, not a proved
-  projection of the expanded machine.
-  The next queue step must install that handoff, authenticate records and permissions from the global source/handler ledger,
+  complete typed call permutation from the actual padded handoff ledger.
+  `LocalCore.OrderingChannels` now isolates State balance and Byte guarantees from full Memory
+  balance. The 60-table prefix of `HostLocalCore.ensemble` installs the HostCall wrapper at the
+  actual syscall position and retains the protected stores, permission provider, complete source,
+  verifier, and public input; host components are appended. Its physical projection proves the
+  original constraints, Byte guarantees, exact State ledger, and active syscall inventory.
+  `HostLocalCore.executionRows_ordered` and `hostCalls_clocks_nodup` follow from the extended
+  ensemble's own constraints and balance. Auxiliary components prove their Byte requirements and
+  CPU State silence statically; the real HINT_READ handler and both RAM consumer variants satisfy
+  that interface. No projected Byte or Memory balance is required or claimed.
+  `HostHintReadHandoff.handler_clocks_nodup_of_hostLocal` and `balanced_for_of_hostLocal` use
+  this installation. Exact accounting of all other handlers' unit HostCall pulls remains explicit.
+  Regressions cover padding, clock carries, duplicate/forged handoffs, and the installed WRITE
+  projection: the same closing Memory frontier balances the wrapper but fails after dropping
+  its x12 pair, despite unchanged State edges and valid original constraints.
+  The next queue step must close the full handler ledger accounting, authenticate records and
+  permissions from the global source/handler ledger,
   and install these RAM rows in mixed grounding, including predecessor currency and full outgoing
   Memory agreement. Local table specifications and the record bindings remain explicit
   premises of the subsystem results. New WRITE/hook node and word authorization and ordered

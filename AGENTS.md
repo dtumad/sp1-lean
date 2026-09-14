@@ -176,11 +176,18 @@ it also proves every consumer has a handler and retains the original rows on all
 `LocalCoreEventUniqueness` derives distinct incoming event clocks from actual local AIR constraints
 and balance. `HostCallLedger` identifies complete handler calls with the physical wrapper's active
 instruction inventory, deriving its binary gate from raw constraints and retaining padding in the
-original count bound. `HostHintReadHandoff.handler_clocks_nodup_of_local` transfers CPU uniqueness
-to the actual handlers. Installation must still identify the wrapper's decoded active instructions
-with the local syscall table and account for every other handler's unit HostCall pulls.
-The local-witness corollary assumes the original ensemble's complete balance. Reuse State/Byte
-chronology when installing active RAM effects; dropping effect tables does not preserve Memory balance.
+original count bound. `LocalCore.OrderingChannels` isolates State balance and Byte guarantees. `HostLocalCore.ensemble`
+installs the wrapper in the protected 60-table prefix, appends host components, and retains the
+full source, verifier, data, and public input. Its physical projection derives original constraints,
+Byte guarantees, the complete State ledger, and the exact active syscall inventory.
+`executionRows_ordered` and `hostCalls_clocks_nodup` then follow from the extended ensemble's
+own constraints and balance. Auxiliary Byte requirements and CPU State silence are static circuit
+properties; `HostHintReadHandoff.auxiliaryInterface` proves them for the real handler and both
+RAM consumer variants. No projected Byte or Memory balance is claimed. The installed WRITE
+regression checks that the x12 pair is lost by original projection: State survives, but the same
+closing Memory frontier no longer balances.
+`HostHintReadHandoff.handler_clocks_nodup_of_hostLocal` and `balanced_for_of_hostLocal` use
+this derived projection. Exact accounting of the other handlers' unit HostCall pulls remains open.
 Record/permission authentication, predecessor currency, and mixed installation remain open.
 Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete

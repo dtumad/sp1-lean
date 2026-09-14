@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.HostCallOrder
+import SP1Clean.Soundness.HostLocalCore
 import SP1Clean.Soundness.HostHintReadPartition
 
 /-! # HINT_READ handler uniqueness from the instruction handoff
@@ -66,6 +67,24 @@ theorem handler_clocks_nodup (instructions handlers : Table (ZMod p))
 
 local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
+/-- The real handler and both RAM-writing consumer variants satisfy the chronology interface.
+Queue/word authentication and their remaining channel balances are separate obligations. -/
+theorem auxiliaryInterface : HostLocalCore.AuxiliaryInterface
+    [handler (p := p), (HintReadCoverage.view false).component, (HintReadCoverage.view true).component] := by
+  apply HostLocalCore.AuxiliaryInterface.of_channels
+  · intro component member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl <;>
+      simp [handler, HintReadCoverage.view, HostHintReadChip.circuit, HintReadWordChip.circuit,
+        Channels.byteChannel, Channels.memoryChannel, HostHintQueue.nodeChannel,
+        HostHintQueue.wordChannel, HostHintQueue.stateChannel, HostCallChip.channel,
+        HintReadWordChip.stateChannel, HostRamAccessChip.channel, WritePermissionProvider.channel, Channel.toRaw]
+  · intro component member used
+    have names := List.mem_map_of_mem (f := RawChannel.name) used
+    have present := List.contains_iff_mem.mpr names
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl <;> change false = true at present <;> contradiction
+
 /-- Local AIR clock ordering and actual instruction handoff derive handler uniqueness.
 The remaining projection premise is exact equality of physical active instruction inventories. -/
 theorem handler_clocks_nodup_of_local {image : Model.Core.ProgramImage} {source : Model.Core.ExecutionSnapshot}
@@ -118,5 +137,58 @@ theorem balanced_for_of_local {image : Model.Core.ProgramImage} {source : Model.
   HostHintReadPartition.balanced_for handlers component tables aligned env member
     (handler_clocks_nodup_of_local witness localConstraints localBalanced instructions handlers
       producer constraints component projected others otherCalls otherLedger handoff) cursor
+
+/-- The installed wrapper derives producer uniqueness internally. The remaining handoff seam is
+an exact accounting of the other handlers' physical unit pulls in this ensemble's own ledger. -/
+theorem handler_clocks_nodup_of_hostLocal {image : Model.Core.ProgramImage} {source : Model.Core.ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (HostLocalCore.ensemble image source auxiliary channels))
+    (interface : HostLocalCore.AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannels) (handlers : Table (ZMod p))
+    (component : handlers.component = handler)
+    (others : List (Table (ZMod p))) (otherCalls : List (HostCallChip.Message (ZMod p)))
+    (otherLedger : others.flatMap (·.interactionsWith HostCallChip.channel.toRaw) =
+      otherCalls.map HostCallChip.channel.pulledValue)
+    (ledger : witness.interactionsWith HostCallChip.channel.toRaw =
+      (HostLocalCore.hostCallTable witness).interactionsWith HostCallChip.channel.toRaw ++
+        handlers.interactionsWith HostCallChip.channel.toRaw ++
+        others.flatMap (·.interactionsWith HostCallChip.channel.toRaw)) :
+    ((handlers.table.map handlers.environment).map HostHintReadPartition.callClock).Nodup := by
+  apply handler_clocks_nodup (HostLocalCore.hostCallTable witness) handlers
+    (HostLocalCore.hostCallTable_component witness)
+    (constraints _ (HostLocalCore.hostCallTable_mem witness)) component others otherCalls otherLedger
+  · rw [← ledger]
+    exact balanced _ (List.mem_cons_self ..)
+  · exact HostLocalCore.hostCalls_clocks_nodup witness interface constraints balanced
+
+/-- The extended ensemble's chronology, complete handoff ledger, and shared cursor ledger derive
+the selected call's word-table balance without projecting its host RAM effects. -/
+theorem balanced_for_of_hostLocal {image : Model.Core.ProgramImage} {source : Model.Core.ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (HostLocalCore.ensemble image source auxiliary channels))
+    (interface : HostLocalCore.AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannels) (handlers : Table (ZMod p))
+    (component : handlers.component = handler)
+    (others : List (Table (ZMod p))) (otherCalls : List (HostCallChip.Message (ZMod p)))
+    (otherLedger : others.flatMap (·.interactionsWith HostCallChip.channel.toRaw) =
+      otherCalls.map HostCallChip.channel.pulledValue)
+    (ledger : witness.interactionsWith HostCallChip.channel.toRaw =
+      (HostLocalCore.hostCallTable witness).interactionsWith HostCallChip.channel.toRaw ++
+        handlers.interactionsWith HostCallChip.channel.toRaw ++
+        others.flatMap (·.interactionsWith HostCallChip.channel.toRaw))
+    (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
+      HintReadCoverage.variants tables)
+    (env : Environment (ZMod p)) (member : env ∈ handlers.table.map handlers.environment)
+    (cursor : BalancedInteractions
+      (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw ++
+        tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw))) :
+    BalancedInteractions
+      (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
+        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) tables).flatMap
+          (·.interactionsWith HintReadWordChip.stateChannel.toRaw)) :=
+  HostHintReadPartition.balanced_for handlers component tables aligned env member
+    (handler_clocks_nodup_of_hostLocal witness interface constraints balanced handlers component
+      others otherCalls otherLedger ledger) cursor
 
 end SP1Clean.Soundness.HostHintReadHandoff
