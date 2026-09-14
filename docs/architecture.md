@@ -565,6 +565,14 @@ a clock carry; it establishes selected subsystems, not a complete mixed-AIR witn
 Positive handler clocks agree with the existing active 1-mod-8 profile; range-only validation can
 still admit zero-step identity segments at clock zero.
 
+The host Memory ledger keeps original instruction/refresh accesses, WRITE's extra x12 read-back,
+and every appended RAM word. `HostLocalCoreMemoryBounds` derives pushed low-clock bounds from
+constraints, Byte checks, Program balance, and local auxiliary checks. The installed hint assembly
+closes these checks and uses its own complete record permutation to derive every interior prior
+low-clock bound. `HostHintReadLocalMemory.source_word_order` then proves strict predecessor order
+for each physical word, including padding. This ordering precedes the remaining value-grounding
+argument and does not project Memory balance to the smaller instruction-only witness.
+
 The host's byte observations now have a computed aligned-cell interface.
 `Model/Core/HostFootprint.lean` includes the full register inputs and the unique union of read and
 write cells. Execution derives coverage, window bounds, and existence of this inventory;

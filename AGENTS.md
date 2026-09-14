@@ -260,8 +260,12 @@ balance, with no caller multiplicity or Memory-guarantee premise; every padded w
 occurrence-preserving sublist of that interior. This is record conservation, not predecessor
 currency. `HostRamTouches` derives canonical RAM locations, new-word and pushed-clock bounds,
 and read/write timing from constraints and Byte guarantees alone. `HostHintReadLocalMemory`
-connects these to every installed physical word and its selected call window. Prior low-clock
-bounds and predecessor currency still need the complete mixed-ledger grounding.
+connects these to every installed physical word and its selected call window.
+`HostLocalCoreMemoryBounds` derives all interior push low-clock bounds from constraints, Byte
+guarantees, Program balance, and local auxiliary push bounds. The installed source assembly closes
+these premises and transfers the bounds through its full record permutation: `source_memory_prior_bound`
+and `source_word_order` derive prior low clocks and strict word-access order. Predecessor value
+currency and the mixed grounding walk remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

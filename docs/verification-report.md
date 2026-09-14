@@ -978,8 +978,15 @@ conservation; identifying the current predecessor value still requires mixed tim
 read at the call clock followed by a write at clock plus one, using constraints and Byte
 guarantees alone. `HostHintReadLocalMemory.source_word_touches` closes these facts for the actual
 installed word tables; `call_word_touches` places selected accesses in their handler's window.
-Strict predecessor order needs the prior low-clock bound, still to be transferred through the
-complete mixed ledger. These access facts do not supply previous-value truth.
+`HostLocalCoreMemoryBounds.memoryInterior_push_bound` derives low-clock bounds for original
+instructions and refreshes using constraints, Byte guarantees, and Program balance, and checks
+WRITE's extra x12 push with the original CPU clock bounds. Auxiliary pushes retain their own
+local bounds. `HostHintReadLocalMemory.source_memory_push_bound` closes those premises for the
+installed source assembly; `source_memory_prior_bound` transfers them through its complete
+record permutation to every consumed interior record. `source_word_order` consequently proves
+strict predecessor order for every physical hint write, including padding. No prior Memory
+guarantee or instruction-only Memory balance is supplied. Previous-value truth and the mixed
+grounding walk remain open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

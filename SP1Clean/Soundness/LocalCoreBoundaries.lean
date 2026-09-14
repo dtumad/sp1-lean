@@ -24,9 +24,11 @@ def sourceWitness {image : ProgramImage} {source : ExecutionSnapshot}
       (NativeCore.afterInitialTables image) []) :=
   EnsembleWitness.ofTables _ witness.tables witness.data () witness.tables_map_component witness.same_data
 
-theorem sourceTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
+/-- Source records are checked using Byte guarantees alone, independently of Memory balance. -/
+theorem sourceTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints)
+    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
       table.Spec := by
   intro table member row rowMem
@@ -38,11 +40,19 @@ theorem sourceTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
   have tableMem : table ∈ witness.allTables :=
     witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member)
-  have byte := (finishedChannel_guarantees image source witness constraints balanced table tableMem).1 row rowMem
+  have byte := bytes table tableMem row rowMem
   have checked := constraints table tableMem row rowMem
   rw [← same] at byte checked ⊢
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
   exact SnapshotMemoryEnsemble.view_spec source.sail.memorySnapshot id _ checked byte
+
+theorem sourceTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
+      table.Spec :=
+  sourceTables_spec_of_byte witness constraints
+    (fun table member => (finishedChannel_guarantees image source witness constraints balanced table member).1)
 
 /-- Every physical source record authenticates its complete value against the fixed source. -/
 theorem source_records_authentic {image : ProgramImage} {source : ExecutionSnapshot}

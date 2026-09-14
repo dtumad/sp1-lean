@@ -40,6 +40,19 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Prior low clocks and strict host RAM ordering from the complete physical Memory ledger.
+    ("SP1Clean/Soundness/HostCallProjection.lean", "memory_values"),
+    ("SP1Clean/Soundness/LocalCoreBoundaries.lean", "sourceTables_spec_of_byte"),
+    ("SP1Clean/Soundness/LocalCoreProgram.lean", "program_pull_committed_of_balance"),
+    ("SP1Clean/Soundness/LocalCoreDecode.lean", "instructionRows_program_committed_of_balance"),
+    ("SP1Clean/Soundness/LocalCoreTouches.lean", "syscall_program_committed_of_balance"),
+    ("SP1Clean/Soundness/LocalCoreTouches.lean", "executionRows_aligned_of_channels"),
+    ("SP1Clean/Soundness/LocalCoreTouches.lean", "memoryInterior_push_bound"),
+    ("SP1Clean/Soundness/HostLocalCoreMemoryBounds.lean", "memoryInterior_push_bound"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "source_program_silent"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "source_memory_push_bound"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "source_memory_prior_bound"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "source_word_order"),
     # Physical host RAM touches before previous-value grounding.
     ("SP1Clean/Soundness/HostRamTouches.lean", "of_constraints"),
     ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "word_touches"),

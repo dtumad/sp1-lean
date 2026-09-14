@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostQueueCPUReplay
 import SP1Clean.Soundness.HostLocalCoreProgram
+import SP1Clean.Soundness.HostHintReadLocalMemory
 
 /-! # Current host hints derived from installed queue history
 
@@ -158,21 +159,6 @@ private theorem read_member
 
 private theorem read_edge (env : Environment (ZMod p)) :
     edge (none, env) = ((HostHintReadCoverage.input env).previous, (HostHintReadCoverage.input env).next) := rfl
-
-private theorem source_program_silent (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) :
-    ∀ component ∈ (HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
-      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++ [⟨(HostHintQueueBoundary.boundary source final).circuit⟩])),
-      Channels.programChannel.toRaw ∉ component.circuit.channels := by
-  have checked : ((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
-      (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
-      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++
-        [(⟨(HostHintQueueBoundary.boundary source final).circuit⟩ : Component (ZMod p))]))).all
-      (fun component => !(component.circuit.channels.map RawChannel.name).contains
-        (Channels.programChannel (p := p)).toRaw.name) = true := rfl
-  intro component member used
-  have silent := List.all_eq_true.mp checked component member
-  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
-  contradiction
 
 private theorem timeline_at_prefix (initialClock : ℕ) (cpu prior rest : List (ExecutionRow p))
     (event : ExecutionRow p) (split : cpu = prior ++ event :: rest) :

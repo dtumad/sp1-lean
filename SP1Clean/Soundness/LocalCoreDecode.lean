@@ -89,9 +89,9 @@ theorem instructionRows_finished_guarantees {image : ProgramImage} {source : Exe
 
 /-- An active decoded instruction fetch belongs to the checked image and official Sail decoder.
 The statement is independent of the instruction's chip and physical table position. -/
-theorem instructionRows_program_committed {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+theorem instructionRows_program_committed_of_balance {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     {row : DecodedInstructionRow p} (member : row ∈ instructionRows witness)
     (active : (row.toChipRow witness.data).is_real = 1) :
     Target.committedInROM (image.toGuestProgram valid)
@@ -105,7 +105,18 @@ theorem instructionRows_program_committed {image : ProgramImage} {source : Execu
     apply instructionRows_interaction_mem witness programChannel member
     rw [DecodedInstructionRow.environment, emitted]
     exact List.mem_singleton_self _
-  exact program_pull_committed valid witness constraints balanced message interaction pullMem
+  exact program_pull_committed_of_balance valid witness constraints balanced message interaction pullMem
     (by change -(row.toChipRow witness.data).is_real = -1; rw [active]) rfl
+
+/-- The complete local AIR authenticates every active ordinary fetch. -/
+theorem instructionRows_program_committed {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {row : DecodedInstructionRow p} (member : row ∈ instructionRows witness)
+    (active : (row.toChipRow witness.data).is_real = 1) :
+    Target.committedInROM (image.toGuestProgram valid)
+      (programAccess (row.toChipRow witness.data).view).toRow :=
+  instructionRows_program_committed_of_balance valid witness constraints
+    (balanced _ (by simp [ensemble, sp1Ensemble_channels])) member active
 
 end SP1Clean.Soundness.LocalCore

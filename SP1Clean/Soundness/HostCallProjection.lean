@@ -20,6 +20,10 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 
 def original : Component (ZMod p) := ⟨SyscallInstrsChip.circuit⟩
 
+/-- WRITE's additional register read, using the constraint-determined full-word selector. -/
+def extraRead (env : Environment (ZMod p)) : Readers.RegisterRead.Inputs (ZMod p) :=
+  (HostCallLedger.input env).read (HostCallChip.writeFlag (HostCallLedger.input env).instruction.op_a_memory.prev_value)
+
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 private theorem instruction_var : (varFromOffset HostCallChip.Inputs (F := ZMod p) 0).instruction =
     varFromOffset SyscallInstrsChip.Inputs 0 := by
@@ -163,6 +167,60 @@ theorem byte_guarantees (env : Environment (ZMod p))
     (guarantees : producer.operations.ChannelGuarantees byteChannel.toRaw env) :
     original.operations.ChannelGuarantees byteChannel.toRaw env :=
   Operations.channelGuarantees_of_interactionsWith_subset _ _ _ byte_subset env guarantees
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem eval_read (input : Var HostCallChip.Inputs (ZMod p)) (flag : Expression (ZMod p))
+    (env : Environment (ZMod p)) :
+    eval env (input.read flag) = (eval env input).read (env flag) := by
+  rcases input with ⟨instruction, length⟩
+  cases instruction
+  cases length
+  simp only [HostCallChip.Inputs.read, circuit_norm]
+
+private theorem main_memory_values (input : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ)
+    (env : Environment (ZMod p))
+    (constraints : ((HostCallChip.main input).operations offset).ConstraintsHold env) :
+    ((HostCallChip.main input).operations offset).interactionValuesWith memoryChannel.toRaw env =
+      ((SyscallInstrsChip.main input.instruction).operations offset).interactionValuesWith memoryChannel.toRaw env ++
+      [memoryChannel.pulledIfValue
+        ((eval env input).read (HostCallChip.writeFlag (eval env input).instruction.op_a_memory.prev_value)).is_real
+        ((eval env input).read (HostCallChip.writeFlag (eval env input).instruction.op_a_memory.prev_value)).prior,
+       memoryChannel.pushedIfValue
+        ((eval env input).read (HostCallChip.writeFlag (eval env input).instruction.op_a_memory.prev_value)).is_real
+        ((eval env input).read (HostCallChip.writeFlag (eval env input).instruction.op_a_memory.prev_value)).pushed] := by
+  rw [Operations.interactionValuesWith, HostCallChip.main_memory_interactions, List.map_append]
+  have core : ((CoreSyscallChip.circuit.main input.instruction).operations offset).interactionsWith memoryChannel.toRaw =
+      ((SyscallInstrsChip.main input.instruction).operations offset).interactionsWith memoryChannel.toRaw := by
+    simp only [CoreSyscallChip.circuit, CoreSyscallChip.main, circuit_norm,
+      GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
+      SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit, Operations.interactionsWith]
+  rw [core]
+  congr 1
+  simp only [List.map_cons, List.map_nil, Channel.eval_pulledIf, Channel.eval_pushedIf]
+  have evaluated := eval_read input (HostCallChip.selector input offset) env
+  rw [HostCallChip.selector_of_constraints input offset env constraints] at evaluated
+  rcases input with ⟨instruction, length⟩
+  rcases instruction with ⟨state, opA, aMemory⟩
+  cases aMemory
+  cases length
+  simp only [HostCallChip.Inputs.read, Readers.RegisterRead.Inputs.prior,
+    Readers.RegisterRead.Inputs.pushed, circuit_norm] at evaluated ⊢
+  rw [evaluated]
+
+/-- The wrapper retains all original Memory interactions and adds exactly its gated x12 pair. -/
+theorem memory_values (env : Environment (ZMod p))
+    (constraints : producer.operations.ConstraintsHold env) :
+    producer.operations.interactionValuesWith memoryChannel.toRaw env =
+      original.operations.interactionValuesWith memoryChannel.toRaw env ++
+      [memoryChannel.pulledIfValue (extraRead env).is_real (extraRead env).prior,
+       memoryChannel.pushedIfValue (extraRead env).is_real (extraRead env).pushed] := by
+  have projected := main_memory_values (varFromOffset HostCallChip.Inputs 0)
+    (size HostCallChip.Inputs) env ((Component.constraintsHold_iff env).mp constraints)
+  rw [instruction_var, eval_varFromOffset_valueFromOffset] at projected
+  simp only [Operations.interactionValuesWith, original, producer, Component.interactionsWith_eq,
+    Component.rowOperations_mk, HostCallChip.circuit, SyscallInstrsChip.circuit]
+  simpa only [Operations.interactionValuesWith, Operations.interactionsWith,
+    ← Operations.interactions_toFlat, original_offset (b := 0), extraRead, HostCallLedger.input] using projected
 
 /-- The wrapper changes only Byte, Memory, and HostCall interactions. Every other channel
 retains the complete original physical ledger, including disabled rows. -/

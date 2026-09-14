@@ -482,8 +482,12 @@ Implemented foundations:
   `HostRamTouches.of_constraints` derives canonical RAM keys, bounded pushed words/clocks, and
   aligned touches from the actual RAM circuit and Byte guarantees. `HostHintReadLocalMemory`
   instantiates these facts for every physical word in the installed source assembly and aligns
-  selected words to their handler clock. Strict predecessor order remains conditional on the
-  prior low-clock bound; the full mixed ledger must derive that bound before value grounding.
+  selected words to their handler clock. `HostLocalCoreMemoryBounds` derives interior push
+  low-clock bounds without projected Memory balance, including WRITE's x12 pair. The installed
+  source assembly closes the auxiliary bounds and transfers them through its complete record
+  permutation. `source_memory_prior_bound` now bounds every consumed interior record, and
+  `source_word_order` proves strict predecessor order for every physical word. Value currency
+  and the complete mixed grounding walk remain open.
   **Next:** derive Memory predecessor currency through mixed grounding, and bind the outgoing snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments

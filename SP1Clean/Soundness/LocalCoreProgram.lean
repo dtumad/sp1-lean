@@ -56,6 +56,19 @@ theorem component_program_source (image : ProgramImage) (source : ExecutionSnaps
       exact (by decide : "SP1Program" ≠ OrderedFinalProvider.channelName) (congrArg RawChannel.name subset)
     · exact NativeCore.interior_program_source image component interior
 
+/-- Program authentication uses only this channel's balance, independently of Memory effects. -/
+theorem program_pull_committed_of_balance {image : ProgramImage} (valid : image.Valid) {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
+    (message : ProgramMsg (ZMod p)) (interaction : Interaction (ZMod p))
+    (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
+    (active : interaction.mult = -1)
+    (payload : interaction.msg = (toElements message).toArray) :
+    Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) :=
+  NativeCore.program_pull_committed_of_sources valid witness constraints
+    balanced
+    (component_program_source image source) message interaction member active payload
+
 /-- Every active local Program pull names an instruction in the checked image and Sail decoder.
 Image validity is also derived by `public_boundary`; it only selects the program in this statement. -/
 theorem program_pull_committed {image : ProgramImage} (valid : image.Valid) {source : ExecutionSnapshot}
@@ -66,9 +79,8 @@ theorem program_pull_committed {image : ProgramImage} (valid : image.Valid) {sou
     (active : interaction.mult = -1)
     (payload : interaction.msg = (toElements message).toArray) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) :=
-  NativeCore.program_pull_committed_of_sources valid witness constraints
-    (balanced programChannel.toRaw (by simp [ensemble, sp1Ensemble_channels]))
-    (component_program_source image source) message interaction member active payload
+  program_pull_committed_of_balance valid witness constraints
+    (balanced _ (by simp [ensemble, sp1Ensemble_channels])) message interaction member active payload
 
 private theorem programIndex_bound {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) : 6 < witness.tables.length := by
