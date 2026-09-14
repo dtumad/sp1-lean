@@ -410,10 +410,13 @@ import SP1Clean.Soundness.HostCallLedger
 import SP1Clean.Soundness.HostCallProjection
 import SP1Clean.Soundness.HostLocalCore
 import SP1Clean.Soundness.HostLocalCoreLedger
+import SP1Clean.Soundness.HostLocalCorePermissions
 import SP1Clean.Soundness.HostLocalHandoff
 import SP1Clean.Soundness.HostCallReceivers
 import SP1Clean.Soundness.HostCallOrder
 import SP1Clean.Soundness.HostHintReadHandoff
+import SP1Clean.Soundness.HostHintReadLocal
+import SP1Clean.Soundness.HostHintReadLocalPermissions
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Proofs.Operations.HintNodeAllocate

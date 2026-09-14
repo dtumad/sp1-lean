@@ -1,4 +1,6 @@
 import SP1Clean.Soundness.HostHintReadPartition
+import SP1Clean.Soundness.HostHintReadLocalPermissions
+import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import ToClean.Air.TableBuild
@@ -104,5 +106,105 @@ theorem missingAndOrphanRows :
 theorem duplicateHandlers :
     let doubled := calls ++ calls
     shared doubled (doubled.flatMap words) = true ∧ unique (handlers doubled) = false := by native_decide
+
+private def image : ProgramImage := ⟨[(65536, 0x73), (131072, 0x73)], 65536, []⟩
+
+private def source : ExecutionSnapshot :=
+  { sail := { registers := (Soundness.Target.configuredState 65536).regs, memory := image.initialMemory }
+    host := {}, clock := 1 }
+
+private def installedTable (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
+    (permissions : List (WritePermissionProvider.Inputs Fp)) (component : Component Fp) (index : ℕ) : Table Fp :=
+  let table := if index == 59 then Table.build ⟨WritePermissionProvider.circuit image⟩ permissions
+      (fun _ _ => #[]) (ProverHint.empty Fp)
+    else if index == 60 then handlers calls
+    else if index == 81 then (consumers rows)[0]'(by simp [consumers, HintReadCoverage.variants])
+    else if index == 82 then (consumers rows)[1]'(by simp [consumers, HintReadCoverage.variants])
+    else Table.build component [] (fun _ _ => #[]) (ProverHint.empty Fp)
+  table.withComponent component
+
+private theorem installedTable_component (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
+    (permissions : List (WritePermissionProvider.Inputs Fp)) (component : Component Fp) (index : ℕ) : (installedTable calls rows permissions component index).component = component := rfl
+
+private theorem installedTable_data (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
+    (permissions : List (WritePermissionProvider.Inputs Fp)) (component : Component Fp) (index : ℕ) : (installedTable calls rows permissions component index).data = (fun _ _ => #[]) := by
+  simp only [installedTable, Table.withComponent]
+  split_ifs <;> rfl
+
+/-- A physical ensemble witness used to test cursor extraction. Other channels are deliberately
+not claimed balanced: source authentication and CPU instruction construction are separate tests. -/
+private def installed (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
+    (permissions : List (WritePermissionProvider.Inputs Fp) := []) :
+    EnsembleWitness (HostHintReadLocal.ensemble (p := SP1Prime) image source HostCallReceivers.available [] []) :=
+  let ensemble := HostHintReadLocal.ensemble (p := SP1Prime) image source HostCallReceivers.available [] []
+  EnsembleWitness.ofTables ensemble (ensemble.tables.zipIdx.map fun (component, index) =>
+    installedTable calls rows permissions component index) (fun _ _ => #[])
+    (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[])))
+    (by simp only [List.map_map, Function.comp_def, installedTable_component, List.zipIdx_map_fst])
+    (by
+      intro table member
+      obtain ⟨⟨component, index⟩, _, rfl⟩ := List.mem_map.mp member
+      exact installedTable_data calls rows permissions component index)
+
+/-- The installed 83-table assembly retains exactly the handler and both physical word tables.
+Its complete cursor balances with reversed multi-call rows; missing handlers, missing words,
+and orphan consumers fail at the same whole-witness channel boundary. -/
+theorem installedCursor :
+    let rows := (calls.flatMap words).reverse
+    let witness := installed calls rows
+    let handler := HostHintReadLocal.handlerTable witness
+    let tables := HostHintReadLocal.wordTables witness
+    let cursor := (witness.allTables.map checked).flatMap (·.2)
+    witness.tables.length = 83 ∧ handler.table = (handlers calls).table ∧
+      tables.map (·.table) = (consumers rows).map (·.table) ∧
+      (handler :: tables).all (fun table => (checked table).1) = true ∧
+      cursor = (checked handler).2 ++ (tables.map checked).flatMap (·.2) ∧
+      HintReadFixtures.balanced cursor = true ∧
+      HintReadFixtures.balanced (((installed (calls.drop 1) rows).allTables.map checked).flatMap (·.2)) = false ∧
+      HintReadFixtures.balanced (((installed calls (rows.drop 1)).allTables.map checked).flatMap (·.2)) = false ∧
+      HintReadFixtures.balanced (((installed calls (rows ++ words (call 3 0 9 65536))).allTables.map checked).flatMap (·.2)) = false := by
+  native_decide
+
+private def permissionRows (rows : List HintReadFixtures.Row) (forge := false) :
+    List (WritePermissionProvider.Inputs Fp) :=
+  rows.flatMap fun row => (List.range 8).filterMap fun index =>
+    let address := Address.toNat row.2.address + index
+    match WritePermissionProvider.populate? (p := SP1Prime) image address with
+    | some input => some input
+    | none => if forge then (WritePermissionProvider.populate? (p := SP1Prime) image (address - 8)).map
+        (fun input => { input with address := Address.ofNat address }) else none
+
+private def permissionRowsChecked (rows : List (WritePermissionProvider.Inputs Fp)) : Bool :=
+  rows.all fun input =>
+    (HostChecks.evaluateProgram (WritePermissionProvider.main image (varFromOffset WritePermissionProvider.Inputs 0))
+      (toElements input).toList none [FiniteLookup.ofStatic image.writePermissionTable]).1
+
+private def permissionLedger (witness : EnsembleWitness
+    (HostHintReadLocal.ensemble (p := SP1Prime) image source HostCallReceivers.available [] [])) : Ledger :=
+  witness.allTables.flatMap fun table => table.table.flatMap fun physical =>
+    let env := table.environment physical
+    (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
+      if interaction.channel.name == "SP1WritePermission" then
+        some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult) else none
+
+/-- Installed permissions cover the padding and final native RAM cell. Dropping a permission fails
+balance. Padding into ROM keeps cursor balance but lacks permissions; forged provider rows restore
+that balance only by violating the fixed provider's actual assertions/lookup. -/
+theorem installedPermissions :
+    let permittedCalls := [call 2 1 265 131056, call 1 265 (2 ^ 24 + 1) (2 ^ 48 - 8)]
+    let rows := permittedCalls.flatMap words
+    let permissions := permissionRows rows
+    let writable := installed permittedCalls rows permissions
+    let romCalls := [call 2 1 265 131064]
+    let romRows := romCalls.flatMap words
+    let rom := installed romCalls romRows (permissionRows romRows)
+    let forged := permissionRows romRows true
+    permissionRowsChecked permissions = true ∧
+      HintReadFixtures.balanced (permissionLedger writable) = true ∧
+      HintReadFixtures.balanced (permissionLedger (installed permittedCalls rows (permissions.drop 1))) = false ∧
+      HintReadFixtures.balanced ((rom.allTables.map checked).flatMap (·.2)) = true ∧
+      HintReadFixtures.balanced (permissionLedger rom) = false ∧
+      HintReadFixtures.balanced (permissionLedger (installed romCalls romRows forged)) = true ∧
+      permissionRowsChecked forged = false := by native_decide
 
 end SP1CleanTest.Core.HostHintReadPartition

@@ -500,10 +500,21 @@ prove the exact physical ledger split. The generic `ReceiverView` reads all rece
 views cover HALT, ENTER, all commitment slots, both HINT_LEN cases, and HINT_READ; their static
 chronology interface and the two word consumers' HostCall silence are proved.
 `HostHintReadHandoff.handler_clocks_nodup_of_registered` and `balanced_for_of_registered` now
-need no handoff accounting equations. Shared cursor balance still concerns the actual consumer
-tables. WRITE and VERIFY handlers and the authenticated queue resources remain to be installed.
-Global record/permission authentication, predecessor currency, and host RAM rows in mixed grounding
-are still required for the complete outgoing state. Duplicating both sides balances the handoff
+need no handoff accounting equations. `HostHintReadLocal.ensemble` fixes the actual handler and
+both word-table positions and declares every channel used by installed host components. Its
+`cursor_interactions`, `cursor_balanced`, and `balanced_for` derive complete and per-call cursor
+balance directly. Other handlers/resources satisfy a static silence interface; the implemented
+control, commitment, and HINT_LEN handlers have a closed instance. Consumer progress excludes
+orphan calls under the word-table specifications.
+`HostLocalCorePermissions` reuses the complete protected source classification with the host
+wrapper installed. The real word variants emit exactly eight unit permission pulls, so the
+fixed image provider authenticates all bytes through the extended ensemble's own balance.
+The provider proves writability below the upper limit; RAM specifications supply the lower
+native-window bound. `HostHintReadLocalPermissions.run_of_witness` combines these facts with
+concrete dispatch and exact padded writes. Local specifications, current queue/node/word bindings,
+and incoming register observations remain explicit. Record binding alone does not establish
+canonical field encodings. WRITE/VERIFY handlers, authenticated queue resources, predecessor
+currency, and host RAM rows in mixed grounding remain required for complete outgoing state. Duplicating both sides balances the handoff
 alone; the State walk supplies the missing event uniqueness.
 
 The host's byte observations now have a computed aligned-cell interface.

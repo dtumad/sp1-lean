@@ -40,6 +40,33 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Installed HINT_READ cursor and permission accounting.
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "ensemble"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "auxiliary_channel_registered"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "availableInterface"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "auxiliaryInterface"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "resources_hostCall_silent"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "handlerTable"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "wordTables"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "handlerTable_component"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "wordTables_mem"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "wordTables_components"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "wordTables_aligned"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "cursor_interactions"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "cursor_balanced"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "handler_clocks_nodup"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "balanced_for"),
+    ("SP1Clean/Soundness/HostHintReadLocal.lean", "consumer_has_handler"),
+    ("SP1Clean/Soundness/HostLocalCorePermissions.lean", "component_permission_source"),
+    ("SP1Clean/Soundness/HostLocalCorePermissions.lean", "permission_pull_permitted"),
+    ("SP1Clean/Soundness/HostHintReadLocalPermissions.lean", "word_permission_pulls"),
+    ("SP1Clean/Soundness/HostHintReadLocalPermissions.lean", "available_permission_pulls"),
+    ("SP1Clean/Soundness/HostHintReadLocalPermissions.lean", "auxiliary_permission_pulls"),
+    ("SP1Clean/Soundness/HostHintReadLocalPermissions.lean", "word_permission_permitted"),
+    ("SP1Clean/Soundness/HostHintReadLocalPermissions.lean", "word_permission_policy"),
+    ("SP1Clean/Soundness/HostHintReadLocalPermissions.lean", "run_of_witness"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "installedCursor"),
+    ("SP1CleanTest/Core/HostHintReadPartition.lean", "installedPermissions"),
     # Complete physical host receiver accounting.
     ("SP1Clean/Soundness/LocalCoreChannels.lean", "component_channels_subset"),
     ("SP1Clean/Soundness/HostLocalCoreLedger.lean", "auxiliaryTables"),

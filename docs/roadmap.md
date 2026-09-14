@@ -402,9 +402,24 @@ Implemented foundations:
   Regressions cover padding, clock carries, duplicate/forged handoffs, and the installed WRITE
   projection: the same closing Memory frontier balances the wrapper but fails after dropping
   its x12 pair, despite unchanged State edges and valid original constraints.
-  The next queue step must derive the shared cursor ledger from installed resources, authenticate
-  records and permissions from the global source/handler ledger,
-  and install these RAM rows in mixed grounding, including predecessor currency and full outgoing
+  `HostHintReadLocal.ensemble` now fixes the handler and both actual word tables, automatically
+  declares all installed host channels, and derives shared cursor balance, alignment, and selected-call
+  balance from its own ledger. Static cursor silence excludes other handlers/resources; local
+  word specifications and strict progress exclude orphan consumers. The 83-table regression checks
+  reversed multi-call rows, clock carries, missing handlers/words, and orphan consumers.
+  `HostLocalCorePermissions` proves the retained fixed image provider is the sole permission source
+  when host auxiliaries are unit consumers. The real word consumers satisfy that condition.
+  `HostHintReadLocalPermissions.run_of_witness` therefore derives dispatch and exact padded writes
+  without separate handoff/cursor accounting or per-byte permissions. Installed permission tests cover
+  the final RAM cell, a missing provider row, padding into ROM, and forged provider rows: cursor
+  balance can survive the ROM write, but valid permission constraints and balance cannot.
+  Automatic channel registration retains repeated channel records. This is harmless for Lean's
+  balance predicate but does not meet `EnsembleExport.channels_unique`; before exporting this
+  extended assembly, construct a canonical inventory and prove that it retains every channel.
+  Deduplicating by name alone is insufficient without proving that equal names identify equal
+  channel records, including their requirements and guarantees.
+  The next queue step must authenticate node/word records and ordered head history from the global
+  source/handler ledger, then install these RAM rows in mixed grounding, including predecessor currency and full outgoing
   Memory agreement. Local table specifications and the record bindings remain explicit
   premises of the subsystem results. New WRITE/hook node and word authorization and ordered
   head history remain open. Include the 48-bit

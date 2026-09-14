@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HostHintReadPartition
 import SP1CleanTest.Core.HostCall
 import SP1CleanTest.Core.LocalCore
 import SP1CleanTest.Core.ExecutionPath
@@ -15,7 +16,6 @@ import SP1CleanTest.Core.HintNodeAllocate
 import SP1CleanTest.Core.HintQueueWords
 import SP1CleanTest.Core.HintReadSpan
 import SP1CleanTest.Core.HintReadWord
-import SP1CleanTest.Core.HostHintReadPartition
 import SP1CleanTest.Core.HostHintRead
 import SP1CleanTest.Core.HostQueue
 import SP1CleanTest.Core.HostExecution
@@ -41,6 +41,8 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.HostHintReadPartition.installedCursor
+#print axioms SP1CleanTest.Core.HostHintReadPartition.installedPermissions
 #print axioms SP1CleanTest.Core.HostCall.registeredReceiverHandoff
 #print axioms SP1CleanTest.Core.HostCall.installedMemoryProjection
 #print axioms SP1CleanTest.Core.HostCall.physicalHandoff

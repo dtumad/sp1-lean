@@ -855,9 +855,8 @@ and the original characteristic count bound are retained.
 families, and empty/nonempty HINT_LEN receivers. `Soundness/HostHintReadHandoff.lean` adds
 HINT_READ and proves the 21-handler chronology interface and both word consumers' HostCall
 silence. Its `handler_clocks_nodup_of_registered` and `balanced_for_of_registered` corollaries
-remove caller-supplied handoff accounting equations. Shared cursor balance and consumer-table
-alignment remain explicit. WRITE and VERIFY handlers are not yet implemented or covered by
-this registry's completeness.
+remove caller-supplied handoff accounting equations. WRITE and VERIFY handlers are not yet
+implemented or covered by this registry's completeness.
 
 The `registeredReceiverHandoff` regression in `SP1CleanTest/Core/HostCall.lean` checks actual
 rows from three handler kinds in the real registry, reversed instructions, and padding; missing
@@ -865,10 +864,39 @@ or duplicate receivers fail HostCall balance. This checks the handoff subsystem,
 host-execution witness. Earlier tests reject forged return limbs and show that duplicating both
 inventories balances handoff alone; CPU ordering excludes that case.
 
-Full integration must derive the shared cursor ledger and record/permission bindings
-from queue history and shard-wide ledgers, and incorporate the host Memory transfers into mixed
-grounding with predecessor currency and complete outgoing-state agreement. The full HINT_LEN
-counterexample remains open.
+`Soundness/HostHintReadLocal.lean` installs the real handler and both word variants in fixed
+physical positions and declares every channel used by its host components, including queue and
+word channels. Its `cursor_interactions` and `cursor_balanced` theorems derive the full shared
+cursor ledger from this witness's own balance; `balanced_for` also derives per-call balance and
+physical alignment. Other components satisfy static cursor silence. Its `consumer_has_handler`
+excludes orphan word consumers using their local specifications and strict index progress.
+
+`Soundness/HostLocalCorePermissions.lean` proves that the retained fixed image table remains
+the sole positive permission source when host auxiliaries are unit consumers. The two physical
+word variants have those proved unit ledgers. `Soundness/HostHintReadLocalPermissions.lean`
+theorem `word_permission_policy` combines provider-authenticated writability and the upper bound
+with the RAM contract's lower native-window bound. Its `run_of_witness` theorem derives concrete
+HINT_READ dispatch and the exact padded word inventory without separate handoff/cursor balance,
+table alignment, clock uniqueness, or per-byte permission premises. Local row specifications,
+current queue/node/word bindings, and current register observations remain explicit. A `Binds`
+predicate describes semantic contents and does not by itself establish canonical field encodings.
+
+The `installedCursor` and `installedPermissions` tests in `SP1CleanTest/Core/HostHintReadPartition.lean`
+use an actual 83-table ensemble witness. They check reversed multi-call rows, clock carries,
+missing handlers/words, orphan consumers, the last native RAM cell, and missing permissions.
+Padding into ROM can still balance the cursor; valid provider constraints and permission balance
+reject it. Forged provider rows restore the permission ledger only by failing those constraints.
+These are channel/subsystem regressions, not complete host-execution witnesses.
+
+The extended assembly's automatic channel list retains duplicates. Repeating a balance
+requirement does not change the Lean relation, but this list fails the exporter's unique-name
+requirement. Exporting this assembly still needs a canonical channel inventory with proved
+coverage and name identity; no full-assembly export instance is claimed here.
+
+Full integration must authenticate current-head history and immutable node/word records from
+shard-wide source/allocation ledgers, then incorporate host Memory transfers into mixed grounding
+with predecessor currency and complete outgoing-state agreement. The full HINT_LEN counterexample
+remains open.
 
 Arbitrary source-provider components are now installed in `LocalCore.ensemble`.
 `MemorySnapshot.Realizes` compares

@@ -193,8 +193,18 @@ all retained tables; `ToClean/Air/ReceiverView` reads every heterogeneous receiv
 variants; `HostHintReadHandoff.registeredReceivers` adds HINT_READ. Static channel proofs close
 their chronology interface and the word resources' HostCall silence. The `_of_registered`
 corollaries derive handler clock uniqueness and per-call word balance without caller handoff
-accounting equations. Shared cursor balance and record authentication remain separate.
-Record/permission authentication, predecessor currency, and mixed installation remain open.
+accounting equations. `HostHintReadLocal.ensemble` now fixes the handler and both physical word
+tables and automatically declares every channel used by its host components. Exact cursor
+accounting, actual table alignment, and per-call balance follow from this witness's own balance;
+strict consumer progress excludes orphan calls. Other handlers and resources prove static
+cursor silence. `HostLocalCorePermissions` retains the fixed image provider as the unique positive
+permission source when appended components are unit consumers; the real HINT_READ word variants
+satisfy this. `HostHintReadLocalPermissions.run_of_witness` derives concrete dispatch and exact
+padded writes without caller handoff, cursor, alignment, clock-uniqueness, or byte-permission
+premises. The fixed provider supplies writability and the upper address bound; local RAM specs
+supply the lower native-window bound. Local row specifications, current queue/node/word binding,
+and incoming register observations remain explicit. Binding alone does not imply canonical
+field encodings. Current-head/record authentication, predecessor currency, and mixed grounding remain open.
 Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
 These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
 global node-word authentication for HINT_READ, and ordered head-history derivation. The shared resource profile

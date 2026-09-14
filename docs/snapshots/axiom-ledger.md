@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-13. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2257 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 288 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2281 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 290 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2545 released declarations are probed.
+- 2571 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,32 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The complete receiver-accounting checkpoint adds 39 main declarations and one test anchor.
+The installed HINT_READ cursor/permission checkpoint adds 24 main declarations and two test
+anchors. Six main additions use exactly the logical baseline; the other 18 have exactly the
+same 100 dependencies as the preceding local ordering theorem. All preceding 2257 main and
+288 test dependency sets are unchanged, with no removals or new main-library axiom names.
+The two new compiler-trusted constants occur only in the installed subsystem regressions.
+
+`HostHintReadLocal.ensemble` fixes the handler and both word-table positions and registers every
+channel used by its host components. Its own balance supplies the complete cursor ledger,
+physical table alignment, handler-clock uniqueness, and per-call balance; word specifications
+and strict progress exclude orphan consumers. `HostLocalCorePermissions` authenticates actual
+byte pulls against the retained fixed image provider when host auxiliaries are unit consumers.
+`HostHintReadLocal.run_of_witness` combines this with concrete dispatch and exact padded writes.
+The provider supplies writability and the upper address bound; local RAM specifications supply
+the lower native-window bound. Local specifications, current queue/node/word bindings, and
+incoming register observations remain explicit. Binding does not itself imply canonical encodings.
+The automatic channel list has duplicates, so a canonical inventory with proved coverage and
+name identity is still needed for the exporter's unique-name requirement.
+
+The actual 83-table regressions cover reversed multi-call rows, clock carries, missing handlers
+and words, orphan consumers, missing permissions, and the final native RAM cell. Padding into ROM
+preserves cursor balance but fails permission balance; forged provider rows restore that ledger
+only by violating actual provider constraints. These are subsystem tests, not full host-execution
+witnesses. Current-head/record authentication, new WRITE/hook allocations, predecessor currency,
+mixed grounding, and complete outgoing state remain open, as does the full-AIR HINT_LEN counterexample.
+
+The preceding complete receiver-accounting checkpoint added 39 main declarations and one test anchor.
 Eighteen main additions use exactly the logical baseline; the other 21 have exactly the same
 100 dependencies as the preceding local ordering theorem. All preceding 2218 main and 287 test
 dependency sets are unchanged, with no removals or new main-library axiom names. The new
@@ -50,7 +75,7 @@ The real receiver views cover HALT, ENTER, all commitment slots, both HINT_LEN v
 HINT_READ. Their static chronology interface and word-resource HostCall silence are proved.
 The `_of_registered` HINT_READ corollaries remove the caller's handoff accounting equations;
 shared cursor balance, record/permission authentication, predecessor currency, mixed grounding,
-and full outgoing state remain open. WRITE and VERIFY handlers remain unimplemented.
+and full outgoing state remained open at that checkpoint. WRITE and VERIFY handlers remain unimplemented.
 The new test checks three real handler kinds in the 21-handler registry with reversed
 instructions and padding; missing or duplicate handlers fail handoff balance. It is a subsystem
 regression, not a complete host-execution witness. The full-AIR HINT_LEN counterexample remains open.
