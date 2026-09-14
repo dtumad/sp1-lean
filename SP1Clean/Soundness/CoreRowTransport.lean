@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.CoreTouches
 import SP1Clean.Soundness.MixedRowTransport
+import SP1Clean.Soundness.WalkTimeline
 
 /-! # Shared semantic transport through alignment and refresh rewriting
 
@@ -114,15 +115,16 @@ theorem rewritten_memory (rows : List (RowFacts p)) (touches : List (List (Touch
     canonicalRow, stateRespell_memPushes, stateRespell_memPulls, and_self]
 
 /-- A structural grounding carrier over opaque event and boundary values. Keeping the concrete
-ensemble out of the carrier type avoids normalizing the complete source during structure elaboration. -/
-structure ExecutionCarrier (data : ProverData (ZMod p)) (events : List (ExecutionRow p))
+ensemble out of the carrier type avoids normalizing the complete source during structure elaboration.
+The event facts explicitly include the complete instruction and host Memory footprint. -/
+structure ExecutionCarrier (facts : ExecutionRow p → RowFacts p) (events : List (ExecutionRow p))
     (incoming outgoing : StateMsg (ZMod p))
     (initialFrontier physicalFinal : MemLoc → Option (MemoryMsg (ZMod p))) where
   ordered : List (ExecutionRow p)
   rows : List (RowFacts p)
   final : MemLoc → Option (MemoryMsg (ZMod p))
   exhaustive : ordered.Perm events
-  aligned : List.Forall₂ WindowAligned rows (ordered.map (ExecutionRow.facts data))
+  aligned : List.Forall₂ WindowAligned rows (ordered.map facts)
   rowOK : ∀ row ∈ rows, RowOKCore (StateMsg.timeNat incoming) row
   stateWalk : Walk.IsWalk (fun row : RowFacts p => (row.statePull, row.statePush))
     incoming outgoing rows
@@ -131,5 +133,91 @@ structure ExecutionCarrier (data : ProverData (ZMod p)) (events : List (Executio
   finalRewrite : ∀ loc message, physicalFinal loc = some message →
     ∃ earlier, final loc = some earlier ∧ MemoryMsg.locOf earlier = MemoryMsg.locOf message ∧
       earlier.value = message.value ∧ MemoryMsg.timeNat earlier ≤ MemoryMsg.timeNat message
+
+variable {facts : ExecutionRow p → RowFacts p} {events : List (ExecutionRow p)}
+  {incoming outgoing : StateMsg (ZMod p)}
+  {initialFrontier physicalFinal : MemLoc → Option (MemoryMsg (ZMod p))}
+
+/-- The complete event footprints determine the timeline through their preserved State edges. -/
+noncomputable def ExecutionCarrier.timeline
+    (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal) : Timeline :=
+  rowTimeline (StateMsg.timeNat incoming) carrier.rows (fun row member => (carrier.rowOK row member).timeGap)
+
+theorem ExecutionCarrier.timeline_start
+    (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal) :
+    carrier.timeline.start 0 = StateMsg.timeNat incoming := rowTimeline_start _ _ _
+
+theorem ExecutionCarrier.timeStep
+    (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal) :
+    ∀ row ∈ carrier.rows, ∀ n, StateMsg.timeNat row.statePull = carrier.timeline.start n →
+      StateMsg.timeNat row.statePush = carrier.timeline.start (n + 1) :=
+  rowTimeline_step_of_walk carrier.stateWalk _
+
+theorem ExecutionCarrier.finalClock
+    (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal) :
+    carrier.timeline.start carrier.rows.length = StateMsg.timeNat outgoing :=
+  rowTimeline_end_of_walk carrier.stateWalk _
+
+theorem ExecutionCarrier.stateBalance
+    (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal) :
+    incoming ::ₘ (↑(carrier.rows.map (·.statePush)) : Multiset (StateMsg (ZMod p))) =
+      outgoing ::ₘ ↑(carrier.rows.map (·.statePull)) := endpointBalance_of_stateWalk _ carrier.stateWalk
+
+/-- Step/frame facts for the complete physical event footprint survive every carrier rewrite. -/
+theorem ExecutionCarrier.engineFacts
+    (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal)
+    (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState) (timeline : Timeline)
+    (steps : ∀ event ∈ events,
+      LocalStepFactG program trajectory initial timeline (facts event) ∧
+      FrameFactG program trajectory initial timeline (facts event)) :
+    ∀ row ∈ carrier.rows, LocalStepFactG program trajectory initial timeline row ∧
+      FrameFactG program trajectory initial timeline row := by
+  intro row member
+  obtain ⟨original, originalMem, aligned⟩ := forall₂_exists_right carrier.aligned row member
+  obtain ⟨event, eventMem, rfl⟩ := List.mem_map.mp originalMem
+  have semantic := steps event (carrier.exhaustive.mem_iff.mp eventMem)
+  exact ⟨aligned.stepFact semantic.1, aligned.frameFact semantic.2⟩
+
+/-- Grounding the rewritten carrier authenticates every original event's operands at their
+actual read times. This does not assert truth at the original prior record's historical timestamp. -/
+theorem ExecutionCarrier.originalCurrency
+    (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal)
+    {program : Target.GuestProgram} {trajectory : Trajectory} {initial : SailState}
+    (grounded : ∀ row ∈ carrier.rows, GroundedG program trajectory initial carrier.timeline row) :
+    ∀ event ∈ events, LocalStateTruthG program trajectory carrier.timeline (facts event).statePull ∧
+      ∀ pull ∈ (facts event).memPulls, MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
+        LocalValueAtG trajectory initial carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value := by
+  intro event member
+  have originalMem := List.mem_map_of_mem (f := facts) (carrier.exhaustive.mem_iff.mpr member)
+  obtain ⟨row, rowMem, aligned⟩ := forall₂_exists_right carrier.aligned.flip _ originalMem
+  have current := grounded row rowMem
+  exact ⟨localStateTruthG_congr aligned.pullTime.symm aligned.pullPc.symm current.1,
+    aligned.pullCurrency current.1 (fun pull member =>
+      ⟨(current.2 pull member).1.1, (current.2 pull member).1.2.1, (current.2 pull member).2⟩)⟩
+
+/-- Ground the carrier from authentic genesis and complete per-event step/frame facts.
+The final value assertion concerns the original physical frontier at the outgoing State time. -/
+theorem ExecutionCarrier.ground
+    (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal)
+    (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState)
+    (initialState : LocalStateTruthG program trajectory carrier.timeline incoming)
+    (initialMemory : LiveOKG trajectory initial carrier.timeline (StateMsg.timeNat incoming) initialFrontier)
+    (steps : ∀ event ∈ events,
+      LocalStepFactG program trajectory initial carrier.timeline (facts event) ∧
+      FrameFactG program trajectory initial carrier.timeline (facts event)) :
+    (∀ row ∈ carrier.rows, GroundedG program trajectory initial carrier.timeline row) ∧
+      LocalStateTruthG program trajectory carrier.timeline outgoing ∧
+      (∀ loc message, physicalFinal loc = some message →
+        LocalValueAtG trajectory initial carrier.timeline loc (StateMsg.timeNat outgoing) message.value) := by
+  have semantic := carrier.engineFacts program trajectory initial carrier.timeline steps
+  have grounded := walkG program trajectory initial carrier.timeline (StateMsg.timeNat incoming)
+    outgoing carrier.final carrier.rows.length carrier.rows incoming initialFrontier rfl
+    (fun row member => (semantic row member).1) (fun row member => (semantic row member).2)
+    carrier.rowOK carrier.timeStep initialState initialMemory carrier.stateBalance carrier.memoryBalance
+  refine ⟨grounded.1, grounded.2.1, ?_⟩
+  intro loc message present
+  obtain ⟨earlier, earlierPresent, _, value, _⟩ := carrier.finalRewrite loc message present
+  have current := (grounded.2.2 loc earlier earlierPresent).2.2.1
+  rwa [value] at current
 
 end SP1Clean.Soundness.NativeCore

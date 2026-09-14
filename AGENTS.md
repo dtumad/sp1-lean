@@ -279,8 +279,15 @@ derives strict order for every actual refresh. The unchanged private boundary le
 unique source/final frontiers; `source_memory_refresh_free` then eliminates refreshes while
 retaining every CPU/host touch and preserving prior/final values and locations. It reuses
 `LocalCore.MemoryChronology` and the existing refresh algorithm. The source assembly supplies
-these facts without prior Memory guarantees or successful replay premises. Semantic transport
-through the rewritten rows, predecessor value currency, and the mixed grounding walk remain open.
+these facts without prior Memory guarantees or successful replay premises.
+`HostHintReadGrounding.source_grounding_carrier` now constructs the shared `ExecutionCarrier`
+over the complete instruction/host footprint. The carrier takes event facts explicitly, and
+shares its timeline, semantic transport, and grounding proof with the ordinary local assembly.
+`GroundingCarrier.ground_of_steps` derives genesis internally and returns original register/RAM
+operand currency plus final State/frontier value truth. Its remaining premises are the complete
+per-event step/frame facts on a trajectory beginning at the source; actual paired replay and
+host-step proofs must still discharge them. No prior-record historical truth is inferred from a
+refresh rewrite. Complete outgoing snapshot agreement and the full eight-call integration remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

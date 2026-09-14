@@ -505,9 +505,13 @@ Implemented foundations:
   projected. Their ordering balance supplies unique source/final frontiers, and
   `source_memory_refresh_free` eliminates actual refreshes using the existing algorithm while
   preserving every CPU/host touch and prior/final values and locations.
-  **Next:** transport semantic facts through these rewritten rows and use the enlarged footprint
-  in the existing Memory grounding walk. Derive
-  predecessor currency and bind the outgoing snapshot. Extend ordering and semantic advancement
+  `HostHintReadGrounding.source_grounding_carrier` now constructs the common execution carrier
+  with that complete footprint. Its `ground_of_steps` uses the existing walk, supplies source
+  State/Memory truth internally, and returns original register/RAM operand currency and final
+  State/frontier value truth. Timeline and transport proofs are shared with the ordinary local
+  assembly. Complete per-event step/frame facts remain explicit premises.
+  **Next:** discharge those premises on the actual paired replay and bind the complete outgoing
+  snapshot. Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
   and use the already-required active 1-mod-8 clock profile; range-only source validation permits
@@ -687,8 +691,9 @@ Still required before the native capstone can be claimed:
    HINT_LEN result. Integrate the remaining Memory/register currency, authenticate new nodes, and extend it to
    WRITE/hook prepends before claiming complete outgoing snapshot agreement.
    The extended Memory ledger and its complete record permutation are now derived for the
-   installed hint assembly, retaining actual wrapper/word accesses. Use that ledger in grounding;
-   the smaller instruction-only witness does not inherit its Memory balance.
+   installed hint assembly, retaining actual wrapper/word accesses. Its full-footprint carrier
+   and conditional grounding theorem now use that ledger; derive the remaining event semantics
+   on paired replay. The smaller instruction-only witness does not inherit its Memory balance.
    Parameterize the bank subsystem's currently zero genesis with the complete local source
    commitment/deferred values before installing it in arbitrary continuation shards.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM

@@ -1011,8 +1011,15 @@ ledgers independently establish unique source/final records. `source_memory_refr
 the existing refresh algorithm and `LocalCore.MemoryChronology`: it retains every CPU/host touch
 and rewrites priors and final records only to equal-value, same-location records at no-later times.
 No instruction-only Memory balance, caller chronology, or prior Memory truth is assumed.
-Semantic transport through the rewritten rows, previous-value truth, and the mixed grounding
-walk remain open.
+`Soundness/HostHintReadGrounding.lean` now constructs the canonical execution carrier for this
+complete footprint and connects it to the same grounding engine as the ordinary local assembly.
+`GroundingCarrier.ground_of_steps` derives source State truth and the live-memory genesis from
+the verifier, source constraints, and Byte guarantees. Given the complete original events'
+step/frame facts on a trajectory starting at that source, it derives their register/RAM operand
+values at the actual read times, final State truth, and physical final-frontier values at the
+outgoing clock. The proof hides alignment and refresh rewriting. It does not infer truth at an
+original prior record's historical timestamp. Actual event semantics on paired replay, complete
+outgoing snapshot agreement, and integration of the remaining host effects are still open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

@@ -40,6 +40,24 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Ground the complete host footprint and return original operand currency.
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier"),
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.timeline"),
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.timeline_start"),
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.timeStep"),
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.finalClock"),
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.stateBalance"),
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.engineFacts"),
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.originalCurrency"),
+    ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionCarrier.ground"),
+    ("SP1Clean/Soundness/LocalCoreSourceGrounding.lean", "source_state_encoding_of_byte"),
+    ("SP1Clean/Soundness/LocalCoreSourceGrounding.lean", "initialStateTruth_of_byte"),
+    ("SP1Clean/Soundness/LocalCoreSourceGrounding.lean", "memoryInitialFrontier_content_of_byte"),
+    ("SP1Clean/Soundness/LocalCoreSourceGrounding.lean", "memoryInitialFrontier_liveOK_of_byte"),
+    ("SP1Clean/Soundness/LocalCoreTransport.lean", "executionRows_readsInWindow_of_program"),
+    ("SP1Clean/Soundness/HostHintReadGrounding.lean", "GroundingCarrier"),
+    ("SP1Clean/Soundness/HostHintReadGrounding.lean", "source_grounding_carrier"),
+    ("SP1Clean/Soundness/HostHintReadGrounding.lean", "GroundingCarrier.ground_of_steps"),
     # The complete host ledger absorbed into CPU rows, with real refresh pairs retained.
     ("SP1Clean/Soundness/HostLocalCoreMemory.lean", "localWitness_table"),
     ("SP1Clean/Soundness/HostLocalCoreMemory.lean", "wrapper_memory_interactions"),
@@ -2048,7 +2066,7 @@ EXACT_REQUIRED_THEOREMS = [
 ]
 
 EXACT_REQUIRED_TARGETS = [
-    (path, rf"(?:theorem|def|abbrev)\s+({re.escape(name)})(?=\s|[({{:]|$)")
+    (path, rf"(?:theorem|def|abbrev|structure)\s+({re.escape(name)})(?=\s|[({{:]|$)")
     for path, name in EXACT_REQUIRED_THEOREMS
 ]
 

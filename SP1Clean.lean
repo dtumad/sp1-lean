@@ -432,6 +432,7 @@ import SP1Clean.Soundness.HostHintReadLocalMemory
 import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Soundness.HostHintReadExecutionRows
 import SP1Clean.Soundness.HostHintReadMemoryOrder
+import SP1Clean.Soundness.HostHintReadGrounding
 import SP1Clean.Soundness.HostLocalCoreRows
 import SP1Clean.Soundness.HostRamTouches
 import SP1Clean.Model.Core.HintQueueEvent

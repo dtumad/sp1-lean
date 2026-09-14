@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2523 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2540 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 302 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2825 released declarations are probed.
+- 2842 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,16 +35,18 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The host refresh integration adds ten main declarations, all retaining the installed assembly's
-existing 100-dependency set. All preceding 2513 main and 302 test dependency sets are unchanged,
-with no removals or new axiom names. `HostHintReadCPU.source_memory_chronology` derives both prior
-and final clock bounds and strict refresh order from the complete ledger, including host RAM.
-The unchanged private boundary ordering channels supply unique source/final frontiers.
-`source_memory_refresh_free` applies the existing refresh algorithm to the enlarged CPU rows;
-every touch survives, and rewritten priors/final records preserve values and locations while
-moving clocks earlier. No instruction-only Memory balance, prior Memory truth, or caller
-chronology is assumed. Semantic transport through the rewritten rows, predecessor value truth,
-and complete host execution grounding remain open.
+The complete-footprint grounding integration adds 17 main probes: nine retain the shared carrier's
+existing 77-dependency set, and eight retain the installed assembly's existing 100-dependency set.
+All preceding 2523 main and 302 test dependency sets are unchanged, with no removals or new axiom
+names. `HostHintReadCPU.source_grounding_carrier` derives the full instruction/host carrier from
+raw constraints and balance, using the proved complete Memory accounting, alignment, chronology,
+and refresh elimination. Its `GroundingCarrier.ground_of_steps` derives source genesis internally
+and returns original register/RAM operand currency and final State/frontier value truth. It uses
+the shared `ExecutionCarrier.ground` and `ExecutionCarrier.originalCurrency` proofs. Complete
+per-event step/frame facts remain premises; actual host execution and full outgoing snapshot
+agreement are not yet proved. Refresh rewriting does not authenticate the original prior record's
+historical timestamp. The preceding refresh integration's ten probes and all older declarations
+retain their recorded dependency sets.
 
 The preceding host Program/register integration added seven main declarations: two use the logical baseline,
 and five retain the installed assembly's existing 100-dependency set. All preceding 2452 main

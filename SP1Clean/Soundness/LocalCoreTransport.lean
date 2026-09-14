@@ -22,20 +22,20 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 
 private theorem syscallRows_readsInWindow {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
     ReadsInWindow (syscallRowFacts row) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  have committed := syscall_program_committed valid witness constraints balanced physicalMem (of_decide_eq_true real)
+  have committed := syscall_program_committed_of_balance valid witness constraints balanced physicalMem (of_decide_eq_true real)
   exact syscall_readsInWindow_of_committed _ _ committed
 
 /-- All original execution reads lie within their location's pre-effect window, with syscall
 read times retained. Operand addresses for system rows come from the checked Program ledger. -/
-theorem executionRows_readsInWindow {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+theorem executionRows_readsInWindow_of_program {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     {event : ExecutionRow p} (member : event ∈ executionRows witness) :
     ReadsInWindow (event.facts witness.data) := by
   simp only [executionRows, List.mem_append, List.mem_map] at member
@@ -47,6 +47,15 @@ theorem executionRows_readsInWindow {image : ProgramImage} {source : ExecutionSn
     obtain ⟨_, _, rfl⟩ := List.mem_map.mp pullMem
     exact ⟨le_rfl, Nat.le_add_right _ _⟩
   · exact syscallRows_readsInWindow valid witness constraints balanced member
+
+/-- The complete local AIR supplies Program balance for the original read windows. -/
+theorem executionRows_readsInWindow {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {event : ExecutionRow p} (member : event ∈ executionRows witness) :
+    ReadsInWindow (event.facts witness.data) :=
+  executionRows_readsInWindow_of_program valid witness constraints
+    (balanced _ (by simp [ensemble, sp1Ensemble_channels])) member
 
 private theorem canonical_times {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
@@ -65,7 +74,7 @@ private theorem canonical_times {image : ProgramImage} {source : ExecutionSnapsh
 back to the actual event rows, so later step/frame proofs do not depend on refresh implementation. -/
 abbrev GroundingCarrier {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :=
-  NativeCore.ExecutionCarrier witness.data (executionRows witness)
+  NativeCore.ExecutionCarrier (ExecutionRow.facts witness.data) (executionRows witness)
     (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput)
     (memoryInitialFrontier witness) (memoryFinalFrontier witness)
 
@@ -122,7 +131,7 @@ theorem GroundingCarrier.stateBalance {image : ProgramImage} {source : Execution
     initialBoundaryStateMessage witness.publicInput ::ₘ
         (↑(carrier.rows.map (·.statePush)) : Multiset (StateMsg (ZMod p))) =
       finalBoundaryStateMessage witness.publicInput ::ₘ ↑(carrier.rows.map (·.statePull)) :=
-  endpointBalance_of_stateWalk _ carrier.stateWalk
+  NativeCore.ExecutionCarrier.stateBalance carrier
 
 /-- Per-event step and frame facts transport to the final carrier uniformly, over any trajectory
 and timeline. These semantic premises are explicitly separate from carrier construction. -/
@@ -133,11 +142,7 @@ theorem GroundingCarrier.engineFacts {image : ProgramImage} {source : ExecutionS
       LocalStepFactG program trajectory initial timeline (event.facts witness.data) ∧
       FrameFactG program trajectory initial timeline (event.facts witness.data)) :
     ∀ row ∈ carrier.rows, LocalStepFactG program trajectory initial timeline row ∧
-      FrameFactG program trajectory initial timeline row := by
-  intro row member
-  obtain ⟨original, originalMem, aligned⟩ := forall₂_exists_right carrier.aligned row member
-  obtain ⟨event, eventMem, rfl⟩ := List.mem_map.mp originalMem
-  have semantic := facts event (carrier.exhaustive.mem_iff.mp eventMem)
-  exact ⟨aligned.stepFact semantic.1, aligned.frameFact semantic.2⟩
+      FrameFactG program trajectory initial timeline row :=
+  NativeCore.ExecutionCarrier.engineFacts carrier program trajectory initial timeline facts
 
 end SP1Clean.Soundness.LocalCore

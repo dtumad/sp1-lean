@@ -21,27 +21,26 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 /-- The timeline is determined by the carrier's State edges, including wide system rows. -/
 noncomputable def GroundingCarrier.timeline {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness) : Timeline :=
-  rowTimeline (StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput)) carrier.rows
-    (fun row member => (carrier.rowOK row member).timeGap)
+  NativeCore.ExecutionCarrier.timeline carrier
 
 /-- The constructed timeline starts at the verifier's public initial clock. -/
 theorem GroundingCarrier.timeline_start {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness) :
     carrier.timeline.start 0 = StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput) :=
-  rowTimeline_start _ _ _
+  NativeCore.ExecutionCarrier.timeline_start carrier
 
 /-- Every carrier row advances to the actual successor index of its own timeline. -/
 theorem GroundingCarrier.timeStep {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness) :
     ∀ row ∈ carrier.rows, ∀ n, StateMsg.timeNat row.statePull = carrier.timeline.start n →
       StateMsg.timeNat row.statePush = carrier.timeline.start (n + 1) :=
-  rowTimeline_step_of_walk carrier.stateWalk _
+  NativeCore.ExecutionCarrier.timeStep carrier
 
 /-- The public final clock is the timeline's last covered index. -/
 theorem GroundingCarrier.finalClock {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness) :
     carrier.timeline.start carrier.rows.length = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) :=
-  rowTimeline_end_of_walk carrier.stateWalk _
+  NativeCore.ExecutionCarrier.finalClock carrier
 
 /-- The derived timeline starts at the complete source's actual clock. -/
 theorem GroundingCarrier.timeline_source {image : ProgramImage} {source : ExecutionSnapshot}
@@ -79,20 +78,9 @@ theorem GroundingCarrier.ground_of_steps {image : ProgramImage} {source : Execut
       (∀ loc message, memoryFinalFrontier witness loc = some message →
         LocalValueAtG trajectory source.sail.realize carrier.timeline loc
           (StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput)) message.value) := by
-  have facts := carrier.engineFacts _ trajectory source.sail.realize carrier.timeline steps
   have genesis := memoryInitialFrontier_liveOK witness constraints balanced trajectory carrier.timeline initial
   rw [carrier.timeline_start] at genesis
-  have grounded := walkG (image.toGuestProgram valid) trajectory source.sail.realize carrier.timeline
-    (StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput))
-    (finalBoundaryStateMessage witness.publicInput) carrier.final carrier.rows.length carrier.rows
-    (initialBoundaryStateMessage witness.publicInput) (memoryInitialFrontier witness) rfl
-    (fun row member => (facts row member).1) (fun row member => (facts row member).2)
-    carrier.rowOK carrier.timeStep (carrier.initialStateTruth valid constraints balanced trajectory initial)
-    genesis carrier.stateBalance carrier.memoryBalance
-  refine ⟨grounded.1, grounded.2.1, ?_⟩
-  intro loc message present
-  obtain ⟨earlier, earlierPresent, _, value, _⟩ := carrier.finalRewrite loc message present
-  have current := (grounded.2.2 loc earlier earlierPresent).2.2.1
-  rwa [value] at current
+  exact NativeCore.ExecutionCarrier.ground carrier (image.toGuestProgram valid) trajectory source.sail.realize
+    (carrier.initialStateTruth valid constraints balanced trajectory initial) genesis steps
 
 end SP1Clean.Soundness.LocalCore

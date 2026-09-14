@@ -120,7 +120,7 @@ theorem GroundingCarrier.timeline_events {image : ProgramImage} {source : Execut
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (n : ℕ) (covered : n ≤ carrier.events.length) :
     carrier.timeline.start n = source.clock + ((carrier.events.take n).map Machine.ExecutionEvent.duration).sum := by
-  rw [timeline, rowTimeline, Timeline.ofDurations_start_le _ _ _ (by
+  rw [timeline, NativeCore.ExecutionCarrier.timeline, rowTimeline, Timeline.ofDurations_start_le _ _ _ (by
     simpa only [List.length_map, carrier.events_length] using covered),
     event_durations carrier constraints balanced, ← List.map_take]
   exact congrArg (fun clock => clock + ((carrier.events.take n).map Machine.ExecutionEvent.duration).sum)
