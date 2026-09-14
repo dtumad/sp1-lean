@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2465 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2477 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 301 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2766 released declarations are probed.
+- 2778 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,15 +35,16 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The host RAM-touch integration adds six main declarations: three use the logical baseline,
-and three retain the installed assembly's existing 100-dependency set. All preceding 2459 main
+The host predecessor-clock integration adds twelve main declarations: two use the logical baseline,
+and ten retain the installed assembly's existing 100-dependency set. All preceding 2465 main
 and 301 test dependency sets are unchanged, with no removals or new axiom names.
-`HostRamTouches.of_constraints` derives canonical RAM keys, new-word and clock bounds, and
-aligned access timing without Memory guarantees. `HostHintReadLocal.source_word_touches`
-instantiates these facts for every actual word in the source/queue assembly, and
-`call_word_touches` places selected words in the handler's window. Strict predecessor order
-still needs the prior low-clock bound from the full mixed ledger; previous-value truth and
-complete host execution grounding remain open.
+`HostLocalCore.memoryInterior_push_bound` covers original instruction/refresh rows, WRITE's
+x12 pair, and locally bounded auxiliary pushes without projecting Memory balance.
+`HostHintReadLocal.source_memory_push_bound` closes those premises for the installed source
+assembly. Its complete record permutation yields `source_memory_prior_bound` for every consumed
+interior record, and `source_word_order` proves strict prior/write order for every physical hint
+word, including padding. The existing canonical keys, word bounds, and aligned touches are retained.
+Previous-value truth and complete host execution grounding remain open.
 
 The preceding host Program/register integration added seven main declarations: two use the logical baseline,
 and five retain the installed assembly's existing 100-dependency set. All preceding 2452 main
