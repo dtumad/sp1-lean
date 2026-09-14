@@ -42,11 +42,15 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 EXACT_REQUIRED_THEOREMS = [
     ("SP1Clean/Soundness/LocalCoreEnsemble.lean", "program_guarantees_of_balance"),
     ("SP1Clean/Soundness/HostLocalCoreProgram.lean", "hostCall_eventLaw"),
+    ("SP1Clean/Soundness/HostLocalCoreProgram.lean", "hostCall_contract"),
+    ("SP1Clean/Soundness/HostExecutionEffect.lean", "hostStep_effect"),
+    ("SP1Clean/Soundness/HostExecutionEffect.lean", "romLoaded_of_readOnly"),
     ("SP1Clean/Soundness/CoreExecutionTrajectory.lean", "ExecutionCarrier.time_of_ordered_at"),
     ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "handler_wordsAt"),
     ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "address_loc"),
     ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "hint_memory_effect"),
     ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "GroundingCarrier.hintRead_step"),
+    ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "GroundingCarrier.hintRead_engineFacts"),
     # Actual paired replay on the complete carrier and incoming-truth hint dispatch.
     ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionRow.canonEdge_facts"),
     ("SP1Clean/Soundness/HostHintReadGrounding.lean", "GroundingCarrier.cpuWalk"),

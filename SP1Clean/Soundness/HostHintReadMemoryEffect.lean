@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostHintReadTrajectory
 import SP1Clean.Soundness.HostFootprint
+import SP1Clean.Soundness.HostExecutionEffect
 
 /-! # HINT_READ execution and exact RAM effects
 
@@ -7,7 +8,8 @@ The complete physical word inventory identifies every updated Sail RAM cell, inc
 mandatory padding word. Canonical RAM keys derive destination alignment; cells outside that
 inventory are unchanged. The installed AIR derives a real host execution at the exact next
 paired-replay position, authenticating the complete event including its PC and recombined clock.
-The timed step/frame bundle and complete outgoing snapshot agreement remain open.
+The timed grounding facts below retain both the instruction's register accesses and all host RAM
+accesses. Complete outgoing snapshot agreement remains a separate whole-shard obligation.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -323,5 +325,230 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
   have effect := source_memory_effect witness constraints balanced event member env handler clock
     current.host bytes remaining inventory current.sail (StateMsg.pcBits (event.facts witness.data).statePull)
   exact ⟨n, current, next, atIndex, paired, after, step, effect⟩
+
+private theorem register_push_truth (row : SyscallInstrsChip.Inputs (ZMod p))
+    (real : row.is_real = 1) (spec : SyscallInstrsChip.Spec row)
+    (pulled : SyscallInstrsChip.PulledFacts row) (operand : row.op_a = 5)
+    (trajectory : Trajectory) (initial next : SailState) (timeline : Timeline) (n : ℕ)
+    (after : trajectory (n + 1) = some next)
+    (time : StateMsg.timeNat (syscallRowFacts row).statePull = timeline.start n)
+    (result : next.get_reg? 5 = some (syscallEventOfRow row).result)
+    (currency : ∀ mp ∈ (syscallRowFacts row).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+      LocalValueAtG trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+    ∀ message ∈ (syscallRowFacts row).memPushes, LocalMemTruthG trajectory initial timeline message := by
+  have bounds := spec.2.1 real
+  change StateMsg.timeNat (SyscallInstrsChip.statePulledMessage row) = timeline.start n at time
+  obtain ⟨timeA, boundA⟩ := syscallRow_memPush_time row bounds.1 bounds.2
+    row.op_a row.op_a_value 4 (by norm_num) 4 rfl
+  obtain ⟨timeB, boundB⟩ := syscallRow_memPush_time row bounds.1 bounds.2
+    row.op_b row.op_b_memory.prev_value 3 (by norm_num) 3 rfl
+  obtain ⟨timeC, boundC⟩ := syscallRow_memPush_time row bounds.1 bounds.2
+    row.op_c row.op_c_memory.prev_value 2 (by norm_num) 2 rfl
+  have currB := currency _ (by rw [syscallRowFacts_memPulls]; exact List.mem_cons_of_mem _ List.mem_cons_self)
+  have currC := currency _ (by
+    rw [syscallRowFacts_memPulls]
+    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+  intro message member
+  rw [syscallRowFacts_memPushes] at member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl
+  · refine ⟨(pulled real).2.2.2.2.2.2.2.2.2.2.2, boundA, ?_⟩
+    have located := (syscallRow_locOf_reg row (i := 5) operand.symm row.op_a_memory row.op_a_value 4).2
+    change microValueG trajectory initial timeline _ _ = _
+    rw [located, timeA, time, microValueG_reg_post (n := n) le_rfl (by have := timeline.gap n; omega),
+      after, Option.bind_some]
+    exact result
+  · refine ⟨currB.1, boundB, ?_⟩
+    rw [LocalValueAtG, timeB]
+    exact currB.2.2
+  · refine ⟨currC.1, boundC, ?_⟩
+    rw [LocalValueAtG, timeC]
+    exact currC.2.2
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem word_push_truth (row : HintReadCoverage.Row (p := p))
+    (facts : HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram)
+    (trajectory : Trajectory) (initial next : SailState) (timeline : Timeline) (n : ℕ)
+    (after : trajectory (n + 1) = some next)
+    (aligned : TouchOK (timeline.start n) (touch row).1 (touch row).2)
+    (current : LocalValueAtG trajectory initial timeline (MemoryMsg.locOf (touch row).1.1)
+      (touch row).1.2 (touch row).1.1.value)
+    (written : locContent next (MemoryMsg.locOf (touch row).2) = some (Word.toBitVec64 (touch row).2.value)) :
+    LocalMemTruthG trajectory initial timeline (touch row).2 := by
+  refine ⟨facts.value, facts.pushLow, ?_⟩
+  rcases aligned.push_kind with ⟨sameValue, sameTime⟩ | atWrite
+  · rw [LocalValueAtG, sameTime, sameValue, aligned.loc_eq]
+    exact current
+  · obtain ⟨cell, located, _⟩ := word_cell row facts
+    rw [located, writeOffset] at atWrite
+    change microValueG trajectory initial timeline _ _ = _
+    rw [located, atWrite, microValueG_ram_post (n := n) le_rfl (by have := timeline.gap n; omega),
+      after, Option.bind_some]
+    rwa [located] at written
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem hint_frame [Fact (2 ^ 17 < p)]
+    (row : SyscallInstrsChip.Inputs (ZMod p)) (operand : row.op_a = 5)
+    (words : List (HintReadCoverage.Row (p := p)))
+    (trajectory : Trajectory) (initial current next : SailState) (timeline : Timeline) (n : ℕ)
+    (before : trajectory n = some current) (after : trajectory (n + 1) = some next)
+    (result : next.get_reg? 5 = some (syscallEventOfRow row).result)
+    (registers : ∀ index : BitVec 5, index ≠ 5 → next.get_reg? index = current.get_reg? index)
+    (written : ∀ word ∈ words, locContent next (MemoryMsg.locOf (touch word).2) =
+      some (Word.toBitVec64 (touch word).2.value))
+    (unchanged : ∀ cell : RamCell, (∀ word ∈ words, MemoryMsg.locOf (touch word).2 ≠ .ram cell) →
+      locContent next (.ram cell) = locContent current (.ram cell)) :
+    ∀ loc value,
+      (∀ message ∈ (syscallRowFacts row).memPushes ++ words.map (fun word => (touch word).2),
+        MemoryMsg.locOf message = loc → message.value = value) →
+      LocalValueAtG trajectory initial timeline loc (timeline.start n) value →
+      LocalValueAtG trajectory initial timeline loc (timeline.start (n + 1)) value := by
+  intro loc value pushes currency
+  have content := (localValueAtG_stepStart_iff before).mp currency
+  apply (localValueAtG_stepStart_iff after).mpr
+  cases loc with
+  | reg index =>
+    by_cases isReturn : index = 5
+    · subst index
+      have located := (syscallRow_locOf_reg row (i := 5) operand.symm row.op_a_memory row.op_a_value 4).2
+      have valueEq : row.op_a_value = value := pushes _
+        (List.mem_append_left _ (by rw [syscallRowFacts_memPushes]; exact List.mem_cons_self)) located
+      change next.get_reg? 5 = _
+      have returned : next.get_reg? 5 = some (Word.toBitVec64 row.op_a_value) := result
+      rwa [valueEq] at returned
+    · change next.get_reg? index = _
+      rw [registers index isReturn]
+      exact content
+  | ram cell =>
+    by_cases touched : ∃ word ∈ words, MemoryMsg.locOf (touch word).2 = .ram cell
+    · obtain ⟨word, member, located⟩ := touched
+      have valueEq := pushes _ (List.mem_append_right _ (List.mem_map_of_mem member)) located
+      have wordValue := written word member
+      rwa [located, valueEq] at wordValue
+    · rw [unchanged cell (by simpa only [not_exists, not_and] using touched)]
+      exact content
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem syscall_state_push (row : SyscallInstrsChip.Inputs (ZMod p))
+    (program : Target.GuestProgram) (trajectory : Trajectory) (next : SailState) (timeline : Timeline) (n : ℕ)
+    (after : trajectory (n + 1) = some next)
+    (time : StateMsg.timeNat (syscallRowFacts row).statePush = timeline.start (n + 1))
+    (pc : next.regs.get? LeanRV64D.Defs.Register.PC = some (syscallEventOfRow row).nextPc)
+    (loaded : Target.RomLoaded program next) (configured : Target.SailConfigured next) :
+    LocalStateTruthG program trajectory timeline (syscallRowFacts row).statePush :=
+  ⟨n + 1, next, after, time, pc, loaded, configured⟩
+
+/-- Every matched physical HINT_READ supplies the existing timed engine's complete step and
+frame obligations on paired replay. Register, RAM, ROM, and configuration effects are derived
+from this witness; no semantic effect or successful-current-step premise is supplied by the caller. -/
+theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (env : Environment (ZMod p))
+    (handler : env ∈ (handlerTable (HostHintQueueBoundary.expanded witness)).table.map
+      (handlerTable (HostHintQueueBoundary.expanded witness)).environment)
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
+    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) ∧
+    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) := by
+  let facts := eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+    (wordTables (HostHintQueueBoundary.expanded witness))) event
+  suffices advance : ∀ (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid)
+      carrier.timeline facts.statePull)
+      (currency : ∀ mp ∈ facts.memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
+      (LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline facts.statePush ∧
+        ∀ message ∈ facts.memPushes, LocalMemTruthG (carrier.trajectory valid) source.sail.realize carrier.timeline message) ∧
+      (∀ loc value, (∀ message ∈ facts.memPushes, MemoryMsg.locOf message = loc → message.value = value) →
+        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline loc (StateMsg.timeNat facts.statePull) value →
+        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline loc (StateMsg.timeNat facts.statePush) value) by
+    exact ⟨fun pull currency => (advance pull currency).1, fun pull currency => (advance pull currency).2⟩
+  intro pull currency
+  obtain ⟨n, current, next, atIndex, paired, pairedNext, step, written, unchanged⟩ :=
+    carrier.hintRead_step valid constraints balanced event member env handler clock pull currency
+  have time := ExecutionCarrier.time_of_ordered_at carrier atIndex
+  have nextTime := ExecutionCarrier.originalTimeStep carrier member n time
+  change StateMsg.timeNat facts.statePull = carrier.timeline.start n at time
+  change StateMsg.timeNat facts.statePush = carrier.timeline.start (n + 1) at nextTime
+  have before : carrier.trajectory valid n = some current.sail := by
+    simp only [GroundingCarrier.trajectory, paired, Option.map_some]
+  have after : carrier.trajectory valid (n + 1) = some next.sail := by
+    simp only [GroundingCarrier.trajectory, pairedNext, Option.map_some]
+  obtain ⟨m, state, present, atTime, _, loaded, configured⟩ := pull
+  have sameIndex : m = n := start_injective carrier.timeline (atTime.symm.trans time)
+  subst m
+  have sail : state = current.sail := Option.some.inj (present.symm.trans before)
+  rw [sail] at loaded configured
+  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
+  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+    (source_interface (p := p) source.host.io.hints)
+  have handlerMember : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+      (queueTables (HostHintQueueBoundary.expanded witness)) := by
+    obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handler
+    simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
+      List.zip_cons_cons, List.flatMap_cons]
+    exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
+  obtain ⟨physical, active, _, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
+    (HostHintQueueBoundary.expanded witness) interface checks balance (none, env) handlerMember event member clock
+  have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+    intro mp present
+    apply currency mp
+    apply List.mem_append_left
+    simpa only [sameEvent, ExecutionRow.facts] using present
+  have contract := HostLocalCore.hostCall_contract (HostHintQueueBoundary.expanded witness)
+    (auxiliaryInterface interface) (source_program_silent source final) checks balance physical active
+    (fun mp present => ⟨(original mp present).1, (original mp present).2.1⟩)
+  have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
+    (source_program_silent source final) checks balance physical active
+  have operands := NativeCore.syscall_operands_of_committed _ _ committed
+  have effects := hostStep_effect (show ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩
+      (image.toGuestProgram valid) current (.syscall (syscallEventOfRow (HostCallLedger.input physical).instruction)) next by
+    simpa only [sameEvent, ExecutionRow.event] using step)
+  have instructionTime : StateMsg.timeNat (syscallRowFacts (HostCallLedger.input physical).instruction).statePull =
+      carrier.timeline.start n := by simpa only [facts, eventFacts, sameEvent, ExecutionRow.facts] using time
+  have registers := register_push_truth (HostCallLedger.input physical).instruction
+    (of_decide_eq_true (List.mem_filter.mp active).2) contract.1 contract.2 operands.1
+    (carrier.trajectory valid) source.sail.realize next.sail carrier.timeline n after instructionTime
+    effects.1.2.2.2.2.2 original
+  have cpuTime : StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n := by
+    simpa only [facts, eventFacts] using time
+  constructor
+  · constructor
+    · have successor := syscall_state_push (HostCallLedger.input physical).instruction
+        (image.toGuestProgram valid) (carrier.trajectory valid) next.sail carrier.timeline n after
+        (by simpa only [facts, eventFacts, sameEvent, ExecutionRow.facts] using nextTime)
+        effects.1.2.2.2.2.1 (romLoaded_of_readOnly image valid effects.2.2.2 loaded) (effects.2.2.1 configured)
+      simpa only [facts, eventFacts, sameEvent, ExecutionRow.facts] using successor
+    · intro message messageMem
+      change message ∈ (event.facts witness.data).memPushes ++
+        (wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+          (wordTables (HostHintQueueBoundary.expanded witness))) event).map (fun row => (touch row).2) at messageMem
+      rcases List.mem_append.mp messageMem with originalMem | wordMem
+      · apply registers message
+        simpa only [sameEvent, ExecutionRow.facts] using originalMem
+      · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp wordMem
+        have access := source_word_touches witness constraints balanced row (List.mem_filter.mp rowMem).1
+        have aligned := (source_touches_at valid witness constraints balanced event row rowMem).1
+        rw [ExecutionRow.edge_eq_facts, cpuTime] at aligned
+        exact word_push_truth row access (carrier.trajectory valid) source.sail.realize next.sail
+          carrier.timeline n after aligned
+          (currency _ (List.mem_append_right _ (List.mem_map_of_mem rowMem))).2.2 (written row rowMem)
+  · intro loc value pushes currentValue
+    rw [time] at currentValue
+    rw [nextTime]
+    apply hint_frame (HostCallLedger.input physical).instruction operands.1 _
+      (carrier.trajectory valid) source.sail.realize current.sail next.sail carrier.timeline n
+      before after effects.1.2.2.2.2.2 effects.2.1 written unchanged loc value ?_ currentValue
+    simpa only [facts, eventFacts, sameEvent, ExecutionRow.facts] using pushes
 
 end SP1Clean.Soundness.HostHintReadCPU

@@ -1036,9 +1036,15 @@ replay state, with exact values for every physical RAM push and preservation of 
 cell. Complete HostCall agreement supplies the arguments/result; the instruction contract and
 clock bounds supply the PC law and non-wrapping clock recombination. The physical write inventory
 includes the mandatory padded word and does not require an assumption about overwritten bytes.
-The complete timed step/frame bundle, other host effects, and outgoing snapshot authentication
-remain necessary to close whole-shard grounding. No unconditional whole-shard execution theorem
-is claimed here.
+`GroundingCarrier.hintRead_engineFacts` supplies the complete timed step/frame bundle for a
+matched physical HINT_READ, without a caller-supplied semantic effect or successful-step premise.
+The x5 write is read back at offset 4; x10/x11 retain their authenticated values at offsets 3/2.
+Every grouped RAM push has its bounded value at the corresponding access time. The frame proof
+covers both untouched locations and written locations whose pushed value matches the invariant.
+`Soundness/HostExecutionEffect.lean` derives configuration and protected-byte preservation from
+the concrete host transition, including transitions that modify RAM; this supplies ROM preservation.
+Other event cases and outgoing snapshot authentication remain necessary to close whole-shard
+grounding. No unconditional whole-shard execution theorem is claimed here.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

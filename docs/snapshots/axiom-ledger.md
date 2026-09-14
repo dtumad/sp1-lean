@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-14. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2565 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2569 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 302 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2867 released declarations are probed.
+- 2871 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,15 +35,15 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The HINT_READ successor proof adds seven main probes: two use only the logical baseline,
-one retains the shared carrier's existing 77-dependency set, and four retain the installed
-assembly's existing 100-dependency set. All preceding 2558 main and 302 test dependency sets are
-unchanged, with no removals or new axiom names. `HostHintReadCPU.GroundingCarrier.hintRead_step`
-derives the actual full-state transition at the exact next paired-replay position from incoming
-State and operand currency. It proves every grouped RAM push, including mandatory padding, and
-preservation of every other RAM cell. Full HostCall agreement, the instruction contract, and
-non-wrapping clock recombination authenticate the complete event. The pure RAM-effect theorem
-uses only the logical baseline and needs no assumption about overwritten values.
+The HINT_READ timed step/frame proof adds four main probes: ROM preservation uses only the logical
+baseline, concrete host preservation retains the existing 77-dependency set, and the instruction
+contract and integrated grounding facts retain the installed assembly's existing 100-dependency
+set. All preceding 2565 main and 302 test dependency sets are unchanged, with no removals or new
+axiom names. `HostHintReadCPU.GroundingCarrier.hintRead_engineFacts` supplies the existing engine's
+complete step/frame obligations for each matched physical HINT_READ. Register and RAM readbacks,
+configuration, protected program bytes, and frames for written and untouched locations follow
+from the actual paired successor. Other event cases and complete outgoing-state agreement remain
+whole-shard obligations; this is not an unconditional shard-execution theorem.
 
 The complete-footprint grounding proof still requires the complete timed step/frame bundle.
 It supplies source genesis and returns original register/RAM operand currency and final

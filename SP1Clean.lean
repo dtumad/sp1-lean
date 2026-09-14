@@ -435,6 +435,7 @@ import SP1Clean.Soundness.HostHintReadMemoryOrder
 import SP1Clean.Soundness.HostHintReadGrounding
 import SP1Clean.Soundness.HostHintReadTrajectory
 import SP1Clean.Soundness.HostHintReadMemoryEffect
+import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostLocalCoreRows
 import SP1Clean.Soundness.HostRamTouches
 import SP1Clean.Model.Core.HintQueueEvent

@@ -521,8 +521,11 @@ Implemented foundations:
   Complete HostCall agreement, the instruction contract, and range-checked clock recombination
   authenticate every event field. The successor realizes every physical RAM push, including
   mandatory padding, and preserves every other RAM cell without assuming overwritten values.
-  **Next:** assemble the complete timed step/frame facts from these event effects and the
-  register, ROM, and configuration facts, then bind the outgoing snapshot.
+  `GroundingCarrier.hintRead_engineFacts` now supplies the complete timed step/frame bundle
+  for each matched physical HINT_READ. It derives the register readbacks at their actual access
+  offsets, every grouped RAM readback, and the frame obligation for written and untouched
+  locations. Concrete host execution preserves Sail configuration and protected program bytes.
+  **Next:** close the other event cases on this complete carrier and bind the outgoing snapshot.
   Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
