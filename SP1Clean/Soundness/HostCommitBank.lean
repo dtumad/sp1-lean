@@ -6,7 +6,7 @@ import ToClean.Air.ChannelClosure
 
 Each bank registers eight slot components and one terminal component. The terminal is a
 semantically inert transition to a fixed clock outside ordinary timestamps. Consequently the
-same ranked-balance argument binds a zero initial bank to public final words, including when
+same ranked-balance argument binds the supplied initial bank to public final words, including when
 there are no calls. The execution fold retains physical row identities and ignores only the
 proved terminal no-op. Local contracts follow from constraints and Byte guarantees.
 -/
@@ -164,23 +164,23 @@ private theorem history_of_balance (deferred : Bool) (rows : List (Row (p := p))
   intro row member
   exact valid row (perm.mem_iff.mp member)
 
-/-- The fixed genesis and public final words determine a history of every physical bank row.
+/-- The fixed local source and public final words determine a history of every physical bank row.
 Local specifications are derived from constraints and Byte guarantees, including at the terminal. -/
 theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
-    (values : Vector (Word (ZMod p)) 8)
+    (initialValues values : Vector (Word (ZMod p)) 8)
     (aligned : List.Forall₂ (fun index table => (view deferred index).component = table.component) indices tables)
     (constraints : ∀ table ∈ tables, table.Constraints)
     (byte : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw)
     (balanced : BalancedInteractions
-      ([(stateChannel deferred).pushedValue HostCommitBoundary.initial,
+      ([(stateChannel deferred).pushedValue (HostCommitBoundary.start initialValues),
         (stateChannel deferred).pulledValue (HostCommitBoundary.final values)] ++
         tables.flatMap (·.interactionsWith (stateChannel deferred).toRaw)))
     (policy : HostPolicy) (characteristic : policy.characteristic = p)
     (context : HostReadContext) (host : HostState) :
     ∃ path : List (Row (p := p)),
       path.Perm (TransitionView.readIndexedRows indices tables) ∧
-      Walk.IsWalk (edge deferred) HostCommitBoundary.initial (HostCommitBoundary.final values) path ∧
-      path.foldlM (execute deferred policy context) ((HostCommitBoundary.initial (p := p)).apply deferred host) =
+      Walk.IsWalk (edge deferred) (HostCommitBoundary.start initialValues) (HostCommitBoundary.final values) path ∧
+      path.foldlM (execute deferred policy context) ((HostCommitBoundary.start initialValues).apply deferred host) =
         some ((HostCommitBoundary.final values).apply deferred host) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component) (views deferred) tables := by
     simpa only [views, List.forall₂_map_left_iff] using aligned
@@ -203,11 +203,11 @@ theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
   rw [views, TransitionView.readRows_eq_indexed] at projected
   simp only [List.flatMap_map] at projected
   rw [projected] at balanced
-  change BalancedInteractions ((stateChannel deferred).transitionLedger HostCommitBoundary.initial
+  change BalancedInteractions ((stateChannel deferred).transitionLedger (HostCommitBoundary.start initialValues)
     (HostCommitBoundary.final values) (TransitionView.readIndexedRows indices tables) (edge deferred)) at balanced
   have endpoints := ((stateChannel deferred).transitionLedger_balanced_iff _ _ _ _).mp balanced
   have endpointBalance : EndpointBalanced (↑(TransitionView.readIndexedRows indices tables)) (edge deferred)
-      HostCommitBoundary.initial (HostCommitBoundary.final values) := by
+      (HostCommitBoundary.start initialValues) (HostCommitBoundary.final values) := by
     simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints.2
   exact history_of_balance deferred _ _ _ localSpecs endpointBalance policy characteristic context host
 

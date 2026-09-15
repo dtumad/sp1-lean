@@ -40,6 +40,11 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    ("SP1Clean/FormalModel/Contracts/HostCommitBoundary.lean", "start"),
+    ("SP1Clean/Soundness/HostCommitEnsemble.lean", "sourceValues"),
+    ("SP1Clean/Soundness/HostCommitEnsemble.lean", "source_apply"),
+    ("SP1CleanTest/Core/HostCommitBoundary.lean", "continuationBanks"),
+    ("SP1CleanTest/Core/HostCommitBoundary.lean", "continuationTampering"),
     ("SP1Clean/Soundness/HostHintReadInstructionExecution.lean", "GroundingCarrier.instruction_step"),
     ("SP1Clean/Soundness/HostHintReadExecutionPath.lean", "GroundingCarrier.execution"),
     ("SP1Clean/Soundness/HostHintReadExecutionPath.lean", "source_execution"),

@@ -1070,6 +1070,14 @@ would not suffice. Host transitions use the concrete interpreter's actual incomi
 padding is erased and empty segments are identities. This statement does not bind a supplied
 complete outgoing snapshot or the Exit bus. Those obligations, the two missing handlers, and
 constructive completeness remain open; no full eight-call AIR/execution equivalence is claimed.
+Registration does not by itself establish active COMMIT coverage: this source-hint assembly
+does not install the commitment-bank endpoints. The separate `HostCommitEnsemble` now fixes its
+incoming bank from the actual complete source host, and `sound` derives the physical bank history
+from that host to the public final values. A zero-clock seed avoids claiming a historical last-call
+time. Nonzero-source regressions preserve values across a bank-shard cut and reject reset sources,
+untouched-slot mutations, and forged outgoing high limbs. Both bank endpoints and their terminals
+still need installation and CPU-history agreement in the mixed ensemble before outgoing bank
+authentication or active-COMMIT completeness can be claimed there.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

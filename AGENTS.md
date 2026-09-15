@@ -322,7 +322,12 @@ These components still need mixed-AIR installation, authenticated WRITE/hook all
 allocation-ledger node-word authentication for HINT_READ, and integration of allocation edges and
 queue history with full execution. The shared resource profile must include the identity bounds;
 no static-source-queue assumption is admissible.
-The bank subsystem's zero genesis also needs generalization to the actual local source banks.
+`HostCommitEnsemble` now takes the actual source host and seeds its selected bank, preserving
+nonzero commitment/deferred values across continuation cuts. Its verifier has no witness cells;
+clock zero is a local ledger seed, with boot's zero values as a specialization. Installing those
+bank endpoints/terminals and aligning their history with the CPU remains open. The current
+source-hint assembly registers COMMIT components but omits their endpoints, so its path theorem
+does not establish active-COMMIT non-vacuity or completeness.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are

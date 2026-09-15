@@ -68,9 +68,9 @@ private def tableFor (deferred : Bool) (events : List (Fin 8 × Inputs Fp))
   | none => Table.build ⟨HostCommitBoundary.terminal deferred⟩ terminals
       (fun _ _ => #[]) (ProverHint.empty Fp)
 
-private def witnessFor (deferred : Bool) (events : List (Fin 8 × Inputs Fp))
+private def witnessFor (deferred : Bool) (source : Model.Core.HostState) (events : List (Fin 8 × Inputs Fp))
     (terminals : List (State Fp)) (publicValues : Vector (Word Fp) 8) :
-    EnsembleWitness (HostCommitEnsemble.ensemble (p := SP1Prime) deferred [] []) :=
+    EnsembleWitness (HostCommitEnsemble.ensemble (p := SP1Prime) deferred source [] []) :=
   EnsembleWitness.ofTables _ (HostCommitBank.indices.map (tableFor deferred events terminals))
     (fun _ _ => #[]) publicValues (by
       simp only [List.map_map, HostCommitEnsemble.ensemble, HostCommitBank.components,
@@ -84,7 +84,7 @@ private def witnessFor (deferred : Bool) (events : List (Fin 8 × Inputs Fp))
 
 private def witness (deferred : Bool) (slot : Fin 8) (active : Bool)
     (terminals : List (State Fp)) (publicValues : Vector (Word Fp) 8) :=
-  witnessFor deferred (if active then (calls deferred slot).map (slot, ·) else []) terminals publicValues
+  witnessFor deferred {} (if active then (calls deferred slot).map (slot, ·) else []) terminals publicValues
 
 private def evaluated (deferred : Bool) (slot : Fin 8) (active : Bool)
     (terminals : List (State Fp)) (publicValues : Vector (Word Fp) 8) : Bool × Ledger :=
@@ -126,7 +126,7 @@ private def interleaved (deferred : Bool) : List (Fin 8 × Inputs Fp) × State F
 /-- Slot-grouped physical tables retain a history whose chronological order crosses tables. -/
 theorem interleavedBanks : [false, true].all (fun deferred =>
     let (events, last) := interleaved deferred
-    let built := witnessFor deferred events [last] last.values
+    let built := witnessFor deferred {} events [last] last.values
     let checks := built.allTables.map tableChecked
     checks.all (·.1) && balance ((checks.flatMap (·.2)).filter fun item =>
       item.1 == (stateChannel (p := SP1Prime) deferred).name) &&
@@ -157,10 +157,69 @@ theorem terminalClocks : [false, true].all (fun deferred =>
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
-#assert_exportable (HostCommitBoundary.verifier (p := SP1Prime) false)
+#assert_exportable (HostCommitBoundary.verifier (p := SP1Prime) false (Vector.replicate 8 0))
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
-#assert_exportable (HostCommitBoundary.verifier (p := SP1Prime) true)
+#assert_exportable (HostCommitBoundary.verifier (p := SP1Prime) true (Vector.replicate 8 0))
+
+private def continuationSource : Model.Core.HostState :=
+  { committed := #v[1, 65537, 3, 4, 5, 6, 7, 4294967295],
+    deferred := #v[101, 102, 103, 104, 105, 106, 107, 108],
+    stdout := [11, 22], stderr := [33] }
+
+private def continuation (deferred : Bool) : List (Fin 8 × Inputs Fp) × State Fp := Id.run do
+  let make (slot : Fin 8) (clock value : ℕ) (previous : State Fp) := HostCommitChip.populate deferred
+    ⟨0, clock, codeWord deferred, slotWord slot, Target.bitVecToWord (BitVec.ofNat 64 value), codeWord deferred, 0⟩ previous
+  let seed := HostCommitBoundary.start (HostCommitEnsemble.sourceValues deferred continuationSource)
+  let first := make 7 1048577 11 seed
+  let second := make 0 1048841 22 (first.next 7)
+  let third := make 7 1049105 33 (second.next 0)
+  return ([(7, first), (0, second), (7, third)], third.next 7)
+
+private def bankChecked (deferred : Bool) (source : Model.Core.HostState)
+    (events : List (Fin 8 × Inputs Fp)) (last : State Fp) (values : Vector (Word Fp) 8) : Bool :=
+  let checks := (witnessFor deferred source events [last] values).allTables.map tableChecked
+  checks.all (·.1) && balance ((checks.flatMap (·.2)).filter fun item =>
+    item.1 == (stateChannel (p := SP1Prime) deferred).name)
+
+/-- Nonzero banks survive empty segments and repeated interleaved writes. A cut seeds the second
+shard from the first result with a local clock-zero token, preserving all untouched host fields. -/
+theorem continuationBanks : [false, true].all (fun deferred =>
+    let seed := HostCommitBoundary.start (HostCommitEnsemble.sourceValues (p := SP1Prime) deferred continuationSource)
+    let empty := (witnessFor deferred continuationSource [] [seed] seed.values).allTables.map tableChecked
+    let (events, last) := continuation deferred
+    let first := events[0]!.2.next 7
+    let middle := first.apply deferred continuationSource
+    let rest := events.drop 1
+    let resumed := (rest[0]!.1, { rest[0]!.2 with previous := HostCommitBoundary.start first.values }) :: rest.drop 1
+    empty.all (·.1) && balance (empty.flatMap (·.2)) &&
+      bankChecked deferred continuationSource events last last.values &&
+      bankChecked deferred continuationSource (events.take 1) first first.values &&
+      bankChecked deferred middle resumed last last.values &&
+      decide (middle.stdout = continuationSource.stdout ∧ middle.stderr = continuationSource.stderr ∧
+        (if deferred then middle.committed = continuationSource.committed
+          else middle.deferred = continuationSource.deferred))) = true := by native_decide
+
+/-- A continuation cannot reset its source, alter an untouched source slot, or forge an outgoing
+slot. Changing a high word limb is rejected even when 32-bit decoding would discard that limb. -/
+theorem continuationTampering : [false, true].all (fun deferred =>
+    let (events, last) := continuation deferred
+    let forgedSource := if deferred then { continuationSource with deferred := continuationSource.deferred.set 5 999 }
+      else { continuationSource with committed := continuationSource.committed.set 5 999 }
+    let forgedValues := last.values.set 5 (last.values[5].set 2 1)
+    !bankChecked deferred {} events last last.values &&
+      !bankChecked deferred forgedSource events last last.values &&
+      !bankChecked deferred continuationSource events last forgedValues) = true := by native_decide
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (HostCommitBoundary.verifier (p := SP1Prime) false
+  (HostCommitEnsemble.sourceValues false continuationSource))
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (HostCommitBoundary.verifier (p := SP1Prime) true
+  (HostCommitEnsemble.sourceValues true continuationSource))
 
 end SP1CleanTest.Core.HostCommitBoundary

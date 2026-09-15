@@ -543,6 +543,9 @@ Implemented foundations:
   from those constraints and balance, deriving normal retirement through the registered ordinary
   chip contracts. The path exhausts the active event inventory with multiplicities, erases inactive
   padding, includes empty identities, and matches final PC, clock, and physical Memory-frontier values.
+  Registered COMMIT components alone do not establish active-call coverage: this source-hint
+  assembly still omits their bank endpoints. Its soundness theorem is not an active-COMMIT
+  non-vacuity or completeness result.
   **Next:** bind the complete outgoing snapshot, including host banks and untouched Sail state.
   Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
@@ -632,15 +635,18 @@ Implemented foundations:
 
 - `HostCommitBoundary` closes a bank at a fixed private-channel clock beyond all ordinary call
   times, preserving all eight words. Its terminal has 48 computed witness cells; its verifier
-  fixes zero genesis and the public final words without allocating witnesses or publishing the
-  last call timestamp. `HostCommitBank` registers eight slot tables plus that terminal.
+  fixes the selected bank of the complete source host and the public final words without allocating
+  witnesses or publishing the last call timestamp. The clock-zero source token is a local seed,
+  with boot's zero bank as a specialization. `HostCommitBank` registers eight slot tables plus that terminal.
   `HostCommitEnsemble.sound` derives an exhaustive host-interpreter history from the composable
   ensemble's raw constraints and actual balance, including Byte closure and the count guard.
   Its only auxiliary proof parameters are static bank-channel exclusion and Byte-provider
   requirements; no row-local spec, initial/final record, ordering or boundary-truth premise is
   supplied by the caller. Physical-table regressions cover empty banks, repeated writes,
   interleaved slots, missing/duplicate terminals, forged genesis, wrong public outputs, and invalid
-  terminal clocks.
+  terminal clocks. Nonzero-source regressions also cut an interleaved history into two bank shards,
+  preserve untouched slots and other host fields, and reject reset sources or forged high limbs
+  that 32-bit semantic decoding alone would discard. The generalized verifier remains exportable.
   This is a bank subsystem, not yet the mixed RISC-V ensemble. Calls and other host state/effects
   still need coordination there. In particular, with no auxiliary call sources this subsystem
   admits only empty call histories; no active-call non-vacuity claim is made for that configuration.
@@ -731,8 +737,10 @@ Still required before the native capstone can be claimed:
    `ExecutionPath`, including ordinary normal retirement, exact active-event multiplicities,
    and final PC/clock/Memory-frontier agreement. The smaller instruction-only witness does not
    inherit its Memory balance.
-   Parameterize the bank subsystem's currently zero genesis with the complete local source
-   commitment/deferred values before installing it in arbitrary continuation shards.
+   The bank subsystem now seeds the selected commitment/deferred values from the complete local
+   source host. Install its source/final endpoints and terminals in the mixed ensemble, align its
+   history with actual CPU calls, and bind both outgoing banks. The present source-hint assembly
+   registers the slot handlers but omits those endpoints; registration is not active-call coverage.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM
    writes; the latter already use the same byte-permission interface in the installed hint assembly.
    Terminal ECALL/Exit agreement, complete outgoing snapshot binding, and the full eight-call

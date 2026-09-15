@@ -4,7 +4,7 @@ import ToClean.Circuit.InteractionRecovery
 
 /-! # Fixed endpoints for a mutable native bank
 
-A zero-witness verifier fixes the initial words and public final words. The terminal component
+A zero-witness verifier fixes the supplied source words and public final words. The terminal component
 keeps the last ordinary timestamp private, checks its bounds, and preserves all eight words.
 No semantic truth is asserted by the bank channel.
 -/
@@ -34,14 +34,14 @@ def terminal (deferred : Bool) : GeneralFormalCircuit (ZMod p) State unit where
     circuit_proof_start [terminalMain, Gadgets.ToBits.rangeCheck, stateChannel, final]
     exact h_assumptions
 
-def verifierMain (deferred : Bool) (values : Var (ProvableVector Word 8) (ZMod p)) :
+def verifierMain (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) (values : Var (ProvableVector Word 8) (ZMod p)) :
     Circuit (ZMod p) Unit := do
-  (stateChannel deferred).push (const initial)
+  (stateChannel deferred).push (const (start initialValues))
   (stateChannel deferred).pull (final values)
 
-def verifier (deferred : Bool) :
+def verifier (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) :
     GeneralFormalCircuit (ZMod p) (ProvableVector Word 8) unit where
-  main := verifierMain deferred
+  main := verifierMain deferred initialValues
   Spec _ _ _ := True
   ProverAssumptions _ _ _ := True
   channelsWithRequirements := [(stateChannel deferred).toRaw]
@@ -63,9 +63,9 @@ theorem terminal_interactions (deferred : Bool) (input : Var State (ZMod p)) (of
   simp only [terminalMain, circuit_norm, range_empty, List.nil_append]
 
 omit [Fact (2 ^ 25 < p)] in
-theorem verifier_interactions (deferred : Bool) (values : Var (ProvableVector Word 8) (ZMod p)) (offset : ℕ) :
-    ((verifierMain deferred values).operations offset).interactionsWith (stateChannel deferred).toRaw =
-      [((stateChannel deferred).pushed (const initial)).toRaw,
+theorem verifier_interactions (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) (values : Var (ProvableVector Word 8) (ZMod p)) (offset : ℕ) :
+    ((verifierMain deferred initialValues values).operations offset).interactionsWith (stateChannel deferred).toRaw =
+      [((stateChannel deferred).pushed (const (start initialValues))).toRaw,
        ((stateChannel deferred).pulled (final values)).toRaw] := by
   simp only [verifierMain, circuit_norm]
 
@@ -83,10 +83,10 @@ theorem terminal_values (deferred : Bool) (input : Var State (ZMod p)) (offset :
     Channel.eval_pulled, Channel.eval_pushed, eval_final]
 
 omit [Fact (2 ^ 25 < p)] in
-theorem verifier_values (deferred : Bool) (values : Var (ProvableVector Word 8) (ZMod p)) (offset : ℕ)
+theorem verifier_values (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) (values : Var (ProvableVector Word 8) (ZMod p)) (offset : ℕ)
     (env : Environment (ZMod p)) :
-    ((verifierMain deferred values).operations offset).interactionValuesWith (stateChannel deferred).toRaw env =
-      [(stateChannel deferred).pushedValue initial,
+    ((verifierMain deferred initialValues values).operations offset).interactionValuesWith (stateChannel deferred).toRaw env =
+      [(stateChannel deferred).pushedValue (start initialValues),
        (stateChannel deferred).pulledValue (final (Eval.eval env values))] := by
   simp only [Operations.interactionValuesWith, verifier_interactions, List.map_cons, List.map_nil,
     Channel.eval_pulled, Channel.eval_pushed, ProvableType.eval_const, eval_final]
