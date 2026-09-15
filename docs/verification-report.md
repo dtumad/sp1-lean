@@ -1061,9 +1061,15 @@ the row's prior bank or the complete final bank snapshot has already been authen
 `HostHintReadExecution` proves `HostHintReadCPU.GroundingCarrier.ground`, combining all ordinary,
 syscall, and legacy HALT cases. It derives the original operand currency and final
 State/Memory frontier truth without caller-supplied event semantics. The legacy HALT table retains
-its 16-bit exit restriction. Complete outgoing snapshot binding, reconstruction of the full local
-execution relation, and the two missing handlers remain open; no full eight-call AIR/execution
-equivalence is claimed.
+its 16-bit exit restriction. `Soundness/HostHintReadExecutionPath.lean` now proves
+`HostHintReadCPU.source_execution`: the installed AIR's constraints and balance yield an
+`ExecutionPath` from the actual complete source, with exactly the active event multiset and
+agreement at final PC, clock, and every physical Memory-frontier record. Ordinary retirement is
+derived from the registered chip contracts and grounded operands; successful Sail replay alone
+would not suffice. Host transitions use the concrete interpreter's actual incoming state. Inactive
+padding is erased and empty segments are identities. This statement does not bind a supplied
+complete outgoing snapshot or the Exit bus. Those obligations, the two missing handlers, and
+constructive completeness remain open; no full eight-call AIR/execution equivalence is claimed.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

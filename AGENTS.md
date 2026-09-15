@@ -307,8 +307,10 @@ assuming unchanged RAM. `HostHintReadInstructionExecution` now proves
 store footprints and registered ROM-preserving effects. `HostHintReadSyscallExecution` derives
 all installed SyscallInstrs cases from full-call balance, including control dispatch on the actual
 incoming host bank. `HostHintReadExecution` adds legacy HALT and proves `GroundingCarrier.ground`
-with no remaining event-semantic premise. Final State/frontier truth is derived; complete outgoing
-snapshot agreement, execution reconstruction, and the full eight-call integration remain open.
+with no remaining event-semantic premise. `HostHintReadExecutionPath.source_execution` derives
+a genuine local `ExecutionPath`, including ordinary normal retirement, the exact active event
+multiset, and final PC/clock/Memory-frontier agreement. Complete outgoing snapshot and Exit-bus
+binding, the full eight-call integration, and constructive completeness remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

@@ -150,4 +150,60 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     exact successor.symm.trans (duration.trans (congrArg (fun clock => clock + 8) time))
   · exact trajectory_ordinary valid carrier constraints balanced member checked.2
 
+/-- Grounded ordinary operands yield a normally retiring semantic step from the actual paired
+state. Instruction dispatch and readiness stay inside the registered chip contracts. -/
+theorem GroundingCarrier.instruction_step (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {row : DecodedInstructionRow p}
+    (member : ExecutionRow.instruction row ∈
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+      (row.ordinaryRowFacts witness.data).statePull)
+    (currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
+          (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+    {n : ℕ} {current : ExecutionState}
+    (present : carrier.pairedTrajectory valid n = some current)
+    (time : StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePull = carrier.timeline.start n) :
+    ∃ next, ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      current .ordinary next := by
+  have checked := instruction_inputs valid witness constraints balanced member
+  have contracts := supportedChip_groundingContracts row.chip checked.1.registered
+  have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
+      (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data).is_real = 1 := by
+    simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
+  rw [source_data] at active
+  have guard := contracts.routingLocal witness.data row rfl checked.1.constraints active.2 _ checked.2
+  have migrated : (row.toChipRow witness.data).kind.advance.isSome = true := contracts.migrated
+  have memory := row.memoryChannelGuarantees_of_pullCurrency witness.data
+    (fun mp hmp => ⟨(currency mp hmp).1, (currency mp hmp).2.1⟩)
+  have inputs : DecodedRowOpenSoundnessInputs row witness.data :=
+    ⟨contracts.assumptionsLocal witness.data row rfl checked.1 active.2 _ checked.2 memory, memory⟩
+  have wiring := contracts.wiringLocal witness.data row rfl checked.1 active.2 _ checked.2 inputs
+  have ready := contracts.readinessLocal witness.data row rfl checked.1 active.2 guard _ checked.2 inputs
+  obtain ⟨m, state, statePresent, atTime, pc, rom, configured⟩ := pull
+  have same : m = n := start_injective carrier.timeline (atTime.symm.trans time)
+  subst m
+  have before : carrier.trajectory valid n = some current.sail := by
+    simp only [GroundingCarrier.trajectory, present, Option.map_some]
+  have sameState : state = current.sail := Option.some.inj (statePresent.symm.trans before)
+  rw [sameState] at pc rom configured
+  change current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+    some (StateMsg.pcBits (row.ordinaryRowFacts witness.data).statePull) at pc
+  obtain ⟨next, _, effect⟩ := wiring.advance_atG (ChipKind.advancePayload_of_migrated migrated)
+    active.2 (checked.1.chipSpec inputs) checked.2 ready before time pc rom configured
+    (fun mp hmp => ⟨(currency mp hmp).1, (currency mp hmp).2.2⟩)
+  have atPc : current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+      some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) := by
+    rw [program_pc_eq_statePull]
+    exact pc
+  have notEcall := checked.2.notEcall configured atPc
+  obtain ⟨_, _, fetched, _, _⟩ := checked.2
+  have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member present atPc fetched
+  exact ⟨⟨next, current.host, current.clock + Machine.ordinarySchedule.duration⟩,
+    .ordinary running notEcall effect.normal⟩
+
 end SP1Clean.Soundness.HostHintReadCPU

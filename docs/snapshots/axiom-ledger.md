@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-15. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2593 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2596 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 302 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2895 released declarations are probed.
+- 2898 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,15 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The closed installed-grounding proof adds nine main probes. The actual-bank commitment
+The installed local-execution theorem adds three main probes, all retaining the assembly's
+existing 100-dependency set. All preceding 2593 main and 302 test dependency sets are unchanged,
+with no removals or new axiom names. `HostHintReadCPU.source_execution` derives the finite
+`ExecutionPath` from raw constraints and balance, including ordinary normal retirement, exact
+active-event multiplicities, and agreement at the final PC, clock, and physical Memory frontier.
+Empty identities and inactive padding use the same statement. Complete outgoing snapshot and
+Exit-bus binding, the two missing handlers, and the full eight-call compiler remain open.
+
+The preceding closed installed-grounding proof added nine main probes. The actual-bank commitment
 constructor and dispatch theorem use subsets of the logical baseline; the other seven retain
 the installed assembly's existing 100-dependency set. All preceding 2584 main and 302 test
 dependency sets are unchanged, with no removals or new axiom names.
@@ -47,9 +55,8 @@ Sail/host replay. Full-call balance selects control versus queue handlers intern
 executes on the actual incoming host bank, preserving its other slots; this does not authenticate
 the row's prior bank or a supplied outgoing bank snapshot. Legacy HALT keeps its 16-bit exit domain.
 
-Complete local-execution reconstruction, outgoing snapshot binding, and the full eight-call
-compiler remain capstone obligations. No unconditional eight-call AIR/execution equivalence is
-claimed. Refresh rewriting does not authenticate an original prior record's historical timestamp.
+No unconditional eight-call AIR/execution equivalence is claimed. Refresh rewriting does not
+authenticate an original prior record's historical timestamp.
 
 The preceding host Program/register integration added seven main declarations: two use the logical baseline,
 and five retain the installed assembly's existing 100-dependency set. All preceding 2452 main

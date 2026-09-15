@@ -439,6 +439,7 @@ import SP1Clean.Soundness.HostHintReadInstructionExecution
 import SP1Clean.Soundness.HostHintReadMemoryEffect
 import SP1Clean.Soundness.HostHintReadSyscallExecution
 import SP1Clean.Soundness.HostHintReadExecution
+import SP1Clean.Soundness.HostHintReadExecutionPath
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostLocalCoreRows
 import SP1Clean.Soundness.HostRamTouches

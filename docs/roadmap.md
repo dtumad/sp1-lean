@@ -539,8 +539,11 @@ Implemented foundations:
   actual incoming host bank; it does not substitute the bank recorded in a row. `HostHintReadExecution`
   also supplies legacy HALT and closes `GroundingCarrier.ground` for every event kind, deriving
   original operand currency and final State/Memory frontier truth without event-semantic premises.
-  **Next:** reconstruct the complete local execution relation from this grounding and bind the
-  outgoing snapshot, including host banks and untouched Sail state.
+  `HostHintReadExecutionPath.source_execution` now reconstructs a genuine finite `ExecutionPath`
+  from those constraints and balance, deriving normal retirement through the registered ordinary
+  chip contracts. The path exhausts the active event inventory with multiplicities, erases inactive
+  padding, includes empty identities, and matches final PC, clock, and physical Memory-frontier values.
+  **Next:** bind the complete outgoing snapshot, including host banks and untouched Sail state.
   Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
@@ -723,13 +726,18 @@ Still required before the native capstone can be claimed:
    snapshot agreement.
    The extended Memory ledger and its complete record permutation are now derived for the
    installed hint assembly, retaining actual wrapper/word accesses. Its full-footprint carrier
-   and closed grounding theorem now derive every installed event's timed facts on paired replay. The smaller instruction-only witness does not inherit its Memory balance.
+   and closed grounding theorem now derive every installed event's timed facts on paired replay.
+   `HostHintReadExecutionPath.source_execution` upgrades that replay to the actual local
+   `ExecutionPath`, including ordinary normal retirement, exact active-event multiplicities,
+   and final PC/clock/Memory-frontier agreement. The smaller instruction-only witness does not
+   inherit its Memory balance.
    Parameterize the bank subsystem's currently zero genesis with the complete local source
    commitment/deferred values before installing it in arbitrary continuation shards.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM
-   writes; the latter must use the same byte-permission interface. Terminal ECALL/Exit agreement and complete
-   execution reconstruction, including ordinary normal retirement, remain open. No unconditional
-   local execution theorem is claimed.
+   writes; the latter already use the same byte-permission interface in the installed hint assembly.
+   Terminal ECALL/Exit agreement, complete outgoing snapshot binding, and the full eight-call
+   integration remain open. The installed assembly's local soundness theorem does not yet establish
+   full-profile AIR/execution equivalence.
 3. Integrate the paired semantic replay with the mixed carrier, the full-code-checked
    syscall chip and host effects into the AIR and mixed timed grounding. Ordinary ROM-write
    exclusion is already integrated through `ProtectedLocalCore`. Extending the Memory footprint must preserve host accesses

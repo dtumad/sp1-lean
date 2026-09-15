@@ -7,8 +7,9 @@ import SP1Clean.Soundness.LocalCoreHaltExecution
 Ordinary, SyscallInstrs, and legacy HALT rows all use the same paired Sail/host replay and the
 complete physical Memory ledger. Source genesis, every event step/frame fact, and final frontier
 currency follow from constraints and balance. No event-semantic premise remains. This is the
-grounding stage: complete outgoing snapshot authentication, the full eight-call compiler, and
-the final local-execution equivalence remain separate capstone obligations.
+grounding stage: `HostHintReadExecutionPath` derives the installed assembly's local execution
+soundness. Complete outgoing snapshot authentication, the full eight-call compiler, and the final
+local-execution equivalence remain separate capstone obligations.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
