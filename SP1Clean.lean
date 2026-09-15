@@ -414,6 +414,7 @@ import SP1Clean.Soundness.HostLocalCoreMemory
 import SP1Clean.Soundness.HostLocalCoreMemoryBounds
 import SP1Clean.Soundness.HostLocalCoreProgram
 import SP1Clean.Soundness.HostLocalCorePermissions
+import SP1Clean.Soundness.HostLocalCoreRom
 import SP1Clean.Soundness.HostLocalHandoff
 import SP1Clean.Soundness.HostCallReceivers
 import SP1Clean.Soundness.HostCallOrder
@@ -434,6 +435,7 @@ import SP1Clean.Soundness.HostHintReadExecutionRows
 import SP1Clean.Soundness.HostHintReadMemoryOrder
 import SP1Clean.Soundness.HostHintReadGrounding
 import SP1Clean.Soundness.HostHintReadTrajectory
+import SP1Clean.Soundness.HostHintReadInstructionExecution
 import SP1Clean.Soundness.HostHintReadMemoryEffect
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostLocalCoreRows

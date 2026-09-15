@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-15. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2574 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2584 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 302 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2876 released declarations are probed.
+- 2886 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,20 +35,19 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The combined queue-handler proof adds five main probes, all retaining the installed assembly's
-existing 100-dependency set. All preceding 2569 main and 302 test dependency sets are unchanged,
-with no removals or new axiom names. `HostHintReadCPU.GroundingCarrier.queue_engineFacts` supplies
-the existing engine's complete step/frame obligations for HINT_READ and both HINT_LEN variants.
-HINT_LEN dispatch, its paired successor, and the absence of added hint RAM rows follow from the
-actual queue observation, authenticated call ownership, and CPU clock uniqueness. The two calls
-share register/RAM readback, configuration, ROM, and frame assembly. Ordinary/control event cases
-and complete outgoing-state agreement remain whole-shard obligations; this is not an unconditional
-shard-execution theorem.
+The ordinary-instruction integration adds ten main probes: five use the logical baseline, one
+uses the existing 98-dependency chip-registry set, and four use the installed assembly's existing
+100-dependency set. All preceding 2574 main and 302 test dependency sets are unchanged, with no
+removals or new axiom names. `HostHintReadCPU.GroundingCarrier.instruction_engineFacts` supplies
+all 25 ordinary instruction families on the same complete carrier as `queue_engineFacts` supplies
+HINT_READ and both HINT_LEN variants. The actual extended permission ledger authenticates store
+bytes, the registered row effects preserve ROM, and authenticated hint ownership excludes added
+word accesses at ordinary instruction clocks. The original store footprint proofs are shared.
 
-The complete-footprint grounding proof still requires the complete timed step/frame bundle.
+The complete-footprint grounding proof still requires the control rows' timed step/frame facts.
 It supplies source genesis and returns original register/RAM operand currency and final
-State/frontier value truth. Register micro-time facts, ROM/configuration preservation, complete
-outgoing snapshot agreement, and the eight-call integration remain to be assembled. Refresh
+State/frontier value truth. Complete outgoing snapshot agreement and the eight-call integration
+remain whole-shard obligations; no unconditional shard-execution theorem is claimed. Refresh
 rewriting does not authenticate an original prior record's historical timestamp.
 
 The preceding host Program/register integration added seven main declarations: two use the logical baseline,

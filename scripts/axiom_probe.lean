@@ -439,6 +439,16 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Composition.extracted_instructionTables_constraints
 #print axioms SP1Clean.Composition.signedSum_eq_sent_sub_received
 #print axioms SP1Clean.Composition.signedSum_eq_zero
+#print axioms SP1Clean.Soundness.ProtectedLocalCore.byte_write_permitted_of_row
+#print axioms SP1Clean.Soundness.ProtectedLocalCore.half_write_permitted_of_row
+#print axioms SP1Clean.Soundness.ProtectedLocalCore.word_write_permitted_of_row
+#print axioms SP1Clean.Soundness.ProtectedLocalCore.double_write_permitted_of_row
+#print axioms SP1Clean.Soundness.ProtectedLocalCore.supported_write_permitted
+#print axioms SP1Clean.Soundness.HostLocalCore.row_pull_permitted
+#print axioms SP1Clean.Soundness.HostLocalCore.instructionRows_write_permitted
+#print axioms SP1Clean.Soundness.HostQueueCurrent.source_permission_pulls
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.pairedTrajectory_running_of_fetch
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.instruction_engineFacts
 #print axioms SP1Clean.Soundness.LocalCore.program_guarantees_of_balance
 #print axioms SP1Clean.Soundness.HostLocalCore.hostCall_eventLaw
 #print axioms SP1Clean.Soundness.HostLocalCore.hostCall_contract

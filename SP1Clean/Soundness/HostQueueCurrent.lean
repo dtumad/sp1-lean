@@ -132,7 +132,8 @@ theorem source_current {final : HostHintQueue.State (ZMod p)}
     cpuExhaustive cpuWalk exhaustive walk history prior rest event split row (exhaustive.mem_iff.mpr member)
     clock policy program current replayed
 
-private theorem source_permission_pulls (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) :
+/-- Installed non-word hint resources cannot create positive write permissions. -/
+theorem source_permission_pulls (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) :
     ∀ component ∈ (HostCallReceivers.available (p := p)).map (·.component) ++
       (sourceResources source.host.io.hints ++ [⟨(HostHintQueueBoundary.boundary source final).circuit⟩]),
       WritePermission.Pulls component := by

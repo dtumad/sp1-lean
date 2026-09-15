@@ -63,7 +63,8 @@ private theorem double_view_real (input : StoreDoubleChip.Inputs (ZMod p))
     (cols : StoreDoubleChip.Columns (ZMod p)) :
     (StoreDoubleChip.rowView input cols).is_real = input.is_real := rfl
 
-private theorem supported_write_permitted (image : ProgramImage) (id : InstructionChipId)
+/-- Only the four store families need byte permissions; all other instruction views have no RAM write. -/
+theorem supported_write_permitted (image : ProgramImage) (id : InstructionChipId)
     (env : Environment (ZMod p))
     (byte : id = .storeByte →
       ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →

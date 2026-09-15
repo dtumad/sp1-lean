@@ -301,7 +301,11 @@ HINT_READ and both HINT_LEN variants, including register/RAM readbacks, all loca
 configuration, and ROM preservation. HINT_LEN's full successor follows from the actual queue
 observation; authenticated HINT_READ ownership and CPU clock uniqueness exclude added hint RAM
 rows from non-read events. `HostExecutionEffect` supplies concrete host preservation without
-assuming unchanged RAM. Ordinary/control event cases and complete outgoing snapshot agreement remain open.
+assuming unchanged RAM. `HostHintReadInstructionExecution` now proves
+`HostHintReadCPU.GroundingCarrier.instruction_engineFacts` for all 25 ordinary cases on the same carrier.
+`HostLocalCoreRom` authenticates store permissions from the extended ledger and reuses the original
+store footprints and registered ROM-preserving effects. Control event cases and complete outgoing
+snapshot agreement remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

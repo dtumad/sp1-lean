@@ -529,7 +529,12 @@ Implemented foundations:
   and nonempty queues. Authenticated HINT_READ ownership and CPU clock uniqueness prove that
   every non-read event has an empty added-word footprint. `GroundingCarrier.queue_engineFacts`
   coordinates all three installed queue-handler variants through the shared step/frame proof.
-  **Next:** close the ordinary/control event cases on this complete carrier and bind the outgoing snapshot.
+  `HostHintReadInstructionExecution` now supplies `GroundingCarrier.instruction_engineFacts`
+  for all 25 ordinary families on that same carrier. The actual extended permission ledger
+  authenticates each store byte; the registered row effects derive ROM preservation, and
+  authenticated hint ownership removes the ordinary row's added-word footprint. Only Byte and
+  Program facts project to the instruction view; the complete Memory ledger stays in the host assembly.
+  **Next:** close the control event cases on this carrier and bind the outgoing snapshot.
   Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments

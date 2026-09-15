@@ -1048,9 +1048,13 @@ for either queue variant from its actual observed length and incoming grounding 
 `source_wordsAt_nil_of_not_read` derives the absence of added hint RAM rows for non-read events:
 every physical word has an authenticated HINT_READ owner at its unique CPU clock.
 `GroundingCarrier.queue_engineFacts` combines HINT_READ and both HINT_LEN variants behind one
-timed step/frame statement. Ordinary/control event cases and outgoing snapshot authentication
-remain necessary to close whole-shard grounding. No unconditional whole-shard execution theorem
-is claimed here.
+timed step/frame statement. `HostHintReadInstructionExecution` supplies
+`GroundingCarrier.instruction_engineFacts` for all 25 ordinary instruction families on the same
+complete carrier. Its static chip inputs use the preserved Byte/Program facts. Every ordinary
+store's byte permission is authenticated by the extended assembly's actual ledger, and the
+registered row effects preserve ROM. Hint-word ownership excludes added RAM rows at ordinary
+instruction clocks. Control event cases and outgoing snapshot authentication remain necessary to
+close whole-shard grounding. No unconditional whole-shard execution theorem is claimed here.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

@@ -104,6 +104,19 @@ private theorem source_running
   rw [carrier.timeline_start, carrier.finalClock, clock] at strict
   exact (lt_irrefl _ strict)
 
+/-- An authenticated fetch at an actual replayed prefix excludes terminal host status. -/
+theorem GroundingCarrier.pairedTrajectory_running_of_fetch (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {event : ExecutionRow p}
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    {n : ℕ} {state : ExecutionState} (present : carrier.pairedTrajectory valid n = some state)
+    {pc : BitVec 64} {word : BitVec 32}
+    (atPc : state.sail.regs.get? LeanRV64D.Defs.Register.PC = some pc)
+    (fetched : (image.toGuestProgram valid).fetchWord pc = some word) : state.host.exitCode = none := by
+  exact replayEvents?_running_of_fetch (source_running carrier constraints balanced member) present atPc fetched
+
 private theorem prefix_of_state (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)

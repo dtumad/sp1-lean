@@ -54,4 +54,23 @@ theorem permission_pull_permitted {image : ProgramImage} {source : ExecutionSnap
     (component_permission_source image source auxiliary channels pulls) address
     (WritePermissionProvider.channel.pulledValue address) member rfl rfl
 
+/-- An active physical row request is authenticated by the extended assembly's own ledger. -/
+theorem row_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (table : Table (ZMod p)) (tableMem : table ∈ witness.allTables)
+    (physical : Array (ZMod p)) (physicalMem : physical ∈ table.table)
+    (gate : Expression (ZMod p)) (address : Var (fields 3) (ZMod p))
+    (emitted : (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
+      table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw)
+    (active : Expression.eval (table.environment physical) gate = 1) :
+    WritePermissionProvider.Permitted image (eval (table.environment physical) address) := by
+  apply permission_pull_permitted witness pulls constraints balanced
+  have member := EnsembleWitness.mem_interactionsWith.mpr
+    ⟨table, tableMem, List.mem_flatMap.mpr ⟨physical, physicalMem, List.mem_map_of_mem emitted⟩⟩
+  simpa only [Channel.eval_pulledIf, Channel.pulledIfValue, Channel.pulledValue,
+    CircuitType.eval_expr, active] using member
+
 end SP1Clean.Soundness.HostLocalCore
