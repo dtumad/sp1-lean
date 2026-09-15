@@ -578,16 +578,18 @@ private theorem syscall_state_push (row : SyscallInstrsChip.Inputs (ZMod p))
     LocalStateTruthG program trajectory timeline (syscallRowFacts row).statePush :=
   ⟨n + 1, next, after, time, pc, loaded, configured⟩
 
-private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Valid)
+/-- Shared timed assembly for an authenticated physical syscall and its complete semantic effects.
+The actual instruction contract supplies register touches, while all grouped RAM effects remain
+in the original extended ledger. Handler-specific dispatch is the remaining premise. -/
+theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
-    (queueRow : HostQueueOrder.Row (p := p))
-    (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.expanded witness)))
-    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow)
+    (physical : Environment (ZMod p))
+    (active : physical ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable (HostHintQueueBoundary.expanded witness)))
+    (sameEvent : event = .syscall (HostCallLedger.input physical).instruction)
     (effect : ∀ (_ : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
@@ -641,8 +643,6 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
   have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
     (source_interface (p := p) source.host.io.hints)
-  obtain ⟨physical, active, _, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
-    (HostHintQueueBoundary.expanded witness) interface checks balance queueRow queueMember event member clock
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
@@ -695,6 +695,45 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
       (carrier.trajectory valid) source.sail.realize current.sail next.sail carrier.timeline n
       before after effects.1.2.2.2.2.2 effects.2.1 written unchanged loc value ?_ currentValue
     simpa only [facts, eventFacts, sameEvent, ExecutionRow.facts] using pushes
+
+private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (queueRow : HostQueueOrder.Row (p := p))
+    (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+      (queueTables (HostHintQueueBoundary.expanded witness)))
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow)
+    (effect : ∀ (_ : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+      (event.facts witness.data).statePull)
+    (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
+    ∃ n current next, carrier.ordered[n]? = some event ∧
+      carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
+      ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
+      (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+          (wordTables (HostHintQueueBoundary.expanded witness))) event,
+        locContent next.sail (MemoryMsg.locOf (touch row).2) = some (Word.toBitVec64 (touch row).2.value)) ∧
+      (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+          (wordTables (HostHintQueueBoundary.expanded witness))) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
+        locContent next.sail (.ram cell) = locContent current.sail (.ram cell))) :
+    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) ∧
+    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) := by
+  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
+  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+    (source_interface (p := p) source.host.io.hints)
+  obtain ⟨physical, active, _, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
+    (HostHintQueueBoundary.expanded witness) interface checks balance queueRow queueMember event member clock
+  exact carrier.syscall_engineFacts_of_effects valid constraints balanced event member physical active sameEvent effect
 
 /-- Every matched physical HINT_READ supplies the existing timed engine's complete step and
 frame obligations on paired replay. Register, RAM, ROM, and configuration effects are derived

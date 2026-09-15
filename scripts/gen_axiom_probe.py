@@ -40,6 +40,15 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    ("SP1Clean/Proofs/Chips/HostCommitChip/Bridge.lean", "execution"),
+    ("SP1Clean/Proofs/Chips/HostCommitChip/Bridge.lean", "run_of_callSpec"),
+    ("SP1Clean/Soundness/HostQueueCallProjection.lean", "calls_run_or_queue"),
+    ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "GroundingCarrier.syscall_engineFacts_of_effects"),
+    ("SP1Clean/Soundness/HostHintReadSyscallExecution.lean", "GroundingCarrier.syscall_engineFacts"),
+    ("SP1Clean/Soundness/LocalCoreHaltExecution.lean", "halt_program_committed_of_balance"),
+    ("SP1Clean/Soundness/LocalCoreHaltExecution.lean", "haltRows_staticFacts_of_byte"),
+    ("SP1Clean/Soundness/HostHintReadExecution.lean", "GroundingCarrier.halt_engineFacts"),
+    ("SP1Clean/Soundness/HostHintReadExecution.lean", "GroundingCarrier.ground"),
     ("SP1Clean/Soundness/ProtectedStoreFootprints.lean", "byte_write_permitted_of_row"),
     ("SP1Clean/Soundness/ProtectedStoreFootprints.lean", "half_write_permitted_of_row"),
     ("SP1Clean/Soundness/ProtectedStoreFootprints.lean", "word_write_permitted_of_row"),

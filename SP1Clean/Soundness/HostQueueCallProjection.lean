@@ -1,6 +1,8 @@
 import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Model.Core.QueueReplay
+import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
+import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
 
 /-! # Queue actions in the complete installed HostCall inventory
 
@@ -108,6 +110,73 @@ theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Sp
       ↓reduceIte, HostQueueHistory.event]
     decide
 
+private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
+    (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
+    (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env)
+    (host : HostState) (running : host.exitCode = none) (policy : HostPolicy)
+    (characteristic : policy.characteristic = p) (context : HostReadContext)
+    (observed : context.register 5 = some (Word.toBitVec64 (receiver.message env).code) ∧
+      context.register 10 = some (Word.toBitVec64 (receiver.message env).arg1) ∧
+      context.register 11 = some (Word.toBitVec64 (receiver.message env).arg2)) :
+    ∃ execution, host.run policy context = some execution ∧
+      execution.result = Word.toBitVec64 (receiver.message env).result ∧ execution.effect.write = none := by
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+    (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
+    (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
+  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
+  rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
+  · have valid := HostHaltChip.component_spec_of_byte env constraints bytes
+    change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
+    rw [halt_message] at observed ⊢
+    exact ⟨_, HostHaltChip.run_of_spec _ valid host running policy characteristic context
+      observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
+  · have valid := HostEnterChip.component_spec_of_constraints env constraints
+    change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
+    rw [enter_message] at observed ⊢
+    exact ⟨_, HostEnterChip.run_of_spec _ valid host running policy context
+      observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
+  · have valid := HostCommitBank.view_spec_of_byte false (some slot) env constraints bytes
+    change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
+    rw [commit_message] at observed ⊢
+    exact ⟨_, HostCommitChip.run_of_callSpec false slot _ valid.1 host running policy characteristic context
+      observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
+  · have valid := HostCommitBank.view_spec_of_byte true (some slot) env constraints bytes
+    change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
+    rw [commit_message] at observed ⊢
+    exact ⟨_, HostCommitChip.run_of_callSpec true slot _ valid.1 host running policy characteristic context
+      observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
+
+private theorem controls_run (receivers : List (HostLocalHandoff.Receiver (p := p)))
+    (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun receiver table => receiver.component = table.component) receivers tables)
+    (registered : ∀ receiver ∈ receivers, receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (constraints : ∀ table ∈ tables, table.Constraints)
+    (bytes : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (message : HostCallChip.Message (ZMod p)) (member : message ∈ ReceiverView.messages receivers tables)
+    (host : HostState) (running : host.exitCode = none) (policy : HostPolicy)
+    (characteristic : policy.characteristic = p) (context : HostReadContext)
+    (observed : context.register 5 = some (Word.toBitVec64 message.code) ∧
+      context.register 10 = some (Word.toBitVec64 message.arg1) ∧
+      context.register 11 = some (Word.toBitVec64 message.arg2)) :
+    ∃ execution, host.run policy context = some execution ∧
+      execution.result = Word.toBitVec64 message.result ∧ execution.effect.write = none := by
+  induction aligned with
+  | nil => simp [ReceiverView.messages, TransitionView.readIndexedRows] at member
+  | @cons receiver table receivers tables same aligned ih =>
+    rw [ReceiverView.messages_cons] at member
+    rcases List.mem_append.mp member with first | rest
+    · obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp first
+      apply control_run receiver (registered receiver (List.mem_cons_self ..))
+        (table.environment physical) ?_ ?_ host running policy characteristic context observed
+      · rw [same]
+        exact constraints table (List.mem_cons_self ..) physical physicalMem
+      · rw [same]
+        exact bytes table (List.mem_cons_self ..) physical physicalMem
+    · exact ih (fun receiver member => registered receiver (List.mem_cons_of_mem _ member))
+        (fun table member => constraints table (List.mem_cons_of_mem _ member))
+        (fun table member => bytes table (List.mem_cons_of_mem _ member)) rest
+
 private theorem controls_projection (receivers : List (HostLocalHandoff.Receiver (p := p)))
     (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun receiver table => receiver.component = table.component) receivers tables)
@@ -207,6 +276,43 @@ private theorem control_calls
   exact controls_projection _ _ aligned (fun _ present => present)
     (fun table present => constraints table (member table present))
     (fun table present => byte_guarantees witness interface constraints balanced table (member table present))
+
+/-- Every installed call is either an actual queue-handler row or a control call whose
+dispatch succeeds on the observed registers of any running host. Control dispatch modifies
+the actual host state, independently of later authentication of its complete outgoing snapshot. -/
+theorem calls_run_or_queue
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (message : HostCallChip.Message (ZMod p)) (member : message ∈ HostLocalHandoff.calls witness) :
+    (∃ row ∈ TransitionView.readIndexedRows indices (queueTables witness), message = call row) ∨
+    (Word.toBitVec64 message.code ≠ SyscallKind.hintRead.code ∧
+      ∀ (host : HostState), host.exitCode = none → ∀ (policy : HostPolicy), policy.characteristic = p →
+      ∀ (context : HostReadContext),
+        (context.register 5 = some (Word.toBitVec64 message.code) ∧
+          context.register 10 = some (Word.toBitVec64 message.arg1) ∧
+          context.register 11 = some (Word.toBitVec64 message.arg2)) →
+        ∃ execution, host.run policy context = some execution ∧
+          execution.result = Word.toBitVec64 message.result ∧ execution.effect.write = none) := by
+  rcases List.mem_append.mp ((calls_split witness).mem_iff.mp member) with queue | control
+  · obtain ⟨row, rowMem, same⟩ := List.mem_map.mp queue
+    exact Or.inl ⟨row, rowMem, same.symm⟩
+  · right
+    constructor
+    · have projected := (control_calls witness interface constraints balanced message control).2
+      intro read
+      simp only [project, read, queueCallEvent?, SyscallKind.code, BitVec.reduceEq, ↓reduceIte] at projected
+      contradiction
+    · have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.available (p := p)).take 18)
+        (controlTables witness) (by
+          simp only [controlTables, List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
+            List.map_cons, List.drop_succ_cons, List.drop_zero])
+      have physical (table : Table (ZMod p)) (present : table ∈ controlTables witness) : table ∈ witness.allTables :=
+        witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop (List.mem_of_mem_take
+          (List.mem_of_mem_drop (List.mem_of_mem_take present))))
+      exact controls_run _ _ aligned (fun _ present => present)
+        (fun table present => constraints table (physical table present))
+        (fun table present => byte_guarantees witness interface constraints balanced table (physical table present)) message control
 
 /-- Keep the call clock with its queue observation, so order comparison retains event contents. -/
 def stamped (message : HostCallChip.Message (ZMod p)) : Option (ℕ × HintQueue.Event) :=

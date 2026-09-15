@@ -1053,8 +1053,17 @@ timed step/frame statement. `HostHintReadInstructionExecution` supplies
 complete carrier. Its static chip inputs use the preserved Byte/Program facts. Every ordinary
 store's byte permission is authenticated by the extended assembly's actual ledger, and the
 registered row effects preserve ROM. Hint-word ownership excludes added RAM rows at ordinary
-instruction clocks. Control event cases and outgoing snapshot authentication remain necessary to
-close whole-shard grounding. No unconditional whole-shard execution theorem is claimed here.
+instruction clocks. `HostQueueCallProjection.calls_run_or_queue` classifies the complete installed
+call inventory; `HostHintReadSyscallExecution` derives every SyscallInstrs step/frame bundle using
+that classification. HALT and ENTER use their existing dispatch bridges; COMMIT's new
+`run_of_callSpec` updates the actual host bank, preserving its other slots. It makes no claim that
+the row's prior bank or the complete final bank snapshot has already been authenticated.
+`HostHintReadExecution` proves `HostHintReadCPU.GroundingCarrier.ground`, combining all ordinary,
+syscall, and legacy HALT cases. It derives the original operand currency and final
+State/Memory frontier truth without caller-supplied event semantics. The legacy HALT table retains
+its 16-bit exit restriction. Complete outgoing snapshot binding, reconstruction of the full local
+execution relation, and the two missing handlers remain open; no full eight-call AIR/execution
+equivalence is claimed.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

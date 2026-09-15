@@ -534,7 +534,13 @@ Implemented foundations:
   authenticates each store byte; the registered row effects derive ROM preservation, and
   authenticated hint ownership removes the ordinary row's added-word footprint. Only Byte and
   Program facts project to the instruction view; the complete Memory ledger stays in the host assembly.
-  **Next:** close the control event cases on this carrier and bind the outgoing snapshot.
+  `HostHintReadSyscallExecution` now classifies each actual full call through the installed
+  receiver ledger and derives all SyscallInstrs step/frame facts. COMMIT dispatch updates the
+  actual incoming host bank; it does not substitute the bank recorded in a row. `HostHintReadExecution`
+  also supplies legacy HALT and closes `GroundingCarrier.ground` for every event kind, deriving
+  original operand currency and final State/Memory frontier truth without event-semantic premises.
+  **Next:** reconstruct the complete local execution relation from this grounding and bind the
+  outgoing snapshot, including host banks and untouched Sail state.
   Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments
@@ -712,12 +718,12 @@ Still required before the native capstone can be claimed:
    HINT_LEN/HINT_READ handlers, and verifier-owned queue endpoints now have an installed token-path
    theorem and byte-exact queue-prefix history in actual CPU order. `HostQueueCurrent` now proves
    agreement with the actual replayed host, consumes it in HINT_READ dispatch, and derives the
-   HINT_LEN result. Integrate the remaining Memory/register currency, authenticate new nodes, and extend it to
-   WRITE/hook prepends before claiming complete outgoing snapshot agreement.
+   HINT_LEN result. Complete Memory/register currency is now derived by `GroundingCarrier.ground`.
+   Authenticate new nodes and extend it to WRITE/hook prepends before claiming complete outgoing
+   snapshot agreement.
    The extended Memory ledger and its complete record permutation are now derived for the
    installed hint assembly, retaining actual wrapper/word accesses. Its full-footprint carrier
-   and conditional grounding theorem now use that ledger; derive the remaining event semantics
-   on paired replay. The smaller instruction-only witness does not inherit its Memory balance.
+   and closed grounding theorem now derive every installed event's timed facts on paired replay. The smaller instruction-only witness does not inherit its Memory balance.
    Parameterize the bank subsystem's currently zero genesis with the complete local source
    commitment/deferred values before installing it in arbitrary continuation shards.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM

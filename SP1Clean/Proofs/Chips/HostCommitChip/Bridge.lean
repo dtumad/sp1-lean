@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostCommitChip.Formal
-import SP1Clean.Model.Core.HostExecution
+import SP1Clean.Model.Core.HostExecutionLaws
 
 /-! # Native commitment rows implement mutable host slots
 
@@ -36,6 +36,63 @@ private theorem slot_value (slot : Fin 8) : Word.toNat (slotWord (R := ZMod p) s
     List.getElem_cons_zero, List.getElem_cons_succ, ZMod.val_zero, zero_mul, add_zero]
   rw [ZMod.val_natCast_of_lt (by have := slot.isLt; omega)]
 
+private theorem call_bounds (deferred : Bool) (slot : Fin 8) (call : HostCallChip.Message (ZMod p))
+    (valid : CallSpec deferred slot call) :
+    (Word.toBitVec64 call.arg1).toNat = slot.val ∧
+      (Word.toBitVec64 call.arg2).toNat < bound p deferred := by
+  constructor
+  · rw [valid.2.1, Word.toBitVec64_toNat (slot_bound slot), slot_value]
+  · rw [Word.toBitVec64_toNat valid.2.2.2.2.1]
+    exact valid.2.2.2.2.2
+
+private theorem code_value (deferred : Bool) :
+    Word.toBitVec64 (codeWord (R := ZMod p) deferred) =
+      (if deferred then SyscallKind.commitDeferred else .commit).code := by
+  have small (n : ℕ) (bound : n < 2 ^ 17) : (n : ZMod p).val = n :=
+    ZMod.val_natCast_of_lt (lt_trans bound (Fact.out (p := 2 ^ 17 < p)))
+  have sixteen : (16 : ZMod p).val = 16 := small 16 (by decide)
+  have twentySix : (26 : ZMod p).val = 26 := small 26 (by decide)
+  cases deferred <;> simp [codeWord, Word.toBitVec64, Word.toNat, sixteen, twentySix, SyscallKind.code]
+
+/-- Update the actual host bank; the call does not choose the values of untouched slots. -/
+def execution (deferred : Bool) (slot : Fin 8) (call : HostCallChip.Message (ZMod p))
+    (host : HostState) : HostExecution :=
+  ⟨if deferred then .commitDeferred else .commit, Word.toBitVec64 call.arg1,
+    Word.toBitVec64 call.arg2, Word.toBitVec64 call.result,
+    ⟨if deferred then { host with deferred := host.deferred.set slot ((Word.toBitVec64 call.arg2).setWidth 32) }
+      else { host with committed := host.committed.set slot ((Word.toBitVec64 call.arg2).setWidth 32) }, none⟩⟩
+
+private theorem executeKind_of_callSpec (deferred : Bool) (slot : Fin 8) (call : HostCallChip.Message (ZMod p))
+    (valid : CallSpec deferred slot call) (host : HostState) (policy : HostPolicy)
+    (characteristic : policy.characteristic = p) (context : HostReadContext) :
+    host.executeKind policy context (if deferred then .commitDeferred else .commit)
+      (Word.toBitVec64 call.arg1) (Word.toBitVec64 call.arg2) =
+        some (execution deferred slot call host).effect := by
+  have bounds := call_bounds deferred slot call valid
+  cases deferred
+  · simp only [bound, Bool.false_eq_true, ↓reduceIte] at bounds
+    simp only [HostState.executeKind, bounds.1, dif_pos slot.isLt, if_pos bounds.2, execution,
+      Bool.false_eq_true, ↓reduceIte]
+  · simp only [bound, ↓reduceIte, lt_min_iff] at bounds
+    simp only [HostState.executeKind, bounds.1, dif_pos slot.isLt, characteristic, if_pos bounds.2,
+      execution, ↓reduceIte]
+
+/-- The constrained call and actual register observations determine dispatch on any running
+host, preserving its other slots. Final bank-ledger agreement is a separate boundary claim. -/
+theorem run_of_callSpec (deferred : Bool) (slot : Fin 8) (call : HostCallChip.Message (ZMod p))
+    (valid : CallSpec deferred slot call) (host : HostState) (running : host.exitCode = none)
+    (policy : HostPolicy) (characteristic : policy.characteristic = p) (context : HostReadContext)
+    (code : context.register 5 = some (Word.toBitVec64 call.code))
+    (arg1 : context.register 10 = some (Word.toBitVec64 call.arg1))
+    (arg2 : context.register 11 = some (Word.toBitVec64 call.arg2)) :
+    host.run policy context = some (execution deferred slot call host) := by
+  apply (host.run_eq_some_iff policy context _).mpr
+  refine ⟨running, ?_, arg1, arg2, ?_, executeKind_of_callSpec deferred slot call valid host policy characteristic context⟩
+  · simpa only [valid.1, code_value, execution] using code
+  · rw [show (execution deferred slot call host).result = Word.toBitVec64 call.result from rfl,
+      valid.2.2.1, code_value]
+    cases deferred <;> rfl
+
 omit [Fact (2 ^ 25 < p)] in
 /-- The decoded state changes exactly the selected 32-bit slot. -/
 theorem next_decode (input : Inputs (ZMod p)) (slot : Fin 8) :
@@ -50,19 +107,13 @@ theorem executeKind_of_spec (deferred : Bool) (slot : Fin 8) (input : Inputs (ZM
       (if deferred then .commitDeferred else .commit)
       (Word.toBitVec64 input.call.arg1) (Word.toBitVec64 input.call.arg2) =
       some ⟨(input.next slot).apply deferred host, none⟩ := by
-  have index := valid.1.2.1
-  have word : Word.isU64 input.call.arg2 := valid.1.2.2.2.2.1
-  have value : Word.toNat input.call.arg2 < bound p deferred := valid.1.2.2.2.2.2
-  have indexNat : (Word.toBitVec64 input.call.arg1).toNat = slot.val := by
-    rw [index, Word.toBitVec64_toNat (slot_bound slot), slot_value]
-  have valueNat : (Word.toBitVec64 input.call.arg2).toNat = Word.toNat input.call.arg2 :=
-    Word.toBitVec64_toNat word
+  have bounds := call_bounds deferred slot input.call valid.1
   cases deferred
-  · simp only [bound, Bool.false_eq_true, ↓reduceIte] at value
-    simp only [State.apply, Bool.false_eq_true, ↓reduceIte, HostState.executeKind, indexNat,
-      dif_pos slot.isLt, valueNat, if_pos value, next_decode]
-  · simp only [bound, ↓reduceIte, lt_min_iff] at value
-    simp only [State.apply, ↓reduceIte, HostState.executeKind, indexNat,
-      dif_pos slot.isLt, valueNat, characteristic, if_pos value, next_decode]
+  · simp only [bound, Bool.false_eq_true, ↓reduceIte] at bounds
+    simp only [State.apply, Bool.false_eq_true, ↓reduceIte, HostState.executeKind, bounds.1,
+      dif_pos slot.isLt, if_pos bounds.2, next_decode]
+  · simp only [bound, ↓reduceIte, lt_min_iff] at bounds
+    simp only [State.apply, ↓reduceIte, HostState.executeKind, bounds.1,
+      dif_pos slot.isLt, characteristic, if_pos bounds.2, next_decode]
 
 end SP1Clean.HostCommitChip

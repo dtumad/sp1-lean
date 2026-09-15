@@ -304,8 +304,11 @@ rows from non-read events. `HostExecutionEffect` supplies concrete host preserva
 assuming unchanged RAM. `HostHintReadInstructionExecution` now proves
 `HostHintReadCPU.GroundingCarrier.instruction_engineFacts` for all 25 ordinary cases on the same carrier.
 `HostLocalCoreRom` authenticates store permissions from the extended ledger and reuses the original
-store footprints and registered ROM-preserving effects. Control event cases and complete outgoing
-snapshot agreement remain open.
+store footprints and registered ROM-preserving effects. `HostHintReadSyscallExecution` derives
+all installed SyscallInstrs cases from full-call balance, including control dispatch on the actual
+incoming host bank. `HostHintReadExecution` adds legacy HALT and proves `GroundingCarrier.ground`
+with no remaining event-semantic premise. Final State/frontier truth is derived; complete outgoing
+snapshot agreement, execution reconstruction, and the full eight-call integration remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.
