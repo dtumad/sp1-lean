@@ -38,10 +38,10 @@ local instance pathLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 
 local instance pathLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
-  {final : HostHintQueue.State (ZMod p)} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 private theorem step_of_replay (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (n : ℕ) (current next : ExecutionState) (event : Machine.ExecutionEvent)
@@ -73,7 +73,7 @@ private theorem step_of_replay (valid : image.Valid)
   | halt row => exact (replayHost?_eq_some_iff _ _ _ _ _).mp replay
 
 private theorem final_replay (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (truth : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
@@ -99,7 +99,7 @@ private theorem final_replay (valid : image.Valid)
 /-- Raw installed AIR constraints and balance yield a normally retiring local execution on the
 derived complete event tape. Its endpoint agrees with the public PC/clock and every final record. -/
 theorem GroundingCarrier.execution (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -128,7 +128,7 @@ theorem GroundingCarrier.execution (valid : image.Valid)
 grounding, or event semantics. The path exhausts the active physical inventory, preserving repeated
 occurrences and erasing inactive padding. Complete outgoing snapshot binding is not asserted. -/
 theorem source_execution (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ events target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)

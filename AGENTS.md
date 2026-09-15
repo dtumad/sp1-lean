@@ -324,10 +324,13 @@ queue history with full execution. The shared resource profile must include the 
 no static-source-queue assumption is admissible.
 `HostCommitEnsemble` now takes the actual source host and seeds its selected bank, preserving
 nonzero commitment/deferred values across continuation cuts. Its verifier has no witness cells;
-clock zero is a local ledger seed, with boot's zero values as a specialization. Installing those
-bank endpoints/terminals and aligning their history with the CPU remains open. The current
-source-hint assembly registers COMMIT components but omits their endpoints, so its path theorem
-does not establish active-COMMIT non-vacuity or completeness.
+clock zero is a local ledger seed, with boot's zero values as a specialization. The source-hint assembly now installs both bank terminals and a combined verifier-owned
+queue/bank boundary. `HostHintReadBanks.ordered_history` derives each physical bank history
+from that complete mixed witness, and the existing execution-path proof retains its full ledger.
+A complete active-COMMIT regression starts from nonzero banks and checks every constraint, lookup,
+and channel balance; changed final banks and missing/duplicate terminals are rejected. Aligning
+those bank histories with the CPU replay and authenticating the complete outgoing snapshot remain
+open, as does constructive completeness. The combined verifier exports with zero witness cells.
 The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
 computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
 agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are

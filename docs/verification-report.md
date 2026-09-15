@@ -901,7 +901,7 @@ local handler contract. `word_steps` extracts the bundled step circuit's soundne
 Byte and authenticated word guarantees. The coverage and permission proofs consume this weaker
 contract; `word_spec` retains the Memory guarantees needed for the full RAM contract.
 
-The `installedRecords` regression uses the actual 85-table source registration with repeated
+The `installedRecords` regression uses the actual 87-table source registration with repeated
 demand and reversed rows. Missing source rows fail record balance. Changing fixed source bytes
 leaves the claimed ledger balanced but fails the lookup. `noncanonicalNodeLength` exhibits a
 length whose decoded 64-bit value agrees with the honest record while its field encoding is
@@ -925,7 +925,7 @@ conditionally on the actual resource endpoint ledger; that interface does not co
 authenticate endpoints.
 The stronger negative result `source_queue_rows_nil` proves that the fixed node/word source
 assembly, with full AIR constraints and balance, forces all three queue-handler tables inactive.
-Thus its active 85-table record fixtures cannot be complete AIR witnesses. `missingQueueEndpoints`
+Thus its active 87-table record fixtures cannot be complete AIR witnesses. `missingQueueEndpoints`
 checks their record balance succeeds while queue balance fails; adding the correct explicit endpoint
 pair closes that ledger, and altering its final head breaks it again. The pair in this regression
 is not an installed verifier. The new `Soundness/HostHintQueueBoundary.lean` assembly now runs the
@@ -1070,14 +1070,18 @@ would not suffice. Host transitions use the concrete interpreter's actual incomi
 padding is erased and empty segments are identities. This statement does not bind a supplied
 complete outgoing snapshot or the Exit bus. Those obligations, the two missing handlers, and
 constructive completeness remain open; no full eight-call AIR/execution equivalence is claimed.
-Registration does not by itself establish active COMMIT coverage: this source-hint assembly
-does not install the commitment-bank endpoints. The separate `HostCommitEnsemble` now fixes its
-incoming bank from the actual complete source host, and `sound` derives the physical bank history
-from that host to the public final values. A zero-clock seed avoids claiming a historical last-call
-time. Nonzero-source regressions preserve values across a bank-shard cut and reject reset sources,
-untouched-slot mutations, and forged outgoing high limbs. Both bank endpoints and their terminals
-still need installation and CPU-history agreement in the mixed ensemble before outgoing bank
-authentication or active-COMMIT completeness can be claimed there.
+The source-hint assembly now installs both commitment-bank terminals and a combined verifier
+fixing source and final bank words. `HostHintReadBanks.ordered_history` projects the actual slot
+and terminal tables, derives their Byte guarantees from the complete ledger, and applies the
+existing exhaustive bank-history theorem. The source values come from the actual host; a
+zero-clock seed makes no historical last-call claim. The mixed assembly has 87 physical tables
+and one verifier, whose derived singleton representation preserves every channel and count bound.
+A complete active-COMMIT regression starts from nonzero banks, evaluates all local assertions
+and fixed lookups, constructs real Byte providers, and checks the complete CPU, Memory, HostCall,
+bank, and remaining channel balances. It rejects changed final banks and missing or duplicate
+terminals. The current legacy Exit arrangement still requires its inactive HALT row.
+The combined verifier exports with zero witness cells. CPU-order agreement with the bank histories,
+complete outgoing-state authentication, and active-COMMIT constructive completeness remain open.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

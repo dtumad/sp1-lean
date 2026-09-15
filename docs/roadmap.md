@@ -426,7 +426,7 @@ Implemented foundations:
   `word_spec` isolates the actual Memory-channel guarantees for the full RAM contract.
   `word_steps` derives the authenticated step independently; coverage and permissions use it,
   obtaining the lower address bound from the checked handler span and its actual cursor path.
-  The 85-table regression rejects missing source rows and changed fixed bytes, and a separate regression shows that equal
+  The 87-table regression rejects missing source rows and changed fixed bytes, and a separate regression shows that equal
   semantic length words need not have canonical encodings.
   `HostHintReadLocalExecution.current_records` now restricts persistent-store bindings to each
   call's current allocation frontier: its current head bounds the node, and the balanced cursor
@@ -543,9 +543,12 @@ Implemented foundations:
   from those constraints and balance, deriving normal retirement through the registered ordinary
   chip contracts. The path exhausts the active event inventory with multiplicities, erases inactive
   padding, includes empty identities, and matches final PC, clock, and physical Memory-frontier values.
-  Registered COMMIT components alone do not establish active-call coverage: this source-hint
-  assembly still omits their bank endpoints. Its soundness theorem is not an active-COMMIT
-  non-vacuity or completeness result.
+  The assembly now includes both bank terminals and verifier-owned source/final bank pairs.
+  `HostHintReadBanks.ordered_history` derives each physical bank history from the mixed AIR
+  constraints and balance. A complete active-COMMIT regression with nonzero source banks checks
+  every channel, including actual CPU/Memory/HostCall and Byte providers; forged final banks and
+  omitted or duplicated terminals fail. The existing execution-path proof uses this enlarged
+  witness. Bank-history agreement with CPU replay and constructive completeness remain open.
   **Next:** bind the complete outgoing snapshot, including host banks and untouched Sail state.
   Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
@@ -631,7 +634,8 @@ Implemented foundations:
   distinct overwrites, invalid clocks/values/witnesses, and rejected forks or missing updates;
   the witness programs export 186 cells. Native bank history does not require every intermediate
   value to equal the final digest. The composable bank ensemble below now authenticates its
-  endpoints and derives local specs. Installing it and the handoff in the mixed machine remains open.
+  endpoints and derives local specs. The mixed installation now derives those same histories
+  from its actual bank tables and combined verifier; CPU-replay agreement remains open.
 
 - `HostCommitBoundary` closes a bank at a fixed private-channel clock beyond all ordinary call
   times, preserving all eight words. Its terminal has 48 computed witness cells; its verifier
@@ -647,8 +651,9 @@ Implemented foundations:
   terminal clocks. Nonzero-source regressions also cut an interleaved history into two bank shards,
   preserve untouched slots and other host fields, and reject reset sources or forged high limbs
   that 32-bit semantic decoding alone would discard. The generalized verifier remains exportable.
-  This is a bank subsystem, not yet the mixed RISC-V ensemble. Calls and other host state/effects
-  still need coordination there. In particular, with no auxiliary call sources this subsystem
+  This standalone bank subsystem is also reused by `HostHintReadBanks.ordered_history` in the
+  mixed assembly. Agreement with that assembly's CPU replay and other host effects remains open.
+  With no auxiliary call sources the standalone subsystem
   admits only empty call histories; no active-call non-vacuity claim is made for that configuration.
 
 - `HostHaltChip` and `HostEnterChip` now constrain HALT and constrained-replay ENTER. Their complete
@@ -738,9 +743,10 @@ Still required before the native capstone can be claimed:
    and final PC/clock/Memory-frontier agreement. The smaller instruction-only witness does not
    inherit its Memory balance.
    The bank subsystem now seeds the selected commitment/deferred values from the complete local
-   source host. Install its source/final endpoints and terminals in the mixed ensemble, align its
-   history with actual CPU calls, and bind both outgoing banks. The present source-hint assembly
-   registers the slot handlers but omits those endpoints; registration is not active-call coverage.
+   source host. Both source/final pairs and physical terminals are now installed in the mixed
+   ensemble, and its complete ledger derives the exhaustive bank histories. The active-COMMIT
+   full-ledger regression establishes a concrete satisfiable continuation from nonzero banks.
+   Align those histories with actual CPU replay and bind both outgoing banks in the path theorem.
    Constrain actual host effects, including WRITE's x12/buffer reads and HINT_READ's padded RAM
    writes; the latter already use the same byte-permission interface in the installed hint assembly.
    Terminal ECALL/Exit agreement, complete outgoing snapshot binding, and the full eight-call

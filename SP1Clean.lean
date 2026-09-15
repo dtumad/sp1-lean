@@ -429,6 +429,7 @@ import SP1Clean.Soundness.HostQueueOrder
 import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Native.Operations.HintQueueBoundary
 import SP1Clean.Soundness.HostHintQueueBoundary
+import SP1Clean.Soundness.HostHintReadBanks
 import SP1Clean.Soundness.HostHintReadLocalMemory
 import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Soundness.HostHintReadExecutionRows
@@ -859,6 +860,8 @@ import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Soundness.HostCommitHistory
 import SP1Clean.FormalModel.Contracts.HostCommitBoundary
 import SP1Clean.Native.Operations.HostCommitBoundary
+import SP1Clean.Native.Operations.HostCommitEndpoint
+import SP1Clean.Native.Operations.HostBoundary
 import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Soundness.HostCommitEnsemble
 import SP1Clean.FormalModel.Contracts.HostControl

@@ -243,11 +243,11 @@ theorem wordsAt_locations_nodup
   apply List.Nodup.of_map MemLoc.busAddress
   simpa only [List.map_map, Function.comp_def] using distinct
 
-variable {final : HostHintQueue.State (ZMod p)}
+variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 
 /-- The installed source-backed assembly supplies the word-step contracts used for grouping. -/
 theorem source_word_steps
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     HintReadCoverage.Steps (wordTables (HostHintQueueBoundary.expanded witness)) :=
@@ -301,7 +301,7 @@ private theorem wordsAt_nil_of_not_read
 /-- Only an authenticated HINT_READ can own added hint RAM rows. CPU clock uniqueness rules
 out assigning another call's words to a non-read event, without using Memory-value guarantees. -/
 theorem source_wordsAt_nil_of_not_read
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -344,7 +344,7 @@ theorem words_partition
 
 /-- The source-backed assembly derives every premise of the exact CPU word partition. -/
 theorem source_words_partition
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (cpu : List (ExecutionRow p))
@@ -360,7 +360,7 @@ theorem source_words_partition
 
 /-- Grouping by CPU events preserves the complete raw Memory ledger of both word tables. -/
 theorem source_memory_partition
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (cpu : List (ExecutionRow p))
@@ -377,7 +377,7 @@ theorem source_memory_partition
 
 /-- The installed source assembly supplies location uniqueness for every CPU group. -/
 theorem source_locations_nodup
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p) :
@@ -409,7 +409,7 @@ private theorem touches_chain (rows : List (HintReadCoverage.Row (p := p)))
 /-- The host part of each CPU row satisfies the grounding engine's per-location chain law.
 All its writes share the event's access time, and authenticated coverage makes locations unique. -/
 theorem source_touches_chain
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p) (loc : MemLoc) :
@@ -422,7 +422,7 @@ theorem source_touches_chain
 /-- CPU grouping retains the previously derived aligned timing, pushed bounds, and strict
 predecessor order of every physical hint word. -/
 theorem source_touches_at (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p) :

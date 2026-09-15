@@ -285,7 +285,7 @@ theorem installedRecords :
     let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
     let witness := withSources hints calls rows nodes records
     let changed := [[99] ++ (HintReadFixtures.bytes 16).drop 1, HintReadFixtures.bytes 8, []]
-    witness.tables.length = 85 ∧ sourceRowsChecked hints nodes records = true ∧
+    witness.tables.length = 87 ∧ sourceRowsChecked hints nodes records = true ∧
       HintReadFixtures.balanced (recordLedger witness.allTables) = true ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows (nodes.drop 1) records).allTables) = false ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows nodes (records.drop 1)).allTables) = false ∧
@@ -346,7 +346,7 @@ theorem missingQueueEndpoints :
 private def withQueueBoundary (actual : List Bytes) (final : HostHintQueue.State Fp)
     (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
     (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) :
-    EnsembleWitness (Soundness.HostHintQueueBoundary.ensemble image (recordSnapshot actual) final
+    EnsembleWitness (Soundness.HostHintQueueBoundary.ensemble image (recordSnapshot actual) final (recordSnapshot actual).host
       HostCallReceivers.available (HostHintReadLocal.sourceResources actual) []) :=
   let original := withSources actual calls rows nodes records
   EnsembleWitness.ofTables _ original.tables original.data original.publicInput
@@ -362,7 +362,7 @@ theorem installedQueueEndpoints :
     let final := (call 1 265 (2 ^ 24 + 1) (2 ^ 48 - 8)).next
     let witness := withQueueBoundary hints final calls rows nodes records
     let expanded := Soundness.HostHintQueueBoundary.expanded witness
-    witness.tables.length = 85 ∧ expanded.tables.length = 86 ∧
+    witness.tables.length = 87 ∧ expanded.tables.length = 88 ∧
       witness.verifierTable.table.length = 1 ∧
       HintReadFixtures.balanced (queueLedger witness.allTables) = true ∧
       HintReadFixtures.balanced (queueLedger expanded.allTables) = true ∧

@@ -42,13 +42,13 @@ theorem History.current {hints atHints : List Bytes} {final : State (ZMod p)} {u
   have equal := Option.some.inj (actual.symm.trans replayed)
   exact ⟨store, extended.trans bounded, equal ▸ binding⟩
 
-variable {image : ProgramImage} {source : ExecutionSnapshot} {final : State (ZMod p)}
+variable {image : ProgramImage} {source : ExecutionSnapshot} {final : State (ZMod p)} {bankFinal : HostState}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 
 /-- Every path prefix supplies its current queue from the AIR; callers supply no per-call head truth.
 The current handler registry requires extra resources without additional queue-state edges. -/
 theorem of_witness
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal
       HostCallReceivers.available resources channels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (upper : Store) (extension : Extends (ofList source.host.io.hints).1 upper)
@@ -75,7 +75,7 @@ theorem of_witness
 /-- Source bytes and the installed AIR alone determine every observed length, queue pop, and final
 reachable queue. This theorem does not require current-head or record-authentication premises. -/
 theorem source_history
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ path : List (Row (p := p)),
@@ -87,6 +87,6 @@ theorem source_history
   intro component member used
   have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
   simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl <;> change false = true at present <;> contradiction
+  rcases member with rfl | rfl | rfl | rfl <;> change false = true at present <;> contradiction
 
 end SP1Clean.Soundness.HostHintQueueHistory

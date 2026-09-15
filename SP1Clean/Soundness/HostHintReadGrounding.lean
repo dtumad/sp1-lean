@@ -18,10 +18,10 @@ local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
-  {final : HostHintQueue.State (ZMod p)} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 private theorem source_ordering
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) :=
@@ -31,27 +31,27 @@ private theorem source_ordering
     (HostHintQueueBoundary.expanded_balanced witness balanced)
 
 private theorem source_data
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
 
 private theorem source_public
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).publicInput = witness.publicInput := rfl
 
 private theorem source_program
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (balanced : witness.BalancedChannels) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).BalancedChannel programChannel.toRaw := by
   change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).interactionsWith _)
-  rw [HostLocalCore.localWitness_program _ (source_program_silent source final)]
+  rw [HostLocalCore.localWitness_program _ (source_program_silent source final bankFinal)]
   exact HostHintQueueBoundary.expanded_balanced witness balanced _
     (by simp [HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
 
 private theorem source_event_readsInWindow (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -71,7 +71,7 @@ private theorem source_event_readsInWindow (valid : image.Valid)
     exact ⟨(words row rowMem).1.read_lo, (words row rowMem).1.read_hi⟩
 
 private theorem canonical_times
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -104,7 +104,7 @@ private theorem original_prior_bounds {aligned original : RowFacts p} (facts : A
 
 /-- The shared carrier specialized to the actual instruction and hint-word footprints. -/
 abbrev GroundingCarrier
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :=
   NativeCore.ExecutionCarrier
     (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
@@ -122,7 +122,7 @@ private theorem eventFacts_canonEdge (data : ProverData (ZMod p)) (words : List 
 
 /-- The same ordered CPU tape supplies both memory grounding and queue-prefix replay. -/
 theorem GroundingCarrier.cpuWalk
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness) :
     Walk.IsWalk (ExecutionRow.canonEdge witness.data) (initialBoundaryStateMessage witness.publicInput)
       (finalBoundaryStateMessage witness.publicInput) carrier.ordered := by
@@ -133,7 +133,7 @@ theorem GroundingCarrier.cpuWalk
 /-- The installed host AIR supplies the final carrier, with all host Memory accesses retained.
 Ordering, read alignment, refresh elimination, and canonical State transport are internal. -/
 theorem source_grounding_carrier (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     Nonempty (GroundingCarrier witness) := by
@@ -189,7 +189,7 @@ The remaining semantic premises are step/frame facts for the original events' fu
 The result authenticates their original operands at read time, including every added RAM word;
 alignment, canonicalization, and the rewritten prior records are internal to the proof. -/
 theorem GroundingCarrier.ground_of_steps (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (trajectory : Trajectory) (initial : trajectory 0 = some source.sail.realize)

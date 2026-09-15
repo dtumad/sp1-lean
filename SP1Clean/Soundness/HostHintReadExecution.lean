@@ -22,10 +22,10 @@ local instance executionLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p :=
 local instance executionLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
-  {final : HostHintQueue.State (ZMod p)} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 private theorem source_ordering
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) :=
@@ -35,7 +35,7 @@ private theorem source_ordering
     (HostHintQueueBoundary.expanded_balanced witness balanced)
 
 private theorem halt_facts (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : HaltChip.Inputs (ZMod p)}
@@ -51,13 +51,13 @@ private theorem halt_facts (valid : image.Valid)
   have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).BalancedChannel
       programChannel.toRaw := by
     change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).interactionsWith _)
-    rw [HostLocalCore.localWitness_program _ (source_program_silent source final)]
+    rw [HostLocalCore.localWitness_program _ (source_program_silent source final bankFinal)]
     exact HostHintQueueBoundary.expanded_balanced witness balanced _
       (by simp [HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
   exact ((LocalCore.halt_program_committed_of_balance valid _ checked programBalance member).ecall_of_opcode rfl).1
 
 private theorem trajectory_halt (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : HaltChip.Inputs (ZMod p)}
@@ -100,7 +100,7 @@ private theorem trajectory_halt (valid : image.Valid)
 /-- The retained legacy HALT table also executes on the complete carrier. Its existing
 16-bit exit restriction follows from its own assertions; no stronger HALT domain is claimed. -/
 theorem GroundingCarrier.halt_engineFacts (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : HaltChip.Inputs (ZMod p)}
@@ -124,7 +124,7 @@ theorem GroundingCarrier.halt_engineFacts (valid : image.Valid)
 The result authenticates all operand values and the final State/Memory frontier on actual
 paired replay, including empty local segments. Complete outgoing snapshot binding is separate. -/
 theorem GroundingCarrier.ground (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     (∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)),

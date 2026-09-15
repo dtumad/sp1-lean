@@ -175,7 +175,7 @@ private theorem auxiliary_memory_words
     resourcesSilent, List.append_nil]
   rfl
 
-variable {final : HostHintQueue.State (ZMod p)}
+variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem messages_perm (left right : List (TypedInteraction (memoryChannel (p := p))))
@@ -187,7 +187,7 @@ private theorem messages_perm (left right : List (TypedInteraction (memoryChanne
 /-- Every active host Memory contribution of the installed source assembly belongs to its
 word tables. The zero x12 pairs remain in the raw ledger and disappear only by signed activity. -/
 theorem source_memory_messages
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     (producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.expanded witness))).Perm
@@ -198,32 +198,32 @@ theorem source_memory_messages
         consumedMessages ((wordTables (HostHintQueueBoundary.expanded witness)).flatMap (typedTableInteractionsWith · memoryChannel))) := by
   have checked := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   have specs := queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checked balance
   have empty := wrapper_messages_nil _ (wrapper_disabled _ interface checked balance specs)
-  have words := auxiliary_memory_words (HostHintQueueBoundary.expanded witness) (source_memory_silent source final)
+  have words := auxiliary_memory_words (HostHintQueueBoundary.expanded witness) (source_memory_silent source final bankFinal)
   have perm := HostLocalCore.memoryInterior_perm (HostHintQueueBoundary.expanded witness) checked
   have messages := messages_perm _ _ perm
   simpa only [producedMessages_append, consumedMessages_append, empty.1, empty.2, List.append_nil, words] using messages
 
 /-- The actual CPU inventory with all installed hint-word Memory effects attached. -/
 noncomputable def sourceExecutionRows
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) : List (RowFacts p) :=
   (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).map
     (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
       (wordTables (HostHintQueueBoundary.expanded witness))))
 
 private theorem source_data
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
 
 /-- Every active physical Memory record is in its enlarged CPU row or an actual refresh pair.
 No host access remains as an unaccounted side ledger. -/
 theorem source_execution_memory_projection
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) (loc : MemLoc) :
     TimedGrounding.pushesAt (sourceExecutionRows witness) loc +
@@ -264,7 +264,7 @@ theorem source_execution_memory_projection
 /-- The full source/final inventories balance the enlarged execution rows and real refreshes.
 This is record conservation before the grounding walk establishes predecessor value currency. -/
 theorem source_execution_memory_balance
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) (loc : MemLoc) :
     Multiset.filter (fun message => MemoryMsg.locOf message = loc)
@@ -383,7 +383,7 @@ private theorem time_of_clock (data : ProverData (ZMod p)) (left right : Executi
   simpa only [cpuClock, StateMsg.timeNat] using values
 
 private theorem source_word_owner
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -395,7 +395,7 @@ private theorem source_word_owner
       event = .syscall (HostCallLedger.input env).instruction := by
   have checked := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   obtain ⟨physical, selected⟩ := List.mem_filter.mp member
   obtain ⟨_, _, env, active, _, cpuMem, clock⟩ := word_cpu (HostHintQueueBoundary.expanded witness)
@@ -410,7 +410,7 @@ private theorem source_word_owner
   exact time_of_clock witness.data _ _ same
 
 private theorem source_word_disjoint (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -422,7 +422,7 @@ private theorem source_word_disjoint (valid : image.Valid)
     MemoryMsg.locOf message ≠ MemoryMsg.locOf (touch row).2 := by
   obtain ⟨env, active, same⟩ := source_word_owner witness constraints balanced event eventMem row member
   have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) (HostHintQueueBoundary.expanded_constraints witness constraints)
+    (source_program_silent source final bankFinal) (HostHintQueueBoundary.expanded_constraints witness constraints)
     (HostHintQueueBoundary.expanded_balanced witness balanced) env active
   have operands := syscall_operands_of_committed _ _ committed
   rw [same] at messageMem
@@ -434,7 +434,7 @@ private theorem source_word_disjoint (valid : image.Valid)
 /-- Every actual CPU event admits aligned register and hint-RAM touches from the complete AIR.
 The enlarged row retains its original State edge, fetch, and all physical Memory occurrences. -/
 theorem source_event_aligned (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -444,7 +444,7 @@ theorem source_event_aligned (valid : image.Valid)
         (wordTables (HostHintQueueBoundary.expanded witness))) event) := by
   have checked := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   have bytes := HostLocalCore.localWitness_byte (HostHintQueueBoundary.expanded witness)
     (auxiliaryInterface interface) checked
@@ -452,7 +452,7 @@ theorem source_event_aligned (valid : image.Valid)
   have program : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).BalancedChannel
       programChannel.toRaw := by
     change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).interactionsWith _)
-    rw [HostLocalCore.localWitness_program _ (source_program_silent source final)]
+    rw [HostLocalCore.localWitness_program _ (source_program_silent source final bankFinal)]
     exact balance _ (by simp [HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
   obtain ⟨aligned, facts⟩ := LocalCore.executionRows_aligned_of_channels valid
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))
@@ -496,7 +496,7 @@ private theorem align_facts (originals : List (RowFacts p))
 /-- An exhaustive ordered CPU walk with aligned host footprints and the complete Memory
 aggregates. This directly transports source/final record balance to the aligned rows. -/
 theorem source_ordered_aligned_rows (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ (ordered : List (ExecutionRow p)) (rows : List (RowFacts p)),

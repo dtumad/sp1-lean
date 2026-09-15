@@ -256,8 +256,8 @@ private theorem ordered_history
 /-- The installed source-only queue registry determines both exhaustive paths and their order
 agreement from raw constraints and full balance. It retains arbitrary local CPU endpoints.
 Successful whole-host replay, Memory grounding, and outgoing snapshot binding remain separate. -/
-theorem source_history {final : State (ZMod p)}
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ cpu : List (ExecutionRow p), ∃ path : List (Row (p := p)),
@@ -271,7 +271,7 @@ theorem source_history {final : State (ZMod p)}
       CurrentQueues witness.data source.host.io.hints (HintQueue.ofList source.host.io.hints).1 cpu path := by
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   obtain ⟨cpu, cpuExhaustive, cpuWalk⟩ := HostLocalCore.executionRows_ordered
     (HostHintQueueBoundary.expanded witness) (auxiliaryInterface interface) checks balance

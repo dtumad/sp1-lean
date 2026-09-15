@@ -20,10 +20,10 @@ local instance instructionLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p 
 local instance instructionLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
-  {final : HostHintQueue.State (ZMod p)} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 private theorem source_data
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
 
@@ -42,7 +42,7 @@ private theorem instruction_staticInputs
       (fun table tableMem => program table (LocalCore.instructionTables_mem witness tableMem)) row member⟩
 
 private theorem instruction_inputs (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}
@@ -61,7 +61,7 @@ private theorem instruction_inputs (valid : image.Valid)
   have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).BalancedChannel
       programChannel.toRaw := by
     change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).interactionsWith _)
-    rw [HostLocalCore.localWitness_program _ (source_program_silent source final)]
+    rw [HostLocalCore.localWitness_program _ (source_program_silent source final bankFinal)]
     exact balance _ (by simp [HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
   have program := LocalCore.program_guarantees_of_balance image source _ checked programBalance
   have inputs := instruction_staticInputs _ checked ordering.byte program active.1
@@ -73,7 +73,7 @@ private theorem instruction_inputs (valid : image.Valid)
       inputs.constraints inputs.byte active.2)
 
 private theorem trajectory_ordinary (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}
@@ -107,7 +107,7 @@ private theorem trajectory_ordinary (valid : image.Valid)
 /-- All 25 ordinary instruction families supply complete step/frame facts on the same carrier
 as the hint handlers. ROM preservation and absence of added hint accesses follow from the AIR. -/
 theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}
@@ -132,7 +132,7 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
   have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.expanded witness)
-    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source final)) checks balance active.1 active.2
+    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source final bankFinal)) checks balance active.1 active.2
   rw [source_data] at permission active
   apply contracts.engineFactsLocalG_of_rowEffect witness.data row rfl checked.1 active.2 _ checked.2
     (carrier.trajectory valid) source.sail.realize carrier.timeline
@@ -153,7 +153,7 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
 /-- Grounded ordinary operands yield a normally retiring semantic step from the actual paired
 state. Instruction dispatch and readiness stay inside the registered chip contracts. -/
 theorem GroundingCarrier.instruction_step (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}

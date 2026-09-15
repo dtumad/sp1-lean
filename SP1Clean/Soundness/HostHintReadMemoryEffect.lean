@@ -147,7 +147,7 @@ theorem hint_memory_effect (input : HostHintReadChip.Inputs (ZMod p)) (host : Ho
     exact outside row rowMem (located.trans (congrArg MemLoc.ram equal))
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
-  {final : HostHintQueue.State (ZMod p)} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem hint_event (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZMod p)
@@ -204,7 +204,7 @@ private theorem length_event (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZM
     reduceCtorEq, ↓reduceIte, arg1, arg2, result, pc, stamp, ← raw, ← next]
 
 private theorem source_memory_effect
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -229,7 +229,7 @@ private theorem source_memory_effect
         (.ram cell) = locContent state (.ram cell)) := by
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   have selected := handler_wordsAt (HostHintQueueBoundary.expanded witness) interface checks balance
     event member env handler clock
@@ -248,7 +248,7 @@ private theorem source_memory_effect
 successor realizes all grouped RAM pushes and preserves every other RAM cell. The only semantic
 antecedents are the incoming State and operand currency supplied by timed grounding. -/
 theorem GroundingCarrier.hintRead_step (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -292,7 +292,7 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     exact replayEvents?_clock paired
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   have handlerMember : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
       (queueTables (HostHintQueueBoundary.expanded witness)) := by
@@ -313,10 +313,10 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
       (HostCallLedger.input physical).instruction) = carrier.timeline.start n := by
     simpa only [sameEvent, ExecutionRow.facts, syscallRowFacts_statePull] using time
   have registers := HostLocalCore.hostCall_registers valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) checks balance physical active _ source.sail.realize current.sail _ n
+    (source_program_silent source final bankFinal) checks balance physical active _ source.sail.realize current.sail _ n
     before instructionTime (fun mp present => (original mp present).2.2)
   have law := HostLocalCore.hostCall_eventLaw (HostHintQueueBoundary.expanded witness)
-    (auxiliaryInterface interface) (source_program_silent source final) checks balance physical active
+    (auxiliaryInterface interface) (source_program_silent source final bankFinal) checks balance physical active
     (fun mp present => ⟨(original mp present).1, (original mp present).2.1⟩)
   have observed := (current.host.run_eq_some_iff _ _ _).mp ran
   have code := Option.some.inj (registers.1.symm.trans observed.2.1)
@@ -324,7 +324,7 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     current.host bytes remaining sameCall code law.1 current.clock
     (currentTime.trans (instructionTime.symm.trans law.2.symm))
   have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) checks balance physical active
+    (source_program_silent source final bankFinal) checks balance physical active
   have fetched := (committed.ecall_of_opcode rfl).1
   change (image.toGuestProgram valid).fetchWord
     (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) =
@@ -368,7 +368,7 @@ private theorem length_not_read (event : ExecutionRow p) (wrapper : HostCallChip
 /-- The physical HINT_LEN executes at its paired-replay position and preserves RAM. Its empty
 added-word footprint follows from authenticated HINT_READ ownership and CPU clock uniqueness. -/
 theorem GroundingCarrier.hintLength_step (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -409,7 +409,7 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     exact replayEvents?_clock paired
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   obtain ⟨physical, active, sameCall, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
     (HostHintQueueBoundary.expanded witness) interface checks balance (some empty, env) handler event member clock
@@ -424,10 +424,10 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
       (HostCallLedger.input physical).instruction) = carrier.timeline.start n := by
     simpa only [sameEvent, ExecutionRow.facts, syscallRowFacts_statePull] using time
   have registers := HostLocalCore.hostCall_registers valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) checks balance physical active _ source.sail.realize current.sail _ n
+    (source_program_silent source final bankFinal) checks balance physical active _ source.sail.realize current.sail _ n
     before instructionTime (fun mp present => (original mp present).2.2)
   have law := HostLocalCore.hostCall_eventLaw (HostHintQueueBoundary.expanded witness)
-    (auxiliaryInterface interface) (source_program_silent source final) checks balance physical active
+    (auxiliaryInterface interface) (source_program_silent source final bankFinal) checks balance physical active
     (fun mp present => ⟨(original mp present).1, (original mp present).2.1⟩)
   have observed := (current.host.run_eq_some_iff _ _ _).mp ran
   have code := Option.some.inj (registers.1.symm.trans observed.2.1)
@@ -435,7 +435,7 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     current.host sameCall code law.1 current.clock
     (currentTime.trans (instructionTime.symm.trans law.2.symm))
   have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) checks balance physical active
+    (source_program_silent source final bankFinal) checks balance physical active
   have fetched := (committed.ecall_of_opcode rfl).1
   change (image.toGuestProgram valid).fetchWord
     (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) =
@@ -582,7 +582,7 @@ private theorem syscall_state_push (row : SyscallInstrsChip.Inputs (ZMod p))
 The actual instruction contract supplies register touches, while all grouped RAM effects remain
 in the original extended ledger. Handler-specific dispatch is the remaining premise. -/
 theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -641,7 +641,7 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
   rw [sail] at loaded configured
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
@@ -651,10 +651,10 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
     apply List.mem_append_left
     simpa only [sameEvent, ExecutionRow.facts] using present
   have contract := HostLocalCore.hostCall_contract (HostHintQueueBoundary.expanded witness)
-    (auxiliaryInterface interface) (source_program_silent source final) checks balance physical active
+    (auxiliaryInterface interface) (source_program_silent source final bankFinal) checks balance physical active
     (fun mp present => ⟨(original mp present).1, (original mp present).2.1⟩)
   have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) checks balance physical active
+    (source_program_silent source final bankFinal) checks balance physical active
   have operands := NativeCore.syscall_operands_of_committed _ _ committed
   have effects := hostStep_effect (show ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩
       (image.toGuestProgram valid) current (.syscall (syscallEventOfRow (HostCallLedger.input physical).instruction)) next by
@@ -697,7 +697,7 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
     simpa only [facts, eventFacts, sameEvent, ExecutionRow.facts] using pushes
 
 private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -729,7 +729,7 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
         (wordTables (HostHintQueueBoundary.expanded witness))) event) := by
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   obtain ⟨physical, active, _, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
     (HostHintQueueBoundary.expanded witness) interface checks balance queueRow queueMember event member clock
@@ -739,7 +739,7 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
 frame obligations on paired replay. Register, RAM, ROM, and configuration effects are derived
 from this witness; no semantic effect or successful-current-step premise is supplied by the caller. -/
 theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -765,7 +765,7 @@ theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
 frame obligations on paired replay. Register, RAM, ROM, and configuration effects are derived
 from this witness; no semantic effect or successful-current-step premise is supplied by the caller. -/
 theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -802,7 +802,7 @@ private theorem read_handler_member (first : Table (ZMod p)) (others : List (Tab
 /-- Every physical queue handler supplies the full timed step/frame contract. HINT_READ and
 both HINT_LEN variants are coordinated internally on the same complete execution carrier. -/
 theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)

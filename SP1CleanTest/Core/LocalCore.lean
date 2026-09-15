@@ -1,5 +1,7 @@
 import SP1Clean.Soundness.LocalCoreGrounding
 import SP1Clean.Soundness.ProtectedLocalCore
+import SP1Clean.Soundness.HostHintQueueBoundary
+import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Model.Core.HostSnapshot
 import SP1CleanTest.Audit.OneAddNativePremises
 import ToClean.Air.EnsembleExport
@@ -93,7 +95,8 @@ private def evaluate (image : ProgramImage) (source : ExecutionSnapshot) (compon
   let fixed := [FiniteLookup.ofStatic (source.sail.memorySnapshot.registerTable (p := SP1Prime)),
     FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
     FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime))]
+    FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime)),
+    FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))]
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
@@ -349,6 +352,86 @@ private def syscallRows (result : ℕ) : List Row :=
     (57, List.replicate (size HaltChip.Inputs) 0), (58, (toElements (syscallInput result)).toList)]
 
 private def syscallPublic : SP1PublicIO Fp := { publicInput with final_clk_0_16 := 273 }
+
+private def commitSource : ExecutionSnapshot :=
+  { syscallSource with
+    sail.registers := ((syscallSource.sail.registers.insert .x5 16).insert .x10 0).insert .x11 65537
+    host := {
+      committed := #v[11, 22, 33, 44, 55, 66, 77, 88],
+      deferred := #v[101, 102, 103, 104, 105, 106, 107, 108] } }
+
+private def commitTarget : HostState :=
+  { commitSource.host with committed := commitSource.host.committed.set 0 65537 }
+
+private def commitInstruction : HostCallChip.Inputs Fp :=
+  ⟨{ syscallInput 16 with
+      op_a_memory.prev_value := word 16, op_b_memory.prev_value := word 0,
+      op_c_memory.prev_value := word 65537,
+      syscall_id_bytes := U16toU8OperationSafe.populate (word 16),
+      is_enter_unconstrained := IsZeroOperation.populate (13 : Fp),
+      is_hint_len := IsZeroOperation.populate (-224 : Fp),
+      is_halt_zero := IsZeroOperation.populate (16 : Fp),
+      is_commit := IsZeroOperation.populate (0 : Fp),
+      is_commit_deferred := IsZeroOperation.populate (-10 : Fp),
+      digest_index_bits := #v[1, 0, 0, 0, 0, 0, 0, 0], digest_word := #v[1, 0, 1, 0] },
+    ⟨0, ⟨0, 0⟩⟩⟩
+
+private def commitHandler : HostCommitChip.Inputs Fp :=
+  HostCommitChip.populate false (commitInstruction.message 0)
+    (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false commitSource.host))
+
+private def commitRows : List Row :=
+  let sourceRow (previous index : ℕ) : Row :=
+    (0, (toElements (OrderedSnapshotProvider.populate
+      (SnapshotRegisterProvider.populate commitSource.sail.memorySnapshot (BitVec.ofNat 5 index))
+      previous index)).toList)
+  [sourceRow 0 5, sourceRow 6 10, sourceRow 11 11, terminal 2 12,
+    (3, finalRecord 0 5 13 16), (3, finalRecord 6 10 12 0),
+    (3, finalRecord 11 11 11 65537), terminal 5 12,
+    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) syscallImage (65536, 0x00000073) 1).map
+      (fun input => (toElements input).toList)).getD []),
+    (57, List.replicate (size HaltChip.Inputs) 0),
+    (58, (toElements commitInstruction).toList), (63, (toElements commitHandler).toList),
+    (85, (toElements (commitHandler.next 0)).toList),
+    (86, (toElements (HostCommitBoundary.start
+      (HostCommitEnsemble.sourceValues true commitSource.host))).toList)]
+
+private def checkCommit (target : HostState) (rows : List Row) : Bool :=
+  let assembly := HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage commitSource
+    (SP1Clean.HostHintQueueBoundary.initial []) target HostCallReceivers.available
+    (HostHintReadLocal.sourceResources []) []
+  let evaluateAt (row : Row) := match assembly.tables[row.1]? with
+    | none => (false, [])
+    | some component => evaluate syscallImage commitSource component row.2
+  let head := evaluate syscallImage commitSource ⟨assembly.verifier⟩ (toElements syscallPublic).toList
+  let initial := head :: rows.map evaluateAt
+  let demands := (initial.flatMap Prod.snd).filterMap byteProvider
+  let evaluated := initial ++ demands.map evaluateAt
+  let ledger := evaluated.flatMap Prod.snd
+  evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
+    ledger.all fun (name, message, _) =>
+      (assembly.channels.map RawChannel.name).contains name &&
+        ((ledger.filter (fun entry => entry.1 == name && entry.2.1 == message)).map
+          (fun entry => entry.2.2)).sum == 0
+
+/-- An active COMMIT closes the complete installed ledger from nonzero incoming banks,
+including the actual CPU handoff, register Memory pairs, both terminals, and every Byte provider. -/
+theorem activeCommitLocalShard : checkCommit commitTarget commitRows = true := by native_decide
+
+/-- Complete balance rejects changed outgoing words in either bank and missing or duplicate terminals. -/
+theorem rejectsCommitBoundaries :
+    [checkCommit commitSource.host commitRows,
+     checkCommit { commitTarget with deferred := commitTarget.deferred.set 0 0 } commitRows,
+     checkCommit commitTarget (commitRows.filter (fun row => row.1 != 85)),
+     checkCommit commitTarget (commitRows.filter (fun row => row.1 != 86)),
+     checkCommit commitTarget (commitRows ++ commitRows.filter (fun row => row.1 == 85))] =
+      [false, false, false, false, false] := by native_decide
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage commitSource
+  (SP1Clean.HostHintQueueBoundary.initial []) commitTarget HostCallReceivers.available
+  (HostHintReadLocal.sourceResources []) []).verifier
 
 /-- An active ECALL closes the actual 59-table ledger with all three nonzero source registers,
 its wide State edge, the changed result, and source/final inventories. No syscall row is erased. -/

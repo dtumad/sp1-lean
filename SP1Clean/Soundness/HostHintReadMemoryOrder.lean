@@ -18,10 +18,10 @@ local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
-  {final : HostHintQueue.State (ZMod p)} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 private theorem source_ordering
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) :=
@@ -31,17 +31,17 @@ private theorem source_ordering
     (HostHintQueueBoundary.expanded_balanced witness balanced)
 
 private theorem source_data
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
 
 private theorem source_public
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).publicInput = witness.publicInput := rfl
 
 private theorem aligned_push_bounds
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p))
@@ -73,7 +73,7 @@ private theorem aligned_push_bounds
   exact ⟨aligned.pushBound message messageMem, clkHigh_lt_of_timeNat_le (by omega) finalTime⟩
 
 private theorem source_record_bounds
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ record ∈ (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
@@ -88,7 +88,7 @@ private theorem source_record_bounds
   exact ⟨facts.2.1, clkHigh_lt_of_timeNat_le (le_of_eq facts.2.2.1) (by norm_num)⟩
 
 private theorem refresh_push_bounds
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ pair ∈ LocalCore.memoryRefreshes (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)),
@@ -98,7 +98,7 @@ private theorem refresh_push_bounds
     (source_ordering witness constraints balanced).byte
 
 private theorem consumed_bounds
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (rows : List (RowFacts p))
@@ -130,7 +130,7 @@ private theorem consumed_bounds
 /-- The full host ledger bounds every prior/final record and orders every physical refresh.
 It closes the existing engine's row conditions for the enlarged register/RAM footprints. -/
 theorem source_memory_chronology
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (ordered : List (ExecutionRow p))
@@ -182,7 +182,7 @@ theorem source_memory_chronology
 /-- Constraints and balance construct the complete ordered host footprint and discharge all
 Memory clock conditions, without caller-supplied chronology or prior Memory truth. -/
 theorem source_ordered_memory_rows (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ (ordered : List (ExecutionRow p)) (rows : List (RowFacts p)),
@@ -202,7 +202,7 @@ theorem source_ordered_memory_rows (valid : image.Valid)
     projection⟩
 
 private theorem frontier_balance
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (rows : List (RowFacts p))
@@ -222,7 +222,7 @@ private theorem frontier_balance
 Every CPU and host touch survives; rewritten priors and the final frontier preserve values and
 locations and only move clocks earlier. Semantic step/frame facts remain separate obligations. -/
 theorem source_memory_refresh_free (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ (ordered : List (ExecutionRow p)) (rows : List (RowFacts p))

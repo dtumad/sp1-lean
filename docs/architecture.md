@@ -536,8 +536,13 @@ their specifications and the complete installed queue ledger; every other contri
 in the actual extra resource tables. `queue_ordered_of_endpoints` exposes those resources' endpoint
 ledger explicitly for the older assembly. `source_queue_rows_nil` proves that assembly cannot have
 active queue handlers under full constraints and balance. `HostHintQueueBoundary.ensemble` now
-installs a single endpoint pair in the actual verifier. Its source cursor is computed from, and
-proved bound to, the full incoming hints; its final cursor is an ensemble parameter.
+installs the queue endpoint pair and both bank endpoint pairs in one verifier through
+`HostBoundary`, composing the existing circuits as true Clean subcircuits. Its source cursor is
+computed from, and proved bound to, the full incoming hints; its final cursor and both outgoing
+banks are ensemble parameters. Two physical bank terminal tables preserve the private last-call
+timestamps. `HostHintReadBanks.ordered_history` derives the selected physical bank history
+from this mixed witness; matching it to CPU replay remains necessary for complete outgoing-state
+authentication. The bank parameters constrain only the selected bank vectors, not the other host fields.
 `ToClean/Air/VerifierExtension.lean` represents that invocation as a derived singleton for existing
 table proofs, with constraints and every channel's balance equivalent in both representations.
 The witness cannot omit or duplicate the derived boundary row. `source_queue_ordered` consequently

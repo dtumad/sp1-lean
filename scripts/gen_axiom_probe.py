@@ -40,6 +40,21 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    ("SP1Clean/Native/Operations/HostCommitEndpoint.lean", "circuit"),
+    ("SP1Clean/Native/Operations/HostCommitEndpoint.lean", "values"),
+    ("SP1Clean/Native/Operations/HostCommitEndpoint.lean", "closed"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "circuit"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "values"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "closed"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "closed_main"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "source_bound"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "queue_values"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "bank_values"),
+    ("SP1Clean/Soundness/HostHintReadBanks.lean", "tables_aligned"),
+    ("SP1Clean/Soundness/HostHintReadBanks.lean", "interactions"),
+    ("SP1Clean/Soundness/HostHintReadBanks.lean", "ordered_history"),
+    ("SP1CleanTest/Core/LocalCore.lean", "activeCommitLocalShard"),
+    ("SP1CleanTest/Core/LocalCore.lean", "rejectsCommitBoundaries"),
     ("SP1Clean/FormalModel/Contracts/HostCommitBoundary.lean", "start"),
     ("SP1Clean/Soundness/HostCommitEnsemble.lean", "sourceValues"),
     ("SP1Clean/Soundness/HostCommitEnsemble.lean", "source_apply"),

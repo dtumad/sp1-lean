@@ -220,6 +220,6 @@ theorem source_queue_rows_nil
   intro component member used
   have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
   simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl <;> change false = true at present <;> contradiction
+  rcases member with rfl | rfl | rfl | rfl <;> change false = true at present <;> contradiction
 
 end SP1Clean.Soundness.HostHintReadLocal

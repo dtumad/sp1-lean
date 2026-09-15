@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostHintRecordSources
 import SP1Clean.Soundness.HostLocalCoreAuthentication
+import SP1Clean.Native.Operations.HostCommitBoundary
 
 /-! # Record authentication in the installed HINT_READ assembly
 
@@ -288,9 +289,10 @@ theorem word_spec (witness : EnsembleWitness (ensemble image source others resou
     rw [component] at checkedRow byteRow wordRow memoryRow ⊢
     exact word_spec_of_channels _ _ checkedRow byteRow memoryRow wordRow
 
-/-- Both fixed record providers are computed from the source bytes. -/
+/-- Source hint records and the two physical bank terminals. The verifier supplies their endpoints. -/
 def sourceResources (hints : List Bytes) : List (Component (ZMod p)) :=
-  [⟨HostHintQueue.source hints⟩, ⟨HostHintQueue.sourceWord hints⟩]
+  [⟨HostHintQueue.source hints⟩, ⟨HostHintQueue.sourceWord hints⟩,
+    ⟨HostCommitBoundary.terminal false⟩, ⟨HostCommitBoundary.terminal true⟩]
 
 /-- The existing handlers plus source providers need no caller-supplied record-source proof. -/
 theorem source_record_sources (hints : List Bytes) (store : Store)
@@ -301,9 +303,12 @@ theorem source_record_sources (hints : List Bytes) (store : Store)
   rcases List.mem_append.mp member with handler | fixed
   · exact HostHintRecordSources.available_authenticates store component handler
   · simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at fixed
-    rcases fixed with rfl | rfl
+    rcases fixed with rfl | rfl | rfl | rfl
     · exact (HostHintRecordSources.source_node_authenticates hints).extend extension
     · exact (HostHintRecordSources.source_word_authenticates hints).extend extension
+    all_goals
+      constructor <;> apply Component.Authenticates.of_silent <;>
+        simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel, Channel.toRaw, circuit_norm]
 
 /-- The fixed-source registration authenticates its actual records from the snapshot's hint bytes. -/
 theorem source_record_authentication
@@ -317,14 +322,18 @@ theorem source_record_authentication
 theorem source_interface (hints : List Bytes) :
     ExtensionInterface (HostCallReceivers.available (p := p)) (sourceResources hints) := by
   have sourceSilent (component : Component (ZMod p)) (member : component ∈ sourceResources hints)
-      (channel : RawChannel (ZMod p)) (node : channel ≠ nodeChannel.toRaw) (word : channel ≠ wordChannel.toRaw) :
+      (channel : RawChannel (ZMod p)) (node : channel ≠ nodeChannel.toRaw) (word : channel ≠ wordChannel.toRaw)
+      (commit : channel ≠ (HostCommitChip.stateChannel false).toRaw)
+      (deferred : channel ≠ (HostCommitChip.stateChannel true).toRaw) :
       channel ∉ component.circuit.channels := by
     simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl
+    rcases member with rfl | rfl | rfl | rfl
     · change channel ∉ [nodeChannel.toRaw]
       simpa only [List.mem_singleton] using node
     · change channel ∉ [wordChannel.toRaw]
       simpa only [List.mem_singleton] using word
+    · simpa only [HostCommitBoundary.terminal, circuit_norm, List.mem_cons, List.not_mem_nil, or_false, or_self] using commit
+    · simpa only [HostCommitBoundary.terminal, circuit_norm, List.mem_cons, List.not_mem_nil, or_false, or_self] using deferred
   constructor
   · constructor
     · intro component member env checked
@@ -336,6 +345,8 @@ theorem source_interface (hints : List Bytes) :
         exact sourceSilent component fixed Channels.byteChannel.toRaw
           (by simp [Channels.byteChannel, nodeChannel, Channel.toRaw])
           (by simp [Channels.byteChannel, wordChannel, Channel.toRaw])
+          (by simp [Channels.byteChannel, HostCommitChip.stateChannel, Channel.toRaw])
+          (by simp [Channels.byteChannel, HostCommitChip.stateChannel, Channel.toRaw])
           (List.mem_append_right _ used)
     · intro component member
       rcases List.mem_append.mp member with handler | fixed
@@ -343,15 +354,21 @@ theorem source_interface (hints : List Bytes) :
       · exact sourceSilent component fixed Channels.stateChannel.toRaw
           (by simp [Channels.stateChannel, nodeChannel, Channel.toRaw])
           (by simp [Channels.stateChannel, wordChannel, Channel.toRaw])
+          (by simp [Channels.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+          (by simp [Channels.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
   · intro component member
     exact sourceSilent component member HostCallChip.channel.toRaw
       (by simp [HostCallChip.channel, nodeChannel, Channel.toRaw])
       (by simp [HostCallChip.channel, wordChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
   · intro component member
     rcases List.mem_append.mp member with handler | fixed
     · exact availableInterface.cursor component (List.mem_append_left [] handler)
     · exact sourceSilent component fixed HintReadWordChip.stateChannel.toRaw
         (by simp [HintReadWordChip.stateChannel, nodeChannel, Channel.toRaw])
         (by simp [HintReadWordChip.stateChannel, wordChannel, Channel.toRaw])
+        (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+        (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
 
 end SP1Clean.Soundness.HostHintReadLocal

@@ -22,10 +22,10 @@ local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
-  {final : HostHintQueue.State (ZMod p)} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 private theorem source_ordering
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) :=
@@ -35,18 +35,18 @@ private theorem source_ordering
     (HostHintQueueBoundary.expanded_balanced witness balanced)
 
 private theorem source_data
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
 
 private theorem source_public
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).publicInput = witness.publicInput := rfl
 
 /-- The complete carrier's timeline agrees with semantic event time at every index. -/
 theorem GroundingCarrier.timeline_events
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     carrier.timeline = eventTimeline carrier.events source.clock := by
@@ -62,22 +62,22 @@ theorem GroundingCarrier.timeline_events
 
 /-- Replay starts at the complete local source and threads the selected native host policy. -/
 noncomputable def GroundingCarrier.pairedTrajectory (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness) : ℕ → Option ExecutionState :=
   ExecutionCarrier.pairedTrajectory carrier ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) source.realize
 
 noncomputable def GroundingCarrier.trajectory (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness) : Trajectory :=
   fun n => (carrier.pairedTrajectory valid n).map ExecutionState.sail
 
 theorem GroundingCarrier.trajectory_zero (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness) :
     carrier.trajectory valid 0 = some source.sail.realize := rfl
 
 private theorem source_running
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {event : ExecutionRow p}
@@ -106,7 +106,7 @@ private theorem source_running
 
 /-- An authenticated fetch at an actual replayed prefix excludes terminal host status. -/
 theorem GroundingCarrier.pairedTrajectory_running_of_fetch (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {event : ExecutionRow p}
@@ -118,7 +118,7 @@ theorem GroundingCarrier.pairedTrajectory_running_of_fetch (valid : image.Valid)
   exact replayEvents?_running_of_fetch (source_running carrier constraints balanced member) present atPc fetched
 
 private theorem prefix_of_state (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     {event : ExecutionRow p}
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
@@ -144,7 +144,7 @@ private theorem prefix_of_state (valid : image.Valid)
 /-- Incoming State truth locates the physical HINT_LEN at its actual replayed host prefix.
 The circuit's result is the length observed there, without assuming earlier replay separately. -/
 theorem GroundingCarrier.hintLength_result (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -180,7 +180,7 @@ private theorem length_run [Fact (2 ^ 17 < p)]
 /-- The physical HINT_LEN executes against the actual paired prefix. Its code, arguments,
 queue-dependent result, and running status follow from the AIR and incoming grounding invariant. -/
 theorem GroundingCarrier.hintLength_run (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -203,12 +203,12 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     empty env handler clock _ _ current replayed
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   obtain ⟨physical, active, sameCall, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
     (HostHintQueueBoundary.expanded witness) interface checks balance (some empty, env) handler event member clock
   have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) checks balance physical active
+    (source_program_silent source final bankFinal) checks balance physical active
   have fetched := (committed.ecall_of_opcode rfl).1
   rw [sameEvent] at pc
   have running := replayEvents?_running_of_fetch (source_running carrier constraints balanced member) replayed pc fetched
@@ -225,7 +225,7 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     apply List.mem_append_left
     simpa only [sameEvent, ExecutionRow.facts] using present
   have registers := HostLocalCore.hostCall_registers valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) checks balance physical active _ source.sail.realize current.sail _ n
+    (source_program_silent source final bankFinal) checks balance physical active _ source.sail.realize current.sail _ n
     before instructionTime original
   have tables := queue_specs (HostHintQueueBoundary.expanded witness) interface _
     (HostHintQueueBoundary.source_authentication witness constraints) checks balance
@@ -247,7 +247,7 @@ private theorem read_member {resources : List (Component (ZMod p))}
 /-- HINT_READ dispatch and its exact padded writes follow at the replayed prefix from incoming
 State truth and operand currency. Running status and previous replay are derived internally. -/
 theorem GroundingCarrier.hintRead_run (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
@@ -275,12 +275,12 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
   obtain ⟨n, current, atIndex, split, paired, replayed, pc⟩ := prefix_of_state valid carrier member pull
   have checks := HostHintQueueBoundary.expanded_constraints witness constraints
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   obtain ⟨physical, active, _, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at (HostHintQueueBoundary.expanded witness)
     interface checks balance (none, env) (read_member _ env handler) event member clock
   have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final) checks balance physical active
+    (source_program_silent source final bankFinal) checks balance physical active
   have fetch := (committed.ecall_of_opcode rfl).1
   rw [sameEvent] at pc
   have running := replayEvents?_running_of_fetch (source_running carrier constraints balanced member) replayed pc fetch

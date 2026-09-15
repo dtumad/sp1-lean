@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-15. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2599 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 304 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2612 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 306 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2903 released declarations are probed.
+- 2918 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,6 +35,21 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
+The mixed bank installation adds thirteen main probes: the ten boundary-circuit laws use only
+`[propext, Classical.choice, Quot.sound]`, and the three installed-ledger/history theorems retain
+the existing assembly's 100-dependency set. Two new complete-AIR regression probes each add only
+their own disclosed `native_decide` constant. All preceding 2599 main and 304 test dependency
+sets are unchanged, with no removals or new main-library axiom names.
+`HostBoundary` composes the queue and both bank verifiers, and the source resource inventory now
+includes both physical bank terminals. `HostHintReadBanks.ordered_history` derives their exhaustive
+histories directly from that mixed witness's constraints and full balance. The existing local
+execution-path proof is transported to this enlarged witness. A complete active-COMMIT fixture
+starts from nonzero banks, supplies actual CPU and Memory records and Byte providers, and checks
+all fixed lookups and channel balances; forged final banks and missing/duplicate terminals fail.
+The fixture retains the current legacy Exit arrangement's inactive HALT row. The composite
+verifier exports with zero witness cells. CPU-history agreement, complete outgoing-state binding,
+and constructive completeness remain open.
+
 The source-bank generalization adds three main probes using only the logical baseline and two
 test probes, each with its own disclosed compiler-trust constant. All preceding 2596 main and
 302 test dependency sets are unchanged, with no removals or new main-library axiom names.
@@ -45,10 +60,6 @@ historical timestamp claim. Nonzero-bank regressions cover empty segments, inter
 continuation cuts, reset or altered sources, and forged outgoing high limbs; the verifier remains
 exportable with zero witness cells. These active tests check bank balance and physical local
 constraints/Byte meanings, not full HostCall balance or a mixed RISC-V witness.
-
-The installed source-hint assembly currently registers COMMIT components without their bank
-endpoints. Its path theorem therefore does not establish active-COMMIT non-vacuity or completeness.
-Installing both banks' endpoints/terminals and aligning their histories with the CPU remains open.
 
 The installed local-execution theorem added three main probes, all retaining the assembly's
 existing 100-dependency set. All preceding 2593 main and 302 test dependency sets are unchanged,
@@ -402,7 +413,8 @@ all eight calls with guest and hook prepends, empty-hint padding, preserved hist
 changed bytes at equal lengths. This is semantic compiler machinery, not a newly authenticated AIR
 queue: node contents, head transitions, and field/resource bounds still need integration. The
 full-AIR forged HINT_LEN result remains open. The source-bank generalization above now replaces
-the bank subsystem's zero genesis with actual source commitment/deferred values; mixed installation remains open.
+the bank subsystem's zero genesis with actual source commitment/deferred values; the mixed installation
+above now supplies the endpoints, while CPU-history agreement remains open.
 
 The protected-ROM grounding checkpoint adds 13 main declarations and no test anchors. Two
 additions use the logical baseline or a subset, two retain the existing 77-axiom Sail set, one
