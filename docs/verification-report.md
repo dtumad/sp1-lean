@@ -1043,8 +1043,14 @@ Every grouped RAM push has its bounded value at the corresponding access time. T
 covers both untouched locations and written locations whose pushed value matches the invariant.
 `Soundness/HostExecutionEffect.lean` derives configuration and protected-byte preservation from
 the concrete host transition, including transitions that modify RAM; this supplies ROM preservation.
-Other event cases and outgoing snapshot authentication remain necessary to close whole-shard
-grounding. No unconditional whole-shard execution theorem is claimed here.
+`GroundingCarrier.hintLength_run` and `hintLength_step` derive the complete HINT_LEN successor
+for either queue variant from its actual observed length and incoming grounding invariant.
+`source_wordsAt_nil_of_not_read` derives the absence of added hint RAM rows for non-read events:
+every physical word has an authenticated HINT_READ owner at its unique CPU clock.
+`GroundingCarrier.queue_engineFacts` combines HINT_READ and both HINT_LEN variants behind one
+timed step/frame statement. Ordinary/control event cases and outgoing snapshot authentication
+remain necessary to close whole-shard grounding. No unconditional whole-shard execution theorem
+is claimed here.
 
 `physicalQueueHistory` decodes the real handler tables in physical order, sorts their events by
 clock, and replays interleaved length observations and reads, including an empty hint and an

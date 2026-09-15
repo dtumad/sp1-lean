@@ -450,6 +450,11 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Soundness.HostHintReadCPU.hint_memory_effect
 #print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.hintRead_step
 #print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.hintRead_engineFacts
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_wordsAt_nil_of_not_read
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.hintLength_run
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.hintLength_step
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.hintLength_engineFacts
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.queue_engineFacts
 #print axioms SP1Clean.Soundness.NativeCore.ExecutionRow.canonEdge_facts
 #print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.cpuWalk
 #print axioms SP1Clean.Soundness.NativeCore.ExecutionCarrier.events

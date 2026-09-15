@@ -525,7 +525,11 @@ Implemented foundations:
   for each matched physical HINT_READ. It derives the register readbacks at their actual access
   offsets, every grouped RAM readback, and the frame obligation for written and untouched
   locations. Concrete host execution preserves Sail configuration and protected program bytes.
-  **Next:** close the other event cases on this complete carrier and bind the outgoing snapshot.
+  `hintLength_run` and `hintLength_step` now derive the actual HINT_LEN successor for both empty
+  and nonempty queues. Authenticated HINT_READ ownership and CPU clock uniqueness prove that
+  every non-read event has an empty added-word footprint. `GroundingCarrier.queue_engineFacts`
+  coordinates all three installed queue-handler variants through the shared step/frame proof.
+  **Next:** close the ordinary/control event cases on this complete carrier and bind the outgoing snapshot.
   Extend ordering and semantic advancement
   to authenticated WRITE/hook allocation edges; the current three-handler theorem requires the
   other resources to be queue-silent. Preserve identity segments

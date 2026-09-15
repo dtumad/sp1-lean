@@ -296,11 +296,12 @@ the exact padded writes there. Preceding replay and running status are derived i
 ordinary local assembly. `HostHintReadMemoryEffect` now proves `GroundingCarrier.hintRead_step`, deriving
 the actual HINT_READ transition and next paired state, with every physical RAM push and preservation
 of all other RAM cells. The instruction contract and clock bounds authenticate its complete event.
-`GroundingCarrier.hintRead_engineFacts` now derives the complete timed step/frame bundle for
-each matched physical HINT_READ, including register and RAM readbacks, written-location and
-untouched-location frames, configuration, and ROM preservation. `HostExecutionEffect` supplies
-the concrete host interpreter's register/configuration/protected-byte preservation without assuming
-unchanged RAM. Other event cases on this carrier and complete outgoing snapshot agreement remain open.
+`GroundingCarrier.queue_engineFacts` now derives the complete timed step/frame bundle for
+HINT_READ and both HINT_LEN variants, including register/RAM readbacks, all location frames,
+configuration, and ROM preservation. HINT_LEN's full successor follows from the actual queue
+observation; authenticated HINT_READ ownership and CPU clock uniqueness exclude added hint RAM
+rows from non-read events. `HostExecutionEffect` supplies concrete host preservation without
+assuming unchanged RAM. Ordinary/control event cases and complete outgoing snapshot agreement remain open.
 The combined handoff regression uses real
 264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
 carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.

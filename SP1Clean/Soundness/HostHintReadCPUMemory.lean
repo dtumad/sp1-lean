@@ -257,6 +257,64 @@ theorem source_word_steps
     (HostHintQueueBoundary.expanded_constraints witness constraints)
     (HostHintQueueBoundary.expanded_balanced witness balanced)
 
+omit [Fact (2 ^ 25 < p)] in
+private theorem read_call_code [Fact (2 ^ 17 < p)]
+    (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZMod p)
+    (input : HostHintReadChip.Inputs (ZMod p))
+    (same : wrapper.message flag = input.call) (spec : HostHintReadChip.Spec input) :
+    (syscallEventOfRow wrapper.instruction).rawCode = SyscallKind.hintRead.code := by
+  change Word.toBitVec64 (wrapper.message flag).code = _
+  rw [same, spec.1, HostHintReadChip.codeWord, Target.toBitVec64_bitVecToWord]
+
+private theorem wordsAt_nil_of_not_read
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (store : HintQueue.Store) (authenticated : RecordAuthentication witness store)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness witness))
+    (notRead : ∀ row, event = .syscall row → (syscallEventOfRow row).rawCode ≠ SyscallKind.hintRead.code) :
+    wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+      (wordTables witness)) event = [] := by
+  apply List.eq_nil_iff_forall_not_mem.mpr
+  intro row present
+  obtain ⟨physical, selected⟩ := List.mem_filter.mp present
+  obtain ⟨handler, handlerMem, env, _, sameCall, cpuMem, sameClock⟩ := word_cpu
+    witness interface constraints balanced
+    (word_steps witness interface store authenticated constraints balanced) row physical
+  have time := congrArg (fun key : ZMod p × ZMod p => clkNat key.1 key.2)
+    (sameClock.trans (of_decide_eq_true selected))
+  rw [cpu_clock_time, cpu_clock_time] at time
+  have unique := LocalCore.executionRows_times_nodup_of_orderingChannels
+    (HostLocalCore.localWitness witness)
+    (HostLocalCore.localWitness_constraints _ constraints)
+    (HostLocalCore.orderingChannels _ (auxiliaryInterface interface) constraints balanced)
+  rw [local_data] at unique
+  have sameEvent := List.inj_on_of_nodup_map unique member cpuMem time.symm
+  have spec : HostHintReadChip.Spec (HostHintReadCoverage.input handler) := by
+    obtain ⟨physical, physicalMem, same⟩ := List.mem_map.mp handlerMem
+    have checked := handler_spec witness interface _
+      authenticated constraints balanced physical physicalMem
+    rwa [handlerTable_component, same] at checked
+  exact notRead _ sameEvent (read_call_code (HostCallLedger.input env) _ _ sameCall spec)
+
+/-- Only an authenticated HINT_READ can own added hint RAM rows. CPU clock uniqueness rules
+out assigning another call's words to a non-read event, without using Memory-value guarantees. -/
+theorem source_wordsAt_nil_of_not_read
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (notRead : ∀ row, event = .syscall row → (syscallEventOfRow row).rawCode ≠ SyscallKind.hintRead.code) :
+    wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+      (wordTables (HostHintQueueBoundary.expanded witness))) event = [] := by
+  exact wordsAt_nil_of_not_read (HostHintQueueBoundary.expanded witness)
+    (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints)) _
+    (HostHintQueueBoundary.source_authentication witness constraints)
+    (HostHintQueueBoundary.expanded_constraints witness constraints)
+    (HostHintQueueBoundary.expanded_balanced witness balanced) event member notRead
+
 /-- Every physical word occurs exactly once among the groups of any exhaustive CPU order.
 This is an occurrence-preserving permutation, so grouping cannot erase duplicate accesses. -/
 theorem words_partition

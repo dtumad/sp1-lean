@@ -8,7 +8,8 @@ The same CPU order drives memory grounding and host queue history. Incoming Stat
 the actual replayed prefix, while the authenticated ECALL fetch excludes a stopped host. HINT_LEN
 then observes that host's queue, and HINT_READ consumes it using the engine's original register
 currency. No preceding-replay or running-host premise is supplied to these dispatch theorems.
-Complete step/frame facts and outgoing snapshot agreement remain separate obligations.
+The successor and timed step/frame proofs consume these results in `HostHintReadMemoryEffect`.
+Complete outgoing snapshot agreement remains a whole-shard obligation.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -147,6 +148,79 @@ theorem GroundingCarrier.hintLength_result (valid : image.Valid)
   exact ⟨n, current, atIndex, paired, HostQueueCurrent.length_of_source_prefix witness constraints balanced
     carrier.exhaustive carrier.cpuWalk (carrier.ordered.take n) (carrier.ordered.drop (n + 1)) event split
     empty env handler clock _ _ current replayed⟩
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem length_run [Fact (2 ^ 17 < p)]
+    (empty : Bool) (input : HostHintLengthChip.Inputs (ZMod p))
+    (spec : HostHintLengthChip.Spec empty input) (host : HostState)
+    (result : Word.toBitVec64 input.call.result = host.io.hintLength)
+    (running : host.exitCode = none) (policy : HostPolicy) (context : HostReadContext)
+    (observed : context.register 5 = some (Word.toBitVec64 input.call.code) ∧
+      context.register 10 = some (Word.toBitVec64 input.call.arg1) ∧
+      context.register 11 = some (Word.toBitVec64 input.call.arg2)) :
+    host.run policy context = some (HostHintLengthChip.execution input host) := by
+  apply (host.run_eq_some_iff policy context (HostHintLengthChip.execution input host)).mpr
+  refine ⟨running, ?_, observed.2.1, observed.2.2, result, rfl⟩
+  simpa only [spec.1, HostHintLengthChip.codeWord, Target.toBitVec64_bitVecToWord,
+    HostHintLengthChip.execution] using observed.1
+
+/-- The physical HINT_LEN executes against the actual paired prefix. Its code, arguments,
+queue-dependent result, and running status follow from the AIR and incoming grounding invariant. -/
+theorem GroundingCarrier.hintLength_run (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (empty : Bool) (env : Environment (ZMod p))
+    (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+      (queueTables (HostHintQueueBoundary.expanded witness)))
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
+    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+      (event.facts witness.data).statePull)
+    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event).memPulls,
+      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+    ∃ n current, carrier.ordered[n]? = some event ∧ carrier.pairedTrajectory valid n = some current ∧
+      current.host.run ⟨{ readOnly := image.readOnly }, p⟩ (.ofSail current.sail) =
+        some (HostHintLengthChip.execution (valueFromOffset HostHintLengthChip.Inputs 0 env) current.host) := by
+  obtain ⟨n, current, atIndex, split, paired, replayed, pc⟩ := prefix_of_state valid carrier member pull
+  have result := HostQueueCurrent.length_of_source_prefix witness constraints balanced
+    carrier.exhaustive carrier.cpuWalk (carrier.ordered.take n) (carrier.ordered.drop (n + 1)) event split
+    empty env handler clock _ _ current replayed
+  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
+  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+    (source_interface (p := p) source.host.io.hints)
+  obtain ⟨physical, active, sameCall, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
+    (HostHintQueueBoundary.expanded witness) interface checks balance (some empty, env) handler event member clock
+  have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
+    (source_program_silent source final) checks balance physical active
+  have fetched := (committed.ecall_of_opcode rfl).1
+  rw [sameEvent] at pc
+  have running := replayEvents?_running_of_fetch (source_running carrier constraints balanced member) replayed pc fetched
+  have before : carrier.trajectory valid n = some current.sail := by
+    simp only [GroundingCarrier.trajectory, paired, Option.map_some]
+  have time := ExecutionCarrier.time_of_ordered_at carrier atIndex
+  have instructionTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+      (HostCallLedger.input physical).instruction) = carrier.timeline.start n := by
+    simpa only [eventFacts, sameEvent, ExecutionRow.facts, syscallRowFacts_statePull] using time
+  have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
+      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+    intro mp present
+    apply currency mp
+    apply List.mem_append_left
+    simpa only [sameEvent, ExecutionRow.facts] using present
+  have registers := HostLocalCore.hostCall_registers valid (HostHintQueueBoundary.expanded witness)
+    (source_program_silent source final) checks balance physical active _ source.sail.realize current.sail _ n
+    before instructionTime original
+  have tables := queue_specs (HostHintQueueBoundary.expanded witness) interface _
+    (HostHintQueueBoundary.source_authentication witness constraints) checks balance
+  have spec := HostQueueOrder.rows_spec _ (queueTables_aligned (HostHintQueueBoundary.expanded witness))
+    tables (some empty, env) handler
+  change HostCallLedger.call physical = (valueFromOffset HostHintLengthChip.Inputs 0 env).call at sameCall
+  rw [sameCall] at registers
+  exact ⟨n, current, atIndex, paired, length_run empty _ spec current.host result running _ _ registers⟩
 
 private theorem read_member {resources : List (Component (ZMod p))}
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels)) (env : Environment (ZMod p))

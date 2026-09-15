@@ -2,14 +2,15 @@ import SP1Clean.Soundness.HostHintReadTrajectory
 import SP1Clean.Soundness.HostFootprint
 import SP1Clean.Soundness.HostExecutionEffect
 
-/-! # HINT_READ execution and exact RAM effects
+/-! # Hint execution and complete grounding effects
 
 The complete physical word inventory identifies every updated Sail RAM cell, including the
 mandatory padding word. Canonical RAM keys derive destination alignment; cells outside that
 inventory are unchanged. The installed AIR derives a real host execution at the exact next
 paired-replay position, authenticating the complete event including its PC and recombined clock.
-The timed grounding facts below retain both the instruction's register accesses and all host RAM
-accesses. Complete outgoing snapshot agreement remains a separate whole-shard obligation.
+HINT_LEN observes the actual queue and has a proved empty added-word footprint. Both calls share
+the timed grounding argument, retaining the instruction's registers and all host RAM accesses.
+Complete outgoing snapshot agreement remains a separate whole-shard obligation.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -175,6 +176,33 @@ private theorem hint_event (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZMod
   simp only [HostExecution.toEvent, HostHintReadChip.execution, HostExecution.nextPc,
     reduceCtorEq, ↓reduceIte, arg1, arg2, result, pc, stamp, ← raw, ← next]
 
+omit [Fact (2 ^ 25 < p)] in
+private theorem length_event (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZMod p)
+    (input : HostHintLengthChip.Inputs (ZMod p)) (host : HostState)
+    (same : wrapper.message flag = input.call)
+    (code : Word.toBitVec64 (wrapper.message flag).code = SyscallKind.hintLength.code)
+    (law : (syscallEventOfRow wrapper.instruction).RowLaw)
+    (clock : ℕ) (atClock : clock = (syscallEventOfRow wrapper.instruction).clock) :
+    (HostHintLengthChip.execution input host).toEvent clock
+      (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage wrapper.instruction)) =
+        syscallEventOfRow wrapper.instruction := by
+  have raw : (syscallEventOfRow wrapper.instruction).rawCode = SyscallKind.hintLength.code := code
+  have next := law.2.2.1
+  simp only [Machine.CoreSyscallEvent.PcLaw, Machine.CoreSyscallEvent.syscallId, raw,
+    SyscallKind.code, Machine.haltSyscallId] at next
+  change (syscallEventOfRow wrapper.instruction).nextPc = (syscallEventOfRow wrapper.instruction).pc + 4 at next
+  have arg1 : Word.toBitVec64 input.call.arg1 = (syscallEventOfRow wrapper.instruction).arg1 := by
+    rw [← same]; rfl
+  have arg2 : Word.toBitVec64 input.call.arg2 = (syscallEventOfRow wrapper.instruction).arg2 := by
+    rw [← same]; rfl
+  have result : Word.toBitVec64 input.call.result = (syscallEventOfRow wrapper.instruction).result := by
+    rw [← same]; rfl
+  have pc : StateMsg.pcBits (SyscallInstrsChip.statePulledMessage wrapper.instruction) =
+      (syscallEventOfRow wrapper.instruction).pc := rfl
+  have stamp : clock = (syscallEventOfRow wrapper.instruction).clock := atClock
+  simp only [HostExecution.toEvent, HostHintLengthChip.execution, HostExecution.nextPc,
+    reduceCtorEq, ↓reduceIte, arg1, arg2, result, pc, stamp, ← raw, ← next]
+
 private theorem source_memory_effect
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
@@ -326,6 +354,117 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     current.host bytes remaining inventory current.sail (StateMsg.pcBits (event.facts witness.data).statePull)
   exact ⟨n, current, next, atIndex, paired, after, step, effect⟩
 
+private theorem length_not_read (event : ExecutionRow p) (wrapper : HostCallChip.Inputs (ZMod p))
+    (flag : ZMod p) (same : event = .syscall wrapper.instruction)
+    (code : Word.toBitVec64 (wrapper.message flag).code = SyscallKind.hintLength.code) :
+    ∀ row, event = .syscall row → (syscallEventOfRow row).rawCode ≠ SyscallKind.hintRead.code := by
+  intro row rowEq
+  have sameRow := ExecutionRow.syscall.inj (same.symm.trans rowEq)
+  rw [← sameRow]
+  change Word.toBitVec64 (wrapper.message flag).code ≠ SyscallKind.hintRead.code
+  rw [code]
+  decide
+
+/-- The physical HINT_LEN executes at its paired-replay position and preserves RAM. Its empty
+added-word footprint follows from authenticated HINT_READ ownership and CPU clock uniqueness. -/
+theorem GroundingCarrier.hintLength_step (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (empty : Bool) (env : Environment (ZMod p))
+    (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+      (queueTables (HostHintQueueBoundary.expanded witness)))
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
+    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+      (event.facts witness.data).statePull)
+    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+    ∃ n current next, carrier.ordered[n]? = some event ∧
+      carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
+      ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
+      (∀ cell : RamCell, locContent next.sail (.ram cell) = locContent current.sail (.ram cell)) ∧
+      wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event = [] := by
+  obtain ⟨n, current, atIndex, paired, ran⟩ :=
+    carrier.hintLength_run valid constraints balanced event member empty env handler clock pull
+      (fun mp present => (currency mp present).2.2)
+  have time := ExecutionCarrier.time_of_ordered_at carrier atIndex
+  change StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n at time
+  have before : carrier.trajectory valid n = some current.sail := by
+    simp only [GroundingCarrier.trajectory, paired, Option.map_some]
+  obtain ⟨m, state, present, atTime, atPc, _⟩ := pull
+  have sameIndex : m = n := start_injective carrier.timeline (atTime.symm.trans time)
+  subst m
+  have sail : current.sail = state := Option.some.inj (before.symm.trans present)
+  rw [← sail] at atPc
+  have covered : n ≤ carrier.events.length := by
+    have bound := (List.getElem?_eq_some_iff.mp atIndex).1
+    simpa only [ExecutionCarrier.events, List.length_map] using Nat.le_of_lt bound
+  have currentTime : current.clock = carrier.timeline.start n := by
+    rw [carrier.timeline_events constraints balanced, eventTimeline_start_le _ _ _ covered]
+    exact replayEvents?_clock paired
+  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
+  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+    (source_interface (p := p) source.host.io.hints)
+  obtain ⟨physical, active, sameCall, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
+    (HostHintQueueBoundary.expanded witness) interface checks balance (some empty, env) handler event member clock
+  have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+    intro mp present
+    apply currency mp
+    apply List.mem_append_left
+    simpa only [sameEvent, ExecutionRow.facts] using present
+  have instructionTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
+      (HostCallLedger.input physical).instruction) = carrier.timeline.start n := by
+    simpa only [sameEvent, ExecutionRow.facts, syscallRowFacts_statePull] using time
+  have registers := HostLocalCore.hostCall_registers valid (HostHintQueueBoundary.expanded witness)
+    (source_program_silent source final) checks balance physical active _ source.sail.realize current.sail _ n
+    before instructionTime (fun mp present => (original mp present).2.2)
+  have law := HostLocalCore.hostCall_eventLaw (HostHintQueueBoundary.expanded witness)
+    (auxiliaryInterface interface) (source_program_silent source final) checks balance physical active
+    (fun mp present => ⟨(original mp present).1, (original mp present).2.1⟩)
+  have observed := (current.host.run_eq_some_iff _ _ _).mp ran
+  have code := Option.some.inj (registers.1.symm.trans observed.2.1)
+  have label := length_event (HostCallLedger.input physical) _ (valueFromOffset HostHintLengthChip.Inputs 0 env)
+    current.host sameCall code law.1 current.clock
+    (currentTime.trans (instructionTime.symm.trans law.2.symm))
+  have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
+    (source_program_silent source final) checks balance physical active
+  have fetched := (committed.ecall_of_opcode rfl).1
+  change (image.toGuestProgram valid).fetchWord
+    (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) =
+      some Target.ECALL_ENC at fetched
+  change current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+    some (StateMsg.pcBits (event.facts witness.data).statePull) at atPc
+  have sourcePc : StateMsg.pcBits (event.facts witness.data).statePull =
+      StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction) := by
+    rw [sameEvent]; rfl
+  let execution := HostHintLengthChip.execution (valueFromOffset HostHintLengthChip.Inputs 0 env) current.host
+  let next : ExecutionState := ⟨execution.apply current.sail (StateMsg.pcBits (event.facts witness.data).statePull),
+    execution.effect.state, current.clock + Machine.syscallSchedule.duration⟩
+  have step : ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next := by
+    have stepped : current.host.step ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+        current.clock current.sail = some (execution.effect.state, next.sail,
+          syscallEventOfRow (HostCallLedger.input physical).instruction) := by
+      simp only [HostState.step, atPc, Bind.bind, Option.bind_some, sourcePc, fetched, ↓reduceIte, ran]
+      simp only [next, execution, sourcePc, label]
+    rw [sameEvent]
+    exact ExecutionStep.syscall stepped
+  have after : carrier.pairedTrajectory valid (n + 1) = some next := by
+    change ExecutionCarrier.pairedTrajectory carrier _ _ _ (n + 1) = _
+    rw [ExecutionCarrier.pairedTrajectory_succ carrier _ _ _ member time]
+    change (carrier.pairedTrajectory valid n).bind _ = _
+    rw [paired, Option.bind_some, step.replay]
+  have noWords := source_wordsAt_nil_of_not_read witness constraints balanced event member
+    (length_not_read event (HostCallLedger.input physical) _ sameEvent code)
+  exact ⟨n, current, next, atIndex, paired, after, step, fun _ => rfl, noWords⟩
+
 private theorem register_push_truth (row : SyscallInstrsChip.Inputs (ZMod p))
     (real : row.is_real = 1) (spec : SyscallInstrsChip.Spec row)
     (pulled : SyscallInstrsChip.PulledFacts row) (operand : row.op_a = 5)
@@ -439,19 +578,31 @@ private theorem syscall_state_push (row : SyscallInstrsChip.Inputs (ZMod p))
     LocalStateTruthG program trajectory timeline (syscallRowFacts row).statePush :=
   ⟨n + 1, next, after, time, pc, loaded, configured⟩
 
-/-- Every matched physical HINT_READ supplies the existing timed engine's complete step and
-frame obligations on paired replay. Register, RAM, ROM, and configuration effects are derived
-from this witness; no semantic effect or successful-current-step premise is supplied by the caller. -/
-theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
+private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
-    (env : Environment (ZMod p))
-    (handler : env ∈ (handlerTable (HostHintQueueBoundary.expanded witness)).table.map
-      (handlerTable (HostHintQueueBoundary.expanded witness)).environment)
-    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
+    (queueRow : HostQueueOrder.Row (p := p))
+    (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+      (queueTables (HostHintQueueBoundary.expanded witness)))
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow)
+    (effect : ∀ (_ : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+      (event.facts witness.data).statePull)
+    (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
+    ∃ n current next, carrier.ordered[n]? = some event ∧
+      carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
+      ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
+      (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+          (wordTables (HostHintQueueBoundary.expanded witness))) event,
+        locContent next.sail (MemoryMsg.locOf (touch row).2) = some (Word.toBitVec64 (touch row).2.value)) ∧
+      (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+          (wordTables (HostHintQueueBoundary.expanded witness))) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
+        locContent next.sail (.ram cell) = locContent current.sail (.ram cell))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
         (wordTables (HostHintQueueBoundary.expanded witness))) event) ∧
@@ -472,7 +623,7 @@ theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
     exact ⟨fun pull currency => (advance pull currency).1, fun pull currency => (advance pull currency).2⟩
   intro pull currency
   obtain ⟨n, current, next, atIndex, paired, pairedNext, step, written, unchanged⟩ :=
-    carrier.hintRead_step valid constraints balanced event member env handler clock pull currency
+    effect pull currency
   have time := ExecutionCarrier.time_of_ordered_at carrier atIndex
   have nextTime := ExecutionCarrier.originalTimeStep carrier member n time
   change StateMsg.timeNat facts.statePull = carrier.timeline.start n at time
@@ -490,14 +641,8 @@ theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
   have balance := HostHintQueueBoundary.expanded_balanced witness balanced
   have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
     (source_interface (p := p) source.host.io.hints)
-  have handlerMember : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.expanded witness)) := by
-    obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handler
-    simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
-      List.zip_cons_cons, List.flatMap_cons]
-    exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
   obtain ⟨physical, active, _, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at
-    (HostHintQueueBoundary.expanded witness) interface checks balance (none, env) handlerMember event member clock
+    (HostHintQueueBoundary.expanded witness) interface checks balance queueRow queueMember event member clock
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
@@ -550,5 +695,95 @@ theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
       (carrier.trajectory valid) source.sail.realize current.sail next.sail carrier.timeline n
       before after effects.1.2.2.2.2.2 effects.2.1 written unchanged loc value ?_ currentValue
     simpa only [facts, eventFacts, sameEvent, ExecutionRow.facts] using pushes
+
+/-- Every matched physical HINT_READ supplies the existing timed engine's complete step and
+frame obligations on paired replay. Register, RAM, ROM, and configuration effects are derived
+from this witness; no semantic effect or successful-current-step premise is supplied by the caller. -/
+theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (env : Environment (ZMod p))
+    (handler : env ∈ (handlerTable (HostHintQueueBoundary.expanded witness)).table.map
+      (handlerTable (HostHintQueueBoundary.expanded witness)).environment)
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
+    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) ∧
+    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) := by
+  apply carrier.queue_engineFacts_of_effects valid constraints balanced event member (none, env) ?_ clock
+    (fun pull currency => carrier.hintRead_step valid constraints balanced event member env handler clock pull currency)
+  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handler
+  simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
+    List.zip_cons_cons, List.flatMap_cons]
+  exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
+
+/-- Both physical HINT_LEN variants supply the existing timed engine's complete step and
+frame obligations on paired replay. Register, RAM, ROM, and configuration effects are derived
+from this witness; no semantic effect or successful-current-step premise is supplied by the caller. -/
+theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (empty : Bool) (env : Environment (ZMod p))
+    (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+      (queueTables (HostHintQueueBoundary.expanded witness)))
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env)) :
+    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) ∧
+    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) := by
+  apply carrier.queue_engineFacts_of_effects valid constraints balanced event member (some empty, env) handler clock
+  intro pull currency
+  obtain ⟨n, current, next, atIndex, before, after, step, unchanged, noWords⟩ :=
+    carrier.hintLength_step valid constraints balanced event member empty env handler clock pull currency
+  refine ⟨n, current, next, atIndex, before, after, step, ?_, fun cell _ => unchanged cell⟩
+  rw [noWords]
+  simp only [List.not_mem_nil, false_implies, implies_true]
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem read_handler_member (first : Table (ZMod p)) (others : List (Table (ZMod p)))
+    (env : Environment (ZMod p))
+    (member : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (first :: others)) :
+    env ∈ first.table.map first.environment := by
+  cases others with
+  | nil => simpa [TransitionView.readIndexedRows, HostQueueOrder.indices, List.mem_map] using member
+  | cons second rest =>
+    cases rest <;>
+      simpa [TransitionView.readIndexedRows, HostQueueOrder.indices, List.mem_map] using member
+
+/-- Every physical queue handler supplies the full timed step/frame contract. HINT_READ and
+both HINT_LEN variants are coordinated internally on the same complete execution carrier. -/
+theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (event : ExecutionRow p)
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (queueRow : HostQueueOrder.Row (p := p))
+    (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
+      (queueTables (HostHintQueueBoundary.expanded witness)))
+    (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow) :
+    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) ∧
+    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (wordTables (HostHintQueueBoundary.expanded witness))) event) := by
+  rcases queueRow with ⟨index, env⟩
+  cases index with
+  | none =>
+    exact carrier.hintRead_engineFacts valid constraints balanced event member env
+      (read_handler_member _ _ env queueMember) clock
+  | some empty =>
+    exact carrier.hintLength_engineFacts valid constraints balanced event member empty env queueMember clock
 
 end SP1Clean.Soundness.HostHintReadCPU

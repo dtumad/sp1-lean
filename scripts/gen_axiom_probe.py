@@ -51,6 +51,11 @@ EXACT_REQUIRED_THEOREMS = [
     ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "hint_memory_effect"),
     ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "GroundingCarrier.hintRead_step"),
     ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "GroundingCarrier.hintRead_engineFacts"),
+    ("SP1Clean/Soundness/HostHintReadCPUMemory.lean", "source_wordsAt_nil_of_not_read"),
+    ("SP1Clean/Soundness/HostHintReadTrajectory.lean", "GroundingCarrier.hintLength_run"),
+    ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "GroundingCarrier.hintLength_step"),
+    ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "GroundingCarrier.hintLength_engineFacts"),
+    ("SP1Clean/Soundness/HostHintReadMemoryEffect.lean", "GroundingCarrier.queue_engineFacts"),
     # Actual paired replay on the complete carrier and incoming-truth hint dispatch.
     ("SP1Clean/Soundness/CoreRowTransport.lean", "ExecutionRow.canonEdge_facts"),
     ("SP1Clean/Soundness/HostHintReadGrounding.lean", "GroundingCarrier.cpuWalk"),
