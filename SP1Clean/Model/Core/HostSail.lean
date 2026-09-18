@@ -145,6 +145,21 @@ theorem HostExecution.preserves_readOnly {host : HostState} {policy : HostPolicy
       exact write.preserves_readOnly source.mem policy.memory
         (host.executeKind_write_permitted executed write actual) query readOnly
 
+/-- All successful host calls preserve the complete memory map outside the permitted window. -/
+theorem HostExecution.preserves_memory_outside {host : HostState} {policy : HostPolicy} {source : SailState}
+    {execution : HostExecution} (run : host.run policy (.ofSail source) = some execution)
+    (pc : BitVec 64) (query : ℕ) (outside : query < policy.memory.lower ∨ policy.memory.upper ≤ query) :
+    (execution.apply source pc).mem.get? query = source.mem.get? query := by
+  have executed := ((host.run_eq_some_iff policy (.ofSail source) execution).mp run).2.2.2.2.2
+  change (execution.effect.applyMemory source.mem).get? query = source.mem.get? query
+  cases actual : execution.effect.write with
+  | none => simp only [HostEffect.applyMemory, actual]
+  | some write =>
+    simp only [HostEffect.applyMemory, actual]
+    have bounds := (policy.memory.permits_iff _ _).mp
+      (host.executeKind_write_permitted executed write actual)
+    exact write.read_outside source.mem query (by omega)
+
 /-- The graph of the concrete stateful interpreter, for one incoming host state. Whole runs
 thread the returned host state; they do not reuse this incoming state at every instruction. -/
 def HostState.handler (host : HostState) (policy : HostPolicy) : Machine.SyscallHandler :=

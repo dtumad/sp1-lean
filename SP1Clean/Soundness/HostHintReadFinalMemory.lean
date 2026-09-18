@@ -6,7 +6,8 @@ import SP1Clean.Soundness.CoreMemoryFrame
 The physical final inventory covers every actual instruction and host RAM access. At locations
 without a final record, the original event frames preserve the complete source value. Thus the
 same execution has a value at every native register/RAM location, with no touched-location or
-frame premise supplied by the caller. This is an endpoint observation, before binding a complete
+frame premise supplied by the caller. Byte permissions and replay also exclude all out-of-window
+entries. These are endpoint observations, before binding a complete
 outgoing snapshot, Sail bookkeeping, and public terminal status.
 -/
 
@@ -119,9 +120,21 @@ theorem GroundingCarrier.final_memory (valid : image.Valid)
       exact carrier.untouched_memory valid constraints balanced target replay loc _
         (sourceValid.memory.locContent_of_address_lt loc bound) present
 
+/-- The finite source has no out-of-window entries, and every actual event preserves their absence. -/
+theorem GroundingCarrier.final_memory_domain (valid : image.Valid)
+    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {target : ExecutionState}
+    (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize carrier.events = some target) (address : ℕ) (outside : 2 ^ 48 ≤ address) :
+    target.sail.mem.get? address = none := by
+  rw [carrier.memory_outside valid constraints balanced replay address outside]
+  exact (source.sail.memory.toSailMemory_get? (2 ^ 48) address).trans (if_neg (by omega))
+
 /-- The installed AIR yields one local execution with complete host reconstruction and every
-native Memory value, including untouched locations. Full Sail/runtime and Exit binding remain
-separate from these endpoint observations. -/
+native Memory value and the complete RAM domain, including untouched locations. Full Sail/runtime
+and Exit binding remain separate from these endpoint observations. -/
 theorem source_execution_with_memory (valid : image.Valid)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))
@@ -138,6 +151,7 @@ theorem source_execution_with_memory (valid : image.Valid)
             (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc with
           | some message => Word.toBitVec64 message.value
           | none => source.sail.memorySnapshot.read loc)) ∧
+      (∀ address, 2 ^ 48 ≤ address → target.sail.mem.get? address = none) ∧
       HintQueue.decode? (HintQueue.ofList source.host.io.hints).1 (Address.toNat final.head) = some hints ∧
       target.host = { source.host with
         io.hints := hints
@@ -148,6 +162,7 @@ theorem source_execution_with_memory (valid : image.Valid)
   obtain ⟨target, path, clock, pc, _⟩ := carrier.execution valid constraints balanced
   obtain ⟨hints, decoded, host⟩ := carrier.final_host valid constraints balanced target path
   exact ⟨carrier.events, target, hints, path, carrier.exhaustive.map ExecutionRow.event, clock, pc,
-    carrier.final_memory valid constraints balanced target path.replay, decoded, host⟩
+    carrier.final_memory valid constraints balanced target path.replay,
+    carrier.final_memory_domain valid constraints balanced path.replay, decoded, host⟩
 
 end SP1Clean.Soundness.HostHintReadCPU

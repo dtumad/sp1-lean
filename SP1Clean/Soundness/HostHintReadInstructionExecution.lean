@@ -152,7 +152,7 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
 
 /-- Grounded ordinary operands yield a normally retiring semantic step from the actual paired
 state. Instruction dispatch and readiness stay inside the registered chip contracts. -/
-theorem GroundingCarrier.instruction_step (valid : image.Valid)
+theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
@@ -169,7 +169,8 @@ theorem GroundingCarrier.instruction_step (valid : image.Valid)
     (present : carrier.pairedTrajectory valid n = some current)
     (time : StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePull = carrier.timeline.start n) :
     ∃ next, ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
-      current .ordinary next := by
+      current .ordinary next ∧
+      Target.RowEffect (image.toGuestProgram valid) (row.toChipRow witness.data).view current.sail next.sail := by
   have checked := instruction_inputs valid witness constraints balanced member
   have contracts := supportedChip_groundingContracts row.chip checked.1.registered
   have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
@@ -204,6 +205,28 @@ theorem GroundingCarrier.instruction_step (valid : image.Valid)
   obtain ⟨_, _, fetched, _, _⟩ := checked.2
   have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member present atPc fetched
   exact ⟨⟨next, current.host, current.clock + Machine.ordinarySchedule.duration⟩,
-    .ordinary running notEcall effect.normal⟩
+    .ordinary running notEcall effect.normal, effect⟩
+
+/-- Projection to normal retirement keeps the original instruction-step interface. -/
+theorem GroundingCarrier.instruction_step (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {row : DecodedInstructionRow p}
+    (member : ExecutionRow.instruction row ∈
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+      (row.ordinaryRowFacts witness.data).statePull)
+    (currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
+          (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+    {n : ℕ} {current : ExecutionState}
+    (present : carrier.pairedTrajectory valid n = some current)
+    (time : StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePull = carrier.timeline.start n) :
+    ∃ next, ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      current .ordinary next := by
+  obtain ⟨next, step, _⟩ := carrier.instruction_step_effect valid constraints balanced member pull currency present time
+  exact ⟨next, step⟩
 
 end SP1Clean.Soundness.HostHintReadCPU

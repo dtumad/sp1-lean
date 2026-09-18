@@ -64,6 +64,61 @@ private theorem double_view_real (input : StoreDoubleChip.Inputs (ZMod p))
     (StoreDoubleChip.rowView input cols).is_real = input.is_real := rfl
 
 /-- Only the four store families need byte permissions; all other instruction views have no RAM write. -/
+theorem supported_write_property (property : Trace.RowView (ZMod p) → Prop)
+    (noWrite : ∀ row, row.commit.memWrite = none → property row) (id : InstructionChipId)
+    (env : Environment (ZMod p))
+    (byte : id = .storeByte →
+      ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      property (StoreByteChip.rowView
+        ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowInput env)
+        ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+    (half : id = .storeHalf →
+      ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      property (StoreHalfChip.rowView
+        ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowInput env)
+        ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+    (word : id = .storeWord →
+      ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      property (StoreWordChip.rowView
+        ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowInput env)
+        ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+    (double : id = .storeDouble →
+      ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      property (StoreDoubleChip.rowView
+        ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowInput env)
+        ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+    : let chip := (supportedChipFor (p := p) id)
+      (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)).is_real = 1 →
+      property (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)) := by
+  dsimp only
+  cases id with
+  | storeByte =>
+    intro active
+    change (StoreByteChip.rowView _ _).is_real = 1 at active
+    rw [byte_view_real] at active
+    exact byte rfl active
+  | storeHalf =>
+    intro active
+    change (StoreHalfChip.rowView _ _).is_real = 1 at active
+    rw [half_view_real] at active
+    exact half rfl active
+  | storeWord =>
+    intro active
+    change (StoreWordChip.rowView _ _).is_real = 1 at active
+    rw [word_view_real] at active
+    exact word rfl active
+  | storeDouble =>
+    intro active
+    change (StoreDoubleChip.rowView _ _).is_real = 1 at active
+    rw [double_view_real] at active
+    exact double rfl active
+  | jal | jalr | uType =>
+    intro _
+    apply noWrite
+    exact destination_memWrite _
+  | _ => intro _; exact noWrite _ rfl
+
+/-- Uniform ROM exclusion, with instruction cases shared by all footprint properties. -/
 theorem supported_write_permitted (image : ProgramImage) (id : InstructionChipId)
     (env : Environment (ZMod p))
     (byte : id = .storeByte →
@@ -89,33 +144,8 @@ theorem supported_write_permitted (image : ProgramImage) (id : InstructionChipId
     : let chip := (supportedChipFor (p := p) id)
       (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)).is_real = 1 →
       Target.RowWritePermitted image (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)) := by
-  dsimp only
-  cases id with
-  | storeByte =>
-    intro active
-    change (StoreByteChip.rowView _ _).is_real = 1 at active
-    rw [byte_view_real] at active
-    exact byte rfl active
-  | storeHalf =>
-    intro active
-    change (StoreHalfChip.rowView _ _).is_real = 1 at active
-    rw [half_view_real] at active
-    exact half rfl active
-  | storeWord =>
-    intro active
-    change (StoreWordChip.rowView _ _).is_real = 1 at active
-    rw [word_view_real] at active
-    exact word rfl active
-  | storeDouble =>
-    intro active
-    change (StoreDoubleChip.rowView _ _).is_real = 1 at active
-    rw [double_view_real] at active
-    exact double rfl active
-  | jal | jalr | uType =>
-    intro _
-    apply no_write_permitted
-    exact destination_memWrite _
-  | _ => intro _; exact no_write_permitted image _ rfl
+  exact supported_write_property (Target.RowWritePermitted image) (no_write_permitted image)
+    id env byte half word double
 
 /-- Raw protected AIR constraints and balance exclude every ordinary write to instruction bytes. -/
 theorem instructionRows_write_permitted {image : ProgramImage} {source : ExecutionSnapshot}

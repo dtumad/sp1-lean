@@ -615,8 +615,12 @@ preserve its complete source value on the same execution. No untouched-location 
 The active COMMIT fixture retains nonzero untouched x20 and RAM at addresses 8, 80000 and `2^48 - 1`;
 finite host execution preserves them. Deleting a touched final record still fails Memory balance
 after repairing its ordering chain; all constraints, fixed lookups and other channel balances pass.
-Absence outside native RAM and the remaining Sail
-register/runtime fields still need proof before literal outgoing snapshot equality follows.
+The same theorem proves no Sail RAM entries exist at or above `2^48`. The actual byte-permission
+ledger retains each ordinary store byte's range bound; successful host execution frames the map
+outside its checked window. These facts propagate along the same paired replay, including empty
+segments. The semantic HINT_READ regression reaches the final byte with padding, frames absent and
+present out-of-window keys, and rejects an additional padding word beyond the ceiling. Remaining
+Sail register/runtime fields still need proof before literal outgoing snapshot equality follows.
 
 The source check validates the finite image, complete initialized registers, platform
 configuration, supported decoding, every ROM byte, and 48-bit source PC/clock. Fixed source

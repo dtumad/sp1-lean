@@ -141,6 +141,23 @@ private def sailApplication : Bool :=
 /-- The adapter observes the actual source registers and applies the emitted memory update. -/
 theorem sailAdapter : sailApplication = true := by native_decide
 
+/-- Actual Sail application reaches the last native byte without creating a one-past entry.
+An already-present out-of-window key is framed, while an extra padding word is rejected. -/
+theorem nativeMemoryCeiling : [0, 7, 8, 9].all (fun length =>
+    [false, true].all fun present =>
+      let address := 2 ^ 48 - 8 * (length / 8 + 1)
+      let initial := { sailSource with
+        regs := (sailSource.regs.insert .x10 (BitVec.ofNat 64 address)).insert .x11 (BitVec.ofNat 64 length)
+        mem := if present then (∅ : Std.ExtHashMap ℕ (BitVec 8)).insert (2 ^ 48) 93 else ∅ }
+      match ({ io.hints := [hintBytes length] } : HostState).run policy (.ofSail initial) with
+      | none => false
+      | some execution =>
+        let target := execution.apply initial 65536
+        target.mem.get? (2 ^ 48 - 1) == some 0 &&
+          target.mem.get? (2 ^ 48) == initial.mem.get? (2 ^ 48) &&
+          target.mem.get? (2 ^ 48 + 1) == none) = true ∧
+    run { io.hints := [hintBytes 8] } .hintRead (2 ^ 48 - 8) 8 = none := by native_decide
+
 private def ecallProgram : GuestProgram where
   rom := [(65536, 0x73)]
   pc_start := 65536

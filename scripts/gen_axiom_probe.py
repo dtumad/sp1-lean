@@ -40,6 +40,23 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete RAM domain from actual store permissions and paired replay.
+    ("SP1Clean/Model/Core/HostSail.lean", "HostExecution.preserves_memory_outside"),
+    ("SP1Clean/Model/Core/ExecutionReplay.lean", "replayEvents?_preserves"),
+    ("SP1Clean/Soundness/RomWriteProtection.lean", "RowWriteAuthorized.permitted"),
+    ("SP1Clean/Soundness/RomWriteProtection.lean", "write_authorized_of_permissions"),
+    ("SP1Clean/Soundness/RomWriteProtection.lean", "RowEffect.memory_outside_of_writeAuthorization"),
+    ("SP1Clean/Soundness/ProtectedStoreFootprints.lean", "byte_write_authorized_of_row"),
+    ("SP1Clean/Soundness/ProtectedStoreFootprints.lean", "half_write_authorized_of_row"),
+    ("SP1Clean/Soundness/ProtectedStoreFootprints.lean", "word_write_authorized_of_row"),
+    ("SP1Clean/Soundness/ProtectedStoreFootprints.lean", "double_write_authorized_of_row"),
+    ("SP1Clean/Soundness/ProtectedLocalCoreRom.lean", "supported_write_property"),
+    ("SP1Clean/Soundness/HostLocalCoreRom.lean", "instructionRows_write_authorized"),
+    ("SP1Clean/Soundness/HostHintReadInstructionExecution.lean", "GroundingCarrier.instruction_step_effect"),
+    ("SP1Clean/Soundness/HostHintReadExecutionPath.lean", "GroundingCarrier.memory_outside"),
+    ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "GroundingCarrier.final_memory_domain"),
+    ("SP1CleanTest/Core/HostExecution.lean", "nativeMemoryCeiling"),
+
     # Complete native Memory observations, including locations absent from the final ledger.
     ("SP1Clean/Model/Core/MemorySnapshot.lean", "Realizes.locContent_of_address_lt"),
     ("SP1Clean/Soundness/CoreMemoryFrame.lean", "pushesAt_zero_of_final_none"),

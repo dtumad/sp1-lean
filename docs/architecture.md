@@ -227,7 +227,7 @@ Adapters must state what they preserve; no equivalence is assumed merely from si
 | `CoreTableProjection`, `CoreRowBalance`, `CoreMemoryBalance` | Shared physical table projections and complete occurrence accounting |
 | `StateChronology`, `CoreMemoryChronology`, `CoreRowTransport` | Order, refresh elimination and the shared `ExecutionCarrier` |
 | `CoreExecutionTrajectory` | Actual paired replay and alignment with the AIR timeline |
-| `HostHintReadExecutionPath` / `HostHintReadFinalMemory` | Installed mixed-AIR path with final PC/clock, all native register/RAM values and complete host reconstruction |
+| `HostHintReadExecutionPath` / `HostHintReadFinalMemory` | Installed mixed-AIR path with final PC/clock, all native register/RAM values, complete RAM domain and host reconstruction |
 | `CoreMemoryFrame` | Original-ledger support from strict access/refresh clocks, and untouched values transported through the existing carrier |
 | `Model/Core/BankReplay` / `HostBankCPUReplay` | Bank observations of the existing interpreter and occurrence-preserving agreement between physical histories and CPU subsequences |
 | `Model/Core/HostReplay` | Host frame and optional exit-status laws of the existing full-state path; the installed receiver inventory discharges the frame restriction |

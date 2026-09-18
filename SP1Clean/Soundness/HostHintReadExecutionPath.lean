@@ -50,7 +50,8 @@ private theorem step_of_replay (valid : image.Valid)
       source.realize (carrier.events.take n) = some current)
     (replay : replayStep? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       current event = some next) :
-    ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event next := by
+    ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event next ∧
+      ∀ address, 2 ^ 48 ≤ address → next.sail.mem.get? address = current.sail.mem.get? address := by
   simp only [ExecutionCarrier.events, List.getElem?_map] at atEvent
   obtain ⟨row, atRow, rfl⟩ := Option.map_eq_some_iff.mp atEvent
   have member := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
@@ -66,11 +67,29 @@ private theorem step_of_replay (valid : image.Valid)
       intro mp mem
       apply grounded.2 mp
       exact List.mem_append_left _ mem
-    obtain ⟨target, step⟩ := carrier.instruction_step valid constraints balanced member grounded.1 currency prefixReplay time
+    obtain ⟨target, step, effect⟩ := carrier.instruction_step_effect valid constraints balanced member grounded.1 currency prefixReplay time
     have same : target = next := Option.some.inj (step.replay.symm.trans replay)
-    rwa [same] at step
-  | syscall row => exact (replayHost?_eq_some_iff _ _ _ _ _).mp replay
-  | halt row => exact (replayHost?_eq_some_iff _ _ _ _ _).mp replay
+    subst target
+    refine ⟨step, ?_⟩
+    have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
+        (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data).is_real = 1 := by
+      simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
+    have authorization := HostLocalCore.instructionRows_write_authorized (HostHintQueueBoundary.expanded witness)
+      (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source final bankFinal))
+      (HostHintQueueBoundary.expanded_constraints witness constraints)
+      (HostHintQueueBoundary.expanded_balanced witness balanced) active.1 active.2
+    have dataEq : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
+    rw [dataEq] at authorization
+    exact effect.memory_outside_of_writeAuthorization valid authorization
+  | syscall row | halt row =>
+    have step := (replayHost?_eq_some_iff _ _ _ _ _).mp replay
+    refine ⟨step, ?_⟩
+    cases step with
+    | syscall success =>
+      obtain ⟨pc, execution, _, _, ran, _, sail, _⟩ := HostState.step_observations success
+      intro address outside
+      rw [sail]
+      exact HostExecution.preserves_memory_outside ran pc address (Or.inr outside)
 
 private theorem final_replay (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
@@ -116,13 +135,27 @@ theorem GroundingCarrier.execution (valid : image.Valid)
       source.realize carrier.events = some target := by
     simpa only [GroundingCarrier.pairedTrajectory, ExecutionCarrier.pairedTrajectory,
       executionTrajectory, List.take_length] using present
-  refine ⟨target, path_of_replay replay (step_of_replay valid carrier constraints balanced), clock, pc, ?_⟩
+  refine ⟨target, path_of_replay replay (fun n current next event atEvent prefixReplay replay =>
+    (step_of_replay valid carrier constraints balanced n current next event atEvent prefixReplay replay).1), clock, pc, ?_⟩
   intro loc message finalRecord
   have value := grounded.2.2 loc message finalRecord
   have before : carrier.trajectory valid carrier.events.length = some target.sail := by
     simp only [GroundingCarrier.trajectory, present, Option.map_some]
   rw [← carrier.finalClock, ← carrier.events_length] at value
   exact (localValueAtG_stepStart_iff before).mp value
+
+/-- The same actual replay preserves the full Sail memory map outside the native address range. -/
+theorem GroundingCarrier.memory_outside (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {target : ExecutionState}
+    (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize carrier.events = some target) (address : ℕ) (outside : 2 ^ 48 ≤ address) :
+    target.sail.mem.get? address = source.sail.realize.mem.get? address := by
+  exact replayEvents?_preserves (fun state => state.sail.mem.get? address) replay
+    (fun n current next event atEvent prefixReplay replay =>
+      (step_of_replay valid carrier constraints balanced n current next event atEvent prefixReplay replay).2 address outside)
 
 /-- The installed ensemble proves a local RISC-V/host path without caller-supplied ordering,
 grounding, or event semantics. The path exhausts the active physical inventory, preserving repeated

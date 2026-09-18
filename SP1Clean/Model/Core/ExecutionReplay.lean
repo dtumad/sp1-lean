@@ -159,6 +159,24 @@ theorem replayEvents?_clock {policy : HostPolicy} {program : GuestProgram}
     rw [ih suffix, replayStep?_clock step]
     simp only [List.map_cons, List.sum_cons, Nat.add_assoc]
 
+/-- An observation preserved at every actual prefix transition survives the complete replay. -/
+theorem replayEvents?_preserves {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {events : List ExecutionEvent}
+    {α : Sort*} (observe : ExecutionState → α)
+    (success : replayEvents? policy program source events = some target)
+    (frame : ∀ n current next event, events[n]? = some event →
+      replayEvents? policy program source (events.take n) = some current →
+      replayStep? policy program current event = some next → observe next = observe current) :
+    observe target = observe source := by
+  induction events generalizing source with
+  | nil => cases success; rfl
+  | cons event rest ih =>
+    obtain ⟨middle, step, suffix⟩ := Option.bind_eq_some_iff.mp success
+    refine (ih suffix ?_).trans (frame 0 source middle event rfl rfl step)
+    intro n current next label atLabel prefixReplay replay
+    apply frame (n + 1) current next label (by simpa only [List.getElem?_cons_succ] using atLabel) _ replay
+    simpa only [List.take_succ_cons, replayEvents?, step, Option.bind_some] using prefixReplay
+
 /-- The terminal-PC invariant propagates through replay, including the empty tape. -/
 theorem replayEvents?_terminal_pc {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {events : List ExecutionEvent}
