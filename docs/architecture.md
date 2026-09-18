@@ -227,7 +227,8 @@ Adapters must state what they preserve; no equivalence is assumed merely from si
 | `CoreTableProjection`, `CoreRowBalance`, `CoreMemoryBalance` | Shared physical table projections and complete occurrence accounting |
 | `StateChronology`, `CoreMemoryChronology`, `CoreRowTransport` | Order, refresh elimination and the shared `ExecutionCarrier` |
 | `CoreExecutionTrajectory` | Actual paired replay and alignment with the AIR timeline |
-| `HostHintReadExecutionPath` / `HostHintReadHostAgreement` | Installed mixed-AIR path with final PC/clock/frontier and complete host reconstruction |
+| `HostHintReadExecutionPath` / `HostHintReadFinalMemory` | Installed mixed-AIR path with final PC/clock, all native register/RAM values and complete host reconstruction |
+| `CoreMemoryFrame` | Original-ledger support from strict access/refresh clocks, and untouched values transported through the existing carrier |
 | `Model/Core/BankReplay` / `HostBankCPUReplay` | Bank observations of the existing interpreter and occurrence-preserving agreement between physical histories and CPU subsequences |
 | `Model/Core/HostReplay` | Host frame and optional exit-status laws of the existing full-state path; the installed receiver inventory discharges the frame restriction |
 | `Soundness/Shard` | Public contract/facade; complete outgoing-state and compiler targets remain unfilled |
@@ -241,8 +242,10 @@ timed engine then derives current operands and final frontier values from the ac
 footprint. Projecting State alone does not preserve Memory balance: WRITE contributes an extra x12
 pair, and host RAM rows contribute physical accesses. All relevant occurrences must survive.
 
-The full outgoing contract is stronger than those frontier facts. It must authenticate untouched
-Sail/runtime state and bind Exit, including the terminal flag. The host reconstruction already
+The full outgoing contract also needs absence outside native RAM, the other Sail registers/runtime
+fields, and Exit, including the terminal flag. Native register/RAM values are now known at every
+location below `2^48`: final records supply their values, and locations absent from that inventory
+retain their source values by the original ledger and the carrier's frame proofs. Host reconstruction
 identifies every host field from queue/bank endpoints, actual HALT events and preserved source I/O.
 These conclusions must still be bound to the complete supplied target snapshot.
 The current source-hint installation has neither WRITE/VERIFY nor authenticated dynamic allocation;

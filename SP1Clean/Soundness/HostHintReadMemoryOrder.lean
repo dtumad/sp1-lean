@@ -201,7 +201,8 @@ theorem source_ordered_memory_rows (valid : image.Valid)
     source_memory_chronology witness constraints balanced ordered exhaustive walk rows alignment projection,
     projection⟩
 
-private theorem frontier_balance
+/-- The complete physical endpoints also balance any occurrence-preserving aligned row ledger. -/
+theorem frontier_balance
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)

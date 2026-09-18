@@ -439,6 +439,14 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Composition.extracted_instructionTables_constraints
 #print axioms SP1Clean.Composition.signedSum_eq_sent_sub_received
 #print axioms SP1Clean.Composition.signedSum_eq_zero
+#print axioms SP1Clean.Model.Core.MemorySnapshot.Realizes.locContent_of_address_lt
+#print axioms SP1Clean.Soundness.NativeCore.pushesAt_zero_of_final_none
+#print axioms SP1Clean.Soundness.NativeCore.ExecutionCarrier.frame_of_no_push
+#print axioms SP1Clean.Soundness.HostHintReadCPU.frontier_balance
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_no_push_of_final_none
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.untouched_memory
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.final_memory
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_execution_with_memory
 #print axioms SP1Clean.Model.Core.HostFrameSafe
 #print axioms SP1Clean.Model.Core.hostExitAfter
 #print axioms SP1Clean.Model.Core.ExecutionStep.host_frame

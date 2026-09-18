@@ -598,14 +598,25 @@ not completed instances. The explicit semantic `Profile` parameter still needs a
 resource/permission policy enforced by the AIR; compiler success or readiness cannot define it.
 This preserves the distinction between the desired bounded language and today's installed subset.
 
-The current path theorem is `HostHintReadCPU.source_execution_with_host`, in
-`SP1Clean/Soundness/HostHintReadHostAgreement.lean`. It consumes raw constraints and balanced
+The current path theorem is `HostHintReadCPU.source_execution_with_memory`, in
+`SP1Clean/Soundness/HostHintReadFinalMemory.lean`. It consumes raw constraints and balanced
 channels of the source-hint/bank assembly and returns a genuine local execution from the checked
 complete incoming snapshot. Its event list is a permutation of the physical active CPU inventory;
 its final PC, clock, every final Memory-frontier value, and both verifier-bound banks agree with
 the actual replay. All ordinary cases, HINT_READ/HINT_LEN, control and commitment calls, and
 legacy HALT are grounded internally. No separate ordering, prior-record currency, successful replay, or step/frame premise
 is supplied by the caller. The complete outgoing snapshot and terminal Exit are not yet bound.
+
+Its Memory conclusion covers every integer register and every aligned RAM cell below `2^48`,
+including the first 32 bytes and locations omitted from the final inventory. A missing final record
+forces that location's original execution/refresh ledger empty: paired touches conserve record
+counts, and strictly increasing clocks exclude a closed cycle. The existing event frames then
+preserve its complete source value on the same execution. No untouched-location premise is added.
+The active COMMIT fixture retains nonzero untouched x20 and RAM at addresses 8, 80000 and `2^48 - 1`;
+finite host execution preserves them. Deleting a touched final record still fails Memory balance
+after repairing its ordering chain; all constraints, fixed lookups and other channel balances pass.
+Absence outside native RAM and the remaining Sail
+register/runtime fields still need proof before literal outgoing snapshot equality follows.
 
 The source check validates the finite image, complete initialized registers, platform
 configuration, supported decoding, every ROM byte, and 48-bit source PC/clock. Fixed source

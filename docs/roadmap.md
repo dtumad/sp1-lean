@@ -45,7 +45,8 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
-| Installed mixed soundness | `HostHintReadCPU.source_execution_with_host` derives a real local path, exact active event multiset, final PC/clock/frontier values and complete host reconstruction from raw constraints/balance | Complete outgoing Sail/runtime state, supplied target equality and Exit binding |
+| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values and complete host reconstruction from raw constraints/balance | Complete outgoing Sail/runtime state, supplied target equality and Exit binding |
+| Memory endpoint | Final records give touched values; absent final records imply no physical push, and the existing frames preserve source values at every other native location, including RAM below address 32 | Absence outside native RAM, remaining Sail registers/runtime fields and binding the supplied target |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
 | Host endpoint | Final hint cursor decodes to the actual remaining bytes; both banks agree with CPU replay; other host fields are preserved by the installed inventory; optional exit status follows actual HALT events | Bind these conclusions to the complete outgoing instance, including running versus HALT-zero |
 | Commitment banks | Both physical histories equal the corresponding CPU subsequences, including update arguments and clocks; their endpoints equal the actual replayed banks | Include these equalities in the complete outgoing snapshot |
@@ -84,14 +85,16 @@ execution carrier to make a local proof convenient.
 | Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-**Next proof work:** complete outgoing Sail/runtime agreement and its verifier binding, including
-explicit terminal status. `HostHintReadCPU.source_execution_with_host` now reconstructs every host
-field on the same path: the final queue cursor authenticates remaining hint bytes, the bank
-endpoints agree with CPU updates, and physical call accounting derives preservation of public
-output, requests/replies and stdout/stderr. The actual event tape determines optional exit status;
-that status is not yet tied to the public Exit bus or to `bankFinal.exitCode`. No caller host-frame,
-queue, bank-order or replay-success premise is added. Preserve this theorem while authenticating
-untouched Sail registers/RAM, runtime fields, and literal equality with the supplied complete target.
+**Next proof work:** finish complete outgoing Sail/runtime agreement and its verifier binding,
+including explicit terminal status. `HostHintReadCPU.source_execution_with_memory` now identifies
+every integer register and every aligned RAM cell below `2^48`, including locations absent from the
+final inventory. The original balanced ledger and strict access/refresh clocks exclude hidden
+cycles; the same execution carrier's frame facts preserve the remaining source values. The theorem
+also retains complete host reconstruction from queue/bank endpoints, actual HALT labels, and the
+source I/O frame. No caller untouched-location, host-frame, order or replay-success premise is added.
+Absence outside native RAM, the other Sail registers and runtime fields still need agreement, followed
+by literal equality with the supplied target. Optional exit status is not yet tied to the public
+Exit bus or to `bankFinal.exitCode`.
 Work on the semantic capacity/profile definition alongside this only where needed to fix the
 public boundary; it may not narrow the intended all-eight-call language to today's installation.
 

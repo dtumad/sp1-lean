@@ -1,6 +1,6 @@
+import SP1CleanTest.Core.LocalCore
 import SP1CleanTest.Core.HostExecution
 import SP1CleanTest.Core.HostQueue
-import SP1CleanTest.Core.LocalCore
 import SP1CleanTest.Core.HostCommitBoundary
 import SP1CleanTest.Core.HostHintReadPartition
 import SP1CleanTest.Core.ExecutionPath
@@ -41,6 +41,7 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.LocalCore.untouchedCommitMemory
 #print axioms SP1CleanTest.Core.HostExecution.completeHostContinuation
 #print axioms SP1CleanTest.Core.HostQueue.bankProjection
 #print axioms SP1CleanTest.Core.LocalCore.activeCommitLocalShard

@@ -433,6 +433,8 @@ import SP1Clean.Soundness.HostHintReadBanks
 import SP1Clean.Soundness.HostBankCPUReplay
 import SP1Clean.Soundness.HostHintReadBankAgreement
 import SP1Clean.Soundness.HostHintReadHostAgreement
+import SP1Clean.Soundness.HostHintReadFinalMemory
+import SP1Clean.Soundness.CoreMemoryFrame
 import SP1Clean.Soundness.HostHintReadLocalMemory
 import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Soundness.HostHintReadExecutionRows

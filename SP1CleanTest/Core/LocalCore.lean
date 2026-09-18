@@ -355,7 +355,8 @@ private def syscallPublic : SP1PublicIO Fp := { publicInput with final_clk_0_16 
 
 private def commitSource : ExecutionSnapshot :=
   { syscallSource with
-    sail.registers := ((syscallSource.sail.registers.insert .x5 16).insert .x10 0).insert .x11 65537
+    sail.registers := (((syscallSource.sail.registers.insert .x5 16).insert .x10 0).insert .x11 65537).insert .x20 907
+    sail.memory := ((syscallSource.sail.memory.write 8 19).write 80000 42).write (2 ^ 48 - 1) 55
     host := {
       committed := #v[11, 22, 33, 44, 55, 66, 77, 88],
       deferred := #v[101, 102, 103, 104, 105, 106, 107, 108],
@@ -398,7 +399,9 @@ private def commitRows : List Row :=
     (86, (toElements (HostCommitBoundary.start
       (HostCommitEnsemble.sourceValues true commitSource.host))).toList)]
 
-private def checkCommit (target : HostState) (rows : List Row) : Bool :=
+/-- Separate Memory balance only to identify the cause of a negative fixture. Full acceptance
+below requires both checks. The first still checks every constraint, lookup and other channel. -/
+private def commitChecks (target : HostState) (rows : List Row) : Bool × Bool :=
   let assembly := HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage commitSource
     (SP1Clean.HostHintQueueBoundary.initial []) target HostCallReceivers.available
     (HostHintReadLocal.sourceResources []) []
@@ -410,15 +413,31 @@ private def checkCommit (target : HostState) (rows : List Row) : Bool :=
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map evaluateAt
   let ledger := evaluated.flatMap Prod.snd
-  evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
-    ledger.all fun (name, message, _) =>
-      (assembly.channels.map RawChannel.name).contains name &&
-        ((ledger.filter (fun entry => entry.1 == name && entry.2.1 == message)).map
-          (fun entry => entry.2.2)).sum == 0
+  let balanced (entry : String × List Fp × Fp) :=
+    ((ledger.filter (fun other => other.1 == entry.1 && other.2.1 == entry.2.1)).map
+      (fun other => other.2.2)).sum == 0
+  (evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
+    ledger.all (fun entry => (assembly.channels.map RawChannel.name).contains entry.1 &&
+      (entry.1 == "SP1Memory" || balanced entry)),
+    ledger.all (fun entry => entry.1 != "SP1Memory" || balanced entry))
+
+private def checkCommit (target : HostState) (rows : List Row) : Bool :=
+  let checked := commitChecks target rows
+  checked.1 && checked.2
 
 /-- An active COMMIT closes the complete installed ledger from nonzero incoming banks,
 including the actual CPU handoff, register Memory pairs, both terminals, and every Byte provider. -/
 theorem activeCommitLocalShard : checkCommit commitTarget commitRows = true := by native_decide
+
+/-- Untouched source values need no Memory rows, even below the RAM bus window and at its upper
+edge. Removing a touched final record still fails after repairing the boundary ordering chain. -/
+theorem untouchedCommitMemory :
+    ((commitSource.hostStep? syscallPolicy syscallProgram).map (fun result =>
+      (result.1.sail.registers.get? LeanRV64D.Defs.Register.x20,
+        result.1.sail.memory.read 8, result.1.sail.memory.read 80000,
+        result.1.sail.memory.read (2 ^ 48 - 1)))) = some (some 907, 19, 42, 55) ∧
+    commitChecks commitTarget (commitRows.take 6 ++ [terminal 5 11] ++ commitRows.drop 8) = (true, false) := by
+  native_decide
 
 /-- Complete balance rejects changed outgoing words in either bank and missing or duplicate terminals. -/
 theorem rejectsCommitBoundaries :

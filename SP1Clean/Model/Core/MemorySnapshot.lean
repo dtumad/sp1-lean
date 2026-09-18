@@ -46,15 +46,15 @@ theorem Realizes.valid {snapshot : MemorySnapshot} {state : SailState}
   have zero := realizes.1 0
   simpa [SailState.get_reg?, read, Valid] using zero.symm
 
-/-- Full byte agreement implies agreement at every canonically encoded bus location. -/
-theorem Realizes.locContent {snapshot : MemorySnapshot} {state : SailState}
+/-- Full byte agreement also covers RAM below the bus's register-reserved addresses. -/
+theorem Realizes.locContent_of_address_lt {snapshot : MemorySnapshot} {state : SailState}
     (realizes : snapshot.Realizes state) (location : MemLoc)
-    (canonical : location.CanonicalAddress) :
+    (bound : location.busAddress < 2 ^ 48) :
     locContent state location = some (snapshot.read location) := by
   cases location with
   | reg index => exact realizes.1 index
   | ram cell =>
-      have upper : cell.toNat * 8 < 2 ^ 48 := canonical.2
+      have upper : cell.toNat * 8 < 2 ^ 48 := bound
       have base : cell.baseAddr.toNat = cell.toNat * 8 := by
         exact (BitVec.toNat_ofNat _ _).trans (Nat.mod_eq_of_lt (by omega))
       change ramWord64? state cell.baseAddr = _
@@ -62,6 +62,13 @@ theorem Realizes.locContent {snapshot : MemorySnapshot} {state : SailState}
         rw [base]
         exact realizes.2 _ (by have := index.isLt; omega)), base]
       rfl
+
+/-- Full byte agreement implies agreement at every canonically encoded bus location. -/
+theorem Realizes.locContent {snapshot : MemorySnapshot} {state : SailState}
+    (realizes : snapshot.Realizes state) (location : MemLoc)
+    (canonical : location.CanonicalAddress) :
+    locContent state location = some (snapshot.read location) :=
+  realizes.locContent_of_address_lt location (MemLoc.busAddress_lt_two_pow_48 canonical)
 
 /-- Extensional comparison ignores obsolete writes in the sparse update history. It still
 checks every supported byte, so a mutation at an untouched location cannot disappear. -/

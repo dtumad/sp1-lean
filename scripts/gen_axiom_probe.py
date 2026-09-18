@@ -40,6 +40,17 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete native Memory observations, including locations absent from the final ledger.
+    ("SP1Clean/Model/Core/MemorySnapshot.lean", "Realizes.locContent_of_address_lt"),
+    ("SP1Clean/Soundness/CoreMemoryFrame.lean", "pushesAt_zero_of_final_none"),
+    ("SP1Clean/Soundness/CoreMemoryFrame.lean", "ExecutionCarrier.frame_of_no_push"),
+    ("SP1Clean/Soundness/HostHintReadMemoryOrder.lean", "frontier_balance"),
+    ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "source_no_push_of_final_none"),
+    ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "GroundingCarrier.untouched_memory"),
+    ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "GroundingCarrier.final_memory"),
+    ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "source_execution_with_memory"),
+    ("SP1CleanTest/Core/LocalCore.lean", "untouchedCommitMemory"),
+
     # Complete host reconstruction and terminal-status observations on the existing path.
     ("SP1Clean/Model/Core/HostReplay.lean", "HostFrameSafe"),
     ("SP1Clean/Model/Core/HostReplay.lean", "hostExitAfter"),
