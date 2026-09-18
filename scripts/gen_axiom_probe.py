@@ -40,6 +40,16 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Full Sail row bookkeeping and preserved fields of the installed paired replay.
+    ("SP1Clean/Soundness/RowEffectDefs.lean", "RowEffect"),
+    ("SP1Clean/Proofs/Sail/Advance.lean", "minstret_tail_effect"),
+    ("SP1Clean/Proofs/Sail/Advance.lean", "tail_bookkeeping"),
+    ("SP1Clean/Proofs/Sail/Advance.lean", "sailStep_of_ladder_bookkeeping"),
+    ("SP1Clean/Model/Core/HostSail.lean", "HostExecution.other_register_frame"),
+    ("SP1Clean/Soundness/HostHintReadExecutionPath.lean", "GroundingCarrier.runtime"),
+    ("SP1Clean/Soundness/HostHintReadExecutionPath.lean", "GroundingCarrier.other_registers"),
+    ("SP1CleanTest/Core/ExecutionPath.lean", "ordinaryBookkeeping"),
+
     # Complete RAM domain from actual store permissions and paired replay.
     ("SP1Clean/Model/Core/HostSail.lean", "HostExecution.preserves_memory_outside"),
     ("SP1Clean/Model/Core/ExecutionReplay.lean", "replayEvents?_preserves"),

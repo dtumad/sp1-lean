@@ -107,10 +107,10 @@ structure RefinesAt (prog : GuestProgram) (s0 : SailState)
 /-- The committed effect of one row, as a relation between the pre- and post-states of its interpreter
 step: the PC moves to the row's committed `next_pc`; the **register** file is, **when the row writes a
 register** (`commit.writesReg`), exactly `s` except at the `op_a` destination (→ the committed `rdWrite`),
-and **when it does not** (Branch / AluX0 / LoadX0, `commit.writesReg = false`) a pure frame — the SC
-Phase 4 gate that lets a Branch/Store row, whose `op_a` is a *source read*, not corrupt that register;
-initialization and configuration persist. `try_step` may also touch bookkeeping registers (`minstret`,
-`hart_state`, …) the trace doesn't commit, but those are outside the `BitVec 5` register file. The **memory**
+and **when it does not** (Branch / AluX0 / LoadX0, `commit.writesReg = false`) a pure frame. A
+Branch/Store row's `op_a` is a source read and does not overwrite that register. Initialization and
+configuration persist. The bookkeeping clauses retain `nextPC`, `minstret_increment`, and the exact
+`minstret` update; all other registers and simulator runtime fields are preserved. The **memory**
 clause is the orthogonal second axis: `commit.memWrite = none` (all chips but stores) → `s'.mem = s.mem`
 frame; `some mw` (a store) → the committed `width`-byte range at `mw.addrNat` becomes `mw.byteAt`, the rest
 framed.
@@ -136,6 +136,21 @@ structure RowEffect (_prog : GuestProgram) (r : Trace.RowView (ZMod p))
           (∀ a : ℕ, ¬ mw.covers a → s'.mem.get? a = s.mem.get? a))
   init : s.isInitialized → s'.isInitialized
   cfg : SailConfigured s → SailConfigured s'
+
+  /-- Runtime output and the simulator cycle counter are framed by supported instructions. -/
+  runtime : s'.cycleCount = s.cycleCount ∧ s'.sailOutput = s.sailOutput
+  /-- All other Sail register keys, including absent keys, survive the instruction. -/
+  otherRegs : ∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC →
+    R ≠ Register.minstret → R ≠ Register.minstret_increment →
+    (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) → s'.regs.get? R = s.regs.get? R
+  /-- Normal retirement commits the computed nextPC into PC. -/
+  nextPC : s'.regs.get? Register.nextPC = s'.regs.get? Register.PC
+  /-- The official privilege/filter check controls the exact retirement-counter update. -/
+  retirement : ∃ increment : Bool,
+    (should_inc_minstret Privilege.Machine).run s = .ok increment s ∧
+    s'.regs.get? Register.minstret_increment = some increment ∧
+    s'.regs.get? Register.minstret = (s.regs.get? Register.minstret).map
+      (fun value => if increment then BitVec.addInt value 1 else value)
 
 /-- **The value half of `OperandsBound`.** For each register source operand (`imm = 0`), the live Sail
 register value equals the row's committed read-value column (`op_b`/`op_c` `prev_value`). This is what

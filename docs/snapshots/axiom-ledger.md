@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-18. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2686 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 310 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2693 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 311 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2996 released declarations are probed.
+- 3004 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,6 +35,19 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
+The Sail-bookkeeping checkpoint adds seven main probes and one semantic regression. All preceding
+2686 main and 310 test dependency sets are unchanged, with no removals or new axiom names in either
+library. Three helpers use the logical baseline, the strengthened row-effect contract and Sail
+ladder retain the existing 77-dependency Sail set, and both installed replay-frame theorems retain
+the existing 100-dependency mixed assembly set. The new regression has the same 83-dependency set
+as the existing real self-jump anchor; it introduces no compiler-trust constant. All 25 instruction
+bridges now retain the exact nextPC and retirement-counter effect, and the installed shard theorem
+preserves Sail's simulator counter, output, and every register outside the GPR/PC/retirement
+footprint. The regression proves enabled wraparound and inhibited retirement with nonzero counters
+and nonempty output. Accumulated nextPC/retirement endpoint formulas, supplied-target equality,
+public Exit/status binding, the remaining host installation, and constructive completeness remain
+open.
+
 The RAM-domain checkpoint adds fourteen main probes and one semantic regression. All preceding
 2672 main and 309 test dependency sets are unchanged, with no removals or new main-library axiom
 names. The footprint helpers use existing logical sets; replay and row-effect transport retain
@@ -44,8 +57,9 @@ regression adds only its disclosed `native_decide` constant to the three logical
 `source_execution_with_memory` identifies every integer register and RAM cell below `2^48`,
 including untouched locations, and proves every Sail RAM key at or above `2^48` absent. It uses the
 actual byte-permission bound and the same paired replay. HINT_READ padding can end at the final
-native byte without creating a one-past entry. Remaining Sail registers/runtime fields,
-supplied-target equality, public Exit/status binding and constructive completeness remain open.
+native byte without creating a one-past entry. The checkpoint above retains Sail register/runtime
+frames; accumulated bookkeeping, supplied-target equality, public Exit/status binding and
+constructive completeness remain open.
 
 The complete-host reconstruction adds eleven main probes and one semantic regression. The two
 event observations have no axioms; the four host frame/exit laws retain the existing 77-dependency

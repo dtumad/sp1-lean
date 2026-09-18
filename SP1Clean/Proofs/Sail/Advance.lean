@@ -479,6 +479,40 @@ theorem tryStep_reaches (s s_a s'' : SailState) (w : BitVec 32) (I : instruction
 /-- **The minstret-bump tail is a register-file frame**: run on any initialized state `t`, the
 `minstret_increment`-gated `minstret ← minstret+1` bump yields `.ok false t'` with `t'` agreeing with `t`
 on `PC` and on the whole `BitVec 5` register file — the bump touches only the `minstret` CSR. -/
+theorem minstret_tail_effect (t : SailState) (hinit : t.isInitialized) :
+    ∃ t' : SailState,
+      (do
+        let mi ← LeanRV64D.readReg Register.minstret_increment
+        if (true && mi) = true then do
+            let m ← LeanRV64D.readReg Register.minstret
+            LeanRV64D.writeReg Register.minstret (BitVec.addInt m 1)
+            (pure false : SailM Bool)
+          else (pure false : SailM Bool)).run t = .ok false t'
+      ∧ t'.regs.get? Register.PC = t.regs.get? Register.PC
+      ∧ (∀ idx : BitVec 5, t'.get_reg? idx = t.get_reg? idx)
+      ∧ t'.mem = t.mem
+      ∧ (∀ R : Register, R ≠ Register.minstret → t'.regs.get? R = t.regs.get? R)
+      ∧ t'.isInitialized
+      ∧ t'.cycleCount = t.cycleCount ∧ t'.sailOutput = t.sailOutput
+      ∧ t'.regs.get? Register.minstret =
+        (t.regs.get? Register.minstret).map (fun value =>
+          if (true && t.regs.get Register.minstret_increment (hinit _)) = true
+          then BitVec.addInt value 1 else value) := by
+  rw [run_bind_of_run t _ _ (Sail.run_readReg_of_isInitialized t Register.minstret_increment hinit)]
+  split
+  · rw [run_bind_of_run t _ _ (Sail.run_readReg_of_isInitialized t Register.minstret hinit),
+      run_writeReg_bind]
+    refine ⟨_, rfl, ?_, (fun idx => ?_), rfl, (fun R hR => ?_), SailState.isInitialized_insert t hinit _ _, rfl, rfl, ?_⟩
+    · rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    · exact SailState.get_reg?_insert_of_ne (by unfold reg_idx_to_Register; split <;> decide)
+    · rw [Std.ExtDHashMap.get?_insert, dif_neg (fun hc => hR (beq_iff_eq.mp hc).symm)]
+    · rw [Std.ExtDHashMap.get?_insert_self, Std.ExtDHashMap.get?_eq_some_get (hinit _)]
+      simp only [Option.map_some]
+  · refine ⟨_, rfl, rfl, fun _ => rfl, rfl, (fun _ _ => rfl), hinit, rfl, rfl, ?_⟩
+    rw [Std.ExtDHashMap.get?_eq_some_get (hinit _)]
+    simp only [Option.map_some]
+
+/-- The architectural projection of the complete retirement tail. -/
 theorem minstret_tail_frame (t : SailState) (hinit : t.isInitialized) :
     ∃ t' : SailState,
       (do
@@ -493,19 +527,49 @@ theorem minstret_tail_frame (t : SailState) (hinit : t.isInitialized) :
       ∧ t'.mem = t.mem
       ∧ (∀ R : Register, R ≠ Register.minstret → t'.regs.get? R = t.regs.get? R)
       ∧ t'.isInitialized := by
-  rw [run_bind_of_run t _ _ (Sail.run_readReg_of_isInitialized t Register.minstret_increment hinit)]
-  split
-  · rw [run_bind_of_run t _ _ (Sail.run_readReg_of_isInitialized t Register.minstret hinit),
-      run_writeReg_bind]
-    refine ⟨_, rfl, ?_, (fun idx => ?_), rfl, (fun R hR => ?_), SailState.isInitialized_insert t hinit _ _⟩
-    · rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
-    · exact SailState.get_reg?_insert_of_ne (by unfold reg_idx_to_Register; split <;> decide)
-    · rw [Std.ExtDHashMap.get?_insert, dif_neg (fun hc => hR (beq_iff_eq.mp hc).symm)]
-  · exact ⟨_, rfl, rfl, fun _ => rfl, rfl, (fun _ _ => rfl), hinit⟩
+  obtain ⟨next, ran, pc, regs, memory, frame, initialized, _⟩ := minstret_tail_effect t hinit
+  exact ⟨next, ran, pc, regs, memory, frame, initialized⟩
 
 /-- **The `tick_pc` + minstret tail's effect** on the observables: it commits `PC ← nextPC` and leaves every
 `BitVec 5` register file entry fixed (the minstret bump touches only the `minstret` CSR, `tick_pc` only
 `PC` — both outside the register file). -/
+theorem tail_bookkeeping (s'' : SailState) (hinit'' : s''.isInitialized) :
+    ∃ s_final : SailState,
+      (do
+        tick_pc ()
+        let mi ← LeanRV64D.readReg Register.minstret_increment
+        if (true && mi) = true then do
+            let m ← LeanRV64D.readReg Register.minstret
+            LeanRV64D.writeReg Register.minstret (BitVec.addInt m 1)
+            (pure false : SailM Bool)
+          else (pure false : SailM Bool)).run s'' = .ok false s_final
+      ∧ s_final.regs.get? Register.PC = s''.regs.get? Register.nextPC
+      ∧ (∀ idx : BitVec 5, s_final.get_reg? idx = s''.get_reg? idx)
+      ∧ s_final.mem = s''.mem
+      ∧ (∀ R : Register, R ≠ Register.PC → R ≠ Register.minstret →
+          s_final.regs.get? R = s''.regs.get? R)
+      ∧ s_final.isInitialized
+      ∧ s_final.cycleCount = s''.cycleCount ∧ s_final.sailOutput = s''.sailOutput
+      ∧ s_final.regs.get? Register.minstret =
+        (s''.regs.get? Register.minstret).map (fun value =>
+          if (true && s''.regs.get Register.minstret_increment (hinit'' _)) = true
+          then BitVec.addInt value 1 else value) := by
+  simp only [tick_pc_eq, bind_assoc]
+  rw [run_bind_of_run s'' _ _ (Sail.run_readReg_of_isInitialized s'' Register.nextPC hinit''),
+    run_writeReg_bind]
+  obtain ⟨t', hrun, hPC', hxreg', hmem', hframe', hinit', cycles, output, retired⟩ := minstret_tail_effect
+    {s'' with regs := s''.regs.insert Register.PC (s''.regs.get Register.nextPC (hinit'' _))}
+    (SailState.isInitialized_insert s'' hinit'' _ _)
+  refine ⟨t', hrun, ?_, (fun idx => ?_), hmem', (fun R hRpc hRm => ?_), hinit', cycles, output, ?_⟩
+  · rw [hPC', Std.ExtDHashMap.get?_insert_self, Std.ExtDHashMap.get?_eq_some_get (hinit'' _)]
+  · rw [hxreg' idx]; exact SailState.get_reg?_insert_PC
+  · rw [hframe' R hRm, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => hRpc (beq_iff_eq.mp hc).symm)]
+  · simpa only [Std.ExtDHashMap.get?_insert, Std.ExtDHashMap.get_insert,
+      show (Register.PC == Register.minstret_increment) = false from rfl,
+      show (Register.PC == Register.minstret) = false from rfl,
+      Bool.false_eq_true, ↓reduceDIte] using retired
+
+/-- The architectural projection retains the original tail interface. -/
 theorem tail_effect (s'' : SailState) (hinit'' : s''.isInitialized) :
     ∃ s_final : SailState,
       (do
@@ -522,16 +586,8 @@ theorem tail_effect (s'' : SailState) (hinit'' : s''.isInitialized) :
       ∧ (∀ R : Register, R ≠ Register.PC → R ≠ Register.minstret →
           s_final.regs.get? R = s''.regs.get? R)
       ∧ s_final.isInitialized := by
-  simp only [tick_pc_eq, bind_assoc]
-  rw [run_bind_of_run s'' _ _ (Sail.run_readReg_of_isInitialized s'' Register.nextPC hinit''),
-    run_writeReg_bind]
-  obtain ⟨t', hrun, hPC', hxreg', hmem', hframe', hinit'⟩ := minstret_tail_frame
-    {s'' with regs := s''.regs.insert Register.PC (s''.regs.get Register.nextPC (hinit'' _))}
-    (SailState.isInitialized_insert s'' hinit'' _ _)
-  refine ⟨t', hrun, ?_, (fun idx => ?_), hmem', (fun R hRpc hRm => ?_), hinit'⟩
-  · rw [hPC', Std.ExtDHashMap.get?_insert_self, Std.ExtDHashMap.get?_eq_some_get (hinit'' _)]
-  · rw [hxreg' idx]; exact SailState.get_reg?_insert_PC
-  · rw [hframe' R hRm, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => hRpc (beq_iff_eq.mp hc).symm)]
+  obtain ⟨next, ran, pc, regs, memory, frame, initialized, _⟩ := tail_bookkeeping s'' hinit''
+  exact ⟨next, ran, pc, regs, memory, frame, initialized⟩
 
 /-- **The core `SailStep` composition** — joins the landed ladder (`tryStep_reaches`) with the tail's
 observable effect (`tail_effect`). Given the ladder inputs on the post-minstret-write state, `try_step`
@@ -539,6 +595,42 @@ takes one real step to some `s_final` whose `PC` is the post-execute `nextPC` an
 register file agrees with the post-execute state `s''`. This is the whole `try_step`-side content of a
 register-writing chip's `advance`; per-chip work is only characterizing `s''` (via the execute bridge)
 and building the ladder inputs from `RefinesAt`/`OperandsBound`. -/
+theorem sailStep_of_ladder_bookkeeping (s s_a s'' : SailState) (w : BitVec 32) (I : instruction) (b : Bool)
+    (hb : (should_inc_minstret Privilege.Machine).run s = .ok b s)
+    (hcp : (LeanRV64D.readReg Register.cur_privilege).run s = .ok Privilege.Machine s)
+    (hactive : (s.regs.insert Register.minstret_increment b).get? Register.hart_state
+      = some (HartState.HART_ACTIVE ()))
+    (hslr : StraightLineReady ({s with regs := s.regs.insert Register.minstret_increment b}) w)
+    (hdec : (ext_decode w).run ({s with regs := s.regs.insert Register.minstret_increment b})
+      = .ok I ({s with regs := s.regs.insert Register.minstret_increment b}))
+    (hsa : (LeanRV64D.writeReg Register.nextPC (BitVec.addInt
+        ((s.regs.insert Register.minstret_increment b).get Register.PC (hslr.init Register.PC)) 4)).run
+        ({s with regs := s.regs.insert Register.minstret_increment b}) = .ok () s_a)
+    (hexec : (execute I).run s_a = .ok (ExecutionResult.Retire_Success ()) s'')
+    (h_active'' : s''.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()))
+    (hinit'' : s''.isInitialized) :
+    ∃ s_final : SailState, (try_step 0 false).run s = .ok false s_final
+      ∧ SailRetiresNormally s s_final
+      ∧ s_final.regs.get? Register.PC = s''.regs.get? Register.nextPC
+      ∧ (∀ idx : BitVec 5, s_final.get_reg? idx = s''.get_reg? idx)
+      ∧ s_final.mem = s''.mem
+      ∧ (∀ R : Register, R ≠ Register.PC → R ≠ Register.minstret →
+          s_final.regs.get? R = s''.regs.get? R)
+      ∧ s_final.isInitialized
+      ∧ s_final.cycleCount = s''.cycleCount ∧ s_final.sailOutput = s''.sailOutput
+      ∧ s_final.regs.get? Register.minstret =
+        (s''.regs.get? Register.minstret).map (fun value =>
+          if (true && s''.regs.get Register.minstret_increment (hinit'' _)) = true
+          then BitVec.addInt value 1 else value) := by
+  obtain ⟨s_final, hrun, hPC, hxreg, hmem, hframe, hinitf, cycles, output, retired⟩ := tail_bookkeeping s'' hinit''
+  have hstep : (try_step 0 false).run s = .ok false s_final := by
+    rw [tryStep_reaches s s_a s'' w I b hb hcp hactive hslr hdec hsa hexec h_active'']
+    exact hrun
+  refine ⟨s_final, hstep, ?_, hPC, hxreg, hmem, hframe, hinitf, cycles, output, retired⟩
+  exact ⟨b, zero_extend (m := 32) w, s'', hb,
+    run_hart_active_reaches _ s_a s'' w I 0 hslr hdec hsa hexec, hstep⟩
+
+/-- The existing ladder statement projects from the complete bookkeeping result. -/
 theorem sailStep_of_ladder (s s_a s'' : SailState) (w : BitVec 32) (I : instruction) (b : Bool)
     (hb : (should_inc_minstret Privilege.Machine).run s = .ok b s)
     (hcp : (LeanRV64D.readReg Register.cur_privilege).run s = .ok Privilege.Machine s)
@@ -561,13 +653,23 @@ theorem sailStep_of_ladder (s s_a s'' : SailState) (w : BitVec 32) (I : instruct
       ∧ (∀ R : Register, R ≠ Register.PC → R ≠ Register.minstret →
           s_final.regs.get? R = s''.regs.get? R)
       ∧ s_final.isInitialized := by
-  obtain ⟨s_final, hrun, hPC, hxreg, hmem, hframe, hinitf⟩ := tail_effect s'' hinit''
-  have hstep : (try_step 0 false).run s = .ok false s_final := by
-    rw [tryStep_reaches s s_a s'' w I b hb hcp hactive hslr hdec hsa hexec h_active'']
-    exact hrun
-  refine ⟨s_final, hstep, ?_, hPC, hxreg, hmem, hframe, hinitf⟩
-  exact ⟨b, zero_extend (m := 32) w, s'', hb,
-    run_hart_active_reaches _ s_a s'' w I 0 hslr hdec hsa hexec, hstep⟩
+  obtain ⟨next, ran, normal, pc, regs, memory, frame, initialized, _⟩ :=
+    sailStep_of_ladder_bookkeeping s s_a s'' w I b hb hcp hactive hslr hdec hsa hexec h_active'' hinit''
+  exact ⟨next, ran, normal, pc, regs, memory, frame, initialized⟩
+
+private theorem retirement_counter {source post next : SailState} (initialized : post.isInitialized)
+    {increment : Bool} (flag : post.regs.get? Register.minstret_increment = some increment)
+    (prior : post.regs.get? Register.minstret = source.regs.get? Register.minstret)
+    (retired : next.regs.get? Register.minstret = (post.regs.get? Register.minstret).map
+      (fun value => if (true && post.regs.get Register.minstret_increment (initialized _)) = true
+        then BitVec.addInt value 1 else value)) :
+    next.regs.get? Register.minstret = (source.regs.get? Register.minstret).map
+      (fun value => if increment then BitVec.addInt value 1 else value) := by
+  have flagValue : post.regs.get Register.minstret_increment (initialized _) = increment := by
+    rw [Std.ExtDHashMap.get?_eq_some_get (initialized _)] at flag
+    exact Option.some.inj flag
+  rw [retired, flagValue, prior]
+  simp only [Bool.true_and]
 
 /-! ## Per-chip `advance` composition helpers -/
 
@@ -650,7 +752,7 @@ theorem SailConfigured.congr {sf s : SailState} (cfg : SailConfigured s) (hinit 
 `hfetch`, the committed pc, the fetched-word decode to `I`, `rd ≠ x0`, the `Spec`-derived write `value`),
 one real `try_step` realizes the row's `RowEffect`. The **execute** enters as a hypothesis `hexec` (over any
 state agreeing with `s` on the register file), so each family plugs in its own execute-reaches lemma
-(`rtype_execute_reaches`/`itype_execute_reaches`/…) — the ladder + the six-clause `RowEffect` readoff are
+(`rtype_execute_reaches`/`itype_execute_reaches`/…) — the ladder and complete `RowEffect` are
 shared. The only per-chip inputs to a wrapper are `I`, `value`/`hexec`, and `hval`. -/
 theorem advance_write_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : SailState}
     (I : instruction) (rd : BitVec 5) (value : BitVec 64) (pc : BitVec 64)
@@ -727,8 +829,8 @@ theorem advance_write_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s
       (hrdreg Register.hart_state (by tauto))]; exact cfg.active
   have hinit'' : SailState.isInitialized s'' := by
     rw [hs''_def]; exact SailState.isInitialized_insert s_a hinit_sa _ _
-  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf⟩ :=
-    sailStep_of_ladder s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
+  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
+    sailStep_of_ladder_bookkeeping s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
       hb hcp hactive hslr hdec hsa hexec_sa h_active'' hinit''
   -- the s_final → s config-register frame
   have hcfg_frame : ∀ R : Register,
@@ -741,11 +843,24 @@ theorem advance_write_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s
       hframe_s R (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)
       (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide) (hrdreg R hR)]
   have hmem_fin : s_final.mem = s.mem := by rw [hmemf, hs''_def, hsa_def, hs'_def]
+  have increment : s''.regs.get? Register.minstret_increment = some b := by
+    simp only [hs''_def, hsa_def, hs'_def, Std.ExtDHashMap.get?_insert,
+      show (reg_idx_to_Register rd == Register.minstret_increment) = false by
+        unfold reg_idx_to_Register; split <;> decide,
+      show (Register.nextPC == Register.minstret_increment) = false from rfl,
+      Bool.false_eq_true, ↓reduceDIte]
+    rfl
   refine ⟨s_final, ⟨false, hrun⟩,
     { normal := hnormal, pc := ?_, regs := ?_,
       mem := ⟨fun _ a => by rw [hmem_fin],
         fun mw hmw => absurd (hnomem.symm.trans hmw) (by simp)⟩,
-      init := fun _ => hinitf, cfg := fun _ => ?_ }⟩
+      init := fun _ => hinitf, cfg := fun _ => ?_,
+      runtime := ⟨cycles, output⟩,
+      otherRegs := fun R pc next retired increment gpr =>
+        (hframef R pc retired).trans (hframe_s R increment next (gpr rd)),
+      nextPC := (hframef Register.nextPC (by decide) (by decide)).trans hPCf.symm,
+      retirement := ⟨b, hb, (hframef Register.minstret_increment (by decide) (by decide)).trans increment,
+        retirement_counter hinit'' increment (hframe_s Register.minstret (by decide) (by decide) (by unfold reg_idx_to_Register; split <;> decide)) retired⟩ }⟩
   · -- pc
     rw [hPCf]
     have hnp : s''.regs.get? Register.nextPC = some npv := by
@@ -1229,8 +1344,8 @@ theorem advance_jump_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
   have hinit'' : SailState.isInitialized s'' := by
     rw [hs''_def]
     exact SailState.isInitialized_insert _ (SailState.isInitialized_insert s_a hinit_sa _ _) _ _
-  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf⟩ :=
-    sailStep_of_ladder s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
+  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
+    sailStep_of_ladder_bookkeeping s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
       hb hcp hactive hslr hdec hsa hexec_sa h_active'' hinit''
   have hcfg_frame : ∀ R : Register,
       (R = Register.cur_privilege ∨ R = Register.hart_state ∨ R = Register.mstatus ∨ R = Register.mideleg
@@ -1242,11 +1357,24 @@ theorem advance_jump_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
       hframe_s R (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)
       (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide) (hrdreg R hR)]
   have hmem_fin : s_final.mem = s.mem := by rw [hmemf, hs''_def, hsa_def, hs'_def]
+  have increment : s''.regs.get? Register.minstret_increment = some b := by
+    simp only [hs''_def, hsa_def, hs'_def, Std.ExtDHashMap.get?_insert,
+      show (reg_idx_to_Register rd == Register.minstret_increment) = false by
+        unfold reg_idx_to_Register; split <;> decide,
+      show (Register.nextPC == Register.minstret_increment) = false from rfl,
+      Bool.false_eq_true, ↓reduceDIte]
+    rfl
   refine ⟨s_final, ⟨false, hrun⟩,
     { normal := hnormal, pc := ?_, regs := ?_,
       mem := ⟨fun _ a => by rw [hmem_fin],
         fun mw hmw => absurd (hnomem.symm.trans hmw) (by simp)⟩,
-      init := fun _ => hinitf, cfg := fun _ => ?_ }⟩
+      init := fun _ => hinitf, cfg := fun _ => ?_,
+      runtime := ⟨cycles, output⟩,
+      otherRegs := fun R pc next retired increment gpr =>
+        (hframef R pc retired).trans (hframe_s R increment next (gpr rd)),
+      nextPC := (hframef Register.nextPC (by decide) (by decide)).trans hPCf.symm,
+      retirement := ⟨b, hb, (hframef Register.minstret_increment (by decide) (by decide)).trans increment,
+        retirement_counter hinit'' increment (hframe_s Register.minstret (by decide) (by decide) (by unfold reg_idx_to_Register; split <;> decide)) retired⟩ }⟩
   · rw [hPCf]
     have hnp : s''.regs.get? Register.nextPC = some target := by
       rw [hs''_def, Std.ExtDHashMap.get?_insert,
@@ -1860,8 +1988,8 @@ theorem advance_of_ctrl {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
     rw [hframe_s Register.hart_state (by decide) (by decide)]; exact cfg.active
   have hinit'' : SailState.isInitialized s'' := by
     rw [hs''_def]; exact SailState.isInitialized_insert s_a hinit_sa _ _
-  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf⟩ :=
-    sailStep_of_ladder s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
+  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
+    sailStep_of_ladder_bookkeeping s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
       hb hcp hactive hslr hdec hsa hexec_sa h_active'' hinit''
   have hcfg_frame : ∀ R : Register,
       (R = Register.cur_privilege ∨ R = Register.hart_state ∨ R = Register.mstatus ∨ R = Register.mideleg
@@ -1873,11 +2001,22 @@ theorem advance_of_ctrl {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
       hframe_s R (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)
       (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)]
   have hmem_fin : s_final.mem = s.mem := by rw [hmemf, hs''_def, hsa_def, hs'_def]
+  have increment : s''.regs.get? Register.minstret_increment = some b := by
+    simp only [hs''_def, hsa_def, hs'_def, Std.ExtDHashMap.get?_insert,
+      show (Register.nextPC == Register.minstret_increment) = false from rfl,
+      Bool.false_eq_true, ↓reduceDIte]
+    rfl
   refine ⟨s_final, ⟨false, hrun⟩,
     { normal := hnormal, pc := ?_, regs := ?_,
       mem := ⟨fun _ a => by rw [hmem_fin],
         fun mw hmw => absurd (hnomem.symm.trans hmw) (by simp)⟩,
-      init := fun _ => hinitf, cfg := fun _ => ?_ }⟩
+      init := fun _ => hinitf, cfg := fun _ => ?_,
+      runtime := ⟨cycles, output⟩,
+      otherRegs := fun R pc next retired increment gpr =>
+        (hframef R pc retired).trans (hframe_s R increment next),
+      nextPC := (hframef Register.nextPC (by decide) (by decide)).trans hPCf.symm,
+      retirement := ⟨b, hb, (hframef Register.minstret_increment (by decide) (by decide)).trans increment,
+        retirement_counter hinit'' increment (hframe_s Register.minstret (by decide) (by decide)) retired⟩ }⟩
   · rw [hPCf]
     have hnp : s''.regs.get? Register.nextPC = some target := by
       rw [hs''_def, Std.ExtDHashMap.get?_insert_self]
@@ -2029,7 +2168,7 @@ theorem execute_LOAD_reaches_width1 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
 
 /-- **The load register-writing core.** The `advance_write_core` twin whose `hexec` additionally receives
 the **memory frame** `t.mem = s.mem` and `SailConfigured t` — so a load's `execute_LOAD` (which reads
-`t.mem`) can be discharged. Straight-line (`nextPC = pc+4`), writes only `rd`; identical ladder + six-clause
+`t.mem`) can be discharged. Straight-line (`nextPC = pc+4`), writes only `rd`; identical ladder and complete
 `RowEffect` read-off to `advance_write_core`. The two changes vs. `advance_write_core`: `hexec`'s antecedents
 (`t.mem = s.mem`, `SailConfigured t`) and the `hmem_sa`/`hcfg_sa` haves feeding `hexec s_a …`. -/
 theorem advance_load_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : SailState}
@@ -2108,8 +2247,8 @@ theorem advance_load_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
       (hrdreg Register.hart_state (by tauto))]; exact cfg.active
   have hinit'' : SailState.isInitialized s'' := by
     rw [hs''_def]; exact SailState.isInitialized_insert s_a hinit_sa _ _
-  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf⟩ :=
-    sailStep_of_ladder s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
+  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
+    sailStep_of_ladder_bookkeeping s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
       hb hcp hactive hslr hdec hsa hexec_sa h_active'' hinit''
   have hcfg_frame : ∀ R : Register,
       (R = Register.cur_privilege ∨ R = Register.hart_state ∨ R = Register.mstatus ∨ R = Register.mideleg
@@ -2121,11 +2260,24 @@ theorem advance_load_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
       hframe_s R (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)
       (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide) (hrdreg R hR)]
   have hmem_fin : s_final.mem = s.mem := by rw [hmemf, hs''_def, hsa_def, hs'_def]
+  have increment : s''.regs.get? Register.minstret_increment = some b := by
+    simp only [hs''_def, hsa_def, hs'_def, Std.ExtDHashMap.get?_insert,
+      show (reg_idx_to_Register rd == Register.minstret_increment) = false by
+        unfold reg_idx_to_Register; split <;> decide,
+      show (Register.nextPC == Register.minstret_increment) = false from rfl,
+      Bool.false_eq_true, ↓reduceDIte]
+    rfl
   refine ⟨s_final, ⟨false, hrun⟩,
     { normal := hnormal, pc := ?_, regs := ?_,
       mem := ⟨fun _ a => by rw [hmem_fin],
         fun mw hmw => absurd (hnomem.symm.trans hmw) (by simp)⟩,
-      init := fun _ => hinitf, cfg := fun _ => ?_ }⟩
+      init := fun _ => hinitf, cfg := fun _ => ?_,
+      runtime := ⟨cycles, output⟩,
+      otherRegs := fun R pc next retired increment gpr =>
+        (hframef R pc retired).trans (hframe_s R increment next (gpr rd)),
+      nextPC := (hframef Register.nextPC (by decide) (by decide)).trans hPCf.symm,
+      retirement := ⟨b, hb, (hframef Register.minstret_increment (by decide) (by decide)).trans increment,
+        retirement_counter hinit'' increment (hframe_s Register.minstret (by decide) (by decide) (by unfold reg_idx_to_Register; split <;> decide)) retired⟩ }⟩
   · rw [hPCf]
     have hnp : s''.regs.get? Register.nextPC = some npv := by
       rw [hs''_def, Std.ExtDHashMap.get?_insert,
@@ -2411,8 +2563,8 @@ theorem advance_of_store {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
     rw [hframe_s Register.hart_state (by decide) (by decide)]; exact cfg.active
   have hinit'' : SailState.isInitialized s'' := by
     rw [hs''_def]; exact hinit_sa
-  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf⟩ :=
-    sailStep_of_ladder s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
+  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
+    sailStep_of_ladder_bookkeeping s s_a s'' (data₃ ++ data₂ ++ data₁ ++ data₀) I b
       hb hcp hactive hslr hdec hsa hexec_sa h_active'' hinit''
   have hcfg_frame : ∀ R : Register,
       (R = Register.cur_privilege ∨ R = Register.hart_state ∨ R = Register.mstatus ∨ R = Register.mideleg
@@ -2424,11 +2576,22 @@ theorem advance_of_store {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
       hframe_s R (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)
       (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)]
   have hmem_fin : s_final.mem = writeMem s.mem := by rw [hmemf, hs''_def]
+  have increment : s''.regs.get? Register.minstret_increment = some b := by
+    simp only [hs''_def, hsa_def, hs'_def, Std.ExtDHashMap.get?_insert,
+      show (Register.nextPC == Register.minstret_increment) = false from rfl,
+      Bool.false_eq_true, ↓reduceDIte]
+    rfl
   refine ⟨s_final, ⟨false, hrun⟩,
     { normal := hnormal, pc := ?_, regs := ?_,
       mem := ⟨fun hnone _ => absurd (hmw.symm.trans hnone) (by simp),
               fun mw' hmw' => ?_⟩,
-      init := fun _ => hinitf, cfg := fun _ => ?_ }⟩
+      init := fun _ => hinitf, cfg := fun _ => ?_,
+      runtime := ⟨cycles, output⟩,
+      otherRegs := fun R pc next retired increment gpr =>
+        (hframef R pc retired).trans (hframe_s R increment next),
+      nextPC := (hframef Register.nextPC (by decide) (by decide)).trans hPCf.symm,
+      retirement := ⟨b, hb, (hframef Register.minstret_increment (by decide) (by decide)).trans increment,
+        retirement_counter hinit'' increment (hframe_s Register.minstret (by decide) (by decide)) retired⟩ }⟩
   · rw [hPCf]
     have hnp : s''.regs.get? Register.nextPC = some (pc + 4#64) := hnpc_sa
     rw [hnp]; congr 1
@@ -2863,8 +3026,8 @@ theorem advance_load_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} 
       hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active_sa : s_a.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)]; exact cfg.active
-  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf⟩ :=
-    sailStep_of_ladder s s_a s_a (data₃ ++ data₂ ++ data₁ ++ data₀) I b
+  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
+    sailStep_of_ladder_bookkeeping s s_a s_a (data₃ ++ data₂ ++ data₁ ++ data₀) I b
       hb hcp hactive hslr hdec hsa hexec_sa h_active_sa hinit_sa
   have hcfg_frame : ∀ R : Register,
       (R = Register.cur_privilege ∨ R = Register.hart_state ∨ R = Register.mstatus ∨ R = Register.mideleg
@@ -2876,11 +3039,22 @@ theorem advance_load_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} 
       hframe_s R (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)
       (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)]
   have hmem_fin : s_final.mem = s.mem := by rw [hmemf, hmem_sa]
+  have increment : s_a.regs.get? Register.minstret_increment = some b := by
+    simp only [hsa_def, hs'_def, Std.ExtDHashMap.get?_insert,
+      show (Register.nextPC == Register.minstret_increment) = false from rfl,
+      Bool.false_eq_true, ↓reduceDIte]
+    rfl
   refine ⟨s_final, ⟨false, hrun⟩,
     { normal := hnormal, pc := ?_, regs := ?_,
       mem := ⟨fun _ a => by rw [hmem_fin],
         fun mw hmw => absurd (hnomem.symm.trans hmw) (by simp)⟩,
-      init := fun _ => hinitf, cfg := fun _ => ?_ }⟩
+      init := fun _ => hinitf, cfg := fun _ => ?_,
+      runtime := ⟨cycles, output⟩,
+      otherRegs := fun R pc next retired increment gpr =>
+        (hframef R pc retired).trans (hframe_s R increment next),
+      nextPC := (hframef Register.nextPC (by decide) (by decide)).trans hPCf.symm,
+      retirement := ⟨b, hb, (hframef Register.minstret_increment (by decide) (by decide)).trans increment,
+        retirement_counter hinit_sa increment (hframe_s Register.minstret (by decide) (by decide)) retired⟩ }⟩
   · rw [hPCf, hnpc_sa]; congr 1
     rw [sndPc_straightline r hstraight hpc0, ← hrcv]
   · rw [if_neg (by rw [hnowrite]; decide)]
@@ -3250,8 +3424,8 @@ theorem advance_alu_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {
       hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active_sa : s_a.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)]; exact cfg.active
-  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf⟩ :=
-    sailStep_of_ladder s s_a s_a (data₃ ++ data₂ ++ data₁ ++ data₀) I b
+  obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
+    sailStep_of_ladder_bookkeeping s s_a s_a (data₃ ++ data₂ ++ data₁ ++ data₀) I b
       hb hcp hactive hslr hdec hsa hexec_sa h_active_sa hinit_sa
   have hcfg_frame : ∀ R : Register,
       (R = Register.cur_privilege ∨ R = Register.hart_state ∨ R = Register.mstatus ∨ R = Register.mideleg
@@ -3263,11 +3437,22 @@ theorem advance_alu_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {
       hframe_s R (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)
       (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)]
   have hmem_fin : s_final.mem = s.mem := by rw [hmemf, hmem_sa]
+  have increment : s_a.regs.get? Register.minstret_increment = some b := by
+    simp only [hsa_def, hs'_def, Std.ExtDHashMap.get?_insert,
+      show (Register.nextPC == Register.minstret_increment) = false from rfl,
+      Bool.false_eq_true, ↓reduceDIte]
+    rfl
   refine ⟨s_final, ⟨false, hrun⟩,
     { normal := hnormal, pc := ?_, regs := ?_,
       mem := ⟨fun _ a => by rw [hmem_fin],
         fun mw hmw => absurd (hnomem.symm.trans hmw) (by simp)⟩,
-      init := fun _ => hinitf, cfg := fun _ => ?_ }⟩
+      init := fun _ => hinitf, cfg := fun _ => ?_,
+      runtime := ⟨cycles, output⟩,
+      otherRegs := fun R pc next retired increment gpr =>
+        (hframef R pc retired).trans (hframe_s R increment next),
+      nextPC := (hframef Register.nextPC (by decide) (by decide)).trans hPCf.symm,
+      retirement := ⟨b, hb, (hframef Register.minstret_increment (by decide) (by decide)).trans increment,
+        retirement_counter hinit_sa increment (hframe_s Register.minstret (by decide) (by decide)) retired⟩ }⟩
   · rw [hPCf, hnpc_sa]; congr 1
     rw [sndPc_straightline r hstraight hpc0, ← hrcv]
   · rw [if_neg (by rw [hnowrite]; decide)]

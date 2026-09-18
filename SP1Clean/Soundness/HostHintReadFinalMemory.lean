@@ -7,13 +7,15 @@ The physical final inventory covers every actual instruction and host RAM access
 without a final record, the original event frames preserve the complete source value. Thus the
 same execution has a value at every native register/RAM location, with no touched-location or
 frame premise supplied by the caller. Byte permissions and replay also exclude all out-of-window
-entries. These are endpoint observations, before binding a complete
-outgoing snapshot, Sail bookkeeping, and public terminal status.
+entries. Runtime output/cycles and registers outside the instruction bookkeeping footprint are
+also preserved. Accumulated nextPC/retirement bookkeeping, complete outgoing snapshot binding,
+and public terminal status remain open.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
+open LeanRV64D.Defs (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance finalMemoryLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -133,8 +135,8 @@ theorem GroundingCarrier.final_memory_domain (valid : image.Valid)
   exact (source.sail.memory.toSailMemory_get? (2 ^ 48) address).trans (if_neg (by omega))
 
 /-- The installed AIR yields one local execution with complete host reconstruction and every
-native Memory value and the complete RAM domain, including untouched locations. Full Sail/runtime
-and Exit binding remain separate from these endpoint observations. -/
+native Memory value and the complete RAM domain, including untouched locations. Sail runtime and
+register frames are retained; accumulated retirement/nextPC and full target/Exit binding remain open. -/
 theorem source_execution_with_memory (valid : image.Valid)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))
@@ -152,6 +154,10 @@ theorem source_execution_with_memory (valid : image.Valid)
           | some message => Word.toBitVec64 message.value
           | none => source.sail.memorySnapshot.read loc)) ∧
       (∀ address, 2 ^ 48 ≤ address → target.sail.mem.get? address = none) ∧
+      (target.sail.cycleCount = source.sail.cycleCount ∧ target.sail.sailOutput = source.sail.output) ∧
+      (∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC → R ≠ Register.minstret →
+        R ≠ Register.minstret_increment → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
+          target.sail.regs.get? R = source.sail.registers.get? R) ∧
       HintQueue.decode? (HintQueue.ofList source.host.io.hints).1 (Address.toNat final.head) = some hints ∧
       target.host = { source.host with
         io.hints := hints
@@ -163,6 +169,8 @@ theorem source_execution_with_memory (valid : image.Valid)
   obtain ⟨hints, decoded, host⟩ := carrier.final_host valid constraints balanced target path
   exact ⟨carrier.events, target, hints, path, carrier.exhaustive.map ExecutionRow.event, clock, pc,
     carrier.final_memory valid constraints balanced target path.replay,
-    carrier.final_memory_domain valid constraints balanced path.replay, decoded, host⟩
+    carrier.final_memory_domain valid constraints balanced path.replay,
+    carrier.runtime valid constraints balanced path.replay,
+    carrier.other_registers valid constraints balanced path.replay, decoded, host⟩
 
 end SP1Clean.Soundness.HostHintReadCPU

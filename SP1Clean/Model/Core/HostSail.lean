@@ -80,6 +80,15 @@ def HostExecution.apply (execution : HostExecution) (source : SailState) (pc : B
     regs := (source.regs.insert Register.x5 execution.result).insert Register.PC (execution.nextPc pc)
     mem := execution.effect.applyMemory source.mem }
 
+/-- The adapter frames every Sail register key except PC and the x5 return slot. -/
+theorem HostExecution.other_register_frame (execution : HostExecution) (source : SailState)
+    (pc : BitVec 64) (reg : Register) (notPc : reg ≠ Register.PC) (notReturn : reg ≠ Register.x5) :
+    (execution.apply source pc).regs.get? reg = source.regs.get? reg := by
+  simp only [apply, Std.ExtDHashMap.get?_insert,
+    show (Register.PC == reg) = false from beq_eq_false_iff_ne.mpr notPc.symm,
+    show (Register.x5 == reg) = false from beq_eq_false_iff_ne.mpr notReturn.symm,
+    Bool.false_eq_true, ↓reduceDIte]
+
 /-- Every integer register except the return register keeps its source observation. -/
 theorem HostExecution.register_frame (execution : HostExecution) (source : SailState)
     (pc : BitVec 64) (index : BitVec 5) (other : index ≠ 5) :

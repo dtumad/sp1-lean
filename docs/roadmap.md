@@ -45,8 +45,9 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
-| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM and complete host reconstruction from raw constraints/balance | Complete outgoing Sail/runtime state, supplied target equality and Exit binding |
-| Memory endpoint | Final records give touched values; absent final records imply no physical push, and the existing frames preserve source values at every other native location, including RAM below address 32; byte permissions and actual replay preserve absence at and above `2^48` | Remaining Sail registers/runtime fields and binding the supplied target |
+| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, Sail runtime/register frames and complete host reconstruction from raw constraints/balance | Accumulated retirement/nextPC bookkeeping, supplied target equality and Exit binding |
+| Memory endpoint | Final records give touched values; absent final records imply no physical push, and the existing frames preserve source values at every other native location, including RAM below address 32; byte permissions and actual replay preserve absence at and above `2^48` | Accumulated retirement/nextPC bookkeeping and binding the supplied target |
+| Sail bookkeeping | All 25 instruction bridges retain exact nextPC/retirement effects and complete runtime/register frames; the installed path preserves simulator cycles/output and every register outside the GPR/PC/retirement footprint | Accumulate `nextPC`, `minstret`, and `minstret_increment` at the endpoint and bind the supplied target |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
 | Host endpoint | Final hint cursor decodes to the actual remaining bytes; both banks agree with CPU replay; other host fields are preserved by the installed inventory; optional exit status follows actual HALT events | Bind these conclusions to the complete outgoing instance, including running versus HALT-zero |
 | Commitment banks | Both physical histories equal the corresponding CPU subsequences, including update arguments and clocks; their endpoints equal the actual replayed banks | Include these equalities in the complete outgoing snapshot |
@@ -85,7 +86,7 @@ execution carrier to make a local proof convenient.
 | Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-**Next proof work:** finish complete outgoing Sail/runtime agreement and its verifier binding,
+**Next proof work:** accumulate the three remaining Sail bookkeeping observations and finish outgoing-state verifier binding,
 including explicit terminal status. `HostHintReadCPU.source_execution_with_memory` now identifies
 every integer register and every aligned RAM cell below `2^48`, including locations absent from the
 final inventory. The original balanced ledger and strict access/refresh clocks exclude hidden
@@ -94,8 +95,11 @@ also retains complete host reconstruction from queue/bank endpoints, actual HALT
 source I/O frame. No caller untouched-location, host-frame, order or replay-success premise is added.
 Every store byte now retains its authenticated 48-bit bound, and all host writes retain the checked
 native window. The same paired replay therefore preserves the source map's absence at every address
-at or above `2^48`. Remaining Sail registers and runtime fields still need agreement, followed by
-literal equality with the supplied target. Optional exit status is not yet tied to the public
+at or above `2^48`. The strengthened shared `RowEffect` now retains the exact ordinary nextPC and
+retirement-counter update. All 25 bridges prove this through the existing Sail ladder. The mixed
+path also preserves simulator `cycleCount`, `sailOutput`, and every register outside the
+GPR/PC/retirement footprint. Accumulate `nextPC`, `minstret`, and `minstret_increment` next, then
+prove literal equality with the supplied target. Optional exit status is not yet tied to the public
 Exit bus or to `bankFinal.exitCode`.
 Work on the semantic capacity/profile definition alongside this only where needed to fix the
 public boundary; it may not narrow the intended all-eight-call language to today's installation.

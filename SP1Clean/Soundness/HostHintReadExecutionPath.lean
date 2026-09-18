@@ -14,6 +14,7 @@ Exit-bus binding, WRITE/VERIFY handlers, and constructive completeness remain se
 namespace SP1Clean.Soundness.HostHintReadCPU
 
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
+open LeanRV64D.Defs (Register)
 
 private theorem path_of_replay {policy : HostPolicy} {program : Target.GuestProgram}
     {source target : ExecutionState} {events : List Machine.ExecutionEvent}
@@ -51,7 +52,11 @@ private theorem step_of_replay (valid : image.Valid)
     (replay : replayStep? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       current event = some next) :
     ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event next ∧
-      ∀ address, 2 ^ 48 ≤ address → next.sail.mem.get? address = current.sail.mem.get? address := by
+      (∀ address, 2 ^ 48 ≤ address → next.sail.mem.get? address = current.sail.mem.get? address) ∧
+      (next.sail.cycleCount = current.sail.cycleCount ∧ next.sail.sailOutput = current.sail.sailOutput) ∧
+      ∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC → R ≠ Register.minstret →
+        R ≠ Register.minstret_increment → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
+          next.sail.regs.get? R = current.sail.regs.get? R := by
   simp only [ExecutionCarrier.events, List.getElem?_map] at atEvent
   obtain ⟨row, atRow, rfl⟩ := Option.map_eq_some_iff.mp atEvent
   have member := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
@@ -70,7 +75,7 @@ private theorem step_of_replay (valid : image.Valid)
     obtain ⟨target, step, effect⟩ := carrier.instruction_step_effect valid constraints balanced member grounded.1 currency prefixReplay time
     have same : target = next := Option.some.inj (step.replay.symm.trans replay)
     subst target
-    refine ⟨step, ?_⟩
+    refine ⟨step, ?_, effect.runtime, effect.otherRegs⟩
     have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
         (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data).is_real = 1 := by
       simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
@@ -87,9 +92,15 @@ private theorem step_of_replay (valid : image.Valid)
     cases step with
     | syscall success =>
       obtain ⟨pc, execution, _, _, ran, _, sail, _⟩ := HostState.step_observations success
-      intro address outside
-      rw [sail]
-      exact HostExecution.preserves_memory_outside ran pc address (Or.inr outside)
+      refine ⟨?_, ?_, ?_⟩
+      · intro address outside
+        rw [sail]
+        exact HostExecution.preserves_memory_outside ran pc address (Or.inr outside)
+      · rw [sail]
+        exact ⟨rfl, rfl⟩
+      · intro R notPc _ _ _ notGpr
+        rw [sail]
+        exact execution.other_register_frame current.sail pc R notPc (notGpr 5)
 
 private theorem final_replay (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
@@ -155,7 +166,39 @@ theorem GroundingCarrier.memory_outside (valid : image.Valid)
     target.sail.mem.get? address = source.sail.realize.mem.get? address := by
   exact replayEvents?_preserves (fun state => state.sail.mem.get? address) replay
     (fun n current next event atEvent prefixReplay replay =>
-      (step_of_replay valid carrier constraints balanced n current next event atEvent prefixReplay replay).2 address outside)
+      (step_of_replay valid carrier constraints balanced n current next event atEvent prefixReplay replay).2.1 address outside)
+
+/-- Native instruction and host steps preserve Sail's simulator counter and output exactly. -/
+theorem GroundingCarrier.runtime (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {target : ExecutionState}
+    (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize carrier.events = some target) :
+    target.sail.cycleCount = source.sail.cycleCount ∧ target.sail.sailOutput = source.sail.output := by
+  have same := replayEvents?_preserves (fun state => (state.sail.cycleCount, state.sail.sailOutput)) replay
+    (fun n current next event atEvent prefixReplay replay => Prod.ext
+      (step_of_replay valid carrier constraints balanced n current next event atEvent prefixReplay replay).2.2.1.1
+      (step_of_replay valid carrier constraints balanced n current next event atEvent prefixReplay replay).2.2.1.2)
+  exact Prod.mk.inj same
+
+/-- Every Sail register outside the GPR/PC/retirement footprint retains its complete source observation. -/
+theorem GroundingCarrier.other_registers (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {target : ExecutionState}
+    (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize carrier.events = some target)
+    (R : Register) (notPc : R ≠ Register.PC) (notNext : R ≠ Register.nextPC)
+    (notRetired : R ≠ Register.minstret) (notIncrement : R ≠ Register.minstret_increment)
+    (notGpr : ∀ index : BitVec 5, R ≠ reg_idx_to_Register index) :
+    target.sail.regs.get? R = source.sail.registers.get? R := by
+  exact replayEvents?_preserves (fun state => state.sail.regs.get? R) replay
+    (fun n current next event atEvent prefixReplay replay =>
+      (step_of_replay valid carrier constraints balanced n current next event atEvent prefixReplay replay).2.2.2
+        R notPc notNext notRetired notIncrement notGpr)
 
 /-- The installed ensemble proves a local RISC-V/host path without caller-supplied ordering,
 grounding, or event semantics. The path exhausts the active physical inventory, preserving repeated

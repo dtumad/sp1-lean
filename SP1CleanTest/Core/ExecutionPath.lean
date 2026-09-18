@@ -171,6 +171,74 @@ theorem replayOrdinaryPreservesHost (host : HostState) (running : host.exitCode 
         some ⟨Audit.ActiveNativeCompleteness.activeTarget, host, clock + 8⟩ :=
   (ExecutionPath.cons (ordinaryContinues host running clock) (.nil _)).replay
 
+private noncomputable def bookkeepingSource (inhibit : Bool) : SailState :=
+  { Audit.JointNonVacuity.anchorState with
+    regs := (((((Audit.JointNonVacuity.anchorState.regs.insert .mcountinhibit
+      (if inhibit then 4 else 0)).insert .minstretcfg 0).insert .minstret (BitVec.allOnes 64)).insert
+      .nextPC 80000).insert .mcycle 73)
+    cycleCount := 29
+    sailOutput := #["earlier Sail output"] }
+
+private theorem bookkeepingConfigured (inhibit : Bool) : SailConfigured (bookkeepingSource inhibit) := by
+  apply Advance.SailConfigured.congr Audit.JointNonVacuity.anchorState_configured
+  · exact SailState.isInitialized_insert _ (SailState.isInitialized_insert _
+      (SailState.isInitialized_insert _ (SailState.isInitialized_insert _
+        (SailState.isInitialized_insert _ Audit.JointNonVacuity.anchorState_configured.init _ _) _ _) _ _) _ _) _ _
+  · intro R member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      simp only [bookkeepingSource, Std.ExtDHashMap.get?_insert] <;> rfl
+
+/-- A real normally retiring self-jump wraps the retirement counter only when enabled, updates
+nextPC, and preserves distinct nonzero simulator/CSR counters and nonempty Sail output. -/
+theorem ordinaryBookkeeping (inhibit : Bool) :
+    ∃ next, SailRetiresNormally (bookkeepingSource inhibit) next ∧
+      next.regs.get? Register.nextPC = some 65536 ∧
+      next.regs.get? Register.minstret_increment = some (!inhibit) ∧
+      next.regs.get? Register.minstret = some (if inhibit then BitVec.allOnes 64 else 0) ∧
+      next.regs.get? Register.mcycle = some 73 ∧
+      next.cycleCount = 29 ∧ next.sailOutput = #["earlier Sail output"] := by
+  have configured := bookkeepingConfigured inhibit
+  have pc : (bookkeepingSource inhibit).regs.get? Register.PC = some 65536#64 := by
+    simp only [bookkeepingSource, Std.ExtDHashMap.get?_insert]
+    exact Audit.JointNonVacuity.anchorState_pc
+  have rom : RomLoaded Audit.JointNonVacuity.anchorProgram (bookkeepingSource inhibit) :=
+    Audit.JointNonVacuity.anchorState_romLoaded
+  obtain ⟨next, _, effect⟩ := Advance.advance_of_jal_x0 (p := SP1Prime)
+    (prog := Audit.JointNonVacuity.anchorProgram) (r := Audit.JointNonVacuity.jalView)
+    configured rom (by rw [Audit.JointNonVacuity.jalView_rcvPc]; exact pc)
+    Audit.JointNonVacuity.jalView_decodedInROM rfl rfl rfl
+    (by rw [Audit.JointNonVacuity.jalView_sndPc]; decide)
+    (fun imm bound => by
+      have bytes : bitVecToWord (p := SP1Prime) ((0#21 : BitVec 21).signExtend 64) =
+          bitVecToWord (imm.signExtend 64) := bound
+      have value := congrArg Word.toBitVec64 bytes
+      rw [toBitVec64_bitVecToWord, toBitVec64_bitVecToWord] at value
+      rw [Audit.JointNonVacuity.jalView_rcvPc, Audit.JointNonVacuity.jalView_sndPc,
+        show LeanRV64D.Functions.sign_extend (m := 64) imm = imm.signExtend 64 from rfl, ← value]
+      decide)
+  obtain ⟨increment, enabled, flag, retired⟩ := effect.retirement
+  have observed : (LeanRV64D.Functions.should_inc_minstret Privilege.Machine).run
+      (bookkeepingSource inhibit) = .ok (!inhibit) (bookkeepingSource inhibit) := by
+    rw [TryStepReduction.run_should_inc_minstret _ configured.init]
+    congr 1
+    simp only [bookkeepingSource, Std.ExtDHashMap.get_insert, beq_iff_eq,
+      reduceCtorEq, ↓reduceDIte, cast_eq]
+    cases inhibit <;> decide
+  have incrementEq : increment = !inhibit := by
+    have same := enabled.symm.trans observed
+    cases same
+    rfl
+  rw [incrementEq] at flag retired
+  refine ⟨next, effect.normal, ?_, flag, ?_, ?_, effect.runtime⟩
+  · rw [effect.nextPC, effect.pc, Audit.JointNonVacuity.jalView_sndPc]
+    decide
+  · rw [retired]
+    simp only [bookkeepingSource, Std.ExtDHashMap.get?_insert]
+    cases inhibit <;> decide
+  · rw [effect.otherRegs Register.mcycle (by decide) (by decide) (by decide) (by decide)
+      (fun index => by unfold reg_idx_to_Register; split <;> decide)]
+    exact Std.ExtDHashMap.get?_insert_self
+
 private def queueProgram : GuestProgram where
   rom := [(65536, 0x73), (65540, 0x73), (65544, 0x73)]
   pc_start := 65536
