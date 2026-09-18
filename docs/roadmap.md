@@ -45,11 +45,11 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
-| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations and complete host reconstruction from raw constraints/balance | Supplied target equality and Exit binding |
+| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction, and the public Exit value for a newly halted endpoint | Supplied target equality, including explicit terminal status |
 | Memory endpoint | Final records give touched values; absent final records imply no physical push, and the existing frames preserve source values at every other native location, including RAM below address 32; byte permissions and actual replay preserve absence at and above `2^48` | Binding the supplied target |
 | Sail bookkeeping | The installed path preserves runtime/other registers and derives all three bookkeeping slots: source-controlled retirement count, increment flag, and nextPC from the semantic host suffix and final PC | Bind these observations to the supplied target |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
-| Host endpoint | Final hint cursor decodes to the actual remaining bytes; both banks agree with CPU replay; other host fields are preserved by the installed inventory; optional exit status follows actual HALT events | Bind these conclusions to the complete outgoing instance, including running versus HALT-zero |
+| Host endpoint | Final hints and banks agree with CPU replay; other host fields are preserved; optional exit status follows actual HALT events, whose canonical 32-bit result equals the public Exit field | Bind these conclusions to the complete outgoing instance, including running versus HALT-zero |
 | Commitment banks | Both physical histories equal the corresponding CPU subsequences, including update arguments and clocks; their endpoints equal the actual replayed banks | Include these equalities in the complete outgoing snapshot |
 | Constructive completeness | Existing 55-table ordinary compiler with explicitly narrower admissibility; many mixed component constructors | Full local-segment compiler total on the independent semantic profile |
 | Export | Generic typed ensemble export/checker, component witness IR, Rust reference consumer | Complete mixed ensemble inventory and event-to-all-tables compiler export |
@@ -99,7 +99,17 @@ Thus the endpoint formulas require no exposed instruction-row order or new calle
 `HostHintReadBookkeeping` derives those formulas from the same grounded chip effects and paired
 replay. `Model/Core/SailBookkeeping` owns the data-only observations; it does not introduce a second
 execution model. Complete supplied-target equality is still not checked by the ensemble, and optional
-exit status is not yet tied to the public Exit bus or to `bankFinal.exitCode`.
+exit status is not yet checked against the supplied outgoing instance or `bankFinal.exitCode`.
+`HostHintReadCPU.GroundingCarrier.final_exit` now binds every newly halted endpoint's concrete 32-bit code to
+the public Exit field without modular aliases. `LocalCoreExit` classifies the complete physical
+ledger and applies the existing generic gated-unit balance theorem. The wrapper and appended
+host components preserve this projection even though they do not preserve Memory balance.
+Full installed-AIR regressions cover legacy HALT, syscall HALT above the legacy 16-bit limit,
+HALT-zero, forged public codes, duplicate producers, and an extra padding producer. The syscall
+HALT fixture needs no legacy row; continuing/empty witnesses still need the legacy padding
+emission. Removing that participation rule and authenticating optional terminal status remain open.
+`suppliedExitStatusGap` reproduces acceptance with `bankFinal.exitCode = none` or `some 7`
+after a real HALT-zero; the full boundary must reject both.
 Work on the semantic capacity/profile definition alongside this only where needed to fix the
 public boundary; it may not narrow the intended all-eight-call language to today's installation.
 

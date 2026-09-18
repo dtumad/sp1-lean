@@ -1,6 +1,6 @@
+import SP1CleanTest.Core.LocalCore
 import SP1CleanTest.Core.ExecutionPath
 import SP1CleanTest.Core.HostExecution
-import SP1CleanTest.Core.LocalCore
 import SP1CleanTest.Core.HostQueue
 import SP1CleanTest.Core.HostCommitBoundary
 import SP1CleanTest.Core.HostHintReadPartition
@@ -41,6 +41,9 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.LocalCore.installedHaltExit
+#print axioms SP1CleanTest.Core.LocalCore.rejectsInstalledExitForgery
+#print axioms SP1CleanTest.Core.LocalCore.suppliedExitStatusGap
 #print axioms SP1CleanTest.Core.ExecutionPath.hostBookkeeping
 #print axioms SP1CleanTest.Core.ExecutionPath.bookkeepingObservationExamples
 #print axioms SP1CleanTest.Core.ExecutionPath.ordinaryBookkeeping

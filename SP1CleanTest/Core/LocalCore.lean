@@ -401,14 +401,15 @@ private def commitRows : List Row :=
 
 /-- Separate Memory balance only to identify the cause of a negative fixture. Full acceptance
 below requires both checks. The first still checks every constraint, lookup and other channel. -/
-private def commitChecks (target : HostState) (rows : List Row) : Bool × Bool :=
-  let assembly := HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage commitSource
-    (SP1Clean.HostHintQueueBoundary.initial []) target HostCallReceivers.available
-    (HostHintReadLocal.sourceResources []) []
+private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp)
+    (target : HostState) (rows : List Row) : Bool × Bool :=
+  let assembly := HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage source
+    (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) target HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) []
   let evaluateAt (row : Row) := match assembly.tables[row.1]? with
     | none => (false, [])
-    | some component => evaluate syscallImage commitSource component row.2
-  let head := evaluate syscallImage commitSource ⟨assembly.verifier⟩ (toElements syscallPublic).toList
+    | some component => evaluate syscallImage source component row.2
+  let head := evaluate syscallImage source ⟨assembly.verifier⟩ (toElements input).toList
   let initial := head :: rows.map evaluateAt
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map evaluateAt
@@ -420,6 +421,9 @@ private def commitChecks (target : HostState) (rows : List Row) : Bool × Bool :
     ledger.all (fun entry => (assembly.channels.map RawChannel.name).contains entry.1 &&
       (entry.1 == "SP1Memory" || balanced entry)),
     ledger.all (fun entry => entry.1 != "SP1Memory" || balanced entry))
+
+private def commitChecks (target : HostState) (rows : List Row) : Bool × Bool :=
+  installedChecks commitSource syscallPublic target rows
 
 private def checkCommit (target : HostState) (rows : List Row) : Bool :=
   let checked := commitChecks target rows
@@ -546,6 +550,63 @@ theorem rejectsForgedHalt :
       (haltPublic 65535) (haltRows 65535),
      check syscallImage (haltSource 65535) (haltPublic 65534) (haltRows 65535)] =
       [false, false, false] := by native_decide
+
+private def unchangedBanks (host : HostState) : List Row :=
+  [(85, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false host))).toList),
+   (86, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues true host))).toList)]
+
+private def haltInstruction (exit : ℕ) : HostCallChip.Inputs Fp :=
+  ⟨{ syscallInput 0 with
+      op_a_memory.prev_value := word 0, op_b_memory.prev_value := word exit,
+      next_pc := #v[1, 0, 0], is_halt := 1,
+      syscall_id_bytes := U16toU8OperationSafe.populate (word 0),
+      is_enter_unconstrained := IsZeroOperation.populate (-3 : Fp),
+      is_hint_len := IsZeroOperation.populate (-240 : Fp),
+      is_halt_zero := IsZeroOperation.populate (0 : Fp),
+      is_commit := IsZeroOperation.populate (-16 : Fp),
+      is_commit_deferred := IsZeroOperation.populate (-26 : Fp) },
+    ⟨0, ⟨0, 0⟩⟩⟩
+
+private def installedHaltRows (exit : ℕ) (legacy : Bool) : List Row :=
+  (if legacy then haltRows exit else
+    (haltRows exit).filter (fun row => row.1 != 57) ++
+      [(58, (toElements (haltInstruction exit)).toList),
+       (61, (toElements (HostHaltChip.populate ((haltInstruction exit).message 0))).toList)]) ++
+    unchangedBanks (haltSource exit).host
+
+private def checkInstalledHalt (exit publicExit : ℕ) (rows : List Row) : Bool :=
+  let checked := installedChecks (haltSource exit) (haltPublic publicExit)
+    { (haltSource exit).host with exitCode := some (BitVec.ofNat 32 exit) } rows
+  checked.1 && checked.2
+
+/-- Both actual Exit producers bind the public code in the full 87-table installation. The
+syscall HALT supports a code above the legacy range and needs no legacy padding companion. -/
+theorem installedHaltExit :
+    checkInstalledHalt 65535 65535 (installedHaltRows 65535 true) = true ∧
+    checkInstalledHalt 65536 65536 (installedHaltRows 65536 false) = true ∧
+    checkInstalledHalt 0 0 (installedHaltRows 0 false) = true ∧
+    ((haltSource 0).hostStep? syscallPolicy syscallProgram).map (fun result => result.1.host.exitCode) =
+      some (some 0) := by native_decide
+
+/-- Wrong public values, duplicate HALT producers, and a spurious legacy padding producer are
+rejected by complete acceptance, including when the genuine exit code is zero. -/
+theorem rejectsInstalledExitForgery :
+    [checkInstalledHalt 65536 65535 (installedHaltRows 65536 false),
+     checkInstalledHalt 0 1 (installedHaltRows 0 false),
+     checkInstalledHalt 0 0 (installedHaltRows 0 false ++
+       (installedHaltRows 0 false).filter (fun row => row.1 == 58 || row.1 == 61)),
+     checkInstalledHalt 0 0 (installedHaltRows 0 false ++
+       [(57, List.replicate (size HaltChip.Inputs) 0)])] =
+      [false, false, false, false] := by native_decide
+
+/-- The current outgoing host parameter binds banks only. Even after a real HALT-zero, changing
+its optional exit status retains acceptance. The complete boundary must reject both forgeries. -/
+theorem suppliedExitStatusGap :
+    installedChecks (haltSource 0) (haltPublic 0)
+      { (haltSource 0).host with exitCode := none } (installedHaltRows 0 false) = (true, true) ∧
+    installedChecks (haltSource 0) (haltPublic 0)
+      { (haltSource 0).host with exitCode := some 7 } (installedHaltRows 0 false) = (true, true) := by
+  native_decide
 
 private def storeRomImage : ProgramImage := ⟨[(65536, 0x00110023)], 65536, []⟩
 

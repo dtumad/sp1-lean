@@ -605,7 +605,9 @@ complete incoming snapshot. Its event list is a permutation of the physical acti
 its final PC, clock, every final Memory-frontier value, and both verifier-bound banks agree with
 the actual replay. All ordinary cases, HINT_READ/HINT_LEN, control and commitment calls, and
 legacy HALT are grounded internally. No separate ordering, prior-record currency, successful replay, or step/frame premise
-is supplied by the caller. The complete outgoing snapshot and terminal Exit are not yet bound.
+is supplied by the caller. A newly halted endpoint's concrete code also equals the public Exit
+field. Checking the supplied complete outgoing snapshot, including its optional terminal status,
+remains open.
 
 Its Memory conclusion covers every integer register and every aligned RAM cell below `2^48`,
 including the first 32 bytes and locations omitted from the final inventory. A missing final record
@@ -674,10 +676,22 @@ bank equalities, `GroundingCarrier.final_host` reconstructs the entire host reco
 accounting excludes WRITE and VERIFY in this installation, deriving preservation of source public
 output, requests, hook replies, stdout and stderr. Optional exit status is computed from actual
 HALT labels on the same path, so running and a successful exit zero remain distinct. This does
-not bind `bankFinal`'s other fields: complete outgoing instance equality and the public Exit/status
-connection remain open. A full-host semantic regression retains nonempty I/O and request/reply
+not bind `bankFinal`'s other fields: complete outgoing instance equality and optional terminal-status
+checking remain open. A full-host semantic regression retains nonempty I/O and request/reply
 state through reads and repeated commitment updates, then distinguishes continuation, HALT-zero,
 and a stopped identity. The active COMMIT AIR fixture also retains nonempty incoming I/O fields.
+
+`HostHintReadCPU.GroundingCarrier.final_exit` connects a newly halted endpoint to the actual
+public Exit ledger. Both possible instruction producers are retained, and all appended handlers
+and resources are proved silent on that channel. Count-bounded balance identifies the public
+value with the actual HALT argument; successful concrete host dispatch supplies its canonical
+below-characteristic, 32-bit range. This rules out modular aliases without adding a caller premise
+to the combined theorem. Full installed-AIR regressions cover legacy HALT, syscall HALT above
+the legacy 16-bit limit, HALT-zero, forged public codes, and duplicate or spurious padding
+producers. `suppliedExitStatusGap` records that replacing the supplied host's exit with `none`
+or `some 7` after HALT-zero still passes: that parameter currently authenticates only the banks.
+Continuing and empty witnesses also retain the legacy padding requirement. These remaining
+boundary and terminal-policy obligations are distinct from the now-proved public value agreement.
 
 The installed receiver inventory excludes WRITE and VERIFY. Semantic execution and queue
 allocation helpers cover all eight concrete calls, but new nodes must authenticate their complete

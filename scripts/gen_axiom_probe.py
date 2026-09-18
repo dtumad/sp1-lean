@@ -40,6 +40,20 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Public Exit value on the installed full-state execution.
+    ("SP1Clean/Soundness/BumpDecode.lean", "syscallInstrsTable_typedExit_of_component"),
+    ("SP1Clean/Soundness/BumpDecode.lean", "haltTable_typedExit_of_component"),
+    ("SP1Clean/Soundness/LocalCoreExit.lean", "exitProducers"),
+    ("SP1Clean/Soundness/LocalCoreExit.lean", "exit_interactions"),
+    ("SP1Clean/Soundness/LocalCoreExit.lean", "exit_messages"),
+    ("SP1Clean/Soundness/LocalCoreExit.lean", "halt_exit_code"),
+    ("SP1Clean/Soundness/LocalCoreExit.lean", "syscall_exit_code"),
+    ("SP1Clean/Soundness/HostHintReadExit.lean", "source_exit_balance"),
+    ("SP1Clean/Soundness/HostHintReadExit.lean", "GroundingCarrier.final_exit"),
+    ("SP1CleanTest/Core/LocalCore.lean", "installedHaltExit"),
+    ("SP1CleanTest/Core/LocalCore.lean", "rejectsInstalledExitForgery"),
+    ("SP1CleanTest/Core/LocalCore.lean", "suppliedExitStatusGap"),
+
     # Accumulated Sail bookkeeping on the installed mixed execution.
     ("SP1Clean/Model/Core/ExecutionReplay.lean", "replayEvents?_fold"),
     ("SP1Clean/Model/Core/SailBookkeeping.lean", "retirementEnabled"),

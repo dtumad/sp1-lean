@@ -1259,21 +1259,22 @@ theorem syscallInstrsTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (
 /-- The `SyscallInstrs` table's typed Exit view: per physical row, a single `is_halt`-gated push.
 There is no anti-gated companion — a many-row table cannot balance the verifier that way, which is
 exactly why the exit accounting is redesigned when the halt table retires. -/
-theorem syscallInstrsTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedTableInteractionsWith (syscallInstrsTable witness) exitChannel =
-      (syscallInstrsTable witness).table.flatMap fun row =>
+theorem syscallInstrsTable_typedExit_of_component (table : Table (ZMod p))
+    (component : table.component = ⟨SyscallInstrsChip.circuit⟩) :
+    typedTableInteractionsWith table exitChannel =
+      table.table.flatMap fun row =>
         [TypedInteraction.pushedIfValue exitChannel
-           (syscallInstrsRow (syscallInstrsTable witness) row).is_halt
+           (syscallInstrsRow table row).is_halt
            (SyscallInstrsChip.exitMessage
-             (syscallInstrsRow (syscallInstrsTable witness) row))] := by
+             (syscallInstrsRow table row))] := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
-    syscallInstrsTable_component, Component.interactionsWith_eq]
-  change List.map (AbstractInteraction.eval ((syscallInstrsTable witness).environment row))
+    component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval (table.environment row))
       (((SyscallInstrsChip.main
         (varFromOffset SyscallInstrsChip.Inputs 0 : Var SyscallInstrsChip.Inputs (ZMod p))
           ).operations (size SyscallInstrsChip.Inputs)).interactionsWith exitChannel.toRaw) = _
@@ -1284,16 +1285,27 @@ theorem syscallInstrsTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p 
   simp only [SyscallInstrsChip.exitMessage, SyscallInstrsChip.exitMsg,
     SyscallInstrsChip.reduceWord, circuit_norm, syscallInstrsRow_eq]
 
+/-- The original ensemble specializes the component-level Exit ledger. -/
+theorem syscallInstrsTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    typedTableInteractionsWith (syscallInstrsTable witness) exitChannel =
+      (syscallInstrsTable witness).table.flatMap fun row =>
+        [TypedInteraction.pushedIfValue exitChannel
+           (syscallInstrsRow (syscallInstrsTable witness) row).is_halt
+           (SyscallInstrsChip.exitMessage
+             (syscallInstrsRow (syscallInstrsTable witness) row))] :=
+  syscallInstrsTable_typedExit_of_component (syscallInstrsTable witness) (syscallInstrsTable_component witness)
+
 /-- The Halt table's typed Exit view: per physical row, the gated reduced-word push and the
 anti-gated zero push — the hand-off pair the verifier's ungated `⟨exit_code⟩` pull balances. -/
-theorem haltTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedTableInteractionsWith (haltTable witness) exitChannel =
-      (haltTable witness).table.flatMap fun row =>
+theorem haltTable_typedExit_of_component (table : Table (ZMod p))
+    (component : table.component = ⟨HaltChip.circuit⟩) :
+    typedTableInteractionsWith table exitChannel =
+      table.table.flatMap fun row =>
         [TypedInteraction.pushedIfValue exitChannel
-           (haltRow (haltTable witness) row).is_real
-           (HaltChip.exitMessage (haltRow (haltTable witness) row)),
+           (haltRow table row).is_real
+           (HaltChip.exitMessage (haltRow table row)),
          TypedInteraction.pushedIfValue exitChannel
-           (1 - (haltRow (haltTable witness) row).is_real)
+           (1 - (haltRow table row).is_real)
            (⟨0⟩ : ExitMsg (ZMod p))] := by
   haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
@@ -1301,8 +1313,8 @@ theorem haltTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p := p))) :
   intro row rowMem
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
-    haltTable_component, Component.interactionsWith_eq]
-  change List.map (AbstractInteraction.eval ((haltTable witness).environment row))
+    component, Component.interactionsWith_eq]
+  change List.map (AbstractInteraction.eval (table.environment row))
       (((HaltChip.main
         (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p))).operations
           (size HaltChip.Inputs)).interactionsWith exitChannel.toRaw) = _
@@ -1313,6 +1325,18 @@ theorem haltTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     simp only [HaltChip.exitMessage, HaltChip.exitMsg, circuit_norm, haltRow_eq]
   · rw [Channel.eval_pushedIf]
     simp only [HaltChip.exitPaddingMsg, circuit_norm, haltRow_eq]
+
+/-- The original ensemble specializes the component-level Exit ledger. -/
+theorem haltTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p := p))) :
+    typedTableInteractionsWith (haltTable witness) exitChannel =
+      (haltTable witness).table.flatMap fun row =>
+        [TypedInteraction.pushedIfValue exitChannel
+           (haltRow (haltTable witness) row).is_real
+           (HaltChip.exitMessage (haltRow (haltTable witness) row)),
+         TypedInteraction.pushedIfValue exitChannel
+           (1 - (haltRow (haltTable witness) row).is_real)
+           (⟨0⟩ : ExitMsg (ZMod p))] :=
+  haltTable_typedExit_of_component (haltTable witness) (haltTable_component witness)
 
 /-- The Halt table's per-row full guarantee bundle: byte and program grounded by the
 finished-channel engine, State and Exit structurally `True`, and the memory read-prior pulls

@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-18. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2706 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 313 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2715 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 316 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 3019 released declarations are probed.
+- 3031 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,18 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The Exit-value checkpoint adds nine main probes and three full installed-AIR regressions. All
+preceding 2706 main and 313 test dependency sets are unchanged, with no removals or new main-library
+axiom names. The two component-ledger projections use only the logical baseline. The seven
+assembly-indexed declarations retain the existing 100-dependency mixed assembly set; each new test
+adds exactly one disclosed compiler-trust constant to that same set. The combined
+`source_execution_with_memory` theorem now identifies a newly halted endpoint's concrete 32-bit
+code with the public Exit value, without a modular alias or new caller premise. The full fixtures
+exercise both HALT producers, zero and above-16-bit codes, and forged/duplicate emissions. They
+also reproduce the still-open supplied-status gap: `bankFinal.exitCode` does not affect acceptance.
+Complete target checking, explicit terminal status, removal of the legacy padding rule, full host
+installation, and constructive completeness remain open.
 
 The accumulated-bookkeeping checkpoint adds thirteen main probes and two regressions. All preceding
 2693 main and 311 test dependency sets are unchanged, with no removals or new main-library axiom
