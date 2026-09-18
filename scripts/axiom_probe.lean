@@ -439,6 +439,17 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Composition.extracted_instructionTables_constraints
 #print axioms SP1Clean.Composition.signedSum_eq_sent_sub_received
 #print axioms SP1Clean.Composition.signedSum_eq_zero
+#print axioms SP1Clean.Model.Core.HostFrameSafe
+#print axioms SP1Clean.Model.Core.hostExitAfter
+#print axioms SP1Clean.Model.Core.ExecutionStep.host_frame
+#print axioms SP1Clean.Model.Core.ExecutionPath.host_frame
+#print axioms SP1Clean.Model.Core.ExecutionStep.host_exit
+#print axioms SP1Clean.Model.Core.ExecutionPath.host_exit
+#print axioms SP1Clean.Soundness.HostQueueCallProjection.calls_not_verify
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.final_hints
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.host_frame_safe
+#print axioms SP1Clean.Soundness.HostHintReadCPU.GroundingCarrier.final_host
+#print axioms SP1Clean.Soundness.HostHintReadCPU.source_execution_with_host
 #print axioms SP1Clean.Soundness.HostCallReceivers.halt_message
 #print axioms SP1Clean.Soundness.HostCallReceivers.enter_message
 #print axioms SP1Clean.Soundness.HostCallReceivers.commit_message

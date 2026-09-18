@@ -58,7 +58,8 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     exact Or.inr (Or.inr (Or.inr valid.1.1))
 
 private theorem control_projection (message : HostCallChip.Message (ZMod p))
-    (code : ControlCode message.code) : safe message ∧ project message = none := by
+    (code : ControlCode message.code) :
+    safe message ∧ project message = none ∧ Word.toBitVec64 message.code ≠ SyscallKind.verifyProof.code := by
   have small (n : ℕ) (bound : n < 2 ^ 17) : ((n : ℕ) : ZMod p).val = n :=
     ZMod.val_natCast_of_lt (lt_trans bound (Fact.out (p := 2 ^ 17 < p)))
   have three : (3 : ZMod p).val = 3 := small 3 (by decide)
@@ -163,7 +164,8 @@ private theorem controls_projection (receivers : List (HostLocalHandoff.Receiver
     (registered : ∀ receiver ∈ receivers, receiver ∈ (HostCallReceivers.available (p := p)).take 18)
     (constraints : ∀ table ∈ tables, table.Constraints)
     (bytes : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw) :
-    ∀ message ∈ ReceiverView.messages receivers tables, safe message ∧ project message = none := by
+    ∀ message ∈ ReceiverView.messages receivers tables,
+      safe message ∧ project message = none ∧ Word.toBitVec64 message.code ≠ SyscallKind.verifyProof.code := by
   induction aligned with
   | nil => simp [ReceiverView.messages, TransitionView.readIndexedRows]
   | @cons receiver table receivers tables same aligned ih =>
@@ -247,7 +249,7 @@ private theorem control_calls
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ message ∈ ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness),
-      safe message ∧ project message = none := by
+      safe message ∧ project message = none ∧ Word.toBitVec64 message.code ≠ SyscallKind.verifyProof.code := by
   have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.available (p := p)).take 18)
     (controlTables witness) (by
       simp only [controlTables, List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
@@ -281,7 +283,7 @@ theorem calls_run_or_queue
     exact Or.inl ⟨row, rowMem, same.symm⟩
   · right
     constructor
-    · have projected := (control_calls witness interface constraints balanced message control).2
+    · have projected := (control_calls witness interface constraints balanced message control).2.1
       intro read
       simp only [project, read, queueCallEvent?, SyscallKind.code, BitVec.reduceEq, ↓reduceIte] at projected
       contradiction
@@ -345,6 +347,24 @@ theorem calls_projection
     simp only [stamped, facts.2, Option.map_some, call_time]
   · intro message member
     have facts := control_calls witness interface constraints balanced message member
-    exact ⟨facts.1, by simp only [stamped, facts.2, Option.map_none]⟩
+    exact ⟨facts.1, by simp only [stamped, facts.2.1, Option.map_none]⟩
+
+/-- The installed registry contains no VERIFY handler. Its absence follows from complete call
+accounting, independently of the semantic frame lemma that consumes it. -/
+theorem calls_not_verify
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (specs : ∀ table ∈ queueTables witness, table.Spec)
+    (message : HostCallChip.Message (ZMod p)) (member : message ∈ HostLocalHandoff.calls witness) :
+    Word.toBitVec64 message.code ≠ SyscallKind.verifyProof.code := by
+  rcases List.mem_append.mp ((calls_split witness).mem_iff.mp member) with queue | control
+  · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp queue
+    have projected := (queue_projection row
+      (rows_spec _ (queueTables_aligned witness) specs row rowMem)).2
+    intro same
+    simp only [project, queueCallEvent?, same, SyscallKind.code, BitVec.reduceEq, ↓reduceIte] at projected
+    contradiction
+  · exact (control_calls witness interface constraints balanced message control).2.2
 
 end SP1Clean.Soundness.HostQueueCallProjection

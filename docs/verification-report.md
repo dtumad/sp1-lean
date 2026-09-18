@@ -598,8 +598,8 @@ not completed instances. The explicit semantic `Profile` parameter still needs a
 resource/permission policy enforced by the AIR; compiler success or readiness cannot define it.
 This preserves the distinction between the desired bounded language and today's installed subset.
 
-The current path theorem is `HostHintReadCPU.source_execution_with_banks`, in
-`SP1Clean/Soundness/HostHintReadBankAgreement.lean`. It consumes raw constraints and balanced
+The current path theorem is `HostHintReadCPU.source_execution_with_host`, in
+`SP1Clean/Soundness/HostHintReadHostAgreement.lean`. It consumes raw constraints and balanced
 channels of the source-hint/bank assembly and returns a genuine local execution from the checked
 complete incoming snapshot. Its event list is a permutation of the physical active CPU inventory;
 its final PC, clock, every final Memory-frontier value, and both verifier-bound banks agree with
@@ -641,6 +641,16 @@ changed final banks or missing/duplicate terminals fail. A separate semantic reg
 all eight host calls from nonzero banks, preserves untouched slots, and distinguishes reversed
 overwrites. It is not a claim of full eight-call AIR installation.
 The `bankFinal` parameter currently binds only the two banks, not the entire supplied host record.
+
+The final queue cursor now decodes to the actual execution's remaining hints. Together with both
+bank equalities, `GroundingCarrier.final_host` reconstructs the entire host record. Complete call
+accounting excludes WRITE and VERIFY in this installation, deriving preservation of source public
+output, requests, hook replies, stdout and stderr. Optional exit status is computed from actual
+HALT labels on the same path, so running and a successful exit zero remain distinct. This does
+not bind `bankFinal`'s other fields: complete outgoing instance equality and the public Exit/status
+connection remain open. A full-host semantic regression retains nonempty I/O and request/reply
+state through reads and repeated commitment updates, then distinguishes continuation, HALT-zero,
+and a stopped identity. The active COMMIT AIR fixture also retains nonempty incoming I/O fields.
 
 The installed receiver inventory excludes WRITE and VERIFY. Semantic execution and queue
 allocation helpers cover all eight concrete calls, but new nodes must authenticate their complete

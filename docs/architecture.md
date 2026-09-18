@@ -227,8 +227,9 @@ Adapters must state what they preserve; no equivalence is assumed merely from si
 | `CoreTableProjection`, `CoreRowBalance`, `CoreMemoryBalance` | Shared physical table projections and complete occurrence accounting |
 | `StateChronology`, `CoreMemoryChronology`, `CoreRowTransport` | Order, refresh elimination and the shared `ExecutionCarrier` |
 | `CoreExecutionTrajectory` | Actual paired replay and alignment with the AIR timeline |
-| `HostHintReadExecutionPath` / `HostHintReadBankAgreement` | Installed mixed-AIR path with final PC/clock/frontier and both bank equalities |
+| `HostHintReadExecutionPath` / `HostHintReadHostAgreement` | Installed mixed-AIR path with final PC/clock/frontier and complete host reconstruction |
 | `Model/Core/BankReplay` / `HostBankCPUReplay` | Bank observations of the existing interpreter and occurrence-preserving agreement between physical histories and CPU subsequences |
+| `Model/Core/HostReplay` | Host frame and optional exit-status laws of the existing full-state path; the installed receiver inventory discharges the frame restriction |
 | `Soundness/Shard` | Public contract/facade; complete outgoing-state and compiler targets remain unfilled |
 | `Proofs/Completeness` | Existing compiler, row builders, access/frontier schedules and provider construction to reuse |
 
@@ -241,8 +242,9 @@ footprint. Projecting State alone does not preserve Memory balance: WRITE contri
 pair, and host RAM rows contribute physical accesses. All relevant occurrences must survive.
 
 The full outgoing contract is stronger than those frontier facts. It must authenticate untouched
-state and all host fields and bind Exit. Bank and queue histories already agree with the same
-CPU replay; their endpoint facts must be included in complete snapshot equality.
+Sail/runtime state and bind Exit, including the terminal flag. The host reconstruction already
+identifies every host field from queue/bank endpoints, actual HALT events and preserved source I/O.
+These conclusions must still be bound to the complete supplied target snapshot.
 The current source-hint installation has neither WRITE/VERIFY nor authenticated dynamic allocation;
 its restricted inventory is not the final public profile. Every semantic resource/permission
 restriction must also be enforced or derived by the AIR. In particular, same-value writes to ROM

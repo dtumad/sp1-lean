@@ -45,8 +45,9 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
-| Installed mixed soundness | `HostHintReadCPU.source_execution_with_banks` derives a real local path, exact active event multiset, final PC/clock/frontier values and both final banks from raw constraints/balance | Full outgoing snapshot and Exit |
+| Installed mixed soundness | `HostHintReadCPU.source_execution_with_host` derives a real local path, exact active event multiset, final PC/clock/frontier values and complete host reconstruction from raw constraints/balance | Complete outgoing Sail/runtime state, supplied target equality and Exit binding |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
+| Host endpoint | Final hint cursor decodes to the actual remaining bytes; both banks agree with CPU replay; other host fields are preserved by the installed inventory; optional exit status follows actual HALT events | Bind these conclusions to the complete outgoing instance, including running versus HALT-zero |
 | Commitment banks | Both physical histories equal the corresponding CPU subsequences, including update arguments and clocks; their endpoints equal the actual replayed banks | Include these equalities in the complete outgoing snapshot |
 | Constructive completeness | Existing 55-table ordinary compiler with explicitly narrower admissibility; many mixed component constructors | Full local-segment compiler total on the independent semantic profile |
 | Export | Generic typed ensemble export/checker, component witness IR, Rust reference consumer | Complete mixed ensemble inventory and event-to-all-tables compiler export |
@@ -83,14 +84,16 @@ execution carrier to make a local proof convenient.
 | Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-**Next proof work:** complete outgoing-state agreement and its verifier binding.
-`HostHintReadCPU.source_execution_with_banks` now closes the bank-history step on the same
-execution path: complete HostCall matching plus strict CPU/bank clocks identifies each update
-subsequence, and the existing host interpreter gives its final bank. No caller bank/CPU order or
-successful replay premise is added. Preserve this theorem while deriving complete final
-Sail/register/RAM/runtime/host equality and Exit agreement. Work on the semantic capacity/profile
-definition alongside this only where needed to fix the public boundary. A profile restriction
-may not silently narrow the intended all-eight-call language to fit today's installation.
+**Next proof work:** complete outgoing Sail/runtime agreement and its verifier binding, including
+explicit terminal status. `HostHintReadCPU.source_execution_with_host` now reconstructs every host
+field on the same path: the final queue cursor authenticates remaining hint bytes, the bank
+endpoints agree with CPU updates, and physical call accounting derives preservation of public
+output, requests/replies and stdout/stderr. The actual event tape determines optional exit status;
+that status is not yet tied to the public Exit bus or to `bankFinal.exitCode`. No caller host-frame,
+queue, bank-order or replay-success premise is added. Preserve this theorem while authenticating
+untouched Sail registers/RAM, runtime fields, and literal equality with the supplied complete target.
+Work on the semantic capacity/profile definition alongside this only where needed to fix the
+public boundary; it may not narrow the intended all-eight-call language to today's installation.
 
 The full boundary verifier must take source/target snapshots as public instance data, with a
 canonical bounded header, and derive private queue/bank endpoints internally. A caller must not
@@ -140,6 +143,8 @@ rules, not a second progress log. Historical development details remain availabl
 - The old unrestricted HINT_LEN assembly admitted a forged return plus matching final record. The
   installed source-hint replay now derives the return from actual queue history. WRITE-generated queues
   still need authenticated allocation integration; the older assembly is not an alternative capstone.
+- Running (`none`) and HALT-zero (`some 0`) are different host states. The current Exit code alone
+  cannot certify that distinction; endpoint binding must authenticate terminal status as well as value.
 - Legacy HALT imposes a 16-bit exit domain and currently needs an inactive HALT row even in a nonhalting
   fixture. The intended native syscall HALT accepts canonical below-characteristic 32-bit exits.
 - Native commitment banks support repeated overwrites. The pinned SyscallInstrs COMMIT constraints

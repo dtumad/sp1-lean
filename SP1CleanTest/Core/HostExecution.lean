@@ -1,4 +1,5 @@
 import SP1Clean.Model.Core.HostSail
+import SP1Clean.Model.Core.HostReplay
 import SP1Clean.Model.SP1Field
 
 /-! # Stateful native host execution regressions
@@ -176,5 +177,37 @@ private def ioSequence : Option (HostState × Option (BitVec 8) × Option (BitVe
 /-- Successive calls share queue state, written RAM, public output, and the terminal result. -/
 theorem statefulSequence : ioSequence =
     some ({ io.publicOutput := [1, 2], exitCode := some 0 }, some 1, some 0) := by native_decide
+
+private def continuationSource : HostState :=
+  { io := ⟨[[1, 2], [3]], [41, 42]⟩
+    committed := #v[10, 20, 30, 40, 50, 60, 70, 80]
+    deferred := #v[101, 102, 103, 104, 105, 106, 107, 108]
+    requests := [.hook ⟨15, [7]⟩, .proof ⟨[8], [9]⟩]
+    replies := [⟨⟨16, [5]⟩, [[6]]⟩]
+    stdout := [11, 12]
+    stderr := [13] }
+
+private def continuationTarget : HostState :=
+  { continuationSource with
+    io.hints := [[3]]
+    committed := continuationSource.committed.set 7 99
+    deferred := continuationSource.deferred.set 0 123 }
+
+private def continuationRun : Option HostState :=
+  ([(SyscallKind.enterUnconstrained, 0, 0), (.hintLength, 0, 0), (.hintRead, 65536, 2),
+    (.commit, 7, 88), (.commitDeferred, 0, 123), (.commit, 7, 99)] :
+      List (SyscallKind × BitVec 64 × BitVec 64)).foldlM
+    (fun host call => (run host call.1 call.2.1 call.2.2).map (·.effect.state)) continuationSource
+
+/-- Complete host equality preserves all pre-existing I/O, requests and replies through reads,
+control calls and both banks. Continuing, HALT-zero, and an already stopped identity are distinct. -/
+theorem completeHostContinuation :
+    continuationRun = some continuationTarget ∧
+    (continuationRun.bind fun host => run host .halt 0 0).map (·.effect.state) =
+      some { continuationTarget with exitCode := some 0 } ∧
+    run { continuationTarget with exitCode := some 0 } .enterUnconstrained 0 0 = none ∧
+    ([] : List SP1Clean.Machine.ExecutionEvent).foldl hostExitAfter (some 17) = some 17 ∧
+    ({} : HostState).exitCode ≠ ({ exitCode := some 0 } : HostState).exitCode := by
+  native_decide
 
 end SP1CleanTest.Core.HostExecution

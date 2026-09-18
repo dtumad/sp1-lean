@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-18. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2653 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 307 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2664 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 308 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2960 released declarations are probed.
+- 2972 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,18 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The complete-host reconstruction adds eleven main probes and one semantic regression. The two
+event observations have no axioms; the four host frame/exit laws retain the existing 77-dependency
+Sail set, and the five installed call/endpoint claims retain the existing 100-dependency mixed
+assembly set. All preceding 2653 main and 307 test dependency sets are unchanged, with no removals
+or new main-library axiom names. The new regression adds only its disclosed `native_decide`
+constant. `HostHintReadCPU.source_execution_with_host` recovers every final host field from
+authenticated queue/bank endpoints, actual HALT events and the source I/O frame derived from
+complete call accounting. The regression preserves nonempty source I/O through reads and repeated
+bank updates and distinguishes running from HALT-zero; the active COMMIT full-AIR fixture also
+retains nonempty source I/O. Complete supplied-target equality, outgoing Sail/runtime agreement,
+public Exit/status binding and constructive completeness remain open.
 
 The bank-history agreement adds twenty-two main probes and one semantic regression. Both
 `HostBankCPUReplay.cpu_projection` and `HostHintReadCPU.source_execution_with_banks` retain the

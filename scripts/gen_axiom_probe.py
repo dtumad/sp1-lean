@@ -40,6 +40,20 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete host reconstruction and terminal-status observations on the existing path.
+    ("SP1Clean/Model/Core/HostReplay.lean", "HostFrameSafe"),
+    ("SP1Clean/Model/Core/HostReplay.lean", "hostExitAfter"),
+    ("SP1Clean/Model/Core/HostReplay.lean", "ExecutionStep.host_frame"),
+    ("SP1Clean/Model/Core/HostReplay.lean", "ExecutionPath.host_frame"),
+    ("SP1Clean/Model/Core/HostReplay.lean", "ExecutionStep.host_exit"),
+    ("SP1Clean/Model/Core/HostReplay.lean", "ExecutionPath.host_exit"),
+    ("SP1Clean/Soundness/HostQueueCallProjection.lean", "calls_not_verify"),
+    ("SP1Clean/Soundness/HostHintReadHostAgreement.lean", "GroundingCarrier.final_hints"),
+    ("SP1Clean/Soundness/HostHintReadHostAgreement.lean", "GroundingCarrier.host_frame_safe"),
+    ("SP1Clean/Soundness/HostHintReadHostAgreement.lean", "GroundingCarrier.final_host"),
+    ("SP1Clean/Soundness/HostHintReadHostAgreement.lean", "source_execution_with_host"),
+    ("SP1CleanTest/Core/HostExecution.lean", "completeHostContinuation"),
+
     # Physical bank histories and final banks of the same mixed CPU replay.
     ("SP1Clean/Soundness/HostCallReceivers.lean", "halt_message"),
     ("SP1Clean/Soundness/HostCallReceivers.lean", "enter_message"),

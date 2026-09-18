@@ -358,7 +358,9 @@ private def commitSource : ExecutionSnapshot :=
     sail.registers := ((syscallSource.sail.registers.insert .x5 16).insert .x10 0).insert .x11 65537
     host := {
       committed := #v[11, 22, 33, 44, 55, 66, 77, 88],
-      deferred := #v[101, 102, 103, 104, 105, 106, 107, 108] } }
+      deferred := #v[101, 102, 103, 104, 105, 106, 107, 108],
+      io.publicOutput := [41, 42], stdout := [11, 12], stderr := [13],
+      requests := [.hook ⟨15, [7]⟩], replies := [⟨⟨16, [5]⟩, [[6]]⟩] } }
 
 private def commitTarget : HostState :=
   { commitSource.host with committed := commitSource.host.committed.set 0 65537 }
