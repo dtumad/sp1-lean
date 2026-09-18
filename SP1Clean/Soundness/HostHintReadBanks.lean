@@ -188,4 +188,36 @@ theorem ordered_history (deferred : Bool)
     (fun table member => bytes table (inAll table member)) bank policy characteristic context source.host
   simpa only [HostCommitEnsemble.source_apply] using history
 
+/-- The actual bank calls, in strict clock order, execute from the source bank to its committed
+final words. Only the administrative terminal is erased. Agreement with the CPU replay remains
+separate; neither a call-order premise nor a local specification is supplied here. -/
+theorem ordered_calls (deferred : Bool)
+    (witness : Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (channels := channels))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (policy : HostPolicy) (characteristic : policy.characteristic = p) (context : HostReadContext) :
+    ∃ calls : List (HostCallChip.Message (ZMod p)),
+      calls.Perm ((TransitionView.readIndexedRows indices (bankTables deferred witness)).filterMap call?) ∧
+      (calls.map fun call => Semantics.clkNat call.clk_high call.clk_low).Pairwise (· < ·) ∧
+      calls.foldlM (executeCall deferred policy context) source.host =
+        some ((HostCommitBoundary.final (HostCommitEnsemble.sourceValues (p := p) deferred bankFinal)).apply
+          deferred source.host) := by
+  obtain ⟨path, perm, walk, executed⟩ :=
+    ordered_history deferred witness constraints balanced policy characteristic context
+  have checked := HostHintQueueBoundary.expanded_constraints witness constraints
+  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
+  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
+    (bankFinal := bankFinal) (source_interface (p := p) source.host.io.hints)
+  have bytes := byte_guarantees (HostHintQueueBoundary.expanded witness) interface checked balance
+  have inAll (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
+      table ∈ (HostHintQueueBoundary.expanded witness).allTables :=
+    (HostHintQueueBoundary.expanded witness).mem_allTables_of_mem_tables
+      (List.mem_append_left _ (bank_mem deferred witness table member))
+  have specs := rows_spec_of_byte deferred (bankTables deferred witness)
+    (tables_aligned deferred witness) (fun table member => checked table (inAll table member))
+    (fun table member => bytes table (inAll table member))
+  refine ⟨path.filterMap call?, perm.filterMap call?,
+    calls_pairwise deferred walk (fun row member => specs row (perm.mem_iff.mp member)), ?_⟩
+  rw [fold_calls, executed]
+
 end SP1Clean.Soundness.HostHintReadBanks

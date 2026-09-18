@@ -16,7 +16,7 @@ Each document has one role:
 | [`audit-surface.md`](audit-surface.md) | short semantic definition inventory, mechanically gated |
 | [`layering.md`](layering.md) | structural layering and namespace contract |
 | [`architecture.md`](architecture.md) | module ownership, proof chain, and deliberate exceptions |
-| [`roadmap.md`](roadmap.md) | dependency-ordered future work and non-blocking backlog |
+| [`roadmap.md`](roadmap.md) | current native shard targets, status, acceptance gates, and separate follow-ups |
 | [`leanervm-comparison.md`](leanervm-comparison.md) | pinned comparison, capstone decisions, and possible shared contributions |
 | [`goal-overview.md`](goal-overview.md) | completed-state contract; never current status |
 | [`witgen-wire-format.md`](witgen-wire-format.md) | witness-export wire format |
@@ -41,7 +41,7 @@ Each document has one role:
 3. [`architecture.md`](architecture.md) — the whole-chip and whole-shard proof chain.
 4. [`release-audit.md`](release-audit.md) — machine-derived pins, gates, and axiom disclosures.
 5. [`audit-surface.md`](audit-surface.md) — the definitions requiring human semantic review.
-6. [`roadmap.md`](roadmap.md) — remaining exact-AIR and verifier work.
+6. [`roadmap.md`](roadmap.md) — native capstone obligations and separate exact-AIR/verifier work.
 
 The release audit runs `scripts/check_release_surface.py`, which independently checks that all 25
 instruction identities retain a native definition, Formal/Bridge/Complete proof surface,

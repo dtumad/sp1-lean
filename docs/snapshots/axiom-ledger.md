@@ -1,15 +1,15 @@
 # Axiom and trust ledger
 
-Checked against the consolidated stack on 2026-09-15. Each raw file retains the source revision
+Checked against the consolidated stack on 2026-09-18. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2612 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2631 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 306 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2918 released declarations are probed.
+- 2937 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,16 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The full-state shard contract and bank-call checkpoint adds nineteen main probes and no tests.
+The eleven execution/target declarations inherit the existing 77-dependency Sail semantic set;
+policy and local bank laws use subsets of the ordinary logical baseline. The installed
+`HostHintReadBanks.ordered_calls` theorem retains the existing mixed assembly's 100-dependency set.
+All preceding 2612 main and 306 test dependency sets are unchanged, with no removals or new axiom
+names. The shard soundness/compiler targets and their conditional assembly law are **not**
+inhabited capstone instances; the concrete semantic resource profile remains open. Bank terminal
+erasure preserves the full semantic fold, and the installed bank calls are exhaustive and
+strictly ordered. Agreement with CPU replay and the complete outgoing snapshot remain open.
 
 The mixed bank installation adds thirteen main probes: the ten boundary-circuit laws use only
 `[propext, Classical.choice, Quot.sound]`, and the three installed-ledger/history theorems retain

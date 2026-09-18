@@ -4,7 +4,17 @@ This is a guide to the current theorem boundary. The [technical report](verifica
 contains the detailed arguments; the [release audit](release-audit.md) records dependency pins and
 trust boundaries. SP1 is pinned to `v6.4.0`, and Lean/mathlib to v4.32.2.
 
-## Native soundness
+## Local shard capstone
+
+The current mixed AIR derives a local path from a complete checked incoming Sail/host state,
+with exact active-event coverage and final PC/clock/Memory-frontier agreement. Complete outgoing
+state/Exit binding, WRITE/VERIFY with authenticated allocations, and full constructive completeness
+remain open. The checked end-to-end targets reuse the existing execution path and generic Clean
+interfaces; they are not completed instances. See [the roadmap](roadmap.md) for the compact status
+and implementation order, and the [report](verification-report.md#72-full-state-local-shard-semantics-and-the-installed-mixed-air)
+for the proof boundary.
+
+## Retained 55-table native soundness
 
 `supported_core_native_sound`, in `SP1Clean/Soundness/AIR.lean`, proves:
 

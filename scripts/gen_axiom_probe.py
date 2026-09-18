@@ -40,6 +40,27 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Full-state shard contract targets and ordered commitment calls.
+    ("SP1Clean/FormalModel/Shard.lean", "policy"),
+    ("SP1Clean/FormalModel/Shard.lean", "Executes"),
+    ("SP1Clean/FormalModel/Shard.lean", "AdmissibleExecution"),
+    ("SP1Clean/FormalModel/Shard.lean", "nil_iff"),
+    ("SP1Clean/FormalModel/Shard.lean", "append"),
+    ("SP1Clean/FormalModel/Shard.lean", "clock"),
+    ("SP1Clean/FormalModel/Shard.lean", "of_halted"),
+    ("SP1Clean/Soundness/Shard/Contract.lean", "Interpretation"),
+    ("SP1Clean/Soundness/Shard/Contract.lean", "SoundnessTarget"),
+    ("SP1Clean/Soundness/Shard/Contract.lean", "CompilerTarget"),
+    ("SP1Clean/Soundness/Shard/Contract.lean", "completeEnsemble"),
+    ("SP1Clean/Soundness/Shard/Contract.lean", "statement_iff"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "call?"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "executeCall"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "fold_calls"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "rows_spec_of_byte"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "times_pairwise"),
+    ("SP1Clean/Soundness/HostCommitBank.lean", "calls_pairwise"),
+    ("SP1Clean/Soundness/HostHintReadBanks.lean", "ordered_calls"),
+
     ("SP1Clean/Native/Operations/HostCommitEndpoint.lean", "circuit"),
     ("SP1Clean/Native/Operations/HostCommitEndpoint.lean", "values"),
     ("SP1Clean/Native/Operations/HostCommitEndpoint.lean", "closed"),

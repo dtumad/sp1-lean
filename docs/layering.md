@@ -58,12 +58,16 @@ When namespace and path disagree, one of them is wrong; deciding which requires 
 Layer direction is not enough if two strata independently model the same data. The following
 ownership rules complement the three import laws:
 
-- `Model/Machine/EventExecution.lean` owns proof-free execution traces; PolyFun prefixes and Sail
-  chains are certified views of that carrier, not parallel witness types.
-- The field-free access schedules and State/Memory histories are derived compiler views of
-  `EventExecutionTrace`, not standalone execution witnesses.  Their physical-row agreement must be
-  proved or remain a named `NativeTraceReady` seam; an unbridged vocabulary is representation
-  duplication, not layering.
+- `Model/Core/Execution{,Path,Replay,Snapshot}.lean` owns full Sail/host/clock execution and
+  finite boundaries. `FormalModel/Shard.lean` states the native contract over those same objects.
+  PolyFun prefixes and Sail chains are certified views, not parallel witness types.
+- `Model/Machine/EventExecution.lean` and `CoreShardSemanticWitness` retain the legacy
+  ordinary/exact-Core trace views. They lack the full evolving host; adapters must explicitly
+  establish compatibility before a consumer migrates. Do not claim full-state equivalence.
+- Field-free access schedules and State/Memory histories are derived compiler views, not
+  standalone execution witnesses. Reuse the existing transition/access plans and the shared
+  `ExecutionCarrier`/`CoreExecutionTrajectory` for physical occurrence transport and replay.
+  A remaining `NativeTraceReady` seam in the old compiler must not enter the final shard contract.
 - `Model/InstructionChipId.lean` owns instruction-table identity and order;
   `Model/InstructionRouting.lean` owns pure routing. Higher registries realize those definitions.
 - typed interactions are the soundness primary and computable `LookupAccess` ledgers are the

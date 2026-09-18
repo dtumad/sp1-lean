@@ -62,6 +62,37 @@ def execute (deferred : Bool) (policy : HostPolicy) (context : HostReadContext)
   | some slot => HostCommitHistory.execute deferred policy context host (slot, row.2)
   | none => some host
 
+/-- A bank terminal is administrative; each slot row carries its complete instruction handoff. -/
+def call? (row : Row (p := p)) : Option (HostCallChip.Message (ZMod p)) :=
+  row.1.map fun _ => (valueFromOffset Inputs 0 row.2).call
+
+def executeCall (deferred : Bool) (policy : HostPolicy) (context : HostReadContext)
+    (host : HostState) (call : HostCallChip.Message (ZMod p)) : Option HostState :=
+  (host.executeKind policy context (if deferred then .commitDeferred else .commit)
+    (Word.toBitVec64 call.arg1) (Word.toBitVec64 call.arg2)).map (·.state)
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Erasing only the terminal preserves the semantic fold, including failure. -/
+theorem fold_calls (deferred : Bool) (policy : HostPolicy) (context : HostReadContext)
+    (host : HostState) (path : List (Row (p := p))) :
+    (path.filterMap call?).foldlM (executeCall deferred policy context) host =
+      path.foldlM (execute deferred policy context) host := by
+  induction path generalizing host with
+  | nil => rfl
+  | cons row rest ih =>
+    rcases row with ⟨index, env⟩
+    cases index with
+    | none =>
+      change (rest.filterMap call?).foldlM (executeCall deferred policy context) host =
+        rest.foldlM (execute deferred policy context) host
+      exact ih host
+    | some slot =>
+      simp only [List.filterMap_cons, call?, Option.map_some, List.foldlM_cons, execute,
+        HostCommitHistory.execute, HostCommitHistory.rowInput, executeCall]
+      congr 1
+      funext next
+      exact ih next
+
 /-- Only Byte is a nontrivial incoming guarantee of either kind of bank row. -/
 theorem view_spec_of_byte (deferred : Bool) (index : Index) (env : Environment (ZMod p))
     (constraints : (view deferred index).component.operations.ConstraintsHold env)
@@ -164,6 +195,64 @@ private theorem history_of_balance (deferred : Bool) (rows : List (Row (p := p))
   intro row member
   exact valid row (perm.mem_iff.mp member)
 
+/-- Local bank-row specifications from the actual table checks and Byte guarantees. -/
+theorem rows_spec_of_byte (deferred : Bool) (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun index table => (view deferred index).component = table.component) indices tables)
+    (constraints : ∀ table ∈ tables, table.Constraints)
+    (byte : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw) :
+    ∀ row ∈ TransitionView.readIndexedRows indices tables,
+      (view deferred row.1).component.Spec row.2 := by
+  have alignment : List.Forall₂ (fun view table => view.component = table.component) (views deferred) tables := by
+    simpa only [views, List.forall₂_map_left_iff] using aligned
+  have specs : ∀ table ∈ tables, table.Spec := by
+    intro table member row rowMember
+    have allSame : indices.map (fun index => (view deferred index).component) = tables.map (·.component) := by
+      have mapped : List.Forall₂ (· = ·) (indices.map (fun index => (view deferred index).component))
+          (tables.map (·.component)) := by
+        simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using aligned
+      simpa only [List.forall₂_eq_eq_eq] using mapped
+    have componentMem := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+    rw [← allSame] at componentMem
+    obtain ⟨index, _, same⟩ := List.mem_map.mp componentMem
+    have checked := constraints table member row rowMember
+    have bytes := byte table member row rowMember
+    rw [← same] at checked bytes ⊢
+    exact view_spec_of_byte deferred index _ checked bytes
+  exact TransitionView.readIndexedRows_spec indices (view deferred) tables alignment specs
+
+/-- The complete bank path, including its terminal, is strictly ordered by successor clocks. -/
+theorem times_pairwise (deferred : Bool) {path : List (Row (p := p))}
+    {initial final : State (ZMod p)} (walk : Walk.IsWalk (edge deferred) initial final path)
+    (valid : ∀ row ∈ path, (view deferred row.1).component.Spec row.2) :
+    (path.map fun row => Semantics.clkNat (edge deferred row).2.clk_high
+      (edge deferred row).2.clk_low).Pairwise (· < ·) :=
+  RankedGrounding.targetRanks_pairwise_of_isWalk (edge deferred)
+    (fun state => Semantics.clkNat state.clk_high state.clk_low) walk
+    (fun row member => view_strict deferred row.1 row.2 (valid row member))
+
+private theorem call_time (deferred : Bool) (row : Row (p := p))
+    (call : HostCallChip.Message (ZMod p)) (present : call? row = some call) :
+    Semantics.clkNat call.clk_high call.clk_low =
+      Semantics.clkNat (edge deferred row).2.clk_high (edge deferred row).2.clk_low := by
+  rcases row with ⟨index, env⟩
+  cases index with
+  | none => simp only [call?, Option.map_none, reduceCtorEq] at present
+  | some slot =>
+    have same : (valueFromOffset Inputs 0 env).call = call := Option.some.inj present
+    rw [← same]
+    simp only [edge, view, HostCommitHistory.view, Inputs.next]
+
+/-- The complete handoffs remain strictly chronological after erasing the terminal. -/
+theorem calls_pairwise (deferred : Bool) {path : List (Row (p := p))}
+    {initial final : State (ZMod p)} (walk : Walk.IsWalk (edge deferred) initial final path)
+    (valid : ∀ row ∈ path, (view deferred row.1).component.Spec row.2) :
+    ((path.filterMap call?).map fun call => Semantics.clkNat call.clk_high call.clk_low).Pairwise (· < ·) := by
+  apply List.pairwise_map.mpr
+  apply (List.pairwise_map.mp (times_pairwise deferred walk valid)).filterMap
+  intro a b ordered x hx y hy
+  rw [call_time deferred a x hx, call_time deferred b y hy]
+  exact ordered
+
 /-- The fixed local source and public final words determine a history of every physical bank row.
 Local specifications are derived from constraints and Byte guarantees, including at the terminal. -/
 theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
@@ -184,21 +273,7 @@ theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
         some ((HostCommitBoundary.final values).apply deferred host) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component) (views deferred) tables := by
     simpa only [views, List.forall₂_map_left_iff] using aligned
-  have specs : ∀ table ∈ tables, table.Spec := by
-    intro table member row rowMember
-    have allSame : indices.map (fun index => (view deferred index).component) = tables.map (·.component) := by
-      have mapped : List.Forall₂ (· = ·) (indices.map (fun index => (view deferred index).component))
-          (tables.map (·.component)) := by
-        simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using aligned
-      simpa only [List.forall₂_eq_eq_eq] using mapped
-    have componentMem := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-    rw [← allSame] at componentMem
-    obtain ⟨index, _, same⟩ := List.mem_map.mp componentMem
-    have checked := constraints table member row rowMember
-    have bytes := byte table member row rowMember
-    rw [← same] at checked bytes ⊢
-    exact view_spec_of_byte deferred index _ checked bytes
-  have localSpecs := TransitionView.readIndexedRows_spec indices (view deferred) tables alignment specs
+  have localSpecs := rows_spec_of_byte deferred tables aligned constraints byte
   have projected := TransitionView.readRows_interactions (views deferred) tables alignment
   rw [views, TransitionView.readRows_eq_indexed] at projected
   simp only [List.flatMap_map] at projected

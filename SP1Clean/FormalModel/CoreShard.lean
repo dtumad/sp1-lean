@@ -1,17 +1,18 @@
 import SP1Clean.FormalModel.Relations
 import SP1Clean.Model.Machine.Shard
 
-/-! # One semantic relation for a Core shard
+/-! # Shared legacy ordinary/exact-Core shard relation
 
-This is the public semantic center shared by soundness and completeness.  It has one statement
-parameter, one proof-free witness (`Machine.CoreShardSemanticWitness`), and one operational model.
-Native and exact AIRs specialize the small `CoreShardContract` hook; they do not define competing
-execution carriers or competing notions of a valid shard.
+This relation is shared by the retained ordinary compiler and exact-Core contracts. Its witness
+has a Sail trace and a finite touched Memory boundary; it does not thread the complete evolving
+host state. `FormalModel/Shard` is the full-state native capstone contract, using the existing
+`Model/Core/ExecutionPath` and complete snapshots. An adapter between these surfaces must prove
+its scope explicitly; they are not interchangeable semantic models.
 
-The operational content is fixed here: a private initial state, deterministic event evaluator,
-official Sail validity, clock/PC endpoints, code loading, configuration, and a
-finite canonical Memory boundary.  A specialization may add profile facts (instruction routing,
-commit rows, verifying-key configuration), but cannot replace those common execution clauses. -/
+The common legacy clauses here fix deterministic event evaluation, official Sail validity,
+clock/PC endpoints, code loading, configuration, and a finite canonical Memory boundary.
+Specializations add their profile facts through `CoreShardContract` without replacing those
+common clauses. -/
 
 open LeanRV64D.Defs
 
@@ -99,8 +100,7 @@ structure CoreShardExecutionValid {Statement : Type} (model : CoreShardModel Sta
     (witness.evaluatedTrace model).finalState
   shardCase : CoreShardCase model contract statement witness
 
-/-- The canonical semantic relation.  All public native/exact aliases must reduce to this
-definition rather than introduce another validity structure. -/
+/-- The shared semantic relation for the legacy ordinary and exact-Core specializations. -/
 def CoreShardExecutionRelation {Statement : Type} (model : CoreShardModel Statement)
     (contract : CoreShardContract Statement) :
     WitnessRelation.Relation Statement CoreShardSemanticWitness :=

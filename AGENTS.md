@@ -62,295 +62,26 @@ Plonk, and Groth16 are separate verifier targets; pin **Core** first. Parsing ma
 to a canonical Rust exporter so it does not obscure the verifier/refinement boundary.
 
 **This workstream's current priority:** close native Clean soundness/completeness for arbitrary
-bounded local execution segments, with authenticated complete boundaries, constrained inline host
-effects, native shard composition, and generic whole-ensemble export. Boot-to-HALT is an endpoint
-corollary, not the primary shard relation. `Model/Core/Execution{,Path,Replay,Boot}.lean` supplies
-the stateful semantic path, split/join and PolyFun equivalence, paired replay, and semantic boot/HALT
-corollaries. `MemorySnapshot` and the ordered snapshot register/RAM providers now authenticate
-arbitrary finite source values, with an executable extensional RAM/register comparison. The assembly
-`LocalCore.ensemble` takes the complete `ExecutionSnapshot`, projects its register/RAM providers,
-and binds the public incoming PC/clock to that actual source. Its verifier checks complete register
-initialization, Sail platform configuration, finite program validity, supported decoding, every ROM
-byte, and 48-bit source PC/clock ranges. `LocalCoreBoundaries.lean` derives source-record authenticity,
-uniqueness, exact Memory projection, and source/public validity from raw constraints and balance.
-`LocalCoreSourceGrounding.lean` derives the initial State truth and live-memory invariant on a
-trajectory beginning at that source. Zero-time source records are admissible local seeds even at
-nonzero shard clocks, without historical last-access claims. `LocalCoreFinalBoundary` derives canonical
-final records and unique locations; `LocalCoreMemory` proves the exact physical Memory decomposition,
-signed-unit multiplicities, complete record permutation, and per-location frontier equation, including
-active syscalls. `CoreMemoryBalance` shares component and boundary algebra with the boot proofs.
-`LocalCoreProgram` and `LocalCoreDecode` authenticate all active Program fetches and preserve
-physical instruction cells/constraints. `LocalCoreRows` projects the shared mixed carrier into exact
-Memory balance, including all active syscalls. `LocalCoreState` derives exact State endpoint balance;
-`LocalCoreOrder` constructs an exhaustive canonical walk and its 8/264-tick timing without ordering
-or inactivity premises. Shared component semantics and physical projections live in
-`CoreProgramBalance`, `CoreExecutionRow`, and `CoreTableProjection`; the generic decoder and
-`StateChronology` remain the common algorithms. Local aligned touches, prior/final clock bounds,
-strict refresh order, canonical carrier, and timeline are now derived through `LocalCoreTouches`,
-`LocalCoreMemoryOrder`, `LocalCoreTransport`, and `LocalCoreGrounding`. The explicit `ground_of_steps`
-combinator supplies source State/Memory truth internally and derives final State/value truth from
-original-event step/frame facts. Shared proofs live in `CoreRowBalance`, `CoreTouches`,
-`CoreMemoryChronology`, and `CoreRowTransport`; `ExecutionCarrier` keeps concrete source values out
-of structure elaboration. `LocalCoreTrajectory` now constructs that trajectory through
-`Model/Core/ExecutionReplay`, threading the actual full host state and matching its covered clocks
-to the AIR timeline. `LocalCoreInstructionExecution.ground_of_system_steps` derives every ordinary
-chip's step/frame facts on this replay. `LocalCoreHaltExecution.ground_of_host_steps` also derives
-HALT's actual stateful host transition and exit status from committed ECALL and incoming register
-currency; only ROM preservation and active SyscallInstrs effects remain semantic premises.
-The new 60-table `ProtectedLocalCore.ensemble` installs four store wrappers and a fixed writable-
-interval permission provider. All four wrappers prove original widths/assertions/lookups and old
-ledgers unchanged, and the provider's proof-independent constructor succeeds exactly for writable
-48-bit byte addresses. Full-AIR regressions reject code-writing SB, missing/forged permission, and
-retain partial writes beside ROM in one RAM cell, store padding, and stopped identities. Its full
-witness projection now preserves the original constraints, old ledgers, public input, and data.
-`ProtectedLocalCorePermissions` authenticates every active permission pull from the fixed provider
-and this ensemble's own balance, using an exhaustive component source classification.
-`ProtectedStoreFootprints` relates the authenticated requests to every committed write byte;
-`ProtectedLocalCoreRom` transports that result through physical decoder provenance for all 25 kinds.
-`ProtectedLocalCore.ground_of_host_steps` now derives ordinary ROM preservation from those row effects
-and derives HALT internally, retaining only active SyscallInstrs step/frame effects as semantic
-premises. Full outgoing-state and terminal Exit agreement and compiler totality remain open.
-Keep this native profile strengthening separate from the unchanged original SP1 chip faithfulness anchors.
-The host policy characteristic explicitly equals the AIR field. HALT's legacy row still has a
-16-bit exit domain, stronger than the concrete host's canonical below-characteristic, 32-bit range.
-Running-host and non-ECALL guards follow inside incoming State truth, not from caller assumptions.
-Final State truth also recovers successful replay of the full tape and its
-returned PC/clock; normal-retirement reconstruction and full outgoing snapshot agreement remain
-separate. Regressions include reversed/padded instructions, repeated-register
-touches, actual State clock carries, and identities. Active CPU clock phase (1 modulo 8) must be
-explicit in the shared semantic compiler profile; source range validation alone is broader.
-The full HINT_LEN regression records the remaining host-result gap: changing both the instruction's
-return and its final record still passes AIR checks despite disagreeing with finite host execution.
-Full outgoing Sail/host agreement,
-the other active host effects, and terminal Exit-bus agreement remain open; separate AIR witnesses
-are not yet proved composable. `ExecutionSnapshot` gives finite data and an executable comparison
-proved equivalent to literal Sail/host/clock equality, preserving every register and missing key,
-runtime counters/output, and host state. `HostSnapshot` computes sparse host execution with full-state
-soundness/completeness against the Sail adapter, including padded writes. Source validation allows
-stopped hosts for empty identity segments. The local verifier freezes a stopped source's clock,
-and `executionRows_nil_of_stopped` proves its active event inventory empty, closing the reproduced
-ADD-after-HALT gap. The full HINT_LEN forged-return gap remains open.
-`Model/Core/HintQueue` now represents complete hint bytes with immutable nodes and decreasing tail
-pointers; source encoding, decoding, pops, and preservation of historical heads are proved.
-`HostQueue` compiles the queue update from every successful eight-call host execution, including
-WRITE/hook prepends, and proves the current queue determines HINT_LEN's return. `HintQueueRecords`
-encodes bounded 48-bit node identities and authenticates initial metadata against a fixed table
-computed from source hints. `HostHintLengthChip` constrains the current-head observation, strict
-queue-clock advance, and full HostCall handoff. Its bridge proves the complete host transition
-from explicit current-queue/node binding; its constructor derives completeness from successful
-dispatch and pointer/clock bounds. Source and handler ledgers and witness export are proved.
-The private queue cursor also retains the full allocation frontier after pops, including at an
-empty head; HINT_LEN preserves it. `HintNodeAllocate` checks the actual successor identity without
-48-bit wrap and links it to the current head. Its semantic bridge preserves every old node.
-`HintQueuePrepend` compiles ordered prefixes into these checked allocations, with exact row count,
-cursor continuity, and full byte-level queue representation under one capacity bound. Allocation
-does not itself authenticate bytes or publish nodes: those remain enclosing-handler obligations.
-`HintQueueWords` and `HintQueueWordRecords` now describe complete padded word contents with
-canonical node/position keys. The fixed `HintQueueWordSource` circuit authenticates original words
-from the actual source hints, with exact ledgers and no incoming byte premise. Complete word
-coverage plus the authenticated length recovers all bytes and matches the semantic HINT_READ RAM
-write, including mandatory final padding. Generated allocation words share the checked fresh node
-identity. New-word authorization, complete AIR consumer coverage, and mixed installation remain open.
-`HintReadSpan` now constrains the exact positive padded count and last written address, retaining
-writes whose one-past endpoint is exactly `2^48`. Its semantic constructor covers aligned permitted
-native-window writes. Word records authenticate an `isLast` marker: a bounded final word derives
-the actual node length below `2^64`, and `HintReadSpan.Spec.node_end` ties that natural length and
-word count to the checked span. This closes the modulo-length alias at the component boundary;
-`HintReadWordChip` now binds each word pull to one physical RAM transfer and all eight byte
-permissions, with an exact successor cursor and exportable 265-cell witnesses. The physical
-two-table subsystem derives an exhaustive consecutive word inventory and fixed clock/node from
-cursor balance; its converse balances a constructed walk. A checked span supplies the constructor's
-successor bounds. `HostHintReadChip` now checks the full instruction handoff, current head, span,
-and final-word request, pops to the node's tail while preserving the frontier, and emits the real
-cursor endpoints. Its host bridge derives exact natural length and the complete padded-write
-request from bound records and permissions; successful execution constructs its full domain.
-`HostHintReadCoverage` derives the exact node inventory using those physical handler endpoints.
-`HostHintReadWrites.run_of_tables` now combines successful host dispatch with exact physical
-padded word writes. Authenticated consumer markers derive every destination address; the actual
-Memory ledger and byte permissions give word readback and permission for the full padded request.
-Cursor balance alone admits swapped markers and repeated addresses; an executed regression shows
-why every consumer word must be authenticated. `HostHintReadPartition` now derives per-call
-balance from the shared physical handler/consumer cursor ledger and unique handler clocks;
-it also proves every consumer has a handler and retains the original rows on all channels.
-`run_of_shared_tables` carries this through to concrete dispatch and padded writes.
-`LocalCoreEventUniqueness` derives distinct incoming event clocks from actual local AIR constraints
-and balance. `HostCallLedger` identifies complete handler calls with the physical wrapper's active
-instruction inventory, deriving its binary gate from raw constraints and retaining padding in the
-original count bound. `LocalCore.OrderingChannels` isolates State balance and Byte guarantees. `HostLocalCore.ensemble`
-installs the wrapper in the protected 60-table prefix, appends host components, and retains the
-full source, verifier, data, and public input. Its physical projection derives original constraints,
-Byte guarantees, the complete State ledger, and the exact active syscall inventory.
-`executionRows_ordered` and `hostCalls_clocks_nodup` then follow from the extended ensemble's
-own constraints and balance. Auxiliary Byte requirements and CPU State silence are static circuit
-properties; `HostHintReadHandoff.auxiliaryInterface` proves them for the real handler and both
-RAM consumer variants. No projected Byte or Memory balance is claimed. The installed WRITE
-regression checks that the x12 pair is lost by original projection: State survives, but the same
-closing Memory frontier no longer balances.
-`HostLocalHandoff` now derives complete full-call permutation from this ensemble's physical
-receiver registry and its own balance. `LocalCoreChannels` and `HostLocalCoreLedger` classify
-all retained tables; `ToClean/Air/ReceiverView` reads every heterogeneous receiver occurrence.
-`HostCallReceivers` supplies HALT, ENTER, both eight-slot commitment families, and both HINT_LEN
-variants; `HostHintReadHandoff.registeredReceivers` adds HINT_READ. Static channel proofs close
-their chronology interface and the word resources' HostCall silence. The `_of_registered`
-corollaries derive handler clock uniqueness and per-call word balance without caller handoff
-accounting equations. `HostHintReadLocal.ensemble` now fixes the handler and both physical word
-tables and automatically declares every channel used by its host components. Exact cursor
-accounting, actual table alignment, and per-call balance follow from this witness's own balance;
-strict consumer progress excludes orphan calls. Other handlers and resources prove static
-cursor silence. `HostLocalCorePermissions` retains the fixed image provider as the unique positive
-permission source when appended components are unit consumers; the real HINT_READ word variants
-satisfy this. `HostHintReadLocalPermissions.run_of_witness` derives concrete dispatch and exact
-padded writes without caller handoff, cursor, alignment, clock-uniqueness, or byte-permission
-premises. The fixed provider supplies writability and the upper address bound; the checked handler
-span and authenticated cursor successors supply the lower native-window bound. Local handler and
-word-step specifications, current queue/node/word binding, and incoming register observations
-remain explicit. Binding alone does not imply canonical
-field encodings. `HostHintReadLocalRecords` now authenticates every physical node/word pull
-through the whole installed ledger and derives the handler specification. Fixed source nodes
-and words close both canonical validity and binding from actual lookup constraints;
-`source_record_authentication` uses the complete snapshot's hint bytes. `word_spec` isolates the
-remaining Memory-channel representation guarantees for the full RAM contract. `word_steps` derives
-the authenticated word and exact successor from the bundled step circuit without that premise.
-Coverage, byte permissions, and dispatch consume this weaker contract. `RecordAuthentication`
-concerns actual physical source rows, so future allocation proofs can consume prior grounding facts; requiring
-raw constraints alone for every possible allocation row would be too strong. A record bound in
-a persistent store restricts to the current frontier via
-`HostHintReadLocalExecution.current_records`: current-head truth bounds the node and the actual
-cursor path fixes every consumer's pointer. `run_of_authenticated_witness` now derives local
-specifications and all individual record bindings before proving dispatch and complete padded
-writes. Its remaining inputs include current queue truth, persistent-store extension and source
-authentication and current register observations. Prior Memory guarantees are no longer required
-for dispatch or the padded-write inventory. Alignment with the CPU/host timeline, dynamic allocation authentication, predecessor currency, and mixed grounding
-remain open.
-`HostQueueOrder` and `HostHintReadLocalQueue` now derive the physical queue-token path and complete
-installed ledger for HINT_READ and both HINT_LEN variants. `source_queue_rows_nil` proves the old
-fixed-source assembly without endpoints cannot have active queue handlers. The new
-`HostHintQueueBoundary.ensemble` installs exactly one endpoint pair in the verifier, with a source
-cursor bound to the complete incoming hints and a fixed final cursor parameter. Generic
-`ToClean/Air/VerifierExtension.lean` transports every constraint and channel balance through a derived
-singleton table. `source_queue_ordered` closes the token-path theorem from full constraints and
-balance, without separate endpoint or record-authentication premises. The installed regression
-checks queue balance, duplicate chains, forged final heads/frontiers, and zero-event identities;
-it remains a subsystem fixture. `HostHintQueueHistory.source_history` now derives complete byte
-replay and current head/frontier truth at every queue-path prefix from that AIR. HINT_LEN observations
-and exact HINT_READ lengths are checked by replay, and `terminal_bytes` identifies the remaining
-bytes decoded at the final cursor. `HintQueueHistory.of_walk` permits growing persistent stores;
-`HostState.hintEvent_sound` covers all eight successful semantic calls, including WRITE/hook
-prepends. The installed instance still covers only the three existing queue-handler variants.
-`HostQueueCPUOrder.source_history` now derives both exhaustive paths and their order agreement
-from the installed AIR. Every queue row consumes the full call of a physical active syscall;
-`call_cpu_at` recovers that exact instruction at its unique CPU clock. Queue clocks form a
-subsequence of every exhaustive CPU walk, and `CurrentQueues` recovers current bytes/frontier
-from queue events in each preceding CPU prefix. `HostQueueCallProjection` and `HostQueueCPUReplay`
-derive the complete semantic queue-action sequence and exclude WRITE from the actual receiver
-inventory. `HostQueueCurrent.source_current` proves equality with the evolving whole-host state
-after successful prefix replay. `run_of_source_prefix` consumes that result in HINT_READ dispatch
-and exact padded-write coverage without independent current-queue/store/authentication premises;
-`length_of_source_prefix` identifies HINT_LEN's current-host return without Memory guarantees.
-`HostLocalCoreProgram` preserves Program balance and authenticates the physical wrapper's ECALL
-operands. `run_of_source_prefix` now derives x5/x10/x11 observations from the engine's incoming
-currency on the actual prefix trajectory; event position and clock are internal. The preceding
-replay, running status, and that currency remain premises. The current call's success is not
-assumed. Mixed Memory grounding, outgoing snapshot binding, and authenticated allocation edges
-remain open. `HostLocalCoreMemory` now retains the
-entire physical Memory interior, including WRITE's extra x12 pair and appended host RAM accesses,
-and preserves the two boundary inventories as complete tables. `HostHintReadLocalMemory` closes
-the installed source-backed assembly's complete record permutation from raw constraints and
-balance, with no caller multiplicity or Memory-guarantee premise; every padded word pair is an
-occurrence-preserving sublist of that interior. This is record conservation, not predecessor
-currency. `HostRamTouches` derives canonical RAM locations, new-word and pushed-clock bounds,
-and read/write timing from constraints and Byte guarantees alone. `HostHintReadLocalMemory`
-connects these to every installed physical word and its selected call window.
-`HostLocalCoreMemoryBounds` derives all interior push low-clock bounds from constraints, Byte
-guarantees, Program balance, and local auxiliary push bounds. The installed source assembly closes
-these premises and transfers the bounds through its full record permutation: `source_memory_prior_bound`
-and `source_word_order` derive prior low clocks and strict word-access order. `HostHintReadCPUMemory`
-groups every physical hint word with its actual CPU event through cursor and full HostCall balance.
-The grouping preserves the complete raw word Memory ledger and duplicate occurrences. Authenticated
-node/word coverage gives distinct canonical locations within each call and the timed engine's
-per-location chain law. `HostHintReadExecutionRows` adds those words to each CPU event and proves
-complete source/final record balance for the enlarged rows and actual refresh pairs.
-`HostLocalCoreRows` retains the wrapper's x12 pair in the general ledger decomposition; the current
-source registry derives its zero gate. `source_ordered_aligned_rows` derives an exhaustive CPU walk
-with aligned register/RAM touches and unchanged complete Memory aggregates. Call ownership and
-authenticated ECALL operands separate the original register touches from the added RAM footprint.
-`HostHintReadMemoryOrder` transfers both clock bounds through the complete record balance and
-derives strict order for every actual refresh. The unchanged private boundary ledgers derive
-unique source/final frontiers; `source_memory_refresh_free` then eliminates refreshes while
-retaining every CPU/host touch and preserving prior/final values and locations. It reuses
-`LocalCore.MemoryChronology` and the existing refresh algorithm. The source assembly supplies
-these facts without prior Memory guarantees or successful replay premises.
-`HostHintReadGrounding.source_grounding_carrier` now constructs the shared `ExecutionCarrier`
-over the complete instruction/host footprint. The carrier takes event facts explicitly, and
-shares its timeline, semantic transport, and grounding proof with the ordinary local assembly.
-`GroundingCarrier.ground_of_steps` derives genesis internally and returns original register/RAM
-operand currency plus final State/frontier value truth. Its remaining premises are the complete
-per-event step/frame facts on a trajectory beginning at the source; actual paired replay and
-host-step proofs must still discharge them. No prior-record historical truth is inferred from a
-refresh rewrite. Complete outgoing snapshot agreement and the full eight-call integration remain open.
-`HostHintReadTrajectory` now uses that carrier's original CPU walk for the actual paired replay.
-`hintLength_result` proves the observation of the host queue at the exact event position from
-incoming State truth; `hintRead_run` consumes original operand currency and proves dispatch and
-the exact padded writes there. Preceding replay and running status are derived internally.
-`CoreExecutionTrajectory` shares occurrence lookup, replay, and full timeline agreement with the
-ordinary local assembly. `HostHintReadMemoryEffect` now proves `GroundingCarrier.hintRead_step`, deriving
-the actual HINT_READ transition and next paired state, with every physical RAM push and preservation
-of all other RAM cells. The instruction contract and clock bounds authenticate its complete event.
-`GroundingCarrier.queue_engineFacts` now derives the complete timed step/frame bundle for
-HINT_READ and both HINT_LEN variants, including register/RAM readbacks, all location frames,
-configuration, and ROM preservation. HINT_LEN's full successor follows from the actual queue
-observation; authenticated HINT_READ ownership and CPU clock uniqueness exclude added hint RAM
-rows from non-read events. `HostExecutionEffect` supplies concrete host preservation without
-assuming unchanged RAM. `HostHintReadInstructionExecution` now proves
-`HostHintReadCPU.GroundingCarrier.instruction_engineFacts` for all 25 ordinary cases on the same carrier.
-`HostLocalCoreRom` authenticates store permissions from the extended ledger and reuses the original
-store footprints and registered ROM-preserving effects. `HostHintReadSyscallExecution` derives
-all installed SyscallInstrs cases from full-call balance, including control dispatch on the actual
-incoming host bank. `HostHintReadExecution` adds legacy HALT and proves `GroundingCarrier.ground`
-with no remaining event-semantic premise. `HostHintReadExecutionPath.source_execution` derives
-a genuine local `ExecutionPath`, including ordinary normal retirement, the exact active event
-multiset, and final PC/clock/Memory-frontier agreement. Complete outgoing snapshot and Exit-bus
-binding, the full eight-call integration, and constructive completeness remain open.
-The combined handoff regression uses real
-264-tick syscall spacing, intervening ENTER calls, reversed tables, padding, and a 24-bit clock
-carry; changing a complete call at the same clock fails. It is not a full mixed-AIR witness.
-No static-source-queue restriction is added to the full capstone objective.
-Active queue clocks are positive, consistent with the existing 1-mod-8 compiler-profile obligation;
-range-only source validation still permits zero-step identities.
-Duplicating both instruction and handler rows balances the handoff alone; CPU ordering rules it out.
-These components still need mixed-AIR installation, authenticated WRITE/hook allocations, complete
-allocation-ledger node-word authentication for HINT_READ, and integration of allocation edges and
-queue history with full execution. The shared resource profile must include the identity bounds;
-no static-source-queue assumption is admissible.
-`HostCommitEnsemble` now takes the actual source host and seeds its selected bank, preserving
-nonzero commitment/deferred values across continuation cuts. Its verifier has no witness cells;
-clock zero is a local ledger seed, with boot's zero values as a specialization. The source-hint assembly now installs both bank terminals and a combined verifier-owned
-queue/bank boundary. `HostHintReadBanks.ordered_history` derives each physical bank history
-from that complete mixed witness, and the existing execution-path proof retains its full ledger.
-A complete active-COMMIT regression starts from nonzero banks and checks every constraint, lookup,
-and channel balance; changed final banks and missing/duplicate terminals are rejected. Aligning
-those bank histories with the CPU replay and authenticating the complete outgoing snapshot remain
-open, as does constructive completeness. The combined verifier exports with zero witness cells.
-The generic interfaces, finite-image/host-I/O substrate, executable instruction decoder,
-computed fixed program provider, and Rust ensemble checker are implemented. Uniform decoder/Sail
-agreement is proved by `SailDecode.instructionDecode_agrees`; enabled hint-extension aliases are
-explicitly excluded from the checked parser. The integrated native capstone remains open. Its remaining work
-includes mixed-row grounding and host/terminal completion for the new 59-table
-`Soundness/NativeCoreEnsemble.lean` assembly. That assembly already replaces the legacy Program and
-memory providers, fixes the boot PC/time and both ordering endpoints, and closes Byte/Program.
-`NativeCoreBoundaries.lean` derives initial-record authenticity/uniqueness, their exact physical Memory
-projection, public boot fields, and physical Program-row ROM/Sail membership from raw constraints and
-balance. Finalizer specifications/uniqueness and exact frontier balances are closed; final-value currency
-and the remaining mixed host walk still require integration. The older 55-table execution theorem
-has not been transported to this assembly. The detailed remaining work
-is in `docs/roadmap.md` under "Native Clean core". Preserve the 25 instruction faithfulness anchors;
-exact v6.4.0 Core AIR refinement remains separate. Native
-timed grounding, every one of the 25 chip contracts, and `supported_core_native_sound` are closed. The
-paired 34-table execution and 6-table memory-boundary shard relation exists, but full upstream soundness remains open
-until the six Core system tables derive the native boundary facts and
-`CoreAIRRefinementObligations` has a closed construction. Until then only
-`sp1_air_refinement_of_obligations`/`sp1_air_sound_of_obligations` are declared; the unqualified names
-remain reserved. See `docs/roadmap.md` and `docs/architecture.md`.
+bounded local execution segments, with authenticated complete boundaries, all eight constrained
+host calls, native shard composition, and generic whole-ensemble export. Boot-to-HALT is an
+endpoint corollary. Work from the checked end-to-end targets in `FormalModel/Shard.lean` and
+`Soundness/Shard/Contract.lean`; their concrete semantic resource profile and implementation
+instances remain open. Do not add compiler readiness, provider validity, grounding, or syscall
+inactivity as caller premises of the final capstone.
+
+`Model/Core/Execution{,Path,Replay,Boot,Snapshot}.lean` owns complete Sail/host/clock semantics.
+Reuse its paths and finite boundaries, the shared `ExecutionCarrier`/`CoreExecutionTrajectory`,
+and the existing decoder, routing, access plans, and compiler. The older `CoreShardSemanticWitness`
+is a legacy ordinary/exact-Core view, not a second full-state model. Keep the native profile's
+ROM/host strengthening separate from the unchanged 25 whole-chip Rust faithfulness anchors.
+
+Current proof scope, the next obligation, durable semantic findings, and acceptance gates live in
+[docs/roadmap.md](docs/roadmap.md); module ownership and trust boundaries live in
+[docs/architecture.md](docs/architecture.md) and [docs/layering.md](docs/layering.md).
+Update that status in one place rather than appending a development log here. The full mixed
+outgoing-state/Exit theorem, all-eight-call installation, and constructive completeness remain
+open. `sp1_air_sound` and `sp1_air_refinement` also remain reserved for a closed exact-upstream
+refinement; only their `_of_obligations` combinators are currently declared.
 
 ## Build
 
@@ -634,12 +365,12 @@ Native-resident pending the "Spec homing" backlog item (see the ChipAssumptions 
 and completed the root index (now gated by `scripts/check_root_index.sh`). The trace *arguments*
 (`RefinesAt`/`RowEffect`/routing) are `ChipRow`/`RowView`-dependent and so remain in `Soundness/` —
 their natural layer — rather than being forced below it.
-A bespoke-trail → Clean `VmTables` migration (roadmap W11) was investigated and **rejected**
+A bespoke-trail → Clean `VmTables` migration was investigated and **rejected**
 — Clean's VM engine yields verifier-guarantees with no explicit execution walk, while the SP1 argument
 needs a balance-derived ordered trail, so re-basing adds obligations without removing the
-SP1-specific trail machinery (see roadmap W11).
+SP1-specific trail machinery (see `docs/architecture.md`).
 
-**Structural-bus grounding program (closed for the native slice, 2026-07).** Channels communicate the field tuples and
+**Legacy 55-table structural-bus grounding (closed for its stated slice).** Channels communicate the field tuples and
 multiplicities that SP1 actually constrains; they do not assert reachability. `VmChannel` and the earlier
 semantic-channel spike were retired. State has local guarantee `True`, Program carries `RowSpec`, Memory
 carries `isU64 ∧ ClkBound` (value + a bounded 24-bit access timestamp), and Byte carries `ByteRowSpec`.
@@ -647,7 +378,7 @@ carries `isU64 ∧ ClkBound` (value + a bounded 24-bit access timestamp), and By
 grounding engine from bus balance, boundary/provider facts, program commitment, strict schedule rank, and
 the 25 chip `advance` lemmas. No chip `ProverAssumptions` threads either global truth. The current capstone
 layers distinguish native supported-machine refinement, extracted AIR faithfulness, full SP1 AIR
-soundness, and the eventual ArkLib verifier theorem; see `docs/roadmap.md` (P0–P2).
+soundness, and the eventual ArkLib verifier theorem; see `docs/roadmap.md` for the separate native and exact targets.
 The memory-bus closed forms, `GroundingAdapter`, all 25 `ChipGroundingContracts`, aligned-carrier
 transports, RAM/same-location grounding, and per-position assumptions/readiness are proved. Remaining
 work is to derive this native relation's semantic boundary premise from the exact upstream system
@@ -658,10 +389,9 @@ proved and its table registered at ensemble position 54, but the timed grounding
 walk a syscall row's three register touches, so `noActiveRows` restricts the relation to shards whose
 syscall table is inactive, and `haltTablePresent` keeps the Halt table the sole Exit contributor.
 Both fields go when those two things change — the first with the engine's mixed-row carrier, the
-second with the terminal-row policy for the full syscall table. Shards with an active syscall row are outside the certified
-set today, and the relation says so rather than assuming it away.
+second with the terminal-row policy for the full syscall table. Shards with an active syscall row are outside this legacy relation, and the relation says so rather than assuming it away.
 An *earlier* third conjunct (`SupportedCoreMemoryTimestampRangeRelation`, the
-pulled-record `clk_high < 2 ^ 24` bound) was deleted in the 2026-08 W3 wave: it is now derived from
+pulled-record `clk_high < 2 ^ 24` bound) was deleted in the timestamp-bound derivation: it is now derived from
 the produced side of the capstone's own per-location Memory balance, unblocked by moving the bound
 out of `ChipGroundingContracts.rowAligned`'s premises and into the per-touch antecedent of its slot
 conjunct.
@@ -747,7 +477,7 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
     deprecated-tactic guards `style.refine`/`style.cases`/`style.induction`/`style.admit`, and
     `oldObtain`/`style.cdot` — all at **zero** violations. They apply during the normal `lake build SP1Clean`.
     `linter.style.longLine` is the remaining candidate (real fallout, concentrated in Native/FormalModel; see
-    `docs/roadmap.md` § "Cleanup / polish backlog"). The flags are scoped **per-lib** rather than at package level so the
+    `docs/roadmap.md` § "Separate follow-ups"). The flags are scoped **per-lib** rather than at package level so the
     auto-gen `SP1Extracted` library stays out of the set (it carries per-file `set_option linter.all false`);
     keep the five identical `moreLeanArgs` copies in `lakefile.toml` in sync. (Every hand-written pillar
     transitively imports Mathlib — Native via Clean — so the `-D linter.*` options register fine; the older
@@ -766,7 +496,7 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
     regenerates it; CI runs `lake lint` in the build job. Deliberately **dropped**: `docBlame`/`tacticDocs`
     (doc-coverage noise) and `unusedArguments` (flags only the uniform field-generic / `ProverData` signature
     args — all structural, and a fresh false-positive per new chip).
-  - The next-candidate linter (`longLine`) is tracked in `docs/roadmap.md` § "Cleanup / polish backlog"; the
+  - The next-candidate linter (`longLine`) is tracked in `docs/roadmap.md` § "Separate follow-ups"; the
     non-negotiable suppressions — `unusedSectionVars`/`unusedSimpArgs` (structurally necessary in circuit
     proofs) and the auto-gen `linter.all false` — must stay.
 - **This repo does not raise elaboration budgets.** Hand-written Lean carries **zero**
@@ -870,8 +600,8 @@ after installing or toggling.
   allowed to be long); its citations are machine-checked by `scripts/check_report_citations.sh`.
 - `docs/architecture.md` — the chip-centered native/Sail/Rust-oracle/trace chain and theorem layering,
   including the deliberate layering exceptions.
-- `docs/roadmap.md` — the dependency order from exact system-table grounding through ArkLib and
-  completeness.
+- `docs/roadmap.md` — current native shard targets, implementation order, findings, and release
+  gates; exact Core refinement and ArkLib are separate follow-ups.
 - `docs/goal-overview.md` — the completed-state contract (verifier + completeness targets). Not
   current status; never cite it as such.
 - `docs/release-audit.md` — the honest-claim / trust-boundary report (axiom census and zero-deferral gate;

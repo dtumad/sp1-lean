@@ -700,6 +700,8 @@ import SP1Clean.FormalModel.CoreProfile
 import SP1Clean.FormalModel.OpcodeTable
 import SP1Clean.FormalModel.CoreAIRRelation
 import SP1Clean.FormalModel.CoreShard
+import SP1Clean.FormalModel.Shard
+import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.FormalModel.Relations
 import SP1Clean.FormalModel.EventExecution
 import SP1Clean.FormalModel.Execution
