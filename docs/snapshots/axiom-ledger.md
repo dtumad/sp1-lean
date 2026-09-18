@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-18. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2631 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 306 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2653 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 307 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 2937 released declarations are probed.
+- 2960 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,6 +35,18 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
+The bank-history agreement adds twenty-two main probes and one semantic regression. Both
+`HostBankCPUReplay.cpu_projection` and `HostHintReadCPU.source_execution_with_banks` retain the
+existing mixed assembly's 100-dependency set. Two whole-state replay projections retain the
+existing 77-dependency Sail set; the interpreter bank laws and shared receiver helpers use only
+subsets of the logical baseline. All preceding 2631 main dependency sets are unchanged. Of the
+306 preceding tests, `HostQueue.changingQueue` loses its `Quot.sound` dependency with the stronger
+semantic import; its statement and the other 305 dependency sets are unchanged. There are no new
+main-library axiom names; the new regression adds only its disclosed
+`native_decide` constant. Full HostCall accounting and strict clocks identify each bank's CPU
+subsequence, including repeated updates, before the original replay supplies both final bank
+equalities. Complete outgoing snapshot/Exit binding and constructive completeness remain open.
+
 The full-state shard contract and bank-call checkpoint adds nineteen main probes and no tests.
 The eleven execution/target declarations inherit the existing 77-dependency Sail semantic set;
 policy and local bank laws use subsets of the ordinary logical baseline. The installed
@@ -43,7 +55,8 @@ All preceding 2612 main and 306 test dependency sets are unchanged, with no remo
 names. The shard soundness/compiler targets and their conditional assembly law are **not**
 inhabited capstone instances; the concrete semantic resource profile remains open. Bank terminal
 erasure preserves the full semantic fold, and the installed bank calls are exhaustive and
-strictly ordered. Agreement with CPU replay and the complete outgoing snapshot remain open.
+strictly ordered. The bank agreement above closes the CPU-replay obligation; complete outgoing
+snapshot binding remains open.
 
 The mixed bank installation adds thirteen main probes: the ten boundary-circuit laws use only
 `[propext, Classical.choice, Quot.sound]`, and the three installed-ledger/history theorems retain
@@ -57,8 +70,8 @@ execution-path proof is transported to this enlarged witness. A complete active-
 starts from nonzero banks, supplies actual CPU and Memory records and Byte providers, and checks
 all fixed lookups and channel balances; forged final banks and missing/duplicate terminals fail.
 The fixture retains the current legacy Exit arrangement's inactive HALT row. The composite
-verifier exports with zero witness cells. CPU-history agreement, complete outgoing-state binding,
-and constructive completeness remain open.
+verifier exports with zero witness cells. Complete outgoing-state binding and constructive
+completeness remain open; the bank agreement above closes CPU-history agreement.
 
 The source-bank generalization adds three main probes using only the logical baseline and two
 test probes, each with its own disclosed compiler-trust constant. All preceding 2596 main and
@@ -424,7 +437,7 @@ changed bytes at equal lengths. This is semantic compiler machinery, not a newly
 queue: node contents, head transitions, and field/resource bounds still need integration. The
 full-AIR forged HINT_LEN result remains open. The source-bank generalization above now replaces
 the bank subsystem's zero genesis with actual source commitment/deferred values; the mixed installation
-above now supplies the endpoints, while CPU-history agreement remains open.
+above now supplies the endpoints, and the bank agreement closes CPU-history agreement.
 
 The protected-ROM grounding checkpoint adds 13 main declarations and no test anchors. Two
 additions use the logical baseline or a subset, two retain the existing 77-axiom Sail set, one

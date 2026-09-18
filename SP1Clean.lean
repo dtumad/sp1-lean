@@ -430,6 +430,8 @@ import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Native.Operations.HintQueueBoundary
 import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Soundness.HostHintReadBanks
+import SP1Clean.Soundness.HostBankCPUReplay
+import SP1Clean.Soundness.HostHintReadBankAgreement
 import SP1Clean.Soundness.HostHintReadLocalMemory
 import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Soundness.HostHintReadExecutionRows
@@ -476,6 +478,7 @@ import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Model.Core.BankReplay
 import SP1Clean.Model.Core.HostHalt
 import SP1Clean.FormalModel.Contracts.AddressOrder
 import SP1Clean.Native.Operations.AddressOrder

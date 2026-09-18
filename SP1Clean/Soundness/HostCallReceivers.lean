@@ -55,6 +55,29 @@ def hintLength (empty : Bool) : ReceiverView (HostCallChip.channel (p := p)) whe
       (size HostHintLengthChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
     exact HostHintLengthChip.host_values empty _ _ env
 
+/-- The receiver reads the complete call from the physical HALT row. -/
+theorem halt_message (env : Environment (ZMod p)) :
+    (HostCallReceivers.halt (p := p)).message env = (valueFromOffset HostHaltChip.Inputs 0 env).call := by
+  have evaluated (input : Var HostHaltChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
+    cases input
+    simp only [circuit_norm]
+  simp only [HostCallReceivers.halt, evaluated, eval_varFromOffset_valueFromOffset]
+
+omit [Fact (2 ^ 25 < p)] in
+/-- ENTER already has exactly the complete call as its input. -/
+theorem enter_message (env : Environment (ZMod p)) :
+    (HostCallReceivers.enter (p := p)).message env = valueFromOffset HostEnterChip.Inputs 0 env := by
+  simp only [HostCallReceivers.enter, eval_varFromOffset_valueFromOffset]
+
+/-- Each commitment receiver reads its row's complete call. -/
+theorem commit_message (deferred : Bool) (slot : Fin 8) (env : Environment (ZMod p)) :
+    (HostCallReceivers.commit (p := p) deferred slot).message env =
+      (valueFromOffset HostCommitChip.Inputs 0 env).call := by
+  have evaluated (input : Var HostCommitChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
+    cases input
+    simp only [circuit_norm]
+  simp only [HostCallReceivers.commit, evaluated, eval_varFromOffset_valueFromOffset]
+
 /-- The implemented non-RAM handlers: control, both eight-slot commitment families,
 and empty/nonempty HINT_LEN. HINT_READ adds its own receiver and RAM resources. -/
 def available : List (ReceiverView (HostCallChip.channel (p := p))) :=

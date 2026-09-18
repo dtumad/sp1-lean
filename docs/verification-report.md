@@ -598,13 +598,13 @@ not completed instances. The explicit semantic `Profile` parameter still needs a
 resource/permission policy enforced by the AIR; compiler success or readiness cannot define it.
 This preserves the distinction between the desired bounded language and today's installed subset.
 
-The current path theorem is `HostHintReadCPU.source_execution`, in
-`SP1Clean/Soundness/HostHintReadExecutionPath.lean`. It consumes raw constraints and balanced
+The current path theorem is `HostHintReadCPU.source_execution_with_banks`, in
+`SP1Clean/Soundness/HostHintReadBankAgreement.lean`. It consumes raw constraints and balanced
 channels of the source-hint/bank assembly and returns a genuine local execution from the checked
 complete incoming snapshot. Its event list is a permutation of the physical active CPU inventory;
-its final PC, clock, and every final Memory-frontier value agree with the actual replay. All
-ordinary cases, HINT_READ/HINT_LEN, control and commitment calls, and legacy HALT are grounded
-internally. No separate ordering, prior-record currency, successful replay, or step/frame premise
+its final PC, clock, every final Memory-frontier value, and both verifier-bound banks agree with
+the actual replay. All ordinary cases, HINT_READ/HINT_LEN, control and commitment calls, and
+legacy HALT are grounded internally. No separate ordering, prior-record currency, successful replay, or step/frame premise
 is supplied by the caller. The complete outgoing snapshot and terminal Exit are not yet bound.
 
 The source check validates the finite image, complete initialized registers, platform
@@ -633,9 +633,13 @@ addresses; those counterexamples explain why complete word authentication is nec
 Both commitment banks are initialized from the actual source host, including nonzero values at
 continuation cuts. The combined verifier installs their endpoints alongside the queue endpoints,
 and physical bank histories follow from that mixed witness's own balance. Ordered full-call
-projection and terminal erasure preserve the semantic fold. The complete active-COMMIT regression
-checks all constraints, fixed lookups and channel balances; changed final banks or missing/duplicate
-terminals fail. Aligning these histories with the CPU replay remains the next boundary obligation.
+matching and strict CPU/bank clocks identify the exact chronological subsequences, retaining
+arguments and repeated update occurrences. `HostBankCPUReplay.replay_bank` connects their folds
+to the existing whole-state interpreter; the path theorem supplies replay success internally.
+The complete active-COMMIT regression checks all constraints, fixed lookups and channel balances;
+changed final banks or missing/duplicate terminals fail. A separate semantic regression traverses
+all eight host calls from nonzero banks, preserves untouched slots, and distinguishes reversed
+overwrites. It is not a claim of full eight-call AIR installation.
 The `bankFinal` parameter currently binds only the two banks, not the entire supplied host record.
 
 The installed receiver inventory excludes WRITE and VERIFY. Semantic execution and queue

@@ -227,7 +227,8 @@ Adapters must state what they preserve; no equivalence is assumed merely from si
 | `CoreTableProjection`, `CoreRowBalance`, `CoreMemoryBalance` | Shared physical table projections and complete occurrence accounting |
 | `StateChronology`, `CoreMemoryChronology`, `CoreRowTransport` | Order, refresh elimination and the shared `ExecutionCarrier` |
 | `CoreExecutionTrajectory` | Actual paired replay and alignment with the AIR timeline |
-| `HostHintReadExecutionPath` | Current installed mixed-AIR path theorem, with final PC/clock/frontier agreement |
+| `HostHintReadExecutionPath` / `HostHintReadBankAgreement` | Installed mixed-AIR path with final PC/clock/frontier and both bank equalities |
+| `Model/Core/BankReplay` / `HostBankCPUReplay` | Bank observations of the existing interpreter and occurrence-preserving agreement between physical histories and CPU subsequences |
 | `Soundness/Shard` | Public contract/facade; complete outgoing-state and compiler targets remain unfilled |
 | `Proofs/Completeness` | Existing compiler, row builders, access/frontier schedules and provider construction to reuse |
 
@@ -240,7 +241,8 @@ footprint. Projecting State alone does not preserve Memory balance: WRITE contri
 pair, and host RAM rows contribute physical accesses. All relevant occurrences must survive.
 
 The full outgoing contract is stronger than those frontier facts. It must authenticate untouched
-state and all host fields, align bank/queue histories with the same CPU replay, and bind Exit.
+state and all host fields and bind Exit. Bank and queue histories already agree with the same
+CPU replay; their endpoint facts must be included in complete snapshot equality.
 The current source-hint installation has neither WRITE/VERIFY nor authenticated dynamic allocation;
 its restricted inventory is not the final public profile. Every semantic resource/permission
 restriction must also be enforced or derived by the AIR. In particular, same-value writes to ROM

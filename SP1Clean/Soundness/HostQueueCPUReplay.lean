@@ -46,7 +46,8 @@ private theorem syscall_safe (env : Environment (ZMod p)) :
   simp only [QueueProjectionSafe, ExecutionRow.event, rawCode_syscallEventOfRow,
     safe, HostCallLedger.call, HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat]
 
-private theorem halt_code {image : ProgramImage} {source : ExecutionSnapshot}
+/-- Every active legacy HALT row carries the actual zero syscall code. -/
+theorem halt_code {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (LocalCore.ensemble (p := p) image source)) (constraints : witness.Constraints)
     (row : HaltChip.Inputs (ZMod p))
     (member : row ∈ activeSystemRows (LocalCore.systemTable witness 2) haltRow (·.is_real)) :
@@ -64,7 +65,8 @@ private theorem halt_code {image : ProgramImage} {source : ExecutionSnapshot}
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 
-private theorem filterMap_inventory {Instruction Halt Wrapper Row Message Label : Type*}
+/-- Erase silent instruction families while retaining every wrapper occurrence. -/
+theorem filterMap_inventory {Instruction Halt Wrapper Row Message Label : Type*}
     (instruction : Instruction → Row) (halt : Halt → Row) (wrapper : Wrapper → Row)
     (call : Wrapper → Message) (project : Row → Option Label) (label : Message → Option Label)
     (instructions : List Instruction) (haltRows : List Halt) (wrappers : List Wrapper)

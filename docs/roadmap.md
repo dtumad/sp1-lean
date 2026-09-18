@@ -45,9 +45,9 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
-| Installed mixed soundness | `HostHintReadCPU.source_execution` derives a real local path, exact active event multiset, final PC/clock and all final frontier values from raw constraints/balance | Full outgoing snapshot, bank/CPU agreement, Exit |
+| Installed mixed soundness | `HostHintReadCPU.source_execution_with_banks` derives a real local path, exact active event multiset, final PC/clock/frontier values and both final banks from raw constraints/balance | Full outgoing snapshot and Exit |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
-| Commitment banks | Actual nonzero source banks, both verifier-owned endpoints, complete physical histories from the mixed witness; ordered call projection and terminal erasure preserve the fold | Align each bank history with the same CPU replay |
+| Commitment banks | Both physical histories equal the corresponding CPU subsequences, including update arguments and clocks; their endpoints equal the actual replayed banks | Include these equalities in the complete outgoing snapshot |
 | Constructive completeness | Existing 55-table ordinary compiler with explicitly narrower admissibility; many mixed component constructors | Full local-segment compiler total on the independent semantic profile |
 | Export | Generic typed ensemble export/checker, component witness IR, Rust reference consumer | Complete mixed ensemble inventory and event-to-all-tables compiler export |
 | Exact upstream / verifier | Paired 34+6-table exact relation and conditional refinement combinators | Closed exact refinement bundle; cryptographic knowledge soundness separately |
@@ -75,7 +75,7 @@ execution carrier to make a local proof convenient.
 |---|---|---|
 | Statement and ownership | Use `FormalModel.Shard.Executes` and the existing generic AIR interfaces; keep the resource parameter visibly open | Checked targets exist (done); concrete profile and canonical header below still required |
 | Semantic resource policy | Fix active clock phase/ranges, actual ordinary-store byte permissions, finite host/queue identity bounds, and channel-count capacity in one semantic profile | Soundness derives every restriction from the AIR; every permitted semantic execution fits; identities need no active-clock phase |
-| Complete outgoing boundary | Align both bank histories with CPU order; prove complete final Sail/register/RAM/runtime/host agreement; bind the full target and terminal Exit | A changed untouched register/byte, host field, bank, PC/clock, or exit cannot retain acceptance; target equality is a conclusion |
+| Complete outgoing boundary | Use the proved bank/CPU agreement; prove complete final Sail/register/RAM/runtime/host agreement; bind the full target and terminal Exit | A changed untouched register/byte, host field, bank, PC/clock, or exit cannot retain acceptance; target equality is a conclusion |
 | Full host inventory | Install WRITE/VERIFY effects, x12 and RAM reads, request/reply binding, hook/hint prepends, authenticated allocations and node words | All eight calls grounded on the same evolving host; no static-source-queue or syscall-inactivity restriction |
 | Terminal policy | Replace legacy HALT participation with the full syscall HALT path and the native canonical exit range | Nonhalting and empty shards need no dummy HALT; stopped states permit only identities; genuine HALT binds Exit |
 | Constructive completeness | Adapt existing routing, transition views, access plans, schedules, providers and row constructors to this exact full-state relation | `CompilerTarget` inhabited without proof inputs or caller readiness/footprint/totality premises; accepted candidates compile and compiled candidates are valid |
@@ -83,12 +83,14 @@ execution carrier to make a local proof convenient.
 | Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-**Next proof work:** finish bank/CPU order agreement, then use it in full outgoing-state agreement.
-`HostHintReadBanks.ordered_calls` now supplies the exhaustive ordered-call fold directly from
-the installed constraints and balance, using `HostCommitBank.fold_calls` and `calls_pairwise`. Match full calls through the existing receiver registry and unique CPU clocks; do not
-build another host evaluator. Work on the semantic capacity/profile definition alongside this only
-where needed to fix the public boundary. A profile restriction may not silently narrow the intended
-all-eight-call language to fit today's installation.
+**Next proof work:** complete outgoing-state agreement and its verifier binding.
+`HostHintReadCPU.source_execution_with_banks` now closes the bank-history step on the same
+execution path: complete HostCall matching plus strict CPU/bank clocks identifies each update
+subsequence, and the existing host interpreter gives its final bank. No caller bank/CPU order or
+successful replay premise is added. Preserve this theorem while deriving complete final
+Sail/register/RAM/runtime/host equality and Exit agreement. Work on the semantic capacity/profile
+definition alongside this only where needed to fix the public boundary. A profile restriction
+may not silently narrow the intended all-eight-call language to fit today's installation.
 
 The full boundary verifier must take source/target snapshots as public instance data, with a
 canonical bounded header, and derive private queue/bank endpoints internally. A caller must not

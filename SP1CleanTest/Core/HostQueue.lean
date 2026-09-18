@@ -1,4 +1,5 @@
 import SP1Clean.Model.Core.HostQueue
+import SP1Clean.Model.Core.BankReplay
 import SP1Clean.Model.SP1Field
 
 /-! # Stateful queue compilation regressions
@@ -77,6 +78,25 @@ theorem changingQueue :
         [[9, 8, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0],
          [7, 0, 0, 0, 0, 0, 0, 0], [1, 2, 3, 0, 0, 0, 0, 0]],
         4, some [], [], 4, 5, 2, 0, some 0⟩ := by native_decide
+
+/-- Both banks agree with the selected call fold through all eight kinds, including hook
+writes and VERIFY. Nonzero untouched slots survive; reversing repeated writes changes the result.
+This exercises the host projection, independently of mixed-AIR installation. -/
+theorem bankProjection :
+    let start := { initial with
+      host := { initial.host with
+        committed := #v[10, 20, 30, 40, 50, 60, 70, 80]
+        deferred := #v[101, 102, 103, 104, 105, 106, 107, 108] } }
+    let tape := calls.dropLast ++ [(.commit, 0, 11, 0), (.commitDeferred, 1, 12, 0), (.halt, 0, 0, 0)]
+    let result := tape.foldlM step start
+    result.map (fun state => (state.host.committed, state.host.deferred)) =
+      some (#v[11, 20, 30, 40, 50, 60, 70, 80], #v[101, 12, 103, 104, 105, 106, 107, 108]) ∧
+    [false, true].all (fun deferred =>
+      let updates := tape.filterMap fun call => bankCall? deferred call.1.code call.2.1 call.2.2.1
+      result.any fun state => decide (
+        updates.foldl bankUpdate (start.host.bank deferred) = state.host.bank deferred ∧
+        updates.reverse.foldl bankUpdate (start.host.bank deferred) ≠ state.host.bank deferred)) = true := by
+  native_decide
 
 /-- Every historical head still denotes its full original bytes after later prepends and pops. -/
 theorem historicalHeads :

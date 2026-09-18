@@ -30,26 +30,6 @@ private def ControlCode (code : Word (ZMod p)) : Prop :=
   code = 0 ∨ code = HostEnterChip.codeWord ∨
     code = HostCommitChip.codeWord false ∨ code = HostCommitChip.codeWord true
 
-private theorem halt_message (env : Environment (ZMod p)) :
-    (HostCallReceivers.halt (p := p)).message env = (valueFromOffset HostHaltChip.Inputs 0 env).call := by
-  have evaluated (input : Var HostHaltChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
-    cases input
-    simp only [circuit_norm]
-  simp only [HostCallReceivers.halt, evaluated, eval_varFromOffset_valueFromOffset]
-
-omit [Fact (2 ^ 25 < p)] in
-private theorem enter_message (env : Environment (ZMod p)) :
-    (HostCallReceivers.enter (p := p)).message env = valueFromOffset HostEnterChip.Inputs 0 env := by
-  simp only [HostCallReceivers.enter, eval_varFromOffset_valueFromOffset]
-
-private theorem commit_message (deferred : Bool) (slot : Fin 8) (env : Environment (ZMod p)) :
-    (HostCallReceivers.commit (p := p) deferred slot).message env =
-      (valueFromOffset HostCommitChip.Inputs 0 env).call := by
-  have evaluated (input : Var HostCommitChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
-    cases input
-    simp only [circuit_norm]
-  simp only [HostCallReceivers.commit, evaluated, eval_varFromOffset_valueFromOffset]
-
 private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
     (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
@@ -62,19 +42,19 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
   rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
   · have valid := HostHaltChip.component_spec_of_byte env constraints bytes
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
-    rw [halt_message]
+    rw [HostCallReceivers.halt_message]
     exact Or.inl valid.1
   · have valid := HostEnterChip.component_spec_of_constraints env constraints
     change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
-    rw [enter_message]
+    rw [HostCallReceivers.enter_message]
     exact Or.inr (Or.inl valid.1)
   · have valid := HostCommitBank.view_spec_of_byte false (some slot) env constraints bytes
     change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
-    rw [commit_message]
+    rw [HostCallReceivers.commit_message]
     exact Or.inr (Or.inr (Or.inl valid.1.1))
   · have valid := HostCommitBank.view_spec_of_byte true (some slot) env constraints bytes
     change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
-    rw [commit_message]
+    rw [HostCallReceivers.commit_message]
     exact Or.inr (Or.inr (Or.inr valid.1.1))
 
 private theorem control_projection (message : HostCallChip.Message (ZMod p))
@@ -128,22 +108,22 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
   rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
   · have valid := HostHaltChip.component_spec_of_byte env constraints bytes
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
-    rw [halt_message] at observed ⊢
+    rw [HostCallReceivers.halt_message] at observed ⊢
     exact ⟨_, HostHaltChip.run_of_spec _ valid host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
   · have valid := HostEnterChip.component_spec_of_constraints env constraints
     change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
-    rw [enter_message] at observed ⊢
+    rw [HostCallReceivers.enter_message] at observed ⊢
     exact ⟨_, HostEnterChip.run_of_spec _ valid host running policy context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
   · have valid := HostCommitBank.view_spec_of_byte false (some slot) env constraints bytes
     change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
-    rw [commit_message] at observed ⊢
+    rw [HostCallReceivers.commit_message] at observed ⊢
     exact ⟨_, HostCommitChip.run_of_callSpec false slot _ valid.1 host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
   · have valid := HostCommitBank.view_spec_of_byte true (some slot) env constraints bytes
     change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
-    rw [commit_message] at observed ⊢
+    rw [HostCallReceivers.commit_message] at observed ⊢
     exact ⟨_, HostCommitChip.run_of_callSpec true slot _ valid.1 host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
 
@@ -230,11 +210,13 @@ private theorem queue_messages (tables : List (Table (ZMod p))) :
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 
-private def controlTables
+/-- Physical control and commitment handlers in the installed receiver prefix. -/
+def controlTables
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels)) :=
   ((HostLocalHandoff.receiverTables witness).drop 1).take 18
 
-private theorem calls_split
+/-- Complete calls split into queue handlers and the retained control/commitment inventory. -/
+theorem calls_split
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels)) :
     (HostLocalHandoff.calls witness).Perm
       ((TransitionView.readIndexedRows indices (queueTables witness)).map call ++

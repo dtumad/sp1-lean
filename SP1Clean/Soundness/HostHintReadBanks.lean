@@ -49,6 +49,66 @@ private theorem auxiliary_components
     HostLocalCore.ensemble, HostLocalCore.tables]
   rw [List.drop_left' (by simp only [List.length_set, ProtectedLocalCore.tables_length])]
 
+private theorem auxiliary_length
+    (witness : Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+    (witness.tables.drop 60).length = 27 := by
+  have size := congrArg List.length (auxiliary_components witness)
+  simp only [List.length_map] at size
+  exact size
+
+/-- The instruction receivers precede the resources and the appended boundary verifier. -/
+theorem receiver_tables
+    (witness : Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+    HostLocalHandoff.receiverTables (HostHintQueueBoundary.expanded witness) =
+      (witness.tables.drop 60).take 21 := by
+  have size := auxiliary_length witness
+  change ((witness.tables ++ [_]).drop 60).take 21 = _
+  rw [List.drop_append_of_le_length (by simp only [List.length_drop] at size; omega)]
+  exact List.take_append_of_le_length (by omega)
+
+private theorem read_calls (deferred : Bool) (slots : List (Fin 8))
+    (tables terminal : List (Table (ZMod p))) (size : slots.length = tables.length) :
+    (TransitionView.readIndexedRows (slots.map some ++ [none]) (tables ++ terminal)).filterMap call? =
+      ReceiverView.messages (slots.map (HostCallReceivers.commit deferred)) tables := by
+  induction slots generalizing tables with
+  | nil =>
+      have empty : tables = [] := List.length_eq_zero_iff.mp size.symm
+      subst tables
+      cases terminal <;> simp [TransitionView.readIndexedRows, call?, ReceiverView.messages]
+  | cons slot slots ih =>
+      cases tables with
+      | nil => simp at size
+      | cons table tables =>
+          simp only [List.map_cons, List.cons_append, TransitionView.readIndexedRows,
+            List.zip_cons_cons, List.flatMap_cons, List.filterMap_append] at ih ⊢
+          rw [ReceiverView.messages_cons, ih tables (by simpa using size)]
+          simp only [List.filterMap_map, Function.comp_def, call?, Option.map_some, List.filterMap_eq_map',
+            ReceiverView.tableMessages, HostCallReceivers.commit_message]
+
+/-- Erasing the bank terminal leaves precisely its eight physical handler tables. -/
+theorem calls_eq_slot_tables (deferred : Bool)
+    (witness : Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+    (TransitionView.readIndexedRows indices (bankTables deferred witness)).filterMap call? =
+      ReceiverView.messages (List.ofFn fun slot => HostCallReceivers.commit deferred slot)
+        (((HostLocalHandoff.receiverTables (HostHintQueueBoundary.expanded witness)).drop
+          (if deferred then 11 else 3)).take 8) := by
+  have size := auxiliary_length witness
+  have slotsSize : (List.finRange 8).length =
+      (((witness.tables.drop 60).drop (start deferred)).take 8).length := by
+    simp only [List.length_drop] at size
+    cases deferred <;> simp [start, List.length_take, List.length_drop] <;> omega
+  have read := read_calls deferred (List.finRange 8)
+    (((witness.tables.drop 60).drop (start deferred)).take 8)
+    (((witness.tables.drop 60).drop (start deferred + 8 + gap deferred)).take 1) slotsSize
+  rw [receiver_tables]
+  simp only [List.drop_take, List.take_take]
+  cases deferred <;> simpa only [bankTables, selected, start, indices, Bool.false_eq_true,
+    if_false, if_true, Nat.reduceSub, min_eq_left (by decide : 8 ≤ 18),
+    min_eq_left (by decide : 8 ≤ 10), List.ofFn_eq_map] using read
+
 theorem tables_aligned (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels)) :
@@ -154,7 +214,7 @@ theorem interactions (deferred : Bool)
     (split ▸ List.perm_append_comm ..)
 
 /-- Both bank endpoints and every local specification follow from the complete mixed AIR.
-The fold here contains the selected bank's calls; CPU-order agreement is a separate replay step. -/
+The fold here contains the selected bank's calls; `HostBankCPUReplay` supplies CPU-order agreement. -/
 theorem ordered_history (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))
@@ -189,8 +249,8 @@ theorem ordered_history (deferred : Bool)
   simpa only [HostCommitEnsemble.source_apply] using history
 
 /-- The actual bank calls, in strict clock order, execute from the source bank to its committed
-final words. Only the administrative terminal is erased. Agreement with the CPU replay remains
-separate; neither a call-order premise nor a local specification is supplied here. -/
+final words. Only the administrative terminal is erased. `HostBankCPUReplay` connects this fold
+to the CPU tape; neither a call-order premise nor a local specification is supplied here. -/
 theorem ordered_calls (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))

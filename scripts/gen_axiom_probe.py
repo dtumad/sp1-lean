@@ -40,6 +40,31 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Physical bank histories and final banks of the same mixed CPU replay.
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "halt_message"),
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "enter_message"),
+    ("SP1Clean/Soundness/HostCallReceivers.lean", "commit_message"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "HostState.executeBank_bank"),
+    ("SP1CleanTest/Core/HostQueue.lean", "bankProjection"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "HostState.bank"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "bankKind"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "bankCall?"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "bankEvent?"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "bankUpdate"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "HostState.executeKind_bank"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "replayStep?_bank"),
+    ("SP1Clean/Model/Core/BankReplay.lean", "replayEvents?_bank"),
+    ("SP1Clean/Soundness/HostHintReadBanks.lean", "receiver_tables"),
+    ("SP1Clean/Soundness/HostHintReadBanks.lean", "calls_eq_slot_tables"),
+    ("SP1Clean/Soundness/HostQueueCallProjection.lean", "calls_split"),
+    ("SP1Clean/Soundness/HostQueueCPUReplay.lean", "halt_code"),
+    ("SP1Clean/Soundness/HostQueueCPUReplay.lean", "filterMap_inventory"),
+    ("SP1Clean/Soundness/HostBankCPUReplay.lean", "calls_projection"),
+    ("SP1Clean/Soundness/HostBankCPUReplay.lean", "cpu_projection"),
+    ("SP1Clean/Soundness/HostBankCPUReplay.lean", "replay_bank"),
+    ("SP1Clean/Soundness/HostHintReadBankAgreement.lean", "GroundingCarrier.final_banks"),
+    ("SP1Clean/Soundness/HostHintReadBankAgreement.lean", "source_execution_with_banks"),
+
     # Full-state shard contract targets and ordered commitment calls.
     ("SP1Clean/FormalModel/Shard.lean", "policy"),
     ("SP1Clean/FormalModel/Shard.lean", "Executes"),
