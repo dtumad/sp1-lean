@@ -159,6 +159,27 @@ theorem replayEvents?_clock {policy : HostPolicy} {program : GuestProgram}
     rw [ih suffix, replayStep?_clock step]
     simp only [List.map_cons, List.sum_cons, Nat.add_assoc]
 
+/-- An observation of the actual replay is computed by folding the corresponding row data.
+The labels may retain physical data that semantic event labels deliberately omit. -/
+theorem replayEvents?_fold {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {ρ α : Type*} {rows : List ρ}
+    (label : ρ → ExecutionEvent) (observe : ExecutionState → α) (update : α → ρ → α)
+    (success : replayEvents? policy program source (rows.map label) = some target)
+    (effect : ∀ n current next row, rows[n]? = some row →
+      replayEvents? policy program source ((rows.take n).map label) = some current →
+      replayStep? policy program current (label row) = some next →
+        observe next = update (observe current) row) :
+    observe target = rows.foldl update (observe source) := by
+  induction rows generalizing source with
+  | nil => cases success; rfl
+  | cons row rest ih =>
+    obtain ⟨middle, step, suffix⟩ := Option.bind_eq_some_iff.mp success
+    rw [List.foldl_cons, ← effect 0 source middle row rfl rfl step]
+    apply ih suffix
+    intro n current next item atItem prefixReplay replay
+    apply effect (n + 1) current next item (by simpa only [List.getElem?_cons_succ] using atItem) _ replay
+    simpa only [List.take_succ_cons, List.map_cons, replayEvents?, step, Option.bind_some] using prefixReplay
+
 /-- An observation preserved at every actual prefix transition survives the complete replay. -/
 theorem replayEvents?_preserves {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {events : List ExecutionEvent}

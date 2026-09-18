@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.HostHintReadHostAgreement
+import SP1Clean.Soundness.HostHintReadBookkeeping
 import SP1Clean.Soundness.CoreMemoryFrame
 
 /-! # Complete native Memory observations at the outgoing boundary
@@ -8,8 +9,8 @@ without a final record, the original event frames preserve the complete source v
 same execution has a value at every native register/RAM location, with no touched-location or
 frame premise supplied by the caller. Byte permissions and replay also exclude all out-of-window
 entries. Runtime output/cycles and registers outside the instruction bookkeeping footprint are
-also preserved. Accumulated nextPC/retirement bookkeeping, complete outgoing snapshot binding,
-and public terminal status remain open.
+also preserved. The semantic tape determines all three retirement/nextPC slots. Complete outgoing
+snapshot binding and public terminal status remain open.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -135,8 +136,8 @@ theorem GroundingCarrier.final_memory_domain (valid : image.Valid)
   exact (source.sail.memory.toSailMemory_get? (2 ^ 48) address).trans (if_neg (by omega))
 
 /-- The installed AIR yields one local execution with complete host reconstruction and every
-native Memory value and the complete RAM domain, including untouched locations. Sail runtime and
-register frames are retained; accumulated retirement/nextPC and full target/Exit binding remain open. -/
+native Memory value and the complete RAM domain, including untouched locations. Sail runtime,
+register frames, and all retirement/nextPC effects are retained; full target/Exit binding remains open. -/
 theorem source_execution_with_memory (valid : image.Valid)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))
@@ -155,6 +156,16 @@ theorem source_execution_with_memory (valid : image.Valid)
           | none => source.sail.memorySnapshot.read loc)) ∧
       (∀ address, 2 ^ 48 ≤ address → target.sail.mem.get? address = none) ∧
       (target.sail.cycleCount = source.sail.cycleCount ∧ target.sail.sailOutput = source.sail.output) ∧
+      target.sail.regs.get? Register.nextPC = nextPcAfter events
+        (source.sail.registers.get? Register.nextPC)
+        (some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput))) ∧
+      (target.sail.regs.get? Register.minstret_increment =
+        (if events.countP Machine.ExecutionEvent.isOrdinary = 0
+          then source.sail.registers.get? Register.minstret_increment
+          else some (retirementEnabled source.sail.realize)) ∧
+        target.sail.regs.get? Register.minstret = (source.sail.registers.get? Register.minstret).map
+          (fun value => value + BitVec.ofNat 64
+            (if retirementEnabled source.sail.realize then events.countP Machine.ExecutionEvent.isOrdinary else 0))) ∧
       (∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC → R ≠ Register.minstret →
         R ≠ Register.minstret_increment → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
           target.sail.regs.get? R = source.sail.registers.get? R) ∧
@@ -167,10 +178,13 @@ theorem source_execution_with_memory (valid : image.Valid)
   obtain ⟨carrier⟩ := source_grounding_carrier valid witness constraints balanced
   obtain ⟨target, path, clock, pc, _⟩ := carrier.execution valid constraints balanced
   obtain ⟨hints, decoded, host⟩ := carrier.final_host valid constraints balanced target path
+  have nextPc := carrier.nextPC valid constraints balanced path.replay
+  rw [pc] at nextPc
   exact ⟨carrier.events, target, hints, path, carrier.exhaustive.map ExecutionRow.event, clock, pc,
     carrier.final_memory valid constraints balanced target path.replay,
     carrier.final_memory_domain valid constraints balanced path.replay,
     carrier.runtime valid constraints balanced path.replay,
+    nextPc, carrier.retirement valid constraints balanced path.replay,
     carrier.other_registers valid constraints balanced path.replay, decoded, host⟩
 
 end SP1Clean.Soundness.HostHintReadCPU

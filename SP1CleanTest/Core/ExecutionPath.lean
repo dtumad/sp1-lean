@@ -1,4 +1,5 @@
 import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Model.Core.SailBookkeeping
 import SP1Clean.Model.Core.QueueReplay
 import SP1Clean.Model.SP1Field
 import SP1CleanTest.Audit.ActiveNativeCompleteness
@@ -238,6 +239,56 @@ theorem ordinaryBookkeeping (inhibit : Bool) :
   · rw [effect.otherRegs Register.mcycle (by decide) (by decide) (by decide) (by decide)
       (fun index => by unfold reg_idx_to_Register; split <;> decide)]
     exact Std.ExtDHashMap.get?_insert_self
+
+private def hostBookkeepingSource : ExecutionState :=
+  { source with sail := { source.sail with
+    regs := ((((source.sail.regs.insert Register.nextPC 80000).insert Register.minstret
+      (BitVec.allOnes 64)).insert Register.minstret_increment true).insert Register.mcountinhibit 4).insert
+        Register.minstretcfg 0 } }
+
+private def hostBookkeepingMiddle : ExecutionState :=
+  ⟨enter.apply hostBookkeepingSource.sail 65536, enter.effect.state, hostBookkeepingSource.clock + 264⟩
+
+private def hostBookkeepingTarget : ExecutionState :=
+  ⟨halt.apply hostBookkeepingMiddle.sail 65540, halt.effect.state, hostBookkeepingMiddle.clock + 264⟩
+
+/-- A real ENTER/HALT path has no ordinary retirement. It keeps nonzero nextPC and minstret,
+including an old increment flag different from the currently disabled retirement decision. -/
+theorem hostBookkeeping :
+    ExecutionPath policy program hostBookkeepingSource
+      [.syscall (enter.toEvent source.clock 65536), .syscall (halt.toEvent middle.clock 65540)] hostBookkeepingTarget ∧
+      hostBookkeepingTarget.sail.regs.get? Register.PC = some haltPc ∧
+      hostBookkeepingTarget.sail.regs.get? Register.nextPC = some 80000 ∧
+      hostBookkeepingTarget.sail.regs.get? Register.minstret = some (BitVec.allOnes 64) ∧
+      hostBookkeepingTarget.sail.regs.get? Register.minstret_increment = some true ∧
+      retirementEnabled hostBookkeepingSource.sail = false := by
+  constructor
+  · have first : ExecutionStep policy program hostBookkeepingSource
+        (.syscall (enter.toEvent source.clock 65536)) hostBookkeepingMiddle :=
+      .syscall (HostState.step_of_run (by native_decide) (by native_decide) (by native_decide) _)
+    have last : ExecutionStep policy program hostBookkeepingMiddle
+        (.syscall (halt.toEvent middle.clock 65540)) hostBookkeepingTarget :=
+      .syscall (HostState.step_of_run (by native_decide) (by native_decide) (by native_decide) _)
+    exact .cons first (.cons last (.nil _))
+  · native_decide
+
+/-- Observation arithmetic on mixed labels distinguishes retirement count from elapsed ticks,
+and keeps the last ordinary nextPC across a trailing host suffix and HALT. This is not an AIR fixture. -/
+theorem bookkeepingObservationExamples :
+    ([ExecutionEvent.ordinary, .syscall (enter.toEvent 17 65536), .ordinary,
+      .syscall (halt.toEvent 289 65540)].foldl
+        (fun values event => retirementTick values event.isOrdinary) (true, some false, some (BitVec.allOnes 64)) =
+          (true, some true, some 1)) ∧
+    ([ExecutionEvent.ordinary, .syscall (enter.toEvent 17 65536), .ordinary].foldl
+        (fun values event => retirementTick values event.isOrdinary) (false, some true, some 7) =
+          (false, some false, some 7)) ∧
+    nextPcAfter [.ordinary, .syscall (enter.toEvent 17 65536), .syscall (halt.toEvent 281 65540)]
+      (some 80000) (some haltPc) = some 65536 ∧
+    nextPcAfter [.syscall (enter.toEvent 17 65536), .ordinary] (some 80000) (some 90000) = some 90000 ∧
+    nextPcAfter [.syscall (enter.toEvent 17 65536), .syscall (halt.toEvent 281 65540)]
+      (some 80000) (some haltPc) = some 80000 ∧
+    nextPcAfter [] (some 80000) (some 90000) = some 80000 := by
+  decide
 
 private def queueProgram : GuestProgram where
   rom := [(65536, 0x73), (65540, 0x73), (65544, 0x73)]

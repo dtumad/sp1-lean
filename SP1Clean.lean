@@ -446,6 +446,7 @@ import SP1Clean.Soundness.HostHintReadMemoryEffect
 import SP1Clean.Soundness.HostHintReadSyscallExecution
 import SP1Clean.Soundness.HostHintReadExecution
 import SP1Clean.Soundness.HostHintReadExecutionPath
+import SP1Clean.Soundness.HostHintReadBookkeeping
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostLocalCoreRows
 import SP1Clean.Soundness.HostRamTouches
@@ -481,6 +482,7 @@ import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Model.Core.SailBookkeeping
 import SP1Clean.Model.Core.BankReplay
 import SP1Clean.Model.Core.HostReplay
 import SP1Clean.Model.Core.HostHalt

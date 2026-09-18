@@ -41,6 +41,36 @@ local instance pathLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
+/-- The registered chip effect at an actual replayed instruction occurrence. All incoming
+truth and operand currency are supplied by the same installed grounding proof. -/
+theorem GroundingCarrier.instruction_effect_at (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {n : ℕ} {current next : ExecutionState} {row : DecodedInstructionRow p}
+    (atRow : carrier.ordered[n]? = some (.instruction row))
+    (prefixReplay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize (carrier.events.take n) = some current)
+    (replay : replayStep? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      current .ordinary = some next) :
+    ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current .ordinary next ∧
+      Target.RowEffect (image.toGuestProgram valid) (row.toChipRow witness.data).view current.sail next.sail := by
+  have member := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
+  have grounded := (carrier.ground valid constraints balanced).1 _ member
+  have time := carrier.time_of_ordered_at atRow
+  rw [(eventFacts_state_fetch _ _ _).1] at time
+  have currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
+          (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+    intro mp mem
+    apply grounded.2 mp
+    exact List.mem_append_left _ mem
+  obtain ⟨target, step, effect⟩ := carrier.instruction_step_effect valid constraints balanced member grounded.1 currency prefixReplay time
+  have same : target = next := Option.some.inj (step.replay.symm.trans replay)
+  subst target
+  exact ⟨step, effect⟩
+
 private theorem step_of_replay (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
@@ -62,19 +92,7 @@ private theorem step_of_replay (valid : image.Valid)
   have member := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
   cases row with
   | instruction row =>
-    have grounded := (carrier.ground valid constraints balanced).1 _ member
-    have time := carrier.time_of_ordered_at atRow
-    rw [(eventFacts_state_fetch _ _ _).1] at time
-    have currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
-        MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-          LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
-            (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
-      intro mp mem
-      apply grounded.2 mp
-      exact List.mem_append_left _ mem
-    obtain ⟨target, step, effect⟩ := carrier.instruction_step_effect valid constraints balanced member grounded.1 currency prefixReplay time
-    have same : target = next := Option.some.inj (step.replay.symm.trans replay)
-    subst target
+    obtain ⟨step, effect⟩ := carrier.instruction_effect_at valid constraints balanced atRow prefixReplay replay
     refine ⟨step, ?_, effect.runtime, effect.otherRegs⟩
     have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
         (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data).is_real = 1 := by

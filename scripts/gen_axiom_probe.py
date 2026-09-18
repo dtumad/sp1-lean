@@ -40,6 +40,23 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Accumulated Sail bookkeeping on the installed mixed execution.
+    ("SP1Clean/Model/Core/ExecutionReplay.lean", "replayEvents?_fold"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "retirementEnabled"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "retirementEnabled_of_run"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "retirementTick"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "retirementTick_fold"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "nextPcAfter"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "nextPcAfter_nil"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "nextPcAfter_ordinary"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "nextPcAfter_syscall"),
+    ("SP1Clean/Model/Core/SailBookkeeping.lean", "replayEvents?_nextPC"),
+    ("SP1Clean/Soundness/HostHintReadExecutionPath.lean", "GroundingCarrier.instruction_effect_at"),
+    ("SP1Clean/Soundness/HostHintReadBookkeeping.lean", "GroundingCarrier.retirement"),
+    ("SP1Clean/Soundness/HostHintReadBookkeeping.lean", "GroundingCarrier.nextPC"),
+    ("SP1CleanTest/Core/ExecutionPath.lean", "hostBookkeeping"),
+    ("SP1CleanTest/Core/ExecutionPath.lean", "bookkeepingObservationExamples"),
+
     # Full Sail row bookkeeping and preserved fields of the installed paired replay.
     ("SP1Clean/Soundness/RowEffectDefs.lean", "RowEffect"),
     ("SP1Clean/Proofs/Sail/Advance.lean", "minstret_tail_effect"),

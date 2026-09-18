@@ -624,8 +624,15 @@ instruction `RowEffect` additionally retains runtime/register frames and exact n
 retirement bookkeeping. The same mixed path preserves simulator `cycleCount`, `sailOutput`, and
 all registers outside GPRs, PC, nextPC, and the two retirement slots. The normal self-jump regression
 checks enabled 64-bit retirement wraparound and inhibited retirement, with nonzero simulator/mcycle
-counters and nonempty output. Accumulated nextPC/retirement endpoint formulas and literal outgoing
-snapshot equality remain open.
+counters and nonempty output. `HostHintReadBookkeeping` now accumulates these effects on the same
+replay: `minstret` adds the ordinary-event count modulo `2^64` when the source's official filter
+enables it, and the increment flag is preserved when that count is zero. `nextPcAfter` recovers
+nextPC from the semantic tape and public final PC, using the incoming PC of the trailing host
+suffix after the last ordinary step. Host-only and empty segments preserve incoming nextPC.
+The semantic ENTER/HALT regression retains nonzero nextPC/minstret and an old increment flag
+different from the current enable bit. Mixed-label arithmetic tests cover wraparound, inhibition,
+and both nextPC cases; these are not full-AIR fixtures. Literal supplied outgoing snapshot
+equality and its verifier binding remain open.
 
 The source check validates the finite image, complete initialized registers, platform
 configuration, supported decoding, every ROM byte, and 48-bit source PC/clock. Fixed source
