@@ -45,11 +45,11 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
-| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction, and the public Exit value for a newly halted endpoint | Supplied target equality, including explicit terminal status |
+| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction with the supplied optional exit, and the public Exit value for a newly halted endpoint | Complete supplied-target equality |
 | Memory endpoint | Final records give touched values; absent final records imply no physical push, and the existing frames preserve source values at every other native location, including RAM below address 32; byte permissions and actual replay preserve absence at and above `2^48` | Binding the supplied target |
 | Sail bookkeeping | The installed path preserves runtime/other registers and derives all three bookkeeping slots: source-controlled retirement count, increment flag, and nextPC from the semantic host suffix and final PC | Bind these observations to the supplied target |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
-| Host endpoint | Final hints and banks agree with CPU replay; other host fields are preserved; optional exit status follows actual HALT events, whose canonical 32-bit result equals the public Exit field | Bind these conclusions to the complete outgoing instance, including running versus HALT-zero |
+| Host endpoint | Final hints and banks agree with CPU replay; other host fields are preserved; the supplied optional exit equals actual replay status, whose new HALT code equals the public Exit field | Bind the remaining fields of the complete outgoing instance |
 | Commitment banks | Both physical histories equal the corresponding CPU subsequences, including update arguments and clocks; their endpoints equal the actual replayed banks | Include these equalities in the complete outgoing snapshot |
 | Constructive completeness | Existing 55-table ordinary compiler with explicitly narrower admissibility; many mixed component constructors | Full local-segment compiler total on the independent semantic profile |
 | Export | Generic typed ensemble export/checker, component witness IR, Rust reference consumer | Complete mixed ensemble inventory and event-to-all-tables compiler export |
@@ -58,8 +58,8 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 The current mixed witness has 87 physical tables plus its singleton verifier. The selected
 `HostHintQueueBoundary.ensemble` installs the source-hint resources and both bank terminals.
 Its `bankFinal : HostState` parameter checks the two banks and optional exit status; it is **not**
-a complete outgoing-state commitment. Bank/replay agreement is proved; terminal/replay agreement
-is the next obligation. Queue cursors and bank endpoints remain internal implementation data.
+a complete outgoing-state commitment. Bank and terminal agreement with the CPU replay are proved.
+Queue cursors and bank endpoints remain internal implementation data.
 WRITE and VERIFY are excluded by this instance's actual receiver inventory, not proved as active
 cases. This restricted instance is an implementation checkpoint, not the final capstone domain.
 
@@ -81,14 +81,14 @@ execution carrier to make a local proof convenient.
 | Semantic resource policy | Fix active clock phase/ranges, actual ordinary-store byte permissions, finite host/queue identity bounds, and channel-count capacity in one semantic profile | Soundness derives every restriction from the AIR; every permitted semantic execution fits; identities need no active-clock phase |
 | Complete outgoing boundary | Use the proved bank/CPU agreement; prove complete final Sail/register/RAM/runtime/host agreement; bind the full target and terminal Exit | A changed untouched register/byte, host field, bank, PC/clock, or exit cannot retain acceptance; target equality is a conclusion |
 | Full host inventory | Install WRITE/VERIFY effects, x12 and RAM reads, request/reply binding, hook/hint prepends, authenticated allocations and node words | All eight calls grounded on the same evolving host; no static-source-queue or syscall-inactivity restriction |
-| Terminal policy | Finish terminal-receipt/replay agreement and remove legacy padding participation; active mixed HALT already uses the canonical syscall handler | Nonhalting and empty shards need no dummy HALT; stopped states permit only identities; genuine HALT binds Exit |
+| Terminal policy | Remove legacy padding participation; active mixed HALT uses the canonical syscall handler, and receipt/replay agreement is proved | Nonhalting and empty shards need no dummy HALT; stopped states permit only identities; genuine HALT binds Exit |
 | Constructive completeness | Adapt existing routing, transition views, access plans, schedules, providers and row constructors to this exact full-state relation | `CompilerTarget` inhabited without proof inputs or caller readiness/footprint/totality premises; accepted candidates compile and compiled candidates are valid |
 | Native composition | Use complete snapshot equality at cuts, prove each piece satisfies its own profile, reuse semantic split/join | Separately certified shards compose; splitting/recompilation handles bounds; boot-to-HALT is a corollary |
 | Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-**Next proof work:** connect the new terminal receipt ledger to the existing CPU replay to prove
-optional exit equality, then bind the complete supplied outgoing snapshot.
+**Next proof work:** bind the complete supplied outgoing snapshot to the already-derived
+Sail/register/RAM/runtime/host endpoint. Terminal receipt/replay agreement is now closed.
 `HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
 cell below `2^48`, including locations absent from the final inventory, and excludes entries outside
 that range. It retains complete host reconstruction, Sail runtime/other-register frames, and all
@@ -102,8 +102,14 @@ Thus the endpoint formulas require no exposed instruction-row order or new calle
 replay. `Model/Core/SailBookkeeping` owns the data-only observations; it does not introduce a second
 execution model. Complete supplied-target equality is still not checked by the ensemble. The native
 verifier now checks `bankFinal.exitCode` through a separate complete-word terminal receipt and
-requires an already-stopped source to preserve its exact optional exit. General receipt/CPU-replay
-agreement remains to be added to the endpoint theorem.
+requires an already-stopped source to preserve its exact optional exit.
+`HostTerminalLedger.receipts` derives the complete HALT-word inventory from raw constraints and
+balance. `HostHintReadTerminal.legacy_rows_nil` excludes legacy active events from the actual
+carrier. Full HostCall matching then connects those words to the same CPU tape, and
+`ExecutionPath.exit_receipts` proves its semantic terminal law for arbitrary local paths.
+`GroundingCarrier.final_terminal` concludes `target.host.exitCode = bankFinal.exitCode` without
+an extra source-running or event-semantic premise. The combined theorem now uses that supplied
+status directly in its reconstructed host, covering running, newly halted, and stopped identities.
 `HostHintReadCPU.GroundingCarrier.final_exit` now binds every newly halted endpoint's concrete 32-bit code to
 the public Exit field without modular aliases. `LocalCoreExit` classifies the complete physical
 ledger and applies the existing generic gated-unit balance theorem. The wrapper and appended
@@ -117,8 +123,7 @@ HALT-zero, forged public codes, duplicate producers, and an extra padding produc
 `some 7` after HALT-zero is rejected. `terminalIdentity` checks running/stopped identities,
 unchanged wide exit codes, fabricated HALT-zero, and attempts to restart a stopped source.
 The syscall HALT fixture needs no legacy row; continuing/empty witnesses still need the legacy
-padding emission. Removing that participation rule and proving general optional-exit equality on
-the reconstructed CPU path remain open.
+padding emission. Removing that participation rule remains open.
 Work on the semantic capacity/profile definition alongside this only where needed to fix the
 public boundary; it may not narrow the intended all-eight-call language to today's installation.
 

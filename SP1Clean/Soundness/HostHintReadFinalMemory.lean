@@ -1,6 +1,7 @@
 import SP1Clean.Soundness.HostHintReadHostAgreement
 import SP1Clean.Soundness.HostHintReadBookkeeping
 import SP1Clean.Soundness.HostHintReadExit
+import SP1Clean.Soundness.HostHintReadTerminalAgreement
 import SP1Clean.Soundness.CoreMemoryFrame
 
 /-! # Complete native Memory observations at the outgoing boundary
@@ -11,8 +12,8 @@ same execution has a value at every native register/RAM location, with no touche
 frame premise supplied by the caller. Byte permissions and replay also exclude all out-of-window
 entries. Runtime output/cycles and registers outside the instruction bookkeeping footprint are
 also preserved. The semantic tape determines all three retirement/nextPC slots, and every newly
-halted endpoint has the public Exit value. The verifier checks terminal receipts; their general
-agreement with this path and complete supplied-snapshot equality remain open.
+halted endpoint has the public Exit value. The actual optional terminal status agrees with the
+verifier's supplied endpoint. Complete supplied-snapshot equality remains open.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -140,7 +141,7 @@ theorem GroundingCarrier.final_memory_domain (valid : image.Valid)
 /-- The installed AIR yields one local execution with complete host reconstruction and every
 native Memory value and the complete RAM domain, including untouched locations. Sail runtime,
 register frames, all retirement/nextPC effects, and the actual HALT's public exit code are retained;
-proving equality with the complete supplied target, including optional terminal status, remains open. -/
+the optional terminal status agrees with the supplied host. Complete target equality remains open. -/
 theorem source_execution_with_memory (valid : image.Valid)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))
@@ -177,12 +178,15 @@ theorem source_execution_with_memory (valid : image.Valid)
         io.hints := hints
         committed := bankFinal.committed
         deferred := bankFinal.deferred
-        exitCode := events.foldl hostExitAfter source.host.exitCode } ∧
+        exitCode := bankFinal.exitCode } ∧
       (∀ code : BitVec 32, source.host.exitCode = none → target.host.exitCode = some code →
         code.toNat = witness.publicInput.exit_code.val) := by
   obtain ⟨carrier⟩ := source_grounding_carrier valid witness constraints balanced
   obtain ⟨target, path, clock, pc, _⟩ := carrier.execution valid constraints balanced
   obtain ⟨hints, decoded, host⟩ := carrier.final_host valid constraints balanced target path
+  have terminal : carrier.events.foldl hostExitAfter source.host.exitCode = bankFinal.exitCode :=
+    path.host_exit.symm.trans (carrier.final_terminal valid constraints balanced path)
+  rw [terminal] at host
   have nextPc := carrier.nextPC valid constraints balanced path.replay
   rw [pc] at nextPc
   exact ⟨carrier.events, target, hints, path, carrier.exhaustive.map ExecutionRow.event, clock, pc,

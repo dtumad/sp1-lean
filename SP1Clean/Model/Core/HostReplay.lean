@@ -105,4 +105,29 @@ theorem ExecutionPath.host_exit {policy : HostPolicy} {program : GuestProgram}
   | nil => rfl
   | cons step _ ih => rw [List.foldl_cons, ← step.host_exit, ← ih]
 
+/-- A local path emits exactly one exit receipt when it newly halts. Stopped sources emit none. -/
+theorem ExecutionPath.exit_receipts {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {events : List ExecutionEvent}
+    (path : ExecutionPath policy program source events target) :
+    events.filterMap (hostExitAfter none) =
+      if source.host.exitCode = none then target.host.exitCode.toList else [] := by
+  induction path with
+  | nil state => cases state.host.exitCode <;> simp
+  | @cons source middle target event events step tail ih =>
+      rw [step.running, if_pos rfl]
+      cases event with
+      | ordinary =>
+          have running : middle.host.exitCode = none := step.host_exit.trans step.running
+          simpa only [List.filterMap_cons, hostExitAfter, running, ↓reduceIte] using ih
+      | syscall call =>
+          by_cases halt : call.rawCode = SyscallKind.halt.code
+          · have status : middle.host.exitCode = some (call.arg1.setWidth 32) := by
+              simpa only [hostExitAfter, halt, ↓reduceIte] using step.host_exit
+            have stopped : middle.host.exitCode ≠ none := by rw [status]; simp
+            obtain ⟨rfl, rfl⟩ := tail.of_halted stopped
+            simp [hostExitAfter, halt, status]
+          · have running : middle.host.exitCode = none := by
+              simpa only [hostExitAfter, halt, ↓reduceIte, step.running] using step.host_exit
+            simpa only [List.filterMap_cons, hostExitAfter, halt, running, ↓reduceIte] using ih
+
 end SP1Clean.Model.Core

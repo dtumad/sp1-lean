@@ -40,6 +40,16 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete optional exit agrees with the installed CPU replay.
+    ("SP1Clean/Model/Core/HostReplay.lean", "ExecutionPath.exit_receipts"),
+    ("SP1Clean/Soundness/HostTerminalLedger.lean", "receipt?"),
+    ("SP1Clean/Soundness/HostTerminalLedger.lean", "interactions"),
+    ("SP1Clean/Soundness/HostTerminalLedger.lean", "receipts"),
+    ("SP1Clean/Soundness/HostTerminalLedger.lean", "source_status"),
+    ("SP1Clean/Soundness/HostHintReadTerminalProjection.lean", "legacy_rows_nil"),
+    ("SP1Clean/Soundness/HostHintReadTerminalAgreement.lean", "GroundingCarrier.terminal_receipts"),
+    ("SP1Clean/Soundness/HostHintReadTerminalAgreement.lean", "GroundingCarrier.final_terminal"),
+
     # Checked optional terminal status and padding-only legacy projection.
     ("SP1Clean/Native/Operations/HostExitBoundary.lean", "circuit"),
     ("SP1Clean/Native/Operations/HostExitBoundary.lean", "closed"),

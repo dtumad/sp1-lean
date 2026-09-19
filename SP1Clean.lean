@@ -430,6 +430,9 @@ import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Native.Operations.HintQueueBoundary
 import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Soundness.HostHintReadBanks
+import SP1Clean.Soundness.HostTerminalLedger
+import SP1Clean.Soundness.HostHintReadTerminalProjection
+import SP1Clean.Soundness.HostHintReadTerminalAgreement
 import SP1Clean.Soundness.HostBankCPUReplay
 import SP1Clean.Soundness.HostHintReadBankAgreement
 import SP1Clean.Soundness.HostHintReadHostAgreement

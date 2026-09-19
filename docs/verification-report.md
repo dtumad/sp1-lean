@@ -24,8 +24,9 @@ obligation.
 **Current local-shard work.** The mixed native assembly now derives a real `ExecutionPath` from
 its complete checked source, with ordinary instructions and installed control/commit/hint calls,
 without caller grounding or event-semantic premises. It proves exact active-event coverage and
-final PC/clock/Memory-frontier agreement. Complete outgoing snapshot/Exit binding, WRITE/VERIFY and
-authenticated allocation integration, and constructive full-profile completeness remain open.
+final PC/clock/Memory-frontier agreement and authenticates the supplied optional exit status.
+Complete outgoing snapshot binding, removal of legacy Exit padding, WRITE/VERIFY and authenticated
+allocation integration, and constructive full-profile completeness remain open.
 The end-to-end target types are in `SP1Clean/Soundness/Shard/Contract.lean`; they are explicitly
 uninstantiated. Section 7.2 describes this work; [the roadmap](roadmap.md) owns its current obligations.
 
@@ -603,10 +604,11 @@ The current path theorem is `HostHintReadCPU.source_execution_with_memory`, in
 channels of the source-hint/bank assembly and returns a genuine local execution from the checked
 complete incoming snapshot. Its event list is a permutation of the physical active CPU inventory;
 its final PC, clock, every final Memory-frontier value, and both verifier-bound banks agree with
-the actual replay. All ordinary cases, HINT_READ/HINT_LEN, control and commitment calls, and
-legacy HALT are grounded internally. No separate ordering, prior-record currency, successful replay, or step/frame premise
-is supplied by the caller. A newly halted endpoint's concrete code also equals the public Exit
-field. Checking the supplied complete outgoing snapshot, including its optional terminal status,
+the actual replay. All ordinary cases, HINT_READ/HINT_LEN, control and commitment calls are
+grounded internally; constraints restrict the legacy HALT table to padding. No separate ordering,
+prior-record currency, successful replay, or step/frame premise is supplied by the caller. A newly
+halted endpoint's concrete code also equals the public Exit field. The supplied optional terminal
+status agrees with that same path. Checking the remaining fields of the complete outgoing snapshot
 remains open.
 
 Its Memory conclusion covers every integer register and every aligned RAM cell below `2^48`,
@@ -669,16 +671,17 @@ The complete active-COMMIT regression checks all constraints, fixed lookups and 
 changed final banks or missing/duplicate terminals fail. A separate semantic regression traverses
 all eight host calls from nonzero banks, preserves untouched slots, and distinguishes reversed
 overwrites. It is not a claim of full eight-call AIR installation.
-The `bankFinal` parameter currently binds only the two banks, not the entire supplied host record.
+The `bankFinal` parameter binds the two banks and optional exit, not the entire supplied host record.
 
 The final queue cursor now decodes to the actual execution's remaining hints. Together with both
 bank equalities, `GroundingCarrier.final_host` reconstructs the entire host record. Complete call
 accounting excludes WRITE and VERIFY in this installation, deriving preservation of source public
 output, requests, hook replies, stdout and stderr. Optional exit status is computed from actual
 HALT labels on the same path, so running and a successful exit zero remain distinct. This does
-not bind `bankFinal`'s other fields: complete outgoing instance equality and optional terminal-status
-checking remain open. A full-host semantic regression retains nonempty I/O and request/reply
-state through reads and repeated commitment updates, then distinguishes continuation, HALT-zero,
+not bind every supplied host field: complete outgoing instance equality remains open. The terminal
+receipt proof below additionally identifies the actual optional exit with `bankFinal.exitCode`.
+A full-host semantic regression retains nonempty I/O and request/reply state through reads and
+repeated commitment updates, then distinguishes continuation, HALT-zero,
 and a stopped identity. The active COMMIT AIR fixture also retains nonempty incoming I/O fields.
 
 `HostHintReadCPU.GroundingCarrier.final_exit` connects a newly halted endpoint to the actual
@@ -696,8 +699,14 @@ forged public codes, and duplicate or spurious padding producers. `rejectsSuppli
 checks rejection of `none` or `some 7` after HALT-zero. `terminalIdentity` checks both valid
 identity statuses and rejects fabricated termination, changed stopped codes, and restarting a
 stopped source. Continuing and empty witnesses still retain the legacy padding requirement.
-General terminal-receipt/CPU-replay agreement and complete supplied-target equality remain proof
-obligations beyond the public value agreement already in the combined theorem.
+`HostTerminalLedger.receipts` derives the exact HALT-word inventory from the full installed ledger.
+The padding-only legacy component has no active CPU events, and full HostCall balance matches
+receipts to actual syscall labels. `ExecutionPath.exit_receipts` supplies their terminal meaning
+for arbitrary local paths. `GroundingCarrier.final_terminal` therefore proves the supplied
+optional exit equals the replayed host's status, with no running-source or event-semantic premise.
+The combined `source_execution_with_memory` theorem now reconstructs the host with
+`exitCode := bankFinal.exitCode`; its public code conclusion is retained. Complete supplied-target
+equality remains open.
 
 The installed receiver inventory excludes WRITE and VERIFY. Semantic execution and queue
 allocation helpers cover all eight concrete calls, but new nodes must authenticate their complete
@@ -721,8 +730,8 @@ bridges; the exclusion does not change the original instruction-chip faithfulnes
 
 ### 7.3 Remaining local-shard obligations and retained compatibility views
 
-The full capstone still needs complete outgoing state/Exit agreement, the full eight-call
-installation with authenticated allocations, the concrete semantic resource policy, constructive
+The full capstone still needs complete outgoing-state binding, removal of legacy Exit padding,
+the full eight-call installation with authenticated allocations, the concrete semantic resource policy, constructive
 compilation of every permitted local segment, and certified AIR composition/export. The legacy
 HALT row still restricts exits to 16 bits and participates even in nonhalting fixtures; the native
 target instead uses syscall HALT with canonical below-characteristic 32-bit exits. Active CPU

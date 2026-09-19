@@ -1,15 +1,15 @@
 # Axiom and trust ledger
 
-Checked against the consolidated stack on 2026-09-18. Each raw file retains the source revision
+Checked against the consolidated stack on 2026-09-19. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2737 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2745 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 317 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 3054 released declarations are probed.
+- 3062 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,18 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The terminal-status checkpoint adds twenty-two main probes. Eighteen component/projection laws
+The terminal-replay agreement adds eight main probes and no tests. All preceding 2737 main and
+317 test dependency sets are unchanged, with no removals or new axiom names. The receipt selector
+uses only `propext`; the semantic path law retains the existing 77-dependency Sail set, and the six
+installed-ledger/projection/endpoint laws retain the existing 100-dependency mixed assembly set.
+Complete physical HostCall accounting connects the verifier's HALT receipts to the actual CPU
+tape, and the existing execution path proves their terminal meaning. The combined
+`source_execution_with_memory` theorem reconstructs the host with the supplied optional exit,
+without adding a running-source or event-semantic premise. Complete supplied-target equality,
+removal of legacy padding participation, full host installation, and constructive completeness
+remain open.
+
+The preceding terminal-status checkpoint adds twenty-two main probes. Eighteen component/projection laws
 use exactly the logical baseline; four installed-witness declarations retain the existing
 100-dependency mixed assembly set. All preceding 2715 main dependency sets are unchanged, with
 no main removals or new main-library axiom names. The reproduced `suppliedExitStatusGap` test is
@@ -51,8 +62,9 @@ termination, restarted stopped hosts, and changed stopped codes, while accepting
 identities and wide canonical exits. The handler also checks its exact receipt ledger, and both
 the strengthened combined verifier and padding wrapper export with zero witness cells.
 `source_execution_with_memory` retains its proved public Exit-value agreement and unchanged caller
-premises. General receipt/CPU-replay agreement, complete supplied-target equality, removal of the
-legacy padding participation rule, full host installation, and constructive completeness remain open.
+premises. The terminal-replay agreement above closes the general receipt/CPU-replay obligation;
+complete supplied-target equality, removal of the legacy padding participation rule, full host
+installation, and constructive completeness remain open.
 
 The accumulated-bookkeeping checkpoint adds thirteen main probes and two regressions. All preceding
 2693 main and 311 test dependency sets are unchanged, with no removals or new main-library axiom
