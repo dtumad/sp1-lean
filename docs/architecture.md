@@ -249,6 +249,11 @@ location below `2^48`: final records supply their values, and locations absent f
 retain their source values by the original ledger and the carrier's frame proofs. Host reconstruction
 identifies every host field from queue/bank endpoints, actual HALT events and preserved source I/O.
 These conclusions must still be bound to the complete supplied target snapshot.
+`Model/Core/MemoryFinalCheck` owns the finite endpoint comparison and complete change inventory.
+The `FinalRegisterValue`/`FinalRamValue` contracts and native circuits authenticate target values;
+`FinalMemoryReceipt` preserves the original finalizer and hands off its full record. Source and
+target use the shared named byte/word lookup circuits with distinct fixed-table identities.
+Coverage enforcement and mixed installation belong to the enclosing boundary, not these row contracts.
 The current source-hint installation has neither WRITE/VERIFY nor authenticated dynamic allocation;
 its restricted inventory is not the final public profile. Every semantic resource/permission
 restriction must also be enforced or derived by the AIR. In particular, same-value writes to ROM

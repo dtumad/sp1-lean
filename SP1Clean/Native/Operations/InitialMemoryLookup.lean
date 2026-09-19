@@ -100,8 +100,9 @@ private theorem compare_upper {address upper : Word (ZMod p)}
   · exact False.elim (one_ne_zero equal)
 
 /-- Compose the fixed lookup, address range check, and two word comparisons. -/
-def main (memory : ByteMemory) (limit : ℕ) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
-  lookup (memory.fixedTable limit).toTable input.interval
+def main (memory : ByteMemory) (limit : ℕ) (input : Var Inputs (ZMod p))
+    (tableName : String := "sp1.native.initial_memory") : Circuit (ZMod p) Unit := do
+  lookup { (memory.fixedTable limit).toTable with name := tableName } input.interval
   assertion WordRangeCheck.circuit input.address
   assertion LtOperationUnsigned.circuit ⟨input.address, input.interval.lower, input.lowerCompare, 1⟩
   assertZero input.lowerCompare.u16_compare_operation.bit
@@ -118,17 +119,18 @@ def main (memory : ByteMemory) (limit : ℕ) (input : Var Inputs (ZMod p)) : Cir
     (LtOperationUnsigned.circuit (p := p)).channelsWithGuarantees =
       [SP1Clean.Channels.byteChannel.toRaw] := rfl
 
-instance elaborated (memory : ByteMemory) (limit : ℕ) :
-    ElaboratedCircuit (ZMod p) Inputs unit (main memory limit) where
+instance elaborated (memory : ByteMemory) (limit : ℕ) (tableName : String) :
+    ElaboratedCircuit (ZMod p) Inputs unit (main memory limit (tableName := tableName)) where
   localLength _ := 64
   output _ _ := ()
   channelsWithGuarantees := [SP1Clean.Channels.byteChannel.toRaw]
 
-/-- Sound and complete byte lookup in the fixed initial image. -/
-def circuit (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 64) :
+/-- Sound and complete byte lookup, with an explicit fixed-table identity for export. -/
+def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 64)
+    (tableName : String) :
     GeneralFormalCircuit (ZMod p) Inputs unit where
-  main := main memory limit
-  elaborated := elaborated memory limit
+  main := main memory limit (tableName := tableName)
+  elaborated := elaborated memory limit tableName
   channelsWithRequirements := []
   requirementsChannelsLawful := by
     intro input offset
@@ -166,17 +168,26 @@ def circuit (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 64) :
     · simpa only [if_neg (Nat.not_lt.mpr lowerLe)] using lowerResult
     · rw [upperResult, if_pos upperLt, sub_self]
 
-@[circuit_norm] theorem circuit_localLength (memory : ByteMemory) (limit : ℕ)
-    (bound : limit < 2 ^ 64) (input : Var Inputs (ZMod p)) :
-    (circuit memory limit bound).localLength input = 64 := rfl
+@[circuit_norm ↓, explicit_circuit_norm] theorem circuitNamed_elaborated (memory : ByteMemory)
+    (limit : ℕ) (limitBound : limit < 2 ^ 64) (tableName : String) :
+    (circuitNamed (p := p) memory limit limitBound tableName).elaborated = elaborated memory limit tableName := rfl
 
-@[circuit_norm] theorem circuit_guarantees (memory : ByteMemory) (limit : ℕ)
-    (bound : limit < 2 ^ 64) :
-    (circuit (p := p) memory limit bound).channelsWithGuarantees =
+@[circuit_norm, explicit_circuit_norm] theorem circuit_localLength (memory : ByteMemory) (limit : ℕ)
+    (bound : limit < 2 ^ 64) (input : Var Inputs (ZMod p))
+    (tableName : String := "sp1.native.initial_memory") :
+    (circuitNamed memory limit bound (tableName := tableName)).localLength input = 64 := rfl
+
+@[circuit_norm, explicit_circuit_norm] theorem circuit_guarantees (memory : ByteMemory) (limit : ℕ)
+    (bound : limit < 2 ^ 64) (tableName : String := "sp1.native.initial_memory") :
+    (circuitNamed (p := p) memory limit bound (tableName := tableName)).channelsWithGuarantees =
       [SP1Clean.Channels.byteChannel.toRaw] := rfl
 
-@[circuit_norm] theorem circuit_requirements (memory : ByteMemory) (limit : ℕ)
-    (bound : limit < 2 ^ 64) :
-    (circuit (p := p) memory limit bound).channelsWithRequirements = [] := rfl
+@[circuit_norm, explicit_circuit_norm] theorem circuit_requirements (memory : ByteMemory) (limit : ℕ)
+    (bound : limit < 2 ^ 64) (tableName : String := "sp1.native.initial_memory") :
+    (circuitNamed (p := p) memory limit bound (tableName := tableName)).channelsWithRequirements = [] := rfl
+
+/-- Source-memory specialization of the named fixed byte lookup. -/
+abbrev circuit (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 64) :=
+  circuitNamed (p := p) memory limit limitBound "sp1.native.initial_memory"
 
 end SP1Clean.InitialMemoryLookup

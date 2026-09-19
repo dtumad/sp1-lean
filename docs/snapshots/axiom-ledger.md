@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-19. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2757 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 319 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2787 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 323 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 3076 released declarations are probed.
+- 3110 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,7 +35,22 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The finite Memory endpoint comparison adds twelve main probes and two executable regressions.
+The native target-value checks and finite change inventory add thirty main probes and four
+executable regressions. All preceding 2757 main and 319 test dependency sets are unchanged,
+with no removals or new main-library axiom names. Every new main declaration uses a subset of
+the logical baseline; each new test adds one disclosed compiler-trust constant. The register/RAM
+checkers have semantic soundness/completeness contracts, proof-independent constructors, and
+exact complete-record receipt equations. Their fixed target lookups use the shared byte/word
+implementation with distinct export names. The receipt wrapper preserves the original finalizer's
+row width, assertions, lookups and other ledgers. The finite change inventory is proved complete
+for all native register/RAM differences, and its coverage plus target-value checks is equivalent
+to `checkFinal`. Executable checks cover forged values, partial-word changes, missing/duplicate
+receipts and changed clocks. Exportability passes for both checkers and both wrapped finalizers.
+These are component and handoff checks; mixed installation and verifier-enforced change coverage
+remain open, alongside the remaining full-state binding, full host inventory and constructive
+completeness.
+
+The preceding finite Memory endpoint comparison adds twelve main probes and two executable regressions.
 All preceding 2745 main and 317 test dependency sets are unchanged, with no removals or new
 main-library axiom names. Eight pure comparison/static-channel declarations use subsets of the
 logical baseline (one has no axioms); four installed-inventory/replay declarations retain the

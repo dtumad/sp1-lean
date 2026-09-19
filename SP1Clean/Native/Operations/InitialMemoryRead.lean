@@ -111,6 +111,14 @@ private theorem read_of_bytes (memory : ByteMemory) (input : Inputs (ZMod p))
   · rw [values, Word.toBitVec64_ofBytes]
     rfl
 
+/-- The data-only constructor conditions already determine the authenticated output word. -/
+theorem ProverAssumptions.spec (memory : ByteMemory) (input : Inputs (ZMod p))
+    (valid : ProverAssumptions memory input) :
+    Spec memory input (Word.ofBytes (input.bytes.map fun byte => byte.interval.value)) :=
+  read_of_bytes memory input
+    (fun index => InitialMemoryLookup.ProverAssumptions.spec memory (2 ^ 48) (by norm_num)
+      _ (valid index).1) (fun index => (valid index).2)
+
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_address (env : Environment (ZMod p))
     (vars : Var InitialMemoryLookup.Inputs (ZMod p)) (value : InitialMemoryLookup.Inputs (ZMod p))
@@ -129,7 +137,15 @@ private theorem eval_byte (env : Environment (ZMod p))
     congrArg (fun input : InitialMemoryLookup.Inputs (ZMod p) => input.interval.value) equal
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem eval_result (env : Environment (ZMod p))
+theorem eval_base (env : Environment (ZMod p))
+    (vars : Vector (Var InitialMemoryLookup.Inputs (ZMod p)) 8)
+    (values : Vector (InitialMemoryLookup.Inputs (ZMod p)) 8)
+    (equal : eval env vars = values) :
+    Vector.map (Expression.eval env) vars[0].address = values[0].address :=
+  eval_address env _ _ (eval_vector_eq_get (M := InitialMemoryLookup.Inputs) env vars values equal 0 (by decide))
+
+omit [Fact (2 ^ 17 < p)] in
+theorem eval_result (env : Environment (ZMod p))
     (vars : Vector (Var InitialMemoryLookup.Inputs (ZMod p)) 8)
     (values : Vector (InitialMemoryLookup.Inputs (ZMod p)) 8)
     (equal : eval env vars = values) :
@@ -143,9 +159,10 @@ private theorem eval_result (env : Environment (ZMod p))
   ext index bound
   interval_cases index <;> simp only [Word.ofBytes, circuit_norm, byteNat]
 
-def main (memory : ByteMemory) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Word (ZMod p)) := do
+def main (memory : ByteMemory) (input : Var Inputs (ZMod p))
+    (tableName : String := "sp1.native.initial_memory") : Circuit (ZMod p) (Var Word (ZMod p)) := do
   Circuit.forEach (Vector.finRange 8) fun index => do
-    let _ ← InitialMemoryLookup.circuit memory (2 ^ 48) (by norm_num) input.bytes[index.val]
+    let _ ← InitialMemoryLookup.circuitNamed memory (2 ^ 48) (by norm_num) (tableName := tableName) input.bytes[index.val]
     assertion AddOperation.circuit
       ⟨input.bytes[0].address, const (offset index), ⟨input.bytes[index.val].address⟩, 1⟩
   return Word.ofBytes (input.bytes.map fun byte => byte.interval.value)
@@ -160,18 +177,18 @@ def main (memory : ByteMemory) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) 
     (AddOperation.circuit (p := p)).channelsWithGuarantees =
       List.replicate 4 SP1Clean.Channels.byteChannel.toRaw := rfl
 
-instance elaborated (memory : ByteMemory) :
-    ElaboratedCircuit (ZMod p) Inputs Word (main memory) := by
+instance elaborated (memory : ByteMemory) (tableName : String) :
+    ElaboratedCircuit (ZMod p) Inputs Word (main memory (tableName := tableName)) := by
   elaborate_circuit
 
-/-- Sound and complete word read against the supplied initial memory. -/
-def circuit (memory : ByteMemory) : GeneralFormalCircuit (ZMod p) Inputs Word where
-  main := main memory
-  elaborated := elaborated memory
+/-- Sound and complete word read with an explicit fixed-table identity for export. -/
+def circuitNamed (memory : ByteMemory) (tableName : String) : GeneralFormalCircuit (ZMod p) Inputs Word where
+  main := main memory (tableName := tableName)
+  elaborated := elaborated memory tableName
   Spec input output _ := Spec memory input output
   ProverAssumptions input _ _ := ProverAssumptions memory input
   soundness := by
-    circuit_proof_start [InitialMemoryLookup.circuit]
+    circuit_proof_start [InitialMemoryLookup.circuitNamed]
     have atByte (index : Fin 8) :=
       eval_vector_eq_get env input_var_bytes input_bytes h_input index index.isLt
     have atAddress (index : ℕ) (bound : index < 8) :
@@ -193,7 +210,7 @@ def circuit (memory : ByteMemory) : GeneralFormalCircuit (ZMod p) Inputs Word wh
       Word.toBitVec64 input_bytes[0].address + BitVec.ofNat 64 index.val
     simpa only [offset, toBitVec64_bitVecToWord] using (addition rfl).2
   completeness := by
-    circuit_proof_start [InitialMemoryLookup.circuit]
+    circuit_proof_start [InitialMemoryLookup.circuitNamed]
     have atByte (index : Fin 8) :=
       eval_vector_eq_get env.toEnvironment input_var_bytes input_bytes h_input index index.isLt
     have atAddress (index : ℕ) (bound : index < 8) :
@@ -211,5 +228,27 @@ def circuit (memory : ByteMemory) : GeneralFormalCircuit (ZMod p) Inputs Word wh
       ⟨fun _ => ⟨(h_assumptions 0).1.1, isU64_bitVecToWord _⟩, Or.inr rfl⟩,
       fun _ => ⟨(h_assumptions index).1.1, ?_⟩⟩
     simpa only [offset, toBitVec64_bitVecToWord] using (h_assumptions index).2
+
+@[circuit_norm ↓, explicit_circuit_norm] theorem circuitNamed_elaborated (memory : ByteMemory) (tableName : String) :
+    (circuitNamed (p := p) memory tableName).elaborated = elaborated memory tableName := rfl
+
+@[circuit_norm, explicit_circuit_norm] theorem circuitNamed_localLength (memory : ByteMemory) (tableName : String)
+    (input : Var Inputs (ZMod p)) :
+    (circuitNamed memory tableName).localLength input = 512 := rfl
+
+@[circuit_norm, explicit_circuit_norm] theorem circuitNamed_output (memory : ByteMemory) (tableName : String)
+    (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    (circuitNamed memory tableName).output input offset =
+      Word.ofBytes (input.bytes.map fun byte => byte.interval.value) := rfl
+
+@[circuit_norm, explicit_circuit_norm] theorem circuitNamed_requirements (memory : ByteMemory) (tableName : String) :
+    (circuitNamed (p := p) memory tableName).channelsWithRequirements = [] := rfl
+
+@[circuit_norm, explicit_circuit_norm] theorem circuitNamed_guarantees (memory : ByteMemory) (tableName : String) :
+    (circuitNamed (p := p) memory tableName).channelsWithGuarantees =
+      List.replicate 40 SP1Clean.Channels.byteChannel.toRaw := rfl
+
+/-- Source-memory specialization of the named fixed word read. -/
+abbrev circuit (memory : ByteMemory) := circuitNamed (p := p) memory "sp1.native.initial_memory"
 
 end SP1Clean.InitialMemoryRead

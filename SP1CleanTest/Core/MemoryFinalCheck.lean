@@ -46,4 +46,17 @@ theorem rejectsForgedEndpoints :
      source.checkFinal target (records ++ [(.reg 1, 124)])] =
       [false, false, false, false, false, false, false, false] := by native_decide
 
+/-- Coverage demands are computed from complete boundary data, ignoring history duplicates
+but retaining low RAM and the last byte of the native window. -/
+theorem completeChanges :
+    [source.changes target == records.map Prod.fst,
+     source.changes source == [],
+     source.changes { target with memory.entries := target.memory.entries ++ [(65539, 99)] } ==
+       source.changes target,
+     source.changes { source with memory := source.memory.write 0 6 } == [.ram 0],
+     source.changes { source with memory := source.memory.write (2 ^ 48 - 1) 20 } ==
+       [.ram (BitVec.ofNat 61 ((2 ^ 48 - 1) / 8))],
+     source.changes { source with memory := source.memory.write (2 ^ 48) 99 } == []] =
+      [true, true, true, true, true, true] := by native_decide
+
 end SP1CleanTest.Core.MemoryFinalCheck

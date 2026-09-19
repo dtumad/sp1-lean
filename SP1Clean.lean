@@ -512,6 +512,7 @@ import SP1Clean.Model.Core.SourceExecution
 import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
 import SP1Clean.Model.Core.MemoryEquality
 import SP1Clean.Model.Core.RegisterSnapshotTable
+import SP1Clean.Model.FinalMemoryValue
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
 import SP1Clean.Proofs.Chips.SnapshotRamProvider
 import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
@@ -573,6 +574,9 @@ import SP1Clean.Math.WordEquality
 import SP1Clean.Proofs.Operations.AddOperation.Formal
 import SP1Clean.Native.Operations.InitialMemoryLookup
 import SP1Clean.Native.Operations.InitialMemoryRead
+import SP1Clean.Native.Operations.FinalMemoryReceipt
+import SP1Clean.Native.Operations.FinalRegisterValue
+import SP1Clean.Native.Operations.FinalRamValue
 import SP1Clean.Native.Operations.AddOperation.Defs
 import SP1Clean.Native.Operations.AddOperation.Populate
 import SP1Clean.Native.Operations.AddOperation.RawSpec
@@ -706,6 +710,8 @@ import SP1Clean.Soundness.CoreAIRSyscallFree
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.FormalModel.Contracts.InitialMemory
 import SP1Clean.FormalModel.Contracts.InitialMemoryRead
+import SP1Clean.FormalModel.Contracts.FinalRegisterValue
+import SP1Clean.FormalModel.Contracts.FinalRamValue
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.FormalModel.Contracts.DivRem

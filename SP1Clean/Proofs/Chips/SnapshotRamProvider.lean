@@ -116,17 +116,6 @@ theorem snapshotSpec (snapshot : MemorySnapshot) (input : Inputs (ZMod p))
       · exact checked.2.2.2.2.2.2.2.2.2
       · norm_num [MemoryBoundary.address], location.2⟩⟩
 
-omit [Fact (2 ^ 17 < p)] in
-private theorem eval_base (env : Environment (ZMod p))
-    (vars : Vector (Var InitialMemoryLookup.Inputs (ZMod p)) 8)
-    (values : Vector (InitialMemoryLookup.Inputs (ZMod p)) 8)
-    (equal : eval env vars = values) :
-    Vector.map (Expression.eval env) vars[0].address = values[0].address := by
-  have first := eval_vector_eq_get env vars values equal 0 (by decide)
-  generalize vars[0] = row at first ⊢
-  rcases row with ⟨address, interval, lower, upper⟩
-  simpa only [circuit_norm] using congrArg InitialMemoryLookup.Inputs.address first
-
 def main (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) :
     Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
   let value ← InitialMemoryRead.circuit snapshot.memory input
@@ -144,7 +133,7 @@ theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Inputs
       [(memoryChannel.pushed ((elaborated snapshot).output input offset)).toRaw] := by
   have readEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
     (InitialMemoryRead.circuit snapshot.memory).base memoryChannel.toRaw input n (by
-      simp [ InitialMemoryRead.circuit, circuit_norm, memoryChannel, byteChannel])
+      simp [ InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed, circuit_norm, memoryChannel, byteChannel])
   have addressEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
     AddressOperation.circuit.base memoryChannel.toRaw (addressInput input) n (by
       simp [ AddressOperation.circuit, circuit_norm, memoryChannel, byteChannel])
@@ -162,15 +151,15 @@ def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs M
       AddressOperation.Assumptions (addressInput input)
   channelsWithRequirements := [memoryChannel.toRaw]
   soundness := by
-    circuit_proof_start [InitialMemoryRead.circuit, AddressOperation.circuit, addressInput, message]
-    rw [eval_base env _ _ h_input] at h_holds
+    circuit_proof_start [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed, AddressOperation.circuit, addressInput, message]
+    rw [InitialMemoryRead.eval_base env _ _ h_input] at h_holds
     have checked := (h_holds.2 (address_assumptions ⟨input_bytes⟩ h_holds.1.1)).2.2.2 rfl
     have valid := snapshotSpec snapshot ⟨input_bytes⟩ _ _ h_holds.1 checked
     simp only [message, circuit_norm] at valid
     exact ⟨valid, fun _ _ => ⟨valid.1.1, valid.1.2.1⟩⟩
   completeness := by
-    circuit_proof_start [InitialMemoryRead.circuit, AddressOperation.circuit, addressInput, message]
-    rw [eval_base env.toEnvironment _ _ h_input]
+    circuit_proof_start [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed, AddressOperation.circuit, addressInput, message]
+    rw [InitialMemoryRead.eval_base env.toEnvironment _ _ h_input]
     exact h_assumptions
 
 /-- Construct a row from a semantic address, rejecting unaligned or reserved memory. -/

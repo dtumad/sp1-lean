@@ -30,6 +30,56 @@ private theorem byte_cell (cell : RamCell) (index : Fin 8) :
   have quotient : (cell.toNat * 8 + index.val) / 8 = cell.toNat := by have := index.isLt; omega
   rw [quotient, BitVec.ofNat_toNat, BitVec.setWidth_eq]
 
+/-- The complete finite change inventory, computed from both boundaries. Register locations
+remain distinct from low RAM; obsolete updates and out-of-window entries add no changes. -/
+def changes (source target : MemorySnapshot) : List MemLoc :=
+  (((List.ofFn fun index : Fin 32 => MemLoc.reg (BitVec.ofNat 5 index.val)) ++
+      ((source.memory.entries ++ target.memory.entries).filter (fun entry => decide (entry.1 < 2 ^ 48))).map
+        (fun entry => MemLoc.ram (BitVec.ofNat 61 (entry.1 / 8)))).filter
+    (fun loc => decide (source.read loc ≠ target.read loc))).dedup
+
+/-- Every native location that changes occurs, even when no execution row lists it. -/
+theorem mem_changes_iff (source target : MemorySnapshot) (loc : MemLoc) :
+    loc ∈ source.changes target ↔ loc.busAddress < 2 ^ 48 ∧ source.read loc ≠ target.read loc := by
+  simp only [changes, List.mem_dedup, List.mem_filter, decide_eq_true_eq, List.mem_append,
+    List.mem_map, List.mem_ofFn]
+  constructor
+  · rintro ⟨(⟨index, rfl⟩ | ⟨entry, ⟨member, bound⟩, rfl⟩), different⟩
+    · exact ⟨by have := index.isLt; simp only [MemLoc.busAddress, BitVec.toNat_ofNat]; omega, different⟩
+    · refine ⟨?_, different⟩
+      simp only [MemLoc.busAddress, BitVec.toNat_ofNat]
+      omega
+  · rintro ⟨bound, different⟩
+    refine ⟨?_, different⟩
+    cases loc with
+    | reg index =>
+        exact Or.inl ⟨⟨index.toNat, index.isLt⟩, by simp⟩
+    | ram cell =>
+        apply Or.inr
+        by_contra absent
+        apply different
+        apply congrArg Word.bytesValue
+        apply Vector.ext
+        intro index small
+        have byteBound : cell.toNat * 8 + index < 2 ^ 48 := by
+          change cell.toNat * 8 < 2 ^ 48 at bound
+          omega
+        have noEntry : ∀ entry ∈ source.memory.entries ++ target.memory.entries,
+            entry.1 ≠ cell.toNat * 8 + index := by
+          intro entry member equal
+          apply absent
+          refine ⟨entry, ⟨List.mem_append.mp member, ?_⟩, ?_⟩
+          · simpa only [equal] using byteBound
+          · rw [equal, byte_cell cell ⟨index, small⟩]
+        simp only [ByteMemory.wordBytes, Vector.getElem_ofFn]
+        rw [source.memory.read_eq_zero_of_absent _ (fun entry member =>
+          noEntry entry (List.mem_append_left _ member)),
+          target.memory.read_eq_zero_of_absent _ (fun entry member =>
+            noEntry entry (List.mem_append_right _ member))]
+
+theorem changes_nodup (source target : MemorySnapshot) : (source.changes target).Nodup :=
+  List.nodup_dedup _
+
 /-- The executable check means exact final values and preservation at every unlisted native
 location. Neither touched-location coverage nor an absent-key convention is assumed. -/
 theorem checkFinal_iff (source target : MemorySnapshot) (records : List (MemLoc × BitVec 64)) :
@@ -83,6 +133,26 @@ theorem checkFinal_iff (source target : MemorySnapshot) (records : List (MemLoc 
       simp only [read, cellNat, ByteMemory.readWord_byte _ _ ⟨address % 8, Nat.mod_lt _ (by decide)⟩] at bytes
       rw [show address / 8 * 8 + address % 8 = address by omega] at bytes
       exact bytes
+
+/-- Fixed target-value checks and coverage of the computed change inventory suffice for the
+complete endpoint check. This is the finite accounting obligation of the native boundary. -/
+theorem checkFinal_iff_changes (source target : MemorySnapshot) (records : List (MemLoc × BitVec 64)) :
+    source.checkFinal target records = true ↔
+      (∀ record ∈ records, target.read record.1 = record.2) ∧
+        source.changes target ⊆ records.map Prod.fst := by
+  rw [checkFinal_iff]
+  constructor
+  · rintro ⟨values, frame⟩
+    refine ⟨values, ?_⟩
+    intro loc member
+    have changed := (mem_changes_iff source target loc).mp member
+    by_contra absent
+    exact changed.2 (frame loc changed.1 absent)
+  · rintro ⟨values, covered⟩
+    refine ⟨values, ?_⟩
+    intro loc bound absent
+    by_contra different
+    exact absent (covered ((mem_changes_iff source target loc).mpr ⟨bound, different⟩))
 
 /-- The selected final value, or the source value if no record exists, equals the complete
 supplied target. Duplicate records cannot hide a conflicting value because all are checked. -/
