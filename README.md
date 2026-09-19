@@ -107,7 +107,9 @@ without its previous oleans.
 
 For the consolidated eight-PR development, start with the
 [capstone assessment](docs/audits/2026-09-capstone-assessment.md), which records reproduction,
-confirmed defects, and remaining proof obligations. For the implementation, read the
+confirmed defects, and remaining proof obligations, then the
+[branch review](docs/audits/2026-09-19-capstone-branch-review.md), which reviews the full-state
+capstone work that followed it. For the implementation, read the
 [verification overview](docs/overview.md), then the
 [technical report](docs/verification-report.md), [semantic audit surface](docs/audit-surface.md),
 and [architecture](docs/architecture.md). The [documentation index](docs/README.md) identifies
