@@ -600,7 +600,7 @@ resource/permission policy enforced by the AIR; compiler success or readiness ca
 This preserves the distinction between the desired bounded language and today's installed subset.
 
 The current path theorem is `HostHintReadCPU.source_execution_with_memory`, in
-`SP1Clean/Soundness/HostHintReadFinalMemory.lean`. It consumes raw constraints and balanced
+`SP1Clean/Soundness/HostHintReadFinalSnapshot.lean`. It consumes raw constraints and balanced
 channels of the source-hint/bank assembly and returns a genuine local execution from the checked
 complete incoming snapshot. Its event list is a permutation of the physical active CPU inventory;
 its final PC, clock, every final Memory-frontier value, and both verifier-bound banks agree with
@@ -624,7 +624,19 @@ ledger retains each ordinary store byte's range bound; successful host execution
 outside its checked window. These facts propagate along the same paired replay, including empty
 segments. The semantic HINT_READ regression reaches the final byte with padding, frames absent and
 present out-of-window keys, and rejects an additional padding word beyond the ceiling. The shared
-instruction `RowEffect` additionally retains runtime/register frames and exact normal
+finite `MemorySnapshot.checkFinal` now validates a proposed memory endpoint against the original
+final-record list. It compares every record's value and checks source/target equality on all
+unlisted registers and RAM cells, using the sparse supports rather than enumerating the address
+space. `GroundingCarrier.checkFinal_iff` in `Soundness/HostHintReadFinalSnapshot.lean` proves that
+this check accepts exactly the execution's GPR values and literal Sail RAM map. The combined path
+theorem retains this equivalence without a new caller premise. Bounds and unique final locations
+are derived from the installed AIR. Positive regressions retain reversed records,
+consistent duplicates, zero writes and obsolete sparse histories; negative cases change touched
+and untouched bytes/registers, low RAM, the final native byte, or a duplicate record's value.
+These regressions check the finite comparison, not an installed boundary circuit. Native lookup
+binding of final values and coverage of every source-to-target change remain open.
+
+The instruction `RowEffect` additionally retains runtime/register frames and exact normal
 retirement bookkeeping. The same mixed path preserves simulator `cycleCount`, `sailOutput`, and
 all registers outside GPRs, PC, nextPC, and the two retirement slots. The normal self-jump regression
 checks enabled 64-bit retirement wraparound and inhibited retirement, with nonzero simulator/mcycle

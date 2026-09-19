@@ -226,6 +226,31 @@ theorem memory_records_perm (witness : EnsembleWitness (ensemble image source au
   rw [← memory_interactions, typedEnsembleInteractionsWith_raw]
   exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
 
+/-- Canonical, distinct final locations follow from Byte and private ordering balance; the
+extended Memory ledger need not project to the original ensemble. -/
+theorem final_records_canonical_nodup (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (interface : AuxiliaryInterface auxiliary)
+    (finalSilent : ∀ component ∈ auxiliary,
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (∀ record ∈ FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness)),
+      MemoryBoundary.CanonicalSpec record) ∧
+    ((FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness))).map MemoryMsg.locOf).Nodup := by
+  have checked := localWitness_constraints witness constraints
+  have bytes := localWitness_byte witness interface constraints
+    (balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels]))
+  have specs := LocalCore.finalTables_spec_of_byte _ checked bytes
+  refine ⟨FinalMemoryEnsemble.inventory.records_valid_of_tables _ specs, ?_⟩
+  apply FinalMemoryEnsemble.inventory.records_locations_nodup_of_tables
+    (LocalCore.finalWitness (localWitness witness)) (NativeCore.afterFinalTables_silent image) specs
+  change BalancedInteractions ((LocalCore.finalWitness (localWitness witness)).interactionsWith _)
+  rw [LocalCore.finalWitness_interactions, localWitness_other witness _
+    (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, byteChannel, Channel.toRaw])
+    (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, memoryChannel, Channel.toRaw])
+    (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, HostCallChip.channel, Channel.toRaw])
+    (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, WritePermissionProvider.channel, Channel.toRaw]) finalSilent]
+  exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble])
+
 /-- The complete host ledger has unique authentic source and canonical final frontiers.
 Only the unchanged private ordering channels are projected; every host Memory access is retained. -/
 theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image source auxiliary channels))
@@ -257,15 +282,6 @@ theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image sourc
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, HostCallChip.channel, Channel.toRaw])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, WritePermissionProvider.channel, Channel.toRaw]) sourceSilent]
     exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble])
-  · apply FinalMemoryEnsemble.inventory.records_locations_nodup_of_tables
-      (LocalCore.finalWitness (localWitness witness)) (NativeCore.afterFinalTables_silent image)
-      (LocalCore.finalTables_spec_of_byte _ checked bytes)
-    change BalancedInteractions ((LocalCore.finalWitness (localWitness witness)).interactionsWith _)
-    rw [LocalCore.finalWitness_interactions, localWitness_other witness _
-      (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, byteChannel, Channel.toRaw])
-      (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, memoryChannel, Channel.toRaw])
-      (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, HostCallChip.channel, Channel.toRaw])
-      (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, WritePermissionProvider.channel, Channel.toRaw]) finalSilent]
-    exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble])
+  · exact (final_records_canonical_nodup witness interface finalSilent constraints balanced).2
 
 end SP1Clean.Soundness.HostLocalCore

@@ -9,20 +9,20 @@ address has value zero on both sides. The check is finite even for the 48-bit na
 
 namespace SP1Clean.Model.Core.ByteMemory
 
-/-- Compare all bytes below a limit using only the finite supports of the two memories. -/
-def agreesBelow (left right : ByteMemory) (limit : ℕ) : Bool :=
+/-- Compare a selected set of addresses using the union of both finite supports. -/
+def agreesOn (left right : ByteMemory) (selected : ℕ → Bool) : Bool :=
   (left.entries ++ right.entries).all fun entry =>
-    if entry.1 < limit then left.read entry.1 == right.read entry.1 else true
+    if selected entry.1 then left.read entry.1 == right.read entry.1 else true
 
-theorem agreesBelow_iff (left right : ByteMemory) (limit : ℕ) :
-    left.agreesBelow right limit = true ↔
-      ∀ address < limit, left.read address = right.read address := by
-  rw [agreesBelow, List.all_eq_true]
+theorem agreesOn_iff (left right : ByteMemory) (selected : ℕ → Bool) :
+    left.agreesOn right selected = true ↔
+      ∀ address, selected address = true → left.read address = right.read address := by
+  rw [agreesOn, List.all_eq_true]
   constructor
-  · intro checked address bound
+  · intro checked address chosen
     by_cases present : ∃ entry ∈ left.entries ++ right.entries, entry.1 = address
     · obtain ⟨entry, member, equal⟩ := present
-      simpa only [equal, if_pos bound, beq_iff_eq] using checked entry member
+      simpa only [equal, chosen, ↓reduceIte, beq_iff_eq] using checked entry member
     · have absent : ∀ entry ∈ left.entries ++ right.entries, entry.1 ≠ address := by
         simpa only [not_exists, not_and] using present
       rw [left.read_eq_zero_of_absent address (fun entry member =>
@@ -31,7 +31,16 @@ theorem agreesBelow_iff (left right : ByteMemory) (limit : ℕ) :
           absent entry (List.mem_append_right _ member))]
   · intro agrees entry _
     split
-    next bound => exact beq_iff_eq.mpr (agrees entry.1 bound)
+    next chosen => exact beq_iff_eq.mpr (agrees entry.1 chosen)
     next => rfl
+
+/-- Compare all bytes below a limit using only the finite supports of the two memories. -/
+def agreesBelow (left right : ByteMemory) (limit : ℕ) : Bool :=
+  left.agreesOn right (fun address => decide (address < limit))
+
+theorem agreesBelow_iff (left right : ByteMemory) (limit : ℕ) :
+    left.agreesBelow right limit = true ↔
+      ∀ address < limit, left.read address = right.read address := by
+  simp only [agreesBelow, agreesOn_iff, decide_eq_true_eq]
 
 end SP1Clean.Model.Core.ByteMemory

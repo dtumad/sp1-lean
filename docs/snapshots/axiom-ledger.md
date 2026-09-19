@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-19. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2745 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 317 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2757 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 319 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 3062 released declarations are probed.
+- 3076 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,20 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The finite Memory endpoint comparison adds twelve main probes and two executable regressions.
+All preceding 2745 main and 317 test dependency sets are unchanged, with no removals or new
+main-library axiom names. Eight pure comparison/static-channel declarations use subsets of the
+logical baseline (one has no axioms); four installed-inventory/replay declarations retain the
+existing 100-dependency mixed assembly set. Each new test adds one disclosed compiler-trust
+constant. `MemorySnapshot.checkFinal` checks every final-record value and the complete untouched
+complement using the sparse supports. Its installed iff theorem identifies every GPR and the
+literal Sail RAM map, with record bounds and uniqueness derived from the original AIR. The
+combined `source_execution_with_memory` theorem now retains this equivalence on the same path
+without a new caller premise. The statement is assembled in `HostHintReadFinalSnapshot`; its
+location/frame proofs remain in `HostHintReadFinalMemory`. Native enforcement of target values
+and complete change coverage, the remaining full-state binding, full host installation and
+constructive completeness remain open.
 
 The terminal-replay agreement adds eight main probes and no tests. All preceding 2737 main and
 317 test dependency sets are unchanged, with no removals or new axiom names. The receipt selector

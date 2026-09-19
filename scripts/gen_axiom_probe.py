@@ -40,6 +40,22 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Complete finite Memory comparison and its installed replay characterization.
+    ("SP1Clean/Model/Core/MemoryEquality.lean", "agreesOn"),
+    ("SP1Clean/Model/Core/MemoryEquality.lean", "agreesOn_iff"),
+    ("SP1Clean/Model/Core/MemoryWord.lean", "readWord_byte"),
+    ("SP1Clean/Model/Core/MemoryFinalCheck.lean", "checkFinal"),
+    ("SP1Clean/Model/Core/MemoryFinalCheck.lean", "checkFinal_iff"),
+    ("SP1Clean/Model/Core/MemoryFinalCheck.lean", "read_of_checkFinal"),
+    ("SP1Clean/Model/Core/MemoryFinalCheck.lean", "checkFinal_iff_reads"),
+    ("SP1Clean/Soundness/HostLocalCoreMemory.lean", "final_records_canonical_nodup"),
+    ("SP1Clean/Soundness/HostHintReadLocalMemory.lean", "source_boundary_silent"),
+    ("SP1Clean/Soundness/HostHintReadFinalSnapshot.lean", "finalMemoryValues"),
+    ("SP1Clean/Soundness/HostHintReadFinalSnapshot.lean", "GroundingCarrier.memory_of_checkFinal"),
+    ("SP1Clean/Soundness/HostHintReadFinalSnapshot.lean", "GroundingCarrier.checkFinal_iff"),
+    ("SP1CleanTest/Core/MemoryFinalCheck.lean", "acceptsEquivalentEndpoints"),
+    ("SP1CleanTest/Core/MemoryFinalCheck.lean", "rejectsForgedEndpoints"),
+
     # Complete optional exit agrees with the installed CPU replay.
     ("SP1Clean/Model/Core/HostReplay.lean", "ExecutionPath.exit_receipts"),
     ("SP1Clean/Soundness/HostTerminalLedger.lean", "receipt?"),
@@ -141,7 +157,7 @@ EXACT_REQUIRED_THEOREMS = [
     ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "source_no_push_of_final_none"),
     ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "GroundingCarrier.untouched_memory"),
     ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "GroundingCarrier.final_memory"),
-    ("SP1Clean/Soundness/HostHintReadFinalMemory.lean", "source_execution_with_memory"),
+    ("SP1Clean/Soundness/HostHintReadFinalSnapshot.lean", "source_execution_with_memory"),
     ("SP1CleanTest/Core/LocalCore.lean", "untouchedCommitMemory"),
 
     # Complete host reconstruction and terminal-status observations on the existing path.

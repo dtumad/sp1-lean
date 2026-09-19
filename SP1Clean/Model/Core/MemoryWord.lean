@@ -20,6 +20,11 @@ def wordBytes (memory : ByteMemory) (address : ℕ) : Vector (BitVec 8) 8 :=
 def readWord (memory : ByteMemory) (address : ℕ) : BitVec 64 :=
   Word.bytesValue (memory.wordBytes address)
 
+/-- Each byte of a sparse word is the corresponding memory read. -/
+theorem readWord_byte (memory : ByteMemory) (address : ℕ) (index : Fin 8) :
+    (memory.readWord address).extractLsb' (8 * index.val) 8 = memory.read (address + index.val) := by
+  simp only [readWord, Word.bytesValue_extract, wordBytes, Fin.getElem_fin, Vector.getElem_ofFn]
+
 /-- Byte-wise memory agreement suffices for whole-word agreement with Sail. -/
 theorem ramWord64?_of_bytes (memory : ByteMemory) (state : SailState) (address : BitVec 64)
     (bytes : ∀ index : Fin 8,

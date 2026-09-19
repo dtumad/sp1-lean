@@ -203,7 +203,8 @@ theorem source_program_silent (source : ExecutionSnapshot) (final : HostHintQueu
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
   contradiction
 
-private theorem source_boundary_silent (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
+/-- The installed host resources preserve both private Memory-boundary ordering channels. -/
+theorem source_boundary_silent (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (name : String) (boundary : name ∈ [SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName]) :
     ∀ component ∈ (receiver :: HostCallReceivers.available).map (·.component) ++
       (wordResources ++ (sourceResources source.host.io.hints ++ [⟨(HostHintQueueBoundary.boundary source final bankFinal).circuit⟩])),

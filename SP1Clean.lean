@@ -438,6 +438,7 @@ import SP1Clean.Soundness.HostHintReadBankAgreement
 import SP1Clean.Soundness.HostHintReadHostAgreement
 import SP1Clean.Soundness.HostHintReadExit
 import SP1Clean.Soundness.HostHintReadFinalMemory
+import SP1Clean.Soundness.HostHintReadFinalSnapshot
 import SP1Clean.Soundness.CoreMemoryFrame
 import SP1Clean.Soundness.HostHintReadLocalMemory
 import SP1Clean.Soundness.HostHintReadCPUMemory
@@ -505,6 +506,7 @@ import SP1Clean.Model.Core.ProgramImage
 import SP1Clean.Model.Core.SailMemory
 import SP1Clean.Model.Core.Boot
 import SP1Clean.Model.Core.MemorySnapshot
+import SP1Clean.Model.Core.MemoryFinalCheck
 import SP1Clean.Model.Core.SourceSnapshot
 import SP1Clean.Model.Core.SourceExecution
 import SP1Clean.FormalModel.Contracts.LocalCoreBoundary

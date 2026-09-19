@@ -46,7 +46,7 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
 | Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction with the supplied optional exit, and the public Exit value for a newly halted endpoint | Complete supplied-target equality |
-| Memory endpoint | Final records give touched values; absent final records imply no physical push, and the existing frames preserve source values at every other native location, including RAM below address 32; byte permissions and actual replay preserve absence at and above `2^48` | Binding the supplied target |
+| Memory endpoint | Complete final and untouched values, absence beyond native RAM, and an executable target comparison proved equivalent to every GPR and literal Sail RAM equality | Enforce the comparison through final-value lookups and complete change coverage |
 | Sail bookkeeping | The installed path preserves runtime/other registers and derives all three bookkeeping slots: source-controlled retirement count, increment flag, and nextPC from the semantic host suffix and final PC | Bind these observations to the supplied target |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
 | Host endpoint | Final hints and banks agree with CPU replay; other host fields are preserved; the supplied optional exit equals actual replay status, whose new HALT code equals the public Exit field | Bind the remaining fields of the complete outgoing instance |
@@ -88,7 +88,10 @@ execution carrier to make a local proof convenient.
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
 **Next proof work:** bind the complete supplied outgoing snapshot to the already-derived
-Sail/register/RAM/runtime/host endpoint. Terminal receipt/replay agreement is now closed.
+Sail/register/RAM/runtime/host endpoint. For Memory, enforce the finite target comparison through
+native final-value lookups and coverage of every source-to-target change; then bind the complete
+Sail register map (including key presence), bookkeeping/runtime and host fields.
+Terminal receipt/replay agreement is closed.
 `HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
 cell below `2^48`, including locations absent from the final inventory, and excludes entries outside
 that range. It retains complete host reconstruction, Sail runtime/other-register frames, and all
@@ -100,7 +103,19 @@ Thus the endpoint formulas require no exposed instruction-row order or new calle
 
 `HostHintReadBookkeeping` derives those formulas from the same grounded chip effects and paired
 replay. `Model/Core/SailBookkeeping` owns the data-only observations; it does not introduce a second
-execution model. Complete supplied-target equality is still not checked by the ensemble. The native
+execution model. `MemorySnapshot.checkFinal` compares all final-record values with the target and
+checks preservation everywhere else using the finite supports of both sparse memories.
+`GroundingCarrier.checkFinal_iff` proves this executable check equivalent to every integer-register
+observation and literal Sail RAM equality on the installed replay. Record bounds and uniqueness
+are derived from its original AIR. The combined `source_execution_with_memory` theorem now retains
+this equivalence on the same execution without a new caller premise; its final assembly lives in
+`HostHintReadFinalSnapshot`, while the location/frame proofs stay in `HostHintReadFinalMemory`.
+The comparison includes low RAM, absent outside-window keys,
+and changes at locations omitted from the final inventory; obsolete sparse history is immaterial.
+Its positive and negative regressions exercise the data check, not an installed boundary circuit.
+The native finalizers must still authenticate target values and cover every changed location;
+the final capstone may not accept the check or coverage as a caller premise.
+Complete supplied-target equality is still not checked by the ensemble. The native
 verifier now checks `bankFinal.exitCode` through a separate complete-word terminal receipt and
 requires an already-stopped source to preserve its exact optional exit.
 `HostTerminalLedger.receipts` derives the complete HALT-word inventory from raw constraints and
