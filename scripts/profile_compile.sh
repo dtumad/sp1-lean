@@ -144,7 +144,7 @@ while IFS= read -r f; do
   #    lean's exit code. (Redirecting lean directly under time would capture time's output too.)
   /usr/bin/time -p sh -c \
     'log="$1"; lean="$2"; shift 2; "$lean" -Dprofiler=true -Dprofiler.threshold=50 "$@" > "$log" 2>&1' \
-    _ "$log" "$LEAN_BIN" "${PACKAGE_FLAGS[@]}" "${flags[@]}" "$f" 2> "$timefile"
+    _ "$log" "$LEAN_BIN" "${PACKAGE_FLAGS[@]}" ${flags[@]+"${flags[@]}"} "$f" 2> "$timefile"
   rc=$?
 
   secs="$(awk '/^real/ {print $2}' "$timefile")"
