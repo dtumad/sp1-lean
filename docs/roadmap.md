@@ -1,351 +1,275 @@
-# Roadmap — the W-graph to the machine-level VM theorem
+# Roadmap
 
-The open work, organized as a dependency graph of work items (`W*`) whose **end state is the target
-theorem** `Target.sp1_target_execution` (`SP1Clean/Soundness/TargetVm.lean`): *from a verifying Clean
-ensemble over the committed boundary, the official LeanRV64D Sail interpreter, run from any state that
-loads the guest program, reaches the halting `ECALL` with the committed exit code.* The theorem is
-**stated and its walk induction proved today**; every open gap is a named hypothesis in its
-`TargetObligations` bundle (see `targetSeams` in that file). **Done when:** every `TargetObligations`
-field is discharged for a concrete `OperandsBound`, and W1 closes the capstone premise — at that point
-`sp1_target_soundness` is axiom-clean end-to-end (Sail model + one logUp axiom only).
+## Native Clean core
 
-For what is *already proven* and the full trust boundary, see [`release-audit.md`](release-audit.md).
-For the machine-checked axiom inventory, run `scripts/run_audit.sh` (snapshot:
-[`snapshots/axiom-ledger.md`](snapshots/axiom-ledger.md)).
+The capstone is a sound and complete native Clean AIR for **bounded local RISC-V execution
+segments**, with complete Sail/host boundaries and all eight concrete host calls. A segment can
+continue, halt, or be empty. Boot-to-HALT is an endpoint corollary. Instruction dispatch, physical
+row order, padding, and ledger bookkeeping belong inside the proof.
 
-Legend: `[ ]` open · `[~]` partial · `[x]` done. Effort: S < M < L < XL.
+The intended public statement is:
 
-**Progress snapshot (2026-06-17).** A sweep down the critical path landed (build green throughout, every
-new headline theorem axiom-clean modulo the Sail model's own decoder axioms; the 4-`sorry` debt unchanged):
-**W3** closed end-to-end on the concrete-program path — the *real* `noncomputable` Sail decoder is reduced
-(`Model/SailDecode.lean`), the decode bound is discharged from Program-bus balance, and `decodedInROM` is
-proved for a concrete instruction. **W6b** non-vacuity witness done (`FormalModel/Trace/Witness.lean`).
-**W4a** MemoryGlobalInit provider constructed (`Soundness/MemoryGlobal.lean`). **W2+W7** exact-replay
-keystone done — `RefinesAt`/`RowEffect` strengthened to exact replay / strict write, `chain_to_refines`
-re-proved — and the **W2 value-half assembled** (`ValueBound.lean`: `ValueOperandsBound`, the concrete
-`OperandsBound = decode ∧ value`, and `targetObligations_full` with `bound` discharged). `SailConfigured`
-strengthened to `isInitialized ∧ machine mode`. Remaining on the critical path: discharge the W2 cross-bus
-residual `TraceValueBinding`, W5 HALT, W7's `try_step` reduction, glue.
-
----
-
-## The project debt at a glance — one `sorry`
-
-The chip completeness debts (ShiftLeft/ShiftRight/DivRem) are now **all closed** (axiom-clean); the
-**sole** remaining `sorry` is the capstone-packaging premise (item 4 below). Soundness is `sorry`-free.
-(Line numbers drift; the declaration names are the stable handles — `scripts/run_audit.sh` gates on
-exactly this set.) `MulChip.completeness` was closed 2026-06-10 via `MulOperation.spec_populate` (the
-witnessed `populate` columns satisfy the structural `Spec`); items 1–3 below record the now-closed
-ShiftLeft/ShiftRight/DivRem completeness work.
-
-1. `ShiftLeftChip.completeness` — `Proofs/Chips/ShiftLeftChip/Formal.lean` — **CLOSED 2026-06-12**
-   (axiom-clean), honest `populate`-style witness + `ProverHint` opcode threading (the
-   `BranchChip.completeness` recipe).
-2. `ShiftRightChip.completeness` — `Proofs/Chips/ShiftRightChip/Formal.lean` — **CLOSED 2026-06-12**
-   (axiom-clean), same hint-`populate` recipe as ShiftLeft.
-3. `DivRemChip.completeness` — `Proofs/Chips/DivRemChip/Formal.lean` — **CLOSED 2026-06-18** (axiom-clean),
-   via `completeness_driver` in `Proofs/Chips/DivRemChip/Completeness/Driver.lean`. The 13 nested
-   `IsEqualWord`/`IsZero` cols pins were unblocked by *selective non-decomposition* —
-   `attribute [local circuit_norm ↓ 100000] ProvableType.eval_fromElements` keeps those sub-op cols folded
-   so `circuit_proof_start` never explodes them into the intractable nested record (see
-   `docs/agents/proof-patterns.md`). Heartbeats 256M → 64M.
-4. `sp1_witness_decode` — `Soundness/SP1GatedVm.lean` — the single isolated capstone premise: the
-   witness → `ChipRow` decode seam (`SP1WitnessDecode`, = **W1b/W1c** below); a packaging premise, not
-   a chip debt. (`sp1_gatedExecution_prereqs` itself is now a *proven* assembly of this seam with the
-   W1a balance translation `sp1_state_balance_of_balancedInteractions`.)
-
-Note (census fact): because each chip `circuit` *embeds* its completeness proof as a structure field,
-items 1–3 also surface as `sorryAx` on `sp1Tables`/`sp1GatedVm`/`sp1_machine_soundness` under
-`#print axioms`, even though the soundness proofs never consume those fields. Closing items 1–3 is
-therefore also what makes the *capstone chain's* census clean (together with item 4).
-
----
-
-## The W-graph
-
-```
-            W10 TargetVm skeleton (DONE)
-           /        |            \
-    W6a GuestProgram (DONE,       \                     [independent tracks]
-        in skeleton)               \
-      /         \                   \                   W1  close sp1_gatedExecution_prereqs (XL)
- W6b ELF tool   W3 Decode/Fetch     W7 try_step           ├─ W1a Clean→native balance translation [x]
- (M, off-path)  chips (L)           step-lift (XL)        ├─ W1b 25-table witness ↔ ChipRow decode (L)
-                     \                  |                 └─ W1c isU64 recovery from memory bus (M)
-            W4a MemoryGlobalInit/       |               W8  logUp axiom packaging (M–L, after W1)
-                Final single-shard      |               W9  Clean PR #398 migration [x] (2026-06-10)
-                slice (L)               |               W11 re-base GatedVm on upstream VmTables (M–L)
-                     \                  |               B1  the 3 completeness sorries (M each)
-                     \                  |
-                W2 operand binding from memory-bus
-                balance (XL) [+W2b load/store data
-                addresses into RowView (L)]
-                     \                  |
-                W5 ECALL/HALT chip (M–L) [clk_inc prereq x 2026-06-10]
-                     \                  |
-                      glue: discharge TargetObligations
-                                |
-                 sp1_target_execution UNCONDITIONAL
-                                |
-                W4b multi-shard ShardComposition (XL) [post-target]
+```text
+nativeShardEnsemble(context, source, target).Statement(canonicalHeader)
+  ↔ ∃ events, boundedNativeExecution(context, source, target, events)
 ```
 
-**Critical path:** W3 → W4a → W2 → W5 → glue (W3 + W4a substantially done, W2's exact-replay keystone
-done — see the progress snapshot; the live front is the **W2 value-half ↔ W5 ↔ W7 `try_step` reduction**).
-**W7 runs fully in parallel** and becomes the critical path if the Sail `translateAddr`/fetch reduction in
-machine mode is heavier than expected — note its decode stage is already reduced (`Model/SailDecode.lean`),
-and its `RowEffect` target shape (strict write) is now fixed by the W2+W7 keystone. **W1 is on the path of
-the axiom-clean end-to-end claim but not of the named-hypothesis target theorem** — it merges at the very
-end (`sp1_target_soundness` inherits its closure automatically).
+`source` and `target` are the existing `Model.Core.ExecutionSnapshot`; `events` is the existing
+`Machine.ExecutionEvent` list. Execution means `Model.Core.ExecutionPath` through the official
+Sail state, concrete host state, and clock. The count of semantic events, their 8/264-tick cost,
+and physical table heights are distinct. Padding contributes no semantic step.
 
-**Clean PR #398 exposure: resolved (2026-06-10).** W9 landed by pinning Clean to the open PR's head
-SHA (`292b9cc3`, 13 commits ahead / 0 behind the old pin) rather than waiting for the merge — the
-custom gating is gone and W1a now works directly against the upstream primitives (and gains
-`InteractionsWellFormed` + the new `Air/Balance` gated lemmas for free). Residual: a small re-pin to
-the merge commit when the PR lands on `main`.
+The checked statement spine is now in
+[`FormalModel/Shard.lean`](../SP1Clean/FormalModel/Shard.lean). It requires a checked source and
+literal equality with the complete outgoing realization. Its identity, composition, clock,
+and stopped-source laws are proved using the existing path. The AIR and compiler target types in
+[`Soundness/Shard/Contract.lean`](../SP1Clean/Soundness/Shard/Contract.lean) reuse `CompleteEnsemble`
+and `EnsembleCompiler`, with a conditional equivalence law. **They are not instantiated capstones.**
+`Profile` is an explicit, uninstantiated semantic-domain parameter; fixing and enforcing it is
+part of the work below. It must never become a caller-supplied readiness or compiler-totality bundle.
 
----
+The AIR side must remain exactly raw Clean constraints, fixed lookups, and balanced channels.
+Do not add execution correctness, provider authenticity, ordering, or grounding as conjuncts to
+make soundness hold. Source validity, canonical public fields, complete endpoint agreement, and
+the resource restrictions on the semantic side must be checked or derived by the ensemble.
 
-## Work items
+Faithfulness to the pinned SP1 Rust AIR is a separate theorem. Preserve the 25 whole-chip anchors;
+native ROM protection and host strengthening do not acquire upstream faithfulness automatically.
+The capstone does not prove a cryptographic verifier or acceptance of recursive-proof requests.
 
-### W10 — the target-theorem skeleton `[x]` (2026-06-10)
+## Current state
 
-`Soundness/TargetVm.lean`: `GuestProgram`, `IsInitialState` (a load *relation*, with the
-`SailConfigured` residue seam), `SailStep`/`SailChain` over the official `try_step`, `SP1Halted`
-(observed one step before the halting ECALL), `SP1TargetPublicIO` (+`exit_code`, `toLegacy`),
-`RefinesAt`/`RowEffect`, the `TargetObligations` gap bundle, and the **proved** walk induction
-`sp1_target_execution` + the `sp1_machine_soundness`-routed corollary `sp1_target_soundness`.
+| Surface | What is proved | Remaining boundary |
+|---|---|---|
+| Whole instructions | All 25 native chip contracts, Sail bridges, and whole-chip Rust faithfulness anchors | Preserve these while changing ensemble wrappers |
+| Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
+| Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
+| Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
+| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction with the supplied optional exit, and the public Exit value for a newly halted endpoint | Complete supplied-target equality |
+| Memory endpoint | Complete final and untouched values, executable target comparison equivalent to every GPR and literal Sail RAM equality, native target-value checks, and a complete finite change inventory | Install the checks and enforce complete change coverage in the verifier |
+| Sail bookkeeping | The installed path preserves runtime/other registers and derives all three bookkeeping slots: source-controlled retirement count, increment flag, and nextPC from the semantic host suffix and final PC | Bind these observations to the supplied target |
+| Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
+| Host endpoint | Final hints and banks agree with CPU replay; other host fields are preserved; the supplied optional exit equals actual replay status, whose new HALT code equals the public Exit field | Bind the remaining fields of the complete outgoing instance |
+| Commitment banks | Both physical histories equal the corresponding CPU subsequences, including update arguments and clocks; their endpoints equal the actual replayed banks | Include these equalities in the complete outgoing snapshot |
+| Constructive completeness | Existing 55-table ordinary compiler with explicitly narrower admissibility; many mixed component constructors | Full local-segment compiler total on the independent semantic profile |
+| Export | Generic typed ensemble export/checker, component witness IR, Rust reference consumer | Complete mixed ensemble inventory and event-to-all-tables compiler export |
+| Exact upstream / verifier | Paired 34+6-table exact relation and conditional refinement combinators | Closed exact refinement bundle; cryptographic knowledge soundness separately |
 
-### W6 — the guest program
+The current mixed witness has 87 physical tables plus its singleton verifier. The selected
+`HostHintQueueBoundary.ensemble` installs the source-hint resources and both bank terminals.
+Its `bankFinal : HostState` parameter checks the two banks and optional exit status; it is **not**
+a complete outgoing-state commitment. Bank and terminal agreement with the CPU replay are proved.
+Queue cursors and bank endpoints remain internal implementation data.
+WRITE and VERIFY are excluded by this instance's actual receiver inventory, not proved as active
+cases. This restricted instance is an implementation checkpoint, not the final capstone domain.
 
-- [x] **W6a** `GuestProgram` (encoded ROM primary, decode is a theorem target) — in the skeleton.
-- [~] **W6b** **non-vacuity witness done (2026-06-17, `FormalModel/Trace/Witness.lean`, axiom-clean):**
-  `isInitialState_nonvacuous : ∃ s0, IsInitialState emptyProgram s0`, so the target theorem's hypothesis
-  is not vacuous. Reusable machinery: `Fintype Register` (derived), `configuredState pc` +
-  `cfgState_init`/`pc`/`priv` (a state with every register present, PC pinned, machine mode). **Remaining
-  (deferred, lower value):** ELF → `GuestProgram` byte ingestion (mirror SP1's `Program::from_elf`,
-  `../sp1 crates/core/executor/src/program.rs`) + a richer (non-empty) witness ROM (reuses
-  `configuredState` + `mem` content + `romLoaded` byte proofs; `BitVec 64` `rom_*` proofs need `bv_decide`).
+The former 55-table `supported_core_native_sound` and ordinary completeness results remain useful
+and audited. Their `SemanticBoundaryBinding`, syscall-inactivity, and readiness premises do not
+carry over as acceptable assumptions of the new theorem. The 59-table boot assembly and the
+checked-source/protected assemblies are retained implementation layers, not alternative public
+execution models.
 
-### W3 — InstructionDecode/InstructionFetch → the decode half of `OperandsBound` `[~]` (closed end-to-end on the concrete-program path, 2026-06-17)
+## Implementation order and acceptance
 
-Build the project `decode` on LeanRV64D's own decoder (so fetch-decode coherence with `try_step` is by
-construction); the decode component of `OperandsBound` is each real row's operand indices/immediates being
-the decode of `prog.fetchWord` at its pc. **Landed:**
-- `Soundness/Decode.lean` — `instrToProgramRow` (all opcode families), `DecodeOperandsBound`/`decodedInROM`,
-  and `decode_bound_of_balance`/`decode_targetBound_of_balance` (the decode half of `bound` from a
-  **constructed** `ProgramProvider (decodedInROM prog)` + Program-bus balance, no threaded `h_link`; the
-  generalization `programProvider_of_valid` is in `ProgramProviderSpike.lean`).
-- `Model/SailDecode.lean` — the **real `noncomputable` Sail decoder reduced**: `decode_ADD_example` proves
-  `(ext_decode 0x003100B3).run s = .ok (RTYPE …) s` via a lazy branch-skip walk (`run_bind_ok_none`/`_some`
-  + a clean-stop `refine`-walk), under `SailConfigured` (= `isInitialized ∧ machine mode`).
-- `Decode.lean` `decodedInROM_addRow` — composes the two into the W3 obligation for a concrete ADD.
+Work from the checked end-to-end targets downward. Each change must identify which target it
+advances and finish with the appropriate build/test/audit evidence. Do not introduce a second
+execution carrier to make a local proof convenient.
 
-**Remaining:** a symbolic-register `ext_decode_RTYPE` is **out of scope** (would need `bv_decide` per
-cascade branch; decode is only ever applied to *concrete* ROM words, so the per-opcode recipe suffices for
-the witness program). The general `∀ prog` case keeps `decodedInROM` a trusted decode-chip assumption
-(cf. `ProgramRowSpec`).
+| Milestone | Implementation | Completion criterion |
+|---|---|---|
+| Statement and ownership | Use `FormalModel.Shard.Executes` and the existing generic AIR interfaces; keep the resource parameter visibly open | Checked targets exist (done); concrete profile and canonical header below still required |
+| Semantic resource policy | Fix active clock phase/ranges, actual ordinary-store byte permissions, finite host/queue identity bounds, and channel-count capacity in one semantic profile | Soundness derives every restriction from the AIR; every permitted semantic execution fits; identities need no active-clock phase |
+| Complete outgoing boundary | Use the proved bank/CPU agreement; prove complete final Sail/register/RAM/runtime/host agreement; bind the full target and terminal Exit | A changed untouched register/byte, host field, bank, PC/clock, or exit cannot retain acceptance; target equality is a conclusion |
+| Full host inventory | Install WRITE/VERIFY effects, x12 and RAM reads, request/reply binding, hook/hint prepends, authenticated allocations and node words | All eight calls grounded on the same evolving host; no static-source-queue or syscall-inactivity restriction |
+| Terminal policy | Remove legacy padding participation; active mixed HALT uses the canonical syscall handler, and receipt/replay agreement is proved | Nonhalting and empty shards need no dummy HALT; stopped states permit only identities; genuine HALT binds Exit |
+| Constructive completeness | Adapt existing routing, transition views, access plans, schedules, providers and row constructors to this exact full-state relation | `CompilerTarget` inhabited without proof inputs or caller readiness/footprint/totality premises; accepted candidates compile and compiled candidates are valid |
+| Native composition | Use complete snapshot equality at cuts, prove each piece satisfies its own profile, reuse semantic split/join | Separately certified shards compose; splitting/recompilation handles bounds; boot-to-HALT is a corollary |
+| Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
+| Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-### W4 — the memory-infrastructure chips
+**Next proof work:** bind the complete supplied outgoing snapshot to the already-derived
+Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks
+and enforce coverage of every computed source-to-target change; then bind the complete
+Sail register map (including key presence), bookkeeping/runtime and host fields.
+Terminal receipt/replay agreement is closed.
+`HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
+cell below `2^48`, including locations absent from the final inventory, and excludes entries outside
+that range. It retains complete host reconstruction, Sail runtime/other-register frames, and all
+three bookkeeping observations. The source's official machine-mode filter controls `minstret`,
+which advances by the ordinary-event count modulo `2^64`; host calls add no retirement. An empty
+ordinary inventory preserves the incoming increment flag. `nextPcAfter` uses the semantic tape's
+trailing host PCs and public final PC, preserving incoming nextPC when there is no ordinary event.
+Thus the endpoint formulas require no exposed instruction-row order or new caller premise.
 
-- [~] **W4a (single-shard slice, L):** **MemoryGlobalInit provider constructed (2026-06-17,
-  `Soundness/MemoryGlobal.lean`, axiom-clean)** — the Memory-bus analog of `ProgramProviderSpike`.
-  `memGenesisContributions` (one entry per address at value 0, genesis timestamp `t0`) +
-  `memProviderGenesis_of_contributions` discharges the threaded `MemProviderGenesis`;
-  `traceMemoryValid_of_genesis_and_balance` derives `TraceMemoryValid` from the constructed provider +
-  ordering side conditions + balance (residual: `t0` below all real clocks). `memBalanceHyps_of_genesis`
-  (`MemoryIsU64.lean`) lifts the operand isU64/value facts onto the same provider. **Remaining:**
-  `MemoryGlobalFinal` + binding the genesis value / final image to a concrete `prog.memImage` / boundary
-  (the per-address *value* — W2's replay precision).
-- [ ] **W4b (multi-shard, XL, post-target):** `ShardBoundary` (pc/clk chaining, init/final memory
-  boundary, cumulative-sum carry), `MemoryLocal`/`MemoryBump`/`StateBump`, `machineValid_of_shards`.
-  SP1's full memory argument is fundamentally multi-shard; the target theorem is single-shard first.
+`HostHintReadBookkeeping` derives those formulas from the same grounded chip effects and paired
+replay. `Model/Core/SailBookkeeping` owns the data-only observations; it does not introduce a second
+execution model. `MemorySnapshot.checkFinal` compares all final-record values with the target and
+checks preservation everywhere else using the finite supports of both sparse memories.
+`GroundingCarrier.checkFinal_iff` proves this executable check equivalent to every integer-register
+observation and literal Sail RAM equality on the installed replay. Record bounds and uniqueness
+are derived from its original AIR. The combined `source_execution_with_memory` theorem now retains
+this equivalence on the same execution without a new caller premise; its final assembly lives in
+`HostHintReadFinalSnapshot`, while the location/frame proofs stay in `HostHintReadFinalMemory`.
+The comparison includes low RAM, absent outside-window keys,
+and changes at locations omitted from the final inventory; obsolete sparse history is immaterial.
+Its positive and negative regressions exercise the data check, not an installed boundary circuit.
+`FinalRegisterValue` and `FinalRamValue` now authenticate target values through fixed lookups,
+with proved semantic contracts and proof-independent constructors. Source and target fixed tables
+have distinct export identities; both use the same byte/word lookup implementation. The RAM check
+authenticates every byte, while the original RAM finalizer retains alignment/address provenance.
+`FinalMemoryReceipt` composes that original finalizer without changing its width, assertions,
+lookups, or old ledgers, and publishes its complete record on a separate register or RAM channel.
+Exact producer/consumer receipt equations are proved. Circuit regressions check all assertions,
+fixed lookups and Byte semantics, and reject forged values, partial-word mutations and missing,
+duplicate, wrong-clock or wrong-kind receipts. All four circuits export; this is a component and
+handoff fixture, not an installed mixed-AIR boundary.
+`MemorySnapshot.changes` computes the unique finite set of all changed native locations from both
+snapshots, including low RAM. Its membership theorem and `checkFinal_iff_changes` prove that target
+value authentication plus coverage of this computed set is exactly the complete endpoint check.
+The next installation must enforce these demands in the verifier and connect the actual final
+inventory to the target checkers. It must retain their extra Byte demands: preservation of the old
+Memory/State ledgers does not establish projected Byte balance. Neither the endpoint check nor
+change coverage may become a caller premise of the final capstone.
+Complete supplied-target equality is still not checked by the ensemble. The native
+verifier now checks `bankFinal.exitCode` through a separate complete-word terminal receipt and
+requires an already-stopped source to preserve its exact optional exit.
+`HostTerminalLedger.receipts` derives the complete HALT-word inventory from raw constraints and
+balance. `HostHintReadTerminal.legacy_rows_nil` excludes legacy active events from the actual
+carrier. Full HostCall matching then connects those words to the same CPU tape, and
+`ExecutionPath.exit_receipts` proves its semantic terminal law for arbitrary local paths.
+`GroundingCarrier.final_terminal` concludes `target.host.exitCode = bankFinal.exitCode` without
+an extra source-running or event-semantic premise. The combined theorem now uses that supplied
+status directly in its reconstructed host, covering running, newly halted, and stopped identities.
+`HostHintReadCPU.GroundingCarrier.final_exit` now binds every newly halted endpoint's concrete 32-bit code to
+the public Exit field without modular aliases. `LocalCoreExit` classifies the complete physical
+ledger and applies the existing generic gated-unit balance theorem. The wrapper and appended
+host components preserve this projection even though they do not preserve Memory balance.
+The mixed assembly now constrains the legacy table to padding and routes active HALT through
+`HostHaltChip`, which emits the terminal receipt. The old local assembly is unchanged. The padding
+wrapper projects every original row and channel, so the existing mixed execution proof still
+applies. Full installed-AIR regressions cover syscall HALT above the legacy 16-bit limit,
+HALT-zero, forged public codes, duplicate producers, and an extra padding producer.
+`rejectsSuppliedExitStatus` replaces the reproduced gap: changing the supplied exit to `none` or
+`some 7` after HALT-zero is rejected. `terminalIdentity` checks running/stopped identities,
+unchanged wide exit codes, fabricated HALT-zero, and attempts to restart a stopped source.
+The syscall HALT fixture needs no legacy row; continuing/empty witnesses still need the legacy
+padding emission. Removing that participation rule remains open.
+Work on the semantic capacity/profile definition alongside this only where needed to fix the
+public boundary; it may not narrow the intended all-eight-call language to today's installation.
 
-### W2 — operand/register binding from the memory-bus balance (XL; the long pole) `[~]` exact-replay keystone landed (2026-06-17)
+The full boundary verifier must take source/target snapshots as public instance data, with a
+canonical bounded header, and derive private queue/bank endpoints internally. A caller must not
+supply a queue path, bank history, finite target-realization proof, or grounded execution. Whether
+those complete instance data later become succinct authenticated commitments is a separate layer.
 
-Derive, from the memory-bus balance + the register adapters' `prev_value` columns, that each row's
-committed operand *value* columns equal the live register/memory values at its walk position — i.e.
-prove `TargetObligations.bound` for the concrete `OperandsBound` and strengthen `RefinesAt`'s register
-frame to exact replay.
+## Model and module ownership
 
-**Keystone DONE (commit, `Soundness/TargetVm.lean`):** the exact-replay surgery on the *proved* capstone —
-`replayVal` (most-recent `op_a` write over the path prefix); `RefinesAt.frame` strengthened from a
-frame-disjunction to **exact replay**; `RowEffect.regs` strengthened to the **strict write** form
-(`s'=rdWrite` at `op_a`, `s'=s` elsewhere — what W7's `wX_bits rd` produces); `chain_to_refines` /
-`sp1_target_execution` re-proved green, no new axioms. So W2's exact-replay and W7's `RowEffect` shape land
-together as designed.
+- `Model/Core/Execution{,Path,Replay,Boot,Snapshot}.lean` owns full machine/host/clock execution.
+  `FormalModel/Shard.lean` gives its native shard contract; it adds no state or trace representation.
+- `Model/Machine/ExecutionEvent` vocabulary is shared. `EventExecutionTrace` and
+  `CoreShardSemanticWitness` remain the legacy ordinary/exact-Core views. They lack the complete
+  evolving host and must not be asserted equivalent to full snapshots without an explicit adapter.
+- `InstructionChipId`, `InstructionRouting`, `SP1TransitionView`, and existing access plans remain
+  the common identities, decoder/routing and compiler views. Never copy an opcode dispatch table.
+- `ExecutionCarrier` and `CoreExecutionTrajectory` own physical occurrence transport and replay.
+  Local/protected/host projections share these. Ledger projections retain every relevant occurrence;
+  State projection alone does not justify projecting Memory or Byte balance.
+- `Soundness/Shard/` is the public assembly/contract home. Move live implementation families only
+  after establishing their consumers; keep namespaces stable and separate moves from proof changes.
+  Existing `Proofs/Completeness/` remains the compiler owner. Do not create another obligations framework.
+- Retire duplicate scaffolding only after migrating consumers and census probes. Preserve exact-Core
+  contracts and old audited theorems unless an equivalent replacement is proved.
 
-**Value-half assembled (`Soundness/ValueBound.lean`):** `ValueOperandsBound` (live registers = committed
-`op_b`/`op_c` `prev_value` columns); `value_targetBound` proves the value half of `bound` by composing the
-exact-replay invariant (`RefinesAt.frame`) with the cross-bus link (axiom-clean); `OperandsBound_full =
-decode ∧ value`, `operandsBound_full_targetBound` (full `bound`, both halves), and `targetObligations_full`
-(the full `TargetObligations` at the concrete `OperandsBound`, `bound` discharged, `lift`/`halt` the W7/W5
-seams — the Phase-7 glue entry point).
+The roadmap owns current status and next actions. Architecture owns module roles and trust
+boundaries; the verification report owns external claims and evidence. `AGENTS.md` supplies working
+rules, not a second progress log. Historical development details remain available in git history.
 
-**Walk-clk bridge landed (`ValueBound.lean`):** `walk_clk_monotone` — consecutive `WalkOf` rows advance
-the state-bus clock (`sndClkOf path[i] = rcvClkOf path[i+1]`), i.e. the walk visits rows in increasing clk
-order = the order the Memory-bus value chain reads them (`sndClk_eq_rcvClk` is the clk twin of
-`sndPc_eq_rcvPc`; `isWalk_chain` was exposed for it).
+## Semantic findings to retain
 
-**Remaining `TraceValueBinding` discharge:** compose `walk_clk_monotone` with (i) the memory event
-timestamps = row clocks (`rowClkLow`), (ii) the Memory-bus value chain (`memEvent_prevValue_eq_writer` /
-`traceMemoryValid_of_genesis_and_balance`: a read returns the most-recent earlier write, read-backs
-preserving it), and (iii) the genesis alignment (`s0`'s initial registers = 0 = the init chip's genesis) —
-the induction relating `replayVal`'s walk recursion to the memory event chain. Sub-item **W2b (L):** thread
-real load/store data addresses into `Trace.RowView` (the §8.4 gap) and strengthen `RowEffect`'s ROM clause
-to full store-replay memory.
+- Full boundary equality includes absent Sail register keys, all RAM bytes, runtime counters/output,
+  host I/O and requests/replies, both banks, exit status, and clock. Equal PC/clock or equal touched
+  Memory inventories is insufficient. Sparse snapshots compare their full realizations extensionally.
+- Zero-time source records are local seeds at arbitrary shard clocks. They do not assert historical
+  last-access times. Refresh elimination does not prove truth about rewritten historical events.
+- Active CPU clocks use phase 1 modulo 8. Range-only source validation is broader; empty identities
+  remain legal at any checked source clock. The full profile must account for field/count bounds as
+  well as CPU steps: a short host trace can still allocate or access many bytes.
+- Store permission concerns every byte actually written, including same-value writes. Preservation
+  of ROM contents alone is weaker. HINT_READ writes mandatory final padding even for aligned or empty
+  hints; a final written byte at `2^48 - 1` is allowed when the one-past endpoint is `2^48`.
+- Record binding alone does not imply canonical field encoding. Queue cursor balance alone admitted
+  swapped markers/repeated addresses; node length, every word marker, destination, and byte permission
+  must all be authenticated. Fresh allocation must authorize complete bytes, not just a node identity.
+- Duplicate instruction/handler pairs can balance HostCall alone. CPU ordering excludes them. WRITE's
+  extra x12 pair is lost by projecting to the original syscall table; retain the full mixed Memory ledger.
+- The old unrestricted HINT_LEN assembly admitted a forged return plus matching final record. The
+  installed source-hint replay now derives the return from actual queue history. WRITE-generated queues
+  still need authenticated allocation integration; the older assembly is not an alternative capstone.
+- Running (`none`) and HALT-zero (`some 0`) are different host states. The current Exit code alone
+  cannot certify that distinction; endpoint binding must authenticate terminal status as well as value.
+- Legacy HALT imposes a 16-bit exit domain and currently needs an inactive HALT row even in a nonhalting
+  fixture. The intended native syscall HALT accepts canonical below-characteristic 32-bit exits.
+- Native commitment banks support repeated overwrites. The pinned SyscallInstrs COMMIT constraints
+  compare against fixed public digests; a faithful exact refinement needs an explicit compatible domain
+  or a different target. Do not remove native overwrites to disguise this difference.
+- Native host observations are explicit: ENTER returns zero; VERIFY records a proof request, not
+  cryptographic acceptance; hook replies are request-bound inputs. The pinned minimal executor's
+  deferred/VERIFY behavior and native observations are distinct comparison obligations.
+- Rust untraced hint writes reset access clocks to zero. Native authenticated host timing is separate.
+  Empty unaligned WRITE byte coverage can differ from Rust's untraced aligned reads. Preserve these
+  findings when defining exact refinement and conformance scope.
 
-### W5 — the ECALL/HALT chip (M–L)
+## Capstone integration and review
 
-Model the HALT slice of `SyscallInstrs` (`../sp1 crates/core/machine/src/syscall/instructions/air.rs`:
-`is_halt` ⟹ `next_pc = [HALT_PC,0,0]`, syscall id in `t0`/x5, exit code in `a0`/x10). **Hidden
-prerequisite — done (2026-06-10):** syscall rows advance the clock by **256**, not 8 — `StateAccess`
-now carries a per-row `clk_inc` (`Soundness/StateConsistency.lean`, projected at 8 by `stateAccess`
-for all 25 current chips), `stateLookups`/`sndKey` (`Soundness/GatedVm/StateBridge.lean`) key on
-`clk_low + clk_inc`, and the PC-chain layer (`pcChainProp`/`clkStep`/`TraceClkAdvance`/
-`state_successor_of_balance`/`balanced_state_bus`) is per-access, so a mixed-increment trace
-type-checks. The chip itself remains open. Deliverables: `TargetObligations.halt`/`halt_nonempty`,
-`exit_code` bound into the public values (replace `SP1PublicIO` with `SP1TargetPublicIO` in
-`SP1GatedVm.lean`), ECALL routing in `Coverage.lean` (today ECALL/EBREAK/UNIMP are the 3 uncovered
-opcodes of 53), and pointing `stateAccess`'s `clk_inc` projection at a `RowView`-level increment.
+`dtumad/core-verification-capstone` already contains the eight-PR predecessor history. Continue on
+this combined branch with reviewable commits; do not replay the stack or squash away provenance
+merely to produce one PR. Keep the original instruction faithfulness and dump-conformance gates.
 
-### W7 — the `try_step` step-lift (XL; parallel track) `[~]` decode stage + RowEffect shape landed
+Before publication, construct mixed compiled local shards with memory, host effects, nonzero banks,
+and queue allocations across cuts; compose them from boot through HALT. Include continuing shards,
+empty/stopped identities, reversed/padded physical tables, repeated touches, clock carries and
+capacity edges. Negative fixtures must mutate full boundaries, codes/returns, missing/duplicate rows,
+queue words/allocations, permissions, and Exit. Inspect the propositions themselves as well as tests.
 
-Per chip kind: in a state satisfying `RefinesAt` + the concrete `OperandsBound`, reduce
-`(try_step 0 false).run s` — interrupt check, fetch (vs `RomLoaded`), decode (vs W3's decoder),
-execute (vs the existing `correct_*_native` bridges), PC commit — to `.ok _ s'` with
-`RowEffect r s s'`. **Already in place (2026-06-17):** the **decode stage** is reduced
-(`Model/SailDecode.lean`: `run_bind_ok_none`/`_some` + the branch-skip walk reduce the real `ext_decode`);
-`SailConfigured` is populated to `isInitialized ∧ machine mode` (the two pins the decode reduction needs;
-more added as fetch/execute discover them); and the **`RowEffect` target shape is now fixed** (the strict
-write form from the W2+W7 keystone — `wX_bits rd` produces exactly it). Remaining: fetch + execute (vs the
-per-chip `sailEquiv`/`correct_*_native` bridges, no `Bridge.lean` changes expected) + PC commit, per chip
-kind. Risk: the address-translation reduction; if heavy, this becomes the critical path.
+Every implementation milestone ends with:
 
-### W1 — close `sp1_gatedExecution_prereqs` (§B5 residue; XL, independent track)
+```bash
+lake build SP1Clean
+lake test
+lake lint
+scripts/run_audit.sh
+```
 
-`sp1_gatedExecution_prereqs` is no longer a monolithic `sorry` (2026-06-10): it is a **proven**
-assembly of the W1b decode seam `sp1_witness_decode : … → SP1WitnessDecode witness` (the sole
-remaining `sorry` in `Soundness/SP1GatedVm.lean`) with the proven W1a balance translation.
+Require zero errors, warnings, stray `info:` notes, proof deferrals, kernel bypasses, and main-library
+`native_decide`. Add public declarations to the axiom inventory, independently review dependency
+changes, then regenerate committed snapshots from committed source. Final publication also needs
+complete ensemble/witgen export checks, existing Rust dump/interpreter conformance, regeneration
+checks at unchanged pins, and fresh-build CI. The PR must state the actual theorem, native profile,
+trust base, and remaining exact/cryptographic work, linking the eight predecessor PRs.
 
-- [x] **W1a (2026-06-10):** Clean `Statement.BalancedChannels` → native `isConsistentBalanced`
-  State-bus translation, **proven and clean-3** at ensemble scale:
-  `sp1_state_balance_of_balancedInteractions` (`Soundness/SP1GatedVm.lean`), riding the generic
-  adapter `isConsistentBalanced_of_balancedInteractions` + the per-key cast-sum kernel
-  `intCast_multiplicitySum_map_toAccess` (`GatedVm/BalanceMod.lean`; same-channel `toAccess` keys
-  separate exactly on the message by `ZMod.val`/`Array.toList` injectivity, so each `LookupKey` ℤ-sum
-  casts to one Clean `balanceOf`), `Interaction.toAccess`/`intCast_signedVal`
-  (`Model/InteractionProjection.lean`), the native `{-1, 0, 1}` bound
-  `stateLookups_mult_binary` (`Soundness/StateConsistency.lean`), and the landed
-  `isConsistentBalanced_of_intCast_zero`. *Notes: upstream's gated counting lemmas
-  (`balanceOf_eq_mult_countP_of_mult_or_zero`, `exists_push_of_pull`, `activeInteractions`) turned
-  out unnecessary — the per-key cast argument replaces counting; `InteractionsWellFormed` is carried
-  by `BalancedChannel` but unconsumed (the multiplicity bound is native, from binary `is_real`).
-  Residual (deliberately moved to the seam): the witness ↔ access-list correspondence itself — the
-  `state_accesses_perm` field of `SP1WitnessDecode` (`stateLookups_eq_emitted` lifted over the
-  25-table flatMap + the verifier boundary) — needs the row ↔ table binding and so rides W1b.*
-- [ ] **W1b (L, the biggest piece):** the 25-table `witness.tables ↔ List (ChipRow p)` decode
-  (`same_circuits` + `valueFromOffset`) + per-table `Component.weakSoundness`, now with a concrete
-  target shape: produce the `SP1WitnessDecode` bundle (rows/data + `spec_holds` + `is_real_binary` +
-  `state_accesses_perm`) demanded by `sp1_witness_decode`.
-- [~] **W1c (M):** each chip's `isU64` operand `Assumptions` recovered from the memory-bus balance.
-  Lemma family landed (`operand_{a,b,c}_isU64_of_memBalance` in `Soundness/MemoryIsU64.lean`, riding
-  the limb-level bus-key extraction + per-address chain induction `eventsAt_values_isU64`, under the
-  `MemBalanceHyps` bundle); wiring into the capstone rides W1b.
+## Separate follow-ups
 
-### W8 — logUp/GKR packaging (M–L, after W1)
+**Exact SP1 Core refinement.** Keep `sp1_air_refinement` and `sp1_air_sound` reserved until a closed
+`CoreAIRRefinementObligations` construction exists. Today's `_of_obligations` results consume the
+paired 34-table execution and six-table memory-boundary relation. Remaining work includes fixed
+Byte/Range/Program meaning and coverage, source-backed canonical inventory/uniqueness, count bounds,
+State/Memory balance, system ordering and public/global boundary meaning, and the semantic loader
+binding. Empty preprocessing assertion lists do not establish these facts. Program identity and
+initial global memory values depend on authenticated preprocessing/verifying-key commitments;
+exact byte-address boundary order also needs alignment/consumability before it yields native cell
+uniqueness. Range13-to-Range16 and raw Global-to-typed-Memory changes are not literal ledger
+permutations. Do not assume COMMIT-row existence from an operand constraint on rows that exist.
 
-Replace the assumed balance with one named `axiom logupGkrSound` ("a verifying GKR+PCS transcript ⟹
-fingerprinted cumulative sum = 0") in `Model/InteractionBus.lean`, and prove the non-crypto half
-(fingerprinted-sum-zero ⟹ send/receive multiset equality, LogUp/Schwartz–Zippel). **Done when** the
-TCB cites one crypto axiom instead of "balance assumed."
+**Verified verifier.** Pin Core first. An executable Lean verifier/Rust agreement theorem, ArkLib
+knowledge soundness with a cryptographic error bound, and AIR-to-Sail interpretation are independent
+layers. No unconditional deterministic `verifyCore = true → valid execution` claim. Compressed,
+Plonk, Groth16, and succinct boundary commitments are separate targets.
 
-### W9 — Clean PR #398 migration `[x]` (2026-06-10)
+**Sharing and cleanup.** The leanerVM review supports sharing generic Clean/PolyFun machinery,
+not replacing this execution/host model. Keep generic additions in `ToClean`/`ToMathlib`; modifications
+to existing Clean declarations follow the documented fork/upstream workflow. No dependency re-pin
+is authorized by this roadmap. Nonblocking cleanup includes contract homing, measured proof
+factorization, and long-line linting; avoid combining those broad changes with boundary proofs.
 
-Landed by pinning Clean to the **open PR's head SHA**
-([Verified-zkEVM/clean#398](https://github.com/Verified-zkEVM/clean/pull/398) =
-`292b9cc369be11baf816926a4bd5a697c01b1dcc`, 13 commits ahead / 0 behind the old `main` pin, same 4.28
-toolchain) rather than waiting for the merge. Upstream `Channel.toRaw` is now gated on zero
-multiplicity and receives owe no `Requirements` at all, so the whole custom layer in
-`Model/Channels.lean` (`toRawGated`/`gatedReceive`/`emitGated`/`receivedGated`/`emittedGated` +
-projections + `binary_gate_req_vacuous`; the asymmetric family turned out to be dead code) is deleted
-in favor of `Channel.pullIf`/`Channel.emit`/gated `toRaw`. Side effect worth knowing: pre-W9,
-`sp1GatedVm.busChannels` listed `toRawGated` records while the readers emitted on `toRaw` — records
-that differed at `mult = 0` — so the ensemble balance plausibly did not bind the program/memory
-emissions; the unification makes the Statement's bus balance genuinely bind them.
-
-Extraction reproducibility (release-audit TB-9) was **not** fixed by the pin alone — the compiler at
-the SP1 pin emits a `name`/`main`-**field** `ElaboratedCircuit` from a transient window of Clean main
-(`60665ed0`, later reworked), which no pinned Clean accepts. `update_extracted.py` now normalizes the
-emitter output (`_normalize_circuit_api`: parameterized instance + `pullIf`/`toRaw` names); a full
-regen at the pin reproduces `Extracted/` + `WitnessTests/` byte-identical and the 14 circuit-form
-files up to the (accepted, re-committed) emitter formatting of the two `Lt` files. **Residual:**
-re-pin to the merge commit when the PR lands on `main`; upstream `d25bba8d` (post-pin, not in the PR
-branch) likely retires the Batteries import-narrowing workaround (`docs/agents/lean-sail-notes.md`).
-
-### W11 — re-base `GatedVm` on upstream `VmTables` (M–L; new, post-W9)
-
-`GatedVm/` exists only because pre-#398 upstream `VmTables` hardwired `±1` multiplicities. Post-#398
-it natively supports gated VMs (`VmStep`, `tables_channel` over `pullIf`/`pushIf` with enabledness
-derived from constraints, `stepOfAllTables`, the gated
-`verifier_guarantees_of_requirements_of_requirements_of_guarantees`,
-`addVm_soundVmChannel_of_soundChannels`). Re-basing would inherit the upstream VM-channel soundness
-engine for the State bus. Cost: every chip exposes `[pullIf is_real cur, pushIf is_real next]` on the
-State channel (the state *receive* switches from `emit (-is_real)` to a true `pullIf` — harmless,
-`StateMsg.Spec = True`) plus enabledness booleanity from the existing `is_real` gate. Adjacent to
-W1a; not coupled to it.
-
-### B1 — the three completeness `sorry`s (M each, independent)
-
-Debt items 1–3 above (`MulChip.completeness` closed 2026-06-10 via `MulOperation.spec_populate` +
-the `LtChip` witnessed-columns `convert`/`getElem_toElements_eval_varFromOffset` recipe); the
-`BranchChip.completeness` recipe (honest `ProverHint` flag witnesses + shared dispatch) is the
-template for the rest. Closing them also cleans the capstone chain's axiom census (see the debt note)
-and retires the K6 sampled-conformance reliance for those chips.
-
----
-
-## Coverage-claim hygiene (ongoing)
-
-- Keep `allChipKinds_length` (25), `sp1Tables_length` (25), and the `Coverage.lean` guards
-  (`coverage_kinds_eq_registry`, the covered/uncovered partition — 50 of 53 opcodes; ECALL/EBREAK/UNIMP
-  open until W5) in sync as chips are added.
-- In any external claim, cite the machine-derived surface figure — the 25 modeled chips cover the
-  **Supervisor-mode halves of 25 of SP1's 122 `RiscvAir` variants** (v6.2.2-20-g9d249b8d4) — and the
-  explicit exclusion list (decode/fetch, memory-infra, PageProt, syscalls/traps, Global, Range,
-  precompiles, and the User-mode duplicates). `Supervisor/User`: decide whether single-variant coverage
-  extends to the User duplicates (same AIR, different bus tags?) or stays a documented gap.
-- The witness-vector battery and `Extracted/` currency are re-checked by `scripts/run_audit.sh` §A4 +
-  CI `lake build`; the `SP1_PINNED_COMMIT` assertion in `update_extracted.py` keeps extraction
-  provenance explicit. Remaining: a CI job that re-extracts and diffs per-PR.
-
----
-
-## Cleanup / polish backlog (non-blocking)
-
-Deferred quality/perf TODOs — none gate the VM theorem; pick up opportunistically. The *how-to-golf-safely*
-lessons (heavy-core caution, kernel-safe dedup, the `maxHeartbeats`-is-the-wrong-lever finding, the available
-`/cleanup` skills) live in `docs/agents/proof-patterns.md` § "Compile-time / performance landmines" + "Golf &
-cleanup discipline".
-
-- **`linter.style.longLine`** — the one remaining syntactic linter not yet enabled (it's the last candidate
-  noted in AGENTS.md § Linters). ~1080 lines exceed 100 chars (`Native/` ~817, `FormalModel/` ~263). Enable it
-  alone on the core pillar lake libraries, then reflow or per-file-suppress back to 0 warnings. Heavy, mechanical.
-- **Shift soundness tail-dedup** — the real build-time prize. Extract the byte-identical `cpuA/msb*/aluA`
-  requirements tail shared across the 6 Shift soundness conjuncts into a `requirements_holds`/`SpecObligation`
-  helper, mirroring `Proofs/Chips/DivRemChip/Soundness/Tail.lean` (recipe: proof-patterns § "Shared-tail
-  dedup"). Structural, multi-hour, overlaps the recently-golfed Shift soundness files — do it as a dedicated
-  pass, not a drive-by.
-- **`/decompose-proof` candidates** — long proof bodies worth splitting into named sub-lemmas:
-  `ShiftLeftChip`/`ShiftRightChip` `Formal.lean` `completeness` (~123/~180 lines), `LoadHalfChip`'s 4-way
-  `h_sel_lt` offset-selection case-bash (near-verbatim across soundness + completeness), `BranchChip`
-  `soundness`/`completeness` (~156/~290 lines of per-column `env.get` plumbing). Several are perf-tuned —
-  decompose with care and watch elaboration time.
-- **SailState-staging bridge preamble** — the `hpc_get`/`key`/`hsp_config` preamble recurs across ~10
-  store/jal/load `Bridge.lean` files → a shared lemma. **Re-examine the shape first** — upstream #101/#102
-  rewrote several bridges in the 2026-06-23 merge, so the pre-merge duplication may have shifted.
-- **Namespace-isolate the auto-gen (linter hardening, Option B)** — the `sp1Lint` exclusion is a *soft*
-  module-path filter. A *hard* boundary would relocate all auto-gen to a separate root namespace
-  `SP1Extracted.*` so the stock `runLinter` excludes it by construction (no custom filter). Cost: ~87 module
-  renames + import-line edits + `update_extracted.py` writer paths + lakefile globs. Not worth it for linting
-  alone; reconsider only if a hard auto-gen/hand-written namespace split is wanted for other reasons.
+Pin changes remain separate reviewed work: follow [extraction](agents/extraction.md),
+[Sail provenance](agents/sail-model-provenance.md), and [Clean upstream](agents/clean-upstream.md).

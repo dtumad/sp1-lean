@@ -1,17 +1,26 @@
-# docs/agents/ — contributor / agent techniques
+# Contributor and agent techniques
 
-The fiddly proof- and build-level techniques used while working on the proofs. These are the
-*how-to-make-the-proofs-go* references; for *what the project proves and how much it means*, see the
-reader-facing docs one level up (start with [`../architecture.md`](../architecture.md) and
-[`../release-audit.md`](../release-audit.md)).
+These files contain maintained proof, build, provenance, and upstream-integration procedures. For
+the current theorem boundary, start with [`../architecture.md`](../architecture.md) and
+[`../release-audit.md`](../release-audit.md).
 
-## Index
+Read Clean's pinned upstream documentation first:
+`.lake/packages/Clean/doc/performance-problems.md`, `doc/proving-guide.md`, `AGENTS.md`, and
+`Clean/Air/README.md`. The files here specialize those rules to SP1.
 
-- [porting-recipe.md](porting-recipe.md) — step-by-step checklist to port a new chip from the Add/Bitwise template: create the four artifacts, wire the root import, verify build + axioms.
-- [proof-patterns.md](proof-patterns.md) — the witnessed-`FormalCircuit` soundness/completeness skeleton; `ZMod p` / `Word` / `circuit_proof_start` landmines; `maxHeartbeats` floors; the `ElaboratedCircuit` field-obligation recipe; the **Golf & cleanup discipline** section (how to golf/clean proofs safely).
-- [lean-sail-notes.md](lean-sail-notes.md) — the Lean 4.28 environment: toolchain pins, why public Clean `main`, the GitHub-fetched Sail deps, the `lake update` toolchain-bump trap, and the Clean-main ↔ Batteries `Fin.foldl` collision and its fix.
-- [extraction.md](extraction.md) — the constraint-extraction pipeline (`sp1-constraint-compiler` → `update_extracted.py` → Lean) and the DSL contract.
-Point-in-time snapshots (regenerate before release) live under [`../snapshots/`](../snapshots/):
-- [../snapshots/axiom-ledger.md](../snapshots/axiom-ledger.md) — the machine-checked `#print axioms` inventory per theorem.
-- [../snapshots/compile-profile.md](../snapshots/compile-profile.md) — per-module elaboration profile + worst offenders + common threads.
-- [mul-operation-learnings.md](mul-operation-learnings.md) — Mul-specific soundness/completeness pitfalls (the 16-limb schoolbook multiply).
+- [proof-patterns.md](proof-patterns.md) — circuit proof recipes, performance landmines, and the
+  repository's cleanup discipline. Its source-stability and folded-term rules override generic
+  `mathlib-quality` transformations when they conflict.
+- [porting-recipe.md](porting-recipe.md) — step-by-step chip-porting checklist.
+- [lean-sail-notes.md](lean-sail-notes.md) — Lean/Sail environment, immutable pins, and update
+  traps.
+- [clean-upstream.md](clean-upstream.md) — Clean fork state, upstream queue, and exit condition.
+- [sail-model-provenance.md](sail-model-provenance.md) — generated model provenance and
+  regeneration.
+- [extraction.md](extraction.md) — Rust constraint extraction and generated-artifact contract.
+- [sp1-upstream-draft.md](sp1-upstream-draft.md) — prepared SP1-side draft; nothing pushed.
+- [upstream-drafts.md](upstream-drafts.md) — prepared Clean issue/PR text; posting needs approval.
+
+Generated axiom records live in [`../snapshots/`](../snapshots/). Compile profiles are generated on
+demand with `scripts/profile_compile.sh` and kept with the review that motivated them, not as
+evergreen documentation.

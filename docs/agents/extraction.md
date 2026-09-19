@@ -1,177 +1,215 @@
 # Constraint extraction (`update_extracted.py`)
 
-How SP1's operation **structs + constraints** get into this project as the
-`SP1Clean/Extracted/<Op>.lean` files that the faithfulness anchors (`Faithful/<Op>.lean`)
-pin the native gadgets against. This is the clean-native analogue of sp1-lean's
-`update_constraints.py`, but it regenerates whole self-contained files (struct *and*
-constraints) and the upstream compiler was extended to emit field-generic, clean-native-ready
-Lean directly — so there is **no** Python post-processing of the constraint text.
+How SP1's **complete table rows, `assertZero` lists, interaction lists, public-value block, machine
+shape, and populate traces** enter this project. The stable AIR output is list-only: Lean gadgets and
+circuits are proof-oriented implementation details under `Native/` and are never generated from Rust.
+`update_extracted.py` still emits operation list modules during the chip-boundary migration, but those
+are generator-private dependencies of current chip oracles, not public verification boundaries.
+
+The upstream compiler emits field-generic Lean directly, so there is no Python rewriting of constraint
+expressions. Python only selects targets, supplies reuse imports, wraps modules, and writes deterministic
+files.
 
 ## The pipeline
 
 ```
-sp1-constraint-compiler  --→  update_extracted.py  --→  SP1Clean/Extracted/<Op>.lean
-   (rust, field-generic)        (wrap + write)            (struct + @[irreducible] constraints)
-                                                                  ↑ imported by
-                                                          Model/SP1Constraint.lean (shared datatype)
-                                                          Faithful/<Op>.lean (anchor theorem)
+RiscvAir::machine() ───────────────→ Extracted/CoreAIRManifest.lean
+executor opcode.rs (semantic pin) ─→ Extracted/OpcodeTable.lean
+Air::eval / eval_public_values ────→ Extracted/{ChipOracle,SystemOracle}/...
+        (audited extraction branch)   (rows + ordered asserts/interactions only)
+
+Native/ hand-written Clean circuits ─→ Faithful/<Chip>.lean (`ChipFaithful`)
+Rust chip_traces (same pin) ────────→ export/sp1dump/<Chip>.dump.json
+                                       (events + full generate_trace rows;
+                                        sole writer scripts/update_sp1_dumps.sh)
 ```
 
 Run it:
 
-```
-SP1_DIR=../sp1 python3 update_extracted.py
+```sh
+SP1_DIR=/path/to/extraction-branch-checkout python3 update_extracted.py
 ```
 
-`SP1_DIR` must point at an sp1 checkout whose `sp1-constraint-compiler` builds; the default is
-`../sp1` (a sibling sp1 checkout, on the `clean-native` extraction branch). The operations regenerated
-are the `CONSTRAINTS_LIST` table at the top of
-the script: `Add/AddOperation`, `Bitwise/BitwiseOperation`, `Sub/SubOperation`, and the
-W-variants `Addw/U16MSBOperation`, `Addw/AddwOperation`, `Subw/SubwOperation`. The output is
-deterministic, so re-running leaves a clean `git diff`.
+`SP1_DIR` must point at a **clean** checkout of the extraction branch pinned by `SP1_PINNED_COMMIT`
+(`dtumad/lean-extraction` on `succinctlabs/sp1`, based directly on the v6.4.0 semantic tag) — every
+extraction change is an ordinary commit on that branch; there is no uncommitted-patch mechanism. The
+ordinary sibling `../sp1` checked out at that branch serves as both semantic source and extractor.
+The generator verifies that the checkout's merge base with semantic revision
+`f66b4bff51d0ccff51d152e0f7f66b2ffedf3529` (`v6.4.0`) is the semantic revision itself, that
+machine-source changes are reflection metadata only against an explicit file allowlist, and that the
+worktree is clean. `CHIPS` and `SYSTEM_TABLES` select AIR anchors; `OPERATIONS` is the
+shared-substrate registry (the canonical reader modules + statement targets multiple chip anchors
+reference; the whole-chip migration is complete, so it shrinks only when an anchor is actually
+retired). This script emits **AIR artifacts only** — trace conformance lives in the dump-anchored
+pipeline (`scripts/update_sp1_dumps.sh` + `scripts/witgenExport.lean --testdata` + the Rust
+differential), not here. There is no circuit-output registry or circuit emitter. The output is
+deterministic, so a full regeneration at the audited pin leaves all pre-existing anchors
+byte-identical.
 
-Any op whose struct `#[derive(SP1OperationBuilder)]`s (and whose `*Input` derives
-`InputParams`/`InputExpr`) is auto-registered by the compiler — adding it to `CONSTRAINTS_LIST`
-is enough; no hand-written `impl SP1OperationBuilder` in the compiler's `builder.rs` is needed.
+**Opcode table.** The `Opcode` enum's variant-name → `#[repr(u8)]`-discriminant table — the opcode
+value every chip commits on the Program bus — is extracted unconditionally as
+`SP1Clean/Extracted/OpcodeTable.lean` by a text-level parse (like the manifest writers, no cargo
+run) of `crates/core/executor/src/opcode.rs` **at `SP1_SEMANTIC_COMMIT` via `git show`**, so it is
+independent of the checkout's working state and reproducible at the pin. The parse fails
+closed on shape drift (missing `pub enum Opcode` block or `#[repr(u8)]` attribute, no variants,
+non-consecutive discriminants). The hand-maintained mirror `SP1Clean/Model/Opcode.lean` is
+cross-checked against the extracted table by the kernel-`decide` theorem
+`opcodeTable_matchesExtracted` (`SP1Clean/FormalModel/OpcodeTable.lean`): variant names (via the
+adjacent `Opcode.name` string table — a derived `Repr` does not kernel-reduce), discriminants,
+count, and order, so any mirror drift fails the build.
+
+Profile extraction is unconditional, even under `EXTRACT_ONLY`: regeneration fails before writing AIR
+files unless the baseline 34-table execution cluster, the 6-table memory-boundary cluster, every main
+and preprocessed width, and the 160-cell public-value width match the audited manifest exactly. Requested
+system tables, public values, and self-contained chip oracles are hard requirements; the script exits
+nonzero rather than retaining a stale artifact.
 
 ## What the rust backend emits
 
-For `--chip <C> --operation <Op> --format lean`, the compiler now prints a self-contained
-module fragment:
+For `--chip Add --format lean`, the compiler prints a whole-row fragment of this shape:
 
 ```lean
-structure AddOperation (F : Type) where
-  value : (Word F)
+structure AddCols (F : Type) where
+  state : CPUState F
+  adapter : RTypeReader F
+  add_operation : AddOperation F
+  is_real : F
 
-namespace AddOperation
+namespace AddCols
 
-@[irreducible] def constraints {F : Type} [Field F] [CoeHead F ℕ]
-  (a : (Word F)) (b : (Word F)) (cols : (AddOperation F)) (is_real : F)
-  : SP1Constraints F :=
-  …
-  ⟨[ E1, … ], [ ⟨.send, .byte (ByteOpcode.ofNat 6) cols.value[0] 16 0, is_real⟩, … ]⟩
+@[irreducible] def asserts {F : Type} [Field F] [CoeHead F ℕ]
+    (cols : AddCols F) : List F :=
+  helper.asserts … ++ reader.asserts … ++ [cols.is_real * (cols.is_real - 1), …]
 
-end AddOperation
+@[irreducible] def interactions {F : Type} [Field F] [CoeHead F ℕ]
+    (cols : AddCols F) : List (Interaction F) :=
+  helper.interactions … ++ reader.interactions …
+
+end AddCols
 ```
 
-`update_extracted.py` sandwiches this between a fixed header (imports of
-`SP1Clean.Math.Word` + `…SP1Constraint`, `namespace SP1Clean.Extracted`,
-`open SP1Clean`) and footer, giving e.g. `SP1Clean.Extracted.AddOperation.constraints`.
+The two lists are the stable oracle. Calls to operation/reader helpers inside their generated bodies are
+an emission detail; a chip anchor may unfold them locally. Canonical generated readers such as
+`CPUState` and `RTypeReader` are imported once, including their generated helper functions; only
+chip-private arithmetic helpers are embedded in the chip namespace. The goal is not to make any of
+those Rust helpers match Lean gadgets.
 
-### Rust changes that made this possible
+### Audited Rust extraction branch
 
-All on the `field-generic-constraint-extraction` branch of the sp1 repo:
+The extraction backend is not part of the semantic SP1 pin yet. Its exact review surface is the
+**committed** delta of the pinned branch over the semantic revision (`f66b4bff5..b5616f908`,
+`dtumad/lean-extraction` on `succinctlabs/sp1`): the reflection derives on the 26 machine files
+(verified derive/import-line-only by `verify_extraction_branch_delta`), the field-generic Lean
+emission and expression representation in the hypercube IR, `IntoShape`'s mode-aware column
+projection, the whole-chip extraction modes in `main.rs`, and the `chip_traces` dump binary. The
+first surface is mechanically restricted metadata. The latter surfaces are trusted extractor/
+shape/tooling code accepted at the exact pinned commit; the allowlist does not prove them
+semantically inert.
+`Extracted/Provenance.lean` records the semantic revision and the branch revision. The series is
+authored at upstream-PR quality; once it lands upstream, `SP1_PINNED_COMMIT` advances to an
+upstream commit. The relevant changes are:
 
-- **Field-generic, not `Fin KB`.** Every Lean-emission site now writes the type token `F`
-  instead of the concrete `Fin KB`:
+- **Field-generic, not `Fin KB`**. Every Lean-emission site writes the
+  type token `F` instead of the concrete `Fin KB`:
   `crates/hypercube/src/ir/ast.rs` (let-step + call-output types),
   `expr.rs` / `var.rs` (`(… : F)⁻¹` inverse constants),
   `shape.rs` (`to_lean_type`: `F`, `(Word F)`, and struct types as `(<name> F)`),
-  `func.rs` (`to_output_lean_type`: `SP1Constraints F`).
-- **Two-list output (`SP1Constraints`).** `crates/hypercube/src/ir/ast.rs` (`to_lean_components`)
+  and the list renderers (`List F` / `List (Interaction F)`).
+- **Two-list output.** `crates/hypercube/src/ir/ast.rs` (`to_lean_components`)
   returns the row constraints as **two** lists — `asserts` (field exprs, each `= 0`) and
   `interactions` (`⟨.send/.receive, <payload>, mult⟩`) — and `crates/core/compiler/src/main.rs`
-  emits them as a `⟨[asserts], [interactions]⟩ : SP1Constraints F` literal (composed sub-ops chain
-  with `++`, the componentwise append). This mirrors Clean's own `Operations.constraints` /
-  `Operations.interactions` split and isolates arithmetic faithfulness from bus faithfulness.
+  emits separate `asserts` and `interactions` definitions. This mirrors Clean's own
+  `Operations.constraints` / `Operations.interactions` split.
 - **Field binder.** `crates/core/compiler/src/main.rs` prints
-  `@[irreducible] def constraints {F : Type} [Field F] [CoeHead F ℕ]` for both operations and
-  chips. `[CoeHead F ℕ]` backs the `ByteOpcode.ofNat opcode` coercion when the opcode is a
+  `[Field F] [CoeHead F ℕ]` on the generated definitions. `[CoeHead F ℕ]` backs the
+  `ByteOpcode.ofNat opcode` coercion when the opcode is a
   dynamic field value (e.g. Bitwise); it is an unused-but-harmless hypothesis for
   constant-opcode operations (Add).
-- **Struct emission.** `Shape::collect_lean_struct_defs` (in `shape.rs`) synthesizes
-  `structure <name> (F : Type) where …` from the operation's `cols` input `Shape::Struct`
-  (recursing nested structs, nested-first); `main.rs` prints these before the `constraints`
-  def and wraps the def in `namespace <Op> … end <Op>`.
+- **Struct emission.** Shape reflection synthesizes
+  `structure <name> (F : Type) where …` from the chip's column shape (recursing nested structs,
+  nested-first).
+- **Flat system tables and public values.** Tables without reflection metadata are emitted as an exact
+  `values : Vector F width`; `MachineRecord::eval_public_values` is emitted as its own complete ordered
+  assertion/interaction block.
+- **Machine manifest.** A separate mode reads `RiscvAir::machine().shape().chip_clusters` directly and
+  reports runtime table names and widths. Python compares that output to the theorem profile before
+  writing anything.
+- **No circuit backend.** The transitional Rust-to-Clean-circuit format does not exist on the
+  extraction branch. The extractor cannot manufacture a second implementation of a native gadget.
 
-The old `Text`/`Json` emission formats were not preserved where they conflicted (the change to
-field-generic types is intentionally destructive to the prior `Fin KB` text output).
+Large generated lists are split into opaque `assertsPartN`/`interactionsPartN` definitions and then
+concatenated in order. This is only a Lean elaboration boundary: it follows Clean's advice to keep
+expensive values folded and does not alter the extracted list.
+
+The pinned `Global` table is the sole Core AIR exception to the default elaboration budget. One of its
+output terms has a dependency closure of roughly 1,300 shared IR bindings, so splitting the surrounding
+list cannot make that term smaller (and finer factoring duplicates the closure). Its generated module
+therefore carries a module-local budget directive, named with its measured floor in
+`scripts/option_escapes_allowlist.txt`; no other generated Core AIR module receives one. If the emitter
+starts producing a module that needs a budget, right-size the emit in `update_extracted.py` — do not
+allowlist the output.
 
 ## The Lean side
 
-- **`Model/SP1Constraint.lean`** — the single, shared port of SP1's constraint datatype
-  (`ByteOpcode` + `ofNat`, `AirInteraction`, `Interaction`, `SP1Constraints`, `allHold`,
-  `allHold_append`), co-designed to match the emitted surface syntax. `ByteOpcode.constrain` gives the real
+- **`Extracted/ExtractionDSL.lean` + `Model/SP1Constraint.lean`** — the generated interaction vocabulary
+  and the shared byte/opcode definitions. `ByteOpcode.constrain` gives the real
   meaning for `Range` (byte range checks, used by Add) and AND/OR/XOR (used by Bitwise, via
-  `byteOp`); other opcodes are `True` stubs until exercised. A **scoped**
+  `byteOp`). A **scoped**
   `CoeHead (ZMod p) ℕ` instance + `coe_eq_val` simp lemma live under
   `SP1Clean.ConstraintCoe` (activated only by `open scoped …`), so the coercion never
   leaks into the heavy arithmetic proofs in `Native/Operations/`/`Proofs/`.
-- **`Extracted/<Op>.lean`** — generated; never hand-edit. Field-generic; carries the struct +
-  `@[irreducible] constraints`.
-- **`Faithful/<Op>.lean`** — the anchor theorem only. Imports the shared datatype + the
-  generated `Extracted` module, `open scoped SP1Clean.ConstraintCoe`, and proves the SP1
-  constraint list's `allHold` equals the native gadget's spec (`RawSpec` / `byteOp` relation).
+- **`Extracted/ChipOracle/<Chip>.lean`** — generated; never hand-edit. It owns the chip-namespaced Rust row and its complete
+  `asserts`/`interactions` oracle, reusing canonical generated reader rows/functions instead of cloning
+  them per chip.
+- **`Extracted/SystemOracle/<Table>.lean`** — generated flat rows for the eleven non-instruction tables
+  needed by the baseline execution and memory-boundary clusters, plus the machine-level `PublicValues`
+  block. Flat indices are named only in the hand-audited adapter above this layer.
+- **`Extracted/CoreAIRManifest.lean` / `Provenance.lean`** — generated fail-closed profile and source
+  identity. `FormalModel/CoreProfile.lean` proves the readable hand-maintained enum is a permutation of
+  the runtime manifest with identical widths.
+- **`Native/Chips/<Chip>/Defs.lean`** — owns an independent native row. It need not reuse the extracted
+  row or any Rust operation struct.
+- **`Faithful/ChipOracle.lean` + `Faithful/<Chip>.lean`** — define the native→Rust row reconfiguration
+  and prove `ChipFaithful`. The assertion theorem compares the complete evaluated Clean assertion list;
+  the interaction theorem compares the complete projected four-bus multiset.
+- **`export/sp1dump/` + the generation-time gate** — the dump-anchored trace-conformance pipeline
+  (successor of the retired `native_decide` vector batteries, 2026-08). `chip_traces` (a committed
+  binary at the extraction pin) dumps deterministic per-chip event batteries plus the full padded
+  `generate_trace` matrix; `scripts/witgenExport.lean --testdata` recovers the native inputs from
+  the dumped rows through the symbolic row maps, recomputes every event row via
+  `FlatOperation.witgen` + row-map evaluation, and **fails closed on any cell mismatch** before
+  writing the `export/testdata/` differential fixtures the Rust reference interpreter re-checks.
+  This resolves the release-readiness audit finding F-R-01 (the legacy batteries' dumper never
+  existed at any pinned revision): the dumper is now an ordinary commit at the pin, the dumps are
+  reproducible byte-for-byte (`update_sp1_dumps.sh --check`), and the comparison re-runs in CI.
 
-## Circuit form (`--format lean-circuit`)
+## Legacy operation-list outputs (retirement path)
 
-For a **byte-bus, pure-assertion leaf** operation (Rust `eval` returns `Shape::Unit`, composes no
-sub-ops), the compiler can additionally emit the **Clean-native circuit form** — the gadget's `Inputs`
-struct, its `main : Var Inputs → Circuit Unit` do-block, and the `ElaboratedCircuit` instance +
-`@[circuit_norm]` rfl-lemmas — instead of the two flat lists. `update_extracted.py` writes this to
-`SP1Clean/Operations/<Op>/Extracted.lean` — the auto-generated member of the op's four-file
-directory (alongside the hand-written `Populate.lean`, `RawSpec.lean`, `Formal.lean`) — for every op
-in its `CIRCUIT_OPERATIONS` registry (`AddOperation`, `SubOperation`, `U16CompareOperation`,
-`U16MSBOperation`, `BitwiseOperation`, the `IsZero`/`IsZeroWord`/`IsEqualWord` chain, `AddwOperation`,
-`SubwOperation`, `AddrAddOperation`, `LtOperationUnsigned`, `LtOperationSigned`). The shared
-`Extracted/<Op>.lean` (column struct + `asserts`/`interactions`) still lives in `Extracted/`; only the
-circuit form moved into the per-op directory.
+The old `--format lean-circuit` mode and `CIRCUIT_OPERATIONS` registry are gone, and
+`Extracted/Circuit/` has been deleted. The former generated circuit definitions now live as ordinary,
+hand-maintained proof implementations under `Native/Operations/<Op>/Defs.lean`. Per-operation assertion/
+interaction lists, witness vectors, and public `Faithful/<Operation>.lean` anchors still predate the chip
+boundary; do not extend them. During migration a generated chip oracle may import
+`Extracted.<Operation>` because the Rust list emitter factors its expression that way. A chip proof may
+unfold that call locally but exposes only its `ChipFaithful` theorem.
 
-When an op composes **≥2 sub-circuits** (`LtOperationSigned`: two `U16MSBOperation` + one
-`LtOperationUnsigned`), the nested `a ++ (b ++ c)` channel-list `⊆` goal does not close by the
-`channelsLawful` *default* tactic, so the compiler emits an explicit
-`channelsLawful := by simp [circuit_norm, main, <each sub>.circuit]` (unfolding the composed
-`.circuit`s locally — never as global `@[circuit_norm]` lemmas, which would collapse the
-`channelsWithRequirements = [] ∨ Assumptions` soundness requirement-tails of *every* composing chip).
-A 0- or 1-sub op omits the field (the default closes it).
+For each migrated chip:
 
-```lean
-structure Inputs (F : Type) where           -- the `eval` params verbatim …
-  a : (Word F)
-  b : (Word F)
-  cols : (AddOperation F)                    -- … the column struct nested as `cols`
-  is_real : F
-deriving ProvableStruct
+1. give the native chip its own row type;
+2. define the simple native→Rust `reconfigure` map;
+3. prove complete assertion and interaction equivalence;
+4. retain/add the whole-chip trace-populate test;
+5. remove any operation list, witness battery, or operation anchor no longer imported by another chip.
 
-def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
-  …                                          -- the `let Eᵢ` SSA chain, then
-  byteChannel.pullIf is_real ⟨6, is_real * cols.value[0], …⟩   -- byte send → gated pull (value folded)
-  E1 === 0                                   -- each AssertZero → `=== 0`  (E1 = the `is_real` boolean gate)
-  …
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit where …
-```
+## Adding or refactoring a Lean gadget
 
-**Why this matters.** The emitted `main` *is* the extracted artifact, so the gadget's
-soundness/completeness (`Proofs/Operations/<Op>/Formal.lean`) run against SP1's constraints **by
-construction** — there is no longer a hand-written `main` that a `Faithful/<Op>.lean` anchor must
-reconcile against the extracted lists. The compiler-side translation bakes in the Clean conventions:
-the field-generic `: F` becomes `ZMod p`, an `AssertZero` becomes `<e> === 0`, and a byte `send_byte`
-becomes a `byteChannel.pullIf` (a *pull* of the preprocessed `ByteChip`, the value folded
-`gate * value`). The `main` includes SP1's `is_real` boolean gate (`is_real * (is_real - 1) = 0`),
-which the older hand-written gadgets dropped to a chip `Assumptions`.
-
-**Migration shape** (per converted op): the generated `Extracted/Circuit/<Op>.lean` owns
-`Inputs`/`main`/`elaborated`; `FormalModel/Contracts/Operations.lean` drops the flat `Inputs` and imports the generated
-module (the `Spec` reads `input.cols.value`); `Proofs/Operations/<Op>/Formal.lean` runs its proofs against the
-generated `main`; the hand-written `populate`/`spec_populate` live in `Native/Operations/<Op>/Populate.lean`; and
-each composing chip wraps the witnessed result word in the `cols` struct
-(`assertion <Op>.circuit ⟨…, { value := value }, …⟩`). The op-level `Faithful/<Op>.lean` bridge and
-the flat `Extracted/<Op>.{asserts,interactions}` defs **stay** — they remain load-bearing for the
-not-yet-migrated **chip-level** faithfulness (`Faithful/<Chip>Chip.lean`, which still composes
-`<Op>.asserts ↔ AssertSpec`). Only **byte-bus** leaves are supported so far; readers/CPUState
-(State/Memory/Program buses) and the witnessing `FormalCircuit`s are future work.
-
-## Adding a new operation
-
-1. Add `("<Chip>", "<Op>")` to `CONSTRAINTS_LIST` in `update_extracted.py` and run it.
-2. If `<Op>` emits a `ByteOpcode` not yet modelled, add its real meaning to
-   `ByteOpcode.constrain` in `Model/SP1Constraint.lean` (replace the `True` stub).
-3. Wire `SP1Clean.Extracted.<Op>` into the root index `SP1Clean.lean`.
-4. Write `Faithful/<Op>.lean` anchoring `Extracted.<Op>.constraints` to the gadget's spec.
+Do not add it to extraction. Give it the smallest semantic contract useful to its consuming chips, prove
+its soundness/completeness locally, and compose it as a true Clean subcircuit. Only the consuming chip's
+row reconfiguration and `ChipFaithful` theorem must change if the chip row layout changes.
 
 ## Adding a new chip
 
-Chip column structs (`Extracted/<Chip>Chip.lean`, the `<Chip>Cols` struct + the composed
+Chip oracle modules (`Extracted/ChipOracle/<Chip>.lean`, the namespaced `<Chip>Cols` struct + the complete
 `asserts`/`interactions`) are generated by the same tool from the chip's `Air::eval`. Three steps, the first
 two in the **`$SP1_DIR`** checkout (extraction tooling — additive reflection derives + a dispatch line, *not*
 a chip-semantics change):
@@ -184,31 +222,86 @@ a chip-semantics change):
    IntoShape` (add `use struct_reflection::{StructReflection, StructReflectionHelper};` and
    `use sp1_derive::{AlignedBorrow, IntoShape};`). The `IntoShape` derive handles the zero-width `EmptyCols`
    mode-fields fine (see `AddCols`).
-3. **Generate.** Add `"<Chip>"` to `CHIPS` in `update_extracted.py` and run a *closed* group, e.g.
+3. **Generate.** Add `"<Chip>"` to `CHIPS` and `CHIP_ORACLES` in `update_extracted.py`, then run a *closed* group, e.g.
    `EXTRACT_ONLY=AluX0,CPUState,ALUTypeReader,RTypeReader python3 update_extracted.py` (closed under the
    chip's nested sub-structs, so the reuse/import wiring resolves). Sub-operation **methods** that are *not*
    `SP1Operation`s (e.g. `ALUTypeReader::eval_op_a_immutable`) are **inlined** in the chip's
    `asserts`/`interactions` rather than emitted as a `<Sub>.asserts` call — the `Faithful/<Chip>.lean` anchor
-   then discharges them directly (see `Faithful/AluX0.lean`).
+   then discharges them directly (see `Faithful/AluX0Chip.lean`).
 
-## Composed operations (sub-op `++`)
+## Generated helper factoring (sub-op `++`)
 
 Operations that compose sub-operations (e.g. `AddwOperation`/`SubwOperation` calling
-`U16MSBOperation`) emit a `let CSk := <SubOp>.constraints …` step and return `CSk ++ ⟨[own…], […]⟩`
-(`++` is the componentwise `SP1Constraints` append). The compiler re-emits the sub-op's column
+`U16MSBOperation`) emit parallel `<SubOp>.asserts … ++ [own…]` and
+`<SubOp>.interactions … ++ [own…]` chains. The compiler re-emits the sub-op's column
 **struct** inline (nested-first), which would clash with the sub-op's own standalone
-`Extracted/<SubOp>.lean`. So `update_extracted.py` post-processes a composed op's fragment: it
-detects each `<SubOp>.constraints` call, **strips** the re-emitted `structure <SubOp> … deriving
-ProvableStruct` block, and adds `import SP1Clean.Extracted.<SubOp>` to the header (so the
-sub-op struct + `constraints` come from its own module). Each `Extracted/` file therefore owns
-exactly one struct. The faithfulness anchor for a composed op splits the list at the `++` with
-`SP1Constraints.allHold_append` and discharges the sub-op fragment via the sub-op's own anchor (see
-`Faithful/Addw.lean`, `Faithful/Subw.lean`; the deeper `Faithful/LtOperationSigned.lean` and
-`Faithful/IsZeroWordOperation.lean` collapse their sub-lists the same way).
+`Extracted/<SubOp>.lean`. So `update_extracted.py` discovers struct ownership, asks the compiler to
+reuse each owned sub-struct instead of re-emitting it, and adds `import SP1Clean.Extracted.<SubOp>`
+to the header (so the
+sub-op struct + list definitions come from its own module). Each `Extracted/` file therefore owns
+exactly one struct. This factoring must remain invisible at the public proof boundary: a whole-chip
+anchor may split/unfold the generated append chain as a local calculation, but it concludes with one
+complete chip assertion/interactions theorem.
+
+Two header details of the generated chip oracles: the module-doc reuse list names **every**
+imported shared module (readers *and* struct carriers such as `MemoryAccess`), and imports that
+another import already provides transitively are pruned (`_prune_transitive_imports` — e.g. a
+load/store oracle reaches `RegisterAccessCols` through `ITypeReader`, whose module itself imports
+`RTypeReader`, so no direct `RTypeReader` import is emitted).
+
+## Upstream architecture drift (measured 2026-08-19) — why the pin stays at v6.4.0
+
+SP1's internal line has **replaced the global-accumulation memory-consistency architecture with a
+Merkle-tree one** since our semantic pin. Measured between `v6.4.0` and
+`succinctlabs/sp1-private@main` (`ed1198bd`, 64 commits ahead, 0 behind):
+
+- **`RiscvAir` chips** — removed: `Global`, `MemoryGlobalInit`, `MemoryGlobalFinal`,
+  `PageProtGlobalInit`, `PageProtGlobalFinal`, `SyscallCore`, `SyscallCoreUser`,
+  `SyscallPrecompile`, `SyscallPrecompileUser`. Added: `MerkleTreeTraversal`, `LeafHash`,
+  `LeafHashControl`, `HintReadControl`, `HintRead`.
+- **`InteractionKind`** — removed: `Global`, `GlobalAccumulation`, `MemoryGlobalInitControl`,
+  `MemoryGlobalFinalizeControl`, `PageProtGlobalInitControl`, `PageProtGlobalFinalizeControl`.
+  Added: `MerkleTreeTraversal`, `LeafHash`, `HintRead`.
+
+**What carries over:** all **25 instruction chips** — no file under `alu/`, `control_flow/`,
+`memory/instructions/`, or `utype/` differs — together with the four buses they use (Memory,
+Program, Byte, State). That is the entire native-chip layer: the `GeneralFormalCircuit`s, the
+`ChipFaithful` anchors, the `advance`/Sail bridges, and the grounding contracts.
+
+**What does not:** the 6-table memory-boundary cluster and the syscall system tables — i.e.
+`Extracted/SystemOracle/{Global,MemoryGlobalInit,MemoryGlobalFinalize,SyscallCore,…}`,
+`Extracted/CoreAIRManifest.lean`, and the `FormalModel/CoreProfile.lean` table enum. **The open P1
+item — deriving the native boundary/timestamp facts from the six Core system tables — therefore
+targets a design that upstream is already replacing.** That does not invalidate anything proved
+(our claims are pinned to v6.4.0, a released public tag, and remain true of it), but it changes
+what the next increment should aim at, and it is why a re-pin is a scoped project rather than a
+version bump: re-extract the system/boundary tables, re-derive the memory-boundary relation, and
+re-audit the profile.
+
+Evidence for the mechanics: rebasing the extraction series onto `private/main` applies **textually
+clean** (5 commits, no conflicts) but fails to build with six `E0599`s in the interaction-kind →
+Lean-name mapping in `crates/hypercube/src/ir/lean.rs`. That fix is mechanical; the AIR change
+behind it is not.
+
+**Decision: stay pinned at `v6.4.0`.** It is public, released, externally reproducible, and it is
+in `sp1-private`'s own history — so a branch based on it is still a legitimate PR base there.
 
 ## Future work
 
-- Chip-level `asserts`/`interactions` are now generated and consumed (see *Adding a new chip* above; the
-  native readers + CPU-state are in place). The remaining tooling gap is the `--format lean-circuit` chip
-  form (the `Inputs` + `main` + `ElaboratedCircuit` shape) — currently operation-only; chips compose their
-  sub-circuits by hand in `Native/Chips/<Op>Chip/Defs.lean`.
+- Add `--elf` real-program dumps (`chip_traces --elf` now covers all 25 chip families; committing
+  dumps and fixture rows from a real guest execution — and an `--elf` variant of the in-SP1
+  conformance test — is deferred follow-up).
+- Extend canonical generated reader reuse as each new chip oracle lands, while keeping chip-private
+  Rust arithmetic helpers embedded as implementation details.
+- Retire an entry of `OPERATIONS` / the operation-list modules whenever its last consuming
+  anchor is retired (they are deliberate shared substrate, not migration debt — see `AGENTS.md`).
+- Land the upstream sp1 PR from the pinned branch series (`dtumad/lean-extraction`), then advance
+  `SP1_PINNED_COMMIT` to the upstream commit. The series now carries its own value proposition
+  beyond extraction: `crates/core/compiler/conformance-check/` checks SP1's live
+  `generate_trace` against the vendored formally-verified witness generators (see
+  `docs/rust-integration-memo.md`). It is deliberately a **standalone opt-in package with zero
+  CI footprint** for now — its own cargo workspace, excluded from SP1's, driven only by
+  `scripts/run_sp1_conformance.sh` here — so nothing in SP1's `cargo build`/`cargo test
+  --workspace` builds or runs it. Promoting it into SP1 CI is a later hardening step; only once
+  it runs in authoritative SP1 CI do this repo's committed `export/sp1dump/` tree and its
+  dump-anchored gate input become retirable (the gated seam-A retirement).

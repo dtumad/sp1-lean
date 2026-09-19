@@ -1,0 +1,287 @@
+import SP1Clean.Soundness.LocalCoreRows
+import SP1Clean.Soundness.SystemStateRows
+
+/-! # Physical State ledger of the local shard assembly
+
+The mixed event inventory and the actual StateBump rows account for all State interactions.
+Initialization, finalization, and lookup providers are State-silent. The verifier contributes
+exactly the public final pull and initial push, so balance authenticates both endpoints.
+-/
+
+namespace SP1Clean.Soundness.LocalCore
+
+open SP1Clean.Soundness.NativeCore (ExecutionRow typedTableInteractions_nil byteProvider_channel_silent
+  flatMap_split flatMap_filter_inactive pushesAt_flatMap pullsAt_flatMap verifier_state_interactions_of_main)
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+
+variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
+
+local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+
+/-- The actual active canonicalization rows, separate from instruction execution. -/
+noncomputable def stateBumps {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) : List (StateBumpChip.Inputs (ZMod p)) :=
+  activeSystemRows (systemTable witness 1) stateBumpRow (·.is_real)
+
+private theorem boundary_state_silent (image : ProgramImage) (source : ExecutionSnapshot)
+    (component : Component (ZMod p)) (member : component ∈ (tables image source).take 6) :
+    stateChannel.toRaw ∉ component.circuit.channels := by
+  change component ∈ (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++
+    FinalMemoryEnsemble.inventory.views.map (·.component) at member
+  rcases List.mem_append.mp member with initial | final
+  · obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp initial
+    obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
+    intro used
+    have subset := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id used
+    simp only [List.mem_cons, List.not_mem_nil, or_false, stateChannel_eq_byteChannel_false,
+      stateChannel_eq_memoryChannel_false, false_or] at subset
+    exact (by decide : "SP1State" ≠ SnapshotMemoryEnsemble.channelName) (congrArg RawChannel.name subset)
+  · obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp final
+    obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
+    intro used
+    have subset := FinalMemoryEnsemble.view_channels_subset (p := p) id used
+    simp only [List.mem_cons, List.not_mem_nil, or_false, stateChannel_eq_byteChannel_false,
+      stateChannel_eq_memoryChannel_false, false_or] at subset
+    exact (by decide : "SP1State" ≠ OrderedFinalProvider.channelName) (congrArg RawChannel.name subset)
+
+private theorem boundaryTables_state_silent {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    (witness.tables.take 6).flatMap (typedTableInteractionsWith · stateChannel) = [] := by
+  apply List.flatMap_eq_nil_iff.mpr
+  intro table member
+  apply typedTableInteractions_nil
+  apply boundary_state_silent image source
+  have mapped := List.mem_map_of_mem (f := fun t : Table (ZMod p) => t.component) member
+  rw [List.map_take, witness.tables_map_component] at mapped
+  exact mapped
+
+private theorem byteTables_state_silent {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    ((witness.tables.drop 32).take 23).flatMap (typedTableInteractionsWith · stateChannel) = [] := by
+  apply List.flatMap_eq_nil_iff.mpr
+  intro table member
+  apply typedTableInteractions_nil
+  have mapped := List.mem_map_of_mem (f := fun t : Table (ZMod p) => t.component) member
+  rw [List.map_take, List.map_drop, witness.tables_map_component] at mapped
+  change table.component ∈ (sp1ProviderTables (p := p)).take 23 at mapped
+  exact byteProvider_channel_silent table.component mapped stateChannel.toRaw
+    (by simp [stateChannel_eq_byteChannel_false])
+
+/-- The physical State interior contains exactly ordinary rows and the three State system tables. -/
+theorem state_interiors {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    witness.tables.flatMap (typedTableInteractionsWith · stateChannel) =
+      (instructionTables witness).flatMap (typedTableInteractionsWith · stateChannel) ++
+        typedTableInteractionsWith (systemTable witness 1) stateChannel ++
+        typedTableInteractionsWith (systemTable witness 2) stateChannel ++
+        typedTableInteractionsWith (systemTable witness 3) stateChannel := by
+  have length : witness.tables.length = 59 := by
+    rw [← witness.same_length]; exact tables_length image source
+  have programSilent : typedTableInteractionsWith (programTable witness) stateChannel = [] := by
+    apply typedTableInteractions_nil
+    rw [programTable_component]
+    change (stateChannel (p := p)).toRaw ∉ [programChannel.toRaw]
+    simp [stateChannel_eq_programChannel_false]
+  have refreshSilent : typedTableInteractionsWith (systemTable witness 0) stateChannel = [] := by
+    apply typedTableInteractions_nil
+    rw [systemTable_component]
+    change (stateChannel (p := p)).toRaw ∉ [byteChannel.toRaw, memoryChannel.toRaw, memoryChannel.toRaw]
+    simp [stateChannel_eq_byteChannel_false, stateChannel_eq_memoryChannel_false]
+  have head : witness.tables.drop 6 = programTable witness :: witness.tables.drop 7 := by
+    rw [List.drop_eq_getElem_cons (by omega)]; rfl
+  have tail : witness.tables.drop 55 = [systemTable witness 0, systemTable witness 1,
+      systemTable witness 2, systemTable witness 3] := by
+    rw [List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
+      List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
+      List.drop_eq_nil_of_le (by omega)]
+    rfl
+  have split := congrArg (List.flatMap (typedTableInteractionsWith · stateChannel))
+    (List.take_append_drop 6 witness.tables)
+  rw [List.flatMap_append, boundaryTables_state_silent, List.nil_append] at split
+  rw [← split, head, List.flatMap_cons, programSilent, List.nil_append,
+    flatMap_split witness.tables _ 7 25, flatMap_split witness.tables _ 32 23,
+    byteTables_state_silent, List.nil_append, tail]
+  simp only [List.flatMap_cons, List.flatMap_nil, refreshSilent, List.nil_append,
+    List.append_nil, List.append_assoc, instructionTables]
+
+private theorem verifierMain_stateInteractions (image : ProgramImage) (source : ExecutionSnapshot)
+    (input : Var SP1PublicIO (ZMod p)) (offset : ℕ) :
+    ((verifierMain image source input).operations offset).interactionsWith stateChannel.toRaw =
+      ((sp1StateVerifierMain input).operations offset).interactionsWith stateChannel.toRaw := by
+  have silent (name : String) (different : name ≠ "SP1State") (offset : ℕ) :=
+    InteractionRecovery.interactionsWith_main_eq_nil
+      (OrderedBoundaryVerifier.circuit (p := p) name
+        OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey).base
+      stateChannel.toRaw () offset (by
+        change stateChannel.toRaw ∉ [(OrderedBoundary.channel name).toRaw]
+        simp [stateChannel, OrderedBoundary.channel, Channel.toRaw, Ne.symm different])
+  have initial := silent SnapshotMemoryEnsemble.channelName (by decide)
+  have final := silent OrderedFinalProvider.channelName (by decide)
+  simp only [verifierMain, circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions,
+    Operations.interactionsWith, OrderedBoundaryVerifier.circuit] at initial final ⊢
+  simp only [List.filter_append, initial, final, List.append_nil, sp1StateVerifier]
+  rfl
+
+/-- The combined verifier contributes exactly the final pull and initial push. -/
+theorem verifier_state_interactions {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    typedTableInteractionsWith witness.verifierTable stateChannel =
+      [TypedInteraction.pulledIfValue stateChannel 1
+        ⟨witness.publicInput.final_clk_high, witness.publicInput.final_clk_low,
+          witness.publicInput.final_pc0, witness.publicInput.final_pc1,
+          witness.publicInput.final_pc2⟩,
+       TypedInteraction.pushedIfValue stateChannel 1
+        ⟨witness.publicInput.init_clk_high, witness.publicInput.init_clk_low,
+          witness.publicInput.init_pc0, witness.publicInput.init_pc1,
+          witness.publicInput.init_pc2⟩] := by
+  exact verifier_state_interactions_of_main witness (verifierMain_stateInteractions image source)
+
+private theorem instruction_state_interactions {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    (instructionTables witness).flatMap (typedTableInteractionsWith · stateChannel) =
+      (instructionRows witness).flatMap (fun row =>
+        statePairInteractions (row.toChipRow witness.data).is_real (decodedStateEdge witness.data row)) := by
+  rw [← decodedInstructionInteractionsWith_eq_tables witness.data stateChannel
+    (instructionTables_aligned witness)]
+  apply List.flatMap_congr
+  intro row member
+  exact row.stateInteractions_eq witness.data (supportedChip_stateEmissionShape row.chip
+    (decodedInstructionRows_chip_mem (witness.tables.drop 7) member))
+
+/-- All typed State interactions, including disabled pairs, are these physical row ledgers. -/
+theorem state_interactions {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    typedEnsembleInteractionsWith witness stateChannel =
+      statePairInteractions 1 (finalBoundaryStateMessage witness.publicInput,
+        initialBoundaryStateMessage witness.publicInput) ++
+      (instructionRows witness).flatMap (fun row =>
+        statePairInteractions (row.toChipRow witness.data).is_real (decodedStateEdge witness.data row)) ++
+      (systemTable witness 1).table.flatMap (fun physical =>
+        let row := stateBumpRow (systemTable witness 1) physical
+        statePairInteractions row.is_real (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row)) ++
+      (systemTable witness 2).table.flatMap (fun physical =>
+        let row := haltRow (systemTable witness 2) physical
+        statePairInteractions row.is_real (HaltChip.statePulledMessage row, HaltChip.statePushedMessage row)) ++
+      (systemTable witness 3).table.flatMap (fun physical =>
+        let row := syscallInstrsRow (systemTable witness 3) physical
+        statePairInteractions row.is_real (SyscallInstrsChip.statePulledMessage row,
+          SyscallInstrsChip.statePushedMessage row)) := by
+  rw [typedEnsembleInteractionsWith, EnsembleWitness.allTables, List.flatMap_cons,
+    verifier_state_interactions, state_interiors, instruction_state_interactions,
+    stateBumpTable_typedState_of_component _ (systemTable_component witness 1),
+    haltTable_typedState_of_component _ (systemTable_component witness 2),
+    syscallInstrsTable_typedState_of_component _ (systemTable_component witness 3)]
+  simp only [statePairInteractions, initialBoundaryStateMessage, finalBoundaryStateMessage,
+    List.append_assoc]
+
+private theorem instruction_selector_binary {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
+    (row : DecodedInstructionRow p) (member : row ∈ instructionRows witness) :
+    (row.toChipRow witness.data).is_real = 0 ∨ (row.toChipRow witness.data).is_real = 1 :=
+  supportedChip_selectorConstraintShape row.chip
+    (decodedInstructionRows_chip_mem (witness.tables.drop 7) member) witness.data row.physical
+    (instructionRows_constraints witness constraints row member)
+
+/-- State selectors are signed units or zero throughout the combined witness. -/
+theorem state_signedBinary_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
+    ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
+      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
+  rw [state_interactions]
+  intro interaction member
+  simp only [List.mem_append] at member
+  rcases member with (((boundary | ordinary) | bump) | halt) | syscall
+  · exact statePair_signed_binary 1 (Or.inr rfl) _ _ interaction boundary
+  · exact statePairs_signedBinary _ _ _ (instruction_selector_binary witness constraints) interaction ordinary
+  · exact statePairs_signedBinary _ _ _
+      (stateBumpRow_binary _ (systemTable_component witness 1)
+        (systemTable_constraints witness constraints 1)
+        (byte _ (systemTable_mem witness 1)))
+      interaction bump
+  · exact statePairs_signedBinary _ _ _
+      (haltRow_binary _ (systemTable_component witness 2) (systemTable_constraints witness constraints 2))
+      interaction halt
+  · exact statePairs_signedBinary _ _ _
+      (syscallRow_binary _ (systemTable_component witness 3) (systemTable_constraints witness constraints 3))
+      interaction syscall
+
+private noncomputable def activeStateEdges {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :=
+  (activeInstructionRows witness).map (decodedStateEdge witness.data) ++
+    (stateBumps witness).map (fun row => (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row)) ++
+    (activeSystemRows (systemTable witness 2) haltRow (·.is_real)).map
+      (fun row => (HaltChip.statePulledMessage row, HaltChip.statePushedMessage row)) ++
+    (activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)).map
+      (fun row => (SyscallInstrsChip.statePulledMessage row, SyscallInstrsChip.statePushedMessage row))
+
+private theorem activeStateEdges_balance {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (channels : OrderingChannels witness) :
+    RankedGrounding.EndpointBalanced (↑(activeStateEdges witness)) id
+      (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) := by
+  classical
+  have raw : BalancedInteractions ((typedEnsembleInteractionsWith witness stateChannel).map TypedInteraction.raw) := by
+    rw [typedEnsembleInteractionsWith_raw]
+    exact channels.state
+  have pairs := Multiset.coe_eq_coe.mpr (producedMessages_perm_consumedMessages _ raw
+    (state_signedBinary_of_byte witness constraints channels.byte))
+  have ordinary := statePairs_projection _ _ (decodedStateEdge witness.data) (instruction_selector_binary witness constraints)
+  have bump := statePairs_projection _ _ (fun physical =>
+    let row := stateBumpRow (systemTable witness 1) physical
+    (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row)) (stateBumpRow_binary _ (systemTable_component witness 1)
+    (systemTable_constraints witness constraints 1)
+    (channels.byte _ (systemTable_mem witness 1)))
+  have halt := statePairs_projection _ _ (fun physical =>
+    let row := haltRow (systemTable witness 2) physical
+    (HaltChip.statePulledMessage row, HaltChip.statePushedMessage row))
+    (haltRow_binary _ (systemTable_component witness 2) (systemTable_constraints witness constraints 2))
+  have syscall := statePairs_projection _ _ (fun physical =>
+    let row := syscallInstrsRow (systemTable witness 3) physical
+    (SyscallInstrsChip.statePulledMessage row, SyscallInstrsChip.statePushedMessage row))
+    (syscallRow_binary _ (systemTable_component witness 3) (systemTable_constraints witness constraints 3))
+  rw [state_interactions, producedMessages_append, producedMessages_append, producedMessages_append,
+    producedMessages_append, consumedMessages_append, consumedMessages_append, consumedMessages_append,
+    consumedMessages_append, ordinary.1, ordinary.2, bump.1, bump.2, halt.1, halt.2, syscall.1, syscall.2,
+    statePairInteractions, producedMessages_statePair_one, consumedMessages_statePair_one] at pairs
+  simpa only [RankedGrounding.EndpointBalanced, Multiset.map_coe, activeStateEdges,
+    activeInstructionRows, stateBumps, activeSystemRows, List.filter_map,
+    List.map_append, List.map_map, Function.comp_def, id_eq, List.singleton_append, List.cons_append, List.nil_append,
+    ← Multiset.cons_coe] using pairs
+
+/-- Complete raw State balance on the mixed row inventory and actual canonicalization rows. -/
+theorem state_endpointBalanced_of_orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (channels : OrderingChannels witness) :
+    RankedGrounding.EndpointBalanced
+      ((↑((executionRows witness).map (ExecutionRow.edge witness.data)) : Multiset _) +
+        (↑((stateBumps witness).map (fun row => (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row))) : Multiset _))
+      id (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) := by
+  have equal : (↑(activeStateEdges witness) : Multiset (StateMsg (ZMod p) × StateMsg (ZMod p))) =
+      (↑((executionRows witness).map (ExecutionRow.edge witness.data)) : Multiset (StateMsg (ZMod p) × StateMsg (ZMod p))) +
+        (↑((stateBumps witness).map (fun row => (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row))) : Multiset (StateMsg (ZMod p) × StateMsg (ZMod p))) := by
+    simp only [activeStateEdges, executionRows, List.map_append, List.map_map,
+      Function.comp_def, ExecutionRow.edge, ← Multiset.coe_add]
+    ac_rfl
+  rw [← equal]
+  exact activeStateEdges_balance witness constraints channels
+
+/-- Complete witnesses supply the Byte facts used to decode State multiplicities. -/
+theorem state_signedBinary {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
+      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 :=
+  state_signedBinary_of_byte witness constraints (orderingChannels_of_balanced witness constraints balanced).byte
+
+/-- Complete witnesses supply the State/Byte interface used by endpoint accounting. -/
+theorem state_endpointBalanced {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    RankedGrounding.EndpointBalanced
+      ((↑((executionRows witness).map (NativeCore.ExecutionRow.edge witness.data)) : Multiset _) +
+        (↑((stateBumps witness).map (fun row => (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row))) : Multiset _))
+      id (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) :=
+  state_endpointBalanced_of_orderingChannels witness constraints (orderingChannels_of_balanced witness constraints balanced)
+
+end SP1Clean.Soundness.LocalCore

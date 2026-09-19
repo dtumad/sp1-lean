@@ -1,42 +1,59 @@
-# docs/ — index
+# Documentation index
 
-Topical guides for `sp1-clean-native`. Skim the relevant one when you hit a matching surface.
-The top-level `../README.md` is the public entry point; the always-loaded contributor brief is `../AGENTS.md`.
+The top-level [`README.md`](../README.md) is the public entry point and [`AGENTS.md`](../AGENTS.md)
+is the contributor brief loaded by coding agents. Documents in this tree describe the current
+theorem boundary or provide an explicitly retained external audit record. Superseded proposals,
+handoffs, campaign queues, and timing snapshots are available from git history instead of living
+beside current claims.
 
-The docs split into two audiences:
+Each document has one role:
 
-- **Reader-facing** (understand what the project proves and how much it means) — the top-level files here:
-  `architecture.md`, `release-audit.md`, `roadmap.md`, `bus-model.md`.
-- **Contributor / agent-facing** (the fiddly proof/build techniques used while working on the proofs) — these
-  live under [`agents/`](agents/README.md): `porting-recipe.md`, `proof-patterns.md`, `lean-sail-notes.md`,
-  `extraction.md`, `mul-operation-learnings.md`. Point-in-time snapshots live under
-  [`snapshots/`](snapshots/): `axiom-ledger.md`, `compile-profile.md`.
+| Document | Role |
+|---|---|
+| [`overview.md`](overview.md) | ten-minute technical orientation |
+| [`verification-report.md`](verification-report.md) | self-contained external technical report |
+| [`release-audit.md`](release-audit.md) | machine-adjacent pin, gate, trust, and census record |
+| [`audit-surface.md`](audit-surface.md) | short semantic definition inventory, mechanically gated |
+| [`layering.md`](layering.md) | structural layering and namespace contract |
+| [`architecture.md`](architecture.md) | module ownership, proof chain, and deliberate exceptions |
+| [`roadmap.md`](roadmap.md) | current native shard targets, status, acceptance gates, and separate follow-ups |
+| [`leanervm-comparison.md`](leanervm-comparison.md) | pinned comparison, capstone decisions, and possible shared contributions |
+| [`goal-overview.md`](goal-overview.md) | completed-state contract; never current status |
+| [`witgen-wire-format.md`](witgen-wire-format.md) | witness-export wire format |
+| [`rust-integration-memo.md`](rust-integration-memo.md) | SP1-side witness-generation integration memo |
+| [`audits/2026-08-independent-semantic-audit.md`](audits/2026-08-independent-semantic-audit.md) | retained independent semantic review |
+| [`audits/2026-08-pr110-external-report-disposition.md`](audits/2026-08-pr110-external-report-disposition.md) | retained finding-by-finding external-review disposition |
+| [`audits/2026-08-unification-target-architecture.md`](audits/2026-08-unification-target-architecture.md) | unification campaign's measured architecture baseline and pin decision |
+| [`audits/2026-09-capstone-assessment.md`](audits/2026-09-capstone-assessment.md) | eight-PR provenance, reproduction evidence, confirmed defects, and finish-line assessment |
+| [`audits/2026-09-19-capstone-branch-review.md`](audits/2026-09-19-capstone-branch-review.md) | independent review of the full-state capstone branch: model, statement, installed proofs, findings |
+| [`agents/`](agents/README.md) | maintained contributor techniques and provenance procedures |
+| [`snapshots/axiom-ledger.md`](snapshots/axiom-ledger.md) | generated per-theorem axiom inventory |
 
-## What to read first
+> **Upstream authority: read Clean's own docs.** Read the pinned copy under
+> `.lake/packages/Clean/` or upstream at <https://github.com/Verified-zkEVM/clean>:
+> `doc/performance-problems.md`, `doc/proving-guide.md`, `AGENTS.md`, and
+> `Clean/Air/README.md`. [`agents/proof-patterns.md`](agents/proof-patterns.md) records only the
+> SP1-specific applications and cleanup constraints.
 
-1. **`architecture.md`** — what this project is and the per-chip pattern. Read before adding a chip.
-2. **`release-audit.md`** — the honest claim + pre-release audit: what is proven, the trust boundary, the
-   axiom census, and the `sorry` inventory. Read before trusting or citing the result.
-3. **`agents/porting-recipe.md`** — the step-by-step checklist to port a new instruction. Your working doc.
-4. **`agents/proof-patterns.md`** — the witnessed-`FormalCircuit` proof recipe + the landmines.
-5. **`agents/lean-sail-notes.md`** — the 4.28 environment: relevant when touching deps, imports, or the Sail side.
+## Read these first
 
-The single richest in-repo reference is `SP1Clean/Comparison.lean` — a no-new-proofs findings doc
-recording the worked Add example's six steps end-to-end. The docs here distill it; read it for the full rationale.
+1. [`verification-report.md`](verification-report.md) — claim, evidence, limitations, and trust base.
+2. [`overview.md`](overview.md) — concise current implementation status.
+3. [`architecture.md`](architecture.md) — the whole-chip and whole-shard proof chain.
+4. [`release-audit.md`](release-audit.md) — machine-derived pins, gates, and axiom disclosures.
+5. [`audit-surface.md`](audit-surface.md) — the definitions requiring human semantic review.
+6. [`roadmap.md`](roadmap.md) — native capstone obligations and separate exact-AIR/verifier work.
 
-## Index
+The release audit runs `scripts/check_release_surface.py`, which independently checks that all 25
+instruction identities retain a native definition, Formal/Bridge/Complete proof surface,
+whole-chip Rust oracle and faithfulness anchor, real-row satisfiability theorem, SP1 dump, and all
+three witgen artifacts. `scripts/check_current_docs.py` checks local Markdown links, rejects retired
+paths, and requires module documentation on hand-written Lean modules.
 
-**Reader-facing (top-level)**
-- [architecture.md](architecture.md) — four-artifact chain (gadget → chip → Sail bridge → faithful anchor), mirror-rust layout, design verdict, design status.
-- [release-audit.md](release-audit.md) — the honest claim, the five-kinds-of-faithfulness analysis, the machine-model divergence catalog, the axiom census, the `sorry` blocker inventory, and the modeling-fidelity / SP1-developer-reactions sections.
-- [roadmap.md](roadmap.md) — open work along two axes: coverage breadth (Axis A) and sound-model depth (Axis B), with the five remaining `sorry`s up front.
-- [bus-model.md](bus-model.md) — the cross-chip interaction-bus model (channels, the static byte table, Guarantees/Requirements duality).
+## Historical records
 
-**Contributor / agent-facing** — see [`agents/README.md`](agents/README.md) for the full index.
-- [agents/porting-recipe.md](agents/porting-recipe.md) — create the four artifacts, wire the root import, verify build + axioms; reuse Clean's native gadgets instead of an SP1 byte-bus.
-- [agents/proof-patterns.md](agents/proof-patterns.md) — soundness/completeness skeleton for witnessed gadgets; `ZMod p` / `Word` / `circuit_proof_start` landmines; `maxHeartbeats` floors.
-- [agents/lean-sail-notes.md](agents/lean-sail-notes.md) — Lean 4.28 + public Clean `main` + the GitHub-fetched Sail deps; the `lake update` toolchain-bump trap; the Clean-main ↔ Batteries `Fin.foldl` collision and the import-narrowing fix.
-- [agents/extraction.md](agents/extraction.md) — the constraint-extraction pipeline (`sp1-constraint-compiler` → `update_extracted.py` → Lean) and the DSL contract.
-- [snapshots/axiom-ledger.md](snapshots/axiom-ledger.md) — the machine-checked `#print axioms` inventory per theorem (re-generate from a green build before release).
-- [snapshots/compile-profile.md](snapshots/compile-profile.md) — per-module elaboration profile + worst offenders (a point-in-time snapshot).
-- [agents/mul-operation-learnings.md](agents/mul-operation-learnings.md) — Mul-specific soundness/completeness pitfalls (the 16-limb schoolbook multiply).
+Superseded internal design proposals and campaign handoffs are deliberately not kept in the working
+tree. Durable conclusions were moved into `architecture.md`, `roadmap.md`, `AGENTS.md`, source
+docstrings, and `agents/proof-patterns.md`. Use git history when reconstructing an old decision.
+The documents under `audits/` remain because they are review/measurement records rather than live
+design instructions.

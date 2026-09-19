@@ -1,0 +1,140 @@
+import SP1Clean.Native.Operations.FinalRegisterValue
+import SP1Clean.Native.Operations.FinalRamValue
+import SP1Clean.Native.Operations.FinalMemoryReceipt
+import SP1Clean.Proofs.Chips.OrderedFinalProvider
+import SP1Clean.Model.SP1Field
+import Clean.Circuit.WitnessExport
+
+/-! # Native target-value checks and complete-record handoff
+
+These run the actual witness programs, assertions, target fixed lookups, and Byte semantics.
+Receipt balance includes clocks and all value limbs. The original Memory and ordering ledgers
+remain available to the enclosing machine; this fixture does not claim a complete mixed AIR.
+-/
+
+namespace SP1CleanTest.Core.FinalMemoryValue
+
+open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
+
+private abbrev Fp := ZMod SP1Prime
+
+private def target : MemorySnapshot where
+  registers := (Vector.replicate 32 0).set 1 123 |>.set 31 0xffffffffffffffff
+  memory := ⟨[(65536, 9), (65539, 0), (65543, 17), (65539, 99), (2 ^ 48 - 1, 255)]⟩
+
+private instance byteDecidable (op : ByteOpcode) (a b c : Fp) : Decidable (op.constrain a b c) := by
+  cases op <;> unfold ByteOpcode.constrain <;> infer_instance
+
+private def byteValid (values : List Fp) : Bool :=
+  match values with
+  | [opcode, a, b, c] =>
+    [ByteOpcode.AND, .OR, .XOR, .U8Range, .LTU, .MSB, .Range].any fun op =>
+      opcode == (op.idx : Fp) && decide (op.constrain a b c)
+  | _ => false
+
+private def localConstraints (snapshot : MemorySnapshot) (env : Environment Fp)
+    (operations : List (FlatOperation Fp)) : Bool :=
+  operations.all fun operation =>
+    match operation with
+    | .assert expression => env expression == 0
+    | .lookup lookup =>
+      if arity : lookup.table.arity = size RegisterSnapshotRow then
+        lookup.table.name == "sp1.native.target_registers" && (List.finRange 32).any fun index =>
+          toElements (snapshot.registerRow (p := SP1Prime) (BitVec.ofNat 5 index.val)) ==
+            arity ▸ lookup.entry.map env
+      else if arity : lookup.table.arity = size MemoryIntervalRow then
+        lookup.table.name == "sp1.native.target_memory" && (snapshot.memory.intervals (2 ^ 48)).any fun interval =>
+          toElements (interval.encode (p := SP1Prime)) == arity ▸ lookup.entry.map env
+      else false
+    | .witness .. | .interact .. => true
+
+private def evaluate {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
+    (snapshot : MemorySnapshot) (circuit : GeneralFormalCircuit Fp Input Output) (input : Input Fp) :
+    Bool × List (String × List Fp × Fp) :=
+  let program := circuit.main (varFromOffset Input 0)
+  let env := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
+  let operations := (program.operations (size Input)).toFlat
+  let interactions := FlatOperation.interactions operations
+  let bytes := interactions.all fun interaction =>
+    interaction.channel.name != "SP1Byte" || env interaction.mult == 0 ||
+      byteValid (interaction.msg.map env).toList
+  (localConstraints snapshot env operations && bytes,
+    (interactions.filter fun interaction =>
+      interaction.channel.name == "SP1FinalRegisterValue" || interaction.channel.name == "SP1FinalRamValue").map
+      fun interaction => (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+
+private def balanced (rows : List (Bool × List (String × List Fp × Fp))) : Bool :=
+  let interactions := rows.flatMap Prod.snd
+  rows.all Prod.fst && decide (interactions.length < SP1Prime) &&
+    interactions.all fun (channel, message, _) =>
+      ((interactions.filter fun entry => entry.1 == channel && entry.2.1 == message).map (·.2.2)).sum == 0
+
+private def word (value : ℕ) : Word Fp := bitVecToWord (BitVec.ofNat 64 value)
+
+private def record (address value clock : ℕ) : Channels.MemoryMsg Fp :=
+  ⟨clock / 2 ^ 24, clock % 2 ^ 24, (word address)[0], (word address)[1], (word address)[2], word value⟩
+
+private def register : Channels.MemoryMsg Fp := record 1 123 (2 ^ 24 + 8)
+private def ram : Channels.MemoryMsg Fp := record 65536 (target.memory.readWord 65536).toNat 264
+
+private def registerRow (value : Channels.MemoryMsg Fp) := evaluate target (FinalRegisterValue.circuit target) value
+
+private def ramRow (snapshot : MemorySnapshot) (value : Channels.MemoryMsg Fp) (address : ℕ) :=
+  evaluate snapshot (FinalRamValue.circuit snapshot)
+    ⟨value, InitialMemoryRead.populate snapshot.memory address⟩
+
+private def registerReceipt := evaluate target
+  (FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit)
+  (OrderedMemoryProvider.populate register 0 1)
+
+private def ramReceipt := evaluate target
+  (FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit)
+  (OrderedMemoryProvider.populate ram 2 65536)
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (FinalRegisterValue.circuit (p := SP1Prime) target)
+
+/-- info: exportable ✓ (512 witness cells) -/
+#guard_msgs in
+#assert_exportable (FinalRamValue.circuit (p := SP1Prime) target)
+
+/-- info: exportable ✓ (133 witness cells) -/
+#guard_msgs in
+#assert_exportable (FinalMemoryReceipt.circuit (p := SP1Prime) false OrderedFinalProvider.registerCircuit)
+
+/-- info: exportable ✓ (196 witness cells) -/
+#guard_msgs in
+#assert_exportable (FinalMemoryReceipt.circuit (p := SP1Prime) true OrderedFinalProvider.ramCircuit)
+
+/-- Constructors cover nonzero registers, sparse zero gaps, partial words, and the last native word. -/
+theorem constructedRows :
+    [0, 1, 31].all (fun index =>
+      ((FinalRegisterValue.populate? target (record index (target.registers[index % 32]).toNat 17)).map
+        fun input => (registerRow input).1).getD false) &&
+    [65536, 65544, 2 ^ 48 - 8].all (fun address =>
+      ((FinalRamValue.populate? target (record address (target.memory.readWord address).toNat 264)).map
+        fun input => (evaluate target (FinalRamValue.circuit target) input).1).getD false) = true := by
+  native_decide
+
+/-- Directly forged inputs fail the actual AIR, independently of constructor rejection. -/
+theorem rejectsForgedValues :
+    [(registerRow { register with value := word 124 }).1,
+     (registerRow { register with addr1 := 1 }).1,
+     (registerRow { register with addr0 := 32 }).1,
+     (ramRow target { ram with value := word 9 } 65536).1,
+     (ramRow target ram 65544).1,
+     (ramRow { target with memory := target.memory.write 65543 18 } ram 65536).1,
+     (ramRow target (record (2 ^ 48 - 7) 0 264) (2 ^ 48 - 7)).1] =
+      [false, false, false, false, false, false, false] := by native_decide
+
+/-- Full-record accounting rejects missing, duplicate, wrong-clock, and wrong-kind consumers. -/
+theorem receiptAccounting :
+    [balanced [ramRow target ram 65536, registerReceipt, ramReceipt, registerRow register],
+     balanced [registerReceipt],
+     balanced [registerReceipt, registerRow register, registerRow register],
+     balanced [registerReceipt, registerRow { register with clk_low := 9 }],
+     balanced [ramReceipt, registerRow register], balanced []] =
+      [true, false, false, false, false, true] := by native_decide
+
+end SP1CleanTest.Core.FinalMemoryValue

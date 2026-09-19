@@ -2,167 +2,145 @@
 
 ![SP1 Lean](./.github/assets/header.png)
 
-Formal verification of SP1 Hypercube zkVM arithmetization
+Formal verification of SP1 Core instruction AIRs and native AIR-to-execution refinement
 
 </div>
 
-## Overview
+## Verified result
 
-A formal verification, in **Lean 4**, of the RISC-V chips in
-[SP1](https://github.com/succinctlabs/sp1) — Succinct's zkVM.
+This repository verifies SP1's Core RISC-V instruction chips in Lean using the Clean circuit DSL
+and the generated RISC-V Sail model. The SP1 semantic source is
+`f66b4bff51d0ccff51d152e0f7f66b2ffedf3529` (`v6.4.0`).
 
-SP1 proves the correct execution of a RISC-V program by encoding each instruction as rows of arithmetic
-constraints across a family of *chips* (one per operation: add, sub, bitwise, comparison, …). Those
-constraints are written in Rust. This project takes the constraints SP1's chips actually enforce and
-proves, in Lean, that satisfying them forces the row to compute the right RISC-V result.
+The closed and retained 55-table theorem is:
 
-The circuits themselves are expressed in the [Clean](https://github.com/Verified-zkEVM/clean) zk-circuit
-DSL, and the reference for what each instruction *should* do is the official
-[Sail](https://github.com/riscv/sail-riscv) model of the RISC-V ISA. So a finished proof connects three
-things: SP1's Rust constraints, the Clean circuit, and the RISC-V ISA.
-
-### What is proven
-
-- **Soundness** — if a chip's row satisfies its constraints, the row computes the result the RISC-V ISA
-  specifies for that instruction (proved against the Sail model). Every soundness theorem is
-  *axiom-clean* — `#print axioms` shows only Lean's standard axioms, no `sorry`.
-- **Completeness** — because the circuits carry explicit witnesses, we also prove that every correct
-  input is accepted (no spurious constraint rejects a valid row).
-- **Faithfulness** — the constraints the Lean proof reasons about are *exactly* the constraints SP1's Rust
-  code emits, so the proof can't be vacuously about a different circuit.
-
-### What is assumed / out of scope
-
-- The Sail model is taken as the ground-truth definition of RISC-V.
-- The Clean DSL and the Lean toolchain are trusted.
-- **Soundness is `sorry`-free.** A handful of *completeness* proofs are still deferred skeletons
-  (currently five: Mul, ShiftLeft, ShiftRight and DivRem chips, plus one prerequisite premise in the
-  gated-VM capstone). These are liveness gaps — they say "this valid row is accepted", not "this row is
-  correct" — so they never weaken a soundness claim. See [`docs/release-audit.md`](docs/release-audit.md)
-  for the exact inventory and [`docs/roadmap.md`](docs/roadmap.md) for the plan to close them.
-- This is a per-chip, per-row result plus a trace-level composition layer; it is not yet an end-to-end
-  proof of the whole zkVM.
-
-## Code Structure
-
-All Lean sources live under `SP1Clean/`, with a mirror-of-SP1 layout. The root index
-`SP1Clean.lean` wires up every module's import.
-
-### `FormalModel/Contracts/`
-The input structs and specifications, stated against the RV64 ISA functions — what each reader, operation,
-and chip is expected to compute.
-- `Contracts/Readers.lean` — reader-circuit specs (CPU state, R-type reader, register-access columns/timestamps).
-- `Contracts/Operations.lean` — operation-level specs.
-- `Contracts/Chips.lean` — chip-row `Inputs` + semantic `Spec`s; `Contracts/ChipAssumptions.lean` adds the ALU chips' `Assumptions`/`ProverAssumptions`.
-- `Trace/GuestProgram.lean` — the guest-program execution model (`GuestProgram`, `IsInitialState`, `SailChain`, `SP1Halted`).
-
-### `Math/`
-General math with no SP1/Sail dependencies (the upstreaming candidate). Everything works over a prime field.
-- `Word.lean` — a `Word` as four little-endian 16-bit limbs, plus reassembly into a 64-bit value.
-- `Bitwise.lean` — byte-level AND/OR/XOR.
-- `MulCarryChain.lean` — multiplication carry-chain utilities.
-- `HWord.lean`, `GetElemFastPath.lean`, `Misc.lean` — half-word lemmas, a vector-access shim, misc lemmas.
-
-### `Model/`
-The SP1 substrate — Sail wrappers and the lookup-bus model.
-- `Register.lean`, `SailWrap.lean`, `SailMemory.lean` — register state, Sail monad wrappers, and the Sail memory model.
-- `Channels.lean`, `ChipAir.lean`, `InteractionBus.lean`, `InteractionProjection.lean`,
-  `InteractionRecovery.lean` — the model of the lookup buses chips use to talk to each other.
-- `ByteTable.lean` — the static byte-lookup table (SP1's preprocessed `ByteChip`).
-- `SP1Constraint.lean` — shared SP1 opcode datatypes (`ByteOpcode`, `Opcode`).
-
-### `Native/Operations/` + `Proofs/Operations/`
-The Clean circuit gadgets, one per operation (Add, Addw, Sub, Subw, Mul, Bitwise, BitwiseU16, Lt, U16Compare,
-U16MSB, U16toU8, IsZero(Word), IsEqualWord, Address, AddrAdd), each proved to compute the right 64-bit result.
-A structured op `<Op>/` is split across pillars: the witness + native arithmetic core
-(`Native/Operations/<Op>/{Populate,RawSpec}.lean`), the `FormalAssertion` proof
-(`Proofs/Operations/<Op>/Formal.lean`), and the auto-generated `eval` circuit (`Extracted/Circuit/<Op>.lean`).
-Single-file (flat) ops live in `Native/Operations/`.
-
-### `Native/Readers/`
-Register-adapter reader circuits that validate register reads/writes and instruction fetches per row:
-`CPUState.lean`, `RTypeReader.lean`, `ALUTypeReader.lean`, `RegisterAccessCols.lean`,
-`RegisterAccessTimestamp.lean`.
-
-### `Native/Chips/` + `Proofs/Chips/`
-The chips: each composes the reader circuits, an operation gadget, and an `is_real` selector. A chip
-`<Op>Chip/` is split across pillars — the `main` circuit (`Native/Chips/<Op>Chip/Defs.lean`) and the
-soundness/completeness proofs + Sail bridge (`Proofs/Chips/<Op>Chip/{Formal,Bridge}.lean`); the `Spec` lives
-in `FormalModel/Contracts/Chips.lean`. The ALU, control-flow, and memory chips are all here —
-Add/Addi/Addw/Sub/Subw, Bitwise, Lt, Mul, DivRem, ShiftLeft/ShiftRight, AluX0, Branch, Jal/Jalr, UType, and
-the Load*/Store*/LoadX0 memory chips — alongside the flat receiver-infra files `Proofs/Chips/ByteChip.lean`,
-`ProgramChip.lean`, and `MemoryProvider.lean`. (The 3 entangled complex chips DivRem/ShiftLeft/ShiftRight
-keep their `Defs` in `Proofs/Chips/` too.) Soundness is proved and `sorry`-free throughout; a few
-completeness proofs are still deferred skeletons.
-
-### `Faithful/`
-The faithfulness layer: proofs that the constraints used in the chip proofs are exactly those SP1 emits,
-plus witness-conformance checks (`*Witness.lean`) that the Lean witness matches SP1's `populate`. Shared
-scaffolding in `ChipTactics.lean` and `WitnessConformance.lean`.
-
-### `Extracted/`
-A copy of SP1's constraints, mechanically extracted from the Rust via `sp1-constraint-compiler`. The
-hand-written `ExtractionDSL.lean` defines the vocabulary these read in (a list of assertions plus lookup
-interactions); the rest are the per-chip/op constraint lists, reader columns, and witness vectors.
-
-### `Soundness/`
-Trace-level consistency properties and the whole-machine capstone.
-- `ChipRow.lean` — the `ChipKind` structure-of-functions each chip registers.
-- `StateConsistency.lean` (PC chain), `MemoryConsistency.lean`, `ByteConsistency.lean`,
-  `ProgramConsistency.lean` — per-bus consistency.
-- `Opcode.lean` + `Coverage.lean` — the auditable `Opcode → chip → Sail` routing table (mirroring SP1's
-  `RiscvAir`); `InstructionTrace.lean` maps an instruction sequence to a `ChipRow` sequence;
-  `Completeness.lean` is the partial whole-VM-completeness layer.
-- `GatedVm/` + `SP1GatedVm.lean` — the execution capstone (`sp1_machine_soundness`), the final
-  Clean `FormalEnsemble`.
-
-### `SP1CleanTest/` — the test library (`lake test`)
-A separate top-level library (it imports `SP1Clean`, but is **not** part of the main `lake build`) holding
-the conformance tests — the project's only `native_decide` (which trusts the whole compiler, so it is kept
-out of the main library by `scripts/check_no_native_decide.sh`). Two layers: `WitnessTests/` checks each
-operation's witness generator against explicit vectors dumped from SP1 (`<Op>Witness.lean` anchors +
-auto-generated `WitnessTests/Vectors/`), and `TraceGenTests/` checks whole chip traces re-derived from each
-chip's own circuit against SP1's real `generate_trace`. Shows conformance on test cases; doesn't directly
-prove witness generation faithful. Run with `lake test`.
-
-## How a proof connects to SP1
-
-Each operation is verified through a short chain of artifacts that together link SP1's Rust, the Clean
-circuit, and the RISC-V ISA:
-
-1. **Gadget** (`Native/Operations/<Op>/` + `Proofs/Operations/<Op>/Formal.lean`) — the Clean circuit for the
-   operation, with a spec describing the result it computes on 64-bit words.
-2. **Chip** (`Native/Chips/<Op>Chip/Defs.lean` + `Proofs/Chips/<Op>Chip/Formal.lean`) — composes the gadget
-   with the register/instruction *readers* and an `is_real` selector, matching the shape of one of SP1's chips.
-3. **Sail bridge** (`Proofs/Chips/<Op>Chip/Bridge.lean`) — proves the chip's result matches the RISC-V ISA, as
-   defined by the Sail model.
-4. **Faithfulness anchor** (`Faithful/<Op>.lean`) — proves the constraints used above are exactly those SP1
-   emits, drawn from a Rust-extracted copy of SP1's constraints under `Extracted/`.
-
-Beyond a single row, chips talk to each other through lookup buses (registers, memory, the program ROM, a
-byte table). These are modeled as a multiplicity-weighted interaction bus, with per-bus consistency lemmas
-composed into a whole-trace result. See [`docs/bus-model.md`](docs/bus-model.md) for that layer.
-
-## Building
-
-```bash
-# Build everything (the default target)
-lake build SP1Clean
+```lean
+theorem supported_core_native_sound :
+    WitnessRelation.Sound (SupportedCoreNativeRelation (p := p))
+      (SupportedCoreSailRelation (p := p))
 ```
 
-## Toolchain & Dependencies
+Its input has three parts: the native ensemble's constraints and channel balance; a semantic
+binding for the program, providers, and initial Sail state; and `SyscallTableInactive`, requiring
+an inactive syscall table and a physically present Halt table.
 
-All dependencies are fetched from public Git repositories by `lake build` — there is nothing to check out
-by hand. They are pinned, and you should **not bump them**:
+The conclusion is a shard-local execution of the official generated Sail interpreter: either a
+normally retiring instruction sequence, or such a sequence followed by the modeled HALT handler.
+The public PC and clock endpoints agree with the execution. Ordinary instructions take eight
+ticks; HALT adds 264. Program loading, platform configuration, and code/memory compatibility are
+explicit assumptions. The Memory timestamp bounds are derived in the grounding proof.
 
-| Dependency | Version / source |
-|------------|------------------|
-| Lean       | `leanprover/lean4:v4.28.0` (`lean-toolchain`) |
-| mathlib    | `github.com/leanprover-community/mathlib4 @ v4.28.0` |
-| Clean      | `github.com/Verified-zkEVM/clean @ main` |
-| `LeanRV64D` (Sail RV64 model) | `github.com/succinctlabs/sail-riscv-lean @ dtumad/clean-native` |
-| `RISCV` (lightweight RV64 ISA fns) | `github.com/succinctlabs/riscv-lean @ dtumad/clean-native` |
-| `Sail` (runtime) | `github.com/rems-project/lean-sail @ v4` (pulled in transitively) |
+The retained native ensemble has **55 tables and seven channels**, plus its separate verifier row.
+It contains 25 instruction tables and 30 provider/system tables, including Halt and SyscallInstrs.
+Registering the full syscall chip does not make active syscall rows part of the current soundness
+theorem.
 
-The two `succinctlabs/*` Sail dependencies are pinned to the `dtumad/clean-native` branch and each carries a
-4.28 `lean-toolchain`; this is what keeps the project from being bumped to 4.29.
+## Current target
+
+The capstone under construction is the full-state local shard statement in
+`SP1Clean/FormalModel/Shard.lean` and `SP1Clean/Soundness/Shard/Contract.lean`: raw acceptance of
+the native ensemble at a canonical public header if and only if some event tape is an admissible
+execution path from the supplied complete source snapshot to the supplied complete target snapshot,
+through the official Sail state, the concrete host state, and the clock. `Soundness.Shard.statement_iff`
+is proved conditionally on two unfilled targets, a soundness instance and a compiler instance, and
+its resource profile is an open parameter. The installed implementation checkpoint is the 87-table
+mixed AIR plus its singleton verifier, whose theorem `HostHintReadCPU.source_execution_with_memory`
+derives a local execution path with complete register, RAM, runtime, bookkeeping, and host
+endpoints from the loader check, raw constraints, and raw balance alone. Complete supplied-target
+equality, WRITE and VERIFY, and mixed completeness remain open. The [roadmap](docs/roadmap.md)
+owns the status; the [branch review](docs/audits/2026-09-19-capstone-branch-review.md) records
+the current findings.
+
+## Coverage and limits
+
+| Result | Current boundary |
+|---|---|
+| 25 instruction-chip soundness and completeness proofs | Native Clean circuits and their semantic contracts |
+| 25 Sail instruction bridges | Supported RV64IM instruction routes |
+| 25 whole-chip Rust faithfulness proofs | Complete assertion systems and active interaction multisets on reconstructed native rows |
+| Full SyscallInstrs chip and factored faithfulness proof | Local row result with explicit public-value binding; active syscall grounding remains unfinished |
+| Native AIR-to-Sail soundness | Explicit semantic boundary and inactive syscall table |
+| Full-state local shard capstone | Conditional `statement_iff`; the installed 87-table checkpoint derives the execution path; target equality and the mixed compiler are open |
+| Deterministic native completeness | All 25 instruction families on the named admissible, ordinary-shard domain |
+| Single-shard boot-to-halt theorem | Requires a boot boundary and live Halt row; no joint inhabitant is constructed yet |
+| Exact upstream Core AIR-to-Sail refinement | Conditional on an unconstructed obligations bundle |
+
+The compiler builds instruction rows, State/Memory refreshes, Memory boundaries, and recounted
+Byte/Range/Program providers. It currently emits a padding Halt row and an empty SyscallInstrs
+table. Its source relation retains explicit readiness and interaction-capacity conditions.
+Unconditional correctness and language equality for the ordinary sub-language still require
+`NativeShardTraceTotal`. The active regression joins an official Sail step, its deterministic
+compiler event, a nonempty bounded native witness, and native soundness back to Sail.
+
+The complete extracted upstream relation contains the paired **34-table execution** and
+**six-table memory-boundary** clusters and the **160-cell public-value block**. Its local transport
+constructs the native ensemble under named contracts; its Halt and SyscallInstrs tables are
+manufactured padding/empty tables, not a transport of upstream syscall events. Global balance,
+authenticated preprocessing, semantic boundary binding, and syscall refinement remain explicit
+obligations.
+
+The exact-AIR declarations are therefore named
+`sp1_air_refinement_of_obligations` and `sp1_air_sound_of_obligations`.
+Neither a closed exact-Core soundness theorem nor cryptographic verifier soundness is claimed.
+A future verifier theorem must account for cryptographic assumptions and an extraction error bound.
+Cross-shard composition and completeness are separate results.
+
+## Trust and dependencies
+
+All dependencies are pinned in `lake-manifest.json`, with Lean/mathlib v4.32.2. The important
+boundaries are:
+
+- **SP1 extraction:** a pinned Rust compiler/exporter produces complete row shapes and
+  assertion/interaction lists. Its tooling remains trusted; source-delta checks, whole-chip
+  faithfulness proofs, and trace conformance provide separate evidence.
+- **Clean:** the dependency is a pinned fork containing changes to prover-data agreement and
+  witness-program sharing. Local additions live in `ToClean/`. The exact differences are
+  disclosed in the [release audit](docs/release-audit.md).
+- **Sail:** the generated model and runtime are pinned together. The model is regenerated with
+  the checked-in SP1 platform configuration; loader and initial-state hypotheses remain explicit.
+- **Lean:** main-library proofs have no proof deferrals, project axioms, kernel bypasses, or
+  `native_decide`. Generated Sail platform hooks and selected bit-vector proof constants are
+  disclosed in the [axiom ledger](docs/snapshots/axiom-ledger.md). Compiler-trusted executable
+  tests live separately in `SP1CleanTest/`.
+
+Do not run bare `lake update`; dependency changes require a reviewed pin change.
+
+## Build and reproduce
+
+```bash
+lake build SP1Clean
+lake test
+lake lint
+scripts/run_audit.sh
+```
+
+Trace conformance also uses `scripts/check_witgen_export.sh --regen` and
+`scripts/run_interp_diff.sh`. Regenerating the Rust extraction requires a clean checkout of its
+separate extraction pin; [the extraction procedure](docs/agents/extraction.md) documents it.
+A successful cached build checks a different reproduction boundary from rebuilding the project
+without its previous oleans.
+
+## Review and contribute
+
+For the consolidated eight-PR development, start with the
+[capstone assessment](docs/audits/2026-09-capstone-assessment.md), which records reproduction,
+confirmed defects, and remaining proof obligations, then the
+[branch review](docs/audits/2026-09-19-capstone-branch-review.md), which reviews the full-state
+capstone work that followed it. For the implementation, read the
+[verification overview](docs/overview.md), then the
+[technical report](docs/verification-report.md), [semantic audit surface](docs/audit-surface.md),
+and [architecture](docs/architecture.md). The [documentation index](docs/README.md) identifies
+each document's role. Remaining work is described in the [roadmap](docs/roadmap.md).
+
+The main source layers are `Math`, `Model`, `Extracted`, `FormalModel`, `Native`, `Proofs`,
+`Faithful`, `Composition`, and `Soundness`. Extraction produces Lean data, not Clean circuits;
+the native circuits are maintained independently. The whole chip is the Rust-faithfulness boundary.
+
+[AGENTS.md](AGENTS.md) records contributor rules. Clean's pinned proof and performance documentation
+is authoritative for circuit proofs; the [local proof notes](docs/agents/proof-patterns.md)
+describe SP1-specific applications.
+
+## License
+
+Dual-licensed under either [Apache License 2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT), at your
+option. Unless explicitly stated otherwise, contributions are dual-licensed under the same terms.
