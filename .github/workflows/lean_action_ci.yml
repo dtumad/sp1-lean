@@ -1,17 +1,44 @@
 name: Lean Action CI
 
+# GitHub-hosted runners only. The four heavy jobs used to pin succinctlabs' self-hosted RunsOn
+# labels (`runner=64cpu-linux-x64`); on any other repository those jobs never start. This workflow
+# runs on `ubuntu-latest` (4 vCPU / 16 GB / ~14 GB free disk on public repositories) and makes that
+# feasible with three measures:
+#
+# 1. Mathlib is never stored in the GitHub Actions cache. lean-action's `use-mathlib-cache` runs
+#    `lake exe cache get` every job (about 6 GB of oleans, a few minutes), which keeps every cache
+#    entry below the 10 GB per-repository limit that lean-action's whole-`.lake` cache would exceed.
+# 2. The project build (`.lake/build`, about 4 GB raw) and every non-mathlib package checkout are
+#    cached under a key that ends in the commit SHA, with a prefix `restore-keys` fallback. A run
+#    therefore starts from the most recent prior build and Lake rebuilds only what changed.
+# 3. The build is resumable. `build` runs `lake build` under a 5-hour `timeout` and saves its cache
+#    even on failure; Lake's per-module traces make a partial build reusable, so a cold cache that
+#    cannot finish inside one job fails once and the re-run continues where it stopped. Once warm,
+#    builds are incremental and take minutes.
+#
+# Structure: `guards` (source-policy gates, seconds) runs in parallel with `build`; `lint`, `test`,
+# and `audit` need `build` and restore its exact cache entry so they replay rather than recompile.
+
 on:
-  # Run on push to `main`/`ci-testing`, any pull request, or manual dispatch
   push:
     branches: ["main", "ci-testing"]
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Bump to invalidate every cache entry (toolchain and manifest changes already rekey).
+  SP1_CACHE_VERSION: v1
 
 jobs:
   guards:
     # Lightweight source-policy gates — run on a standard runner in parallel with the
     # heavy build so a forbidden pattern blocks the PR in seconds without a Lean build.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: No skipKernelTC in source
@@ -44,104 +71,157 @@ jobs:
         run: scripts/check_layering.sh
 
   build:
-    runs-on:
-      [
-        runs-on,
-        runner=64cpu-linux-x64,
-        spot=false,
-        disk=large,
-        "run-id=${{ github.run_id }}",
-      ]
-
+    runs-on: ubuntu-latest
+    # Below GitHub's 6-hour job limit, above the 5-hour `timeout` on `lake build` so the cache
+    # save step always gets to run.
+    timeout-minutes: 350
+    outputs:
+      cache-prefix: ${{ steps.key.outputs.prefix }}
+      cache-key: ${{ steps.key.outputs.key }}
     steps:
       - uses: actions/checkout@v4
-      # Test that the project builds without failure
-      # Note: defaults to ignore warnings and deprecations, maybe change eventually
-      # lean-action's `use-github-cache` caches the WHOLE `.lake` (project build + deps) under a
-      # commit-keyed key (`lake-<os>-<arch>-<toolchain>-<manifest>-<sha>`) with a manifest-prefix
-      # `restore-keys` fallback. So this build is incremental from the most recent prior commit, and the
-      # exact-`<sha>` cache it saves is what the `lint`/`test` jobs restore (an exact hit → `lake build`
-      # there just replays, no recompilation). No separate per-commit project cache is needed.
-      - uses: leanprover/lean-action@v1
+      - name: Free disk space
+        # The hosted image ships ~25 GB of toolchains this project never uses; the toolchain,
+        # mathlib oleans, the project build and the cache archives need roughly 16 GB together.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost /usr/local/.ghcup
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          df -h /
+      - name: Compute cache keys
+        id: key
+        run: |
+          prefix="sp1-${SP1_CACHE_VERSION}-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}"
+          echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
+          echo "key=${prefix}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+      - name: Restore the project build cache (incremental)
+        uses: actions/cache/restore@v4
         with:
-          build: "true"
+          path: |
+            .lake/build
+            .lake/packages/*
+            !.lake/packages/mathlib
+          key: ${{ steps.key.outputs.key }}
+          restore-keys: |
+            ${{ steps.key.outputs.prefix }}-${{ github.sha }}-
+            ${{ steps.key.outputs.prefix }}-
+      - uses: leanprover/lean-action@v1
+        # Installs the pinned toolchain and fetches the mathlib olean cache; the build itself runs
+        # in the next step so it can be bounded by `timeout`.
+        with:
+          build: "false"
           test: "false"
           lint: "false"
-          use-github-cache: "true"
-      # Hand the freshly-built project oleans to the `lint` job via a commit-keyed cache.
-      # lean-action's own `use-github-cache` covers dependencies only (keyed on the manifest), not the
-      # per-commit project build — so without this the lint job would rebuild the whole project.
-      - name: Cache build outputs for the lint job
+          use-mathlib-cache: "true"
+          use-github-cache: "false"
+      - name: Build (resumable — a cold cache may need one re-run)
+        run: timeout 5h lake build
+      - name: Save the project build cache
+        if: always()
         uses: actions/cache/save@v4
         with:
-          path: .lake/build
-          key: lake-build-${{ github.sha }}
+          path: |
+            .lake/build
+            .lake/packages/*
+            !.lake/packages/mathlib
+          key: ${{ steps.key.outputs.key }}
 
   lint:
     # Environment linters (`lake lint` → the `sp1Lint` lintDriver; a curated subset of the Batteries
-    # `#lint` linters over the hand-written `SP1Clean.*` declarations; see AGENTS.md § Linters). Split
-    # into its own job so it is clearly independent in the checks list. `needs: build` so it runs after
-    # the build job has saved its exact-`<sha>` `.lake` cache; lean-action below restores that on an exact
-    # hit, so `lake build` just replays the already-built project (no recompilation) before `lake lint`.
-    # If that cache were ever absent, lean-action's manifest-prefix `restore-keys` fallback does a correct
-    # incremental build instead, so the job stays correct either way.
+    # `#lint` linters over the hand-written `SP1Clean.*` declarations; see AGENTS.md § Linters).
     needs: build
-    runs-on:
-      [
-        runs-on,
-        runner=64cpu-linux-x64,
-        spot=false,
-        disk=large,
-        "run-id=${{ github.run_id }}",
-      ]
-
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost /usr/local/.ghcup
+          df -h /
+      - name: Restore the project build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .lake/build
+            .lake/packages/*
+            !.lake/packages/mathlib
+          key: ${{ needs.build.outputs.cache-key }}
+          restore-keys: |
+            ${{ needs.build.outputs.cache-prefix }}-${{ github.sha }}-
+            ${{ needs.build.outputs.cache-prefix }}-
       - uses: leanprover/lean-action@v1
         with:
-          build: "true"
+          build: "false"
           test: "false"
           lint: "false"
-          use-github-cache: "true"
+          use-mathlib-cache: "true"
+          use-github-cache: "false"
+      - name: Replay the build
+        run: lake build
       - name: Environment linters (lake lint)
         run: lake lint
 
   test:
     # Conformance tests (`lake test` → the `SP1CleanTest` testDriver: the exportability battery and
     # the non-vacuity/real-row satisfiability anchors; whole-trace conformance itself is the separate
-    # dump-anchored pipeline re-run below via `check_witgen_export.sh --regen`).
-    # These live in their own library — the ONLY place `native_decide` is allowed — so they are gated
-    # here, separately from the `native_decide`-free main build. Split into its own job (in parallel with
-    # `lint`) so the trusted-compiler checks are clearly independent in the checks list. `needs: build`
-    # so it runs after the build job has saved its exact-`<sha>` `.lake` cache; lean-action below restores
-    # that on an exact hit, so `lake build` replays the already-built main library (no recompilation) and
-    # `lake test` only elaborates the test modules. If that cache were ever absent, lean-action's
-    # manifest-prefix `restore-keys` fallback does a correct incremental build instead.
+    # dump-anchored pipeline re-run below via `check_witgen_export.sh --regen`). These live in their
+    # own library — the ONLY place `native_decide` is allowed — so they are gated here, separately
+    # from the `native_decide`-free main build. The test-library oleans get their own incremental
+    # cache so unchanged test modules are not re-elaborated every run.
     needs: build
-    runs-on:
-      [
-        runs-on,
-        runner=64cpu-linux-x64,
-        spot=false,
-        disk=large,
-        "run-id=${{ github.run_id }}",
-      ]
-
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
         # run_audit.sh verifies the census provenance stamp with
         # `git merge-base --is-ancestor`, which needs the stamped commit in this clone.
-        # The default shallow fetch would make that check fail for the wrong reason.
         with:
           fetch-depth: 0
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost /usr/local/.ghcup
+          df -h /
+      - name: Restore the project build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .lake/build
+            .lake/packages/*
+            !.lake/packages/mathlib
+          key: ${{ needs.build.outputs.cache-key }}
+          restore-keys: |
+            ${{ needs.build.outputs.cache-prefix }}-${{ github.sha }}-
+            ${{ needs.build.outputs.cache-prefix }}-
+      - name: Restore the test-library build cache (incremental)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .lake/build/lib/lean/SP1CleanTest
+            .lake/build/ir/SP1CleanTest
+          key: ${{ needs.build.outputs.cache-prefix }}-test-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ needs.build.outputs.cache-prefix }}-test-
       - uses: leanprover/lean-action@v1
         with:
-          build: "true"
+          build: "false"
           test: "false"
           lint: "false"
-          use-github-cache: "true"
+          use-mathlib-cache: "true"
+          use-github-cache: "false"
+      - name: Replay the build
+        run: lake build
       - name: Conformance tests (lake test)
-        run: lake test
+        run: timeout 5h lake test
+      - name: Save the test-library build cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .lake/build/lib/lean/SP1CleanTest
+            .lake/build/ir/SP1CleanTest
+          key: ${{ needs.build.outputs.cache-prefix }}-test-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Whole-ensemble export identity
         run: bash scripts/check_ensemble_export.sh
       # The committed export/witgen goldens must match a fresh regeneration byte-for-byte.
@@ -150,8 +230,7 @@ jobs:
       - name: Witgen export matches a fresh regeneration
         run: scripts/check_witgen_export.sh --regen
       # The test-scope axiom census (scripts/axiom_probe_test.lean) elaborates against the
-      # SP1CleanTest oleans that `lake test` just built — the only job where they exist. The
-      # main-scope census runs in the `audit` job, which builds only the default SP1Clean target.
+      # SP1CleanTest oleans that `lake test` just built — the only job where they exist.
       - name: Test-library axiom census (scripts/run_audit.sh --test-only)
         run: scripts/run_audit.sh --test-only
 
@@ -160,32 +239,38 @@ jobs:
     # zero-tolerance proof-deferral and project-axiom scans, the source-policy guards, and the
     # authoritative `#print axioms` census over the released main-library theorem surface, gated
     # against the committed `docs/snapshots/axiom-census.txt` (a drift fails; `--update` is a
-    # local, deliberate act). `--main-only` because this job builds only the default `SP1Clean`
-    # target — the test-scope census runs in the `test` job, whose `lake test` produces the
-    # `SP1CleanTest` oleans that probe needs. `needs: build` for the same commit-keyed `.lake`
-    # cache reuse as `lint`/`test` — the census probe elaborates against the built oleans.
+    # local, deliberate act). `--main-only` because the test-scope census runs in the `test` job.
     needs: build
-    runs-on:
-      [
-        runs-on,
-        runner=64cpu-linux-x64,
-        spot=false,
-        disk=large,
-        "run-id=${{ github.run_id }}",
-      ]
-
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-        # run_audit.sh verifies the census provenance stamp with
-        # `git merge-base --is-ancestor`, which needs the stamped commit in this clone.
-        # The default shallow fetch would make that check fail for the wrong reason.
         with:
           fetch-depth: 0
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost /usr/local/.ghcup
+          df -h /
+      - name: Restore the project build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .lake/build
+            .lake/packages/*
+            !.lake/packages/mathlib
+          key: ${{ needs.build.outputs.cache-key }}
+          restore-keys: |
+            ${{ needs.build.outputs.cache-prefix }}-${{ github.sha }}-
+            ${{ needs.build.outputs.cache-prefix }}-
       - uses: leanprover/lean-action@v1
         with:
-          build: "true"
+          build: "false"
           test: "false"
           lint: "false"
-          use-github-cache: "true"
+          use-mathlib-cache: "true"
+          use-github-cache: "false"
+      - name: Replay the build
+        run: lake build
       - name: Release audit, main scope (scripts/run_audit.sh --main-only)
         run: scripts/run_audit.sh --main-only
