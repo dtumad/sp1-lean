@@ -12,7 +12,7 @@ This repository verifies SP1's Core RISC-V instruction chips in Lean using the C
 and the generated RISC-V Sail model. The SP1 semantic source is
 `f66b4bff51d0ccff51d152e0f7f66b2ffedf3529` (`v6.4.0`).
 
-The main theorem is:
+The closed and retained 55-table theorem is:
 
 ```lean
 theorem supported_core_native_sound :
@@ -30,10 +30,26 @@ The public PC and clock endpoints agree with the execution. Ordinary instruction
 ticks; HALT adds 264. Program loading, platform configuration, and code/memory compatibility are
 explicit assumptions. The Memory timestamp bounds are derived in the grounding proof.
 
-The native ensemble has **55 tables and seven channels**, plus its separate verifier row.
+The retained native ensemble has **55 tables and seven channels**, plus its separate verifier row.
 It contains 25 instruction tables and 30 provider/system tables, including Halt and SyscallInstrs.
 Registering the full syscall chip does not make active syscall rows part of the current soundness
 theorem.
+
+## Current target
+
+The capstone under construction is the full-state local shard statement in
+`SP1Clean/FormalModel/Shard.lean` and `SP1Clean/Soundness/Shard/Contract.lean`: raw acceptance of
+the native ensemble at a canonical public header if and only if some event tape is an admissible
+execution path from the supplied complete source snapshot to the supplied complete target snapshot,
+through the official Sail state, the concrete host state, and the clock. `Soundness.Shard.statement_iff`
+is proved conditionally on two unfilled targets, a soundness instance and a compiler instance, and
+its resource profile is an open parameter. The installed implementation checkpoint is the 87-table
+mixed AIR plus its singleton verifier, whose theorem `HostHintReadCPU.source_execution_with_memory`
+derives a local execution path with complete register, RAM, runtime, bookkeeping, and host
+endpoints from the loader check, raw constraints, and raw balance alone. Complete supplied-target
+equality, WRITE and VERIFY, and mixed completeness remain open. The [roadmap](docs/roadmap.md)
+owns the status; the [branch review](docs/audits/2026-09-19-capstone-branch-review.md) records
+the current findings.
 
 ## Coverage and limits
 
@@ -44,6 +60,7 @@ theorem.
 | 25 whole-chip Rust faithfulness proofs | Complete assertion systems and active interaction multisets on reconstructed native rows |
 | Full SyscallInstrs chip and factored faithfulness proof | Local row result with explicit public-value binding; active syscall grounding remains unfinished |
 | Native AIR-to-Sail soundness | Explicit semantic boundary and inactive syscall table |
+| Full-state local shard capstone | Conditional `statement_iff`; the installed 87-table checkpoint derives the execution path; target equality and the mixed compiler are open |
 | Deterministic native completeness | All 25 instruction families on the named admissible, ordinary-shard domain |
 | Single-shard boot-to-halt theorem | Requires a boot boundary and live Halt row; no joint inhabitant is constructed yet |
 | Exact upstream Core AIR-to-Sail refinement | Conditional on an unconstructed obligations bundle |

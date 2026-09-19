@@ -1,6 +1,8 @@
 # SP1 v1.0 release audit
 
-Snapshot date: 2026-08-06, re-audited on the Lean v4.31 -> v4.32.2 + Sail v4 -> v5 migration. The
+Snapshot date: 2026-08-06, re-audited on the Lean v4.31 -> v4.32.2 + Sail v4 -> v5 migration, and
+re-audited on 2026-09-19 for the full-state capstone branch (see the
+[branch review](audits/2026-09-19-capstone-branch-review.md)). The
 generated records in `docs/snapshots/` are authoritative for exact declaration dependencies; rerun the
 commands below before citing this report for another commit.
 
@@ -108,6 +110,7 @@ confirmed repairs, remaining proof obligations, and limits of that review.
 | Whole-chip AIR faithfulness | `supportedChipFaithfulness` | exact 25-table coverage |
 | Native machine grounding | `supported_core_witness_grounding` | closed |
 | Native AIR-to-Sail | `supported_core_native_sound` | closed, shard-local, explicit boundary premises |
+| Full-state local shard capstone | `Soundness.Shard.statement_iff` | conditional on unfilled soundness and compiler targets; the installed 87-table checkpoint derives the execution path from raw constraints and balance |
 | Exact Rust AIR relation | `CoreAIR.Current.Relation` | complete 34/6-table list-level relation |
 | Exact Rust AIR-to-Sail | `sp1_air_sound_of_obligations` | conditional; bundle not instantiated |
 | Cross-shard execution | `SP1ExecutionRelation` | target relation specified; no soundness theorem yet |

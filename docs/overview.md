@@ -62,7 +62,7 @@ Neither theorem establishes cryptographic verifier acceptance or cross-shard com
 | 54 | SyscallInstrs |
 
 Its seven channels are State, Byte, Program, Memory, Exit, Syscall, and PublicValues.
-The current headline relation makes the last two ledgers silent by requiring an inactive
+The retained 55-table relation makes the last two ledgers silent by requiring an inactive
 SyscallInstrs table.
 
 Every one of the 25 instruction families has native soundness and completeness, a Sail bridge,

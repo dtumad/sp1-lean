@@ -60,7 +60,7 @@ The deliverables:
   The public `supported_core_native_grounding` endpoint returns the initial boundary facts and the
   full grounding record, including its proved `finalStateTruth` and `memoryFinalizeTruth`; the
   local-execution capstone is now visibly a projection of this reusable result.
-- **D5 — The headline theorem.** `supported_core_native_sound`
+- **D5 — The closed 55-table theorem (retained).** `supported_core_native_sound`
   (`SP1Clean/Soundness/AIR.lean`): every constraint-satisfying, channel-balanced witness of the
   55-table ensemble, with an explicit boundary premise, yields a genuine finite,
   normally-retiring run of the official (SP1-configured, §3.2) Sail RV64 interpreter — either
@@ -69,7 +69,9 @@ The deliverables:
   (§8.2) — and with no machine-model parameter (§8). One corollary,
   `supported_core_boot_to_halt_single_shard`, adds a boot boundary and states the first
   whole-program fact: entry point with zeroed registers to a halting state carrying the committed
-  exit code, on a single shard.
+  exit code, on a single shard. The full-state local shard target that supersedes this theorem as
+  the headline is specified in §7.2; its statement is conditional and both of its targets are
+  unfilled.
 - **D6 — Conformance testing against the real prover.** A dump-anchored pipeline reconstructs
   every event row of all 25 chips from the circuits' own witness generators and matches it
   cell-for-cell against full trace matrices dumped from SP1's actual Rust prover at SP1's field,
