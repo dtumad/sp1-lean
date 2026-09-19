@@ -167,22 +167,27 @@ def getHandwrittenDecls : CoreM (Array Name) := do
   return env.constants.map₁.fold (init := #[]) fun decls declName _ =>
     if keep[env.const2ModIdx[declName]?.get! (α := Nat)]! then decls.push declName else decls
 
-/-- Every module under `.lake/build/lib/lean/<root>/` whose olean exists, as import names. Used by
-`--scope core`: PR CI builds only the core target, so instead of importing the umbrella `SP1Clean`
-(whose olean only the alignment workflow produces) the driver lints whatever is built. -/
+/-- Every module under `.lake/build/lib/lean/<root>/` whose olean exists AND whose source file
+still exists, as import names. Used by `--scope core`: PR CI builds only the core target, so
+instead of importing the umbrella `SP1Clean` (whose olean only the alignment workflow produces)
+the driver lints whatever is built. The source check matters: a build directory can hold oleans
+of retired or moved modules, and importing one beside its successor duplicates declarations. -/
 def builtModules (roots : List String) : IO (Array Name) := do
   let libDir : FilePath := ".lake" / "build" / "lib" / "lean"
   let mut mods : Array Name := #[]
   for root in roots do
     let rootOlean := libDir / (root ++ ".olean")
-    if ← rootOlean.pathExists then mods := mods.push (Name.mkSimple root)
+    if (← rootOlean.pathExists) && (← (FilePath.mk (root ++ ".lean")).pathExists) then
+      mods := mods.push (Name.mkSimple root)
     let dir := libDir / root
     unless ← dir.isDir do continue
+    let depth := libDir.components.length
     for entry in ← System.FilePath.walkDir dir do
       if entry.extension == some "olean" then
-        let rel := (entry.withExtension "").toString.drop (libDir.toString.length + 1)
-        let name := (rel.splitOn "/").foldl (fun n c => Name.str n c) Name.anonymous
-        mods := mods.push name
+        let comps := (entry.withExtension "").components.drop depth
+        let src : FilePath := (comps.foldl (fun (p : FilePath) c => p / FilePath.mk c) ⟨"."⟩).withExtension "lean"
+        if ← src.pathExists then
+          mods := mods.push (comps.foldl (fun n c => Name.str n c) Name.anonymous)
   return mods.qsort (·.toString < ·.toString)
 
 /--
@@ -213,15 +218,15 @@ unsafe def main (args : List String) : IO Unit := do
   let verbose := args.contains "-v" || args.contains "--trace"
   -- Advisory, opt-in: see the `--placement` note in this file's header.
   let placement := args.contains "--placement"
-  let coreScope := match args.indexOf? "--scope" with
-    | some i => args[i + 1]? == some "core"
-    | none => false
+  let coreScope : Bool := (args.zip args.tail).any fun (flag, value) =>
+    flag == "--scope" && value == "core"
   initSearchPath (← findSysroot)
   let projectModule := `SP1Clean
   let lintModule := `Batteries.Tactic.Lint
   -- The env linters need built oleans; require them rather than driving a build from here. In
   -- core scope the umbrella olean is not expected to exist.
-  for m in (if coreScope then [lintModule] else [projectModule, lintModule]) do
+  let required : List Name := if coreScope then [lintModule] else [projectModule, lintModule]
+  for m in required do
     let olean ← findOLean m
     unless (← olean.pathExists) do
       IO.eprintln s!"sp1Lint: missing olean for `{m}` at:\n  {olean}\n\
@@ -238,7 +243,7 @@ unsafe def main (args : List String) : IO Unit := do
   let projectImports : Array Name ←
     if coreScope then builtModules ["SP1Clean", "ToClean", "ToMathlib"]
     else pure (#[projectModule] ++ extraModules)
-  if coreScope then
+  if coreScope then do
     IO.println s!"-- sp1Lint: core scope, {projectImports.size} built modules"
   let imports : Array Import :=
     (projectImports ++ #[lintModule]).map fun m => { module := m }
