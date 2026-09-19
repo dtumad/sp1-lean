@@ -21,12 +21,12 @@
 # all in constant tables, capped at 2048, none in a proof.
 #
 # RE-MEASURED at Lean v4.32.2 (2026-08-06, the 4.31 -> 4.32.2 + Sail v4 -> v5 migration). Every one of
-# the 11 sites was re-tested by STRIPPING its option and re-elaborating: all six files still fail
+# the 8 sites was re-tested by STRIPPING its option and re-elaborating: all four files still fail
 # without them, so no entry has become unnecessary. (That check matters because this gate is exact set
 # equality — a site the toolchain no longer needs FAILS the build until its line is deleted.)
 #
-# ---- maxHeartbeats: 3 sites, all on GENERATED definitions ----------------------------------------
-# All three are emitted by update_extracted.py and reproduced by a regeneration; fixes go in the
+# ---- maxHeartbeats: 2 sites, both on GENERATED definitions ---------------------------------------
+# Both are emitted by update_extracted.py and reproduced by a regeneration; fixes go in the
 # generator, never by editing the file.
 
 # The only generated AIR definition that needs any budget. Fails in `«LCNF simp»` — the CODE GENERATOR,
@@ -46,7 +46,7 @@ maxHeartbeats  SP1Clean/Extracted/ChipOracle/DivRem.lean            400000   1
 maxHeartbeats  SP1Clean/Extracted/SystemOracle/Global.lean         1000000   1
 
 
-# ---- maxRecDepth: 8 sites (Lean's default is 512) ------------------------------------------------
+# ---- maxRecDepth: 6 sites (Lean's default is 512) ------------------------------------------------
 
 # Global's four `assertsPart*` definitions — the same Poseidon chain as the heartbeat entry above.
 # Ladder: 800 FAIL / 1200 FAIL / 2000 ok → floor (1200, 2000], set ~2x. The file's other two defs need

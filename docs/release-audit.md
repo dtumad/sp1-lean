@@ -53,8 +53,10 @@ pinned Sail compiler + sail-riscv sources above run against the schema-shaped SP
 reproducible via `scripts/sail-config/generate_lean_rv64d.sh` (`docs/agents/sail-model-provenance.md`).
 It equals the opencompl base `11d8fa21` except the four platform-value sites the two-key config sets
 (PMP-off moved to a Lean-side hypothesis, 2026-08); the
-snapshot's commit message carries the full provenance record. `RISCV` is pinned to the head of the
-open opencompl PR #59; repoint it to opencompl once that merges.
+snapshot's commit message carries the full provenance record. `RISCV` is pinned to the
+succinctlabs fork head, byte-identical to opencompl `ccdfd676` (PR #59, merged 2026-08-18); the
+dependency is scheduled for retirement in favour of stating chip specs and Sail bridges against the
+Sail model directly.
 
 **`Clean` is pinned to a fork, and that is a change to the trust base.** The DSL every circuit in
 this project is built on is no longer upstream `Verified-zkEVM/clean` but `dtumad/clean`, branch
