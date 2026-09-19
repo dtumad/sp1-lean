@@ -40,6 +40,31 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Checked optional terminal status and padding-only legacy projection.
+    ("SP1Clean/Native/Operations/HostExitBoundary.lean", "circuit"),
+    ("SP1Clean/Native/Operations/HostExitBoundary.lean", "closed"),
+    ("SP1Clean/Native/Operations/HostExitBoundary.lean", "values"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "constraints_spec"),
+    ("SP1Clean/Native/Operations/HostBoundary.lean", "terminal_values"),
+    ("SP1Clean/Native/Chips/HaltPaddingChip.lean", "circuit"),
+    ("SP1Clean/Native/Chips/HaltPaddingChip.lean", "constraints"),
+    ("SP1Clean/Native/Chips/HaltPaddingChip.lean", "interactions"),
+    ("SP1Clean/Soundness/HaltPadding.lean", "install"),
+    ("SP1Clean/Soundness/HaltPadding.lean", "project"),
+    ("SP1Clean/Soundness/HaltPadding.lean", "table_component"),
+    ("SP1Clean/Soundness/HaltPadding.lean", "constraints"),
+    ("SP1Clean/Soundness/HaltPadding.lean", "interactions"),
+    ("SP1Clean/Soundness/HaltPadding.lean", "balanced"),
+    ("SP1Clean/Soundness/HaltPadding.lean", "drop_tables"),
+    ("SP1Clean/Proofs/Chips/HostControlLedger.lean", "terminal_values"),
+    ("SP1Clean/Soundness/HostHintQueueBoundary.lean", "underlying"),
+    ("SP1Clean/Soundness/HostHintQueueBoundary.lean", "expanded_data"),
+    ("SP1Clean/Soundness/HostHintQueueBoundary.lean", "expanded_publicInput"),
+    ("SP1Clean/Soundness/HostHintQueueBoundary.lean", "expanded_drop"),
+    ("ToClean/Air/VerifierExtension.lean", "expand_data"),
+    ("ToClean/Air/VerifierExtension.lean", "expand_publicInput"),
+    ("SP1CleanTest/Core/LocalCore.lean", "terminalIdentity"),
+
     # Public Exit value on the installed full-state execution.
     ("SP1Clean/Soundness/BumpDecode.lean", "syscallInstrsTable_typedExit_of_component"),
     ("SP1Clean/Soundness/BumpDecode.lean", "haltTable_typedExit_of_component"),
@@ -52,7 +77,7 @@ EXACT_REQUIRED_THEOREMS = [
     ("SP1Clean/Soundness/HostHintReadExit.lean", "GroundingCarrier.final_exit"),
     ("SP1CleanTest/Core/LocalCore.lean", "installedHaltExit"),
     ("SP1CleanTest/Core/LocalCore.lean", "rejectsInstalledExitForgery"),
-    ("SP1CleanTest/Core/LocalCore.lean", "suppliedExitStatusGap"),
+    ("SP1CleanTest/Core/LocalCore.lean", "rejectsSuppliedExitStatus"),
 
     # Accumulated Sail bookkeeping on the installed mixed execution.
     ("SP1Clean/Model/Core/ExecutionReplay.lean", "replayEvents?_fold"),

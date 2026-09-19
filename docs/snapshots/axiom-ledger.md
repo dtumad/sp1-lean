@@ -2,14 +2,14 @@
 
 Checked against the consolidated stack on 2026-09-18. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2715 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 316 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2737 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 317 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 3031 released declarations are probed.
+- 3054 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,17 +35,24 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The Exit-value checkpoint adds nine main probes and three full installed-AIR regressions. All
-preceding 2706 main and 313 test dependency sets are unchanged, with no removals or new main-library
-axiom names. The two component-ledger projections use only the logical baseline. The seven
-assembly-indexed declarations retain the existing 100-dependency mixed assembly set; each new test
-adds exactly one disclosed compiler-trust constant to that same set. The combined
-`source_execution_with_memory` theorem now identifies a newly halted endpoint's concrete 32-bit
-code with the public Exit value, without a modular alias or new caller premise. The full fixtures
-exercise both HALT producers, zero and above-16-bit codes, and forged/duplicate emissions. They
-also reproduce the still-open supplied-status gap: `bankFinal.exitCode` does not affect acceptance.
-Complete target checking, explicit terminal status, removal of the legacy padding rule, full host
-installation, and constructive completeness remain open.
+The terminal-status checkpoint adds twenty-two main probes. Eighteen component/projection laws
+use exactly the logical baseline; four installed-witness declarations retain the existing
+100-dependency mixed assembly set. All preceding 2715 main dependency sets are unchanged, with
+no main removals or new main-library axiom names. The reproduced `suppliedExitStatusGap` test is
+replaced by `rejectsSuppliedExitStatus`, and `terminalIdentity` adds running/stopped identity cases.
+Each new test has the existing assembly set plus one disclosed compiler-trust constant; all 315
+retained test dependency sets are unchanged. The removed test's compiler-trust constant is retired.
+
+The native verifier checks optional terminal status through a complete-word HALT receipt and
+preserves an already-stopped source's exact exit. Active mixed HALT now uses the canonical syscall
+handler; a padding-only legacy wrapper preserves the original rows and every old ledger under
+projection. Full installed-AIR regressions reject forged status after HALT-zero, fabricated
+termination, restarted stopped hosts, and changed stopped codes, while accepting running/stopped
+identities and wide canonical exits. The handler also checks its exact receipt ledger, and both
+the strengthened combined verifier and padding wrapper export with zero witness cells.
+`source_execution_with_memory` retains its proved public Exit-value agreement and unchanged caller
+premises. General receipt/CPU-replay agreement, complete supplied-target equality, removal of the
+legacy padding participation rule, full host installation, and constructive completeness remain open.
 
 The accumulated-bookkeeping checkpoint adds thirteen main probes and two regressions. All preceding
 2693 main and 311 test dependency sets are unchanged, with no removals or new main-library axiom

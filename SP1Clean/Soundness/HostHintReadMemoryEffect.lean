@@ -232,9 +232,9 @@ private theorem source_memory_effect
   have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   have selected := handler_wordsAt (HostHintQueueBoundary.expanded witness) interface checks balance
-    event member env handler clock
-  have data : (HostHintQueueBoundary.expanded witness).data = witness.data := rfl
-  rw [data] at selected
+    event member env handler
+  simp only [HostHintQueueBoundary.expanded_data] at selected
+  have selected := selected clock
   have writes : ((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
       (wordTables (HostHintQueueBoundary.expanded witness))) event).map HintReadWrites.produced).Perm
       (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes) := by

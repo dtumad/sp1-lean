@@ -348,9 +348,17 @@ private def withQueueBoundary (actual : List Bytes) (final : HostHintQueue.State
     (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) :
     EnsembleWitness (Soundness.HostHintQueueBoundary.ensemble image (recordSnapshot actual) final (recordSnapshot actual).host
       HostCallReceivers.available (HostHintReadLocal.sourceResources actual) []) :=
-  let original := withSources actual calls rows nodes records
-  EnsembleWitness.ofTables _ original.tables original.data original.publicInput
-    original.tables_map_component original.same_data
+  let ensemble := Soundness.HostHintQueueBoundary.ensemble (p := SP1Prime) image
+    (recordSnapshot actual) final (recordSnapshot actual).host
+    HostCallReceivers.available (HostHintReadLocal.sourceResources actual) []
+  EnsembleWitness.ofTables ensemble (ensemble.tables.zipIdx.map fun (component, index) =>
+    sourceTableAt actual calls rows nodes records component index) (fun _ _ => #[])
+    (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[])))
+    (by simp only [List.map_map, Function.comp_def, sourceTableAt_component, List.zipIdx_map_fst])
+    (by
+      intro table member
+      obtain ⟨⟨component, index⟩, _, rfl⟩ := List.mem_map.mp member
+      exact sourceTableAt_data actual calls rows nodes records component index)
 
 /-- The actual verifier closes queue balance exactly once. Duplicate handler chains, a forged
 final head, and a reset frontier fail; zero-event identities work. Other AIR channels remain

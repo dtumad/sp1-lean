@@ -11,8 +11,8 @@ same execution has a value at every native register/RAM location, with no touche
 frame premise supplied by the caller. Byte permissions and replay also exclude all out-of-window
 entries. Runtime output/cycles and registers outside the instruction bookkeeping footprint are
 also preserved. The semantic tape determines all three retirement/nextPC slots, and every newly
-halted endpoint has the public Exit value. Complete supplied-snapshot and terminal-status checks
-remain open.
+halted endpoint has the public Exit value. The verifier checks terminal receipts; their general
+agreement with this path and complete supplied-snapshot equality remain open.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -140,7 +140,7 @@ theorem GroundingCarrier.final_memory_domain (valid : image.Valid)
 /-- The installed AIR yields one local execution with complete host reconstruction and every
 native Memory value and the complete RAM domain, including untouched locations. Sail runtime,
 register frames, all retirement/nextPC effects, and the actual HALT's public exit code are retained;
-checking the complete supplied target, including optional terminal status, remains open. -/
+proving equality with the complete supplied target, including optional terminal status, remains open. -/
 theorem source_execution_with_memory (valid : image.Valid)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))

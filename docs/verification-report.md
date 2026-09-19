@@ -686,12 +686,18 @@ public Exit ledger. Both possible instruction producers are retained, and all ap
 and resources are proved silent on that channel. Count-bounded balance identifies the public
 value with the actual HALT argument; successful concrete host dispatch supplies its canonical
 below-characteristic, 32-bit range. This rules out modular aliases without adding a caller premise
-to the combined theorem. Full installed-AIR regressions cover legacy HALT, syscall HALT above
-the legacy 16-bit limit, HALT-zero, forged public codes, and duplicate or spurious padding
-producers. `suppliedExitStatusGap` records that replacing the supplied host's exit with `none`
-or `some 7` after HALT-zero still passes: that parameter currently authenticates only the banks.
-Continuing and empty witnesses also retain the legacy padding requirement. These remaining
-boundary and terminal-policy obligations are distinct from the now-proved public value agreement.
+to the combined theorem. The native mixed assembly now restricts the legacy table to padding
+and routes active HALT through the canonical syscall handler. `HostExitBoundary` adds a separate
+full-word receipt, consumed precisely when the supplied endpoint changes from running to stopped;
+an already-stopped source must retain its exact exit. The wrapper's projection preserves all
+old rows and channels, and the older local assembly retains its original HALT behavior.
+Full installed-AIR regressions cover syscall HALT above the legacy 16-bit limit, HALT-zero,
+forged public codes, and duplicate or spurious padding producers. `rejectsSuppliedExitStatus`
+checks rejection of `none` or `some 7` after HALT-zero. `terminalIdentity` checks both valid
+identity statuses and rejects fabricated termination, changed stopped codes, and restarting a
+stopped source. Continuing and empty witnesses still retain the legacy padding requirement.
+General terminal-receipt/CPU-replay agreement and complete supplied-target equality remain proof
+obligations beyond the public value agreement already in the combined theorem.
 
 The installed receiver inventory excludes WRITE and VERIFY. Semantic execution and queue
 allocation helpers cover all eight concrete calls, but new nodes must authenticate their complete

@@ -101,7 +101,9 @@ private theorem step_of_replay (valid : image.Valid)
       (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source final bankFinal))
       (HostHintQueueBoundary.expanded_constraints witness constraints)
       (HostHintQueueBoundary.expanded_balanced witness balanced) active.1 active.2
-    have dataEq : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
+    have dataEq : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := by
+      simp only [HostLocalCore.localWitness, EnsembleWitness.project, EnsembleWitness.ofTables_data,
+        HostHintQueueBoundary.expanded_data]
     rw [dataEq] at authorization
     exact effect.memory_outside_of_writeAuthorization valid authorization
   | syscall row | halt row =>

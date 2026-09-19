@@ -38,7 +38,7 @@ theorem main_host_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
   simp only [Operations.interactionsWith, Circuit.operations] at bounded ⊢
   simp only [GeneralFormalCircuit.toSubcircuit_interactions,
     control_equality_empty, List.nil_append]
-  simpa [circuit_norm] using bounded
+  simpa [circuit_norm, HostExitBoundary.channel, HostCallChip.channel, Channel.toRaw] using bounded
 
 theorem host_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :
     ((main input).operations offset).interactionValuesWith HostCallChip.channel.toRaw env =
@@ -49,10 +49,11 @@ theorem host_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environm
 /-- In particular, the handler cannot supply another Exit or alter the instruction Memory ledger. -/
 theorem main_other_interactions (target : RawChannel (ZMod p))
     (notByte : target ≠ byteChannel.toRaw) (notHost : target ≠ HostCallChip.channel.toRaw)
+    (notExit : target ≠ HostExitBoundary.channel.toRaw)
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith target = [] := by
   apply InteractionRecovery.interactionsWith_main_eq_nil circuit.base target input offset
-  simp [circuit, circuit_norm, notByte, notHost]
+  simp [circuit, circuit_norm, notByte, notHost, notExit]
 
 theorem component_spec_of_byte (env : Environment (ZMod p))
     (constraints : (⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env)
@@ -66,6 +67,23 @@ theorem component_spec_of_byte (env : Environment (ZMod p))
   · exact byte
   · obtain rfl := List.mem_singleton.mp member
     exact Operations.channelGuarantees_of_trivial _ (by simp [HostCallChip.channel, Channel.toRaw]) _ _
+
+/-- The checked host handler emits exactly one complete terminal receipt. -/
+theorem terminal_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :
+    ((main input).operations offset).interactionValuesWith HostExitBoundary.channel.toRaw env =
+      [HostExitBoundary.channel.pushedValue (Eval.eval env input.call.arg1)] := by
+  have bounded := InteractionRecovery.interactionsWith_main_eq_nil
+    (BoundedWord.circuit (bound p) (by simp [bound])).base HostExitBoundary.channel.toRaw
+    ⟨input.call.arg1, input.comparison⟩ offset
+    (by simp [BoundedWord.circuit, circuit_norm, HostExitBoundary.channel, byteChannel])
+  have raw : ((main input).operations offset).interactionsWith HostExitBoundary.channel.toRaw =
+      [(HostExitBoundary.channel.pushed input.call.arg1).toRaw] := by
+    simp only [main, circuit_norm, List.nil_append]
+    simp only [Operations.interactionsWith, Circuit.operations] at bounded ⊢
+    simp only [GeneralFormalCircuit.toSubcircuit_interactions,
+      control_equality_empty, List.nil_append]
+    simpa [circuit_norm, HostExitBoundary.channel, HostCallChip.channel, Channel.toRaw] using bounded
+  simp only [Operations.interactionValuesWith, raw, List.map_cons, List.map_nil, Channel.eval_pushed]
 
 end HostHaltChip
 

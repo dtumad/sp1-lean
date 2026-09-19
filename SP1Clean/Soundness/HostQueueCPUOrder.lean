@@ -276,8 +276,9 @@ theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
   obtain ⟨cpu, cpuExhaustive, cpuWalk⟩ := HostLocalCore.executionRows_ordered
     (HostHintQueueBoundary.expanded witness) (auxiliaryInterface interface) checks balance
   obtain ⟨path, exhaustive, walk, history⟩ := HostHintQueueHistory.source_history witness constraints balanced
-  refine ⟨cpu, path, cpuExhaustive, cpuWalk, exhaustive, walk, history, ?_⟩
-  exact ordered_history (HostHintQueueBoundary.expanded witness) interface checks balance
+  refine ⟨cpu, path, cpuExhaustive, ?_, exhaustive, walk, history, ?_⟩
+  · simpa only [HostHintQueueBoundary.expanded_data, HostHintQueueBoundary.expanded_publicInput] using cpuWalk
+  simpa only [HostHintQueueBoundary.expanded_data] using ordered_history (HostHintQueueBoundary.expanded witness) interface checks balance
     (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks balance)
     history exhaustive walk cpuExhaustive cpuWalk
 

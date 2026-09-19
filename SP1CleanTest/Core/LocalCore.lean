@@ -458,6 +458,10 @@ theorem rejectsCommitBoundaries :
   (SP1Clean.HostHintQueueBoundary.initial []) commitTarget HostCallReceivers.available
   (HostHintReadLocal.sourceResources []) []).verifier
 
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (HaltPaddingChip.circuit (p := SP1Prime))
+
 /-- An active ECALL closes the actual 59-table ledger with all three nonzero source registers,
 its wide State edge, the changed result, and source/final inventories. No syscall row is erased. -/
 theorem activeSyscallLocalShard :
@@ -579,10 +583,10 @@ private def checkInstalledHalt (exit publicExit : ℕ) (rows : List Row) : Bool 
     { (haltSource exit).host with exitCode := some (BitVec.ofNat 32 exit) } rows
   checked.1 && checked.2
 
-/-- Both actual Exit producers bind the public code in the full 87-table installation. The
-syscall HALT supports a code above the legacy range and needs no legacy padding companion. -/
+/-- The installed assembly rejects active legacy HALT and accepts canonical syscall HALT,
+including a code above the legacy range, without a legacy padding companion. -/
 theorem installedHaltExit :
-    checkInstalledHalt 65535 65535 (installedHaltRows 65535 true) = true ∧
+    checkInstalledHalt 65535 65535 (installedHaltRows 65535 true) = false ∧
     checkInstalledHalt 65536 65536 (installedHaltRows 65536 false) = true ∧
     checkInstalledHalt 0 0 (installedHaltRows 0 false) = true ∧
     ((haltSource 0).hostStep? syscallPolicy syscallProgram).map (fun result => result.1.host.exitCode) =
@@ -599,13 +603,29 @@ theorem rejectsInstalledExitForgery :
        [(57, List.replicate (size HaltChip.Inputs) 0)])] =
       [false, false, false, false] := by native_decide
 
-/-- The current outgoing host parameter binds banks only. Even after a real HALT-zero, changing
-its optional exit status retains acceptance. The complete boundary must reject both forgeries. -/
-theorem suppliedExitStatusGap :
+/-- A real HALT-zero cannot be advertised as running or as a different exit code. -/
+theorem rejectsSuppliedExitStatus :
     installedChecks (haltSource 0) (haltPublic 0)
-      { (haltSource 0).host with exitCode := none } (installedHaltRows 0 false) = (true, true) ∧
+      { (haltSource 0).host with exitCode := none } (installedHaltRows 0 false) = (false, true) ∧
     installedChecks (haltSource 0) (haltPublic 0)
-      { (haltSource 0).host with exitCode := some 7 } (installedHaltRows 0 false) = (true, true) := by
+      { (haltSource 0).host with exitCode := some 7 } (installedHaltRows 0 false) = (false, true) := by
+  native_decide
+
+private def checkTerminalIdentity (initial final : Option (BitVec 32)) : Bool × Bool :=
+  let incoming := { haltSource 0 with host.exitCode := initial }
+  installedChecks incoming identityPublic { incoming.host with exitCode := final }
+    (identityRows ++ unchangedBanks incoming.host)
+
+/-- Empty running and stopped shards retain their exact optional exit, including wide codes.
+Neither a fabricated HALT-zero nor restarting a stopped host can pass the complete checks. -/
+theorem terminalIdentity :
+    [checkTerminalIdentity none none,
+     checkTerminalIdentity (some 0) (some 0),
+     checkTerminalIdentity (some 65536) (some 65536),
+     checkTerminalIdentity none (some 0),
+     checkTerminalIdentity (some 0) none,
+     checkTerminalIdentity (some 65536) (some 0)] =
+      [(true, true), (true, true), (true, true), (false, true), (false, true), (false, true)] := by
   native_decide
 
 private def storeRomImage : ProgramImage := ⟨[(65536, 0x00110023)], 65536, []⟩

@@ -351,9 +351,11 @@ theorem cpu_projection (deferred : Bool)
   have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   rw [HostHintReadBanks.calls_eq_slot_tables deferred witness] at bankExhaustive
-  exact cpu_ordered deferred (HostHintQueueBoundary.expanded witness) interface checks balance
+  have ordered := cpu_ordered deferred (HostHintQueueBoundary.expanded witness) interface checks balance
     (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks balance)
-    exhaustive walk bankExhaustive bankSorted
+    (cpu := cpu) (calls := calls)
+  simp only [HostHintQueueBoundary.expanded_data, HostHintQueueBoundary.expanded_publicInput] at ordered
+  exact ordered exhaustive walk bankExhaustive bankSorted
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem executeCall_bank (deferred : Bool) (policy : HostPolicy) (context : HostReadContext)

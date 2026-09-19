@@ -8,7 +8,8 @@ import ToClean.Air.EnsembleExport
 /-! # Native control handlers against instructions and host dispatch
 
 Execute the complete instruction and handler witness programs. Their HostCall ledgers must
-cancel exactly, while Exit remains solely on the instruction. This checks local guarantees
+cancel exactly, while the public Exit remains solely on the instruction and the complete
+terminal receipt comes from the HALT handler. This checks local guarantees
 and handoff accounting, not an assembled boot-to-HALT witness. Interpreter checks include
 nonempty host state, unrestricted unused arguments, canonical exits, and stopped dispatch.
 -/
@@ -94,6 +95,9 @@ private def joint (halt : Bool) (arg1 arg2 : ℕ) : Bool :=
   source.1 && target.1 && balanced (selected host (source.2 ++ target.2)) &&
     (selected host source.2).length == 1 && (selected host target.2).length == 1 &&
     selected "SP1Exit" target.2 == [] &&
+    selected "SP1HostExit" target.2 ==
+      (if halt then [("SP1HostExit", (toElements (word arg1)).toList, 1)] else []) &&
+    selected "SP1HostExit" source.2 == [] &&
     selected "SP1Exit" source.2 == (if halt then [("SP1Exit", [arg1], 1)] else []) &&
     (selected "SP1Memory" source.2).length == 6 && selected "SP1Memory" target.2 == []
 

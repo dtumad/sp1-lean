@@ -23,12 +23,12 @@ private theorem eval_zero (env : Environment (ZMod p)) :
 
 theorem soundness : GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) main
     (fun _ _ => True) (fun input _ _ => Spec input) := by
-  circuit_proof_start [Gadgets.Equality.circuit, BoundedWord.circuit, HostCallChip.channel]
+  circuit_proof_start [Gadgets.Equality.circuit, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
   simpa only [eval_zero, CallSpec, BoundedWord.Spec] using h_holds
 
 theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) main
     (fun input _ _ => ProverAssumptions input) (fun _ _ _ => True) := by
-  circuit_proof_start [Gadgets.Equality.circuit, BoundedWord.circuit, HostCallChip.channel]
+  circuit_proof_start [Gadgets.Equality.circuit, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
   obtain ⟨⟨code, result, length, value⟩, comparison⟩ := h_assumptions
   simpa only [eval_zero] using And.intro code ⟨result, length, value, comparison⟩
 
@@ -37,12 +37,12 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   elaborated
   Spec input _ _ := Spec input
   ProverAssumptions input _ _ := ProverAssumptions input
-  channelsWithRequirements := [HostCallChip.channel.toRaw]
+  channelsWithRequirements := [HostCallChip.channel.toRaw, HostExitBoundary.channel.toRaw]
   soundness := soundness
   completeness := completeness
   requirementsChannelsLawful := by
     intro input offset
-    simp [main, circuit_norm, BoundedWord.circuit, HostCallChip.channel]
+    simp [main, circuit_norm, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
 
 def populate (call : HostCallChip.Message (ZMod p)) : Inputs (ZMod p) :=
   ⟨call, LtOperationUnsigned.populate call.arg1 (BoundedWord.limit (bound p))⟩

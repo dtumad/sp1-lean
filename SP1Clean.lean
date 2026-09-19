@@ -874,6 +874,10 @@ import SP1Clean.Soundness.HostCommitHistory
 import SP1Clean.FormalModel.Contracts.HostCommitBoundary
 import SP1Clean.Native.Operations.HostCommitBoundary
 import SP1Clean.Native.Operations.HostCommitEndpoint
+import SP1Clean.Model.HostExit
+import SP1Clean.Native.Chips.HaltPaddingChip
+import SP1Clean.Soundness.HaltPadding
+import SP1Clean.Native.Operations.HostExitBoundary
 import SP1Clean.Native.Operations.HostBoundary
 import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Soundness.HostCommitEnsemble

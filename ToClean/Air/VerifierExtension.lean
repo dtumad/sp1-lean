@@ -137,6 +137,14 @@ def expand {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.instal
       · obtain rfl := List.mem_singleton.mp added
         rfl)
 
+@[simp] theorem expand_data {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) :
+    (closed.expand witness).data = witness.data := rfl
+
+@[simp] theorem expand_publicInput {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) :
+    (closed.expand witness).publicInput = witness.publicInput := rfl
+
 theorem expand_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
     (constraints : witness.Constraints) : (closed.expand witness).Constraints := by
   have checks := (closed.verifier_constraints ens witness.publicInput witness.data).mp

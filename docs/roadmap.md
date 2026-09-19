@@ -57,8 +57,9 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 
 The current mixed witness has 87 physical tables plus its singleton verifier. The selected
 `HostHintQueueBoundary.ensemble` installs the source-hint resources and both bank terminals.
-Its `bankFinal : HostState` parameter currently binds only the two banks; it is **not** a complete
-outgoing-state commitment. Queue cursors and bank endpoints remain internal implementation data.
+Its `bankFinal : HostState` parameter checks the two banks and optional exit status; it is **not**
+a complete outgoing-state commitment. Bank/replay agreement is proved; terminal/replay agreement
+is the next obligation. Queue cursors and bank endpoints remain internal implementation data.
 WRITE and VERIFY are excluded by this instance's actual receiver inventory, not proved as active
 cases. This restricted instance is an implementation checkpoint, not the final capstone domain.
 
@@ -80,13 +81,14 @@ execution carrier to make a local proof convenient.
 | Semantic resource policy | Fix active clock phase/ranges, actual ordinary-store byte permissions, finite host/queue identity bounds, and channel-count capacity in one semantic profile | Soundness derives every restriction from the AIR; every permitted semantic execution fits; identities need no active-clock phase |
 | Complete outgoing boundary | Use the proved bank/CPU agreement; prove complete final Sail/register/RAM/runtime/host agreement; bind the full target and terminal Exit | A changed untouched register/byte, host field, bank, PC/clock, or exit cannot retain acceptance; target equality is a conclusion |
 | Full host inventory | Install WRITE/VERIFY effects, x12 and RAM reads, request/reply binding, hook/hint prepends, authenticated allocations and node words | All eight calls grounded on the same evolving host; no static-source-queue or syscall-inactivity restriction |
-| Terminal policy | Replace legacy HALT participation with the full syscall HALT path and the native canonical exit range | Nonhalting and empty shards need no dummy HALT; stopped states permit only identities; genuine HALT binds Exit |
+| Terminal policy | Finish terminal-receipt/replay agreement and remove legacy padding participation; active mixed HALT already uses the canonical syscall handler | Nonhalting and empty shards need no dummy HALT; stopped states permit only identities; genuine HALT binds Exit |
 | Constructive completeness | Adapt existing routing, transition views, access plans, schedules, providers and row constructors to this exact full-state relation | `CompilerTarget` inhabited without proof inputs or caller readiness/footprint/totality premises; accepted candidates compile and compiled candidates are valid |
 | Native composition | Use complete snapshot equality at cuts, prove each piece satisfies its own profile, reuse semantic split/join | Separately certified shards compose; splitting/recompilation handles bounds; boot-to-HALT is a corollary |
 | Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-**Next proof work:** bind the complete supplied outgoing snapshot and explicit terminal status.
+**Next proof work:** connect the new terminal receipt ledger to the existing CPU replay to prove
+optional exit equality, then bind the complete supplied outgoing snapshot.
 `HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
 cell below `2^48`, including locations absent from the final inventory, and excludes entries outside
 that range. It retains complete host reconstruction, Sail runtime/other-register frames, and all
@@ -98,18 +100,25 @@ Thus the endpoint formulas require no exposed instruction-row order or new calle
 
 `HostHintReadBookkeeping` derives those formulas from the same grounded chip effects and paired
 replay. `Model/Core/SailBookkeeping` owns the data-only observations; it does not introduce a second
-execution model. Complete supplied-target equality is still not checked by the ensemble, and optional
-exit status is not yet checked against the supplied outgoing instance or `bankFinal.exitCode`.
+execution model. Complete supplied-target equality is still not checked by the ensemble. The native
+verifier now checks `bankFinal.exitCode` through a separate complete-word terminal receipt and
+requires an already-stopped source to preserve its exact optional exit. General receipt/CPU-replay
+agreement remains to be added to the endpoint theorem.
 `HostHintReadCPU.GroundingCarrier.final_exit` now binds every newly halted endpoint's concrete 32-bit code to
 the public Exit field without modular aliases. `LocalCoreExit` classifies the complete physical
 ledger and applies the existing generic gated-unit balance theorem. The wrapper and appended
 host components preserve this projection even though they do not preserve Memory balance.
-Full installed-AIR regressions cover legacy HALT, syscall HALT above the legacy 16-bit limit,
-HALT-zero, forged public codes, duplicate producers, and an extra padding producer. The syscall
-HALT fixture needs no legacy row; continuing/empty witnesses still need the legacy padding
-emission. Removing that participation rule and authenticating optional terminal status remain open.
-`suppliedExitStatusGap` reproduces acceptance with `bankFinal.exitCode = none` or `some 7`
-after a real HALT-zero; the full boundary must reject both.
+The mixed assembly now constrains the legacy table to padding and routes active HALT through
+`HostHaltChip`, which emits the terminal receipt. The old local assembly is unchanged. The padding
+wrapper projects every original row and channel, so the existing mixed execution proof still
+applies. Full installed-AIR regressions cover syscall HALT above the legacy 16-bit limit,
+HALT-zero, forged public codes, duplicate producers, and an extra padding producer.
+`rejectsSuppliedExitStatus` replaces the reproduced gap: changing the supplied exit to `none` or
+`some 7` after HALT-zero is rejected. `terminalIdentity` checks running/stopped identities,
+unchanged wide exit codes, fabricated HALT-zero, and attempts to restart a stopped source.
+The syscall HALT fixture needs no legacy row; continuing/empty witnesses still need the legacy
+padding emission. Removing that participation rule and proving general optional-exit equality on
+the reconstructed CPU path remain open.
 Work on the semantic capacity/profile definition alongside this only where needed to fix the
 public boundary; it may not narrow the intended all-eight-call language to today's installation.
 

@@ -6,7 +6,8 @@ import SP1Clean.Soundness.LocalCoreExit
 The host auxiliaries are Exit-silent, so the complete installed ledger preserves the original
 local Exit accounting even though its Memory ledger cannot be projected. A genuine terminal
 HALT therefore binds the public field to the concrete host's canonical 32-bit exit. Running and
-HALT-zero remain distinct in the path; a supplied outgoing status still needs a boundary check.
+HALT-zero remain distinct in the path. The separate terminal receipt checks the supplied status;
+its general agreement with this execution is a further endpoint obligation.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU

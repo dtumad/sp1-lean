@@ -45,9 +45,10 @@ private theorem auxiliary_components
       (receiver :: HostCallReceivers.available).map (·.component) ++
         (wordResources ++ sourceResources source.host.io.hints) := by
   simp only [List.map_drop, witness.tables_map_component, HostHintQueueBoundary.ensemble,
-    ClosedVerifier.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
+    HaltPadding.install, ClosedVerifier.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
     HostLocalCore.ensemble, HostLocalCore.tables]
-  rw [List.drop_left' (by simp only [List.length_set, ProtectedLocalCore.tables_length])]
+  rw [List.drop_set_of_lt (by decide : 57 < 60),
+    List.drop_left' (by simp only [List.length_set, ProtectedLocalCore.tables_length])]
 
 private theorem auxiliary_length
     (witness : Witness (p := p) (image := image) (source := source)
@@ -64,8 +65,9 @@ theorem receiver_tables
     HostLocalHandoff.receiverTables (HostHintQueueBoundary.expanded witness) =
       (witness.tables.drop 60).take 21 := by
   have size := auxiliary_length witness
-  change ((witness.tables ++ [_]).drop 60).take 21 = _
-  rw [List.drop_append_of_le_length (by simp only [List.length_drop] at size; omega)]
+  change (((witness.tables.set 57 _) ++ [_]).drop 60).take 21 = _
+  rw [List.drop_append_of_le_length (by simp only [List.length_drop] at size; simp only [List.length_set]; omega),
+    List.drop_set_of_lt (by decide : 57 < 60)]
   exact List.take_append_of_le_length (by omega)
 
 private theorem read_calls (deferred : Bool) (slots : List (Fin 8))
@@ -130,9 +132,19 @@ theorem tables_aligned (deferred : Bool)
 private theorem bank_mem (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))
-    (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) : table ∈ witness.tables := by
-  rcases List.mem_append.mp member with member | member <;>
-    exact List.mem_of_mem_drop (List.mem_of_mem_drop (List.mem_of_mem_take member))
+    (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
+    table ∈ (HostHintQueueBoundary.expanded witness).allTables := by
+  have within : table ∈ witness.tables.drop 60 := by
+    rcases List.mem_append.mp member with member | member <;>
+      exact List.mem_of_mem_drop (List.mem_of_mem_take member)
+  have bound : 60 ≤ witness.tables.length := by
+    have size := auxiliary_length witness
+    simp only [List.length_drop] at size
+    omega
+  apply (HostHintQueueBoundary.expanded witness).mem_allTables_of_mem_tables
+  apply List.mem_of_mem_drop (i := 60)
+  rw [HostHintQueueBoundary.expanded_drop witness 60 (by decide) bound]
+  exact List.mem_append_left _ within
 
 private theorem flatMap_selected {α β : Type*} (deferred : Bool) (tables : List α) (f : α → List β)
     (silent : ∀ item ∈ outside deferred tables, f item = []) :
@@ -206,7 +218,7 @@ theorem interactions (deferred : Bool)
   rw [wrapper, List.nil_append] at split
   have tail : HostLocalCore.auxiliaryTables (HostHintQueueBoundary.expanded witness) =
       witness.tables.drop 60 ++ [(HostHintQueueBoundary.boundary source final bankFinal).singleton witness.data] :=
-    List.drop_append_of_le_length bound
+    HostHintQueueBoundary.expanded_drop witness 60 (by decide) bound
   simp only [tail, List.flatMap_append, auxiliary_interactions, List.flatMap_cons, List.flatMap_nil,
     List.append_nil, ClosedVerifier.singleton_interactions, HostBoundary.closed_main,
     HostBoundary.bank_values] at split
@@ -234,8 +246,7 @@ theorem ordered_history (deferred : Bool)
   have bytes := byte_guarantees (HostHintQueueBoundary.expanded witness) interface checked balance
   have inAll (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
       table ∈ (HostHintQueueBoundary.expanded witness).allTables :=
-    (HostHintQueueBoundary.expanded witness).mem_allTables_of_mem_tables
-      (List.mem_append_left _ (bank_mem deferred witness table member))
+    bank_mem deferred witness table member
   have member : (HostCommitChip.stateChannel deferred).toRaw ∈
       (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
         (sourceResources source.host.io.hints) channels).channels := by
@@ -271,8 +282,7 @@ theorem ordered_calls (deferred : Bool)
   have bytes := byte_guarantees (HostHintQueueBoundary.expanded witness) interface checked balance
   have inAll (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
       table ∈ (HostHintQueueBoundary.expanded witness).allTables :=
-    (HostHintQueueBoundary.expanded witness).mem_allTables_of_mem_tables
-      (List.mem_append_left _ (bank_mem deferred witness table member))
+    bank_mem deferred witness table member
   have specs := rows_spec_of_byte deferred (bankTables deferred witness)
     (tables_aligned deferred witness) (fun table member => checked table (inAll table member))
     (fun table member => bytes table (inAll table member))

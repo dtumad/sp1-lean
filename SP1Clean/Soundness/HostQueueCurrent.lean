@@ -128,9 +128,12 @@ theorem source_current {final : HostHintQueue.State (ZMod p)} {bankFinal : HostS
   have specs := queue_specs (HostHintQueueBoundary.expanded witness) interface _
     (HostHintQueueBoundary.source_authentication witness constraints) checks balance
   obtain ⟨path, exhaustive, walk, history⟩ := HostHintQueueHistory.source_history witness constraints balanced
-  exact of_prefix (HostHintQueueBoundary.expanded witness) interface checks balance specs
-    cpuExhaustive cpuWalk exhaustive walk history prior rest event split row (exhaustive.mem_iff.mpr member)
-    clock policy program current replayed
+  have currentQueue := of_prefix (HostHintQueueBoundary.expanded witness) interface checks balance specs
+    (cpu := cpu) (path := path) (initial := SP1Clean.HostHintQueueBoundary.initial source.host.io.hints)
+    (final := final) (upper := (HintQueue.ofList source.host.io.hints).1)
+  simp only [HostHintQueueBoundary.expanded_data, HostHintQueueBoundary.expanded_publicInput] at currentQueue
+  exact currentQueue cpuExhaustive cpuWalk exhaustive walk history prior rest event split row
+    (exhaustive.mem_iff.mpr member) clock policy program current replayed
 
 /-- Installed non-word hint resources cannot create positive write permissions. -/
 theorem source_permission_pulls (source : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) :
@@ -260,9 +263,11 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
   have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
     (source_interface (p := p) source.host.io.hints)
   have registers := registers_of_prefix valid (HostHintQueueBoundary.expanded witness) interface
-    (source_program_silent source final bankFinal) witness.data rfl (HostHintQueueBoundary.expanded_constraints witness constraints)
-    (HostHintQueueBoundary.expanded_balanced witness balanced) cpuExhaustive cpuWalk
-    prior rest event split env member clock current replayed currency
+    (source_program_silent source final bankFinal) witness.data (HostHintQueueBoundary.expanded_data witness)
+    (HostHintQueueBoundary.expanded_constraints witness constraints)
+    (HostHintQueueBoundary.expanded_balanced witness balanced) (cpu := cpu)
+  simp only [HostHintQueueBoundary.expanded_publicInput] at registers
+  have registers := registers cpuExhaustive cpuWalk prior rest event split env member clock current replayed currency
   obtain ⟨store, extension, binding⟩ := source_current witness constraints balanced cpuExhaustive cpuWalk
     prior rest event split (none, env) (read_member (HostHintQueueBoundary.expanded witness) env member)
     clock _ _ current replayed
