@@ -675,7 +675,7 @@ additions use exactly the logical baseline; fifteen retain the existing 100-axio
 through their assembly-indexed types. The component multiplicity proof moved to the shared
 `CoreMemoryBalance` module without changing its public name. All preceding 1644 main and 210 test
 dependency sets are unchanged, with no removals or new main-library axiom names. Four new
-compiler-trusted constants belong only to `SP1CleanTest.Core.LocalCore`.
+compiler-trusted constants belong only to `SP1CleanTest.Alignment.Core.LocalCore`.
 
 The local AIR now supplies canonical and unique final records, the exact physical Memory ledger,
 signed-unit multiplicities, complete record permutation, and the per-location source/final equation.
@@ -926,7 +926,7 @@ Memory locations follow from the computed inventory and successful host executio
 Memory-bus words determine the host result; fully written words have the emitted little-endian
 contents, and outside RAM cells are preserved. All 1335 prior main and 124 prior test axiom sets
 are unchanged, with no removals or new main-library axiom names. Six regressions add six
-compiler-trust constants only in `SP1CleanTest.Core.HostFootprint`. The minimal native cover's
+compiler-trust constants only in `SP1CleanTest.Alignment.Core.HostFootprint`. The minimal native cover's
 empty-WRITE distinction from Rust's untraced physical reads is explicit. These are local semantic
 bridges: host AIR tables, their timestamps and balanced accesses, and threaded host state in the
 mixed trajectory remain integration work.
@@ -950,7 +950,7 @@ interaction, including PublicValues, and expose the complete evaluated host requ
 register reader and handoff have soundness/completeness proofs and timestamp constructors;
 the composed witness program exports eight cells. The shared timestamp arithmetic replaces
 existing proof bodies without changing any of the 1365 preceding main or 134 preceding test
-axiom sets. Six new compiler-trust constants occur only in `SP1CleanTest.Core.HostCall`.
+axiom sets. Six new compiler-trust constants occur only in `SP1CleanTest.Alignment.Core.HostCall`.
 That checkpoint audited 1384 main and 140 test declarations, with no removals or new main-library
 axiom names. This is a local component result: the x12 touch and handoff are not yet installed
 in the mixed ensemble, and RAM footprint authorization, host effects and host-state threading
@@ -981,7 +981,7 @@ timestamp private. Local contracts follow from Byte closure. Static auxiliary-co
 proofs still establish bank-channel exclusion and Byte-provider requirements, and the host policy's
 characteristic is explicitly matched to the field. All preceding 1406 main and 146 test axiom sets
 are unchanged, with no removals or new main-library axiom names. Five new compiler-trust constants
-occur only in `SP1CleanTest.Core.HostCommitBoundary`. Empty-bank regressions check the complete
+occur only in `SP1CleanTest.Alignment.Core.HostCommitBoundary`. Empty-bank regressions check the complete
 emitted ledger; active histories check local assertions, Byte meanings, and bank balance, without
 claiming full-machine call authentication. The terminal and verifier witness programs export
 48 and zero cells respectively. That checkpoint audited 1425 main and 151 test declarations.

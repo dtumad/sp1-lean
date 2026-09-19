@@ -141,7 +141,7 @@ All 25 registered instruction circuits now have closed soundness and completenes
 
 ### Sail bridge
 
-`Proofs/Chips/<Chip>/Bridge.lean` turns the semantic contract into the corresponding behavior of the
+`Alignment/Chips/<Chip>/Bridge.lean` turns the semantic contract into the corresponding behavior of the
 generated LeanRV64D Sail model. `ChipKind.advance` packages the result in the uniform interface used by
 the machine proof.
 

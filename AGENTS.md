@@ -85,10 +85,18 @@ refinement; only their `_of_obligations` combinators are currently declared.
 
 ## Build
 
-- Full build: `lake build SP1Clean` (the default target). Passing = **0 errors AND 0 warnings**, and
-  **no stray `info:` notes** — leave the build output clean (see the `ring` note below). This builds
-  **only the main library** — it carries no `native_decide` (gated by `scripts/check_no_native_decide.sh`).
-- Tests: `lake test` (the `SP1CleanTest` `testDriver`). Builds/elaborates the exportability battery and
+- Core build: `lake build` (the default targets `SP1Core`, `ToClean`, `ToMathlib`: the generic and
+  semantic layers plus the chip circuits and their proofs). Full build: `lake build SP1Clean` (the
+  umbrella; adds the SP1-alignment layers `Extracted/{ChipOracle,SystemOracle}`, `Faithful/`,
+  `Alignment/`, `Proofs/Sail`, `Proofs/Completeness`, `Soundness/`, `Composition/`). PR CI runs the
+  core; the alignment workflow (`.github/workflows/alignment.yml`, weekly/on demand/on `main`)
+  runs the full build, `lake lint`, the full test library, the conformance gates, and both censuses.
+  Passing = **0 errors AND 0 warnings**, and **no stray `info:` notes** — leave the build output
+  clean (see the `ring` note below). Neither target carries `native_decide` (gated by
+  `scripts/check_no_native_decide.sh`).
+- Tests: `lake test` (the `SP1CoreTest` `testDriver`: the test modules whose import closure stays in
+  the core). The full library `lake build SP1CleanTest` (alignment workflow) adds the anchors under
+  `SP1CleanTest/Alignment/`, moved there by import closure. Together they build/elaborate the exportability battery and
   the non-vacuity/real-row satisfiability anchors — including the active official-Sail-step ↔
   deterministic-compiler ↔ circuit-event regression — and is the project's **only**
   `native_decide`. Runs on top of the cached main-library oleans (the test lib imports `SP1Clean`,
@@ -198,7 +206,10 @@ Mirror-rust layout under `SP1Clean/`:
   predicates, e.g. `SpecD input _ data := Spec input`, wrapping a Contracts-layer predicate into the
   `GeneralFormalCircuit` signature). Operation circuit definitions are hand-maintained in
   `Native/Operations/<Op>/Defs.lean` when they are not flat single-file operations.
-- **`Proofs/`** — the "proven sound/complete" pillar: `Proofs/Chips/<Op>Chip/{Formal,Bridge,…}.lean`
+- **`Proofs/`** — the "proven sound/complete" pillar: `Proofs/Chips/<Op>Chip/{Formal,Complete,…}.lean`
+  (each chip's Sail bridge and machine contracts, `Bridge.lean`/`Contracts.lean`, live under
+  `Alignment/Chips/<Op>Chip/` with their namespaces unchanged, because they import the machine
+  layer and belong to the alignment build target)
   (soundness/completeness/`circuit` + the Sail bridge; the `Spec` is in `FormalModel/Contracts/Chips.lean`,
   the ALU chips' `Assumptions`/`ProverAssumptions` in `Contracts/ChipAssumptions.lean`),
   `Proofs/Operations/<Op>/Formal.lean` (the `FormalAssertion` soundness/completeness). Flat receiver

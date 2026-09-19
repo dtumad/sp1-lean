@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.TypedTimeContracts
 import SP1Clean.Soundness.AlignedCarrier
-import SP1Clean.Proofs.Chips.AddChip.Contracts
+import SP1Clean.Alignment.Chips.AddChip.Contracts
 
 /-! # The grounding adapter — `ChipKind.advance` → the timed-engine per-row records
 

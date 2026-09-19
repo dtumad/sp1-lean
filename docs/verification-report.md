@@ -810,12 +810,12 @@ premise. These remaining implications are exactly `NativeShardTraceTotal`. The p
 that totality theorem. The report therefore makes no unconditional public-language-equality claim.
 
 The full completeness source itself is jointly satisfiable:
-`SP1CleanTest/Audit/NativeCompletenessNonVacuity.lean` constructs a zero-event common shard witness,
+`SP1CleanTest/Alignment/Audit/NativeCompletenessNonVacuity.lean` constructs a zero-event common shard witness,
 proves `anchorExecution_admissible`, and invokes the functional/existential capstone and the direct
 Clean-statement theorem on its literal `nativeTrace`.
 
 The lower generated-trace assembly bundle is satisfiable in the active case:
-`SP1CleanTest/Audit/ActiveTraceNonVacuity.lean` hand-assembles one semantic trace record for
+`SP1CleanTest/Alignment/Audit/ActiveTraceNonVacuity.lean` hand-assembles one semantic trace record for
 `JAL x0, 0` with the matching native Byte/Range/Program/Memory provider occurrences. Its event count
 and decoded physical instruction-row count are both one, preventing regression to the boundary-only
 or zero-event cases, and its four explicit ledgers have lengths 4/46/2/4 and satisfy exact integer balance plus the
@@ -824,7 +824,7 @@ physical rows; `activeTrace_yields_sailExecution` immediately invokes native sou
 result, reaching the model-free plain-Sail relation. The anchor demonstrates one real row through the complete assembly path; it is not yet an
 inhabitant of every residual premise of `SupportedCoreNativeAdmissibleShardRelation`.
 
-The companion `SP1CleanTest/Audit/ActiveNativeCompleteness.lean` proves that the official Sail
+The companion `SP1CleanTest/Alignment/Audit/ActiveNativeCompleteness.lean` proves that the official Sail
 `JAL x0, 0` step projects through the deterministic compiler to that exact `activeEvent`, and that
 both the resulting one-step semantic execution and the circuit-built active witness inhabit their
 respective bounded relations. This is a joined non-vacuity regression, not an equality proof between
@@ -1055,10 +1055,10 @@ layers are complementary by construction.
 Additionally, the satisfiability layer closes the vacuity questions at three levels — per-chip
 rows, per-family decode facts, and the joint hypothesis bundle:
 
-- `SP1CleanTest/NonVacuity.lean` witnesses the satisfiability of every non-trivial chip
+- `SP1CleanTest/Alignment/NonVacuity.lean` witnesses the satisfiability of every non-trivial chip
   `Assumptions` (all 20 chips whose assumptions are not literally `True`) — mostly at padding
   rows, so it rules out contradictory *preconditions* only.
-- `SP1CleanTest/NonVacuityReal.lean` goes further: for **every one of the 25 instruction
+- `SP1CleanTest/Alignment/NonVacuityReal.lean` goes further: for **every one of the 25 instruction
   chips**, a named, census-visible theorem exhibits a concrete `is_real = 1` row with
   non-degenerate operands satisfying the chip's **complete flattened constraint system**
   (every subcircuit `assertZero`, evaluated at SP1's KoalaBear field with the witness values
@@ -1078,24 +1078,24 @@ rows, per-family decode facts, and the joint hypothesis bundle:
   was unsatisfiable for all 13 M-extension opcodes until the `misa_m` field was added
   (2026-08-20). The per-family hoist lemmas (`decodedInROM_<family>_hoist`, all 18) additionally
   prove the strengthened ∃-instruction form derivable from the weak ∀-state one.
-- The **joint anchor** (`SP1CleanTest/Audit/JointNonVacuity.lean`): a fully proved witness of
+- The **joint anchor** (`SP1CleanTest/Alignment/Audit/JointNonVacuity.lean`): a fully proved witness of
   the entire `SupportedCoreNativeRelation` at SP1's prime — a one-`JAL` statement with equal
   boundary endpoints, the 55-table witness with zero-row chip/provider tables, canonical
   committed prover data, and every `InitialBoundaryFacts` field discharged, including a real
   (non-vacuous) `SailCodeMemoryCompatible` proof via the jal step machinery. The capstone
   applied to it yields the zero-step execution; a satisfying *non-empty* shard witness is the
   trace-generator work and is deliberately out of this anchor's scope.
-- The **generated twin** (`SP1CleanTest/Audit/TraceNonVacuity.lean`): the same boundary-only
+- The **generated twin** (`SP1CleanTest/Alignment/Audit/TraceNonVacuity.lean`): the same boundary-only
   shard, but assembled through the completeness layer's builders rather than written by hand,
   witnessing `SupportedCoreGeneratedTraceRelation` — so the lower generated-trace assembly theorem
   used in §7.4 is not vacuously true of an unsatisfiable relation.
-- The **active assembly anchor** (`SP1CleanTest/Audit/ActiveTraceNonVacuity.lean`): a hand-assembled
+- The **active assembly anchor** (`SP1CleanTest/Alignment/Audit/ActiveTraceNonVacuity.lean`): a hand-assembled
   semantic trace record for JAL-x0 whose instruction-event count and decoded physical instruction-row
   count are both one, with matching native provider occurrences and all five buses balanced. The
   generated-trace assembly circuit-generates its physical AIR rows, then passes the witness through
   `supported_core_native_sound` to the plain-Sail relation. It is not a full or
   verified trace generator.
-- The **active compiler join** (`SP1CleanTest/Audit/ActiveNativeCompleteness.lean`): one official
+- The **active compiler join** (`SP1CleanTest/Alignment/Audit/ActiveNativeCompleteness.lean`): one official
   Sail self-jump is a valid supported semantic execution, its proof-independent projection compiles
   to the exact JAL event above, and the active circuit-built witness lies in the bounded native
   relation. The theorem deliberately stops short of identifying the complete compiler-produced
@@ -1258,10 +1258,10 @@ the mechanism in this tree that addresses it; every citation below is machine-ch
 
 | Predecessor finding (May 2026 review) | Status in this tree |
 |---|---|
-| JALR's theorem assumed `(rs1+imm) % 4 = 0`, omitting the architectural `& ~1` LSB clear | The mask is a *proven Spec conjunct*: `toBitVec64 nextPcWord = ~~~1#64 &&& toBitVec64 value` (`SP1Clean/FormalModel/Contracts/Chips.lean`, the Jalr `Spec`), derived from the constraint system in `JalrChip.soundness` and consumed against the generated `execute_JALR` (which jumps to `BitVec.update target 0 0#1`) by `jalr_chip_reaches_sail` (`SP1Clean/Proofs/Chips/JalrChip/Bridge.lean`). The unconditional limb-to-word lift is `Word.toBitVec64_toNat_mod_four` (`SP1Clean/Math/Word.lean`); alignment implies trap-free retirement via `jump_to_of_mod4_eq_zero` (`SP1Clean/Model/SailWrap.lean`). |
+| JALR's theorem assumed `(rs1+imm) % 4 = 0`, omitting the architectural `& ~1` LSB clear | The mask is a *proven Spec conjunct*: `toBitVec64 nextPcWord = ~~~1#64 &&& toBitVec64 value` (`SP1Clean/FormalModel/Contracts/Chips.lean`, the Jalr `Spec`), derived from the constraint system in `JalrChip.soundness` and consumed against the generated `execute_JALR` (which jumps to `BitVec.update target 0 0#1`) by `jalr_chip_reaches_sail` (`SP1Clean/Alignment/Chips/JalrChip/Bridge.lean`). The unconditional limb-to-word lift is `Word.toBitVec64_toNat_mod_four` (`SP1Clean/Math/Word.lean`); alignment implies trap-free retirement via `jump_to_of_mod4_eq_zero` (`SP1Clean/Model/SailWrap.lean`). |
 | LH/LHU/LW/LWU theorems proved the wrong (byte-width) specification; several loads unproved or `sorry`-dependent | All five load chips carry closed per-width soundness, completeness, Sail bridges, and whole-chip faithfulness. Width and lane selection are kernel-checked: e.g. `loadHalf_selectedBytes` binds *both* little-endian bytes at `ea`/`ea+1` against the width-2 Sail read, and `loadByte_selectedMemoryByte` closes all eight lane cases (`SP1Clean/Soundness/Grounding/MemoryChips.lean`); sign/zero-extension per variant is constraint-forced (§5.3). Zero `sorry` anywhere is CI-gated. |
-| SLTI's theorem was vacuously true (contradictory hypotheses) | Selector flags are circuit-constrained one-hot (never assumptions); `LtChip.Assumptions` is two operand-range facts only. Beyond structure, `SP1CleanTest/NonVacuityReal.lean` exhibits concrete satisfying `is_real = 1` rows for **every** chip's complete flattened constraint system — for Lt, both a true and a false comparison — as named, census-visible theorems (§9). |
-| LUI and AUIPC had no theorem at all | `UTypeChip` has the full stack: `soundness`/`completeness`/`circuit` (axiom-clean), the bridge family through the registered `advance` (`SP1Clean/Proofs/Chips/UTypeChip/Bridge.lean`), and whole-chip Rust faithfulness `uTypeChip_faithful` (`SP1Clean/Faithful/UTypeChip.lean`) — including RV64 LUI's *sign*-extension and AUIPC's full-width carry. |
+| SLTI's theorem was vacuously true (contradictory hypotheses) | Selector flags are circuit-constrained one-hot (never assumptions); `LtChip.Assumptions` is two operand-range facts only. Beyond structure, `SP1CleanTest/Alignment/NonVacuityReal.lean` exhibits concrete satisfying `is_real = 1` rows for **every** chip's complete flattened constraint system — for Lt, both a true and a false comparison — as named, census-visible theorems (§9). |
+| LUI and AUIPC had no theorem at all | `UTypeChip` has the full stack: `soundness`/`completeness`/`circuit` (axiom-clean), the bridge family through the registered `advance` (`SP1Clean/Alignment/Chips/UTypeChip/Bridge.lean`), and whole-chip Rust faithfulness `uTypeChip_faithful` (`SP1Clean/Faithful/UTypeChip.lean`) — including RV64 LUI's *sign*-extension and AUIPC's full-width carry. |
 | Four project axioms, including "memory protection disabled" assumed as an axiom | Zero project `axiom` declarations in the main library (CI-gated); zero `sorryAx` across the mechanically checked released-declaration census. The sole current count lives in `docs/snapshots/axiom-ledger.md`. Platform shaping is not assumed per-proof: the Sail model is *generated* with SP1's platform configuration (§3.2), and the supervisor-only scope is a stated structural restriction (§12.6), not an axiom. |
 | Version pinning and reproducible extraction were absent | Every dependency is an immutable git pin cross-checked by `scripts/check_pins.sh`; extraction is a pin-gated, fail-closed pipeline (§4.1) with byte-idempotency; the audit harness (§13) regenerates the census and fails on drift. |
 | Recommendation: independent adversarial review before public claims | The 2026-07 and 2026-08 release-readiness campaigns (this report's §12 discloses their durable findings) ran blind-derivation adversarial reviews of all 25 chip Specs against the generated Sail model, per-claim validation against upstream sources, and a full file-by-file documentation sweep. |
@@ -1312,7 +1312,7 @@ and durable findings from that newer work.
      their circuits retain `m * (m - 1) = 0`, preserving the signed-memory-balance invariant while
      making both padding and active rows reachable.
 4. **Provider multiplicity source closure is executable and branch-build clean.**
-   `SP1CleanTest/Audit/ProviderMultiplicity.lean` builds concrete tables through
+   `SP1CleanTest/Alignment/Audit/ProviderMultiplicity.lean` builds concrete tables through
    `Air.Flat.Table.build`, not hand-written row arrays. `bytePaddingTable_constraints` proves the
    retained padding row is accepted and `bytePaddingTable_busNeutral` checks its evaluated
    interaction multiplicity is zero. `byteAggregateTable_preservesMultiplicity`,

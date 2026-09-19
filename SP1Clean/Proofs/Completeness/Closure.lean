@@ -8,7 +8,7 @@ import SP1Clean.Proofs.Completeness.ProviderTables
 `Soundness/AIRCompleteness.lean`'s `Balanced` is a *hypothesis*: the assembled witness satisfies
 the ensemble's constraint system, but nothing derives that its channels cancel. Every use so far
 discharges balance by compiled evaluation on a fully concrete shard — which is only available in the
-test library, and is why `SP1CleanTest/Audit/ActiveTraceNonVacuity.lean` spends roughly five hundred
+test library, and is why `SP1CleanTest/Alignment/Audit/ActiveTraceNonVacuity.lean` spends roughly five hundred
 lines on ledger plumbing for a single `JAL x0, 0` row and does not generalise to a symbolic trace.
 
 This module is the first half of closing that gap. It does not invent an algorithm: the exact→native

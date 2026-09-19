@@ -8,13 +8,13 @@ import SP1Clean.Soundness.Grounding.ControlFlowChips
 import SP1Clean.Soundness.Grounding.MemoryChips
 import SP1Clean.Soundness.Decode
 import SP1Clean.Soundness.MemoryFrontier
-import SP1Clean.Proofs.Chips.LoadByteChip.Contracts
-import SP1Clean.Proofs.Chips.LoadHalfChip.Contracts
-import SP1Clean.Proofs.Chips.LoadWordChip.Contracts
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Contracts
-import SP1Clean.Proofs.Chips.LoadX0Chip.Contracts
-import SP1Clean.Proofs.Chips.SubChip.Contracts
-import SP1Clean.Proofs.Chips.MulChip.Contracts
+import SP1Clean.Alignment.Chips.LoadByteChip.Contracts
+import SP1Clean.Alignment.Chips.LoadHalfChip.Contracts
+import SP1Clean.Alignment.Chips.LoadWordChip.Contracts
+import SP1Clean.Alignment.Chips.LoadDoubleChip.Contracts
+import SP1Clean.Alignment.Chips.LoadX0Chip.Contracts
+import SP1Clean.Alignment.Chips.SubChip.Contracts
+import SP1Clean.Alignment.Chips.MulChip.Contracts
 
 /-! # Per-chip grounding contracts — the `ChipGroundingContracts` bundle
 

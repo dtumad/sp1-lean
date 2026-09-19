@@ -108,11 +108,17 @@ Do not run bare `lake update`; dependency changes require a reviewed pin change.
 ## Build and reproduce
 
 ```bash
-lake build SP1Clean
-lake test
+lake build            # core: SP1Core + ToClean + ToMathlib (what PR CI builds)
+lake test             # core test set (SP1CoreTest)
+lake build SP1Clean   # full build including the SP1-alignment layers
+lake build SP1CleanTest
 lake lint
 scripts/run_audit.sh
 ```
+
+The SP1-alignment layers (extracted oracles, Faithful, the per-chip Sail bridges and machine
+contracts under `SP1Clean/Alignment/`, Proofs/Sail, Proofs/Completeness, Soundness, Composition)
+are built and audited by the scheduled `alignment` workflow rather than on every pull request.
 
 Trace conformance also uses `scripts/check_witgen_export.sh --regen` and
 `scripts/run_interp_diff.sh`. Regenerating the Rust extraction requires a clean checkout of its

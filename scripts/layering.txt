@@ -49,8 +49,7 @@
 # They are machine files that live in the chip directory — measured, not assumed.
 8   Soundness     SP1Clean/Soundness/
 8   Soundness     SP1Clean/Proofs/Sail/
-8   Soundness     SP1Clean/Proofs/Chips/*/Bridge.lean
-8   Soundness     SP1Clean/Proofs/Chips/*/Contracts.lean
+8   Soundness     SP1Clean/Alignment/
 
 # 9 — assembly: a trace record becomes built tables and an EnsembleWitness.
 9   Soundness     SP1Clean/Proofs/Completeness/
