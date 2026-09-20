@@ -2,9 +2,7 @@ import SP1Clean.Model.SailWrap
 import SP1Clean.Math.Word
 import SP1Clean.Proofs.Chips.DivRemChip.Formal
 import SP1Clean.Soundness.ChipRow
-import RISCV.Instructions
-import RISCV.SailToRV64
-import RISCV.SailPureToInstructions
+import SP1Clean.Proofs.Sail.RV64Bridge
 import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for the `DivRem` chip (DIV/DIVU/REM/REMU/DIVW/DIVUW/REMW/REMUW) + `ChipKind`
@@ -16,9 +14,9 @@ four Sail families (`execute_DIV`/`execute_REM`/`execute_DIVW`/`execute_REMW`) e
 remainder (`rem`/`remu`), and the four low-32 sign-extended word variants (`divw`/`divuw`/`remw`/`remuw`).
 
 This bridge uses the **RV64 provider library's** connection lemmas directly:
-`_root_.{div_eq,divw_eq,rem_*_eq,remw_*_eq}` (`RISCV.SailToRV64`) chained with
+`SailRV64.execute_{DIV,DIVW,REM,REMW}_eq` (`Model/SailPure.lean`) chained with
 `RV64.{div_eq,divu_eq,divw_eq,divuw_eq,rem_eq,remu_eq,remw_eq,remuw_eq}`
-(`RISCV.SailPureToInstructions`). Each `correct_*_native` is pure monad plumbing — the BitVec
+(`Proofs/Sail/RV64Bridge.lean`). Each `correct_*_native` is pure monad plumbing — the BitVec
 algebra lives in those dep lemmas.
 
 The chip `Spec` sources operands from **inputs** `op_b_val` (rs1) / `op_c_val` (rs2), matching
@@ -89,7 +87,7 @@ def sp1_divrem (rd : regidx) (pc : BitVec 64) (a_val : Word (ZMod p)) : SailM Un
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
 /-- Native Sail equivalence (DIV): the chip's RV64 `div` fact plus the register/PC reads drive
-`spec_div ≡ sp1_divrem`, via `_root_.div_eq` and `RV64.div_eq`. -/
+`spec_div ≡ sp1_divrem`, via `SailRV64.execute_DIV_eq` and `RV64.div_eq`. -/
 theorem correct_div_native
     (rs1_val rs2_val a_val : Word (ZMod p))
     (rs1_idx rs2_idx rd_idx : BitVec 5) (pc : BitVec 64) (s : SailState)
@@ -105,7 +103,7 @@ theorem correct_div_native
   simp only [spec_div, sp1_divrem]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.div_eq, skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_DIV_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_div]
   rfl
 
@@ -127,7 +125,7 @@ theorem correct_divu_native
   simp only [spec_divu, sp1_divrem]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.div_eq, skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_DIV_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divu]
   rfl
 
@@ -149,7 +147,7 @@ theorem correct_rem_native
   simp only [spec_rem, sp1_divrem]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.rem_signed_eq, skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_REM_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_rem]
   rfl
 
@@ -171,7 +169,7 @@ theorem correct_remu_native
   simp only [spec_remu, sp1_divrem]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.rem_unsigned_eq, skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_REM_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remu]
   rfl
 
@@ -193,7 +191,7 @@ theorem correct_divw_native
   simp only [spec_divw, sp1_divrem]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.divw_eq, skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_DIVW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divw]
   rfl
 
@@ -215,7 +213,7 @@ theorem correct_divuw_native
   simp only [spec_divuw, sp1_divrem]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.divw_eq, skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_DIVW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divuw]
   rfl
 
@@ -237,7 +235,7 @@ theorem correct_remw_native
   simp only [spec_remw, sp1_divrem]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.remw_signed_eq, skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_REMW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remw]
   rfl
 
@@ -259,7 +257,7 @@ theorem correct_remuw_native
   simp only [spec_remuw, sp1_divrem]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.remw_unsigned_eq, skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_REMW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remuw]
   rfl
 

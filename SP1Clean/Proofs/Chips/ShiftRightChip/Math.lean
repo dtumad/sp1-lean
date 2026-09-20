@@ -1,12 +1,12 @@
 import SP1Clean.Proofs.Chips.ShiftRightChip.Core
 import SP1Clean.Math.Gate
-import RISCV.Instructions
+import SP1Clean.Model.RV64Semantics
 
 /-! # `SP1Clean.ShiftRightChip` — bitvec/word goal-shape converters (native arithmetic)
 
 The mathematical bridge from the chip's committed result columns (in `Word`/`HWord.toBitVec*` /
 Nat-division form, as the `ShiftRightMath.*_close_su16_*` dispatch lemmas produce them) to the RV64 ISA
-functions (`RV64.srl`/`sra`/`srlw`/`sraw` from `RISCV/Instructions.lean`). Split out of `Formal.lean`
+functions (`RV64.srl`/`sra`/`srlw`/`sraw` from `Model/RV64Semantics.lean`). Split out of `Formal.lean`
 (the chip-folder convention, mirroring `DivRemChip/Math.lean`): these are pure `Word`/`BitVec`/`ZMod p`
 lemmas with no circuit context.
 

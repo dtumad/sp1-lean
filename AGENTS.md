@@ -129,7 +129,7 @@ refinement; only their `_of_obligations` combinators are currently declared.
   dependencies/toolchains) — update one `[[require]]` at a time.
   ⚠ **The generated Sail model and the `lean-sail` runtime must move together.** A v4-generated
   `LeanRV64D` snapshot against `lean-sail` v5 fails with `unknown namespace Sail.ConcurrencyInterfaceV2`;
-  pin both from the same pairing (`opencompl/riscv-lean` PR #59 is the reference).
+  pin both from the same pairing (`docs/agents/sail-model-provenance.md` records the current one).
   Read `docs/agents/lean-sail-notes.md` before touching any dependency.
 - Lake options already set in `lakefile.toml`: `--tstack=400000`, `synthInstance.maxHeartbeats = 1000000`.
 - There are no conventional unit tests in the main library; correctness lives in kernel-checked
@@ -331,11 +331,22 @@ not forbid cross-layer imports within one package; the auto-gen guard is the `Ex
 "do not hand-edit" headers + the sole writer `update_extracted.py` (and, for the export trees, the
 sole writers `scripts/witgenExport.lean` / `scripts/update_sp1_dumps.sh` + their byte-identity gates).
 
+- **`ToPolyFun/`** (top-level, own `lean_lib`, in `defaultTargets`) — upstream-destined PolyFun
+  material, same contract as `ToMathlib`/`ToClean`: imports only PolyFun, declared in PolyFun's own
+  namespaces (`PFunctor.DynSystem.Prefix.append`, `ReachableIn.add`/`split`, `Labeled.Trace`), each
+  file stating its gap against upstream. The machine vocabulary used anywhere in this tree is
+  PolyFun's (`Labeled`, `Prefix`, `ReachableIn`); nothing is re-defined locally.
+  `ToClean/Air/Realizes.lean` (`Air.Flat.Realizes`, a Clean ensemble realizing a PolyFun `Labeled`
+  machine, with `Realizes.statement_iff` as the one statement shape) is the Clean side;
+  `SP1Clean/FormalModel/ShardMachine.lean` and `SP1Clean/Soundness/Shard/Machine.lean` are the SP1
+  instances (`sp1Machine`, the `Labeled` bundle of the existing `executionSystem`; `executes_iff`;
+  `statement_iff_of_realizes`).
 - **`ToClean/`** and **`ToMathlib/`** (top-level, own `lean_lib`s, in `defaultTargets`) — the
   **upstream-destined** libraries, modelled on VCVio's `ToMathlib/`. `ToClean` holds material bound
   for the Clean DSL; `ToMathlib` holds material bound for Mathlib. **Import rule (load-bearing):
-  `ToMathlib` imports only Mathlib; `ToClean` imports Clean (and may import `ToMathlib`); NEITHER
-  may import `SP1Clean`.** That is what keeps them genuinely contributable and makes the terminal
+  `ToMathlib` imports only Mathlib; `ToPolyFun` imports only PolyFun; `ToClean` imports Clean (and
+  may import `ToMathlib` and `ToPolyFun`, since Clean plans to import PolyFun); NONE may import
+  `SP1Clean`.** That is what keeps them genuinely contributable and makes the terminal
   step of an accepted PR a plain deletion plus a repoint of importers to `Clean.*`/`Mathlib.*`.
   Declare things in the namespace they would occupy **upstream** (e.g. `witnessVectorIR` lives in
   `namespace Circuit` with a matching `export`, beside Clean's own `witnessVector`), so acceptance

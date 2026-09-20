@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Sail.TryStepReduction
 import SP1Clean.Soundness.RowEffectDefs
-import RISCV.Instructions
-import RISCV.SailToRV64
+import SP1Clean.Model.RV64Semantics
+import SP1Clean.Model.SailPure
 
 /-! # Phase 4 — the uniform per-chip `advance` (Sail-step obligation)
 
@@ -179,8 +179,8 @@ theorem itype_execute_reaches (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5) (op 
   rfl
 
 /-- The pure value written by a 64-bit shift-immediate instruction.  The shift amount is genuinely
-six bits in RV64; keeping that width here covers shifts 32--63 rather than routing through the older
-five-bit convenience lemmas in `RISCV.SailToRV64`. -/
+six bits in RV64; keeping that width here covers shifts 32--63 rather than routing through the
+older five-bit convenience lemmas. -/
 def execute_SHIFTIOP_pure (op_b : BitVec 64) (shamt : BitVec 6) (op : sop) : BitVec 64 :=
   match op with
   | .SLLI => shift_bits_left op_b shamt
@@ -1523,7 +1523,7 @@ theorem advance_of_jalr {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
 
 /-- The DIV/DIVU execute stage reaches `Retire_Success` (write value `SailRV64.div op_c op_b isU`).
 The div-by-zero/overflow special cases are fully inside `SailRV64.div`; `div_eq` reduces
-`execute_DIV` to `skeleton_binary` by `rfl`, so this mirrors `rtype_execute_reaches` exactly. -/
+`execute_DIV` to `SailRV64.skeleton_binary` by `rfl`, so this mirrors `rtype_execute_reaches` exactly. -/
 theorem execute_DIV_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
@@ -1532,14 +1532,14 @@ theorem execute_DIV_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
              (bitVecToRegidxVal rd_idx (SailRV64.div op_c op_b isU)))}) := by
-  simp only [execute, _root_.div_eq, skeleton_binary]
+  simp only [execute, SailRV64.execute_DIV_eq, SailRV64.skeleton_binary]
   rw [run_bind_of_run s_a _ op_b (by rw [run_rX_bits, h_rs1]),
     run_bind_of_run s_a _ op_c (by rw [run_rX_bits, h_rs2]),
     run_bind_of_run' s_a _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
   rfl
 
 /-- The REM/REMU execute stage reaches `Retire_Success` (write value `SailRV64.rem isU op_c op_b`).
-`execute_REM` has only bool-specialized named lemmas, so the reduction to `skeleton_binary` is an
+`execute_REM` has only bool-specialized named lemmas, so the reduction to `SailRV64.skeleton_binary` is an
 inline `show … from rfl` (holds for a variable `isU` — the body threads `is_unsigned` as a value). -/
 theorem execute_REM_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
     (op_b op_c : BitVec 64) (s_a : SailState)
@@ -1550,8 +1550,8 @@ theorem execute_REM_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
              (bitVecToRegidxVal rd_idx (SailRV64.rem isU op_c op_b)))}) := by
   simp only [execute, show execute_REM (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) isU
-    = skeleton_binary (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)
-        (fun val1 val2 => SailRV64.rem isU val2 val1) from rfl, skeleton_binary]
+    = SailRV64.skeleton_binary (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)
+        (fun val1 val2 => SailRV64.rem isU val2 val1) from rfl, SailRV64.skeleton_binary]
   rw [run_bind_of_run s_a _ op_b (by rw [run_rX_bits, h_rs1]),
     run_bind_of_run s_a _ op_c (by rw [run_rX_bits, h_rs2]),
     run_bind_of_run' s_a _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
@@ -1566,7 +1566,7 @@ theorem execute_DIVW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
              (bitVecToRegidxVal rd_idx (SailRV64.divw op_c op_b isU)))}) := by
-  simp only [execute, _root_.divw_eq, skeleton_binary]
+  simp only [execute, SailRV64.execute_DIVW_eq, SailRV64.skeleton_binary]
   rw [run_bind_of_run s_a _ op_b (by rw [run_rX_bits, h_rs1]),
     run_bind_of_run s_a _ op_c (by rw [run_rX_bits, h_rs2]),
     run_bind_of_run' s_a _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
@@ -1582,8 +1582,8 @@ theorem execute_REMW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
              (bitVecToRegidxVal rd_idx (SailRV64.remw isU op_c op_b)))}) := by
   simp only [execute, show execute_REMW (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) isU
-    = skeleton_binary (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)
-        (fun val1 val2 => SailRV64.remw isU val2 val1) from rfl, skeleton_binary]
+    = SailRV64.skeleton_binary (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)
+        (fun val1 val2 => SailRV64.remw isU val2 val1) from rfl, SailRV64.skeleton_binary]
   rw [run_bind_of_run s_a _ op_b (by rw [run_rX_bits, h_rs1]),
     run_bind_of_run s_a _ op_c (by rw [run_rX_bits, h_rs2]),
     run_bind_of_run' s_a _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
@@ -1591,7 +1591,7 @@ theorem execute_REMW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
 
 /-- The MUL/MULH/MULHU/MULHSU execute stage reaches `Retire_Success` (write value
 `SailRV64.mul op_c op_b op`).  Generic in `op : mul_op`; mirrors `execute_DIV_reaches`
-via `_root_.mul_eq`/`skeleton_binary`. -/
+via `SailRV64.execute_MUL_eq`/`SailRV64.skeleton_binary`. -/
 theorem execute_MUL_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (op : mul_op)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
@@ -1600,14 +1600,14 @@ theorem execute_MUL_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (op : mul_op)
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
              (bitVecToRegidxVal rd_idx (SailRV64.mul op_c op_b op)))}) := by
-  simp only [execute, _root_.mul_eq, skeleton_binary]
+  simp only [execute, SailRV64.execute_MUL_eq, SailRV64.skeleton_binary]
   rw [run_bind_of_run s_a _ op_b (by rw [run_rX_bits, h_rs1]),
     run_bind_of_run s_a _ op_c (by rw [run_rX_bits, h_rs2]),
     run_bind_of_run' s_a _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
   rfl
 
 /-- The MULW execute stage reaches `Retire_Success` (write value `SailRV64.mulw op_c op_b`).
-Mirrors `execute_DIVW_reaches` via `_root_.mulw_eq`/`skeleton_binary`. -/
+Mirrors `execute_DIVW_reaches` via `SailRV64.execute_MULW_eq`/`SailRV64.skeleton_binary`. -/
 theorem execute_MULW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
@@ -1616,7 +1616,7 @@ theorem execute_MULW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5)
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
              (bitVecToRegidxVal rd_idx (SailRV64.mulw op_c op_b)))}) := by
-  simp only [execute, _root_.mulw_eq, skeleton_binary]
+  simp only [execute, SailRV64.execute_MULW_eq, SailRV64.skeleton_binary]
   rw [run_bind_of_run s_a _ op_b (by rw [run_rX_bits, h_rs1]),
     run_bind_of_run s_a _ op_c (by rw [run_rX_bits, h_rs2]),
     run_bind_of_run' s_a _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]

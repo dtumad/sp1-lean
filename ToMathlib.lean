@@ -3,3 +3,4 @@ import ToMathlib.ExtDHashMapOfFintype
 import ToMathlib.ListFilterMap
 import ToMathlib.ListMapMOption
 import ToMathlib.ListChronology
+import ToMathlib.BitVec

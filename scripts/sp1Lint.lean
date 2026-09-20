@@ -161,23 +161,40 @@ def getHandwrittenDecls : CoreM (Array Name) := do
   let handWrittenExtracted : List Name :=
     [`SP1Clean.Extracted.ExtractionDSL, `SP1Clean.Extracted.InteractionModel]
   let keep := env.header.moduleNames.map fun m =>
-    ((`SP1Clean).isPrefixOf m || (`ToClean).isPrefixOf m || (`ToMathlib).isPrefixOf m)
+    ((`SP1Clean).isPrefixOf m || (`ToClean).isPrefixOf m || (`ToMathlib).isPrefixOf m ||
+      (`ToPolyFun).isPrefixOf m)
       && (!(`SP1Clean.Extracted).isPrefixOf m || handWrittenExtracted.contains m)
       && !m.toString.endsWith "Vectors"
   return env.constants.map₁.fold (init := #[]) fun decls declName _ =>
     if keep[env.const2ModIdx[declName]?.get! (α := Nat)]! then decls.push declName else decls
 
+/-- The core-scope module filter: the `SP1Core` globs of `lakefile.toml` (strata 0-6) plus the
+three non-`SP1Clean` roots. Keep in sync with the `SP1Core` stanza. -/
+def isCoreModule (m : Name) : Bool :=
+  let s := m.toString
+  let corePrefixes := ["SP1Clean.Math.", "SP1Clean.Model.", "SP1Clean.FormalModel.",
+    "SP1Clean.Native.", "SP1Clean.Proofs.Operations.", "SP1Clean.Proofs.Chips."]
+  !(s.startsWith "SP1Clean") || s == "SP1Clean.Proofs.CircuitProofStart"
+    || corePrefixes.any (fun pre => s.startsWith pre)
+
 /-- Every module under `.lake/build/lib/lean/<root>/` whose olean exists AND whose source file
 still exists, as import names. Used by `--scope core`: PR CI builds only the core target, so
 instead of importing the umbrella `SP1Clean` (whose olean only the alignment workflow produces)
 the driver lints whatever is built. The source check matters: a build directory can hold oleans
-of retired or moved modules, and importing one beside its successor duplicates declarations. -/
-def builtModules (roots : List String) : IO (Array Name) := do
+of retired or moved modules, and importing one beside its successor duplicates declarations.
+`keep` further restricts the walk (core scope passes the core-library module prefixes): a shared
+build directory can also hold stale oleans of *alignment* modules whose import lists still name
+a pre-move path, and importing one of those drags the retired module in transitively. -/
+def builtModules (roots : List String) (keep : Name → Bool := fun _ => true) :
+    IO (Array Name) := do
   let libDir : FilePath := ".lake" / "build" / "lib" / "lean"
   let mut mods : Array Name := #[]
   for root in roots do
     let rootOlean := libDir / (root ++ ".olean")
-    if (← rootOlean.pathExists) && (← (FilePath.mk (root ++ ".lean")).pathExists) then
+    -- The root module goes through the same filter as the tree: in core scope the umbrella
+    -- `SP1Clean` must never be imported even when a restored cache happens to hold its olean.
+    if (← rootOlean.pathExists) && (← (FilePath.mk (root ++ ".lean")).pathExists)
+        && keep (Name.mkSimple root) then
       mods := mods.push (Name.mkSimple root)
     let dir := libDir / root
     unless ← dir.isDir do continue
@@ -187,7 +204,8 @@ def builtModules (roots : List String) : IO (Array Name) := do
         let comps := (entry.withExtension "").components.drop depth
         let src : FilePath := (comps.foldl (fun (p : FilePath) c => p / FilePath.mk c) ⟨"."⟩).withExtension "lean"
         if ← src.pathExists then
-          mods := mods.push (comps.foldl (fun n c => Name.str n c) Name.anonymous)
+          let mod := comps.foldl (fun n c => Name.str n c) Name.anonymous
+          if keep mod then mods := mods.push mod
   return mods.qsort (·.toString < ·.toString)
 
 /--
@@ -235,13 +253,13 @@ unsafe def main (args : List String) : IO Unit := do
   -- The upstream-destined libraries are linted on the same terms, but they are optional: this
   -- script must run both before and after they exist on disk.
   let mut extraModules := #[]
-  for m in [`ToClean, `ToMathlib] do
+  for m in [`ToClean, `ToMathlib, `ToPolyFun] do
     if ← (← findOLean m).pathExists then extraModules := extraModules.push m
   let nolintsFile : FilePath := "scripts/nolints.json"
   let nolints ← if ← nolintsFile.pathExists then readJsonFile NoLints nolintsFile else pure #[]
   unsafe Lean.enableInitializersExecution
   let projectImports : Array Name ←
-    if coreScope then builtModules ["SP1Clean", "ToClean", "ToMathlib"]
+    if coreScope then builtModules ["SP1Clean", "ToClean", "ToMathlib", "ToPolyFun"] isCoreModule
     else pure (#[projectModule] ++ extraModules)
   if coreScope then do
     IO.println s!"-- sp1Lint: core scope, {projectImports.size} built modules"

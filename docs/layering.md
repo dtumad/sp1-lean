@@ -85,7 +85,7 @@ ordering below is supported by measured import counts, not by intent.
 
 | # | Stratum | Carries |
 |---|---|---|
-| 0 | upstream | `ToMathlib/`, `ToClean/` — no SP1 concepts, destined for Mathlib/Clean |
+| 0 | upstream | `ToMathlib/`, `ToClean/`, `ToPolyFun/` — no SP1 concepts; destined for Mathlib/Clean/PolyFun (`ToClean` may import `ToPolyFun`) |
 | 1 | math | field-generic words, carries, bit operations |
 | 2 | model | the SP1 substrate: messages, channels, buses, ledgers, Sail, schedules |
 | 3 | extracted | generated Rust rows, assertion/interaction lists, manifest — plus the two hand-written modules that define the vocabulary those lists speak |
