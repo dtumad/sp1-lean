@@ -81,12 +81,12 @@ def module_to_path(mod):
     return mod.replace(".", "/") + ".lean"
 
 files = []
-for root in ("SP1Clean", "ToClean", "ToMathlib"):
+for root in ("SP1Clean", "ToClean", "ToMathlib", "ToPolyFun"):
     for dp, _, fs in os.walk(root):
         for f in fs:
             if f.endswith(".lean"):
                 files.append(os.path.join(dp, f))
-for extra in ("SP1Clean.lean", "ToClean.lean", "ToMathlib.lean"):
+for extra in ("SP1Clean.lean", "ToClean.lean", "ToMathlib.lean", "ToPolyFun.lean"):
     if os.path.exists(extra):
         files.append(extra)
 files.sort()
@@ -95,7 +95,7 @@ fail = 0
 unmapped, upward, nsbad = [], [], []
 
 # Root index modules import the whole world by design; they are the umbrella, not a layer.
-ROOT_INDEX = {"SP1Clean.lean", "ToClean.lean", "ToMathlib.lean"}
+ROOT_INDEX = {"SP1Clean.lean", "ToClean.lean", "ToMathlib.lean", "ToPolyFun.lean"}
 
 for path in files:
     if path in ROOT_INDEX:
@@ -117,7 +117,7 @@ for path in files:
 
     # 1. direction
     for mod in src_lines:
-        if not mod.startswith(("SP1Clean", "ToClean", "ToMathlib")):
+        if not mod.startswith(("SP1Clean", "ToClean", "ToMathlib", "ToPolyFun")):
             continue          # Mathlib / Clean / Std / Sail are all below everything
         target = module_to_path(mod)
         if not os.path.exists(target):
