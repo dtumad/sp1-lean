@@ -611,8 +611,8 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms PFunctor.DynSystem.ReachableIn.split
 #print axioms PFunctor.DynSystem.Labeled.Trace.append
 #print axioms PFunctor.DynSystem.Labeled.Trace.reachableIn
-#print axioms Machine.Realizes.statement_iff
-#print axioms Machine.Realizes.reachable_of_statement
+#print axioms Air.Flat.Realizes.statement_iff
+#print axioms Air.Flat.Realizes.reachable_of_statement
 #print axioms SP1Clean.FormalModel.Shard.sp1Machine
 #print axioms SP1Clean.FormalModel.Shard.trace_iff_executionPath
 #print axioms SP1Clean.FormalModel.Shard.executes_iff

@@ -64,7 +64,7 @@ an explicit Rust-facing projection, never a second native ledger definition.
 | `Soundness/` | machine registry, typed decoding, grounding, and capstones |
 | `Composition/` | the composed exact→native artifact: transport, provider redistribution, the 55-table assembly |
 | `ToPolyFun/` (top-level library) | upstream-destined PolyFun lemmas: orbit composition and labeled traces (`Labeled.Trace`) |
-| `Machine/` (top-level library) | `Realizes`, a Clean ensemble realizing a PolyFun `Labeled` machine; `SP1Clean` instantiates it |
+| `ToClean/Air/Realizes.lean` | `Air.Flat.Realizes`, a Clean ensemble realizing a PolyFun `Labeled` machine; `SP1Clean` instantiates it |
 | `SP1CleanTest/` | compiler-trusted executable conformance tests, isolated from the main library |
 
 `SP1Clean.lean` imports the complete main proof library (`scripts/check_root_index.sh` gates that it

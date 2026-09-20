@@ -1,10 +1,10 @@
-import Machine.Air.Realizes
+import ToClean.Air.Realizes
 import SP1Clean.FormalModel.ShardMachine
 import SP1Clean.Soundness.Shard.Contract
 
 /-! # The shard targets as a machine realization
 
-`SoundnessTarget` and `CompilerTarget` are exactly the two fields of `Machine.Realizes` at the SP1
+`SoundnessTarget` and `CompilerTarget` are exactly the two fields of `Air.Flat.Realizes` at the SP1
 machine, with the fixed complete endpoints as the boundary and the header identity, source
 validity, and resource profile as admissibility. `statement_iff_of_realizes` re-derives the
 intended single statement from `Realizes.statement_iff`; nothing is proved twice and no second
@@ -35,9 +35,9 @@ theorem interpretation_iff {profile : Profile} {image : ProgramImage} (valid : i
     {source target : ExecutionSnapshot} {header publicInput : PublicIO (ZMod p)}
     {events : List ExecutionEvent} :
     Interpretation profile image source target header publicInput events ↔
-      _root_.Machine.Interpretation (sp1Machine p image valid) (boundary source target)
+      Air.Flat.Interpretation (sp1Machine p image valid) (boundary source target)
         (admissible profile image source target header) publicInput events := by
-  simp only [Interpretation, AdmissibleExecution, _root_.Machine.Interpretation, boundary, admissible,
+  simp only [Interpretation, AdmissibleExecution, Air.Flat.Interpretation, boundary, admissible,
     executes_iff (valid := valid)]
   tauto
 
@@ -46,7 +46,7 @@ def realizes {ensemble : Ensemble (ZMod p) PublicIO} {profile : Profile} {image 
     (valid : image.Valid) {source target : ExecutionSnapshot} {header : PublicIO (ZMod p)}
     (sound : SoundnessTarget ensemble profile image source target header)
     (compiler : CompilerTarget ensemble profile image source target header) :
-    _root_.Machine.Realizes (sp1Machine p image valid) ensemble (boundary source target)
+    Air.Flat.Realizes (sp1Machine p image valid) ensemble (boundary source target)
       (admissible profile image source target header) where
   sound publicInput _ accepted :=
     let ⟨events, interpretation⟩ := sound publicInput trivial accepted

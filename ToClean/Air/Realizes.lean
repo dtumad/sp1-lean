@@ -2,17 +2,21 @@ import ToPolyFun.Dynamical.Labeled
 import ToClean.Air.CompleteEnsemble
 /-! # A flat AIR ensemble realizing a labeled machine
 
-`Realizes m ens boundary admissible` says that raw acceptance of the Clean ensemble `ens` at a
-public input is exactly the existence of an admissible trace of the PolyFun `Labeled` machine `m`
-between the boundary states read from that public input: soundness in Clean's own
-`Ensemble.Soundness` shape and a proof-independent compiler in the `EnsembleCompiler` shape.
-Neither direction may mention rows, provers, or compiler success in its domain; `admissible` is the
+## Gap against upstream
+
+Clean's `Air.Flat.FormalEnsemble` bundles an ensemble with its soundness proof and nothing else,
+and Clean has no notion of the machine an ensemble is meant to realize. `Realizes m ens boundary
+admissible` says that raw acceptance of the ensemble `ens` at a public input is exactly the
+existence of an admissible trace of the PolyFun `Labeled` machine `m` between the boundary states
+read from that public input: soundness in Clean's own `Ensemble.Soundness` shape and a
+proof-independent compiler in the `EnsembleCompiler` shape (`CompleteEnsemble.lean`). Neither
+direction may mention rows, provers, or compiler success in its domain; `admissible` is the
 semantic resource profile. The single statement is `Realizes.statement_iff`; reachability of the
 boundary is its corollary. The machine side is PolyFun's own vocabulary (`Labeled`, `Prefix`,
-`ReachableIn`, `Labeled.Trace`); this file only ties it to Clean.
+`ReachableIn`, `Labeled.Trace`), which Clean plans to import; this file only ties it to Clean.
 -/
 
-namespace Machine
+namespace Air.Flat
 
 open Air.Flat PFunctor PFunctor.DynSystem
 
@@ -58,4 +62,4 @@ theorem reachable_of_statement (r : Realizes m ens boundary admissible) {publicI
 
 end Realizes
 
-end Machine
+end Air.Flat

@@ -52,10 +52,9 @@ check_tree() {
 check_tree SP1Clean SP1Clean.lean
 check_tree ToClean ToClean.lean
 check_tree ToPolyFun ToPolyFun.lean
-check_tree Machine Machine.lean
 check_tree ToMathlib ToMathlib.lean
 
 if [ "$fail" -eq 0 ]; then
-  echo "PASS: root indices import all $total modules across SP1Clean/ToClean/ToMathlib/ToPolyFun/Machine, no dangling imports"
+  echo "PASS: root indices import all $total modules across SP1Clean/ToClean/ToMathlib/ToPolyFun, no dangling imports"
 fi
 exit "$fail"

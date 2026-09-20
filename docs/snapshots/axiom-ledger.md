@@ -39,7 +39,8 @@ The PolyFun additions, the ensemble-realization statement, and its SP1 shard ins
 main probes and no test probes. All preceding 2787 main and 323 test dependency sets are
 unchanged, with no removals or new main-library axiom names. The six generic declarations
 (`ToPolyFun/`: orbit composition and splitting, labeled-trace concatenation and its projection to
-reachability; `Machine/`: the ensemble-realization statement and its reachability corollary) use
+reachability; `ToClean/Air/Realizes.lean`: the ensemble-realization statement and its reachability
+corollary) use
 subsets of the logical baseline; the five SP1 instances (`sp1Machine`, `trace_iff_executionPath`,
 `executes_iff`, `realizes`, `statement_iff_of_realizes`) inherit the existing Sail platform-hook
 surface of `ExecutionStep` and nothing else. The shard targets remain unfilled; these probes fix
