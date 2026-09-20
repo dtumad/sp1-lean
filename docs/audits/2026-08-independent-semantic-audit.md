@@ -143,13 +143,13 @@ from field equations or uniqueness from balance alone.
 
 **P2 · NEW**
 
-`SP1CleanTest/NonVacuityReal.lean` is a valuable row-local battery, but it intentionally excludes
+`SP1CleanTest/Alignment/NonVacuityReal.lean` is a valuable row-local battery, but it intentionally excludes
 global channel balance, and its representative instruction PCs mostly use `4096`, below the legal
 guest code window `[2^16, 2^48)`. The retained semantic example correctly uses `ADD x1, x2, x3` at
 `0x10000`, but its concrete `decodedInROM` theorem was retired during the Lean 4.32.2/Sail-v5
 migration.
 
-This branch adds `SP1CleanTest/Audit/OneAddNativePremises.lean`, which:
+This branch adds `SP1CleanTest/Alignment/Audit/OneAddNativePremises.lean`, which:
 
 - uses the first legal code address, `0x10000`;
 - proves the complete flattened native Add circuit constraints;

@@ -192,7 +192,7 @@ Add (vector) and Bitwise (struct + first `hintGet`) pilots:
    *expressions* over earlier same-row cells) needs no bespoke congr: in CW, `apply Vector.ext` then
    `simp only [Witgen.WitgenIR.getElem_eval_ofExprs]` per cell and chain `h_agree.get_eq (by omega)`
    rewrites, one per distinct cell read.
-10. **Last step**: the `#assert_exportable` line in `SP1CleanTest/Exportable.lean` with the
+10. **Last step**: the `#assert_exportable` line in `SP1CleanTest/Alignment/Exportable.lean` with the
    `#guard_msgs`-pinned cell count, the root-index import for the new `Witgen.lean`, and the
    standing gates — the chip's **trace anchor must pass unmodified** (the `native_decide`
    byte-for-byte re-derivation through the new IR path is the semantic gate on the whole swap).

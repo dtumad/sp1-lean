@@ -16,8 +16,21 @@ name: Lean Action CI
 #    cannot finish inside one job fails once and the re-run continues where it stopped. Once warm,
 #    builds are incremental and take minutes.
 #
-# Structure: `guards` (source-policy gates, seconds) runs in parallel with `build`; `lint`, `test`,
-# and `audit` need `build` and restore its exact cache entry so they replay rather than recompile.
+# Structure: `guards` (source-policy gates, seconds) runs in parallel with `build`; `lint` and
+# `test` need `build` and restore its exact cache entry so they replay rather than recompile.
+#
+# Cache scoping: GitHub makes a cache entry visible only to the branch that created it and to
+# branches based on it (through the default branch). An entry saved by a pull-request run lives on
+# that PR's merge ref and is invisible to every other PR, so the warm cache PRs actually restore is
+# the one written by the `push` run on `main`. Merging to `main` therefore refreshes the shared
+# cache; a PR's own first build is incremental only from `main`'s entry.
+#
+# Scope: this workflow builds the CORE (`lake build` = `SP1Core` + `ToClean` + `ToMathlib`, the
+# generic/semantic layers and the chip circuits with their proofs) and its test set (`lake test` =
+# `SP1CoreTest`). The SP1-alignment layers (extracted oracles, Faithful, Sail bridges, Soundness,
+# Composition), their tests, the witgen/dump conformance gates, and the axiom census run in
+# `alignment.yml` (scheduled weekly, on demand, and on pushes to `main`), which shares this cache
+# as a fallback. See docs/agents/compile-profile-2026-09.md for the measurement behind the split.
 
 on:
   push:
@@ -159,16 +172,18 @@ jobs:
           use-github-cache: "false"
       - name: Replay the build
         run: lake build
-      - name: Environment linters (lake lint)
-        run: lake lint
+      # `lake lint` imports the umbrella `SP1Clean`, whose oleans only the alignment workflow builds;
+      # `--scope core` lints every hand-written module whose olean is present instead.
+      - name: Environment linters, core scope (sp1Lint --scope core)
+        run: lake build sp1Lint && lake exe sp1Lint --scope core
 
   test:
-    # Conformance tests (`lake test` → the `SP1CleanTest` testDriver: the exportability battery and
-    # the non-vacuity/real-row satisfiability anchors; whole-trace conformance itself is the separate
-    # dump-anchored pipeline re-run below via `check_witgen_export.sh --regen`). These live in their
-    # own library — the ONLY place `native_decide` is allowed — so they are gated here, separately
-    # from the `native_decide`-free main build. The test-library oleans get their own incremental
-    # cache so unchanged test modules are not re-elaborated every run.
+    # Core tests (`lake test` → the `SP1CoreTest` testDriver: the test modules whose import closure
+    # stays inside the core). The alignment-only anchors, the witgen/dump conformance gates, and the
+    # test-scope axiom census run in `alignment.yml`. Test modules are the ONLY place `native_decide`
+    # is allowed, so they are gated here separately from the `native_decide`-free main build. The
+    # test-library oleans get their own incremental cache so unchanged test modules are not
+    # re-elaborated every run.
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 350
@@ -212,7 +227,7 @@ jobs:
           use-github-cache: "false"
       - name: Replay the build
         run: lake build
-      - name: Conformance tests (lake test)
+      - name: Core tests (lake test = SP1CoreTest)
         run: timeout 5h lake test
       - name: Save the test-library build cache
         if: always()
@@ -224,53 +239,3 @@ jobs:
           key: ${{ needs.build.outputs.cache-prefix }}-test-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Whole-ensemble export identity
         run: bash scripts/check_ensemble_export.sh
-      # The committed export/witgen goldens must match a fresh regeneration byte-for-byte.
-      # This runs here (not in `guards`) because the exporter needs the SP1CleanTest oleans
-      # that `lake test` just built — golden drift on a Clean pin bump is caught automatically.
-      - name: Witgen export matches a fresh regeneration
-        run: scripts/check_witgen_export.sh --regen
-      # The test-scope axiom census (scripts/axiom_probe_test.lean) elaborates against the
-      # SP1CleanTest oleans that `lake test` just built — the only job where they exist.
-      - name: Test-library axiom census (scripts/run_audit.sh --test-only)
-        run: scripts/run_audit.sh --test-only
-
-  audit:
-    # The release audit harness (`scripts/run_audit.sh --main-only`): pin cross-checks, the
-    # zero-tolerance proof-deferral and project-axiom scans, the source-policy guards, and the
-    # authoritative `#print axioms` census over the released main-library theorem surface, gated
-    # against the committed `docs/snapshots/axiom-census.txt` (a drift fails; `--update` is a
-    # local, deliberate act). `--main-only` because the test-scope census runs in the `test` job.
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
-            /usr/local/share/boost /usr/local/.ghcup
-          df -h /
-      - name: Restore the project build cache
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            .lake/build
-            .lake/packages/*
-            !.lake/packages/mathlib
-          key: ${{ needs.build.outputs.cache-key }}
-          restore-keys: |
-            ${{ needs.build.outputs.cache-prefix }}-${{ github.sha }}-
-            ${{ needs.build.outputs.cache-prefix }}-
-      - uses: leanprover/lean-action@v1
-        with:
-          build: "false"
-          test: "false"
-          lint: "false"
-          use-mathlib-cache: "true"
-          use-github-cache: "false"
-      - name: Replay the build
-        run: lake build
-      - name: Release audit, main scope (scripts/run_audit.sh --main-only)
-        run: scripts/run_audit.sh --main-only

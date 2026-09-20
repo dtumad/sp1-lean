@@ -1,17 +1,17 @@
 import SP1Clean.Soundness.TypedTimeContracts
-import SP1Clean.Proofs.Chips.BitwiseChip.Contracts
-import SP1Clean.Proofs.Chips.LtChip.Contracts
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Contracts
-import SP1Clean.Proofs.Chips.ShiftRightChip.Contracts
+import SP1Clean.Alignment.Chips.BitwiseChip.Contracts
+import SP1Clean.Alignment.Chips.LtChip.Contracts
+import SP1Clean.Alignment.Chips.ShiftLeftChip.Contracts
+import SP1Clean.Alignment.Chips.ShiftRightChip.Contracts
 import SP1Clean.Proofs.Chips.BranchChip.Contracts
-import SP1Clean.Proofs.Chips.LoadByteChip.Contracts
-import SP1Clean.Proofs.Chips.LoadHalfChip.Contracts
-import SP1Clean.Proofs.Chips.LoadWordChip.Contracts
-import SP1Clean.Proofs.Chips.LoadX0Chip.Contracts
-import SP1Clean.Proofs.Chips.MulChip.Contracts
-import SP1Clean.Proofs.Chips.DivRemChip.Contracts
-import SP1Clean.Proofs.Chips.UTypeChip.Bridge
-import SP1Clean.Proofs.Chips.AluX0Chip.Bridge
+import SP1Clean.Alignment.Chips.LoadByteChip.Contracts
+import SP1Clean.Alignment.Chips.LoadHalfChip.Contracts
+import SP1Clean.Alignment.Chips.LoadWordChip.Contracts
+import SP1Clean.Alignment.Chips.LoadX0Chip.Contracts
+import SP1Clean.Alignment.Chips.MulChip.Contracts
+import SP1Clean.Alignment.Chips.DivRemChip.Contracts
+import SP1Clean.Alignment.Chips.UTypeChip.Bridge
+import SP1Clean.Alignment.Chips.AluX0Chip.Bridge
 
 /-! # The fetch discriminant: no supported instruction row pins the `ECALL` opcode
 

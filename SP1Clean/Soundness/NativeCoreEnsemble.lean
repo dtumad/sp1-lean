@@ -2,7 +2,7 @@ import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.EnsembleChannels
 import SP1Clean.Soundness.InitialMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Proofs.Chips.DecodedProgramProvider.Bridge
+import SP1Clean.Alignment.Chips.DecodedProgramProvider.Bridge
 import SP1Clean.FormalModel.Contracts.NativeCoreBoundary
 
 /-! # Image-authenticated native core assembly

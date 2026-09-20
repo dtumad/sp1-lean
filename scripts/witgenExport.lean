@@ -1,4 +1,4 @@
-import SP1CleanTest.Exportable
+import SP1CleanTest.Alignment.Exportable
 import SP1CleanTest.TraceGenTests.TraceGenerator
 
 /-! # `witgenExport` — the witness-IR export driver (waves D2/D4a)
@@ -30,7 +30,7 @@ evaluation.
 
 This is deliberately an interpreted script, not a `lean_exe`: elaborating the file runs
 the trailing `#eval` against the already-built oleans (the same path as
-`#assert_exportable`'s `#eval`s in `SP1CleanTest/Exportable.lean`), where a compiled
+`#assert_exportable`'s `#eval`s in `SP1CleanTest/Alignment/Exportable.lean`), where a compiled
 executable would force native compilation of the whole import closure. Upstream Clean
 drives its plonky3 fixture scripts the same way, via `lean --run` — unavailable here
 because the generated Sail model (`LeanRV64D`) already owns the root `main`, hence the

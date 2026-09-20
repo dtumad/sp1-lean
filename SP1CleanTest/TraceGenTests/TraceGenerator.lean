@@ -17,7 +17,7 @@ trace generation): given a chip's `main` and one row's concrete input column val
 So a full trace row is *derived* from the circuit definition; nothing about column order, witness
 formulas, or wiring is restated. `generateTrace` then assembles a whole matrix: derived rows for the
 real events plus all-zero padding rows, exactly mirroring SP1's `generate_trace` (which zero-fills
-padding). Consumers: the real-row satisfiability anchors (`SP1CleanTest/NonVacuityReal.lean`) and
+padding). Consumers: the real-row satisfiability anchors (`SP1CleanTest/Alignment/NonVacuityReal.lean`) and
 the exporter's per-chip `circuitTraceRowMapped` spot check, which pins the dump-anchored
 generation-time gate's row evaluation to this value-level path on real SP1 data.
 

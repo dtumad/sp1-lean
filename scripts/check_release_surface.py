@@ -95,13 +95,13 @@ for suffix in ("manifest.json", "rowmap.json", "witgen.json"):
             f"missing={sorted(expected_names - actual)}, extra={sorted(actual - expected_names)}"
         )
 
-nonvacuity_source = (ROOT / "SP1CleanTest/NonVacuityReal.lean").read_text()
+nonvacuity_source = (ROOT / "SP1CleanTest/Alignment/NonVacuityReal.lean").read_text()
 for _, name, anchor in CHIPS:
     chip = f"{name}Chip"
     require(ROOT / f"SP1Clean/Extracted/ChipOracle/{name}.lean", "whole-chip oracle")
     require(ROOT / f"SP1Clean/Faithful/{chip}.lean", "whole-chip faithfulness anchor")
     require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Formal.lean", "formal chip proof")
-    require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Bridge.lean", "Sail bridge")
+    require(ROOT / f"SP1Clean/Alignment/Chips/{chip}/Bridge.lean", "Sail bridge")
     require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Complete.lean", "trace compiler realization")
     if name in {"ShiftLeft", "ShiftRight", "DivRem"}:
         require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Defs.lean", "documented chip definition")

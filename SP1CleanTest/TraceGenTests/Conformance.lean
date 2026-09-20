@@ -6,7 +6,7 @@ import SP1Clean.Model.SP1Field
 `TraceGenTests/` is the substrate for deriving whole trace rows *from a chip's own circuit*
 (`TraceGenerator.lean` — witness columns from `main`'s witness closures, row layout from `main`'s
 output struct) plus the event → input-column extraction (`EventPopulate.lean`). Its consumers are
-the real-row satisfiability battery (`SP1CleanTest/NonVacuityReal.lean`) and the exporter's
+the real-row satisfiability battery (`SP1CleanTest/Alignment/NonVacuityReal.lean`) and the exporter's
 per-chip `circuitTraceRowMapped` spot check.
 
 Trace conformance against SP1's real `MachineAir::generate_trace` lives in the dump-anchored

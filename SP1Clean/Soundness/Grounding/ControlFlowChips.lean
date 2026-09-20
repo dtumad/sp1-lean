@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.Grounding.ITypeChips
-import SP1Clean.Proofs.Chips.JalrChip.Bridge
-import SP1Clean.Proofs.Chips.BranchChip.Bridge
+import SP1Clean.Alignment.Chips.JalrChip.Bridge
+import SP1Clean.Alignment.Chips.BranchChip.Bridge
 
 /-! # Control-flow chip grounding
 
