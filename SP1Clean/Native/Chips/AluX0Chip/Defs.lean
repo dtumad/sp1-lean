@@ -81,6 +81,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   -- **pull** (W11 flip): the reader pulls the instruction fetch as a guarantee, which propagates here.
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     simp only [circuit_norm, main, Readers.CPUState.circuit,
       Readers.ALUTypeReaderImmutable.circuit]
 

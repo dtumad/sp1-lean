@@ -77,6 +77,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   completeness
   channelsWithRequirements := [memoryChannel.toRaw, channel.toRaw]
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     rw [operations_eq]
     refine ⟨?_, ?_, ?_⟩

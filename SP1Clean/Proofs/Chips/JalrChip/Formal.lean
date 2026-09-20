@@ -550,6 +550,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       have h_byte : (byteChannel (p := p)).toRaw ∈
           (elaborated (p := p)).channelsWithGuarantees := by
         simp only [circuit_norm]
@@ -628,6 +629,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       -- `is_trusted = is_real`, opcode `JALR = 47`), consumed by `Soundness/TypedProgram.lean`.
       expose programChannel (exposedProgramInteractions input),
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       unfold Operations.ExposedChannelsLawful
       intro exposed exposedMem

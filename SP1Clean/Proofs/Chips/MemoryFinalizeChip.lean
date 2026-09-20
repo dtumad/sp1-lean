@@ -101,6 +101,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     refine ⟨?_, fun _ => ⟨h_assumptions.1, h_assumptions.2.1⟩⟩
     rcases h_assumptions.2.2 with h | h <;> simp [h]
   requirementsChannelsLawful := fun input_var i₀ => by
+    preserve_tactic_target
     simp only [circuit_norm, main, memoryChannel]; grind
 
 end SP1Clean.MemoryFinalizeChip

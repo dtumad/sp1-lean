@@ -84,6 +84,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   -- `MemoryAccessCols` carrier makes a `main`-unfolding `simp` prohibitively expensive, so state the
   -- op list directly and split the interaction membership by hand.
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     change Operations.ChannelsLawful

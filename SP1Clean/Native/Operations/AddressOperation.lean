@@ -395,6 +395,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Extracted.AddressOperation :=
     completeness := completeness,
     channelsWithRequirements := [],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       simp only [circuit_norm, main, byteChannel]
       refine ⟨List.nil_subset _, ?_⟩
       intro env hgate hnotone hnotzero

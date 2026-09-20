@@ -31,14 +31,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     circuit_proof_start [Gadgets.Equality.circuit, HostCallChip.channel, codeWord]
     simpa only [eval_zero, Spec, codeWord, circuit_norm] using h_assumptions
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     simp [main, circuit_norm, HostCallChip.channel]
-
-set_option linter.unusedSectionVars false in
-/-- The bundle's channels, stated on the bundle (see `HostHaltChip.circuit_channels`). -/
-@[circuit_norm] lemma circuit_channels :
-    (circuit (p := p)).base.channels = [HostCallChip.channel.toRaw, HostCallChip.channel.toRaw] := by
-  show (elaborated (p := p)).channelsWithGuarantees ++ [HostCallChip.channel.toRaw] = _
-  simp only [circuit_norm, List.cons_append, List.nil_append]
 
 end SP1Clean.HostEnterChip

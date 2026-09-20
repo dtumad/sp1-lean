@@ -197,6 +197,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       [ exitChannel.pushedIf input.is_real (exitMsg input),
         exitChannel.pushedIf (1 - input.is_real) exitPaddingMsg ]
   exposedChannels_eq := by
+    preserve_tactic_target
     intro input offset
     unfold Operations.ExposedChannelsLawful
     intro exposed exposedMem
@@ -227,6 +228,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
           decide_false, decide_true, Bool.false_eq_true, if_true, if_false,
           List.nil_append, exposedMemoryInteractions]
   requirementsChannelsLawful := fun input_var i₀ => by
+    preserve_tactic_target
     dsimp only [Operations.RequirementsChannelsLawful]
     refine ⟨by simp only [circuit_norm, main, Readers.CPUState.circuit,
         Readers.RegisterAccessCols.circuit], ?_, ?_⟩

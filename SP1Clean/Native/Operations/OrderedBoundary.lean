@@ -70,6 +70,7 @@ def circuit (name : String) : GeneralFormalCircuit (ZMod p) Inputs unit where
   ProverAssumptions input _ _ := ProverAssumptions input
   channelsWithRequirements := [(channel name).toRaw]
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     refine ⟨?_, ?_, ?_⟩
     · simp only [main, circuit_norm, channel, WordRangeCheck.circuit]

@@ -131,6 +131,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
     [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
      exitChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     dsimp only [Operations.ChannelsLawful]

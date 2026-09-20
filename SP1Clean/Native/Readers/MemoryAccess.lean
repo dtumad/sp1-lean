@@ -121,6 +121,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   -- `channelsWithRequirements`).
   channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     change Operations.ChannelsLawful
@@ -249,6 +250,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [memoryChannel.toRaw],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       change Operations.RequirementsChannelsLawful
         ([.assert _, .subcircuit _, .subcircuit _, .subcircuit _, .interact _, .interact _,
           .interact _, .interact _] : Operations (ZMod p))

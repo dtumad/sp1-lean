@@ -164,6 +164,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns where
            input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0],
            #v[input.adapter.op_c, 0, 0, 0], input.adapter.op_a_0, 0, 0⟩ ]
   exposedChannels_eq := by
+    preserve_tactic_target
     intro input offset
     have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
     have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)

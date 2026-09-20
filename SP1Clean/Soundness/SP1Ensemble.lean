@@ -117,6 +117,7 @@ instance sp1StateVerifierElaborated :
   channelsWithGuarantees :=
     [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.exitChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     simp [circuit_norm, sp1StateVerifierMain, Channels.stateChannel, Channels.byteChannel,
       Channels.exitChannel]
 
@@ -197,6 +198,7 @@ def sp1StateVerifier : GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
   completeness := sp1StateVerifier_completeness
   channelsWithRequirements := []
   requirementsChannelsLawful := fun pi offset => by
+    preserve_tactic_target
     simp only [circuit_norm, sp1StateVerifierMain, Channels.stateChannel, Channels.byteChannel,
       Channels.exitChannel]
     intro channel h
@@ -208,6 +210,7 @@ def sp1StateVerifier : GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
     expose Channels.exitChannel
       [ Channels.exitChannel.pulled (⟨pi.exit_code⟩ : Channels.ExitMsg (Expression (ZMod p))) ]
   exposedChannels_eq := by
+    preserve_tactic_target
     intro pi offset
     unfold Operations.ExposedChannelsLawful
     intro exposed exposedMem

@@ -33,7 +33,7 @@ theorem main_host_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
   have bounded := InteractionRecovery.interactionsWith_main_eq_nil
     (BoundedWord.circuit (bound p) bound_fits).base HostCallChip.channel.toRaw
     ⟨input.call.arg1, input.comparison⟩ offset
-    (by simp [BoundedWord.circuit_channels, HostCallChip.channel, byteChannel, Channel.toRaw])
+    (by simp [BoundedWord.circuit, circuit_norm, HostCallChip.channel, byteChannel])
   simp only [main, circuit_norm, List.nil_append]
   simp only [Operations.interactionsWith, Circuit.operations] at bounded ⊢
   simp only [GeneralFormalCircuit.toSubcircuit_interactions,
@@ -53,7 +53,7 @@ theorem main_other_interactions (target : RawChannel (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith target = [] := by
   apply InteractionRecovery.interactionsWith_main_eq_nil circuit.base target input offset
-  simp [circuit_channels, notByte, notHost, notExit]
+  simp [circuit, circuit_norm, notByte, notHost, notExit]
 
 theorem component_spec_of_byte (env : Environment (ZMod p))
     (constraints : (⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env)
@@ -75,7 +75,7 @@ theorem terminal_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Envi
   have bounded := InteractionRecovery.interactionsWith_main_eq_nil
     (BoundedWord.circuit (bound p) bound_fits).base HostExitBoundary.channel.toRaw
     ⟨input.call.arg1, input.comparison⟩ offset
-    (by simp [BoundedWord.circuit_channels, HostExitBoundary.channel, byteChannel, Channel.toRaw])
+    (by simp [BoundedWord.circuit, circuit_norm, HostExitBoundary.channel, byteChannel])
   have raw : ((main input).operations offset).interactionsWith HostExitBoundary.channel.toRaw =
       [(HostExitBoundary.channel.pushed input.call.arg1).toRaw] := by
     simp only [main, circuit_norm, List.nil_append]
@@ -107,7 +107,7 @@ theorem main_other_interactions (target : RawChannel (ZMod p))
     (notHost : target ≠ HostCallChip.channel.toRaw) (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith target = [] := by
   apply InteractionRecovery.interactionsWith_main_eq_nil circuit.base target input offset
-  simp [circuit_channels, notHost]
+  simp [circuit, circuit_norm, notHost]
 
 omit [Fact (2 ^ 17 < p)] in
 theorem component_spec_of_constraints (env : Environment (ZMod p))

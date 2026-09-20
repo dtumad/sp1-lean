@@ -123,6 +123,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
 
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   channelsLawful := by
+    preserve_tactic_target
     simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit,
       Readers.ITypeReaderImmutable.circuit, Readers.MemoryAccess.circuit]
   -- only the `AddressOperation` subcircuit witnesses (its 4 cells); the other blocks are threaded

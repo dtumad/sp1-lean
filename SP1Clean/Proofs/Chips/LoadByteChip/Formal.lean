@@ -396,6 +396,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       [stateChannel.toRaw, memoryChannel.toRaw],
     soundness := soundness, completeness := completeness,
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       simp only [circuit_norm, main, byteChannel, stateChannel, memoryChannel, programChannel,
         AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit,
         Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit]; grind,
@@ -420,6 +421,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
              #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c_imm,
              input.adapter.op_a_0, 0, 1⟩ ],
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
       have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)

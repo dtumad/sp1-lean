@@ -160,6 +160,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
       varFromOffset BitwiseU16Operation.Columns (offset + 3),
       var { index := offset }, var { index := offset + 1 }, var { index := offset + 2 }⟩
   channelsLawful := by
+    preserve_tactic_target
     simp only [circuit_norm, main, BitwiseU16Operation.circuit, Readers.ALUTypeReader.circuit,
       Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
   -- witnesses the three flags (3) + the `BitwiseU16Operation` column struct (`b_low_bytes` 4 +

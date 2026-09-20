@@ -125,6 +125,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   completeness := completeness
   channelsWithRequirements := [memoryChannel.toRaw]
   requirementsChannelsLawful := fun input_var i₀ => by
+    preserve_tactic_target
     change Operations.RequirementsChannelsLawful
       ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
         .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))

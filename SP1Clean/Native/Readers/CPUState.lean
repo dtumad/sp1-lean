@@ -116,6 +116,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   -- guarantee-bearing interaction and must remain visible to composing circuits.
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     change Operations.ChannelsLawful

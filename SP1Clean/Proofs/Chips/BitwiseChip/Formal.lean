@@ -586,6 +586,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       -- `Soundness/TypedProgram.lean`.
       expose programChannel (exposedProgramInteractions input offset),
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
       have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)

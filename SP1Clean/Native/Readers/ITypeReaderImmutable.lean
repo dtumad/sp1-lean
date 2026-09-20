@@ -75,6 +75,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   -- so it joins `channelsWithGuarantees`; its read-back `pushIf`s keep it in `channelsWithRequirements`).
   channelsWithGuarantees := [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     dsimp only [Operations.ChannelsLawful]
@@ -222,6 +223,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [memoryChannel.toRaw],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       dsimp only [Operations.RequirementsChannelsLawful]
       refine ⟨by simp only [circuit_norm, main, RegisterAccessCols.circuit], ?_, ?_⟩
       · intro channel h_channel

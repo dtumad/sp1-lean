@@ -220,6 +220,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   localLength _ := 0
   output _ _ := ()
   localLength_eq := by
+    preserve_tactic_target
     intro input offset
     simp only [circuit_norm, main, Readers.CPUState.circuit,
       Readers.RegisterAccessCols.circuit, IsZeroOperation.circuit,
@@ -230,6 +231,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
     [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
      exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     dsimp only [Operations.ChannelsLawful]

@@ -862,15 +862,12 @@ private theorem main_requirementsChannelsLawful (input_var : Var Inputs (ZMod p)
     have h_bool : Expression.eval env input_var.is_real = 0 ∨
         Expression.eval env input_var.is_real = 1 :=
       bool_of_mul_pred (by simpa only [sub_eq_add_neg] using h_constraints)
-    have h_bool' : (ProvableStruct.eval env input_var).is_real = 0 ∨
-        (ProvableStruct.eval env input_var).is_real = 1 := by
-      simpa only [circuit_norm] using h_bool
     have h_pull (msg : ByteRow (Expression (ZMod p))) :
         (byteChannel.pulledIf input_var.is_real msg).toRaw.Requirements env := by
       rw [ChannelInteraction.toRaw_requirements]
       intro h1 h0
       simp only [pulledIf_mult, circuit_norm] at h1 h0
-      exact off_gate_vacuous h_bool' h1 h0
+      exact off_gate_vacuous h_bool h1 h0
     simp only [Operations.InChannelsOrRequirements, Operations.forAllNoOffset_append,
       Operations.forAllNoOffset, List.not_mem_nil, false_or, true_and, and_true]
     and_intros

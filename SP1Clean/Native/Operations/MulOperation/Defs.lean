@@ -91,6 +91,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   output_eq := by intros; simp only [main, circuit_norm, seval]
   subcircuitsConsistent := by intros; simp only [main, circuit_norm, seval]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     simp only [main, circuit_norm, seval, U16toU8OperationSafe.circuit, U16MSBOperation.circuit,
       List.cons_subset, List.nil_subset, List.mem_singleton, and_self]

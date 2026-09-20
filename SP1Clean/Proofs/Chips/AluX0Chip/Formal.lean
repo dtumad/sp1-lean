@@ -232,6 +232,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     channelsWithRequirements :=
       [stateChannel.toRaw, memoryChannel.toRaw],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       simp only [circuit_norm, main, byteChannel, stateChannel, memoryChannel, programChannel,
         Readers.CPUState.circuit, Readers.ALUTypeReaderImmutable.circuit]; grind,
     -- W11 (A2): expose the State-bus `[pulledIf is_real cur, pushedIf is_real next]` pair (pc+4, clk+8)
@@ -247,6 +248,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       -- `Soundness/TypedProgram.lean`.
       expose programChannel (exposedProgramInteractions input),
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
       have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)
