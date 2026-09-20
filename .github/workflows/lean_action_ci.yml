@@ -179,8 +179,10 @@ jobs:
 
   test:
     # Core tests (`lake test` → the `SP1CoreTest` testDriver: the test modules whose import closure
-    # stays inside the core). The alignment-only anchors, the witgen/dump conformance gates, and the
-    # test-scope axiom census run in `alignment.yml`. Test modules are the ONLY place `native_decide`
+    # stays inside the core — including the exportability battery and both non-vacuity batteries,
+    # which import the chip `Formal`/`Witgen` modules rather than the umbrella). The alignment-only
+    # anchors, the witgen regeneration gate (its exporter needs the `Faithful` reconfigure maps),
+    # and the test-scope axiom census run in `alignment.yml`. Test modules are the ONLY place `native_decide`
     # is allowed, so they are gated here separately from the `native_decide`-free main build. The
     # test-library oleans get their own incremental cache so unchanged test modules are not
     # re-elaborated every run.

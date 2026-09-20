@@ -1,4 +1,5 @@
-import SP1CleanTest.Alignment.NonVacuityReal
+import SP1Clean
+import SP1CleanTest.Core.NonVacuityReal
 
 /-! # Independent-audit regression: one committed-window ADD row
 

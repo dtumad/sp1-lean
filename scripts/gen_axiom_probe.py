@@ -2421,7 +2421,7 @@ TARGETS = [
     # The real-row satisfiability battery: every named anchor (28 per-chip rows + the Spec-level
     # companions + the nonempty-assert-list guard) is census-visible so its native_decide trust is
     # disclosed per-declaration like the conformance anchors.
-    ("SP1CleanTest/Alignment/NonVacuityReal.lean", r"theorem\s+(\w+)\b"),
+    ("SP1CleanTest/Core/NonVacuityReal.lean", r"theorem\s+(\w+)\b"),
     # Independent audit regressions freeze the full native constraint checks and exact evaluated
     # bus footprints.  The active-trace declarations additionally keep the generated one-row trace,
     # its particular native witness, and the official-Sail consequence census-visible end to end.

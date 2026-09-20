@@ -163,7 +163,8 @@ jobs:
       - name: Whole-ensemble export identity
         run: bash scripts/check_ensemble_export.sh
       # The committed export/witgen goldens must match a fresh regeneration byte-for-byte; the
-      # exporter needs the SP1CleanTest oleans built above.
+      # exporter maps native rows through the `Faithful` reconfigure maps, so it needs the full
+      # library built above even though the exportability battery itself is core.
       - name: Witgen export matches a fresh regeneration
         run: scripts/check_witgen_export.sh --regen
       - name: Test-library axiom census (scripts/run_audit.sh --test-only)
