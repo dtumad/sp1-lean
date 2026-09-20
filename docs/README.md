@@ -26,6 +26,7 @@ Each document has one role:
 | [`audits/2026-08-unification-target-architecture.md`](audits/2026-08-unification-target-architecture.md) | unification campaign's measured architecture baseline and pin decision |
 | [`audits/2026-09-capstone-assessment.md`](audits/2026-09-capstone-assessment.md) | eight-PR provenance, reproduction evidence, confirmed defects, and finish-line assessment |
 | [`audits/2026-09-19-capstone-branch-review.md`](audits/2026-09-19-capstone-branch-review.md) | independent review of the full-state capstone branch: model, statement, installed proofs, findings |
+| [`audits/2026-09-build-semantics.md`](audits/2026-09-build-semantics.md) | build cost joined to the claim map: layers, import floor, hotspot mechanisms, per-cluster verdicts, proposals |
 | [`agents/`](agents/README.md) | maintained contributor techniques and provenance procedures |
 | [`snapshots/axiom-ledger.md`](snapshots/axiom-ledger.md) | generated per-theorem axiom inventory |
 
