@@ -23,7 +23,7 @@ check their actual whole-witness ledgers and fixed lookups. These remain subsyst
 the other channels and complete mixed execution are not claimed satisfied by these fixtures.
 -/
 
-namespace SP1CleanTest.Alignment.Core.HostHintReadPartition
+namespace SP1CleanTest.Core.HostHintReadPartition
 
 open Circuit Air.Flat SP1Clean Model.Core HintQueue Soundness HostChecks
 
@@ -561,4 +561,4 @@ theorem cpuWordGrouping :
   simp only [List.map_map, Function.comp_def, callWords_eq]
   native_decide
 
-end SP1CleanTest.Alignment.Core.HostHintReadPartition
+end SP1CleanTest.Core.HostHintReadPartition

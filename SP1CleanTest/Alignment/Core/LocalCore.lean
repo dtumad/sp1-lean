@@ -18,7 +18,7 @@ exercise the grounding interfaces; stopped-source rows are rejected while identi
 This is AIR conformance, not an execution theorem.
 -/
 
-namespace SP1CleanTest.Alignment.Core.LocalCore
+namespace SP1CleanTest.Core.LocalCore
 
 open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Soundness.Target
 
@@ -757,4 +757,4 @@ theorem protectedPaddingIdentity :
     check image source identityPublic rows true = true ∧
       check image { source with host.exitCode := some 0 } identityPublic rows true = true := by native_decide
 
-end SP1CleanTest.Alignment.Core.LocalCore
+end SP1CleanTest.Core.LocalCore

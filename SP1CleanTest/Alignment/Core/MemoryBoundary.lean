@@ -11,7 +11,7 @@ lookup, and validate every nonzero Byte interaction against the byte-op semantic
 ordering interactions are retained for the separate whole-ensemble balance argument.
 -/
 
-namespace SP1CleanTest.Alignment.Core.MemoryBoundary
+namespace SP1CleanTest.Core.MemoryBoundary
 
 open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
 
@@ -306,4 +306,4 @@ theorem nativeBoundaryInventories :
      controlValid [initial, initRegisterRow 0 0, initRegisterRow 0 0, terminalRow 1]] =
       [true, true, false, false, false] := by native_decide
 
-end SP1CleanTest.Alignment.Core.MemoryBoundary
+end SP1CleanTest.Core.MemoryBoundary

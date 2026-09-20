@@ -15,7 +15,7 @@ and Byte/Memory/Program local checks. State, Exit and PublicValues balance, and 
 remain whole-ensemble obligations outside these local satisfiability tests.
 -/
 
-namespace SP1CleanTest.Alignment.Core.HostCall
+namespace SP1CleanTest.Core.HostCall
 
 open Circuit Air.Flat SP1Clean SP1Clean.HostCallChip SP1Clean.Model.Core
 
@@ -275,4 +275,4 @@ theorem registeredReceiverHandoff :
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger ++ ledger.take 1) = false := by
   native_decide
 
-end SP1CleanTest.Alignment.Core.HostCall
+end SP1CleanTest.Core.HostCall

@@ -11,7 +11,7 @@ incoming host state and RAM. Each call is a separate semantic shard, and their j
 same two-step execution. These test the semantic interface, not an AIR witness.
 -/
 
-namespace SP1CleanTest.Alignment.Core.ExecutionPath
+namespace SP1CleanTest.Core.ExecutionPath
 
 open SP1Clean SP1Clean.Model.Core SP1Clean.Machine SP1Clean.Soundness.Target
   LeanRV64D LeanRV64D.Defs
@@ -345,4 +345,4 @@ theorem queueWriteNeedsAllocation :
   unfold QueueProjectionSafe
   native_decide
 
-end SP1CleanTest.Alignment.Core.ExecutionPath
+end SP1CleanTest.Core.ExecutionPath

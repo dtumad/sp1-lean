@@ -10,7 +10,7 @@ emitted channel. Active histories check all assertions and Byte meanings, then b
 balance; authenticating their HostCall inputs remains the enclosing machine's responsibility.
 -/
 
-namespace SP1CleanTest.Alignment.Core.HostCommitBoundary
+namespace SP1CleanTest.Core.HostCommitBoundary
 
 open Circuit Air.Flat SP1Clean SP1Clean.HostCommitChip SP1Clean.Soundness
 
@@ -222,4 +222,4 @@ theorem continuationTampering : [false, true].all (fun deferred =>
 #assert_exportable (HostCommitBoundary.verifier (p := SP1Prime) true
   (HostCommitEnsemble.sourceValues true continuationSource))
 
-end SP1CleanTest.Alignment.Core.HostCommitBoundary
+end SP1CleanTest.Core.HostCommitBoundary

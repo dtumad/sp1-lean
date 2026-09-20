@@ -9,7 +9,7 @@ immediate and reserved-bit edge cases. The uniform parser/Sail agreement theorem
 proof library; these regressions also witness the official hint-extension priority concretely.
 -/
 
-namespace SP1CleanTest.Alignment.Core.InstructionDecode
+namespace SP1CleanTest.Core.InstructionDecode
 
 open Circuit LeanRV64D.Defs SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
 
@@ -138,4 +138,4 @@ theorem fixedProgramConstraints :
 #guard_msgs in
 #assert_exportable (SP1Clean.DecodedProgramProvider.circuit (p := SP1Clean.SP1Prime) image)
 
-end SP1CleanTest.Alignment.Core.InstructionDecode
+end SP1CleanTest.Core.InstructionDecode

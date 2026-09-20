@@ -21,7 +21,7 @@
 'SP1CleanTest.Core.MemoryFinalCheck.rejectsForgedEndpoints' depends on axioms: [propext,
  Quot.sound,
  SP1CleanTest.Core.MemoryFinalCheck.rejectsForgedEndpoints._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.LocalCore.terminalIdentity' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.terminalIdentity' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -120,9 +120,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.terminalIdentity._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.terminalIdentity._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.installedHaltExit' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.installedHaltExit' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -221,9 +221,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.installedHaltExit._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.installedHaltExit._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsInstalledExitForgery' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsInstalledExitForgery' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -322,9 +322,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsInstalledExitForgery._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsInstalledExitForgery._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsSuppliedExitStatus' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsSuppliedExitStatus' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -423,9 +423,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsSuppliedExitStatus._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsSuppliedExitStatus._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.hostBookkeeping' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.ExecutionPath.hostBookkeeping' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -502,17 +502,17 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_1,
- SP1CleanTest.Alignment.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_2,
- SP1CleanTest.Alignment.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_3,
- SP1CleanTest.Alignment.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_4,
- SP1CleanTest.Alignment.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_6,
- SP1CleanTest.Alignment.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_7]
-'SP1CleanTest.Alignment.Core.ExecutionPath.bookkeepingObservationExamples' depends on axioms: [propext,
+ SP1CleanTest.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_2,
+ SP1CleanTest.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_3,
+ SP1CleanTest.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_4,
+ SP1CleanTest.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_5,
+ SP1CleanTest.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_6,
+ SP1CleanTest.Core.ExecutionPath.hostBookkeeping._native.native_decide.ax_1_7]
+'SP1CleanTest.Core.ExecutionPath.bookkeepingObservationExamples' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-'SP1CleanTest.Alignment.Core.ExecutionPath.ordinaryBookkeeping' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.ExecutionPath.ordinaryBookkeeping' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -599,7 +599,7 @@
  Classical.choice,
  Quot.sound,
  SP1CleanTest.Core.HostExecution.nativeMemoryCeiling._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.LocalCore.untouchedCommitMemory' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.untouchedCommitMemory' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -698,7 +698,7 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.untouchedCommitMemory._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.untouchedCommitMemory._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
 'SP1CleanTest.Core.HostExecution.completeHostContinuation' depends on axioms: [propext,
  Quot.sound,
@@ -706,7 +706,7 @@
 'SP1CleanTest.Core.HostQueue.bankProjection' depends on axioms: [propext,
  Quot.sound,
  SP1CleanTest.Core.HostQueue.bankProjection._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.LocalCore.activeCommitLocalShard' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.activeCommitLocalShard' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -805,9 +805,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.activeCommitLocalShard._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.activeCommitLocalShard._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsCommitBoundaries' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsCommitBoundaries' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -906,17 +906,17 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsCommitBoundaries._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsCommitBoundaries._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.HostCommitBoundary.continuationBanks' depends on axioms: [propext,
+'SP1CleanTest.Core.HostCommitBoundary.continuationBanks' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCommitBoundary.continuationBanks._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCommitBoundary.continuationTampering' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCommitBoundary.continuationBanks._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCommitBoundary.continuationTampering' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCommitBoundary.continuationTampering._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.cpuWordGrouping' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.HostCommitBoundary.continuationTampering._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.cpuWordGrouping' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -993,8 +993,8 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.cpuWordGrouping._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.queueCPUProjection' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.HostHintReadPartition.cpuWordGrouping._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.queueCPUProjection' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1071,8 +1071,8 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.queueCPUProjection._native.native_decide.ax_1_3]
-'SP1CleanTest.Alignment.Core.ExecutionPath.queueHostReplay' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.HostHintReadPartition.queueCPUProjection._native.native_decide.ax_1_3]
+'SP1CleanTest.Core.ExecutionPath.queueHostReplay' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1149,26 +1149,26 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_1,
- SP1CleanTest.Alignment.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_2,
- SP1CleanTest.Alignment.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_3,
- SP1CleanTest.Alignment.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_4,
- SP1CleanTest.Alignment.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_5]
-'SP1CleanTest.Alignment.Core.ExecutionPath.queueWriteNeedsAllocation' depends on axioms: [propext,
+ SP1CleanTest.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_2,
+ SP1CleanTest.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_3,
+ SP1CleanTest.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_4,
+ SP1CleanTest.Core.ExecutionPath.queueHostReplay._native.native_decide.ax_1_5]
+'SP1CleanTest.Core.ExecutionPath.queueWriteNeedsAllocation' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.queueWriteNeedsAllocation._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.queueCPUHandoff' depends on axioms: [propext,
+ SP1CleanTest.Core.ExecutionPath.queueWriteNeedsAllocation._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.queueCPUHandoff' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.queueCPUHandoff._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.physicalQueueHistory' depends on axioms: [propext,
+ SP1CleanTest.Core.HostHintReadPartition.queueCPUHandoff._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.physicalQueueHistory' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.physicalQueueHistory._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.queueReplayPrepends' depends on axioms: [propext,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.queueReplayPrepends._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.installedQueueEndpoints' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.HostHintReadPartition.physicalQueueHistory._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.queueReplayPrepends' depends on axioms: [propext,
+ SP1CleanTest.Core.HostHintReadPartition.queueReplayPrepends._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.installedQueueEndpoints' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1267,9 +1267,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.installedQueueEndpoints._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.HostHintReadPartition.installedQueueEndpoints._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.missingQueueEndpoints' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.HostHintReadPartition.missingQueueEndpoints' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1368,9 +1368,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.missingQueueEndpoints._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.HostHintReadPartition.missingQueueEndpoints._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.futureNodeConsumers' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.HostHintReadPartition.futureNodeConsumers' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1469,9 +1469,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.futureNodeConsumers._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.HostHintReadPartition.futureNodeConsumers._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.installedRecords' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.HostHintReadPartition.installedRecords' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1570,13 +1570,13 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.installedRecords._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.HostHintReadPartition.installedRecords._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.noncanonicalNodeLength' depends on axioms: [propext,
+'SP1CleanTest.Core.HostHintReadPartition.noncanonicalNodeLength' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.noncanonicalNodeLength._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.installedCursor' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.HostHintReadPartition.noncanonicalNodeLength._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.installedCursor' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1675,9 +1675,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.installedCursor._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.HostHintReadPartition.installedCursor._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.installedPermissions' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.HostHintReadPartition.installedPermissions' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1776,13 +1776,13 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.installedPermissions._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.HostHintReadPartition.installedPermissions._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.HostCall.registeredReceiverHandoff' depends on axioms: [propext,
+'SP1CleanTest.Core.HostCall.registeredReceiverHandoff' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.registeredReceiverHandoff._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCall.installedMemoryProjection' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.HostCall.registeredReceiverHandoff._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCall.installedMemoryProjection' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1881,17 +1881,17 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.HostCall.installedMemoryProjection._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.HostCall.installedMemoryProjection._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.HostCall.physicalHandoff' depends on axioms: [propext,
+'SP1CleanTest.Core.HostCall.physicalHandoff' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.physicalHandoff._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCall.duplicateAndForgedHandoff' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCall.physicalHandoff._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCall.duplicateAndForgedHandoff' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.duplicateAndForgedHandoff._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.LocalCore.unguardedStoreIntoRom' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.HostCall.duplicateAndForgedHandoff._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.LocalCore.unguardedStoreIntoRom' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -1990,9 +1990,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.unguardedStoreIntoRom._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.unguardedStoreIntoRom._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.protectedRejectsStoreIntoRom' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.protectedRejectsStoreIntoRom' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2091,9 +2091,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.protectedRejectsStoreIntoRom._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.protectedRejectsStoreIntoRom._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.protectedPartialStoreBesideRom' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.protectedPartialStoreBesideRom' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2192,9 +2192,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.protectedPartialStoreBesideRom._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.protectedPartialStoreBesideRom._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.protectedNonStores' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.protectedNonStores' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2293,12 +2293,12 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.protectedNonStores._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.protectedNonStores._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.permissionAddressWindow' depends on axioms: [propext,
+'SP1CleanTest.Core.LocalCore.permissionAddressWindow' depends on axioms: [propext,
  Quot.sound,
- SP1CleanTest.Alignment.Core.LocalCore.permissionAddressWindow._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.LocalCore.protectedPaddingIdentity' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.LocalCore.permissionAddressWindow._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.LocalCore.protectedPaddingIdentity' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2397,9 +2397,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.protectedPaddingIdentity._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.protectedPaddingIdentity._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.activeHaltLocalShard' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.activeHaltLocalShard' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2498,9 +2498,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.activeHaltLocalShard._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.activeHaltLocalShard._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.legacyHaltExitRange' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.legacyHaltExitRange' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2599,9 +2599,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.legacyHaltExitRange._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.legacyHaltExitRange._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsForgedHalt' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsForgedHalt' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2700,9 +2700,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsForgedHalt._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsForgedHalt._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.replayPrefixStates' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.ExecutionPath.replayPrefixStates' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2779,13 +2779,13 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.replayStopsAfterHalt' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
+ SP1CleanTest.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.replayStopsAfterHalt' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2862,13 +2862,13 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.replayOrdinaryPreservesHost' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
+ SP1CleanTest.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.replayOrdinaryPreservesHost' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -2953,7 +2953,7 @@
  SP1Clean.Audit.JointNonVacuity.jalView_decodedInROM._native.native_decide.ax_1_1,
  SP1Clean.Audit.JointNonVacuity.jalView_rcvPc._native.native_decide.ax_1_1,
  SP1Clean.Audit.JointNonVacuity.jalView_sndPc._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.LocalCore.acceptsSameRegisterTouches' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.acceptsSameRegisterTouches' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3052,9 +3052,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.acceptsSameRegisterTouches._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.acceptsSameRegisterTouches._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.acceptsStateClockCarry' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.acceptsStateClockCarry' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3153,9 +3153,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.acceptsStateClockCarry._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.acceptsStateClockCarry._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.clockPhaseNeedsProfile' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.clockPhaseNeedsProfile' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3254,9 +3254,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.clockPhaseNeedsProfile._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.clockPhaseNeedsProfile._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsActiveRowsAfterHalt' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsActiveRowsAfterHalt' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3355,9 +3355,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsActiveRowsAfterHalt._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsActiveRowsAfterHalt._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsUnauthenticatedFetch' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsUnauthenticatedFetch' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3456,9 +3456,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsUnauthenticatedFetch._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsUnauthenticatedFetch._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.acceptsReorderedPaddedSegment' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.acceptsReorderedPaddedSegment' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3557,9 +3557,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.acceptsReorderedPaddedSegment._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.acceptsReorderedPaddedSegment._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.acceptsEmptySegments' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.acceptsEmptySegments' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3658,7 +3658,7 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.acceptsEmptySegments._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.acceptsEmptySegments._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
 'SP1CleanTest.Core.ExecutionSnapshot.rejectsBookkeepingChanges' depends on axioms: [propext,
  Classical.choice,
@@ -3762,7 +3762,7 @@
  Classical.choice,
  Quot.sound,
  SP1CleanTest.Core.ExecutionSnapshot.rejectsAfterHalt._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.LocalCore.activeSyscallLocalShard' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.activeSyscallLocalShard' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3861,9 +3861,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.activeSyscallLocalShard._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.activeSyscallLocalShard._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsBrokenSyscallLedger' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsBrokenSyscallLedger' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -3962,9 +3962,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsBrokenSyscallLedger._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsBrokenSyscallLedger._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.hintReturnNeedsHostBinding' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.hintReturnNeedsHostBinding' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4063,9 +4063,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.hintReturnNeedsHostBinding._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.hintReturnNeedsHostBinding._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.acceptsDistantSourceEpochs' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.acceptsDistantSourceEpochs' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4164,9 +4164,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.acceptsDistantSourceEpochs._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.acceptsDistantSourceEpochs._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsUnboundSource' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsUnboundSource' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4265,9 +4265,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsUnboundSource._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsUnboundSource._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsInvalidPlatform' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsInvalidPlatform' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4366,9 +4366,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsInvalidPlatform._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsInvalidPlatform._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.activeLocalShard' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.activeLocalShard' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4467,9 +4467,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.activeLocalShard._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.activeLocalShard._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsWrongEndpoints' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsWrongEndpoints' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4568,9 +4568,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsWrongEndpoints._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsWrongEndpoints._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsWrongSource' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsWrongSource' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4669,9 +4669,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsWrongSource._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsWrongSource._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.checksUntouchedRom' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.checksUntouchedRom' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4770,9 +4770,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.checksUntouchedRom._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.checksUntouchedRom._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsBrokenInventory' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsBrokenInventory' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4871,9 +4871,9 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsBrokenInventory._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsBrokenInventory._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
-'SP1CleanTest.Alignment.Core.LocalCore.rejectsWrongFinalValue' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.LocalCore.rejectsWrongFinalValue' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -4972,7 +4972,7 @@
  SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide.ax_1_6✝,
  SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide.ax_1_6✝,
  Gadgets.And.And8.and_times_two_add_xor._native.bv_decide.ax_1_5,
- SP1CleanTest.Alignment.Core.LocalCore.rejectsWrongFinalValue._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.LocalCore.rejectsWrongFinalValue._native.native_decide.ax_1_1,
  Gadgets.Or.Or8.or_times_two_sub_xor._native.bv_decide.ax_1_5✝]
 'SP1CleanTest.Core.SnapshotBoundary.constructedRegisters' depends on axioms: [propext,
  Classical.choice,
@@ -5000,7 +5000,7 @@
 'SP1CleanTest.Core.SnapshotBoundary.rejectsUntouchedMutations' depends on axioms: [propext,
  Quot.sound,
  SP1CleanTest.Core.SnapshotBoundary.rejectsUntouchedMutations._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.ExecutionPath.continuingShard' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.ExecutionPath.continuingShard' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5077,10 +5077,10 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.terminalShard' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.terminalShard' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5157,10 +5157,10 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.joinedShards' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.joinedShards' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5237,13 +5237,13 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.splitJoinedShards' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
+ SP1CleanTest.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.splitJoinedShards' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5320,13 +5320,13 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.polyFunPath' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
+ SP1CleanTest.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.polyFunPath' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5403,13 +5403,13 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.terminalIdentity' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
+ SP1CleanTest.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.terminalIdentity' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5486,7 +5486,7 @@
  valid_reservation,
  Classical.choice,
  Quot.sound]
-'SP1CleanTest.Alignment.Core.ExecutionPath.rejectsAfterHalt' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.ExecutionPath.rejectsAfterHalt' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5563,8 +5563,8 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.target_halted._native.native_decide.ax_1_1✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.rejectsPositiveTerminalSegment' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.target_halted._native.native_decide.ax_1_1✝]
+'SP1CleanTest.Core.ExecutionPath.rejectsPositiveTerminalSegment' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5641,8 +5641,8 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.target_halted._native.native_decide.ax_1_1✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.rejectsForgedHost' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.target_halted._native.native_decide.ax_1_1✝]
+'SP1CleanTest.Core.ExecutionPath.rejectsForgedHost' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5719,14 +5719,14 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.rejectsForgedHost._native.native_decide.ax_1_1,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.rejectsForgedMemory' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.rejectsForgedHost._native.native_decide.ax_1_1,
+ SP1CleanTest.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
+ SP1CleanTest.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.rejectsForgedMemory' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5803,12 +5803,12 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.rejectsForgedMemory._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.ExecutionPath.observableResults' depends on axioms: [propext,
+ SP1CleanTest.Core.ExecutionPath.rejectsForgedMemory._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.ExecutionPath.observableResults' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.observableResults._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.ExecutionPath.replayJoinedShards' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.observableResults._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.ExecutionPath.replayJoinedShards' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5885,17 +5885,17 @@
  valid_reservation,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
- SP1CleanTest.Alignment.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
-'SP1CleanTest.Alignment.Core.ExecutionPath.rejectsForgedEvent' depends on axioms: [propext,
+ SP1CleanTest.Core.ExecutionPath.enter_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.enter_step._native.native_decide.ax_1_2✝,
+ SP1CleanTest.Core.ExecutionPath.halt_run._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_1✝,
+ SP1CleanTest.Core.ExecutionPath.halt_step._native.native_decide.ax_1_2✝]
+'SP1CleanTest.Core.ExecutionPath.rejectsForgedEvent' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.ExecutionPath.rejectsForgedEvent._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.ExecutionPath.ordinaryContinues' depends on axioms: [cancel_reservation,
+ SP1CleanTest.Core.ExecutionPath.rejectsForgedEvent._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.ExecutionPath.ordinaryContinues' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -5980,7 +5980,7 @@
  SP1Clean.Audit.JointNonVacuity.jalView_decodedInROM._native.native_decide.ax_1_1,
  SP1Clean.Audit.JointNonVacuity.jalView_rcvPc._native.native_decide.ax_1_1,
  SP1Clean.Audit.JointNonVacuity.jalView_sndPc._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.ExecutionPath.rejectsRunnableAfterHalt' depends on axioms: [cancel_reservation,
+'SP1CleanTest.Core.ExecutionPath.rejectsRunnableAfterHalt' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,
  match_reservation,
@@ -6150,26 +6150,26 @@
  Classical.choice,
  Quot.sound,
  SP1CleanTest.Core.HostControl.compiledControls._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCommitBoundary.emptyBanks' depends on axioms: [propext,
+'SP1CleanTest.Core.HostCommitBoundary.emptyBanks' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCommitBoundary.emptyBanks._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCommitBoundary.repeatedBanks' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCommitBoundary.emptyBanks._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCommitBoundary.repeatedBanks' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCommitBoundary.repeatedBanks._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCommitBoundary.boundaryTampering' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCommitBoundary.repeatedBanks._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCommitBoundary.boundaryTampering' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCommitBoundary.boundaryTampering._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCommitBoundary.terminalClocks' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCommitBoundary.boundaryTampering._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCommitBoundary.terminalClocks' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCommitBoundary.terminalClocks._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCommitBoundary.interleavedBanks' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCommitBoundary.terminalClocks._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCommitBoundary.interleavedBanks' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCommitBoundary.interleavedBanks._native.native_decide.ax_1_1]
+ SP1CleanTest.Core.HostCommitBoundary.interleavedBanks._native.native_decide.ax_1_1]
 'SP1CleanTest.Core.HostCommit.validUpdates' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
@@ -6194,30 +6194,30 @@
  Classical.choice,
  Quot.sound,
  SP1CleanTest.Core.HostCommit.brokenHistories._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCall.supportedCalls' depends on axioms: [propext,
+'SP1CleanTest.Core.HostCall.supportedCalls' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.supportedCalls._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCall.writeLedger' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCall.supportedCalls._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCall.writeLedger' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.writeLedger._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCall.otherCallLedgers' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCall.writeLedger._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCall.otherCallLedgers' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.otherCallLedgers._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCall.rejectedReads' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCall.otherCallLedgers._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCall.rejectedReads' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.rejectedReads._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCall.gatedReads' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCall.rejectedReads._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCall.gatedReads' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.gatedReads._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostCall.rejectedAliases' depends on axioms: [propext,
+ SP1CleanTest.Core.HostCall.gatedReads._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostCall.rejectedAliases' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostCall.rejectedAliases._native.native_decide.ax_1_1]
+ SP1CleanTest.Core.HostCall.rejectedAliases._native.native_decide.ax_1_1]
 'SP1CleanTest.Core.HostRamAccess.validTransfers' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
@@ -6377,18 +6377,18 @@
  Classical.choice,
  Quot.sound,
  SP1CleanTest.Core.HintReadWord.localTampering._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.sharedCalls' depends on axioms: [propext,
+'SP1CleanTest.Core.HostHintReadPartition.sharedCalls' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.sharedCalls._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.missingAndOrphanRows' depends on axioms: [propext,
+ SP1CleanTest.Core.HostHintReadPartition.sharedCalls._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.missingAndOrphanRows' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.missingAndOrphanRows._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostHintReadPartition.duplicateHandlers' depends on axioms: [propext,
+ SP1CleanTest.Core.HostHintReadPartition.missingAndOrphanRows._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostHintReadPartition.duplicateHandlers' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostHintReadPartition.duplicateHandlers._native.native_decide.ax_1_1]
+ SP1CleanTest.Core.HostHintReadPartition.duplicateHandlers._native.native_decide.ax_1_1]
 'SP1CleanTest.Core.HostHintRead.jointLedgers' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
@@ -6465,28 +6465,28 @@
  Classical.choice,
  Quot.sound,
  SP1CleanTest.Core.HostExecution.statefulSequence._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostFootprint.byteCovers' depends on axioms: [propext,
- SP1CleanTest.Alignment.Core.HostFootprint.byteCovers._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostFootprint.dispatchFootprints' depends on axioms: [propext,
+'SP1CleanTest.Core.HostFootprint.byteCovers' depends on axioms: [propext,
+ SP1CleanTest.Core.HostFootprint.byteCovers._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostFootprint.dispatchFootprints' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostFootprint.dispatchFootprints._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostFootprint.paddedWriteFootprints' depends on axioms: [propext,
+ SP1CleanTest.Core.HostFootprint.dispatchFootprints._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostFootprint.paddedWriteFootprints' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostFootprint.paddedWriteFootprints._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostFootprint.observedDependency' depends on axioms: [propext,
+ SP1CleanTest.Core.HostFootprint.paddedWriteFootprints._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostFootprint.observedDependency' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostFootprint.observedDependency._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostFootprint.failedWordsDoNotAuthenticateBytes' depends on axioms: [propext,
+ SP1CleanTest.Core.HostFootprint.observedDependency._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostFootprint.failedWordsDoNotAuthenticateBytes' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostFootprint.failedWordsDoNotAuthenticateBytes._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.HostFootprint.writtenWordMeaning' depends on axioms: [propext,
+ SP1CleanTest.Core.HostFootprint.failedWordsDoNotAuthenticateBytes._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.HostFootprint.writtenWordMeaning' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.HostFootprint.writtenWordMeaning._native.native_decide.ax_1_1]
+ SP1CleanTest.Core.HostFootprint.writtenWordMeaning._native.native_decide.ax_1_1]
 'SP1CleanTest.Core.SyscallCode.exportedInventory' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
@@ -6507,30 +6507,30 @@
  Classical.choice,
  Quot.sound,
  SP1CleanTest.Core.SyscallCode.chipProfileWiring._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.InstructionDecode.opcodeCoverage' depends on axioms: [SP1CleanTest.Alignment.Core.InstructionDecode.opcodeCoverage._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.InstructionDecode.literalEncodings' depends on axioms: [propext,
+'SP1CleanTest.Core.InstructionDecode.opcodeCoverage' depends on axioms: [SP1CleanTest.Core.InstructionDecode.opcodeCoverage._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.InstructionDecode.literalEncodings' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.InstructionDecode.literalEncodings._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.InstructionDecode.operandEdges' depends on axioms: [propext, Quot.sound]
-'SP1CleanTest.Alignment.Core.InstructionDecode.rejectedEncodings' depends on axioms: [propext,
+ SP1CleanTest.Core.InstructionDecode.literalEncodings._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.InstructionDecode.operandEdges' depends on axioms: [propext, Quot.sound]
+'SP1CleanTest.Core.InstructionDecode.rejectedEncodings' depends on axioms: [propext,
  Quot.sound,
- SP1CleanTest.Alignment.Core.InstructionDecode.rejectedEncodings._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.InstructionDecode.hintAliases' depends on axioms: [propext,
+ SP1CleanTest.Core.InstructionDecode.rejectedEncodings._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.InstructionDecode.hintAliases' depends on axioms: [propext,
  Quot.sound,
- SP1CleanTest.Alignment.Core.InstructionDecode.hintAliases._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.InstructionDecode.sailHintPriority' depends on axioms: [propext,
+ SP1CleanTest.Core.InstructionDecode.hintAliases._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.InstructionDecode.sailHintPriority' depends on axioms: [propext,
  sys_enable_experimental_extensions,
  Classical.choice,
  Quot.sound]
-'SP1CleanTest.Alignment.Core.InstructionDecode.checkedProgram' depends on axioms: [propext,
+'SP1CleanTest.Core.InstructionDecode.checkedProgram' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.InstructionDecode.checkedProgram._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.InstructionDecode.fixedProgramConstraints' depends on axioms: [propext,
+ SP1CleanTest.Core.InstructionDecode.checkedProgram._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.InstructionDecode.fixedProgramConstraints' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.InstructionDecode.fixedProgramConstraints._native.native_decide.ax_1_1]
+ SP1CleanTest.Core.InstructionDecode.fixedProgramConstraints._native.native_decide.ax_1_1]
 'SP1CleanTest.Core.ProgramImage.checkedImage_boot' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
@@ -6551,72 +6551,72 @@
  Classical.choice,
  Quot.sound,
  SP1CleanTest.Core.InitialMemoryRead.rejectsWrongOffset._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.constructedRamRows' depends on axioms: [propext,
+'SP1CleanTest.Core.MemoryBoundary.constructedRamRows' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.constructedRamRows._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.constructedRegisterRows' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.constructedRamRows._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.constructedRegisterRows' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.constructedRegisterRows._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsUnrelatedKeys' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.constructedRegisterRows._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.rejectsUnrelatedKeys' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsUnrelatedKeys._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsInvalidBoundaryRows' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.rejectsUnrelatedKeys._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.rejectsInvalidBoundaryRows' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsInvalidBoundaryRows._native.native_decide.ax_1_1]
+ SP1CleanTest.Core.MemoryBoundary.rejectsInvalidBoundaryRows._native.native_decide.ax_1_1]
 'SP1Clean.Audit.MixedMemoryRows.syscallKeepsMixedReadTimes' depends on axioms: [propext, Classical.choice, Quot.sound]
 'SP1Clean.Audit.MixedMemoryRows.syscallPcArmCrossesLimb' depends on axioms: [propext, Classical.choice, Quot.sound]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.nativeVerifierEndpoints' depends on axioms: [propext,
+'SP1CleanTest.Core.MemoryBoundary.nativeVerifierEndpoints' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.nativeVerifierEndpoints._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsForgedBoot' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.nativeVerifierEndpoints._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.rejectsForgedBoot' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsForgedBoot._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.nativeBoundaryInventories' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.rejectsForgedBoot._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.nativeBoundaryInventories' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.nativeBoundaryInventories._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.finalizersDeferMemoryGuarantees' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.nativeBoundaryInventories._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.finalizersDeferMemoryGuarantees' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.finalizersDeferMemoryGuarantees._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.emptyInventory' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.finalizersDeferMemoryGuarantees._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.emptyInventory' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.emptyInventory._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.mixedInventory' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.emptyInventory._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.mixedInventory' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.mixedInventory._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsMalformedInventories' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.mixedInventory._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.rejectsMalformedInventories' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsMalformedInventories._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.constructedFinalRows' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.rejectsMalformedInventories._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.constructedFinalRows' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.constructedFinalRows._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsInvalidFinalRows' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.constructedFinalRows._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.rejectsInvalidFinalRows' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsInvalidFinalRows._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.finalInventories' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.rejectsInvalidFinalRows._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.finalInventories' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.finalInventories._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsMalformedFinalInventories' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.finalInventories._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.rejectsMalformedFinalInventories' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.rejectsMalformedFinalInventories._native.native_decide.ax_1_1]
-'SP1CleanTest.Alignment.Core.MemoryBoundary.pairedMemoryBoundary' depends on axioms: [propext,
+ SP1CleanTest.Core.MemoryBoundary.rejectsMalformedFinalInventories._native.native_decide.ax_1_1]
+'SP1CleanTest.Core.MemoryBoundary.pairedMemoryBoundary' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- SP1CleanTest.Alignment.Core.MemoryBoundary.pairedMemoryBoundary._native.native_decide.ax_1_1]
+ SP1CleanTest.Core.MemoryBoundary.pairedMemoryBoundary._native.native_decide.ax_1_1]
 'SP1Clean.Audit.NativeCompletenessNonVacuity.anchorExecution_nativeTraceReady' depends on axioms: [cancel_reservation,
  get_16_random_bits,
  load_reservation,

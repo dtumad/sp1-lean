@@ -8,7 +8,7 @@ defined word observation and equality of failed optional reads. These semantic c
 claim that the pending host AIR tables authenticate an execution.
 -/
 
-namespace SP1CleanTest.Alignment.Core.HostFootprint
+namespace SP1CleanTest.Core.HostFootprint
 
 open SP1Clean SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
 open LeanRV64D LeanRV64D.Defs
@@ -87,4 +87,4 @@ private def writtenWords : Bool :=
 /-- Written and padding words agree with little-endian host bytes; adjacent RAM words retain theirs. -/
 theorem writtenWordMeaning : writtenWords = true := by native_decide
 
-end SP1CleanTest.Alignment.Core.HostFootprint
+end SP1CleanTest.Core.HostFootprint
