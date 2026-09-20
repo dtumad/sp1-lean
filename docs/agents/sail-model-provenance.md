@@ -127,7 +127,8 @@ item T2, and dynamic register state remains the boot predicate's business.
 `.github/workflows/sail-regen.yml` runs the same four modes on GitHub-hosted runners: on demand,
 monthly, and on every pull request that touches `scripts/sail-config/`, `lake-manifest.json` (a
 `Lean_RV64D` re-pin), or the workflow itself. It caches the opam root keyed by `OCAML_VERSION` +
-`SAIL_SHA` (cold ≈ 35 min, warm ≈ 1 min), checks that the committed config is base ⊕ overlay for the
+`SAIL_SHA` (the compiler build measured 6.5 min cold on `ubuntu-latest`, seconds warm; each
+regeneration 12–16 min; the whole job ≈ 36 min cold), checks that the committed config is base ⊕ overlay for the
 pinned sail-riscv, and fails on any byte difference between the regenerated model and the pinned
 snapshot (`--sp1`, the gate) while also reporting identity against the opencompl base (`--stock`).
 `scripts/check_pins.sh` additionally requires the script's `SP1_SNAPSHOT` to equal the manifest's
