@@ -31,6 +31,7 @@ structure Inputs (F : Type) where
   cols : Extracted.U16MSBOperation F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract: `msb`'s booleanness holds **unconditionally** (SP1's `eval_msb` asserts it
 ungated, so it must hold on padding too), and on a real row (`is_real`-gated) the witnessed `msb` is
@@ -54,6 +55,7 @@ structure Inputs (F : Type) where
   cols : Extracted.U16CompareOperation F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract: `bit`'s booleanness holds **unconditionally** (SP1's `eval` asserts it ungated,
 so it must hold on padding too), and on a real row (`is_real`-gated) the witnessed `bit` is the strict
@@ -77,6 +79,7 @@ structure Inputs (F : Type) where
   cols : Extracted.U16toU8Operation F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The ungated byte-decomposition content (2-arg, over explicit operand limbs + columns): for each
 limb the low and high bytes are genuine bytes and reassemble the limb. Reused by composing operations
@@ -104,6 +107,7 @@ structure Inputs (F : Type) where
   u16_values : fields 4 F
   cols : Extracted.U16toU8Operation F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract: the low/high split reassembles each limb (the unsafe op's only content —
 `256 * ((u - low) * 256⁻¹) = u - low`, so `low + 256 * high = u`). Holds unconditionally — the op
@@ -124,6 +128,7 @@ structure Inputs (F : Type) where
   cols : Extracted.IsZeroOperation F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 end SP1Clean.IsZeroOperation
 
@@ -135,6 +140,7 @@ structure Inputs (F : Type) where
   cols : Extracted.IsZeroWordOperation F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 end SP1Clean.IsZeroWordOperation
 
@@ -147,6 +153,7 @@ structure Inputs (F : Type) where
   cols : Extracted.IsEqualWordOperation F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 end SP1Clean.IsEqualWordOperation
 
@@ -164,6 +171,7 @@ structure Inputs (F : Type) where
   cols : Extracted.AddrAddOperation F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract for the 48-bit address add: on a real row (`is_real`-gated) the 3-limb result
 is the low 48 bits of the integer sum `a + b`, each limb a genuine 16-bit value, and the
@@ -201,6 +209,7 @@ structure Inputs (F : Type) where
   offset_bit2 : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The aligned address returned by SP1's `AddressOperation::eval`.  The operation's witnessed
 columns retain the raw effective address `b + cc`; the value passed to the Memory bus clears its
@@ -330,6 +339,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 structure Columns (F : Type) where
   value : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- Local addition-gadget inputs. Rust operation inputs are deliberately not an interface here. -/
 structure Inputs (F : Type) where
@@ -338,6 +348,7 @@ structure Inputs (F : Type) where
   cols : Columns F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract (`is_real`-gated, mirroring the readers): on a real row the result is a 64-bit
 value equal to the BitVec sum of the operands. On padding (`is_real = 0`) it is vacuous — the gadget's
@@ -359,6 +370,7 @@ the only place that relates this shape to SP1 Rust's helper-operation columns. -
 structure Columns (F : Type) where
   value : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- Local subtraction-gadget inputs. Rust operation inputs are deliberately not an interface here. -/
 structure Inputs (F : Type) where
@@ -367,6 +379,7 @@ structure Inputs (F : Type) where
   cols : Columns F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract (`is_real`-gated): on a real row the result is a 64-bit value equal to the BitVec
 difference of the operands. On padding (`is_real = 0`) it is vacuous. The result word is witnessed by
@@ -390,6 +403,7 @@ structure Columns (F : Type) where
   value : Vector F 2
   msb : Extracted.U16MSBOperation F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- Inputs for the native 32-bit add-with-sign-extension gadget. -/
 structure Inputs (F : Type) where
@@ -398,6 +412,7 @@ structure Inputs (F : Type) where
   cols : Columns F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The reconstructed 64-bit result word: the two witnessed low limbs, with the two high limbs
 realised as the sign fill `msb * 0xFFFF`. (`Inputs`/`Spec`/`spec_populate` live in the op's
@@ -420,6 +435,7 @@ structure Columns (F : Type) where
   value : Vector F 2
   msb : Extracted.U16MSBOperation F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- Inputs for the native 32-bit subtract-with-sign-extension gadget. -/
 structure Inputs (F : Type) where
@@ -428,6 +444,7 @@ structure Inputs (F : Type) where
   cols : Columns F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The reconstructed 64-bit result word: the two witnessed low limbs, with the two high limbs
 realised as the sign fill `msb * 0xFFFF`. (`Inputs`/`Spec`/`spec_populate` live in the op's
@@ -447,6 +464,7 @@ structure Inputs (F : Type) where
   cols : Extracted.LtOperationUnsigned F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 end SP1Clean.LtOperationUnsigned
 
@@ -460,6 +478,7 @@ structure Inputs (F : Type) where
   is_signed : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 end SP1Clean.LtOperationSigned
 
@@ -473,6 +492,7 @@ helper-operation columns. -/
 structure Columns (F : Type) where
   result : Vector F 8
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- Inputs for the native bytewise bitwise gadget. -/
 structure Inputs (F : Type) where
@@ -482,6 +502,7 @@ structure Inputs (F : Type) where
   opcode : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic, `is_real`- and opcode-gated contract: on a real row each result byte is the bitwise
 AND/OR/XOR of the operand bytes (as 8-bit values), **and the operand bytes are genuine bytes** — the
@@ -523,6 +544,7 @@ structure Inputs (F : Type) where
   is_mulhsu : F
   is_mulw : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Witnessed product byte `k`, `0` outside `0..15`. -/
 def productVal (cols : Extracted.MulOperation (ZMod p)) (k : ℕ) : ZMod p :=

@@ -17,6 +17,7 @@ structure Inputs (F : Type) where
   instruction : SyscallInstrsChip.Inputs F
   length : Extracted.RegisterAccessCols F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 structure Message (F : Type) where
   clk_high : F
@@ -27,6 +28,7 @@ structure Message (F : Type) where
   result : Word F
   length : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Message
 
 def channel {p : ℕ} [Fact p.Prime] : Channel (ZMod p) Message where
   name := "sp1.native.host_call"

@@ -41,6 +41,7 @@ structure Inputs (F : Type) where
   value : Word F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Emit the single op_a (`rd`) write Memory interaction: `pushIf is_real` of the new value at the current
 write timestamp (`+is_real`, the W11-flipped polarity). -/

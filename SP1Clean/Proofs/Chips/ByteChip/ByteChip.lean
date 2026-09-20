@@ -72,6 +72,7 @@ structure Inputs (F : Type) where
   one aggregate repeated consumer occurrences. -/
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Range-checks `b` and `c` as bytes (Clean `rangeCheck 8`, in-circuit bit decomposition) and
 pushes the `U8Range` row `⟨3, 0, b, c⟩` at the explicit input multiplicity. -/
@@ -111,6 +112,7 @@ structure Inputs (F : Type) where
   /-- The LogUp count for this byte-table key. -/
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The 8-bit MSB core (byte analog of `U16MSBOperation.msb_of_raw`): `msb` boolean and `2*b - msb*256`
 a genuine byte force `msb = 1 ↔ 128 ≤ b.val`. -/
@@ -222,6 +224,7 @@ structure Inputs (F : Type) where
   /-- The LogUp count for this byte-table key. -/
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Range-checks `b`, `c` as bytes, derives `r = b AND c` via Clean's `And8` gadget, and pushes the
 `AND` row `⟨0, r, b, c⟩`. -/
@@ -269,6 +272,7 @@ structure Inputs (F : Type) where
   /-- The LogUp count for this byte-table key. -/
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Range-checks `b`, `c` as bytes, derives `r = b OR c` via Clean's `Or8` gadget, and pushes the
 `OR` row `⟨1, r, b, c⟩`. -/
@@ -317,6 +321,7 @@ structure Inputs (F : Type) where
   /-- The LogUp count for this byte-table key. -/
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Range-checks `b`, `c` as bytes, derives `r = b XOR c` via Clean's static `ByteXorTable` lookup, and
 pushes the `XOR` row `⟨2, r, b, c⟩`. -/
@@ -372,6 +377,7 @@ structure Inputs (F : Type) where
   /-- The LogUp count for this byte-table key. -/
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The 8-bit unsigned-comparison core (byte analog of `MSB.byte_msb_iff`): `ltu` boolean and
 `b - c + ltu * 256` a genuine byte force `ltu = 1 ↔ b.val < c.val`. -/

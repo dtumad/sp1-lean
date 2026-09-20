@@ -26,6 +26,7 @@ structure AluX0Cols (F : Type) where
   opcode : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas AluX0Cols
 
 
 

@@ -467,7 +467,6 @@ theorem channelGuarantees_of_consumedMessages (ops : Operations (ZMod p))
     apply (TypedInteraction.message_eq_iff typed _).2
     simp only [typed, interaction, TypedInteraction.eval_raw, AbstractInteraction.eval,
       ProvableType.toElements_fromElements]
-    rfl
   rwa [messageEq] at grounded
 
 @[simp] theorem producedMessages_append (left right : List (TypedInteraction channel)) :

@@ -19,6 +19,7 @@ open SP1Clean
 structure SyscallInstrsCols (F : Type) where
   values : (Vector F 65)
 deriving ProvableStruct
+provable_struct_eval_lemmas SyscallInstrsCols
 
 namespace SyscallInstrsCols
 

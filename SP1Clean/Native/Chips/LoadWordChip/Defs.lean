@@ -57,6 +57,7 @@ structure Columns (F : Type) where
   is_lw : F
   is_lwu : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The threaded reader column blocks + chip-specific witnesses. `state`/`adapter`/`memory_access` are the
 committed column blocks; `offset_bit` is bit 2 of the address; `selected_word` the selected 32-bit half;
@@ -75,6 +76,7 @@ structure Inputs (F : Type) where
   selected_word : fields 2 F
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- rs1 base-address value = the `op_b` register read (`op_b_memory.prev_value`). -/
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value

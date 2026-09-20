@@ -18,6 +18,7 @@ open SP1Clean
 structure U16toU8Operation (F : Type) where
   low_bytes : (Vector F 4)
 deriving ProvableStruct
+provable_struct_eval_lemmas U16toU8Operation
 
 namespace U16toU8OperationUnsafe
 

@@ -15,6 +15,7 @@ structure Inputs (F : Type) where
   currentHigh : F
   currentLow : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def Spec {p : ℕ} (input : Inputs (ZMod p)) : Prop :=
   input.previousHigh.val < 2 ^ 24 ∧ input.previousLow.val < 2 ^ 24 ∧

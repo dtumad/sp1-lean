@@ -24,6 +24,7 @@ structure ITypeReader (F : Type) where
   op_b_memory : (RegisterAccessCols F)
   op_c_imm : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas ITypeReader
 
 namespace ITypeReader
 

@@ -107,6 +107,7 @@ structure Inputs (F : Type) where
   op_c_cmp : U16CompareOperation F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The row is exactly as wide as the upstream table. This is the tripwire for the whole column
 map: it fails if any field above is added, removed, reordered into a different size, or if an
@@ -190,6 +191,7 @@ structure Inputs (F : Type) where
   is_real : F
   is_halt : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Both gates are boolean — the row asserts this ungated, so it holds on padding too. -/
 def Assumptions (r : Inputs (ZMod p)) : Prop :=
@@ -216,6 +218,7 @@ structure Inputs (F : Type) where
   is_commit_deferred : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The two commit selectors are boolean and mutually exclusive — a row cannot be both `COMMIT`
 and `COMMIT_DEFERRED_PROOFS`, since one identifier cannot equal two codes. -/
@@ -259,6 +262,7 @@ structure Inputs (F : Type) where
   is_hint_len : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- `ENTER_UNCONSTRAINED` and `HINT_LEN` are boolean and mutually exclusive, and the `x0` flag is
 boolean (the Program fetch's `RowSpec` carries it). -/
@@ -291,6 +295,7 @@ structure Inputs (F : Type) where
   bit : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The gate is boolean, and on a live gate the word's second limb is a `u16` — it is read from a
 register, so the Memory bus already carries that. -/
@@ -314,6 +319,7 @@ structure Inputs (F : Type) where
   op_c : Word F
   table_byte : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The identifier's table byte is boolean. -/
 def Assumptions (r : Inputs (ZMod p)) : Prop :=

@@ -23,6 +23,7 @@ open SP1Clean
 structure AddOperation (F : Type) where
   value : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas AddOperation
 
 structure JalrColumns (F : Type) where
   state : (CPUState F)
@@ -32,6 +33,7 @@ structure JalrColumns (F : Type) where
   op_a_operation : (AddOperation F)
   lsb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas JalrColumns
 
 namespace AddOperation
 

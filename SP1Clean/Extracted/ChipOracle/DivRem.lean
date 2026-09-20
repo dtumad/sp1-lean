@@ -23,10 +23,12 @@ open SP1Clean
 structure U16toU8Operation (F : Type) where
   low_bytes : (Vector F 4)
 deriving ProvableStruct
+provable_struct_eval_lemmas U16toU8Operation
 
 structure U16MSBOperation (F : Type) where
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16MSBOperation
 
 structure MulOperation (F : Type) where
   carry : (Vector F 16)
@@ -39,14 +41,17 @@ structure MulOperation (F : Type) where
   b_sign_extend : F
   c_sign_extend : F
 deriving ProvableStruct
+provable_struct_eval_lemmas MulOperation
 
 structure AddOperation (F : Type) where
   value : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas AddOperation
 
 structure U16CompareOperation (F : Type) where
   bit : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16CompareOperation
 
 structure LtOperationUnsigned (F : Type) where
   u16_compare_operation : (U16CompareOperation F)
@@ -54,11 +59,13 @@ structure LtOperationUnsigned (F : Type) where
   not_eq_inv : F
   comparison_limbs : (Vector F 2)
 deriving ProvableStruct
+provable_struct_eval_lemmas LtOperationUnsigned
 
 structure IsZeroOperation (F : Type) where
   inverse : F
   result : F
 deriving ProvableStruct
+provable_struct_eval_lemmas IsZeroOperation
 
 structure IsZeroWordOperation (F : Type) where
   is_zero_limb_0 : (IsZeroOperation F)
@@ -69,10 +76,12 @@ structure IsZeroWordOperation (F : Type) where
   is_zero_second_half : F
   result : F
 deriving ProvableStruct
+provable_struct_eval_lemmas IsZeroWordOperation
 
 structure IsEqualWordOperation (F : Type) where
   is_diff_zero : (IsZeroWordOperation F)
 deriving ProvableStruct
+provable_struct_eval_lemmas IsEqualWordOperation
 
 structure DivRemCols (F : Type) where
   state : (CPUState F)

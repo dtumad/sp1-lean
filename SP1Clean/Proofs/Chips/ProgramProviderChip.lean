@@ -64,6 +64,7 @@ structure Inputs (F : Type) where
   imm_c : F
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Forget the provider-only multiplicity column and recover the Program-bus payload. -/
 def Inputs.toMessage {R : Type} (input : Inputs R) : ProgramMsg R where

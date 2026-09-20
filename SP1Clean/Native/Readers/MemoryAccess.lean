@@ -50,6 +50,7 @@ structure Inputs (F : Type) where
   new_value : (Word F)
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The previous-timestamp representative `compare_low · prev_low + (1 − compare_low) · prev_high`. -/
 @[reducible] def selPrev (ts : Extracted.MemoryAccessTimestamp (ZMod p)) : ZMod p :=

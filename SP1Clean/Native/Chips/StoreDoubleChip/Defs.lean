@@ -46,6 +46,7 @@ structure Columns (F : Type) where
   memory_access : Extracted.MemoryAccessCols F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The operand reads + threaded reader column blocks. `op_b_val` is the rs1 base-address value (the
 `op_b` register read), `op_c_imm` the sign-extended immediate; `state`/`adapter`/`memory_access` are the
@@ -58,6 +59,7 @@ structure Inputs (F : Type) where
   adapter : Extracted.ITypeReader F
   memory_access : Extracted.MemoryAccessCols F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
 @[reducible] def Inputs.op_c_imm {F} (i : Inputs F) : Word F := i.adapter.op_c_imm

@@ -18,6 +18,7 @@ open SP1Clean
 structure MemoryGlobalFinalizeCols (F : Type) where
   values : (Vector F 30)
 deriving ProvableStruct
+provable_struct_eval_lemmas MemoryGlobalFinalizeCols
 
 namespace MemoryGlobalFinalizeCols
 

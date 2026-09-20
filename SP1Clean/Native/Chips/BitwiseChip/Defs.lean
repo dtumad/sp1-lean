@@ -35,6 +35,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.ALUTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Native Bitwise-chip row (Rust field order — the chip has no separate `is_real` column; the
 real-row selector is the flag sum). The reader blocks reuse the project substrate; only the composed
@@ -48,6 +49,7 @@ structure Columns (F : Type) where
   is_or : F
   is_and : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- `rs1` operand = the `op_b` register read (`op_b_memory.prev_value`); `rs2` operand = the `op_c`
 register read (`op_c_memory.prev_value`). Both feed the bitwise gadget exactly as in the extraction. -/

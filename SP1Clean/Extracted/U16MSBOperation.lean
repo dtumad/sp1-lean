@@ -18,6 +18,7 @@ open SP1Clean
 structure U16MSBOperation (F : Type) where
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16MSBOperation
 
 namespace U16MSBOperation
 

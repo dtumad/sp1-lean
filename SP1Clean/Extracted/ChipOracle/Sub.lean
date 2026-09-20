@@ -23,6 +23,7 @@ open SP1Clean
 structure SubOperation (F : Type) where
   value : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas SubOperation
 
 structure SubCols (F : Type) where
   state : (CPUState F)
@@ -30,6 +31,7 @@ structure SubCols (F : Type) where
   sub_operation : (SubOperation F)
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas SubCols
 
 namespace SubOperation
 

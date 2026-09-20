@@ -18,6 +18,7 @@ set_option maxHeartbeats 1000000
 structure GlobalCols (F : Type) where
   values : (Vector F 241)
 deriving ProvableStruct
+provable_struct_eval_lemmas GlobalCols
 
 namespace GlobalCols
 

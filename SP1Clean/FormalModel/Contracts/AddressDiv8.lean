@@ -14,12 +14,14 @@ structure Inputs (F : Type) where
   value : Word F
   quotients : fields 3 F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 structure Output (F : Type) where
   quotient : fields 3 F
   remainder : F
   rounded : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Output
 
 def Spec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) (output : Output (ZMod p)) : Prop :=
   Word.isU64 input.value ∧ Word.toNat input.value < 2 ^ 48 ∧

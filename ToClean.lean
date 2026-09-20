@@ -1,3 +1,4 @@
+import ToClean.Circuit.StructEvalLemmas
 import ToClean.Circuit.SubcircuitProjection
 import ToClean.Air.EnsembleProjection
 import ToClean.Circuit.WitnessCombinator

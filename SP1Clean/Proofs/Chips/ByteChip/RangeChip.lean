@@ -65,6 +65,7 @@ structure Inputs (F : Type) where
   aggregate repeated occurrences. -/
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Range-checks `a < 2^n` in-circuit (Clean `rangeCheck n` — a genuine bit decomposition, *not* a byte
 lookup, so the provider owes nothing to the bus it provides), and pushes the `Range` row

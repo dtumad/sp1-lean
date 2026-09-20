@@ -15,6 +15,7 @@ structure Inputs (F : Type) where
   call : HostCallChip.Message F
   comparison : Extracted.LtOperationUnsigned F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def bound (p : ℕ) : ℕ := min p (2 ^ 32)
 

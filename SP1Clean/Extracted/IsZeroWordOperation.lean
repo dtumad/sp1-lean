@@ -25,6 +25,7 @@ structure IsZeroWordOperation (F : Type) where
   is_zero_second_half : F
   result : F
 deriving ProvableStruct
+provable_struct_eval_lemmas IsZeroWordOperation
 
 namespace IsZeroWordOperation
 

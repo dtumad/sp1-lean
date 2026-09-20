@@ -126,7 +126,9 @@ theorem signedSum_eq_sent_sub_received (all : List (Extracted.Interaction (ZMod 
       (Balance.sentCount Balance.Scope.local all payload : ℤ) -
         (Balance.receivedCount Balance.Scope.local all payload : ℤ) := by
   induction all with
-  | nil => simp [Balance.sentCount, Balance.receivedCount]
+  | nil =>
+    simp [Balance.sentCount, Balance.receivedCount, Balance.naturalLedger,
+      NaturalBusLedger.sentCount, NaturalBusLedger.receivedCount]
   | cons i rest ih =>
     have hlocal : Balance.directionScope i.dir = Balance.Scope.local := isLocal i List.mem_cons_self
     have hsmall : 2 * i.mult.val ≤ p := small i List.mem_cons_self

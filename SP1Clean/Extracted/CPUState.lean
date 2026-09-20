@@ -21,6 +21,7 @@ structure CPUState (F : Type) where
   clk_0_16 : F
   pc : (Vector F 3)
 deriving ProvableStruct
+provable_struct_eval_lemmas CPUState
 
 namespace CPUState
 

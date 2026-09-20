@@ -15,6 +15,7 @@ structure Inputs (F : Type) where
   nextIndex : fields 3 F
   nextAddress : fields 3 F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def Spec {p : ℕ} [Fact p.Prime] (last : Bool) (input : Inputs (ZMod p)) : Prop :=
   input.word.Valid ∧ input.word.isLast = (if last then 1 else 0) ∧

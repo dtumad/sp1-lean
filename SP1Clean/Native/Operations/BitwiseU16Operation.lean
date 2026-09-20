@@ -43,6 +43,7 @@ structure Columns (F : Type) where
   c_low_bytes : Extracted.U16toU8Operation F
   bitwise_operation : BitwiseOperation.Columns F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The two operand words, the (chip-owned) decomposition + result column struct, the opcode selector
 (AND=0, OR=1, XOR=2), and the `is_real` gate — SP1's `eval` params verbatim. -/
@@ -53,6 +54,7 @@ structure Inputs (F : Type) where
   opcode : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The eight little-endian bytes of a word given its low-byte columns: `byte[2i] = low[i]`,
 `byte[2i+1] = (w[i] − low[i])·256⁻¹` (SP1's `eval_u16_to_u8_unsafe`). Reducible so it unifies with the

@@ -16,6 +16,7 @@ open SP1Clean
 structure ProgramCols (F : Type) where
   values : (Vector F 1)
 deriving ProvableStruct
+provable_struct_eval_lemmas ProgramCols
 
 namespace ProgramCols
 
