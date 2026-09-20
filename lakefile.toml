@@ -6,7 +6,7 @@ name = "sp1-clean-native"
 # Soundness, Composition) are kept in tree and built by `lake build SP1Clean` (the umbrella) in the
 # scheduled/dispatch `alignment` CI workflow, not on every PR. See docs/agents/compile-profile-2026-09.md
 # for the measurement behind the split.
-defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "Machine"]
+defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun", "Machine"]
 
 moreLeanArgs = ["--tstack=400000"]
 
@@ -187,9 +187,20 @@ moreLeanArgs = [
   "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
 ]
 
-# The generic machine layer: `Machine/Core/*` is PolyFun-only (labeled machines, paths, orbit
-# composition; upstream-destined to PolyFun), `Machine/Air/*` adds Clean/`ToClean` (an ensemble
-# realizing a machine). It never imports `SP1Clean`; `SP1Clean` consumes it. Same linter set.
+# Upstream-destined PolyFun material (orbit composition, labeled traces): imports only PolyFun,
+# stated in PolyFun's own namespaces; acceptance upstream is a deletion plus a repoint.
+[[lean_lib]]
+name = "ToPolyFun"
+moreLeanArgs = [
+  "-Dlinter.style.lambdaSyntax=true", "-Dlinter.style.dollarSyntax=true",
+  "-Dlinter.style.refine=true", "-Dlinter.style.cases=true",
+  "-Dlinter.style.induction=true", "-Dlinter.style.admit=true",
+  "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
+]
+
+# The Clean side of a PolyFun machine: `Machine/Air/Realizes.lean` (Clean + `ToClean` +
+# `ToPolyFun`) states an ensemble realizing a `PFunctor.DynSystem.Labeled` machine. The machine
+# vocabulary itself is PolyFun's. It never imports `SP1Clean`; `SP1Clean` consumes it.
 [[lean_lib]]
 name = "Machine"
 moreLeanArgs = [

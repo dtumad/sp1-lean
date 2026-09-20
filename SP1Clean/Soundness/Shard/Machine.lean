@@ -8,12 +8,13 @@ import SP1Clean.Soundness.Shard.Contract
 machine, with the fixed complete endpoints as the boundary and the header identity, source
 validity, and resource profile as admissibility. `statement_iff_of_realizes` re-derives the
 intended single statement from `Realizes.statement_iff`; nothing is proved twice and no second
-carrier is introduced. Both targets remain unfilled; this file fixes their generic shape.
+carrier is introduced: the machine is PolyFun's `Labeled` bundle of the existing `executionSystem`.
+Both targets remain unfilled; this file fixes their generic shape.
 -/
 
 namespace SP1Clean.Soundness.Shard
 
-open Air.Flat Model.Core Machine FormalModel.Shard
+open Air.Flat Model.Core Machine FormalModel.Shard PFunctor.DynSystem
 
 variable {p : ℕ} [Fact p.Prime]
 variable {PublicIO : TypeMap} [ProvableType PublicIO]

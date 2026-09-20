@@ -35,14 +35,15 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The generic machine layer and its SP1 shard instances add eleven main probes and no test probes.
-All preceding 2787 main and 323 test dependency sets are unchanged, with no removals or new
-main-library axiom names. The six generic declarations (`Machine/`: path composition, the
-reachability view, PolyFun orbit composition and splitting, and the ensemble-realization
-statement) use subsets of the logical baseline, three of them no axioms at all; the five SP1
-instances (`sp1Machine`, `executes_iff`, `executionSegment_iff_segment`, `realizes`,
-`statement_iff_of_realizes`) inherit the existing Sail platform-hook surface of `ExecutionStep`
-and nothing else. The shard targets remain unfilled; these probes fix their generic shape.
+The PolyFun additions, the ensemble-realization statement, and its SP1 shard instances add eleven
+main probes and no test probes. All preceding 2787 main and 323 test dependency sets are
+unchanged, with no removals or new main-library axiom names. The six generic declarations
+(`ToPolyFun/`: orbit composition and splitting, labeled-trace concatenation and its projection to
+reachability; `Machine/`: the ensemble-realization statement and its reachability corollary) use
+subsets of the logical baseline; the five SP1 instances (`sp1Machine`, `trace_iff_executionPath`,
+`executes_iff`, `realizes`, `statement_iff_of_realizes`) inherit the existing Sail platform-hook
+surface of `ExecutionStep` and nothing else. The shard targets remain unfilled; these probes fix
+their generic shape.
 
 The native target-value checks and finite change inventory add thirty main probes and four
 executable regressions. All preceding 2757 main and 319 test dependency sets are unchanged,

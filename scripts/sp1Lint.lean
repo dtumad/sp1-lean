@@ -162,7 +162,7 @@ def getHandwrittenDecls : CoreM (Array Name) := do
     [`SP1Clean.Extracted.ExtractionDSL, `SP1Clean.Extracted.InteractionModel]
   let keep := env.header.moduleNames.map fun m =>
     ((`SP1Clean).isPrefixOf m || (`ToClean).isPrefixOf m || (`ToMathlib).isPrefixOf m ||
-      (`Machine).isPrefixOf m)
+      (`ToPolyFun).isPrefixOf m || (`Machine).isPrefixOf m)
       && (!(`SP1Clean.Extracted).isPrefixOf m || handWrittenExtracted.contains m)
       && !m.toString.endsWith "Vectors"
   return env.constants.map₁.fold (init := #[]) fun decls declName _ =>
@@ -250,13 +250,13 @@ unsafe def main (args : List String) : IO Unit := do
   -- The upstream-destined libraries are linted on the same terms, but they are optional: this
   -- script must run both before and after they exist on disk.
   let mut extraModules := #[]
-  for m in [`ToClean, `ToMathlib, `Machine] do
+  for m in [`ToClean, `ToMathlib, `ToPolyFun, `Machine] do
     if ← (← findOLean m).pathExists then extraModules := extraModules.push m
   let nolintsFile : FilePath := "scripts/nolints.json"
   let nolints ← if ← nolintsFile.pathExists then readJsonFile NoLints nolintsFile else pure #[]
   unsafe Lean.enableInitializersExecution
   let projectImports : Array Name ←
-    if coreScope then builtModules ["SP1Clean", "ToClean", "ToMathlib", "Machine"] isCoreModule
+    if coreScope then builtModules ["SP1Clean", "ToClean", "ToMathlib", "ToPolyFun", "Machine"] isCoreModule
     else pure (#[projectModule] ++ extraModules)
   if coreScope then do
     IO.println s!"-- sp1Lint: core scope, {projectImports.size} built modules"

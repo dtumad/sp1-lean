@@ -10,7 +10,7 @@
 # `bv_decide` footprint. `native_decide` is confined to the top-level `SP1CleanTest` test library,
 # which imports `SP1Clean` but is never imported by it.
 #
-# Scope is every released main source library: `SP1Clean/`, `ToClean/`, `ToMathlib/`, and `Machine/`.
+# Scope is every released main source library: `SP1Clean/`, `ToClean/`, `ToMathlib/`, `ToPolyFun/`, and `Machine/`.
 # `SP1CleanTest/` is the sanctioned home, while `docs/` and `scripts/` legitimately mention the
 # token. There are zero legitimate main-library uses, so any case-insensitive hit fails the gate.
 #
@@ -22,7 +22,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-if grep -rniE 'native_decide' SP1Clean ToClean ToMathlib Machine --include='*.lean' 2>/dev/null; then
+if grep -rniE 'native_decide' SP1Clean ToClean ToMathlib ToPolyFun Machine --include='*.lean' 2>/dev/null; then
   echo "FAIL: native_decide found in a released main source library (see lines above)." >&2
   echo "      native_decide trusts the whole compiler (generated ._native compiler-trust constants) — it must not appear" >&2
   echo "      in the main library. Move the check into the SP1CleanTest test library (run by" >&2

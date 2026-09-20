@@ -1,71 +1,51 @@
-import Machine.Core.Path
+import ToPolyFun.Dynamical.Labeled
 import SP1Clean.FormalModel.Shard
+/-! # The SP1 shard as a PolyFun labeled machine
 
-/-! # The SP1 shard as a labeled machine
-
-`sp1Machine` presents the complete-state execution step of a checked image as a
-`Machine.LabeledMachine`: states are `ExecutionState`, labels are `ExecutionEvent`, steps are
-`ExecutionStep` at the native host policy, and a stopped host is terminal. Its paths are the
-existing `ExecutionPath` (`executionPath_iff_path`), so the generic path algebra and PolyFun view
-apply to the shard contract with no new execution carrier: `Executes` is source validity plus a
-machine path between the realized snapshots (`executes_iff`).
+`sp1Machine` bundles the existing PolyFun view of a checked image's complete-state execution step
+(`executionSystem`/`executionEventMap`, `Model/Core/ExecutionPath.lean`) as a
+`PFunctor.DynSystem.Labeled` machine. Its traces are the existing `ExecutionPath`
+(`trace_iff_executionPath`, from the orbit correspondence proved beside the system), so the
+generic realization statement applies to the shard contract with no new execution carrier:
+`Executes` is source validity plus a machine trace between the realized snapshots
+(`executes_iff`).
 -/
 
 namespace SP1Clean.FormalModel.Shard
 
-open Model.Core Machine
+open Model.Core Machine PFunctor PFunctor.DynSystem
 
 /-- The full-state SP1 step relation of a checked image as a labeled machine. -/
 def sp1Machine (characteristic : ℕ) (image : ProgramImage) (valid : image.Valid) :
-    _root_.Machine.LabeledMachine where
+    Labeled (executionInterface (policy characteristic image) (image.toGuestProgram valid)) where
   State := ExecutionState
+  toDynSystem := executionSystem (policy characteristic image) (image.toGuestProgram valid)
   Event := ExecutionEvent
-  Step := ExecutionStep (policy characteristic image) (image.toGuestProgram valid)
-  Terminal state := state.host.exitCode ≠ none
-  terminal_stuck := fun halted => ExecutionStep.not_of_halted halted
+  event := executionEventMap (policy characteristic image) (image.toGuestProgram valid)
 
 variable {characteristic : ℕ} {image : ProgramImage} {valid : image.Valid}
 
-/-- Every shard path is a labeled-machine path. -/
-theorem path_of_executionPath {source target : ExecutionState} {events : List ExecutionEvent} :
-    ExecutionPath (policy characteristic image) (image.toGuestProgram valid) source events target →
-      _root_.Machine.Path (sp1Machine characteristic image valid) source events target
-  | .nil _ => .nil _
-  | .cons step rest => .cons step (path_of_executionPath rest)
-
-/-- Every labeled-machine path is a shard path. -/
-theorem executionPath_of_path {source target : ExecutionState} {events : List ExecutionEvent} :
-    _root_.Machine.Path (sp1Machine characteristic image valid) source events target →
-      ExecutionPath (policy characteristic image) (image.toGuestProgram valid) source events target
-  | .nil _ => .nil _
-  | .cons step rest => .cons step (executionPath_of_path rest)
-
-/-- Shard paths are exactly labeled-machine paths. -/
-theorem executionPath_iff_path {source target : ExecutionState} {events : List ExecutionEvent} :
-    ExecutionPath (policy characteristic image) (image.toGuestProgram valid) source events target ↔
-      _root_.Machine.Path (sp1Machine characteristic image valid) source events target :=
-  ⟨path_of_executionPath, executionPath_of_path⟩
-
-/-- Counted shard execution is counted machine reachability. -/
-theorem executionSegment_iff_segment {source target : ExecutionState} {steps : ℕ} :
-    ExecutionSegment (policy characteristic image) (image.toGuestProgram valid) source steps
-        target ↔
-      _root_.Machine.Segment (sp1Machine characteristic image valid) source steps target := by
+/-- Machine traces are exactly shard paths. -/
+theorem trace_iff_executionPath {source target : ExecutionState} {events : List ExecutionEvent} :
+    (sp1Machine characteristic image valid).Trace source events target ↔
+      ExecutionPath (policy characteristic image) (image.toGuestProgram valid) source events
+        target := by
   constructor
-  · rintro ⟨events, length, path⟩
-    exact ⟨events, length, path_of_executionPath path⟩
-  · rintro ⟨events, length, path⟩
-    exact ⟨events, length, executionPath_of_path path⟩
+  · rintro ⟨_, orbit, rfl, rfl⟩
+    exact executionPath_of_prefix orbit
+  · intro path
+    obtain ⟨orbit, endpoint, labels⟩ := path.exists_prefix
+    exact ⟨_, orbit, labels, endpoint⟩
 
-/-- `Executes` is source validity plus a machine path between the realized snapshots. -/
+/-- `Executes` is source validity plus a machine trace between the realized snapshots. -/
 theorem executes_iff {source target : ExecutionSnapshot} {events : List ExecutionEvent} :
     Executes characteristic image source target events ↔
       ExecutionSourceValid image source ∧
-        _root_.Machine.Path (sp1Machine characteristic image valid) source.realize events target.realize := by
+        (sp1Machine characteristic image valid).Trace source.realize events target.realize := by
   constructor
   · rintro ⟨sourceValid, path⟩
-    exact ⟨sourceValid, executionPath_iff_path.mp path⟩
-  · rintro ⟨sourceValid, path⟩
-    exact ⟨sourceValid, executionPath_iff_path.mpr path⟩
+    exact ⟨sourceValid, trace_iff_executionPath.mpr path⟩
+  · rintro ⟨sourceValid, trace⟩
+    exact ⟨sourceValid, trace_iff_executionPath.mp trace⟩
 
 end SP1Clean.FormalModel.Shard

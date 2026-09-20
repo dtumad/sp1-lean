@@ -1,13 +1,13 @@
 import PolyFun.PFunctor.Dynamical.Run
-
 /-! # Composition of finite orbits
 
 ## Gap against upstream
 
 PolyFun's `DynSystem.ReachableIn` comes with `refl`, `step`, and `reachableIn_zero_iff` but no
-composition or decomposition: two consecutive orbits cannot be joined into one, and an orbit
-cannot be cut. These are the lemmas a shard-composition argument needs, stated on a bare
-`DynSystem` in PolyFun's own namespace so they can be contributed as they are. -/
+composition or decomposition: two consecutive orbits cannot be joined into one, an orbit cannot be
+cut, and the length of an orbit's event trace is not recorded. These are the lemmas a
+shard-composition argument needs, stated on a bare `DynSystem` in PolyFun's own namespace so they
+can be contributed as they are. -/
 
 namespace PFunctor.DynSystem
 
@@ -40,6 +40,13 @@ theorem Prefix.events_append {Event : Type w} (eventMap : s.EventMap Event) {st 
   induction pre with
   | nil => rfl
   | step d tail ih => simpa using ih post
+
+/-- An orbit's event trace has the orbit's length. -/
+theorem Prefix.length_events {Event : Type w} (eventMap : s.EventMap Event) {st : S} {n : ℕ}
+    (pre : Prefix s st n) : (pre.events eventMap).length = n := by
+  induction pre with
+  | nil => rfl
+  | step _ _ ih => exact congrArg Nat.succ ih
 
 /-- Reachability composes, with the second orbit's length first (the definitional order). -/
 theorem ReachableIn.add' {m n : ℕ} {st mid st' : S} (first : s.ReachableIn m st mid)
