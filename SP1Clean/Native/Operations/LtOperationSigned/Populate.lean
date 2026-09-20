@@ -1,6 +1,7 @@
 import SP1Clean.Native.Operations.LtOperationUnsigned.Populate
 import SP1Clean.Native.Operations.U16MSBOperation.Populate
 import SP1Clean.Extracted.LtOperationSigned
+import ToClean.Circuit.IteDecide
 
 /-! # `LtOperationSigned` — native witness generation
 

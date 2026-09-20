@@ -124,8 +124,13 @@ theorem verifierTable_eq_build {ens : Ensemble F PublicIO} (witness : EnsembleWi
     rw [Component.width, GeneralFormalCircuit.size_eq, hzero, Nat.add_zero]
     with_unfolding_all rfl
   · show [(toElements witness.publicInput).toArray] = _
-    rw [Table.build_table, List.map_cons, List.map_nil,
-      Component.buildRow_of_localLength_zero _ _ _ _ hzero]
-    rfl
+    rw [Table.build_table]
+    -- the singleton is spelled at `ens.verifierTable.Input`, which is `PublicIO` only by unfolding
+    -- `Ensemble.verifierTable`; `rw [List.map_cons]` cannot assign through that, so reduce the map
+    -- by `show` and pass the row explicitly
+    show _ = [ens.verifierTable.buildRow witness.publicInput witness.data hint]
+    exact congrArg (fun r => [r])
+      (Component.buildRow_of_localLength_zero ens.verifierTable witness.publicInput witness.data hint
+        hzero).symm
 
 end Air.Flat

@@ -8,6 +8,7 @@ import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
 import Mathlib.Tactic
+import ToClean.Circuit.IteDecide
 
 /-! # `BitwiseU16Operation` as a Clean-native composed `FormalAssertion`
 

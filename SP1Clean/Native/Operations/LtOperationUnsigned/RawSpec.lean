@@ -134,8 +134,8 @@ theorem ltUnsigned_core {cols : Extracted.LtOperationUnsigned (ZMod p)}
     have hbit : cols.u16_compare_operation.bit
         = if cols.comparison_limbs[0].val < cols.comparison_limbs[1].val then 1 else 0 :=
       (hsub ⟨fun _ => ⟨hb0', hd0'⟩, Or.inr rfl⟩).2 rfl
-    rw [hbit, ecl0, ecl1]
-    simp only [Word.toNat_def, ZMod.val_zero]
+    rw [hbit, ecl0, ecl1, Word.toNat_def b, Word.toNat_def cc]
+    simp only [ZMod.val_zero]
     split_ifs <;> first | rfl | (exfalso; omega)
   · -- f3 = 1: limb 3 differs and is most significant
     simp only [g0, g1, g2, g3] at hcl0 hcl1 hne
@@ -151,8 +151,7 @@ theorem ltUnsigned_core {cols : Extracted.LtOperationUnsigned (ZMod p)}
     have hbit : cols.u16_compare_operation.bit
         = if cols.comparison_limbs[0].val < cols.comparison_limbs[1].val then 1 else 0 :=
       (hsub ⟨fun _ => ⟨hb0', hd0'⟩, Or.inr rfl⟩).2 rfl
-    rw [hbit, ecl0, ecl1]
-    simp only [Word.toNat_def]
+    rw [hbit, ecl0, ecl1, Word.toNat_def b, Word.toNat_def cc]
     split_ifs <;> first | rfl | (exfalso; omega)
   · -- f2 = 1: limb 3 equal, limb 2 differs
     simp only [g0, g1, g2, g3] at hcl0 hcl1 hne hsel3
@@ -169,8 +168,7 @@ theorem ltUnsigned_core {cols : Extracted.LtOperationUnsigned (ZMod p)}
     have hbit : cols.u16_compare_operation.bit
         = if cols.comparison_limbs[0].val < cols.comparison_limbs[1].val then 1 else 0 :=
       (hsub ⟨fun _ => ⟨hb0', hd0'⟩, Or.inr rfl⟩).2 rfl
-    rw [hbit, ecl0, ecl1]
-    simp only [Word.toNat_def]
+    rw [hbit, ecl0, ecl1, Word.toNat_def b, Word.toNat_def cc]
     split_ifs <;> first | rfl | (exfalso; omega)
   · -- f1 = 1: limbs 3,2 equal, limb 1 differs
     simp only [g0, g1, g2, g3] at hcl0 hcl1 hne hsel3 hsel2
@@ -188,8 +186,7 @@ theorem ltUnsigned_core {cols : Extracted.LtOperationUnsigned (ZMod p)}
     have hbit : cols.u16_compare_operation.bit
         = if cols.comparison_limbs[0].val < cols.comparison_limbs[1].val then 1 else 0 :=
       (hsub ⟨fun _ => ⟨hb0', hd0'⟩, Or.inr rfl⟩).2 rfl
-    rw [hbit, ecl0, ecl1]
-    simp only [Word.toNat_def]
+    rw [hbit, ecl0, ecl1, Word.toNat_def b, Word.toNat_def cc]
     split_ifs <;> first | rfl | (exfalso; omega)
   · -- f0 = 1: limbs 3,2,1 equal, limb 0 differs
     simp only [g0, g1, g2, g3] at hcl0 hcl1 hne hsel3 hsel2 hsel1
@@ -208,8 +205,7 @@ theorem ltUnsigned_core {cols : Extracted.LtOperationUnsigned (ZMod p)}
     have hbit : cols.u16_compare_operation.bit
         = if cols.comparison_limbs[0].val < cols.comparison_limbs[1].val then 1 else 0 :=
       (hsub ⟨fun _ => ⟨hb0', hd0'⟩, Or.inr rfl⟩).2 rfl
-    rw [hbit, ecl0, ecl1]
-    simp only [Word.toNat_def]
+    rw [hbit, ecl0, ecl1, Word.toNat_def b, Word.toNat_def cc]
     split_ifs <;> first | rfl | (exfalso; omega)
 
 /-- The selected comparison limbs are genuine 16-bit values (each is one operand limb or `0`). Needed

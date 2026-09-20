@@ -16,7 +16,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Lt's row has computable witnesses: the two flag cells are functions of the hint alone, and the
 ten `LtOperationSigned` cells are functions of the input row plus the `is_slt` cell below them. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,

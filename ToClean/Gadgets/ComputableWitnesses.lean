@@ -10,12 +10,14 @@ Clean's gadget library carries exactly one `ComputableWitnesses` instance in tre
 "any environment consistent with my generators satisfies my constraints" — which is enough to
 compose a circuit but not to *build* a row: an AIR trace-generation argument needs the environment
 Clean's array-backed interpreter actually produces, and `Circuit.witgen_usesLocalWitnesses` is
-gated on `ComputableWitnesses`.
+gated on `ComputableWitnesses` (here at the strengthened `ComputableWitnessesWithData` of
+`ToClean.Circuit.AgreesBelowWithData`).
 
 This file supplies the missing instances for the three gadgets a byte/range table provider
 composes. All three are honest for the same reason — their witness generators are witness-IR terms
 over the input expressions alone — so each proof is the input-agreement hypothesis pushed through
-one `Witgen` evaluation step:
+one `Witgen` evaluation step (for `And8`/`Or8`, `circuit_norm` performs the step itself and the
+two operand projections of the agreement close the goal):
 
 * `Gadgets.ToBits.toBits` — one `witnessVector n (x.bits n)`, then boolean asserts and one equality
   subcircuit, neither of which declares a cell;
@@ -43,7 +45,7 @@ input expression, so an environment agreeing on the input agrees on every declar
 tails — the per-bit boolean assertions (a `forEach` of zero-witness assertions) and the closing
 equality subcircuit — declare no cells at all. -/
 theorem toBits_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
-    (toBits n hn (p := p)).base.ComputableWitnesses := by
+    (toBits n hn (p := p)).base.ComputableWitnessesWithData := by
   intro k input env env'
   simp only [toBits, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _ h_in => ?_,
@@ -54,7 +56,7 @@ theorem toBits_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
 /-- `rangeCheck` has computable witnesses: it is the assertion wrapper around `toBits`, whose own
 `ComputableWitnesses` dispatches the single composed subcircuit. -/
 theorem rangeCheck_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
-    (rangeCheck n hn (p := p)).base.ComputableWitnesses := by
+    (rangeCheck n hn (p := p)).base.ComputableWitnessesWithData := by
   intro k input env env'
   simp only [rangeCheck, circuit_norm, Operations.forAllFlat, Operations.forAll]
   exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
@@ -70,17 +72,11 @@ variable {p : ℕ} [Fact p.Prime] [Fact (p > 512)]
 
 /-- `And8` has computable witnesses: its single cell is `x &&& y` over the two input cells, and the
 `ByteXorTable` lookup that certifies it declares none. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  refine ⟨fun _ h_in => ?_, trivial, trivial⟩
-  have hx : Expression.eval env.toEnvironment input.x
-      = Expression.eval env'.toEnvironment input.x := by
-    simpa [circuit_norm] using congrArg Inputs.x h_in
-  have hy : Expression.eval env.toEnvironment input.y
-      = Expression.eval env'.toEnvironment input.y := by
-    simpa [circuit_norm] using congrArg Inputs.y h_in
-  simp only [Witgen.WitgenIR.eval_ofFExpr, Witgen.FExpr.eval, Witgen.U64Expr.eval, hx, hy]
+  intro _ h_in
+  rw [congrArg Inputs.x h_in, congrArg Inputs.y h_in]
 
 end Gadgets.And.And8
 
@@ -91,16 +87,10 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (p > 512)]
 
 /-- `Or8` has computable witnesses — the `And8` argument verbatim, at `|||`. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  refine ⟨fun _ h_in => ?_, trivial, trivial⟩
-  have hx : Expression.eval env.toEnvironment input.x
-      = Expression.eval env'.toEnvironment input.x := by
-    simpa [circuit_norm] using congrArg Inputs.x h_in
-  have hy : Expression.eval env.toEnvironment input.y
-      = Expression.eval env'.toEnvironment input.y := by
-    simpa [circuit_norm] using congrArg Inputs.y h_in
-  simp only [Witgen.WitgenIR.eval_ofFExpr, Witgen.FExpr.eval, Witgen.U64Expr.eval, hx, hy]
+  intro _ h_in
+  rw [congrArg Inputs.x h_in, congrArg Inputs.y h_in]
 
 end Gadgets.Or.Or8

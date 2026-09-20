@@ -1,4 +1,5 @@
 import SP1Clean.Native.Operations.MulOperation.RawSpec
+import ToClean.Circuit.IteDecide
 
 /-! # `MulOperation.populate` — the witness (trace generation), mirroring SP1's
 `MulOperation::populate`. -/

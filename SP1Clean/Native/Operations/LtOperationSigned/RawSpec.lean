@@ -147,7 +147,7 @@ theorem ltSigned_semantic {b cc : Word (ZMod p)} {cols : Extracted.LtOperationSi
   obtain ⟨hb0, hb1, hb2, hb3⟩ := Word.lt_cases_of_isU64 hb
   obtain ⟨hc0, hc1, hc2, hc3⟩ := Word.lt_cases_of_isU64 hcc
   have h01 : (0 : ZMod p) ≠ 1 := by
-    intro h; haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+    intro h; have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
     have := congrArg ZMod.val h; rw [ZMod.val_zero, ZMod.val_one] at this; exact absurd this (by norm_num)
   rcases hs1 with hs | hs
   · -- `is_signed = 0`: `bm = cm = 0`, the unsigned compare on the unbiased words.
@@ -166,6 +166,8 @@ theorem ltSigned_semantic {b cc : Word (ZMod p)} {cols : Extracted.LtOperationSi
     · rw [hbit.1]
       simp [hs, Word.toNat_def, Vector.getElem_mk, List.getElem_toArray,
         List.getElem_cons_zero, List.getElem_cons_succ]
+      -- both sides are the same `if`; only their `Decidable` instances differ
+      rfl
     · rw [toBitVec64_eq_iff hb hcc]
       have key := hbit.2
       simp only [Word.toNat_def, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,

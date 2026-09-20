@@ -16,7 +16,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- JAL's row has computable witnesses: both witnessed words are functions of the input row alone. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _ h_input => ?_,

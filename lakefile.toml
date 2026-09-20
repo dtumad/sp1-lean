@@ -33,7 +33,7 @@ synthInstance.maxHeartbeats = 1000000
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.32.2"
+rev = "v4.33.1"
 
 # Clean, pinned to a FORK — the one dependency here that is not upstream. Base is upstream
 # `0e53b9f2` (v4.32.2 `main`, post PR #443 "bump-lean-4.32.2"); the fork's `sp1-integration` branch
@@ -53,8 +53,8 @@ rev = "v4.32.2"
 # NB `sp1-integration` must keep this rev reachable (see the PolyFun note below) — never force-push it.
 [[require]]
 name = "Clean"
-git = "https://github.com/dtumad/clean"
-rev = "2dad7788d58b09eabeb3898506e4cb896e5d3e9d"
+git = "https://github.com/Verified-zkEVM/clean"
+rev = "v4.33.1"
 
 # Sail RV64 model. Package name is `Lean_RV64D` (opencompl upstream naming); it exposes the
 # `LeanRV64D` library the project imports. Requiring by the real package name dedups with
@@ -97,7 +97,7 @@ rev = "079463134b9c50450b8393e1566a09fc492a34d9"
 [[require]]
 name = "PolyFun"
 git = "https://github.com/Verified-zkEVM/PolyFun"
-rev = "d062ba2cbb3a50ba5b9f3ba349ca003e6c79630a"
+rev = "997828ce4c04ccdc01f5f199069e26a6195ef6e7"
 
 # The `lake lint` driver executable (see `lintDriver` above). A thin wrapper around the Batteries
 # `#lint` framework; `supportInterpreter` is required because the linters' `test` functions are run
