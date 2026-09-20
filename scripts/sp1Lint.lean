@@ -168,12 +168,25 @@ def getHandwrittenDecls : CoreM (Array Name) := do
   return env.constants.map₁.fold (init := #[]) fun decls declName _ =>
     if keep[env.const2ModIdx[declName]?.get! (α := Nat)]! then decls.push declName else decls
 
+/-- The core-scope module filter: the `SP1Core` globs of `lakefile.toml` (strata 0-6) plus the
+three non-`SP1Clean` roots. Keep in sync with the `SP1Core` stanza. -/
+def isCoreModule (m : Name) : Bool :=
+  let s := m.toString
+  let corePrefixes := ["SP1Clean.Math.", "SP1Clean.Model.", "SP1Clean.FormalModel.",
+    "SP1Clean.Native.", "SP1Clean.Proofs.Operations.", "SP1Clean.Proofs.Chips."]
+  !(s.startsWith "SP1Clean") || s == "SP1Clean.Proofs.CircuitProofStart"
+    || corePrefixes.any (fun pre => s.startsWith pre)
+
 /-- Every module under `.lake/build/lib/lean/<root>/` whose olean exists AND whose source file
 still exists, as import names. Used by `--scope core`: PR CI builds only the core target, so
 instead of importing the umbrella `SP1Clean` (whose olean only the alignment workflow produces)
 the driver lints whatever is built. The source check matters: a build directory can hold oleans
-of retired or moved modules, and importing one beside its successor duplicates declarations. -/
-def builtModules (roots : List String) : IO (Array Name) := do
+of retired or moved modules, and importing one beside its successor duplicates declarations.
+`keep` further restricts the walk (core scope passes the core-library module prefixes): a shared
+build directory can also hold stale oleans of *alignment* modules whose import lists still name
+a pre-move path, and importing one of those drags the retired module in transitively. -/
+def builtModules (roots : List String) (keep : Name → Bool := fun _ => true) :
+    IO (Array Name) := do
   let libDir : FilePath := ".lake" / "build" / "lib" / "lean"
   let mut mods : Array Name := #[]
   for root in roots do
@@ -188,7 +201,8 @@ def builtModules (roots : List String) : IO (Array Name) := do
         let comps := (entry.withExtension "").components.drop depth
         let src : FilePath := (comps.foldl (fun (p : FilePath) c => p / FilePath.mk c) ⟨"."⟩).withExtension "lean"
         if ← src.pathExists then
-          mods := mods.push (comps.foldl (fun n c => Name.str n c) Name.anonymous)
+          let mod := comps.foldl (fun n c => Name.str n c) Name.anonymous
+          if keep mod then mods := mods.push mod
   return mods.qsort (·.toString < ·.toString)
 
 /--
@@ -242,7 +256,7 @@ unsafe def main (args : List String) : IO Unit := do
   let nolints ← if ← nolintsFile.pathExists then readJsonFile NoLints nolintsFile else pure #[]
   unsafe Lean.enableInitializersExecution
   let projectImports : Array Name ←
-    if coreScope then builtModules ["SP1Clean", "ToClean", "ToMathlib", "Machine"]
+    if coreScope then builtModules ["SP1Clean", "ToClean", "ToMathlib", "Machine"] isCoreModule
     else pure (#[projectModule] ++ extraModules)
   if coreScope then do
     IO.println s!"-- sp1Lint: core scope, {projectImports.size} built modules"
