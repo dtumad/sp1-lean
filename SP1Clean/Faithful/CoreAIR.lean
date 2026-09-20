@@ -38,6 +38,7 @@ import SP1Clean.Extracted.ChipOracle.UType
 import SP1Clean.FormalModel.Contracts.PublicValues
 import SP1Clean.FormalModel.CoreAIRRelation
 import SP1Clean.Model.InteractionBus
+import SP1Clean.Faithful.SyscallRowDecode
 
 /-! # Exact extracted Core AIR
 
@@ -316,34 +317,10 @@ together and cannot be separated by a downstream refinement signature. -/
 abbrev ShardRelation {Digest : Type} (binds : PreprocessedBinding p Digest) :=
   (system binds).shardRelation
 
-/-! ## Audited syscall-row view -/
+/-! ## Audited syscall-row view
 
-/-- Reassemble four little-endian 16-bit row limbs as the 64-bit word used by SP1. -/
-def word64 (values : Vector (ZMod p) 65) (i0 i1 i2 i3 : Fin 65) : BitVec 64 :=
-  BitVec.ofNat 64 (values[i0].val + values[i1].val * 2 ^ 16 +
-    values[i2].val * 2 ^ 32 + values[i3].val * 2 ^ 48)
-
-/-- Reassemble a three-limb pc in the same little-endian layout. -/
-def pc64 (values : Vector (ZMod p) 65) (i0 i1 i2 : Fin 65) : BitVec 64 :=
-  BitVec.ofNat 64
-    (values[i0].val + values[i1].val * 2 ^ 16 + values[i2].val * 2 ^ 32)
-
-/-- Read the timestamp represented by `CPUState`'s `(high, 8, 16)` columns. -/
-def clock (values : Vector (ZMod p) 65) : ℕ :=
-  values[0].val * 2 ^ 24 + values[1].val * 2 ^ 16 + values[2].val
-
-/-- Total decoder of one physical `SyscallInstrs` row.  The indices are the flattened field order of
-`SyscallInstrColumns<T, SupervisorMode>` at the pinned Rust revision:
-`state = 0..5`, `RTypeReader = 6..27`, `next_pc = 28..30`, `op_a_value = 32..35`, and
-`is_real = 64`. -/
-def decodeSyscallRow (row : SyscallInstrsCols (ZMod p)) : Machine.CoreSyscallEvent where
-  clock := clock row.values
-  pc := pc64 row.values 3 4 5
-  nextPc := pc64 row.values 28 29 30
-  rawCode := word64 row.values 7 8 9 10
-  arg1 := word64 row.values 15 16 17 18
-  arg2 := word64 row.values 22 23 24 25
-  result := word64 row.values 32 33 34 35
+The row decoder `decodeSyscallRow` is `Faithful/SyscallRowDecode.lean`; here it is lifted to the
+witness. -/
 
 /-- Decode exactly the real syscall rows, preserving physical table order. -/
 def syscallEvents (witness : Witness (Row p)) : List Machine.CoreSyscallEvent :=
