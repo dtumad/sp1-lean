@@ -296,10 +296,12 @@ moreLeanArgs = [
 # (`export/sp1dump/` + the `--testdata` generation-time gate + the Rust differential).
 # The core test set (the `lake test` driver): every test module that does not reach an
 # alignment-only module. The alignment-only anchors live under `SP1CleanTest/Alignment/` (moved by
-# import closure, not by topic) and are covered by the full library below.
+# import closure, not by topic) and are covered by the full library below. Every `Audit/` module
+# is alignment-only, so that directory no longer exists and must not appear in a glob: Lake fails
+# on a glob whose directory is absent from a fresh checkout.
 [[lean_lib]]
 name = "SP1CoreTest"
-globs = ["SP1CleanTest.Core.+", "SP1CleanTest.Audit.+", "SP1CleanTest.TraceGenTests.+"]
+globs = ["SP1CleanTest.Core.+", "SP1CleanTest.TraceGenTests.+"]
 moreLeanArgs = [
   "-Dlinter.style.lambdaSyntax=true", "-Dlinter.style.dollarSyntax=true",
   "-Dlinter.style.refine=true", "-Dlinter.style.cases=true",
