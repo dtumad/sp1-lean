@@ -393,7 +393,8 @@ private lemma toElements_cell_carry {F : Type} (s : Extracted.MulOperation F)
       = s.carry[k] := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
      exact Vector.getElem_append_left (by decide))
 
 set_option linter.unusedSectionVars false in
@@ -404,7 +405,8 @@ private lemma toElements_cell_product {F : Type} (s : Extracted.MulOperation F)
       = s.product[k] := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_) <;> decide)
 
 set_option linter.unusedSectionVars false in
@@ -415,7 +417,8 @@ private lemma toElements_cell_bLower {F : Type} (s : Extracted.MulOperation F)
       = s.b_lower_byte.low_bytes[k] := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_right ?_ ?_).trans
        ((Vector.getElem_append_right ?_ ?_).trans
          ((Vector.getElem_append_left ?_).trans
@@ -429,7 +432,8 @@ private lemma toElements_cell_cLower {F : Type} (s : Extracted.MulOperation F)
       = s.c_lower_byte.low_bytes[k] := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_right ?_ ?_).trans
        ((Vector.getElem_append_right ?_ ?_).trans
          ((Vector.getElem_append_right ?_ ?_).trans
@@ -442,7 +446,8 @@ private lemma toElements_cell_bMsb {F : Type} (s : Extracted.MulOperation F) :
     (toElements s)[40]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
       = s.b_msb := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans
@@ -455,7 +460,8 @@ private lemma toElements_cell_cMsb {F : Type} (s : Extracted.MulOperation F) :
     (toElements s)[41]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
       = s.c_msb := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans
@@ -469,7 +475,8 @@ private lemma toElements_cell_productMsb {F : Type} (s : Extracted.MulOperation 
     (toElements s)[42]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
       = s.product_msb.msb := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans
@@ -485,7 +492,8 @@ private lemma toElements_cell_bSignExtend {F : Type} (s : Extracted.MulOperation
     (toElements s)[43]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
       = s.b_sign_extend := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans
@@ -501,7 +509,8 @@ private lemma toElements_cell_cSignExtend {F : Type} (s : Extracted.MulOperation
     (toElements s)[44]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
       = s.c_sign_extend := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans

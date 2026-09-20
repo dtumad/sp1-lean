@@ -243,7 +243,8 @@ private lemma toElements_cell_bLow {F : Type} (s : Columns F) (k : ℕ) (hk : k 
       = s.b_low_bytes.low_bytes[k] := by
   obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+       ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_left ?_).trans
        ((Vector.getElem_cast ?_).trans (Vector.getElem_append_left ?_)) <;> decide)
 
@@ -254,7 +255,8 @@ private lemma toElements_cell_cLow {F : Type} (s : Columns F) (k : ℕ) (hk : k 
       = s.c_low_bytes.low_bytes[k] := by
   obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+       ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_right ?_ ?_).trans
        ((Vector.getElem_append_left ?_).trans
          ((Vector.getElem_cast ?_).trans (Vector.getElem_append_left ?_))) <;> decide)
@@ -267,7 +269,8 @@ private lemma toElements_cell_result {F : Type} (s : Columns F) (k : ℕ) (hk : 
       = s.bitwise_operation.result[k] := by
   obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+       ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_right ?_ ?_).trans
        ((Vector.getElem_append_right ?_ ?_).trans
          ((Vector.getElem_append_left ?_).trans

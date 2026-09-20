@@ -76,7 +76,8 @@ private lemma toElements_cell_bit {F : Type} (s : Extracted.LtOperationSigned F)
     (toElements s)[0]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
       = s.result.u16_compare_operation.bit := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_left ?_).trans
     ((Vector.getElem_cast ?_).trans ((Vector.getElem_append_left ?_).trans
       ((Vector.getElem_cast ?_).trans (Vector.getElem_append_left ?_)))) <;> decide
@@ -88,7 +89,8 @@ private lemma toElements_cell_flag {F : Type} (s : Extracted.LtOperationSigned F
       = s.result.u16_flags[k] := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_left ?_).trans
        ((Vector.getElem_cast ?_).trans ((Vector.getElem_append_right ?_ ?_).trans
          (Vector.getElem_append_left ?_))) <;> decide)
@@ -98,7 +100,8 @@ private lemma toElements_cell_notEqInv {F : Type} (s : Extracted.LtOperationSign
     (toElements s)[5]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
       = s.result.not_eq_inv := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_left ?_).trans
     ((Vector.getElem_cast ?_).trans ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_)))) <;> decide
@@ -110,7 +113,8 @@ private lemma toElements_cell_compLimb {F : Type} (s : Extracted.LtOperationSign
       = s.result.comparison_limbs[k] := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_left ?_).trans
        ((Vector.getElem_cast ?_).trans ((Vector.getElem_append_right ?_ ?_).trans
          ((Vector.getElem_append_right ?_ ?_).trans ((Vector.getElem_append_right ?_ ?_).trans
@@ -121,7 +125,8 @@ private lemma toElements_cell_bMsb {F : Type} (s : Extracted.LtOperationSigned F
     (toElements s)[8]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
       = s.b_msb.msb := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_left ?_).trans
       ((Vector.getElem_cast ?_).trans (Vector.getElem_append_left ?_))) <;> decide
@@ -131,7 +136,8 @@ private lemma toElements_cell_cMsb {F : Type} (s : Extracted.LtOperationSigned F
     (toElements s)[9]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
       = s.c_msb.msb := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_left ?_).trans

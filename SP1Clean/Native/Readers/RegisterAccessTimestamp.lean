@@ -152,8 +152,8 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
         subst h_channel
         exact Or.inl (List.mem_singleton_self byteChannel.toRaw)
       · intro env h_constraints
-        have h_bool : (ProvableStruct.eval env input_var).is_real = 0 ∨
-            (ProvableStruct.eval env input_var).is_real = 1 := by
+        have h_bool : Expression.eval env input_var.is_real = 0 ∨
+            Expression.eval env input_var.is_real = 1 := by
           apply bool_of_mul_pred
           simpa only [circuit_norm] using h_constraints.1
         rw [Operations.inChannelsOrRequirements_iff_forall_mem]
