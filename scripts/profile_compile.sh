@@ -3,7 +3,7 @@
 # profile_compile.sh — rank every hand-written module by wall-clock elaboration time.
 #
 # Method: after one warm `lake build` (so every dependency is a cached .olean), run
-#   lake env lean -Dprofiler=true -Dprofiler.threshold=50 [linter flags] <file>
+#   lake env lean -Dprofiler=true -Dprofiler.threshold=50 [package flags] <file>
 # on each module. Because deps load from cache, this isolates that file's own elaboration
 # cost. We time it with /usr/bin/time -p and capture the profiler breakdown to a per-file log,
 # then scripts/profile_aggregate.py turns the logs into a ranking plus a per-category and
@@ -15,12 +15,11 @@
 #     surface any nonzero ones — a silent failure must not be misread as "fast".
 #   - Runs sequentially: clean wall-clock numbers, and respects the repo's build-concurrency cap.
 #   - A warm full build must precede the sweep, or early files pay to build their deps.
-#   - `lake env` only sets environment variables; it applies neither a library's `moreLeanArgs`
-#     nor the package's `moreLeanArgs`/`[leanOptions]`. The sweep therefore passes the package
-#     flags (`--tstack=400000 -DsynthInstance.maxHeartbeats=1000000`) and the eight style-linter
-#     flags from lakefile.toml itself (the linters are skipped for the generated
-#     `SP1Clean/Extracted/` modules, which carry `set_option linter.all false` and are built
-#     without them). Keep these lists in sync with lakefile.toml.
+#   - `lake env` only sets environment variables; it applies neither `moreLeanArgs` nor the
+#     package's `[leanOptions]`. The sweep therefore passes the package flags itself
+#     (`--tstack=400000`, the `-D` options, the Mathlib standard linter set and its opt-outs).
+#     Keep PACKAGE_FLAGS in sync with lakefile.toml; the generated modules carry
+#     `set_option linter.all false`, which switches the set off there exactly as in the build.
 #   - The Lake environment is captured once (`lake env` with no command) and `lean` is invoked
 #     directly, so per-module wall time is Lean alone, without ~1 s of Lake startup per file.
 #   - Numbers are per-module wall time of one `lean` process. Lean elaborates proof bodies
@@ -62,14 +61,10 @@ TREES="${TREES:-SP1Clean ToClean ToMathlib}"
 TOP="${TOP:-50}"
 
 # Package-level lean args (lakefile.toml `moreLeanArgs` + `[leanOptions]`), applied to every module.
-PACKAGE_FLAGS=(--tstack=400000 -DsynthInstance.maxHeartbeats=1000000)
-# Per-library style linters (lakefile.toml, the eight-flag block), applied to hand-written modules.
-LINTER_FLAGS=(
-  -Dlinter.style.lambdaSyntax=true -Dlinter.style.dollarSyntax=true
-  -Dlinter.style.refine=true -Dlinter.style.cases=true
-  -Dlinter.style.induction=true -Dlinter.style.admit=true
-  -Dlinter.oldObtain=true -Dlinter.style.cdot=true
-)
+# The package options from lakefile.toml `[leanOptions]` + `moreLeanArgs` (keep in sync).
+PACKAGE_FLAGS=(--tstack=400000 -Dpp.unicode.fun=true -DsynthInstance.maxHeartbeats=1000000
+  -Dweak.linter.mathlibStandardSet=true -Dweak.linter.style.admit=true
+  -Dweak.linter.style.header=false -Dweak.linter.style.longLine=false)
 
 mkdir -p "$OUTDIR"
 : > "$OUTDIR/summary.tsv"
@@ -130,10 +125,10 @@ while IFS= read -r f; do
   log="$OUTDIR/${module}.log"
   timefile="$(mktemp)"
 
-  # Generated modules are built without the style linters (lakefile.toml `SP1Extracted`).
+  # Test modules get the two test-library opt-outs (lakefile.toml `SP1CleanTest`).
   case "$f" in
-    SP1Clean/Extracted/*) flags=() ;;
-    *) flags=("${LINTER_FLAGS[@]}") ;;
+    SP1CleanTest/*) flags=(-Dweak.linter.style.nativeDecide=false -Dweak.linter.hashCommand=false) ;;
+    *) flags=() ;;
   esac
 
   printf '[%3d/%3d] %s ... ' "$count" "$TOTAL" "$module"

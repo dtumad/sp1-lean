@@ -753,3 +753,5 @@ lemma euclid_identity_word_signed
   -- then `omega` rules out the spurious `2^64` multiple via the magnitude bounds.
   split_ifs at hT with h1 h2 h3 <;> rcases hc3v with hc | hc <;> rw [hc] at hT <;>
     norm_num at hT hbB1 hbB2 hrB1 hrB2 hPlo hPhi hbnd ⊢ <;> omega
+
+end SP1Clean.DivRemChip

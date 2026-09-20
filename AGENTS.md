@@ -85,14 +85,19 @@ refinement; only their `_of_obligations` combinators are currently declared.
 
 ## Build
 
-- Core build: `lake build` (the default targets `SP1Core`, `ToClean`, `ToMathlib`: the generic and
-  semantic layers plus the chip circuits and their proofs). Full build: `lake build SP1Clean` (the
-  umbrella; adds the SP1-alignment layers `Extracted/{ChipOracle,SystemOracle}`, `Faithful/`,
-  `Alignment/`, `Proofs/Sail`, `Proofs/Completeness`, `Soundness/`, `Composition/`). PR CI runs the
-  core; the alignment workflow (`.github/workflows/alignment.yml`, weekly/on demand/on `main`)
-  runs the full build, `lake lint`, the full test library, the conformance gates, and both censuses.
-  Passing = **0 errors AND 0 warnings**, and **no stray `info:` notes** — leave the build output
-  clean (see the `ring` note below). Neither target carries `native_decide` (gated by
+- Core build: `lake build` (the default targets `SP1Core`, `ToClean`, `ToMathlib`, `ToPolyFun`:
+  the generic and semantic layers plus the chip circuits and their proofs — strata 0–6 of
+  `scripts/layering.txt`, reached through the root index `SP1Clean/Core.lean`). Full build:
+  `lake build SP1Clean` (the umbrella index `SP1Clean.lean` = `SP1Clean.Core` + the SP1-alignment
+  layers `Extracted/{ChipOracle,SystemOracle}`, `Faithful/`, `Alignment/`, `Proofs/Sail`,
+  `Proofs/Completeness`, `Soundness/`, `Composition/`). **Wire every new module into
+  `SP1Clean.lean`, and a core module into `SP1Clean/Core.lean` as well** — `scripts/check_root_index.sh`
+  and `scripts/check_layering.sh` (check 3) gate both. PR CI runs the core; the alignment workflow
+  (`.github/workflows/alignment.yml`, weekly/on demand/on `main`) runs the full build, `lake lint`,
+  the full test library, the conformance gates, and both censuses.
+  Passing = **0 errors AND 0 warnings**, and **no stray `info:` notes**: CI builds with
+  `lake build --wfail --iofail`, so a linter warning or an `info:` note (see the `ring` note below)
+  fails the job — use the same flags locally. Neither target carries `native_decide` (gated by
   `scripts/check_no_native_decide.sh`).
 - Tests: `lake test` (the `SP1CoreTest` `testDriver`: the test modules whose import closure stays in
   the core). The full library `lake build SP1CleanTest` (alignment workflow) adds the anchors under
@@ -322,15 +327,20 @@ layer. Where the namespace deliberately records intended vocabulary rather than 
 `Model/Opcode.lean` does), that is an entry in `scripts/layering_allowlist.txt` with a reason, not a
 silent divergence. Full contract: `docs/layering.md`.
 
-**Lake libraries** (`lakefile.toml`): the umbrella `SP1Clean` (the default target — its root index imports
-the whole **main** library, so `lake build` builds all of it) plus per-pillar build-targets `SP1Math` /
-`SP1Model` / `SP1Extracted` / `SP1FormalModel` / `SP1Native` / `SP1Proofs` (selected by submodule globs, e.g.
-`"SP1Clean.Math.+"`; `SP1Proofs` groups `Proofs` + `Faithful` + `Soundness`). `lake build SP1Extracted`
-builds just that layer. Separately, the top-level **test** library `SP1CleanTest` (glob `"SP1CleanTest.+"`,
-the `testDriver` → `lake test`) holds the exportability/non-vacuity anchors (including
-`Audit/ActiveNativeCompleteness.lean`) and trace-generator
-substrate; it imports `SP1Clean` but is **not** part of the umbrella, so `lake build SP1Clean` never
-compiles it (keeping the main build `native_decide`-free). Isolation is **by convention** — Lake does
+**Lake libraries** (`lakefile.toml`, eight of them, one option set): `SP1Core` (root index
+`SP1Clean/Core.lean`, strata 0–6 — the PR-CI build), the umbrella `SP1Clean` (root index
+`SP1Clean.lean`, everything — the alignment build), the three upstream-destined libraries
+`ToMathlib`/`ToPolyFun`/`ToClean`, the generated Sail model `LeanRV64D`, and the two **test**
+libraries `SP1CoreTest` (the `testDriver` → `lake test`; globs `SP1CleanTest.Core.+` +
+`SP1CleanTest.TraceGenTests.+`) and `SP1CleanTest` (glob `SP1CleanTest.+`, the alignment
+anchors included). The test libraries hold the exportability/non-vacuity anchors and the
+trace-generator substrate; they import `SP1Clean` but are **not** part of the umbrella, so
+`lake build SP1Clean` never compiles them (keeping the main build `native_decide`-free). Every
+option is package-level (`[leanOptions]`); no library carries linter flags of its own, and a
+module's owning library (Lake: the last declared one matching it; a globless library matches
+everything under its root) only decides which identical configuration it is built with. To build
+one layer, build a module (`lake build SP1Clean.Math.Word`) or the core; there are no per-pillar
+targets. Isolation is **by convention** — Lake does
 not forbid cross-layer imports within one package; the auto-gen guard is the `Extracted/`
 "do not hand-edit" headers + the sole writer `update_extracted.py` (and, for the export trees, the
 sole writers `scripts/witgenExport.lean` / `scripts/update_sp1_dumps.sh` + their byte-identity gates).
@@ -356,7 +366,7 @@ sole writers `scripts/witgenExport.lean` / `scripts/update_sp1_dumps.sh` + their
   `namespace Circuit` with a matching `export`, beside Clean's own `witnessVector`), so acceptance
   changes no call site. Each file's docstring must state the **gap against upstream** — what exists
   there, what is missing, and why — because that text becomes the PR description. Both libraries
-  carry the same eight `-D linter.*` flags as the core pillars (material heading upstream gets no
+  run under the same package-wide linter set as the core (material heading upstream gets no
   relaxation), are covered by every source guard, and are gated by `scripts/check_root_index.sh`.
 
 **Restructure status (updated 2026-07-27; whole-chip oracle migration completed the same day).**
@@ -492,39 +502,47 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
 
 - `circuit_proof_start` (from `Clean.Utils.Tactics`) is the **first** tactic in soundness/completeness proofs;
   any `haveI`/`set_option` must come after it, or it errors "can only be used on Soundness/Completeness".
-- Imports MUST precede the module doc-comment (a `-D linter.*` flag can't be validated against a header that
-  opens with a doc-comment before its imports — the linter's registration module isn't in scope yet; same
-  "Step 0" reason the package `[leanOptions]` carries no Mathlib linter flags, see `lakefile.toml`).
-- **Linters — two kinds.** *Syntactic* linters run during `lake build` (option-gated); *environment*
-  linters run as a separate `lake lint` pass over the built environment.
-  - **Syntactic.** Every hand-written **core** pillar lake library enables the same eight `-D linter.*` flags
-    (via its `moreLeanArgs`): `SP1Math`, `SP1Model`, `SP1FormalModel`, `SP1Native`, and `SP1Proofs`
-    (`Proofs/`+`Faithful/`+`Soundness/`). The flags: `style.lambdaSyntax`/`style.dollarSyntax`, the four
-    deprecated-tactic guards `style.refine`/`style.cases`/`style.induction`/`style.admit`, and
-    `oldObtain`/`style.cdot` — all at **zero** violations. They apply during the normal `lake build SP1Clean`.
-    `linter.style.longLine` is the remaining candidate (real fallout, concentrated in Native/FormalModel; see
-    `docs/roadmap.md` § "Separate follow-ups"). The flags are scoped **per-lib** rather than at package level so the
-    auto-gen `SP1Extracted` library stays out of the set (it carries per-file `set_option linter.all false`);
-    keep the five identical `moreLeanArgs` copies in `lakefile.toml` in sync. (Every hand-written pillar
-    transitively imports Mathlib — Native via Clean — so the `-D linter.*` options register fine; the older
-    "Clean-only Math/Model lack the registration" note was stale. Still true: a file's imports must precede
-    its module doc-comment, or the `-D` flag can't be validated — see the Step 0 bullet above.)
-  - **Environment (`lake lint`).** Run `lake lint` (after a build — it imports the oleans) for the Batteries
-    `#lint` checks. The driver is `scripts/sp1Lint.lean` (package `lintDriver = "sp1Lint"`), a thin wrapper over
-    `getChecks`/`lintCore`. We use a **custom driver, not the stock `runLinter` exe**, because `runLinter`
-    scopes by namespace *root* (`getDeclsInPackage module.getRoot`) — it would lint all `SP1Clean.*` incl.
-    `SP1Clean.Extracted.*`, and the per-file `set_option linter.all false` headers do **nothing** against
-    environment linters (those run post-import; only `nolints.json`/`@[nolint]` suppress them). `sp1Lint`
-    instead filters decls by full module path (drops `Extracted/`+`*Vectors`) and runs a **curated** set of 13
-    low-noise linters (incl. the Mathlib `structureInType`/`deprecatedNoSince` hygiene checks, both at zero
-    violations). Residue lives in `scripts/nolints.json` (20 stable entries — 2 `defLemma`
-    obligation-bundle defs + 4 `simpComm` + 14 `simpNF` Math/Model/Sail simp lemmas); `lake exe sp1Lint --update`
-    regenerates it; CI runs `lake lint` in the build job. Deliberately **dropped**: `docBlame`/`tacticDocs`
-    (doc-coverage noise) and `unusedArguments` (flags only the uniform field-generic / `ProverData` signature
-    args — all structural, and a fresh false-positive per new chip).
-  - The next-candidate linter (`longLine`) is tracked in `docs/roadmap.md` § "Separate follow-ups"; the
-    non-negotiable suppressions — `unusedSectionVars`/`unusedSimpArgs` (structurally necessary in circuit
-    proofs) and the auto-gen `linter.all false` — must stay.
+- Imports precede the module doc-comment (the module system requires it, and it keeps every file
+  in the shape Clean and Mathlib use).
+- **Linters — two kinds, one policy.** *Syntactic* linters run during `lake build`
+  (option-gated); *environment* linters run as a separate `lake lint` pass over the built
+  environment. The policy for both: **the practices these linters enforce are adopted.** Every
+  finding is debt to fix, not a preference to negotiate; a permanent exception exists only for an
+  extenuating circumstance stated at the site (typically an identifier that must mirror an
+  external one — a Rust field, a Sail function) and is spelled `@[nolint <linter>]` on the
+  declaration or `set_option linter.<x> false in` on the command, with a comment saying why.
+  - **Syntactic.** The package enables **Mathlib's standard linter set** once, for every library:
+    `weak.linter.mathlibStandardSet = true` in `lakefile.toml` `[leanOptions]` (plus
+    `linter.style.admit`, which is not a set member). Two mechanics make this the whole story:
+    `weak.` means the option is ignored where it is unregistered (the generated Sail model imports
+    no Mathlib), and Lean resolves an unset linter option as *explicit value ⊳ `linter.all` ⊳
+    linter-set membership ⊳ default*, so the generated `Extracted/` modules and the `*Vectors`
+    test batteries — which carry `set_option linter.all false` — are outside the set without any
+    per-library flags. The `weak.linter.<x> = false` lines in `lakefile.toml` are **temporary
+    opt-outs**, each with its measured count: the sites get fixed in the lint burn-down
+    (`docs/roadmap.md` § Lint debt) and the line is deleted at count 0. Enforcement is
+    `lake build --wfail --iofail` in CI. The non-negotiable file-level suppressions —
+    `unusedSectionVars`/`unusedSimpArgs` (structurally necessary in circuit proofs) and the
+    generated files' `linter.all false` — stay.
+  - **Environment (`lake lint`).** The driver is Batteries' `runLinter` (`lintDriver =
+    "batteries/runLinter"`, the same as Mathlib, cslib and PolyFun): every default `@[env_linter]`
+    (`docBlame`, `defsWithUnderscore`, `unusedArguments`, `simpNF`, …) over the declarations of
+    the four roots `SP1Clean`, `ToClean`, `ToMathlib`, `ToPolyFun`. It needs built oleans: `lake
+    lint` (full tree, the alignment workflow) or, on a core build, `lake exe runLinter --no-build
+    SP1Clean.Core ToClean ToMathlib ToPolyFun` (PR CI). `scripts/nolints.json` is the
+    **burn-down list**: `scripts/update_nolints.sh` regenerates it (Batteries' `--update` handles one
+    root at a time; the script runs it per root and merges), every entry is a debt, and CI
+    fails on any finding not in it — so no new debt enters. Generated declarations are fixed in
+    the emitter (`update_extracted.py` emits docstrings, camelCase definition names, and
+    `@[nolint …]` where the Rust signature forces an unused argument or a mirrored name), not by
+    hand. Names: definitions are `lowerCamelCase`/`UpperCamelCase` (Mathlib's convention, the
+    `defsWithUnderscore` linter); snake_case is reserved for identifiers that mirror an external
+    one and carries the `@[nolint defsWithUnderscore]` exception.
+- **Docstrings.** Every declaration has one (`docBlame` is the gate). Terse and clear: one or two
+  lines stating what the declaration *is now* — no history, no narrative of how it came to be
+  (that belongs in git and the audit docs). A docstring grows beyond a few lines only with a
+  reason. Where a family is uniform (the 25 chips' `circuit`/`main`/`Spec`), say it once in the
+  module docstring and keep the per-declaration line short.
 - **This repo does not raise elaboration budgets.** Hand-written Lean carries **zero**
   `set_option maxHeartbeats`, matching upstream Clean (none in 44,603 lines), and two measured structural
   `maxRecDepth` sites; every other site is on a generated definition.

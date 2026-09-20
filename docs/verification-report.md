@@ -1414,9 +1414,9 @@ docs/audits/2026-07-release-readiness.md (no longer in the tree) from git histor
 ## 13. Reproduction
 
 ```sh
-lake build SP1Clean        # the main library: 0 errors, 0 warnings, 0 info notes
+lake build --wfail --iofail SP1Clean   # the main library: 0 errors, 0 warnings, 0 info notes
 lake test                  # the conformance anchors (the only native_decide)
-lake lint                  # curated environment linters
+lake lint                  # Batteries runLinter, every default environment linter
 scripts/run_audit.sh       # pins + zero-deferral gates + per-theorem axiom census
 ```
 

@@ -66,7 +66,7 @@ jobs:
           use-mathlib-cache: "true"
           use-github-cache: "false"
       - name: Full build (resumable — a cold cache may need one re-run)
-        run: timeout 5h lake build SP1Clean ToClean ToMathlib
+        run: timeout 5h lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun
       - name: Save the build cache
         if: always()
         uses: actions/cache/save@v4
@@ -105,9 +105,9 @@ jobs:
           use-mathlib-cache: "true"
           use-github-cache: "false"
       - name: Replay the full build
-        run: lake build SP1Clean ToClean ToMathlib
-      - name: Environment linters (lake lint)
-        run: lake lint
+        run: lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun
+      - name: Environment linters (lake lint = batteries/runLinter over the four roots)
+        run: lake lint -- --no-build
 
   test-full:
     needs: build-full
@@ -149,9 +149,9 @@ jobs:
           use-mathlib-cache: "true"
           use-github-cache: "false"
       - name: Replay the full build
-        run: lake build SP1Clean ToClean ToMathlib
+        run: lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun
       - name: Full test library (lake build SP1CleanTest)
-        run: timeout 5h lake build SP1CleanTest
+        run: timeout 5h lake build --wfail --iofail SP1CleanTest
       - name: Save the test-library build cache
         if: always()
         uses: actions/cache/save@v4
@@ -203,6 +203,6 @@ jobs:
           use-mathlib-cache: "true"
           use-github-cache: "false"
       - name: Replay the full build
-        run: lake build SP1Clean ToClean ToMathlib
+        run: lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun
       - name: Release audit, main scope (scripts/run_audit.sh --main-only)
         run: scripts/run_audit.sh --main-only

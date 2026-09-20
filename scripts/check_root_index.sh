@@ -4,9 +4,13 @@
 # this script is the machine check behind that rule (a 2026-08 sweep found 33 silent omissions, so
 # the rule needs a gate, not a convention).
 #
-# Covers all three hand-written trees: `SP1Clean/`, and the two upstream-destined libraries
-# `ToClean/` and `ToMathlib/`. The latter two are checked only once they exist on disk, so this
-# script is correct both before and after they are created.
+# Covers the four hand-written trees: `SP1Clean/` and the upstream-destined `ToClean/`,
+# `ToPolyFun/`, `ToMathlib/`. `SP1Clean/` has two indices: `SP1Clean/Core.lean` (the `SP1Core`
+# library root, strata 0–6 of `scripts/layering.txt` — its exact contents are gated by
+# `scripts/check_layering.sh`) and the umbrella `SP1Clean.lean`, which imports `SP1Clean.Core` and
+# everything else; coverage is checked over the union of the two.
+#
+# Import lines may carry the module-system modifiers (`public`, `meta`, `all`).
 #
 # Run from anywhere; part of `scripts/run_audit.sh` and the CI `guards` job. Exit 0 = in sync.
 set -uo pipefail
@@ -25,7 +29,12 @@ check_tree() {
 
   local on_disk indexed missing dangling dupes
   on_disk=$(find "$tree" -name '*.lean' | sed 's|/|.|g; s|\.lean$||' | sort)
-  indexed=$(grep "^import ${tree}" "$index" | sed 's/^import //' | sort)
+  # The umbrella may reach modules through a sub-index it imports (`SP1Clean.Core`); the sub-index
+  # itself is a module on disk and must be imported by the umbrella like any other.
+  indexed=$( { grep -E "^(public )?(meta )?import (all )?${tree}" "$index";
+               for sub in $(grep -oE "^(public )?(meta )?import (all )?${tree}\.Core$" "$index" | sed -E 's/^(public )?(meta )?import (all )?//'); do
+                 grep -E "^(public )?(meta )?import (all )?${tree}" "$(echo "$sub" | sed 's|\.|/|g').lean";
+               done; } | sed -E 's/^(public )?(meta )?import (all )?//' | sort)
 
   missing=$(comm -13 <(echo "$indexed") <(echo "$on_disk"))
   dangling=$(comm -23 <(echo "$indexed") <(echo "$on_disk"))

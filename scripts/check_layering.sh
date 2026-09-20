@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Gate: the layering contract in docs/layering.md.
 #
-# Two checks over one stratum map (scripts/layering.txt):
+# Three checks over one stratum map (scripts/layering.txt):
 #
 #   1. DIRECTION — a module may import only from a strictly lower stratum, or its own. An upward
 #      import is a bug. This is the check that would have caught
@@ -15,7 +15,11 @@
 #      nothing checked. AGENTS.md's "namespaces are decoupled from directory paths" stays true for
 #      SUB-namespaces; the pillar root is what must agree.
 #
-# Both fail closed: a module matching no stratum prefix is an error, so a new top-level directory
+#   3. CORE INDEX — `SP1Clean/Core.lean` (the `SP1Core` library root, i.e. the PR-CI build) imports
+#      exactly the hand-written modules of strata 0-6. The core set is derived from the map, never
+#      listed by hand a second time; a module missing from the index silently drops out of PR CI.
+#
+# All fail closed: a module matching no stratum prefix is an error, so a new top-level directory
 # cannot silently escape the map.
 #
 # Exceptions live in scripts/layering_allowlist.txt with a stated reason. That is a prohibition with
@@ -95,7 +99,14 @@ fail = 0
 unmapped, upward, nsbad = [], [], []
 
 # Root index modules import the whole world by design; they are the umbrella, not a layer.
-ROOT_INDEX = {"SP1Clean.lean", "ToClean.lean", "ToMathlib.lean", "ToPolyFun.lean"}
+# `SP1Clean/Core.lean` is the sub-index of strata 0-6 (the `SP1Core` library root); check 3 below
+# pins its contents to the map.
+ROOT_INDEX = {"SP1Clean.lean", "SP1Clean/Core.lean", "ToClean.lean", "ToMathlib.lean", "ToPolyFun.lean"}
+CORE_INDEX = "SP1Clean/Core.lean"
+CORE_MAX_STRATUM = 6
+
+# An import line, with or without the module-system modifiers (`public`, `meta`, `all`).
+IMPORT_RE = re.compile(r"^(?:public\s+)?(?:meta\s+)?import\s+(?:all\s+)?([A-Za-z0-9_.\u00C0-\uFFFF«»]+)")
 
 for path in files:
     if path in ROOT_INDEX:
@@ -108,8 +119,9 @@ for path in files:
     src_lines, ns_root = [], None
     for line in open(path, encoding="utf-8", errors="replace"):
         s = line.strip()
-        if s.startswith("import "):
-            src_lines.append(s.split()[1])
+        im = IMPORT_RE.match(s)
+        if im:
+            src_lines.append(im.group(1))
             continue
         m = re.match(r"^namespace\s+SP1Clean\.([A-Za-z0-9_]+)", line)
         if m and ns_root is None:
@@ -156,8 +168,43 @@ if nsbad:
         print(f"  {p}: declares SP1Clean.{got}, path stratum expects {want}")
     print("  (one of the two is wrong — usually the path; the namespace is the author's intent)")
 
+# 3. the core index: exactly the hand-written modules of strata 0..CORE_MAX_STRATUM under
+#    SP1Clean/, generated `Extracted/` modules excluded (they enter the core build as imports).
+#    The index is what `lake build SP1Core` builds, so a stale entry silently moves a module in or
+#    out of PR CI.
+expected_core = set()
+for path in files:
+    if path in ROOT_INDEX or not path.startswith("SP1Clean/") or path.startswith("SP1Clean/Extracted/"):
+        continue
+    level, _, _ = classify(path)
+    if level is not None and level <= CORE_MAX_STRATUM:
+        expected_core.add(path[:-5].replace("/", "."))
+indexed_core = set()
+if os.path.exists(CORE_INDEX):
+    for line in open(CORE_INDEX, encoding="utf-8"):
+        im = IMPORT_RE.match(line.strip())
+        if im:
+            indexed_core.add(im.group(1))
+else:
+    fail = 1
+    print(f"FAIL: {CORE_INDEX} is missing")
+missing_core = sorted(expected_core - indexed_core)
+extra_core = sorted(indexed_core - expected_core)
+if missing_core:
+    fail = 1
+    print(f"FAIL: {len(missing_core)} core module(s) (strata 0-{CORE_MAX_STRATUM}) not imported by {CORE_INDEX}:")
+    for m in missing_core[:20]:
+        print(f"  {m}")
+if extra_core:
+    fail = 1
+    print(f"FAIL: {len(extra_core)} import(s) in {CORE_INDEX} that are not core modules "
+          f"(stratum > {CORE_MAX_STRATUM}, generated, or missing):")
+    for m in extra_core[:20]:
+        print(f"  {m}")
+
 if fail == 0:
     print(f"check_layering: PASS ({len(files)} modules, {len(strata)} stratum rules, "
-          f"{len(allowed_edges)} import + {len(allowed_ns)} namespace exception(s))")
+          f"{len(allowed_edges)} import + {len(allowed_ns)} namespace exception(s); "
+          f"core index = {len(indexed_core)} modules)")
 sys.exit(fail)
 PYEOF

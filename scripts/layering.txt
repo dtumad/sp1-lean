@@ -1,8 +1,8 @@
 # The stratum map: which layer each module lives in.
 #
-# Read by scripts/check_layering.sh (import-direction + namespace-agreement gates) and by the
-# placement linter in scripts/sp1Lint.lean. One table, two readers — the strata must not drift
-# apart. The contract these numbers encode is docs/layering.md.
+# Read by scripts/check_layering.sh: the import-direction and namespace-agreement gates, and the
+# core-index check (strata 0-6 = the modules `SP1Clean/Core.lean` must import, i.e. the `SP1Core`
+# library that PR CI builds). The contract these numbers encode is docs/layering.md.
 #
 # Format:   <stratum> <pillar> <path-prefix>
 # A module takes the stratum of the LONGEST matching prefix, so a straddling directory is fixed by

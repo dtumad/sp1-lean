@@ -25,9 +25,11 @@ name: Lean Action CI
 # the one written by the `push` run on `main`. Merging to `main` therefore refreshes the shared
 # cache; a PR's own first build is incremental only from `main`'s entry.
 #
-# Scope: this workflow builds the CORE (`lake build` = `SP1Core` + `ToClean` + `ToMathlib`, the
-# generic/semantic layers and the chip circuits with their proofs) and its test set (`lake test` =
-# `SP1CoreTest`). The SP1-alignment layers (extracted oracles, Faithful, Sail bridges, Soundness,
+# Scope: this workflow builds the CORE (`lake build` = `SP1Core` + `ToClean` + `ToMathlib` +
+# `ToPolyFun`: the generic/semantic layers and the chip circuits with their proofs, reached through
+# the gated root index `SP1Clean/Core.lean`) and its test set (`lake test` = `SP1CoreTest`). Every
+# build runs with `--wfail --iofail`: a warning (the Mathlib standard linter set is on package-wide)
+# or a stray `info:` note fails the job. The SP1-alignment layers (extracted oracles, Faithful, Sail bridges, Soundness,
 # Composition), their tests, the witgen/dump conformance gates, and the axiom census run in
 # `alignment.yml` (scheduled weekly, on demand, and on pushes to `main`), which shares this cache
 # as a fallback. See docs/agents/compile-profile-2026-09.md for the measurement behind the split.
@@ -128,7 +130,7 @@ jobs:
           use-mathlib-cache: "true"
           use-github-cache: "false"
       - name: Build (resumable — a cold cache may need one re-run)
-        run: timeout 5h lake build
+        run: timeout 5h lake build --wfail --iofail
       - name: Save the project build cache
         if: always()
         uses: actions/cache/save@v4
@@ -140,8 +142,9 @@ jobs:
           key: ${{ steps.key.outputs.key }}
 
   lint:
-    # Environment linters (`lake lint` → the `sp1Lint` lintDriver; a curated subset of the Batteries
-    # `#lint` linters over the hand-written `SP1Clean.*` declarations; see AGENTS.md § Linters).
+    # Environment linters (Batteries' `runLinter`, the package's `lintDriver`; see AGENTS.md
+    # § Linters). `lake lint` lints the four roots and needs the umbrella oleans, which only the
+    # alignment workflow builds; here the driver is invoked on the core index instead.
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -171,11 +174,9 @@ jobs:
           use-mathlib-cache: "true"
           use-github-cache: "false"
       - name: Replay the build
-        run: lake build
-      # `lake lint` imports the umbrella `SP1Clean`, whose oleans only the alignment workflow builds;
-      # `--scope core` lints every hand-written module whose olean is present instead.
-      - name: Environment linters, core scope (sp1Lint --scope core)
-        run: lake build sp1Lint && lake exe sp1Lint --scope core
+        run: lake build --wfail --iofail
+      - name: Environment linters, core scope (runLinter on the core index)
+        run: lake exe runLinter --no-build SP1Clean.Core ToClean ToMathlib ToPolyFun
 
   test:
     # Core tests (`lake test` → the `SP1CoreTest` testDriver: the test modules whose import closure
@@ -228,9 +229,9 @@ jobs:
           use-mathlib-cache: "true"
           use-github-cache: "false"
       - name: Replay the build
-        run: lake build
-      - name: Core tests (lake test = SP1CoreTest)
-        run: timeout 5h lake test
+        run: lake build --wfail --iofail
+      - name: Core tests (lake test = SP1CoreTest, with the warning/info gates)
+        run: timeout 5h lake build --wfail --iofail SP1CoreTest
       - name: Save the test-library build cache
         if: always()
         uses: actions/cache/save@v4

@@ -4,6 +4,8 @@ The semantic revision is unmodified upstream SP1. The extractor revision is an a
 descendant whose machine-source diff is reflection metadata only; exporter implementation
 changes live outside the AIR definitions. Regenerate with `update_extracted.py`. -/
 
+set_option linter.all false  -- auto-generated: skip linters
+
 namespace SP1Clean.Extracted
 
 /-- Exact two-revision boundary behind every checked-in extracted artifact. -/

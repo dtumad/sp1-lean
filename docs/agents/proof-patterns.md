@@ -136,9 +136,9 @@ directive before committing — the guard rejects it.
   n=56, the control-rung distribution (`elaborator` 21 · `isDefEq` 14 · `«synthesize pending MVars»` 14 ·
   `whnf` 7) bore almost no resemblance to the binding-rung distribution. Read it at the *lowest failing*
   rung, and never treat a rung-1 phase as the site's identity.
-- **A floor measured through the LSP is not a floor against the gate.** The `lean-lsp` server does not
-  apply the pillar libs' `moreLeanArgs` — the same reason a bare `lake env lean` cannot certify a pass
-  (`scripts/profile_compile.sh` passes the eight style-linter flags itself for that reason). So on the
+- **A floor measured through the LSP is not a floor against the gate.** A bare `lake env lean` applies
+  none of the package's `[leanOptions]`/`moreLeanArgs` (`scripts/profile_compile.sh` passes them
+  itself for that reason), and the LSP applies only what Lake hands it as server options. So on the
   rare occasion an allowlist entry is warranted, size its value at roughly **2–4× the measured bracket top**,
   not at the bare lowest passing rung. Removal is unaffected: a site clearing 40000 against the plain 200000
   default has ≥5× headroom either way. Also: a failure *position* is an attribution tool and says nothing reliable about magnitude,
@@ -1081,8 +1081,8 @@ the reader-local `<reader>_*Interactions` lemmas over unfolding a whole chip.
 - **`lake env lean <file>` does NOT rebuild edited dependencies — it silently checks against stale oleans.**
   `lake env` **only sets the environment; it builds nothing.** Measured: after one file was edited, its source
   was **4 hours newer than its `.olean`** while a `lake env lean` run on a *dependent* module resolved happily
-  against the stale one and reported green. So the instrument is **stronger than the LSP on flags** (it
-  applies the pillar's `moreLeanArgs`, which the LSP does not) and **weaker on freshness** (the LSP at least
+  against the stale one and reported green. So the instrument is **no better than the LSP on flags**
+  (neither applies the package options unless passed explicitly) and **weaker on freshness** (the LSP at least
   answers `Imports are out of date and must be rebuilt`). Neither is a pass oracle for a *pair* of edited
   files. Mitigations, in order: (1) work **deepest-first**, so each file is verified before its dependencies
   move; (2) after editing a dependency run `lake build <Dep.Module>` to refresh its olean, *then* re-verify the

@@ -842,6 +842,7 @@ def render_provenance() -> str:
         "The semantic revision is unmodified upstream SP1. The extractor revision is an audited\n"
         "descendant whose machine-source diff is reflection metadata only; exporter implementation\n"
         "changes live outside the AIR definitions. Regenerate with `update_extracted.py`. -/\n\n"
+        + LINTERS_OFF + "\n\n"
         "namespace SP1Clean.Extracted\n\n"
         "/-- Exact two-revision boundary behind every checked-in extracted artifact. -/\n"
         "structure ExtractionProvenance where\n"
