@@ -1,12 +1,12 @@
 name = "sp1-clean-native"
 # The default build is the CORE: the generic/semantic layers and the chip circuits with their
-# soundness/completeness proofs (`SP1Core`, strata 0-6 of `scripts/layering.txt`), plus the two
-# upstream-destined libraries. The SP1-alignment layers (`SP1Alignment`: the extracted oracles,
+# soundness/completeness proofs (`SP1Core`, strata 0-6 of `scripts/layering.txt`), plus the three
+# upstream-destined libraries (`ToClean`, `ToMathlib`, `ToPolyFun`). The SP1-alignment layers (`SP1Alignment`: the extracted oracles,
 # Faithful, the per-chip Sail bridges and machine contracts, Proofs/Sail, Proofs/Completeness,
 # Soundness, Composition) are kept in tree and built by `lake build SP1Clean` (the umbrella) in the
 # scheduled/dispatch `alignment` CI workflow, not on every PR. See docs/agents/compile-profile-2026-09.md
 # for the measurement behind the split.
-defaultTargets = ["SP1Core", "ToClean", "ToMathlib"]
+defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun"]
 
 moreLeanArgs = ["--tstack=400000"]
 
@@ -186,6 +186,20 @@ moreLeanArgs = [
   "-Dlinter.style.induction=true", "-Dlinter.style.admit=true",
   "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
 ]
+
+# Upstream-destined PolyFun material (orbit composition, labeled traces): imports only PolyFun,
+# stated in PolyFun's own namespaces; acceptance upstream is a deletion plus a repoint. `ToClean`
+# may import it (Clean plans to import PolyFun), which is how `ToClean/Air/Realizes.lean` states
+# an ensemble realizing a PolyFun machine.
+[[lean_lib]]
+name = "ToPolyFun"
+moreLeanArgs = [
+  "-Dlinter.style.lambdaSyntax=true", "-Dlinter.style.dollarSyntax=true",
+  "-Dlinter.style.refine=true", "-Dlinter.style.cases=true",
+  "-Dlinter.style.induction=true", "-Dlinter.style.admit=true",
+  "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
+]
+
 
 # The remaining generated modules (whole-chip and system oracles): alignment only, no linter args.
 [[lean_lib]]
