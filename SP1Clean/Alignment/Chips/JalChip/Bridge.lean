@@ -69,7 +69,6 @@ theorem correct_jal_native
     Sail.run_readReg_bind_of_isInitialized _ _ hsp_init,
     hsp_pc, hjump, RETIRE_SUCCESS, h_jump, h_link]
   simp only [hsp, ExtDHashMap_insert_insert_self]
-  rfl
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Native Sail equivalence for `jal x0` (the `j` pseudo-instruction). When `rd = x0` the link write is a

@@ -92,7 +92,7 @@ lemma signedVal_neg_is_real (hp : 2 < p) {is_real : ZMod p} (h : is_real = 0 ∨
     signedVal (- is_real) = -(is_real.val : ℤ) := by
   rcases h with h | h <;> subst h
   · simp [signedVal, ZMod.val_zero]
-  · haveI : Fact (1 < p) := ⟨by omega⟩
+  · have : Fact (1 < p) := ⟨by omega⟩
     have hv : (-1 : ZMod p).val = p - 1 := by
       simpa [ZMod.val_one] using ZMod.val_neg_of_ne_zero (1 : ZMod p)
     simp only [signedVal, hv, ZMod.val_one]
@@ -114,7 +114,7 @@ lemma signedVal_neg [Fact p.Prime] (hp : 2 < p) (x : ZMod p) :
   · subst hx; simp [signedVal, ZMod.val_zero]
   · have hxlt : x.val < p := ZMod.val_lt x
     have hxpos : 0 < x.val := ZMod.val_pos.mpr hx
-    haveI : NeZero x := ⟨hx⟩
+    have : NeZero x := ⟨hx⟩
     have hvneg : (-x).val = p - x.val := ZMod.val_neg_of_ne_zero x
     have hne : 2 * x.val ≠ p := fun he => hodd ⟨x.val, he.symm⟩
     unfold signedVal

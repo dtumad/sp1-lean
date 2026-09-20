@@ -167,7 +167,7 @@ theorem completeness :
     GeneralFormalCircuit.Completeness (ZMod p) main ProverAssumptions (fun _ _ _ => True) := by
   circuit_proof_start
   simp only [Inputs.op_b_val, Inputs.op_c_imm] at h_assumptions ⊢
-  haveI : AddGroup (id (ZMod p)) := inferInstanceAs (AddGroup (ZMod p))
+  have : AddGroup (id (ZMod p)) := inferInstanceAs (AddGroup (ZMod p))
   have ha := h_assumptions.1
   have hp1 := h_assumptions.2
   have hb := hp1.1

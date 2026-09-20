@@ -132,7 +132,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- A boolean field element's value facts, packaged for the ℕ lifts below. -/
 private lemma binary_val {b : ZMod p} (h : b = 0 ∨ b = 1) :
     b.val ≤ 1 ∧ (b.val = 0 ∧ b = 0 ∨ b.val = 1 ∧ b = 1) := by
-  haveI : Fact (1 < p) := ⟨(Fact.out (p := p.Prime)).one_lt⟩
+  have : Fact (1 < p) := ⟨(Fact.out (p := p.Prime)).one_lt⟩
   rcases h with h | h
   · exact ⟨by rw [h, ZMod.val_zero]; omega, Or.inl ⟨by rw [h, ZMod.val_zero], h⟩⟩
   · exact ⟨by rw [h, ZMod.val_one], Or.inr ⟨by rw [h, ZMod.val_one], h⟩⟩

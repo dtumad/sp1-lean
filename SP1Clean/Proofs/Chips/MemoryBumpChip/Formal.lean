@@ -29,7 +29,7 @@ private lemma val32 : (32 : ZMod p).val = 32 := by
 
 /-- The `LTU` flag literal round-trips through `ZMod.val`. -/
 private lemma val1 : (1 : ZMod p).val = 1 := by
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   exact ZMod.val_one p
 
 /-- The recombined low clock `clk_0_16 + clk_16_24 · 2^16` is a genuine 24-bit value once its limbs

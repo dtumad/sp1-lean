@@ -41,7 +41,7 @@ lemma is_mod_64 {c0 m : ZMod p}
     (h_diff : ((c0 - m) * (64 : ZMod p)⁻¹).val < 1024) :
     c0.val % 64 = m.val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   set k := (c0 - m) * (64 : ZMod p)⁻¹ with k_def
   have h_k_lt : k.val < 1024 := h_diff
   have h_64_ne : (64 : ZMod p) ≠ 0 := val_64_ne_zero
@@ -68,7 +68,7 @@ lemma cancel_mul_65536 {a b c x : ZMod p}
     (h_x_dvd : x.val ∣ 65536) (h_x_pos : 0 < x.val) :
     a * x = b * 65536 + c * x → a = b * (((65536 / x.val : ℕ) : ZMod p)) + c := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   intro h_eq
   set z : ℕ := 65536 / x.val with z_def
   have h_x_le : x.val ≤ 65536 := Nat.le_of_dvd (by omega) h_x_dvd
@@ -102,7 +102,7 @@ private lemma limb_dec_aux {M N : ℕ} (h_MN : M * N = 65536) (h_M_pos : 0 < M)
 private lemma val_of_natCast_aux {n : ℕ} (hn : n < 64) {x : ZMod p} (hx : x = ((n : ℕ) : ZMod p)) :
     x.val = n := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   rw [hx]; exact ZMod.val_natCast_of_lt (by omega)
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
@@ -134,7 +134,7 @@ lemma sll_within_byte_shift
                               ll3 * v0123 + hl2]).toNat
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat * M % 2 ^ 64 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_ll0_mul : (ll0 * v0123).val = ll0.val * M := mul_v_val h_MN h_v_val lt_ll0
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
   have h_b1_val : b1.val = hl1.val * N + ll1.val := by rw [h_b1]; exact hi_lo_val h_MN lt_lh1 lt_ll1
@@ -177,7 +177,7 @@ lemma sll_within_byte_shift_3
     (Word.toBitVec64 #v[0, 0, 0, ll0 * v0123]).toNat
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat * M * 2 ^ 48 % 2 ^ 64 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_ll0_mul : (ll0 * v0123).val = ll0.val * M := mul_v_val h_MN h_v_val lt_ll0
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
   have h_b1_val : b1.val = hl1.val * N + ll1.val := by rw [h_b1]; exact hi_lo_val h_MN lt_lh1 lt_ll1
@@ -216,7 +216,7 @@ lemma sll_within_byte_shift_2
     (Word.toBitVec64 #v[0, 0, ll0 * v0123, ll1 * v0123 + hl0]).toNat
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat * M * 2 ^ 32 % 2 ^ 64 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_ll0_mul : (ll0 * v0123).val = ll0.val * M := mul_v_val h_MN h_v_val lt_ll0
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
   have h_b1_val : b1.val = hl1.val * N + ll1.val := by rw [h_b1]; exact hi_lo_val h_MN lt_lh1 lt_ll1
@@ -257,7 +257,7 @@ lemma sll_within_byte_shift_1
     (Word.toBitVec64 #v[0, ll0 * v0123, ll1 * v0123 + hl0, ll2 * v0123 + hl1]).toNat
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat * M * 2 ^ 16 % 2 ^ 64 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_ll0_mul : (ll0 * v0123).val = ll0.val * M := mul_v_val h_MN h_v_val lt_ll0
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
   have h_b1_val : b1.val = hl1.val * N + ll1.val := by rw [h_b1]; exact hi_lo_val h_MN lt_lh1 lt_ll1
@@ -292,7 +292,7 @@ lemma inner_val {S : ℕ} (hS_le : S ≤ 15) {cb0 cb1 cb2 cb3 : ZMod p}
                   = ((S : ℕ) : ZMod p)) :
     (cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p) + cb3 * 8 : ZMod p).val = S := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   rw [h_inner_eq]; exact ZMod.val_natCast_of_lt (by omega)
 
 /-- The complementary high exponent `(16 - (cb0 + 2cb1 + 4cb2 + 8cb3)).val = 16 - S`. -/
@@ -302,7 +302,7 @@ lemma inner_hi_val {S : ℕ} (hS_le : S ≤ 15) {cb0 cb1 cb2 cb3 : ZMod p}
     (16 - (cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p) + cb3 * 8) : ZMod p).val
       = 16 - S := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   rw [show (16 - (cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p)
             + cb3 * 8) : ZMod p) = (((16 - S) : ℕ) : ZMod p) from by
     rw [h_inner_eq, Nat.cast_sub (by omega : S ≤ 16)]; push_cast; ring]
@@ -347,7 +347,7 @@ lemma sll_close_cb4cb5_zero_case
         := by
   rw [BitVec.toNat_shiftLeft]
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_inner_val := inner_val h_S_le h_inner_eq
   have h_inner_hi_val := inner_hi_val h_S_le h_inner_eq
   rw [h_inner_val] at lt_lh0 lt_lh1 lt_lh2 lt_lh3
@@ -410,7 +410,7 @@ lemma sll_close_cb4cb5_one_one_case
         := by
   rw [BitVec.toNat_shiftLeft]
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_inner_val := inner_val h_S_le h_inner_eq
   have h_inner_hi_val := inner_hi_val h_S_le h_inner_eq
   rw [h_inner_val] at lt_lh0 lt_lh1 lt_lh2 lt_lh3
@@ -473,7 +473,7 @@ lemma sll_close_cb4cb5_zero_one_case
         := by
   rw [BitVec.toNat_shiftLeft]
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_inner_val := inner_val h_S_le h_inner_eq
   have h_inner_hi_val := inner_hi_val h_S_le h_inner_eq
   rw [h_inner_val] at lt_lh0 lt_lh1 lt_lh2 lt_lh3
@@ -536,7 +536,7 @@ lemma sll_close_cb4cb5_one_zero_case
         := by
   rw [BitVec.toNat_shiftLeft]
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_inner_val := inner_val h_S_le h_inner_eq
   have h_inner_hi_val := inner_hi_val h_S_le h_inner_eq
   rw [h_inner_val] at lt_lh0 lt_lh1 lt_lh2 lt_lh3
@@ -568,7 +568,7 @@ lemma sll_close_cb4cb5_one_zero_case
 lemma val_eq_pow {S : ℕ} (hS : S ≤ 15) {x : ZMod p} (hx : x = ((2 ^ S : ℕ) : ZMod p)) :
     x.val = 2 ^ S := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have hlt : (2 : ℕ) ^ S < p := by
     have h2S : (2 : ℕ) ^ S ≤ 2 ^ 15 := Nat.pow_le_pow_right (by norm_num) hS
     have e15 : (2 : ℕ) ^ 15 = 32768 := by norm_num
@@ -589,7 +589,7 @@ lemma v0123_pow {cb0 cb1 cb2 cb3 v01 v012 v0123 : ZMod p}
     ∃ S : ℕ, S ≤ 15 ∧ v0123.val = 2 ^ S ∧
       cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p) + cb3 * 8 = ((S : ℕ) : ZMod p) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have hv : v0123 = (cb0 + 1) * (cb1 * 3 + 1) * (cb2 * 15 + 1) * (cb3 * 255 + 1) := by
     rw [hv0123, hv012, hv01]
   rw [hv]
@@ -622,7 +622,7 @@ lemma cb_sum6_val_lt_64 {cb0 cb1 cb2 cb3 cb4 cb5 : ZMod p}
     (hb3 : cb3 = 0 ∨ cb3 = 1) (hb4 : cb4 = 0 ∨ cb4 = 1) (hb5 : cb5 = 0 ∨ cb5 = 1) :
     (cb0 + cb1 * 2 + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val < 64 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_v0 : (0 : ZMod p).val = 0 := ZMod.val_zero
   have h_v1 : (1 : ZMod p).val = 1 := ZMod.val_one p
   have h_v2 : (2 : ZMod p).val = 2 := val_2_zmod_p
@@ -668,7 +668,7 @@ limb. Lifted to a top-level lemma so the kernel walks the `2 ^ 16/32/48` literal
 soundness term clear of the inline `2 ^ N` deep-recursion landmine). -/
 lemma toBitVec64_toNat_mod64 {w : Word (ZMod p)} (hw : Word.isU64 w) :
     (Word.toBitVec64 w).toNat % 64 = w[0].val % 64 := by
-  haveI : NeZero p := ⟨(Fact.out (p := p.Prime)).pos.ne'⟩
+  have : NeZero p := ⟨(Fact.out (p := p.Prime)).pos.ne'⟩
   rw [Word.toBitVec64_toNat hw, Word.toNat_def,
     show (2:ℕ)^16 = 65536 from by norm_num, show (2:ℕ)^32 = 4294967296 from by norm_num,
     show (2:ℕ)^48 = 281474976710656 from by norm_num]
@@ -713,7 +713,7 @@ lemma sll_assembly
     Word.toBitVec64 #v[a0, a1, a2, a3]
       = Word.toBitVec64 #v[b0, b1, b2, b3] <<< (c0.val % 64) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   -- Small nonzero field constants for reading the one-hot selectors.
   have hv2 : (2 : ZMod p).val = 2 := val_2_zmod_p
   have hv3 : (3 : ZMod p).val = 3 := val_3_zmod_p
@@ -832,7 +832,7 @@ lemma sllw_within_byte_shift
     (HWord.toBitVec32 #v[ll0 * v0123, ll1 * v0123 + hl0]).toNat
     = (HWord.toBitVec32 #v[b0, b1]).toNat * M % 2 ^ 32 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_ll0_mul : (ll0 * v0123).val = ll0.val * M := mul_v_val h_MN h_v_val lt_ll0
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
   have h_b1_val : b1.val = hl1.val * N + ll1.val := by rw [h_b1]; exact hi_lo_val h_MN lt_lh1 lt_ll1
@@ -860,7 +860,7 @@ lemma sllw_within_byte_shift_1
     (HWord.toBitVec32 #v[0, ll0 * v0123]).toNat
     = (HWord.toBitVec32 #v[b0, b1]).toNat * M * 2 ^ 16 % 2 ^ 32 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_ll0_mul : (ll0 * v0123).val = ll0.val * M := mul_v_val h_MN h_v_val lt_ll0
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
   have h_b1_val : b1.val = hl1.val * N + ll1.val := by rw [h_b1]; exact hi_lo_val h_MN lt_lh1 lt_ll1
@@ -902,7 +902,7 @@ lemma sllw_close_cb4_zero_case
         <<< (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16).val
       % 2 ^ 32 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_inner_val := inner_val h_S_le h_inner_eq
   have h_inner_hi_val := inner_hi_val h_S_le h_inner_eq
   rw [h_inner_val] at lt_lh0 lt_lh1
@@ -946,7 +946,7 @@ lemma sllw_close_cb4_one_case
         <<< (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16).val
       % 2 ^ 32 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_inner_val := inner_val h_S_le h_inner_eq
   have h_inner_hi_val := inner_hi_val h_S_le h_inner_eq
   rw [h_inner_val] at lt_lh0 lt_lh1
@@ -996,7 +996,7 @@ lemma sllw_subcase_cb4_zero
       = BitVec.signExtend 64 (HWord.toBitVec32 #v[b0, b1] <<<
                               BitVec.setWidth 5 (HWord.toBitVec32 #v[c0, c1])) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_inner_val := inner_val h_S_le h_inner_eq
   have h_inner_hi_val := inner_hi_val h_S_le h_inner_eq
   have h_lt_ll0_N : ll0.val < N := by rw [h_N_eq]; rw [h_inner_hi_val] at lt_ll0; exact lt_ll0
@@ -1072,7 +1072,7 @@ lemma sllw_subcase_cb4_one
       = BitVec.signExtend 64 (HWord.toBitVec32 #v[b0, b1] <<<
                               BitVec.setWidth 5 (HWord.toBitVec32 #v[c0, c1])) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_inner_val := inner_val h_S_le h_inner_eq
   have h_inner_hi_val := inner_hi_val h_S_le h_inner_eq
   have h_lt_ll0_N : ll0.val < N := by rw [h_N_eq]; rw [h_inner_hi_val] at lt_ll0; exact lt_ll0
@@ -1142,7 +1142,7 @@ lemma sllw_a1_bound
     (h_p01 : s0 * (a1 - lr1) = 0) (h_p11 : s1 * (a1 - lr0) = 0) :
     a1.val < 65536 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have hv2 : (2 : ZMod p).val = 2 := val_2_zmod_p
   have hv3 : (3 : ZMod p).val = 3 := val_3_zmod_p
   have n1 : (1 : ZMod p) ≠ 0 := one_ne_zero
@@ -1204,7 +1204,7 @@ lemma sllw_assembly
       = BitVec.signExtend 64 (HWord.toBitVec32 #v[b0, b1] <<<
                               BitVec.setWidth 5 (HWord.toBitVec32 #v[c0, c1])) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have hv2 : (2 : ZMod p).val = 2 := val_2_zmod_p
   have hv3 : (3 : ZMod p).val = 3 := val_3_zmod_p
   have hv32 : (32 : ZMod p).val = 32 := val_32_zmod_p
@@ -1281,7 +1281,7 @@ set_option linter.unusedSectionVars false in
 /-- The low 32 bits of a `Word`'s `toBitVec64` are its first two limbs as an `HWord`. -/
 lemma extractLsb32_toBitVec64 {w : Word (ZMod p)} (hw : Word.isU64 w) :
     BitVec.extractLsb' 0 32 (Word.toBitVec64 w) = HWord.toBitVec32 #v[w[0], w[1]] := by
-  haveI : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   obtain ⟨h0, h1, h2, h3⟩ := Word.lt_cases_of_isU64 hw
   rw [← BitVec.toNat_inj]
   unfold BitVec.extractLsb'
@@ -1297,7 +1297,7 @@ set_option linter.unusedSectionVars false in
 lemma extractLsb5_toBitVec64 {c : Word (ZMod p)} (hc : Word.isU64 c) :
     BitVec.extractLsb' 0 5 (BitVec.extractLsb' 0 32 (Word.toBitVec64 c))
       = BitVec.setWidth 5 (HWord.toBitVec32 #v[c[0], c[1]]) := by
-  haveI : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   obtain ⟨h0, h1, h2, h3⟩ := Word.lt_cases_of_isU64 hc
   rw [BitVec.extractLsb'_extractLsb'_of_le (by omega), ← BitVec.toNat_inj]
   unfold BitVec.extractLsb'

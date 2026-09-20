@@ -32,12 +32,12 @@ local instance : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 
 /-- `(0 : ZMod p) ≠ 1` (since `2^17 < p`). -/
 lemma zero_ne_one' : (0 : ZMod p) ≠ 1 := by
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   exact zero_ne_one
 
 /-- The `ℕ`-value of a binary field element (`0` or `1`). -/
 lemma val_of_bool {b : ZMod p} (h : b = 0 ∨ b = 1) : b.val = 0 ∨ b.val = 1 := by
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   rcases h with h | h <;> rw [h] <;> simp [ZMod.val_one]
 
 /-- **One-hot.** Six binary flags whose sum is binary have at most one flag set: the sum of all six
