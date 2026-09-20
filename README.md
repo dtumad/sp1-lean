@@ -108,11 +108,11 @@ Do not run bare `lake update`; dependency changes require a reviewed pin change.
 ## Build and reproduce
 
 ```bash
-lake build            # core: SP1Core + ToClean + ToMathlib (what PR CI builds)
+lake build            # core: SP1Core + ToClean + ToMathlib + ToPolyFun (what PR CI builds)
 lake test             # core test set (SP1CoreTest)
 lake build SP1Clean   # full build including the SP1-alignment layers
 lake build SP1CleanTest
-lake lint
+lake lint             # Batteries runLinter over the four roots (needs the full build)
 scripts/run_audit.sh
 ```
 

@@ -271,5 +271,22 @@ to existing Clean declarations follow the documented fork/upstream workflow. No 
 is authorized by this roadmap. Nonblocking cleanup includes contract homing, measured proof
 factorization, and long-line linting; avoid combining those broad changes with boundary proofs.
 
+**Lint debt (2026-09-20 baseline).** The package runs Mathlib's standard syntactic linter set and
+Batteries' full environment-linter set (`AGENTS.md` § Linters); every finding below is debt to
+fix, not an accepted exception, and the numbers are the burn-down baseline. Environment linters
+(`scripts/nolints.json`, 4 235 entries): `docBlame` 2 808 (2 001 hand-written, 807 generated),
+`defsWithUnderscore` 979 (699 / 280 — rename to camelCase; keep snake_case only where an identifier
+mirrors a Rust or Sail one, with `@[nolint defsWithUnderscore]` at the site), `unusedArguments` 432
+(284 / 148 — mostly the `localLength_eq`/`channelsWith*_eq` rfl-lemmas' section variables and the
+`D`-suffix contract lifts), `simpNF` 12, `simpComm` 4. Generated declarations are fixed in
+`update_extracted.py`, never by hand. Syntactic linters (temporary `weak.linter.<x> = false`
+opt-outs in `lakefile.toml`, unique sites / files): `style.longLine` 10 578 / 722, `style.show`
+326 / 75, `style.whitespace` 218 / 10, `flexible` 191 / 64, `style.multiGoal` 25 / 5,
+`style.openClassical` 21 / 21, `style.emptyLine` 15 / 5, `unusedDecidableInType` 10 / 5;
+`style.header` (~950 files, the Mathlib copyright header — adopt once the header form for this
+dual-licensed tree is chosen); `style.longFile` (32 hand-written files over 1 500 lines, linter left
+at its default of off). Work the list down by directory in small PRs, core first, each ending with
+`scripts/update_nolints.sh`; delete an opt-out line the moment its count is 0.
+
 Pin changes remain separate reviewed work: follow [extraction](agents/extraction.md),
 [Sail provenance](agents/sail-model-provenance.md), and [Clean upstream](agents/clean-upstream.md).

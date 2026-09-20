@@ -8,7 +8,9 @@
 #      source, `SP1Clean.FormalModel.CoreProfile.sp1SemanticRevision` (itself `rfl`-checked
 #      against the extracted provenance);
 #   4. the authoritative census ledger and committed raw snapshots against the
-#      generated probes (`scripts/axiom_probe.lean` + `scripts/axiom_probe_test.lean`).
+#      generated probes (`scripts/axiom_probe.lean` + `scripts/axiom_probe_test.lean`);
+#   5. `lakefile.toml` invariants Lake does not check: the two test libraries carry identical
+#      option blocks, and no other library carries linter options (they are package-level).
 #
 # This is the gate whose absence let a wrong recorded PolyFun pin survive the 2026-08
 # migration: `check_report_citations.sh` validates that cited paths resolve, not that
@@ -231,6 +233,30 @@ if not total:
 elif int(total.group(1)) != probe_count:
     err(f"{ledger_path} cites {total.group(1)} released declarations; "
         f"the generated probes contain {probe_count}")
+
+# 5. lakefile invariants that Lake will not check for us. The two test libraries must carry
+#    identical `leanOptions` blocks: Lake gives a module the options of the LAST declared library
+#    that matches it, and `SP1CleanTest` matches every test module, so a divergent `SP1CoreTest`
+#    block would silently not apply to anything. Any other library carrying linter options would
+#    reintroduce the per-library flag copies this file's package-level set replaced.
+lakefile = open("lakefile.toml").read()
+libs = re.split(r"^\[\[lean_lib\]\]\s*$", lakefile, flags=re.M)[1:]
+lib_opts = {}
+for block in libs:
+    name = re.search(r'^name = "([^"]+)"', block, re.M)
+    if not name:
+        continue
+    opts = sorted(re.findall(r"^leanOptions\.(\S+ = \S+)", block, re.M))
+    lib_opts[name.group(1)] = opts
+if lib_opts.get("SP1CoreTest") != lib_opts.get("SP1CleanTest"):
+    err("lakefile.toml: SP1CoreTest and SP1CleanTest must carry identical leanOptions blocks "
+        f"(got {lib_opts.get('SP1CoreTest')} vs {lib_opts.get('SP1CleanTest')})")
+for name, opts in lib_opts.items():
+    if name in ("SP1CoreTest", "SP1CleanTest", "LeanRV64D"):
+        continue
+    if any(o.startswith("weak.linter") or o.startswith("linter") for o in opts):
+        err(f"lakefile.toml: library {name} carries linter options {opts}; linters are set once at "
+            "package level (see AGENTS.md § Linters)")
 
 if fail == 0:
     if census_update_pending:
