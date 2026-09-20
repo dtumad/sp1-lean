@@ -63,26 +63,8 @@ name = "Clean"
 git = "https://github.com/dtumad/clean"
 rev = "2dad7788d58b09eabeb3898506e4cb896e5d3e9d"
 
-# Sail RV64 model. Package name is `Lean_RV64D` (opencompl upstream naming); it exposes the
-# `LeanRV64D` library the project imports (the real package name, so any future consumer that
-# also requires the opencompl snapshot dedups onto this one copy).
-# The pinned snapshot is GENERATED, not hand-edited: pinned rems-project/sail + riscv/sail-riscv
-# sources with the SP1 platform config `scripts/sail-config/sp1_rv64d_cfg.json` (regenerate and
-# verify with `scripts/sail-config/generate_lean_rv64d.sh`; provenance in the snapshot's commit
-# message and docs/agents/sail-model-provenance.md). It equals the opencompl base `11d8fa21` (the
-# snapshot opencompl/riscv-lean PR #59 pinned, generated against lean-sail v5) except the four generated
-# platform-value sites controlled by two config keys. Stock upstream is not usable: its CLINT and
-# signature windows lie inside
-# the address range SP1's chips bound accesses to, which makes the memory-bridge lemmas false as
-# stated, not merely unproved.
-# NB the generated model and the Sail runtime must move together: a v4-generated snapshot against
-# Sail v5 fails with `unknown namespace Sail.ConcurrencyInterfaceV2`.
-[[require]]
-name = "Lean_RV64D"
-git = "https://github.com/succinctlabs/sail-riscv-lean"
-rev = "befc6976ef53c592b637dc897f61b4e71467c239"
-
-# lean-sail runtime, upstream release tag `v5` — the revision the generated snapshot pairs with.
+# lean-sail runtime, upstream release tag `v5` — the revision the in-tree generated model pairs
+# with (a v4-generated model against v5 fails with `unknown namespace Sail.ConcurrencyInterfaceV2`).
 [[require]]
 name = "Sail"
 git = "https://github.com/rems-project/lean-sail"
@@ -192,6 +174,22 @@ moreLeanArgs = [
   "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
 ]
 
+
+# The Sail RV64 model, GENERATED and never hand-edited: the pinned rems-project/sail compiler run
+# over the pinned riscv/sail-riscv sources with the SP1 platform config
+# `scripts/sail-config/sp1_rv64d_cfg.json` (`scripts/sail-config/generate_lean_rv64d.sh --install`
+# writes it; `--sp1` and `.github/workflows/sail-regen.yml` gate byte-identity with a fresh
+# regeneration; `scripts/check_pins.sh` checks the tree hash recorded in docs/release-audit.md;
+# provenance in docs/agents/sail-model-provenance.md). It equals the opencompl base `11d8fa21`
+# except the four generated platform-value sites controlled by two config keys. Stock upstream is
+# not usable: its CLINT and signature windows lie inside the address range SP1's chips bound
+# accesses to, which makes the memory-bridge lemmas false as stated, not merely unproved. The
+# settings mirror the generator's own lakefile; the generated files carry their own option
+# escapes and are outside every hand-written-source guard, like `SP1Clean/Extracted/`.
+[[lean_lib]]
+name = "LeanRV64D"
+leanOptions.weak.linter.style.nameCheck = false
+moreLeancArgs = ["-fbracket-depth=500"]
 
 # The remaining generated modules (whole-chip and system oracles): alignment only, no linter args.
 [[lean_lib]]

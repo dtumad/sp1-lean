@@ -1,10 +1,10 @@
 name: Sail Model Regeneration
 
-# The `Lean_RV64D` dependency is GENERATED: the pinned rems-project/sail compiler run over the pinned
-# riscv/sail-riscv sources with the checked-in SP1 platform config. This workflow is the machine
-# check that the pinned snapshot is exactly that generator output — it rebuilds the model from the
-# four pins in `scripts/sail-config/generate_lean_rv64d.sh` and fails on any byte difference, so the
-# snapshot repository is a build-time cache and never a place where hand edits can hide.
+# The in-tree `LeanRV64D/` library is GENERATED: the pinned rems-project/sail compiler run over the
+# pinned riscv/sail-riscv sources with the checked-in SP1 platform config. This workflow is the
+# machine check that the committed tree is exactly that generator output — it rebuilds the model
+# from the pins in `scripts/sail-config/generate_lean_rv64d.sh` and fails on any byte difference,
+# so regeneration is idempotent and hand edits cannot hide in the generated tree.
 #
 # Steps mirror the script's modes: `--deps` (the OCaml switch and the Sail compiler, cached by
 # toolchain pins; measured 6.5 minutes cold on ubuntu-latest, seconds warm), `--make-config` (the
@@ -13,8 +13,8 @@ name: Sail Model Regeneration
 # which documents that the SP1 config is the only difference; ~12 minutes). Whole job: ~36 minutes
 # cold, ~30 warm.
 #
-# Runs on demand, monthly, and on pull requests that touch the generator, its config, the manifest
-# (a `Lean_RV64D` re-pin), or this file.
+# Runs on demand, monthly, and on pull requests that touch the generator, its config, the generated
+# tree itself, the manifest (a lean-sail re-pin), or this file.
 
 on:
   workflow_dispatch:
@@ -23,6 +23,8 @@ on:
   pull_request:
     paths:
       - "scripts/sail-config/**"
+      - "LeanRV64D/**"
+      - "LeanRV64D.lean"
       - "lake-manifest.json"
       - ".github/workflows/sail-regen.yml"
 
@@ -73,7 +75,7 @@ jobs:
           scripts/sail-config/generate_lean_rv64d.sh --make-config
           git diff --exit-code -- scripts/sail-config/sp1_rv64d_cfg.json
 
-      - name: Regenerate with the SP1 config and compare with the pinned snapshot (the gate)
+      - name: Regenerate with the SP1 config and compare with the in-tree copy (the idempotence gate)
         run: scripts/sail-config/generate_lean_rv64d.sh --sp1
 
       - name: Regenerate with the stock config and compare with the opencompl base

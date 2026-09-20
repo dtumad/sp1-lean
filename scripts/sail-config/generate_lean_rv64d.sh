@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
 # Regenerate the LeanRV64D model from pinned sources + the SP1 platform config, and verify the
-# result against the published snapshots. This is the pipeline behind the `Lean_RV64D` dependency:
-# the artifact at succinctlabs/sail-riscv-lean is generator output from the pins below plus
-# `sp1_rv64d_cfg.json` — not a hand-edited fork. See docs/agents/sail-model-provenance.md.
+# result against the in-tree copy. The model is the repository's `LeanRV64D/` + `LeanRV64D.lean`,
+# an AUTO-GENERATED library that is never hand-edited: generator output from the pins below plus
+# `sp1_rv64d_cfg.json`. See docs/agents/sail-model-provenance.md.
 #
 # Modes:
 #   --deps         one-time: create the opam switch and build the pinned sail compiler
 #   --stock        generate with the stock rv64d config; diff vs the opencompl base snapshot
-#   --sp1          generate with the SP1 config; diff vs the base AND the published SP1 snapshot
+#   --sp1          generate with the SP1 config; diff vs the base (four sites expected) AND the
+#                  in-tree copy (the gate: regeneration must be idempotent)
+#   --install      generate with the SP1 config and write the in-tree copy (then commit it and
+#                  refresh the tree-hash row in docs/release-audit.md via scripts/check_pins.sh)
 #   --make-config  regenerate scripts/sail-config/sp1_rv64d_cfg.json (base config ⊕ overlay)
 #
 # Requires: opam, cmake, z3, python3, git. Work tree defaults to ~/.cache/sp1-sail-gen (override
 # with SAIL_GEN_DIR). Generation takes ~10 minutes after the one-time --deps (~20-40 minutes).
-# CI runs the same modes on every generator/config/manifest change and monthly
-# (.github/workflows/sail-regen.yml); `SP1_SNAPSHOT` must equal the manifest's `Lean_RV64D` rev
-# (scripts/check_pins.sh).
+# CI runs --make-config/--sp1/--stock on every generator, config, or model-tree change and monthly
+# (.github/workflows/sail-regen.yml); scripts/check_pins.sh checks the in-tree copy's hash
+# against the row recorded in docs/release-audit.md.
 #
 # Pins — the provenance record. Verified 2026-08-06: a --stock run under these pins reproduces
 # opencompl 11d8fa21 byte-identically, and --sp1 differs from it in exactly four generated
@@ -24,12 +27,11 @@ SAIL_SHA=41694abd58b27b687af5db275810dfeb8a88cfc0        # rems-project/sail, br
 SAIL_RISCV_SHA=61266bd4dede6c7dd6e903e52dc80bcbf644b1b8  # riscv/sail-riscv, master
 OCAML_VERSION=5.2.1                                       # the opencompl nightly's version
 BASE_SNAPSHOT=11d8fa212a60c05dcc9fe5db925dd4d06dad65b5    # opencompl/sail-riscv-lean main
-SP1_SNAPSHOT=befc6976ef53c592b637dc897f61b4e71467c239     # succinctlabs branch sp1/config-generated-4.32.2
-SP1_SNAPSHOT_REPO="${SP1_SNAPSHOT_REPO:-https://github.com/succinctlabs/sail-riscv-lean}"  # where the snapshot is published
 
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-MODE="${1:?usage: generate_lean_rv64d.sh --deps | --stock | --sp1 | --make-config}"
+MODE="${1:?usage: generate_lean_rv64d.sh --deps | --stock | --sp1 | --install | --make-config}"
+REPO_ROOT="$(cd "$HERE/../.." && pwd)"
 WORK="${SAIL_GEN_DIR:-$HOME/.cache/sp1-sail-gen}"
 SWITCH=sail-gen
 export OPAMYES=1
@@ -87,7 +89,7 @@ PYEOF
   exit 0
 fi
 
-if [ "$MODE" = --sp1 ]; then
+if [ "$MODE" = --sp1 ] || [ "$MODE" = --install ]; then
   [ -f "$HERE/sp1_rv64d_cfg.json" ] || { echo "missing sp1_rv64d_cfg.json — run --make-config"; exit 1; }
   cp "$HERE/sp1_rv64d_cfg.json" "$CFG"
 fi
@@ -99,12 +101,11 @@ H1=$(shasum -a 256 "$CFG" | cut -d' ' -f1)
 [ "$H0" = "$H1" ] || { echo "FAIL: cmake regenerated the config mid-build"; exit 1; }
 
 OUT=sail-riscv/build/model/Lean_RV64D
-[ -d ref ] || git clone --quiet "$SP1_SNAPSHOT_REPO" ref
+[ -d ref ] || git clone --quiet https://github.com/opencompl/sail-riscv-lean ref
 git -C ref fetch --quiet origin
-# Repo furniture the nightly adds around the generated tree (and the resolved manifest, which the
-# published snapshot deliberately keeps — it records the lean-sail pairing).
+# Repo furniture the nightly adds around the generated tree.
 EXCLUDES=(-x README.md -x report.py -x build_log.txt -x .github -x .gitignore -x .lake
-          -x lake-manifest.json -x README.md.template -x .git)
+          -x lake-manifest.json -x lakefile.toml -x lean-toolchain -x README.md.template -x .git)
 
 verdict=0
 diff_against() { # rev label
@@ -118,13 +119,31 @@ diff_against() { # rev label
   fi
 }
 
-if [ "$MODE" = --stock ]; then
-  diff_against "$BASE_SNAPSHOT" "opencompl base" || verdict=1
-else
-  # Four generated value sites vs the base are EXPECTED; identity vs the published SP1 snapshot
-  # is the gate.
-  diff_against "$BASE_SNAPSHOT" "opencompl base (four value sites expected)" || true
-  diff_against "$SP1_SNAPSHOT" "published SP1 snapshot" || verdict=1
-fi
+# The in-tree copy: exactly the generated library, nothing else.
+diff_in_tree() {
+  echo "=== diff vs the in-tree copy ($REPO_ROOT/LeanRV64D) ==="
+  if diff -ru "$REPO_ROOT/LeanRV64D" "$OUT/LeanRV64D" && diff -u "$REPO_ROOT/LeanRV64D.lean" "$OUT/LeanRV64D.lean"; then
+    echo "=== IDENTICAL vs the in-tree copy ==="
+  else
+    echo "=== DIFFERS vs the in-tree copy (see above) ==="
+    return 1
+  fi
+}
+
+case "$MODE" in
+  --stock)
+    diff_against "$BASE_SNAPSHOT" "opencompl base" || verdict=1 ;;
+  --sp1)
+    # Four generated value sites vs the base are EXPECTED; identity vs the in-tree copy is the
+    # gate (regeneration is idempotent).
+    diff_against "$BASE_SNAPSHOT" "opencompl base (four value sites expected)" || true
+    diff_in_tree || verdict=1 ;;
+  --install)
+    diff_against "$BASE_SNAPSHOT" "opencompl base (four value sites expected)" || true
+    rm -rf "$REPO_ROOT/LeanRV64D"
+    cp -R "$OUT/LeanRV64D" "$REPO_ROOT/LeanRV64D"
+    cp "$OUT/LeanRV64D.lean" "$REPO_ROOT/LeanRV64D.lean"
+    echo "=== INSTALLED the generated model into $REPO_ROOT (commit it; refresh the tree-hash row) ===" ;;
+esac
 echo "config sha256: $H1"
 exit "$verdict"
