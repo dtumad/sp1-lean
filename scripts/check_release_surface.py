@@ -95,7 +95,7 @@ for suffix in ("manifest.json", "rowmap.json", "witgen.json"):
             f"missing={sorted(expected_names - actual)}, extra={sorted(actual - expected_names)}"
         )
 
-nonvacuity_source = (ROOT / "SP1CleanTest/Alignment/NonVacuityReal.lean").read_text()
+nonvacuity_source = (ROOT / "SP1CleanTest/Core/NonVacuityReal.lean").read_text()
 for _, name, anchor in CHIPS:
     chip = f"{name}Chip"
     require(ROOT / f"SP1Clean/Extracted/ChipOracle/{name}.lean", "whole-chip oracle")

@@ -32,7 +32,7 @@ import SP1CleanTest.Alignment.Audit.MixedMemoryRows
 import SP1CleanTest.Alignment.Audit.NativeCompletenessNonVacuity
 import SP1CleanTest.Alignment.Audit.JointNonVacuity
 import SP1CleanTest.Alignment.Audit.ActiveNativeCompleteness
-import SP1CleanTest.Alignment.NonVacuityReal
+import SP1CleanTest.Core.NonVacuityReal
 import SP1CleanTest.Alignment.Audit.ActiveTraceNonVacuity
 import SP1CleanTest.Alignment.Audit.OneAddNativePremises
 import SP1CleanTest.Alignment.Audit.ProviderMultiplicity

@@ -181,7 +181,7 @@ on every run, which also catches wire-format drift on a Clean pin bump. To refre
 deliberately after an intended change:
 
 ```
-lake build SP1CleanTest.Alignment.Exportable
+lake build SP1CleanTest.Core.Exportable
 scripts/check_witgen_export.sh --regen --update   # inspect and commit the delta
 ```
 
