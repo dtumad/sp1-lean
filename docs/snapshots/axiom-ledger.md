@@ -1,15 +1,15 @@
 # Axiom and trust ledger
 
-Checked against the consolidated stack on 2026-09-19. Each raw file retains the source revision
+Checked against the consolidated stack on 2026-09-20. Each raw file retains the source revision
 at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2787 declarations) and
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2798 declarations) and
 [`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 323 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 3110 released declarations are probed.
+- 3121 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,15 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+The generic machine layer and its SP1 shard instances add eleven main probes and no test probes.
+All preceding 2787 main and 323 test dependency sets are unchanged, with no removals or new
+main-library axiom names. The six generic declarations (`Machine/`: path composition, the
+reachability view, PolyFun orbit composition and splitting, and the ensemble-realization
+statement) use subsets of the logical baseline, three of them no axioms at all; the five SP1
+instances (`sp1Machine`, `executes_iff`, `executionSegment_iff_segment`, `realizes`,
+`statement_iff_of_realizes`) inherit the existing Sail platform-hook surface of `ExecutionStep`
+and nothing else. The shard targets remain unfilled; these probes fix their generic shape.
 
 The native target-value checks and finite change inventory add thirty main probes and four
 executable regressions. All preceding 2757 main and 319 test dependency sets are unchanged,
@@ -818,6 +827,8 @@ The generator scans:
 - witness and full-trace conformance anchors;
 - the active official-Sail-step, deterministic-compiler-event, and bounded native non-vacuity join;
 - the native grounding and soundness capstones;
+- the generic machine layer (labeled machines and paths, the PolyFun reachability view and its
+  composition lemmas, ensemble realization) and its SP1 shard instances;
 - the generic ensemble correctness/export interfaces, fixed program provider, and finite
   program-image and host-memory frame proofs, authenticated initial register/RAM providers,
   ordered-key uniqueness, constructive row domains, and initialization inventory derived from
