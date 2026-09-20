@@ -1,4 +1,5 @@
 import Machine.Core.Path
+import Machine.Core.Reachable
 import ToClean.Air.CompleteEnsemble
 
 /-! # A flat AIR ensemble realizing a labeled machine
