@@ -191,7 +191,10 @@ def builtModules (roots : List String) (keep : Name → Bool := fun _ => true) :
   let mut mods : Array Name := #[]
   for root in roots do
     let rootOlean := libDir / (root ++ ".olean")
-    if (← rootOlean.pathExists) && (← (FilePath.mk (root ++ ".lean")).pathExists) then
+    -- The root module goes through the same filter as the tree: in core scope the umbrella
+    -- `SP1Clean` must never be imported even when a restored cache happens to hold its olean.
+    if (← rootOlean.pathExists) && (← (FilePath.mk (root ++ ".lean")).pathExists)
+        && keep (Name.mkSimple root) then
       mods := mods.push (Name.mkSimple root)
     let dir := libDir / root
     unless ← dir.isDir do continue
