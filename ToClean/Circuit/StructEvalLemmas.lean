@@ -56,8 +56,9 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
     let some projFn := getProjFnForField? env structName field
       | throwErrorAt id "no projection function for field `{field}` of `{structName}`"
     let isVector ← liftTermElabM do
-      forallTelescopeReducing (← getConstInfo projFn).type fun _ body =>
-        pure (body.isAppOfArity ``Vector 2)
+      forallTelescopeReducing (← getConstInfo projFn).type fun _ body => do
+        -- `Word F`, `fields n F` are abbreviations of `Vector F n`: look through them.
+        pure ((← whnfD body).isAppOfArity ``Vector 2)
     let cmd ← if isVector then `(
       theorem $lemmaIdent:ident {F : Type} [FiniteField F] (env : Environment F)
           (s : Var $structIdent F) :
