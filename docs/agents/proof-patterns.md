@@ -459,13 +459,17 @@ per-file ledger of the migration itself):
   `cases empty <;> elaborate_circuit` instance carries a stuck
   `ExplicitCircuit.channelsWithGuarantees (if false = true then …)`: branch with `match empty with
   | true => … | false => …` instead.
-- **Bundle unfolding.** `simp [X.circuit, circuit_norm]` to read a channel list unfolds the
-  `GeneralFormalCircuit` record into a literal whose `autoParam` proof fields are not
-  type-correct at implicit transparency, after which no `circuit_norm` rewrite fires on the goal.
-  Every bundle whose channels a ledger proof reads exposes `@[circuit_norm] lemma
-  circuit_channels : circuit.base.channels = […]` (proved by `show
-  elaborated.channelsWithGuarantees ++ … = _; simp only [circuit_norm, List.cons_append,
-  List.nil_append]`), and the ledger uses `simp [X.circuit_channels, …, Channel.toRaw]`.
+- **Hand-written obligation proofs start with `preserve_tactic_target`.** A `refine ⟨…⟩`/`intro`
+  proof of a bundle field such as `requirementsChannelsLawful` is abstracted into an auxiliary
+  lemma whose type is the proof term's *inferred* type — the unfolded conjunction, not
+  `Operations.RequirementsChannelsLawful …` — and Lean ≥ 4.33 then rejects the bundle literal
+  that `simp [X.circuit, circuit_norm]` produces downstream as "not type-correct under the
+  implicit transparency level", after which no `circuit_norm` rewrite fires on that goal (the
+  ledger proofs' `simp [BoundedWord.circuit, …]` were the first casualties). Clean main's default
+  field tactics open with `preserve_tactic_target` (it wraps the proof in `id target …` so the
+  aux lemma keeps the declared type); every hand-written `:= by` / `:= fun … => by` proof of
+  `requirementsChannelsLawful`, `exposedChannels_eq`, `channelsLawful`, `subcircuitsConsistent`,
+  `localLength_eq`, `output_eq` does the same, as its first tactic (before any `change`).
 - **Deadlock at shutdown.** A `lake build` worker can hang at 0 % CPU after writing its outputs
   (main thread joining a worker blocked in `reverseFieldLookup → Environment.constants`). Not
   reproducible in isolation; `ps -eo pid,utime` static across a minute is the tell — kill the pid

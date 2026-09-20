@@ -205,12 +205,14 @@ def circuit [Fact (2 ^ 17 < p)] : GeneralFormalCircuit (ZMod p) Inputs unit wher
   -- recover it compositionally rather than unfolding this reader again.
   exposedChannels := fun input _ => exposedState input
   exposedChannels_eq input offset := by
+    preserve_tactic_target
     simp only [exposedState, stateInteractions]
     rw [Operations.exposedChannelsLawful_expose]
     simp only [main, currentMsg, nextMsg, circuit_norm,
       Channels.byteChannel_eq_stateChannel_false, if_false]
   channelsWithRequirements := []
   requirementsChannelsLawful input_var i₀ := by
+    preserve_tactic_target
     change Operations.RequirementsChannelsLawful
       ([.assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
         [byteChannel.toRaw, stateChannel.toRaw] []

@@ -90,6 +90,7 @@ def circuit : FormalAssertion (ZMod p) Inputs where
   completeness := completeness
   channelsWithRequirements := []
   requirementsChannelsLawful input_var i₀ := by
+    preserve_tactic_target
     simp only [circuit_norm, main, byteChannel]
     intro env h_constraints
     have h_bool : Expression.eval env input_var.is_real = 0 ∨
