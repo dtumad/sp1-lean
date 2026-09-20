@@ -137,7 +137,8 @@ directive before committing — the guard rejects it.
   `whnf` 7) bore almost no resemblance to the binding-rung distribution. Read it at the *lowest failing*
   rung, and never treat a rung-1 phase as the site's identity.
 - **A floor measured through the LSP is not a floor against the gate.** The `lean-lsp` server does not
-  apply the pillar libs' `moreLeanArgs` — the same reason `lake env lean` cannot certify a pass. So on the
+  apply the pillar libs' `moreLeanArgs` — the same reason a bare `lake env lean` cannot certify a pass
+  (`scripts/profile_compile.sh` passes the eight style-linter flags itself for that reason). So on the
   rare occasion an allowlist entry is warranted, size its value at roughly **2–4× the measured bracket top**,
   not at the bare lowest passing rung. Removal is unaffected: a site clearing 40000 against the plain 200000
   default has ≥5× headroom either way. Also: a failure *position* is an attribution tool and says nothing reliable about magnitude,

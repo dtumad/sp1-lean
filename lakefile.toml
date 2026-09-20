@@ -1,8 +1,12 @@
 name = "sp1-clean-native"
-# All three hand-written libraries build by default: the upstream-destined `ToClean`/`ToMathlib`
-# roots are listed explicitly so every module in those trees is compiled (and linted) even
-# before an `SP1Clean` module happens to import it.
-defaultTargets = ["SP1Clean", "ToClean", "ToMathlib", "Machine"]
+# The default build is the CORE: the generic/semantic layers and the chip circuits with their
+# soundness/completeness proofs (`SP1Core`, strata 0-6 of `scripts/layering.txt`), plus the two
+# upstream-destined libraries and the generic `Machine` layer. The SP1-alignment layers (`SP1Alignment`: the extracted oracles,
+# Faithful, the per-chip Sail bridges and machine contracts, Proofs/Sail, Proofs/Completeness,
+# Soundness, Composition) are kept in tree and built by `lake build SP1Clean` (the umbrella) in the
+# scheduled/dispatch `alignment` CI workflow, not on every PR. See docs/agents/compile-profile-2026-09.md
+# for the measurement behind the split.
+defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "Machine"]
 
 moreLeanArgs = ["--tstack=400000"]
 
@@ -18,7 +22,10 @@ lintDriver = "sp1Lint"
 # the whole Lean compiler via `Lean.ofReduceBool`/`Lean.trustCompiler`), so they are quarantined in
 # this test library, OUT of the main `SP1Clean` library — kept `native_decide`-free by the
 # `scripts/check_no_native_decide.sh` source gate (the CI `guards` job + the audit). Run with `lake test`.
-testDriver = "SP1CleanTest"
+# `lake test` builds the CORE test set (`SP1CoreTest`); the full `SP1CleanTest` library (which also
+# contains the alignment-only anchors under `SP1CleanTest/Alignment/`) is built by the `alignment`
+# CI workflow with `lake build SP1CleanTest`.
+testDriver = "SP1CoreTest"
 
 # Built-in options only — the Mathlib style linters are applied per-lib via `moreLeanArgs`
 # (see the pillar libraries below), NOT here at package scope: that keeps the auto-gen
@@ -75,8 +82,9 @@ name = "Lean_RV64D"
 git = "https://github.com/succinctlabs/sail-riscv-lean"
 rev = "befc6976ef53c592b637dc897f61b4e71467c239"
 
-# Lightweight ISA fns. Pinned to the succinctlabs fork head, which is the head of the open
-# opencompl/riscv-lean PR #59 ("chore: update to v4.32.2"); repoint to opencompl once that merges.
+# Lightweight ISA fns. Pinned to the succinctlabs fork head, which is byte-identical to opencompl
+# `ccdfd676` (PR #59, "chore: update to v4.32.2", merged 2026-08-18). The dependency is scheduled
+# for retirement: chip specs and Sail bridges will be stated against the Sail model directly.
 [[require]]
 name = "RISCV"
 git = "https://github.com/succinctlabs/riscv-lean"
@@ -132,6 +140,53 @@ moreLeanArgs = [
   "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
 ]
 
+# ---- Module ownership -------------------------------------------------------------------------
+# Lake resolves a module to the LAST declared library whose globs match it
+# (`Package.findModule?` is `leanLibs.findSomeRev? (·.findModule? mod)` over `isBuildableModule`,
+# a glob test), and that library's `moreLeanArgs` are what the module is built with. A library
+# without globs (the umbrella `SP1Clean` below) owns only its root module, never the tree under
+# its root. The pillar libraries at the end of this file therefore still own the `SP1Clean.*`
+# modules; the targets here carry the same eight-flag set, so ownership and flags agree either
+# way. Keep every glob library that matches hand-written modules on the same flag set.
+
+# Generated modules the core needs: the flat extraction substrate (readers, operations, DSL,
+# manifest, provenance) and the one system oracle a core contract file imports. NO linter args
+# (generated modules carry `set_option linter.all false`).
+[[lean_lib]]
+name = "SP1CoreExtracted"
+globs = [
+  "SP1Clean.Extracted.AddOperation", "SP1Clean.Extracted.AddrAddOperation",
+  "SP1Clean.Extracted.AddressOperation", "SP1Clean.Extracted.ALUTypeReader",
+  "SP1Clean.Extracted.CoreAIRManifest", "SP1Clean.Extracted.CPUState",
+  "SP1Clean.Extracted.ExtractionDSL", "SP1Clean.Extracted.InteractionModel",
+  "SP1Clean.Extracted.IsEqualWordOperation", "SP1Clean.Extracted.IsZeroOperation",
+  "SP1Clean.Extracted.IsZeroWordOperation", "SP1Clean.Extracted.ITypeReader",
+  "SP1Clean.Extracted.ITypeReaderImmutable", "SP1Clean.Extracted.JTypeReader",
+  "SP1Clean.Extracted.LtOperationSigned", "SP1Clean.Extracted.LtOperationUnsigned",
+  "SP1Clean.Extracted.MemoryAccess", "SP1Clean.Extracted.MulOperation",
+  "SP1Clean.Extracted.OpcodeTable", "SP1Clean.Extracted.Provenance",
+  "SP1Clean.Extracted.RTypeReader", "SP1Clean.Extracted.U16CompareOperation",
+  "SP1Clean.Extracted.U16MSBOperation", "SP1Clean.Extracted.U16toU8OperationSafe",
+  "SP1Clean.Extracted.U16toU8OperationUnsafe",
+  "SP1Clean.Extracted.SystemOracle.SyscallInstrs",
+]
+
+# The core: strata 0-6 of scripts/layering.txt. Every module here is hand-written and carries the
+# eight-flag style-linter set. `SP1Clean.Soundness.RowView` (stratum 4) is imported by core files and
+# is built as a dependency; it is owned by `SP1Alignment` below (same flags), which is harmless.
+[[lean_lib]]
+name = "SP1Core"
+globs = [
+  "SP1Clean.Math.+", "SP1Clean.Model.+", "SP1Clean.FormalModel.+", "SP1Clean.Native.+",
+  "SP1Clean.Proofs.Operations.+", "SP1Clean.Proofs.CircuitProofStart", "SP1Clean.Proofs.Chips.+",
+]
+moreLeanArgs = [
+  "-Dlinter.style.lambdaSyntax=true", "-Dlinter.style.dollarSyntax=true",
+  "-Dlinter.style.refine=true", "-Dlinter.style.cases=true",
+  "-Dlinter.style.induction=true", "-Dlinter.style.admit=true",
+  "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
+]
+
 # The generic machine layer: `Machine/Core/*` is PolyFun-only (labeled machines, paths, orbit
 # composition; upstream-destined to PolyFun), `Machine/Air/*` adds Clean/`ToClean` (an ensemble
 # realizing a machine). It never imports `SP1Clean`; `SP1Clean` consumes it. Same linter set.
@@ -144,9 +199,31 @@ moreLeanArgs = [
   "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
 ]
 
-# Umbrella library — root module `SP1Clean.lean` imports every module; `lake build` (the default
-# target) builds everything through it. Package-level `moreLeanArgs`/`[leanOptions]` above apply to
-# all libraries, so the layer libraries below inherit `--tstack`/heartbeats with no duplication.
+# The remaining generated modules (whole-chip and system oracles): alignment only, no linter args.
+[[lean_lib]]
+name = "SP1AlignmentExtracted"
+globs = ["SP1Clean.Extracted.+"]
+
+# The SP1-alignment layers: strata 7-11. `SP1Clean.Alignment.+` holds the per-chip Sail bridges and
+# machine contracts that used to live under Proofs/Chips (namespaces unchanged; the move exists so
+# the core target is expressible by globs).
+[[lean_lib]]
+name = "SP1Alignment"
+globs = [
+  "SP1Clean.Alignment.+", "SP1Clean.Faithful.+", "SP1Clean.Proofs.Sail.+",
+  "SP1Clean.Proofs.Completeness.+", "SP1Clean.Soundness.+", "SP1Clean.Composition.+",
+]
+moreLeanArgs = [
+  "-Dlinter.style.lambdaSyntax=true", "-Dlinter.style.dollarSyntax=true",
+  "-Dlinter.style.refine=true", "-Dlinter.style.cases=true",
+  "-Dlinter.style.induction=true", "-Dlinter.style.admit=true",
+  "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
+]
+
+# Umbrella library — root module `SP1Clean.lean` imports every module; `lake build SP1Clean` builds
+# everything through it (the alignment workflow's target). Declared after the owning libraries so
+# it owns only its root index. Package-level `moreLeanArgs`/`[leanOptions]` above apply to all
+# libraries, so every library inherits `--tstack`/heartbeats with no duplication.
 [[lean_lib]]
 name = "SP1Clean"
 
@@ -230,6 +307,21 @@ moreLeanArgs = [
 # too — `sp1Lint` keeps only `SP1Clean`-prefixed declarations, and `SP1CleanTest` is not such a
 # prefix.) Trace conformance against SP1's real prover lives in the dump-anchored pipeline
 # (`export/sp1dump/` + the `--testdata` generation-time gate + the Rust differential).
+# The core test set (the `lake test` driver): every test module that does not reach an
+# alignment-only module. The alignment-only anchors live under `SP1CleanTest/Alignment/` (moved by
+# import closure, not by topic) and are covered by the full library below. Every `Audit/` module
+# is alignment-only, so that directory no longer exists and must not appear in a glob: Lake fails
+# on a glob whose directory is absent from a fresh checkout.
+[[lean_lib]]
+name = "SP1CoreTest"
+globs = ["SP1CleanTest.Core.+", "SP1CleanTest.TraceGenTests.+"]
+moreLeanArgs = [
+  "-Dlinter.style.lambdaSyntax=true", "-Dlinter.style.dollarSyntax=true",
+  "-Dlinter.style.refine=true", "-Dlinter.style.cases=true",
+  "-Dlinter.style.induction=true", "-Dlinter.style.admit=true",
+  "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
+]
+
 [[lean_lib]]
 name = "SP1CleanTest"
 globs = ["SP1CleanTest.+"]

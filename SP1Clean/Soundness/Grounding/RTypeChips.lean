@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Proofs.Chips.SubwChip.Contracts
-import SP1Clean.Proofs.Chips.DivRemChip.Contracts
+import SP1Clean.Alignment.Chips.SubwChip.Contracts
+import SP1Clean.Alignment.Chips.DivRemChip.Contracts
 
 /-! # Canonical R-type grounding instances
 

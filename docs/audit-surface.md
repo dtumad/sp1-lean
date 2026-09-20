@@ -162,7 +162,7 @@ below. The local assembly's complete Sail/host endpoint binding and timed ground
 | `GroundingCarrier.replay_of_finalTruth` | `SP1Clean/Soundness/LocalCoreTrajectory.lean` | Whether grounded final State truth yields successful full-tape replay and public PC/clock agreement |
 | `GroundingCarrier.instruction_engineFacts` | `SP1Clean/Soundness/LocalCoreInstructionExecution.lean` | Whether all ordinary chip facts derive on stateful replay without caller-supplied replay guards |
 | `GroundingCarrier.ground_of_system_steps` | `SP1Clean/Soundness/LocalCoreInstructionExecution.lean` | The remaining ROM and system-row semantic premises after local trajectory and ordinary grounding |
-| `hintReturnNeedsHostBinding` | `SP1CleanTest/Core/LocalCore.lean` | Concrete AIR-valid forged HINT_LEN return against the supplied finite host; records the remaining host-result binding obligation |
+| `hintReturnNeedsHostBinding` | `SP1CleanTest/Alignment/Core/LocalCore.lean` | Concrete AIR-valid forged HINT_LEN return against the supplied finite host; records the remaining host-result binding obligation |
 | `SourceValid` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Finite program/decoding validity, x0, and all source ROM bytes, including untouched code |
 | `checkSource_iff` | `SP1Clean/Model/Core/SourceSnapshot.lean` | Whether executable source validation is exactly the semantic contract |
 | `ensemble` | `SP1Clean/Soundness/LocalCoreEnsemble.lean` | The 59-table assembly with a complete source and its bound incoming PC/clock |
@@ -294,11 +294,11 @@ them; it does not maintain a second list that could drift from extraction.
 | `supported_core_native_shard_functionalCompleteness` | `SP1Clean/Soundness/NativeCompleteness.lean` | The same map into the capacity-aligned native relation |
 | `supported_core_native_complete` | `SP1Clean/Soundness/NativeCompleteness.lean` | Existential whole-ensemble completeness on the admissible image |
 | `sp1Ensemble_statement_of_supported_execution` | `SP1Clean/Soundness/NativeCompleteness.lean` | The direct Clean `Ensemble.Statement` consequence |
-| `anchorExecution_admissible` | `SP1CleanTest/Audit/NativeCompletenessNonVacuity.lean` | A concrete zero-event common shard witness jointly inhabits every admissibility premise |
-| `anchorExecution_yields_airWitness` | `SP1CleanTest/Audit/NativeCompletenessNonVacuity.lean` | The functional capstone returns its literal compiled 55-table witness |
-| `activeView_compiled_event_exists` | `SP1CleanTest/Audit/ActiveNativeCompleteness.lean` | The official-Sail self-jump's projected input compiles to the exact JAL circuit event used by the active trace |
-| `activeExecution_semantic` | `SP1CleanTest/Audit/ActiveNativeCompleteness.lean` | A genuine one-transition Sail execution inhabits the shared supported-shard semantic relation |
-| `activeTrace_bounded_roundTrip` | `SP1CleanTest/Audit/ActiveNativeCompleteness.lean` | The nonempty circuit-built AIR witness lies in the bounded native relation and soundness reconstructs a semantic witness |
+| `anchorExecution_admissible` | `SP1CleanTest/Alignment/Audit/NativeCompletenessNonVacuity.lean` | A concrete zero-event common shard witness jointly inhabits every admissibility premise |
+| `anchorExecution_yields_airWitness` | `SP1CleanTest/Alignment/Audit/NativeCompletenessNonVacuity.lean` | The functional capstone returns its literal compiled 55-table witness |
+| `activeView_compiled_event_exists` | `SP1CleanTest/Alignment/Audit/ActiveNativeCompleteness.lean` | The official-Sail self-jump's projected input compiles to the exact JAL circuit event used by the active trace |
+| `activeExecution_semantic` | `SP1CleanTest/Alignment/Audit/ActiveNativeCompleteness.lean` | A genuine one-transition Sail execution inhabits the shared supported-shard semantic relation |
+| `activeTrace_bounded_roundTrip` | `SP1CleanTest/Alignment/Audit/ActiveNativeCompleteness.lean` | The nonempty circuit-built AIR witness lies in the bounded native relation and soundness reconstructs a semantic witness |
 | `SupportedCoreGeneratedTraceRelation` | `SP1Clean/Soundness/AIRCompleteness.lean` | The lower generated-trace assembly boundary, kept distinct from semantic completeness |
 
 Completeness now covers the deterministic compiler's full 55-table admissible image: all 25 instruction

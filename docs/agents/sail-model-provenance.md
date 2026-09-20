@@ -253,8 +253,8 @@ generated files would be free (the generator emits the new name consistently) an
 references across 64 files are a mechanical sed, but `riscv-lean` names `LeanRV64D` in 4 of its own
 files (118 refs: `Skeleton`, `SailToRV64`, `SailPureToInstructions`, `SailPure`) and requires the
 package by that name, so we would have to fork it **permanently**; opencompl will not import an
-SP1-specific model. That fork is currently disposable chores, pinned at opencompl PR #59 and slated
-for deletion when #59 merges. *Generating as `SP1` and renaming the emitted tree back* — measured
+SP1-specific model. That fork is disposable chores, pinned at the content of opencompl PR #59 (merged
+2026-08-18) and slated for deletion when the dependency is retired. *Generating as `SP1` and renaming the emitted tree back* — measured
 and it works (on the real 171-file snapshot the rename leaves zero residue in either direction and
 round-trips byte-identically), but a find-and-replace across generated output is a maintenance
 hazard we would own forever, and it weakens the "generated, never hand-edited" provenance story.
@@ -262,5 +262,7 @@ Both stay on the shelf in case upstream declines substitution outright; the fall
 resort is simply keeping the `cp` + hash guard, which works.
 
 The sibling `succinctlabs/riscv-lean` fork is only toolchain/dependency chores; it is pinned at
-`d1d678c6`, the head of the open opencompl PR #59 ("chore: update to v4.32.2"). Repoint
-`lakefile.toml` to opencompl once that merges and drop the fork outright.
+`d1d678c6`, byte-identical to opencompl `ccdfd676` (PR #59, "chore: update to v4.32.2", merged
+2026-08-18). The dependency itself is scheduled for retirement: the nine importers will state
+their chip specs and Sail bridges against the Sail model directly, after which the require is
+dropped.

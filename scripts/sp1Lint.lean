@@ -168,8 +168,35 @@ def getHandwrittenDecls : CoreM (Array Name) := do
   return env.constants.map₁.fold (init := #[]) fun decls declName _ =>
     if keep[env.const2ModIdx[declName]?.get! (α := Nat)]! then decls.push declName else decls
 
+/-- Every module under `.lake/build/lib/lean/<root>/` whose olean exists AND whose source file
+still exists, as import names. Used by `--scope core`: PR CI builds only the core target, so
+instead of importing the umbrella `SP1Clean` (whose olean only the alignment workflow produces)
+the driver lints whatever is built. The source check matters: a build directory can hold oleans
+of retired or moved modules, and importing one beside its successor duplicates declarations. -/
+def builtModules (roots : List String) : IO (Array Name) := do
+  let libDir : FilePath := ".lake" / "build" / "lib" / "lean"
+  let mut mods : Array Name := #[]
+  for root in roots do
+    let rootOlean := libDir / (root ++ ".olean")
+    if (← rootOlean.pathExists) && (← (FilePath.mk (root ++ ".lean")).pathExists) then
+      mods := mods.push (Name.mkSimple root)
+    let dir := libDir / root
+    unless ← dir.isDir do continue
+    let depth := libDir.components.length
+    for entry in ← System.FilePath.walkDir dir do
+      if entry.extension == some "olean" then
+        let comps := (entry.withExtension "").components.drop depth
+        let src : FilePath := (comps.foldl (fun (p : FilePath) c => p / FilePath.mk c) ⟨"."⟩).withExtension "lean"
+        if ← src.pathExists then
+          mods := mods.push (comps.foldl (fun n c => Name.str n c) Name.anonymous)
+  return mods.qsort (·.toString < ·.toString)
+
 /--
-Usage: `sp1Lint [--update] [--placement] [-v | --trace]`
+Usage: `sp1Lint [--update] [--placement] [--scope core] [-v | --trace]`
+
+`--scope core` imports every hand-written module whose olean is present under `.lake/build`
+instead of the umbrella `SP1Clean` root, so the driver runs on a core-only build (PR CI); on a
+full build it lints exactly what `lake lint` lints.
 
 `--placement` additionally runs the placement linter (`docs/layering.md` law 2). It is **advisory and
 opt-in, not part of the `lake lint` gate**, and the reason is a measurement rather than a preference:
@@ -192,11 +219,15 @@ unsafe def main (args : List String) : IO Unit := do
   let verbose := args.contains "-v" || args.contains "--trace"
   -- Advisory, opt-in: see the `--placement` note in this file's header.
   let placement := args.contains "--placement"
+  let coreScope : Bool := (args.zip args.tail).any fun (flag, value) =>
+    flag == "--scope" && value == "core"
   initSearchPath (← findSysroot)
   let projectModule := `SP1Clean
   let lintModule := `Batteries.Tactic.Lint
-  -- The env linters need built oleans; require them rather than driving a build from here.
-  for m in [projectModule, lintModule] do
+  -- The env linters need built oleans; require them rather than driving a build from here. In
+  -- core scope the umbrella olean is not expected to exist.
+  let required : List Name := if coreScope then [lintModule] else [projectModule, lintModule]
+  for m in required do
     let olean ← findOLean m
     unless (← olean.pathExists) do
       IO.eprintln s!"sp1Lint: missing olean for `{m}` at:\n  {olean}\n\
@@ -210,8 +241,13 @@ unsafe def main (args : List String) : IO Unit := do
   let nolintsFile : FilePath := "scripts/nolints.json"
   let nolints ← if ← nolintsFile.pathExists then readJsonFile NoLints nolintsFile else pure #[]
   unsafe Lean.enableInitializersExecution
+  let projectImports : Array Name ←
+    if coreScope then builtModules ["SP1Clean", "ToClean", "ToMathlib", "Machine"]
+    else pure (#[projectModule] ++ extraModules)
+  if coreScope then do
+    IO.println s!"-- sp1Lint: core scope, {projectImports.size} built modules"
   let imports : Array Import :=
-    (#[projectModule, lintModule] ++ extraModules).map fun m => { module := m }
+    (projectImports ++ #[lintModule]).map fun m => { module := m }
   let env ← importModules imports {} (trustLevel := 1024) (loadExts := true)
   let opts : Options := if verbose then ({} : Options).setBool `trace.Batteries.Lint true else {}
   let ctx := { fileName := "", fileMap := default, options := opts }

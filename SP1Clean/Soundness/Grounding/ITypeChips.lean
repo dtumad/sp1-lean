@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Proofs.Chips.AddiChip.Contracts
+import SP1Clean.Alignment.Chips.AddiChip.Contracts
 import SP1Clean.Native.Readers.ITypeReaderImmutable
 
 /-! # Canonical I-type grounding

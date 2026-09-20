@@ -22,5 +22,6 @@ Read Clean's pinned upstream documentation first:
 - [upstream-drafts.md](upstream-drafts.md) — prepared Clean issue/PR text; posting needs approval.
 
 Generated axiom records live in [`../snapshots/`](../snapshots/). Compile profiles are generated on
-demand with `scripts/profile_compile.sh` and kept with the review that motivated them, not as
-evergreen documentation.
+demand with `scripts/profile_compile.sh` and `scripts/profile_aggregate.py` and kept with the
+review that motivated them, not as evergreen documentation; the current one is
+[compile-profile-2026-09.md](compile-profile-2026-09.md), the fork's compile-time baseline.

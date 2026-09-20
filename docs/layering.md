@@ -100,9 +100,12 @@ ordering below is supported by measured import counts, not by intent.
 
 **Directories are not strata.** Four of them straddle, and the map says so with narrower rules:
 
-- `Proofs/Chips/<X>/` holds three strata. `Defs`/`Formal` are chip-level; `Bridge.lean` needs
-  `Soundness.ChipRow` and the Sail advance layer; `Contracts.lean` needs `Soundness.TypedMemory`,
-  whose own closure reaches all 25 chips. The latter two already declare `namespace SP1Clean.Soundness`.
+- A chip's files span two strata. `Proofs/Chips/<X>/` (`Defs`/`Formal`/`Complete`/…) is chip-level;
+  the chip's `Bridge.lean` (needs `Soundness.ChipRow` and the Sail advance layer) and `Contracts.lean`
+  (needs `Soundness.TypedMemory`, whose closure reaches all 25 chips) live under
+  `Alignment/Chips/<X>/` at stratum 8 with their namespaces unchanged, so that the core build target
+  is expressible by module globs. `BranchChip/Contracts.lean` stays in `Proofs/Chips/` because its
+  closure reaches only `Soundness.RowView` (stratum 4); the host chips' bridges likewise.
 - `Soundness/` holds three. `RowView.lean` reaches nothing above stratum 3;
   `AIRCompleteness.lean` and `NativeCompleteness.lean` sit above `Proofs/Completeness/`; the rest is
   the machine.
@@ -116,8 +119,9 @@ ordering below is supported by measured import counts, not by intent.
   with a reason rather than a move.
 - `FormalModel/` holds two — `TraceGen/` belongs with the chips.
 
-Adding a narrower rule is always preferable to adding an allowlist entry. Splitting
-`Proofs/Chips/*/{Bridge,Contracts}.lean` out removed 63 would-be exceptions at a stroke.
+Adding a narrower rule is always preferable to adding an allowlist entry. Mapping the per-chip
+`Bridge`/`Contracts` files to stratum 8 (now the `Alignment/` directory) removed 63 would-be
+exceptions at a stroke.
 
 **The gate is only ever as sharp as the strata.** Two modules in the same stratum may import each
 other freely, so a real ordering discovered *inside* a stratum should split it rather than be

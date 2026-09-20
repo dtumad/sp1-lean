@@ -1,9 +1,9 @@
 import SP1Clean.Soundness.Grounding.ITypeChips
-import SP1Clean.Proofs.Chips.AddwChip.Contracts
-import SP1Clean.Proofs.Chips.BitwiseChip.Contracts
-import SP1Clean.Proofs.Chips.LtChip.Contracts
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Contracts
-import SP1Clean.Proofs.Chips.ShiftRightChip.Contracts
+import SP1Clean.Alignment.Chips.AddwChip.Contracts
+import SP1Clean.Alignment.Chips.BitwiseChip.Contracts
+import SP1Clean.Alignment.Chips.LtChip.Contracts
+import SP1Clean.Alignment.Chips.ShiftLeftChip.Contracts
+import SP1Clean.Alignment.Chips.ShiftRightChip.Contracts
 
 /-! # Canonical immediate-capable ALU grounding
 

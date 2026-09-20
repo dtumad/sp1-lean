@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Proofs.Chips.JalChip.Bridge
-import SP1Clean.Proofs.Chips.UTypeChip.Bridge
+import SP1Clean.Alignment.Chips.JalChip.Bridge
+import SP1Clean.Alignment.Chips.UTypeChip.Bridge
 
 /-! # Canonical J-type grounding
 
