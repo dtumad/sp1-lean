@@ -1,4 +1,5 @@
 import Clean.Utils.Tactics.ProvableStructDeriving
+import ToClean.Circuit.StructEvalLemmas
 
 /-! # Public values on the formal-model audit surface
 

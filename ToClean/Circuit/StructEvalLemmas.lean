@@ -23,9 +23,12 @@ bridge by hand, once per field:
 `provable_struct_eval_lemmas S` generates exactly those lemmas for every field of `S` (proof:
 `cases s; simp only [circuit_norm]`, so the right-hand side lands in whatever normal form the
 field's type has — `Expression.eval` for a scalar, `Vector.map (Expression.eval env)` for a
-`Vector F n`, `ProvableStruct.eval` for a nested struct). Upstream home: the `deriving
-ProvableStruct` handler, next to the `fromComponents_cons` lemma it already emits. Supported
-shape: a structure whose only parameter is `(F : Type)`. -/
+`Vector F n`, `ProvableStruct.eval` for a nested struct). Scalar and nested-struct lemmas are
+`circuit_norm` members; a `Vector F n` field's lemma is declared but left untagged, because
+Clean's indexing simproc does lift `Expression.eval env s.c[i]` to `(ProvableStruct.eval env s).c[i]`
+and the two would loop. Upstream home: the `deriving ProvableStruct` handler, next to the
+`fromComponents_cons` lemma it already emits. Supported shape: a structure whose only parameter
+is `(F : Type)`. -/
 
 open Lean Elab Command Meta
 
@@ -47,7 +50,21 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
     -- `_root_`: the generated name is absolute, whatever namespace the command sits in.
     let lemmaIdent := mkIdent (`_root_ ++ structName ++ Name.mkSimple s!"eval_{field}")
     let fieldIdent := mkIdent field
-    let cmd ← `(
+    -- A `Vector F n` field keeps Clean's lifted normal form (`(ProvableStruct.eval env s).c[i]`,
+    -- which Clean's indexing simproc does produce), so its lemma is not a `circuit_norm` member:
+    -- tagging it would loop against that simproc through `eval_fields`/`getElem_map`.
+    let some projFn := getProjFnForField? env structName field
+      | throwErrorAt id "no projection function for field `{field}` of `{structName}`"
+    let isVector ← liftTermElabM do
+      forallTelescopeReducing (← getConstInfo projFn).type fun _ body =>
+        pure (body.isAppOfArity ``Vector 2)
+    let cmd ← if isVector then `(
+      theorem $lemmaIdent:ident {F : Type} [FiniteField F] (env : Environment F)
+          (s : Var $structIdent F) :
+          (ProvableStruct.eval env s).$fieldIdent:ident = Eval.eval env s.$fieldIdent:ident := by
+        cases s
+        simp only [circuit_norm])
+    else `(
       @[circuit_norm]
       theorem $lemmaIdent:ident {F : Type} [FiniteField F] (env : Environment F)
           (s : Var $structIdent F) :

@@ -479,9 +479,12 @@ def _expand_large_derives(body: str) -> str:
                 continue
             fname, fty = line.split(" : ", 1)
             fields.append((fname.strip(), fty.strip()))
+        # `provable_struct_eval_lemmas` (ToClean/Circuit/StructEvalLemmas.lean): the per-field
+        # `eval_<f>` bridge lemmas every hand-written struct also declares, so `circuit_norm` can
+        # relate `(ProvableStruct.eval env s).f` to `Expression.eval env s.f` on an opaque `s`.
         if len(fields) <= _LARGE_STRUCT_FIELD_THRESHOLD:
-            return m.group(0)
-        return _explicit_provable_struct(name, fields)
+            return m.group(0) + f"\nprovable_struct_eval_lemmas {name}"
+        return _explicit_provable_struct(name, fields) + f"\n\nprovable_struct_eval_lemmas {name}"
     return _DERIVE_STRUCT_RE.sub(repl, body)
 
 

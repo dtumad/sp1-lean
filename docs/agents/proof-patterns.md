@@ -414,6 +414,63 @@ and `/--` openers (strip/restore them).
   heartbeat counter, so no budget change diagnoses or fixes it — when a long `main` or a deep term blows up,
   suspect `maxRecDepth` before heartbeats.
 
+### Lean ≥ 4.33 and Clean `main` (the 2026-09 toolchain move)
+
+Six failure classes, each with the fix that is now the house pattern (`docs/audits/` keeps the
+per-file ledger of the migration itself):
+
+- **Sealed `structToElements`.** Clean seals `ProvableStruct.structToElements`/`structFromElements`
+  (`attribute [irreducible]`), so nothing sees through `toElements` of a derived struct by defeq
+  any more: no `change (#v[a] ++ …).toList = _`, no `rfl` from `varFromOffset S i` to a struct
+  literal. Unfold by lemma instead: `simp only [toElements, ProvableStruct.structToElements_eq,
+  ProvableStruct.toComponents, Vector.toList_cast]` then `simp only [components,
+  ProvableStruct.componentsToElements, …]` (the `*_toList` message lemmas), and in the cell
+  navigators `simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+  ProvableStruct.componentsToElements]`. A wrapper lemma such as `toElements_mk` unfolds its
+  LHS only (`change structToElements ⟨s⟩ = _; rw [structToElements_eq]`) — unfolding both sides
+  and closing by `exact` is a whnf timeout. State an `ElaboratedCircuit.output` as the literal
+  struct (`⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩`), not `varFromOffset S i0`.
+- **Transparency-respecting unifier (Lean #13895).** A metavariable assignment must type-check
+  at implicit transparency. `simpa … using h` where the two sides agree only after unfolding a
+  `def` → `exact h`. A `simp`-produced proof term carries whatever spelling of its type simp
+  produced (`min p 2^32 < 2^64` through `LinearOrder.toLattice.toLT`), and a bundle built with
+  it (`BoundedWord.circuit (bound p) (by simp [bound])`) makes every later rewrite on that goal
+  fail with "not type-correct under the implicit transparency level" — name the proof
+  (`HostHaltChip.bound_fits`). A lemma whose argument type only unfolds to the goal's
+  (`events : List (sp1Machine …).Event` vs `List ExecutionEvent`) must be instantiated by hand
+  (`executes_iff (events := events)`), and an eta-difference left by `simp only` closes with a
+  final `rfl`.
+- **Variable-input struct evaluation.** `circuit_norm` no longer unfolds `ProvableStruct.eval` on
+  a non-literal struct (matchers stopped eta-expanding), and Clean's lift simproc
+  (`Expression.eval env s.x ~~> (ProvableStruct.eval env s).x`) never fires for the same reason.
+  The constraint side of every goal is therefore in the `Expression.eval env input_var.f` form,
+  and a row-level fact `(ProvableStruct.eval env s).f = …` needs a bridge:
+  `provable_struct_eval_lemmas S` (`ToClean/Circuit/StructEvalLemmas.lean`, invoked after every
+  `deriving ProvableStruct`, emitted by `update_extracted.py` for generated structs) declares the
+  `@[circuit_norm] S.eval_f` push-down lemmas, exactly Clean's `FemtoCairo/TypesLemmas.lean`
+  idiom. Clean's literal-decomposition and equality-split simprocs live in
+  `Clean.Circuit.StructEvalSimprocs`, imported at the root (`Math/Word.lean`), not in
+  `Clean.Circuit.Basic` — a file that only imported `Basic` had no struct normalisation at all.
+  Where the input is a variable, destructure it at the `intro` (`intro k ⟨x, y⟩ env env'`) as
+  Clean's own gadget proofs do.
+- **`elaborate_circuit`.** It times out on a sixteen-statement `main` (`MulOperation`): write the
+  `ElaboratedCircuit` instance with `simp only [main, circuit_norm, seval]` field proofs. It
+  leaves `if empty then … else …` on a `Bool` literal unreduced in the explicit metadata, so a
+  `cases empty <;> elaborate_circuit` instance carries a stuck
+  `ExplicitCircuit.channelsWithGuarantees (if false = true then …)`: branch with `match empty with
+  | true => … | false => …` instead.
+- **Bundle unfolding.** `simp [X.circuit, circuit_norm]` to read a channel list unfolds the
+  `GeneralFormalCircuit` record into a literal whose `autoParam` proof fields are not
+  type-correct at implicit transparency, after which no `circuit_norm` rewrite fires on the goal.
+  Every bundle whose channels a ledger proof reads exposes `@[circuit_norm] lemma
+  circuit_channels : circuit.base.channels = […]` (proved by `show
+  elaborated.channelsWithGuarantees ++ … = _; simp only [circuit_norm, List.cons_append,
+  List.nil_append]`), and the ledger uses `simp [X.circuit_channels, …, Channel.toRaw]`.
+- **Deadlock at shutdown.** A `lake build` worker can hang at 0 % CPU after writing its outputs
+  (main thread joining a worker blocked in `reverseFieldLookup → Environment.constants`). Not
+  reproducible in isolation; `ps -eo pid,utime` static across a minute is the tell — kill the pid
+  and the build resumes.
+
 ### Gadget-level (arithmetic, `Native/Operations/` + `Proofs/Operations/`)
 
 - **`circuit_proof_start` must be the FIRST tactic** in soundness/completeness. Any
