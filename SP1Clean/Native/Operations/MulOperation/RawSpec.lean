@@ -842,7 +842,7 @@ lemma ofNat128_signExtend (w : Word (ZMod p)) :
 lemma signExtend128_toNat (w : Word (ZMod p)) (hw : w.isU64) :
     ((Word.toBitVec64 w).signExtend 128).toNat
       = Word.toNat w + (if w[3].val ≥ 32768 then 2 ^ 128 - 2 ^ 64 else 0) := by
-  haveI : NeZero p := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : NeZero p := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   obtain ⟨h0, h1, h2, h3⟩ := Word.lt_cases_of_isU64 hw
   have hmsb_iff : (Word.toBitVec64 w).msb = true ↔ w[3].val ≥ 32768 := by
     rw [BitVec.msb_eq_decide, decide_eq_true_eq, Word.toBitVec64_toNat hw, Word.toNat_def]; omega

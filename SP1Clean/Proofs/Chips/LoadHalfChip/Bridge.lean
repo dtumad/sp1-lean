@@ -164,7 +164,6 @@ theorem correct_load_half_native
   simp [spec_lh, sp1_lh, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
     LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread, hext]
-  rfl
 
 /-- End-to-end: from chip + decode + register/PC reads + selected memory bytes, Sail's `LH`/`LHU`
 agrees with the SP1 chip emulation. -/

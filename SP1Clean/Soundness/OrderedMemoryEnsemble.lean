@@ -25,7 +25,7 @@ theorem startKey_toNat : Word.toNat (startKey (p := p)) = 0 := by
 
 omit [Fact (2 ^ 17 < p)] in
 theorem endKey_toNat : Word.toNat (endKey (p := p)) = 2 ^ 48 + 1 := by
-  haveI : Fact (1 < p) := ⟨(Fact.out (p := p.Prime)).one_lt⟩
+  have : Fact (1 < p) := ⟨(Fact.out (p := p.Prime)).one_lt⟩
   norm_num [endKey, Word.toNat, ZMod.val_one]
 
 omit [Fact (2 ^ 17 < p)] in

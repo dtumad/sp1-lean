@@ -118,7 +118,7 @@ theorem soundness :
       have := SP1Clean.BranchChip.val_of_bool (h := hbne)
       have := SP1Clean.BranchChip.val_of_bool (h := hbltu)
       have := SP1Clean.BranchChip.val_of_bool (h := hbgeu)
-      haveI : Fact (1 < p) :=
+      have : Fact (1 < p) :=
         ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
       rw [hl, hg, ZMod.val_one] at h_onehot
       omega
@@ -456,7 +456,7 @@ theorem completeness :
       have := SP1Clean.BranchChip.val_of_bool (h := fb1)
       have := SP1Clean.BranchChip.val_of_bool (h := fb4)
       have := SP1Clean.BranchChip.val_of_bool (h := fb5)
-      haveI : Fact (1 < p) :=
+      have : Fact (1 < p) :=
         ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
       rw [hl, hg, ZMod.val_one] at h_onehot
       omega
@@ -464,7 +464,7 @@ theorem completeness :
       (input_is_real - 1) *
           (env.get (i₀ + 2) + env.get (i₀ + 3)) = 0 := by
     rcases h_bin with h | h
-    · haveI : Fact (1 < p) :=
+    · have : Fact (1 < p) :=
         ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
       have hp : 2 ^ 17 < p := Fact.out
       have hsum0 :
@@ -787,7 +787,7 @@ theorem completeness :
   · rcases fb4 with h | h <;> rw [h] <;> simp
   · rcases fb5 with h | h <;> rw [h] <;> simp
   · rcases brb with h | h <;> rw [h] <;> simp
-  · haveI : CommRing (id (ZMod p)) :=
+  · have : CommRing (id (ZMod p)) :=
       inferInstanceAs (CommRing (ZMod p))
     rcases h_bin with h | h
     · rw [hsumreal, h]

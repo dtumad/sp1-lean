@@ -198,7 +198,6 @@ theorem correct_load_word_native
   simp [spec_lw, sp1_lw, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
     LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread, hext]
-  rfl
 
 /-- **End-to-end composition.** From the `LoadWord` chip prover assumptions + decode + register/PC reads
 + the four selected memory bytes, a width-4 Sail `LOAD` (sign-extended for `LW`, zero-extended for `LWU`)
