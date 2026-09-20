@@ -5,7 +5,7 @@ import SP1Clean.Proofs.Operations.IsEqualWordOperation.Formal
 import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
 import SP1Clean.Proofs.Operations.MulOperation.Formal
 import SP1Clean.Native.Operations.DivRemOperation.OwnAsserts
-import RISCV.Instructions
+import SP1Clean.Model.RV64Semantics
 import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The semantic contract of SP1's combined divide/remainder chip

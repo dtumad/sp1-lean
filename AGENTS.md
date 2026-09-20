@@ -129,7 +129,7 @@ refinement; only their `_of_obligations` combinators are currently declared.
   dependencies/toolchains) — update one `[[require]]` at a time.
   ⚠ **The generated Sail model and the `lean-sail` runtime must move together.** A v4-generated
   `LeanRV64D` snapshot against `lean-sail` v5 fails with `unknown namespace Sail.ConcurrencyInterfaceV2`;
-  pin both from the same pairing (`opencompl/riscv-lean` PR #59 is the reference).
+  pin both from the same pairing (`docs/agents/sail-model-provenance.md` records the current one).
   Read `docs/agents/lean-sail-notes.md` before touching any dependency.
 - Lake options already set in `lakefile.toml`: `--tstack=400000`, `synthInstance.maxHeartbeats = 1000000`.
 - There are no conventional unit tests in the main library; correctness lives in kernel-checked

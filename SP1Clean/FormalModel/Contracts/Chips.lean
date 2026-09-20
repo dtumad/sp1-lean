@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.FormalModel.Contracts.DivRem
 import SP1Clean.FormalModel.Contracts.DivRemColumns
-import RISCV.Instructions
+import SP1Clean.Model.RV64Semantics
 import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
 
@@ -12,7 +12,7 @@ the `FormalModel/Contracts/` sequence (`Readers.lean → Operations.lean → Chi
 
 Unlike the operation gadgets — whose `Spec`s are spelled out as `BitVec` equations — each **chip**
 states its headline meaning in terms of the corresponding **RV64 ISA functions** from
-`RISCV/Instructions.lean` (`RV64.add`/`RV64.sub`/`RV64.addw`/`RV64.subw`, the `RV64.mul*` family,
+`Model/RV64Semantics.lean` (`RV64.add`/`RV64.sub`/`RV64.addw`/`RV64.subw`, the `RV64.mul*` family,
 the shift family `RV64.sll*`/`RV64.srl*`/`RV64.sra*`, `RV64.and`/`RV64.or`/`RV64.xor`,
 `RV64.lui`/`RV64.auipc`, …). Where a chip serves several opcodes (Bitwise, Mul, DivRem, the
 shifts), its `Spec` selects the ISA function by the row's flag columns. The operand order matches

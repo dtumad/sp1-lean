@@ -88,7 +88,6 @@ expected_rows = {
     "mathlib pin": manifest.get("mathlib", {}).get("rev"),
     "Clean pin": manifest.get("Clean", {}).get("rev"),
     "Lean_RV64D pin": manifest.get("Lean_RV64D", {}).get("rev"),
-    "RISCV pin": manifest.get("RISCV", {}).get("rev"),
     "lean-sail pin": manifest.get("Sail", {}).get("rev"),
     "PolyFun pin": manifest.get("PolyFun", {}).get("rev"),
 }

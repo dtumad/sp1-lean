@@ -4,9 +4,7 @@ import SP1Clean.Proofs.Chips.AluX0Chip.Formal
 import SP1Clean.Soundness.ChipRow
 import SP1Clean.Proofs.Sail.Advance
 import Clean.Air.FlatComponent
-import RISCV.Instructions
-import RISCV.SailToRV64
-import RISCV.SailPureToInstructions
+import SP1Clean.Proofs.Sail.RV64Bridge
 
 /-! # Native Sail bridge for `AluX0` (ALU-into-`x0`) + `ChipKind`
 
@@ -124,7 +122,7 @@ theorem correct_aluX0_addi (imm : BitVec 12) (rs1 : BitVec 5) (rs1_val : BitVec 
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 17 < p)] in
-/-- MUL-into-`x0` ≡ `sp1_aluX0` (generic in `op : mul_op`), via `_root_.mul_eq`/`skeleton_binary`. -/
+/-- MUL-into-`x0` ≡ `sp1_aluX0` (generic in `op : mul_op`), via `SailRV64.execute_MUL_eq`/`SailRV64.skeleton_binary`. -/
 theorem correct_aluX0_mul (op : mul_op) (rs1 rs2 : BitVec 5) (rs1_val rs2_val : BitVec 64)
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
@@ -135,11 +133,11 @@ theorem correct_aluX0_mul (op : mul_op) (rs1 rs2 : BitVec 5) (rs1_val rs2_val : 
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
-  simp [_root_.mul_eq, skeleton_binary, h_rs1, h_rs2]
+  simp [SailRV64.execute_MUL_eq, SailRV64.skeleton_binary, h_rs1, h_rs2]
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 17 < p)] in
-/-- MULW-into-`x0` ≡ `sp1_aluX0`, via `_root_.mulw_eq`/`skeleton_binary`. -/
+/-- MULW-into-`x0` ≡ `sp1_aluX0`, via `SailRV64.execute_MULW_eq`/`SailRV64.skeleton_binary`. -/
 theorem correct_aluX0_mulw (rs1 rs2 : BitVec 5) (rs1_val rs2_val : BitVec 64)
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
@@ -150,7 +148,7 @@ theorem correct_aluX0_mulw (rs1 rs2 : BitVec 5) (rs1_val rs2_val : BitVec 64)
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
-  simp [_root_.mulw_eq, skeleton_binary, h_rs1, h_rs2]
+  simp [SailRV64.execute_MULW_eq, SailRV64.skeleton_binary, h_rs1, h_rs2]
 
 /-- DIV family (DIV/DIVU): advance `nextPC`, run `execute_DIV` into `x0` (generic in `is_unsigned`). -/
 noncomputable def spec_aluX0_div (is_unsigned : Bool) (rs2 rs1 : regidx) : SailM Unit := do
@@ -178,7 +176,7 @@ noncomputable def spec_aluX0_remw (is_unsigned : Bool) (rs2 rs1 : regidx) : Sail
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 17 < p)] in
-/-- DIV-into-`x0` ≡ `sp1_aluX0` (generic in `is_unsigned`), via `_root_.div_eq`/`skeleton_binary`. -/
+/-- DIV-into-`x0` ≡ `sp1_aluX0` (generic in `is_unsigned`), via `SailRV64.execute_DIV_eq`/`SailRV64.skeleton_binary`. -/
 theorem correct_aluX0_div (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs2_val : BitVec 64)
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
@@ -189,7 +187,7 @@ theorem correct_aluX0_div (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs2
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
-  simp [_root_.div_eq, skeleton_binary, h_rs1, h_rs2]
+  simp [SailRV64.execute_DIV_eq, SailRV64.skeleton_binary, h_rs1, h_rs2]
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 17 < p)] in
@@ -205,11 +203,11 @@ theorem correct_aluX0_rem (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs2
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   cases is_unsigned <;>
-    simp [_root_.rem_signed_eq, _root_.rem_unsigned_eq, skeleton_binary, h_rs1, h_rs2]
+    simp [SailRV64.execute_REM_eq, SailRV64.skeleton_binary, h_rs1, h_rs2]
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 17 < p)] in
-/-- DIVW-into-`x0` ≡ `sp1_aluX0` (generic in `is_unsigned`), via `_root_.divw_eq`/`skeleton_binary`. -/
+/-- DIVW-into-`x0` ≡ `sp1_aluX0` (generic in `is_unsigned`), via `SailRV64.execute_DIVW_eq`/`SailRV64.skeleton_binary`. -/
 theorem correct_aluX0_divw (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs2_val : BitVec 64)
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
@@ -220,7 +218,7 @@ theorem correct_aluX0_divw (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
-  simp [_root_.divw_eq, skeleton_binary, h_rs1, h_rs2]
+  simp [SailRV64.execute_DIVW_eq, SailRV64.skeleton_binary, h_rs1, h_rs2]
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 17 < p)] in
@@ -236,7 +234,7 @@ theorem correct_aluX0_remw (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   cases is_unsigned <;>
-    simp [_root_.remw_signed_eq, _root_.remw_unsigned_eq, skeleton_binary, h_rs1, h_rs2]
+    simp [SailRV64.execute_REMW_eq, SailRV64.skeleton_binary, h_rs1, h_rs2]
 
 end SP1Clean.AluX0Sail
 
