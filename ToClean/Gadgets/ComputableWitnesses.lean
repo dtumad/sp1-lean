@@ -16,8 +16,8 @@ gated on `ComputableWitnesses` (here at the strengthened `ComputableWitnessesWit
 This file supplies the missing instances for the three gadgets a byte/range table provider
 composes. All three are honest for the same reason — their witness generators are witness-IR terms
 over the input expressions alone — so each proof is the input-agreement hypothesis pushed through
-one `Witgen` evaluation step (for `And8`/`Or8`, `circuit_norm` performs the step itself and the
-two operand projections of the agreement close the goal):
+one `Witgen` evaluation step (for `And8`/`Or8`, `circuit_norm` performs the step itself on the
+destructured input and the two operand agreements close the goal):
 
 * `Gadgets.ToBits.toBits` — one `witnessVector n (x.bits n)`, then boolean asserts and one equality
   subcircuit, neither of which declares a cell;
@@ -73,10 +73,10 @@ variable {p : ℕ} [Fact p.Prime] [Fact (p > 512)]
 /-- `And8` has computable witnesses: its single cell is `x &&& y` over the two input cells, and the
 `ByteXorTable` lookup that certifies it declares none. -/
 theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
-  intro k input env env'
+  intro k ⟨x, y⟩ env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  intro _ h_in
-  rw [congrArg Inputs.x h_in, congrArg Inputs.y h_in]
+  intro _ ⟨hx, hy⟩
+  rw [hx, hy]
 
 end Gadgets.And.And8
 
@@ -88,9 +88,9 @@ variable {p : ℕ} [Fact p.Prime] [Fact (p > 512)]
 
 /-- `Or8` has computable witnesses — the `And8` argument verbatim, at `|||`. -/
 theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
-  intro k input env env'
+  intro k ⟨x, y⟩ env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  intro _ h_in
-  rw [congrArg Inputs.x h_in, congrArg Inputs.y h_in]
+  intro _ ⟨hx, hy⟩
+  rw [hx, hy]
 
 end Gadgets.Or.Or8

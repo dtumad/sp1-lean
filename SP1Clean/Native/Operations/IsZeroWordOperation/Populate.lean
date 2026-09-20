@@ -101,7 +101,8 @@ private lemma toElements_cell_0 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[0]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_0.inverse := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   exact Vector.getElem_append_left (by decide)
 
 set_option linter.unusedSectionVars false in
@@ -110,7 +111,8 @@ private lemma toElements_cell_1 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[1]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_0.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   exact Vector.getElem_append_left (by decide)
 
 set_option linter.unusedSectionVars false in
@@ -119,7 +121,8 @@ private lemma toElements_cell_2 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[2]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_1.inverse := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_) <;> decide
 
 set_option linter.unusedSectionVars false in
@@ -128,7 +131,8 @@ private lemma toElements_cell_3 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[3]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_1.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_) <;> decide
 
 set_option linter.unusedSectionVars false in
@@ -137,7 +141,8 @@ private lemma toElements_cell_4 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[4]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_2.inverse := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_)) <;> decide
 
@@ -147,7 +152,8 @@ private lemma toElements_cell_5 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[5]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_2.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_)) <;> decide
 
@@ -157,7 +163,8 @@ private lemma toElements_cell_6 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[6]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_3.inverse := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_))) <;> decide
@@ -168,7 +175,8 @@ private lemma toElements_cell_7 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[7]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_3.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_))) <;> decide
@@ -179,7 +187,8 @@ private lemma toElements_cell_8 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[8]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_first_half := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans
@@ -191,7 +200,8 @@ private lemma toElements_cell_9 {F : Type} (s : Extracted.IsZeroWordOperation F)
     (toElements s)[9]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_second_half := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans
@@ -204,7 +214,8 @@ private lemma toElements_cell_10 {F : Type} (s : Extracted.IsZeroWordOperation F
     (toElements s)[10]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
       = s.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
-  simp only [circuit_norm, explicit_provable_type]
+  simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+    ProvableStruct.componentsToElements]
   refine (Vector.getElem_append_right ?_ ?_).trans
     ((Vector.getElem_append_right ?_ ?_).trans
       ((Vector.getElem_append_right ?_ ?_).trans

@@ -70,13 +70,11 @@ theorem SyscallMsg.toElements_toList {F : Type} (msg : SyscallMsg F) :
       [msg.clk_high, msg.clk_low, msg.syscall_id,
        msg.arg1[0], msg.arg1[1], msg.arg1[2],
        msg.arg2[0], msg.arg2[1], msg.arg2[2]] := by
-  change (#v[msg.clk_high] ++ (#v[msg.clk_low] ++ (#v[msg.syscall_id] ++
-    (msg.arg1 ++ (msg.arg2 ++ (#v[] : Vector F 0)))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, List.cons_append, List.nil_append,
-    vector3_toList]
-  rw [Vector.getElem_append_left (by omega : 0 < 3),
-    Vector.getElem_append_left (by omega : 1 < 3),
-    Vector.getElem_append_left (by omega : 2 < 3)]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append,
+    List.cons_append, List.nil_append, vector3_toList]
+  rfl
 
 /-- Per-row well-formedness of a State message: **`True`**. SP1's `CPUState::eval`
 (`crates/core/machine/src/adapter/state.rs:90-98`) range-checks *only* the clock (`clk_0_16` 13-bit Range
