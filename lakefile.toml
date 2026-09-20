@@ -75,8 +75,9 @@ name = "Lean_RV64D"
 git = "https://github.com/succinctlabs/sail-riscv-lean"
 rev = "befc6976ef53c592b637dc897f61b4e71467c239"
 
-# Lightweight ISA fns. Pinned to the succinctlabs fork head, which is the head of the open
-# opencompl/riscv-lean PR #59 ("chore: update to v4.32.2"); repoint to opencompl once that merges.
+# Lightweight ISA fns. Pinned to the succinctlabs fork head, which is byte-identical to opencompl
+# `ccdfd676` (PR #59, "chore: update to v4.32.2", merged 2026-08-18). The dependency is scheduled
+# for retirement: chip specs and Sail bridges will be stated against the Sail model directly.
 [[require]]
 name = "RISCV"
 git = "https://github.com/succinctlabs/riscv-lean"
