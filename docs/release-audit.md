@@ -37,7 +37,7 @@ No main-library proof is deferred. This audit found no `sorry`, `stop`, project 
 | SP1 extraction branch | `b5616f908c393d6050970630871f69afe233a21c` (`dtumad/lean-extraction`, `v6.4.0-10-gb5616f908`) |
 | mathlib pin | `905b95818eb32af7874a58b427f50c1711a5e96c` (tag `v4.32.2`) |
 | Clean pin | `2dad7788d58b09eabeb3898506e4cb896e5d3e9d` (**fork** — see below) |
-| Lean_RV64D pin | `befc6976ef53c592b637dc897f61b4e71467c239` |
+| Generated Sail model | sha256 `7426b9c3d35d1b625a1aa2a16248f8015f70acb80699dca3df552e8db2291af7` (161 files) — the in-tree `LeanRV64D/` + `LeanRV64D.lean` |
 | Sail compiler source | `41694abd58b27b687af5db275810dfeb8a88cfc0` (rems-project/sail, `sail2`) |
 | sail-riscv model source | `61266bd4dede6c7dd6e903e52dc80bcbf644b1b8` (riscv/sail-riscv, `master`) |
 | SP1 Sail config | sha256 `41311181e4cad458c21b01a0160a0087b407ee15e616243013169d52d3c1a854` (`scripts/sail-config/sp1_rv64d_cfg.json`) |
@@ -45,14 +45,15 @@ No main-library proof is deferred. This audit found no `sorry`, `stop`, project 
 | PolyFun pin | `d062ba2cbb3a50ba5b9f3ba349ca003e6c79630a` (upstream `main`) |
 
 Every dependency is an immutable git pin — `lake-manifest.json` records no `path` entries, so a clean
-clone reproduces this graph. `Lean_RV64D` is pinned to a **generated** snapshot on
-`succinctlabs/sail-riscv-lean` (branch `sp1/config-generated-4.32.2`; the `sp1-rv64d-v1.0` tag marks
-the earlier four-key snapshot and deliberately was not moved): the
-pinned Sail compiler + sail-riscv sources above run against the schema-shaped SP1 platform config,
-reproducible via `scripts/sail-config/generate_lean_rv64d.sh` (`docs/agents/sail-model-provenance.md`).
-It equals the opencompl base `11d8fa21` except the four platform-value sites the two-key config sets
-(PMP-off moved to a Lean-side hypothesis, 2026-08); the
-snapshot's commit message carries the full provenance record. The former `riscv-lean` (`RISCV`)
+clone reproduces this graph. The Sail RV64 model is the in-tree **generated** library
+`LeanRV64D/` + `LeanRV64D.lean` (never hand-edited): the pinned Sail compiler + sail-riscv sources
+above run against the schema-shaped SP1 platform config, written by
+`scripts/sail-config/generate_lean_rv64d.sh --install` and gated two ways — the tree hash above
+(`scripts/check_pins.sh`, local) and byte-identity with a fresh regeneration from the pins
+(`.github/workflows/sail-regen.yml`, on every change to the generator, config, or tree, and
+monthly). It equals the opencompl base `11d8fa21` except the four platform-value sites the two-key
+config sets (PMP-off moved to a Lean-side hypothesis, 2026-08); the installing commit carries the
+provenance record (`docs/agents/sail-model-provenance.md`). The former `riscv-lean` (`RISCV`)
 dependency was retired 2026-09-20: the RV64 reference functions the chip specs use are
 `SP1Clean/Model/RV64Semantics.lean`, the monad-free Sail write values are
 `SP1Clean/Model/SailPure.lean`, and the equalities between them are proved in

@@ -122,14 +122,18 @@ refinement; only their `_of_obligations` combinators are currently declared.
   session. *Build workers* carry no `--worker` token, so use `ps -ef | grep tstack` for build liveness, and
   `sample <pid>` (not RSS — a healthy run also plateaus at ~3.2 GB) to tell a hang from progress.
 - **Toolchain:** `lean-toolchain` and mathlib are `v4.32.2`, and **every dependency is an immutable git
-  pin** — there are no path dependencies, so a clean clone builds. `Lean_RV64D` points at
-  `succinctlabs/sail-riscv-lean`, a **generated** snapshot: pinned Sail sources run against the
-  checked-in SP1 platform config, regenerable via `scripts/sail-config/generate_lean_rv64d.sh`
-  (`docs/agents/sail-model-provenance.md`). **Do not run bare `lake update`** (it may advance
-  dependencies/toolchains) — update one `[[require]]` at a time.
+  pin** — there are no path dependencies, so a clean clone builds. The Sail RV64 model is the
+  in-tree **generated** library `LeanRV64D/` + `LeanRV64D.lean` (its own `lean_lib`, never
+  hand-edited, outside every hand-written-source guard like `Extracted/`): pinned Sail sources run
+  against the checked-in SP1 platform config, written by
+  `scripts/sail-config/generate_lean_rv64d.sh --install` and gated by the tree hash in
+  `scripts/check_pins.sh` plus byte-identity with a fresh regeneration in
+  `.github/workflows/sail-regen.yml` (`docs/agents/sail-model-provenance.md`). **Do not run bare
+  `lake update`** (it may advance dependencies/toolchains) — update one `[[require]]` at a time.
   ⚠ **The generated Sail model and the `lean-sail` runtime must move together.** A v4-generated
-  `LeanRV64D` snapshot against `lean-sail` v5 fails with `unknown namespace Sail.ConcurrencyInterfaceV2`;
-  pin both from the same pairing (`docs/agents/sail-model-provenance.md` records the current one).
+  `LeanRV64D` tree against `lean-sail` v5 fails with `unknown namespace Sail.ConcurrencyInterfaceV2`;
+  regenerate and re-pin from the same pairing (`docs/agents/sail-model-provenance.md` records the
+  current one).
   Read `docs/agents/lean-sail-notes.md` before touching any dependency.
 - Lake options already set in `lakefile.toml`: `--tstack=400000`, `synthInstance.maxHeartbeats = 1000000`.
 - There are no conventional unit tests in the main library; correctness lives in kernel-checked
@@ -642,7 +646,7 @@ after installing or toggling.
 - `docs/agents/clean-upstream.md` — **the Clean pin is currently a fork.** Its state and exit
   condition, the modification-vs-addition split rule (what may go in the fork versus `ToClean/`),
   and the upstream PR queue with the measurement behind each entry.
-- `docs/agents/sail-model-provenance.md` — the generated `Lean_RV64D` snapshot's provenance: the
+- `docs/agents/sail-model-provenance.md` — the in-tree generated `LeanRV64D` library's provenance: the
   two-key SP1 config and its four generated sites, why stock upstream makes the memory-bridge
   lemmas false, the regeneration pipeline, and the re-pinning procedure.
 - `docs/agents/proof-patterns.md` — the witnessed-`FormalCircuit` soundness/completeness recipe +

@@ -6,11 +6,11 @@ Notes on the shared Lean/Sail dependency graph.
 
 The toolchain is `leanprover/lean4:v4.32.2` and **every dependency is an immutable git pin** — there are
 no path dependencies, so a clean clone builds. The authoritative values live in `lakefile.toml` and
-`lake-manifest.json`; `docs/release-audit.md` records the audited snapshot. `Lean_RV64D` points at
-`succinctlabs/sail-riscv-lean`, a **generated** snapshot — pinned Sail sources plus the checked-in
-SP1 platform config, regenerable and verifiable via `scripts/sail-config/generate_lean_rv64d.sh` —
-see [`sail-model-provenance.md`](sail-model-provenance.md). Re-pin by regenerating, never by
-hand-editing generated Lean.
+`lake-manifest.json`; `docs/release-audit.md` records the audited snapshot. The Sail RV64 model is
+the in-tree **generated** library `LeanRV64D/` — pinned Sail sources plus the checked-in SP1
+platform config, written and verified by `scripts/sail-config/generate_lean_rv64d.sh` — see
+[`sail-model-provenance.md`](sail-model-provenance.md). Re-pin by regenerating (`--install`), never
+by hand-editing generated Lean.
 
 ### Two traps when re-pinning
 
@@ -132,7 +132,7 @@ on `plat_clint_base`); **no `sorryAx`**.
 ## When the toolchain is next touched
 
 Update one `[[require]]` at a time and re-check the exact manifest revision each time. Confirm the new
-rev is reachable from a branch or tag, and that any `Lean_RV64D` move is paired with a compatible
+rev is reachable from a branch or tag, and that any regeneration of `LeanRV64D/` is paired with a compatible
 `lean-sail` (both traps above). Build the generated Sail model with code generation enabled.
 
 Finish with a full `lake build SP1Clean` — `lake env lean <file>` only sets the environment, exits 0 even

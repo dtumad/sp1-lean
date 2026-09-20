@@ -1,12 +1,14 @@
-# Sail model provenance — the generated `Lean_RV64D` snapshot and its config
+# Sail model provenance — the generated `LeanRV64D` library and its config
 
-`Lean_RV64D` is pinned to `succinctlabs/sail-riscv-lean@befc6976` (branch
-`sp1/config-generated-4.32.2`). The snapshot is **generator output, not a
-hand-edited fork**: the pinned Sail compiler run over the pinned `riscv/sail-riscv` sources with
-the SP1 platform configuration `scripts/sail-config/sp1_rv64d_cfg.json`. It equals the opencompl
-daily snapshot **`11d8fa21`** everywhere except the four platform-value sites the config sets.
-The maintained object is therefore a **two-key** config delta plus the five pins recorded in
-`scripts/sail-config/generate_lean_rv64d.sh` — not patched Lean.
+The Sail RV64 model is the in-tree library `LeanRV64D/` + `LeanRV64D.lean`. It is **generator
+output, never hand-edited**: the pinned Sail compiler run over the pinned `riscv/sail-riscv`
+sources with the SP1 platform configuration `scripts/sail-config/sp1_rv64d_cfg.json`, written
+by `scripts/sail-config/generate_lean_rv64d.sh --install`. It equals the opencompl daily snapshot
+**`11d8fa21`** everywhere except the four platform-value sites the config sets. The maintained
+object is therefore a **two-key** config delta plus the three pins recorded in the generation
+script — not patched Lean — and the tree is treated like `SP1Clean/Extracted/`: an auto-generated
+part of the library, outside every hand-written-source guard, gated for byte-identity with a
+fresh regeneration.
 
 The full provenance record (compiler SHA, model SHA, config hash, invocation, environment,
 verification) lives in the snapshot's own commit message; the pins are also recorded in
@@ -98,8 +100,8 @@ Downstream consumers, unmodified and listed for review: `Platform.lean` guards o
 
 ## The pipeline
 
-`scripts/sail-config/generate_lean_rv64d.sh` carries the four pins at its top (Sail compiler
-SHA, sail-riscv SHA, the opencompl base snapshot, the published SP1 snapshot) and four modes:
+`scripts/sail-config/generate_lean_rv64d.sh` carries the three pins at its top (Sail compiler
+SHA, sail-riscv SHA, the opencompl base snapshot) and five modes:
 
 - `--deps` — one-time toolchain: an OCaml 5.2.1 opam switch (matching the opencompl nightly) and
   the pinned Sail compiler built from source. The opam release of sail is **not** sufficient —
@@ -110,17 +112,35 @@ SHA, sail-riscv SHA, the opencompl base snapshot, the published SP1 snapshot) an
   byte-identical.** This is the pin-verification run; it also proves the generator's output is
   OS-independent (verified macOS vs the nightly's ubuntu, 2026-08-06).
 - `--sp1` — regenerate with the SP1 config; diff vs the base must show exactly the four sites,
-  and diff vs the published SP1 snapshot must be identical (the script's exit gate).
+  and diff vs the in-tree copy must be identical (the script's exit gate: regeneration is
+  idempotent).
+- `--install` — regenerate with the SP1 config and write `LeanRV64D/` + `LeanRV64D.lean` in the
+  repository. This is the only way the tree changes.
 
-Publishing a new snapshot is deliberate and manual: branch the fork repo from the target
-opencompl base, replace `LeanRV64D/` + `LeanRV64D.lean` + `lakefile.toml` + `lean-toolchain`
-with the generated output (keep the snapshot's resolved `lake-manifest.json` — it records the
-lean-sail pairing), commit with the provenance template (see `df1acf57`), tag, push, and pin by
-SHA here. A rev must be reachable from a branch or tag, or Lake's clone fails on cold machines.
+Installing a regenerated model is deliberate and manual: run `--install`, commit the tree diff
+with the provenance record in the commit message (compiler SHA, model SHA, config hash,
+invocation, environment, verification — the template is the snapshot commit `df1acf57` on
+`succinctlabs/sail-riscv-lean`, the pre-vendoring home of the model), and refresh the
+`Generated Sail model` row in `docs/release-audit.md` (`scripts/check_pins.sh` prints the
+expected hash). The lean-sail pairing is recorded by the `Sail` pin in `lake-manifest.json`.
 
 What the config cannot express stays where it was: `h_mseccfg_pmm` (pointer masking has no
 config toggle) remains a `SailConfigured` hypothesis, the platform-hook `axiom`s remain trust
 item T2, and dynamic register state remains the boot predicate's business.
+
+### The regeneration workflow
+
+`.github/workflows/sail-regen.yml` runs `--deps`, `--make-config`, `--sp1`, and `--stock` on
+GitHub-hosted runners: on demand, monthly, and on every pull request that touches
+`scripts/sail-config/`, the generated tree, `lake-manifest.json` (a lean-sail re-pin), or the
+workflow itself. It caches the opam root keyed by `OCAML_VERSION` +
+`SAIL_SHA` (the compiler build measured 6.5 min cold on `ubuntu-latest`, seconds warm; each
+regeneration 12–16 min; the whole job ≈ 36 min cold), checks that the committed config is base ⊕ overlay for the
+pinned sail-riscv, and fails on any byte difference between the regenerated model and the
+in-tree copy (`--sp1`, the idempotence gate) while also reporting identity against the opencompl
+base (`--stock`). Locally, `scripts/check_pins.sh` checks the tree's hash against the row in
+`docs/release-audit.md`, so a hand edit to the generated tree fails the fast gate before CI
+regenerates.
 
 ## The runtime/model pairing rule
 
@@ -144,7 +164,8 @@ symbolically-reduced generated internals, independently of the config:
    needed — that is how the current pins were discovered).
 2. `--stock` until byte-identical vs the new base; then `--make-config` (the stock config may
    have gained keys) and `--sp1`; audit that the base diff is still exactly the four sites.
-3. Publish + tag + pin as above, and refresh the pin table in `docs/release-audit.md`.
+3. `--install`, commit the tree with the provenance record, and refresh the pin table in
+   `docs/release-audit.md` (the Sail/sail-riscv rows and the tree-hash row).
 4. Expect churn in `Model/SailMemory.lean` and the `Proofs/Sail/` decode-reduction lemmas that
    pattern-match generated internals. The `11d8fa21` base carried a substantial such event: 158
    files, +2333/−1040 over the previous `793034f3` pin — beyond the `MemoryOpResult` change it

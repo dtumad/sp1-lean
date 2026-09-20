@@ -28,7 +28,8 @@ if [ "$#" -ne 0 ]; then
 fi
 
 python3 - "$allow_census_snapshot_drift" <<'EOF'
-import hashlib, json, re, sys
+import hashlib
+import pathlib, json, re, sys
 
 fail = 0
 allow_census_snapshot_drift = sys.argv[1] == "1"
@@ -87,7 +88,6 @@ expected_rows = {
     "SP1 semantic source": semantic,
     "mathlib pin": manifest.get("mathlib", {}).get("rev"),
     "Clean pin": manifest.get("Clean", {}).get("rev"),
-    "Lean_RV64D pin": manifest.get("Lean_RV64D", {}).get("rev"),
     "lean-sail pin": manifest.get("Sail", {}).get("rev"),
     "PolyFun pin": manifest.get("PolyFun", {}).get("rev"),
 }
@@ -132,6 +132,25 @@ for label, value in (("Sail compiler source", script_pin("SAIL_SHA")),
     elif recorded != value:
         err(f"docs/release-audit.md row '{label}' records `{recorded}` but "
             f"generate_lean_rv64d.sh pins `{value}`")
+
+# The in-tree generated model (`LeanRV64D/` + `LeanRV64D.lean`) is never hand-edited; its tree hash
+# is the local provenance record (CI additionally regenerates it from the pins and diffs).
+def tree_hash():
+    files = ["LeanRV64D.lean"] + sorted(
+        str(q) for q in pathlib.Path("LeanRV64D").rglob("*") if q.is_file())
+    h = hashlib.sha256()
+    for f in files:
+        h.update(f.encode()); h.update(b"\0")
+        h.update(hashlib.sha256(open(f, "rb").read()).hexdigest().encode()); h.update(b"\n")
+    return h.hexdigest(), len(files)
+model_hash, model_files = tree_hash()
+m = re.search(r"^\| Generated Sail model \| sha256 `([0-9a-f]{64})` \((\d+) files\)", audit, re.M)
+if not m:
+    err("docs/release-audit.md pin table has no row '| Generated Sail model | sha256 `<64-hex>` (<n> files)'")
+elif m.group(1) != model_hash or int(m.group(2)) != model_files:
+    err(f"docs/release-audit.md records the generated Sail model as sha256 `{m.group(1)}` "
+        f"({m.group(2)} files) but LeanRV64D/ + LeanRV64D.lean hash to `{model_hash}` "
+        f"({model_files} files); regenerate with generate_lean_rv64d.sh --install or refresh the row")
 
 cfg_path = "scripts/sail-config/sp1_rv64d_cfg.json"
 cfg_sha = hashlib.sha256(open(cfg_path, "rb").read()).hexdigest()
