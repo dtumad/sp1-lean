@@ -44,6 +44,17 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     intro input offset
     simp [main, circuit_norm, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
 
+set_option linter.unusedSectionVars false in
+/-- The bundle's channels, for the ledger's other-channel arguments (stated on the bundle so no
+`simp` has to unfold `circuit`). -/
+@[circuit_norm] lemma circuit_channels :
+    (circuit (p := p)).base.channels =
+      [Channels.byteChannel.toRaw, HostCallChip.channel.toRaw, HostCallChip.channel.toRaw,
+        HostExitBoundary.channel.toRaw] := by
+  show (elaborated (p := p)).channelsWithGuarantees ++
+    [HostCallChip.channel.toRaw, HostExitBoundary.channel.toRaw] = _
+  simp only [circuit_norm, List.cons_append, List.nil_append]
+
 def populate (call : HostCallChip.Message (ZMod p)) : Inputs (ZMod p) :=
   ⟨call, LtOperationUnsigned.populate call.arg1 (BoundedWord.limit (bound p))⟩
 

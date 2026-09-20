@@ -58,7 +58,7 @@ private theorem main_nonbyte (deferred : Bool) (slot : Fin 8) (input : Var Input
   have boundEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
     (BoundedWord.circuit (bound p deferred) (bound_fits p deferred)).base target
     ⟨input.call.arg2, input.comparison⟩ n
-    (by simpa [BoundedWord.circuit, circuit_norm] using different)
+    (by simp only [BoundedWord.circuit_channels, List.mem_singleton]; exact different)
   cases deferred <;> simp only [main, circuit_norm, List.nil_append]
   all_goals
     simp only [Operations.interactionsWith] at clockEmpty boundEmpty ⊢

@@ -16,11 +16,17 @@ open Circuit
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- The exit-code bound fits a word; named so the bundle's `fits` argument is a constant whose
+type is literally `bound p < 2 ^ 64` (a `by simp` proof term carries a different spelling of the
+same type, which Lean ≥ 4.33 no longer accepts inside rewrites). -/
+theorem bound_fits : bound p < 2 ^ 64 := by simp [bound]
+
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion (Gadgets.Equality.circuit Word) (input.call.code, const (0 : Word (ZMod p)))
   assertion (Gadgets.Equality.circuit Word) (input.call.result, const (0 : Word (ZMod p)))
   assertion (Gadgets.Equality.circuit Word) (input.call.length, const (0 : Word (ZMod p)))
-  let _ ← BoundedWord.circuit (bound p) (by simp [bound]) ⟨input.call.arg1, input.comparison⟩
+  let _ ← BoundedWord.circuit (bound p) bound_fits ⟨input.call.arg1, input.comparison⟩
   HostCallChip.channel.pull input.call
   HostExitBoundary.channel.push input.call.arg1
 

@@ -19,10 +19,13 @@ def main (empty : Bool) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit :=
   assertion (Gadgets.Equality.circuit Word) (input.call.code, const codeWord)
   assertion (Gadgets.Equality.circuit Word) (input.call.length, const (0 : Word (ZMod p)))
   let _ ← ClockOrder.circuit input.clock
-  if empty then
+  -- A `match` rather than `if empty`: `elaborate_circuit` reduces the literal-`Bool` match in each
+  -- `cases` branch, while an `ite` on `false = true` stays stuck in the explicit metadata.
+  match empty with
+  | true =>
     assertion (Gadgets.Equality.circuit (fields 3)) (input.previous.head, const (0 : fields 3 (ZMod p)))
     assertion (Gadgets.Equality.circuit Word) (input.call.result, const emptyWord)
-  else
+  | false =>
     assertion (Gadgets.Equality.circuit (fields 3)) (input.previous.head, input.node.pointer)
     assertion (Gadgets.Equality.circuit Word) (input.call.result, input.node.length)
     nodeChannel.pull input.node

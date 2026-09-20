@@ -37,6 +37,11 @@ def main (bound : ℕ) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := 
 instance elaborated (bound : ℕ) : ElaboratedCircuit (ZMod p) Inputs unit (main bound) := by
   elaborate_circuit
 
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma channelsWithGuarantees_eq (bound : ℕ) :
+    ((elaborated (p := p) bound).channelsWithGuarantees : List (RawChannel (ZMod p)))
+      = [SP1Clean.Channels.byteChannel.toRaw] := rfl
+
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_limit (bound : ℕ) (env : Environment (ZMod p)) :
     Vector.map (Expression.eval env) (Vector.map Expression.const (limit (p := p) bound)) = limit bound := by
@@ -94,6 +99,12 @@ def circuit (bound : ℕ) (fits : bound < 2 ^ 64) : GeneralFormalCircuit (ZMod p
     · simp only [main, circuit_norm]
     · intro env _
       simp only [main, circuit_norm]
+
+set_option linter.unusedSectionVars false in
+/-- The bundled circuit's guarantee channels, without unfolding the bundle (a `simp` that unfolds
+`circuit` leaves a record whose proof fields no longer type-check at implicit transparency). -/
+@[circuit_norm] lemma circuit_channels (bound : ℕ) (fits : bound < 2 ^ 64) :
+    (circuit (p := p) bound fits).base.channels = [SP1Clean.Channels.byteChannel.toRaw] := rfl
 
 omit [Fact (2 ^ 17 < p)] in
 theorem populate_assumptions (bound : ℕ) (value : Word (ZMod p))
