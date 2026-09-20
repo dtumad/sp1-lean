@@ -320,6 +320,14 @@ not forbid cross-layer imports within one package; the auto-gen guard is the `Ex
 "do not hand-edit" headers + the sole writer `update_extracted.py` (and, for the export trees, the
 sole writers `scripts/witgenExport.lean` / `scripts/update_sp1_dumps.sh` + their byte-identity gates).
 
+- **`Machine/`** (top-level, own `lean_lib`, in `defaultTargets`) — the **generic machine layer**:
+  `Machine/Core/` (PolyFun only; `LabeledMachine`, labeled `Path`s with their algebra and PolyFun
+  `Prefix`/`ReachableIn` view, `ReachableIn.add`/`split`) and `Machine/Air/` (Clean + `ToClean`;
+  `Realizes`, an ensemble realizing a machine, with `Realizes.statement_iff` as the one statement
+  shape). It never imports `SP1Clean`; `SP1Clean/FormalModel/ShardMachine.lean` and
+  `SP1Clean/Soundness/Shard/Machine.lean` are the SP1 instances (`sp1Machine`,
+  `executes_iff`, `statement_iff_of_realizes`). Inside `SP1Clean.*` namespaces write
+  `_root_.Machine.…`: the legacy `SP1Clean.Machine` namespace shadows the bare name.
 - **`ToClean/`** and **`ToMathlib/`** (top-level, own `lean_lib`s, in `defaultTargets`) — the
   **upstream-destined** libraries, modelled on VCVio's `ToMathlib/`. `ToClean` holds material bound
   for the Clean DSL; `ToMathlib` holds material bound for Mathlib. **Import rule (load-bearing):

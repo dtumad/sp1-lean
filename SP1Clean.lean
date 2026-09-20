@@ -919,3 +919,5 @@ import SP1Clean.Proofs.Operations.HostBuffer32.Content
 import SP1Clean.Proofs.Operations.HostBuffer32
 import SP1Clean.Proofs.Operations.HostBuffer32.Populate
 import SP1Clean.Proofs.Operations.HostBuffer32.Ledger
+import SP1Clean.FormalModel.ShardMachine
+import SP1Clean.Soundness.Shard.Machine

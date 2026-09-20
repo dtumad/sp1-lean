@@ -2,7 +2,7 @@ name = "sp1-clean-native"
 # All three hand-written libraries build by default: the upstream-destined `ToClean`/`ToMathlib`
 # roots are listed explicitly so every module in those trees is compiled (and linted) even
 # before an `SP1Clean` module happens to import it.
-defaultTargets = ["SP1Clean", "ToClean", "ToMathlib"]
+defaultTargets = ["SP1Clean", "ToClean", "ToMathlib", "Machine"]
 
 moreLeanArgs = ["--tstack=400000"]
 
@@ -125,6 +125,18 @@ moreLeanArgs = [
 
 [[lean_lib]]
 name = "ToClean"
+moreLeanArgs = [
+  "-Dlinter.style.lambdaSyntax=true", "-Dlinter.style.dollarSyntax=true",
+  "-Dlinter.style.refine=true", "-Dlinter.style.cases=true",
+  "-Dlinter.style.induction=true", "-Dlinter.style.admit=true",
+  "-Dlinter.oldObtain=true", "-Dlinter.style.cdot=true",
+]
+
+# The generic machine layer: `Machine/Core/*` is PolyFun-only (labeled machines, paths, orbit
+# composition; upstream-destined to PolyFun), `Machine/Air/*` adds Clean/`ToClean` (an ensemble
+# realizing a machine). It never imports `SP1Clean`; `SP1Clean` consumes it. Same linter set.
+[[lean_lib]]
+name = "Machine"
 moreLeanArgs = [
   "-Dlinter.style.lambdaSyntax=true", "-Dlinter.style.dollarSyntax=true",
   "-Dlinter.style.refine=true", "-Dlinter.style.cases=true",

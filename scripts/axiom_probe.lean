@@ -607,6 +607,17 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Soundness.Shard.CompilerTarget
 #print axioms SP1Clean.Soundness.Shard.completeEnsemble
 #print axioms SP1Clean.Soundness.Shard.statement_iff
+#print axioms Machine.Path.append_iff
+#print axioms Machine.Segment.iff_reachableIn
+#print axioms PFunctor.DynSystem.ReachableIn.add
+#print axioms PFunctor.DynSystem.ReachableIn.split
+#print axioms Machine.Realizes.statement_iff
+#print axioms Machine.Realizes.reachable_of_statement
+#print axioms SP1Clean.FormalModel.Shard.sp1Machine
+#print axioms SP1Clean.FormalModel.Shard.executes_iff
+#print axioms SP1Clean.FormalModel.Shard.executionSegment_iff_segment
+#print axioms SP1Clean.Soundness.Shard.realizes
+#print axioms SP1Clean.Soundness.Shard.statement_iff_of_realizes
 #print axioms SP1Clean.Soundness.HostCommitBank.call?
 #print axioms SP1Clean.Soundness.HostCommitBank.executeCall
 #print axioms SP1Clean.Soundness.HostCommitBank.fold_calls

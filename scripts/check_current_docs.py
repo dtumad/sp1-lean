@@ -30,7 +30,7 @@ RETIRED_DOCS = {
     "docs/agents/mul-operation-learnings.md",
 }
 
-LEAN_ROOTS = ("SP1Clean", "SP1CleanTest", "ToClean", "ToMathlib")
+LEAN_ROOTS = ("SP1Clean", "SP1CleanTest", "ToClean", "ToMathlib", "Machine")
 LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
 
 

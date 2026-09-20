@@ -16,6 +16,7 @@
 # 0 — upstream-destined: no SP1 concepts at all.
 0   -             ToMathlib/
 0   -             ToClean/
+0   -             Machine/
 
 # 1..3 — the substrate. Model/ is currently the one pillar that obeys the contract exactly.
 1   Math          SP1Clean/Math/
