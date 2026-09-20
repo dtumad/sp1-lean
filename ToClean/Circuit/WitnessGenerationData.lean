@@ -1,4 +1,5 @@
 import Clean.Circuit.WitnessGeneration
+import ToClean.Circuit.AgreesBelowWithData
 
 /-!
 # Honest witness generation against committed prover data
@@ -17,13 +18,14 @@ This file re-runs the same construction with the committed data supplied by the 
 * `Circuit.witgenWithData_usesLocalWitnesses` — array-backed witness generation against arbitrary
   committed `data` uses the circuit's local witnesses,
 
-under exactly Clean's hypothesis (`Circuit.ComputableWitnesses`) and no other. That matters wherever
-the environment a downstream theorem is stated at carries real data: a flat-AIR `Table` shares one
-`ProverData` across its rows and reads every row through `Environment.fromArray row table.data`, so
-an honesty theorem at the empty commitment cannot be transported to it — the witness generators may
-read `data`, and `ProverEnvironment.AgreesBelow` (rightly) refuses to identify environments that
-commit different data (`Clean.Examples.DataWitness.not_computable_from_cells_alone` is the witness
-that this is not a gap in the proof but a fact about the definition).
+under the obligation `Circuit.ComputableWitnessesWithData` — Clean's `Circuit.ComputableWitnesses`
+with its environment-agreement premise strengthened to `ProverEnvironment.AgreesBelowWithData`
+(`ToClean.Circuit.AgreesBelowWithData`, which records why the cell-only premise is not enough) —
+and no other. That matters wherever the environment a downstream theorem is stated at carries real
+data: a flat-AIR `Table` shares one `ProverData` across its rows and reads every row through
+`Environment.fromArray row table.data`, so an honesty theorem at the empty commitment cannot be
+transported to it — the witness generators may read `data` and `hint`, and the agreement predicate
+has to identify environments only when they commit the same.
 
 ## Upstream
 
@@ -134,7 +136,8 @@ generation against committed data is honest. -/
 theorem proverEnvironmentWithData_usesLocalWitnesses {ops : List (FlatOperation F)}
     (init : List F) :
     (∀ (env env' : ProverEnvironment F),
-      forAll init.length { witness n _ c := env.AgreesBelow n env' → c.eval env = c.eval env' } ops) →
+      forAll init.length
+        { witness n _ c := env.AgreesBelowWithData n env' → c.eval env = c.eval env' } ops) →
       (proverEnvironmentWithData ops data hint init).UsesLocalWitnessesFlat init.length ops := by
   simp only [proverEnvironmentWithData, ProverEnvironment.UsesLocalWitnessesFlat,
     ProverEnvironment.ExtendsVector]
@@ -148,7 +151,8 @@ theorem proverEnvironmentWithData_usesLocalWitnesses {ops : List (FlatOperation 
       simp_all [dynamicWitnessesWithData_cons, Condition.applyFlat, singleLocalLength,
         dynamicWitnessWithData]
     | witness m compute =>
-      simp_all only [Condition.applyFlat, singleLocalLength, ProverEnvironment.AgreesBelow]
+      simp_all only [Condition.applyFlat, singleLocalLength,
+        ProverEnvironment.AgreesBelowWithData, ProverEnvironment.AgreesBelow]
       -- get rid of ih first
       constructor; case right =>
         specialize ih (init ++ (compute.eval (.fromListWithData init data hint)).toList)
@@ -219,12 +223,12 @@ witness generators — at *any* committed data. Data-carrying counterpart of
 `Circuit.proverEnvironment_usesLocalWitnesses`. -/
 theorem proverEnvironmentWithData_usesLocalWitnesses (circuit : Circuit F α) (data : ProverData F)
     (hint : ProverHint F) (init : List F) :
-    circuit.ComputableWitnesses init.length →
+    circuit.ComputableWitnessesWithData init.length →
       (circuit.proverEnvironmentWithData data hint init).UsesLocalWitnesses init.length
         (circuit.operations init.length) := by
   intro h_computable
-  simp_all only [proverEnvironmentWithData, Circuit.ComputableWitnesses,
-    Operations.ComputableWitnesses, ← Operations.forAll_toFlat_iff,
+  simp_all only [proverEnvironmentWithData, Circuit.ComputableWitnessesWithData,
+    Operations.ComputableWitnessesWithData, ← Operations.forAll_toFlat_iff,
     ProverEnvironment.UsesLocalWitnesses]
   exact FlatOperation.proverEnvironmentWithData_usesLocalWitnesses init h_computable
 
@@ -249,9 +253,10 @@ theorem witgenWithData_proverEnvironment (circuit : Circuit F α) (data : Prover
 /-- **Honest array-backed witness generation at a committed `ProverData`.** If a circuit has
 computable witnesses, the environment built from `Circuit.witgenWithData` uses the circuit's local
 witnesses. This is `Circuit.witgen_usesLocalWitnesses` with the empty commitment `fun _ _ => #[]`
-replaced by an arbitrary one, and it needs no hypothesis Clean's version does not. -/
+replaced by an arbitrary one, at the strengthened computability obligation. -/
 theorem witgenWithData_usesLocalWitnesses (circuit : Circuit F α) (data : ProverData F)
-    (hint : ProverHint F) (init : Array F) (h_computable : circuit.ComputableWitnesses init.size) :
+    (hint : ProverHint F) (init : Array F)
+    (h_computable : circuit.ComputableWitnessesWithData init.size) :
     (ProverEnvironment.fromArrayWithData (circuit.witgenWithData data hint init) data
       hint).UsesLocalWitnesses init.size (circuit.operations init.size) := by
   rw [witgenWithData_proverEnvironment]

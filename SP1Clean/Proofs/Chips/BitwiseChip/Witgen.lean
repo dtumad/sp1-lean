@@ -5,7 +5,7 @@ import ToClean.Circuit.WitgenBridge
 
 The W4 **pilot**: the first chip whose witnesses read the `ProverHint` through the exportable
 `FExpr.hintGet` (via `hintFlagsIR`) rather than a Lean closure. Provable exactly because the
-pinned Clean revision's `AgreesBelow` carries `hint`: the flag cells' congruence is one `hint`
+`AgreesBelowWithData` premise carries `hint`: the flag cells' congruence is one `hint`
 projection (`hintFlags_eval_ir` under both environments), and the column-struct payload is
 `populateFE_congr` from the operand projections plus the three *earlier flag cells of the same
 row* (`AgreesBelow.get_eq` — the Jalr lesson: a witness legitimately reading its own row's
@@ -20,7 +20,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- Bitwise's row has computable witnesses: the three flag cells are functions of the hint alone,
 and the sixteen `BitwiseU16Operation` cells are functions of the input row plus the flag cells
 below them. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,

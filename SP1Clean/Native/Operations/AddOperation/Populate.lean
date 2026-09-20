@@ -7,6 +7,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.ProvableStructDeriving
+import ToClean.Circuit.IteDecide
 
 /-! # `AddOperation` — `populate` (the witness generator)
 

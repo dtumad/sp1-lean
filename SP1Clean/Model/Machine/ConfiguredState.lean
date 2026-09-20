@@ -20,6 +20,12 @@ open Sail LeanRV64D LeanRV64D.Functions SP1Clean.SailMem
 -- The former file-wide 100000 stamp was ~150x over and covered the whole file; nothing else here
 -- needs any budget.
 set_option maxRecDepth 800 in
+-- Mathlib's `Fintype` deriving handler closes its `complete` field with `rw [Finset.mem_mk, …]` on
+-- a `Finset.mk ↑enumList enumList_nodup` whose `nodup` field is well-typed only up to unfolding
+-- `Multiset.Nodup`; under v4.33's transparency-respecting unifier that `rw` fails for every enum,
+-- and Mathlib's own `MathlibTest/DeriveFintype.lean` disables the check around each derive exactly
+-- like this.
+set_option backward.isDefEq.respectTransparency false in
 deriving instance Fintype for Register
 
 /-- Every register's value type is inhabited, so a register can be default-filled. -/

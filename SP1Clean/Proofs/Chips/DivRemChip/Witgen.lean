@@ -81,7 +81,7 @@ end Orientation
 
 /-- DivRem's row has computable witnesses: every `populateRow` payload is a function of the
 input row and the hint alone. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, populateRow, constrainRow, circuit_norm, Operations.forAllFlat,
     Operations.forAll]

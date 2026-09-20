@@ -1,5 +1,6 @@
 import SP1Clean.Math.Word
 import SP1Clean.Extracted.IsZeroOperation
+import ToClean.Circuit.IteDecide
 
 /-! # `IsZeroOperation` — `populate` (the witness generator)
 

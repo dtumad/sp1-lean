@@ -68,10 +68,9 @@ theorem populateFE_eval (env : ProverEnvironment (ZMod p))
   have h2 := hA 2 (by omega); have h3 := hA 3 (by omega)
   by_cases hv0 : va[0] = 0 <;> by_cases hv1 : va[1] = 0 <;>
     by_cases hv2 : va[2] = 0 <;> by_cases hv3 : va[3] = 0 <;>
-    (simp [populateFE, populate, IsZeroOperation.populateFE, IsZeroOperation.populate,
-       circuit_norm, explicit_provable_type, h0, h1, h2, h3, hv0, hv1, hv2, hv3,
-       Witgen.StructEval.eval.go, ProvableStruct.toComponents, ProvableStruct.fromComponents]
-     rfl)
+    simp [populateFE, populate, IsZeroOperation.populateFE, IsZeroOperation.populate,
+      circuit_norm, explicit_provable_type, h0, h1, h2, h3, hv0, hv1, hv2, hv3,
+      Witgen.StructEval.eval.go, ProvableStruct.toComponents, ProvableStruct.fromComponents]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Environment-locality of the twin. -/

@@ -48,7 +48,7 @@ theorem eval_offsetBit {F : Type} [FiniteField F]
 
 /-- LoadByte's row has computable witnesses: the four address cells come from the composed
 `AddressOperation`, whose input row is a function of this row's own input cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
