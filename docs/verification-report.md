@@ -450,7 +450,8 @@ def Spec (input : Inputs (ZMod p)) (cols : Columns (ZMod p)) ... : Prop :=
 ```
 
 with `op_b ↦ rs1`, `op_c ↦ rs2` projected from the reader's memory slots, and `RV64.add` the
-riscv-lean reference function proved equal to the Sail `execute_RTYPE` ADD clause. Around this
+repository's RV64 reference function (`Model/RV64Semantics.lean`) proved equal to the Sail
+`execute_RTYPE` ADD clause. Around this
 Spec:
 
 - **Soundness and completeness** (`Proofs/Chips/AddChip/Formal.lean`): the constraint system

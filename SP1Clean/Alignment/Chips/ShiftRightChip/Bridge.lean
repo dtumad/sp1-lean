@@ -3,7 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
 import SP1Clean.Soundness.ChipRow
 import SP1Clean.Proofs.Sail.Advance
-import RISCV.ForLean
+import ToMathlib.BitVec
 
 /-! # Native Sail bridge for the `ShiftRight` chip (SRL/SRA/SRLW/SRAW) + `ChipKind`
 
@@ -63,8 +63,7 @@ theorem execute_RTYPE_pure_srl (x y : BitVec 64) :
   rfl
 
 set_option linter.unusedSimpArgs false in
-/-- The Sail `SRA` pure part is the clean RV64 `sra` (operand order `rs2 rs1`); mirrors the RISCV
-package's `rtype_sra_eq` (`execute_RTYPE_pure x y .SRA` is defeq to `SailRV64.rtype rop.SRA y x`). -/
+/-- The Sail `SRA` pure part is the clean RV64 `sra` (operand order `rs2 rs1`). -/
 theorem execute_RTYPE_pure_sra (x y : BitVec 64) :
     execute_RTYPE_pure x y rop.SRA = RV64.sra y x := by
   simp [execute_RTYPE_pure, RV64.sra, LeanRV64D.Functions.shift_bits_right_arith,
@@ -78,8 +77,8 @@ theorem execute_RTYPEW_pure_srlw (x y : BitVec 64) :
     Sail.shift_bits_right, Sail.BitVec.extractLsb]
   rfl
 
-/-- The Sail `SRAW` pure part is the clean RV64 `sraw` (operand order `rs2 rs1`); mirrors the RISCV
-package's `rtypew_sraw_eq` (the `BitVec.sshiftRight'` reduction needs `RISCV.ForLean`). -/
+/-- The Sail `SRAW` pure part is the clean RV64 `sraw` (operand order `rs2 rs1`); the
+`BitVec.sshiftRight'` reduction goes through `ToMathlib.BitVec.sshiftRight_eq_setWidth_extractLsb_signExtend`. -/
 theorem execute_RTYPEW_pure_sraw (x y : BitVec 64) :
     execute_RTYPEW_pure x y ropw.SRAW = RV64.sraw y x := by
   simp only [execute_RTYPEW_pure, RV64.sraw, sign_extend, Sail.BitVec.signExtend,

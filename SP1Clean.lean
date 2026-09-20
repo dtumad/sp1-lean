@@ -919,3 +919,6 @@ import SP1Clean.Proofs.Operations.HostBuffer32.Content
 import SP1Clean.Proofs.Operations.HostBuffer32
 import SP1Clean.Proofs.Operations.HostBuffer32.Populate
 import SP1Clean.Proofs.Operations.HostBuffer32.Ledger
+import SP1Clean.Model.RV64Semantics
+import SP1Clean.Model.SailPure
+import SP1Clean.Proofs.Sail.RV64Bridge

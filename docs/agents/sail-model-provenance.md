@@ -172,14 +172,13 @@ if ((${CUSTOM_LEAN_ARCH} STREQUAL "rv32d") OR (${CUSTOM_LEAN_ARCH} STREQUAL "rv6
     message(FATAL_ERROR "The value of CUSTOM_LEAN_ARCH (...) cannot be 'rv32d' or 'rv64d'.")
 ```
 
-Any other value renames the package. That is not cosmetic: `.lake/packages/RISCV/lakefile.toml`
-(the `riscv-lean` dependency) transitively requires package **`Lean_RV64D`** from
+Any other value renames the package. Until 2026-09-20 that was not cosmetic: the (now retired)
+`riscv-lean` dependency transitively required package **`Lean_RV64D`** from
 `opencompl/sail-riscv-lean` at floating `rev = "main"`, and our root `lakefile.toml` requires it
-by that same real package name precisely so Lake **dedups onto our one configured copy**. Rename
-ours to `Lean_SP1` and Lake satisfies `Lean_RV64D` from opencompl `main` *as well* — two
-incompatible copies of the model namespace, one of them the stock CLINT-enabled build this
-config exists to disable. Renaming would also touch 994 `LeanRV64D` occurrences across the 161
-generated files and destroy the `--stock` / `--sp1` byte-identity gates below, which are the
+by that same real package name precisely so Lake **dedups onto our one configured copy**; a rename
+to `Lean_SP1` would have pulled the stock CLINT-enabled build in *as well*. With the dependency
+gone the name is kept for the remaining reason: renaming would touch 994 `LeanRV64D` occurrences
+across the 161 generated files and destroy the `--stock` / `--sp1` byte-identity gates below, which are the
 evidence for "four config keys, not patched Lean".
 
 So the ask upstream is narrow: let a custom config **replace** the `rv64d` family (as #1861 does
@@ -204,8 +203,8 @@ CMake Error at model/CMakeLists.txt:303 (add_custom_command):
 
 ### Additive vs substitutive — the actual difference between the two PRs
 
-`riscv-lean` is not being inflexible; it consumes the *stock* model under the name upstream derives
-for it (`arch = rv64d` → `string(TOUPPER)` → `Lean_RV64D` / `LeanRV64D`), and `open
+`riscv-lean` (opencompl's ISA-function layer, which this project no longer depends on) is not
+being inflexible; it consumes the *stock* model under the name upstream derives for it (`arch = rv64d` → `string(TOUPPER)` → `Lean_RV64D` / `LeanRV64D`), and `open
 LeanRV64D.Functions` / `LeanRV64D.readReg` follow from that. The unusual party is us: we do not
 want a *new* model, we want the *same* model *differently configured*, dropped in under the same
 name so every consumer picks it up unchanged. **The package name is the substitution seam.**
@@ -250,19 +249,16 @@ artifact labelled `rv64d` need not come from the stock `rv64d` config, which is 
 
 **The alternatives we are not taking.** *Renaming our architecture to `Lean_SP1`* — the 161
 generated files would be free (the generator emits the new name consistently) and our own 586
-references across 64 files are a mechanical sed, but `riscv-lean` names `LeanRV64D` in 4 of its own
-files (118 refs: `Skeleton`, `SailToRV64`, `SailPureToInstructions`, `SailPure`) and requires the
-package by that name, so we would have to fork it **permanently**; opencompl will not import an
-SP1-specific model. That fork is disposable chores, pinned at the content of opencompl PR #59 (merged
-2026-08-18) and slated for deletion when the dependency is retired. *Generating as `SP1` and renaming the emitted tree back* — measured
+references across 64 files are a mechanical sed (and, since the `riscv-lean` retirement, nothing
+else names the package). *Generating as `SP1` and renaming the emitted tree back* — measured
 and it works (on the real 171-file snapshot the rename leaves zero residue in either direction and
 round-trips byte-identically), but a find-and-replace across generated output is a maintenance
 hazard we would own forever, and it weakens the "generated, never hand-edited" provenance story.
 Both stay on the shelf in case upstream declines substitution outright; the fallback of first
 resort is simply keeping the `cp` + hash guard, which works.
 
-The sibling `succinctlabs/riscv-lean` fork is only toolchain/dependency chores; it is pinned at
-`d1d678c6`, byte-identical to opencompl `ccdfd676` (PR #59, "chore: update to v4.32.2", merged
-2026-08-18). The dependency itself is scheduled for retirement: the nine importers will state
-their chip specs and Sail bridges against the Sail model directly, after which the require is
-dropped.
+The `riscv-lean` dependency (and the sibling `succinctlabs/riscv-lean` fork that pinned it) was
+retired on 2026-09-20: the chip specs are stated against `SP1Clean/Model/RV64Semantics.lean`, the
+monad-free Sail write values live in `SP1Clean/Model/SailPure.lean`, and
+`SP1Clean/Proofs/Sail/RV64Bridge.lean` proves the two equal, so the Sail side of the build is
+exactly lean-sail plus our generated snapshot.

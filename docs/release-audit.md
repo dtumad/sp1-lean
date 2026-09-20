@@ -41,7 +41,6 @@ No main-library proof is deferred. This audit found no `sorry`, `stop`, project 
 | Sail compiler source | `41694abd58b27b687af5db275810dfeb8a88cfc0` (rems-project/sail, `sail2`) |
 | sail-riscv model source | `61266bd4dede6c7dd6e903e52dc80bcbf644b1b8` (riscv/sail-riscv, `master`) |
 | SP1 Sail config | sha256 `41311181e4cad458c21b01a0160a0087b407ee15e616243013169d52d3c1a854` (`scripts/sail-config/sp1_rv64d_cfg.json`) |
-| RISCV pin | `d1d678c67f3039b5fb8a9c5aba76904c5793756b` |
 | lean-sail pin | `079463134b9c50450b8393e1566a09fc492a34d9` (tag `v5`) |
 | PolyFun pin | `d062ba2cbb3a50ba5b9f3ba349ca003e6c79630a` (upstream `main`) |
 
@@ -53,10 +52,11 @@ pinned Sail compiler + sail-riscv sources above run against the schema-shaped SP
 reproducible via `scripts/sail-config/generate_lean_rv64d.sh` (`docs/agents/sail-model-provenance.md`).
 It equals the opencompl base `11d8fa21` except the four platform-value sites the two-key config sets
 (PMP-off moved to a Lean-side hypothesis, 2026-08); the
-snapshot's commit message carries the full provenance record. `RISCV` is pinned to the
-succinctlabs fork head, byte-identical to opencompl `ccdfd676` (PR #59, merged 2026-08-18); the
-dependency is scheduled for retirement in favour of stating chip specs and Sail bridges against the
-Sail model directly.
+snapshot's commit message carries the full provenance record. The former `riscv-lean` (`RISCV`)
+dependency was retired 2026-09-20: the RV64 reference functions the chip specs use are
+`SP1Clean/Model/RV64Semantics.lean`, the monad-free Sail write values are
+`SP1Clean/Model/SailPure.lean`, and the equalities between them are proved in
+`SP1Clean/Proofs/Sail/RV64Bridge.lean`, so the ISA-equivalence chain has no third-party link.
 
 **`Clean` is pinned to a fork, and that is a change to the trust base.** The DSL every circuit in
 this project is built on is no longer upstream `Verified-zkEVM/clean` but `dtumad/clean`, branch

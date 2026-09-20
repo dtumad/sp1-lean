@@ -3,9 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Proofs.Chips.MulChip.Formal
 import SP1Clean.Soundness.ChipRow
 import SP1Clean.Proofs.Sail.Advance
-import RISCV.Instructions
-import RISCV.SailToRV64
-import RISCV.SailPureToInstructions
+import SP1Clean.Proofs.Sail.RV64Bridge
 
 /-! # Native Sail bridge for the `Mul` chip (MUL/MULH/MULHU/MULHSU/MULW) + `ChipKind`
 
@@ -16,8 +14,8 @@ product), `spec_mulh` (high 64, signed×signed), `spec_mulhu` (high 64, unsigned
 `MUL` `mul_op` records (Low/High × the signedness pair) plus `MULW`.
 
 This bridge uses the **RV64 provider library's** connection lemmas directly:
-`_root_.mul_eq`/`_root_.mulw_eq` (`RISCV.SailToRV64`) chained with
-`RV64.{mul,mulh,mulhu,mulhsu,mulw}_eq` (`RISCV.SailPureToInstructions`, fully proven incl. the
+`SailRV64.execute_MUL_eq`/`SailRV64.execute_MULW_eq` (`Model/SailPure.lean`) chained with
+`RV64.{mul,mulh,mulhu,mulhsu,mulw}_eq` (`Proofs/Sail/RV64Bridge.lean`, fully proven incl. the
 MULHSU signed×unsigned high half). `correct_mul*_native` is pure monad plumbing — the BitVec
 algebra lives in those dep lemmas.
 
@@ -82,7 +80,7 @@ def sp1_mul (rd : regidx) (pc : BitVec 64) (a_val : Word (ZMod p)) : SailM Unit 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
 /-- Native Sail equivalence (MUL): the chip's RV64 `mul` fact plus the register/PC reads drive
-`spec_mul ≡ sp1_mul`, via `_root_.mul_eq` (`execute_MUL = skeleton_binary … SailRV64.mul`) and
+`spec_mul ≡ sp1_mul`, via `SailRV64.execute_MUL_eq` (`execute_MUL = SailRV64.skeleton_binary … SailRV64.mul`) and
 `RV64.mul_eq` (`SailRV64.mul {Low,S,S} = RV64.mul`). -/
 theorem correct_mul_native
     (rs1_val rs2_val a_val : Word (ZMod p))
@@ -97,7 +95,7 @@ theorem correct_mul_native
   simp only [spec_mul, sp1_mul, mulOp_mul]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.mul_eq, RV64.mul_eq, skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_MUL_eq, RV64.mul_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mul]
 
 set_option linter.unusedSimpArgs false in
@@ -116,7 +114,7 @@ theorem correct_mulh_native
   simp only [spec_mulh, sp1_mul, mulOp_mulh]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.mul_eq, RV64.mulh_eq, skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_MUL_eq, RV64.mulh_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mulh]
 
 set_option linter.unusedSimpArgs false in
@@ -135,7 +133,7 @@ theorem correct_mulhu_native
   simp only [spec_mulhu, sp1_mul, mulOp_mulhu]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.mul_eq, RV64.mulhu_eq, skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_MUL_eq, RV64.mulhu_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mulhu]
 
 set_option linter.unusedSimpArgs false in
@@ -154,13 +152,13 @@ theorem correct_mulhsu_native
   simp only [spec_mulhsu, sp1_mul, mulOp_mulhsu]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.mul_eq, RV64.mulhsu_eq, skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_MUL_eq, RV64.mulhsu_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mulhsu]
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
 /-- Native Sail equivalence (MULW): the chip's RV64 `mulw` fact drives `spec_mulw ≡ sp1_mul`, via
-`_root_.mulw_eq` and `RV64.mulw_eq`. -/
+`SailRV64.execute_MULW_eq` and `RV64.mulw_eq`. -/
 theorem correct_mulw_native
     (rs1_val rs2_val a_val : Word (ZMod p))
     (rs1_idx rs2_idx rd_idx : BitVec 5) (pc : BitVec 64) (s : SailState)
@@ -174,7 +172,7 @@ theorem correct_mulw_native
   simp only [spec_mulw, sp1_mul]
   have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
-  simp [_root_.mulw_eq, RV64.mulw_eq, skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
+  simp [SailRV64.execute_MULW_eq, RV64.mulw_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mulw]
 
 omit [Fact (2 ^ 24 < p)] in
