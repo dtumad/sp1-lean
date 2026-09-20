@@ -133,6 +133,13 @@ for label, value in (("Sail compiler source", script_pin("SAIL_SHA")),
         err(f"docs/release-audit.md row '{label}' records `{recorded}` but "
             f"generate_lean_rv64d.sh pins `{value}`")
 
+# The snapshot the generator verifies against must be the snapshot the build graph consumes;
+# otherwise the regeneration workflow can pass against one revision while Lake builds another.
+snapshot = script_pin("SP1_SNAPSHOT")
+if snapshot is not None and snapshot != expected_rows["Lean_RV64D pin"]:
+    err(f"generate_lean_rv64d.sh verifies against SP1_SNAPSHOT `{snapshot}` but the manifest "
+        f"pins Lean_RV64D `{expected_rows['Lean_RV64D pin']}`")
+
 cfg_path = "scripts/sail-config/sp1_rv64d_cfg.json"
 cfg_sha = hashlib.sha256(open(cfg_path, "rb").read()).hexdigest()
 m = re.search(r"^\| SP1 Sail config \| sha256 `([0-9a-f]{64})`", audit, re.M)

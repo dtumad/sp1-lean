@@ -12,6 +12,9 @@
 #
 # Requires: opam, cmake, z3, python3, git. Work tree defaults to ~/.cache/sp1-sail-gen (override
 # with SAIL_GEN_DIR). Generation takes ~10 minutes after the one-time --deps (~20-40 minutes).
+# CI runs the same modes on every generator/config/manifest change and monthly
+# (.github/workflows/sail-regen.yml); `SP1_SNAPSHOT` must equal the manifest's `Lean_RV64D` rev
+# (scripts/check_pins.sh).
 #
 # Pins — the provenance record. Verified 2026-08-06: a --stock run under these pins reproduces
 # opencompl 11d8fa21 byte-identically, and --sp1 differs from it in exactly four generated
@@ -22,6 +25,7 @@ SAIL_RISCV_SHA=61266bd4dede6c7dd6e903e52dc80bcbf644b1b8  # riscv/sail-riscv, mas
 OCAML_VERSION=5.2.1                                       # the opencompl nightly's version
 BASE_SNAPSHOT=11d8fa212a60c05dcc9fe5db925dd4d06dad65b5    # opencompl/sail-riscv-lean main
 SP1_SNAPSHOT=befc6976ef53c592b637dc897f61b4e71467c239     # succinctlabs branch sp1/config-generated-4.32.2
+SP1_SNAPSHOT_REPO="${SP1_SNAPSHOT_REPO:-https://github.com/succinctlabs/sail-riscv-lean}"  # where the snapshot is published
 
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -95,7 +99,7 @@ H1=$(shasum -a 256 "$CFG" | cut -d' ' -f1)
 [ "$H0" = "$H1" ] || { echo "FAIL: cmake regenerated the config mid-build"; exit 1; }
 
 OUT=sail-riscv/build/model/Lean_RV64D
-[ -d ref ] || git clone --quiet https://github.com/succinctlabs/sail-riscv-lean ref
+[ -d ref ] || git clone --quiet "$SP1_SNAPSHOT_REPO" ref
 git -C ref fetch --quiet origin
 # Repo furniture the nightly adds around the generated tree (and the resolved manifest, which the
 # published snapshot deliberately keeps — it records the lean-sail pairing).

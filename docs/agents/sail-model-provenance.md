@@ -122,6 +122,19 @@ What the config cannot express stays where it was: `h_mseccfg_pmm` (pointer mask
 config toggle) remains a `SailConfigured` hypothesis, the platform-hook `axiom`s remain trust
 item T2, and dynamic register state remains the boot predicate's business.
 
+### The regeneration workflow
+
+`.github/workflows/sail-regen.yml` runs the same four modes on GitHub-hosted runners: on demand,
+monthly, and on every pull request that touches `scripts/sail-config/`, `lake-manifest.json` (a
+`Lean_RV64D` re-pin), or the workflow itself. It caches the opam root keyed by `OCAML_VERSION` +
+`SAIL_SHA` (cold ≈ 35 min, warm ≈ 1 min), checks that the committed config is base ⊕ overlay for the
+pinned sail-riscv, and fails on any byte difference between the regenerated model and the pinned
+snapshot (`--sp1`, the gate) while also reporting identity against the opencompl base (`--stock`).
+`scripts/check_pins.sh` additionally requires the script's `SP1_SNAPSHOT` to equal the manifest's
+`Lean_RV64D` revision, so the workflow always verifies the snapshot the build consumes. The
+snapshot's host repository is `SP1_SNAPSHOT_REPO` (default `succinctlabs/sail-riscv-lean`); moving
+the published snapshots to a repository we own is a one-line change plus a re-pin.
+
 ## The runtime/model pairing rule
 
 ⚠ **The generated model and the `lean-sail` runtime must move together.** A v4-generated

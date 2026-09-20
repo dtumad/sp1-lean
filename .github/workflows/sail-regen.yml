@@ -1,0 +1,79 @@
+name: Sail Model Regeneration
+
+# The `Lean_RV64D` dependency is GENERATED: the pinned rems-project/sail compiler run over the pinned
+# riscv/sail-riscv sources with the checked-in SP1 platform config. This workflow is the machine
+# check that the pinned snapshot is exactly that generator output — it rebuilds the model from the
+# four pins in `scripts/sail-config/generate_lean_rv64d.sh` and fails on any byte difference, so the
+# snapshot repository is a build-time cache and never a place where hand edits can hide.
+#
+# Steps mirror the script's modes: `--deps` (the OCaml switch and the Sail compiler, cached by
+# toolchain pins; 30-40 minutes cold, seconds warm), `--make-config` (the committed config must be
+# base ⊕ overlay for the pinned sail-riscv), `--sp1` (identity against the pinned SP1 snapshot, the
+# gate), and `--stock` (identity against the opencompl base, which documents that the SP1 config
+# is the only difference). Generation itself takes ~10 minutes per config.
+#
+# Runs on demand, monthly, and on pull requests that touch the generator, its config, the manifest
+# (a `Lean_RV64D` re-pin), or this file.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 4 1 * *"
+  pull_request:
+    paths:
+      - "scripts/sail-config/**"
+      - "lake-manifest.json"
+      - ".github/workflows/sail-regen.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      SAIL_GEN_DIR: ${{ github.workspace }}/.sail-gen
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the toolchain pins from the generator script
+        id: pins
+        run: |
+          for key in SAIL_SHA OCAML_VERSION; do
+            value="$(sed -n "s/^${key}=\([^ ]*\).*/\1/p" scripts/sail-config/generate_lean_rv64d.sh)"
+            [ -n "$value" ] || { echo "no ${key} pin in generate_lean_rv64d.sh"; exit 1; }
+            echo "${key}=${value}" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y opam cmake z3 libgmp-dev pkg-config zlib1g-dev m4
+
+      - name: Restore the Sail toolchain (opam root with the built compiler)
+        id: sail-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.opam
+          key: sail-toolchain-${{ runner.os }}-ocaml${{ steps.pins.outputs.OCAML_VERSION }}-${{ steps.pins.outputs.SAIL_SHA }}
+
+      - name: Initialise opam (cold cache only)
+        if: steps.sail-cache.outputs.cache-hit != 'true'
+        run: opam init --bare --disable-sandboxing --no-setup --yes
+
+      - name: Build the pinned Sail compiler (cold cache only)
+        if: steps.sail-cache.outputs.cache-hit != 'true'
+        run: scripts/sail-config/generate_lean_rv64d.sh --deps
+
+      - name: The committed config is base ⊕ overlay for the pinned sail-riscv
+        run: |
+          scripts/sail-config/generate_lean_rv64d.sh --make-config
+          git diff --exit-code -- scripts/sail-config/sp1_rv64d_cfg.json
+
+      - name: Regenerate with the SP1 config and compare with the pinned snapshot (the gate)
+        run: scripts/sail-config/generate_lean_rv64d.sh --sp1
+
+      - name: Regenerate with the stock config and compare with the opencompl base
+        run: scripts/sail-config/generate_lean_rv64d.sh --stock
