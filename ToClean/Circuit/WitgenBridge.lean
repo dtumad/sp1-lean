@@ -1,4 +1,4 @@
-import Clean.Circuit.WitnessGeneration
+import Clean.Circuit.Theorems
 import Clean.Circuit.Subcircuit
 import ToClean.Circuit.AgreesBelowWithData
 
