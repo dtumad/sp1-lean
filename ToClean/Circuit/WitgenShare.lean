@@ -134,9 +134,9 @@ def BExpr.beq : BExpr F → BExpr F → Bool
 
 end
 
-instance : BEq (FExpr F) := ⟨FExpr.beq⟩
-instance : BEq (U64Expr F) := ⟨U64Expr.beq⟩
-instance : BEq (BExpr F) := ⟨BExpr.beq⟩
+instance instBEqFExpr : BEq (FExpr F) := ⟨FExpr.beq⟩
+instance instBEqU64Expr : BEq (U64Expr F) := ⟨U64Expr.beq⟩
+instance instBEqBExpr : BEq (BExpr F) := ⟨BExpr.beq⟩
 
 end Beq
 
@@ -195,8 +195,8 @@ def BExpr.hashCode : BExpr F → UInt64
 
 end
 
-instance : Hashable (FExpr F) := ⟨FExpr.hashCode⟩
-instance : Hashable (U64Expr F) := ⟨U64Expr.hashCode⟩
+instance instHashableFExpr : Hashable (FExpr F) := ⟨FExpr.hashCode⟩
+instance instHashableU64Expr : Hashable (U64Expr F) := ⟨U64Expr.hashCode⟩
 
 end Hash
 
@@ -209,9 +209,13 @@ variable [DecidableEq F] [Hashable F] [Zero F]
 node to its step index (untrusted caches — hits are re-verified against `steps`), and
 the original-step replacement map (`.inl`/`.inr` following the original step's sort). -/
 structure ShareState (F : Type) [DecidableEq F] [Hashable F] where
+  /-- The shared steps built so far. -/
   steps : Array (Step F) := #[]
+  /-- Field-expression memo: interned node to its step index (re-verified on hit). -/
   memoF : Std.HashMap (FExpr F) ℕ := {}
+  /-- u64-expression memo: interned node to its step index (re-verified on hit). -/
   memoU : Std.HashMap (U64Expr F) ℕ := {}
+  /-- Replacement of each original step, following its sort. -/
   old : Array (FExpr F ⊕ U64Expr F) := #[]
 
 /-- Bind a fresh field-sorted step for `e` and return its reference. -/
