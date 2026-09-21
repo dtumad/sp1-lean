@@ -499,7 +499,7 @@ per-file ledger of the migration itself):
 ### Gadget-level (arithmetic, `Native/Operations/` + `Proofs/Operations/`)
 
 - **`circuit_proof_start` must be the FIRST tactic** in soundness/completeness. Any
-  `haveI`/`set_option`/`have hp` goes *after* it, or it errors "can only be used on Soundness/Completeness"
+  `have`/`set_option`/`have hp` goes *after* it, or it errors "can only be used on Soundness/Completeness"
   (put `set_option … in` on the theorem instead). (`circuit_proof_start` lives in `Clean.Utils.Tactics`.)
 - **Imports before the module doc-comment.** A `/-! … -/` header before the `import` lines makes the package
   `-D linter.flexible` flag get rejected on the (now zero-imports) header. Imports first, then the doc-comment.
@@ -1002,13 +1002,14 @@ in `Proofs/Chips/ShiftLeftChip/Core.lean`.
 **Traps — `have`s that look dead but are load-bearing** (verify with `lean_goal` / a build before removing):
 - `have hp : 2 ^ 17 < p := Fact.out` (and `have : 131072 < p`) — feeds a downstream `omega` that needs the
   magnitude; grep shows one occurrence (its own line) yet `omega` consumes it implicitly.
-- `haveI : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩` — supplies an instance to later
+- `have : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩` (`have`, not `haveI` — Mathlib's
+  `haveILetI` linter flags the latter in a proof) — supplies an instance to later
   `ZMod.val`/`omega` steps. There is **no** global `NeZero p` instance, *on purpose*: a `Fact (2^17 < p)`-derived
   one would make the pervasive `omit [Fact (2^17 < p)] in` clauses illegal (`Model/ByteTable.lean:84`).
 
 > **The mechanism that decides this whole class, measured directly: `Fact p.Prime` synthesizes *both*
 > `NeZero p` and `Fact (1 < p)` as instances, while `Fact (2 ^ N < p)` synthesizes *neither*.** So the
-> `haveI : NeZero p := ⟨…⟩` idiom above is **redundant wherever `Fact p.Prime` is also in the variable
+> `have : NeZero p := ⟨…⟩` idiom above is **redundant wherever `Fact p.Prime` is also in the variable
 > block** — which is everywhere in this tree, since that is the standard variable block. A sweep on this
 > basis removed **149 such locals across 68 files**, with only **3 keeps**.
 >

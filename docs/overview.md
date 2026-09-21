@@ -2,7 +2,7 @@
 
 This is a guide to the current theorem boundary. The [technical report](verification-report.md)
 contains the detailed arguments; the [release audit](release-audit.md) records dependency pins and
-trust boundaries. SP1 is pinned to `v6.4.0`, and Lean/mathlib to v4.32.2.
+trust boundaries. SP1 is pinned to `v6.4.0`, and Lean/mathlib to v4.33.1.
 
 ## Local shard capstone
 

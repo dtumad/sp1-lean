@@ -1,12 +1,31 @@
-# Lean 4.32.2 + Sail environment notes
+# Lean 4.33.1 + Sail environment notes
 
 Notes on the shared Lean/Sail dependency graph.
 
 ## Dependency pins
 
-The toolchain is `leanprover/lean4:v4.32.2` and **every dependency is an immutable git pin** — there are
+The toolchain is `leanprover/lean4:v4.33.1` and **every dependency is an immutable git pin** — there are
 no path dependencies, so a clean clone builds. The authoritative values live in `lakefile.toml` and
-`lake-manifest.json`; `docs/release-audit.md` records the audited snapshot. The Sail RV64 model is
+`lake-manifest.json`; `docs/release-audit.md` records the audited snapshot. Direct pins: mathlib
+`v4.33.1`; Clean upstream `main` `fba2a29f` (module-ified; the package sets `allowNonModules = true`
+so its `requiresModuleSystem` does not warn on our non-module importers, and `--wfail` would turn
+that warning into a failure) with its `CompPoly` `v4.33.1` dependency; PolyFun `997828ce` (the last
+`main` commit on v4.33.1 — PolyFun `main` moved to v4.34.0 on 2026-09-17); lean-sail at the
+**temporary** pin below.
+
+**lean-sail is pinned to `dtumad/lean-sail` branch `sp1-pin`** (`bde9ecc6`) = upstream tag `v5`
+(`07946313`) + one line: `open PreSail` → `open Sail.ConcurrencyInterfaceV1.PreSail` in
+`Sail/Sail.lean`, the namespace the `open` already resolved to. Lean 4.33's `ambiguousOpen` linter
+warns on the original, Lake replays a dependency's warnings on every build, and the build runs
+`--wfail`. The fix is rems-project/lean-sail#14; **exit condition:** when it merges, re-pin to the
+upstream merge commit (or the next tag containing it) and delete this paragraph. The `sp1-pin`
+branch must stay reachable until then (see the trap below). The generated model is unaffected.
+
+**The toolchain-and-dependency move is done one `[[require]]` at a time, except once:** the
+2026-09 bump ran a single bare `lake update` after all four direct requires were repointed, so that
+Clean `main`'s transitive graph (`CompPoly`, the mathlib-family bumps) resolved consistently. That
+is the documented exception to the rule below; every direct pin is an exact revision, so it could
+only re-resolve transitives. The Sail RV64 model is
 the in-tree **generated** library `LeanRV64D/` — pinned Sail sources plus the checked-in SP1
 platform config, written and verified by `scripts/sail-config/generate_lean_rv64d.sh` — see
 [`sail-model-provenance.md`](sail-model-provenance.md). Re-pin by regenerating (`--install`), never

@@ -126,8 +126,13 @@ refinement; only their `_of_obligations` combinators are currently declared.
   `lake serve`** — that is the `lean-lsp` MCP server, and killing it drops the MCP connection for the whole
   session. *Build workers* carry no `--worker` token, so use `ps -ef | grep tstack` for build liveness, and
   `sample <pid>` (not RSS — a healthy run also plateaus at ~3.2 GB) to tell a hang from progress.
-- **Toolchain:** `lean-toolchain` and mathlib are `v4.32.2`, and **every dependency is an immutable git
-  pin** — there are no path dependencies, so a clean clone builds. The Sail RV64 model is the
+- **Toolchain:** `lean-toolchain` and mathlib are `v4.33.1`; Clean is upstream `main`
+  (`fba2a29f`, module-ified — the package sets `allowNonModules = true` until the `SP1Clean/`
+  tree migrates) with its `CompPoly` dependency; PolyFun is `997828ce` (its last v4.33.1
+  commit); lean-sail is the documented temporary pin `dtumad/lean-sail` `sp1-pin` (= `v5` + the
+  one-line `ambiguousOpen` fix of rems-project/lean-sail#14, re-pinned to upstream when that
+  merges). **Every dependency is an immutable git pin** — there are no path dependencies, so a
+  clean clone builds. The Sail RV64 model is the
   in-tree **generated** library `LeanRV64D/` + `LeanRV64D.lean` (its own `lean_lib`, never
   hand-edited, outside every hand-written-source guard like `Extracted/`): pinned Sail sources run
   against the checked-in SP1 platform config, written by
@@ -141,6 +146,14 @@ refinement; only their `_of_obligations` combinators are currently declared.
   current one).
   Read `docs/agents/lean-sail-notes.md` before touching any dependency.
 - Lake options already set in `lakefile.toml`: `--tstack=400000`, `synthInstance.maxHeartbeats = 1000000`.
+- **Lean ≥ 4.33 landmines** (`docs/agents/proof-patterns.md` § "Lean ≥ 4.33 and Clean `main`"): the
+  unifier type-checks metavariable assignments at implicit transparency, so `rw`/`simp` through a
+  `def` that only unfolds at default (`component.Input` vs `Inputs`, `id.Occurrence` vs the entry
+  type, a `change` to a defeq-but-not-syntactic target) fails with "not type-correct under the
+  implicit transparency level" — name the argument, make the typing `def` `@[reducible]`, or rewrite
+  by lemma; Clean seals `structToElements`, so cells are read through `structToElements_eq`, never
+  `rfl`; a `native_decide` statement carries no `let`; every hand-written `ElaboratedCircuit`
+  obligation proof opens with `preserve_tactic_target`.
 - There are no conventional unit tests in the main library; correctness lives in kernel-checked
   soundness/faithfulness/bridge theorems. `lake test` is the separate executable conformance layer.
 
@@ -235,7 +248,7 @@ Mirror-rust layout under `SP1Clean/`:
 - **`SP1CleanTest/`** (top-level, **not** under `SP1Clean/`) — the **test library**, the sole home of
   `native_decide` and the `lake test` target (`testDriver`). It imports the main `SP1Clean` library and
   is never imported by it, so the default `lake build SP1Clean` stays `native_decide`-free (enforced by
-  `scripts/check_no_native_decide.sh`; `native_decide` trusts the whole compiler — at v4.32.2 the census
+  `scripts/check_no_native_decide.sh`; `native_decide` trusts the whole compiler — since v4.32 the census
   shows this as generated `._native.native_decide.ax_*` constants, the successors of the named
   `Lean.ofReduceBool`/`Lean.trustCompiler` axioms). Contents: `Exportable.lean` (the
   `#assert_exportable` battery using the canonical `Model/SP1Field.lean` `SP1Prime`), `NonVacuity.lean` /
@@ -450,14 +463,16 @@ local checkout: Clean is a pinned **git** dependency, and a local sibling path m
 permanent docs or into `lakefile.toml`. (The pin can still lag upstream `main`; if a doc named below is
 missing from `.lake/packages/Clean`, read it on GitHub.)
 
-⚠ **The Clean pin is currently a fork** — `dtumad/clean` branch `sp1-integration`
-(`2dad7788d58b09eabeb3898506e4cb896e5d3e9d`), whose base
-is upstream `0e53b9f2` (v4.32.2). The **standing split**: a change that MODIFIES an existing Clean
-declaration goes in the fork, one branch per upstream PR, because downstream Clean theorems refer to
-Clean's declaration and not ours — that is why it cannot be shimmed in `ToClean/`. A **pure addition**
-stays in `ToClean/` (no pin bump; acceptance is a plain deletion + repoint). Fork state, the PR queue, and
-the exit condition are in `docs/agents/clean-upstream.md`; the trust consequence is disclosed in
-`docs/release-audit.md`. Re-pin to upstream as each PR merges.
+**The Clean pin is upstream `main`** (`fba2a29f5e36420d797c1de118ac9f11f23b819e`, 2026-09-16); the
+2026-08 fork (`dtumad/clean` `sp1-integration`) was retired in the 2026-09 toolchain move — its
+two modifying changes are re-derived as pure additions (`ToClean/Circuit/AgreesBelowWithData.lean`,
+`ToClean/Circuit/WitgenShare.lean`; Clean PRs #450/#453 remain the upstream proposals). The
+**standing split** still applies: a change that MODIFIES an existing Clean declaration cannot be
+shimmed in `ToClean/` (downstream Clean theorems refer to Clean's declaration, not ours) and needs
+an upstream PR — pin a fork branch only for the life of that PR, documented as such; a **pure
+addition** stays in `ToClean/` (no pin bump; acceptance is a plain deletion + repoint).
+`docs/agents/clean-upstream.md` records the retired fork, the PR queue, and the exit condition of
+any temporary pin; `docs/release-audit.md` discloses the pins.
 
 Read, in priority order (paths relative to the Clean repo root — i.e. `.lake/packages/Clean/<path>` in-tree,
 or `<path>` on GitHub):
@@ -501,7 +516,8 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
 ## Proof-style quick notes
 
 - `circuit_proof_start` (from `Clean.Utils.Tactics`) is the **first** tactic in soundness/completeness proofs;
-  any `haveI`/`set_option` must come after it, or it errors "can only be used on Soundness/Completeness".
+  any `have`/`set_option` must come after it, or it errors "can only be used on Soundness/Completeness".
+  (`haveI`/`letI` in a proof are a linter finding since Mathlib v4.33 — write `have`/`let`.)
 - Imports precede the module doc-comment (the module system requires it, and it keeps every file
   in the shape Clean and Mathlib use).
 - **Linters — two kinds, one policy.** *Syntactic* linters run during `lake build`
@@ -659,11 +675,12 @@ after installing or toggling.
   hygienic). It also runs `check_pins.sh`, `check_root_index.sh`, `check_current_docs.py`,
   `check_release_surface.py`, and `check_report_citations.sh` as gates, so none need a separate
   invocation.
-- `docs/agents/lean-sail-notes.md` — the v4.32.2 environment, the git dependency pins, the Sail
-  code-generation workaround, and the `lake update` trap.
-- `docs/agents/clean-upstream.md` — **the Clean pin is currently a fork.** Its state and exit
-  condition, the modification-vs-addition split rule (what may go in the fork versus `ToClean/`),
-  and the upstream PR queue with the measurement behind each entry.
+- `docs/agents/lean-sail-notes.md` — the v4.33.1 environment, the git dependency pins (incl. the
+  temporary lean-sail pin and its exit), the Sail code-generation workaround, and the
+  `lake update` trap.
+- `docs/agents/clean-upstream.md` — the Clean pin (upstream `main`), the retired 2026-08 fork and
+  how its changes became `ToClean/` additions, the modification-vs-addition split rule, and the
+  upstream PR queue with the measurement behind each entry.
 - `docs/agents/sail-model-provenance.md` — the in-tree generated `LeanRV64D` library's provenance: the
   two-key SP1 config and its four generated sites, why stock upstream makes the memory-bridge
   lemmas false, the regeneration pipeline, and the re-pinning procedure.

@@ -87,15 +87,16 @@ Cross-shard composition and completeness are separate results.
 
 ## Trust and dependencies
 
-All dependencies are pinned in `lake-manifest.json`, with Lean/mathlib v4.32.2. The important
-boundaries are:
+All dependencies are pinned in `lake-manifest.json`, with Lean/mathlib v4.33.1 and Clean at upstream
+`main`. The important boundaries are:
 
 - **SP1 extraction:** a pinned Rust compiler/exporter produces complete row shapes and
   assertion/interaction lists. Its tooling remains trusted; source-delta checks, whole-chip
   faithfulness proofs, and trace conformance provide separate evidence.
-- **Clean:** the dependency is a pinned fork containing changes to prover-data agreement and
-  witness-program sharing. Local additions live in `ToClean/`. The exact differences are
-  disclosed in the [release audit](docs/release-audit.md).
+- **Clean:** pinned to upstream `main`; the project's prover-data agreement and witness-program
+  sharing material lives as pure additions in `ToClean/`, proposed upstream. The one dependency
+  not at an upstream revision (`lean-sail`, a one-line linter fix pending upstream) is disclosed
+  in the [release audit](docs/release-audit.md).
 - **Sail:** the generated model and runtime are pinned together. The model is regenerated with
   the checked-in SP1 platform configuration; loader and initial-state hypotheses remain explicit.
 - **Lean:** main-library proofs have no proof deferrals, project axioms, kernel bypasses, or
