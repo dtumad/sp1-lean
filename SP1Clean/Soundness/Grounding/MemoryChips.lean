@@ -809,8 +809,7 @@ theorem locOf_ramPriorMessage (access : Trace.RamAccessView (ZMod p))
     MemoryMsg.locOf (ramPriorMessage access) = MemLoc.ram (ramCellOfAccess access) := by
   unfold RamAccessIsRam at isRam
   simp only [MemoryMsg.locOf, ramPriorMessage]
-  rw [if_neg isRam]
-  rfl
+  exact if_neg isRam
 
 omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 /-- Turn membership of the authenticated generic RAM pull into a live Sail-state cell read. -/
@@ -900,8 +899,7 @@ theorem locOf_ramPushMessage (view : Trace.RowView (ZMod p))
     MemoryMsg.locOf (ramPushMessage view access) = MemLoc.ram (ramCellOfAccess access) := by
   unfold RamAccessIsRam at isRam
   simp only [MemoryMsg.locOf, ramPushMessage]
-  rw [if_neg isRam]
-  rfl
+  exact if_neg isRam
 
 /-- The generic RAM push occupies SP1's `+1` cell-write slot. -/
 theorem timeNat_ramPushMessage {view : Trace.RowView (ZMod p)}
