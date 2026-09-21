@@ -10,7 +10,8 @@
 #   4. the authoritative census ledger and committed raw snapshots against the
 #      generated probes (`scripts/axiom_probe.lean` + `scripts/axiom_probe_test.lean`);
 #   5. `lakefile.toml` invariants Lake does not check: the two test libraries carry identical
-#      option blocks, and no other library carries linter options (they are package-level).
+#      option blocks, the one-module `LeanRV64DRvfi` mirrors `LeanRV64D` plus only
+#      `backward.do.legacy`, and no other library carries linter options (they are package-level).
 #
 # This is the gate whose absence let a wrong recorded PolyFun pin survive the 2026-08
 # migration: `check_report_citations.sh` validates that cited paths resolve, not that
@@ -251,8 +252,14 @@ for block in libs:
 if lib_opts.get("SP1CoreTest") != lib_opts.get("SP1CleanTest"):
     err("lakefile.toml: SP1CoreTest and SP1CleanTest must carry identical leanOptions blocks "
         f"(got {lib_opts.get('SP1CoreTest')} vs {lib_opts.get('SP1CleanTest')})")
+# `LeanRV64DRvfi` owns exactly `LeanRV64D.RvfiDii` (declared after `LeanRV64D`) so that one module
+# builds with the legacy `do` elaborator (lean4#13858); everything else must equal the model's.
+rvfi_expected = sorted(lib_opts.get("LeanRV64D", []) + ["backward.do.legacy = true"])
+if lib_opts.get("LeanRV64DRvfi") != rvfi_expected:
+    err("lakefile.toml: LeanRV64DRvfi must carry LeanRV64D's leanOptions plus backward.do.legacy = true "
+        f"(got {lib_opts.get('LeanRV64DRvfi')}, expected {rvfi_expected})")
 for name, opts in lib_opts.items():
-    if name in ("SP1CoreTest", "SP1CleanTest", "LeanRV64D"):
+    if name in ("SP1CoreTest", "SP1CleanTest", "LeanRV64D", "LeanRV64DRvfi"):
         continue
     if any(o.startswith("weak.linter") or o.startswith("linter") for o in opts):
         err(f"lakefile.toml: library {name} carries linter options {opts}; linters are set once at "

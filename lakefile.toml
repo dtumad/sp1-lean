@@ -72,28 +72,17 @@ weak.linter.unusedDecidableInType = false      # 10 / 5: `[Decidable …]` hypot
 linter.mathlibStandardSet = true
 
 # Every dependency is an immutable published pin, so a clean clone builds this project. Toolchain is
-# Lean v4.32.2 (see `lean-toolchain`); each pin below is at or compatible with it.
+# Lean v4.33.1 (see `lean-toolchain`); each pin below is at or compatible with it.
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
 rev = "v4.33.1"
 
-# Clean, pinned to a FORK — the one dependency here that is not upstream. Base is upstream
-# `0e53b9f2` (v4.32.2 `main`, post PR #443 "bump-lean-4.32.2"); the fork's `sp1-integration` branch
-# carries changes that MODIFY existing Clean declarations and therefore cannot live in our additive
-# `ToClean` library, because downstream Clean theorems refer to Clean's declaration, not ours.
-# Delta at this pin — two changes, one branch per upstream PR:
-#   `agreesbelow-data-hint`:
-#     f5ae8e17  `ProverEnvironment.AgreesBelow` constrains `data`/`hint`, not just `get`
-#     8301b77a  `Clean/Examples/DataWitness.lean`, the worked example + falseness witness
-#   `witgen-share`:
-#     410ffba8  `WitgenIR.share` subterm sharing into let-steps + `Operations.witgenJsonShared?`
-#               (without it, tree-expanding serialization makes SP1's DivRem witgen payload 1.22 GB)
-#     4a9c2c7b  the eval-preservation proof `WitgenIR.eval_share` (axiom-clean), making the pass a
-#               proven transformation the serializer applies unconditionally
-# Rationale, the PR queue, and the exit condition are in `docs/agents/clean-upstream.md`; the trust
-# consequence is disclosed in `docs/release-audit.md`. **Re-pin to upstream as the PRs merge.**
-# NB `sp1-integration` must keep this rev reachable (see the PolyFun note below) — never force-push it.
+# Clean, upstream `main` (`fba2a29f`, 2026-09-16, module-ified, `requiresModuleSystem`). The
+# 2026-08 fork is retired: what it modified (the `AgreesBelow` data/hint constraint, `WitgenIR.share`)
+# now lives as pure additions in `ToClean/`, so a pin bump is a rev change and nothing else.
+# History, the upstream PR queue, and the rule for what may go in a fork versus `ToClean/` are in
+# `docs/agents/clean-upstream.md`.
 [[require]]
 name = "Clean"
 git = "https://github.com/Verified-zkEVM/clean"
@@ -169,6 +158,25 @@ requiresModuleSystem = true
 name = "LeanRV64D"
 leanOptions.autoImplicit = true
 leanOptions.relaxedAutoImplicit = true
+leanOptions.weak.linter.style.nameCheck = false
+moreLeancArgs = ["-fbracket-depth=500"]
+
+# One generated module, `LeanRV64D.RvfiDii`, built with the legacy `do` elaborator. Its
+# `print_rvfi_exec` (18 consecutive `(pure (print_bits …))` statements) hits the new elaborator's
+# exponential re-elaboration (lean4#13858; fix lean4#13985 pending): 718 s and 15.4 GB on one
+# file, the head of a ≈ 60-minute critical path in every cold CI build; the legacy elaborator
+# takes 1.8 s and 1.4 GB (measured 2026-09-21, v4.33.1). The option cannot be library-wide — the
+# legacy elaborator rejects the `← doElem` forms other generated modules use — so this library,
+# declared after `LeanRV64D` and therefore the owner of exactly that module (Lake: the last
+# declared library matching a module owns it), carries it; every other setting mirrors the
+# model's. Same semantics by the option's contract; the library goes when the Sail backend emits
+# `let _ : Unit := e` for pure-unit calls or the Lean fix lands (issue #6).
+[[lean_lib]]
+name = "LeanRV64DRvfi"
+roots = ["LeanRV64D.RvfiDii"]
+leanOptions.autoImplicit = true
+leanOptions.relaxedAutoImplicit = true
+leanOptions.backward.do.legacy = true
 leanOptions.weak.linter.style.nameCheck = false
 moreLeancArgs = ["-fbracket-depth=500"]
 

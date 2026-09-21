@@ -10,6 +10,16 @@ script — not patched Lean — and the tree is treated like `SP1Clean/Extracted
 part of the library, outside every hand-written-source guard, gated for byte-identity with a
 fresh regeneration.
 
+One build-configuration exception, in `lakefile.toml` rather than in the tree: the module
+`LeanRV64D.RvfiDii` is owned by the one-module library `LeanRV64DRvfi` and built with
+`backward.do.legacy = true`, because its generated `print_rvfi_exec` (18 consecutive
+`(pure (print_bits …))` statements) hits the new `do` elaborator's exponential re-elaboration
+(lean4#13858): 718 s and 15 GB for one file, the head of every cold CI build's critical path,
+against 2.5 s under the legacy elaborator. The option cannot be library-wide (the legacy
+elaborator rejects the `← doElem` forms other generated modules use). The durable fix is the
+backend emitting `let _ : Unit := e` for pure-unit calls, after which the library goes; tracked
+on fork issue #6.
+
 The full provenance record (compiler SHA, model SHA, config hash, invocation, environment,
 verification) lives in the snapshot's own commit message; the pins are also recorded in
 `docs/release-audit.md`'s table and re-checked by `scripts/check_pins.sh`.
