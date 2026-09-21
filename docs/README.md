@@ -17,6 +17,7 @@ Each document has one role:
 | [`layering.md`](layering.md) | structural layering and namespace contract |
 | [`architecture.md`](architecture.md) | module ownership, proof chain, and deliberate exceptions |
 | [`roadmap.md`](roadmap.md) | current native shard targets, status, acceptance gates, and separate follow-ups |
+| [`plugin-points.md`](plugin-points.md) | the circuit seams of the semantics core, their contracts, and current work by seam |
 | [`leanervm-comparison.md`](leanervm-comparison.md) | pinned comparison, capstone decisions, and possible shared contributions |
 | [`goal-overview.md`](goal-overview.md) | completed-state contract; never current status |
 | [`witgen-wire-format.md`](witgen-wire-format.md) | witness-export wire format |
