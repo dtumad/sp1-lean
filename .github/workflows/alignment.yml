@@ -68,7 +68,7 @@ jobs:
       - name: Full build (resumable — a cold cache may need one re-run)
         run: timeout 5h lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun
       - name: Save the build cache
-        if: always()
+        if: success() || failure()
         uses: actions/cache/save@v4
         with:
           path: |
@@ -153,7 +153,7 @@ jobs:
       - name: Full test library (lake build SP1CleanTest)
         run: timeout 5h lake build --wfail --iofail SP1CleanTest
       - name: Save the test-library build cache
-        if: always()
+        if: success() || failure()
         uses: actions/cache/save@v4
         with:
           path: |

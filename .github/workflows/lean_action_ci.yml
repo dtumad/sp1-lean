@@ -14,7 +14,12 @@ name: Lean Action CI
 # 3. The build is resumable. `build` runs `lake build` under a 5-hour `timeout` and saves its cache
 #    even on failure; Lake's per-module traces make a partial build reusable, so a cold cache that
 #    cannot finish inside one job fails once and the re-run continues where it stopped. Once warm,
-#    builds are incremental and take minutes.
+#    builds are incremental and take minutes. The save is skipped on a CANCELLED job
+#    (`success() || failure()`, not `always()`): a cancelled `lake build` can leave a truncated
+#    `.olean` behind its already-written trace, and a cache entry holding one poisons every later
+#    run that restores it (`failed to read file … invalid header`, seen 2026-09-20 after two
+#    superseded `main` runs were cancelled by the concurrency group). If that ever recurs, delete
+#    the offending entries with `gh cache delete` or bump `SP1_CACHE_VERSION`.
 #
 # Structure: `guards` (source-policy gates, seconds) runs in parallel with `build`; `lint` and
 # `test` need `build` and restore its exact cache entry so they replay rather than recompile.
@@ -132,7 +137,7 @@ jobs:
       - name: Build (resumable — a cold cache may need one re-run)
         run: timeout 5h lake build --wfail --iofail
       - name: Save the project build cache
-        if: always()
+        if: success() || failure()
         uses: actions/cache/save@v4
         with:
           path: |
@@ -233,7 +238,7 @@ jobs:
       - name: Core tests (lake test = SP1CoreTest, with the warning/info gates)
         run: timeout 5h lake build --wfail --iofail SP1CoreTest
       - name: Save the test-library build cache
-        if: always()
+        if: success() || failure()
         uses: actions/cache/save@v4
         with:
           path: |
