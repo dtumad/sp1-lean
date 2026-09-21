@@ -13,7 +13,7 @@ the mixed CPU/Memory execution remain separate obligations.
 namespace SP1Clean.Soundness.HostHintQueueHistory
 
 open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintQueue HostHintReadLocal HostQueueOrder
-open HostHintQueueBoundary
+open SP1Clean.Soundness.HostHintQueueBoundary
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

@@ -93,6 +93,14 @@ def expanded (witness : EnsembleWitness (ensemble image source final bankFinal o
     (expanded witness).publicInput = witness.publicInput := by
   simp only [expanded, EnsembleWitness.ofTables_publicInput]
 
+/-- The expanded table list: the padding slot re-labelled, then the appended boundary row. -/
+theorem expanded_tables
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels)) :
+    (expanded witness).tables =
+      witness.tables.set 57 ((witness.tables[57]'(HaltPadding.bound witness)).withComponent
+          HaltPaddingChip.original) ++
+        [(boundary source final bankFinal).singleton witness.data] := rfl
+
 /-- Physical tables following the padding-only slot are unchanged. -/
 theorem expanded_drop
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels))
