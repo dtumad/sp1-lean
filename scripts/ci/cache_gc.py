@@ -28,8 +28,8 @@ Rules (a dry run prints the plan; `--apply` deletes):
 
 Usage:
   scripts/ci/cache_gc.py --prefix <prefix> [--repo owner/name] [--closed-ref refs/pull/N/merge]...
-                         [--sweep-closed-prs] [--keep-align 5] [--keep-core 2] [--min-age 10]
-                         [--input list.json] [--apply]
+                         [--sweep-closed-prs] [--only-ref refs/pull/N/merge] [--keep-align 5]
+                         [--keep-core 2] [--min-age 10] [--input list.json] [--apply]
 `--input` takes the JSON of `gh cache list --json id,key,ref,createdAt,sizeInBytes` (tests, or an
 offline plan); without it the listing is fetched with `gh`.
 """
@@ -170,6 +170,7 @@ def main() -> None:
     ap.add_argument("--keep-align", type=int, default=5)
     ap.add_argument("--keep-core", type=int, default=2)
     ap.add_argument("--min-age", type=int, default=10, help="minutes; younger entries are never touched")
+    ap.add_argument("--only-ref", help="restrict deletions to entries on this ref (a PR job tidying its own ref)")
     ap.add_argument("--input", help="JSON listing instead of `gh cache list`")
     ap.add_argument("--apply", action="store_true", help="delete; without it only the plan is printed")
     args = ap.parse_args()
@@ -177,6 +178,8 @@ def main() -> None:
     closed = list(args.closed_ref) + (closed_pr_refs(args.repo) if args.sweep_closed_prs else [])
     now = dt.datetime.now(dt.timezone.utc)
     doomed = plan(entries, args.prefix, now, closed, args.keep_align, args.keep_core, args.min_age)
+    if args.only_ref:
+        doomed = [(e, r) for e, r in doomed if e["ref"] == args.only_ref]
     total = sum(e["sizeInBytes"] for e in entries)
     freed = sum(e["sizeInBytes"] for e, _ in doomed)
     print(f"{len(entries)} entries, {total / 1e9:.2f} GB; plan deletes {len(doomed)} entries, {freed / 1e9:.2f} GB"
