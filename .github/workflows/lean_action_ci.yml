@@ -31,6 +31,13 @@ name: Lean Action CI
 # job ends by dropping the PR's older entries (`scripts/ci/cache_gc.py --only-ref`); the daily
 # `Cache cleanup` workflow keeps the whole cache under budget.
 #
+# Hand-off: a PR's cache entry lives on `refs/pull/N/merge`, which `main` cannot restore, so every
+# merge used to redo the PR's whole build on `main` (24 minutes after a module-mode change, 75 after
+# an options change). The `handoff` job (PR only, after `build`, not a required check) uploads the
+# PR's build as an artifact named by its head sha; the `main` run finds it through the merge
+# commit's second parent, unpacks it, deletes it, and its `lake build` is then seconds. A squash
+# merge, an expired artifact or a failed PR run simply fall through to the lineage restore.
+#
 # Scope: `lake build` = `SP1Core` + `ToClean` + `ToMathlib` + `ToPolyFun` (the generic/semantic
 # layers and the chip circuits with their proofs, through the gated root index `SP1Clean/Core.lean`)
 # and `lake test` = `SP1CoreTest`. Every build runs with `--wfail --iofail`: a warning (the Mathlib
@@ -148,7 +155,21 @@ jobs:
             python3 scripts/ci/cache_pick.py --mode main --prefix "$prefix" --lineage lineage.txt >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
+      - name: Hand-off from the merged PR (pushes to main)
+        id: handoff
+        if: github.event_name == 'push'
+        run: |
+          h2=$(git rev-parse --verify -q HEAD^2 || true)
+          if [ -z "$h2" ]; then echo "not a merge commit; lineage restore"; exit 0; fi
+          id=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=lake-build-${h2}&per_page=1" --jq '.artifacts[0].id // empty')
+          if [ -z "$id" ]; then echo "no hand-off artifact for ${h2}; lineage restore"; exit 0; fi
+          gh api "repos/${{ github.repository }}/actions/artifacts/${id}/zip" > handoff.zip
+          unzip -q handoff.zip && tar --zstd -xf lake-build.tar.zst && rm -f handoff.zip lake-build.tar.zst
+          gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/${id}" || true
+          echo "restored=true" >> "$GITHUB_OUTPUT"
+          du -sh .lake/build
       - name: Restore the project build cache (by lineage)
+        if: steps.handoff.outputs.restored != 'true'
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.CACHE_PATHS }}
@@ -190,3 +211,35 @@ jobs:
         run: |
           python3 scripts/ci/cache_gc.py --repo "${{ github.repository }}" --prefix "${{ steps.key.outputs.prefix }}" \
             --only-ref "refs/pull/${{ github.event.pull_request.number }}/merge" --apply
+
+  handoff:
+    # PR only; off the required check. Re-restores this run's entry (restore-only, no toolchain) and
+    # publishes it as an artifact the `main` run after the merge picks up.
+    if: github.event_name == 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CACHE_PATHS }}
+          key: ${{ needs.build.outputs.cache-key }}
+          fail-on-cache-miss: true
+      - name: Pack
+        run: |
+          dirs=".lake/build"
+          for d in .lake/packages/*/; do
+            case "$d" in
+              */mathlib/|*/batteries/|*/aesop/|*/Qq/|*/proofwidgets/|*/importGraph/|*/LeanSearchClient/|*/plausible/|*/Cli/) ;;
+              *) dirs="$dirs ${d%/}" ;;
+            esac
+          done
+          # shellcheck disable=SC2086
+          tar --zstd -cf lake-build.tar.zst $dirs
+          ls -l lake-build.tar.zst
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lake-build-${{ github.event.pull_request.head.sha }}
+          path: lake-build.tar.zst
+          retention-days: 3
+          compression-level: 0
