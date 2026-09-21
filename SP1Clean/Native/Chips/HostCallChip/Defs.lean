@@ -51,6 +51,7 @@ set_option linter.unusedSectionVars false in
 @[circuit_norm] theorem equal_requirements :
     (Gadgets.IsEqual.circuit (F := ZMod p) (α := Word)).channelsWithRequirements = [] := rfl
 
+omit [Fact (2 ^ 25 < p)] in
 set_option linter.unusedSectionVars false in
 @[local circuit_norm] private theorem equal_guarantees :
     (Gadgets.IsEqual.circuit (F := ZMod p) (α := Word)).channelsWithGuarantees = [] := rfl

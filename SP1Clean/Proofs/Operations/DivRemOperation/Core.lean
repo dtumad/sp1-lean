@@ -22,6 +22,7 @@ open SP1Clean.Channels (byteChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private lemma evalSub (env : Environment (ZMod p)) (a b : Expression (ZMod p)) :
     Expression.eval env (a - b) = Expression.eval env a - Expression.eval env b := by
@@ -29,6 +30,7 @@ private lemma evalSub (env : Environment (ZMod p)) (a b : Expression (ZMod p)) :
   simp only [Expression.eval]
   ring
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Pointwise form of a `Vector.map (Expression.eval env)` pin, i.e. one of the vector-valued
 `circuit_proof_start` `h_input` components read at a single index. The three transport proofs below

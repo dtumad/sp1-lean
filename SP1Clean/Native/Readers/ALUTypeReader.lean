@@ -167,6 +167,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     (⟨input.clk_high, input.clk_low + 2, cols.op_c[0], 0, 0,
       cols.op_c_memory.prev_value⟩ : MemoryMsg (Expression (ZMod p)))
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem equalityConstraint_mem (x y : Expression (ZMod p)) (offset : ℕ) :
     x - y ∈ FlatOperation.constraints

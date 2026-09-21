@@ -243,12 +243,14 @@ their result.  Running `circuit_norm` on the corresponding projection of the com
 causes the simplifier to traverse every sibling block; the local lemmas avoid that normalization fanout.
 -/
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalU16MSB_msb (env : Environment (ZMod p))
     (cols : Extracted.U16MSBOperation (Expression (ZMod p))) :
     (Eval.eval env cols).msb = Expression.eval env cols.msb := by
   provable_struct_simp
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalIsEqualWord_result (env : Environment (ZMod p))
     (cols : Extracted.IsEqualWordOperation (Expression (ZMod p))) :
@@ -256,12 +258,14 @@ private theorem evalIsEqualWord_result (env : Environment (ZMod p))
       Expression.eval env cols.is_diff_zero.result := by
   provable_struct_simp
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalIsZeroWord_result (env : Environment (ZMod p))
     (cols : Extracted.IsZeroWordOperation (Expression (ZMod p))) :
     (Eval.eval env cols).result = Expression.eval env cols.result := by
   provable_struct_simp
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalLtUnsigned_bit (env : Environment (ZMod p))
     (cols : Extracted.LtOperationUnsigned (Expression (ZMod p))) :
@@ -269,6 +273,7 @@ private theorem evalLtUnsigned_bit (env : Environment (ZMod p))
       Expression.eval env cols.u16_compare_operation.bit := by
   provable_struct_simp
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalAdd_value (env : Environment (ZMod p))
     (cols : Extracted.AddOperation (Expression (ZMod p))) :
@@ -277,12 +282,14 @@ private theorem evalAdd_value (env : Environment (ZMod p))
   provable_struct_simp
   exact ProvableType.eval_fields env _
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalRType_opA0 (env : Environment (ZMod p))
     (cols : Extracted.RTypeReader (Expression (ZMod p))) :
     (Eval.eval env cols).op_a_0 = Expression.eval env cols.op_a_0 := by
   provable_struct_simp
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalRType_opBPrev (env : Environment (ZMod p))
     (cols : Extracted.RTypeReader (Expression (ZMod p))) :
@@ -291,6 +298,7 @@ private theorem evalRType_opBPrev (env : Environment (ZMod p))
   provable_struct_simp
   exact ProvableType.eval_fields env _
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalRType_opCPrev (env : Environment (ZMod p))
     (cols : Extracted.RTypeReader (Expression (ZMod p))) :

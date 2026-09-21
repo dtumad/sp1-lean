@@ -88,6 +88,7 @@ private def isZeroWordOwnExpressions
       (cols.result -
         cols.is_zero_first_half * cols.is_zero_second_half)]
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 -- Measured (W3/r3c/b2): clears 40000 heartbeats; the former 1M ceiling was >=25x over, removed.
 private theorem isZeroWord_nativeAssertions

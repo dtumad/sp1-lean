@@ -182,43 +182,6 @@ private theorem loadHalfEvalVec4Components
   · exact (ProvableType.getElem_eval_fields env value 2 (by decide)).symm
   · exact (ProvableType.getElem_eval_fields env value 3 (by decide)).symm
 
-private theorem loadHalfAddressEta {F : Type}
-    (cols : Extracted.AddressOperation F) :
-    ({ addr_operation := { value := cols.addr_operation.value }
-       top_two_limb_inv := cols.top_two_limb_inv } :
-      Extracted.AddressOperation F) = cols := by
-  cases cols with
-  | mk addr top =>
-    cases addr
-    rfl
-
-private theorem loadHalfCpuEta {F : Type}
-    (cols : Extracted.CPUState F) :
-    ({ clk_high := cols.clk_high
-       clk_16_24 := cols.clk_16_24
-       clk_0_16 := cols.clk_0_16
-       pc := cols.pc } : Extracted.CPUState F) = cols := by
-  cases cols
-  rfl
-
-private theorem loadHalfITypeEta {F : Type}
-    (cols : Extracted.ITypeReader F) :
-    ({ op_a := cols.op_a
-       op_a_memory :=
-         { prev_value := cols.op_a_memory.prev_value
-           access_timestamp := cols.op_a_memory.access_timestamp }
-       op_a_0 := cols.op_a_0
-       op_b := cols.op_b
-       op_b_memory :=
-         { prev_value := cols.op_b_memory.prev_value
-           access_timestamp := cols.op_b_memory.access_timestamp }
-       op_c_imm := cols.op_c_imm } : Extracted.ITypeReader F) = cols := by
-  cases cols with
-  | mk opA opAMem opA0 opB opBMem opC =>
-    cases opAMem
-    cases opBMem
-    rfl
-
 theorem loadHalfChipColumnsOfInput_roundtrip {F : Type}
     (cols : LoadHalfChip.Columns F) :
     loadHalfChipColumnsOfInput
@@ -1051,29 +1014,6 @@ private theorem loadHalfExtractedAssertionsDecompose
   simp only [loadHalfOracle_address_asserts_eq, loadHalfOracle_u16msb_asserts_eq]
   simp only [loadHalfVec3Eta, loadHalfVec4Eta]
   simp only [loadHalfExtractedMeaning, List.Forall, Nat.cast_one]
-  have hAddress := congrArg
-    (fun address =>
-      Extracted.AddressOperation.asserts
-        cols.adapter.op_b_memory.prev_value cols.adapter.op_c_imm
-        0 cols.offset_bit[0] cols.offset_bit[1]
-        (cols.is_lh + cols.is_lhu) address)
-    (loadHalfAddressEta (cols := cols.address_operation))
-  have hCpu := congrArg
-    (fun state =>
-      Extracted.CPUState.asserts state
-        #v[cols.state.pc[0] + 4, cols.state.pc[1], cols.state.pc[2]]
-        8 (cols.is_lh + cols.is_lhu))
-    (loadHalfCpuEta (cols := cols.state))
-  have hIType := congrArg
-    (fun adapter =>
-      Extracted.ITypeReader.asserts cols.state.clk_high
-        (cols.state.clk_0_16 + cols.state.clk_16_24 * 65536)
-        cols.state.pc (30 * cols.is_lh + 33 * cols.is_lhu)
-        #v[cols.selected_half, 65535 * cols.msb.msb,
-          65535 * cols.msb.msb, 65535 * cols.msb.msb]
-        adapter (cols.is_lh + cols.is_lhu) (cols.is_lh + cols.is_lhu))
-    (loadHalfITypeEta (cols := cols.adapter))
-  rw [hAddress, hCpu, hIType]
   constructor
   · rintro ⟨hABCD, hTail⟩
     rcases hABCD with ⟨hABC, hD⟩

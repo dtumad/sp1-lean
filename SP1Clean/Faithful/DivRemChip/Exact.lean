@@ -551,12 +551,6 @@ private theorem divRemAddEta {F : Type}
   simp only
   rw [divRemVec4Eta]
 
-private theorem divRemAddDirectEta {F : Type}
-    (cols : Extracted.AddOperation F) :
-    ({ value := cols.value } : Extracted.AddOperation F) = cols := by
-  cases cols
-  rfl
-
 private theorem divRemLtEta {F : Type}
     (cols : Extracted.LtOperationUnsigned F) :
     ({ u16_compare_operation := cols.u16_compare_operation
@@ -570,16 +564,6 @@ private theorem divRemLtEta {F : Type}
   cases cols
   simp only
   rw [divRemVec4Eta, divRemVec2Eta]
-
-private theorem divRemLtDirectEta {F : Type}
-    (cols : Extracted.LtOperationUnsigned F) :
-    ({ u16_compare_operation := cols.u16_compare_operation
-       u16_flags := cols.u16_flags
-       not_eq_inv := cols.not_eq_inv
-       comparison_limbs := cols.comparison_limbs } :
-      Extracted.LtOperationUnsigned F) = cols := by
-  cases cols
-  rfl
 
 /- Small `rfl` projection lemmas that let the giant unfolded oracle bodies be re-expressed over
 native row fields by syntactic rewriting. Rewriting with these tiny proven equations keeps both
@@ -2386,7 +2370,7 @@ private def divRemReaderInteractions {F : Type} [Field F]
     state.pc opcode a adapter isReal isReal
 
 private def divRemDirectInteractions {F : Type} [Field F]
-    [CoeHead F ℕ] (cols : DivRemChip.Columns F) :
+    (cols : DivRemChip.Columns F) :
     List (Extracted.Interaction F) :=
   let rn := cols.rem_neg * 65535
   let e123 :=

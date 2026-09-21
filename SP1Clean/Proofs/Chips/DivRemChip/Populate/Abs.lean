@@ -301,6 +301,7 @@ private lemma toNat_eq_zero_iff {w : Word (ZMod p)} (hw : w.isU64) :
     rw [e0, e1, e2, e3, ZMod.val_zero]
     norm_num
 
+omit [Fact (2 ^ 24 < p)] in
 /-- `wordOfNat 0` is the zero word. -/
 private lemma wordOfNat_zero : wordOfNat (p := p) 0 = #v[0, 0, 0, 0] := by
   simp [wordOfNat]

@@ -417,6 +417,7 @@ private theorem memoryInitProvider_channels_subset :
   simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem memoryFinalizeProvider_channels_subset :
     (MemoryFinalizeChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
@@ -1085,6 +1086,7 @@ private theorem memoryInitProvider_exitChannel_not_mem :
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_self,
     Nat.reduceEqDiff, false_and, and_false] at h
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem memoryFinalizeProvider_exitChannel_not_mem :
     (exitChannel (p := p)).toRaw ∉ (MemoryFinalizeChip.circuit (p := p)).channels := by

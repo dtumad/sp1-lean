@@ -27,7 +27,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- The little-endian concatenation of the two bytes of a 16-bit limb equals `h`. -/
-private lemma toNat_concat_half_bytes [NeZero p] (h : ZMod p) (hh : h.val < 65536) :
+private lemma toNat_concat_half_bytes (h : ZMod p) (hh : h.val < 65536) :
     (BitVec.ofNat 8 (h.val >>> 8) ++ BitVec.ofNat 8 h.val).toNat = h.val := by
   have h_hi : h.val >>> 8 < 256 := by rw [Nat.shiftRight_eq_div_pow]; omega
   have h_decomp : h.val % 256 + (h.val >>> 8) * 256 = h.val := by

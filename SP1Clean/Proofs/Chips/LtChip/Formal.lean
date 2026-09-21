@@ -99,6 +99,7 @@ private lemma rv64_sltu_eq (x y : BitVec 64) :
     RV64.sltu y x = if x.toNat < y.toNat then 1#64 else 0#64 := by
   by_cases h : x.toNat < y.toNat <;> simp [RV64.sltu, BitVec.ult, h]
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- The `resultWord` `#v[bit, 0, 0, 0]` packs to the 64-bit `0/1` indicator carried by its low limb:
 when the compare `bit` is `if P then 1 else 0`, the word's `toBitVec64` is `if P then 1#64 else 0#64`. -/
@@ -108,6 +109,7 @@ private lemma toBitVec64_bitWord (bit : ZMod p) (P : Prop) [Decidable P]
   subst h
   by_cases hP : P <;> simp [hP, Word.toBitVec64, Word.toNat, ZMod.val_one, ZMod.val_zero]
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- A binary field element's `val` is a valid 16-bit limb. -/
 private lemma val_lt_of_bool {b : ZMod p} (h : b = 0 ∨ b = 1) : b.val < 2 ^ 16 := by
@@ -120,6 +122,7 @@ private lemma isU64_bitWord {b : ZMod p} (h : b = 0 ∨ b = 1) :
   Word.isU64_of_cases (val_lt_of_bool h) (val_lt_of_bool (Or.inl rfl))
     (val_lt_of_bool (Or.inl rfl)) (val_lt_of_bool (Or.inl rfl))
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- A field element pinned to `if Q then 1 else 0` is binary (used in soundness to read the compare
 `bit`'s binary-ness off `LtOperationSigned.result_semantic`). -/
@@ -129,6 +132,7 @@ private lemma bool_of_eq_ite {b : ZMod p} {Q : Prop} [Decidable Q]
   · exact Or.inr h
   · exact Or.inl h
 
+omit [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Column 0 of a flattened `LtOperationSigned` column struct is its compare `bit` (peeling the
 `ProvableStruct` `toComponents`/`cast`/`append` tower). Used by completeness to read the witnessed bit
