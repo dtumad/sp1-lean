@@ -2663,7 +2663,7 @@ TARGETS = [
 
 NS_RE = re.compile(r"^namespace\s+([\w.]+)")
 END_RE = re.compile(r"^end\b\s*([\w.]+)?")
-SECTION_RE = re.compile(r"^section\b\s*([\w.]+)?")
+SECTION_RE = re.compile(r"^(?:@\[expose\]\s+)?(?:public\s+)?(?:meta\s+)?section\b\s*([\w.]+)?")
 
 
 def fqns_in(path: Path, decl_re: re.Pattern) -> list[str]:

@@ -7,9 +7,10 @@ Notes on the shared Lean/Sail dependency graph.
 The toolchain is `leanprover/lean4:v4.33.1` and **every dependency is an immutable git pin** — there are
 no path dependencies, so a clean clone builds. The authoritative values live in `lakefile.toml` and
 `lake-manifest.json`; `docs/release-audit.md` records the audited snapshot. Direct pins: mathlib
-`v4.33.1`; Clean upstream `main` `fba2a29f` (module-ified; the package sets `allowNonModules = true`
-so its `requiresModuleSystem` does not warn on our non-module importers, and `--wfail` would turn
-that warning into a failure) with its `CompPoly` `v4.33.1` dependency; PolyFun `997828ce` (the last
+`v4.33.1`; Clean upstream `main` `fba2a29f` (module-ified; the `SP1Clean`/test libraries set
+`allowNonModules = true` so its `requiresModuleSystem` does not warn on our non-module importers,
+and `--wfail` would turn that warning into a failure — the three `To*` libraries are module-mode
+themselves and set `requiresModuleSystem`) with its `CompPoly` `v4.33.1` dependency; PolyFun `997828ce` (the last
 `main` commit on v4.33.1 — PolyFun `main` moved to v4.34.0 on 2026-09-17); lean-sail at the
 **temporary** pin below.
 
