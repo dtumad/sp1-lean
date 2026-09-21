@@ -262,8 +262,10 @@ Mirror-rust layout under `SP1Clean/`:
   sole writer `scripts/update_sp1_dumps.sh` at the extraction pin) + the fail-closed generation-time
   gate in `scripts/witgenExport.lean --testdata` (every event row recomputed via
   `FlatOperation.witgen` + the symbolic row map and matched cell-for-cell, all 25 chips) + the Rust
-  reference-interpreter differential (`scripts/run_interp_diff.sh`). The gate re-runs in CI
-  (`check_witgen_export.sh --regen` in the test job).
+  reference-interpreter differential (`scripts/run_interp_diff.sh`). The gate re-runs in the
+  alignment workflow only (`check_witgen_export.sh --regen` in `test-full`; the exporter imports the
+  umbrella, which PR CI does not build) — **a PR that touches the pins, `ToClean/`, or the exporter
+  runs `scripts/check_witgen_export.sh --regen` locally before merging**, since PR CI cannot.
 - **`Soundness/`** — the whole-machine layer: `RowView.lean` carries the live normalized
   `StateAccess`/`ProgramAccess` vocabulary, while `TypedState.lean`, `TypedProgram.lean`, and
   `TypedMemory.lean` read the actual Clean interaction ledger (the obsolete parallel
