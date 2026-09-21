@@ -57,8 +57,9 @@ theorem queueTables_mem
 theorem extraTables_components
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels)) :
     (extraTables witness).map (·.component) = resources := by
-  simp only [extraTables, List.map_drop, HostLocalHandoff.resourceTables_components,
-    wordResources, List.cons_append, List.nil_append, List.drop_succ_cons, List.drop_zero]
+  simp only [extraTables, List.map_drop]
+  rw [HostLocalHandoff.resourceTables_components witness]
+  simp only [wordResources, List.cons_append, List.nil_append, List.drop_succ_cons, List.drop_zero]
 
 private theorem queue_fresh : stateChannel.toRaw ∉ (LocalCore.ensemble (p := p) image source).channels := by
   intro used
