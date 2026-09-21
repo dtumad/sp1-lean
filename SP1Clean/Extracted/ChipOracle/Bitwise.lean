@@ -23,16 +23,19 @@ open SP1Clean
 structure U16toU8Operation (F : Type) where
   low_bytes : (Vector F 4)
 deriving ProvableStruct
+provable_struct_eval_lemmas U16toU8Operation
 
 structure BitwiseOperation (F : Type) where
   result : (Vector F 8)
 deriving ProvableStruct
+provable_struct_eval_lemmas BitwiseOperation
 
 structure BitwiseU16Operation (F : Type) where
   b_low_bytes : (U16toU8Operation F)
   c_low_bytes : (U16toU8Operation F)
   bitwise_operation : (BitwiseOperation F)
 deriving ProvableStruct
+provable_struct_eval_lemmas BitwiseU16Operation
 
 structure BitwiseCols (F : Type) where
   state : (CPUState F)
@@ -42,6 +45,7 @@ structure BitwiseCols (F : Type) where
   is_or : F
   is_and : F
 deriving ProvableStruct
+provable_struct_eval_lemmas BitwiseCols
 
 namespace U16toU8OperationUnsafe
 

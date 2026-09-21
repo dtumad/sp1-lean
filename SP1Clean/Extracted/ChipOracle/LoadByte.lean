@@ -24,11 +24,13 @@ open SP1Clean
 structure AddrAddOperation (F : Type) where
   value : (Vector F 3)
 deriving ProvableStruct
+provable_struct_eval_lemmas AddrAddOperation
 
 structure AddressOperation (F : Type) where
   addr_operation : (AddrAddOperation F)
   top_two_limb_inv : F
 deriving ProvableStruct
+provable_struct_eval_lemmas AddressOperation
 
 structure LoadByteColumns (F : Type) where
   state : (CPUState F)
@@ -43,6 +45,7 @@ structure LoadByteColumns (F : Type) where
   is_lb : F
   is_lbu : F
 deriving ProvableStruct
+provable_struct_eval_lemmas LoadByteColumns
 
 namespace AddrAddOperation
 

@@ -19,11 +19,13 @@ structure RegisterAccessTimestamp (F : Type) where
   prev_low : F
   diff_low_limb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas RegisterAccessTimestamp
 
 structure RegisterAccessCols (F : Type) where
   prev_value : (Word F)
   access_timestamp : (RegisterAccessTimestamp F)
 deriving ProvableStruct
+provable_struct_eval_lemmas RegisterAccessCols
 
 structure RTypeReader (F : Type) where
   op_a : F
@@ -34,6 +36,7 @@ structure RTypeReader (F : Type) where
   op_c : F
   op_c_memory : (RegisterAccessCols F)
 deriving ProvableStruct
+provable_struct_eval_lemmas RTypeReader
 
 namespace RTypeReader
 

@@ -21,10 +21,12 @@ structure MemoryAccessTimestamp (F : Type) where
   diff_low_limb : F
   diff_high_limb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas MemoryAccessTimestamp
 
 structure MemoryAccessCols (F : Type) where
   prev_value : (Word F)
   access_timestamp : (MemoryAccessTimestamp F)
 deriving ProvableStruct
+provable_struct_eval_lemmas MemoryAccessCols
 
 end SP1Clean.Extracted

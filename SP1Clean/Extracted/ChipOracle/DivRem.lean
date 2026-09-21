@@ -23,10 +23,12 @@ open SP1Clean
 structure U16toU8Operation (F : Type) where
   low_bytes : (Vector F 4)
 deriving ProvableStruct
+provable_struct_eval_lemmas U16toU8Operation
 
 structure U16MSBOperation (F : Type) where
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16MSBOperation
 
 structure MulOperation (F : Type) where
   carry : (Vector F 16)
@@ -39,14 +41,17 @@ structure MulOperation (F : Type) where
   b_sign_extend : F
   c_sign_extend : F
 deriving ProvableStruct
+provable_struct_eval_lemmas MulOperation
 
 structure AddOperation (F : Type) where
   value : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas AddOperation
 
 structure U16CompareOperation (F : Type) where
   bit : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16CompareOperation
 
 structure LtOperationUnsigned (F : Type) where
   u16_compare_operation : (U16CompareOperation F)
@@ -54,11 +59,13 @@ structure LtOperationUnsigned (F : Type) where
   not_eq_inv : F
   comparison_limbs : (Vector F 2)
 deriving ProvableStruct
+provable_struct_eval_lemmas LtOperationUnsigned
 
 structure IsZeroOperation (F : Type) where
   inverse : F
   result : F
 deriving ProvableStruct
+provable_struct_eval_lemmas IsZeroOperation
 
 structure IsZeroWordOperation (F : Type) where
   is_zero_limb_0 : (IsZeroOperation F)
@@ -69,10 +76,12 @@ structure IsZeroWordOperation (F : Type) where
   is_zero_second_half : F
   result : F
 deriving ProvableStruct
+provable_struct_eval_lemmas IsZeroWordOperation
 
 structure IsEqualWordOperation (F : Type) where
   is_diff_zero : (IsZeroWordOperation F)
 deriving ProvableStruct
+provable_struct_eval_lemmas IsEqualWordOperation
 
 structure DivRemCols (F : Type) where
   state : (CPUState F)
@@ -125,6 +134,8 @@ instance : ProvableStruct DivRemCols where
   components := [⟨CPUState, inferInstance⟩, ⟨RTypeReader, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨Word, inferInstance⟩, ⟨fields 8, inferInstance⟩, ⟨MulOperation, inferInstance⟩, ⟨MulOperation, inferInstance⟩, ⟨AddOperation, inferInstance⟩, ⟨AddOperation, inferInstance⟩, ⟨LtOperationUnsigned, inferInstance⟩, ⟨fields 8, inferInstance⟩, ⟨IsZeroWordOperation, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨IsEqualWordOperation, inferInstance⟩, ⟨IsEqualWordOperation, inferInstance⟩, ⟨U16MSBOperation, inferInstance⟩, ⟨U16MSBOperation, inferInstance⟩, ⟨U16MSBOperation, inferInstance⟩, ⟨U16MSBOperation, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩, ⟨field, inferInstance⟩]
   toComponents := fun ⟨state, adapter, a, b, c, quotient, quotient_comp, remainder_comp, remainder, abs_remainder, abs_c, max_abs_c_or_1, c_times_quotient, c_times_quotient_lower, c_times_quotient_upper, c_neg_operation, rem_neg_operation, remainder_lt_operation, carry, is_c_0, is_div, is_divu, is_rem, is_remu, is_divw, is_remw, is_divuw, is_remuw, is_overflow, is_overflow_b, is_overflow_c, b_msb, rem_msb, c_msb, quot_msb, b_neg, b_neg_not_overflow, b_not_neg_not_overflow, is_real_not_word, rem_neg, c_neg, abs_c_alu_event, abs_rem_alu_event, is_real, remainder_check_multiplicity⟩ => .cons state (.cons adapter (.cons a (.cons b (.cons c (.cons quotient (.cons quotient_comp (.cons remainder_comp (.cons remainder (.cons abs_remainder (.cons abs_c (.cons max_abs_c_or_1 (.cons c_times_quotient (.cons c_times_quotient_lower (.cons c_times_quotient_upper (.cons c_neg_operation (.cons rem_neg_operation (.cons remainder_lt_operation (.cons carry (.cons is_c_0 (.cons is_div (.cons is_divu (.cons is_rem (.cons is_remu (.cons is_divw (.cons is_remw (.cons is_divuw (.cons is_remuw (.cons is_overflow (.cons is_overflow_b (.cons is_overflow_c (.cons b_msb (.cons rem_msb (.cons c_msb (.cons quot_msb (.cons b_neg (.cons b_neg_not_overflow (.cons b_not_neg_not_overflow (.cons is_real_not_word (.cons rem_neg (.cons c_neg (.cons abs_c_alu_event (.cons abs_rem_alu_event (.cons is_real (.cons remainder_check_multiplicity .nil))))))))))))))))))))))))))))))))))))))))))))
   fromComponents := fun (.cons state (.cons adapter (.cons a (.cons b (.cons c (.cons quotient (.cons quotient_comp (.cons remainder_comp (.cons remainder (.cons abs_remainder (.cons abs_c (.cons max_abs_c_or_1 (.cons c_times_quotient (.cons c_times_quotient_lower (.cons c_times_quotient_upper (.cons c_neg_operation (.cons rem_neg_operation (.cons remainder_lt_operation (.cons carry (.cons is_c_0 (.cons is_div (.cons is_divu (.cons is_rem (.cons is_remu (.cons is_divw (.cons is_remw (.cons is_divuw (.cons is_remuw (.cons is_overflow (.cons is_overflow_b (.cons is_overflow_c (.cons b_msb (.cons rem_msb (.cons c_msb (.cons quot_msb (.cons b_neg (.cons b_neg_not_overflow (.cons b_not_neg_not_overflow (.cons is_real_not_word (.cons rem_neg (.cons c_neg (.cons abs_c_alu_event (.cons abs_rem_alu_event (.cons is_real (.cons remainder_check_multiplicity .nil))))))))))))))))))))))))))))))))))))))))))))) => DivRemCols.mk state adapter a b c quotient quotient_comp remainder_comp remainder abs_remainder abs_c max_abs_c_or_1 c_times_quotient c_times_quotient_lower c_times_quotient_upper c_neg_operation rem_neg_operation remainder_lt_operation carry is_c_0 is_div is_divu is_rem is_remu is_divw is_remw is_divuw is_remuw is_overflow is_overflow_b is_overflow_c b_msb rem_msb c_msb quot_msb b_neg b_neg_not_overflow b_not_neg_not_overflow is_real_not_word rem_neg c_neg abs_c_alu_event abs_rem_alu_event is_real remainder_check_multiplicity
+
+provable_struct_eval_lemmas DivRemCols
 
 namespace U16toU8OperationSafe
 

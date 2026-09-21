@@ -23,6 +23,7 @@ open SP1Clean
 structure AddOperation (F : Type) where
   value : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas AddOperation
 
 structure AddCols (F : Type) where
   state : (CPUState F)
@@ -30,6 +31,7 @@ structure AddCols (F : Type) where
   add_operation : (AddOperation F)
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas AddCols
 
 namespace AddOperation
 

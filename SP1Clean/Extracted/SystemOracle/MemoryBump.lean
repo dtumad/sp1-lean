@@ -16,6 +16,7 @@ open SP1Clean
 structure MemoryBumpCols (F : Type) where
   values : (Vector F 15)
 deriving ProvableStruct
+provable_struct_eval_lemmas MemoryBumpCols
 
 namespace MemoryBumpCols
 

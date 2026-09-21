@@ -16,6 +16,7 @@ open SP1Clean
 structure MemoryLocalCols (F : Type) where
   values : (Vector F 20)
 deriving ProvableStruct
+provable_struct_eval_lemmas MemoryLocalCols
 
 namespace MemoryLocalCols
 

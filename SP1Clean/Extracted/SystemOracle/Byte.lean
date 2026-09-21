@@ -16,6 +16,7 @@ open SP1Clean
 structure ByteCols (F : Type) where
   values : (Vector F 6)
 deriving ProvableStruct
+provable_struct_eval_lemmas ByteCols
 
 namespace ByteCols
 

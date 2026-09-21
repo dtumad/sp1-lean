@@ -16,6 +16,7 @@ open SP1Clean
 structure SyscallCoreCols (F : Type) where
   values : (Vector F 10)
 deriving ProvableStruct
+provable_struct_eval_lemmas SyscallCoreCols
 
 namespace SyscallCoreCols
 

@@ -22,6 +22,7 @@ structure LtOperationUnsigned (F : Type) where
   not_eq_inv : F
   comparison_limbs : (Vector F 2)
 deriving ProvableStruct
+provable_struct_eval_lemmas LtOperationUnsigned
 
 namespace LtOperationUnsigned
 

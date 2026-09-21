@@ -23,6 +23,7 @@ open SP1Clean
 structure AddOperation (F : Type) where
   value : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas AddOperation
 
 structure UTypeColumns (F : Type) where
   state : (CPUState F)
@@ -32,6 +33,7 @@ structure UTypeColumns (F : Type) where
   is_auipc : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas UTypeColumns
 
 namespace AddOperation
 
