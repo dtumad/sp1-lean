@@ -222,8 +222,8 @@ private theorem producedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
   · rw [List.filter_cons_of_pos (by
         simp only [TypedInteraction.pushedIfValue_mult, hpush, decide_eq_true_eq]
         rw [show gate.val = 1 from by rw [h1]; exact ZMod.val_one p]
-        norm_num), List.filter_nil, List.map_cons, List.map_nil, if_pos h1]
-    rfl
+        norm_num), List.filter_nil, List.map_cons, List.map_nil, if_pos h1,
+      TypedInteraction.pushedIfValue_message]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- The syscall table's Exit pushes consume nothing. -/
