@@ -156,8 +156,14 @@ private theorem touch_of_time (input : Inputs (ZMod p)) (ram : RamKey input.push
     have lower := ram.1
     simp [Inputs.pushed, MemoryBoundary.address, Word.toNat, zero1, zero2] at lower
     omega
+  have hloc : MemoryMsg.locOf input.pushed = .ram (BitVec.ofNat 61
+      ((input.addr0.val + input.addr1.val * 2 ^ 16 + input.addr2.val * 2 ^ 32) / 8)) := by
+    unfold MemoryMsg.locOf
+    simp only [Inputs.pushed]
+    exact if_neg notRegister
   refine ⟨rfl, Nat.le_refl _, Nat.le_add_right _ _, Or.inr ?_⟩
-  simpa only [MemoryMsg.locOf, Inputs.pushed, if_neg notRegister, writeOffset] using time
+  rw [hloc, writeOffset_ram]
+  exact time
 
 /-- The actual host RAM circuit proves the touch used by mixed grounding from constraints and
 Byte guarantees alone. This theorem neither assumes nor concludes prior Memory-value truth. -/

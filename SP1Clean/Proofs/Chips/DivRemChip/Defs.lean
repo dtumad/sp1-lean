@@ -1156,4 +1156,11 @@ set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma derivedOutput_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((derivedElaborated (p := p)).output input offset).state = input.state := rfl
 
+/-- The chip's output is the explicit row layout. Whole-machine proofs rewrite this once (pre-order,
+`simp [↓ output_eq_populatedRowAt, …]`) and then read fields through the `populatedRowAt_*_eq`
+projections, instead of reducing the populate program under `ProvableStruct.eval`. -/
+theorem output_eq_populatedRowAt (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    (elaborated (p := p)).output input offset = populatedRowAt input offset := by
+  rw [← elaborated.output_eq, main_output_eq_populateRow, populateRow_output_eq]
+
 end SP1Clean.DivRemChip
