@@ -393,7 +393,9 @@ local macro "liftMemoryGating " circuit:term ", " rowView:term ", " selector:ter
   `(tactic| (
     apply circuitMemorySelectorGated_of_main $circuit:term $rowView:term $selector:term
     · intro env input offset
-      simp only [$rowView:term, circuit_norm]
+      -- The circuit is unfolded so its output literal decomposes under `eval` before any
+      -- nested-field push-down could meet Clean's struct lift on the opaque output.
+      simp only [$rowView:term, $circuit:term, circuit_norm]
     · exact $gated:term))
 
 /-- As `liftMemoryGating`, for chips whose `RowView` selector is a named `isReal` abbreviation. -/
@@ -402,7 +404,7 @@ local macro "liftMemoryGatingWith " circuit:term ", " rowView:term ", " isReal:t
   `(tactic| (
     apply circuitMemorySelectorGated_of_main $circuit:term $rowView:term $selector:term
     · intro env input offset
-      simp only [$rowView:term, $isReal:term, circuit_norm]
+      simp only [$rowView:term, $isReal:term, $circuit:term, circuit_norm]
     · exact $gated:term))
 
 /-! ## Initial registry anchor -/
