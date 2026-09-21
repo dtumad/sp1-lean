@@ -604,6 +604,7 @@ private theorem subwOperationAssertions
       Expression.eval env (toElements (M := field) x)[0] = Expression.eval env x := rfl
   simp_rw [heval]
   simp only [eval_sub, Expression.eval]
+  simp only [circuit_norm] at ha0 ha1 hb0 hb1 hv0 hv1 hmsb hr hreal
   rw [ha0, ha1, hb0, hb1, hv0, hv1, hmsb, hr, hreal]
   simp
 

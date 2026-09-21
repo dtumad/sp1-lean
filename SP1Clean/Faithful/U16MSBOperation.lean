@@ -72,15 +72,7 @@ theorem u16msb_assertions_exact
       Expression.eval env (toElements (M := field) value)[0] =
         Expression.eval env value := rfl
   simp_rw [heval]
-  have hinput : Eval.eval env input =
-      ({ a := Eval.eval env input.a, cols := Eval.eval env input.cols,
-         is_real := Eval.eval env input.is_real } :
-        SP1Clean.U16MSBOperation.Inputs (ZMod p)) := by
-    rw [ProvableStruct.eval_eq_eval]
-    rfl
-  rw [← ProvableStruct.eval_eq_eval, hinput, eval_u16MSBColumns]
-  simp only [eval_sub, Expression.eval, sub_zero,
-    ProvableType.eval_field]
+  simp only [circuit_norm, eval_sub, Expression.eval, sub_zero]
 
 open SP1Clean.Channels (byteChannel)
 open InteractionRecovery

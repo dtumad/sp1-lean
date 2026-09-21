@@ -736,7 +736,6 @@ private theorem loadHalfMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [loadHalfMemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, loadHalfEvalMemoryInput]
   simp only [ProvableType.eval_field, eval_sub, Expression.eval]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -754,14 +753,7 @@ private theorem loadHalfNativeU16MSBAssertionList
       Expression.eval env (toElements (M := field) value)[0] =
         Expression.eval env value := rfl
   simp_rw [heval]
-  simp only [eval_sub, Expression.eval, sub_zero]
-  rw [← ProvableStruct.eval_eq_eval, loadHalfEvalU16MSBInput,
-    loadHalfEvalU16MSB]
-  have hscalar :
-      Eval.eval env input.cols.msb =
-        Expression.eval env input.cols.msb :=
-    ProvableType.eval_field env input.cols.msb
-  rw [hscalar]
+  simp only [circuit_norm, eval_sub, Expression.eval, sub_zero]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem loadHalfU16MSBAssertions
@@ -1565,10 +1557,8 @@ private theorem loadHalfProgramInteractionsFaithful
     signedVal_neg hp2, Extracted.Interaction.toAccess,
     Extracted.Dir.sign, Opcode.ofNat]
   rw [show
-    -(ProvableStruct.eval env input).is_lhu +
-        -(ProvableStruct.eval env input).is_lh =
-      -((ProvableStruct.eval env input).is_lh +
-        (ProvableStruct.eval env input).is_lhu) by
+    -Expression.eval env input.is_lhu + -Expression.eval env input.is_lh =
+      -(Expression.eval env input.is_lh + Expression.eval env input.is_lhu) by
     ring_nf]
   rw [signedVal_neg hp2]
   simp only [neg_neg]
@@ -1665,10 +1655,8 @@ private theorem loadHalfMemoryInteractionsFaithful
     signedVal_neg hp2, Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   have hGateNeg :
-      -(ProvableStruct.eval env input).is_lhu +
-          -(ProvableStruct.eval env input).is_lh =
-        -((ProvableStruct.eval env input).is_lh +
-          (ProvableStruct.eval env input).is_lhu) := by
+      -Expression.eval env input.is_lhu + -Expression.eval env input.is_lh =
+        -(Expression.eval env input.is_lh + Expression.eval env input.is_lhu) := by
     ring_nf
   simp only [hGateNeg, signedVal_neg hp2, neg_neg]
   exact loadHalfPermMemoryBlocks [_, _] _ _ _ _

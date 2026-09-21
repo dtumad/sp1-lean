@@ -382,12 +382,14 @@ theorem populatedRowAt_remNegValue_eq (input : Var Inputs (ZMod p)) (offset : �
 /-- Folded projection of the complete divisor-negation operation. -/
 theorem populatedRowAt_cNegOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_neg_operation =
-      varFromOffset (F := ZMod p) Extracted.AddOperation (offset + 186) := rfl
+      varFromOffset (F := ZMod p) Extracted.AddOperation (offset + 186) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 /-- Folded projection of the complete remainder-negation operation. -/
 theorem populatedRowAt_remNegOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_neg_operation =
-      varFromOffset (F := ZMod p) Extracted.AddOperation (offset + 190) := rfl
+      varFromOffset (F := ZMod p) Extracted.AddOperation (offset + 190) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 /-- Folded projections of the reordered unsigned-less-than witness. -/
 theorem populatedRowAt_ltComparisonLimbs_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -503,19 +505,23 @@ theorem populatedRowAt_quotMsb_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
 /-- Folded projections of the four one-cell sign-bit operations. -/
 theorem populatedRowAt_bMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).b_msb =
-      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 213) := rfl
+      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 213) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_cMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_msb =
-      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 214) := rfl
+      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 214) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_remMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_msb =
-      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 215) := rfl
+      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 215) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_quotMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).quot_msb =
-      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 216) := rfl
+      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 216) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_ltBit_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder_lt_operation.u16_compare_operation.bit =

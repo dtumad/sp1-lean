@@ -496,6 +496,7 @@ private theorem sub_operation_assertions_local
         (nativeAssertZeros env ((SubOperation.main input).operations offset)) := by
   simp [nativeAssertZeros, SubOperation.main, Extracted.SubOracle.SubOperation.asserts,
     circuit_norm]
+  simp only [circuit_norm] at ha hb hv hr
   rw [ha, hb, hv, hr]
 
 private theorem forall_nil_iff {alpha : Type} (pred : alpha → Prop) :

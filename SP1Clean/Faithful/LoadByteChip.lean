@@ -689,7 +689,6 @@ private theorem loadByteMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [loadByteMemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, loadByteEvalMemoryInput]
   simp only [ProvableType.eval_field, eval_sub, Expression.eval]
 
 private def loadByteChipRustColumns
@@ -1438,10 +1437,8 @@ private theorem loadByteProgramInteractionsFaithful
     signedVal_neg hp2, Extracted.Interaction.toAccess,
     Extracted.Dir.sign, Opcode.ofNat]
   rw [show
-    -(ProvableStruct.eval env input).is_lbu +
-        -(ProvableStruct.eval env input).is_lb =
-      -((ProvableStruct.eval env input).is_lb +
-        (ProvableStruct.eval env input).is_lbu) by
+    -Expression.eval env input.is_lbu + -Expression.eval env input.is_lb =
+      -(Expression.eval env input.is_lb + Expression.eval env input.is_lbu) by
     ring_nf]
   rw [signedVal_neg hp2]
   simp only [neg_neg]
@@ -1536,10 +1533,8 @@ private theorem loadByteMemoryInteractionsFaithful
     signedVal_neg hp2, Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   have hGateNeg :
-      -(ProvableStruct.eval env input).is_lbu +
-          -(ProvableStruct.eval env input).is_lb =
-        -((ProvableStruct.eval env input).is_lb +
-          (ProvableStruct.eval env input).is_lbu) := by
+      -Expression.eval env input.is_lbu + -Expression.eval env input.is_lb =
+        -(Expression.eval env input.is_lb + Expression.eval env input.is_lbu) := by
     ring_nf
   simp only [hGateNeg, signedVal_neg hp2, neg_neg]
   exact loadBytePermMemoryBlocks [_, _] _ _ _ _

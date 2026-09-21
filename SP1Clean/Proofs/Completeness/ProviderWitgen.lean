@@ -90,7 +90,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ (by simp [circuit_norm]),
     FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
       (Gadgets.ToBits.rangeCheck_computableWitnesses _ _) (fun ha h => ?_)⟩
-  · rw [h]
+  · rw [Inputs.eval_congr_b h]
   · have hb : Expression.eval env.toEnvironment input.b
         = Expression.eval env'.toEnvironment input.b := by
       simpa [circuit_norm] using congrArg Inputs.b h
@@ -165,7 +165,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
       (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
       (fun _ h => by simpa [circuit_norm] using congrArg Inputs.c h),
     fun _ h => ?_⟩
-  rw [h]
+  rw [Inputs.eval_congr_b h, Inputs.eval_congr_c h]
 
 end XorByte
 

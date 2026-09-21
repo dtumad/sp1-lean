@@ -284,6 +284,7 @@ private theorem addAssertions
           ((AddOperation.main input).operations offset)) := by
   simp [nativeAssertZeros, AddOperation.main,
     Extracted.JalrOracle.AddOperation.asserts, circuit_norm]
+  simp only [circuit_norm] at ha hb hv hr
   rw [ha, hb, hv, hr]
 
 omit [Fact (2 ^ 17 < p)] in

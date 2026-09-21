@@ -673,7 +673,6 @@ private theorem storeWordMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [storeWordMemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, storeWordEvalMemoryInput]
   simp only [ProvableType.eval_field, eval_sub, Expression.eval]
 
 private def storeWordChipRustColumns

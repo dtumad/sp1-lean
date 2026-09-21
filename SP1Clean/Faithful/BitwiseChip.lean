@@ -155,7 +155,9 @@ private theorem toElements_bitwiseU16Columns {F : Type}
     toElements x = Vector.cast (by rfl)
       (x.b_low_bytes.low_bytes ++ (x.c_low_bytes.low_bytes ++
         (x.bitwise_operation.result ++ (#v[] : Vector F 0)))) := by
-  simp only [ProvableType.toElements, ProvableStruct.toComponents]
+  obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := x
+  simp only [ProvableType.toElements, ProvableStruct.structToElements_eq,
+    ProvableStruct.toComponents, components, ProvableStruct.componentsToElements]
   rfl
 
 private theorem bitwiseChipOperationOfLocals_roundtrip {F : Type}
@@ -362,14 +364,6 @@ private theorem nativeBitwiseU16AssertionList
         Expression.eval env value := rfl
   simp_rw [heval]
   simp only [eval_sub, Expression.eval, sub_zero]
-  have hrealEval :
-      (ProvableStruct.eval env input).is_real = Expression.eval env input.is_real := by
-    have h := congrArg (fun value => value.is_real)
-      (ProvableStruct.eval_eq_eval env input)
-    rw [eval_bitwiseU16Inputs] at h
-    symm
-    simpa only [ProvableType.eval_field] using h
-  rw [hrealEval]
 
 private theorem bitwiseU16Assertions
     (env : Environment (ZMod p)) (input : Var BitwiseU16Operation.Inputs (ZMod p))

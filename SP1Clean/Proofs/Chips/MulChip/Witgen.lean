@@ -35,10 +35,10 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     -- the three signed-variant flags from the earlier cells of the same row.
     refine MulOperation.populateFE_congr_flat env env' _ _ _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_ ?_ ?_
-    · have hv := Inputs.eval_congr_op_b_val h_input
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
-    · have hv := Inputs.eval_congr_op_c_val h_input
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
+      simpa [circuit_norm, Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
+      simpa [circuit_norm, Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · simp only [circuit_norm]
       exact h_agree.get_eq (by omega)
     · simp only [circuit_norm]

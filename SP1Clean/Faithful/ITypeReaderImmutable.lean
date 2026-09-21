@@ -105,7 +105,7 @@ theorem itypereaderimmutable_memory_interactions_faithful_syntactic
           isReal isTrusted).map Extracted.Interaction.toAccess).filter
             (fun access => access.1 = InteractionKind.Memory)).map
         LookupAccessList.negMult := by
-  haveI : NeZero p :=
+  have : NeZero p :=
     ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   have hp2 : 2 < p := by
     have := Fact.out (p := 2 ^ 17 < p)
@@ -158,7 +158,7 @@ theorem itypereaderimmutable_program_interactions_faithful_syntactic
           isReal isTrusted).map Extracted.Interaction.toAccess).filter
             (fun access => access.1 = InteractionKind.Program)).map
         LookupAccessList.negMult := by
-  haveI : NeZero p :=
+  have : NeZero p :=
     ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   have hp2 : 2 < p := by
     have := Fact.out (p := 2 ^ 17 < p)
@@ -210,7 +210,7 @@ theorem itypereaderimmutable_byte_interactions_faithful_syntactic
       ((Extracted.ITypeReaderImmutable.interactions clkHigh clkLow pc opcode cols
           isReal isTrusted).map Extracted.Interaction.toAccess).filter
         (fun access => access.1 = InteractionKind.Byte) := by
-  haveI : NeZero p :=
+  have : NeZero p :=
     ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   have h6 : (6 : ZMod p).val = 6 := val_6_zmod_p
   have h3 : (3 : ZMod p).val = 3 := val_3_zmod_p

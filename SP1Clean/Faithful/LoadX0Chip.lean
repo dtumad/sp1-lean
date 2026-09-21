@@ -679,7 +679,6 @@ private theorem loadX0MemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [loadX0MemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, loadX0EvalMemoryInput]
   simp only [ProvableType.eval_field, eval_sub, Expression.eval]
 
 private def loadX0ChipRustColumns
@@ -1454,20 +1453,20 @@ private theorem loadX0ProgramInteractionsFaithful
     Extracted.Interaction.toAccess,
     Extracted.Dir.sign, Opcode.ofNat]
   rw [show
-    -(ProvableStruct.eval env input).is_ld +
-        (-(ProvableStruct.eval env input).is_lwu +
-          (-(ProvableStruct.eval env input).is_lw +
-            (-(ProvableStruct.eval env input).is_lhu +
-              (-(ProvableStruct.eval env input).is_lh +
-                (-(ProvableStruct.eval env input).is_lbu +
-                  -(ProvableStruct.eval env input).is_lb))))) =
-        -((ProvableStruct.eval env input).is_ld +
-          (ProvableStruct.eval env input).is_lwu +
-          (ProvableStruct.eval env input).is_lw +
-          (ProvableStruct.eval env input).is_lhu +
-          (ProvableStruct.eval env input).is_lh +
-          (ProvableStruct.eval env input).is_lbu +
-          (ProvableStruct.eval env input).is_lb) by
+    -Expression.eval env input.is_ld +
+        (-Expression.eval env input.is_lwu +
+          (-Expression.eval env input.is_lw +
+            (-Expression.eval env input.is_lhu +
+              (-Expression.eval env input.is_lh +
+                (-Expression.eval env input.is_lbu +
+                  -Expression.eval env input.is_lb))))) =
+        -(Expression.eval env input.is_ld +
+          Expression.eval env input.is_lwu +
+          Expression.eval env input.is_lw +
+          Expression.eval env input.is_lhu +
+          Expression.eval env input.is_lh +
+          Expression.eval env input.is_lbu +
+          Expression.eval env input.is_lb) by
     ring_nf]
   rw [signedVal_neg hp2, neg_neg]
   congr 1
@@ -1547,20 +1546,20 @@ private theorem loadX0MemoryInteractionsFaithful
     Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   have hGateNeg :
-      -(ProvableStruct.eval env input).is_ld +
-          (-(ProvableStruct.eval env input).is_lwu +
-            (-(ProvableStruct.eval env input).is_lw +
-              (-(ProvableStruct.eval env input).is_lhu +
-                (-(ProvableStruct.eval env input).is_lh +
-                  (-(ProvableStruct.eval env input).is_lbu +
-                    -(ProvableStruct.eval env input).is_lb))))) =
-        -((ProvableStruct.eval env input).is_lb +
-          (ProvableStruct.eval env input).is_lbu +
-          (ProvableStruct.eval env input).is_lh +
-          (ProvableStruct.eval env input).is_lhu +
-          (ProvableStruct.eval env input).is_lw +
-          (ProvableStruct.eval env input).is_lwu +
-          (ProvableStruct.eval env input).is_ld) := by
+      -Expression.eval env input.is_ld +
+          (-Expression.eval env input.is_lwu +
+            (-Expression.eval env input.is_lw +
+              (-Expression.eval env input.is_lhu +
+                (-Expression.eval env input.is_lh +
+                  (-Expression.eval env input.is_lbu +
+                    -Expression.eval env input.is_lb))))) =
+        -(Expression.eval env input.is_lb +
+          Expression.eval env input.is_lbu +
+          Expression.eval env input.is_lh +
+          Expression.eval env input.is_lhu +
+          Expression.eval env input.is_lw +
+          Expression.eval env input.is_lwu +
+          Expression.eval env input.is_ld) := by
     ring_nf
   simp only [hGateNeg, signedVal_neg hp2, neg_neg]
   exact loadX0PermMemoryBlocks [_, _] [_, _, _, _]

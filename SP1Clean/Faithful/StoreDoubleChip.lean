@@ -632,7 +632,6 @@ private theorem storeDoubleMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [storeDoubleMemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, storeDoubleEvalMemoryInput]
   simp only [ProvableType.eval_field, eval_sub, Expression.eval]
 
 private def storeDoubleChipRustColumns
