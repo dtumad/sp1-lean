@@ -4980,7 +4980,7 @@ private theorem bump_gate_binary
       ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
         .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
     simp only [circuit_norm, Operations.shallowConstraints, List.mem_cons, true_or])
-  simp only [circuit_norm] at gate
+  simp only [circuit_norm] at gate ⊢
   exact bool_of_mul_pred gate
 
 omit [Fact (2 ^ 17 < p)] in
