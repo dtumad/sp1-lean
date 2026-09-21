@@ -1,9 +1,13 @@
+import ToClean.Circuit.StructEvalLemmas
 import ToClean.Circuit.SubcircuitProjection
 import ToClean.Air.EnsembleProjection
 import ToClean.Circuit.WitnessCombinator
 import ToClean.Circuit.WitgenBridge
 import ToClean.Circuit.WitgenEval
 import ToClean.Circuit.WitnessGenerationData
+import ToClean.Circuit.AgreesBelowWithData
+import ToClean.Circuit.IteDecide
+import ToClean.Circuit.WitgenShare
 import ToClean.Circuit.InteractionRecovery
 import ToClean.Circuit.EmittedInteraction
 import ToClean.Gadgets.ComputableWitnesses
