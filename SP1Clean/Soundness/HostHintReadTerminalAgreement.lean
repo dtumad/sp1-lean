@@ -21,8 +21,16 @@ private theorem wrapper_receipt (input : HostCallChip.Inputs (ZMod p)) (flag : Z
     hostExitAfter none (ExecutionRow.syscall input.instruction).event =
       (HostTerminalLedger.receipt? (input.message flag)).map (fun word => (Word.toBitVec64 word).setWidth 32) := by
   simp only [hostExitAfter, ExecutionRow.event, rawCode_syscallEventOfRow,
-    arg1_syscallEventOfRow, HostTerminalLedger.receipt?, HostCallChip.Inputs.message, SyscallKind.code, Word.toBitVec64, Word.toNat]
-  split_ifs <;> rfl
+    arg1_syscallEventOfRow, HostTerminalLedger.receipt?, HostCallChip.Inputs.message, SyscallKind.code]
+  -- Both `if`s decide the same halt test, spelled folded on the right and unfolded on the left.
+  by_cases h : Word.toBitVec64 input.instruction.op_a_memory.prev_value = 0
+  · have h' := h
+    simp only [Word.toBitVec64, Word.toNat] at h'
+    simp only [h, h', if_true, Option.map_some]
+    rfl
+  · have h' := h
+    simp only [Word.toBitVec64, Word.toNat] at h'
+    simp only [h, h', if_false, Option.map_none]
 
 private theorem inventory_receipts (instructions : List (DecodedInstructionRow p))
     (wrappers : List (Environment (ZMod p))) :
