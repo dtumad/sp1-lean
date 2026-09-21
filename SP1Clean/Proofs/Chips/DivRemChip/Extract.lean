@@ -73,7 +73,8 @@ lemma iseqword_result_proj {F : Type} (W : Vector F 11) :
     rw [show (fromElements W : Extracted.IsEqualWordOperation F)
           = fromComponents (ProvableStruct.componentsFromElements
               (components Extracted.IsEqualWordOperation)
-              ((W).cast ProvableStruct.combinedSize_eq)) from rfl,
+              ((W).cast ProvableStruct.combinedSize_eq)) from
+          ProvableStruct.structFromElements_eq (α := Extracted.IsEqualWordOperation) W,
         ProvableStruct.toComponents_fromComponents]
     -- Lean 4.31 no longer unfolds this implicit-reducible instance at `simp`'s default transparency.
     -- Reduce it once, coherently with the dependent vector casts, before peeling the one-field list.
@@ -268,15 +269,18 @@ lemma overflow_of_iseqword {b c : Word (ZMod p)}
     List.getElem_cons_succ] at hrb hrc
   rw [hrb, hrc] at hprod
   have h32768 : (32768 : ZMod p).val = 32768 := val_32768_zmod_p
-  split_ifs at hprod with hbc hcc
-  · obtain ⟨hb0, hb1, hb2, hb3⟩ := hbc
-    obtain ⟨hc0, hc1, hc2, hc3⟩ := hcc
-    refine ⟨intMin_of_toNat hbU ?_, neg_one_of_toNat hcU ?_⟩
-    · rw [Word.toNat_def, hb0, hb1, hb2, hb3]
-      simp only [ZMod.val_zero, h32768]; norm_num
-    · rw [Word.toNat_def, hc0, hc1, hc2, hc3]
-      simp only [val_65535_zmod_p]; norm_num
-  all_goals simp at hprod
+  -- Explicit case split (`split_ifs` collapses the second `if` on `ZMod p` and drops its name).
+  by_cases hbc : b[0] = 0 ∧ b[1] = 0 ∧ b[2] = 0 ∧ b[3] = 32768
+  · by_cases hcc : c[0] = 65535 ∧ c[1] = 65535 ∧ c[2] = 65535 ∧ c[3] = 65535
+    · obtain ⟨hb0, hb1, hb2, hb3⟩ := hbc
+      obtain ⟨hc0, hc1, hc2, hc3⟩ := hcc
+      refine ⟨intMin_of_toNat hbU ?_, neg_one_of_toNat hcU ?_⟩
+      · rw [Word.toNat_def, hb0, hb1, hb2, hb3]
+        simp only [ZMod.val_zero, h32768]; norm_num
+      · rw [Word.toNat_def, hc0, hc1, hc2, hc3]
+        simp only [val_65535_zmod_p]; norm_num
+    · simp [hcc] at hprod
+  · simp [hbc] at hprod
 
 /-- **Half-word overflow.** The `*W` overflow branch uses the *low-half* `IsEqualWord` pair (the operand
 columns' bottom two limbs, top two zeroed, against `i32::MIN`/`-1` low halves). Both products being `1`
@@ -296,17 +300,20 @@ lemma overflow_of_iseqword_word {b c : Word (ZMod p)}
     List.getElem_cons_succ] at hrb hrc
   rw [hrb, hrc] at hprod
   have h32768 : (32768 : ZMod p).val = 32768 := val_32768_zmod_p
-  split_ifs at hprod with hbc hcc
-  · obtain ⟨hb0, hb1, _, _⟩ := hbc
-    obtain ⟨hc0, hc1, _, _⟩ := hcc
-    refine ⟨?_, ?_⟩
-    · apply BitVec.eq_of_toNat_eq
-      rw [extractLsb_lo_toNat hbU, hb0, hb1, BitVec.toNat_intMin]
-      simp only [ZMod.val_zero, h32768]; norm_num
-    · apply BitVec.eq_of_toNat_eq
-      rw [extractLsb_lo_toNat hcU, hc0, hc1, BitVec.neg_one_eq_allOnes, BitVec.toNat_allOnes]
-      simp only [val_65535_zmod_p]; norm_num
-  all_goals simp at hprod
+  simp only [and_true] at hprod
+  by_cases hbc : b[0] = 0 ∧ b[1] = 32768
+  · by_cases hcc : c[0] = 65535 ∧ c[1] = 65535
+    · obtain ⟨hb0, hb1⟩ := hbc
+      obtain ⟨hc0, hc1⟩ := hcc
+      refine ⟨?_, ?_⟩
+      · apply BitVec.eq_of_toNat_eq
+        rw [extractLsb_lo_toNat hbU, hb0, hb1, BitVec.toNat_intMin]
+        simp only [ZMod.val_zero, h32768]; norm_num
+      · apply BitVec.eq_of_toNat_eq
+        rw [extractLsb_lo_toNat hcU, hc0, hc1, BitVec.neg_one_eq_allOnes, BitVec.toNat_allOnes]
+        simp only [val_65535_zmod_p]; norm_num
+    · simp [hcc] at hprod
+  · simp [hbc] at hprod
 
 /-- A 4-flag group sum is binary when the flags are binary and their `.val`s sum to `≤ 1` (the one-hot
 budget). Used to lift the per-flag one-hot to the variant selectors `E5`/`E6`/`E7`. -/

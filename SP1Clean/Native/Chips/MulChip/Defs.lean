@@ -169,13 +169,32 @@ set_option linter.unusedSectionVars false in
     ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
       = [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+-- `↓` (pre-order): the instance forwards `derivedElaborated`'s fields, and since Lean 4.33 `simp`
+-- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
+-- post-order lemma can see it; a pre-order lemma fires on the public form first.
+@[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 54 := rfl
 
 /-- Explicit MUL row layout: five selector witnesses, the 45-cell multiplication block, then the
 four-limb result word.  This is a symbolic normalization boundary for grounding and faithfulness. -/
-@[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+@[circuit_norm ↓] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
+      (⟨input.state, input.adapter,
+        Vector.mapRange 4 fun i => var { index := offset + 50 + i },
+        varFromOffset Extracted.MulOperation (offset + 5),
+        var { index := offset }, var { index := offset + 1 },
+        var { index := offset + 2 }, var { index := offset + 3 },
+        var { index := offset + 4 }⟩ : Var Columns (ZMod p)) := rfl
+
+-- The same facts on the forwarded private derivation, for a goal in which `simp` has already
+-- reduced the public instance's projection.
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
+    (derivedElaborated (p := p)).localLength x = 54 := rfl
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    (derivedElaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
         Vector.mapRange 4 fun i => var { index := offset + 50 + i },
         varFromOffset Extracted.MulOperation (offset + 5),

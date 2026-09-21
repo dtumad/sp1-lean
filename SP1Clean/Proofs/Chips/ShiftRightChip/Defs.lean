@@ -1397,12 +1397,37 @@ set_option linter.unusedSectionVars false in
     ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
       = [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+-- `↓` (pre-order): the instance forwards `derivedElaborated`'s fields, and since Lean 4.33 `simp`
+-- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
+-- post-order lemma can see it; a pre-order lemma fires on the public form first.
+@[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 37 := rfl
 
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
+    (derivedElaborated (p := p)).localLength x = 37 := rfl
+
 /-- The completed ShiftRight row, exposed without unfolding the folded witness circuit. -/
-@[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+@[circuit_norm ↓] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
+      (⟨input.state, input.adapter,
+        varFromOffset (Vector · 4) offset,
+        ⟨var { index := offset + 4 }⟩, ⟨var { index := offset + 5 }⟩,
+        varFromOffset (Vector · 6) (offset + 6),
+        var { index := offset + 12 },
+        var { index := offset + 13 }, var { index := offset + 14 },
+        var { index := offset + 15 },
+        varFromOffset (Vector · 4) (offset + 16),
+        varFromOffset (Vector · 4) (offset + 20),
+        varFromOffset (Vector · 4) (offset + 24),
+        varFromOffset (Vector · 4) (offset + 28),
+        var { index := offset + 32 }, var { index := offset + 33 },
+        var { index := offset + 34 }, var { index := offset + 35 },
+        var { index := offset + 36 }⟩ : Var Columns (ZMod p)) := rfl
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    (derivedElaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
         varFromOffset (Vector · 4) offset,
         ⟨var { index := offset + 4 }⟩, ⟨var { index := offset + 5 }⟩,

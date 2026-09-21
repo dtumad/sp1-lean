@@ -1130,13 +1130,24 @@ set_option linter.unusedSectionVars false in
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 
 set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+-- `↓` (pre-order): the instance forwards `derivedElaborated`'s fields, and since Lean 4.33 `simp`
+-- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
+-- post-order lemma can see it; a pre-order lemma fires on the public form first.
+@[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 217 := rfl
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
+    (derivedElaborated (p := p)).localLength x = 217 := rfl
 
 /-- The shared CPU-state block in DivRem's output is an alias of the input block.  Exposing this
 small projection prevents whole-machine proofs from normalizing the complete 217-cell output just
 to identify the State-bus payload. -/
-@[circuit_norm] lemma output_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+@[circuit_norm ↓] lemma output_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((elaborated (p := p)).output input offset).state = input.state := rfl
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedOutput_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((derivedElaborated (p := p)).output input offset).state = input.state := rfl
 
 end SP1Clean.DivRemChip
