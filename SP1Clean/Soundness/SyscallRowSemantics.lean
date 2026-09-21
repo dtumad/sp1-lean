@@ -1,5 +1,5 @@
 import SP1Clean.Faithful.SyscallInstrsChip
-import SP1Clean.Faithful.CoreAIR
+import SP1Clean.Faithful.SyscallRowDecode
 import SP1Clean.Model.Machine.Shard
 
 /-! # What a syscall row means
@@ -8,11 +8,11 @@ The bridge from one `SyscallInstrsChip` row to one `Machine.CoreSyscallEvent`, a
 constraints to that event's semantic laws. This is the layer at which "the chip is faithful to SP1's
 AIR" becomes "the shard executed a syscall".
 
-**The decoder is reused, not rewritten.** `Faithful.decodeSyscallRow` already maps an *extracted*
-row to a `CoreSyscallEvent`, and `syscallInstrsReconfigure` maps a native row to an extracted one
-index-for-index with both round-trips proved. Composing them is what makes this bridge land on the
-same events `CoreAIRRefinementObligations` quantifies over; a fresh decoder would silently fail to
-connect to the commit obligations.
+**The decoder is reused, not rewritten.** `decodeSyscallRow` (`Faithful/SyscallRowDecode.lean`)
+already maps an *extracted* row to a `CoreSyscallEvent`, and `syscallInstrsReconfigure` maps a
+native row to an extracted one index-for-index with both round-trips proved. Composing them is what
+makes this bridge land on the same events `CoreAIRRefinementObligations` quantifies over; a fresh
+decoder would silently fail to connect to the commit obligations.
 
 **What the row gives, and what it does not.** Three of the four `RowLaw` conjuncts are the arm
 `Spec`s almost verbatim — `WriteArm ↔ ResultLaw`, `PcArm ↔ PcLaw`, `DispatchArm ↔

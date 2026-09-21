@@ -156,6 +156,7 @@ import SP1Clean.Faithful.SubChip
 import SP1Clean.Faithful.SubwChip
 import SP1Clean.Faithful.SupportedMachine
 import SP1Clean.Faithful.SyscallInstrsChip
+import SP1Clean.Faithful.SyscallRowDecode
 import SP1Clean.Faithful.U16CompareOperation
 import SP1Clean.Faithful.U16MSBOperation
 import SP1Clean.Faithful.U16toU8OperationSafe
