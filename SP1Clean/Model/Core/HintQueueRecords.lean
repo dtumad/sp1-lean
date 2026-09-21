@@ -22,6 +22,7 @@ structure NodeRecord (F : Type) where
   tail : fields 3 F
   length : Word F
 deriving ProvableStruct, DecidableEq
+provable_struct_eval_lemmas NodeRecord
 
 variable {p : ℕ} [Fact p.Prime]
 
