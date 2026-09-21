@@ -1,4 +1,5 @@
 import SP1Clean
+import ToClean.Circuit.WitnessGenerationData
 import SP1CleanTest.Core.Exportable
 import SP1CleanTest.TraceGenTests.TraceGenerator
 
@@ -25,7 +26,8 @@ executor event with inputs recovered through the symbolic row map and hints from
 event's opcode, **each recomputed and gated cell-for-cell against the dumped
 `generate_trace` row before anything is written**, plus an honest padding row and
 deterministic seeded synthetic rows. `expectedWitness` is always the Lean reference
-evaluation (`FlatOperation.witgen`) over the **shared** operation list — the same
+evaluation (`witgen` below: Clean's `FlatOperation.witgen` at the empty commitment) over the
+**shared** operation list — the same
 programs the wire carries, and `WitgenIR.eval_share` proves sharing changes no
 evaluation.
 
@@ -285,7 +287,7 @@ chip:
   row itself through the symbolic row map (every native input cell is a bare `var`
   column of the Rust row, except `is_real` on the six flag-hinted chips, where it is
   `1` on event rows); hint tables come from the event's opcode discriminant. **The
-  generation-time gate:** every event row is recomputed — `FlatOperation.witgen` over
+  generation-time gate:** every event row is recomputed — `witgen` over
   the shared operations, then the symbolic row map evaluated at the resulting cells —
   and must equal the dumped SP1 row cell-for-cell, or the exporter throws with
   chip/row/column detail and writes nothing.
@@ -330,11 +332,16 @@ def serializeHints (uses : List TableUse) (h : ProverHint Fp) : Json :=
       ("width", toJson u.width),
       ("rows", toJson ((h u.table u.width).toList.map fun v => v.toList.map ZMod.val))])
 
+/-- Clean's array-backed `FlatOperation.witgen` at the empty commitment, spelled through the
+data-carrying `ToClean` generalization: Clean's own `Circuit/WitnessGeneration.lean` is orphaned
+upstream (unwired, non-`module`), so the module-mode `ToClean` no longer reaches it. -/
+def witgen (hint : ProverHint Fp) (ops : List (FlatOperation Fp)) (init : Array Fp) : Array Fp :=
+  FlatOperation.witgenWithData (fun _ _ => #[]) hint ops init
+
 /-- The Lean reference witness evaluation over the shared flat operations. -/
 def expectedWitnessOf (flatShared : List (FlatOperation Fp)) (hint : ProverHint Fp)
     (inputs : List Fp) : List ℕ :=
-  ((FlatOperation.witgen hint flatShared inputs.toArray).toList.drop inputs.length).map
-    ZMod.val
+  ((witgen hint flatShared inputs.toArray).toList.drop inputs.length).map ZMod.val
 
 def rowJson (kind : String) (anchored : Bool) (seed : Option ℕ) (inputs : List Fp)
     (hints : Json) (expectedWitness : List ℕ) (expectedRow : Option (List ℕ)) : Json :=
@@ -481,9 +488,10 @@ def derivedPadChips : List String := ["ShiftLeft", "ShiftRight", "DivRem"]
 
 /-- Evaluate the symbolic Rust row at the generated witness cells (canonical values).
 The environment is exactly the one witness generation itself evaluates against
-(`Circuit.witgen_proverEnvironment`). -/
+(`witgenWithData_eq_dynamicWitnessesWithData`). -/
 def rowValsOf (rowMap : List (Expression Fp)) (cells : Array Fp) : List Nat :=
-  let env := (ProverEnvironment.fromArray cells (ProverHint.empty Fp)).toEnvironment
+  let env :=
+    (ProverEnvironment.fromArrayWithData cells (fun _ _ => #[]) (ProverHint.empty Fp)).toEnvironment
   rowMap.map fun ex => (Expression.eval env ex).val
 
 /-- First differing column of two equal-length rows, as `(column, lean, sp1)`. -/
@@ -578,7 +586,7 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
     let sp1Row := dump.rows.getD k []
     let inputs := invertInputs inv 1 sp1Row
     let hint := hintFor e.name ev
-    let cells := FlatOperation.witgen hint flatShared inputs.toArray
+    let cells := witgen hint flatShared inputs.toArray
     if let some (j, l, s) := firstMismatch (rowValsOf rowMap cells) sp1Row then
       throw (IO.userError s!"{e.name}: GATE FAILED at event row {k} column {j}: \
         recomputed {l} != SP1 {s} (opcode {ev.opcode})")
@@ -602,7 +610,7 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
   let padInputs := invertInputs inv 0 padSp1
   let padWitness := expectedWitnessOf flatShared empty padInputs
   if derivedPadChips.contains e.name then
-    let padCells := FlatOperation.witgen empty flatShared padInputs.toArray
+    let padCells := witgen empty flatShared padInputs.toArray
     if let some (j, l, s) := firstMismatch (rowValsOf rowMap padCells) padSp1 then
       throw (IO.userError s!"{e.name}: GATE FAILED at the padding row, column {j}: \
         recomputed {l} != SP1 {s}")
