@@ -460,6 +460,20 @@ per-file ledger of the migration itself):
   (`maxRecDepth`) — drop it, both sides normalise to the lifted form; and `if_true`/`if_false`
   (Clean's `iteReduce`) and the `eval_field`/`eval_cols` push-downs become unused simp
   arguments, which `linter.unusedSimpArgs` turns into a build failure under `--wfail`.
+- **Nested push-downs versus the struct lift on a circuit output.** The lift simproc proves its
+  rewrite by a default-transparency `isDefEq` after a small normalisation, so it *succeeds* on any
+  closed base — `circuit.output input offset`, `elaborated.output …` — while failing on a variable
+  input. On such a base the tagged nested-field push-down (`Columns.eval_state`,
+  `SubwOperation.Columns.eval_msb`) and the lift undo each other and `simp` hits `maxRecDepth`
+  (twice-nested "simp failed" is the tell: the lift's inner simp). Never let `circuit_norm` meet
+  an opaque output: unfold the circuit in the same `simp only` (`simp only [X.rowView, X.circuit,
+  circuit_norm]`, the `TypedMemorySelectors` lift macros) so the output literal decomposes first,
+  or rewrite the output to its named layout pre-order (`simp [↓ DivRemChip.output_eq_populatedRowAt,
+  DivRemChip.populatedRowAt_*_eq, …]`; the forwarding chips' `↓ directOutput_eq`), and reduce a
+  view's projections (`simp only [X.rowView]`) before the pass that evaluates its arguments. The
+  same lift undoes `Vector.getElem_map` on a component-level vector lemma's right-hand side
+  (`(ProvableStruct.eval env cols).pc = Vector.map (Expression.eval env) cols.pc`), so vector
+  push-downs stay untagged and are applied by name.
 - **`ite` at implicit transparency.** `split_ifs` introduces the case hypothesis but leaves the
   `if` in place, and `rw [if_pos h]`/`rw [if_neg h]` fail on the `Decidable` instance: use
   `by_cases h : c` and close with `simp [h]` (or `simp only [if_neg (show ¬c by norm_num)]`).
