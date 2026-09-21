@@ -1,20 +1,30 @@
-# Clean upstream — the fork pin, the split rule, and the PR queue
+# Clean upstream — the pin, the split rule, and the PR queue
 
-This project builds on the [Clean](https://github.com/Verified-zkEVM/clean) zk-circuit DSL. As of
-2026-08-13 the `Clean` dependency is pinned to a **fork**, because some of what we need is a change
-to an existing Clean declaration rather than an addition. This file records the fork's state, the
-rule for what may go in it, and the queue of changes with the measurements that justify each one.
+This project builds on the [Clean](https://github.com/Verified-zkEVM/clean) zk-circuit DSL. The
+dependency is pinned to upstream `main` (`fba2a29f5e36420d797c1de118ac9f11f23b819e`, 2026-09-16,
+Lean v4.33.1). From 2026-08-13 to the 2026-09 toolchain move it was pinned to a **fork**
+(`dtumad/clean` `sp1-integration`, base upstream `0e53b9f2`, rev `2dad7788d5…`), because two of the
+changes below modify existing Clean declarations; the move re-derived both as pure additions
+(`ToClean/Circuit/AgreesBelowWithData.lean`, `ToClean/Circuit/WitgenShare.lean`) so the fork could
+be retired without waiting on the upstream PRs. This file records the split rule, the retired
+fork's state (kept for the PR queue's provenance), and the queue of changes with the measurements
+that justify each one.
 
 Reader-facing trust consequence: `../release-audit.md` § "Audited sources". The short version of the
 rule also lives in `../../AGENTS.md` § "Clean-native principles".
 
 ## The split rule
 
-**Modifies an existing Clean declaration → the fork.** One branch per upstream PR. It *cannot* live
-in `ToClean/`, because Clean's own downstream theorems refer to Clean's declaration and not to our
-copy. `AgreesBelow` is the worked example: a local copy carrying the two extra conjuncts yields a
-*weaker* `ComputableWitnesses` obligation, and Clean's `witgen_usesLocalWitnesses` needs the stronger
-one — so the shim would not feed the theorem it exists to feed.
+**Modifies an existing Clean declaration → an upstream PR, and a temporary fork pin only for its
+life.** It *cannot* be shimmed in `ToClean/` when a Clean theorem downstream of the declaration is
+needed at the modified declaration, because that theorem refers to Clean's declaration and not to
+our copy. `AgreesBelow` was the worked example — a local copy carrying the two extra conjuncts
+yields a *weaker* `ComputableWitnesses` obligation, and Clean's `witgen_usesLocalWitnesses` needs
+the stronger one. What retired the fork is that the SP1 development does not need Clean's
+`witgen_usesLocalWitnesses` at the strengthened predicate: the honesty chain it uses is re-proved
+at `AgreesBelowWithData` in `ToClean/Circuit/WitnessGenerationData.lean` (each proof Clean's own
+plus the parameter), so the strengthened predicate is a pure addition after all. Check that before
+queueing anything as a fork change.
 
 **Pure addition → `ToClean/`.** No pin bump, and acceptance upstream is a plain deletion plus a
 repoint of importers to `Clean.*`. Current residents: `Circuit/WitgenBridge` (the zero-witness
@@ -36,23 +46,23 @@ Clean left untagged works from our side, because attributes are global. `Model/C
 `Math/Word.lean:31`, and the `eval_fromElements` priority override in two DivRem files are all in
 this category: upstreaming them is courtesy, not a blocker, and they stay local.
 
-## Fork state
+## Pin state
 
 | | |
 |---|---|
-| Fork | `https://github.com/dtumad/clean` |
-| Pinned branch | `sp1-integration` — the merge of every open PR branch; this is what `lakefile.toml` pins |
-| Pinned rev | `2dad7788d58b09eabeb3898506e4cb896e5d3e9d` |
-| Upstream base | `0e53b9f2` (v4.32.2 `main`, post PR #443) |
-| Toolchain | `leanprover/lean4:v4.32.2` — identical to ours |
+| Pinned | upstream `Verified-zkEVM/clean` `main` at `fba2a29f5e36420d797c1de118ac9f11f23b819e` (2026-09-16; module-ified, `requiresModuleSystem` — the package sets `allowNonModules = true`), with its `CompPoly` dependency |
+| Retired fork | `https://github.com/dtumad/clean`, branch `sp1-integration` = upstream `0e53b9f2` (v4.32.2) + the `agreesbelow-data-hint` and `witgen-share` branches; last pinned rev `2dad7788d58b09eabeb3898506e4cb896e5d3e9d` (2026-08-13 → 2026-09-20) |
+| Toolchain | `leanprover/lean4:v4.33.1` — identical to Clean `main`'s |
 
-`sp1-integration` **must keep the pinned rev reachable**: Lake clones `refs/heads/*` plus tags and
-then checks out, so a commit living only on `refs/pull/*` fails with `fatal: unable to read tree` on
-every machine without a warm cache. Never force-push or delete it. (`lakefile.toml` records the past
-incident where a PR-head pin broke exactly this way.)
+If a future change ever needs a fork pin again, the branch **must keep the pinned rev reachable**:
+Lake clones `refs/heads/*` plus tags and then checks out, so a commit living only on `refs/pull/*`
+fails with `fatal: unable to read tree` on every machine without a warm cache. Never force-push or
+delete such a branch. Pin it for the life of the upstream PR only, document it in
+`../release-audit.md`, and re-pin to upstream at the merge (the shape used for `lean-sail` in
+`lean-sail-notes.md`).
 
-**Exit condition.** Re-pin to upstream as each PR merges; when the queue empties, the `git` URL goes
-back to `Verified-zkEVM/clean` and this file becomes a historical record.
+**Exit condition of the retired fork — met 2026-09-20.** The two branches are re-derived as `ToClean/`
+additions; PRs #450/#453 stay open as upstream proposals whose acceptance deletes the two files.
 
 ### Branch → PR map
 

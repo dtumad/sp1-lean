@@ -1,8 +1,8 @@
 # Formal Verification of SP1 Core Instruction AIRs and Native AIR-to-Execution Refinement in Lean — Technical Report
 
 *sp1-clean-native — a Clean-native, semantically-specified verification of SP1's RISC-V chips.*
-*Snapshot: 2026-09 (repository tree at this document's commit; Lean v4.32.2 + Sail v5; SP1 semantic pin
-`v6.4.0`).*
+*Snapshot: 2026-09 (repository tree at this document's commit; Lean v4.33.1 + Clean `main` + Sail v5;
+SP1 semantic pin `v6.4.0`).*
 
 > **Line-number caveat.** Declarations are cited by name and file; line numbers appear only where
 > stable. Every cited repository path and a release-critical set of cited declaration names are
@@ -1048,7 +1048,7 @@ dump-anchored conformance pipeline closes that gap empirically at SP1's own fiel
 The remaining `native_decide` uses live in the separate test library (`SP1CleanTest/`, never
 imported by the main library — a CI guard forbids `native_decide` there): the exportability
 battery and the satisfiability anchors below, each disclosed per-declaration in the test-scope
-axiom census (surfaced as generated `._native.native_decide.ax_*` constants, the v4.32.2 form of
+axiom census (surfaced as generated `._native.native_decide.ax_*` constants, the post-v4.32 form of
 the former named `Lean.ofReduceBool`/`Lean.trustCompiler` axioms). What conformance establishes:
 populate fidelity and non-vacuity evidence on real prover data. What it does not: proof. The two
 layers are complementary by construction.
@@ -1143,21 +1143,23 @@ three (for instance the transport layer's `transportTable_constraints` and the b
   backend and the config — no longer a hand-maintained delta; the four top-level configured
   values remain disclosed as `rfl` lemmas (the two `ValidateConfig`-internal sites are visible
   in the generated source, §3.2), and every dependency stays an immutable git pin.
-- **T5 — The Clean DSL is pinned to a fork.** Every circuit here is built on Clean, and that
-  dependency is currently `dtumad/clean` (branch `sp1-integration`), not upstream
-  `Verified-zkEVM/clean`. The base is the previous upstream pin; the delta is two upstream-destined
-  branches, both with open PRs, and the pin returns to upstream as they merge. (1) `AgreesBelow`:
-  `ProverEnvironment.AgreesBelow` is strengthened to constrain a prover environment's committed
-  `data` and `hint`, not only its witness cells. The change is a bug fix — the example file's
-  `not_computable_from_cells_alone` proves the prior obligation was *false* for any witness
-  generator reading committed data — and it cannot be shimmed downstream, since Clean's own
-  honest-witness-generation theorem refers to Clean's definition. `AgreesBelow` occurs in
-  hypothesis position everywhere but one discharge site, so no Clean conclusion is weakened and the
-  two theorems concluding with it become strictly stronger. (2) `witgen-share`: the proven
-  subterm-sharing pass for witness programs (`WitgenIR.share` + the kernel-checked `eval_share`),
-  which the committed witness-export goldens depend on. Full disclosure, including the standing
-  rule for what may live in the fork versus this project's additive `ToClean/` library, is in
-  `docs/agents/clean-upstream.md`; the pin table is in `docs/release-audit.md`.
+- **T5 — Dependency pins outside upstream tags.** Every circuit here is built on Clean, pinned to
+  upstream `Verified-zkEVM/clean` `main` (2026-09-16). From 2026-08 to 2026-09 that dependency was
+  a fork carrying two modifying changes; both are now pure additions in this project's `ToClean/`
+  library (no Clean declaration is modified) and remain proposed upstream as Clean PRs #450/#453:
+  (1) `AgreesBelowWithData`, the strengthening of `ProverEnvironment.AgreesBelow` that also
+  constrains a prover environment's committed `data` and `hint` — a bug fix rather than an
+  ergonomics request, since PR #450's `not_computable_from_cells_alone` proves the unstrengthened
+  obligation *false* for any witness generator reading committed data — carried here with the
+  matching `…ComputableWitnessesWithData` obligations and the honesty chain re-proved at the
+  strengthened predicate; (2) `WitgenIR.share`, the proven subterm-sharing pass for witness
+  programs (kernel-checked `WitgenIR.eval_share`), which the committed witness-export goldens
+  depend on. The one dependency not at an upstream revision is `lean-sail`: `dtumad/lean-sail`
+  `sp1-pin` is upstream tag `v5` plus a one-line `open` disambiguation (rems-project/lean-sail#14,
+  a Lean 4.33 linter fix with no semantic content); it returns to upstream when that merges. Full
+  disclosure, including the standing rule for what may be a temporary fork pin versus an additive
+  `ToClean/` file, is in `docs/agents/clean-upstream.md`; the pin table is in
+  `docs/release-audit.md`.
 - **M1 — The semantic boundary binding.** Provider/boundary tables mean the selected program and
   initial state (`SP1SemanticBoundaryRelation`, §8.1). Its provider-content facts are to be
   derived from the exact upstream system tables (the `executionCase` obligation). Separately, the
@@ -1394,8 +1396,9 @@ and durable findings from that newer work.
    `sp1_air_refinement` / `sp1_air_sound` names stay reserved. Under an explicit syscall-free
    restriction (`Soundness/CoreAIRSyscallFree.lean`) four of the bundle's twelve fields are
    discharged and a fifth is reduced to an explicit decoder property.
-8. **Trusted surfaces T1–T5** (§10), including the pinned git dependency graph — in which the
-   Clean DSL is currently a fork (T5) — and the trace-battery provenance caveat (§4.3).
+8. **Trusted surfaces T1–T5** (§10), including the pinned git dependency graph — Clean at upstream
+   `main`, lean-sail at a documented one-line temporary pin (T5) — and the trace-battery
+   provenance caveat (§4.3).
 9. The AIR models the *supervisor-mode* Core profile; user-mode/mprotect table variants,
    precompiles, and the memory-protection chips are out of scope.
 10. **Trap and exception executions are unrepresentable.** Taken jumps/branches to misaligned
@@ -1420,7 +1423,7 @@ lake lint                  # Batteries runLinter, every default environment lint
 scripts/run_audit.sh       # pins + zero-deferral gates + per-theorem axiom census
 ```
 
-Toolchain: Lean `v4.32.2` / mathlib `v4.32.2`; every dependency is an immutable git pin (the
+Toolchain: Lean `v4.33.1` / mathlib `v4.33.1`; every dependency is an immutable git pin (the
 generated Sail model is config-generated from pinned sources — T4). Extraction
 regeneration requires a clean checkout of the pinned sp1 extraction branch
 (`dtumad/lean-extraction`) and a Rust toolchain — see `docs/agents/extraction.md`. The
