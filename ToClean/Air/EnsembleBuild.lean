@@ -1,5 +1,7 @@
-import Clean.Air.FlatEnsemble
-import ToClean.Air.TableBuild
+module
+
+public import Clean.Air.FlatEnsemble
+public import ToClean.Air.TableBuild
 
 /-! # Assembling an `EnsembleWitness` from built tables
 
@@ -30,6 +32,8 @@ record and everything one can conclude from it, but a prover-side assembly must 
 introduction rule the record is missing, and `verifierTable_eq_build` says the verifier row is not
 a special case of row construction. Both belong beside `Table.build` upstream.
 -/
+
+@[expose] public section
 
 variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
 

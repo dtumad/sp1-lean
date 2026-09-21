@@ -1,4 +1,6 @@
-import ToClean.Air.TransitionView
+module
+
+public import ToClean.Air.TransitionView
 
 /-! # Selecting complete message classes and physical rows
 
@@ -8,6 +10,8 @@ bound, provides a typed selector for raw payloads, and selects physical table ro
 changing their component, data, or environments. The intended upstream homes are
 `Clean/Air/Balance.lean` and `Clean/Air/FlatComponent.lean`.
 -/
+
+@[expose] public section
 
 variable {F : Type}
 

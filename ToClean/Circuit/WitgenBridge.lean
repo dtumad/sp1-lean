@@ -1,6 +1,8 @@
-import Clean.Circuit.Theorems
-import Clean.Circuit.Subcircuit
-import ToClean.Circuit.AgreesBelowWithData
+module
+
+public import Clean.Circuit.Theorems
+public import Clean.Circuit.Subcircuit
+public import ToClean.Circuit.AgreesBelowWithData
 
 /-! # Composition lemmas for `ComputableWitnesses`
 
@@ -43,6 +45,8 @@ this; any composed circuit does. The lemmas are stated at the strengthened agree
 `ProverEnvironment.AgreesBelowWithData` and obligation `FormalCircuitBase.ComputableWitnessesWithData`
 (`ToClean.Circuit.AgreesBelowWithData`); on acceptance of Clean PR #450 those names collapse onto
 Clean's own and nothing else here changes. -/
+
+@[expose] public section
 
 namespace FlatOperation
 

@@ -1,5 +1,7 @@
-import Clean.Air.FlatEnsemble
-import ToClean.Air.UnitBalance
+module
+
+public import Clean.Air.FlatEnsemble
+public import ToClean.Air.UnitBalance
 
 /-! # Reading transitions from physical AIR tables
 
@@ -9,6 +11,8 @@ records the exact per-component equation. `readRows_interactions` lifts it to ph
 without assuming a separately assembled ledger, and `readRows_spec` transports their local
 semantic specifications. These are pure additions intended for `Clean/Air/FlatComponent.lean`.
 -/
+
+@[expose] public section
 
 namespace Air.Flat
 

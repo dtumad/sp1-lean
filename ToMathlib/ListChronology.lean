@@ -1,5 +1,7 @@
-import Mathlib.Data.List.Sort
-import Mathlib.Data.List.Perm.Basic
+module
+
+public import Mathlib.Data.List.Sort
+public import Mathlib.Data.List.Perm.Basic
 
 /-! # Recovering prefixes from strictly ordered keys
 
@@ -10,6 +12,8 @@ keys occur in the larger list. These additions belong beside the list ordering l
 Grouping a physical inventory by distinct covered keys also preserves every occurrence; this
 partition lemma keeps duplicate items while allowing the groups to change their order.
 -/
+
+public section
 
 namespace List
 

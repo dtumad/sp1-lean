@@ -1,5 +1,7 @@
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
+module
+
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
 
 /-! # Recovering a subcircuit's interactions on a channel it does not declare
 
@@ -33,6 +35,8 @@ by a different constructor in each case; that repetition is the file's bulk and 
 upstream.
 
 Acceptance is a plain deletion here plus a repoint of importers to `Clean.*`. -/
+
+@[expose] public section
 
 namespace InteractionRecovery
 

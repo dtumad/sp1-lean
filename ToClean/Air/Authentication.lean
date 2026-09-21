@@ -1,5 +1,7 @@
-import ToClean.Air.ChannelClosure
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import ToClean.Air.ChannelClosure
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # Authenticating typed records through the complete interaction ledger
 
@@ -11,6 +13,8 @@ The physical-table interface can consume prior grounding facts for dynamic provi
 and silent components satisfy the interface without authenticating any source.
 This addition belongs beside Clean's flat ensemble channel-closure rules.
 -/
+
+@[expose] public section
 
 namespace Air.Flat
 

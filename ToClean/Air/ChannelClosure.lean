@@ -1,4 +1,6 @@
-import Clean.Air.FlatEnsemble
+module
+
+public import Clean.Air.FlatEnsemble
 
 /-! # Closing a channel from its actual provider requirements
 
@@ -10,6 +12,8 @@ closes universally true structural-channel guarantees, including the dependent a
 otherwise repeated at each call site. These additions are intended for `Clean/Air/FlatEnsemble.lean`;
 they use no application-specific messages or tables.
 -/
+
+@[expose] public section
 
 namespace Circuit.Operations
 

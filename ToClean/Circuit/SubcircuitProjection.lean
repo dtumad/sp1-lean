@@ -1,4 +1,6 @@
-import Clean.Circuit.Subcircuit
+module
+
+public import Clean.Circuit.Subcircuit
 
 /-! # Assertion and lookup lists across a general subcircuit boundary
 
@@ -7,6 +9,8 @@ assertion, lookup, and full flat-operation equalities are missing. These compani
 the original algebra without unfolding a proof-bearing subcircuit inside its consumer. They are
 intended for the same upstream module and require no application-specific assumptions.
 -/
+
+@[expose] public section
 
 variable {F : Type} [FiniteField F]
 variable {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]

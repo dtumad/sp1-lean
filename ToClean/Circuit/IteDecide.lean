@@ -1,4 +1,6 @@
-import Clean.Circuit.Basic
+module
+
+public meta import Clean.Circuit.Basic
 
 /-! # `if decide p = true` under a stale `Decidable` instance
 
@@ -19,6 +21,8 @@ congruence lemmas after the v4.32.2 → v4.33.1 bump; the same sources normalise
 `iteDecideEqTrue` closes the gap as a simproc: it rewrites `@ite α (decide p = true) inst a b` to
 `@ite α p i a b`, with `i` the canonical `Decidable p` instance, by an explicit `if_congr` proof — type-correct at default transparency however the stale instance was spelled. Destined for
 `Clean/Circuit/WitnessIR.lean`, beside the `decide_eq_true_eq` attribute it subsumes. -/
+
+public meta section
 
 open Lean Meta Simp in
 /-- `@ite α (decide p = true) inst a b ↦ @ite α p i a b`, for any `inst` (including one whose type

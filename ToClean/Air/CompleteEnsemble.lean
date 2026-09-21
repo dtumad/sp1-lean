@@ -1,4 +1,6 @@
-import Clean.Air.FlatEnsemble
+module
+
+public import Clean.Air.FlatEnsemble
 
 /-! # Sound and complete flat ensembles
 
@@ -13,6 +15,8 @@ The specification remains a relation on semantic executions, independent of the 
 In particular, compiler success is a conclusion of completeness, never its domain definition.
 These interfaces do not claim that an arbitrary Lean compiler can be exported to another language.
 -/
+
+@[expose] public section
 
 namespace Air.Flat
 

@@ -1,5 +1,8 @@
-import PolyFun.PFunctor.Dynamical.Safety
-import ToPolyFun.Dynamical.Orbit
+module
+
+public import PolyFun.PFunctor.Dynamical.Safety
+public import ToPolyFun.Dynamical.Orbit
+
 /-! # Event traces of labeled systems
 
 ## Gap against upstream
@@ -10,6 +13,8 @@ PolyFun's `DynSystem.Labeled` attaches an event label to every direction, and `P
 labeled counterpart of `ReachableIn` — with the algebra a semantic statement needs: the empty
 trace, concatenation (via `Prefix.append`), and the projection back to `ReachableIn`. Stated in
 PolyFun's own namespace so it can be contributed as it is. -/
+
+@[expose] public section
 
 namespace PFunctor.DynSystem.Labeled
 

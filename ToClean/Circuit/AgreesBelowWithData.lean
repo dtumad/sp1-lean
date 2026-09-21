@@ -1,5 +1,7 @@
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Theorems
+module
+
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Theorems
 
 /-! # `AgreesBelow` over all three prover-environment channels
 
@@ -45,6 +47,8 @@ required downstream: `ProverEnvironment.AgreesBelow`, `ProverEnvironment.OnlyAcc
 `FlatOperation.onlyAccessedBelow_all`, `LookupCircuit.computableWitnesses`, and the one in-tree
 instance `Gadgets.Addition8FullCarry`. None is needed at the modified statement: the SP1 development
 consumes only the additive declarations below. -/
+
+@[expose] public section
 
 variable {F : Type}
 

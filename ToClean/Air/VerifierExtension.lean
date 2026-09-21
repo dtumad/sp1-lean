@@ -1,5 +1,7 @@
-import ToClean.Air.EnsembleBuild
-import ToClean.Circuit.SubcircuitProjection
+module
+
+public import ToClean.Air.EnsembleBuild
+public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Exactly-once closed circuits in an ensemble verifier
 
@@ -12,6 +14,8 @@ Zero witness length alone does not establish independence from offsets or ambien
 `ClosedVerifier` therefore requires exact static constraint and interaction transport laws.
 The derived singleton is a representation of the real verifier invocation, not an extra source.
 -/
+
+@[expose] public section
 
 namespace Air.Flat
 

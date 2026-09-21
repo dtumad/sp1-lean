@@ -1,8 +1,9 @@
-import Mathlib.Tactic
-import Mathlib.Data.ZMod.Basic
-import Std.Data.ExtDHashMap
-import Std.Data.ExtHashMap
-set_option linter.unusedSimpArgs false
+module
+
+public import Mathlib.Tactic
+public import Mathlib.Data.ZMod.Basic
+public import Std.Data.ExtDHashMap
+public import Std.Data.ExtHashMap
 
 /-!
 # Lemmas to be ported to Mathlib
@@ -22,6 +23,10 @@ the `LawfulMonadStateOf` instances exist for some transformers upstream but not 
 the Sail model runs in. Each is a candidate PR on its own; when one lands, delete the declaration
 here and let the importer pick up the Mathlib name.
 -/
+
+public section
+
+set_option linter.unusedSimpArgs false
 
 section grind
 

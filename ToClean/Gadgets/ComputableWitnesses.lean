@@ -1,7 +1,9 @@
-import ToClean.Circuit.WitgenBridge
-import Clean.Gadgets.Bits
-import Clean.Gadgets.And.And8
-import Clean.Gadgets.Or.Or8
+module
+
+public import ToClean.Circuit.WitgenBridge
+public import Clean.Gadgets.Bits
+public import Clean.Gadgets.And.And8
+public import Clean.Gadgets.Or.Or8
 
 /-! # `ComputableWitnesses` for the Clean gadgets an AIR provider composes
 
@@ -33,6 +35,8 @@ Destined for the gadget files themselves — `computableWitnesses` beside each g
 mirroring `Addition8FullCarry`'s. Declared here in the gadgets' own namespaces so acceptance is a
 deletion plus dropping the import. Nothing in this file changes an existing Clean declaration; the
 three composition lemmas it cites are in `ToClean/Circuit/WitgenBridge.lean`. -/
+
+@[expose] public section
 
 namespace Gadgets.ToBits
 

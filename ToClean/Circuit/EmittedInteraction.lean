@@ -1,4 +1,6 @@
-import Clean.Circuit.Channel
+module
+
+public import Clean.Circuit.Channel
 
 /-! # Evaluated interactions without local guarantees
 
@@ -8,6 +10,8 @@ guarantees, but its evaluated-value helpers cover only pushes and guarantee-bear
 in the same algebraic balance; its semantic meaning can be established later by global grounding.
 These additions belong beside `Channel.pushedValue` in `Clean/Circuit/Channel.lean`.
 -/
+
+@[expose] public section
 
 namespace Channel
 
