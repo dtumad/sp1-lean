@@ -343,10 +343,13 @@ layer. Where the namespace deliberately records intended vocabulary rather than 
 `Model/Opcode.lean` does), that is an entry in `scripts/layering_allowlist.txt` with a reason, not a
 silent divergence. Full contract: `docs/layering.md`.
 
-**Lake libraries** (`lakefile.toml`, eight of them, one option set): `SP1Core` (root index
+**Lake libraries** (`lakefile.toml`, nine of them, one option set): `SP1Core` (root index
 `SP1Clean/Core.lean`, strata 0–6 — the PR-CI build), the umbrella `SP1Clean` (root index
 `SP1Clean.lean`, everything — the alignment build), the three upstream-destined libraries
-`ToMathlib`/`ToPolyFun`/`ToClean`, the generated Sail model `LeanRV64D`, and the two **test**
+`ToMathlib`/`ToPolyFun`/`ToClean`, the generated Sail model `LeanRV64D` plus the one-module
+`LeanRV64DRvfi` (owner of `LeanRV64D.RvfiDii` alone, so that module — and only it — builds with
+`backward.do.legacy`, the lakefile-level workaround for lean4#13858 that turns its 718 s /
+15 GB elaboration into 2.5 s; issue #6), and the two **test**
 libraries `SP1CoreTest` (the `testDriver` → `lake test`; globs `SP1CleanTest.Core.+` +
 `SP1CleanTest.TraceGenTests.+`) and `SP1CleanTest` (glob `SP1CleanTest.+`, the alignment
 anchors included). The test libraries hold the exportability/non-vacuity anchors and the
