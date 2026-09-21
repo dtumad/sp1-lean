@@ -61,7 +61,9 @@ open scoped SP1Clean.ConstraintCoe
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Exact main-row type selected by each table in the pinned profile. -/
-def MainRow (p : ℕ) [Fact p.Prime] : Table → Type
+-- `@[reducible]`: `MainRow p t` types row fields, and a goal that applies a table's generated
+-- `asserts`/`interactions` to `row.main` must type-check at implicit transparency (Lean ≥ 4.33).
+@[reducible] def MainRow (p : ℕ) [Fact p.Prime] : Table → Type
   | .program => ProgramCols (ZMod p)
   | .byteLookup => ByteCols (ZMod p)
   | .rangeLookup => RangeCols (ZMod p)

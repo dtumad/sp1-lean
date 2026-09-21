@@ -181,7 +181,9 @@ def Table.mainWidth : Table → ℕ
   | .memoryGlobalInit | .memoryGlobalFinalize => 30
 
 /-- Width of the preprocessed row paired with this AIR. -/
-def Table.preprocessedWidth : Table → ℕ
+-- `@[reducible]`: it types the preprocessed row vector, so a goal applying a table's generated
+-- lists to `row.preprocessed` must see through it at implicit transparency (Lean ≥ 4.33).
+@[reducible] def Table.preprocessedWidth : Table → ℕ
   | .program => 16
   | .byteLookup => 7
   | .rangeLookup => 2
