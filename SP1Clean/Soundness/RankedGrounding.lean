@@ -116,7 +116,7 @@ theorem endpointBalanced_of_isWalk (edge : Edge → Vertex × Vertex) :
 omit [DecidableEq Vertex] in
 /-- A strictly ranked edge multiset has no nonempty balanced cycle. -/
 theorem eq_zero_of_endpointBalanced_self (edges : Multiset Edge)
-    (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ)
+    (edge : Edge → Vertex × Vertex) (rank : Vertex → ℕ) {initial : Vertex}
     (increases : ∀ row ∈ edges, rank (edge row).1 < rank (edge row).2)
     (balanced : EndpointBalanced edges edge initial initial) :
     edges = 0 := by

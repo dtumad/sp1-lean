@@ -145,7 +145,8 @@ refinement; only their `_of_obligations` combinators are currently declared.
   regenerate and re-pin from the same pairing (`docs/agents/sail-model-provenance.md` records the
   current one).
   Read `docs/agents/lean-sail-notes.md` before touching any dependency.
-- Lake options already set in `lakefile.toml`: `--tstack=400000`, `synthInstance.maxHeartbeats = 1000000`.
+- Lake options already set in `lakefile.toml`: `--tstack=400000`; `autoImplicit = false` (every
+  binder is written; the generated Sail model overrides it); `synthInstance.maxHeartbeats` is the default.
 - **Lean ≥ 4.33 landmines** (`docs/agents/proof-patterns.md` § "Lean ≥ 4.33 and Clean `main`"): the
   unifier type-checks metavariable assignments at implicit transparency, so `rw`/`simp` through a
   `def` that only unfolds at default (`component.Input` vs `Inputs`, `id.Occurrence` vs the entry

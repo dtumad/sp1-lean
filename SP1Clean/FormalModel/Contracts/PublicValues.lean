@@ -294,13 +294,13 @@ def SP1ShardStatement.ConfigurationMatches {p : ℕ} {Digest : Type}
     statement.publicValues.mprotect = statement.verifyingKey.untrusted_config.mprotect
 
 /-- The execution-coordinate projection of one adjacent shard link. -/
-def SP1PublicValues.ExecutionContinues (previous next : SP1PublicValues (ZMod p)) : Prop :=
+def SP1PublicValues.ExecutionContinues {p : ℕ} (previous next : SP1PublicValues (ZMod p)) : Prop :=
   previous.next_pc = next.pc_start ∧
     previous.last_timestamp = next.initial_timestamp ∧
     previous.exit_code = next.prev_exit_code
 
 /-- Pairwise execution-coordinate continuity of an ordered shard ledger. -/
-def SP1PublicValues.ExecutionContinuous : List (SP1PublicValues (ZMod p)) → Prop
+def SP1PublicValues.ExecutionContinuous {p : ℕ} : List (SP1PublicValues (ZMod p)) → Prop
   | [] | [_] => True
   | previous :: next :: rest =>
       previous.ExecutionContinues next ∧ ExecutionContinuous (next :: rest)
@@ -370,7 +370,7 @@ structure SP1PublicValues.CommitTransitionValid {p : ℕ}
 /-- Every equality checked between two consecutive core-shard public records by recursion's
 compression loop.  Per-shard cumulative sums are deliberately absent: recursion combines them with
 septic-curve addition rather than carrying one into the next record. -/
-def SP1PublicValues.LedgerContinues (previous next : SP1PublicValues (ZMod p)) : Prop :=
+def SP1PublicValues.LedgerContinues {p : ℕ} (previous next : SP1PublicValues (ZMod p)) : Prop :=
   previous.committed_value_digest = next.prev_committed_value_digest ∧
     previous.deferred_proofs_digest = next.prev_deferred_proofs_digest ∧
     previous.next_pc = next.pc_start ∧
@@ -385,14 +385,14 @@ def SP1PublicValues.LedgerContinues (previous next : SP1PublicValues (ZMod p)) :
     previous.proof_nonce = next.proof_nonce
 
 /-- Exact pairwise continuity of an ordered core-shard ledger. -/
-def SP1PublicValues.LedgerContinuous : List (SP1PublicValues (ZMod p)) → Prop
+def SP1PublicValues.LedgerContinuous {p : ℕ} : List (SP1PublicValues (ZMod p)) → Prop
   | [] | [_] => True
   | previous :: next :: rest =>
       previous.LedgerContinues next ∧ LedgerContinuous (next :: rest)
 
 /-- Initial aggregate boundary imposed when a recursive proof is marked complete.  The timestamp
 encoding is compared semantically (`toNat = 1`); `WellFormed` supplies its canonical limb bounds. -/
-def SP1PublicValues.InitialLedgerBoundary (publicValues : SP1PublicValues (ZMod p)) : Prop :=
+def SP1PublicValues.InitialLedgerBoundary {p : ℕ} (publicValues : SP1PublicValues (ZMod p)) : Prop :=
   SP1WordDigestZero publicValues.prev_committed_value_digest ∧
     SP1VectorZero publicValues.prev_deferred_proofs_digest ∧
     publicValues.initial_timestamp.toNat = 1 ∧
@@ -407,7 +407,7 @@ def SP1PublicValues.InitialLedgerBoundary (publicValues : SP1PublicValues (ZMod 
 /-- Terminal aggregate boundary imposed by SP1 recursion for a complete proof.  `haltPc` is an
 explicit parameter so this public-values module remains independent of the syscall semantics module;
 the current Core target instantiates it with `1`. -/
-def SP1PublicValues.FinalLedgerBoundary (haltPc : ℕ)
+def SP1PublicValues.FinalLedgerBoundary {p : ℕ} (haltPc : ℕ)
     (publicValues : SP1PublicValues (ZMod p)) : Prop :=
   publicValues.next_pc.toNat = haltPc ∧
     publicValues.last_init_addr.toNat ≠ 0 ∧
@@ -417,14 +417,14 @@ def SP1PublicValues.FinalLedgerBoundary (haltPc : ℕ)
 
 /-- Exactly one included record is the first execution shard.  Using `filter.length`, rather than
 uniqueness of record *values*, also detects a duplicated identical record. -/
-def SP1PublicValues.HasUniqueFirstExecutionShard
+def SP1PublicValues.HasUniqueFirstExecutionShard {p : ℕ}
     (shards : List (SP1PublicValues (ZMod p))) : Prop :=
   (shards.filter fun publicValues => publicValues.is_first_execution_shard = 1).length = 1
 
 /-- Public-record checks performed by recursive composition, except for septic-curve aggregation
 and deferred-proof authentication.  Those two external checks have their own narrow theorem
 parameters at the execution boundary; they are not hidden inside this ledger predicate. -/
-def SP1PublicValues.AuthenticatedLedger (haltPc : ℕ)
+def SP1PublicValues.AuthenticatedLedger {p : ℕ} (haltPc : ℕ)
     (shards : List (SP1PublicValues (ZMod p))) : Prop :=
   ∃ first rest final,
     shards = first :: rest ∧
@@ -435,7 +435,7 @@ def SP1PublicValues.AuthenticatedLedger (haltPc : ℕ)
       HasUniqueFirstExecutionShard shards
 
 /-- The full ledger continuity implies its execution-coordinate projection. -/
-theorem SP1PublicValues.executionContinuous_of_ledgerContinuous
+theorem SP1PublicValues.executionContinuous_of_ledgerContinuous {p : ℕ}
     {shards : List (SP1PublicValues (ZMod p))}
     (continuous : LedgerContinuous shards) : ExecutionContinuous shards := by
   induction shards with
@@ -450,7 +450,7 @@ theorem SP1PublicValues.executionContinuous_of_ledgerContinuous
 /-- Once the rolling COMMIT flag is set, ledger continuity and the public-values AIR transition
 laws force that shard's committed digest to equal the terminal digest.  This theorem uses no
 converse from a flag to syscall-row existence. -/
-theorem SP1PublicValues.committedDigest_eq_last_of_flag
+theorem SP1PublicValues.committedDigest_eq_last_of_flag {p : ℕ}
     {first : SP1PublicValues (ZMod p)} {rest : List (SP1PublicValues (ZMod p))}
     {final : SP1PublicValues (ZMod p)}
     (last : (first :: rest).getLast? = some final)

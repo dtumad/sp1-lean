@@ -1275,7 +1275,7 @@ row is carried through the projection rather than excluded by it.
 The result is a `List.Forall₂` rather than a `List.map`: the two row types are related by a
 *relation* (the syscall arm decodes a raw array), not by a function into `WalkedRow`, so there is no
 map to speak of. `Walk.isWalk_forall₂` is the transport that shape needs. -/
-theorem listAllWalked {α β : Type*} (dec : β → SyscallInstrsChip.Inputs (ZMod p))
+theorem listAllWalked {α β γ : Type*} (dec : β → SyscallInstrsChip.Inputs (ZMod p))
     (mk : α → DecodedInstructionRow p) :
     ∀ (l : List (α ⊕ γ ⊕ β)),
       (∀ t ∈ l, (∃ a : α, t = Sum.inl a) ∨ (∃ b : β, t = Sum.inr (Sum.inr b))) →

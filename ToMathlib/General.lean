@@ -90,14 +90,16 @@ instance Fin.noZeroDivisors_of_prime (p : ℕ)
     [hp : Fact (Nat.Prime (p + 1))] : NoZeroDivisors (Fin (p + 1)) :=
   IsDomain.to_noZeroDivisors (ZMod (p + 1))
 
-@[simp] theorem Std.ExtDHashMap.insert_insert [BEq α] [Hashable α] [LawfulBEq α]
+@[simp] theorem Std.ExtDHashMap.insert_insert {α : Type*} {β : α → Type*}
+    [BEq α] [Hashable α] [LawfulBEq α]
     {m : Std.ExtDHashMap α β} (a : α) (b b' : β a) :
     (m.insert a b).insert a b' = m.insert a b' := by
   refine Std.ExtDHashMap.ext_get? fun a' => ?_
   simp [Std.ExtDHashMap.get?_insert]
   by_cases h : a = a' <;> simp [h]
 
-@[simp] theorem Std.ExtDHashMap.insert_insert_comm [BEq α] [Hashable α] [LawfulBEq α]
+@[simp] theorem Std.ExtDHashMap.insert_insert_comm {α : Type*} {β : α → Type*}
+    [BEq α] [Hashable α] [LawfulBEq α]
     (m : Std.ExtDHashMap α β) (a a' : α) (b : β a) (b' : β a') (h : a ≠ a') :
     (m.insert a b).insert a' b' = (m.insert a' b').insert a b := by
   refine Std.ExtDHashMap.ext_get? fun x => ?_
@@ -106,7 +108,7 @@ instance Fin.noZeroDivisors_of_prime (p : ℕ)
   · exact (h (by aesop)).elim
   all_goals rfl
 
-instance : Fintype (BitVec n) where
+instance {n : ℕ} : Fintype (BitVec n) where
   elems := Finset.image BitVec.ofFin Finset.univ
   complete x := by simp [Finset.mem_image]
 
@@ -140,7 +142,7 @@ section modify
 
 section back
 
-theorem modify_bind_get_bind_of_forall_eq (f : σ → σ)
+theorem modify_bind_get_bind_of_forall_eq {α β : Type _} (f : σ → σ)
     (g : σ → α) (mx : α → m β) (x : α) (h : ∀ s, g (f s) = x) :
     (do modify f; let s ← get; mx (g s)) =
       (do modify f; mx x) := by

@@ -390,12 +390,12 @@ and `/--` openers (strip/restore them).
   expensive compute into an abstract-`BitVec` helper proved once over variables and apply it symbolically —
   see the `2^64` bullet under "Bit-shift chip soundness" above for the worked `srl_toNat`/`sra_toNat` fix.
 
-- **`autoImplicit` is ON here, and it fails *silently* when you hoist a statement.** A lemma whose
-  **statement** mentions a name reachable only through a targeted `open` — e.g. `byteChannel`, which lives in
-  `SP1Clean.Channels` — does **not** error. The name is auto-bound as a fresh implicit variable, the lemma
-  elaborates as something weaker and different, and it surfaces much later as a confusing mismatch printing
-  `Channels.byteChannel` against `byteChannel`. Any hoisted statement mentioning a channel needs
-  `open SP1Clean.Channels (byteChannel) in` (the shape `Faithful/CPUState.lean` already uses mid-file).
+- **`autoImplicit` is OFF (package `leanOptions`), so a hoisted statement that names something outside
+  its `open`s errors instead of elaborating as a weaker lemma.** A statement mentioning a name reachable
+  only through a targeted `open` — e.g. `byteChannel`, which lives in `SP1Clean.Channels` — needs
+  `open SP1Clean.Channels (byteChannel) in` (the shape `Faithful/CPUState.lean` already uses mid-file);
+  with auto-bound implicits the name would have become a fresh variable and the mismatch surfaced much
+  later as `Channels.byteChannel` against `byteChannel`, which is why the option is off.
   **Validate a new shared statement by *applying* it at an existing call site** — a scratch `example`
   discharging the verbatim hand-written `have` — before rolling it out. Also check for an import cycle before
   promising a hoist covers every site: `ChipTactics.lean` imports `Faithful/CPUState.lean`, so CPUState
