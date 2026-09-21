@@ -795,6 +795,24 @@ private theorem bitwiseNoRawInteractions (cols : Extracted.BitwiseOracle.Bitwise
   simp [Extracted.ALUTypeReader.interactions, Extracted.BitwiseOracle.BitwiseCols.interactions, Extracted.BitwiseOracle.BitwiseOperation.interactions, Extracted.BitwiseOracle.BitwiseU16Operation.interactions, Extracted.BitwiseOracle.U16toU8OperationUnsafe.interactions, Extracted.CPUState.interactions,
     Extracted.Interaction.IsRaw]
 
+/-- The native Bitwise chip emits on the four SP1 buses only: its channel set is the bundle's
+declared one. Stated over an opaque input so the main anchor does not re-walk `main`. -/
+private theorem unexpectedInteractionsEmpty
+    (input : Var BitwiseChip.Inputs (ZMod p)) (offset : ℕ) :
+    unexpectedInteractions ((BitwiseChip.main input).operations offset) = [] := by
+  unfold unexpectedInteractions
+  apply List.filter_eq_nil_iff.mpr
+  intro interaction hmem hunexpected
+  have hchannel :
+      interaction.channel ∈ ((BitwiseChip.main input).operations offset).channels := by
+    rw [Operations.channels]
+    exact List.mem_map.mpr ⟨interaction, hmem, rfl⟩
+  have hknown := (BitwiseChip.circuit (p := p)).channels_subset input offset hchannel
+  simp only [BitwiseChip.circuit, FormalCircuitBase.channelsWithGuarantees_def,
+    FormalCircuitBase.channelsWithRequirements_def, circuit_norm] at hknown
+  simp only [decide_eq_true_eq] at hunexpected
+  tauto
+
 theorem bitwiseChip_interactions_faithful
     (env : Environment (ZMod p)) (input : Var BitwiseChip.Inputs (ZMod p))
     (offset : ℕ) (cols : BitwiseChip.Columns (ZMod p))
@@ -892,19 +910,7 @@ theorem bitwiseChip_interactions_faithful
     simp [bitwise_chip_operation, explicit_provable_type, circuit_norm,
       Nat.add_assoc]
   simp only [nativeAccesses]
-  have hunexpected :
-      unexpectedInteractions ((BitwiseChip.main input).operations offset) = [] := by
-    simp [unexpectedInteractions, BitwiseChip.main,
-      Readers.CPUState.circuit, Readers.CPUState.main,
-      Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
-      Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-      Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-      Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
-      SP1Clean.BitwiseU16Operation.circuit, SP1Clean.BitwiseU16Operation.main,
-      SP1Clean.BitwiseOperation.circuit, SP1Clean.BitwiseOperation.main,
-      Gadgets.Equality.main, FormalAssertion.toSubcircuit_interactions,
-      GeneralFormalCircuit.toSubcircuit_interactions, circuit_norm]
-  rw [hunexpected]
+  rw [unexpectedInteractionsEmpty]
   simp only [List.map_nil, List.append_nil]
   simp only [ChipOracle.accesses, ChipOracle.nativeInteractions, bitwiseChipOracle]
   rw [BitwiseChip.interactionsWith_state_eq, BitwiseChip.interactionsWith_byte_eq,
