@@ -144,22 +144,29 @@ theorem interpreterEffects :
       host.run policy (context input) == some expected && expected.result == 0 &&
         expected.effect == ⟨host, none⟩) = true := by native_decide
 
+/-- The interpreter's result for `call halt arg1 _` builds a checked row at each of four clocks
+(across the clock-limb boundary), pulling exactly the canonical message. A `def` rather than an
+inline statement: `let`s in a theorem type become `have`s, and the kernel then unfolds the
+interpreter to identify the two spellings. -/
+private def compiledControl (halt : Bool) (arg1 : ℕ) : Bool :=
+  let input := call halt arg1 (2 ^ 64 - 1)
+  match host.run policy (context input) with
+  | none => false
+  | some execution => [1, 2 ^ 24 - 7, 2 ^ 24 + 1, 2 ^ 48 - 7].all fun clock =>
+      let message := SP1Clean.HostControl.message (p := SP1Prime) clock execution
+      let checked := if halt then
+        evaluateProgram (HostHaltChip.main (varFromOffset HostHaltChip.Inputs 0))
+          (toElements (SP1Clean.HostControl.halt clock execution)).toList
+        else evaluateProgram (HostEnterChip.main (varFromOffset HostEnterChip.Inputs 0))
+          (toElements (SP1Clean.HostControl.enter clock execution)).toList
+      checked.1 && Semantics.clkNat message.clk_high message.clk_low == clock &&
+        selected "sp1.native.host_call" checked.2 ==
+          [("sp1.native.host_call", (toElements message).toList, -1)]
+
 /-- Successful interpreter results construct checked rows, including across clock-limb boundaries. -/
-theorem compiledControls : [false, true].all (fun halt =>
-    [0, 65536, SP1Prime - 1].all fun arg1 =>
-      let input := call halt arg1 (2 ^ 64 - 1)
-      match host.run policy (context input) with
-      | none => false
-      | some execution => [1, 2 ^ 24 - 7, 2 ^ 24 + 1, 2 ^ 48 - 7].all fun clock =>
-          let message := SP1Clean.HostControl.message (p := SP1Prime) clock execution
-          let checked := if halt then
-            evaluateProgram (HostHaltChip.main (varFromOffset HostHaltChip.Inputs 0))
-              (toElements (SP1Clean.HostControl.halt clock execution)).toList
-            else evaluateProgram (HostEnterChip.main (varFromOffset HostEnterChip.Inputs 0))
-              (toElements (SP1Clean.HostControl.enter clock execution)).toList
-          checked.1 && Semantics.clkNat message.clk_high message.clk_low == clock &&
-            selected "sp1.native.host_call" checked.2 ==
-              [("sp1.native.host_call", (toElements message).toList, -1)]) = true := by native_decide
+theorem compiledControls :
+    [false, true].all (fun halt => [0, 65536, SP1Prime - 1].all (compiledControl halt)) = true := by
+  native_decide
 
 /-- info: exportable ✓ (64 witness cells) -/
 #guard_msgs in
