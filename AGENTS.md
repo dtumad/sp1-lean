@@ -119,8 +119,10 @@ refinement; only their `_of_obligations` combinators are currently declared.
   finish or kill it** (`pkill -f "lake build"` / `pkill -f "lake env lean"`). Cap at **2–3 builds at once**.
   A `run_in_background` build can outlive its shell — check with `ps -ef | grep -E "lake|lean" | grep -v lsp`
   before spawning another. The lean LSP server (`uvx lean-lsp-mcp`) also keeps several GB warm.
-  **There is no `-j` option** in Lake here (only `-J/--json`; re-verified at v4.32.2) — serialise by not
-  running anything else.
+  **There is no `-j` option** in Lake here (only `-J/--json`; re-verified at v4.33.1): Lake's
+  concurrency is the Lean runtime pool of the `lake` process, `LEAN_NUM_THREADS` (default = cores),
+  inherited by every child `lean`; the lakefile's `moreLeanArgs` `-j2` caps each child at two
+  elaboration threads (`docs/agents/build-profiling.md`) — serialise by not running anything else.
 - **Process hygiene.** *LSP file workers* (`lean --worker …`, children of `lean --server`) leak and hold GB
   after an agent exits; `pkill -f "lean --worker"` is the correct reaper. **Never kill `lean --server` /
   `lake serve`** — that is the `lean-lsp` MCP server, and killing it drops the MCP connection for the whole
@@ -145,8 +147,11 @@ refinement; only their `_of_obligations` combinators are currently declared.
   regenerate and re-pin from the same pairing (`docs/agents/sail-model-provenance.md` records the
   current one).
   Read `docs/agents/lean-sail-notes.md` before touching any dependency.
-- Lake options already set in `lakefile.toml`: `--tstack=400000`; `autoImplicit = false` (every
-  binder is written; the generated Sail model overrides it); `synthInstance.maxHeartbeats` is the default.
+- Lake options already set in `lakefile.toml`: `--tstack=400000`, `-j2` (two elaboration threads
+  per `lean` — measured best on the 4-vCPU runner, where 4 × 4 threads cost a third of the
+  CPU-seconds in contention; CI adds `LEAN_NUM_THREADS=3` for Lake's own pool); `autoImplicit = false`
+  (every binder is written; the generated Sail model overrides it); `synthInstance.maxHeartbeats`
+  is the default.
 - **Lean ≥ 4.33 landmines** (`docs/agents/proof-patterns.md` § "Lean ≥ 4.33 and Clean `main`"): the
   unifier type-checks metavariable assignments at implicit transparency, so `rw`/`simp` through a
   `def` that only unfolds at default (`component.Input` vs `Inputs`, `id.Occurrence` vs the entry

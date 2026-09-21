@@ -6,8 +6,8 @@ name: Lean Action CI
 # 1. Mathlib is never stored in the GitHub Actions cache. lean-action's `use-mathlib-cache` runs
 #    `lake exe cache get` (about 6 GB of oleans, one to two minutes), which keeps every cache entry
 #    well below the 10 GB per-repository limit; the same tool also restores Batteries, Aesop, Qq,
-#    ProofWidgets, importGraph, LeanSearchClient, plausible and Cli, so those are excluded from our
-#    entries too (`CACHE_PATHS`). NB the path list is part of the entry's version hash: editing it
+#    ProofWidgets, importGraph, LeanSearchClient and plausible (measured 2026-09-21; `Cli` is not
+#    among them), so those seven are excluded from our entries too (`CACHE_PATHS`). NB the path list is part of the entry's version hash: editing it
 #    invalidates every existing entry, so bump `SP1_CACHE_VERSION` in the same change.
 # 2. The project build (`.lake/build`) and the remaining package checkouts are cached under a key
 #    `<prefix>-<kind>-<sha>-<run id>-<attempt>` (`prefix` = version + OS + toolchain/manifest
@@ -67,7 +67,6 @@ env:
     !.lake/packages/importGraph
     !.lake/packages/LeanSearchClient
     !.lake/packages/plausible
-    !.lake/packages/Cli
 
 jobs:
   guards:
@@ -121,6 +120,9 @@ jobs:
       pull-requests: read
     env:
       GH_TOKEN: ${{ github.token }}
+      # Three concurrent `lean` processes (each `-j2` from the lakefile): the 2026-09-21 matrix on
+      # this runner (fork issue #39) — 4 × 4 threads 32.4 min cold, 3 × 2 threads 26.9 min.
+      LEAN_NUM_THREADS: "3"
     outputs:
       cache-prefix: ${{ steps.key.outputs.prefix }}
       cache-key: ${{ steps.key.outputs.key }}
@@ -230,7 +232,7 @@ jobs:
           dirs=".lake/build"
           for d in .lake/packages/*/; do
             case "$d" in
-              */mathlib/|*/batteries/|*/aesop/|*/Qq/|*/proofwidgets/|*/importGraph/|*/LeanSearchClient/|*/plausible/|*/Cli/) ;;
+              */mathlib/|*/batteries/|*/aesop/|*/Qq/|*/proofwidgets/|*/importGraph/|*/LeanSearchClient/|*/plausible/) ;;
               *) dirs="$dirs ${d%/}" ;;
             esac
           done
