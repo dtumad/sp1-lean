@@ -30,6 +30,25 @@ and the two would loop. Upstream home: the `deriving ProvableStruct` handler, ne
 `fromComponents_cons` lemma it already emits. Supported shape: a structure whose only parameter
 is `(F : Type)`. -/
 
+namespace ProvableStruct
+
+variable {F : Type} [FiniteField F]
+
+/-- The cell-wise reading of "the evaluated struct variable at `offset` is `w`" (the shape a
+`witnessVector`-style witness condition takes once `circuit_norm` has decomposed
+`varFromOffset α offset` into a literal): cell `j` of the environment is cell `j` of `w`'s
+flattening. Fold the literal back with `change ProvableStruct.eval env
+(ProvableStruct.varFromOffset α offset) = _ at h` (definitional) and apply. -/
+theorem get_of_eval_varFromOffset_eq {α : TypeMap} [ProvableStruct α]
+    (env : Environment F) (offset : ℕ) (w : α F)
+    (h : ProvableStruct.eval env (ProvableStruct.varFromOffset α offset) = w)
+    (j : ℕ) (hj : j < size α) : env.get (offset + j) = (toElements w)[j] := by
+  subst h
+  rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.varFromOffset_eq_varFromOffset,
+    ProvableType.eval_varFromOffset, ProvableType.toElements_fromElements, Vector.getElem_mapRange]
+
+end ProvableStruct
+
 open Lean Elab Command Meta
 
 namespace ProvableStruct
@@ -55,13 +74,17 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
     -- tagging it would loop against that simproc through `eval_fields`/`getElem_map`.
     let some projFn := getProjFnForField? env structName field
       | throwErrorAt id "no projection function for field `{field}` of `{structName}`"
-    -- 0 = scalar (`F`), 1 = `Vector F n` (`Word F`, `fields n F` included), 2 = nested struct.
+    -- 0 = scalar (`F`); 1 = `Vector F n` (`Word F`, `fields n F` included); 3 = a vector of
+    -- something else (a `ProvableVector`); 2 = a nested struct or anything else.
     let kind : Nat ← liftTermElabM do
       forallTelescopeReducing (← getConstInfo projFn).type fun xs body => do
         if body == xs[0]! then pure 0
-        else if (← whnfD body).isAppOfArity ``Vector 2 then pure 1
-        else pure 2
-    let cmd ← if kind == 1 then `(
+        else
+          let body' ← whnfD body
+          if body'.isAppOfArity ``Vector 2 then
+            pure (if body'.getAppArgs[0]! == xs[0]! then 1 else 3)
+          else pure 2
+    let cmd ← if kind == 1 || kind == 3 then `(
       theorem $lemmaIdent:ident {F : Type} [FiniteField F] (env : Environment F)
           (s : Var $structIdent F) :
           (ProvableStruct.eval env s).$fieldIdent:ident = Eval.eval env s.$fieldIdent:ident := by
@@ -96,7 +119,7 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
           have := congrArg (fun r => r.$fieldIdent:ident) h
           simp only [$lemmaIdent:ident, circuit_norm] at this
           exact this)
-      | _ => `(
+      | 2 => `(
         theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
             {s : Var $structIdent F}
             (h : ProvableStruct.eval env s = ProvableStruct.eval env' s) :
@@ -104,6 +127,14 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
               = ProvableStruct.eval env' s.$fieldIdent:ident := by
           have := congrArg (fun r => r.$fieldIdent:ident) h
           simp only [circuit_norm] at this
+          exact this)
+      | _ => `(
+        theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
+            {s : Var $structIdent F}
+            (h : ProvableStruct.eval env s = ProvableStruct.eval env' s) :
+            Eval.eval env s.$fieldIdent:ident = Eval.eval env' s.$fieldIdent:ident := by
+          have := congrArg (fun r => r.$fieldIdent:ident) h
+          simp only [$lemmaIdent:ident] at this
           exact this)
     elabCommand congrCmd
 

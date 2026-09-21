@@ -284,6 +284,17 @@ theorem completeness :
   have hpvc : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_c_memory_prev_value
       = input_adapter_op_c_memory_prev_value := h_input.2.2.2.2.2.2.2.2.1.1
   simp only [Inputs.op_b_val, Inputs.op_c_val] at h_env_cols
+  -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.
+  change ProvableStruct.eval env.toEnvironment
+    (ProvableStruct.varFromOffset BitwiseU16Operation.Columns (i₀ + 3)) = _ at h_env_cols
+  replace h_env_cols := fun j : Fin 16 =>
+    (ProvableStruct.get_of_eval_varFromOffset_eq _ _ _ h_env_cols j (by
+      have h : size BitwiseU16Operation.Columns = 16 := rfl
+      have := j.isLt
+      omega)).trans (Witgen.getElem_eval_toElements _ _ j (by
+      have h : size BitwiseU16Operation.Columns = 16 := rfl
+      have := j.isLt
+      omega)).symm
   -- The witness stream is the `populateFE` IR; `populateFE_eval_cell` evaluates each pinned cell to
   -- the value-level `populate` at the evaluated operands (the operands folded through `vec4_eval` +
   -- `h_input`, the opcode expression evaluated to its `env.get` form).
