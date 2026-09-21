@@ -1485,6 +1485,7 @@ private theorem divRemUpperPlacementGlue
   norm_num
   simp only [gate]
 
+omit [Fact (2 ^ 24 < p)] in
 private theorem divRemOwnConstraint
     (env : Environment (ZMod p))
     (cols : Var DivRemChip.Columns (ZMod p))
@@ -1515,6 +1516,7 @@ private structure DivRemMulFlagFacts
     cols.is_divu + cols.is_remu + cols.is_div + cols.is_rem +
       cols.is_divw + cols.is_remw + cols.is_divuw + cols.is_remuw = 1
 
+omit [Fact (2 ^ 24 < p)] in
 private theorem divRemMulFlagFacts
     (env : Environment (ZMod p))
     (cols : Var DivRemChip.Columns (ZMod p))
@@ -2158,6 +2160,7 @@ private theorem divRemReaderAssertionsExact
   simpa only [divRemReaderAssertions, state, adapter, a, opcode,
     isReal] using h
 
+omit [Fact (2 ^ 24 < p)] in
 private theorem divRemOpA0OfOwn
     (env : Environment (ZMod p))
     (cols : Var DivRemChip.Columns (ZMod p))
