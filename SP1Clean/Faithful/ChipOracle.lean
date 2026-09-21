@@ -324,6 +324,7 @@ theorem cpuStateAssertions
         (nativeAssertZeros env ((Readers.CPUState.main input).operations offset)) := by
   simp [nativeAssertZeros, Readers.CPUState.main, Extracted.CPUState.asserts,
     circuit_norm]
+  simp only [circuit_norm] at hr
   rw [hr]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -386,6 +387,7 @@ theorem rTypeAssertions
       Expression.eval env (toElements (M := field) x)[0] = Expression.eval env x := rfl
   simp_rw [heval]
   simp only [Expression.eval]
+  simp only [circuit_norm] at hreal htrusted
   rw [hop, hreal, htrusted, hw0, hw1, hw2, hw3, htrust]
   intro hzero
   rw [hzero]
@@ -425,6 +427,7 @@ theorem iTypeAssertionsExact
       Expression.eval env (toElements (M := field) x)[0] = Expression.eval env x := rfl
   simp_rw [heval]
   simp only [Expression.eval]
+  simp only [circuit_norm] at hreal htrusted
   rw [hopA0, hreal, htrusted, hwrite0, hwrite1, hwrite2, hwrite3, htrust]
   simp
   tauto
@@ -472,6 +475,7 @@ theorem iTypeImmutableAssertionsExact
         Expression.eval env x := rfl
   simp_rw [heval]
   simp only [Expression.eval]
+  simp only [circuit_norm] at hreal htrusted
   rw [hopA0, hprev0, hprev1, hprev2, hprev3, hreal, htrusted, htrust]
   simp
   tauto
@@ -534,6 +538,7 @@ theorem jTypeAssertions
         Expression.eval env x := rfl
   simp_rw [heval]
   simp only [Expression.eval]
+  simp only [circuit_norm] at hreal htrusted
   rw [hreal, htrusted, hopA0, hwrite0, hwrite1, hwrite2, hwrite3, htrust]
   simp
   tauto
