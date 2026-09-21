@@ -3,8 +3,10 @@
 
 Two inputs, one report shape:
 
-* ``--profile-dir DIR``: the output of ``scripts/profile_compile.sh`` — ``summary.tsv`` plus one
-  ``<module>.log`` per module carrying Lean's ``-Dprofiler`` ``cumulative profiling times:`` block.
+* ``--profile-dir DIR``: the output of ``scripts/profile_compile.sh`` — ``summary.tsv``
+  (``cpu<TAB>wall<TAB>exit<TAB>module``; the older three-column ``seconds<TAB>exit<TAB>module``
+  form is still read, its seconds taken as the primary number) plus one ``<module>.log`` per
+  module carrying Lean's ``-Dprofiler`` ``cumulative profiling times:`` block.
   Produces ``DIR/profile.md`` and ``DIR/profile.json`` with the ranking, project-wide category
   totals (import, elaboration, simp, tactic execution, type checking, typeclass inference,
   compilation, linting, ...), and a per-pillar table.
@@ -118,7 +120,7 @@ def pillar_table(times: dict[str, float], categories: dict[str, dict[str, float]
 
 def write_report(path_md: Path, path_json: Path, title: str, method: str, times: dict[str, float],
                  exits: dict[str, int] | None, categories: dict[str, dict[str, float]] | None,
-                 top: int) -> None:
+                 top: int, walls: dict[str, float] | None = None) -> None:
     ranked = sorted(times.items(), key=lambda item: -item[1])
     summary = stats(list(times.values()))
     lines = [f"# {title}", "", method, "",
@@ -160,6 +162,9 @@ def write_report(path_md: Path, path_json: Path, title: str, method: str, times:
     if exits:
         for module, code in exits.items():
             report["modules"].setdefault(module, {})["exit"] = code
+    if walls:
+        for module, wall in walls.items():
+            report["modules"].setdefault(module, {})["wall"] = wall
     path_md.write_text("\n".join(lines) + "\n")
     path_json.write_text(json.dumps(report, indent=1, sort_keys=True) + "\n")
 
@@ -169,23 +174,30 @@ def run_profile_dir(directory: Path, top: int) -> None:
     if not summary.exists():
         sys.exit(f"missing {summary}")
     times: dict[str, float] = {}
+    walls: dict[str, float] = {}
     exits: dict[str, int] = {}
     categories: dict[str, dict[str, float]] = {}
     for line in summary.read_text().splitlines():
         parts = line.rstrip("\n").split("\t")
-        if len(parts) != 3:
+        if len(parts) == 4:
+            cpu, wall, code, module = parts
+            walls[module] = float(wall)
+        elif len(parts) == 3:
+            cpu, code, module = parts
+        else:
             continue
-        secs, code, module = parts
-        times[module] = float(secs)
+        times[module] = float(cpu)
         exits[module] = int(code)
         categories[module] = parse_cumulative(directory / f"{module}.log")
     write_report(
         directory / "profile.md", directory / "profile.json",
         "Compile-time profile (isolated per-module elaboration)",
-        "Method: `scripts/profile_compile.sh` — one `lake env lean -Dprofiler=true` per module against a "
-        "warm olean cache, sequential, single-thread CPU cost per module. Category columns come from Lean's "
-        "`cumulative profiling times` block (seconds).",
-        times, exits, categories, top)
+        "Method: `scripts/profile_compile.sh` — one `lean -Dprofiler=true` per module (package flags from "
+        "`scripts/lean_flags.py`) against a warm olean cache, sequential. The primary number is the process's "
+        "CPU time (user+sys; proof bodies elaborate on parallel threads, so wall under-counts them) when the "
+        "sweep recorded it, else wall. Category columns come from Lean's `cumulative profiling times` block "
+        "(seconds).",
+        times, exits, categories, top, walls)
     print(f"wrote {directory / 'profile.md'} and profile.json ({len(times)} modules)")
 
 
