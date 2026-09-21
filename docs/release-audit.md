@@ -70,8 +70,9 @@ Clean's `AgreesBelow`, needed rather than convenient: Clean PR #450's
 `not_computable_from_cells_alone` shows the unstrengthened obligation is **false** for any witness
 program reading `FExpr.dataGet`) and `ToClean/Circuit/WitgenShare.lean` (`WitgenIR.share`
 with its proven `WitgenIR.eval_share`, the subterm-sharing pass that takes the DivRem witness
-programs' wire format from 1.22 GB to 1.04 MB). Clean PRs #450/#453 remain the upstream proposals;
-acceptance deletes the two files and repoints their importers.
+programs' wire format from 1.22 GB to 1.04 MB). Clean PR #450 remains the upstream proposal for
+the first; its acceptance deletes that file and repoints its importers. #453 (the sharing pass)
+was closed unmerged on 2026-09-21, so `WitgenShare.lean` is a permanent `ToClean/` addition.
 
 **`lean-sail` is a documented temporary pin.** `dtumad/lean-sail` branch `sp1-pin` is tag `v5`
 plus one line — `open PreSail` → `open Sail.ConcurrencyInterfaceV1.PreSail` in `Sail/Sail.lean`,

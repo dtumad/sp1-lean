@@ -42,7 +42,11 @@ testDriver = "SP1CoreTest"
 # Opt-outs are measurements, not preferences; each names its count and has a docs/roadmap.md entry.
 [leanOptions]
 pp.unicode.fun = true
-synthInstance.maxHeartbeats = 1000000
+# No auto-bound implicits (Mathlib, Clean and PolyFun all set this); every binder is written. The
+# generated Sail model overrides both below. `synthInstance.maxHeartbeats` is the default: a
+# per-file probe of the whole tree (2026-09-21) found no instance search that needs more.
+autoImplicit = false
+relaxedAutoImplicit = false
 weak.linter.mathlibStandardSet = true
 # `style.admit` is not a member of the standard set; kept from the previous per-library flag set.
 weak.linter.style.admit = true
@@ -159,9 +163,12 @@ requiresModuleSystem = true
 # accesses to, which makes the memory-bridge lemmas false as stated, not merely unproved. The
 # settings mirror the generator's own lakefile; the generated files carry their own option
 # escapes and are outside every hand-written-source guard, like `SP1Clean/Extracted/`. It imports
-# only `Sail`, so the package's weak linter options are unregistered here and ignored.
+# only `Sail`, so the package's weak linter options are unregistered here and ignored. The backend
+# emits auto-bound implicits (`k_n`, …), so the package's `autoImplicit = false` is overridden here.
 [[lean_lib]]
 name = "LeanRV64D"
+leanOptions.autoImplicit = true
+leanOptions.relaxedAutoImplicit = true
 leanOptions.weak.linter.style.nameCheck = false
 moreLeancArgs = ["-fbracket-depth=500"]
 

@@ -62,7 +62,7 @@ TOP="${TOP:-50}"
 
 # Package-level lean args (lakefile.toml `moreLeanArgs` + `[leanOptions]`), applied to every module.
 # The package options from lakefile.toml `[leanOptions]` + `moreLeanArgs` (keep in sync).
-PACKAGE_FLAGS=(--tstack=400000 -Dpp.unicode.fun=true -DsynthInstance.maxHeartbeats=1000000
+PACKAGE_FLAGS=(--tstack=400000 -Dpp.unicode.fun=true -DautoImplicit=false -DrelaxedAutoImplicit=false
   -Dweak.linter.mathlibStandardSet=true -Dweak.linter.style.admit=true
   -Dweak.linter.style.header=false -Dweak.linter.style.longLine=false)
 

@@ -76,6 +76,10 @@ set_option linter.style.longLine false
 
 section sailboats
 
+variable {α β : Type} {x : α} {idx idx' : BitVec 5} {val val' : BitVec 64} {s : SailState}
+  {reg reg' : Register} {v : RegisterType reg} {v' : RegisterType reg'} {typ_0 : regidx}
+  {data pc : BitVec 64} {u : Unit}
+
 namespace Option
 
 /-- Version of `Option.getM` using `throw` instead of `failure`. -/
@@ -115,12 +119,12 @@ lemma get_reg?_insert_self
   if idx = 0 then some 0 else reg_idx_must_64 idx ▸ some v := by grind
 
 @[simp]
-lemma get_reg?_insert_nextPC :
+lemma get_reg?_insert_nextPC {v : RegisterType Register.nextPC} :
   SailState.get_reg? {s with regs := s.regs.insert Register.nextPC v} idx =
   SailState.get_reg? s idx := by aesop
 
 @[simp]
-lemma get_reg?_insert_PC :
+lemma get_reg?_insert_PC {v : RegisterType Register.PC} :
   SailState.get_reg? {s with regs := s.regs.insert Register.PC v} idx =
   SailState.get_reg? s idx := by aesop
 
@@ -235,7 +239,7 @@ lemma run_writeReg_bind (mx : Unit → SailM α) :
     (mx ()).run {s with regs := s.regs.insert reg v} := by aesop
 
 @[simp]
-lemma writeReg_writeReg_self :
+lemma writeReg_writeReg_self {v' : RegisterType reg} :
   (do LeanRV64D.writeReg reg v; LeanRV64D.writeReg reg v') = LeanRV64D.writeReg reg v' := by aesop
 
 /-- Swap writes to two different registers. -/
@@ -401,7 +405,7 @@ lemma writeReg_bind_map_readReg
 
 /-- Writing a value overwrites the previous write. -/
 @[simp]
-lemma writeReg_wX_bits_writeReg :
+lemma writeReg_wX_bits_writeReg {v' : RegisterType reg} :
   (do LeanRV64D.writeReg reg v; wX_bits typ_0 data; LeanRV64D.writeReg reg v') =
     (do wX_bits typ_0 data; LeanRV64D.writeReg reg v') := by aesop
 
@@ -427,6 +431,8 @@ end Sail
 end sailboats
 
 section execution
+
+variable {b : Bool} {rs1 rs2 rd : regidx}
 open PreSail
 open LeanRV64D.Functions
 
@@ -435,6 +441,8 @@ lemma bool_bits_forwards_to_if :
   bool_bit_forwards b = if b then 1#1 else 0#1 := by aesop
 
 section RTYPE
+
+variable {op : rop}
 
 /-- `execute_RTYPE` pure part -/
 def execute_RTYPE_pure (op1 : BitVec 64) (op2 : BitVec 64) (op : rop) :=
@@ -465,6 +473,8 @@ lemma execute_RTYPE_eq_execute_RTYPE' :
 end RTYPE
 
 section RTYPEW
+
+variable {op : ropw}
 
 /-- `execute_RTYPEW` pure part: the W-instructions operate on the low 32 bits of the
 operands and **sign-extend** the 32-bit result back to 64 bits (verbatim from the Sail

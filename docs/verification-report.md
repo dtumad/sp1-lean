@@ -1146,7 +1146,8 @@ three (for instance the transport layer's `transportTable_constraints` and the b
 - **T5 — Dependency pins outside upstream tags.** Every circuit here is built on Clean, pinned to
   upstream `Verified-zkEVM/clean` `main` (2026-09-16). From 2026-08 to 2026-09 that dependency was
   a fork carrying two modifying changes; both are now pure additions in this project's `ToClean/`
-  library (no Clean declaration is modified) and remain proposed upstream as Clean PRs #450/#453:
+  library (no Clean declaration is modified); the first remains proposed upstream as Clean PR
+  #450, the second's PR #453 was closed unmerged on 2026-09-21:
   (1) `AgreesBelowWithData`, the strengthening of `ProverEnvironment.AgreesBelow` that also
   constrains a prover environment's committed `data` and `hint` — a bug fix rather than an
   ergonomics request, since PR #450's `not_computable_from_cells_alone` proves the unstrengthened

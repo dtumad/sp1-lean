@@ -145,7 +145,8 @@ refinement; only their `_of_obligations` combinators are currently declared.
   regenerate and re-pin from the same pairing (`docs/agents/sail-model-provenance.md` records the
   current one).
   Read `docs/agents/lean-sail-notes.md` before touching any dependency.
-- Lake options already set in `lakefile.toml`: `--tstack=400000`, `synthInstance.maxHeartbeats = 1000000`.
+- Lake options already set in `lakefile.toml`: `--tstack=400000`; `autoImplicit = false` (every
+  binder is written; the generated Sail model overrides it); `synthInstance.maxHeartbeats` is the default.
 - **Lean ≥ 4.33 landmines** (`docs/agents/proof-patterns.md` § "Lean ≥ 4.33 and Clean `main`"): the
   unifier type-checks metavariable assignments at implicit transparency, so `rw`/`simp` through a
   `def` that only unfolds at default (`component.Input` vs `Inputs`, `id.Occurrence` vs the entry
@@ -478,7 +479,8 @@ missing from `.lake/packages/Clean`, read it on GitHub.)
 **The Clean pin is upstream `main`** (`fba2a29f5e36420d797c1de118ac9f11f23b819e`, 2026-09-16); the
 2026-08 fork (`dtumad/clean` `sp1-integration`) was retired in the 2026-09 toolchain move — its
 two modifying changes are re-derived as pure additions (`ToClean/Circuit/AgreesBelowWithData.lean`,
-`ToClean/Circuit/WitgenShare.lean`; Clean PRs #450/#453 remain the upstream proposals). The
+`ToClean/Circuit/WitgenShare.lean`; Clean PR #450 remains the upstream proposal for the first,
+#453 for the second was closed unmerged 2026-09-21 — the sharing pass is ours to keep). The
 **standing split** still applies: a change that MODIFIES an existing Clean declaration cannot be
 shimmed in `ToClean/` (downstream Clean theorems refer to Clean's declaration, not ours) and needs
 an upstream PR — pin a fork branch only for the life of that PR, documented as such; a **pure
