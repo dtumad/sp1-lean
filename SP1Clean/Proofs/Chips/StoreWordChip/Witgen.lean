@@ -64,12 +64,12 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
   · -- the address gadget's input row: the two operand words, the offset bit, and the row selector
     simp only [circuit_norm]
     refine ⟨?_, ?_, ?_, ?_⟩
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
+    · have hv := Inputs.eval_congr_op_b_val h_input
       simpa only [eval_opBVal] using hv
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_imm) h_input
+    · have hv := Inputs.eval_congr_op_c_imm h_input
       simpa only [eval_opCImm] using hv
-    · exact congrArg (fun r : Inputs (ZMod p) => r.offset_bit) h_input
-    · exact congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
+    · exact Inputs.eval_congr_offset_bit h_input
+    · exact Inputs.eval_congr_is_real h_input
   all_goals simp [circuit_norm]
 
 end SP1Clean.StoreWordChip

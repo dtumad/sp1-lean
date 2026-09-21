@@ -73,7 +73,7 @@ private theorem inputFacts {env env' : ProverEnvironment (ZMod p)}
       (fun r : Inputs (ZMod p) => r.adapter.op_c_memory.prev_value) h_input
     rw [eval_opCPrev env.toEnvironment input, eval_opCPrev env'.toEnvironment input] at hv
     simpa using congrArg (fun v : Word (ZMod p) => v[i]'hi) hv
-  · have hv := congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
+  · have hv := Inputs.eval_congr_is_real h_input
     rw [eval_isReal env.toEnvironment input, eval_isReal env'.toEnvironment input] at hv
     exact hv
 

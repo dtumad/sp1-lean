@@ -55,11 +55,13 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
     -- tagging it would loop against that simproc through `eval_fields`/`getElem_map`.
     let some projFn := getProjFnForField? env structName field
       | throwErrorAt id "no projection function for field `{field}` of `{structName}`"
-    let isVector ← liftTermElabM do
-      forallTelescopeReducing (← getConstInfo projFn).type fun _ body => do
-        -- `Word F`, `fields n F` are abbreviations of `Vector F n`: look through them.
-        pure ((← whnfD body).isAppOfArity ``Vector 2)
-    let cmd ← if isVector then `(
+    -- 0 = scalar (`F`), 1 = `Vector F n` (`Word F`, `fields n F` included), 2 = nested struct.
+    let kind : Nat ← liftTermElabM do
+      forallTelescopeReducing (← getConstInfo projFn).type fun xs body => do
+        if body == xs[0]! then pure 0
+        else if (← whnfD body).isAppOfArity ``Vector 2 then pure 1
+        else pure 2
+    let cmd ← if kind == 1 then `(
       theorem $lemmaIdent:ident {F : Type} [FiniteField F] (env : Environment F)
           (s : Var $structIdent F) :
           (ProvableStruct.eval env s).$fieldIdent:ident = Eval.eval env s.$fieldIdent:ident := by
@@ -73,5 +75,36 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
         cases s
         simp only [circuit_norm])
     elabCommand cmd
+    -- `S.eval_congr_f : eval env s = eval env' s → <field f of s agrees>`, stated in the field's
+    -- `circuit_norm` normal form so `rw`/`exact` at a constraint-form goal need no further step.
+    let congrIdent := mkIdent (`_root_ ++ structName ++ Name.mkSimple s!"eval_congr_{field}")
+    let congrCmd ← match kind with
+      | 0 => `(
+        theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
+            {s : Var $structIdent F}
+            (h : ProvableStruct.eval env s = ProvableStruct.eval env' s) :
+            Expression.eval env s.$fieldIdent:ident = Expression.eval env' s.$fieldIdent:ident := by
+          have := congrArg (fun r => r.$fieldIdent:ident) h
+          simp only [circuit_norm] at this
+          exact this)
+      | 1 => `(
+        theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
+            {s : Var $structIdent F}
+            (h : ProvableStruct.eval env s = ProvableStruct.eval env' s) :
+            Vector.map (Expression.eval env) s.$fieldIdent:ident
+              = Vector.map (Expression.eval env') s.$fieldIdent:ident := by
+          have := congrArg (fun r => r.$fieldIdent:ident) h
+          simp only [$lemmaIdent:ident, circuit_norm] at this
+          exact this)
+      | _ => `(
+        theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
+            {s : Var $structIdent F}
+            (h : ProvableStruct.eval env s = ProvableStruct.eval env' s) :
+            ProvableStruct.eval env s.$fieldIdent:ident
+              = ProvableStruct.eval env' s.$fieldIdent:ident := by
+          have := congrArg (fun r => r.$fieldIdent:ident) h
+          simp only [circuit_norm] at this
+          exact this)
+    elabCommand congrCmd
 
 end ProvableStruct

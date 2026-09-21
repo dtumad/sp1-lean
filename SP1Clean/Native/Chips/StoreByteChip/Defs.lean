@@ -163,7 +163,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.offset_bit, input.mem_limb,
         input.mem_limb_low_byte, input.register_low_byte, input.increment,
         input.store_value, input.is_real⟩ :

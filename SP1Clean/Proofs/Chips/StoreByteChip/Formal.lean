@@ -389,9 +389,6 @@ private theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (o
       Expression.eval] at hshallow
     have h_bool : Expression.eval env input.is_real = 0 ∨
         Expression.eval env input.is_real = 1 := bool_of_mul_pred hshallow
-    have h_bool' : (ProvableStruct.eval env input).is_real = 0 ∨
-        (ProvableStruct.eval env input).is_real = 1 := by
-      simpa only [circuit_norm] using h_bool
     rw [Operations.inChannelsOrRequirements_iff_forall_mem]
     intro interaction h_interaction
     simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
@@ -406,7 +403,7 @@ private theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (o
       rw [ChannelInteraction.toRaw_requirements] <;>
       intro h1 h0 <;>
       simp only [circuit_norm] at h1 h0 <;>
-      exact off_gate_vacuous h_bool' h1 h0
+      exact off_gate_vacuous h_bool h1 h0
 
 /-- The `StoreByte` chip row as a `GeneralFormalCircuit`; output is the extracted `Columns`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=

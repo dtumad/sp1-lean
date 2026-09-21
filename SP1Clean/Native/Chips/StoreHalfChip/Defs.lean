@@ -128,7 +128,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   localLength_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReaderImmutable.circuit, Readers.MemoryAccess.circuit]
   output input i0 :=
     ⟨input.state, input.adapter,
-      ⟨varFromOffset Extracted.AddrAddOperation i0, var ⟨i0 + 3⟩⟩,
+      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
       input.memory_access, input.offset_bit, input.store_value, input.is_real⟩
   output_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReaderImmutable.circuit, Readers.MemoryAccess.circuit]
   -- `programChannel` joins the structural `RowSpec` propagated from `ITypeReaderImmutable`'s program **pull** (W11 flip).
@@ -139,7 +139,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.offset_bit, input.store_value, input.is_real⟩ :
         Var Columns (ZMod p)) := rfl
 

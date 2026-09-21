@@ -598,9 +598,6 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
             (Expression.eval env input_var.is_real - 1) = 0 := hshallow.2
         have h_bool : Expression.eval env input_var.is_real = 0 ∨
             Expression.eval env input_var.is_real = 1 := bool_of_mul_pred h_gate
-        have h_bool' : (ProvableStruct.eval env input_var).is_real = 0 ∨
-            (ProvableStruct.eval env input_var).is_real = 1 := by
-          simpa only [circuit_norm] using h_bool
         rw [Operations.inChannelsOrRequirements_iff_forall_mem]
         intro interaction h_interaction
         simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
@@ -617,7 +614,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
         rw [ChannelInteraction.toRaw_requirements]
         intro h1 h0
         simp only [circuit_norm] at h1 h0
-        exact off_gate_vacuous h_bool' h1 h0,
+        exact off_gate_vacuous h_bool h1 h0,
     -- W11: expose the State-bus `[pulledIf is_real cur, pushedIf is_real next]` pair as chip-owned
     -- interactions (the Clean `VmTables` re-base that motivated the shape was investigated and deferred
     -- — roadmap W11). `next_pc` is the **witnessed** LSB-cleared jump target the chip feeds `CPUState`:

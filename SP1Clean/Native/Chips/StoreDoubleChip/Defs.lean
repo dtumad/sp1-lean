@@ -131,7 +131,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   localLength _ := 3 + 1
   output input i0 :=
     ⟨input.state, input.adapter,
-      ⟨varFromOffset Extracted.AddrAddOperation i0, var ⟨i0 + 3⟩⟩,
+      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
       input.memory_access, input.is_real⟩
   -- `programChannel` joins the structural `RowSpec` propagated from `ITypeReaderImmutable`'s program **pull** (W11 flip).
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
@@ -141,7 +141,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.is_real⟩ :
         Var Columns (ZMod p)) := rfl
 

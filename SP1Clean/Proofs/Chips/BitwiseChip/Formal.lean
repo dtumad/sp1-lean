@@ -154,9 +154,10 @@ completeness `populate` bridge applies it symbolically. -/
 private lemma toElements_result_byte (s : BitwiseU16Operation.Columns (ZMod p)) (k : Fin 8) :
     (toElements s)[8 + (k : ℕ)]'(by simp only [circuit_norm]; omega)
       = s.bitwise_operation.result[(k : ℕ)] := by
-  obtain ⟨a, b, c⟩ := s
+  obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := s
   fin_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type];
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+       ProvableStruct.componentsToElements];
      refine (Vector.getElem_append_right ?_ ?_).trans
        ((Vector.getElem_append_right ?_ ?_).trans
          ((Vector.getElem_append_left ?_).trans

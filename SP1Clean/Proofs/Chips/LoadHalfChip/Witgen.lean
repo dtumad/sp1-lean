@@ -66,18 +66,18 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_⟩
   · simp [circuit_norm]
-  · have hob := congrArg (fun r : Inputs (ZMod p) => r.offset_bit) h_input
+  · have hob := Inputs.eval_congr_offset_bit h_input
     simp only [eval_offsetBit] at hob
     simp only [circuit_norm]
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
+    · have hv := Inputs.eval_congr_op_b_val h_input
       simpa only [eval_opBVal] using hv
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_imm) h_input
+    · have hv := Inputs.eval_congr_op_c_imm h_input
       simpa only [eval_opCImm] using hv
     · simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 2 => v[0]) hob
     · simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 2 => v[1]) hob
-    · rw [congrArg (fun r : Inputs (ZMod p) => r.is_lh) h_input,
-        congrArg (fun r : Inputs (ZMod p) => r.is_lhu) h_input]
+    · rw [Inputs.eval_congr_is_lh h_input,
+        Inputs.eval_congr_is_lhu h_input]
   all_goals simp [circuit_norm]
 
 end SP1Clean.LoadHalfChip

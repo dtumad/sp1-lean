@@ -39,7 +39,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
       simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     have hsel : Expression.eval env.toEnvironment input.is_auipc
         = Expression.eval env'.toEnvironment input.is_auipc := by
-      have hv := congrArg (fun r : Inputs (ZMod p) => r.is_auipc) h_input
+      have hv := Inputs.eval_congr_is_auipc h_input
       simpa [eval_inputs] using hv
     -- the payload is a bare `FExpr` product, so unfold the IR evaluator alone: naming
     -- `circuit_norm` here would reach the whole inline `main` (no `populateIR` opacity boundary)
@@ -58,7 +58,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
       simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     have hsel : Expression.eval env.toEnvironment input.is_auipc
         = Expression.eval env'.toEnvironment input.is_auipc := by
-      have hv := congrArg (fun r : Inputs (ZMod p) => r.is_auipc) h_input
+      have hv := Inputs.eval_congr_is_auipc h_input
       simpa [eval_inputs] using hv
     have hoa0 : Expression.eval env.toEnvironment input.adapter.op_a_0
         = Expression.eval env'.toEnvironment input.adapter.op_a_0 := by

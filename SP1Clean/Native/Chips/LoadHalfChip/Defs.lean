@@ -150,7 +150,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   localLength_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit, U16MSBOperation.circuit]
   output input i0 :=
     ⟨input.state, input.adapter,
-      ⟨varFromOffset Extracted.AddrAddOperation i0, var ⟨i0 + 3⟩⟩,
+      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
       input.memory_access, input.offset_bit, input.selected_half, ⟨input.msb⟩,
       input.is_lh, input.is_lhu⟩
   output_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit, U16MSBOperation.circuit]
@@ -163,7 +163,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.offset_bit, input.selected_half, ⟨input.msb⟩,
         input.is_lh, input.is_lhu⟩ :
         Var Columns (ZMod p)) := rfl

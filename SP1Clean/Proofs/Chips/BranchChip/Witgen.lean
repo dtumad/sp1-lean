@@ -67,7 +67,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
           (congrArg (fun v : Word (ZMod p) => v[3]) hv)).trans (Vector.getElem_map _ (by omega))
     · simp only [circuit_norm]
       exact h_agree.get_eq (by omega)
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
+    · have hv := Inputs.eval_congr_is_real h_input
       rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval] at hv
       simpa only [eval_inputIsReal] using hv
   · -- The ten `LtOperationSigned` cells: rs1/rs2 inputs, the two comparison flag cells, `is_real`.
@@ -101,7 +101,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
           (congrArg (fun v : Word (ZMod p) => v[3]) hv)).trans (Vector.getElem_map _ (by omega))
     · simp only [circuit_norm]
       rw [h_agree.get_eq (by omega), h_agree.get_eq (by omega)]
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
+    · have hv := Inputs.eval_congr_is_real h_input
       rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval] at hv
       simpa only [eval_inputIsReal] using hv
   · simp [circuit_norm]

@@ -42,10 +42,10 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     -- (`eval_opBVal`/`eval_opCVal`), the opcode from the three earlier flag cells.
     refine BitwiseU16Operation.populateFE_congr_flat env env' _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
+    · have hv := Inputs.eval_congr_op_b_val h_input
       simp only [eval_opBVal] at hv
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
+    · have hv := Inputs.eval_congr_op_c_val h_input
       simp only [eval_opCVal] at hv
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · simp only [circuit_norm]
