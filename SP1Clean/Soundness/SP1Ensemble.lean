@@ -139,7 +139,7 @@ theorem sp1StateVerifier_soundness :
     GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) sp1StateVerifierMain
       (fun _ _ => True) (fun pi _ _ => pi.LimbBounds) := by
   circuit_proof_start
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   simp only [circuit_norm, SP1StateBoundary.LimbBounds, Channels.stateChannel,
     Channels.byteChannel, Channels.exitChannel] at h_holds ⊢
   obtain ⟨i016, i3248, ipair, ipc0, ipc1, ipc2, f016, f3248, fpair, fpc0, fpc1, fpc2⟩ := h_holds
@@ -167,7 +167,7 @@ theorem sp1StateVerifier_completeness :
     GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) sp1StateVerifierMain
       sp1StateVerifierProverAssumptions (fun _ _ _ => True) := by
   circuit_proof_start
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   simp only [sp1StateVerifierProverAssumptions, SP1StateBoundary.LimbBounds] at h_assumptions
   obtain ⟨i016, i1624, i2432, i3248, ipc0, ipc1, ipc2,
     f016, f1624, f2432, f3248, fpc0, fpc1, fpc2⟩ := h_assumptions
@@ -220,7 +220,7 @@ def sp1StateVerifier : GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
         Channels.byteChannel_eq_stateChannel_false,
         Channels.byteChannel_eq_exitChannel_false,
         Channels.stateChannel_eq_exitChannel_false,
-        Channels.exitChannel_eq_stateChannel_false, if_false]
+        Channels.exitChannel_eq_stateChannel_false]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- The verifier's exact syntactic State pair, exposed without unfolding its formal-circuit record. -/
@@ -401,7 +401,7 @@ theorem witness_instructionTables_aligned
       change witness.tables[i].component = (supportedChips (p := p))[i].table
       have descriptorEq : (sp1Ensemble (p := p)).tables[i] =
           (supportedChips (p := p))[i].table := by
-        change (sp1Tables (p := p) ++ sp1ProviderTables (p := p))[i] = _
+        simp only [sp1Ensemble_tables]
         rw [List.getElem_append_left instructionBound]
         simp only [sp1Tables, List.getElem_map]
         rfl
