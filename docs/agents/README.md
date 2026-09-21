@@ -11,6 +11,9 @@ Read Clean's pinned upstream documentation first:
 - [proof-patterns.md](proof-patterns.md) — circuit proof recipes, performance landmines, and the
   repository's cleanup discipline. Its source-stability and folded-term rules override generic
   `mathlib-quality` transformations when they conflict.
+- [build-profiling.md](build-profiling.md) — which tool answers which build-time question
+  (whole build, one module, one declaration), how to read the profiler categories, and the
+  measurement protocol every build-time PR follows.
 - [porting-recipe.md](porting-recipe.md) — step-by-step chip-porting checklist.
 - [lean-sail-notes.md](lean-sail-notes.md) — Lean/Sail environment, immutable pins, and update
   traps.
@@ -23,8 +26,9 @@ Read Clean's pinned upstream documentation first:
 
 Generated axiom records live in [`../snapshots/`](../snapshots/). Compile profiles are generated on
 demand with `scripts/profile_compile.sh` and `scripts/profile_aggregate.py` (per-module timings and
-Lean's category split) and `scripts/build_semantics.py` (the cost joined to the layers, strata and
-headline-claim closures), and kept with the review that motivated them, not as evergreen
-documentation: [compile-profile-2026-09.md](compile-profile-2026-09.md) is the fork's compile-time
+Lean's category split), `scripts/build_semantics.py` (the cost joined to the layers, strata and
+headline-claim closures, the critical path, a before/after comparison) and the
+`build-experiment.yml` workflow (a controlled cold or warm build on the CI runner), and kept with
+the review that motivated them, not as evergreen documentation: [compile-profile-2026-09.md](compile-profile-2026-09.md) is the fork's compile-time
 baseline and [`../audits/2026-09-build-semantics.md`](../audits/2026-09-build-semantics.md) the
 cost-versus-claims investigation.

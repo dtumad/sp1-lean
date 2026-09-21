@@ -12,11 +12,21 @@ computes the transitive import closure of each headline declaration's module.
 Outputs (under --out): `modules.tsv` (one row per module: layer, stratum, seconds, lines, one
 membership column per headline), `layers.md` (layer x stratum cost), `claims.md` (per headline:
 closure size, seconds, strata/layers touched), `unreached.md` (modules in no headline closure),
-`chips.md` (per chip and per file kind). The audit `docs/audits/2026-09-build-semantics.md` is
-regenerated from these; numbers never get edited by hand.
+`chips.md` (per chip and per file kind), `critical_path.md` (the longest import-weighted path
+through the built modules and the P-processor bound `max(CP, total/P)` — what a build with that
+many parallel jobs can never beat), and, when the log carries GitHub Actions timestamps,
+`timeline.md` (concurrency over the build and the single-job tail). The audit
+`docs/audits/2026-09-build-semantics.md` is regenerated from these; numbers never get edited by
+hand.
+
+`--compare <head log>` joins a second log to the first (the base) and writes `compare.md` instead:
+totals and critical paths of both, the touched modules' deltas (`--touched` = a file of module
+names or repo paths, one per line), the largest regressions/improvements among common modules, and
+a noise check (untouched modules should stay within ±15 %).
 
 Usage:
-  scripts/build_semantics.py --lake-log <log> --out <dir> [--profile-dir <sweep dir>]
+  scripts/build_semantics.py --lake-log <log> --out <dir> [--profile-dir <sweep dir>] [--processors 4]
+  scripts/build_semantics.py --lake-log <base log> --compare <head log> --out <dir> [--touched <file>]
 """
 import argparse
 import collections
@@ -190,6 +200,89 @@ def read_lake_log(path):
     return secs
 
 
+TS_RE = re.compile(r"^\ufeff?(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.\d+)?Z\s")
+
+
+def read_lake_log_events(path):
+    """module -> (seconds, end time in epoch seconds or None) from `Built` lines with an optional
+    GitHub Actions timestamp prefix (a local Lake log has none, so `end` is None there)."""
+    import datetime as dt
+    events = {}
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            m = BUILT_RE.search(line)
+            if not m:
+                continue
+            v = float(m.group(2))
+            v = v / 1000 if m.group(3) == "ms" else v
+            t = TS_RE.match(line)
+            end = dt.datetime.fromisoformat(t.group(1)).replace(tzinfo=dt.timezone.utc).timestamp() if t else None
+            events[m.group(1)] = (v, end)
+    return events
+
+
+def critical_path(imports, secs):
+    """Longest path through the import DAG restricted to the modules in `secs`, each weighted by its
+    seconds; `imports` maps module -> imported modules. Returns (length, [modules root..leaf])."""
+    best = {}
+    order = []
+    state = {}
+    for root in secs:
+        if root in state:
+            continue
+        stack = [(root, False)]
+        while stack:
+            m, done = stack.pop()
+            if done:
+                state[m] = 2
+                order.append(m)
+                continue
+            if state.get(m) == 2:
+                continue
+            state[m] = 1
+            stack.append((m, True))
+            for i in imports.get(m, []):
+                if i in secs and state.get(i) != 2:
+                    stack.append((i, False))
+    for m in order:
+        pred = max((best[i] for i in imports.get(m, []) if i in best), key=lambda p: p[0], default=(0.0, []))
+        best[m] = (pred[0] + secs[m], pred[1] + [m])
+    if not best:
+        return 0.0, []
+    return max(best.values(), key=lambda p: p[0])
+
+
+def timeline(events, bucket=60):
+    """Concurrency over the build from timestamped events: returns None without timestamps, else a
+    dict with the span, the average/peak concurrency, the seconds spent at <= 1 and <= 2 running
+    jobs, the longest solo stretch (module, seconds), and per-bucket running counts. Jobs under
+    one second are left out (their timestamps cluster and would inflate the counts)."""
+    timed = {m: (s, e) for m, (s, e) in events.items() if e is not None and s >= 1.0}
+    if not timed:
+        return None
+    starts = {m: e - s for m, (s, e) in timed.items()}
+    t0 = min(starts.values()); t1 = max(e for _, e in timed.values())
+    span = max(t1 - t0, 1e-9)
+    n = int(span // bucket) + 1
+    running = [0] * n
+    for m, (s, e) in timed.items():
+        lo = int((starts[m] - t0) // bucket); hi = int((e - t0) // bucket)
+        for b in range(max(lo, 0), min(hi, n - 1) + 1):
+            running[b] += 1
+    total = sum(s for s, _ in timed.values())
+    le1 = sum(bucket for r in running if r <= 1)
+    le2 = sum(bucket for r in running if r <= 2)
+    # the module that was running alone for the longest stretch
+    solo_best = ("", 0.0)
+    for m, (s, e) in timed.items():
+        lo = int((starts[m] - t0) // bucket); hi = int((e - t0) // bucket)
+        alone = sum(bucket for b in range(max(lo, 0), min(hi, n - 1) + 1) if running[b] <= 1)
+        if alone > solo_best[1]:
+            solo_best = (m, alone)
+    return {"span": span, "total": total, "avg": total / span, "peak": max(running),
+            "le1": le1, "le2": le2, "solo": solo_best, "running": running, "bucket": bucket}
+
+
 CATEGORIES = ["import", "elaboration", "simp", "tactic execution", "interpretation", "type checking",
               "typeclass inference", "blocked (unaccounted)", "linting"]
 
@@ -211,18 +304,109 @@ def fmt(x):
     return f"{x:,.0f}".replace(",", " ")
 
 
+def write_critical_path(args, imports, secs, events):
+    """critical_path.md (+ timeline.md when the log is timestamped)."""
+    P = args.processors
+    total = sum(secs.values())
+    cp, path = critical_path(imports, secs)
+    bound = max(cp, total / P) if P else cp
+    with open(os.path.join(args.out, "critical_path.md"), "w") as f:
+        f.write(f"Source log: `{args.lake_log}` — {len(secs)} built modules, {fmt(total)} s summed.\n\n")
+        f.write(f"| Critical path | Σ / {P} | {P}-processor bound `max(CP, Σ/P)` | CP share of bound |\n|---:|---:|---:|---:|\n")
+        f.write(f"| {fmt(cp)} s ({cp/60:.1f} min) | {fmt(total/P)} s ({total/P/60:.1f} min) | {fmt(bound)} s ({bound/60:.1f} min) | {100*cp/max(bound,1e-9):.0f} % |\n\n")
+        f.write("The build is *critical-path-bound* when CP > Σ/P (shortening the path helps) and *throughput-bound* "
+                "otherwise (only CPU-seconds help). Modules outside the import graph (dependencies such as Clean) "
+                "count in Σ but not in the path.\n\n")
+        f.write(f"Path ({len(path)} modules, root → leaf):\n\n")
+        for m in path:
+            f.write(f"- `{m}` {secs[m]:.0f} s\n")
+    tl = timeline(events)
+    if tl:
+        with open(os.path.join(args.out, "timeline.md"), "w") as f:
+            f.write(f"Source log: `{args.lake_log}` (GitHub Actions timestamps; start = end − duration).\n\n")
+            f.write("| Build span | Σ built | Average concurrency | Peak | Seconds at ≤ 1 job | at ≤ 2 jobs | Longest solo stretch |\n|---:|---:|---:|---:|---:|---:|---|\n")
+            f.write(f"| {tl['span']/60:.1f} min | {fmt(tl['total'])} s | {tl['avg']:.2f} | {tl['peak']} | {fmt(tl['le1'])} | {fmt(tl['le2'])} | `{tl['solo'][0]}` {fmt(tl['solo'][1])} s |\n\n")
+            f.write(f"Running jobs per {tl['bucket']}-second bucket (minute: count):\n\n")
+            f.write(" ".join(f"{i}:{r}" for i, r in enumerate(tl["running"])) + "\n")
+
+
+def read_touched(path, graph_modules):
+    """Module names from a file of names or repo paths (`git diff --name-only` output works)."""
+    touched = set()
+    with open(path, encoding="utf-8") as f:
+        for raw in f:
+            item = raw.strip()
+            if not item:
+                continue
+            if item.endswith(".lean"):
+                item = item[:-5].replace("/", ".")
+            if item in graph_modules:
+                touched.add(item)
+    return touched
+
+
+def write_compare(args, imports):
+    """compare.md: base (`--lake-log`) vs head (`--compare`)."""
+    P = args.processors
+    base = read_lake_log_events(args.lake_log)
+    head = read_lake_log_events(args.compare)
+    bs = {m: s for m, (s, _) in base.items()}
+    hs = {m: s for m, (s, _) in head.items()}
+    touched = read_touched(args.touched, set(imports)) if args.touched else set()
+    common = sorted(set(bs) & set(hs))
+    deltas = {m: (hs[m] - bs[m], (hs[m] - bs[m]) / bs[m] if bs[m] else float("inf")) for m in common}
+    untouched = [m for m in common if m not in touched]
+    noisy = [m for m in untouched if abs(deltas[m][1]) > 0.15 and max(bs[m], hs[m]) >= 5]
+    abs_pct = sorted(abs(deltas[m][1]) for m in untouched if bs[m] >= 5)
+    median_pct = abs_pct[len(abs_pct) // 2] if abs_pct else 0.0
+    with open(os.path.join(args.out, "compare.md"), "w") as f:
+        f.write("| | Modules | Σ built s | Critical path s | " + f"{P}-processor bound s |\n|---|---:|---:|---:|---:|\n")
+        for name, secs in (("base", bs), ("head", hs)):
+            cp, _ = critical_path(imports, secs)
+            tot = sum(secs.values())
+            f.write(f"| {name} | {len(secs)} | {fmt(tot)} | {fmt(cp)} | {fmt(max(cp, tot / P))} |\n")
+        tb, th = sum(bs.values()), sum(hs.values())
+        f.write(f"\nΔ Σ built: {th - tb:+.0f} s ({100 * (th - tb) / max(tb, 1e-9):+.1f} %). Only-in-base: {len(set(bs) - set(hs))}, only-in-head: {len(set(hs) - set(bs))}.\n\n")
+        if touched:
+            f.write(f"## Touched modules ({len(touched)} named, {len([m for m in touched if m in common])} in both logs)\n\n| Module | base s | head s | Δ s | Δ % |\n|---|---:|---:|---:|---:|\n")
+            for m in sorted(touched, key=lambda m: -abs(deltas.get(m, (0, 0))[0])):
+                if m in common:
+                    f.write(f"| `{m}` | {bs[m]:.1f} | {hs[m]:.1f} | {deltas[m][0]:+.1f} | {100 * deltas[m][1]:+.0f} % |\n")
+                else:
+                    f.write(f"| `{m}` | {bs.get(m, float('nan')):.1f} | {hs.get(m, float('nan')):.1f} | — | — |\n")
+            f.write("\n")
+        for title, rows in (("Largest regressions (common modules)", sorted(common, key=lambda m: -deltas[m][0])[:20]),
+                            ("Largest improvements (common modules)", sorted(common, key=lambda m: deltas[m][0])[:20])):
+            f.write(f"## {title}\n\n| Module | base s | head s | Δ s | Δ % | touched |\n|---|---:|---:|---:|---:|---|\n")
+            for m in rows:
+                f.write(f"| `{m}` | {bs[m]:.1f} | {hs[m]:.1f} | {deltas[m][0]:+.1f} | {100 * deltas[m][1]:+.0f} % | {'yes' if m in touched else ''} |\n")
+            f.write("\n")
+        f.write(f"## Noise check\n\nUntouched common modules ≥ 5 s: median |Δ| = {100 * median_pct:.0f} %; "
+                f"{len(noisy)} outside ±15 %" + (": " + ", ".join(f"`{m}` ({100 * deltas[m][1]:+.0f} %)" for m in noisy[:15]) if noisy else "") + ".\n")
+    print(f"wrote {args.out}/compare.md: base {len(bs)} modules {fmt(tb)} s, head {len(hs)} modules {fmt(th)} s, {len(noisy)} noisy untouched")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lake-log", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--profile-dir")
+    ap.add_argument("--processors", type=int, default=4, help="P for the P-processor bound (default 4 = the CI runner)")
+    ap.add_argument("--compare", help="a second (head) Lake log: write compare.md against --lake-log (the base) and stop")
+    ap.add_argument("--touched", help="with --compare: file of touched module names or repo paths, one per line")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
     graph = read_graph()
+    imports = {m: v[1] for m, v in graph.items()}
+    if args.compare:
+        write_compare(args, imports)
+        return
     strata = load_strata()
-    secs = read_lake_log(args.lake_log)
+    events = read_lake_log_events(args.lake_log)
+    secs = {m: s for m, (s, _) in events.items()}
     cats = read_profile_dir(args.profile_dir) if args.profile_dir else {}
+    write_critical_path(args, imports, secs, events)
 
     info = {}
     for mod, (path, imports, lines) in graph.items():
@@ -337,7 +521,7 @@ def main():
         for c, d in sorted(chips.items(), key=lambda kv: -sum(kv[1].values())):
             f.write(f"| {c} | {fmt(sum(d.values()))} | " + ", ".join(f"{k} {v:.0f}" for k, v in d.most_common(4)) + " |\n")
 
-    print(f"wrote {args.out}/{{modules.tsv,layers.md,claims.md,unreached.md,chips.md}}: "
+    print(f"wrote {args.out}/{{modules.tsv,layers.md,claims.md,unreached.md,chips.md,critical_path.md[,timeline.md]}}: "
           f"{len(info)} modules, {fmt(total)} s, {len(closures)} headlines, {len(unreached)} unreached")
 
 

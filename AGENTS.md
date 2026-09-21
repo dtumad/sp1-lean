@@ -706,8 +706,12 @@ after installing or toggling.
   performance-sensitive definitions.
 - `docs/agents/porting-recipe.md` — step-by-step checklist to port a new chip from the Add/Bitwise template.
 - `docs/agents/extraction.md` — the constraint-extraction pipeline (compiler → Python → Lean DSL).
-- Generate compile profiles on demand with `scripts/profile_compile.sh` (per-module category split)
-  and `scripts/build_semantics.py` (cost joined to layers and headline-claim closures); keep
+- `docs/agents/build-profiling.md` — which tool answers which build-time question, how to read the
+  profiler categories, and the measurement protocol for a build-time PR.
+- Generate compile profiles on demand with `scripts/profile_compile.sh` (per-module category split),
+  `scripts/build_semantics.py` (cost joined to layers and headline-claim closures, the critical
+  path, `--compare` for a PR pair) and the `build-experiment.yml` workflow (a controlled cold/warm
+  build on the CI runner); keep
   point-in-time timings with the review artifact that uses them rather than in the maintained
   documentation set (`docs/audits/2026-09-build-semantics.md` is the current one).
 - `docs/snapshots/axiom-ledger.md` — machine-checked `#print axioms` inventory per theorem (point-in-time
