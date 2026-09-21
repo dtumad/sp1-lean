@@ -115,6 +115,7 @@ set_option linter.unusedSectionVars false in
 private lemma val_lt_of_bool {b : ZMod p} (h : b = 0 ∨ b = 1) : b.val < 2 ^ 16 := by
   have := bool_val_le h; omega
 
+omit [Fact (2 ^ 17 < p)] in
 /-- The Lt result word `#v[bit, 0, 0, 0]` is a valid u64 whenever the compare `bit` is binary (the
 op_a write push's `isU64 value` obligation). -/
 private lemma isU64_bitWord {b : ZMod p} (h : b = 0 ∨ b = 1) :

@@ -417,8 +417,10 @@ private theorem memoryInitProvider_channels_subset :
   simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
-omit [Fact (2 ^ 24 < p)] in
+-- `[Fact (2 ^ 24 < p)]` feeds the file's derived `Fact (2 ^ 17 < p)` instance the circuit needs;
+-- the linter sees only the final term.
 set_option linter.unusedSectionVars false in
+@[nolint unusedArguments]
 private theorem memoryFinalizeProvider_channels_subset :
     (MemoryFinalizeChip.circuit (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
   intro ch h
@@ -1086,8 +1088,8 @@ private theorem memoryInitProvider_exitChannel_not_mem :
   simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_self,
     Nat.reduceEqDiff, false_and, and_false] at h
 
-omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
+@[nolint unusedArguments]
 private theorem memoryFinalizeProvider_exitChannel_not_mem :
     (exitChannel (p := p)).toRaw ∉ (MemoryFinalizeChip.circuit (p := p)).channels := by
   intro h

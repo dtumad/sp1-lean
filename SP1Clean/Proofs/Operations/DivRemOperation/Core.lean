@@ -42,6 +42,7 @@ private lemma eval_getElem {n : ℕ} {env : Environment (ZMod p)}
     Expression.eval env v[i] = w[i] := by
   rw [← h, Vector.getElem_map]
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **Var↔value transport for the own-assert tail.** Mapping `Expression.eval` over the
 carrier-generic `ownAsserts` chain at `R = Expression (ZMod p)` yields the same chain at
 `R = ZMod p`, given the per-field evaluation pins (exactly the components of a
@@ -118,6 +119,7 @@ theorem ownAsserts_map_eval (env : Environment (ZMod p)) (colsV : Var DivRemChip
     gvBpv, gvCpv, gvA, gvB, gvC, gvQ, gvQC, gvR, gvRC, gvAR, gvAC, gvMax, gvCnegV, gvRnegV,
     gvCtq, gvCarry]
 
+omit [Fact (2 ^ 24 < p)] in
 /-- Soundness-direction transport: the var-level own-assert equations (the `assertZeros
 (ownAsserts cols)` block's `h_holds` content) give the evaluated-row `OwnAssertsHold` bundle.
 `colsV`/`cols` are implicit so both solve structurally from `h` and the goal — the pins then
@@ -175,6 +177,7 @@ theorem ownAssertsHold_of_forall (env : Environment (ZMod p)) {colsV : Var DivRe
   obtain ⟨e, he, rfl⟩ := List.mem_map.mp hx
   exact h e he
 
+omit [Fact (2 ^ 24 < p)] in
 /-- Completeness-direction transport: the evaluated-row `OwnAssertsHold` bundle discharges the
 var-level own-assert equations. -/
 theorem forall_of_ownAssertsHold (env : Environment (ZMod p)) {colsV : Var DivRemChip.Columns (ZMod p)}

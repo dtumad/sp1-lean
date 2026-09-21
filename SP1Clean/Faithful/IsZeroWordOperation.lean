@@ -88,8 +88,9 @@ private def isZeroWordOwnExpressions
       (cols.result -
         cols.is_zero_first_half * cols.is_zero_second_half)]
 
-omit [Fact (2 ^ 17 < p)] in
+-- `[Fact (2 ^ 17 < p)]` is needed by the closing `simp` (the linter sees only the final term).
 set_option linter.unusedSectionVars false in
+@[nolint unusedArguments]
 -- Measured (W3/r3c/b2): clears 40000 heartbeats; the former 1M ceiling was >=25x over, removed.
 private theorem isZeroWord_nativeAssertions
     (env : Environment (ZMod p))
