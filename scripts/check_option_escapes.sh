@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Gate: elaboration-budget escape hatches are PROHIBITED except on an explicit measured allowlist.
 #
-# Covers `set_option maxHeartbeats` and `set_option maxRecDepth` under `SP1Clean/` and `SP1CleanTest/`.
+# Covers `set_option maxHeartbeats`, `set_option maxRecDepth` and the v4.33 unifier escape
+# `set_option backward.isDefEq.respectTransparency` under `SP1Clean/` and `SP1CleanTest/`.
 #
 # Hand-written Lean in this repo carries **zero** `maxHeartbeats`, matching upstream Clean, which has
 # none in 44,603 lines and enforces that in review. The allowlisted sites are generated definitions and
@@ -44,9 +45,9 @@ tmp_allow=$(mktemp)
 trap 'rm -f "$tmp_actual" "$tmp_allow"' EXIT
 
 # Actual sites: one "<option> <path> <value>" line per occurrence, aggregated to counts.
-for opt in maxHeartbeats maxRecDepth; do
+for opt in maxHeartbeats maxRecDepth backward.isDefEq.respectTransparency; do
   grep -rn "set_option $opt " SP1Clean SP1CleanTest ToClean ToMathlib ToPolyFun --include='*.lean' 2>/dev/null \
-    | sed -E "s|^([^:]+):[0-9]+:.*set_option $opt ([0-9]+).*|$opt \1 \2|"
+    | sed -E "s|^([^:]+):[0-9]+:.*set_option $opt ([A-Za-z0-9]+).*|$opt \1 \2|"
 done | sort | uniq -c | awk '{print $2, $3, $4, $1}' | sort > "$tmp_actual"
 
 # Allowlist: strip comments/blank lines, keep the first four fields.

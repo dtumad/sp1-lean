@@ -79,11 +79,21 @@ private theorem divRem_toElements_field {F : Type} (x : F) :
 
 private theorem divRem_toElements_addOperation {F : Type}
     (op : Extracted.AddOperation F) :
-    toElements op = op.value := rfl
+    toElements op = op.value := by
+  obtain ⟨v⟩ := op
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  ext i hi
+  simp only [Vector.getElem_cast]
+  exact Vector.getElem_append_left _
 
 private theorem divRem_toElements_u16MSBOperation {F : Type}
     (op : Extracted.U16MSBOperation F) :
-    toElements op = #v[op.msb] := rfl
+    toElements op = #v[op.msb] := by
+  obtain ⟨v⟩ := op
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 /-- Copy a shared standalone arithmetic block into the DivRem oracle's chip-private struct copy.
 Same field names; definitional field-copy, not an operation-level faithfulness claim. -/

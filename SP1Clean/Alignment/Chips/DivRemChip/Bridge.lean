@@ -105,7 +105,6 @@ theorem correct_div_native
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_DIV_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_div]
-  rfl
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
@@ -127,7 +126,6 @@ theorem correct_divu_native
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_DIV_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divu]
-  rfl
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
@@ -149,7 +147,6 @@ theorem correct_rem_native
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_REM_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_rem]
-  rfl
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
@@ -171,7 +168,6 @@ theorem correct_remu_native
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_REM_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remu]
-  rfl
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
@@ -193,7 +189,6 @@ theorem correct_divw_native
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_DIVW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divw]
-  rfl
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
@@ -215,7 +210,6 @@ theorem correct_divuw_native
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_DIVW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divuw]
-  rfl
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
@@ -237,7 +231,6 @@ theorem correct_remw_native
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_REMW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remw]
-  rfl
 
 set_option linter.unusedSimpArgs false in
 omit [Fact (2 ^ 24 < p)] in
@@ -259,7 +252,6 @@ theorem correct_remuw_native
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_REMW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remuw]
-  rfl
 
 omit [Fact (2 ^ 24 < p)] in
 /-- End-to-end: from the chip `Spec`, the 8-way DIV/DIVU/REM/REMU/DIVW/DIVUW/REMW/REMUW Sail

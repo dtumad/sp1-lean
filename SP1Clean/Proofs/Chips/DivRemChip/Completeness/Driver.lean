@@ -135,7 +135,7 @@ theorem completeness :
     rw [← CircuitType.eval_var_fields]
     exact h_input.2.2.2.2.2.2.2.2.1
   have hir : Expression.eval env.toEnvironment input_var_is_real = input_is_real := h_input.1
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   -- reduce the reducible operand projections, then abbreviate the operands and flags
   simp only [Inputs.op_b_val, Inputs.op_c_val] at hbU hcU
   set B := input_adapter_op_b_memory_prev_value with hBdef
