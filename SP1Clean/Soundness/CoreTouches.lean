@@ -95,9 +95,12 @@ theorem halt_aligned (row : HaltChip.Inputs (ZMod p))
     row.x5_memory.prev_value clock timestamps
   refine ⟨alignedOf (haltRowFacts row) touches, ?_⟩
   apply alignedFacts_of_touches (haltRowFacts row) touches
-  · constructor <;>
-      dsimp only [alignedOf, touches, SystemTouches.touches, haltRowFacts, HaltChip.memoryPairs,
-        List.map_cons, List.map_nil] <;>
+  · -- Unfold both message spellings to the same literals before `Perm.refl`: identifying them by
+    -- unification alone recurses through `List.map` past the depth limit.
+    constructor <;>
+      simp only [alignedOf, touches, SystemTouches.touches, haltRowFacts, HaltChip.memoryPairs,
+        List.map_cons, List.map_nil, SystemTouches.prior, SystemTouches.push,
+        HaltChip.memPulledMessage, HaltChip.memPushedMessage] <;>
       exact List.Perm.refl _
   · change ∀ touch ∈ touches, TouchOK (SystemTouches.start row.state) touch.1 touch.2
     exact facts.1
