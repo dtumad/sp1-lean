@@ -165,10 +165,17 @@ requiresModuleSystem = true
 # escapes and are outside every hand-written-source guard, like `SP1Clean/Extracted/`. It imports
 # only `Sail`, so the package's weak linter options are unregistered here and ignored. The backend
 # emits auto-bound implicits (`k_n`, …), so the package's `autoImplicit = false` is overridden here.
+# `backward.do.legacy`: the generated `RvfiDii.print_rvfi_exec` (18 consecutive
+# `(pure (print_bits …))` statements) hits the new `do` elaborator's exponential re-elaboration
+# (lean4#13858, fix lean4#13985 pending) — 718 s and 15.4 GB on one file, ≈ 60 of the 75 cold CI
+# minutes; the legacy elaborator takes 1.8 s and 1.4 GB (measured 2026-09-21, v4.33.1). Same
+# semantics by the option's contract; dropped when the Sail backend emits `let _ : Unit := e`
+# for pure-unit calls or the Lean fix lands (issue #6).
 [[lean_lib]]
 name = "LeanRV64D"
 leanOptions.autoImplicit = true
 leanOptions.relaxedAutoImplicit = true
+leanOptions.backward.do.legacy = true
 leanOptions.weak.linter.style.nameCheck = false
 moreLeancArgs = ["-fbracket-depth=500"]
 
