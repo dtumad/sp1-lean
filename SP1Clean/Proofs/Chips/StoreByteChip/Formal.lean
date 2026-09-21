@@ -454,13 +454,13 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           GeneralFormalCircuit.toSubcircuit_interactions]
       · simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           h_byte, h_program, h_memory, decide_false, decide_true, Bool.false_eq_true,
-          if_true, List.nil_append]
+          List.nil_append]
       · simp [circuit_norm, Gadgets.Equality.main, exposedMemoryInteractions]
       · simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           Channels.byteChannel_eq_programChannel_false,
           Channels.stateChannel_eq_programChannel_false,
           Channels.memoryChannel_eq_programChannel_false,
-          decide_false, decide_true, Bool.false_eq_true, if_true, List.nil_append] }
+          decide_false, decide_true, Bool.false_eq_true, List.nil_append] }
 
 /-- Folded circuit projections used by the whole-chip row codec. -/
 @[circuit_norm] theorem circuit_main_eq : (circuit (p := p)).main = main := rfl

@@ -736,7 +736,7 @@ private theorem loadHalfMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [loadHalfMemoryAssertionValues,
     List.singleton_append]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem loadHalfNativeU16MSBAssertionList

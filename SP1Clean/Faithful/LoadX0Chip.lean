@@ -679,7 +679,7 @@ private theorem loadX0MemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [loadX0MemoryAssertionValues,
     List.singleton_append]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def loadX0ChipRustColumns
     (env : Environment (ZMod p))

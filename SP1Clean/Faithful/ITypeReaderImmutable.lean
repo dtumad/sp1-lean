@@ -124,7 +124,7 @@ theorem itypereaderimmutable_memory_interactions_faithful_syntactic
       (Gadgets.Equality.circuit field) memoryChannel.toRaw n inp
       List.not_mem_nil List.not_mem_nil
   simp only [Readers.ITypeReaderImmutable.main, circuit_norm, hrac, heq,
-    SP1Clean.Channels.programChannel_eq_memoryChannel_false, if_false]
+    SP1Clean.Channels.programChannel_eq_memoryChannel_false]
   simp only [toAccess_pushIf_memory, toAccess_pullIf_memory]
   simp only [Extracted.ITypeReaderImmutable.interactions, List.map_cons,
     List.map_nil, Extracted.Interaction.toAccess, Extracted.Dir.sign,
@@ -177,7 +177,7 @@ theorem itypereaderimmutable_program_interactions_faithful_syntactic
       (Gadgets.Equality.circuit field) programChannel.toRaw n inp
       List.not_mem_nil List.not_mem_nil
   simp only [Readers.ITypeReaderImmutable.main, circuit_norm, hrac, heq,
-    SP1Clean.Channels.memoryChannel_eq_programChannel_false, if_false]
+    SP1Clean.Channels.memoryChannel_eq_programChannel_false]
   have hk := fun (g : Expression (ZMod p))
       (message : SP1Clean.Channels.ProgramMsg (Expression (ZMod p))) =>
     toAccess_pullIf_program env g message

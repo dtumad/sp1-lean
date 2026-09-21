@@ -209,7 +209,7 @@ def circuit [Fact (2 ^ 17 < p)] : GeneralFormalCircuit (ZMod p) Inputs unit wher
     simp only [exposedState, stateInteractions]
     rw [Operations.exposedChannelsLawful_expose]
     simp only [main, currentMsg, nextMsg, circuit_norm,
-      Channels.byteChannel_eq_stateChannel_false, if_false]
+      Channels.byteChannel_eq_stateChannel_false]
   channelsWithRequirements := []
   requirementsChannelsLawful input_var i₀ := by
     preserve_tactic_target

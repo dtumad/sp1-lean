@@ -678,7 +678,7 @@ private theorem storeHalfMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [storeHalfMemoryAssertionValues,
     List.singleton_append]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def storeHalfChipRustColumns
     (env : Environment (ZMod p))

@@ -673,7 +673,7 @@ private theorem storeWordMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [storeWordMemoryAssertionValues,
     List.singleton_append]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def storeWordChipRustColumns
     (env : Environment (ZMod p))
@@ -1599,9 +1599,8 @@ private theorem storeWordByteInteractionsFaithful
     h6, h3, Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   simp only [← ProvableStruct.eval_eq_eval,
-    StoreWordChip.eval_inputs, eval_cpuState,
-    Readers.ITypeReader.eval_cols, eval_registerAccessCols,
-    eval_registerAccessTimestamp, storeWordEvalMemoryCols,
+    eval_cpuState,
+    eval_registerAccessTimestamp,
     storeWordEvalMemoryTimestamp, ProvableType.eval_field]
   exact storeWordPermFourBlocks
     [_, _] [_, _, _, _] [_, _] [_, _, _, _]

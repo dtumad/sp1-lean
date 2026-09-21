@@ -632,7 +632,7 @@ private theorem storeDoubleMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [storeDoubleMemoryAssertionValues,
     List.singleton_append]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def storeDoubleChipRustColumns
     (env : Environment (ZMod p))
@@ -1482,9 +1482,8 @@ private theorem storeDoubleByteInteractionsFaithful
     h6, h3, Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   simp only [← ProvableStruct.eval_eq_eval,
-    StoreDoubleChip.eval_inputs, eval_cpuState,
-    Readers.ITypeReader.eval_cols, eval_registerAccessCols,
-    eval_registerAccessTimestamp, storeDoubleEvalMemoryCols,
+    eval_cpuState,
+    eval_registerAccessTimestamp,
     storeDoubleEvalMemoryTimestamp, ProvableType.eval_field]
   exact storeDoublePermFourBlocks
     [_, _] [_, _, _, _] [_, _] [_, _, _, _]

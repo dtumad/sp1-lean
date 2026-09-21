@@ -754,7 +754,7 @@ private theorem storeByteMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [storeByteMemoryAssertionValues,
     List.singleton_append]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def storeByteChipRustColumns
     (env : Environment (ZMod p))

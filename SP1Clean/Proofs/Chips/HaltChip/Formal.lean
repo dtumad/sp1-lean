@@ -225,7 +225,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
           Channels.exitChannel_eq_stateChannel_false,
           Channels.exitChannel_eq_memoryChannel_false,
           Channels.exitChannel_eq_programChannel_false,
-          decide_false, decide_true, Bool.false_eq_true, if_true, if_false,
+          decide_false, decide_true, Bool.false_eq_true,
           List.nil_append, exposedMemoryInteractions]
   requirementsChannelsLawful := fun input_var i₀ => by
     preserve_tactic_target
