@@ -568,7 +568,7 @@ theorem sp1Ensemble_tables_channels_subset_core_of_ne (i : ℕ)
   by_cases hlt : i < 25
   · have hget : ((sp1Ensemble (p := p)).tables[i]'(by rw [hlen]; omega))
         = (sp1Tables (p := p))[i]'(by rw [sp1Tables_length]; exact hlt) := by
-      change ((sp1Tables (p := p) ++ sp1ProviderTables (p := p))[i]'_) = _
+      simp only [sp1Ensemble_tables]
       rw [List.getElem_append_left]
     rw [hget]
     exact sp1Tables_channels_subset _ (List.getElem_mem _)
@@ -576,7 +576,7 @@ theorem sp1Ensemble_tables_channels_subset_core_of_ne (i : ℕ)
     have hj : i - 25 < ProviderTableId.all.length := by omega
     have hget : ((sp1Ensemble (p := p)).tables[i]'(by rw [hlen]; omega))
         = providerTableFor (p := p) (ProviderTableId.all[i - 25]'hj) := by
-      change ((sp1Tables (p := p) ++ sp1ProviderTables (p := p))[i]'_) = _
+      simp only [sp1Ensemble_tables]
       rw [List.getElem_append_right (by rw [sp1Tables_length]; omega)]
       simp only [sp1Tables_length, sp1ProviderTables, List.getElem_map]
     -- Rewrite the *channel list*, not the component: `Component` is dependent, so `rw` on it

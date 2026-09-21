@@ -216,8 +216,8 @@ private theorem aluX0Chip_fetchDiscriminant :
 /-- Discharge one registry case from its circuit-level discriminant theorem. -/
 local macro "fetchDiscriminantCase " kind:term ", " thm:term : tactic =>
   `(tactic| (
-    letI := ($kind:term).provableInputs
-    letI := ($kind:term).provableCols
+    let _inputs := ($kind:term).provableInputs
+    let _cols := ($kind:term).provableCols
     apply fetchDiscriminantShape_of_circuit
     exact $thm:term))
 

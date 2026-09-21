@@ -477,17 +477,7 @@ private theorem memoryProvider_toAccess_eq_inputAccess
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
   simp only [memoryInitInputAccess, LookupAccessList.negMult, circuit_norm]
   rw [memoryProvider_eval_toMessage, signedVal_neg hp]
-  have evaluated := ProvableStruct.eval_var_eq_eval env input
-  simp only [MemoryProviderChip.Inputs.toMessage]
-  rw [congrArg MemoryProviderChip.Inputs.clk_high evaluated,
-    congrArg MemoryProviderChip.Inputs.clk_low evaluated,
-    congrArg MemoryProviderChip.Inputs.addr0 evaluated,
-    congrArg MemoryProviderChip.Inputs.addr1 evaluated,
-    congrArg MemoryProviderChip.Inputs.addr2 evaluated,
-    congrArg (fun x : MemoryProviderChip.Inputs (ZMod p) => x.value[0]) evaluated,
-    congrArg (fun x : MemoryProviderChip.Inputs (ZMod p) => x.value[1]) evaluated,
-    congrArg (fun x : MemoryProviderChip.Inputs (ZMod p) => x.value[2]) evaluated,
-    congrArg (fun x : MemoryProviderChip.Inputs (ZMod p) => x.value[3]) evaluated]
+  simp only [MemoryProviderChip.Inputs.toMessage, circuit_norm]
 
 private theorem memoryFinalize_toAccess_eq_inputAccess
     (env : Environment (ZMod p))
@@ -502,17 +492,7 @@ private theorem memoryFinalize_toAccess_eq_inputAccess
   simp only [memoryFinalizeInputAccess, LookupAccessList.negMult, circuit_norm,
     signedVal_neg hp, neg_neg]
   rw [memoryFinalize_eval_toMessage]
-  have evaluated := ProvableStruct.eval_var_eq_eval env input
-  simp only [MemoryFinalizeChip.Inputs.toMessage]
-  rw [congrArg MemoryFinalizeChip.Inputs.clk_high evaluated,
-    congrArg MemoryFinalizeChip.Inputs.clk_low evaluated,
-    congrArg MemoryFinalizeChip.Inputs.addr0 evaluated,
-    congrArg MemoryFinalizeChip.Inputs.addr1 evaluated,
-    congrArg MemoryFinalizeChip.Inputs.addr2 evaluated,
-    congrArg (fun x : MemoryFinalizeChip.Inputs (ZMod p) => x.value[0]) evaluated,
-    congrArg (fun x : MemoryFinalizeChip.Inputs (ZMod p) => x.value[1]) evaluated,
-    congrArg (fun x : MemoryFinalizeChip.Inputs (ZMod p) => x.value[2]) evaluated,
-    congrArg (fun x : MemoryFinalizeChip.Inputs (ZMod p) => x.value[3]) evaluated]
+  simp only [MemoryFinalizeChip.Inputs.toMessage, circuit_norm]
 
 private theorem memoryProvider_nativeAccesses_symbolic
     (env : Environment (ZMod p)) :

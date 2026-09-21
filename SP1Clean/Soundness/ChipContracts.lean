@@ -5033,7 +5033,7 @@ private lemma producedMessages_gatedPair {Message : TypeMap} [ProvableType Messa
     producedMessages [TypedInteraction.pulledIfValue channel gate pulled,
         TypedInteraction.pushedIfValue channel gate pushed] =
       if gate = 1 then [pushed] else [] := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hpullVal : signedVal (-gate) = -(gate.val : ℤ) := signedVal_neg_is_real hp hbool
   have hpushVal : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
   unfold producedMessages
@@ -5059,7 +5059,7 @@ private lemma consumedMessages_gatedPair {Message : TypeMap} [ProvableType Messa
     consumedMessages [TypedInteraction.pulledIfValue channel gate pulled,
         TypedInteraction.pushedIfValue channel gate pushed] =
       if gate = 1 then [pulled] else [] := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hpullVal : signedVal (-gate) = -(gate.val : ℤ) := signedVal_neg_is_real hp hbool
   have hpushVal : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
   unfold consumedMessages
@@ -5791,7 +5791,7 @@ private lemma bump_clkNat_lt
     Semantics.clkNat ph pl <
       Semantics.clkNat (c2432 + c3248 * 256) (cl16 + c1624 * 65536) := by
   have hp := Fact.out (p := 2 ^ 25 < p)
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have v256 : ((256 : ZMod p)).val = 256 := bump_val256
   have v65536 : ((65536 : ZMod p)).val = 65536 := bump_val65536
   have hPushHigh : (c2432 + c3248 * 256).val = c2432.val + c3248.val * 256 :=

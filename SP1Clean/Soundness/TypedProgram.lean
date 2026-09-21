@@ -707,8 +707,8 @@ theorem DivRemChip.programEmissionShape :
 to the uniform supported-chip contract. -/
 local macro "programRegistryCase " kind:term ", " shape:term : tactic =>
   `(tactic| (
-    letI := ($kind:term).provableInputs
-    letI := ($kind:term).provableCols
+    let _inputs := ($kind:term).provableInputs
+    let _cols := ($kind:term).provableCols
     apply programEmissionShape_of_circuit
     exact $shape:term))
 

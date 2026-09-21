@@ -1021,8 +1021,8 @@ theorem AluX0Chip.circuitMemorySelectorGated :
 the corresponding whole-chip Memory selector theorem to the descriptor-level contract. -/
 local macro "memorySelectorRegistryCase " kind:term ", " shape:term : tactic =>
   `(tactic| (
-    letI := ($kind:term).provableInputs
-    letI := ($kind:term).provableCols
+    let _inputs := ($kind:term).provableInputs
+    let _cols := ($kind:term).provableCols
     apply memorySelectorConstraintShape_of_circuit
     exact $shape:term))
 

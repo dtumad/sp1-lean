@@ -659,7 +659,7 @@ def traceInputs (entries : List TraceGen.MemRecordEntry) : List (Inputs (ZMod p)
 theorem proverAssumptions_of_entry {e : TraceGen.MemRecordEntry} (h : e.WellFormedInit)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     circuit.ProverAssumptions (ofEntry (p := p) e) data hint := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have hclk : e.clk = 0 := h
   refine ⟨TraceGen.wordOfNat_isU64 _, ?_, ?_, e.multiplicityField_isBool⟩
   · simp only [ofEntry, TraceGen.MemRecordEntry.toMemoryMsg, hclk]
@@ -729,7 +729,7 @@ in `clk_high`, which `ClkBound` does not constrain.) -/
 theorem proverAssumptions_of_entry (e : TraceGen.MemRecordEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     circuit.ProverAssumptions (ofEntry (p := p) e) data hint := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   exact ⟨TraceGen.wordOfNat_isU64 _, val_natCast_lt (Nat.mod_lt _ (by norm_num)) le_rfl,
     e.multiplicityField_isBool⟩
 
@@ -795,7 +795,7 @@ def paddingInputs : Inputs (ZMod p) where
   is_real := 0
 
 theorem spec_paddingInputs : Spec (paddingInputs (p := p)) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   refine ⟨Or.inl rfl, Or.inl rfl, ⟨0, 0, Or.inl rfl, Or.inl rfl, by simp [paddingInputs],
     by simp [paddingInputs], by simp [paddingInputs]⟩, fun h => absurd h ?_⟩
   simp [paddingInputs]
@@ -843,7 +843,7 @@ def paddingInputs : Inputs (ZMod p) where
   is_real := 0
 
 theorem spec_paddingInputs : Spec (paddingInputs (p := p)) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   refine ⟨Or.inl rfl, fun h => absurd h ?_⟩
   simp [paddingInputs]
 

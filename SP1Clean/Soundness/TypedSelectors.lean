@@ -66,13 +66,6 @@ theorem AddChip.selectorBinary_of_shallow
     (shallow : ConstraintsHold.Shallow env ((AddChip.main input).operations offset)) :
     Expression.eval env input.is_real = 0 ∨ Expression.eval env input.is_real = 1 := by
   simp only [AddChip.main, circuit_norm] at shallow
-  have inputRealEq : (ProvableStruct.eval env input).is_real =
-      Expression.eval env input.is_real := by
-    calc
-      _ = (Eval.eval env input).is_real :=
-        congrArg (fun value => value.is_real) (ProvableStruct.eval_eq_eval env input).symm
-      _ = Expression.eval env input.is_real := by simp only [circuit_norm]
-  rw [inputRealEq] at shallow
   exact bool_of_mul_pred shallow
 
 omit [Fact (2 ^ 24 < p)] in
@@ -184,7 +177,7 @@ local macro "simpleInputSelectorBinary" main:term : tactic =>
     intro input offset env shallow
     change (Eval.eval env input).is_real = 0 ∨ (Eval.eval env input).is_real = 1
     simp only [$main:term, circuit_norm] at shallow
-    rw [← ProvableStruct.eval_eq_eval env input] at shallow
+    simp only [circuit_norm]
     exact bool_of_mul_pred (by tauto)))
 
 /-- Boilerplate for chips whose `is_real` boolean gate is the *first* shallow assert of `main`.
@@ -287,8 +280,7 @@ theorem BranchChip.mainSelectorBinary :
     exact List.mem_cons_of_mem _ List.mem_cons_self
   have link := allConstraints _ linkMem
   have gate := allConstraints _ gateMem
-  simp only [circuit_norm] at link gate
-  rw [← ProvableStruct.eval_eq_eval env input] at link
+  simp only [circuit_norm] at link gate ⊢
   rcases bool_of_mul_pred gate with selectorZero | selectorOne
   · left
     linear_combination link + selectorZero
@@ -304,24 +296,24 @@ theorem LoadByteChip.mainSelectorBinary : MainSelectorBinary (p := p) LoadByteCh
   constructor
   intro input offset env shallow
   simp only [LoadByteChip.main, circuit_norm] at shallow
-  rw [← ProvableStruct.eval_eq_eval env input] at shallow
-  simpa only [LoadByteChip.isReal] using bool_of_mul_pred shallow.2
+  simp only [LoadByteChip.isReal, circuit_norm]
+  exact bool_of_mul_pred shallow.2
 
 theorem LoadHalfChip.mainSelectorBinary : MainSelectorBinary (p := p) LoadHalfChip.main
     LoadHalfChip.isReal := by
   constructor
   intro input offset env shallow
   simp only [LoadHalfChip.main, circuit_norm] at shallow
-  rw [← ProvableStruct.eval_eq_eval env input] at shallow
-  simpa only [LoadHalfChip.isReal] using bool_of_mul_pred shallow
+  simp only [LoadHalfChip.isReal, circuit_norm]
+  exact bool_of_mul_pred shallow
 
 theorem LoadWordChip.mainSelectorBinary : MainSelectorBinary (p := p) LoadWordChip.main
     LoadWordChip.isReal := by
   constructor
   intro input offset env shallow
   simp only [LoadWordChip.main, circuit_norm] at shallow
-  rw [← ProvableStruct.eval_eq_eval env input] at shallow
-  simpa only [LoadWordChip.isReal] using bool_of_mul_pred shallow
+  simp only [LoadWordChip.isReal, circuit_norm]
+  exact bool_of_mul_pred shallow
 
 theorem LoadDoubleChip.mainSelectorBinary :
     MainSelectorBinary (p := p) LoadDoubleChip.main (fun input => input.is_real) := by
@@ -332,8 +324,8 @@ theorem LoadX0Chip.mainSelectorBinary : MainSelectorBinary (p := p) LoadX0Chip.m
   constructor
   intro input offset env shallow
   simp only [LoadX0Chip.main, circuit_norm] at shallow
-  rw [← ProvableStruct.eval_eq_eval env input] at shallow
-  simpa only [LoadX0Chip.isReal] using bool_of_mul_pred shallow
+  simp only [LoadX0Chip.isReal, circuit_norm]
+  exact bool_of_mul_pred shallow
 
 theorem StoreByteChip.mainSelectorBinary :
     MainSelectorBinary (p := p) StoreByteChip.main (fun input => input.is_real) := by
@@ -456,8 +448,8 @@ theorem AluX0Chip.mainSelectorBinary :
 typed shallow contract to the physical circuit, and identify the `RowView` selector by reflexivity. -/
 local macro "selectorRegistryCase " kind:term ", " selector:term ", " contract:term : tactic =>
   `(tactic| (
-    letI := ($kind:term).provableInputs
-    letI := ($kind:term).provableCols
+    let _inputs := ($kind:term).provableInputs
+    let _cols := ($kind:term).provableCols
     apply selectorConstraintShape_of_circuit
     apply circuitSelectorBinary_of_main (selector := $selector:term)
     · intros
@@ -517,8 +509,8 @@ theorem supportedChip_selectorConstraintShape (chip : SupportedChip p)
       (MulChip.mainSelectorBinary (p := p))
   · -- DivRem: the gate is inside the `DivRemCore` subcircuit, so the shallow `MainSelectorBinary`
     -- route does not apply; use the direct deep-constraints theorem.
-    letI := (DivRemChip.kind (p := p)).provableInputs
-    letI := (DivRemChip.kind (p := p)).provableCols
+    let _inputs := (DivRemChip.kind (p := p)).provableInputs
+    let _cols := (DivRemChip.kind (p := p)).provableCols
     apply selectorConstraintShape_of_circuit
     exact DivRemChip.circuitSelectorBinary (p := p)
   · selectorRegistryCase (AluX0Chip.kind (p := p)), (fun input => input.is_real),

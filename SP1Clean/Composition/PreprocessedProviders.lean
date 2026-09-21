@@ -1314,7 +1314,7 @@ private theorem range_interactionsWith_byte (width : RangeChip.Width)
   simp only [Operations.interactionsWith_append, rangeCheck_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm]
+    circuit_norm]
 
 private theorem program_interactionsWith_program
     (input : Var ProgramProviderChip.Inputs (ZMod p)) (offset : ℕ) :
@@ -1328,7 +1328,7 @@ private theorem program_interactionsWith_program
     assertBool_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm]
+    circuit_norm]
 
 private theorem and8_interactionsWith
     (channel : RawChannel (ZMod p)) (offset : ℕ)
@@ -1371,7 +1371,7 @@ private theorem and_interactionsWith_byte
     and8_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm, Nat.add_zero]
+    circuit_norm, Nat.add_zero]
 
 private theorem or_interactionsWith_byte
     (input : Var ByteChip.OrByte.Inputs (ZMod p)) (offset : ℕ) :
@@ -1390,7 +1390,7 @@ private theorem or_interactionsWith_byte
     or8_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm, Nat.add_zero]
+    circuit_norm, Nat.add_zero]
 
 private theorem xor_interactionsWith_byte
     (input : Var ByteChip.XorByte.Inputs (ZMod p)) (offset : ℕ) :
@@ -1408,7 +1408,7 @@ private theorem xor_interactionsWith_byte
     Operations.interactionsWith_witness, Operations.interactionsWith_lookup]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm, Nat.add_zero]
+    circuit_norm, Nat.add_zero]
 
 private theorem ltu_interactionsWith_byte
     (input : Var ByteChip.Ltu.Inputs (ZMod p)) (offset : ℕ) :
@@ -1426,7 +1426,7 @@ private theorem ltu_interactionsWith_byte
     Operations.interactionsWith_witness, assertBool_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm, Nat.add_zero]
+    circuit_norm, Nat.add_zero]
 
 private theorem u8Range_nativeAccesses_symbolic (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
@@ -1453,27 +1453,42 @@ private theorem u8Range_nativeAccesses_symbolic (env : Environment (ZMod p)) :
   simp only [if_true, List.map_cons, List.map_nil]
   have hbVar :
       (varFromOffset ByteChip.U8Range.Inputs 0 :
-        ByteChip.U8Range.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := rfl
+        ByteChip.U8Range.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hcVar :
       (varFromOffset ByteChip.U8Range.Inputs 0 :
-        ByteChip.U8Range.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := rfl
+        ByteChip.U8Range.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hmVar :
       (varFromOffset ByteChip.U8Range.Inputs 0 :
-        ByteChip.U8Range.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := rfl
+        ByteChip.U8Range.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   rw [hbVar, hcVar, hmVar]
   rw [pushedIf_def]
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem u8RangeInput_get_zero (input : ByteChip.U8Range.Inputs (ZMod p)) :
-    (toElements input)[0] = input.b := by cases input; rfl
+    (toElements input)[0] = input.b := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem u8RangeInput_get_one (input : ByteChip.U8Range.Inputs (ZMod p)) :
-    (toElements input)[1] = input.c := by cases input; rfl
+    (toElements input)[1] = input.c := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem u8RangeInput_get_two (input : ByteChip.U8Range.Inputs (ZMod p)) :
-    (toElements input)[2] = input.multiplicity := by cases input; rfl
+    (toElements input)[2] = input.multiplicity := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 private theorem u8RangeRow_nativeAccesses
     (row : CoreAIR.Current.Row p .byteLookup)
@@ -1513,7 +1528,7 @@ private theorem msb_interactionsWith_byte
     rangeCheck8_interactionsWith, assertBool_interactionsWith,
     Channel.pushIf, Operations.interactionsWith_interact, Operations.interactionsWith_nil,
     ChannelInteraction.toRaw_channel, List.nil_append]
-  simp only [if_true, circuit_norm, Nat.add_zero]
+  simp only [circuit_norm, Nat.add_zero]
 
 private theorem msb_main_output_eq
     (input : Var ByteChip.MSB.Inputs (ZMod p)) (offset : ℕ) :
@@ -1555,11 +1570,19 @@ private theorem msb_buildRow_result
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem msbInput_get_zero (input : ByteChip.MSB.Inputs (ZMod p)) :
-    (toElements input)[0] = input.b := by cases input; rfl
+    (toElements input)[0] = input.b := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem msbInput_get_one (input : ByteChip.MSB.Inputs (ZMod p)) :
-    (toElements input)[1] = input.multiplicity := by cases input; rfl
+    (toElements input)[1] = input.multiplicity := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 private theorem and_main_output_eq
     (input : Var ByteChip.AndByte.Inputs (ZMod p)) (offset : ℕ) :
@@ -1606,15 +1629,27 @@ private theorem and_buildRow_result_val
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem andInput_get_zero (input : ByteChip.AndByte.Inputs (ZMod p)) :
-    (toElements input)[0] = input.b := by cases input; rfl
+    (toElements input)[0] = input.b := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem andInput_get_one (input : ByteChip.AndByte.Inputs (ZMod p)) :
-    (toElements input)[1] = input.c := by cases input; rfl
+    (toElements input)[1] = input.c := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem andInput_get_two (input : ByteChip.AndByte.Inputs (ZMod p)) :
-    (toElements input)[2] = input.multiplicity := by cases input; rfl
+    (toElements input)[2] = input.multiplicity := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 private theorem or_main_output_eq
     (input : Var ByteChip.OrByte.Inputs (ZMod p)) (offset : ℕ) :
@@ -1661,15 +1696,27 @@ private theorem or_buildRow_result_val
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem orInput_get_zero (input : ByteChip.OrByte.Inputs (ZMod p)) :
-    (toElements input)[0] = input.b := by cases input; rfl
+    (toElements input)[0] = input.b := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem orInput_get_one (input : ByteChip.OrByte.Inputs (ZMod p)) :
-    (toElements input)[1] = input.c := by cases input; rfl
+    (toElements input)[1] = input.c := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem orInput_get_two (input : ByteChip.OrByte.Inputs (ZMod p)) :
-    (toElements input)[2] = input.multiplicity := by cases input; rfl
+    (toElements input)[2] = input.multiplicity := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 private theorem xor_main_output_eq
     (input : Var ByteChip.XorByte.Inputs (ZMod p)) (offset : ℕ) :
@@ -1713,15 +1760,27 @@ private theorem xor_buildRow_result_val
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem xorInput_get_zero (input : ByteChip.XorByte.Inputs (ZMod p)) :
-    (toElements input)[0] = input.b := by cases input; rfl
+    (toElements input)[0] = input.b := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem xorInput_get_one (input : ByteChip.XorByte.Inputs (ZMod p)) :
-    (toElements input)[1] = input.c := by cases input; rfl
+    (toElements input)[1] = input.c := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem xorInput_get_two (input : ByteChip.XorByte.Inputs (ZMod p)) :
-    (toElements input)[2] = input.multiplicity := by cases input; rfl
+    (toElements input)[2] = input.multiplicity := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 private theorem ltu_main_output_eq
     (input : Var ByteChip.Ltu.Inputs (ZMod p)) (offset : ℕ) :
@@ -1765,23 +1824,43 @@ private theorem ltu_buildRow_result
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem ltuInput_get_zero (input : ByteChip.Ltu.Inputs (ZMod p)) :
-    (toElements input)[0] = input.b := by cases input; rfl
+    (toElements input)[0] = input.b := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem ltuInput_get_one (input : ByteChip.Ltu.Inputs (ZMod p)) :
-    (toElements input)[1] = input.c := by cases input; rfl
+    (toElements input)[1] = input.c := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem ltuInput_get_two (input : ByteChip.Ltu.Inputs (ZMod p)) :
-    (toElements input)[2] = input.multiplicity := by cases input; rfl
+    (toElements input)[2] = input.multiplicity := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem rangeInput_get_zero (input : RangeChip.Inputs (ZMod p)) :
-    (toElements input)[0] = input.a := by cases input; rfl
+    (toElements input)[0] = input.a := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem rangeInput_get_one (input : RangeChip.Inputs (ZMod p)) :
-    (toElements input)[1] = input.multiplicity := by cases input; rfl
+    (toElements input)[1] = input.multiplicity := by
+  cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
+  rfl
 
 private theorem msbRow_nativeAccesses
     (contract : PreprocessedProviderContract witness)
@@ -1813,10 +1892,12 @@ private theorem msbRow_nativeAccesses
   rw [msb_buildRow_result _ _ _ (contract.byteOperandBounds hrow).1]
   have hbVar :
       (varFromOffset ByteChip.MSB.Inputs 0 :
-        ByteChip.MSB.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := rfl
+        ByteChip.MSB.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hmVar :
       (varFromOffset ByteChip.MSB.Inputs 0 :
-        ByteChip.MSB.Inputs (Expression (ZMod p))).multiplicity = var ⟨1⟩ := rfl
+        ByteChip.MSB.Inputs (Expression (ZMod p))).multiplicity = var ⟨1⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   rw [hbVar, hmVar,
     eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 2; omega),
     eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 2; omega),
@@ -1856,13 +1937,16 @@ private theorem andRow_nativeAccesses
   rw [and_buildRow_result_val _ _ _ (contract.byteOperandBounds hrow)]
   have hbVar :
       (varFromOffset ByteChip.AndByte.Inputs 0 :
-        ByteChip.AndByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := rfl
+        ByteChip.AndByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hcVar :
       (varFromOffset ByteChip.AndByte.Inputs 0 :
-        ByteChip.AndByte.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := rfl
+        ByteChip.AndByte.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hmVar :
       (varFromOffset ByteChip.AndByte.Inputs 0 :
-        ByteChip.AndByte.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := rfl
+        ByteChip.AndByte.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   rw [hbVar, hcVar, hmVar,
     eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
     eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
@@ -1903,13 +1987,16 @@ private theorem orRow_nativeAccesses
   rw [or_buildRow_result_val _ _ _ (contract.byteOperandBounds hrow)]
   have hbVar :
       (varFromOffset ByteChip.OrByte.Inputs 0 :
-        ByteChip.OrByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := rfl
+        ByteChip.OrByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hcVar :
       (varFromOffset ByteChip.OrByte.Inputs 0 :
-        ByteChip.OrByte.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := rfl
+        ByteChip.OrByte.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hmVar :
       (varFromOffset ByteChip.OrByte.Inputs 0 :
-        ByteChip.OrByte.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := rfl
+        ByteChip.OrByte.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   rw [hbVar, hcVar, hmVar,
     eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
     eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
@@ -1950,13 +2037,16 @@ private theorem xorRow_nativeAccesses
   rw [xor_buildRow_result_val _ _ _ (contract.byteOperandBounds hrow)]
   have hbVar :
       (varFromOffset ByteChip.XorByte.Inputs 0 :
-        ByteChip.XorByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := rfl
+        ByteChip.XorByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hcVar :
       (varFromOffset ByteChip.XorByte.Inputs 0 :
-        ByteChip.XorByte.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := rfl
+        ByteChip.XorByte.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hmVar :
       (varFromOffset ByteChip.XorByte.Inputs 0 :
-        ByteChip.XorByte.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := rfl
+        ByteChip.XorByte.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   rw [hbVar, hcVar, hmVar,
     eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
     eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
@@ -1997,13 +2087,16 @@ private theorem ltuRow_nativeAccesses
   rw [ltu_buildRow_result _ _ _ (contract.byteOperandBounds hrow)]
   have hbVar :
       (varFromOffset ByteChip.Ltu.Inputs 0 :
-        ByteChip.Ltu.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := rfl
+        ByteChip.Ltu.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hcVar :
       (varFromOffset ByteChip.Ltu.Inputs 0 :
-        ByteChip.Ltu.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := rfl
+        ByteChip.Ltu.Inputs (Expression (ZMod p))).c = var ⟨1⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hmVar :
       (varFromOffset ByteChip.Ltu.Inputs 0 :
-        ByteChip.Ltu.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := rfl
+        ByteChip.Ltu.Inputs (Expression (ZMod p))).multiplicity = var ⟨2⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   rw [hbVar, hcVar, hmVar,
     eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
     eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
@@ -2044,10 +2137,12 @@ private theorem rangeRow_nativeAccesses (width : RangeChip.Width)
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   have haVar :
       (varFromOffset RangeChip.Inputs 0 :
-        RangeChip.Inputs (Expression (ZMod p))).a = var ⟨0⟩ := rfl
+        RangeChip.Inputs (Expression (ZMod p))).a = var ⟨0⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   have hmVar :
       (varFromOffset RangeChip.Inputs 0 :
-        RangeChip.Inputs (Expression (ZMod p))).multiplicity = var ⟨1⟩ := rfl
+        RangeChip.Inputs (Expression (ZMod p))).multiplicity = var ⟨1⟩ := by
+    rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
   rw [haVar, hmVar,
     eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 2; omega),
     eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 2; omega),

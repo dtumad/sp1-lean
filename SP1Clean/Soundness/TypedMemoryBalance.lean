@@ -586,7 +586,7 @@ private theorem memoryBumpTable_is_real_binary
     ∀ row ∈ (memoryBumpTable witness).table,
       (memoryBumpRow (memoryBumpTable witness) row).is_real = 0 ∨
         (memoryBumpRow (memoryBumpTable witness) row).is_real = 1 := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   intro row rowMem
   have tableConstraints : (memoryBumpTable witness).Constraints :=
     constraints _ (witness.mem_allTables_of_mem_tables

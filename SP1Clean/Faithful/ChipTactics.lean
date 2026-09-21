@@ -58,7 +58,7 @@ constraint list is `<op-fragment> ++ CPUState ++ <reader> ++ [binary gate, op_a_
 
 Arguments (all identifiers): the generated `asserts` def, the generated `interactions` def, the
 `is_real = 1` hypothesis, the operation-fragment anchor, and the register-adapter anchor. Requires a
-`NeZero p` instance in context (add `haveI : NeZero p := ⟨…⟩` in the caller). -/
+`NeZero p` instance in context (add `have : NeZero p := ⟨…⟩` in the caller). -/
 syntax "faithful_chip" ident ppSpace ident ppSpace ident ppSpace ident ppSpace ident : tactic
 macro_rules
   | `(tactic| faithful_chip $asserts:ident $inter:ident $hreal:ident $opAnchor:ident $rdrAnchor:ident) =>

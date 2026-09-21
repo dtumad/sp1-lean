@@ -110,7 +110,7 @@ theorem u8Range_interactionsWith_byte :
   simp only [Operations.interactionsWith_append,
     rangeCheck8_interactionsWith, Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append]
-  simp only [if_true]
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]
   rfl
 
 /-- **A built `U8Range` row emits exactly one access, and this is it.**
@@ -131,13 +131,19 @@ theorem u8Range_buildRow_cleanAccesses
         signedVal input.multiplicity)] := by
   rw [interactions_eq_interactionsWith_of_onlyChannel _ byteChannel.toRaw
       Ledger.onlyChannel_U8Range, u8Range_interactionsWith_byte]
+  unfold ByteChip.U8Range.component
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
-  rw [eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 2 (by change 2 < 3; omega)]
-  -- `rw` cannot close the cells here: the goal's `input` is at `component.Input`, the lemmas' at
-  -- `Inputs`, and the two are only definitionally equal. Destructuring settles it directly.
+  rw [eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)) input data hint 0
+        (by change 0 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)) input data hint 1
+        (by change 1 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)) input data hint 2
+        (by change 2 < 3; omega)]
+  -- The goal's `input` is at `component.Input`, the lemmas' at `Inputs`: with the component
+  -- unfolded the two agree syntactically, and the cells are read off the destructured input.
   cases input
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
   rfl
 
 omit [Fact (2 ^ 24 < p)] in
@@ -175,7 +181,7 @@ theorem msb_interactionsWith_byte
     rangeCheck8_interactionsWith, assertBool_interactionsWith,
     Channel.pushIf, Operations.interactionsWith_interact, Operations.interactionsWith_nil,
     ChannelInteraction.toRaw_channel, List.nil_append]
-  simp only [if_true, circuit_norm, Nat.add_zero]
+  simp only [circuit_norm, Nat.add_zero]
 
 theorem msb_main_output_eq
     (input : Var ByteChip.MSB.Inputs (ZMod p)) (offset : ℕ) :
@@ -216,12 +222,14 @@ theorem msb_buildRow_result
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 /-- The `MSB` input variable's fields, by cell. -/
 theorem msbVar_b :
-    (varFromOffset ByteChip.MSB.Inputs 0 : Var ByteChip.MSB.Inputs (ZMod p)).b = var ⟨0⟩ := rfl
+    (varFromOffset ByteChip.MSB.Inputs 0 : Var ByteChip.MSB.Inputs (ZMod p)).b = var ⟨0⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem msbVar_multiplicity :
     (varFromOffset ByteChip.MSB.Inputs 0 : Var ByteChip.MSB.Inputs (ZMod p)).multiplicity
-      = var ⟨1⟩ := rfl
+      = var ⟨1⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 /-- Component-level form of `msb_interactionsWith_byte`, at the offset `Component.rowOperations`
 introduces. -/
@@ -260,10 +268,12 @@ theorem msb_buildRow_cleanAccesses
   unfold ByteChip.MSB.component
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   rw [msb_buildRow_result input data hint bound, msbVar_b, msbVar_multiplicity,
-    eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 2; omega),
-    eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 2; omega)]
+    eval_var_buildRow_input_get (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 2; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 2; omega)]
   cases input
-  simp only [Expression.eval]
+  simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
+    ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
   rfl
 
 /-! ## AndByte
@@ -301,7 +311,7 @@ theorem and_interactionsWith_byte
     and8_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm, Nat.add_zero]
+    circuit_norm, Nat.add_zero]
 
 theorem and_main_output_eq
     (input : Var ByteChip.AndByte.Inputs (ZMod p)) (offset : ℕ) :
@@ -353,17 +363,20 @@ theorem and_buildRow_result_val
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem andVar_b :
     (varFromOffset ByteChip.AndByte.Inputs 0 : Var ByteChip.AndByte.Inputs (ZMod p)).b
-      = var ⟨0⟩ := rfl
+      = var ⟨0⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem andVar_c :
     (varFromOffset ByteChip.AndByte.Inputs 0 : Var ByteChip.AndByte.Inputs (ZMod p)).c
-      = var ⟨1⟩ := rfl
+      = var ⟨1⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem andVar_multiplicity :
     (varFromOffset ByteChip.AndByte.Inputs 0 : Var ByteChip.AndByte.Inputs (ZMod p)).multiplicity
-      = var ⟨2⟩ := rfl
+      = var ⟨2⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem and_component_interactionsWith_byte :
     (ByteChip.AndByte.component (p := p)).operations.interactionsWith byteChannel.toRaw =
@@ -395,11 +408,13 @@ theorem and_buildRow_cleanAccesses
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   unfold ByteChip.AndByte.component
   rw [and_buildRow_result_val input data hint bounds, andVar_b, andVar_c, andVar_multiplicity,
-    eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 2 (by change 2 < 3; omega)]
+    eval_var_buildRow_input_get (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
   cases input
-  simp only [Expression.eval]
+  simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
+    ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
   rfl
 
 /-! ## OrByte — AndByte's shape with the `Or8` gadget -/
@@ -433,7 +448,7 @@ theorem or_interactionsWith_byte
     or8_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm, Nat.add_zero]
+    circuit_norm, Nat.add_zero]
 
 theorem or_main_output_eq
     (input : Var ByteChip.OrByte.Inputs (ZMod p)) (offset : ℕ) :
@@ -483,17 +498,20 @@ theorem or_buildRow_result_val
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem orVar_b :
     (varFromOffset ByteChip.OrByte.Inputs 0 : Var ByteChip.OrByte.Inputs (ZMod p)).b
-      = var ⟨0⟩ := rfl
+      = var ⟨0⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem orVar_c :
     (varFromOffset ByteChip.OrByte.Inputs 0 : Var ByteChip.OrByte.Inputs (ZMod p)).c
-      = var ⟨1⟩ := rfl
+      = var ⟨1⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem orVar_multiplicity :
     (varFromOffset ByteChip.OrByte.Inputs 0 : Var ByteChip.OrByte.Inputs (ZMod p)).multiplicity
-      = var ⟨2⟩ := rfl
+      = var ⟨2⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem or_component_interactionsWith_byte :
     (ByteChip.OrByte.component (p := p)).operations.interactionsWith byteChannel.toRaw =
@@ -525,11 +543,13 @@ theorem or_buildRow_cleanAccesses
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   unfold ByteChip.OrByte.component
   rw [or_buildRow_result_val input data hint bounds, orVar_b, orVar_c, orVar_multiplicity,
-    eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 2 (by change 2 < 3; omega)]
+    eval_var_buildRow_input_get (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
   cases input
-  simp only [Expression.eval]
+  simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
+    ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
   rfl
 
 /-! ## XorByte — MSB's witnessed-cell shape, with two operands -/
@@ -550,7 +570,7 @@ theorem xor_interactionsWith_byte
     Operations.interactionsWith_witness, Operations.interactionsWith_lookup]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm, Nat.add_zero]
+    circuit_norm, Nat.add_zero]
 
 theorem xor_main_output_eq
     (input : Var ByteChip.XorByte.Inputs (ZMod p)) (offset : ℕ) :
@@ -594,17 +614,20 @@ theorem xor_buildRow_result
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem xorVar_b :
     (varFromOffset ByteChip.XorByte.Inputs 0 : Var ByteChip.XorByte.Inputs (ZMod p)).b
-      = var ⟨0⟩ := rfl
+      = var ⟨0⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem xorVar_c :
     (varFromOffset ByteChip.XorByte.Inputs 0 : Var ByteChip.XorByte.Inputs (ZMod p)).c
-      = var ⟨1⟩ := rfl
+      = var ⟨1⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem xorVar_multiplicity :
     (varFromOffset ByteChip.XorByte.Inputs 0 : Var ByteChip.XorByte.Inputs (ZMod p)).multiplicity
-      = var ⟨2⟩ := rfl
+      = var ⟨2⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem xor_component_interactionsWith_byte :
     (ByteChip.XorByte.component (p := p)).operations.interactionsWith byteChannel.toRaw =
@@ -636,11 +659,13 @@ theorem xor_buildRow_cleanAccesses
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   unfold ByteChip.XorByte.component
   rw [xor_buildRow_result input data hint bounds, xorVar_b, xorVar_c, xorVar_multiplicity,
-    eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 2 (by change 2 < 3; omega)]
+    eval_var_buildRow_input_get (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
   cases input
-  simp only [Expression.eval]
+  simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
+    ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
   rfl
 
 /-! ## Ltu — MSB's witnessed-cell shape, with two operands -/
@@ -661,7 +686,7 @@ theorem ltu_interactionsWith_byte
     Operations.interactionsWith_witness, assertBool_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm, Nat.add_zero]
+    circuit_norm, Nat.add_zero]
 
 theorem ltu_main_output_eq
     (input : Var ByteChip.Ltu.Inputs (ZMod p)) (offset : ℕ) :
@@ -705,17 +730,20 @@ theorem ltu_buildRow_result
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem ltuVar_b :
     (varFromOffset ByteChip.Ltu.Inputs 0 : Var ByteChip.Ltu.Inputs (ZMod p)).b
-      = var ⟨0⟩ := rfl
+      = var ⟨0⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem ltuVar_c :
     (varFromOffset ByteChip.Ltu.Inputs 0 : Var ByteChip.Ltu.Inputs (ZMod p)).c
-      = var ⟨1⟩ := rfl
+      = var ⟨1⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem ltuVar_multiplicity :
     (varFromOffset ByteChip.Ltu.Inputs 0 : Var ByteChip.Ltu.Inputs (ZMod p)).multiplicity
-      = var ⟨2⟩ := rfl
+      = var ⟨2⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem ltu_component_interactionsWith_byte :
     (ByteChip.Ltu.component (p := p)).operations.interactionsWith byteChannel.toRaw =
@@ -747,11 +775,13 @@ theorem ltu_buildRow_cleanAccesses
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   unfold ByteChip.Ltu.component
   rw [ltu_buildRow_result input data hint bounds, ltuVar_b, ltuVar_c, ltuVar_multiplicity,
-    eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get _ _ _ _ 2 (by change 2 < 3; omega)]
+    eval_var_buildRow_input_get (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
+    eval_var_buildRow_input_get (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
   cases input
-  simp only [Expression.eval]
+  simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
+    ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
   rfl
 
 /-! ## Range — `U8Range`'s shape, parameterised by width
@@ -772,16 +802,18 @@ theorem range_interactionsWith_byte (width : RangeChip.Width)
   simp only [Operations.interactionsWith_append, rangeCheck_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm]
+    circuit_norm]
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem rangeVar_a :
-    (varFromOffset RangeChip.Inputs 0 : Var RangeChip.Inputs (ZMod p)).a = var ⟨0⟩ := rfl
+    (varFromOffset RangeChip.Inputs 0 : Var RangeChip.Inputs (ZMod p)).a = var ⟨0⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 theorem rangeVar_multiplicity :
     (varFromOffset RangeChip.Inputs 0 : Var RangeChip.Inputs (ZMod p)).multiplicity
-      = var ⟨1⟩ := rfl
+      = var ⟨1⟩ := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 /-- `Ledger.onlyChannel_Range` at the width-indexed component the trace actually builds.
 `componentFor width` and `component width.val _` are definitionally equal, but `rw` needs the
@@ -819,12 +851,17 @@ theorem range_buildRow_cleanAccesses (width : RangeChip.Width)
   rw [interactions_eq_interactionsWith_of_onlyChannel _ byteChannel.toRaw
       (onlyChannel_rangeComponentFor width),
     range_component_interactionsWith_byte, range_interactionsWith_byte]
+  unfold RangeChip.componentFor
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   rw [rangeVar_a, rangeVar_multiplicity,
-    eval_var_buildRow_input_get _ _ _ _ 0 (by change 0 < 2; omega),
-    eval_var_buildRow_input_get _ _ _ _ 1 (by change 1 < 2; omega)]
+    eval_var_buildRow_input_get (⟨RangeChip.circuitFor width⟩ : Component (ZMod p)) input data hint 0
+      (by change 0 < 2; omega),
+    eval_var_buildRow_input_get (⟨RangeChip.circuitFor width⟩ : Component (ZMod p)) input data hint 1
+      (by change 1 < 2; omega)]
   cases input
-  simp only [Expression.eval]
+  simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
+    ProvableStruct.toComponents]
+  simp only [components, ProvableStruct.componentsToElements]
   rfl
 
 /-! ## Program — the ROM provider
@@ -858,7 +895,7 @@ theorem program_interactionsWith_program
     assertBool_interactionsWith]
   simp only [Channel.pushIf, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    if_true, circuit_norm]
+    circuit_norm]
 
 omit [Fact (2 ^ 24 < p)] in
 theorem program_toAccess_eq_programRowAccess (env : Environment (ZMod p))

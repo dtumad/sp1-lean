@@ -164,7 +164,7 @@ private theorem producedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
     producedMessages [TypedInteraction.pushedIfValue exitChannel gate m,
         TypedInteraction.pushedIfValue exitChannel (1 - gate) (⟨0⟩ : ExitMsg (ZMod p))] =
       [if gate = 1 then m else (⟨0⟩ : ExitMsg (ZMod p))] := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hbool' : (1 : ZMod p) - gate = 0 ∨ (1 : ZMod p) - gate = 1 := by
     rcases hbool with h0 | h1
     · right; rw [h0, sub_zero]
@@ -196,7 +196,7 @@ private theorem producedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
     producedMessages [TypedInteraction.pushedIfValue exitChannel gate m] =
       (if gate = 1 then [m] else []) := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hpush : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
   unfold producedMessages
   rcases hbool with h0 | h1
@@ -216,7 +216,7 @@ omit [Fact (2 ^ 24 < p)] in
 private theorem consumedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
     consumedMessages [TypedInteraction.pushedIfValue exitChannel gate m] = [] := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hpush : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
   have hval : gate.val = 0 ∨ gate.val = 1 := by
     rcases hbool with h | h
@@ -234,7 +234,7 @@ private theorem consumedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
     consumedMessages [TypedInteraction.pushedIfValue exitChannel gate m,
         TypedInteraction.pushedIfValue exitChannel (1 - gate) (⟨0⟩ : ExitMsg (ZMod p))] = [] := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hbool' : (1 : ZMod p) - gate = 0 ∨ (1 : ZMod p) - gate = 1 := by
     rcases hbool with h0 | h1
     · right; rw [h0, sub_zero]
@@ -267,7 +267,7 @@ theorem witness_exitInteractions_signedBinary
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
         signedVal interaction.mult = 1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   rw [typedEnsembleExitInteractions_eq]
   intro interaction interactionMem
   rcases List.mem_append.mp interactionMem with hverifier | htail
@@ -325,7 +325,7 @@ theorem witness_exitProduced_eq
   have hverifier : producedMessages
       [TypedInteraction.pulledIfValue exitChannel 1
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] = [] := by
-    haveI : Fact (1 < p) := ⟨by omega⟩
+    have : Fact (1 < p) := ⟨by omega⟩
     unfold producedMessages
     rw [List.filter_cons_of_neg (by
         simp only [TypedInteraction.pulledIfValue_mult,
@@ -364,7 +364,7 @@ theorem witness_exitConsumed_eq
       [TypedInteraction.pulledIfValue exitChannel 1
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] =
       [(⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] := by
-    haveI : Fact (1 < p) := ⟨by omega⟩
+    have : Fact (1 < p) := ⟨by omega⟩
     unfold consumedMessages
     rw [List.filter_cons_of_pos (by
         simp only [TypedInteraction.pulledIfValue_mult,
