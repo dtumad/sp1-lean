@@ -23,6 +23,7 @@ open SP1Clean
 structure U16MSBOperation (F : Type) where
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16MSBOperation
 
 structure ShiftLeftCols (F : Type) where
   state : (CPUState F)
@@ -41,6 +42,7 @@ structure ShiftLeftCols (F : Type) where
   is_sllw : F
   is_sllw_imm : F
 deriving ProvableStruct
+provable_struct_eval_lemmas ShiftLeftCols
 
 namespace U16MSBOperation
 

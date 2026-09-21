@@ -19,11 +19,13 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 /-! ## The one-hot flag destructor -/
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- A field element with zero `val` is zero. -/
 private lemma eq_zero_of_val {x : ZMod p} (h : x.val = 0) : x = 0 := by
   rw [← ZMod.natCast_zmod_val x, h, Nat.cast_zero]
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- A boolean field element with `val = 1` is one. -/
 private lemma eq_one_of_val {x : ZMod p} (hx : x = 0 ∨ x = 1) (h : x.val = 1) : x = 1 := by
@@ -166,6 +168,7 @@ extension of any 32-bit value) and `allOnes64_limbs` (the divisor-zero `allOnes`
 instantiate it; `quotBits_shape`/`remBits_shape` show every word-class bit pattern is one of
 those two forms. -/
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Truncation `setWidth 32 |>.setWidth 64` keeps limb 0 (bits 0–15). -/
 private lemma wordOfBits_setWidth32_limb0 (x : BitVec 64) :
@@ -176,6 +179,7 @@ private lemma wordOfBits_setWidth32_limb0 (x : BitVec 64) :
   rw [BitVec.toNat_setWidth_of_le (by decide : (32 : ℕ) ≤ 64), BitVec.toNat_setWidth]
   omega
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Truncation `setWidth 32 |>.setWidth 64` keeps limb 1 (bits 16–31). -/
 private lemma wordOfBits_setWidth32_limb1 (x : BitVec 64) :
@@ -186,6 +190,7 @@ private lemma wordOfBits_setWidth32_limb1 (x : BitVec 64) :
   rw [BitVec.toNat_setWidth_of_le (by decide : (32 : ℕ) ≤ 64), BitVec.toNat_setWidth]
   omega
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Truncation `setWidth 32 |>.setWidth 64` zeroes limbs 2 and 3 (the value is `< 2^32`). -/
 private lemma wordOfBits_setWidth32_hi (x : BitVec 64) :

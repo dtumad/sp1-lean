@@ -162,43 +162,6 @@ private theorem storeWordEvalVec4Components
   · exact (ProvableType.getElem_eval_fields env value 2 (by decide)).symm
   · exact (ProvableType.getElem_eval_fields env value 3 (by decide)).symm
 
-private theorem storeWordAddressEta {F : Type}
-    (cols : Extracted.AddressOperation F) :
-    ({ addr_operation := { value := cols.addr_operation.value }
-       top_two_limb_inv := cols.top_two_limb_inv } :
-      Extracted.AddressOperation F) = cols := by
-  cases cols with
-  | mk addr top =>
-    cases addr
-    rfl
-
-private theorem storeWordCpuEta {F : Type}
-    (cols : Extracted.CPUState F) :
-    ({ clk_high := cols.clk_high
-       clk_16_24 := cols.clk_16_24
-       clk_0_16 := cols.clk_0_16
-       pc := cols.pc } : Extracted.CPUState F) = cols := by
-  cases cols
-  rfl
-
-private theorem storeWordITypeEta {F : Type}
-    (cols : Extracted.ITypeReader F) :
-    ({ op_a := cols.op_a
-       op_a_memory :=
-         { prev_value := cols.op_a_memory.prev_value
-           access_timestamp := cols.op_a_memory.access_timestamp }
-       op_a_0 := cols.op_a_0
-       op_b := cols.op_b
-       op_b_memory :=
-         { prev_value := cols.op_b_memory.prev_value
-           access_timestamp := cols.op_b_memory.access_timestamp }
-       op_c_imm := cols.op_c_imm } : Extracted.ITypeReader F) = cols := by
-  cases cols with
-  | mk opA opAMem opA0 opB opBMem opC =>
-    cases opAMem
-    cases opBMem
-    rfl
-
 theorem storeWordChipColumnsOfInput_roundtrip {F : Type}
     (cols : StoreWordChip.Columns F) :
     storeWordChipColumnsOfInput
@@ -673,8 +636,7 @@ private theorem storeWordMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [storeWordMemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, storeWordEvalMemoryInput]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def storeWordChipRustColumns
     (env : Environment (ZMod p))
@@ -1600,9 +1562,8 @@ private theorem storeWordByteInteractionsFaithful
     h6, h3, Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   simp only [← ProvableStruct.eval_eq_eval,
-    StoreWordChip.eval_inputs, eval_cpuState,
-    Readers.ITypeReader.eval_cols, eval_registerAccessCols,
-    eval_registerAccessTimestamp, storeWordEvalMemoryCols,
+    eval_cpuState,
+    eval_registerAccessTimestamp,
     storeWordEvalMemoryTimestamp, ProvableType.eval_field]
   exact storeWordPermFourBlocks
     [_, _] [_, _, _, _] [_, _] [_, _, _, _]

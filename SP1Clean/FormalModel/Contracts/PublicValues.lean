@@ -1,4 +1,5 @@
 import Clean.Utils.Tactics.ProvableStructDeriving
+import ToClean.Circuit.StructEvalLemmas
 
 /-! # Public values on the formal-model audit surface
 
@@ -58,6 +59,7 @@ structure SP1StateBoundary (F : Type) where
   is_execution_shard : F
   committed_value_digest : Vector F 32
 deriving ProvableStruct
+provable_struct_eval_lemmas SP1StateBoundary
 
 section Recombined
 

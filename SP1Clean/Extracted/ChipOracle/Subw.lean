@@ -23,11 +23,13 @@ open SP1Clean
 structure U16MSBOperation (F : Type) where
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16MSBOperation
 
 structure SubwOperation (F : Type) where
   value : (Vector F 2)
   msb : (U16MSBOperation F)
 deriving ProvableStruct
+provable_struct_eval_lemmas SubwOperation
 
 structure SubwCols (F : Type) where
   state : (CPUState F)
@@ -35,6 +37,7 @@ structure SubwCols (F : Type) where
   subw_operation : (SubwOperation F)
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas SubwCols
 
 namespace U16MSBOperation
 

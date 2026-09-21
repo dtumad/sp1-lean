@@ -20,6 +20,7 @@ structure AddressOperation (F : Type) where
   addr_operation : (AddrAddOperation F)
   top_two_limb_inv : F
 deriving ProvableStruct
+provable_struct_eval_lemmas AddressOperation
 
 namespace AddressOperation
 

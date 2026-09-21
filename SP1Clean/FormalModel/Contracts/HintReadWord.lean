@@ -19,6 +19,7 @@ structure State (F : Type) where
   index : fields 3 F
   address : fields 3 F
 deriving ProvableStruct
+provable_struct_eval_lemmas State
 
 structure Inputs (F : Type) where
   ram : HostRamAccessChip.Inputs F
@@ -27,6 +28,7 @@ structure Inputs (F : Type) where
   nextIndex : fields 3 F
   nextAddress : fields 3 F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def stateChannel {p : ℕ} : Channel (ZMod p) State where
   name := "sp1.native.hint_read_state"

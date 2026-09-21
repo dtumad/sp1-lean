@@ -59,6 +59,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
     ⟨input.is_real, input.state, input.adapter,
       ⟨Vector.mapRange 4 fun i => var { index := offset + i }⟩⟩
   channelsLawful := by
+    preserve_tactic_target
     simp only [circuit_norm, main, Readers.CPUState.circuit, Readers.RTypeReader.circuit,
       Readers.RegisterWrite.circuit, SubOperation.circuit]
   localLength _ := 4

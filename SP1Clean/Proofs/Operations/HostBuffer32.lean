@@ -195,6 +195,7 @@ def circuit (offset : Fin 8) : GeneralFormalCircuit (ZMod p) (Inputs offset) uni
   completeness := completeness offset
   channelsWithRequirements := [channel.toRaw]
   requirementsChannelsLawful input n := by
+    preserve_tactic_target
     refine ⟨?_, ?_, ?_⟩
     · simp only [main, circuit_norm]
     · simp only [main, circuit_norm]

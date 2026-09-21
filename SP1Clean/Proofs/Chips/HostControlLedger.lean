@@ -31,7 +31,7 @@ theorem main_host_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith HostCallChip.channel.toRaw =
       [(HostCallChip.channel.pulled input.call).toRaw] := by
   have bounded := InteractionRecovery.interactionsWith_main_eq_nil
-    (BoundedWord.circuit (bound p) (by simp [bound])).base HostCallChip.channel.toRaw
+    (BoundedWord.circuit (bound p) bound_fits).base HostCallChip.channel.toRaw
     ⟨input.call.arg1, input.comparison⟩ offset
     (by simp [BoundedWord.circuit, circuit_norm, HostCallChip.channel, byteChannel])
   simp only [main, circuit_norm, List.nil_append]
@@ -73,7 +73,7 @@ theorem terminal_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Envi
     ((main input).operations offset).interactionValuesWith HostExitBoundary.channel.toRaw env =
       [HostExitBoundary.channel.pushedValue (Eval.eval env input.call.arg1)] := by
   have bounded := InteractionRecovery.interactionsWith_main_eq_nil
-    (BoundedWord.circuit (bound p) (by simp [bound])).base HostExitBoundary.channel.toRaw
+    (BoundedWord.circuit (bound p) bound_fits).base HostExitBoundary.channel.toRaw
     ⟨input.call.arg1, input.comparison⟩ offset
     (by simp [BoundedWord.circuit, circuit_norm, HostExitBoundary.channel, byteChannel])
   have raw : ((main input).operations offset).interactionsWith HostExitBoundary.channel.toRaw =

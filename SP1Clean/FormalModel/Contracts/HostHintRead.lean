@@ -22,6 +22,7 @@ structure Inputs (F : Type) where
   lastIndex : fields 3 F
   lastValue : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def codeWord {p : ℕ} [Fact p.Prime] : Word (ZMod p) := bitVecToWord SyscallKind.hintRead.code
 

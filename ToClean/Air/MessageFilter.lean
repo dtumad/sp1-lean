@@ -95,7 +95,8 @@ theorem filterRows_interactions (table : Table F) (channel : RawChannel F)
     simp only [environment] at selected
     simp only [List.filter_cons, List.flatMap_cons, List.filter_append]
     rw [selected]
-    cases keep (Environment.fromArray row table.data) <;> simp [rest]
+    obtain hk | hk := Bool.eq_false_or_eq_true (keep (Environment.fromArray row table.data)) <;>
+      simp [hk, rest]
 
 end Air.Flat.Table
 

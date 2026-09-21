@@ -58,12 +58,11 @@ private theorem programMsg_toList (message : ProgramMsg (ZMod p)) :
        message.op_b[0], message.op_b[1], message.op_b[2], message.op_b[3],
        message.op_c[0], message.op_c[1], message.op_c[2], message.op_c[3],
        message.op_a_0, message.imm_b, message.imm_c] := by
-  change (#v[message.pc0] ++ (#v[message.pc1] ++ (#v[message.pc2] ++
-    (#v[message.opcode] ++ (#v[message.op_a] ++ (message.op_b ++ (message.op_c ++
-      (#v[message.op_a_0] ++ (#v[message.imm_b] ++ (#v[message.imm_c] ++
-        (#v[] : Vector (ZMod p) 0))))))))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, word_toList,
-    List.append_nil, List.cons_append, List.nil_append]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append,
+    List.cons_append, List.nil_append, word_toList]
+  rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem msgToken_program_eq_programRowKey (message : ProgramMsg (ZMod p)) :

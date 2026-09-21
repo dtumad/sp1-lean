@@ -214,7 +214,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Extracted.AddressOperati
   -- 3 address limbs + 1 inverse witness; the offset range check is now a byte-bus `Range` receive
   -- (witnesses nothing), and AddrAddOperation (FormalAssertion) adds no cells.
   localLength _ := 3 + 1
-  output _ i0 := ⟨varFromOffset Extracted.AddrAddOperation i0, var ⟨i0 + 3⟩⟩
+  output _ i0 := ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩
   -- byte-bus channels propagated from the AddrAddOperation assertion.
   channelsWithGuarantees := [byteChannel.toRaw]
 
@@ -225,7 +225,7 @@ set_option linter.unusedSectionVars false in
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma output_eq (x : Var Inputs (ZMod p)) (i0 : ℕ) :
     (elaborated (p := p)).output x i0
-      = ⟨varFromOffset Extracted.AddrAddOperation i0, var ⟨i0 + 3⟩⟩ := rfl
+      = ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩ := rfl
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :
@@ -395,6 +395,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Extracted.AddressOperation :=
     completeness := completeness,
     channelsWithRequirements := [],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       simp only [circuit_norm, main, byteChannel]
       refine ⟨List.nil_subset _, ?_⟩
       intro env hgate hnotone hnotzero

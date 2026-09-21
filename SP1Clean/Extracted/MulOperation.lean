@@ -29,6 +29,7 @@ structure MulOperation (F : Type) where
   b_sign_extend : F
   c_sign_extend : F
 deriving ProvableStruct
+provable_struct_eval_lemmas MulOperation
 
 namespace MulOperation
 

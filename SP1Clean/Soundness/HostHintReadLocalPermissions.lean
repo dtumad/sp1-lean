@@ -89,8 +89,8 @@ private theorem row_address_lower (witness : EnsembleWitness (ensemble image sou
       rw [TransitionView.readIndexedRows_selectTables]
       exact List.mem_filter.mpr ⟨member, by
         simp only [HostHintReadPartition.keepWord, HostHintReadPartition.keepState,
-          HintReadCoverage.rowInput, decide_eq_true_eq]
-        exact clock.symm⟩)
+          HintReadCoverage.rowInput]
+        exact decide_eq_true clock.symm⟩)
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handlerMem
   have valid := handlerSpecs physical physicalMem
   rw [handlerTable_component] at valid

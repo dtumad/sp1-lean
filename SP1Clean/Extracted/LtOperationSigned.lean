@@ -23,6 +23,7 @@ structure LtOperationSigned (F : Type) where
   b_msb : (U16MSBOperation F)
   c_msb : (U16MSBOperation F)
 deriving ProvableStruct
+provable_struct_eval_lemmas LtOperationSigned
 
 namespace LtOperationSigned
 

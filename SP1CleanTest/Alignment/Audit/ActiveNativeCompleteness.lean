@@ -220,8 +220,10 @@ theorem activeExecution_semantic :
       simpa only [jalView_sndPc] using activeTarget_effect.pc
     · exact ⟨Machine.EventExecutionTrace.haltFree_of_allOrdinary activeExecution_allOrdinary,
         activeExecution_supported,
-        by simp [CoreProfile.WithinOrdinaryRowLimit,
-          Machine.EventExecutionTrace.ordinarySteps, Machine.ordinaryTransitionCount]⟩
+        by
+          simp only [CoreProfile.WithinOrdinaryRowLimit,
+            Machine.EventExecutionTrace.ordinarySteps, Machine.ordinaryTransitionCount]
+          decide⟩
 
 /-- The circuit-built active witness also lies inside the shared bounded native relation. -/
 theorem activeTrace_boundedNativeRelation :

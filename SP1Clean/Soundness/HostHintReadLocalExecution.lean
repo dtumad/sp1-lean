@@ -121,8 +121,10 @@ private theorem consumer_pointer (witness : EnsembleWitness (ensemble image sour
   have included : row ∈ path := by
     apply perm.mem_iff.mpr
     rw [TransitionView.readIndexedRows_selectTables]
-    exact List.mem_filter.mpr ⟨rowMem, by simpa only [HostHintReadPartition.keepWord,
-      HostHintReadPartition.keepState, HintReadCoverage.rowInput, decide_eq_true_eq] using clock⟩
+    exact List.mem_filter.mpr ⟨rowMem, by
+      simp only [HostHintReadPartition.keepWord, HostHintReadPartition.keepState,
+        HintReadCoverage.rowInput]
+      exact decide_eq_true clock⟩
   exact congrArg (fun context => context.2.2) (same row included)
 
 /-- Installed record balance authenticates the header and every consumed word at the call's

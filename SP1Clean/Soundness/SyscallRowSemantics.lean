@@ -211,7 +211,7 @@ theorem syscallEdge_pcBounds (r : SyscallInstrsChip.Inputs (ZMod p))
     (∀ i : Fin 3, (r.state.pc[i]).val < 2 ^ 16) ∧
       (∀ i : Fin 3, (r.next_pc[i]).val < 2 ^ 16) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hpull := pulled real
   have hpc0 : (r.state.pc[0]).val < 2 ^ 16 := hpull.2.1
   have hpc1 : (r.state.pc[1]).val < 2 ^ 16 := hpull.2.2.1
@@ -322,7 +322,7 @@ theorem arm_halt (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.Sele
     (real : r.is_real = 1) (hid : (syscallEventOfRow r).syscallId = Machine.haltSyscallId) :
     (syscallEventOfRow r).nextPc = Machine.haltPc := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hfield : SyscallInstrsChip.syscallId r = ((SyscallInstrsChip.haltCode : ℕ) : ZMod p) :=
     (syscallId_field_iff r sel real (by decide : Machine.haltSyscallId < 256)).1 hid
   have hzero : r.is_halt_zero.result = 1 := by
@@ -432,7 +432,7 @@ three facts the plan named as not row-local. -/
 private theorem three_limbs_zero {a b c : ZMod p} (koala : 2 ^ 18 < p)
     (ha : a.val < 2 ^ 16) (hb : b.val < 2 ^ 16) (hc : c.val < 2 ^ 16)
     (h : a + b + c = 0) : a = 0 ∧ b = 0 ∧ c = 0 := by
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have hcast : a + b + c = ((a.val + b.val + c.val : ℕ) : ZMod p) := by
     push_cast [ZMod.natCast_zmod_val]
     ring
@@ -532,7 +532,7 @@ theorem rowLaw_of_spec_and_pulledFacts (spec : SyscallInstrsChip.Spec r)
     (real : r.is_real = 1) :
     (syscallEventOfRow r).RowLaw := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have htb : (syscallEventOfRow r).tableByte = (SyscallInstrsChip.tableByte r).val :=
     tableByte_syscallEventOfRow r sel real
   refine ⟨?_, ?_, ?_, ?_⟩

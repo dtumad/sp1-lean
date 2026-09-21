@@ -25,7 +25,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The address gadget's witnesses are computable: the limbs from the input operands, the inverse
 from cells this sub-circuit already witnessed. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _ h_input => ?_,
@@ -36,14 +36,14 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_⟩
   · refine AddrAddOperation.populateIR_congr env env' _ _ (fun i hi => ?_) (fun i hi => ?_)
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.b) h_input
+    · have hv := Inputs.eval_congr_b h_input
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.cc) h_input
+    · have hv := Inputs.eval_congr_cc h_input
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
   · simp [circuit_norm]
   · have hsel : Expression.eval env.toEnvironment input.is_real
         = Expression.eval env'.toEnvironment input.is_real := by
-      simpa [circuit_norm] using congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
+      simpa [circuit_norm] using Inputs.eval_congr_is_real h_input
     rw [Witgen.WitgenIR.eval_ofFExprs_one, Witgen.WitgenIR.eval_ofFExprs_one]
     simp only [Witgen.FExpr.eval, Expression.eval, hsel,
       h_agree.get_eq (show n + 1 < 3 + n by omega),

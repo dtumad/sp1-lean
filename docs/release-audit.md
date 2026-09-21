@@ -31,18 +31,19 @@ No main-library proof is deferred. This audit found no `sorry`, `stop`, project 
 
 | Component | Audited value |
 |---|---|
-| Lean toolchain | `leanprover/lean4:v4.32.2` |
+| Lean toolchain | `leanprover/lean4:v4.33.1` |
 | SP1 semantic source | `f66b4bff51d0ccff51d152e0f7f66b2ffedf3529` |
 | SP1 description | `v6.4.0` |
 | SP1 extraction branch | `b5616f908c393d6050970630871f69afe233a21c` (`dtumad/lean-extraction`, `v6.4.0-10-gb5616f908`) |
-| mathlib pin | `905b95818eb32af7874a58b427f50c1711a5e96c` (tag `v4.32.2`) |
-| Clean pin | `2dad7788d58b09eabeb3898506e4cb896e5d3e9d` (**fork** — see below) |
+| mathlib pin | `0df444a360eaa60ab8c11dca51a86af692955474` (tag `v4.33.1`) |
+| Clean pin | `fba2a29f5e36420d797c1de118ac9f11f23b819e` (upstream `main`, 2026-09-16; the 2026-08 fork is retired — see below) |
+| CompPoly pin | `a09455a22fea4623a2a1c5b363cf6efc61486a83` (tag `v4.33.1`; Clean's own dependency, Apache-2.0) |
 | Generated Sail model | sha256 `7426b9c3d35d1b625a1aa2a16248f8015f70acb80699dca3df552e8db2291af7` (161 files) — the in-tree `LeanRV64D/` + `LeanRV64D.lean` |
 | Sail compiler source | `41694abd58b27b687af5db275810dfeb8a88cfc0` (rems-project/sail, `sail2`) |
 | sail-riscv model source | `61266bd4dede6c7dd6e903e52dc80bcbf644b1b8` (riscv/sail-riscv, `master`) |
 | SP1 Sail config | sha256 `41311181e4cad458c21b01a0160a0087b407ee15e616243013169d52d3c1a854` (`scripts/sail-config/sp1_rv64d_cfg.json`) |
-| lean-sail pin | `079463134b9c50450b8393e1566a09fc492a34d9` (tag `v5`) |
-| PolyFun pin | `d062ba2cbb3a50ba5b9f3ba349ca003e6c79630a` (upstream `main`) |
+| lean-sail pin | `bde9ecc665b663bbdb29afb11fb6634870fdc7df` (`dtumad/lean-sail` `sp1-pin` = tag `v5` + the one-line `open` disambiguation of rems-project/lean-sail#14 — **temporary**, see below) |
+| PolyFun pin | `997828ce4c04ccdc01f5f199069e26a6195ef6e7` (upstream `main`, its last v4.33.1 commit) |
 
 Every dependency is an immutable git pin — `lake-manifest.json` records no `path` entries, so a clean
 clone reproduces this graph. The Sail RV64 model is the in-tree **generated** library
@@ -59,38 +60,30 @@ dependency was retired 2026-09-20: the RV64 reference functions the chip specs u
 `SP1Clean/Model/SailPure.lean`, and the equalities between them are proved in
 `SP1Clean/Proofs/Sail/RV64Bridge.lean`, so the ISA-equivalence chain has no third-party link.
 
-**`Clean` is pinned to a fork, and that is a change to the trust base.** The DSL every circuit in
-this project is built on is no longer upstream `Verified-zkEVM/clean` but `dtumad/clean`, branch
-`sp1-integration`. The base is upstream `0e53b9f2` (the previous pin); the delta is two changes,
-one branch per upstream PR:
+**`Clean` is upstream again.** From 2026-08 to 2026-09 the DSL was pinned to a fork
+(`dtumad/clean` `sp1-integration`, base upstream `0e53b9f2`) carrying two modifying changes; the
+2026-09 toolchain move retired it. Both changes are now pure additions in this repository's
+`ToClean/` library, so no Clean declaration is modified: `ToClean/Circuit/AgreesBelowWithData.lean`
+(the data/hint-preserving `AgreesBelowWithData` predicate, its `…ComputableWitnessesWithData`
+obligations and `FormalCircuitBase.computableWitnessesWithData_implies` — the fork's strengthening of
+Clean's `AgreesBelow`, needed rather than convenient: Clean PR #450's
+`not_computable_from_cells_alone` shows the unstrengthened obligation is **false** for any witness
+program reading `FExpr.dataGet`) and `ToClean/Circuit/WitgenShare.lean` (`WitgenIR.share`
+with its proven `WitgenIR.eval_share`, the subterm-sharing pass that takes the DivRem witness
+programs' wire format from 1.22 GB to 1.04 MB). Clean PRs #450/#453 remain the upstream proposals;
+acceptance deletes the two files and repoints their importers.
 
-| Commit | Branch | What it changes |
-|---|---|---|
-| `f5ae8e17` | `agreesbelow-data-hint` | `ProverEnvironment.AgreesBelow` gains `∧ env.data = env'.data ∧ env.hint = env'.hint`, plus three accessors and `agreesBelow_rfl` |
-| `8301b77a` | `agreesbelow-data-hint` | Adds `Clean/Examples/DataWitness.lean` — a worked example, no change to any existing declaration |
-| `410ffba8` | `witgen-share` | Adds `Clean/Circuit/WitnessShare.lean` (`WitgenIR.share`, subterm sharing into let-steps) and the `Operations.witgenJsonShared?` serializer entry — pure additions plus one refactor of `witgenJson?` through a shared `witgenJsonList?` with identical output |
-| `4a9c2c7b` | `witgen-share` | Proves `WitgenIR.eval_share` (`ir.share.eval env = ir.eval env`, axiom-clean) — the sharing pass is a proven transformation |
+**`lean-sail` is a documented temporary pin.** `dtumad/lean-sail` branch `sp1-pin` is tag `v5`
+plus one line — `open PreSail` → `open Sail.ConcurrencyInterfaceV1.PreSail` in `Sail/Sail.lean`,
+the namespace the `open` already resolved to — because Lean 4.33's `ambiguousOpen` linter warns on
+the original and the build runs `--wfail`. It is rems-project/lean-sail#14; the pin returns to
+upstream when that merges (the exit condition recorded in `docs/agents/lean-sail-notes.md`). No
+generated-model or proof consequence: the generated `LeanRV64D/` tree is unchanged.
 
-The `witgen-share` change exists because the wire format serializes expression *trees*: without
-sharing, this repo's DivRem witness programs serialize to 1.22 GB (two single programs at 552 MB);
-with the pass applied at serialization the committed payload is 1.04 MB, and an external
-interpreter's evaluation cost drops proportionally.
-
-`AgreesBelow` sits in *hypothesis* position everywhere except one discharge site, so the change
-weakens every obligation that mentions it and strengthens the two theorems that conclude with it
-(`Circuit.proverEnvironment_usesLocalWitnesses`, `Circuit.witgen_usesLocalWitnesses`); no Clean
-conclusion is weakened. The reason it cannot live in this repo's additive `ToClean` library is that
-Clean's own `witgen_usesLocalWitnesses` refers to Clean's `AgreesBelow`, not ours — a local copy with
-the stronger hypothesis yields a *weaker* obligation and would not feed it.
-
-The change is a bug fix rather than an ergonomics request: `not_computable_from_cells_alone` in the
-example file proves that the previous obligation was **false** for any witness program reading
-`FExpr.dataGet`, not merely hard to discharge.
-
-**Upstreaming remains separate from the reproducible pinned baseline.** The Clean fork's recorded
-re-pin left the axiom census unchanged. The generated Sail model and RISC-V support also use
-project-hosted revisions, as disclosed above. Fork state, the PR queue, and the standing rule for what may
-go in the fork versus `ToClean/` are recorded in `docs/agents/clean-upstream.md`.
+**Upstreaming remains separate from the reproducible pinned baseline.** The 2026-09 re-pin left the
+axiom census unchanged apart from renamed probes. The generated Sail model uses a project-hosted
+configuration, as disclosed above. The retired fork, the PR queue, and the standing rule for what
+may be a temporary fork pin versus `ToClean/` are recorded in `docs/agents/clean-upstream.md`.
 
 The extraction branch is a descendant of the semantic source with that source as its merge base, and
 every extraction change is an ordinary commit on it — there is no uncommitted-patch mechanism. The

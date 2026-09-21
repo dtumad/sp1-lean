@@ -31,6 +31,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     circuit_proof_start [Gadgets.Equality.circuit, HostCallChip.channel, codeWord]
     simpa only [eval_zero, Spec, codeWord, circuit_norm] using h_assumptions
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     simp [main, circuit_norm, HostCallChip.channel]
 

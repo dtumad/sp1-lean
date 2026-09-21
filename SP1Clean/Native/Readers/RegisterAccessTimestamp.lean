@@ -74,6 +74,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   -- an empty requirements list.
   channelsWithGuarantees := [byteChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     change Operations.ChannelsLawful
@@ -141,6 +142,7 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       change Operations.RequirementsChannelsLawful
         ([.assert _, .interact _, .interact _] : Operations (ZMod p)) [byteChannel.toRaw] []
       dsimp only [Operations.RequirementsChannelsLawful]
@@ -152,8 +154,8 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
         subst h_channel
         exact Or.inl (List.mem_singleton_self byteChannel.toRaw)
       · intro env h_constraints
-        have h_bool : (ProvableStruct.eval env input_var).is_real = 0 ∨
-            (ProvableStruct.eval env input_var).is_real = 1 := by
+        have h_bool : Expression.eval env input_var.is_real = 0 ∨
+            Expression.eval env input_var.is_real = 1 := by
           apply bool_of_mul_pred
           simpa only [circuit_norm] using h_constraints.1
         rw [Operations.inChannelsOrRequirements_iff_forall_mem]

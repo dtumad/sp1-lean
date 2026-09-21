@@ -115,6 +115,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   completeness := completeness
   channelsWithRequirements := []
   requirementsChannelsLawful := fun input_var i₀ => by
+    preserve_tactic_target
     change Operations.RequirementsChannelsLawful
       ([.assert _, .interact _, .interact _, .interact _, .interact _, .interact _, .assert _,
         .assert _, .assert _, .assert _, .assert _, .assert _, .assert _, .interact _,
@@ -129,8 +130,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
       · exact Or.inl List.mem_cons_self
     · intro env h_constraints
-      have h_bool : (ProvableStruct.eval env input_var).is_real = 0 ∨
-          (ProvableStruct.eval env input_var).is_real = 1 := by
+      have h_bool : Expression.eval env input_var.is_real = 0 ∨
+          Expression.eval env input_var.is_real = 1 := by
         apply bool_of_mul_pred
         simpa only [circuit_norm] using h_constraints.1
       rw [Operations.inChannelsOrRequirements_iff_forall_mem]

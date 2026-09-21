@@ -1,5 +1,6 @@
 import Clean.Air.FlatEnsemble
 import Clean.Circuit.WitnessExport
+import ToClean.Circuit.WitgenShare
 
 /-! # Exporting complete flat ensembles
 

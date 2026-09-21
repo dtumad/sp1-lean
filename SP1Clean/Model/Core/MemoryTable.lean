@@ -20,6 +20,7 @@ structure MemoryIntervalRow (F : Type) where
   upper : Word F
   value : F
 deriving ProvableStruct, DecidableEq
+provable_struct_eval_lemmas MemoryIntervalRow
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

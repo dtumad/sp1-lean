@@ -20,6 +20,7 @@ structure State (F : Type) where
   clk_low : F
   values : Vector (Word F) 8
 deriving ProvableStruct
+provable_struct_eval_lemmas State
 
 structure Inputs (F : Type) where
   call : HostCallChip.Message F
@@ -27,6 +28,7 @@ structure Inputs (F : Type) where
   comparison : Extracted.LtOperationUnsigned F
   bytes : Extracted.U16toU8Operation F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def codeWord {R : Type} [NatCast R] [Zero R] (deferred : Bool) : Word R :=
   #v[(if deferred then 26 else 16 : ℕ), 0, 0, 0]

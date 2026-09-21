@@ -28,6 +28,7 @@ structure Message (F : Type) where
   address : Word F
   bytes : Vector F 32
 deriving ProvableStruct
+provable_struct_eval_lemmas Message
 
 structure Inputs (offset : Fin 8) (F : Type) where
   message : Message F

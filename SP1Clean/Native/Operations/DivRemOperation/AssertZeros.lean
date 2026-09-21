@@ -122,6 +122,7 @@ instance : ExplicitCircuits (F := ZMod p) assertZeros where
   operations es _ := es.map fun e => .assert e
   localLength_eq es _ := by simp only [assertZeros, Circuit.localLength, circuit_norm]
   subcircuitsConsistent es _ := by
+    preserve_tactic_target
     simp only [assertZeros, Operations.SubcircuitsConsistent, circuit_norm]
   channelsWithGuarantees _ _ := []
   channelsLawful es _ := by simp only [assertZeros, Operations.ChannelsLawful, circuit_norm]

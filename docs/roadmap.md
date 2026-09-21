@@ -267,8 +267,8 @@ Plonk, Groth16, and succinct boundary commitments are separate targets.
 
 **Sharing and cleanup.** The leanerVM review supports sharing generic Clean/PolyFun machinery,
 not replacing this execution/host model. Keep generic additions in `ToClean`/`ToMathlib`; modifications
-to existing Clean declarations follow the documented fork/upstream workflow. No dependency re-pin
-is authorized by this roadmap. Nonblocking cleanup includes contract homing, measured proof
+to existing Clean declarations follow the documented upstream workflow (`docs/agents/clean-upstream.md`).
+No dependency re-pin is authorized by this roadmap. Nonblocking cleanup includes contract homing, measured proof
 factorization, and long-line linting; avoid combining those broad changes with boundary proofs.
 
 **Lint debt (2026-09-20 baseline).** The package runs Mathlib's standard syntactic linter set and

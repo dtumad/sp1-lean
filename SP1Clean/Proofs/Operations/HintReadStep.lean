@@ -105,6 +105,7 @@ def circuit (last : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
       part_checks last ⟨⟨input_word_pointer, input_word_index, input_word_value, input_word_isLast⟩,
         input_address, input_nextIndex, input_nextAddress⟩ h_assumptions⟩
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     refine ⟨?_, ?_, ?_⟩
     · simp only [main, circuit_norm, HostHintQueue.wordChannel,

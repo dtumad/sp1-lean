@@ -71,6 +71,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs (fields 8) where
   completeness
   channelsWithRequirements := []
   requirementsChannelsLawful input offset := by
+    preserve_tactic_target
     refine ⟨?_, ?_, ?_⟩
     · simp only [main, circuit_norm]
     · simp only [main, circuit_norm]

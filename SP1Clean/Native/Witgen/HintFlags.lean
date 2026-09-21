@@ -35,7 +35,7 @@ theorem hintFlagsIR_eval (env : ProverEnvironment F) (key : String) (n : ℕ) :
   simp [hintFlagsIR, circuit_norm]
 
 /-- Environment-locality: the flag vector reads the environment only through `hint`. This is the
-whole `ComputableWitnesses` obligation for a hint-flag witness site (the fork's `AgreesBelow`
+whole `ComputableWitnesses` obligation for a hint-flag witness site (`AgreesBelowWithData`
 supplies the `hint` equation). -/
 theorem hintFlagsIR_congr (env env' : ProverEnvironment F) (hh : env.hint = env'.hint)
     (key : String) (n : ℕ) :

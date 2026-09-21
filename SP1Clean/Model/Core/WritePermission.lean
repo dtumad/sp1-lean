@@ -126,6 +126,7 @@ structure WritePermissionInterval (F : Type) where
   lower : fields 3 F
   upper : fields 3 F
 deriving ProvableStruct, DecidableEq
+provable_struct_eval_lemmas WritePermissionInterval
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

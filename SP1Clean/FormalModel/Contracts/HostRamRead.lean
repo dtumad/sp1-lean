@@ -17,6 +17,7 @@ structure Inputs (F : Type) where
   ram : HostRamAccessChip.Inputs F
   shared : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 structure Message (F : Type) where
   clk_high : F
@@ -26,6 +27,7 @@ structure Message (F : Type) where
   addr2 : F
   value : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Message
 
 def Message.address {R : Type} [Zero R] (message : Message R) : Word R :=
   #v[message.addr0, message.addr1, message.addr2, 0]

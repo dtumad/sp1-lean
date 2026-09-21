@@ -236,6 +236,7 @@ structure Inputs (F : Type) where
   is_real : F
   remainder_check_multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Component-wise evaluation of the comparison input.  Keep this next to the derived
 `ProvableStruct` instance: large chip proofs can rewrite this theorem before projecting a field,

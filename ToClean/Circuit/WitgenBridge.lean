@@ -1,5 +1,6 @@
-import Clean.Circuit.WitnessGeneration
+import Clean.Circuit.Theorems
 import Clean.Circuit.Subcircuit
+import ToClean.Circuit.AgreesBelowWithData
 
 /-! # Composition lemmas for `ComputableWitnesses`
 
@@ -38,7 +39,10 @@ field. The lemmas here close that hole in the two cases a composed chip meets.
 Destined for `Clean/Circuit/Subcircuit.lean`, beside `compose_computableWitnesses` and
 `Circuit.subcircuit_computableWitnesses`. Clean has exactly one `ComputableWitnesses` instance in
 tree (`Gadgets/Addition8/Addition8FullCarry.lean`), which has no subcircuits and so never needs
-this; any composed circuit does. -/
+this; any composed circuit does. The lemmas are stated at the strengthened agreement predicate
+`ProverEnvironment.AgreesBelowWithData` and obligation `FormalCircuitBase.ComputableWitnessesWithData`
+(`ToClean.Circuit.AgreesBelowWithData`); on acceptance of Clean PR #450 those names collapse onto
+Clean's own and nothing else here changes. -/
 
 namespace FlatOperation
 
@@ -96,10 +100,10 @@ whole flattened condition. -/
 theorem forAll_witnessCongr_mono {env env' : ProverEnvironment F} {Q Q' : Prop} (h : Q' → Q) :
     ∀ (ops : List (FlatOperation F)) (n : ℕ),
       forAll n { witness := fun offset _ compute =>
-          ProverEnvironment.AgreesBelow offset env env' → Q →
+          ProverEnvironment.AgreesBelowWithData offset env env' → Q →
             compute.eval env = compute.eval env' } ops →
       forAll n { witness := fun offset _ compute =>
-          ProverEnvironment.AgreesBelow offset env env' → Q' →
+          ProverEnvironment.AgreesBelowWithData offset env env' → Q' →
             compute.eval env = compute.eval env' } ops := by
   intro ops
   induction ops with
@@ -136,15 +140,15 @@ the offset that agreement is stated at.
 This is what a child whose *input expression reads a cell of the parent* needs — SP1's `MSB` and
 `LTU` byte providers range-check `2 * b - msb * 256`, where `msb` is a cell the parent witnessed
 just above the row input. Every witness inside the child sits at an offset at least the child's
-starting offset, so `ProverEnvironment.agreesBelow_of_le` recovers agreement there. -/
+starting offset, so `ProverEnvironment.agreesBelowWithData_of_le` recovers agreement there. -/
 theorem forAll_witnessCongr_mono_agrees {env env' : ProverEnvironment F} {Q Q' : Prop} {n : ℕ}
-    (h : ProverEnvironment.AgreesBelow n env env' → Q' → Q) :
+    (h : ProverEnvironment.AgreesBelowWithData n env env' → Q' → Q) :
     ∀ (ops : List (FlatOperation F)) (m : ℕ), n ≤ m →
       forAll m { witness := fun offset _ compute =>
-          ProverEnvironment.AgreesBelow offset env env' → Q →
+          ProverEnvironment.AgreesBelowWithData offset env env' → Q →
             compute.eval env = compute.eval env' } ops →
       forAll m { witness := fun offset _ compute =>
-          ProverEnvironment.AgreesBelow offset env env' → Q' →
+          ProverEnvironment.AgreesBelowWithData offset env env' → Q' →
             compute.eval env = compute.eval env' } ops := by
   intro ops
   induction ops with
@@ -153,7 +157,7 @@ theorem forAll_witnessCongr_mono_agrees {env env' : ProverEnvironment F} {Q Q' :
     intro m hnm hall
     cases op with
     | witness k c =>
-      exact ⟨fun ha hq => hall.1 ha (h (ProverEnvironment.agreesBelow_of_le ha hnm) hq),
+      exact ⟨fun ha hq => hall.1 ha (h (ProverEnvironment.agreesBelowWithData_of_le ha hnm) hq),
         ih _ (by omega) hall.2⟩
     | assert e => exact ⟨trivial, ih _ hnm hall.2⟩
     | lookup l => exact ⟨trivial, ih _ hnm hall.2⟩
@@ -171,11 +175,11 @@ child's input variable is assembled from the parent's, so agreement of the evalu
 gives agreement of the evaluated child row. -/
 theorem forAll_witnessCongr_of_generalSubcircuit {env env' : ProverEnvironment F} {Q : Prop}
     (circuit : GeneralFormalCircuit F β α) (input : Var β F) (n : ℕ)
-    (h_cw : circuit.base.ComputableWitnesses)
+    (h_cw : circuit.base.ComputableWitnessesWithData)
     (h_in : Q → Eval.eval env input = Eval.eval env' input) :
     forAll n
       { witness := fun offset _ compute =>
-          ProverEnvironment.AgreesBelow offset env env' → Q →
+          ProverEnvironment.AgreesBelowWithData offset env env' → Q →
             compute.eval env = compute.eval env' }
       (circuit.toSubcircuit n input).ops.toFlat := by
   have h := h_cw n input env env'
@@ -197,12 +201,12 @@ Unifying them instead forces `whnf` through the child's `localLength`, which is 
 elaboration cliff. -/
 theorem forAll_witnessCongr_of_formalSubcircuit {env env' : ProverEnvironment F} {Q : Prop}
     (circuit : FormalCircuit F β α) (input : Var β F) {m n : ℕ} (hmn : m = n)
-    (h_cw : circuit.base.ComputableWitnesses)
-    (h_in : ProverEnvironment.AgreesBelow n env env' → Q →
+    (h_cw : circuit.base.ComputableWitnessesWithData)
+    (h_in : ProverEnvironment.AgreesBelowWithData n env env' → Q →
       Eval.eval env input = Eval.eval env' input) :
     forAll m
       { witness := fun offset _ compute =>
-          ProverEnvironment.AgreesBelow offset env env' → Q →
+          ProverEnvironment.AgreesBelowWithData offset env env' → Q →
             compute.eval env = compute.eval env' }
       (circuit.toSubcircuit n input).ops.toFlat := by
   subst hmn
@@ -216,12 +220,12 @@ no output but may still declare cells — a bit decomposition is the canonical c
 (`Gadgets.ToBits.rangeCheck`), and every byte/range provider composes one. -/
 theorem forAll_witnessCongr_of_assertionSubcircuit {env env' : ProverEnvironment F} {Q : Prop}
     (circuit : FormalAssertion F β) (input : Var β F) {m n : ℕ} (hmn : m = n)
-    (h_cw : circuit.base.ComputableWitnesses)
-    (h_in : ProverEnvironment.AgreesBelow n env env' → Q →
+    (h_cw : circuit.base.ComputableWitnessesWithData)
+    (h_in : ProverEnvironment.AgreesBelowWithData n env env' → Q →
       Eval.eval env input = Eval.eval env' input) :
     forAll m
       { witness := fun offset _ compute =>
-          ProverEnvironment.AgreesBelow offset env env' → Q →
+          ProverEnvironment.AgreesBelowWithData offset env env' → Q →
             compute.eval env = compute.eval env' }
       (circuit.toSubcircuit n input).ops.toFlat := by
   subst hmn

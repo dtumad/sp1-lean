@@ -20,6 +20,7 @@ structure State (F : Type) where
   head : fields 3 F
   allocated : fields 3 F
 deriving ProvableStruct
+provable_struct_eval_lemmas State
 
 /-- Allocation identities are fresh relative to the entire persistent store, including popped nodes. -/
 def State.Binds {p : ℕ} (state : State (ZMod p)) (store : Store)
@@ -49,6 +50,7 @@ structure Inputs (F : Type) where
   previous : HostHintQueue.State F
   node : HintQueue.NodeRecord F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def codeWord {p : ℕ} [Fact p.Prime] : Word (ZMod p) := bitVecToWord SyscallKind.hintLength.code
 

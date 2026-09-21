@@ -32,6 +32,7 @@ structure Inputs (F : Type) where
   opcode : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The recombined low clock `clk_0_16 + clk_16_24 · 2^16` (matching SP1's `clk_low`). -/
 @[reducible] def clkLow (state : Extracted.CPUState (ZMod p)) : ZMod p :=
@@ -51,6 +52,7 @@ structure Columns (F : Type) where
   opcode : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- Compose the `CPUState` reader (pc+4 / clk+8), the LTU `opcode < 29` range check, and the
 `ALUTypeReaderImmutable` adapter (op_a/op_b/op_c reads, op_c gated by `is_real - imm_c`), then impose the
@@ -79,6 +81,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   -- **pull** (W11 flip): the reader pulls the instruction fetch as a guarantee, which propagates here.
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     simp only [circuit_norm, main, Readers.CPUState.circuit,
       Readers.ALUTypeReaderImmutable.circuit]
 

@@ -23,10 +23,12 @@ open SP1Clean
 structure U16toU8Operation (F : Type) where
   low_bytes : (Vector F 4)
 deriving ProvableStruct
+provable_struct_eval_lemmas U16toU8Operation
 
 structure U16MSBOperation (F : Type) where
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16MSBOperation
 
 structure MulOperation (F : Type) where
   carry : (Vector F 16)
@@ -39,6 +41,7 @@ structure MulOperation (F : Type) where
   b_sign_extend : F
   c_sign_extend : F
 deriving ProvableStruct
+provable_struct_eval_lemmas MulOperation
 
 structure MulCols (F : Type) where
   state : (CPUState F)
@@ -51,6 +54,7 @@ structure MulCols (F : Type) where
   is_mulhsu : F
   is_mulw : F
 deriving ProvableStruct
+provable_struct_eval_lemmas MulCols
 
 namespace U16toU8OperationSafe
 

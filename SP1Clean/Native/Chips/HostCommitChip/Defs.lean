@@ -36,11 +36,13 @@ def main (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p)) : Circui
   HostCallChip.channel.pull input.call
   (stateChannel deferred).pull input.previous
   (stateChannel deferred).push (input.next slot)
-  if deferred then
+  -- A `match` rather than `if deferred`: see `HostHintLengthChip.main`.
+  match deferred with
+  | true =>
     publicValuesChannel.push ⟨147, 1⟩
     publicValuesChannel.push ⟨Expression.const ((72 + slot.val : ℕ) : ZMod p),
       input.call.arg2[0] + input.call.arg2[1] * 65536⟩
-  else
+  | false =>
     publicValuesChannel.push ⟨145, 1⟩
     forEach (Vector.ofFn (fun i : Fin 4 => i)) fun i =>
       publicValuesChannel.push

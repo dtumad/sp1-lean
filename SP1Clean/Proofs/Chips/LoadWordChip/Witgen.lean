@@ -51,7 +51,7 @@ theorem eval_opCImm {F : Type} [FiniteField F]
 
 /-- LoadWord's row has computable witnesses: the four address cells come from the composed
 `AddressOperation`, whose input row is a function of this row's own input cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
@@ -72,13 +72,13 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   · simp [circuit_norm]
   · -- the address gadget's input row: the two operand words, the offset bit, and the row selector
     simp only [circuit_norm]
-    refine ⟨?_, ?_, congrArg (fun r : Inputs (ZMod p) => r.offset_bit) h_input, ?_⟩
+    refine ⟨?_, ?_, Inputs.eval_congr_offset_bit h_input, ?_⟩
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
       simpa only [eval_opBVal] using hv
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_imm) h_input
       simpa only [eval_opCImm] using hv
-    · rw [congrArg (fun r : Inputs (ZMod p) => r.is_lw) h_input,
-        congrArg (fun r : Inputs (ZMod p) => r.is_lwu) h_input]
+    · rw [Inputs.eval_congr_is_lw h_input,
+        Inputs.eval_congr_is_lwu h_input]
   all_goals simp [circuit_norm]
 
 end SP1Clean.LoadWordChip

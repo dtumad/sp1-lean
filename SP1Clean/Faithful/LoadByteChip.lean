@@ -175,43 +175,6 @@ private theorem loadByteEvalVec4Components
   · exact (ProvableType.getElem_eval_fields env value 2 (by decide)).symm
   · exact (ProvableType.getElem_eval_fields env value 3 (by decide)).symm
 
-private theorem loadByteAddressEta {F : Type}
-    (cols : Extracted.AddressOperation F) :
-    ({ addr_operation := { value := cols.addr_operation.value }
-       top_two_limb_inv := cols.top_two_limb_inv } :
-      Extracted.AddressOperation F) = cols := by
-  cases cols with
-  | mk addr top =>
-    cases addr
-    rfl
-
-private theorem loadByteCpuEta {F : Type}
-    (cols : Extracted.CPUState F) :
-    ({ clk_high := cols.clk_high
-       clk_16_24 := cols.clk_16_24
-       clk_0_16 := cols.clk_0_16
-       pc := cols.pc } : Extracted.CPUState F) = cols := by
-  cases cols
-  rfl
-
-private theorem loadByteITypeEta {F : Type}
-    (cols : Extracted.ITypeReader F) :
-    ({ op_a := cols.op_a
-       op_a_memory :=
-         { prev_value := cols.op_a_memory.prev_value
-           access_timestamp := cols.op_a_memory.access_timestamp }
-       op_a_0 := cols.op_a_0
-       op_b := cols.op_b
-       op_b_memory :=
-         { prev_value := cols.op_b_memory.prev_value
-           access_timestamp := cols.op_b_memory.access_timestamp }
-       op_c_imm := cols.op_c_imm } : Extracted.ITypeReader F) = cols := by
-  cases cols with
-  | mk opA opAMem opA0 opB opBMem opC =>
-    cases opAMem
-    cases opBMem
-    rfl
-
 theorem loadByteChipColumnsOfInput_roundtrip {F : Type}
     (cols : LoadByteChip.Columns F) :
     loadByteChipColumnsOfInput
@@ -689,8 +652,7 @@ private theorem loadByteMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [loadByteMemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, loadByteEvalMemoryInput]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def loadByteChipRustColumns
     (env : Environment (ZMod p))
@@ -954,29 +916,6 @@ private theorem loadByteExtractedAssertionsDecompose
   simp only [loadByteOracle_address_asserts_eq]
   simp only [loadByteVec3Eta, loadByteVec4Eta]
   simp only [loadByteExtractedMeaning, List.Forall, Nat.cast_one]
-  have hAddress := congrArg
-    (fun address =>
-      Extracted.AddressOperation.asserts
-        cols.adapter.op_b_memory.prev_value cols.adapter.op_c_imm
-        cols.offset_bit[0] cols.offset_bit[1] cols.offset_bit[2]
-        (cols.is_lb + cols.is_lbu) address)
-    (loadByteAddressEta (cols := cols.address_operation))
-  have hCpu := congrArg
-    (fun state =>
-      Extracted.CPUState.asserts state
-        #v[cols.state.pc[0] + 4, cols.state.pc[1], cols.state.pc[2]]
-        8 (cols.is_lb + cols.is_lbu))
-    (loadByteCpuEta (cols := cols.state))
-  have hIType := congrArg
-    (fun adapter =>
-      Extracted.ITypeReader.asserts cols.state.clk_high
-        (cols.state.clk_0_16 + cols.state.clk_16_24 * 65536)
-        cols.state.pc (29 * cols.is_lb + 32 * cols.is_lbu)
-        #v[cols.selected_byte + 65280 * cols.msb, 65535 * cols.msb,
-          65535 * cols.msb, 65535 * cols.msb]
-        adapter (cols.is_lb + cols.is_lbu) (cols.is_lb + cols.is_lbu))
-    (loadByteITypeEta (cols := cols.adapter))
-  rw [hAddress, hCpu, hIType]
   constructor
   · rintro ⟨hABC, hTail⟩
     rcases hABC with ⟨hAB, hC⟩
@@ -1438,10 +1377,8 @@ private theorem loadByteProgramInteractionsFaithful
     signedVal_neg hp2, Extracted.Interaction.toAccess,
     Extracted.Dir.sign, Opcode.ofNat]
   rw [show
-    -(ProvableStruct.eval env input).is_lbu +
-        -(ProvableStruct.eval env input).is_lb =
-      -((ProvableStruct.eval env input).is_lb +
-        (ProvableStruct.eval env input).is_lbu) by
+    -Expression.eval env input.is_lbu + -Expression.eval env input.is_lb =
+      -(Expression.eval env input.is_lb + Expression.eval env input.is_lbu) by
     ring_nf]
   rw [signedVal_neg hp2]
   simp only [neg_neg]
@@ -1536,10 +1473,8 @@ private theorem loadByteMemoryInteractionsFaithful
     signedVal_neg hp2, Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   have hGateNeg :
-      -(ProvableStruct.eval env input).is_lbu +
-          -(ProvableStruct.eval env input).is_lb =
-        -((ProvableStruct.eval env input).is_lb +
-          (ProvableStruct.eval env input).is_lbu) := by
+      -Expression.eval env input.is_lbu + -Expression.eval env input.is_lb =
+        -(Expression.eval env input.is_lb + Expression.eval env input.is_lbu) := by
     ring_nf
   simp only [hGateNeg, signedVal_neg hp2, neg_neg]
   exact loadBytePermMemoryBlocks [_, _] _ _ _ _

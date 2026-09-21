@@ -23,6 +23,7 @@ open SP1Clean
 structure U16CompareOperation (F : Type) where
   bit : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16CompareOperation
 
 structure LtOperationUnsigned (F : Type) where
   u16_compare_operation : (U16CompareOperation F)
@@ -30,16 +31,19 @@ structure LtOperationUnsigned (F : Type) where
   not_eq_inv : F
   comparison_limbs : (Vector F 2)
 deriving ProvableStruct
+provable_struct_eval_lemmas LtOperationUnsigned
 
 structure U16MSBOperation (F : Type) where
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16MSBOperation
 
 structure LtOperationSigned (F : Type) where
   result : (LtOperationUnsigned F)
   b_msb : (U16MSBOperation F)
   c_msb : (U16MSBOperation F)
 deriving ProvableStruct
+provable_struct_eval_lemmas LtOperationSigned
 
 structure BranchColumns (F : Type) where
   state : (CPUState F)
@@ -54,6 +58,7 @@ structure BranchColumns (F : Type) where
   is_branching : F
   compare_operation : (LtOperationSigned F)
 deriving ProvableStruct
+provable_struct_eval_lemmas BranchColumns
 
 namespace U16MSBOperation
 

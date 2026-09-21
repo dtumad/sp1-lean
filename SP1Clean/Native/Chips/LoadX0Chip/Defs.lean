@@ -56,6 +56,7 @@ structure Columns (F : Type) where
   is_lwu : F
   is_ld : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The operand reads + threaded reader column blocks. `op_b_val` is the rs1 base-address value (the
 `op_b` register read), `op_c_imm` the sign-extended immediate; the seven selectors flag the active load
@@ -75,6 +76,7 @@ structure Inputs (F : Type) where
   memory_access : Extracted.MemoryAccessCols F
   offset_bit : fields 3 F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
 @[reducible] def Inputs.op_c_imm {F} (i : Inputs F) : Word F := i.adapter.op_c_imm
@@ -167,7 +169,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.offset_bit, input.is_lb, input.is_lbu,
         input.is_lh, input.is_lhu, input.is_lw, input.is_lwu, input.is_ld⟩ :
         Var Columns (ZMod p)) := rfl

@@ -133,6 +133,7 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
   elaborated := elaborated memory limit tableName
   channelsWithRequirements := []
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     refine ⟨?_, ?_, ?_⟩
     · simp only [main, circuit_norm]

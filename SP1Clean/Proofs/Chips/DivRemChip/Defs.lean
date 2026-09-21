@@ -382,12 +382,14 @@ theorem populatedRowAt_remNegValue_eq (input : Var Inputs (ZMod p)) (offset : �
 /-- Folded projection of the complete divisor-negation operation. -/
 theorem populatedRowAt_cNegOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_neg_operation =
-      varFromOffset (F := ZMod p) Extracted.AddOperation (offset + 186) := rfl
+      varFromOffset (F := ZMod p) Extracted.AddOperation (offset + 186) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 /-- Folded projection of the complete remainder-negation operation. -/
 theorem populatedRowAt_remNegOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_neg_operation =
-      varFromOffset (F := ZMod p) Extracted.AddOperation (offset + 190) := rfl
+      varFromOffset (F := ZMod p) Extracted.AddOperation (offset + 190) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 /-- Folded projections of the reordered unsigned-less-than witness. -/
 theorem populatedRowAt_ltComparisonLimbs_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -503,19 +505,23 @@ theorem populatedRowAt_quotMsb_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
 /-- Folded projections of the four one-cell sign-bit operations. -/
 theorem populatedRowAt_bMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).b_msb =
-      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 213) := rfl
+      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 213) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_cMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_msb =
-      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 214) := rfl
+      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 214) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_remMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_msb =
-      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 215) := rfl
+      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 215) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_quotMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).quot_msb =
-      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 216) := rfl
+      varFromOffset (F := ZMod p) Extracted.U16MSBOperation (offset + 216) := by
+  rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_ltBit_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder_lt_operation.u16_compare_operation.bit =
@@ -1130,13 +1136,31 @@ set_option linter.unusedSectionVars false in
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 
 set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+-- `↓` (pre-order): the instance forwards `derivedElaborated`'s fields, and since Lean 4.33 `simp`
+-- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
+-- post-order lemma can see it; a pre-order lemma fires on the public form first.
+@[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 217 := rfl
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
+    (derivedElaborated (p := p)).localLength x = 217 := rfl
 
 /-- The shared CPU-state block in DivRem's output is an alias of the input block.  Exposing this
 small projection prevents whole-machine proofs from normalizing the complete 217-cell output just
 to identify the State-bus payload. -/
-@[circuit_norm] lemma output_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+@[circuit_norm ↓] lemma output_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((elaborated (p := p)).output input offset).state = input.state := rfl
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedOutput_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((derivedElaborated (p := p)).output input offset).state = input.state := rfl
+
+/-- The chip's output is the explicit row layout. Whole-machine proofs rewrite this once (pre-order,
+`simp [↓ output_eq_populatedRowAt, …]`) and then read fields through the `populatedRowAt_*_eq`
+projections, instead of reducing the populate program under `ProvableStruct.eval`. -/
+theorem output_eq_populatedRowAt (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    (elaborated (p := p)).output input offset = populatedRowAt input offset := by
+  rw [← elaborated.output_eq, main_output_eq_populateRow, populateRow_output_eq]
 
 end SP1Clean.DivRemChip

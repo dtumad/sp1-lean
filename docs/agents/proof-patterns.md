@@ -414,10 +414,106 @@ and `/--` openers (strip/restore them).
   heartbeat counter, so no budget change diagnoses or fixes it — when a long `main` or a deep term blows up,
   suspect `maxRecDepth` before heartbeats.
 
+### Lean ≥ 4.33 and Clean `main` (the 2026-09 toolchain move)
+
+Six failure classes, each with the fix that is now the house pattern (`docs/audits/` keeps the
+per-file ledger of the migration itself):
+
+- **Sealed `structToElements`.** Clean seals `ProvableStruct.structToElements`/`structFromElements`
+  (`attribute [irreducible]`), so nothing sees through `toElements` of a derived struct by defeq
+  any more: no `change (#v[a] ++ …).toList = _`, no `rfl` from `varFromOffset S i` to a struct
+  literal. Unfold by lemma instead: `simp only [toElements, ProvableStruct.structToElements_eq,
+  ProvableStruct.toComponents, Vector.toList_cast]` then `simp only [components,
+  ProvableStruct.componentsToElements, …]` (the `*_toList` message lemmas), and in the cell
+  navigators `simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+  ProvableStruct.componentsToElements]`. A wrapper lemma such as `toElements_mk` unfolds its
+  LHS only (`change structToElements ⟨s⟩ = _; rw [structToElements_eq]`) — unfolding both sides
+  and closing by `exact` is a whnf timeout. State an `ElaboratedCircuit.output` as the literal
+  struct (`⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩`), not `varFromOffset S i0`.
+- **Transparency-respecting unifier (Lean #13895).** A metavariable assignment must type-check
+  at implicit transparency. `simpa … using h` where the two sides agree only after unfolding a
+  `def` → `exact h`. A `simp`-produced proof term carries whatever spelling of its type simp
+  produced (`min p 2^32 < 2^64` through `LinearOrder.toLattice.toLT`), and a bundle built with
+  it (`BoundedWord.circuit (bound p) (by simp [bound])`) makes every later rewrite on that goal
+  fail with "not type-correct under the implicit transparency level" — name the proof
+  (`HostHaltChip.bound_fits`). A lemma whose argument type only unfolds to the goal's
+  (`events : List (sp1Machine …).Event` vs `List ExecutionEvent`) must be instantiated by hand
+  (`executes_iff (events := events)`), and an eta-difference left by `simp only` closes with a
+  final `rfl`.
+- **Variable-input struct evaluation.** `circuit_norm` no longer unfolds `ProvableStruct.eval` on
+  a non-literal struct (matchers stopped eta-expanding), and Clean's lift simproc
+  (`Expression.eval env s.x ~~> (ProvableStruct.eval env s).x`) never fires for the same reason.
+  The constraint side of every goal is therefore in the `Expression.eval env input_var.f` form,
+  and a row-level fact `(ProvableStruct.eval env s).f = …` needs a bridge:
+  `provable_struct_eval_lemmas S` (`ToClean/Circuit/StructEvalLemmas.lean`, invoked after every
+  `deriving ProvableStruct`, emitted by `update_extracted.py` for generated structs) declares the
+  `@[circuit_norm] S.eval_f` push-down lemmas, exactly Clean's `FemtoCairo/TypesLemmas.lean`
+  idiom. Clean's literal-decomposition and equality-split simprocs live in
+  `Clean.Circuit.StructEvalSimprocs`, imported at the root (`Math/Word.lean`), not in
+  `Clean.Circuit.Basic` — a file that only imported `Basic` had no struct normalisation at all.
+  Where the input is a variable, destructure it at the `intro` (`intro k ⟨x, y⟩ env env'`) as
+  Clean's own gadget proofs do. Two of those simprocs (`structEvalProjectionExpr`,
+  `structEqSplit`) are registered in the *default* simproc set, so they fire in every `simp`
+  and `simp only`, not just under `circuit_norm`: the lift does fire on a nested projection
+  (`Expression.eval env r.state.clk ~~> (ProvableStruct.eval env r.state).clk`), so a
+  bridging hypothesis stated in the other direction loops as a simp rewrite rule
+  (`maxRecDepth`) — drop it, both sides normalise to the lifted form; and `if_true`/`if_false`
+  (Clean's `iteReduce`) and the `eval_field`/`eval_cols` push-downs become unused simp
+  arguments, which `linter.unusedSimpArgs` turns into a build failure under `--wfail`.
+- **Nested push-downs versus the struct lift on a circuit output.** The lift simproc proves its
+  rewrite by a default-transparency `isDefEq` after a small normalisation, so it *succeeds* on any
+  closed base — `circuit.output input offset`, `elaborated.output …` — while failing on a variable
+  input. On such a base the tagged nested-field push-down (`Columns.eval_state`,
+  `SubwOperation.Columns.eval_msb`) and the lift undo each other and `simp` hits `maxRecDepth`
+  (twice-nested "simp failed" is the tell: the lift's inner simp). Never let `circuit_norm` meet
+  an opaque output: unfold the circuit in the same `simp only` (`simp only [X.rowView, X.circuit,
+  circuit_norm]`, the `TypedMemorySelectors` lift macros) so the output literal decomposes first,
+  or rewrite the output to its named layout pre-order (`simp [↓ DivRemChip.output_eq_populatedRowAt,
+  DivRemChip.populatedRowAt_*_eq, …]`; the forwarding chips' `↓ directOutput_eq`), and reduce a
+  view's projections (`simp only [X.rowView]`) before the pass that evaluates its arguments. The
+  same lift undoes `Vector.getElem_map` on a component-level vector lemma's right-hand side
+  (`(ProvableStruct.eval env cols).pc = Vector.map (Expression.eval env) cols.pc`), so vector
+  push-downs stay untagged and are applied by name.
+- **`ite` at implicit transparency.** `split_ifs` introduces the case hypothesis but leaves the
+  `if` in place, and `rw [if_pos h]`/`rw [if_neg h]` fail on the `Decidable` instance: use
+  `by_cases h : c` and close with `simp [h]` (or `simp only [if_neg (show ¬c by norm_num)]`).
+- **Declaration heartbeat budget.** The forwarded-instance and struct-lift normal forms cost
+  more per `simp`; a 300-line anchor that fit under the default budget on 4.32 can exceed it
+  (`Faithful/BitwiseChip.lean` — the site reported is just where the counter ran out). The
+  fix is the usual one, an opaque-input private lemma for the expensive step, never an option
+  escape: the `unexpectedInteractions … = []` step by `simp [main, …]` costs 2.4 s and is
+  replaced by the Jal/Jalr `channels_subset` shape.
+- **`native_decide` statements carry no `let`.** `cleanup.letToHave` rewrites a theorem's
+  *type* to `have`s while the tactic goal keeps the `let`s; identifying the two sends the
+  kernel through the host interpreter, and the 4.33 kernel's bounded depth (#13956) rejects it
+  as `(kernel) deep recursion` regardless of `maxRecDepth`. Put the per-case body in a private
+  `def` and state the theorem over it (`SP1CleanTest/Core/HostControl.lean`'s `compiledControl`).
+- **`elaborate_circuit`.** It times out on a sixteen-statement `main` (`MulOperation`): write the
+  `ElaboratedCircuit` instance with `simp only [main, circuit_norm, seval]` field proofs. It
+  leaves `if empty then … else …` on a `Bool` literal unreduced in the explicit metadata, so a
+  `cases empty <;> elaborate_circuit` instance carries a stuck
+  `ExplicitCircuit.channelsWithGuarantees (if false = true then …)`: branch with `match empty with
+  | true => … | false => …` instead.
+- **Hand-written obligation proofs start with `preserve_tactic_target`.** A `refine ⟨…⟩`/`intro`
+  proof of a bundle field such as `requirementsChannelsLawful` is abstracted into an auxiliary
+  lemma whose type is the proof term's *inferred* type — the unfolded conjunction, not
+  `Operations.RequirementsChannelsLawful …` — and Lean ≥ 4.33 then rejects the bundle literal
+  that `simp [X.circuit, circuit_norm]` produces downstream as "not type-correct under the
+  implicit transparency level", after which no `circuit_norm` rewrite fires on that goal (the
+  ledger proofs' `simp [BoundedWord.circuit, …]` were the first casualties). Clean main's default
+  field tactics open with `preserve_tactic_target` (it wraps the proof in `id target …` so the
+  aux lemma keeps the declared type); every hand-written `:= by` / `:= fun … => by` proof of
+  `requirementsChannelsLawful`, `exposedChannels_eq`, `channelsLawful`, `subcircuitsConsistent`,
+  `localLength_eq`, `output_eq` does the same, as its first tactic (before any `change`).
+- **Deadlock at shutdown.** A `lake build` worker can hang at 0 % CPU after writing its outputs
+  (main thread joining a worker blocked in `reverseFieldLookup → Environment.constants`). Not
+  reproducible in isolation; `ps -eo pid,utime` static across a minute is the tell — kill the pid
+  and the build resumes.
+
 ### Gadget-level (arithmetic, `Native/Operations/` + `Proofs/Operations/`)
 
 - **`circuit_proof_start` must be the FIRST tactic** in soundness/completeness. Any
-  `haveI`/`set_option`/`have hp` goes *after* it, or it errors "can only be used on Soundness/Completeness"
+  `have`/`set_option`/`have hp` goes *after* it, or it errors "can only be used on Soundness/Completeness"
   (put `set_option … in` on the theorem instead). (`circuit_proof_start` lives in `Clean.Utils.Tactics`.)
 - **Imports before the module doc-comment.** A `/-! … -/` header before the `import` lines makes the package
   `-D linter.flexible` flag get rejected on the (now zero-imports) header. Imports first, then the doc-comment.
@@ -920,13 +1016,14 @@ in `Proofs/Chips/ShiftLeftChip/Core.lean`.
 **Traps — `have`s that look dead but are load-bearing** (verify with `lean_goal` / a build before removing):
 - `have hp : 2 ^ 17 < p := Fact.out` (and `have : 131072 < p`) — feeds a downstream `omega` that needs the
   magnitude; grep shows one occurrence (its own line) yet `omega` consumes it implicitly.
-- `haveI : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩` — supplies an instance to later
+- `have : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩` (`have`, not `haveI` — Mathlib's
+  `haveILetI` linter flags the latter in a proof) — supplies an instance to later
   `ZMod.val`/`omega` steps. There is **no** global `NeZero p` instance, *on purpose*: a `Fact (2^17 < p)`-derived
   one would make the pervasive `omit [Fact (2^17 < p)] in` clauses illegal (`Model/ByteTable.lean:84`).
 
 > **The mechanism that decides this whole class, measured directly: `Fact p.Prime` synthesizes *both*
 > `NeZero p` and `Fact (1 < p)` as instances, while `Fact (2 ^ N < p)` synthesizes *neither*.** So the
-> `haveI : NeZero p := ⟨…⟩` idiom above is **redundant wherever `Fact p.Prime` is also in the variable
+> `have : NeZero p := ⟨…⟩` idiom above is **redundant wherever `Fact p.Prime` is also in the variable
 > block** — which is everywhere in this tree, since that is the standard variable block. A sweep on this
 > basis removed **149 such locals across 68 files**, with only **3 keeps**.
 >

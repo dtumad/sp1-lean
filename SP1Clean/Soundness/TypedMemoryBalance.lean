@@ -125,7 +125,7 @@ theorem witness_nonMemoryProviderTable_memoryInteractions_eq_nil
   have componentProviderEq : witness.tables[i].component =
       (sp1ProviderTables (p := p))[i - 25] := by
     rw [← componentEq]
-    change (sp1Tables (p := p) ++ sp1ProviderTables (p := p))[i] = _
+    simp only [sp1Ensemble_tables]
     rw [List.getElem_append_right (by simpa only [sp1Tables_length] using lower)]
     simp only [sp1Tables_length]
   rw [componentProviderEq]
@@ -160,22 +160,31 @@ theorem witness_providerMemoryInteractions_eq
   have tablesLength : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
-  have interactionsAtOther (i : ℕ) (lower : instructionTableCount ≤ i)
-      (upper : i < ensembleTableCount) (bound : i < witness.tables.length)
-      (notInit : i ≠ memoryInitProviderIndex) (notFinalize : i ≠ memoryFinalizeProviderIndex)
-      (notBump : i ≠ memoryBumpIndex) (notHalt : i ≠ haltIndex)
-      (notSyscall : i ≠ syscallInstrsIndex) :
+  have interactionsAtOther (i : ℕ) (bound : i < witness.tables.length)
+      (h : 25 ≤ i ∧ i < 55 ∧ i ≠ 49 ∧ i ≠ 50 ∧ i ≠ 51 ∧ i ≠ 53 ∧ i ≠ 54) :
       typedTableInteractionsWith witness.tables[i] memoryChannel = [] :=
-    witness_nonMemoryProviderTable_memoryInteractions_eq_nil witness i lower upper bound
-      notInit notFinalize notBump notHalt notSyscall
+    witness_nonMemoryProviderTable_memoryInteractions_eq_nil witness i h.1 h.2.1 bound
+      h.2.2.1 h.2.2.2.1 h.2.2.2.2.1 h.2.2.2.2.2.1 h.2.2.2.2.2.2
   repeat rw [List.drop_eq_getElem_cons (by omega)]
   rw [List.drop_eq_nil_of_le (by omega)]
   simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
-  simp [interactionsAtOther, instructionTableCount, ensembleTableCount, programProviderIndex,
-    byteProviderTableCount, rangeProviderTableCount, memoryInitProviderIndex,
-    memoryFinalizeProviderIndex, memoryBumpIndex, haltIndex, syscallInstrsIndex,
-    nonBumpProviderTableCount, stateSilentProviderTableCount, memoryInitProviderTable,
-    memoryFinalizeProviderTable, memoryBumpTable, haltTable, syscallInstrsTable]
+  -- `simp` cannot use `interactionsAtOther` as a conditional rewrite (the bound proof inside the
+  -- `getElem` is not a premise it can discharge), so the twenty-five silent tables are named.
+  rw [interactionsAtOther 25 (by omega) (by decide),
+    interactionsAtOther 26 (by omega) (by decide), interactionsAtOther 27 (by omega) (by decide),
+    interactionsAtOther 28 (by omega) (by decide), interactionsAtOther 29 (by omega) (by decide),
+    interactionsAtOther 30 (by omega) (by decide), interactionsAtOther 31 (by omega) (by decide),
+    interactionsAtOther 32 (by omega) (by decide), interactionsAtOther 33 (by omega) (by decide),
+    interactionsAtOther 34 (by omega) (by decide), interactionsAtOther 35 (by omega) (by decide),
+    interactionsAtOther 36 (by omega) (by decide), interactionsAtOther 37 (by omega) (by decide),
+    interactionsAtOther 38 (by omega) (by decide), interactionsAtOther 39 (by omega) (by decide),
+    interactionsAtOther 40 (by omega) (by decide), interactionsAtOther 41 (by omega) (by decide),
+    interactionsAtOther 42 (by omega) (by decide), interactionsAtOther 43 (by omega) (by decide),
+    interactionsAtOther 44 (by omega) (by decide), interactionsAtOther 45 (by omega) (by decide),
+    interactionsAtOther 46 (by omega) (by decide), interactionsAtOther 47 (by omega) (by decide),
+    interactionsAtOther 48 (by omega) (by decide), interactionsAtOther 52 (by omega) (by decide)]
+  simp only [List.nil_append]
+  rfl
 
 /-! ## Exact Memory-channel decomposition of the whole ensemble witness -/
 
@@ -586,7 +595,7 @@ private theorem memoryBumpTable_is_real_binary
     ∀ row ∈ (memoryBumpTable witness).table,
       (memoryBumpRow (memoryBumpTable witness) row).is_real = 0 ∨
         (memoryBumpRow (memoryBumpTable witness) row).is_real = 1 := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   intro row rowMem
   have tableConstraints : (memoryBumpTable witness).Constraints :=
     constraints _ (witness.mem_allTables_of_mem_tables

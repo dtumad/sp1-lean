@@ -491,7 +491,7 @@ theorem aluX0Chip_interactions_faithful
     eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
     Opcode.ofNat, ConstraintCoe.coe_eq_val,
     LookupAccessList.negMult, signedVal_neg hp2, h6]
-  simp only [← ProvableStruct.eval_eq_eval, AluX0Chip.eval_inputs,
+  simp only [← ProvableStruct.eval_eq_eval,
     eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
     eval_registerAccessTimestamp, eval_sub,
     ProvableType.eval_field, Expression.eval]

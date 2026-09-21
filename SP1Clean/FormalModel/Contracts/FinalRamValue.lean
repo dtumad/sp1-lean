@@ -18,6 +18,7 @@ structure Inputs (F : Type) where
   record : MemoryMsg F
   read : InitialMemoryRead.Inputs F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 variable {p : ℕ} [Fact p.Prime]
 

@@ -61,6 +61,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       valid.2.2.2.2.2.1, valid.2.2.2.2.2.2.1, valid.2.2.2.2.2.2.2.1, span,
       valid.2.2.2.2.2.2.2.2.2.1, valid.2.2.2.2.2.2.2.2.2.2⟩
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     refine ⟨?_, ?_, ?_⟩
     · simp only [main, circuit_norm, ClockOrder.circuit, HintReadSpan.circuit,

@@ -30,7 +30,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- The little-endian concatenation of the four bytes of two 16-bit limbs equals `x + y·2^16`. -/
-private lemma toNat_concat_word_bytes [NeZero p]
+private lemma toNat_concat_word_bytes
     (x y : ZMod p) (hx : x.val < 65536) (hy : y.val < 65536) :
     (BitVec.ofNat 8 (y.val >>> 8) ++ BitVec.ofNat 8 y.val ++
       BitVec.ofNat 8 (x.val >>> 8) ++ BitVec.ofNat 8 x.val).toNat =
@@ -198,7 +198,6 @@ theorem correct_load_word_native
   simp [spec_lw, sp1_lw, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
     LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread, hext]
-  rfl
 
 /-- **End-to-end composition.** From the `LoadWord` chip prover assumptions + decode + register/PC reads
 + the four selected memory bytes, a width-4 Sail `LOAD` (sign-extended for `LW`, zero-extended for `LWU`)

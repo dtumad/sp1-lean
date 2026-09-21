@@ -272,6 +272,7 @@ private theorem addAssertions
           ((AddOperation.main input).operations offset)) := by
   simp [nativeAssertZeros, AddOperation.main,
     Extracted.JalOracle.AddOperation.asserts, circuit_norm]
+  simp only [circuit_norm] at ha hb hv hr
   rw [ha, hb, hv, hr]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -898,7 +899,7 @@ private theorem byteInteractionsFaithful
           (jalChipReconfigure (rustColumns env input offset))).map
             Extracted.Interaction.toAccess).filter
         (fun access => access.1 = InteractionKind.Byte)) := by
-  haveI : NeZero p :=
+  have : NeZero p :=
     ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   have h6 : (6 : ZMod p).val = 6 := val_6_zmod_p
   have h3 : (3 : ZMod p).val = 3 := val_3_zmod_p
@@ -926,7 +927,7 @@ private theorem byteInteractionsFaithful
     Extracted.Interaction.toAccess,
     Extracted.Dir.sign, Nat.add_assoc]
   simp only [← ProvableStruct.eval_eq_eval,
-    JalChip.eval_inputs, eval_cpuState, evalJTypeReader,
+    eval_cpuState, evalJTypeReader,
     eval_registerAccessCols,
     eval_registerAccessTimestamp, ProvableType.eval_field,
     Expression.eval, eval_sub, neg_sub]

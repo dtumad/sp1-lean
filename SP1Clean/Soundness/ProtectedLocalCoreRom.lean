@@ -43,26 +43,6 @@ private theorem destination_memWrite {F : Type} [DecidableEq F] [Zero F] (flag :
   unfold Trace.CommitEffect.destination
   split <;> rfl
 
-omit [Fact (2 ^ 24 < p)] in
-private theorem byte_view_real (input : StoreByteChip.Inputs (ZMod p))
-    (cols : StoreByteChip.Columns (ZMod p)) :
-    (StoreByteChip.rowView input cols).is_real = input.is_real := rfl
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem half_view_real (input : StoreHalfChip.Inputs (ZMod p))
-    (cols : StoreHalfChip.Columns (ZMod p)) :
-    (StoreHalfChip.rowView input cols).is_real = input.is_real := rfl
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem word_view_real (input : StoreWordChip.Inputs (ZMod p))
-    (cols : StoreWordChip.Columns (ZMod p)) :
-    (StoreWordChip.rowView input cols).is_real = input.is_real := rfl
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem double_view_real (input : StoreDoubleChip.Inputs (ZMod p))
-    (cols : StoreDoubleChip.Columns (ZMod p)) :
-    (StoreDoubleChip.rowView input cols).is_real = input.is_real := rfl
-
 /-- Only the four store families need byte permissions; all other instruction views have no RAM write. -/
 theorem supported_write_property (property : Trace.RowView (ZMod p) → Prop)
     (noWrite : ∀ row, row.commit.memWrite = none → property row) (id : InstructionChipId)
@@ -94,23 +74,15 @@ theorem supported_write_property (property : Trace.RowView (ZMod p) → Prop)
   cases id with
   | storeByte =>
     intro active
-    change (StoreByteChip.rowView _ _).is_real = 1 at active
-    rw [byte_view_real] at active
     exact byte rfl active
   | storeHalf =>
     intro active
-    change (StoreHalfChip.rowView _ _).is_real = 1 at active
-    rw [half_view_real] at active
     exact half rfl active
   | storeWord =>
     intro active
-    change (StoreWordChip.rowView _ _).is_real = 1 at active
-    rw [word_view_real] at active
     exact word rfl active
   | storeDouble =>
     intro active
-    change (StoreDoubleChip.rowView _ _).is_real = 1 at active
-    rw [double_view_real] at active
     exact double rfl active
   | jal | jalr | uType =>
     intro _

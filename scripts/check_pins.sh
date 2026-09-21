@@ -101,15 +101,15 @@ for label, expected in expected_rows.items():
         err(f"docs/release-audit.md row '{label}' records `{recorded}` but the source of truth is `{expected}`")
 
 # AGENTS.md is the operational authority agents load before touching the dependency graph.  A stale
-# fork revision there is more dangerous than stale prose because it can directly steer a future pin
+# revision there is more dangerous than stale prose because it can directly steer a future pin
 # update, so gate it against the same resolved Clean revision.
 agents = open("AGENTS.md").read()
 agents_clean = re.search(
-    r"Clean pin is currently a fork.*?\(`([0-9a-f]{40})`\)", agents, re.S)
+    r"The Clean pin is upstream `main`\*\* \(`([0-9a-f]{40})`", agents, re.S)
 if not agents_clean:
-    err("AGENTS.md does not record the current Clean fork revision as a full 40-hex commit")
+    err("AGENTS.md does not record the current Clean pin as a full 40-hex commit")
 elif agents_clean.group(1) != expected_rows["Clean pin"]:
-    err(f"AGENTS.md records Clean fork `{agents_clean.group(1)}` but the resolved pin is "
+    err(f"AGENTS.md records Clean pin `{agents_clean.group(1)}` but the resolved pin is "
         f"`{expected_rows['Clean pin']}`")
 
 # -- 2b. the Sail generation pins, which live in a script rather than the build graph ----

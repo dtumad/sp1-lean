@@ -191,7 +191,7 @@ theorem SupportedCoreTraceWitness.haltTablePadding
       | nil => rfl
       | cons e _ => exact e.elim
     rw [trace.haltTable_witness]
-    simp only [SupportedCoreTraceWitness.providerTableFor, Table.build_table, hocc]
+    simp only [SupportedCoreTraceWitness.providerTableFor, hocc]
     rfl
   refine ⟨by rw [htab]; rfl, ?_⟩
   intro row rowMem

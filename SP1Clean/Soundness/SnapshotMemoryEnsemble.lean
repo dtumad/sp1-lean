@@ -111,6 +111,7 @@ theorem recordFor_interactions (snapshot : MemorySnapshot) (id : TableId) (env :
     simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Option.toList_some,
       Component.rowOutput_mk, FormalCircuitBase.output_def, OrderedMemoryProvider.elaborated,
       SnapshotRegisterProvider.elaborated]
+    rfl
   · change (ramView snapshot).component.operations.interactionValuesWith memoryChannel.toRaw env = _
     simp only [recordFor, ramView,
       OrderedMemoryEnsemble.providerView, Operations.interactionValuesWith,
@@ -120,6 +121,7 @@ theorem recordFor_interactions (snapshot : MemorySnapshot) (id : TableId) (env :
     rw [SnapshotRamProvider.main_memory_interactions]
     simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Option.toList_some,
       Component.rowOutput_mk, FormalCircuitBase.output_def, OrderedMemoryProvider.elaborated]
+    rfl
   · exact OrderedMemoryEnsemble.terminalView_memory_interactions _ (by decide) env
 
 /-- Source-provider semantics follow from raw constraints and the Byte guarantees alone.

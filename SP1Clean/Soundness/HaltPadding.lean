@@ -18,7 +18,7 @@ def install (ens : Ensemble (ZMod p) PublicIO) (index : Fin ens.tables.length) :
 
 variable {ens : Ensemble (ZMod p) PublicIO} {index : Fin ens.tables.length}
 
-private theorem bound (witness : EnsembleWitness (install ens index)) : index.val < witness.tables.length := by
+theorem bound (witness : EnsembleWitness (install ens index)) : index.val < witness.tables.length := by
   rw [← witness.same_length]
   simpa only [install, List.length_set] using index.isLt
 

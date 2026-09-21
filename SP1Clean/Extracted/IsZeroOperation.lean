@@ -19,6 +19,7 @@ structure IsZeroOperation (F : Type) where
   inverse : F
   result : F
 deriving ProvableStruct
+provable_struct_eval_lemmas IsZeroOperation
 
 namespace IsZeroOperation
 

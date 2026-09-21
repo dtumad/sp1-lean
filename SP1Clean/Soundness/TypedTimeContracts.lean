@@ -269,8 +269,8 @@ theorem stateTimeConstraintShape_of_circuit (kind : ChipKind p)
     (shape : @CircuitStateTimeStep p _ kind.Inputs kind.Cols kind.provableInputs
       kind.provableCols circuit kind.view) :
     StateTimeConstraintShape ⟨id, kind, circuit, spec_eq⟩ := by
-  letI := kind.provableInputs
-  letI := kind.provableCols
+  let := kind.provableInputs
+  let := kind.provableCols
   intro data physical
   dsimp only
   intro guarantees real
@@ -280,8 +280,8 @@ theorem stateTimeConstraintShape_of_circuit (kind : ChipKind p)
 concrete CPU-reader contract into the uniform physical-row clock theorem. -/
 local macro "timeRegistryCase " kind:term ", " contract:term : tactic =>
   `(tactic| (
-    letI := ($kind:term).provableInputs
-    letI := ($kind:term).provableCols
+    let _inputs := ($kind:term).provableInputs
+    let _cols := ($kind:term).provableCols
     apply stateTimeConstraintShape_of_circuit
     apply circuitStateTimeStep_of_cpuStateContract
     exact $contract:term))
@@ -626,7 +626,7 @@ theorem syscallInstrsRow_pcArm_spec_of_component
             (syscallInstrsRow table row).state.pc[1] ∧
           (syscallInstrsRow table row).next_pc[2] =
             (syscallInstrsRow table row).state.pc[2]) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have rowConstraints := constraints row rowMem
   rw [component] at rowConstraints
   let env := table.environment row
@@ -1950,7 +1950,7 @@ derived AIR facts; none remains a capstone premise. -/
 theorem witness_realDecodedState_canonExhaustiveTrail
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+    have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
     RankedGrounding.ExhaustiveTrail
       ((↑((realDecodedInstructionRows witness.data witness.tables).map
           (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
@@ -1962,7 +1962,7 @@ theorem witness_realDecodedState_canonExhaustiveTrail
       (trailCanonEdge witness)
       (initialBoundaryStateMessage witness.publicInput)
       (finalBoundaryStateMessage witness.publicInput) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
   classical
   obtain ⟨instrGood, bumpCanon, haltGood, syscallGood⟩ :=
     witness_stateEdges_goodness witness constraints balanced

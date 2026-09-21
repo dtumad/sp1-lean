@@ -50,6 +50,7 @@ structure Inputs (F : Type) where
   new_value : (Word F)
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The previous-timestamp representative `compare_low · prev_low + (1 − compare_low) · prev_high`. -/
 @[reducible] def selPrev (ts : Extracted.MemoryAccessTimestamp (ZMod p)) : ZMod p :=
@@ -120,6 +121,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   -- `channelsWithRequirements`).
   channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     change Operations.ChannelsLawful
@@ -248,6 +250,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [memoryChannel.toRaw],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       change Operations.RequirementsChannelsLawful
         ([.assert _, .subcircuit _, .subcircuit _, .subcircuit _, .interact _, .interact _,
           .interact _, .interact _] : Operations (ZMod p))
@@ -262,8 +265,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         · exact Or.inl List.mem_cons_self
         · exact Or.inr List.mem_cons_self
       · intro env h_constraints
-        have h_bool : (ProvableStruct.eval env input_var).is_real = 0 ∨
-            (ProvableStruct.eval env input_var).is_real = 1 := by
+        have h_bool : Expression.eval env input_var.is_real = 0 ∨
+            Expression.eval env input_var.is_real = 1 := by
           apply bool_of_mul_pred
           simpa only [circuit_norm] using h_constraints.1
         rw [Operations.inChannelsOrRequirements_iff_forall_mem]

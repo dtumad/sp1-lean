@@ -8,6 +8,7 @@ import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
 import Mathlib.Tactic
+import ToClean.Circuit.IteDecide
 
 /-! # `BitwiseU16Operation` as a Clean-native composed `FormalAssertion`
 
@@ -42,6 +43,7 @@ structure Columns (F : Type) where
   c_low_bytes : Extracted.U16toU8Operation F
   bitwise_operation : BitwiseOperation.Columns F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The two operand words, the (chip-owned) decomposition + result column struct, the opcode selector
 (AND=0, OR=1, XOR=2), and the `is_real` gate — SP1's `eval` params verbatim. -/
@@ -52,6 +54,7 @@ structure Inputs (F : Type) where
   opcode : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The eight little-endian bytes of a word given its low-byte columns: `byte[2i] = low[i]`,
 `byte[2i+1] = (w[i] − low[i])·256⁻¹` (SP1's `eval_u16_to_u8_unsafe`). Reducible so it unifies with the
@@ -242,7 +245,8 @@ private lemma toElements_cell_bLow {F : Type} (s : Columns F) (k : ℕ) (hk : k 
       = s.b_low_bytes.low_bytes[k] := by
   obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+       ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_left ?_).trans
        ((Vector.getElem_cast ?_).trans (Vector.getElem_append_left ?_)) <;> decide)
 
@@ -253,7 +257,8 @@ private lemma toElements_cell_cLow {F : Type} (s : Columns F) (k : ℕ) (hk : k 
       = s.c_low_bytes.low_bytes[k] := by
   obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+       ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_right ?_ ?_).trans
        ((Vector.getElem_append_left ?_).trans
          ((Vector.getElem_cast ?_).trans (Vector.getElem_append_left ?_))) <;> decide)
@@ -266,7 +271,8 @@ private lemma toElements_cell_result {F : Type} (s : Columns F) (k : ℕ) (hk : 
       = s.bitwise_operation.result[k] := by
   obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := s
   interval_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type]
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+       ProvableStruct.componentsToElements]
      refine (Vector.getElem_append_right ?_ ?_).trans
        ((Vector.getElem_append_right ?_ ?_).trans
          ((Vector.getElem_append_left ?_).trans

@@ -21,6 +21,7 @@ structure WordRecord (F : Type) where
   value : Word F
   isLast : F
 deriving ProvableStruct, DecidableEq
+provable_struct_eval_lemmas WordRecord
 
 variable {p : ℕ} [Fact p.Prime]
 

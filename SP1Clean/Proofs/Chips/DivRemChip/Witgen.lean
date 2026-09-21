@@ -42,13 +42,6 @@ private theorem eval_opCPrev {F : Type} [FiniteField F]
     Readers.RTypeReader.eval_registerAccessCols]
   exact ProvableType.eval_fields env _
 
-omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
-private theorem eval_isReal {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    (ProvableStruct.eval env input).is_real = Expression.eval env input.is_real := by
-  rw [← ProvableStruct.eval_eq_eval]
-  simp only [eval_inputs, CircuitType.eval_expr]
-
 omit [Fact (2 ^ 24 < p)] in
 /-- The three operand facts every payload congruence consumes, projected once from the
 struct-level input agreement. -/
@@ -73,15 +66,13 @@ private theorem inputFacts {env env' : ProverEnvironment (ZMod p)}
       (fun r : Inputs (ZMod p) => r.adapter.op_c_memory.prev_value) h_input
     rw [eval_opCPrev env.toEnvironment input, eval_opCPrev env'.toEnvironment input] at hv
     simpa using congrArg (fun v : Word (ZMod p) => v[i]'hi) hv
-  · have hv := congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
-    rw [eval_isReal env.toEnvironment input, eval_isReal env'.toEnvironment input] at hv
-    exact hv
+  · exact Inputs.eval_congr_is_real h_input
 
 end Orientation
 
 /-- DivRem's row has computable witnesses: every `populateRow` payload is a function of the
 input row and the hint alone. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, populateRow, constrainRow, circuit_norm, Operations.forAllFlat,
     Operations.forAll]

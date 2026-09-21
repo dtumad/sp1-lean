@@ -50,7 +50,7 @@ theorem val_zero_zmod : (0 : ZMod p).val = 0 := by simp
 
 theorem val_one_zmod : (1 : ZMod p).val = 1 := by
   have := Fact.out (p := 2 ^ 24 < p)
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   exact ZMod.val_one p
 
 /-- The derived boolean cells (`MSB`'s high bit, `LTU`'s comparison result) are field bits, and

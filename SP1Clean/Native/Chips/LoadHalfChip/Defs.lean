@@ -49,6 +49,7 @@ structure Columns (F : Type) where
   is_lh : F
   is_lhu : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The operand reads + threaded reader column blocks. `op_b_val` is the rs1 base-address value, `op_c_imm`
 the sign-extended immediate; `state`/`adapter`/`memory_access` are the committed column blocks; `offset_bit`
@@ -64,6 +65,7 @@ structure Inputs (F : Type) where
   selected_half : F
   msb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
 @[reducible] def Inputs.op_c_imm {F} (i : Inputs F) : Word F := i.adapter.op_c_imm
@@ -148,7 +150,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   localLength_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit, U16MSBOperation.circuit]
   output input i0 :=
     ⟨input.state, input.adapter,
-      ⟨varFromOffset Extracted.AddrAddOperation i0, var ⟨i0 + 3⟩⟩,
+      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
       input.memory_access, input.offset_bit, input.selected_half, ⟨input.msb⟩,
       input.is_lh, input.is_lhu⟩
   output_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit, U16MSBOperation.circuit]
@@ -161,7 +163,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.offset_bit, input.selected_half, ⟨input.msb⟩,
         input.is_lh, input.is_lhu⟩ :
         Var Columns (ZMod p)) := rfl

@@ -39,6 +39,7 @@ def EvidenceContract (input : Inputs (ZMod p)) (cols : Columns (ZMod p))
       wv0 := cols.a[0], wv1 := cols.a[1], wv2 := cols.a[2], wv3 := cols.a[3] } ∧
   Cases.RowEvidence input.is_real input.op_b_val input.op_c_val cols.a cols
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Evaluation commutes with the comparison cluster's projection from the committed chip row. -/
 private theorem eval_compareInput_ofCols (env : Environment (ZMod p))
@@ -70,6 +71,7 @@ private def readerInputValue (input : Inputs (ZMod p)) (cols : Columns (ZMod p))
     pc := input.state.pc, opcode := DivRemContract.encodedOpcode cols,
     wv0 := cols.a[0], wv1 := cols.a[1], wv2 := cols.a[2], wv3 := cols.a[3] }
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Verifier evaluation commutes with the folded R-type reader projection. -/
 private theorem eval_readerInputExpr (env : Environment (ZMod p))
@@ -94,6 +96,7 @@ private def writeInputValue (input : Inputs (ZMod p)) (cols : Columns (ZMod p)) 
     clk_low := input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4,
     op_a := input.adapter.op_a, value := cols.a, is_real := input.is_real }
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Verifier evaluation commutes with the folded destination-write projection. -/
 private theorem eval_writeInputExpr (env : Environment (ZMod p))

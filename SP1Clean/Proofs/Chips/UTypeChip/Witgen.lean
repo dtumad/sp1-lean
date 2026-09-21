@@ -16,7 +16,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- U-type's row has computable witnesses: both witnessed payloads are functions of the input row. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _ h_input => ?_,
@@ -39,7 +39,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
       simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     have hsel : Expression.eval env.toEnvironment input.is_auipc
         = Expression.eval env'.toEnvironment input.is_auipc := by
-      have hv := congrArg (fun r : Inputs (ZMod p) => r.is_auipc) h_input
+      have hv := Inputs.eval_congr_is_auipc h_input
       simpa [eval_inputs] using hv
     -- the payload is a bare `FExpr` product, so unfold the IR evaluator alone: naming
     -- `circuit_norm` here would reach the whole inline `main` (no `populateIR` opacity boundary)
@@ -58,7 +58,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
       simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     have hsel : Expression.eval env.toEnvironment input.is_auipc
         = Expression.eval env'.toEnvironment input.is_auipc := by
-      have hv := congrArg (fun r : Inputs (ZMod p) => r.is_auipc) h_input
+      have hv := Inputs.eval_congr_is_auipc h_input
       simpa [eval_inputs] using hv
     have hoa0 : Expression.eval env.toEnvironment input.adapter.op_a_0
         = Expression.eval env'.toEnvironment input.adapter.op_a_0 := by

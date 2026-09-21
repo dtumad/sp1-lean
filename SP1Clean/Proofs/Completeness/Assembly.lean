@@ -135,8 +135,10 @@ namespace SP1Clean.ProviderTableId
 
 open SP1Clean.TraceGen
 
-/-- Semantic occurrence type routed to one provider, boundary, or bump table. -/
-def Occurrence : ProviderTableId → Type
+/-- Semantic occurrence type routed to one provider, boundary, or bump table. Reducible so a
+`List id.Occurrence` is the concrete entry list at implicit transparency, where the closure
+proofs' rewrites identify the two. -/
+@[reducible] def Occurrence : ProviderTableId → Type
   | .byte _ => ByteEntry
   | .range _ => RangeEntry
   | .program => RomEntry

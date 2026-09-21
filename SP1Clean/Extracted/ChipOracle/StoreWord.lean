@@ -24,11 +24,13 @@ open SP1Clean
 structure AddrAddOperation (F : Type) where
   value : (Vector F 3)
 deriving ProvableStruct
+provable_struct_eval_lemmas AddrAddOperation
 
 structure AddressOperation (F : Type) where
   addr_operation : (AddrAddOperation F)
   top_two_limb_inv : F
 deriving ProvableStruct
+provable_struct_eval_lemmas AddressOperation
 
 structure StoreWordColumns (F : Type) where
   state : (CPUState F)
@@ -39,6 +41,7 @@ structure StoreWordColumns (F : Type) where
   store_value : (Word F)
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas StoreWordColumns
 
 namespace AddrAddOperation
 

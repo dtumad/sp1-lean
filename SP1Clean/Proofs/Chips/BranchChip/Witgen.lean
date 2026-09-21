@@ -6,7 +6,7 @@ import ToClean.Circuit.WitgenBridge
 The largest hint surface so far: six opcode flags plus the single-cell `is_branching` decision
 (both pure `hint` reads), the `next_pc` blend (inputs plus the `is_branching` cell below it), and
 the `LtOperationSigned` block (inputs plus the two comparison flag cells). Every same-row read is
-`AgreesBelow.get_eq`; every hint read closes from the fork's `hint` component. Branch has **no
+`AgreesBelow.get_eq`; every hint read closes from `AgreesBelowWithData`'s `hint` component. Branch has **no
 trace anchor**, so `ComputableWitnesses` + the rewired completeness are the conversion's checks —
 the idioms are the ones the anchored Bitwise/Lt pilots proved out. -/
 
@@ -17,7 +17,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Branch's row has computable witnesses. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun h_agree _ => ?_,
@@ -67,9 +67,8 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
           (congrArg (fun v : Word (ZMod p) => v[3]) hv)).trans (Vector.getElem_map _ (by omega))
     · simp only [circuit_norm]
       exact h_agree.get_eq (by omega)
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
-      rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval] at hv
-      simpa only [eval_inputIsReal] using hv
+    · have hv := Inputs.eval_congr_is_real h_input
+      exact hv
   · -- The ten `LtOperationSigned` cells: rs1/rs2 inputs, the two comparison flag cells, `is_real`.
     refine LtOperationSigned.populateFE_congr_flat env env' _ _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_ ?_
@@ -101,9 +100,8 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
           (congrArg (fun v : Word (ZMod p) => v[3]) hv)).trans (Vector.getElem_map _ (by omega))
     · simp only [circuit_norm]
       rw [h_agree.get_eq (by omega), h_agree.get_eq (by omega)]
-    · have hv := congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
-      rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval] at hv
-      simpa only [eval_inputIsReal] using hv
+    · have hv := Inputs.eval_congr_is_real h_input
+      exact hv
   · simp [circuit_norm]
   · simp [circuit_norm]
   · simp [circuit_norm]

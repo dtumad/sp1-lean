@@ -75,6 +75,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   -- so it joins `channelsWithGuarantees`; its read-back `pushIf`s keep it in `channelsWithRequirements`).
   channelsWithGuarantees := [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     dsimp only [Operations.ChannelsLawful]
@@ -222,6 +223,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [memoryChannel.toRaw],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       dsimp only [Operations.RequirementsChannelsLawful]
       refine ⟨by simp only [circuit_norm, main, RegisterAccessCols.circuit], ?_, ?_⟩
       · intro channel h_channel
@@ -231,8 +233,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         all_goals exact Or.inr List.mem_cons_self
       · intro env h_constraints
         rw [constraintsHold_shallow_iff_forall_mem] at h_constraints
-        have h_trusted : (ProvableStruct.eval env input_var).is_trusted = 0 ∨
-            (ProvableStruct.eval env input_var).is_trusted = 1 :=
+        have h_trusted : Expression.eval env input_var.is_trusted = 0 ∨
+            Expression.eval env input_var.is_trusted = 1 :=
           bool_of_mul_pred (by
             simpa only [circuit_norm] using h_constraints.1
               (input_var.is_trusted * (input_var.is_trusted - 1))

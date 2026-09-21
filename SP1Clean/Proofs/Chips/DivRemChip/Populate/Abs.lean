@@ -301,6 +301,7 @@ private lemma toNat_eq_zero_iff {w : Word (ZMod p)} (hw : w.isU64) :
     rw [e0, e1, e2, e3, ZMod.val_zero]
     norm_num
 
+omit [Fact (2 ^ 24 < p)] in
 /-- `wordOfNat 0` is the zero word. -/
 private lemma wordOfNat_zero : wordOfNat (p := p) 0 = #v[0, 0, 0, 0] := by
   simp [wordOfNat]
@@ -336,11 +337,11 @@ private lemma signFill_toBitVec64 {w : Word (ZMod p)} (hw : w.isU64) :
   · simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
       List.getElem_cons_succ]
     unfold U16MSBOperation.populate_msb
-    split_ifs with h
+    by_cases h : w[1].val ≥ 32768
     · rw [show w[1].val / 32768 = 1 by omega]
-      exact Nat.cast_one
+      simp [h]
     · rw [show w[1].val / 32768 = 0 by omega]
-      exact Nat.cast_zero
+      simp [h]
   · simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
       List.getElem_cons_succ]
     rw [BitVec.toNat_setWidth, Word.toBitVec64_toNat hw, Word.toNat_def]

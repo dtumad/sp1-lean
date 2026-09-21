@@ -16,6 +16,7 @@ structure Inputs (F : Type) where
   last : fields 3 F
   count : fields 3 F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def Domain (address length : ℕ) : Prop :=
   2 ^ 16 ≤ address ∧ address % 8 = 0 ∧ address + 8 * (length / 8 + 1) ≤ 2 ^ 48

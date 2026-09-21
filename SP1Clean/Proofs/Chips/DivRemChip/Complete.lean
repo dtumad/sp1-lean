@@ -174,7 +174,7 @@ lemma divRemFlags_spec {e : RTypeEvent} (hop : e.IsDivRem) :
 `isU64` a non-zero padding row still owes. -/
 lemma oneWord_isU64 : Word.isU64 (#v[1, 0, 0, 0] : Word (ZMod p)) := by
   have hp : 2 ^ 24 < p := Fact.out
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   refine Word.isU64_of_cases ?_ (by simp) (by simp) (by simp)
   rw [show (#v[1, 0, 0, 0] : Word (ZMod p))[0] = 1 from rfl, ZMod.val_one]
   norm_num

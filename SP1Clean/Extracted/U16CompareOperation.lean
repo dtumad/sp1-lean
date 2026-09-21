@@ -18,6 +18,7 @@ open SP1Clean
 structure U16CompareOperation (F : Type) where
   bit : F
 deriving ProvableStruct
+provable_struct_eval_lemmas U16CompareOperation
 
 namespace U16CompareOperation
 

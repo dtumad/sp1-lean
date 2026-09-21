@@ -38,7 +38,7 @@ theorem eval_opCImm {F : Type} [FiniteField F]
 
 /-- LoadDouble's row has computable witnesses: the four address cells come from the composed
 `AddressOperation`, whose input row is a function of this row's own input cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
@@ -55,7 +55,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
       simpa only [eval_opBVal] using hv
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_imm) h_input
       simpa only [eval_opCImm] using hv
-    · exact congrArg (fun r : Inputs (ZMod p) => r.is_real) h_input
+    · exact Inputs.eval_congr_is_real h_input
   all_goals simp [circuit_norm]
 
 end SP1Clean.LoadDoubleChip

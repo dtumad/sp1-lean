@@ -20,6 +20,7 @@ open SP1Clean
 structure IsEqualWordOperation (F : Type) where
   is_diff_zero : (IsZeroWordOperation F)
 deriving ProvableStruct
+provable_struct_eval_lemmas IsEqualWordOperation
 
 namespace IsEqualWordOperation
 

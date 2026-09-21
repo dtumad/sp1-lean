@@ -72,11 +72,11 @@ theorem write_complete (interval : MemoryInterval) (address query : ℕ) (value 
 theorem write_count (interval : MemoryInterval) (address query : ℕ) (value : BitVec 8) :
     (interval.write address value).countP (fun next => decide (next.Contains query)) =
       if interval.Contains query then 1 else 0 := by
-  simp only [write, Contains]
+  unfold write
   split
   · next inside =>
       simp only [List.countP_cons, List.countP_nil, decide_eq_true_eq]
-      split_ifs <;> omega
+      split_ifs <;> simp only [Contains] at * <;> omega
   · simp
 
 private theorem write_length (interval : MemoryInterval) (address : ℕ) (value : BitVec 8) :

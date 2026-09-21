@@ -1,7 +1,9 @@
 import Clean.Circuit.Basic
+import Clean.Circuit.StructEvalSimprocs
 import Clean.Utils.Field
 import Mathlib.Tactic.LinearCombination
 import ToClean.Tactic.GetElemFastPath
+import ToClean.Circuit.StructEvalLemmas
 
 /-! # Minimal numeric foundations
 

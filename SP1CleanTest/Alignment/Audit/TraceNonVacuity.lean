@@ -129,7 +129,6 @@ theorem anchorTrace_wellFormed : anchorTrace.WellFormed := by
             norm_num [ProviderTableId.Valid, TraceGen.RangeEntry.WellFormed, width16]
         · have hocc : anchorTrace.providerOccurrences (.range width) = [] := by
             rw [anchorTrace_rangeOccurrences, anchorRangeEntries, if_neg hwidth]
-            rfl
           rw [hocc] at he
           exact absurd he List.not_mem_nil
     | program | memoryInit | memoryFinalize | memoryBump | stateBump =>
@@ -181,7 +180,6 @@ theorem anchorRangeBuilt_interactionsWith (width : RangeChip.Width)
   · rw [if_neg hwidth]
     have hocc : anchorTrace.providerOccurrences (.range width) = [] := by
       rw [anchorTrace_rangeOccurrences, anchorRangeEntries, if_neg hwidth]
-      rfl
     rw [hocc]
     rfl
 

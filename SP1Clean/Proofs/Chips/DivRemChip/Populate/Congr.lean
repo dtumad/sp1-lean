@@ -189,8 +189,10 @@ private theorem ovbResCongr :
         #v[.expr B[0], .expr B[1], .expr B[2], .expr B[3]] #v[0, 0, 0, .const 32768]) 10 hsz
   simp only [ovbResFE, wSumF, flagF, hintF, circuit_norm, -Witgen.u64Wrap, hir, hhint]
   refine if_congr Iff.rfl (if_congr Iff.rfl ?_ ?_) rfl
-  · exact hc1.trans (((congrArg (fun s => (toElements s)[10]'hsz) h1)).trans hc1'.symm)
-  · exact hc2.trans (((congrArg (fun s => (toElements s)[10]'hsz) h2)).trans hc2'.symm)
+  · rw [← Witgen.FExpr.eval_getElem, ← Witgen.FExpr.eval_getElem]
+    exact hc1.trans (((congrArg (fun s => (toElements s)[10]'hsz) h1)).trans hc1'.symm)
+  · rw [← Witgen.FExpr.eval_getElem, ← Witgen.FExpr.eval_getElem]
+    exact hc2.trans (((congrArg (fun s => (toElements s)[10]'hsz) h2)).trans hc2'.symm)
 
 omit [Fact (2 ^ 24 < p)] in
 include hC hir hhint in
@@ -232,8 +234,10 @@ private theorem ovcResCongr :
         #v[.const 65535, .const 65535, .const 65535, .const 65535]) 10 hsz
   simp only [ovcResFE, wSumF, flagF, hintF, circuit_norm, -Witgen.u64Wrap, hir, hhint]
   refine if_congr Iff.rfl (if_congr Iff.rfl ?_ ?_) rfl
-  · exact hc1.trans (((congrArg (fun s => (toElements s)[10]'hsz) h1)).trans hc1'.symm)
-  · exact hc2.trans (((congrArg (fun s => (toElements s)[10]'hsz) h2)).trans hc2'.symm)
+  · rw [← Witgen.FExpr.eval_getElem, ← Witgen.FExpr.eval_getElem]
+    exact hc1.trans (((congrArg (fun s => (toElements s)[10]'hsz) h1)).trans hc1'.symm)
+  · rw [← Witgen.FExpr.eval_getElem, ← Witgen.FExpr.eval_getElem]
+    exact hc2.trans (((congrArg (fun s => (toElements s)[10]'hsz) h2)).trans hc2'.symm)
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in

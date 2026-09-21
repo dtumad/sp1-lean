@@ -120,9 +120,13 @@ def circuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     rw [one] at h_holds
     have valid := binds _ _ _ (h_holds.1 h_assumptions)
     have canonicalRecord := canonical _ valid
-    have addition := h_holds.2.2 ⟨fun _ => ⟨canonicalRecord.2.1, isU64_bitVecToWord _⟩, Or.inr rfl⟩
+    -- `circuit_norm` puts the record's projections in the constraint form the goal carries
+    have addition := h_holds.2.2 ⟨fun _ =>
+      ⟨by simpa only [MemoryBoundary.address, circuit_norm] using canonicalRecord.2.1,
+        isU64_bitVecToWord _⟩, Or.inr rfl⟩
     have key := key_of_addition _ _ canonicalRecord h_holds.2.1.2.1 (by
-      simpa only [oneWord, toBitVec64_bitVecToWord, MemoryBoundary.address] using (addition rfl).2)
+      simpa only [oneWord, toBitVec64_bitVecToWord, MemoryBoundary.address, circuit_norm]
+        using (addition rfl).2)
     exact ⟨⟨valid, h_holds.2.1, key⟩, Or.inr h_assumptions⟩
   completeness := by
     circuit_proof_start [OrderedBoundary.circuit, MemoryBoundary.address]
@@ -135,10 +139,12 @@ def circuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     have valid := binds _ _ _ spec
     have canonicalRecord := canonical _ valid
     refine ⟨h_assumptions.1, h_assumptions.2.2.1,
-      ⟨⟨fun _ => ⟨canonicalRecord.2.1, isU64_bitVecToWord _⟩, Or.inr rfl⟩, ?_⟩⟩
+      ⟨⟨fun _ => ⟨by simpa only [MemoryBoundary.address, circuit_norm] using canonicalRecord.2.1,
+        isU64_bitVecToWord _⟩, Or.inr rfl⟩, ?_⟩⟩
     intro _
     refine ⟨h_assumptions.2.2.1.1.2.1, ?_⟩
-    simpa only [oneWord, toBitVec64_bitVecToWord] using h_assumptions.2.2.2 _ spec
+    simpa only [oneWord, toBitVec64_bitVecToWord, MemoryBoundary.address, circuit_norm]
+      using h_assumptions.2.2.2 _ spec
 
 /-- Construct the control columns from the payload and its semantic address. -/
 def populate (payload : Payload (ZMod p)) (previous address : ℕ) : Inputs Payload (ZMod p) :=

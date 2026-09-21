@@ -26,6 +26,7 @@ structure ALUTypeReader (F : Type) where
   op_c_memory : (RegisterAccessCols F)
   imm_c : F
 deriving ProvableStruct
+provable_struct_eval_lemmas ALUTypeReader
 
 namespace ALUTypeReader
 

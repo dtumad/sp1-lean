@@ -155,7 +155,7 @@ theorem guarantee_of_requirements {p : ℕ} [Fact p.Prime]
   have multOne : mult = 1 := by rw [← intCast_signedVal mult, positive]; norm_num
   change channel.toRaw.Requirements mult ⟨message, sameSize⟩ data at requirements
   simp only [Channel.toRaw] at requirements
-  letI : Fact (ringChar (ZMod p) ≠ 2) := ⟨by rw [ZMod.ringChar_zmod_n]; omega⟩
+  let : Fact (ringChar (ZMod p) ≠ 2) := ⟨by rw [ZMod.ringChar_zmod_n]; omega⟩
   have multNeNeg : mult ≠ -1 := by rw [multOne]; exact one_ne_neg_one
   have guarantee := requirements multNeNeg (by simp [multOne])
   simpa only [TypedInteraction.message, Interaction.msgVector] using guarantee
@@ -467,7 +467,6 @@ theorem channelGuarantees_of_consumedMessages (ops : Operations (ZMod p))
     apply (TypedInteraction.message_eq_iff typed _).2
     simp only [typed, interaction, TypedInteraction.eval_raw, AbstractInteraction.eval,
       ProvableType.toElements_fromElements]
-    rfl
   rwa [messageEq] at grounded
 
 @[simp] theorem producedMessages_append (left right : List (TypedInteraction channel)) :

@@ -27,7 +27,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- The little-endian concatenation of the two bytes of a 16-bit limb equals `h`. -/
-private lemma toNat_concat_half_bytes [NeZero p] (h : ZMod p) (hh : h.val < 65536) :
+private lemma toNat_concat_half_bytes (h : ZMod p) (hh : h.val < 65536) :
     (BitVec.ofNat 8 (h.val >>> 8) ++ BitVec.ofNat 8 h.val).toNat = h.val := by
   have h_hi : h.val >>> 8 < 256 := by rw [Nat.shiftRight_eq_div_pow]; omega
   have h_decomp : h.val % 256 + (h.val >>> 8) * 256 = h.val := by
@@ -164,7 +164,6 @@ theorem correct_load_half_native
   simp [spec_lh, sp1_lh, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
     LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread, hext]
-  rfl
 
 /-- End-to-end: from chip + decode + register/PC reads + selected memory bytes, Sail's `LH`/`LHU`
 agrees with the SP1 chip emulation. -/

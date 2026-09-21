@@ -16,6 +16,7 @@ structure Inputs (F : Type) where
   address : fields 3 F
   interval : WritePermissionInterval F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 variable {p : ℕ}
 
