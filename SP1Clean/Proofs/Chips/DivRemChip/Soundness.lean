@@ -19,7 +19,7 @@ local instance neZeroP_soundness : NeZero p := ⟨by have := Fact.out (p := 2 ^ 
 `Math/Gate.lean` for it would drag that module's blanket `Mathlib.Tactic` import into this
 (DivRem-class, import-cost-sensitive) module's closure. -/
 private lemma bool_val_le_aux {x : ZMod p} (h : x = 0 ∨ x = 1) : x.val ≤ 1 := by
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   rcases h with h | h <;> simp [h, ZMod.val_one]
 
 /-- **Unsigned carry-chain reassembly.** The chip pins `c·quotient + remainder = b` through an
@@ -57,8 +57,8 @@ lemma euclid_identity_unsigned
         + (ctq[6]).val * 65536 ^ 6 + (ctq[7]).val * 65536 ^ 7 = cn * qn)
     (hqn : qn < 2 ^ 64) (hcn : cn < 2 ^ 64) :
     b.toNat = cn * qn + rem.toNat := by
-  haveI : Fact (Nat.Prime p) := ‹Fact p.Prime›
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (Nat.Prime p) := ‹Fact p.Prime›
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   obtain ⟨r0, r1, r2, r3⟩ := Word.lt_cases_of_isU64 hrem
   obtain ⟨b0, b1, b2, b3⟩ := Word.lt_cases_of_isU64 hb
   -- lift each ZMod limb equation to ℕ via `Word.limb_lift` (the high limbs have `vv = aa = 0`).
@@ -171,7 +171,7 @@ lemma flags_val_sum {f0 f1 f2 f3 f4 f5 f6 f7 : ZMod p}
     (b4 : f4 = 0 ∨ f4 = 1) (b5 : f5 = 0 ∨ f5 = 1) (b6 : f6 = 0 ∨ f6 = 1) (b7 : f7 = 0 ∨ f7 = 1)
     (hsum : f0 + f1 + f2 + f3 + f4 + f5 + f6 + f7 = 1) :
     f0.val + f1.val + f2.val + f3.val + f4.val + f5.val + f6.val + f7.val = 1 := by
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   have hp : 8 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
   have e0 : f0.val ≤ 1 := bool_val_le_aux b0
   have e1 : f1.val ≤ 1 := bool_val_le_aux b1
@@ -318,8 +318,8 @@ lemma euclid_identity_signed
         = ((quotient.toBitVec64.signExtend 128 * c.toBitVec64.signExtend 128) >>> 64).setWidth 64) :
     b.toBitVec64.toInt
       = quotient.toBitVec64.toInt * c.toBitVec64.toInt + remc.toBitVec64.toInt := by
-  haveI : Fact (Nat.Prime p) := ‹Fact p.Prime›
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (Nat.Prime p) := ‹Fact p.Prime›
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   have hbn_bin : b_neg = 0 ∨ b_neg = 1 := by rw [hbneg]; split <;> simp
   have hrn_bin : rem_neg = 0 ∨ rem_neg = 1 := by rw [hrneg]; split <;> simp
   obtain ⟨lo0, lo1, lo2, lo3⟩ := Word.lt_cases_of_isU64 hloU
@@ -435,7 +435,7 @@ lemma sign_conditions {b remc c quotient : BitVec 64} {b_neg rem_neg : ZMod p}
     (hid : b.toInt = c.toInt * quotient.toInt + remc.toInt)
     (hlt : remc.toInt.natAbs < c.toInt.natAbs) :
     (0 ≤ b.toInt → 0 ≤ remc.toInt) ∧ (b.toInt ≤ 0 → remc.toInt ≤ 0) := by
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   have h01 : (0 : ZMod p) ≠ 1 := zero_ne_one
   have hbm : b.msb = decide (b.toInt < 0) := BitVec.msb_eq_toInt
   have hrm : remc.msb = decide (remc.toInt < 0) := BitVec.msb_eq_toInt
@@ -609,7 +609,7 @@ lemma euclid_identity_word_unsigned
     (hl3 : ctqlo[3] + rem[3] + carry[2] = b[3] + carry[3] * 65536)
     (hlo : ctqlo.toBitVec64 = qc.toBitVec64 * c.toBitVec64) :
     b.toNat = c.toNat * qc.toNat + rem.toNat := by
-  haveI : Fact (Nat.Prime p) := ‹Fact p.Prime›
+  have : Fact (Nat.Prime p) := ‹Fact p.Prime›
   obtain ⟨l0, l1, l2, l3⟩ := Word.lt_cases_of_isU64 hloU
   obtain ⟨r0, r1, _, _⟩ := Word.lt_cases_of_isU64 hrU
   obtain ⟨bb0, bb1, _, _⟩ := Word.lt_cases_of_isU64 hbU
@@ -698,7 +698,7 @@ lemma euclid_identity_word_signed
     (hlo : ctqlo.toBitVec64 = quotient.toBitVec64 * c.toBitVec64) :
     b.toBitVec64.toInt
       = quotient.toBitVec64.toInt * c.toBitVec64.toInt + remc.toBitVec64.toInt := by
-  haveI : Fact (Nat.Prime p) := ‹Fact p.Prime›
+  have : Fact (Nat.Prime p) := ‹Fact p.Prime›
   -- 32-bit `toInt` projections (sign-extension) and the resulting `[-2^31, 2^31)` bounds.
   have hbp := toInt_eq_extractLsb_of_signfill hbU hbf2 hbf3
   have hcp := toInt_eq_extractLsb_of_signfill hcU hcf2 hcf3

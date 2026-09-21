@@ -99,7 +99,7 @@ theorem witness_nonHaltProviderTable_exitInteractions_eq_nil
   have componentProviderEq : witness.tables[i].component =
       (sp1ProviderTables (p := p))[i - 25] := by
     rw [← componentEq]
-    change (sp1Tables (p := p) ++ sp1ProviderTables (p := p))[i] = _
+    simp only [sp1Ensemble_tables]
     rw [List.getElem_append_right (by simpa only [sp1Tables_length] using lower)]
     simp only [sp1Tables_length]
   rw [componentProviderEq]
@@ -118,19 +118,33 @@ theorem witness_providerExitInteractions_eq
   have tablesLength : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
-  have interactionsAtOther (i : ℕ) (lower : instructionTableCount ≤ i)
-      (upper : i < ensembleTableCount) (bound : i < witness.tables.length)
-      (notHalt : i ≠ haltIndex) (notSyscall : i ≠ syscallInstrsIndex) :
+  have interactionsAtOther (i : ℕ) (bound : i < witness.tables.length)
+      (h : 25 ≤ i ∧ i < 55 ∧ i ≠ 53 ∧ i ≠ 54) :
       typedTableInteractionsWith witness.tables[i] exitChannel = [] :=
-    witness_nonHaltProviderTable_exitInteractions_eq_nil witness i lower upper bound notHalt
-      notSyscall
+    witness_nonHaltProviderTable_exitInteractions_eq_nil witness i h.1 h.2.1 bound h.2.2.1
+      h.2.2.2
   repeat rw [List.drop_eq_getElem_cons (by omega)]
   rw [List.drop_eq_nil_of_le (by omega)]
   simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
-  rw [show witness.tables[53] = haltTable witness from rfl,
-    show witness.tables[54] = syscallInstrsTable witness from rfl]
-  simp [interactionsAtOther, instructionTableCount, ensembleTableCount, haltIndex,
-    syscallInstrsIndex, stateSilentProviderTableCount]
+  -- `simp` cannot use `interactionsAtOther` as a conditional rewrite (the bound proof inside the
+  -- `getElem` is not a premise it can discharge), so the twenty-eight silent tables are named.
+  rw [interactionsAtOther 25 (by omega) (by decide),
+    interactionsAtOther 26 (by omega) (by decide), interactionsAtOther 27 (by omega) (by decide),
+    interactionsAtOther 28 (by omega) (by decide), interactionsAtOther 29 (by omega) (by decide),
+    interactionsAtOther 30 (by omega) (by decide), interactionsAtOther 31 (by omega) (by decide),
+    interactionsAtOther 32 (by omega) (by decide), interactionsAtOther 33 (by omega) (by decide),
+    interactionsAtOther 34 (by omega) (by decide), interactionsAtOther 35 (by omega) (by decide),
+    interactionsAtOther 36 (by omega) (by decide), interactionsAtOther 37 (by omega) (by decide),
+    interactionsAtOther 38 (by omega) (by decide), interactionsAtOther 39 (by omega) (by decide),
+    interactionsAtOther 40 (by omega) (by decide), interactionsAtOther 41 (by omega) (by decide),
+    interactionsAtOther 42 (by omega) (by decide), interactionsAtOther 43 (by omega) (by decide),
+    interactionsAtOther 44 (by omega) (by decide), interactionsAtOther 45 (by omega) (by decide),
+    interactionsAtOther 46 (by omega) (by decide), interactionsAtOther 47 (by omega) (by decide),
+    interactionsAtOther 48 (by omega) (by decide), interactionsAtOther 49 (by omega) (by decide),
+    interactionsAtOther 50 (by omega) (by decide), interactionsAtOther 51 (by omega) (by decide),
+    interactionsAtOther 52 (by omega) (by decide)]
+  simp only [List.nil_append]
+  rfl
 
 /-- Exact Exit-channel decomposition of the whole ensemble witness: the verifier's ungated pull,
 the Halt table's per-row gated hand-off pair, then the `SyscallInstrs` table's `is_halt`-gated
@@ -164,7 +178,7 @@ private theorem producedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
     producedMessages [TypedInteraction.pushedIfValue exitChannel gate m,
         TypedInteraction.pushedIfValue exitChannel (1 - gate) (⟨0⟩ : ExitMsg (ZMod p))] =
       [if gate = 1 then m else (⟨0⟩ : ExitMsg (ZMod p))] := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hbool' : (1 : ZMod p) - gate = 0 ∨ (1 : ZMod p) - gate = 1 := by
     rcases hbool with h0 | h1
     · right; rw [h0, sub_zero]
@@ -196,7 +210,7 @@ private theorem producedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
     producedMessages [TypedInteraction.pushedIfValue exitChannel gate m] =
       (if gate = 1 then [m] else []) := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hpush : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
   unfold producedMessages
   rcases hbool with h0 | h1
@@ -208,15 +222,15 @@ private theorem producedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
   · rw [List.filter_cons_of_pos (by
         simp only [TypedInteraction.pushedIfValue_mult, hpush, decide_eq_true_eq]
         rw [show gate.val = 1 from by rw [h1]; exact ZMod.val_one p]
-        norm_num), List.filter_nil, List.map_cons, List.map_nil, if_pos h1]
-    rfl
+        norm_num), List.filter_nil, List.map_cons, List.map_nil, if_pos h1,
+      TypedInteraction.pushedIfValue_message]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- The syscall table's Exit pushes consume nothing. -/
 private theorem consumedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
     consumedMessages [TypedInteraction.pushedIfValue exitChannel gate m] = [] := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hpush : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
   have hval : gate.val = 0 ∨ gate.val = 1 := by
     rcases hbool with h | h
@@ -234,7 +248,7 @@ private theorem consumedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
     consumedMessages [TypedInteraction.pushedIfValue exitChannel gate m,
         TypedInteraction.pushedIfValue exitChannel (1 - gate) (⟨0⟩ : ExitMsg (ZMod p))] = [] := by
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hbool' : (1 : ZMod p) - gate = 0 ∨ (1 : ZMod p) - gate = 1 := by
     rcases hbool with h0 | h1
     · right; rw [h0, sub_zero]
@@ -267,7 +281,7 @@ theorem witness_exitInteractions_signedBinary
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
         signedVal interaction.mult = 1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   rw [typedEnsembleExitInteractions_eq]
   intro interaction interactionMem
   rcases List.mem_append.mp interactionMem with hverifier | htail
@@ -325,7 +339,7 @@ theorem witness_exitProduced_eq
   have hverifier : producedMessages
       [TypedInteraction.pulledIfValue exitChannel 1
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] = [] := by
-    haveI : Fact (1 < p) := ⟨by omega⟩
+    have : Fact (1 < p) := ⟨by omega⟩
     unfold producedMessages
     rw [List.filter_cons_of_neg (by
         simp only [TypedInteraction.pulledIfValue_mult,
@@ -364,7 +378,7 @@ theorem witness_exitConsumed_eq
       [TypedInteraction.pulledIfValue exitChannel 1
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] =
       [(⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] := by
-    haveI : Fact (1 < p) := ⟨by omega⟩
+    have : Fact (1 < p) := ⟨by omega⟩
     unfold consumedMessages
     rw [List.filter_cons_of_pos (by
         simp only [TypedInteraction.pulledIfValue_mult,

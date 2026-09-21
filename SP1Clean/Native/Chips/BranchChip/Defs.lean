@@ -311,23 +311,26 @@ set_option linter.unusedSectionVars false in
 
 /-! ### Operand projections, in `circuit_norm`'s own orientation — stated at the **component**
 level (the lift simprocs move projections inside `eval` before an input-level lemma could match;
-the `ComputableWitnesses` proof projects the struct-level agreement onto these). -/
+the `ComputableWitnesses` proof projects the struct-level agreement onto these). Not
+`@[circuit_norm]`: on Clean `main` the indexing lift (`Expression.eval env cols.pc[i] ~~>
+(ProvableStruct.eval env cols).pc[i]`) undoes `Vector.getElem_map` on their right-hand sides, and
+the pair loops. -/
 
-@[circuit_norm] theorem eval_statePc {F : Type} [FiniteField F]
+theorem eval_statePc {F : Type} [FiniteField F]
     (env : Environment F) (cols : Extracted.CPUState (Expression F)) :
     (ProvableStruct.eval env cols).pc = Vector.map (Expression.eval env) cols.pc := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Readers.CPUState.eval_cols]
   exact ProvableType.eval_fields env _
 
-@[circuit_norm] theorem eval_opCImm {F : Type} [FiniteField F]
+theorem eval_opCImm {F : Type} [FiniteField F]
     (env : Environment F) (cols : Extracted.ITypeReader (Expression F)) :
     (ProvableStruct.eval env cols).op_c_imm = Vector.map (Expression.eval env) cols.op_c_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Readers.ITypeReader.eval_cols]
   exact ProvableType.eval_fields env _
 
-@[circuit_norm] theorem eval_prevValue {F : Type} [FiniteField F]
+theorem eval_prevValue {F : Type} [FiniteField F]
     (env : Environment F) (cols : Extracted.RegisterAccessCols (Expression F)) :
     (ProvableStruct.eval env cols).prev_value
       = Vector.map (Expression.eval env) cols.prev_value := by

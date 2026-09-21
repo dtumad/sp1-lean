@@ -41,6 +41,7 @@ structure ByteRow (F : Type) where
   b : F
   c : F
 deriving ProvableStruct
+provable_struct_eval_lemmas ByteRow
 
 /-- The byte-table membership predicate: the row is a valid byte-op tuple — some `ByteOpcode` whose
 index matches the `opcode` column and whose `constrain` semantics hold on `(a, b, c)`. This *is* SP1's

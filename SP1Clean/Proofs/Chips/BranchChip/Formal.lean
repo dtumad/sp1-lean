@@ -65,10 +65,6 @@ private theorem main_requirementsChannelsLawful
         Expression.eval env input_var.is_real = 1 := by
       rw [h_sum_eq]
       exact bool_of_mul_pred h_constraints.2.1
-    have h_bool' :
-        (ProvableStruct.eval env input_var).is_real = 0 ∨
-          (ProvableStruct.eval env input_var).is_real = 1 := by
-      simpa only [circuit_norm] using h_bool
     rw [Operations.inChannelsOrRequirements_iff_forall_mem]
     intro interaction h_interaction
     simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def, witnessVectorIR, witnessField, Witnessable.witness, witnessIR, subcircuitWithAssertion, assertion, assertZero,
@@ -84,7 +80,7 @@ private theorem main_requirementsChannelsLawful
       rw [ChannelInteraction.toRaw_requirements] <;>
       intro h1 h0 <;>
       simp only [circuit_norm] at h1 h0 <;>
-      exact off_gate_vacuous h_bool' h1 h0
+      exact off_gate_vacuous h_bool h1 h0
 
 /-- The Program-fetch opcode committed by the witnessed one-hot branch flags. -/
 def exposedOpcode (offset : ℕ) : Expression (ZMod p) :=

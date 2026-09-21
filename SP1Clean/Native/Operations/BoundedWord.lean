@@ -88,6 +88,7 @@ def circuit (bound : ℕ) (fits : bound < 2 ^ 64) : GeneralFormalCircuit (ZMod p
   soundness := soundness bound fits
   completeness := completeness bound fits
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     refine ⟨?_, ?_, ?_⟩
     · simp only [main, circuit_norm]

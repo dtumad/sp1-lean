@@ -76,6 +76,7 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     completeness := completeness,
     channelsWithRequirements := [],
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       simp only [circuit_norm, main, byteChannel]; grind }
 
 set_option linter.unusedSectionVars false in

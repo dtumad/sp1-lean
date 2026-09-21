@@ -58,6 +58,7 @@ structure Inputs (F : Type) where
   is_clk : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- StateBump's semantic contract. Ungated (they hold on padding rows too, as upstream):
 the two selector bits are boolean, and the pc carry cascade — binary limb borrows `b0`, `b1` with
@@ -101,6 +102,7 @@ structure Inputs (F : Type) where
   addr : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- MemoryBump's semantic contract (`is_real`-gated; ungated it proves only `is_real` boolean).
 On a real row: the pulled record's received guarantees (`Word.isU64` of the value it re-pushes, and
@@ -161,6 +163,7 @@ structure Inputs (F : Type) where
   x11_memory : Extracted.RegisterAccessCols F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Halt's semantic contract, composed from the reader sub-`Spec`s (the AddChip pattern). Ungated:
 the proven `is_real`-binary fact. Then the `CPUState` clock byte bounds (at the halt transition

@@ -94,9 +94,12 @@ tower: one rewrite lands in `IsZeroWordOperation`, whose navigators finish). -/
 lemma toElements_mk {F : Type} (s : Extracted.IsZeroWordOperation F) :
     toElements (⟨s⟩ : Extracted.IsEqualWordOperation F)
       = (toElements s).cast (by rfl) := by
+  change ProvableStruct.structToElements (⟨s⟩ : Extracted.IsEqualWordOperation F) = _
+  rw [ProvableStruct.structToElements_eq]
+  simp only [ProvableStruct.toComponents, components, ProvableStruct.componentsToElements]
   ext i hi
-  simp only [circuit_norm, explicit_provable_type]
-  exact (Vector.getElem_append_left hi).trans (Vector.getElem_cast _)
+  simp only [Vector.getElem_cast]
+  exact Vector.getElem_append_left _
 
 set_option linter.unusedSectionVars false in
 /-- The nested result field is flattened cell `10` (for composing chips that read the

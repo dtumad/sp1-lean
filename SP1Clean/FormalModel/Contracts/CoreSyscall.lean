@@ -14,6 +14,7 @@ structure Inputs (F : Type) where
   code : Word F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 variable {p : ℕ} [Fact p.Prime]
 

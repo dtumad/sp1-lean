@@ -68,6 +68,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
   output input _ := input
   channelsWithGuarantees := [byteChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     intro input offset
     simp only [main, circuit_norm, WordRangeCheck.circuit, AddressOperation.circuit]
 

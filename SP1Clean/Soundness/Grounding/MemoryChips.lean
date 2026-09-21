@@ -809,8 +809,7 @@ theorem locOf_ramPriorMessage (access : Trace.RamAccessView (ZMod p))
     MemoryMsg.locOf (ramPriorMessage access) = MemLoc.ram (ramCellOfAccess access) := by
   unfold RamAccessIsRam at isRam
   simp only [MemoryMsg.locOf, ramPriorMessage]
-  rw [if_neg isRam]
-  rfl
+  exact if_neg isRam
 
 omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 /-- Turn membership of the authenticated generic RAM pull into a live Sail-state cell read. -/
@@ -900,8 +899,7 @@ theorem locOf_ramPushMessage (view : Trace.RowView (ZMod p))
     MemoryMsg.locOf (ramPushMessage view access) = MemLoc.ram (ramCellOfAccess access) := by
   unfold RamAccessIsRam at isRam
   simp only [MemoryMsg.locOf, ramPushMessage]
-  rw [if_neg isRam]
-  rfl
+  exact if_neg isRam
 
 /-- The generic RAM push occupies SP1's `+1` cell-write slot. -/
 theorem timeNat_ramPushMessage {view : Trace.RowView (ZMod p)}
@@ -2100,8 +2098,8 @@ theorem chipSpec_of_literalDescriptor
         kind.provableInputs kind.provableCols circuit
         (Environment.fromArray physical data))
       data := by
-  letI : ProvableType kind.Inputs := kind.provableInputs
-  letI : ProvableType kind.Cols := kind.provableCols
+  let : ProvableType kind.Inputs := kind.provableInputs
+  let : ProvableType kind.Cols := kind.provableCols
   rw [circuitRowInputOf_eq_component, circuitRowOutputOf_eq_component]
   exact h
 
@@ -2130,8 +2128,8 @@ theorem advanceReady_of_literalDescriptor
       ((⟨id, kind, circuit, specEq⟩ : SupportedChip p).decodeRow
         data physical).cols
       program state := by
-  letI : ProvableType kind.Inputs := kind.provableInputs
-  letI : ProvableType kind.Cols := kind.provableCols
+  let : ProvableType kind.Inputs := kind.provableInputs
+  let : ProvableType kind.Cols := kind.provableCols
   rw [circuitRowInputOf_eq_component, circuitRowOutputOf_eq_component] at h
   exact h
 
@@ -3995,7 +3993,7 @@ theorem loadX0View_isReal (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 private theorem loadX0Val_of_binary {b : ZMod p} (h : b = 0 ∨ b = 1) :
     b.val = 0 ∨ b.val = 1 := by
-  haveI : Fact (1 < p) := ⟨by
+  have : Fact (1 < p) := ⟨by
     have := Fact.out (p := 2 ^ 17 < p)
     omega⟩
   rcases h with h | h <;> rw [h] <;> simp [ZMod.val_one]
@@ -4009,7 +4007,7 @@ private theorem loadX0OneHot7_atMost {b0 b1 b2 b3 b4 b5 b6 : ZMod p}
     (hsum : (b0 + b1 + b2 + b3 + b4 + b5 + b6) *
       (b0 + b1 + b2 + b3 + b4 + b5 + b6 - 1) = 0) :
     b0.val + b1.val + b2.val + b3.val + b4.val + b5.val + b6.val ≤ 1 := by
-  haveI : Fact (1 < p) := ⟨by
+  have : Fact (1 < p) := ⟨by
     have := Fact.out (p := 2 ^ 17 < p)
     omega⟩
   have hp : 8 < p := by

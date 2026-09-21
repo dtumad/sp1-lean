@@ -192,7 +192,7 @@ private theorem activeDecodedJalRow_is_real :
     (Environment.fromArray
       (JalChip.component.buildRow (activeEvent.toJalInputs (p := SP1Prime)) anchorData anchorHint)
       anchorData)).is_real = 1
-  rw [Component.rowInput_buildRow]
+  rw [Component.rowInput_buildRow JalChip.component (activeEvent.toJalInputs (p := SP1Prime))]
   rfl
 
 /-- The canonical decoder's sole physical instruction row is active, not padding. -/
@@ -237,9 +237,9 @@ private theorem activeRange16Entries_wellFormed :
 theorem activeTrace_wellFormed : activeTrace.WellFormed where
   instruction := by
     intro id e he
-    cases id <;>
-      simp_all [activeTrace, activeInstructionEvents, InstructionChipId.Valid,
-        activeEvent_wellFormed, activeEvent_targets]
+    cases id <;> simp_all [activeTrace, activeInstructionEvents, InstructionChipId.Valid]
+    obtain rfl := List.mem_singleton.mp he
+    exact ⟨activeEvent_wellFormed, activeEvent_targets⟩
   provider := by
     intro id e he
     cases id with
@@ -271,7 +271,6 @@ theorem activeTrace_wellFormed : activeTrace.WellFormed where
                 norm_num [ProviderTableId.Valid, RangeEntry.WellFormed, activeWidth16]
             · have hocc : activeTrace.providerOccurrences (.range width) = [] := by
                 simp [activeTrace, activeProviderOccurrences, activeRangeEntries, h13, h14, h16]
-                rfl
               rw [hocc] at he
               exact absurd he List.not_mem_nil
     | program =>

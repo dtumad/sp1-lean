@@ -90,10 +90,11 @@ def circuit : FormalAssertion (ZMod p) Inputs where
   completeness := completeness
   channelsWithRequirements := []
   requirementsChannelsLawful input_var i₀ := by
+    preserve_tactic_target
     simp only [circuit_norm, main, byteChannel]
     intro env h_constraints
-    have h_bool : (ProvableStruct.eval env input_var).is_real = 0 ∨
-        (ProvableStruct.eval env input_var).is_real = 1 :=
+    have h_bool : Expression.eval env input_var.is_real = 0 ∨
+        Expression.eval env input_var.is_real = 1 :=
       bool_of_mul_pred h_constraints.1
     refine ⟨?_, ?_, ?_, ?_⟩ <;> intro h1 h0 <;>
       exact off_gate_vacuous h_bool h1 h0

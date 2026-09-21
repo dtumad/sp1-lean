@@ -46,7 +46,7 @@ lemma is_mod_64 {c0 m : ZMod p}
     (h_diff : ((c0 - m) * (64 : ZMod p)⁻¹).val < 1024) :
     c0.val % 64 = m.val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   set k := (c0 - m) * (64 : ZMod p)⁻¹ with k_def
   have h_k_lt : k.val < 1024 := h_diff
   have h_64_ne : (64 : ZMod p) ≠ 0 := val_64_ne_zero
@@ -73,7 +73,7 @@ lemma cancel_mul_65536 {a b c x : ZMod p}
     (h_x_dvd : x.val ∣ 65536) (h_x_pos : 0 < x.val) :
     a * x = b * 65536 + c * x → a = b * (((65536 / x.val : ℕ) : ZMod p)) + c := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   intro h_eq
   set z : ℕ := 65536 / x.val with z_def
   have h_x_le : x.val ≤ 65536 := Nat.le_of_dvd (by omega) h_x_dvd
@@ -111,8 +111,8 @@ lemma cb_sum_val_eq {cb0 cb1 cb2 cb3 cb4 cb5 : ZMod p}
     (cb0 + cb1 * 2 + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32 : ZMod p).val =
       cb0.val + cb1.val * 2 + cb2.val * 4 + cb3.val * 8 + cb4.val * 16 + cb5.val * 32 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
-  haveI : Fact (1 < p) := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
+  have : Fact (1 < p) := ⟨by omega⟩
   have hb0 : cb0.val ≤ 1 := by rcases b_cb0 with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
   have hb1 : cb1.val ≤ 1 := by rcases b_cb1 with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
   have hb2 : cb2.val ≤ 1 := by rcases b_cb2 with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
@@ -150,7 +150,7 @@ lemma cb_sum5_val_eq {cb0 cb1 cb2 cb3 cb4 : ZMod p}
     (cb0 + cb1 * 2 + cb2 * 4 + cb3 * 8 + cb4 * 16 : ZMod p).val =
       cb0.val + cb1.val * 2 + cb2.val * 4 + cb3.val * 8 + cb4.val * 16 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have hb0 : cb0.val ≤ 1 := by rcases b_cb0 with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
   have hb1 : cb1.val ≤ 1 := by rcases b_cb1 with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
   have hb2 : cb2.val ≤ 1 := by rcases b_cb2 with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
@@ -184,7 +184,7 @@ lemma is_mod_32 {c0 cb0 cb1 cb2 cb3 cb4 cb5 : ZMod p}
         * (64 : ZMod p)⁻¹).val < 1024) :
     c0.val % 32 = (cb0 + cb1 * 2 + cb2 * 4 + cb3 * 8 + cb4 * 16 : ZMod p).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h6 := cb_sum_val_eq b_cb0 b_cb1 b_cb2 b_cb3 b_cb4 b_cb5
   have h5 := cb_sum5_val_eq b_cb0 b_cb1 b_cb2 b_cb3 b_cb4
   have hb0 : cb0.val ≤ 1 := by rcases b_cb0 with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
@@ -203,7 +203,7 @@ lemma is_mod_32 {c0 cb0 cb1 cb2 cb3 cb4 cb5 : ZMod p}
 lemma bool_mul_65535_lt {b : ZMod p} (hb : b = 0 ∨ b = 1) :
     (b * 65535).val < 65536 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   rcases hb with h | h
   · rw [h, zero_mul]; simp [ZMod.val_zero]
   · rw [h, one_mul]
@@ -236,7 +236,7 @@ lemma srl_within_byte_shift {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
                               hl2 + ll3 * v0123, hl3]).toNat
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat / N := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_N_pos : 0 < N := N_pos h_MN
   -- b_j.val = hl_j.val * N + ll_j.val
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
@@ -302,7 +302,7 @@ lemma srl_within_byte_shift_1 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (Word.toBitVec64 #v[hl1 + ll2 * v0123, hl2 + ll3 * v0123, hl3, 0]).toNat
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat / (N * 2 ^ 16) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_NM : N * M = 65536 := by linarith [h_MN, Nat.mul_comm M N]
   have h_N_pos : 0 < N := N_pos h_MN
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
@@ -362,7 +362,7 @@ lemma srl_within_byte_shift_2 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (Word.toBitVec64 #v[hl2 + ll3 * v0123, hl3, 0, 0]).toNat
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat / (N * 2 ^ 32) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_NM : N * M = 65536 := by linarith [h_MN, Nat.mul_comm M N]
   have h_N_pos : 0 < N := N_pos h_MN
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
@@ -418,7 +418,7 @@ lemma srl_within_byte_shift_3 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (Word.toBitVec64 #v[hl3, 0, 0, 0]).toNat
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat / (N * 2 ^ 48) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_NM : N * M = 65536 := by linarith [h_MN, Nat.mul_comm M N]
   have h_N_pos : 0 < N := N_pos h_MN
   have h_b0_val : b0.val = hl0.val * N + ll0.val := by rw [h_b0]; exact hi_lo_val h_MN lt_lh0 lt_ll0
@@ -468,7 +468,7 @@ lemma inner_val {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
                   = ((S : ℕ) : ZMod p)) :
     (cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p) + cb3 * 8 : ZMod p).val = S := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   rw [h_inner_eq]; exact ZMod.val_natCast_of_lt (by omega)
 
 /-- The complementary high exponent `(16 - (cb0 + 2cb1 + 4cb2 + 8cb3)).val = 16 - S`. -/
@@ -479,7 +479,7 @@ lemma inner_hi_val {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (16 - (cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p)
             + cb3 * 8) : ZMod p).val = 16 - S := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   rw [show (16 - (cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p)
             + cb3 * 8) : ZMod p) = (((16 - S) : ℕ) : ZMod p) from by
     rw [h_inner_eq, Nat.cast_sub hS_le]; push_cast; ring]
@@ -529,7 +529,7 @@ lemma srl_close_su16_0_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_v_val : v0123.val = M := by
     rw [h_v0123_explicit]; exact ZMod.val_natCast_of_lt h_M_lt_p
   -- Normalize bounds using h_inner_eq. For SR, ll < 2^S (the inner sum), hl < 2^(16-S).
@@ -606,7 +606,7 @@ lemma srl_close_su16_1_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_v_val : v0123.val = M := by
     rw [h_v0123_explicit]; exact ZMod.val_natCast_of_lt h_M_lt_p
   have h_inner_val := inner_val (by omega) h_inner_eq
@@ -678,7 +678,7 @@ lemma srl_close_su16_2_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_v_val : v0123.val = M := by
     rw [h_v0123_explicit]; exact ZMod.val_natCast_of_lt h_M_lt_p
   have h_inner_val := inner_val (by omega) h_inner_eq
@@ -749,7 +749,7 @@ lemma srl_close_su16_3_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_v_val : v0123.val = M := by
     rw [h_v0123_explicit]; exact ZMod.val_natCast_of_lt h_M_lt_p
   have h_inner_val := inner_val (by omega) h_inner_eq
@@ -815,7 +815,7 @@ lemma limb_16_lt_aux {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (h_v0123_eq : v0123.val = M)
     (lt_hl : hl.val < M) (lt_ll : ll.val < N) :
     (hl + ll * v0123).val < 65536 := by
-  haveI : NeZero p := ⟨(Fact.out (p := Nat.Prime p)).pos.ne'⟩
+  have : NeZero p := ⟨(Fact.out (p := Nat.Prime p)).pos.ne'⟩
   have hp : 2 ^ 17 < p := Fact.out
   have h_N_pos : 0 < N := by nlinarith [h_MN, h_M_pos]
   have h_ll_v_lt_p : ll.val * v0123.val < p := by
@@ -847,7 +847,7 @@ lemma lr_blast_per_pattern {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (lt_ll : ll.val < 2 ^ (cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p)
                             + cb3 * 8 : ZMod p).val) :
     (hl + ll * v0123).val < 65536 := by
-  haveI : NeZero p := ⟨(Fact.out (p := Nat.Prime p)).pos.ne'⟩
+  have : NeZero p := ⟨(Fact.out (p := Nat.Prime p)).pos.ne'⟩
   have hp : 2 ^ 17 < p := Fact.out
   have h_N_pos : 0 < N := by nlinarith [h_MN, h_M_pos]
   have h_M_lt_p : M < p := by nlinarith [h_MN, h_N_pos, hp]
@@ -929,7 +929,7 @@ lemma sf_blast_per_pattern {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (lt_hl : hl.val < 2 ^ (16 - (cb0 + cb1 * ((2 : ℕ) : ZMod p) + cb2 * ((4 : ℕ) : ZMod p)
                                   + cb3 * 8) : ZMod p).val) :
     (hl + (((65536 : ℕ) : ZMod p) - v0123)).val < 65536 := by
-  haveI : NeZero p := ⟨(Fact.out (p := Nat.Prime p)).pos.ne'⟩
+  have : NeZero p := ⟨(Fact.out (p := Nat.Prime p)).pos.ne'⟩
   have hp : 2 ^ 17 < p := Fact.out
   have h_N_pos : 0 < N := by nlinarith [h_MN, h_M_pos]
   have h_M_lt_p : M < p := by nlinarith [h_MN, h_N_pos, hp]
@@ -1018,7 +1018,7 @@ lemma higher_lower_zero {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (h_dec : hl * 65536 + ll * v0123 = 0) :
     hl = 0 ∧ ll = 0 := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have zero_aux : ∀ (M N : ℕ), M * N = 65536 → 0 < M →
       v0123 = ((M : ℕ) : ZMod p) → hl.val < M → ll.val < N →
       hl * 65536 + ll * v0123 = 0 → hl = 0 ∧ ll = 0 := by
@@ -1185,7 +1185,7 @@ lemma sign_fill_limb_val {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
                                   + cb3 * 8) : ZMod p).val) :
     (hl + (((65536 : ℕ) : ZMod p) - v0123)).val = hl.val + (65536 - M) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_v_val : v0123.val = M := by
     rw [h_v0123_explicit]; exact ZMod.val_natCast_of_lt h_M_lt_p
   have h_M_le : M ≤ 65536 := by
@@ -1241,7 +1241,7 @@ lemma sra_close_su16_0_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = 2 ^ 64 - 1 - (2 ^ 64 - 1 - (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat)
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   -- Get the SRL identity for the unsigned-quotient direction
   have h_srl := srl_close_su16_0_case S h_S_le M N h_MN h_M_pos h_M_eq h_N_eq
     h_M_lt_p h_v0123_explicit h_inner_eq h_total_eq
@@ -1331,7 +1331,7 @@ lemma sra_close_su16_1_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = 2 ^ 64 - 1 - (2 ^ 64 - 1 - (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat)
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_srl := srl_close_su16_1_case S h_S_le M N h_MN h_M_pos h_M_eq h_N_eq
     h_M_lt_p h_v0123_explicit h_inner_eq h_total_eq
     lt_ll0 lt_lh0 lt_ll1 lt_lh1 lt_ll2 lt_lh2 lt_ll3 lt_lh3
@@ -1422,7 +1422,7 @@ lemma sra_close_su16_2_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = 2 ^ 64 - 1 - (2 ^ 64 - 1 - (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat)
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_srl := srl_close_su16_2_case S h_S_le M N h_MN h_M_pos h_M_eq h_N_eq
     h_M_lt_p h_v0123_explicit h_inner_eq h_total_eq
     lt_ll0 lt_lh0 lt_ll1 lt_lh1 lt_ll2 lt_lh2 lt_ll3 lt_lh3
@@ -1515,7 +1515,7 @@ lemma sra_close_su16_3_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = 2 ^ 64 - 1 - (2 ^ 64 - 1 - (Word.toBitVec64 #v[b0, b1, b2, b3]).toNat)
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16 + cb5 * 32).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_srl := srl_close_su16_3_case S h_S_le M N h_MN h_M_pos h_M_eq h_N_eq
     h_M_lt_p h_v0123_explicit h_inner_eq h_total_eq
     lt_ll0 lt_lh0 lt_ll1 lt_lh1 lt_ll2 lt_lh2 lt_ll3 lt_lh3
@@ -1594,7 +1594,7 @@ lemma srlw_within_byte_shift {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     (HWord.toBitVec32 #v[hl0 + ll1 * v0123, hl1]).toNat
     = (HWord.toBitVec32 #v[b0, b1]).toNat / N := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_N_lt_p : N < p := ShiftBounds.N_lt_p h_MN
   have h_N_val : ((N : ℕ) : ZMod p).val = N := ZMod.val_natCast_of_lt h_N_lt_p
   have h_NM : N * M = 65536 := by rw [Nat.mul_comm]; exact h_MN
@@ -1647,7 +1647,7 @@ lemma srlw_within_byte_shift_1 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)
     (HWord.toBitVec32 #v[hl1, 0]).toNat
     = (HWord.toBitVec32 #v[b0, b1]).toNat / (N * 2 ^ 16) := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_N_lt_p : N < p := by nlinarith [h_MN]
   have h_N_val : ((N : ℕ) : ZMod p).val = N := ZMod.val_natCast_of_lt h_N_lt_p
   have h_NM : N * M = 65536 := by linarith [h_MN, Nat.mul_comm M N]
@@ -1714,7 +1714,7 @@ lemma srlw_close_su16_0_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = (HWord.toBitVec32 #v[b0, b1]).toNat
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_v_val : v0123.val = M := by
     rw [h_v0123_explicit]; exact ZMod.val_natCast_of_lt h_M_lt_p
   have h_inner_val := inner_val (by omega) h_inner_eq
@@ -1767,7 +1767,7 @@ lemma srlw_close_su16_1_case {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
     = (HWord.toBitVec32 #v[b0, b1]).toNat
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_v_val : v0123.val = M := by
     rw [h_v0123_explicit]; exact ZMod.val_natCast_of_lt h_M_lt_p
   have h_inner_val := inner_val (by omega) h_inner_eq
@@ -1823,7 +1823,7 @@ lemma sraw_close_su16_0_case_msb1 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 <
     = 2 ^ 32 - 1 - (2 ^ 32 - 1 - (HWord.toBitVec32 #v[b0, b1]).toNat)
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_srlw := srlw_close_su16_0_case S h_S_le M N h_MN h_M_pos h_M_eq h_N_eq
     h_M_lt_p h_v0123_explicit h_inner_eq h_total_eq
     lt_ll0 lt_lh0 lt_ll1 lt_lh1 h_b0_dec h_b1_dec
@@ -1891,7 +1891,7 @@ lemma sraw_close_su16_1_case_msb1 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 <
     = 2 ^ 32 - 1 - (2 ^ 32 - 1 - (HWord.toBitVec32 #v[b0, b1]).toNat)
         / 2 ^ (cb0 + cb1 * (2 : ZMod p) + cb2 * 4 + cb3 * 8 + cb4 * 16).val := by
   have hp : 2 ^ 17 < p := Fact.out
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have h_srlw := srlw_close_su16_1_case S h_S_le M N h_MN h_M_pos h_M_eq h_N_eq
     h_M_lt_p h_v0123_explicit h_inner_eq h_total_eq
     lt_ll0 lt_lh0 lt_ll1 lt_lh1 h_b0_dec h_b1_dec

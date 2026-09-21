@@ -31,6 +31,7 @@ structure StateMsg (F : Type) where
   pc1 : F
   pc2 : F
 deriving ProvableStruct
+provable_struct_eval_lemmas StateMsg
 
 /-- The exact v6.4.0 Syscall-bus message — `(clk_high, clk_low, syscall_id, arg1[0..2],
 arg2[0..2])`, arity 9. `SyscallInstrs` sends this tuple when byte one of the raw syscall code says
@@ -49,6 +50,7 @@ structure SyscallMsg (F : Type) where
   arg1 : Vector F 3
   arg2 : Vector F 3
 deriving ProvableStruct
+provable_struct_eval_lemmas SyscallMsg
 
 private theorem vector3_toList {F : Type} (values : Vector F 3) :
     values.toList = [values[0], values[1], values[2]] := by
@@ -70,13 +72,11 @@ theorem SyscallMsg.toElements_toList {F : Type} (msg : SyscallMsg F) :
       [msg.clk_high, msg.clk_low, msg.syscall_id,
        msg.arg1[0], msg.arg1[1], msg.arg1[2],
        msg.arg2[0], msg.arg2[1], msg.arg2[2]] := by
-  change (#v[msg.clk_high] ++ (#v[msg.clk_low] ++ (#v[msg.syscall_id] ++
-    (msg.arg1 ++ (msg.arg2 ++ (#v[] : Vector F 0)))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, List.cons_append, List.nil_append,
-    vector3_toList]
-  rw [Vector.getElem_append_left (by omega : 0 < 3),
-    Vector.getElem_append_left (by omega : 1 < 3),
-    Vector.getElem_append_left (by omega : 2 < 3)]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append,
+    List.cons_append, List.nil_append, vector3_toList]
+  rfl
 
 /-- Per-row well-formedness of a State message: **`True`**. SP1's `CPUState::eval`
 (`crates/core/machine/src/adapter/state.rs:90-98`) range-checks *only* the clock (`clk_0_16` 13-bit Range
@@ -100,6 +100,7 @@ structure MemoryMsg (F : Type) where
   addr2 : F
   value : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas MemoryMsg
 
 /-- Per-row register-access address shape (`addr1 = addr2 = 0`). Kept as a small structural predicate (e.g.
 for trace use); it is **not** the memory channel's `Guarantees` — see `memoryChannel`. -/
@@ -280,6 +281,7 @@ structure ProgramMsg (F : Type) where
   imm_b : F
   imm_c : F
 deriving ProvableStruct
+provable_struct_eval_lemmas ProgramMsg
 
 /-- Per-row well-formedness of a Program message — the part a CPU row can **send-prove locally** for *any*
 adapter type. The only genuinely send-local fact is that `op_a_0` is boolean (from the reader's
@@ -313,6 +315,7 @@ halt row, and exactly one halt-table row overall. -/
 structure ExitMsg (F : Type) where
   value : F
 deriving ProvableStruct
+provable_struct_eval_lemmas ExitMsg
 
 /-- The public-values message — one addressed cell of the committed public-values vector.
 
@@ -330,5 +333,6 @@ structure PublicValueMsg (F : Type) where
   index : F
   value : F
 deriving ProvableStruct
+provable_struct_eval_lemmas PublicValueMsg
 
 end SP1Clean.Channels

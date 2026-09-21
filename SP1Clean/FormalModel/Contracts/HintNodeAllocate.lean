@@ -16,6 +16,7 @@ structure Inputs (F : Type) where
   previous : HostHintQueue.State F
   node : HintQueue.NodeRecord F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def Inputs.next {F : Type} (input : Inputs F) : HostHintQueue.State F :=
   ⟨input.previous.clk_high, input.previous.clk_low, input.node.pointer, input.node.pointer⟩

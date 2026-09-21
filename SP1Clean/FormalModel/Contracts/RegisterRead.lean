@@ -18,6 +18,7 @@ structure Inputs (F : Type) where
   index : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def Inputs.prior {R : Type} [Zero R] (input : Inputs R) : MemoryMsg R :=
   ⟨input.clk_high, input.cols.access_timestamp.prev_low, input.index, 0, 0, input.cols.prev_value⟩

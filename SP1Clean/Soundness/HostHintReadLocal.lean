@@ -109,8 +109,9 @@ theorem wordTables_mem (witness : EnsembleWitness (ensemble image source others 
 /-- The word-table identities and order follow from the actual resource registration. -/
 theorem wordTables_components (witness : EnsembleWitness (ensemble image source others resources channels)) :
     (wordTables witness).map (·.component) = wordResources := by
-  simp only [wordTables, List.map_take, HostLocalHandoff.resourceTables_components,
-    wordResources, List.cons_append, List.nil_append, List.take_succ_cons, List.take_zero]
+  simp only [wordTables, List.map_take]
+  rw [HostLocalHandoff.resourceTables_components witness]
+  simp only [wordResources, List.cons_append, List.nil_append, List.take_succ_cons, List.take_zero]
 
 theorem wordTables_aligned (witness : EnsembleWitness (ensemble image source others resources channels)) :
     List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
@@ -176,8 +177,9 @@ theorem cursor_interactions (witness : EnsembleWitness (ensemble image source ot
     apply interface.cursor table.component
     apply List.mem_append_right
     have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-    simpa only [List.map_drop, HostLocalHandoff.resourceTables_components, wordResources,
-      List.cons_append, List.nil_append, List.drop_succ_cons, List.drop_zero] using mapped
+    rw [List.map_drop, HostLocalHandoff.resourceTables_components witness] at mapped
+    simpa only [wordResources, List.cons_append, List.nil_append, List.drop_succ_cons,
+      List.drop_zero] using mapped
   rw [← split, List.flatMap_append, receiverSplit, List.flatMap_cons, receiverSilent, List.append_nil]
   congr 1
   have resourceSplit := List.take_append_drop 2 (HostLocalHandoff.resourceTables witness)

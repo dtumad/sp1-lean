@@ -13,6 +13,7 @@ structure Inputs (F : Type) where
   lower : fields 3 F
   upper : fields 3 F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 variable {p : ℕ}
 

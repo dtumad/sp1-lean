@@ -899,7 +899,7 @@ private lemma run_checked_mem_read_aligned (access : MemoryAccessType mem_payloa
               -- clears them; the outermost target index is `(8 * ↑width).toNat`, only DEFEQ to
               -- `8 * width`, so it needs `exact` — `rw`/`simp` match syntactically and will not fire
               simp only [BitVec.setWidth_eq]
-              exact congrArg (fun v => (v, true, (0 : ℕ))) (BitVec.setWidth_eq d)
+              exact BitVec.setWidth_eq d
           · refine run_ME_pure' _ _ s ?_
             exact congrArg (fun v => (v, true, (0 : ℕ))) (BitVec.setWidth_eq d)
         · refine run_ME_pure' _ _ s ?_

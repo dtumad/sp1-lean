@@ -18,6 +18,7 @@ structure Inputs (F : Type) where
   lowerCompare : Extracted.LtOperationUnsigned F
   upperCompare : Extracted.LtOperationUnsigned F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 variable {p : ℕ} [Fact p.Prime]
 

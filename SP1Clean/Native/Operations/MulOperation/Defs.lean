@@ -80,10 +80,21 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   is_real * (cols.product[14] - (((cols.b_lower_byte.low_bytes[0]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[0] - cols.b_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[1]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[1] - cols.b_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[2]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[2] - cols.b_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[3]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[3] - cols.b_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) * ((input.c[3] - cols.c_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[3]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[2] - cols.c_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[2]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[1] - cols.c_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[1]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[0] - cols.c_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[0])) + cols.carry[13] - cols.carry[14] * 256)) === 0
   is_real * (cols.product[15] - (((cols.b_lower_byte.low_bytes[0]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[0] - cols.b_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[1]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[1] - cols.b_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[2]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[2] - cols.b_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[3]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[3] - cols.b_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[3] - cols.c_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[3]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[2] - cols.c_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[2]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[1] - cols.c_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[1]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[0] - cols.c_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[0])) + cols.carry[14] - cols.carry[15] * 256)) === 0
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
-  elaborate_circuit_with {
-    channelsWithGuarantees := [byteChannel.toRaw]
-  }
+-- Hand-written fields: on Clean `main` at Lean v4.33.1, `elaborate_circuit` (and the `rfl` default
+-- of `localLength_eq`) time out normalising this sixteen-constraint `main`, while the structural
+-- simp closes each obligation in well under a second.
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
+  localLength _ := 0
+  output _ _ := ()
+  channelsWithGuarantees := [byteChannel.toRaw]
+  localLength_eq := by intros; simp only [main, circuit_norm, seval]
+  output_eq := by intros; simp only [main, circuit_norm, seval]
+  subcircuitsConsistent := by intros; simp only [main, circuit_norm, seval]
+  channelsLawful := by
+    preserve_tactic_target
+    dsimp only [ElaboratedCircuit.ChannelsLawful]
+    simp only [main, circuit_norm, seval, U16toU8OperationSafe.circuit, U16MSBOperation.circuit,
+      List.cons_subset, List.nil_subset, List.mem_singleton, and_self]
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

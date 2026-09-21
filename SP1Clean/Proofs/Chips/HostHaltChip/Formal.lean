@@ -41,6 +41,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   soundness := soundness
   completeness := completeness
   requirementsChannelsLawful := by
+    preserve_tactic_target
     intro input offset
     simp [main, circuit_norm, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
 

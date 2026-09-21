@@ -116,6 +116,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   -- guarantee-bearing interaction and must remain visible to composing circuits.
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     dsimp only [ElaboratedCircuit.ChannelsLawful]
     intro input offset
     change Operations.ChannelsLawful
@@ -204,12 +205,14 @@ def circuit [Fact (2 ^ 17 < p)] : GeneralFormalCircuit (ZMod p) Inputs unit wher
   -- recover it compositionally rather than unfolding this reader again.
   exposedChannels := fun input _ => exposedState input
   exposedChannels_eq input offset := by
+    preserve_tactic_target
     simp only [exposedState, stateInteractions]
     rw [Operations.exposedChannelsLawful_expose]
     simp only [main, currentMsg, nextMsg, circuit_norm,
-      Channels.byteChannel_eq_stateChannel_false, if_false]
+      Channels.byteChannel_eq_stateChannel_false]
   channelsWithRequirements := []
   requirementsChannelsLawful input_var i₀ := by
+    preserve_tactic_target
     change Operations.RequirementsChannelsLawful
       ([.assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
         [byteChannel.toRaw, stateChannel.toRaw] []
@@ -223,8 +226,8 @@ def circuit [Fact (2 ^ 17 < p)] : GeneralFormalCircuit (ZMod p) Inputs unit wher
       · exact Or.inl List.mem_cons_self
       · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
     · intro env h_constraints
-      have h_bool : (ProvableStruct.eval env input_var).is_real = 0 ∨
-          (ProvableStruct.eval env input_var).is_real = 1 := by
+      have h_bool : Expression.eval env input_var.is_real = 0 ∨
+          Expression.eval env input_var.is_real = 1 := by
         apply bool_of_mul_pred
         simpa only [circuit_norm] using h_constraints.1
       rw [Operations.inChannelsOrRequirements_iff_forall_mem]

@@ -227,7 +227,7 @@ private theorem DivRemChip.encodedOpcode_ne_ecall {f0 f1 f2 f3 f4 f5 f6 f7 : ZMo
   have hvals := DivRemChip.flags_val_sum b0 b1 b2 b3 b4 b5 b6 b7 hsum
   intro h
   have hp := Fact.out (p := 2 ^ 17 < p)
-  haveI : NeZero p := ⟨by omega⟩
+  have : NeZero p := ⟨by omega⟩
   have hcast : f0 * 16 + f1 * 18 + f2 * 15 + f3 * 17 + f4 * 25 + f5 * 27 + f6 * 26 + f7 * 28 =
       ((f0.val * 16 + f1.val * 18 + f2.val * 15 + f3.val * 17 + f4.val * 25 + f5.val * 27 +
         f6.val * 26 + f7.val * 28 : ℕ) : ZMod p) := by

@@ -88,7 +88,7 @@ set_option linter.unusedSectionVars false in
 /-- `1 ≠ -1` in the field: the fact that separates a push from a pull, and the only place the
 ledger needs the characteristic to be odd. -/
 lemma one_ne_neg_one : (1 : ZMod p) ≠ -1 := by
-  haveI : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   intro h
   have h2 : (2 : ZMod p) = 0 := by linear_combination h
   have := congrArg ZMod.val h2

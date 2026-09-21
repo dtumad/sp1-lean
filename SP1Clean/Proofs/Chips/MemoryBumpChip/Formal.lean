@@ -29,7 +29,7 @@ private lemma val32 : (32 : ZMod p).val = 32 := by
 
 /-- The `LTU` flag literal round-trips through `ZMod.val`. -/
 private lemma val1 : (1 : ZMod p).val = 1 := by
-  haveI : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+  have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   exact ZMod.val_one p
 
 /-- The recombined low clock `clk_0_16 + clk_16_24 · 2^16` is a genuine 24-bit value once its limbs
@@ -125,6 +125,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   completeness := completeness
   channelsWithRequirements := [memoryChannel.toRaw]
   requirementsChannelsLawful := fun input_var i₀ => by
+    preserve_tactic_target
     change Operations.RequirementsChannelsLawful
       ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
         .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
@@ -138,8 +139,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
           | exact Or.inl List.mem_cons_self
           | exact Or.inr List.mem_cons_self
     · intro env h_constraints
-      have h_bool : (ProvableStruct.eval env input_var).is_real = 0 ∨
-          (ProvableStruct.eval env input_var).is_real = 1 := by
+      have h_bool : Expression.eval env input_var.is_real = 0 ∨
+          Expression.eval env input_var.is_real = 1 := by
         apply bool_of_mul_pred
         simpa only [circuit_norm] using h_constraints.1
       rw [Operations.inChannelsOrRequirements_iff_forall_mem]

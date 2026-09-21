@@ -45,6 +45,7 @@ structure Columns (F : Type) where
   memory_access : Extracted.MemoryAccessCols F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The operand reads + threaded reader column blocks. `op_b_val` is the rs1 base-address value (the
 `op_b` register read), `op_c_imm` the sign-extended immediate; `state`/`adapter`/`memory_access` are the
@@ -56,6 +57,7 @@ structure Inputs (F : Type) where
   adapter : Extracted.ITypeReader F
   memory_access : Extracted.MemoryAccessCols F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
 @[reducible] def Inputs.op_c_imm {F} (i : Inputs F) : Word F := i.adapter.op_c_imm
@@ -111,6 +113,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
 
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   channelsLawful := by
+    preserve_tactic_target
     simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit,
       Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit]
   -- only the `AddressOperation` subcircuit witnesses (its 4 cells); the other blocks are threaded
@@ -118,7 +121,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   localLength _ := 3 + 1
   output input i0 :=
     ⟨input.state, input.adapter,
-      ⟨varFromOffset Extracted.AddrAddOperation i0, var ⟨i0 + 3⟩⟩,
+      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
       input.memory_access, input.is_real⟩
   -- `programChannel` joins the structural `RowSpec` propagated from `ITypeReader`'s program **pull** (W11 flip);
   -- `memoryChannel` joins from `MemoryAccess`'s read pulls + `RegisterWrite`'s op_a write push (W11 memory flip).
@@ -129,7 +132,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.is_real⟩ :
         Var Columns (ZMod p)) := rfl
 

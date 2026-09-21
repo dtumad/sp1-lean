@@ -63,6 +63,7 @@ def circuit (deferred : Bool) (slot : Fin 8) : GeneralFormalCircuit (ZMod p) Inp
   soundness := soundness deferred slot
   completeness := completeness deferred slot
   requirementsChannelsLawful := by
+    preserve_tactic_target
     cases deferred
     all_goals
       intro input offset

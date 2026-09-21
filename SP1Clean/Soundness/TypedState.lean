@@ -1014,7 +1014,7 @@ theorem witness_haltRows_selectorBinary
     ∀ row ∈ (haltTable witness).table,
       (haltRow (haltTable witness) row).is_real = 0 ∨
         (haltRow (haltTable witness) row).is_real = 1 := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : haltTable witness ∈ witness.tables :=
     List.getElem_mem (haltIndex_lt_tablesLength witness)
   have tableConstraints : (haltTable witness).Constraints :=
@@ -1041,7 +1041,7 @@ theorem witness_syscallInstrsRows_selectorBinary
     ∀ row ∈ (syscallInstrsTable witness).table,
       (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 0 ∨
         (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1 := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : syscallInstrsTable witness ∈ witness.tables :=
     List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
   have tableConstraints : (syscallInstrsTable witness).Constraints :=
@@ -1069,7 +1069,7 @@ theorem witness_syscallInstrsRows_haltSelectorBinary
     ∀ row ∈ (syscallInstrsTable witness).table,
       (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 0 ∨
         (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 1 := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : syscallInstrsTable witness ∈ witness.tables :=
     List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
   have tableConstraints : (syscallInstrsTable witness).Constraints :=

@@ -298,6 +298,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
     requirementsChannelsLawful := fun input_var i₀ => by
+      preserve_tactic_target
       dsimp only [Operations.RequirementsChannelsLawful]
       refine ⟨?_, ?_, ?_⟩
       · simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
@@ -338,6 +339,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       expose memoryChannel (exposedMemoryInteractions input offset) ++
       expose programChannel (exposedProgramInteractions input),
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       unfold Operations.ExposedChannelsLawful
       intro exposed exposedMem

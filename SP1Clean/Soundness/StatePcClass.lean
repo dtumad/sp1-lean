@@ -327,8 +327,8 @@ theorem statePcClassShape_of_circuit (kind : ChipKind p)
     (shape : @CircuitPushedPcBound p _ kind.Inputs kind.Cols kind.provableInputs
       kind.provableCols circuit kind.view) :
     StatePcClassShape ⟨id, kind, circuit, spec_eq⟩ := by
-  letI := kind.provableInputs
-  letI := kind.provableCols
+  let := kind.provableInputs
+  let := kind.provableCols
   intro data physical guarantees real
   exact Or.inr (shape.bound data physical guarantees real)
 
@@ -377,8 +377,8 @@ theorem shiftRightChip_statePcClassShape : StatePcClassShape
 limbs. -/
 theorem jalChip_statePcClassShape : StatePcClassShape
     (⟨.jal, JalChip.kind, JalChip.circuit, rfl⟩ : SupportedChip p) := by
-  letI := (JalChip.kind (p := p)).provableInputs
-  letI := (JalChip.kind (p := p)).provableCols
+  let := (JalChip.kind (p := p)).provableInputs
+  let := (JalChip.kind (p := p)).provableCols
   apply statePcClassShape_of_circuit
   apply circuitPushedPcBound_of_jumpTargetContract
   exact jalChip_jumpTargetContract
@@ -387,8 +387,8 @@ theorem jalChip_statePcClassShape : StatePcClassShape
 `AddOperation` result limbs, range-checked there. -/
 theorem jalrChip_statePcClassShape : StatePcClassShape
     (⟨.jalr, JalrChip.kind, JalrChip.circuit, rfl⟩ : SupportedChip p) := by
-  letI := (JalrChip.kind (p := p)).provableInputs
-  letI := (JalrChip.kind (p := p)).provableCols
+  let := (JalrChip.kind (p := p)).provableInputs
+  let := (JalrChip.kind (p := p)).provableCols
   apply statePcClassShape_of_circuit
   apply circuitPushedPcBound_of_jumpTargetContract
   exact jalrChip_jumpTargetContract
@@ -397,8 +397,8 @@ theorem jalrChip_statePcClassShape : StatePcClassShape
 range-checks; no case split on the branching decision is needed. -/
 theorem branchChip_statePcClassShape : StatePcClassShape
     (⟨.branch, BranchChip.kind, BranchChip.circuit, rfl⟩ : SupportedChip p) := by
-  letI := (BranchChip.kind (p := p)).provableInputs
-  letI := (BranchChip.kind (p := p)).provableCols
+  let := (BranchChip.kind (p := p)).provableInputs
+  let := (BranchChip.kind (p := p)).provableCols
   apply statePcClassShape_of_circuit
   apply circuitPushedPcBound_of_shallowNextPcContract
   exact branchChip_shallowNextPcContract

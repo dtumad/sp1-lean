@@ -2,6 +2,7 @@ import SP1Clean.Native.Chips.MulChip.Defs
 import SP1Clean.Math.EvalVec
 import SP1Clean.Proofs.Chips.MulChip.Structural
 import Clean.Air.Circuit
+import ToClean.Circuit.WitgenEval
 
 /-! # `SP1Clean.MulChip` — `Assumptions` / soundness / completeness / `circuit` -/
 
@@ -242,6 +243,16 @@ theorem completeness :
       omega
   -- fold the witness stream's `populateFE` operands to the evaluated input words
   simp only [Inputs.op_b_val, Inputs.op_c_val] at h_env_cols
+  -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.
+  replace h_env_cols := fun j : Fin 45 =>
+    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Extracted.MulOperation) env.toEnvironment (i₀ + 5) _
+      (by simpa only [circuit_norm] using h_env_cols) j (by
+        have h : size Extracted.MulOperation = 45 := rfl
+        have := j.isLt
+        omega)).trans (Witgen.getElem_eval_toElements _ _ j (by
+      have h : size Extracted.MulOperation = 45 := rfl
+      have := j.isLt
+      omega)).symm
   -- The witness stream is the `populateFE` IR; `populateFE_eval_cell` evaluates each pinned cell to
   -- the value-level `populate` at the evaluated operands. One reusable per-index fact serves both
   -- the `Spec` conversion below and the `RegisterWrite` `isU64` bullet's `product`/`product_msb`
@@ -423,6 +434,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       -- `Soundness/TypedProgram.lean`.
       expose programChannel (exposedProgramInteractions input offset),
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
       have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)
@@ -469,7 +481,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           GeneralFormalCircuit.toSubcircuit_interactions]
       · simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           h_byte, h_program, h_memory, decide_false, decide_true, Bool.false_eq_true,
-          if_true, List.nil_append]
+          List.nil_append]
       · simp [circuit_norm, Gadgets.Equality.main, exposedMemoryInteractions] }
 
 /-- Folded circuit projections used by the whole-chip row codec. -/

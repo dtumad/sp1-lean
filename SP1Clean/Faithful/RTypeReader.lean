@@ -166,7 +166,7 @@ theorem rtypereader_memory_interactions_faithful_syntactic
       ProvablePair.instance (Gadgets.Equality.circuit field) memoryChannel.toRaw n inp
       List.not_mem_nil List.not_mem_nil
   simp only [Readers.RTypeReader.main, circuit_norm, hrac, heq,
-    SP1Clean.Channels.programChannel_eq_memoryChannel_false, if_false]
+    SP1Clean.Channels.programChannel_eq_memoryChannel_false]
   -- W11 memory flip: reads are `pullIf` (mult `-is_real`), the op_b/op_c read-backs `pushIf` (mult `is_real`);
   -- the op_a write `pushIf` is GONE (factored to `RegisterWrite`), so the oracle's op_a write (Memory-index 1)
   -- is `eraseIdx 1`'d off the RHS, and the whole list is `negMult`-bridged (our pull/push polarity is the
@@ -215,7 +215,7 @@ theorem rtypereader_program_interactions_faithful_syntactic
       ProvablePair.instance (Gadgets.Equality.circuit field) programChannel.toRaw n inp
       List.not_mem_nil List.not_mem_nil
   simp only [Readers.RTypeReader.main, circuit_norm, hrac, heq,
-    SP1Clean.Channels.memoryChannel_eq_programChannel_false, if_false]
+    SP1Clean.Channels.memoryChannel_eq_programChannel_false]
   -- SC Phase 2a: `programChannel` is a `Channel` — `circuit_norm` recovers the program pull in the raw
   -- `ChannelInteraction.toRaw` form, so unfold the kernel's `pulledIf`/`toRaw` to match it (cf. the
   -- the shared State-interaction kernel pattern), then rewrite.

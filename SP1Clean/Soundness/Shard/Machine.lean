@@ -69,7 +69,10 @@ theorem statement_iff_of_realizes {ensemble : Ensemble (ZMod p) PublicIO} {profi
       ∃ events, AdmissibleExecution profile p image source target events := by
   rw [(realizes valid sound compiler).statement_iff header]
   refine exists_congr fun events => ?_
-  simp only [boundary, admissible, AdmissibleExecution, executes_iff (valid := valid), true_and]
+  -- `executes_iff` is instantiated by hand: `events : List (sp1Machine …).Event` only unfolds to
+  -- `List ExecutionEvent` at default transparency, which `simp` no longer does when assigning it.
+  simp only [boundary, admissible, AdmissibleExecution, true_and,
+    executes_iff (valid := valid) (events := events)]
   tauto
 
 end SP1Clean.Soundness.Shard

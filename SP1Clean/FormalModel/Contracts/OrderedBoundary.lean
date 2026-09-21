@@ -15,6 +15,7 @@ structure Inputs (F : Type) where
   current : Word F
   comparison : Extracted.LtOperationUnsigned F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- A terminal row supplies only the last key and its comparison witness. The final key is
 a circuit parameter, never a witness column. -/
@@ -22,6 +23,7 @@ structure TerminalInputs (F : Type) where
   previous : Word F
   comparison : Extracted.LtOperationUnsigned F
 deriving ProvableStruct
+provable_struct_eval_lemmas TerminalInputs
 
 variable {p : ℕ} [Fact p.Prime]
 

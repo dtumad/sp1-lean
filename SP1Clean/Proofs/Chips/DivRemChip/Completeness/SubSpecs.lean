@@ -88,7 +88,9 @@ def mulWitnessElements (cols : Extracted.MulOperation (ZMod p)) : Vector (ZMod p
 
 set_option linter.unusedSectionVars false in
 lemma mulWitnessElements_eq (cols : Extracted.MulOperation (ZMod p)) :
-    mulWitnessElements cols = Vector.cast mul_size_eq (ProvableType.toElements cols) := rfl
+    mulWitnessElements cols = Vector.cast mul_size_eq (ProvableType.toElements cols) := by
+  simp only [mulWitnessElements, ProvableType.toElements, ProvableStruct.structToElements_eq,
+    Vector.cast_cast]
 
 set_option linter.unusedSectionVars false in
 lemma mulWitnessElements_get (cols : Extracted.MulOperation (ZMod p)) (i : Fin 45) :
@@ -116,7 +118,6 @@ lemma mulWitnessElements_eq_flat (cols : Extracted.MulOperation (ZMod p)) :
     mulWitnessElements cols = mulFlatElements cols := by
   simp only [mulWitnessElements, mulFlatElements, mulTailElements, mul_toComponents,
     circuit_norm, explicit_provable_type, ProvableStruct.componentsToElements, Vector.cast_rfl]
-  rfl
 
 private lemma append16_get_right {α : Type} (xs : Vector α 16) (ys : Vector α 29)
     (i : Fin 16) : (xs ++ ys)[16 + i.val] = ys[i.val] := by

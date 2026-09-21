@@ -16,6 +16,7 @@ structure Inputs (F : Type) where
   read : HostRamReadChip.Message F
   low : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def Spec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) (output : Vector (ZMod p) 8) : Prop :=
   input.read.Valid ∧ (∀ index : Fin 8, output[index].val < 256) ∧

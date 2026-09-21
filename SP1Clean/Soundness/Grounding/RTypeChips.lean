@@ -404,27 +404,17 @@ theorem divRemChip_rtypeMemoryInteractionShape :
     RTypeMemoryInteractionShape (divRemChipDescriptor (p := p)) :=
   divRemChip_typedMemoryInteractions_eq
 
-/-- The DivRem timestamp contract's per-slot adapter projection.  The `simpa` set is fixed; only
-the projected `RTypeReader` field varies, so naming the shape keeps the twelve fields readable. -/
-local macro "divRemAdapterField " proj:term : tactic => do
+/-- The DivRem timestamp contract's per-slot projections. One fixed simp set: the output is
+rewritten to the explicit row layout pre-order (`↓ circuit_output_eq`) and the adapter/state
+blocks read off `populatedRowAt`, so no goal ever unfolds the 217-cell output. -/
+local macro "divRemTimestampField" : tactic => do
   let input := Lean.mkIdent `input
   let offset := Lean.mkIdent `offset
   let readerInput := Lean.mkIdent `readerInput
-  let adapterEq := Lean.mkIdent `adapterEq
-  `(tactic| simpa only [$input:ident, $offset:ident, $readerInput:ident,
-      DivRemChip.rTypeReaderInput, DivRemChip.eval_inputs,
-      Extracted.RTypeReader.toAdapterView, circuit_norm] using congrArg $proj $adapterEq)
-
-/-- As `divRemAdapterField`, for the three `clk_low + δ` target slots read off the state block. -/
-local macro "divRemTargetField " delta:term : tactic => do
-  let input := Lean.mkIdent `input
-  let offset := Lean.mkIdent `offset
-  let readerInput := Lean.mkIdent `readerInput
-  let stateEq := Lean.mkIdent `stateEq
-  `(tactic| simpa only [$input:ident, $offset:ident, $readerInput:ident,
-      DivRemChip.rTypeReaderInput, DivRemChip.eval_inputs, circuit_norm] using
-      congrArg (fun state : Extracted.CPUState (ZMod p) =>
-        state.clk_0_16 + state.clk_16_24 * 65536 + $delta) $stateEq)
+  `(tactic| simp only [$input:ident, $offset:ident, $readerInput:ident,
+      DivRemChip.rTypeReaderInput, DivRemChip.eval_inputs, ↓ DivRemChip.circuit_output_eq,
+      DivRemChip.populatedRowAt_adapter_eq, DivRemChip.populatedRowAt_state_eq,
+      Extracted.RTypeReader.toAdapterView, circuit_norm])
 
 theorem DivRemChip.rtypeTimestampContract :
     CircuitRTypeTimestampContract (p := p) (DivRemChip.circuit (p := p))
@@ -437,21 +427,19 @@ theorem DivRemChip.rtypeTimestampContract :
   · simpa only [DivRemChip.circuit_main_eq] using
       DivRemChip.rTypeReader_mem input offset
   · intro env
-    have adapterEq := DivRemChip.eval_output_adapter input offset env
-    have stateEq := DivRemChip.eval_output_state input offset env
     simp only [DivRemChip.rowView]
     refine {
       real_eq := by
         simp only [input, offset, readerInput, DivRemChip.rTypeReaderInput, circuit_norm]
-      aPrev_eq := by divRemAdapterField (·.op_a_memory.access_timestamp.prev_low)
-      aDiff_eq := by divRemAdapterField (·.op_a_memory.access_timestamp.diff_low_limb)
-      bPrev_eq := by divRemAdapterField (·.op_b_memory.access_timestamp.prev_low)
-      bDiff_eq := by divRemAdapterField (·.op_b_memory.access_timestamp.diff_low_limb)
-      cPrev_eq := by divRemAdapterField (·.op_c_memory.access_timestamp.prev_low)
-      cDiff_eq := by divRemAdapterField (·.op_c_memory.access_timestamp.diff_low_limb)
-      targetA_eq := by divRemTargetField 4
-      targetB_eq := by divRemTargetField 3
-      targetC_eq := by divRemTargetField 2 }
+      aPrev_eq := by divRemTimestampField
+      aDiff_eq := by divRemTimestampField
+      bPrev_eq := by divRemTimestampField
+      bDiff_eq := by divRemTimestampField
+      cPrev_eq := by divRemTimestampField
+      cDiff_eq := by divRemTimestampField
+      targetA_eq := by divRemTimestampField
+      targetB_eq := by divRemTimestampField
+      targetC_eq := by divRemTimestampField }
 
 theorem divRemChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = divRemChipDescriptor (p := p))

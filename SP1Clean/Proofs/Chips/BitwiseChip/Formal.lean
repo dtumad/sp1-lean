@@ -1,6 +1,7 @@
 import SP1Clean.Native.Chips.BitwiseChip.Defs
 import SP1Clean.Math.EvalVec
 import Clean.Air.Circuit
+import ToClean.Circuit.WitgenEval
 
 /-! # `SP1Clean.BitwiseChip` — contract: `Assumptions` / soundness / completeness / `circuit`
 
@@ -154,9 +155,10 @@ completeness `populate` bridge applies it symbolically. -/
 private lemma toElements_result_byte (s : BitwiseU16Operation.Columns (ZMod p)) (k : Fin 8) :
     (toElements s)[8 + (k : ℕ)]'(by simp only [circuit_norm]; omega)
       = s.bitwise_operation.result[(k : ℕ)] := by
-  obtain ⟨a, b, c⟩ := s
+  obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := s
   fin_cases k <;>
-    (simp only [circuit_norm, explicit_provable_type];
+    (simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+       ProvableStruct.componentsToElements];
      refine (Vector.getElem_append_right ?_ ?_).trans
        ((Vector.getElem_append_right ?_ ?_).trans
          ((Vector.getElem_append_left ?_).trans
@@ -283,6 +285,16 @@ theorem completeness :
   have hpvc : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_c_memory_prev_value
       = input_adapter_op_c_memory_prev_value := h_input.2.2.2.2.2.2.2.2.1.1
   simp only [Inputs.op_b_val, Inputs.op_c_val] at h_env_cols
+  -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.
+  replace h_env_cols := fun j : Fin 16 =>
+    (ProvableStruct.get_of_eval_varFromOffset_eq (α := BitwiseU16Operation.Columns) env.toEnvironment (i₀ + 3) _
+      (by simpa only [circuit_norm] using h_env_cols) j (by
+        have h : size BitwiseU16Operation.Columns = 16 := rfl
+        have := j.isLt
+        omega)).trans (Witgen.getElem_eval_toElements _ _ j (by
+      have h : size BitwiseU16Operation.Columns = 16 := rfl
+      have := j.isLt
+      omega)).symm
   -- The witness stream is the `populateFE` IR; `populateFE_eval_cell` evaluates each pinned cell to
   -- the value-level `populate` at the evaluated operands (the operands folded through `vec4_eval` +
   -- `h_input`, the opcode expression evaluated to its `env.get` form).
@@ -367,7 +379,7 @@ theorem completeness :
     refine Eq.trans ?_
       ((getElem_toElements_eval_varFromOffset env.toEnvironment (i₀ + 3) i hi).trans
         (hcolsPop ⟨i, hi⟩))
-    simp only [circuit_norm]; rfl
+    simp only [circuit_norm]
   · -- RegisterWrite's `isU64 value` (the op_a write push): the witnessed result word's `isU64` from
     -- `resultWord_isU64` at the `populate`d columns (`spec_populate`), bridged to the chip's explicit
     -- `#v[r[0]+r[1]*256, …]` (in `env.get` form) via the per-byte witness-hint pins.
@@ -586,6 +598,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       -- `Soundness/TypedProgram.lean`.
       expose programChannel (exposedProgramInteractions input offset),
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
       have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)
@@ -606,7 +619,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           GeneralFormalCircuit.toSubcircuit_interactions]
         simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           h_byte, h_program, h_memory, decide_false, decide_true, Bool.false_eq_true,
-          if_true, List.nil_append]
+          List.nil_append]
       · simp only [main, Readers.CPUState.circuit, Readers.CPUState.main,
           Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
           Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,

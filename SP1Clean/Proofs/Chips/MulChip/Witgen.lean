@@ -18,7 +18,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 /-- Mul's row has computable witnesses: the flag cells are functions of the hint alone, the
 `MulOperation` cells of the input row plus the flag cells below them, and the result word of
 earlier same-row cells alone. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
@@ -36,11 +36,9 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
     refine MulOperation.populateFE_congr_flat env env' _ _ _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_ ?_ ?_
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
-      simp only [eval_opBVal] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa [circuit_norm, Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
-      simp only [eval_opCVal] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa [circuit_norm, Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · simp only [circuit_norm]
       exact h_agree.get_eq (by omega)
     · simp only [circuit_norm]

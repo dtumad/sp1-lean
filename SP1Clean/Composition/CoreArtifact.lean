@@ -236,7 +236,7 @@ private theorem interactionsWith_map_toAccess_eq_filter_kind
   apply List.filter_congr
   intro interaction interactionMem
   simp only [Function.comp_apply, Interaction.toAccess]
-  rw [decide_eq_decide]
+  apply decide_eq_decide.mpr
   constructor
   · rintro rfl
     exact channelKind
@@ -367,7 +367,8 @@ private theorem exactNativeEnsembleWitness_syscallTableInactive {Digest : Type}
     rfl
   haltTablePresent := by
     show (extractedHaltTable (p := p) data).table ≠ []
-    simp [extractedHaltTable, HaltChip.haltTraceInputs, Air.Flat.Table.build_table]
+    simp only [extractedHaltTable, HaltChip.haltTraceInputs]
+    exact List.cons_ne_nil _ _
 
 /-- The State/Memory endpoint plus the recount-derived Byte/Program balances and exact count bounds
 give Clean balance on every native channel.  The access-list permutation is reflexive because each

@@ -156,43 +156,6 @@ private theorem storeDoubleEvalVec4Components
   · exact (ProvableType.getElem_eval_fields env value 2 (by decide)).symm
   · exact (ProvableType.getElem_eval_fields env value 3 (by decide)).symm
 
-private theorem storeDoubleAddressEta {F : Type}
-    (cols : Extracted.AddressOperation F) :
-    ({ addr_operation := { value := cols.addr_operation.value }
-       top_two_limb_inv := cols.top_two_limb_inv } :
-      Extracted.AddressOperation F) = cols := by
-  cases cols with
-  | mk addr top =>
-    cases addr
-    rfl
-
-private theorem storeDoubleCpuEta {F : Type}
-    (cols : Extracted.CPUState F) :
-    ({ clk_high := cols.clk_high
-       clk_16_24 := cols.clk_16_24
-       clk_0_16 := cols.clk_0_16
-       pc := cols.pc } : Extracted.CPUState F) = cols := by
-  cases cols
-  rfl
-
-private theorem storeDoubleITypeEta {F : Type}
-    (cols : Extracted.ITypeReader F) :
-    ({ op_a := cols.op_a
-       op_a_memory :=
-         { prev_value := cols.op_a_memory.prev_value
-           access_timestamp := cols.op_a_memory.access_timestamp }
-       op_a_0 := cols.op_a_0
-       op_b := cols.op_b
-       op_b_memory :=
-         { prev_value := cols.op_b_memory.prev_value
-           access_timestamp := cols.op_b_memory.access_timestamp }
-       op_c_imm := cols.op_c_imm } : Extracted.ITypeReader F) = cols := by
-  cases cols with
-  | mk opA opAMem opA0 opB opBMem opC =>
-    cases opAMem
-    cases opBMem
-    rfl
-
 theorem storeDoubleChipColumnsOfInput_roundtrip {F : Type}
     (cols : StoreDoubleChip.Columns F) :
     storeDoubleChipColumnsOfInput
@@ -632,8 +595,7 @@ private theorem storeDoubleMemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [storeDoubleMemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, storeDoubleEvalMemoryInput]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def storeDoubleChipRustColumns
     (env : Environment (ZMod p))
@@ -1483,9 +1445,8 @@ private theorem storeDoubleByteInteractionsFaithful
     h6, h3, Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   simp only [← ProvableStruct.eval_eq_eval,
-    StoreDoubleChip.eval_inputs, eval_cpuState,
-    Readers.ITypeReader.eval_cols, eval_registerAccessCols,
-    eval_registerAccessTimestamp, storeDoubleEvalMemoryCols,
+    eval_cpuState,
+    eval_registerAccessTimestamp,
     storeDoubleEvalMemoryTimestamp, ProvableType.eval_field]
   exact storeDoublePermFourBlocks
     [_, _] [_, _, _, _] [_, _] [_, _, _, _]

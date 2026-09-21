@@ -47,7 +47,7 @@ theorem eval_offsetBit {F : Type} [FiniteField F]
 
 /-- LoadX0's row has computable witnesses: the four address cells come from the composed
 `AddressOperation`, whose input row is a function of this row's own input cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
@@ -68,8 +68,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_⟩
   · simp [circuit_norm]
-  · have hob := congrArg (fun r : Inputs (ZMod p) => r.offset_bit) h_input
-    simp only [eval_offsetBit] at hob
+  · have hob := Inputs.eval_congr_offset_bit h_input
     simp only [circuit_norm]
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
@@ -79,13 +78,13 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
     · simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[0]) hob
     · simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[1]) hob
     · simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[2]) hob
-    · rw [congrArg (fun r : Inputs (ZMod p) => r.is_lb) h_input,
-        congrArg (fun r : Inputs (ZMod p) => r.is_lbu) h_input,
-        congrArg (fun r : Inputs (ZMod p) => r.is_lh) h_input,
-        congrArg (fun r : Inputs (ZMod p) => r.is_lhu) h_input,
-        congrArg (fun r : Inputs (ZMod p) => r.is_lw) h_input,
-        congrArg (fun r : Inputs (ZMod p) => r.is_lwu) h_input,
-        congrArg (fun r : Inputs (ZMod p) => r.is_ld) h_input]
+    · rw [Inputs.eval_congr_is_lb h_input,
+        Inputs.eval_congr_is_lbu h_input,
+        Inputs.eval_congr_is_lh h_input,
+        Inputs.eval_congr_is_lhu h_input,
+        Inputs.eval_congr_is_lw h_input,
+        Inputs.eval_congr_is_lwu h_input,
+        Inputs.eval_congr_is_ld h_input]
   all_goals simp [circuit_norm]
 
 end SP1Clean.LoadX0Chip

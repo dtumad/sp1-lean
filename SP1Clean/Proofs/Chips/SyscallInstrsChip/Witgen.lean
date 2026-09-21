@@ -31,9 +31,8 @@ def component : Component (ZMod p) := ⟨circuit⟩
 
 /-- The table's row list from its (for now uninhabited) occurrence list: no rows. Stated as the
 literal empty list rather than `events.map Empty.elim`, so every fact below is a `rfl` away. -/
-def syscallInstrsTraceInputs (_events : List Empty) : List (Inputs (ZMod p)) := []
+def syscallInstrsTraceInputs (_events : List Empty) : List ((component (p := p)).Input (ZMod p)) := []
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 @[simp] theorem syscallInstrsTraceInputs_eq_nil (events : List Empty) :
     syscallInstrsTraceInputs (p := p) events = [] := rfl
 

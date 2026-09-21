@@ -1,6 +1,7 @@
 import SP1Clean.Native.Chips.LtChip.Defs
 import SP1Clean.Math.EvalVec
 import Clean.Air.Circuit
+import ToClean.Circuit.WitgenEval
 
 /-! # `SP1Clean.LtChip` — contract: `Assumptions` / soundness / completeness / `circuit` -/
 
@@ -98,6 +99,7 @@ private lemma rv64_sltu_eq (x y : BitVec 64) :
     RV64.sltu y x = if x.toNat < y.toNat then 1#64 else 0#64 := by
   by_cases h : x.toNat < y.toNat <;> simp [RV64.sltu, BitVec.ult, h]
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- The `resultWord` `#v[bit, 0, 0, 0]` packs to the 64-bit `0/1` indicator carried by its low limb:
 when the compare `bit` is `if P then 1 else 0`, the word's `toBitVec64` is `if P then 1#64 else 0#64`. -/
@@ -107,11 +109,13 @@ private lemma toBitVec64_bitWord (bit : ZMod p) (P : Prop) [Decidable P]
   subst h
   by_cases hP : P <;> simp [hP, Word.toBitVec64, Word.toNat, ZMod.val_one, ZMod.val_zero]
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- A binary field element's `val` is a valid 16-bit limb. -/
 private lemma val_lt_of_bool {b : ZMod p} (h : b = 0 ∨ b = 1) : b.val < 2 ^ 16 := by
   have := bool_val_le h; omega
 
+omit [Fact (2 ^ 17 < p)] in
 /-- The Lt result word `#v[bit, 0, 0, 0]` is a valid u64 whenever the compare `bit` is binary (the
 op_a write push's `isU64 value` obligation). -/
 private lemma isU64_bitWord {b : ZMod p} (h : b = 0 ∨ b = 1) :
@@ -119,6 +123,7 @@ private lemma isU64_bitWord {b : ZMod p} (h : b = 0 ∨ b = 1) :
   Word.isU64_of_cases (val_lt_of_bool h) (val_lt_of_bool (Or.inl rfl))
     (val_lt_of_bool (Or.inl rfl)) (val_lt_of_bool (Or.inl rfl))
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- A field element pinned to `if Q then 1 else 0` is binary (used in soundness to read the compare
 `bit`'s binary-ness off `LtOperationSigned.result_semantic`). -/
@@ -128,6 +133,7 @@ private lemma bool_of_eq_ite {b : ZMod p} {Q : Prop} [Decidable Q]
   · exact Or.inr h
   · exact Or.inl h
 
+omit [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Column 0 of a flattened `LtOperationSigned` column struct is its compare `bit` (peeling the
 `ProvableStruct` `toComponents`/`cast`/`append` tower). Used by completeness to read the witnessed bit
@@ -245,6 +251,16 @@ theorem completeness :
   -- cell and `is_real` input evaluated to their value forms).
   have hsig : Expression.eval env.toEnvironment (var { index := i₀ } : Expression (ZMod p))
       = env.get i₀ := by simp [circuit_norm]
+  -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.
+  replace h_env_cols := fun j : Fin 10 =>
+    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Extracted.LtOperationSigned) env.toEnvironment (i₀ + 2) _
+      (by simpa only [circuit_norm] using h_env_cols) j (by
+        have h : size Extracted.LtOperationSigned = 10 := rfl
+        have := j.isLt
+        omega)).trans (Witgen.getElem_eval_toElements _ _ j (by
+      have h : size Extracted.LtOperationSigned = 10 := rfl
+      have := j.isLt
+      omega)).symm
   have hcolsPop : ∀ j : Fin 10, env.get (i₀ + 2 + (j : ℕ))
       = (toElements (LtOperationSigned.populate input_adapter_op_b_memory_prev_value
           input_adapter_op_c_memory_prev_value (env.get i₀) input_is_real))[(j : ℕ)]'(by
@@ -313,7 +329,7 @@ theorem completeness :
   refine Eq.trans ?_
     ((getElem_toElements_eval_varFromOffset env.toEnvironment (i₀ + 2) i hi).trans
       (hcolsPop ⟨i, hi⟩))
-  simp only [circuit_norm]; rfl
+  simp only [circuit_norm]
   -- RegisterWrite's `isU64 #v[bit, 0, 0, 0]` (the op_a write push): the upper three limbs are literal
   -- `0`; the witnessed compare `bit` `env`-evaluates (via the same ascription trick, index `0`) to the
   -- `populate`d column 0, i.e. `U16CompareOperation.populate_bit …`, which is binary by `populate_bit_bool`.
@@ -476,6 +492,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       -- `Soundness/TypedProgram.lean`.
       expose programChannel (exposedProgramInteractions input offset),
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
       have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)
@@ -498,7 +515,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           GeneralFormalCircuit.toSubcircuit_interactions]
         simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           h_byte, h_program, h_memory, decide_false, decide_true, Bool.false_eq_true,
-          if_true, List.nil_append]
+          List.nil_append]
       · simp only [main, Readers.CPUState.circuit, Readers.CPUState.main,
           Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
           Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,

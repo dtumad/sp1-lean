@@ -40,6 +40,7 @@ structure Inputs (F : Type) where
   value : Word F
   multiplicity : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Forget the provider-only multiplicity column and recover the Memory-bus payload. -/
 def Inputs.toMessage {R : Type} (input : Inputs R) : MemoryMsg R where
@@ -100,6 +101,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     refine ⟨?_, fun _ => ⟨h_assumptions.1, h_assumptions.2.1⟩⟩
     rcases h_assumptions.2.2 with h | h <;> simp [h]
   requirementsChannelsLawful := fun input_var i₀ => by
+    preserve_tactic_target
     simp only [circuit_norm, main, memoryChannel]; grind
 
 end SP1Clean.MemoryFinalizeChip

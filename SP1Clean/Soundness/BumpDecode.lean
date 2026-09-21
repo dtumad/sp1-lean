@@ -425,7 +425,7 @@ theorem stateBumpTable_typedState_of_component (table : Table (ZMod p))
          TypedInteraction.pushedIfValue stateChannel
            (stateBumpRow table row).is_real
            (StateBumpChip.pushedMessage (stateBumpRow table row))] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
@@ -482,7 +482,7 @@ theorem memoryBumpTable_typedMemory_of_component (table : Table (ZMod p))
          TypedInteraction.pushedIfValue memoryChannel
            (memoryBumpRow table row).is_real
            (MemoryBumpChip.pushedMessage (memoryBumpRow table row))] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
@@ -591,7 +591,7 @@ theorem stateBumpTable_spec_of_component (table : Table (ZMod p))
     (tableConstraints : table.Constraints) (byteGuarantees : table.ChannelGuarantees byteChannel.toRaw) :
     ∀ row ∈ table.table,
       StateBumpChip.Spec (stateBumpRow table row) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   intro row rowMem
   have hlist : table.component.circuit.channelsWithGuarantees =
       [byteChannel.toRaw, stateChannel.toRaw] := by
@@ -838,7 +838,7 @@ theorem haltTable_typedState_of_component (table : Table (ZMod p))
          TypedInteraction.pushedIfValue stateChannel
            (haltRow table row).is_real
            (HaltChip.statePushedMessage (haltRow table row))] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
@@ -885,7 +885,7 @@ theorem syscallInstrsTable_typedState_of_component (table : Table (ZMod p))
            (syscallInstrsRow table row).is_real
            (SyscallInstrsChip.statePushedMessage
              (syscallInstrsRow table row))] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
@@ -927,7 +927,7 @@ theorem haltRow_typedProgram_of_component (table : Table (ZMod p))
     typedInteractionValuesWith table.component.operations programChannel (table.environment row) =
       [TypedInteraction.pulledIfValue programChannel (haltRow table row).is_real
         (HaltChip.programMessage (haltRow table row))] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
     component, Component.interactionsWith_eq]
@@ -963,7 +963,7 @@ theorem syscallInstrsRow_typedProgram_of_component (table : Table (ZMod p))
          (syscallInstrsRow table row).is_real
          (SyscallInstrsChip.programMessage
            (syscallInstrsRow table row))] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
     component, Component.interactionsWith_eq]
@@ -1036,7 +1036,7 @@ theorem haltTable_typedMemory_of_component (table : Table (ZMod p))
            (haltRow table row).is_real
            (HaltChip.memPushedMessage (haltRow table row)
              (haltRow table row).x11_memory 11 2)] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
@@ -1158,7 +1158,7 @@ theorem syscallInstrsRow_typedMemory_of_component (table : Table (ZMod p))
        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow table row)
          (syscallInstrsRow table row).op_c 2
          (syscallInstrsRow table row).op_c_memory.prev_value)] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map,
     component, Component.interactionsWith_eq]
@@ -1267,7 +1267,7 @@ theorem syscallInstrsTable_typedExit_of_component (table : Table (ZMod p))
            (syscallInstrsRow table row).is_halt
            (SyscallInstrsChip.exitMessage
              (syscallInstrsRow table row))] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
@@ -1307,7 +1307,7 @@ theorem haltTable_typedExit_of_component (table : Table (ZMod p))
          TypedInteraction.pushedIfValue exitChannel
            (1 - (haltRow table row).is_real)
            (⟨0⟩ : ExitMsg (ZMod p))] := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   unfold typedTableInteractionsWith
   apply List.flatMap_congr
   intro row rowMem
@@ -1349,7 +1349,7 @@ private theorem haltTable_fullGuarantees
     {row : Array (ZMod p)} (rowMem : row ∈ (haltTable witness).table) :
     (haltTable witness).component.operations.FullGuarantees
       ((haltTable witness).environment row) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have hlist : (haltTable witness).component.circuit.channelsWithGuarantees =
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
        exitChannel.toRaw] := by
@@ -1385,7 +1385,7 @@ private theorem haltRow_spec_of_facts
     (memoryGuarantees : (haltTable witness).ChannelGuarantees memoryChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ (haltTable witness).table) :
     HaltChip.Spec (haltRow (haltTable witness) row) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have hassump : (haltTable witness).component.Assumptions
       ((haltTable witness).environment row) := by
     rw [haltTable_component]
@@ -1451,7 +1451,7 @@ private theorem syscallInstrsTable_fullGuarantees
     (rowMem : row ∈ table.table) :
     table.component.operations.FullGuarantees
       (table.environment row) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have hlist : table.component.circuit.channelsWithGuarantees =
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
        exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw] := by
@@ -1496,7 +1496,7 @@ theorem syscallInstrsRow_spec_of_component
       memoryChannel.toRaw (table.environment row))
     (rowMem : row ∈ table.table) :
     SyscallInstrsChip.Spec (syscallInstrsRow table row) := by
-  haveI : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
+  have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have hassump : table.component.Assumptions
       (table.environment row) := by
     rw [component]

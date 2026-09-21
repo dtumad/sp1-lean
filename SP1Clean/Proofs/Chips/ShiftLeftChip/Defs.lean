@@ -1232,12 +1232,35 @@ set_option linter.unusedSectionVars false in
     ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
       = [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+-- `↓` (pre-order): the instance forwards `derivedElaborated`'s fields, and since Lean 4.33 `simp`
+-- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
+-- post-order lemma can see it; a pre-order lemma fires on the public form first.
+@[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 33 := rfl
 
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
+    (derivedElaborated (p := p)).localLength x = 33 := rfl
+
 /-- The completed ShiftLeft row, exposed without unfolding the folded witness circuit. -/
-@[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+@[circuit_norm ↓] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
+      (⟨input.state, input.adapter,
+        varFromOffset (Vector · 4) offset,
+        varFromOffset (Vector · 6) (offset + 4),
+        var { index := offset + 10 }, var { index := offset + 11 },
+        var { index := offset + 12 },
+        varFromOffset (Vector · 4) (offset + 13),
+        varFromOffset (Vector · 4) (offset + 17),
+        varFromOffset (Vector · 4) (offset + 21),
+        varFromOffset (Vector · 4) (offset + 25),
+        ⟨var { index := offset + 29 }⟩,
+        var { index := offset + 30 }, var { index := offset + 31 },
+        var { index := offset + 32 }⟩ : Var Columns (ZMod p)) := rfl
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma derivedOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    (derivedElaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
         varFromOffset (Vector · 4) offset,
         varFromOffset (Vector · 6) (offset + 4),

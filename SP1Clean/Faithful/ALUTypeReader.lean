@@ -117,7 +117,7 @@ theorem alutypereader_program_interactions_faithful_syntactic
       ProvablePair.instance (Gadgets.Equality.circuit field) programChannel.toRaw n inp
       List.not_mem_nil List.not_mem_nil
   simp only [Readers.ALUTypeReader.main, circuit_norm, hrac, heq,
-    SP1Clean.Channels.memoryChannel_eq_programChannel_false, if_false]
+    SP1Clean.Channels.memoryChannel_eq_programChannel_false]
   -- SC Phase 2a: `programChannel` is a `Channel` — unfold the kernel's `pulledIf` to match the raw
   -- `ChannelInteraction` form `circuit_norm` recovers, then rewrite.
   have hk := fun (g : Expression (ZMod p)) (m : SP1Clean.Channels.ProgramMsg (Expression (ZMod p))) =>
@@ -188,7 +188,7 @@ theorem alutypereader_memory_interactions_faithful_syntactic
       ProvablePair.instance (Gadgets.Equality.circuit field) memoryChannel.toRaw n inp
       List.not_mem_nil List.not_mem_nil
   simp only [Readers.ALUTypeReader.main, circuit_norm, hrac, heq,
-    SP1Clean.Channels.programChannel_eq_memoryChannel_false, if_false]
+    SP1Clean.Channels.programChannel_eq_memoryChannel_false]
   simp only [toAccess_pushIf_memory, toAccess_pullIf_memory]
   simp only [Extracted.ALUTypeReader.interactions, List.map_cons, List.map_nil,
     Extracted.Interaction.toAccess, Extracted.Dir.sign, List.filter_cons]

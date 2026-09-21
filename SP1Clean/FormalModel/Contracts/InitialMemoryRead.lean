@@ -15,6 +15,7 @@ open SP1Clean.Model.Core
 structure Inputs (F : Type) where
   bytes : Vector (InitialMemoryLookup.Inputs F) 8
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 variable {p : ℕ} [Fact p.Prime]
 

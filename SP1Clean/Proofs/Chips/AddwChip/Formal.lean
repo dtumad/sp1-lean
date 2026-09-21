@@ -209,6 +209,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
              input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
              input.adapter.op_a_0, 0, input.adapter.imm_c⟩ ],
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
       have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)
@@ -228,7 +229,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           GeneralFormalCircuit.toSubcircuit_interactions]
         simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           h_byte, h_program, h_memory, decide_false, decide_true, Bool.false_eq_true,
-          if_true, List.nil_append]
+          List.nil_append]
       · simp only [main, Readers.CPUState.circuit, Readers.CPUState.main,
           Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
           Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,

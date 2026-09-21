@@ -16,6 +16,7 @@ structure RegisterSnapshotRow (F : Type) where
   index : F
   value : Word F
 deriving ProvableStruct, DecidableEq
+provable_struct_eval_lemmas RegisterSnapshotRow
 
 namespace MemorySnapshot
 

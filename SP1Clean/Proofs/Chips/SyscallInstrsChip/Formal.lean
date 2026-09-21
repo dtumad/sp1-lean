@@ -294,15 +294,15 @@ theorem completeness :
     | exact h_mS.2.2.2.2.1 | exact h_mS.2.2.2.2.2)
   all_goals try (first
     | (intro hr
-       exact ⟨by rw [(h_res hr).1]; simp [syscallId, sub_eq_zero], (h_inv hr).1⟩)
+       exact ⟨by rw [(h_res hr).1]; simp [syscallId, sub_eq_zero]; rfl, (h_inv hr).1⟩)
     | (intro hr
-       exact ⟨by rw [(h_res hr).2.1]; simp [syscallId, sub_eq_zero], (h_inv hr).2.1⟩)
+       exact ⟨by rw [(h_res hr).2.1]; simp [syscallId, sub_eq_zero]; rfl, (h_inv hr).2.1⟩)
     | (intro hr
-       exact ⟨by rw [(h_res hr).2.2.1]; simp [syscallId, sub_eq_zero], (h_inv hr).2.2.1⟩)
+       exact ⟨by rw [(h_res hr).2.2.1]; simp [syscallId, sub_eq_zero]; rfl, (h_inv hr).2.2.1⟩)
     | (intro hr
-       exact ⟨by rw [(h_res hr).2.2.2.1]; simp [syscallId, sub_eq_zero], (h_inv hr).2.2.2.1⟩)
+       exact ⟨by rw [(h_res hr).2.2.2.1]; simp [syscallId, sub_eq_zero]; rfl, (h_inv hr).2.2.2.1⟩)
     | (intro hr
-       exact ⟨by rw [(h_res hr).2.2.2.2]; simp [syscallId, sub_eq_zero], (h_inv hr).2.2.2.2⟩)
+       exact ⟨by rw [(h_res hr).2.2.2.2]; simp [syscallId, sub_eq_zero]; rfl, (h_inv hr).2.2.2.2⟩)
     | exact h_dA
     | exact h_dS)
   all_goals try (first

@@ -219,19 +219,19 @@ lemma populateCtq_padding (k : ℕ) (hk : k < 8) :
       #v[0, 1, 0, 0, 0, 0, 0, 0] = 0 := by
     simp only [quotBits, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
       List.getElem_cons_succ]
-    rw [hb0, hc1, if_neg (by norm_num), if_neg (by norm_num), if_neg (by norm_num),
-      if_neg (by decide)]
+    rw [hb0, hc1]
+    norm_num
     decide
   have hqc : populateQuotComp (#v[0, 0, 0, 0] : Word (ZMod p)) #v[1, 0, 0, 0]
       #v[0, 1, 0, 0, 0, 0, 0, 0] = wordOfBits 0 := by
     simp only [populateQuotComp, quotCompBits, Vector.getElem_mk, List.getElem_toArray,
       List.getElem_cons_zero, List.getElem_cons_succ]
-    rw [if_neg (by norm_num), hqb]
+    simp only [if_neg (show ¬((0 : ZMod p) + 0 = 1) by norm_num), hqb]
   have hprod : ctqProd (#v[0, 0, 0, 0] : Word (ZMod p)) #v[1, 0, 0, 0]
       #v[0, 1, 0, 0, 0, 0, 0, 0] = 0 := by
     simp only [ctqProd, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
       List.getElem_cons_succ]
-    rw [if_neg (by norm_num), hqc, wordOfBits_toBitVec64]
+    simp only [if_neg (show ¬((0 : ZMod p) + 0 + 0 + 0 = 1) by norm_num), hqc, wordOfBits_toBitVec64]
     simp
   simp [populateCtq, ctqLimbNat, hprod]
 

@@ -17,6 +17,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
+omit [Fact (2 ^ 25 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem equality_empty (target : RawChannel (ZMod p))
     (input : Var (ProvablePair Word Word) (ZMod p)) (offset : ℕ) :

@@ -179,43 +179,6 @@ private theorem loadX0EvalVec4Components
   · exact (ProvableType.getElem_eval_fields env value 2 (by decide)).symm
   · exact (ProvableType.getElem_eval_fields env value 3 (by decide)).symm
 
-private theorem loadX0AddressEta {F : Type}
-    (cols : Extracted.AddressOperation F) :
-    ({ addr_operation := { value := cols.addr_operation.value }
-       top_two_limb_inv := cols.top_two_limb_inv } :
-      Extracted.AddressOperation F) = cols := by
-  cases cols with
-  | mk addr top =>
-    cases addr
-    rfl
-
-private theorem loadX0CpuEta {F : Type}
-    (cols : Extracted.CPUState F) :
-    ({ clk_high := cols.clk_high
-       clk_16_24 := cols.clk_16_24
-       clk_0_16 := cols.clk_0_16
-       pc := cols.pc } : Extracted.CPUState F) = cols := by
-  cases cols
-  rfl
-
-private theorem loadX0ITypeEta {F : Type}
-    (cols : Extracted.ITypeReader F) :
-    ({ op_a := cols.op_a
-       op_a_memory :=
-         { prev_value := cols.op_a_memory.prev_value
-           access_timestamp := cols.op_a_memory.access_timestamp }
-       op_a_0 := cols.op_a_0
-       op_b := cols.op_b
-       op_b_memory :=
-         { prev_value := cols.op_b_memory.prev_value
-           access_timestamp := cols.op_b_memory.access_timestamp }
-       op_c_imm := cols.op_c_imm } : Extracted.ITypeReader F) = cols := by
-  cases cols with
-  | mk opA opAMem opA0 opB opBMem opC =>
-    cases opAMem
-    cases opBMem
-    rfl
-
 theorem loadX0ChipColumnsOfInput_roundtrip {F : Type}
     (cols : LoadX0Chip.Columns F) :
     loadX0ChipColumnsOfInput
@@ -679,8 +642,7 @@ private theorem loadX0MemoryAssertionList
   repeat' rw [CanonicalReader.equalityAssertionList]
   simp only [loadX0MemoryAssertionValues,
     List.singleton_append]
-  rw [← ProvableStruct.eval_eq_eval, loadX0EvalMemoryInput]
-  simp only [ProvableType.eval_field, eval_sub, Expression.eval]
+  simp only [eval_sub, Expression.eval]
 
 private def loadX0ChipRustColumns
     (env : Environment (ZMod p))
@@ -945,36 +907,6 @@ private theorem loadX0ExtractedAssertionsDecompose
   simp only [loadX0Oracle_address_asserts_eq]
   simp only [loadX0Vec3Eta, loadX0Vec4Eta]
   simp only [loadX0ExtractedMeaning, List.Forall]
-  have hAddress := congrArg
-    (fun address =>
-      Extracted.AddressOperation.asserts
-        cols.adapter.op_b_memory.prev_value cols.adapter.op_c_imm
-        cols.offset_bit[0] cols.offset_bit[1] cols.offset_bit[2]
-        (cols.is_lb + cols.is_lbu + cols.is_lh + cols.is_lhu +
-          cols.is_lw + cols.is_lwu + cols.is_ld) address)
-    (loadX0AddressEta (cols := cols.address_operation))
-  have hCpu := congrArg
-    (fun state =>
-      Extracted.CPUState.asserts state
-        #v[cols.state.pc[0] + 4, cols.state.pc[1], cols.state.pc[2]]
-        8 (cols.is_lb + cols.is_lbu + cols.is_lh + cols.is_lhu +
-          cols.is_lw + cols.is_lwu + cols.is_ld))
-    (loadX0CpuEta (cols := cols.state))
-  have hIType := congrArg
-    (fun adapter =>
-      Extracted.ITypeReaderImmutable.asserts cols.state.clk_high
-        (cols.state.clk_0_16 + cols.state.clk_16_24 * 65536)
-        cols.state.pc
-        (29 * cols.is_lb + 32 * cols.is_lbu + 30 * cols.is_lh +
-          33 * cols.is_lhu + 31 * cols.is_lw + 34 * cols.is_lwu +
-          35 * cols.is_ld)
-        adapter
-        (cols.is_lb + cols.is_lbu + cols.is_lh + cols.is_lhu +
-          cols.is_lw + cols.is_lwu + cols.is_ld)
-        (cols.is_lb + cols.is_lbu + cols.is_lh + cols.is_lhu +
-          cols.is_lw + cols.is_lwu + cols.is_ld))
-    (loadX0ITypeEta (cols := cols.adapter))
-  rw [hAddress, hCpu, hIType]
   constructor
   · rintro ⟨hABC, hTail⟩
     rcases hABC with ⟨hAB, hC⟩
@@ -1454,20 +1386,20 @@ private theorem loadX0ProgramInteractionsFaithful
     Extracted.Interaction.toAccess,
     Extracted.Dir.sign, Opcode.ofNat]
   rw [show
-    -(ProvableStruct.eval env input).is_ld +
-        (-(ProvableStruct.eval env input).is_lwu +
-          (-(ProvableStruct.eval env input).is_lw +
-            (-(ProvableStruct.eval env input).is_lhu +
-              (-(ProvableStruct.eval env input).is_lh +
-                (-(ProvableStruct.eval env input).is_lbu +
-                  -(ProvableStruct.eval env input).is_lb))))) =
-        -((ProvableStruct.eval env input).is_ld +
-          (ProvableStruct.eval env input).is_lwu +
-          (ProvableStruct.eval env input).is_lw +
-          (ProvableStruct.eval env input).is_lhu +
-          (ProvableStruct.eval env input).is_lh +
-          (ProvableStruct.eval env input).is_lbu +
-          (ProvableStruct.eval env input).is_lb) by
+    -Expression.eval env input.is_ld +
+        (-Expression.eval env input.is_lwu +
+          (-Expression.eval env input.is_lw +
+            (-Expression.eval env input.is_lhu +
+              (-Expression.eval env input.is_lh +
+                (-Expression.eval env input.is_lbu +
+                  -Expression.eval env input.is_lb))))) =
+        -(Expression.eval env input.is_ld +
+          Expression.eval env input.is_lwu +
+          Expression.eval env input.is_lw +
+          Expression.eval env input.is_lhu +
+          Expression.eval env input.is_lh +
+          Expression.eval env input.is_lbu +
+          Expression.eval env input.is_lb) by
     ring_nf]
   rw [signedVal_neg hp2, neg_neg]
   congr 1
@@ -1547,20 +1479,20 @@ private theorem loadX0MemoryInteractionsFaithful
     Extracted.Interaction.toAccess,
     Extracted.Dir.sign]
   have hGateNeg :
-      -(ProvableStruct.eval env input).is_ld +
-          (-(ProvableStruct.eval env input).is_lwu +
-            (-(ProvableStruct.eval env input).is_lw +
-              (-(ProvableStruct.eval env input).is_lhu +
-                (-(ProvableStruct.eval env input).is_lh +
-                  (-(ProvableStruct.eval env input).is_lbu +
-                    -(ProvableStruct.eval env input).is_lb))))) =
-        -((ProvableStruct.eval env input).is_lb +
-          (ProvableStruct.eval env input).is_lbu +
-          (ProvableStruct.eval env input).is_lh +
-          (ProvableStruct.eval env input).is_lhu +
-          (ProvableStruct.eval env input).is_lw +
-          (ProvableStruct.eval env input).is_lwu +
-          (ProvableStruct.eval env input).is_ld) := by
+      -Expression.eval env input.is_ld +
+          (-Expression.eval env input.is_lwu +
+            (-Expression.eval env input.is_lw +
+              (-Expression.eval env input.is_lhu +
+                (-Expression.eval env input.is_lh +
+                  (-Expression.eval env input.is_lbu +
+                    -Expression.eval env input.is_lb))))) =
+        -(Expression.eval env input.is_lb +
+          Expression.eval env input.is_lbu +
+          Expression.eval env input.is_lh +
+          Expression.eval env input.is_lhu +
+          Expression.eval env input.is_lw +
+          Expression.eval env input.is_lwu +
+          Expression.eval env input.is_ld) := by
     ring_nf
   simp only [hGateNeg, signedVal_neg hp2, neg_neg]
   exact loadX0PermMemoryBlocks [_, _] [_, _, _, _]

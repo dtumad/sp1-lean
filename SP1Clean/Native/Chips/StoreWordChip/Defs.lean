@@ -44,6 +44,7 @@ structure Columns (F : Type) where
   store_value : Word F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The operand reads + threaded reader column blocks. `op_b_val` is the rs1 base-address value, `op_c_imm`
 the immediate; `state`/`adapter`/`memory_access` are the committed column blocks; `offset_bit` is bit 2 of
@@ -57,6 +58,7 @@ structure Inputs (F : Type) where
   offset_bit : F
   store_value : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
 @[reducible] def Inputs.op_c_imm {F} (i : Inputs F) : Word F := i.adapter.op_c_imm
@@ -117,7 +119,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   localLength _ := 3 + 1
   output input i0 :=
     ⟨input.state, input.adapter,
-      ⟨varFromOffset Extracted.AddrAddOperation i0, var ⟨i0 + 3⟩⟩,
+      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
       input.memory_access, input.offset_bit, input.store_value, input.is_real⟩
   -- `programChannel` joins the structural `RowSpec` propagated from `ITypeReaderImmutable`'s program **pull** (W11 flip).
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
@@ -127,7 +129,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.offset_bit, input.store_value, input.is_real⟩ :
         Var Columns (ZMod p)) := rfl
 

@@ -251,10 +251,8 @@ private lemma overflow_limbs_64 {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
   by_cases hPb : B[0] = 0 ∧ B[1] = 0 ∧ B[2] = 0 ∧ B[3] = (32768 : ZMod p)
   · by_cases hPc : C[0] = (65535 : ZMod p) ∧ C[1] = 65535 ∧ C[2] = 65535 ∧ C[3] = 65535
     · exact ⟨hPb, hPc⟩
-    · rw [if_pos hPb, if_neg hPc, one_mul] at hov
-      exact absurd hov zero_ne_one
-  · rw [if_neg hPb, zero_mul] at hov
-    exact absurd hov zero_ne_one
+    · simp [hPb, hPc] at hov
+  · simp [hPb] at hov
 
 /-- **E105–E119, 64-bit operand pin**: on a 64-bit signed class, `is_overflow = 1` forces
 `b = i64::MIN` and `c = -1` as 64-bit values. -/
@@ -324,10 +322,8 @@ private lemma overflow_limbs_word {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
   by_cases hPb : B[0] = 0 ∧ B[1] = (32768 : ZMod p)
   · by_cases hPc : C[0] = (65535 : ZMod p) ∧ C[1] = 65535
     · exact ⟨hPb, hPc⟩
-    · rw [if_pos hPb, if_neg hPc, one_mul] at hov
-      exact absurd hov zero_ne_one
-  · rw [if_neg hPb, zero_mul] at hov
-    exact absurd hov zero_ne_one
+    · simp [hPb, hPc] at hov
+  · simp [hPb] at hov
 
 /-- **E105–E119, W-variant operand pin**: on the signed-word class, `is_overflow = 1` forces
 `b as u32 = i32::MIN` and `c as u32 = -1`. -/

@@ -22,6 +22,7 @@ structure Inputs (F : Type) where
   addr2 : F
   new_value : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The call-facing record excludes the internal predecessor timestamp witness. -/
 structure Message (F : Type) where
@@ -33,6 +34,7 @@ structure Message (F : Type) where
   previous : Word F
   current : Word F
 deriving ProvableStruct
+provable_struct_eval_lemmas Message
 
 def channel {p : ℕ} [Fact p.Prime] : Channel (ZMod p) Message where
   name := "sp1.native.host_ram_access"

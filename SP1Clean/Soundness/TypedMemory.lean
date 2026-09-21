@@ -293,8 +293,8 @@ theorem registerOperandPullShape_of_circuit (kind : ChipKind p)
     (shape : @CircuitRegisterOperandPullShape p _ kind.Inputs kind.Cols
       kind.provableInputs kind.provableCols circuit kind.view selector kind.advanceReady) :
     RegisterOperandPullShape ⟨id, kind, circuit, spec_eq⟩ := by
-  letI : ProvableType kind.Inputs := kind.provableInputs
-  letI : ProvableType kind.Cols := kind.provableCols
+  let : ProvableType kind.Inputs := kind.provableInputs
+  let : ProvableType kind.Cols := kind.provableCols
   constructor
   · intro data physical program state
     dsimp only
@@ -323,8 +323,8 @@ theorem registerOperandPullShape_of_circuitContract (kind : ChipKind p)
     (contract : @CircuitRegisterOperandPullContract p _ kind.Inputs kind.Cols
       kind.provableInputs kind.provableCols circuit kind.view selector) :
     RegisterOperandPullShape ⟨id, kind, circuit, spec_eq⟩ := by
-  letI : ProvableType kind.Inputs := kind.provableInputs
-  letI : ProvableType kind.Cols := kind.provableCols
+  let : ProvableType kind.Inputs := kind.provableInputs
+  let : ProvableType kind.Cols := kind.provableCols
   apply registerOperandPullShape_of_circuit kind circuit spec_eq id selector
     selector_eq
   exact circuitRegisterOperandPullShape_of_exposure circuit kind.view selector

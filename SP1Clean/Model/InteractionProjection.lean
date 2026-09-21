@@ -92,7 +92,7 @@ lemma signedVal_neg_is_real (hp : 2 < p) {is_real : ZMod p} (h : is_real = 0 ∨
     signedVal (- is_real) = -(is_real.val : ℤ) := by
   rcases h with h | h <;> subst h
   · simp [signedVal, ZMod.val_zero]
-  · haveI : Fact (1 < p) := ⟨by omega⟩
+  · have : Fact (1 < p) := ⟨by omega⟩
     have hv : (-1 : ZMod p).val = p - 1 := by
       simpa [ZMod.val_one] using ZMod.val_neg_of_ne_zero (1 : ZMod p)
     simp only [signedVal, hv, ZMod.val_one]
@@ -114,7 +114,7 @@ lemma signedVal_neg [Fact p.Prime] (hp : 2 < p) (x : ZMod p) :
   · subst hx; simp [signedVal, ZMod.val_zero]
   · have hxlt : x.val < p := ZMod.val_lt x
     have hxpos : 0 < x.val := ZMod.val_pos.mpr hx
-    haveI : NeZero x := ⟨hx⟩
+    have : NeZero x := ⟨hx⟩
     have hvneg : (-x).val = p - x.val := ZMod.val_neg_of_ne_zero x
     have hne : 2 * x.val ≠ p := fun he => hodd ⟨x.val, he.symm⟩
     unfold signedVal
@@ -191,6 +191,7 @@ theorem interactionToRustOrientedAccess_eval (env : Environment (ZMod p))
   simp only [Interaction.toRustOrientedAccess,
     AbstractInteraction.toRustOrientedAccess, AbstractInteraction.eval,
     Interaction.toAccess, AbstractInteraction.toAccess, Vector.toList]
+  rfl
 
 omit [NeZero p] in
 /-- The `toAccess`-image of **any** channel interaction: bus kind and table name from the channel
@@ -234,10 +235,10 @@ private lemma toList_word {α : Type} (w : Vector α 4) :
 private lemma stateMsg_toList {T : Type} (msg : StateMsg T) :
     (toElements msg).toList =
       [msg.clk_high, msg.clk_low, msg.pc0, msg.pc1, msg.pc2] := by
-  change (#v[msg.clk_high] ++ (#v[msg.clk_low] ++ (#v[msg.pc0] ++ (#v[msg.pc1] ++
-    (#v[msg.pc2] ++ (#v[] : Vector T 0)))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, List.append_nil, List.cons_append,
-    List.nil_append]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append]
+  rfl
 
 omit [NeZero p] in
 /-! ## The evaluated gated pair, generically
@@ -313,11 +314,10 @@ private lemma memoryMsg_toList {T : Type} (msg : MemoryMsg T) :
     (toElements msg).toList =
       [msg.clk_high, msg.clk_low, msg.addr0, msg.addr1, msg.addr2,
        msg.value[0], msg.value[1], msg.value[2], msg.value[3]] := by
-  change (#v[msg.clk_high] ++ (#v[msg.clk_low] ++ (#v[msg.addr0] ++ (#v[msg.addr1] ++
-    (#v[msg.addr2] ++ (msg.value ++ (#v[] : Vector T 0))))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, List.append_nil,
-    List.cons_append, List.nil_append]
-  rw [toList_word]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append, toList_word]
+  rfl
 
 /-- `(toElements msg).toList` of a `ProgramMsg` is its sixteen fields (the `op_b`/`op_c` words flattening
 to their four `getElem`s each), in field order. See the `combinedSize'` note. -/
@@ -327,11 +327,11 @@ private lemma programMsg_toList {T : Type} (msg : ProgramMsg T) :
        msg.op_b[0], msg.op_b[1], msg.op_b[2], msg.op_b[3],
        msg.op_c[0], msg.op_c[1], msg.op_c[2], msg.op_c[3],
        msg.op_a_0, msg.imm_b, msg.imm_c] := by
-  change (#v[msg.pc0] ++ (#v[msg.pc1] ++ (#v[msg.pc2] ++ (#v[msg.opcode] ++ (#v[msg.op_a] ++
-    (msg.op_b ++ (msg.op_c ++ (#v[msg.op_a_0] ++ (#v[msg.imm_b] ++ (#v[msg.imm_c] ++
-    (#v[] : Vector T 0))))))))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, toList_word,
-    List.append_nil, List.cons_append, List.nil_append]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append,
+    List.cons_append, List.nil_append, toList_word]
+  rfl
 
 omit [NeZero p] in
 /-- **Kernel of the Memory "emitted = projection".** The `toAccess`-image of a pushed `memoryChannel`
@@ -423,10 +423,10 @@ open SP1Clean.Channels (byteChannel)
 note. -/
 private lemma byteRow_toList {T : Type} (msg : ByteRow T) :
     (toElements msg).toList = [msg.opcode, msg.a, msg.b, msg.c] := by
-  change (#v[msg.opcode] ++ (#v[msg.a] ++ (#v[msg.b] ++ (#v[msg.c] ++
-    (#v[] : Vector T 0))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, List.append_nil, List.cons_append,
-    List.nil_append]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append]
+  rfl
 
 omit [NeZero p] in
 /-- **Kernel of the Byte provider projection.** The `toAccess` image of a gated
@@ -473,10 +473,11 @@ private lemma syscallMsg_toList {T : Type} (msg : SyscallMsg T) :
     (toElements msg).toList =
       [msg.clk_high, msg.clk_low, msg.syscall_id,
        msg.arg1[0], msg.arg1[1], msg.arg1[2], msg.arg2[0], msg.arg2[1], msg.arg2[2]] := by
-  change (#v[msg.clk_high] ++ (#v[msg.clk_low] ++ (#v[msg.syscall_id] ++
-    (msg.arg1 ++ (msg.arg2 ++ (#v[] : Vector T 0)))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, List.cons_append,
-    List.nil_append, Vector.append_empty, vec3_toList]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append,
+    List.cons_append, List.nil_append, vec3_toList]
+  rfl
 
 omit [NeZero p] in
 /-- **Kernel of the syscall hand-off.** SP1's own syscall bus, at the native push: bus `.Syscall`,

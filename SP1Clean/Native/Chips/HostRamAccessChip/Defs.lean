@@ -51,6 +51,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
 @[local circuit_norm] private theorem address_guarantees :
     (AddressOperation.circuit (p := p)).channelsWithGuarantees = [byteChannel.toRaw] := rfl
 
+omit [Fact (2 ^ 25 < p)] in
 set_option linter.unusedSectionVars false in
 @[local circuit_norm] private theorem range_guarantees (n : ℕ) (bound : 2 ^ n < p) :
     (Gadgets.ToBits.rangeCheck n bound).channelsWithGuarantees = [] := rfl

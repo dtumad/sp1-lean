@@ -124,7 +124,9 @@ private theorem mulChipLocals_flag {F : Type}
     (mulChipLocals cols)[i] =
       #v[cols.is_mul, cols.is_mulh, cols.is_mulhu,
         cols.is_mulhsu, cols.is_mulw][i] := by
-  interval_cases i <;> simp [mulChipLocals]
+  unfold mulChipLocals
+  rw [Vector.getElem_cast, Vector.getElem_append_left (by omega),
+    Vector.getElem_append_left hi]
 
 private theorem mulChipOperationOfLocals_roundtrip {F : Type}
     (cols : MulChip.Columns F) :
@@ -144,9 +146,13 @@ private theorem mulChipAOfLocals_roundtrip {F : Type}
     mulChipAOfLocals (mulChipLocals cols) = cols.a := by
   apply Vector.ext
   intro i hi
-  interval_cases i <;>
-    simp [mulChipAOfLocals, mulChipLocals,
-      show size Extracted.MulOperation = 45 by rfl]
+  unfold mulChipAOfLocals mulChipLocals
+  rw [Vector.getElem_cast, Vector.getElem_drop, Vector.getElem_cast,
+    Vector.getElem_append_right (by have : size Extracted.MulOperation = 45 := rfl; omega)
+      (by have : size Extracted.MulOperation = 45 := rfl; omega)]
+  congr 1
+  have : size Extracted.MulOperation = 45 := rfl
+  omega
 
 theorem mulChipColumnsOfInput_roundtrip {F : Type} [Add F]
     (cols : MulChip.Columns F) :
@@ -1603,28 +1609,10 @@ theorem mulOperation_assertions_backward
   have hsum' := bool_of_mul_pred hsum
   have hr' :
       Expression.eval env input.is_real *
-        (Expression.eval env input.is_real - 1) = 0 := by
-    have h := congrArg (fun value => value.is_real)
-      (ProvableStruct.eval_eq_eval env input)
-    rw [eval_mulOperationInputs] at h
-    have heval :
-        Expression.eval env input.is_real =
-          (ProvableStruct.eval env input).is_real := by
-      simpa only [ProvableType.eval_field] using h
-    rw [heval]
-    exact hr
+        (Expression.eval env input.is_real - 1) = 0 := hr
   have hw0' :
       Expression.eval env input.is_mulw *
-        (Expression.eval env input.is_mulw - 1) = 0 := by
-    have h := congrArg (fun value => value.is_mulw)
-      (ProvableStruct.eval_eq_eval env input)
-    rw [eval_mulOperationInputs] at h
-    have heval :
-        Expression.eval env input.is_mulw =
-          (ProvableStruct.eval env input).is_mulw := by
-      simpa only [ProvableType.eval_field] using h
-    rw [heval]
-    exact hw0
+        (Expression.eval env input.is_mulw - 1) = 0 := hw0
   have hpmsb' :
       (Eval.eval env input.cols).product_msb.msb *
         ((Eval.eval env input.cols).product_msb.msb - 1) = 0 := by

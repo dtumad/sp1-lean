@@ -167,7 +167,7 @@ theorem completeness :
     GeneralFormalCircuit.Completeness (ZMod p) main ProverAssumptions (fun _ _ _ => True) := by
   circuit_proof_start
   simp only [Inputs.op_b_val, Inputs.op_c_imm] at h_assumptions ⊢
-  haveI : AddGroup (id (ZMod p)) := inferInstanceAs (AddGroup (ZMod p))
+  have : AddGroup (id (ZMod p)) := inferInstanceAs (AddGroup (ZMod p))
   have ha := h_assumptions.1
   have hp1 := h_assumptions.2
   have hb := hp1.1
@@ -389,9 +389,6 @@ private theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (o
       Expression.eval] at hshallow
     have h_bool : Expression.eval env input.is_real = 0 ∨
         Expression.eval env input.is_real = 1 := bool_of_mul_pred hshallow
-    have h_bool' : (ProvableStruct.eval env input).is_real = 0 ∨
-        (ProvableStruct.eval env input).is_real = 1 := by
-      simpa only [circuit_norm] using h_bool
     rw [Operations.inChannelsOrRequirements_iff_forall_mem]
     intro interaction h_interaction
     simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
@@ -406,7 +403,7 @@ private theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (o
       rw [ChannelInteraction.toRaw_requirements] <;>
       intro h1 h0 <;>
       simp only [circuit_norm] at h1 h0 <;>
-      exact off_gate_vacuous h_bool' h1 h0
+      exact off_gate_vacuous h_bool h1 h0
 
 /-- The `StoreByte` chip row as a `GeneralFormalCircuit`; output is the extracted `Columns`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
@@ -436,6 +433,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
              input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c_imm,
              input.adapter.op_a_0, 0, 1⟩ ],
     exposedChannels_eq := by
+      preserve_tactic_target
       intro input offset
       have h_byte := Channels.byteChannel_toRaw_ne_stateChannel (p := p)
       have h_program := Channels.programChannel_toRaw_ne_stateChannel (p := p)
@@ -456,13 +454,13 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           GeneralFormalCircuit.toSubcircuit_interactions]
       · simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           h_byte, h_program, h_memory, decide_false, decide_true, Bool.false_eq_true,
-          if_true, List.nil_append]
+          List.nil_append]
       · simp [circuit_norm, Gadgets.Equality.main, exposedMemoryInteractions]
       · simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           Channels.byteChannel_eq_programChannel_false,
           Channels.stateChannel_eq_programChannel_false,
           Channels.memoryChannel_eq_programChannel_false,
-          decide_false, decide_true, Bool.false_eq_true, if_true, List.nil_append] }
+          decide_false, decide_true, Bool.false_eq_true, List.nil_append] }
 
 /-- Folded circuit projections used by the whole-chip row codec. -/
 @[circuit_norm] theorem circuit_main_eq : (circuit (p := p)).main = main := rfl

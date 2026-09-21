@@ -897,39 +897,39 @@ theorem aF_eval (env : ProverEnvironment (ZMod p))
     rw [U16MSBOperation.populate_msbF_eval _ _ (by rw [hlo1]; exact hlo1v), hlo1]
   interval_cases j <;> by_cases hf0 : (hintFlags env.hint)[0] = 1
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, if_true, hbs,
+      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega)] <;>
       norm_num [← hkeq]
   · by_cases hf1 : (hintFlags env.hint)[1] = 1
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, if_true, if_false, hbs]
+    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, hbs]
       split_ifs <;> first | omega | norm_num [hlr 0 (by omega), hlr 1 (by omega)]
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, if_false]
+    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, if_true, hbs,
+      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega)] <;>
       norm_num [← hkeq]
   · by_cases hf1 : (hintFlags env.hint)[1] = 1
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, if_true, if_false, hbs]
+    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
       rw [hlo1]
       split_ifs <;> first | omega | norm_num [hlr 0 (by omega), hlr 1 (by omega)]
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, if_false]
+    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, if_true, hbs,
+      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega), hlr 2 (by omega)] <;>
       norm_num [← hkeq]
   · by_cases hf1 : (hintFlags env.hint)[1] = 1
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, if_true, if_false, hmsb]
+    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, hmsb]
       split_ifs <;> first | omega | norm_num
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, if_false]
+    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, if_true, hbs,
+      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega), hlr 2 (by omega),
         hlr 3 (by omega)] <;>
       norm_num [← hkeq]
   · by_cases hf1 : (hintFlags env.hint)[1] = 1
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, if_true, if_false, hmsb]
+    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, hmsb]
       split_ifs <;> first | omega | norm_num
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, if_false]
+    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
 
 /-- Evaluating the result word is `populateA`. -/
 theorem populateAIR_eval (env : ProverEnvironment (ZMod p))

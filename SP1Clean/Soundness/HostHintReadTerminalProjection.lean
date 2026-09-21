@@ -32,10 +32,12 @@ private theorem projected_table
     LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) 2 =
       (witness.tables[57]'(bound witness)).withComponent HaltPaddingChip.original := by
   unfold LocalCore.systemTable HostLocalCore.localWitness
-  simp only [EnsembleWitness.project, EnsembleWitness.ofTables_tables, List.getElem_ofFn]
-  change (((witness.tables.set 57 _) ++ [_])[57]'_).withComponent _ = _
-  rw [List.getElem_append_left (by simpa only [List.length_set] using bound witness),
-    List.getElem_set_self]
+  simp only [EnsembleWitness.project, EnsembleWitness.ofTables_tables, List.getElem_ofFn,
+    HostHintQueueBoundary.expanded_tables]
+  rw [List.getElem_append_left (by
+      change 57 < _
+      simpa only [List.length_set] using bound witness)]
+  simp only [show (55 + ((2 : Fin 4) : ℕ) : ℕ) = 57 from rfl, List.getElem_set_self]
   rfl
 
 /-- The original carrier contains no active legacy HALT row. -/
@@ -50,7 +52,7 @@ theorem legacy_rows_nil
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   rw [projected_table] at physicalMem real
   have checked := constraints _ (witness.mem_allTables_of_mem_tables (List.getElem_mem _)) physical physicalMem
-  rw [HaltPadding.table_component] at checked
+  rw [HaltPadding.table_component witness] at checked
   have zero := ((HaltPaddingChip.constraints _).mp checked).2
   change (valueFromOffset HaltChip.Inputs 0 _).is_real = 0 at zero
   have same : (haltRow ((witness.tables[57]'(bound witness)).withComponent HaltPaddingChip.original)

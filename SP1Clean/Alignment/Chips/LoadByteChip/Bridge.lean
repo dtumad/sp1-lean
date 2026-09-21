@@ -153,7 +153,6 @@ theorem correct_load_byte_native
   simp [spec_lb, sp1_lb, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
     LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread, hext]
-  rfl
 
 /-- End-to-end: from chip + decode + register/PC reads + selected memory byte, Sail's `LB`/`LBU`
 agrees with the SP1 chip emulation. -/

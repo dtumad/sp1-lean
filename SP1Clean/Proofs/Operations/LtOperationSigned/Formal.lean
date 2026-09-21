@@ -63,6 +63,7 @@ private lemma vec4_eta {α : Type} (v : Vector α 4) : #v[v[0], v[1], v[2], v[3]
 private lemma vec2_eta {α : Type} (v : Vector α 2) : #v[v[0], v[1]] = v := by
   apply Vector.ext; intro i hi; interval_cases i <;> rfl
 
+omit [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- `(0 : ZMod p) ≠ 1`. -/
 private lemma zero_ne_one' : (0 : ZMod p) ≠ 1 := zero_ne_one

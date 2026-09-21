@@ -84,6 +84,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   output _ _ := ()
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw]
   channelsLawful := by
+    preserve_tactic_target
     simp only [circuit_norm, main, pulledMsg, pushedMsg]
 
 set_option linter.unusedSectionVars false in

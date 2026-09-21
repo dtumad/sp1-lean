@@ -56,6 +56,7 @@ structure Inputs (F : Type) where
   is_real : F
   clk_target : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract: the two timestamp byte bounds, **`is_real`-gated** — the 16-bit `Range` on
 `diff_low_limb` and the `U8Range` (`< 256`) on the scaled high part. Soundness *derives* them from the
@@ -79,6 +80,7 @@ structure Inputs (F : Type) where
   is_real : F
   clk_target : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract: just the composed timestamp sub-assertion's two byte bounds (over
 `cols.access_timestamp`). SP1's register-access read imposes no local well-formedness on `prev_value`
@@ -113,6 +115,7 @@ structure Inputs (F : Type) where
   wv2 : F
   wv3 : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract: the four `op_a_0` zeroing gates
 (`op_a_0 * wv_i = 0`, the `rd = x0 ⇒ write 0` rule) and the `op_a_0` binary fact — genuine local
@@ -174,6 +177,7 @@ structure Inputs (F : Type) where
   wv2 : F
   wv3 : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract for the ALU-type adapter. The `RTypeReader` content (the four `op_a_0` zeroing
 gates, the `op_a_0` binary fact, and the op_a/op_b timestamp byte bounds, `is_real`-gated) **plus** the
@@ -237,6 +241,7 @@ structure Inputs (F : Type) where
   pc : fields 3 F
   opcode : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract for the immutable ALU-type adapter. The four `op_a_0` zeroing gates pin the **read**
 value of `x0` to `0` (`op_a_0 * op_a_memory.prev_value_i = 0`, vs the mutable reader's `op_a_0 * wv_i = 0`),
@@ -303,6 +308,7 @@ structure Inputs (F : Type) where
   wv2 : F
   wv3 : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract for the I-type adapter (op_a a destination write). The four `op_a_0` zeroing gates
 (`op_a_0 * wv_i = 0`, the `rd = x0 ⇒ write 0` rule), the Program-row-derived `op_a_0` binary fact on
@@ -364,6 +370,7 @@ structure Inputs (F : Type) where
   pc : fields 3 F
   opcode : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract for the immutable I-type adapter. The four `op_a_0` zeroing gates pin the **read**
 value of `x0` to `0` (`op_a_0 * op_a_memory.prev_value_i = 0`), the Program-row-derived `op_a_0`
@@ -418,6 +425,7 @@ structure Inputs (F : Type) where
   wv2 : F
   wv3 : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract for the J-type adapter (op_a a destination write, op_b/op_c immediates). The four
 `op_a_0` zeroing gates (`op_a_0 * wv_i = 0`, the `rd = x0 ⇒ write 0` rule), the Program-row-derived
@@ -477,6 +485,7 @@ structure Inputs (F : Type) where
   clk_inc : F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Semantic contract: the two clock byte-range bounds, **`is_real`-gated** — exactly the content of
 `Faithful/CPUState.lean`'s `cpustate_constraints_faithful` (under `is_real = 1`). Soundness *derives* these

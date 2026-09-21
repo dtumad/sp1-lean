@@ -46,6 +46,7 @@ def circuit (empty : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
       HeadSpec] at *
     all_goals simpa only [h_input] using h_assumptions
   requirementsChannelsLawful := by
+    preserve_tactic_target
     cases empty
     all_goals
       intro input offset

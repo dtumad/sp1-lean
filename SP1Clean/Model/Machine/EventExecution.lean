@@ -384,7 +384,7 @@ theorem prefixTransitions_valid {handler : SyscallHandler} {program : GuestProgr
   | nil => exact .nil _
   | @step source steps direction tail ih =>
       refine .cons ⟨direction.event, direction.target⟩ direction.valid ?_
-      simpa only [eventSystem, PFunctor.DynSystem.update_mk'] using ih
+      exact ih
 
 /-- A PolyFun prefix converted to the proof-free carrier remains valid. -/
 theorem EventExecutionTrace.ofPrefix_valid {handler : SyscallHandler} {program : GuestProgram}
@@ -401,8 +401,7 @@ theorem stateAfterTransitions_prefixTransitions {handler : SyscallHandler}
   induction path with
   | nil => rfl
   | @step source steps direction tail ih =>
-      change stateAfterTransitions direction.target (prefixTransitions tail) = tail.last
-      simpa only [eventSystem, PFunctor.DynSystem.update_mk'] using ih
+      exact ih
 
 /-- Forgetting proof fields preserves the event transcript. -/
 theorem events_prefixTransitions {handler : SyscallHandler}
@@ -435,7 +434,7 @@ theorem EventExecutionTrace.ofPrefix_events {handler : SyscallHandler}
     (valid : execution.Valid handler program) :
     EventExecutionTrace.ofPrefix (execution.toPrefix valid) = execution := by
   cases execution
-  simp [EventExecutionTrace.ofPrefix, EventExecutionTrace.toPrefix]
+  exact congrArg (EventExecutionTrace.mk _) valid.prefixTransitions_toPrefix
 
 /-- Advance an interaction clock through an event transcript. -/
 def clockAfterEvents (initialClock : ℕ) (events : List ExecutionEvent) : ℕ :=

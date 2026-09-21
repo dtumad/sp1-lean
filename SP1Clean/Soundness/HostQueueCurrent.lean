@@ -311,8 +311,9 @@ theorem length_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFina
     (HostQueueHistory.records_of_witness (HostHintQueueBoundary.expanded witness) _ authentication balance _ member)
   obtain ⟨_, _, _, _, applied, _⟩ := advance store current.host.io.hints extension binding
   by_contra different
-  simp only [HostQueueHistory.event, HintQueue.Event.apply?, HostIO.hintLength] at applied
-  simp only [HostIO.hintLength] at different
-  simp only [if_neg different, reduceCtorEq] at applied
+  simp only [HostQueueHistory.event, HintQueue.Event.apply?] at applied
+  rcases ite_eq_iff.mp applied with ⟨hc, _⟩ | ⟨_, h⟩
+  · exact different hc
+  · exact Option.some_ne_none _ h.symm
 
 end SP1Clean.Soundness.HostQueueCurrent

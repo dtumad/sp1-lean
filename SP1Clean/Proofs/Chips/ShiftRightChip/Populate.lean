@@ -1202,28 +1202,28 @@ theorem aF_eval (env : ProverEnvironment (ZMod p))
     simp [vPowersInv]
   interval_cases j <;> by_cases h64 : (hintFlags env.hint)[0] + (hintFlags env.hint)[1] = 1
   · interval_cases k <;>
-      (simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, if_true, hbs,
+      (simp only [aF, populateA, circuit_norm, hF0, hF1, h64, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega), hlr 2 (by omega),
         hlr 3 (by omega), hfillE, hvinv]
        norm_num [← hkeq])
   · by_cases hw : (hintFlags env.hint)[2] + (hintFlags env.hint)[3] = 1
-    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw, if_true, if_false,
+    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw,
         hbs, hlr 0 (by omega), hlr 1 (by omega), hfillE, hvinv]
       split_ifs
       all_goals first | rfl | omega
-    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw, if_false]
+    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw]
   · interval_cases k <;>
-      (simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, if_true, hbs,
+      (simp only [aF, populateA, circuit_norm, hF0, hF1, h64, hbs,
         Witgen.FExpr.evalList, hlr 1 (by omega), hlr 2 (by omega),
         hlr 3 (by omega), hfillE, hmfE, hvinv]
        norm_num [← hkeq])
   · by_cases hw : (hintFlags env.hint)[2] + (hintFlags env.hint)[3] = 1
-    · simp only [aF, loF1, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw, if_true,
-        if_false, hbs, hlr 1 (by omega), hfillE, hmfE, hvinv]
+    · simp only [aF, loF1, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw,
+        hbs, hlr 1 (by omega), hfillE, hmfE, hvinv]
       split_ifs <;> first | rfl | omega
-    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw, if_false]
+    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw]
   · interval_cases k <;>
-      (simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, if_true, hbs,
+      (simp only [aF, populateA, circuit_norm, hF0, hF1, h64, hbs,
         Witgen.FExpr.evalList, hlr 2 (by omega),
         hlr 3 (by omega), hfillE, hmfE, hvinv]
        norm_num [← hkeq])
@@ -1254,12 +1254,12 @@ theorem aF_eval (env : ProverEnvironment (ZMod p))
                 else bMsb vb (hintFlags env.hint) * 65535) := by
         rw [U16MSBOperation.populate_msbF_eval { env := env } _
           (by rw [hloE, ← hplace]; exact hval1), hloE]
-      simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw, if_true, if_false,
-        hbs, hmsbE, hvinv]
+      simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw,
+        hmsbE, hvinv]
       split_ifs <;> first | rfl | omega
-    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw, if_false]
+    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw]
   · interval_cases k <;>
-      (simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, if_true, hbs,
+      (simp only [aF, populateA, circuit_norm, hF0, hF1, h64, hbs,
         Witgen.FExpr.evalList,
         hlr 3 (by omega), hfillE, hmfE, hvinv]
        norm_num [← hkeq])
@@ -1290,10 +1290,10 @@ theorem aF_eval (env : ProverEnvironment (ZMod p))
                 else bMsb vb (hintFlags env.hint) * 65535) := by
         rw [U16MSBOperation.populate_msbF_eval { env := env } _
           (by rw [hloE, ← hplace]; exact hval1), hloE]
-      simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw, if_true, if_false,
-        hbs, hmsbE, hvinv]
+      simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw,
+        hmsbE, hvinv]
       split_ifs <;> first | rfl | omega
-    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw, if_false]
+    · simp only [aF, populateA, circuit_norm, hF0, hF1, hF2, hF3, h64, hw]
 
 /-- Evaluating the result word is `populateA`. -/
 theorem populateAIR_eval (env : ProverEnvironment (ZMod p))

@@ -197,6 +197,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       [ exitChannel.pushedIf input.is_real (exitMsg input),
         exitChannel.pushedIf (1 - input.is_real) exitPaddingMsg ]
   exposedChannels_eq := by
+    preserve_tactic_target
     intro input offset
     unfold Operations.ExposedChannelsLawful
     intro exposed exposedMem
@@ -224,9 +225,10 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
           Channels.exitChannel_eq_stateChannel_false,
           Channels.exitChannel_eq_memoryChannel_false,
           Channels.exitChannel_eq_programChannel_false,
-          decide_false, decide_true, Bool.false_eq_true, if_true, if_false,
+          decide_false, decide_true, Bool.false_eq_true,
           List.nil_append, exposedMemoryInteractions]
   requirementsChannelsLawful := fun input_var i₀ => by
+    preserve_tactic_target
     dsimp only [Operations.RequirementsChannelsLawful]
     refine ⟨by simp only [circuit_norm, main, Readers.CPUState.circuit,
         Readers.RegisterAccessCols.circuit], ?_, ?_⟩
@@ -242,8 +244,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
           | exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
               (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))))
     · intro env h_constraints
-      have h_bool : (ProvableStruct.eval env input_var).is_real = 0 ∨
-          (ProvableStruct.eval env input_var).is_real = 1 := by
+      have h_bool : Expression.eval env input_var.is_real = 0 ∨
+          Expression.eval env input_var.is_real = 1 := by
         apply bool_of_mul_pred
         simpa only [circuit_norm] using h_constraints.1
       rw [Operations.inChannelsOrRequirements_iff_forall_mem]

@@ -57,6 +57,7 @@ private def isEqualWordChild
       input.a[2] - input.b[2], input.a[3] - input.b[3]],
     input.cols.is_diff_zero, input.is_real⟩
 
+omit [Fact (2 ^ 17 < p)] in
 -- Perf (measured 2026-07-28, control at 1 heartbeat gave a real timeout): elaborates inside 40000
 -- heartbeats, so the plain default carries >=5x headroom — the former 1000000-heartbeat ceiling
 -- was >=25x over and has been removed.
@@ -80,8 +81,7 @@ private theorem isEqualWord_nativeAssertions
     constraints_toSubcircuit_formalAssertion,
     FormalAssertion.toSubcircuit_localLength,
     Operations.constraints_nil, List.map_append, List.map_nil]
-  simp only [SP1Clean.IsZeroWordOperation.circuit_localLength,
-    Nat.add_zero]
+  simp only [Nat.add_zero]
   simp only [SP1Clean.IsZeroWordOperation.circuit,
     Gadgets.Equality.circuit]
   rw [CanonicalReader.equalityAssertionList]

@@ -37,6 +37,7 @@ structure Columns (F : Type) where
   adapter : Extracted.RTypeReader F
   add_operation : AddOperation.Columns F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The `is_real` selector and the **threaded reader column blocks** `state`/`adapter` (the committed
 CPUState + register-adapter columns the chip reads). The `rs1`/`rs2` source operands are **not** separate
@@ -47,6 +48,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.RTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The `rs1` source operand = the register read on the `op_b` memory slot (the value the Memory bus pins,
 `op_b_memory.prev_value`). Projecting it from the adapter — rather than carrying a redundant top-level
@@ -89,6 +91,7 @@ structure Columns (F : Type) where
   adapter : Extracted.ITypeReader F
   add_operation : AddOperation.Columns F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The `is_real` selector and the **threaded reader column blocks** `state`/`adapter` (the latter an
 **I-type** `Extracted.ITypeReader` carrying the immediate). The `rs1` source operand and the immediate
@@ -99,6 +102,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.ITypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The `rs1` source operand = the register read on the `op_b` memory slot (the value the Memory bus pins,
 `op_b_memory.prev_value`). Projecting it from the adapter — rather than carrying a redundant top-level
@@ -143,6 +147,7 @@ structure Columns (F : Type) where
   adapter : Extracted.RTypeReader F
   sub_operation : SubOperation.Columns F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The `is_real` selector and the threaded reader column blocks `state`/`adapter` (as `AddChip`). The
 `rs1`/`rs2` operands are projected from the adapter register slots — see `Inputs.op_b_val` below. -/
@@ -151,6 +156,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.RTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The `rs1`/`rs2` source operands = the register reads on the adapter's `op_b`/`op_c` memory slots (the
 Memory-bus values), projected rather than carried as separate committed columns (see `AddChip`). -/
@@ -198,6 +204,7 @@ structure Columns (F : Type) where
   adapter : Extracted.ALUTypeReader F
   addw_operation : AddwOperation.Columns F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The `is_real` selector and the threaded reader column blocks `state`/`adapter` (ADDW's adapter is the
 immediate-capable `ALUTypeReader`, unlike SUBW's `RTypeReader`). The
@@ -207,6 +214,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.ALUTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The `rs1`/`rs2` source operands = the register reads on the adapter's `op_b`/`op_c` memory slots (the
 Memory-bus values, `op_b_memory.prev_value`/`op_c_memory.prev_value`). ADDW is register-register
@@ -264,6 +272,7 @@ structure Columns (F : Type) where
   adapter : Extracted.RTypeReader F
   subw_operation : SubwOperation.Columns F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The `is_real` selector and the threaded reader column blocks `state`/`adapter` (as `SubChip`; SUBW's
 adapter is the register `RTypeReader`). The `rs1`/`rs2` operands are projected — see `Inputs.op_b_val`. -/
@@ -272,6 +281,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.RTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The `rs1`/`rs2` source operands = the register reads on the adapter's `op_b`/`op_c` memory slots. -/
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
@@ -312,6 +322,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.ALUTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- `rs1` operand = the `op_b` register read (`op_b_memory.prev_value`); the arithmetic C operand is
 the `op_c_memory.prev_value` word returned by SP1's `ALUTypeReader.c()`. On immediate rows the reader
@@ -341,6 +352,7 @@ structure Columns (F : Type) where
   is_sllw : F
   is_sllw_imm : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The folded tail of the generated ShiftLeft `asserts` list, beginning immediately after the two
 flag booleans and their combined boolean gate. This is a genuine proof boundary over the committed
@@ -434,6 +446,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.ALUTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Native ShiftRight-chip row (Rust field order — the chip has no separate `is_real` column; the
 real-row selector is the four-flag sum). The reader blocks and the two MSB blocks reuse the project
@@ -461,6 +474,7 @@ structure Columns (F : Type) where
   is_sraw : F
   is_w_imm : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The folded tail of the generated ShiftRight `asserts` list, beginning immediately after the four
 flag booleans and their combined boolean gate.  This is a genuine proof boundary, not a claimed Rust
@@ -591,6 +605,7 @@ structure Columns (F : Type) where
   is_mulhsu : F
   is_mulw : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The two operand words (as read for `rs1`/`rs2`), the `is_real` selector, and the **threaded reader
 column blocks** `state`/`adapter` (as `AddChip`; `Mul`/`Mulh`/… are R-type register-register ops, so the
@@ -601,6 +616,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.RTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The `rs1`/`rs2` source operands = the register reads on the adapter's `op_b`/`op_c` memory slots. -/
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
@@ -616,6 +632,7 @@ structure SelectorValues (F : Type) where
   is_mulhsu : F
   is_mulw : F
 deriving ProvableStruct
+provable_struct_eval_lemmas SelectorValues
 
 /-- Project the dispatch cells from a complete MUL row. -/
 def selectors {F : Type} (cols : Columns F) : SelectorValues F :=
@@ -740,6 +757,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.RTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- Component-wise verifier evaluation of the DivRem chip input. -/
 @[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
@@ -790,6 +808,7 @@ structure Columns (F : Type) where
   add_operation : AddOperation.Columns F
   op_a_operation : AddOperation.Columns F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The committed **J-type** row blocks the chip reads: the `is_real` selector, the CPUState block
 `state` (clk + `pc`), and the J-type register adapter `adapter` (the destination `op_a`/`op_a_0`, its
@@ -801,6 +820,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.JTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The program counter as a 4-limb word (the three committed `pc` limbs + a zero high limb): the `a`
 operand both of the chip's `AddOperation`s add to (`pc + imm = next_pc`, `pc + 4 = link`). -/
@@ -850,6 +870,7 @@ structure Columns (F : Type) where
   add_operation : AddOperation.Columns F
   is_auipc : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The committed **U-type** row blocks the chip reads: the `is_real` selector, the CPUState block `state`
 (clk + `pc`), the J-type register adapter `adapter` (the destination `op_a`/`op_a_0`, its `op_a_memory`
@@ -863,6 +884,7 @@ structure Inputs (F : Type) where
   adapter : Extracted.JTypeReader F
   is_auipc : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The program counter as a 4-limb word (the three committed `pc` limbs + a zero high limb): the `a`
 operand of the chip's `AddOperation` for AUIPC (`pc + imm`). -/
@@ -916,6 +938,7 @@ structure Columns (F : Type) where
   op_a_operation : AddOperation.Columns F
   lsb : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The committed **I-type** row blocks the JALR chip reads: the `is_real` selector, the CPUState block
 `state` (clk + `pc`), and the I-type register adapter `adapter` (the destination `op_a`/`op_a_0` with its
@@ -927,6 +950,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.ITypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The rs1 register value as a 4-limb word — the `op_b` source read's prior value, the `a` operand of the
 jump `AddOperation` (`rs1 + imm = target`). -/
@@ -1000,6 +1024,7 @@ structure Columns (F : Type) where
   is_branching : F
   compare_operation : Extracted.LtOperationSigned F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- The committed **B-type** row blocks the Branch chip reads: the `is_real` selector (bound in-circuit to
 the flag sum `Σ is_b*`), the CPUState block `state` (clk + `pc`), and the immutable I-type register adapter
@@ -1012,6 +1037,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.ITypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- The rs1 register value as a 4-limb word — the `op_a` source read's prior value, the `a`/`b` operand of
 the compare (`a < b`, with `a ↦ rs1`). -/

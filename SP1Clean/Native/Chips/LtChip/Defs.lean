@@ -34,6 +34,7 @@ structure Inputs (F : Type) where
   state : Extracted.CPUState F
   adapter : Extracted.ALUTypeReader F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 /-- `rs1` operand = the `op_b` register read (`op_b_memory.prev_value`); the arithmetic C operand is
 the `op_c_memory.prev_value` word returned by `ALUTypeReader.c()` in SP1. On immediate rows the reader
@@ -53,6 +54,7 @@ structure Columns (F : Type) where
   is_sltu : F
   lt_operation : Extracted.LtOperationSigned F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 /-- **Assertion half** — the literal meaning of SP1's `LtCols.asserts` *own* (inline) assertZero tail
 (everything past the composed `LtOperationSigned`/`CPUState`/`ALUTypeReader` sub-lists), in extracted

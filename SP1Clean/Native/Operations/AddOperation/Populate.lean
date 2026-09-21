@@ -7,6 +7,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.ProvableStructDeriving
+import ToClean.Circuit.IteDecide
 
 /-! # `AddOperation` — `populate` (the witness generator)
 
@@ -145,7 +146,7 @@ theorem populateIRGated_eval_off (env : ProverEnvironment (ZMod p))
     simp only [populateIRGated, populate, circuit_norm, FiniteField.fromNat, hg,
       hA 0 (by omega), hA 1 (by omega), hA 2 (by omega), hA 3 (by omega),
       hB 0 (by omega), hB 1 (by omega), hB 2 (by omega), hB 3 (by omega),
-      decide_true, if_true]
+      decide_true]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- With the gate on (`op_a_0 ≠ 0`, i.e. the `rd = x0` row), every gated limb is
@@ -157,7 +158,7 @@ theorem populateIRGated_eval_on (env : ProverEnvironment (ZMod p))
   apply Vector.ext; intro i hi
   interval_cases i <;>
     simp only [populateIRGated, circuit_norm, -Witgen.u64Wrap, hg,
-      decide_false, if_false, Bool.false_eq_true]
+      decide_false, Bool.false_eq_true]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Environment-locality of the gated witness IR (the `ComputableWitnesses`

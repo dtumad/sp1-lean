@@ -191,17 +191,7 @@ private theorem memoryProviderToAccessEqInputCleanAccess
   rw [toAccess_pushIf_memory]
   simp only [memoryInitInputCleanAccess, circuit_norm]
   rw [memoryProviderEvalToMessage]
-  have evaluated := ProvableStruct.eval_var_eq_eval env input
-  simp only [MemoryProviderChip.Inputs.toMessage]
-  rw [congrArg MemoryProviderChip.Inputs.clk_high evaluated,
-    congrArg MemoryProviderChip.Inputs.clk_low evaluated,
-    congrArg MemoryProviderChip.Inputs.addr0 evaluated,
-    congrArg MemoryProviderChip.Inputs.addr1 evaluated,
-    congrArg MemoryProviderChip.Inputs.addr2 evaluated,
-    congrArg (fun x : MemoryProviderChip.Inputs (ZMod p) => x.value[0]) evaluated,
-    congrArg (fun x : MemoryProviderChip.Inputs (ZMod p) => x.value[1]) evaluated,
-    congrArg (fun x : MemoryProviderChip.Inputs (ZMod p) => x.value[2]) evaluated,
-    congrArg (fun x : MemoryProviderChip.Inputs (ZMod p) => x.value[3]) evaluated]
+  simp only [MemoryProviderChip.Inputs.toMessage, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem memoryFinalizeToAccessEqInputCleanAccess
@@ -213,17 +203,7 @@ private theorem memoryFinalizeToAccessEqInputCleanAccess
   rw [toAccess_pullIf_memory]
   simp only [memoryFinalizeInputCleanAccess, circuit_norm]
   rw [memoryFinalizeEvalToMessage]
-  have evaluated := ProvableStruct.eval_var_eq_eval env input
-  simp only [MemoryFinalizeChip.Inputs.toMessage]
-  rw [congrArg MemoryFinalizeChip.Inputs.clk_high evaluated,
-    congrArg MemoryFinalizeChip.Inputs.clk_low evaluated,
-    congrArg MemoryFinalizeChip.Inputs.addr0 evaluated,
-    congrArg MemoryFinalizeChip.Inputs.addr1 evaluated,
-    congrArg MemoryFinalizeChip.Inputs.addr2 evaluated,
-    congrArg (fun x : MemoryFinalizeChip.Inputs (ZMod p) => x.value[0]) evaluated,
-    congrArg (fun x : MemoryFinalizeChip.Inputs (ZMod p) => x.value[1]) evaluated,
-    congrArg (fun x : MemoryFinalizeChip.Inputs (ZMod p) => x.value[2]) evaluated,
-    congrArg (fun x : MemoryFinalizeChip.Inputs (ZMod p) => x.value[3]) evaluated]
+  simp only [MemoryFinalizeChip.Inputs.toMessage, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem wordToList {T : Type} (word : Vector T 4) :
@@ -238,12 +218,10 @@ private theorem memoryMsgElements {T : Type} (message : MemoryMsg T) :
     (toElements message).toList =
       [message.clk_high, message.clk_low, message.addr0, message.addr1, message.addr2,
         message.value[0], message.value[1], message.value[2], message.value[3]] := by
-  change (#v[message.clk_high] ++ (#v[message.clk_low] ++ (#v[message.addr0] ++
-    (#v[message.addr1] ++ (#v[message.addr2] ++
-      (message.value ++ (#v[] : Vector T 0))))))).toList = _
-  simp only [Vector.toList_append, Vector.toList_mk, List.append_nil,
-    List.cons_append, List.nil_append]
-  rw [wordToList]
+  simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents,
+    Vector.toList_cast]
+  simp only [components, ProvableStruct.componentsToElements, Vector.toList_append, wordToList]
+  rfl
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem accessAtEntryKey (entry : MemRecordEntry) (multiplicity : ℤ) :

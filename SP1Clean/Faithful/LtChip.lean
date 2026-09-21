@@ -84,19 +84,7 @@ private theorem ltChip_u16MSB_assertions_exact
       Expression.eval env (toElements (M := field) value)[0] =
         Expression.eval env value := rfl
   simp_rw [heval]
-  have hinput : Eval.eval env input =
-      ({ a := Eval.eval env input.a, cols := Eval.eval env input.cols,
-         is_real := Eval.eval env input.is_real } :
-        U16MSBOperation.Inputs (ZMod p)) := by
-    rw [ProvableStruct.eval_eq_eval]
-    rfl
-  have hcols : Eval.eval env input.cols =
-      ({ msb := Eval.eval env input.cols.msb } :
-        Extracted.U16MSBOperation (ZMod p)) := by
-    rw [ProvableStruct.eval_eq_eval]
-    rfl
-  rw [← ProvableStruct.eval_eq_eval, hinput, hcols]
-  simp only [eval_sub, Expression.eval, sub_zero, CircuitType.eval_expr]
+  simp only [circuit_norm, eval_sub, Expression.eval, sub_zero]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem ltChip_u16Compare_assertions_exact
@@ -112,19 +100,7 @@ private theorem ltChip_u16Compare_assertions_exact
       Expression.eval env (toElements (M := field) value)[0] =
         Expression.eval env value := rfl
   simp_rw [heval]
-  have hinput : Eval.eval env input =
-      ({ a := Eval.eval env input.a, b := Eval.eval env input.b,
-         cols := Eval.eval env input.cols, is_real := Eval.eval env input.is_real } :
-        U16CompareOperation.Inputs (ZMod p)) := by
-    rw [ProvableStruct.eval_eq_eval]
-    rfl
-  have hcols : Eval.eval env input.cols =
-      ({ bit := Eval.eval env input.cols.bit } :
-        Extracted.U16CompareOperation (ZMod p)) := by
-    rw [ProvableStruct.eval_eq_eval]
-    rfl
-  rw [← ProvableStruct.eval_eq_eval, hinput, hcols]
-  simp only [eval_sub, Expression.eval, sub_zero, CircuitType.eval_expr]
+  simp only [circuit_norm, eval_sub, Expression.eval, sub_zero]
 
 private def ltUnsignedAssertionTail (b cc : Word (ZMod p))
     (cols : Extracted.LtOperationUnsigned (ZMod p)) (isReal : ZMod p) :
@@ -824,10 +800,14 @@ def ltChipColumnsOfInput {F : Type} (input : LtChip.Inputs F)
 private theorem ltChipLocals_zero {F : Type} (cols : LtChip.Columns F) :
     (ltChipLocals cols)[0] = cols.is_slt := by
   simp [ltChipLocals]
+  rw [Vector.getElem_append_left (by decide)]
+  rfl
 
 private theorem ltChipLocals_one {F : Type} (cols : LtChip.Columns F) :
     (ltChipLocals cols)[1] = cols.is_sltu := by
   simp [ltChipLocals]
+  rw [Vector.getElem_append_left (by decide)]
+  rfl
 
 private theorem ltChipOperationOfLocals_roundtrip {F : Type}
     (cols : LtChip.Columns F) :

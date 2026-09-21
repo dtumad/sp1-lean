@@ -13,6 +13,7 @@ structure Inputs (F : Type) where
   value : Word F
   comparison : Extracted.LtOperationUnsigned F
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 def Spec {p : ℕ} [Fact p.Prime] (bound : ℕ) (input : Inputs (ZMod p)) : Prop :=
   Word.isU64 input.value ∧ Word.toNat input.value < bound

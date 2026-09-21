@@ -60,6 +60,7 @@ private lemma toInt_eq_toNat_sub128' (x : BitVec 128) :
   have hlt : x.toNat < 2 ^ 128 := x.isLt
   split <;> rename_i h <;> simp only [decide_eq_true_eq] at * <;> split <;> omega
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- `populate_msb` as an indicator of the high bit of a u16 cell. -/
 private lemma populate_msb_eq_ite {a : ZMod p} (ha : a.val < 2 ^ 16) :
@@ -139,6 +140,7 @@ private lemma extNat_int32 (v : BitVec 32) {fv : ℕ} (hf : fv = if v.msb then 1
   · rw [if_pos hm] at hI hse ⊢; rw [if_pos hm, hse]; push_cast; omega
   · rw [if_neg hm] at hI hse ⊢; rw [if_neg hm, hse]; push_cast; omega
 
+omit [Fact (Nat.Prime p)] in
 set_option linter.unusedSectionVars false in
 /-- The low-32 truncation of a committed u64 word reads off its two low limbs. -/
 private lemma setWidth32_toNat {B : Word (ZMod p)} (hB : B.isU64) :
@@ -217,6 +219,7 @@ lemma chainResidue_field_val_lt (B C : Word (ZMod p)) (f : Vector (ZMod p) 8) (i
   rw [ZMod.val_natCast_of_lt (by omega)]
   exact hlt
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Cast core for the chain-residue identities, step 0 (no incoming carry). -/
 private lemma residue_field_core0 {x r res cy : ℕ} {Xf Rf CYf : ZMod p}
@@ -228,6 +231,7 @@ private lemma residue_field_core0 {x r res cy : ℕ} {Xf Rf CYf : ZMod p}
   push_cast at hc
   linear_combination hc
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Cast core for the chain-residue identities, steps 1–7 (incoming carry `cyp`). -/
 private lemma residue_field_coreS {x r cyp res cy : ℕ} {Xf Rf CYPf CYf : ZMod p}
@@ -431,8 +435,7 @@ private lemma chain_high_limbs {X Z k r4 r5 r6 r7 cy3 cy4 cy5 cy6 cy7 : ℕ}
     X / 2 ^ 112 % 2 ^ 16 + r7 + cy6 = Z / 2 ^ 112 % 2 ^ 16 + cy7 * 2 ^ 16 := by
   refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
 
-set_option linter.unusedVariables false in
-/-- **Generic digit extraction.** If `X + R = Z + 2^128·k` with `X, Z < 2^128` and `R` the
+/-- **Generic digit extraction.** If `X + R = Z + 2^128·k` with `R` the
 base-`2^16` reassembly of eight u16 addends `r0…r7`, then the carry recursion
 `cy_i = (x_i + r_i + cy_{i-1}) / 2^16` on the digits `x_i` of `X` satisfies the eight chain limb
 equations against the digits `z_i` of `Z`. Composed from the five minimal-context helpers above
@@ -441,7 +444,6 @@ shallow `omega`, which keeps elaboration to seconds (a monolithic `omega` here d
 private lemma chain_limbs_of_sum
     {X Z k x0 x1 x2 x3 x4 x5 x6 x7 r0 r1 r2 r3 r4 r5 r6 r7
      z0 z1 z2 z3 z4 z5 z6 z7 cy0 cy1 cy2 cy3 cy4 cy5 cy6 cy7 : ℕ}
-    (hX : X < 2 ^ 128) (hZ : Z < 2 ^ 128)
     (hx0 : x0 = X % 2 ^ 16) (hx1 : x1 = X / 2 ^ 16 % 2 ^ 16)
     (hx2 : x2 = X / 2 ^ 32 % 2 ^ 16) (hx3 : x3 = X / 2 ^ 48 % 2 ^ 16)
     (hx4 : x4 = X / 2 ^ 64 % 2 ^ 16) (hx5 : x5 = X / 2 ^ 80 % 2 ^ 16)
@@ -450,8 +452,6 @@ private lemma chain_limbs_of_sum
     (hz2 : z2 = Z / 2 ^ 32 % 2 ^ 16) (hz3 : z3 = Z / 2 ^ 48 % 2 ^ 16)
     (hz4 : z4 = Z / 2 ^ 64 % 2 ^ 16) (hz5 : z5 = Z / 2 ^ 80 % 2 ^ 16)
     (hz6 : z6 = Z / 2 ^ 96 % 2 ^ 16) (hz7 : z7 = Z / 2 ^ 112 % 2 ^ 16)
-    (hr0 : r0 < 2 ^ 16) (hr1 : r1 < 2 ^ 16) (hr2 : r2 < 2 ^ 16) (hr3 : r3 < 2 ^ 16)
-    (hr4 : r4 < 2 ^ 16) (hr5 : r5 < 2 ^ 16) (hr6 : r6 < 2 ^ 16) (hr7 : r7 < 2 ^ 16)
     (hcy0 : cy0 = (x0 + r0) / 2 ^ 16)
     (hcy1 : cy1 = (x1 + r1 + cy0) / 2 ^ 16) (hcy2 : cy2 = (x2 + r2 + cy1) / 2 ^ 16)
     (hcy3 : cy3 = (x3 + r3 + cy2) / 2 ^ 16) (hcy4 : cy4 = (x4 + r4 + cy3) / 2 ^ 16)
@@ -495,6 +495,7 @@ def EuclidLimbEqs (B C : Word (ZMod p)) (f : Vector (ZMod p) 8) : Prop :=
   populateBNeg B f * 65535 = (populateCtq B C f)[7] + populateRemNeg B C f * 65535
       - (populateCarry B C f)[7] * 65536 + (populateCarry B C f)[6]
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Cast core for a chain limb equation, step 0. -/
 private lemma limb_field_lo {x r z cy : ℕ} {Xf Rf Zf CYf : ZMod p}
@@ -506,6 +507,7 @@ private lemma limb_field_lo {x r z cy : ℕ} {Xf Rf Zf CYf : ZMod p}
   push_cast at hc
   linear_combination -hc
 
+omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Cast core for a chain limb equation, steps 1–7 (incoming carry). -/
 private lemma limb_field_hi {x r cyp z cy : ℕ} {Xf Rf CYPf Zf CYf : ZMod p}
@@ -545,8 +547,6 @@ private lemma euclid_limbs_of_agg {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
   obtain ⟨hb0, hb1, hb2, hb3⟩ := Word.lt_cases_of_isU64 (bComp_isU64 hB f)
   have hbnv : (populateBNeg B f).val ≤ 1 := by
     rcases populateBNeg_bool hB hsig with h | h <;> rw [h] <;> simp [ZMod.val_one]
-  have hXlt : (ctqProd B C f).toNat < 2 ^ 128 := (ctqProd B C f).isLt
-  have hZlt : bExtNat B f < 2 ^ 128 := bExtNat_lt hB hsig
   have hc : Word.toNat (bComp B f) < 2 ^ 64 := toNat_lt_2_64 (bComp_isU64 hB f)
   -- the committed-operand digits of `bExtNat`
   have hz0 : ((bComp B f)[0]).val = bExtNat B f % 2 ^ 16 := by
@@ -624,11 +624,8 @@ private lemma euclid_limbs_of_agg {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
     simp only [remExtNat, Word.toNat_def]
     omega
   obtain ⟨e0, e1, e2, e3, e4, e5, e6, e7⟩ :=
-    chain_limbs_of_sum hXlt hZlt hx0 hx1 hx2 hx3 hx4 hx5 hx6 hx7
+    chain_limbs_of_sum hx0 hx1 hx2 hx3 hx4 hx5 hx6 hx7
       hz0 hz1 hz2 hz3 hz4 hz5 hz6 hz7
-      (remAddendNat_lt B C hsig 0) (remAddendNat_lt B C hsig 1) (remAddendNat_lt B C hsig 2)
-      (remAddendNat_lt B C hsig 3) (remAddendNat_lt B C hsig 4) (remAddendNat_lt B C hsig 5)
-      (remAddendNat_lt B C hsig 6) (remAddendNat_lt B C hsig 7)
       hcy0 hcy1 hcy2 hcy3 hcy4 hcy5 hcy6 hcy7
       (by rw [← hRsum]; exact hagg)
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩

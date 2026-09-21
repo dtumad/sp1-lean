@@ -46,6 +46,7 @@ structure Columns (F : Type) where
   store_value : Word F
   is_real : F
 deriving ProvableStruct
+provable_struct_eval_lemmas Columns
 
 structure Inputs (F : Type) where
   is_real : F
@@ -59,6 +60,7 @@ structure Inputs (F : Type) where
   increment : F
   store_value : (Word F)
 deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
 
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
 @[reducible] def Inputs.op_c_imm {F} (i : Inputs F) : Word F := i.adapter.op_c_imm
@@ -161,7 +163,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        ⟨varFromOffset Extracted.AddrAddOperation offset, var ⟨offset + 3⟩⟩,
+        ⟨⟨varFromOffset (fields 3) offset⟩, var ⟨offset + 3⟩⟩,
         input.memory_access, input.offset_bit, input.mem_limb,
         input.mem_limb_low_byte, input.register_low_byte, input.increment,
         input.store_value, input.is_real⟩ :
