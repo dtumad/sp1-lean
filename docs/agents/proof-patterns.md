@@ -452,7 +452,28 @@ per-file ledger of the migration itself):
   `Clean.Circuit.StructEvalSimprocs`, imported at the root (`Math/Word.lean`), not in
   `Clean.Circuit.Basic` — a file that only imported `Basic` had no struct normalisation at all.
   Where the input is a variable, destructure it at the `intro` (`intro k ⟨x, y⟩ env env'`) as
-  Clean's own gadget proofs do.
+  Clean's own gadget proofs do. Two of those simprocs (`structEvalProjectionExpr`,
+  `structEqSplit`) are registered in the *default* simproc set, so they fire in every `simp`
+  and `simp only`, not just under `circuit_norm`: the lift does fire on a nested projection
+  (`Expression.eval env r.state.clk ~~> (ProvableStruct.eval env r.state).clk`), so a
+  bridging hypothesis stated in the other direction loops as a simp rewrite rule
+  (`maxRecDepth`) — drop it, both sides normalise to the lifted form; and `if_true`/`if_false`
+  (Clean's `iteReduce`) and the `eval_field`/`eval_cols` push-downs become unused simp
+  arguments, which `linter.unusedSimpArgs` turns into a build failure under `--wfail`.
+- **`ite` at implicit transparency.** `split_ifs` introduces the case hypothesis but leaves the
+  `if` in place, and `rw [if_pos h]`/`rw [if_neg h]` fail on the `Decidable` instance: use
+  `by_cases h : c` and close with `simp [h]` (or `simp only [if_neg (show ¬c by norm_num)]`).
+- **Declaration heartbeat budget.** The forwarded-instance and struct-lift normal forms cost
+  more per `simp`; a 300-line anchor that fit under the default budget on 4.32 can exceed it
+  (`Faithful/BitwiseChip.lean` — the site reported is just where the counter ran out). The
+  fix is the usual one, an opaque-input private lemma for the expensive step, never an option
+  escape: the `unexpectedInteractions … = []` step by `simp [main, …]` costs 2.4 s and is
+  replaced by the Jal/Jalr `channels_subset` shape.
+- **`native_decide` statements carry no `let`.** `cleanup.letToHave` rewrites a theorem's
+  *type* to `have`s while the tactic goal keeps the `let`s; identifying the two sends the
+  kernel through the host interpreter, and the 4.33 kernel's bounded depth (#13956) rejects it
+  as `(kernel) deep recursion` regardless of `maxRecDepth`. Put the per-case body in a private
+  `def` and state the theorem over it (`SP1CleanTest/Core/HostControl.lean`'s `compiledControl`).
 - **`elaborate_circuit`.** It times out on a sixteen-statement `main` (`MulOperation`): write the
   `ElaboratedCircuit` instance with `simp only [main, circuit_norm, seval]` field proofs. It
   leaves `if empty then … else …` on a `Bool` literal unreduced in the explicit metadata, so a
