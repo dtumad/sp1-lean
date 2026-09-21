@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 #
-# profile_compile.sh — rank every hand-written module by wall-clock elaboration time.
+# profile_compile.sh — rank every hand-written module by its isolated elaboration cost.
 #
 # Method: after one warm `lake build` (so every dependency is a cached .olean), run
-#   lake env lean -Dprofiler=true -Dprofiler.threshold=50 [package flags] <file>
+#   lean -Dprofiler=true -Dprofiler.threshold=50 [package flags] <file>
 # on each module. Because deps load from cache, this isolates that file's own elaboration
-# cost. We time it with /usr/bin/time -p and capture the profiler breakdown to a per-file log,
-# then scripts/profile_aggregate.py turns the logs into a ranking plus a per-category and
-# per-pillar cost split (import, elaboration, simp, tactic execution, type checking, typeclass
-# inference, compilation, linting, ...).
+# cost. We time it with /usr/bin/time -p — CPU (`user` + `sys`, the primary number: Lean
+# elaborates proof bodies on parallel threads, so wall under-counts them) and wall — and capture
+# the profiler breakdown to a per-file log, then scripts/profile_aggregate.py turns the logs into
+# a ranking plus a per-category and per-pillar cost split (import, elaboration, simp, tactic
+# execution, type checking, typeclass inference, interpretation, compilation, linting, ...).
 #
 # Caveats baked in:
 #   - `lake env lean` exits 0 even on a stack overflow, so we record exit codes explicitly and
@@ -16,10 +17,9 @@
 #   - Runs sequentially: clean wall-clock numbers, and respects the repo's build-concurrency cap.
 #   - A warm full build must precede the sweep, or early files pay to build their deps.
 #   - `lake env` only sets environment variables; it applies neither `moreLeanArgs` nor the
-#     package's `[leanOptions]`. The sweep therefore passes the package flags itself
-#     (`--tstack=400000`, the `-D` options, the Mathlib standard linter set and its opt-outs).
-#     Keep PACKAGE_FLAGS in sync with lakefile.toml; the generated modules carry
-#     `set_option linter.all false`, which switches the set off there exactly as in the build.
+#     package's `[leanOptions]`. The sweep therefore passes the package flags itself, read from
+#     lakefile.toml by `scripts/lean_flags.py` (package options, plus a library's own for the
+#     test and generated-model trees), so they cannot drift from the build.
 #   - The Lake environment is captured once (`lake env` with no command) and `lean` is invoked
 #     directly, so per-module wall time is Lean alone, without ~1 s of Lake startup per file.
 #   - Numbers are per-module wall time of one `lean` process. Lean elaborates proof bodies
@@ -44,7 +44,7 @@
 #
 # Outputs (under $OUTDIR):
 #   <module>.log         full -Dprofiler stdout+stderr for each module
-#   summary.tsv          seconds<TAB>exit<TAB>module, sorted slowest-first (the offender ranking)
+#   summary.tsv          cpu<TAB>wall<TAB>exit<TAB>module, sorted by CPU (the offender ranking)
 #   summary.md           the ranking as a markdown table with a totals/failures footer
 #   measurements.jsonl   one JSON-Lines record per module (archival)
 #   profile.md           ranking + category totals + per-pillar split (from profile_aggregate.py)
@@ -60,11 +60,12 @@ PREFIX="${1:-}"
 TREES="${TREES:-SP1Clean ToClean ToMathlib}"
 TOP="${TOP:-50}"
 
-# Package-level lean args (lakefile.toml `moreLeanArgs` + `[leanOptions]`), applied to every module.
-# The package options from lakefile.toml `[leanOptions]` + `moreLeanArgs` (keep in sync).
-PACKAGE_FLAGS=(--tstack=400000 -Dpp.unicode.fun=true -DautoImplicit=false -DrelaxedAutoImplicit=false
-  -Dweak.linter.mathlibStandardSet=true -Dweak.linter.style.admit=true
-  -Dweak.linter.style.header=false -Dweak.linter.style.longLine=false)
+# Package-level lean args (lakefile.toml `moreLeanArgs` + `[leanOptions]`), applied to every
+# module; the test and generated-model libraries add their own (`lean_flags.py --lib`).
+pkg_flags="$(python3 "$ROOT/scripts/lean_flags.py" --shell)" || exit 1
+test_flags="$(python3 "$ROOT/scripts/lean_flags.py" --lib SP1CleanTest --shell)" || exit 1
+model_flags="$(python3 "$ROOT/scripts/lean_flags.py" --lib LeanRV64D --shell)" || exit 1
+PACKAGE_FLAGS=($pkg_flags); TEST_FLAGS=($test_flags); MODEL_FLAGS=($model_flags)
 
 mkdir -p "$OUTDIR"
 : > "$OUTDIR/summary.tsv"
@@ -125,49 +126,52 @@ while IFS= read -r f; do
   log="$OUTDIR/${module}.log"
   timefile="$(mktemp)"
 
-  # Test modules get the two test-library opt-outs (lakefile.toml `SP1CleanTest`).
+  # A library's own options replace the package's (Lake: the library wins on a key).
   case "$f" in
-    SP1CleanTest/*) flags=(-Dweak.linter.style.nativeDecide=false -Dweak.linter.hashCommand=false) ;;
-    *) flags=() ;;
+    SP1CleanTest/*) flags=("${TEST_FLAGS[@]}") ;;
+    LeanRV64D/*|LeanRV64D.lean) flags=("${MODEL_FLAGS[@]}") ;;
+    *) flags=("${PACKAGE_FLAGS[@]}") ;;
   esac
 
   printf '[%3d/%3d] %s ... ' "$count" "$TOTAL" "$module"
 
   # 3. Time the isolated elaboration. lean runs inside `sh -c` so ITS stdout+stderr (incl. the
-  #    profiler breakdown) go to $log, while /usr/bin/time -p's own `real <sec>` line stays on
+  #    profiler breakdown) go to $log, while /usr/bin/time -p's own `real/user/sys` lines stay on
   #    the outer stderr -> $timefile. time -p exits with the wrapped command's status, so rc is
   #    lean's exit code. (Redirecting lean directly under time would capture time's output too.)
   /usr/bin/time -p sh -c \
     'log="$1"; lean="$2"; shift 2; "$lean" -Dprofiler=true -Dprofiler.threshold=50 "$@" > "$log" 2>&1' \
-    _ "$log" "$LEAN_BIN" "${PACKAGE_FLAGS[@]}" ${flags[@]+"${flags[@]}"} "$f" 2> "$timefile"
+    _ "$log" "$LEAN_BIN" "${flags[@]}" "$f" 2> "$timefile"
   rc=$?
 
   secs="$(awk '/^real/ {print $2}' "$timefile")"
+  cpu="$(awk '/^user/ {u=$2} /^sys/ {s=$2} END {printf "%.2f", u + s}' "$timefile")"
   rm -f "$timefile"
   [ -z "$secs" ] && secs="0"
+  [ -z "$cpu" ] && cpu="0"
 
-  printf '%ss (exit %d)\n' "$secs" "$rc"
-  printf '%s\t%s\t%s\n' "$secs" "$rc" "$module" >> "$OUTDIR/summary.tsv"
-  printf '{"metric": "compile//%s", "value": %s, "unit": "s", "exit": %d}\n' \
-    "$module" "$secs" "$rc" >> "$OUTDIR/measurements.jsonl"
+  printf '%ss cpu, %ss wall (exit %d)\n' "$cpu" "$secs" "$rc"
+  printf '%s\t%s\t%s\t%s\n' "$cpu" "$secs" "$rc" "$module" >> "$OUTDIR/summary.tsv"
+  printf '{"metric": "compile//%s", "value": %s, "unit": "s", "wall": %s, "exit": %d}\n' \
+    "$module" "$cpu" "$secs" "$rc" >> "$OUTDIR/measurements.jsonl"
 done < "$LISTFILE"
 rm -f "$LISTFILE"
 
-# 4. Sort slowest-first; that sorted file IS the canonical offender ranking.
+# 4. Sort by CPU, slowest-first; that sorted file IS the canonical offender ranking.
 sort -t$'\t' -k1,1 -rn "$OUTDIR/summary.tsv" -o "$OUTDIR/summary.tsv"
 
 # 5. Render a markdown table + a totals/failures footer.
 {
-  echo "# Compile-time profile (wall-clock elaboration, isolated per module)"
+  echo "# Compile-time profile (isolated per module: CPU = user+sys, wall)"
   echo
-  echo "| Rank | Seconds | Exit | Module |"
-  echo "| ---: | ---: | ---: | --- |"
-  awk -F'\t' '{ printf "| %d | %.2f | %d | \x60%s\x60 |\n", NR, $1, $2, $3 }' "$OUTDIR/summary.tsv"
+  echo "| Rank | CPU s | Wall s | Exit | Module |"
+  echo "| ---: | ---: | ---: | ---: | --- |"
+  awk -F'\t' '{ printf "| %d | %.2f | %.2f | %d | \x60%s\x60 |\n", NR, $1, $2, $3, $4 }' "$OUTDIR/summary.tsv"
   echo
   awk -F'\t' '
-    { total += $1; n++; if ($2 != 0) fails[$2"\t"$3]=1 }
+    { total += $1; wall += $2; n++; if ($3 != 0) fails[$3"\t"$4]=1 }
     END {
-      printf "**Total:** %.1fs across %d modules (sequential; no parallelism/kernel phase).\n\n", total, n
+      printf "**Total:** %.1fs CPU, %.1fs wall across %d modules (sequential; one lean per module).\n\n", total, wall, n
       nf = 0; for (k in fails) nf++
       if (nf > 0) {
         printf "**%d module(s) exited nonzero** (silent under `lake env lean` — investigate):\n\n", nf
@@ -184,4 +188,4 @@ python3 "$ROOT/scripts/profile_aggregate.py" --profile-dir "$OUTDIR" --top "$TOP
 echo
 echo ">>> Done. Ranking: $OUTDIR/summary.tsv  |  Split: $OUTDIR/profile.md  |  Logs: $OUTDIR/*.log"
 echo ">>> Top 15:"
-head -15 "$OUTDIR/summary.tsv" | awk -F'\t' '{ printf "  %6.2fs  (exit %s)  %s\n", $1, $2, $3 }'
+head -15 "$OUTDIR/summary.tsv" | awk -F'\t' '{ printf "  %7.2fs cpu %7.2fs wall  (exit %s)  %s\n", $1, $2, $3, $4 }'
