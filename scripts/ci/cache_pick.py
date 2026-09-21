@@ -8,7 +8,7 @@ rebuilt 582 modules that way). This script picks the exact key instead, from `gh
 the first-parent history of the commit being built, and prints one exact key plus two short
 fallback prefixes for `$GITHUB_OUTPUT`:
 
-  key=<exact key or empty>      fallback1=<prefix>-align-<sha>-      fallback2=<prefix>-core-<sha>-
+  pick=<exact key or empty>     fallback1=<prefix>-align-<sha>-      fallback2=<prefix>-core-<sha>-
 
 Modes (`--mode`):
   pr     own newest `align-pr<N>` on refs/pull/N/merge → own newest `core-pr<N>` → for each sha of
@@ -117,7 +117,7 @@ def main() -> None:
     entries = json.load(open(args.input)) if args.input else fetch(args.repo)
     key = pick(entries, args.prefix, args.mode, lineage, args.pr, args.core_key) or ""
     head = lineage[0] if lineage else ""
-    print(f"key={key}")
+    print(f"pick={key}")
     print(f"fallback1={args.prefix}-align-{head}-")
     print(f"fallback2={args.prefix}-core-{head}-")
 
