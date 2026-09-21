@@ -1,5 +1,8 @@
-import Clean.Circuit.StructEvalSimprocs
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import Clean.Circuit.StructEvalSimprocs
+public import Clean.Utils.Tactics.ProvableStructDeriving
+public meta import Lean
 
 /-! # Per-field evaluation lemmas for a `ProvableStruct`
 
@@ -29,6 +32,8 @@ Clean's indexing simproc does lift `Expression.eval env s.c[i]` to `(ProvableStr
 and the two would loop. Upstream home: the `deriving ProvableStruct` handler, next to the
 `fromComponents_cons` lemma it already emits. Supported shape: a structure whose only parameter
 is `(F : Type)`. -/
+
+@[expose] public section
 
 namespace ProvableStruct
 

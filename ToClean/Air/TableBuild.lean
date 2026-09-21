@@ -1,6 +1,8 @@
-import ToClean.Circuit.WitnessGenerationData
-import Clean.Air.FlatComponent
-import Clean.Circuit.Foundations
+module
+
+public import ToClean.Circuit.WitnessGenerationData
+public import Clean.Air.FlatComponent
+public import Clean.Circuit.Foundations
 
 /-!
 # Building a valid flat-AIR table from semantic inputs
@@ -69,6 +71,8 @@ generation is involved and no theorem says its constraints hold. It is the zero-
 instance of `Table.build`. `Clean/Air/Vm.lean` adds no builder: it is a pure soundness development
 about VM channels.
 -/
+
+@[expose] public section
 
 variable {F : Type} [FiniteField F]
 

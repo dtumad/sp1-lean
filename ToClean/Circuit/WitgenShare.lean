@@ -1,5 +1,7 @@
-import Clean.Circuit.WitnessExport
-import Std.Data.HashMap
+module
+
+public import Clean.Circuit.WitnessExport
+public import Std.Data.HashMap
 
 /-!
 # Witness-IR subterm sharing (`WitgenIR.share`)
@@ -63,6 +65,8 @@ Design notes:
   (sound: `beq` implies `=`) and `beq_refl` are what the verification path and the
   cache hit rate rely on.
 -/
+
+@[expose] public section
 
 variable {F : Type}
 

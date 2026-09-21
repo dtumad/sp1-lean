@@ -1,4 +1,6 @@
-import Clean.Circuit.Basic
+module
+
+public meta import Clean.Circuit.Basic
 
 /-! # `v[i]` index-bound fast path
 
@@ -34,5 +36,7 @@ path belongs in front of it upstream.
 It lives here rather than in a third top-level library because 24 lines do not justify one, and
 because its placement is load-bearing: the rule must sit **above** Std's in the import graph, which
 `ToClean` (imported by everything, importing only Clean and Mathlib) reliably provides. -/
+
+public meta section
 
 macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| decide)

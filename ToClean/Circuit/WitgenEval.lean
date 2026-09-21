@@ -1,4 +1,6 @@
-import Clean.Circuit.WitnessIR
+module
+
+public import Clean.Circuit.WitnessIR
 
 /-! # Struct-level witness-IR evaluation: `toElements` collapse and gated struct payloads
 
@@ -29,6 +31,8 @@ Destined for `Clean/Circuit/WitnessIR.lean`, beside `Witgen.eval` and the `field
 `Witgen.eval_fields'` / `Witgen.FExpr.eval_getElem` (of which the two collapse lemmas are the
 `ProvableType`-generic forms). Declared in the `Witgen` namespace they would occupy upstream, so
 acceptance is a deletion plus dropping the import. -/
+
+@[expose] public section
 
 namespace Witgen
 

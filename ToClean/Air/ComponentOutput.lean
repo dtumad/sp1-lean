@@ -1,4 +1,6 @@
-import Clean.Air.FlatComponent
+module
+
+public import Clean.Air.FlatComponent
 
 /-! # Decoding a component output through its formal circuit metadata
 
@@ -8,6 +10,8 @@ Clean defines `Component.rowOutput` through a subcircuit application, but has no
 equation exposing the formal circuit's declared output. This rewrite keeps concrete witness
 programs opaque when a client relates physical row outputs to a circuit's interaction ledger.
 -/
+
+@[expose] public section
 
 namespace Air.Flat.Component
 

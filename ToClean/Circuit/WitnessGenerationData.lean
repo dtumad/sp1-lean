@@ -1,5 +1,7 @@
-import Clean.Circuit.Theorems
-import ToClean.Circuit.AgreesBelowWithData
+module
+
+public import Clean.Circuit.Theorems
+public import ToClean.Circuit.AgreesBelowWithData
 
 /-!
 # Honest witness generation against committed prover data
@@ -45,6 +47,8 @@ Clean fork rather than here; the additive `…WithData` names below let the depe
 proceed at the current pin, and are the exact declarations the generalization subsumes. The suffix
 is therefore expected to disappear on acceptance, unlike the rest of `ToClean/`.
 -/
+
+@[expose] public section
 
 variable {F : Type} [FiniteField F] {α : Type}
 

@@ -381,6 +381,16 @@ sole writers `scripts/witgenExport.lean` / `scripts/update_sp1_dumps.sh` + their
   there, what is missing, and why — because that text becomes the PR description. Both libraries
   run under the same package-wide linter set as the core (material heading upstream gets no
   relaxation), are covered by every source guard, and are gated by `scripts/check_root_index.sh`.
+  **All three are module-system libraries** (`requiresModuleSystem = true`; a non-module file in
+  them is a warning and, under `--wfail`, a failure), each file in its upstream's header idiom so
+  acceptance is a copy: `module` / `public import …` / `public section` for Mathlib-bound theorem
+  files; `@[expose] public section` for PolyFun- and Clean-bound definition files (Clean's
+  `Circuit/Formal.lean` shape — `SP1Clean/` proofs unfold these by `rfl`/`simp only
+  [circuit_norm]`); `public meta section` for tactic/simproc files (`IteDecide`,
+  `GetElemFastPath`); a mixed file adds `public meta import Lean` and keeps the meta code in the
+  same exposed section (`StructEvalLemmas`). A `private` declaration used inside an exposed
+  definition is an error in module mode — make it public. The `SP1Clean/` and test trees stay
+  non-module (`allowNonModules = true` per library) until their own migration.
 
 **Restructure status (updated 2026-07-27; whole-chip oracle migration completed the same day).**
 Landed in the 2026-07 release-readiness campaign: the full 25-chip `Extracted/ChipOracle/`

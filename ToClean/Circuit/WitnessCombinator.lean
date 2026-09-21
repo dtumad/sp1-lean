@@ -1,5 +1,7 @@
-import Clean.Circuit.Basic
-import Clean.Circuit.Explicit
+module
+
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Explicit
 
 /-! # `witnessVectorIR` — the vector witness combinator used by every chip row
 
@@ -25,6 +27,8 @@ Destined for `Clean/Circuit/Basic.lean`, beside `Circuit.witnessVector`, of whic
 `WitgenIR`-taking generalisation. It carries no witness semantics of its own — `witnessVector m out`
 is exactly `witnessVectorIR m (.ir [] out)` — so the merge is additive. Declared here in the
 namespace it would occupy upstream, so acceptance is a deletion plus dropping the import. -/
+
+@[expose] public section
 
 namespace Circuit
 

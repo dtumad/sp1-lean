@@ -1,2 +1,4 @@
-import ToPolyFun.Dynamical.Orbit
-import ToPolyFun.Dynamical.Labeled
+module
+
+public import ToPolyFun.Dynamical.Orbit
+public import ToPolyFun.Dynamical.Labeled

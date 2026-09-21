@@ -1,4 +1,6 @@
-import ToClean.Air.TransitionView
+module
+
+public import ToClean.Air.TransitionView
 
 /-! # Reading unit receivers from physical AIR tables
 
@@ -8,6 +10,8 @@ ledger equation; `messages_interactions` lifts it over physically aligned tables
 indexed-row reader retains every occurrence, and the sublist theorem transports global message
 uniqueness to any registered table. These are pure additions for `Clean/Air/FlatComponent.lean`.
 -/
+
+@[expose] public section
 
 namespace Air.Flat
 

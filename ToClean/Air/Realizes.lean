@@ -1,5 +1,8 @@
-import ToPolyFun.Dynamical.Labeled
-import ToClean.Air.CompleteEnsemble
+module
+
+public import ToPolyFun.Dynamical.Labeled
+public import ToClean.Air.CompleteEnsemble
+
 /-! # A flat AIR ensemble realizing a labeled machine
 
 ## Gap against upstream
@@ -15,6 +18,8 @@ semantic resource profile. The single statement is `Realizes.statement_iff`; rea
 boundary is its corollary. The machine side is PolyFun's own vocabulary (`Labeled`, `Prefix`,
 `ReachableIn`, `Labeled.Trace`), which Clean plans to import; this file only ties it to Clean.
 -/
+
+@[expose] public section
 
 namespace Air.Flat
 

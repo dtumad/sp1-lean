@@ -8,8 +8,8 @@ name = "sp1-clean-native"
 defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun"]
 
 moreLeanArgs = ["--tstack=400000"]
-# Clean main sets `requiresModuleSystem`; our SP1Clean/ tree is non-module until its migration.
-allowNonModules = true
+# `allowNonModules` is set per library below (the `SP1Clean/` and test trees are non-module until
+# their migration), not package-wide, so the three module-mode `To*` libraries are enforced.
 
 # `lake lint` driver — Batteries' `runLinter` (what Mathlib, cslib and PolyFun use): every default
 # environment linter (`docBlame`, `defsWithUnderscore`, `unusedArguments`, `simpNF`, …) over the
@@ -131,14 +131,22 @@ rev = "997828ce4c04ccdc01f5f199069e26a6195ef6e7"
 # contributable and makes the terminal step of an accepted upstream PR a plain deletion plus a
 # repoint of the importers. Root indices `ToMathlib.lean`/`ToPolyFun.lean`/`ToClean.lean` are
 # hand-maintained (this project has no `mk_all`) and gated by `scripts/check_root_index.sh`.
+# All three are module-system libraries, each file in its upstream's header idiom (`module` /
+# `public import` / `public section` for Mathlib-bound theorem files, `@[expose] public section`
+# for PolyFun- and Clean-bound definitions, `public meta section` for tactic/simproc files), so
+# acceptance upstream is a copy; `requiresModuleSystem` makes a non-module file here a warning,
+# and `--wfail` a failure.
 [[lean_lib]]
 name = "ToMathlib"
+requiresModuleSystem = true
 
 [[lean_lib]]
 name = "ToPolyFun"
+requiresModuleSystem = true
 
 [[lean_lib]]
 name = "ToClean"
+requiresModuleSystem = true
 
 # The Sail RV64 model, GENERATED and never hand-edited: the pinned rems-project/sail compiler run
 # over the pinned riscv/sail-riscv sources with the SP1 platform config
@@ -165,11 +173,15 @@ moreLeancArgs = ["-fbracket-depth=500"]
 [[lean_lib]]
 name = "SP1Core"
 roots = ["SP1Clean.Core"]
+# Non-module tree importing module-mode libraries (Clean main, `To*`): allowed until the
+# `SP1Clean/` migration.
+allowNonModules = true
 
 # Umbrella: `SP1Clean.lean` imports `SP1Clean.Core` plus strata 7–11 and every generated module;
 # `lake build SP1Clean` is the full build (the alignment workflow's target).
 [[lean_lib]]
 name = "SP1Clean"
+allowNonModules = true
 
 # Test libraries (glob libraries, no root index). `SP1CoreTest` (the `lake test` driver) is the
 # subset whose import closure stays inside the core; `SP1CleanTest` is the whole tree, alignment
@@ -182,11 +194,13 @@ name = "SP1Clean"
 [[lean_lib]]
 name = "SP1CoreTest"
 globs = ["SP1CleanTest.Core.+", "SP1CleanTest.TraceGenTests.+"]
+allowNonModules = true
 leanOptions.weak.linter.style.nativeDecide = false
 leanOptions.weak.linter.hashCommand = false
 
 [[lean_lib]]
 name = "SP1CleanTest"
 globs = ["SP1CleanTest.+"]
+allowNonModules = true
 leanOptions.weak.linter.style.nativeDecide = false
 leanOptions.weak.linter.hashCommand = false

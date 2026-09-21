@@ -1,4 +1,6 @@
-import Clean.Circuit.Lookup
+module
+
+public import Clean.Circuit.Lookup
 
 /-! # Static lookup tables from concrete rows
 
@@ -9,6 +11,8 @@ equals the table specification. There is no constructor for an already computed 
 `ofRows` supplies that common case with literal list membership as its specification and an
 executable index search. Its defining predicate is independent of prover data.
 -/
+
+@[expose] public section
 
 namespace StaticTable
 

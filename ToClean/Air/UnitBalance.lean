@@ -1,4 +1,6 @@
-import Clean.Air.Balance
+module
+
+public import Clean.Air.Balance
 
 /-! # Exact message balance for unit transitions
 
@@ -10,6 +12,8 @@ converse. It is independent of row semantics, ordering, and any particular machi
 The intended upstream home is `Clean/Air/Balance.lean`, beside its constant-multiplicity
 counting lemmas. No existing Clean declaration is changed.
 -/
+
+@[expose] public section
 
 /-- Removing disabled interactions preserves balance and weakens its characteristic count bound. -/
 theorem BalancedInteractions.filter_nonzero {F : Type} [FiniteField F] [DecidableEq F]

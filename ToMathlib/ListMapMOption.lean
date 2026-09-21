@@ -1,4 +1,6 @@
-import Mathlib.Data.List.Forall2
+module
+
+public import Mathlib.Data.List.Forall2
 
 /-! # Pointwise meaning of successful optional list traversal
 
@@ -9,6 +11,8 @@ characterizations. The equivalence between a successful optional traversal and p
 successful observations is missing. It lets readers reason about byte sequences without
 unfolding nested option binds at each consumer.
 -/
+
+public section
 
 namespace List
 

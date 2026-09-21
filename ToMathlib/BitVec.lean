@@ -1,6 +1,8 @@
-import Mathlib.Tactic
-import Mathlib.Data.BitVec
-set_option linter.unusedSimpArgs false
+module
+
+public import Mathlib.Tactic
+public import Mathlib.Data.BitVec
+
 /-!
 # `BitVec` lemmas to be ported upstream
 
@@ -14,6 +16,10 @@ The gap against upstream (Lean core `Init/Data/BitVec/`, v4.32.2): core has `toI
 `ofInt_toInt`, but not these four composites; each is a short consequence of those and belongs
 beside them. The former `riscv-lean` dependency carried private copies of the same facts.
 -/
+
+public section
+
+set_option linter.unusedSimpArgs false
 
 namespace BitVec
 

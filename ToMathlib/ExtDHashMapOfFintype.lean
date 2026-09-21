@@ -1,6 +1,8 @@
-import Mathlib.Data.Fintype.Basic
-import Mathlib.Data.Multiset.MapFold
-import Std.Data.ExtDHashMap.Lemmas
+module
+
+public import Mathlib.Data.Fintype.Basic
+public import Mathlib.Data.Multiset.MapFold
+public import Std.Data.ExtDHashMap.Lemmas
 
 /-! # A finite dependent map from a function on a finite type
 
@@ -11,6 +13,8 @@ enumerations as finsets, whose unordered support should not require choosing a l
 Inserting the same function value at each key commutes, so a multiset fold builds the map
 computably, with lookup exactly equal to the supplied function.
 -/
+
+public section
 
 namespace Std.ExtDHashMap
 

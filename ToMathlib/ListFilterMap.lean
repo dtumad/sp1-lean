@@ -1,4 +1,6 @@
-import Mathlib.Data.List.Nodup
+module
+
+public import Mathlib.Data.List.Nodup
 
 /-! # Distinct decoded keys from distinct source keys
 
@@ -7,6 +9,8 @@ inputs. A witness decoder commonly forgets columns instead: a separate source ke
 and determines the decoded key. This corollary needs agreement only on list members, and does
 not require the encoding function to be injective. It belongs beside `Nodup.filterMap` upstream.
 -/
+
+public section
 
 namespace List
 

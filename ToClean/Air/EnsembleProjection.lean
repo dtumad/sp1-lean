@@ -1,4 +1,6 @@
-import ToClean.Air.EnsembleBuild
+module
+
+public import ToClean.Air.EnsembleBuild
 
 /-! # Physical witness projection between flat ensembles
 
@@ -10,6 +12,8 @@ constructor. The lemmas below expose the corresponding proof obligations over op
 Pointwise constraint and channel-guarantee transports also support extensions that add witness
 cells or requirements. Individual channels can be retained without projecting global balance.
 -/
+
+@[expose] public section
 
 namespace Operations
 

@@ -1,4 +1,7 @@
-import PolyFun.PFunctor.Dynamical.Run
+module
+
+public import PolyFun.PFunctor.Dynamical.Run
+
 /-! # Composition of finite orbits
 
 ## Gap against upstream
@@ -8,6 +11,8 @@ composition or decomposition: two consecutive orbits cannot be joined into one, 
 cut, and the length of an orbit's event trace is not recorded. These are the lemmas a
 shard-composition argument needs, stated on a bare `DynSystem` in PolyFun's own namespace so they
 can be contributed as they are. -/
+
+@[expose] public section
 
 namespace PFunctor.DynSystem
 

@@ -1,6 +1,8 @@
-import Clean.Air.FlatEnsemble
-import Clean.Circuit.WitnessExport
-import ToClean.Circuit.WitgenShare
+module
+
+public import Clean.Air.FlatEnsemble
+public import Clean.Circuit.WitnessExport
+public import ToClean.Circuit.WitgenShare
 
 /-! # Exporting complete flat ensembles
 
@@ -17,6 +19,8 @@ and external interpretation remain implementation boundaries; the theorems here 
 Lean representation. The Rust reference consumer currently instantiates prime-field arithmetic.
 -/
 
+@[expose] public section
+
 namespace Air.Flat
 
 variable {F : Type} [FiniteField F]
@@ -28,7 +32,8 @@ structure FiniteLookup (F : Type) where
   realizes : ∀ data row, table.Contains data row ↔ row ∈ rows
 
 omit [FiniteField F] in
-private theorem staticTable_realizes {Row : TypeMap} [ProvableType Row]
+/-- A static table contains exactly its listed rows (the `FiniteLookup.ofStatic` witness). -/
+theorem staticTable_realizes {Row : TypeMap} [ProvableType Row]
     (table : StaticTable F Row) (data : Array (Vector F (size Row))) (row : Vector F (size Row)) :
     table.toTable.toRaw.Contains data row ↔
       row ∈ List.ofFn (fun index => toElements (table.row index)) := by
@@ -139,7 +144,8 @@ theorem EnsembleExport.containsFixed_iff [DecidableEq F] {ens : Ensemble F Publi
 
 variable [Lean.ToJson F] [DecidableEq F] [Hashable F]
 
-private def componentJson (name : String) (component : Component F) : Except String Lean.Json := do
+/-- One component's export record: its name and shared witness program. -/
+def componentJson (name : String) (component : Component F) : Except String Lean.Json := do
   let program ← component.rowOperations.witgenJsonShared?
   return Lean.Json.mkObj [
     ("name", Lean.toJson name),
