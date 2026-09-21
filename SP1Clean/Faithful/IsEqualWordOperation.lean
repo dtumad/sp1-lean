@@ -81,8 +81,7 @@ private theorem isEqualWord_nativeAssertions
     constraints_toSubcircuit_formalAssertion,
     FormalAssertion.toSubcircuit_localLength,
     Operations.constraints_nil, List.map_append, List.map_nil]
-  simp only [SP1Clean.IsZeroWordOperation.circuit_localLength,
-    Nat.add_zero]
+  simp only [Nat.add_zero]
   simp only [SP1Clean.IsZeroWordOperation.circuit,
     Gadgets.Equality.circuit]
   rw [CanonicalReader.equalityAssertionList]

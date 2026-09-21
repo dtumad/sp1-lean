@@ -1156,6 +1156,7 @@ theorem divRemChip_lookups_empty :
     U16toU8OperationSafe.circuit, U16toU8OperationSafe.main,
     DivRemChip.assertZeros, Gadgets.Equality.main, circuit_norm]
 
+omit [Fact (2 ^ 24 < p)] in
 /-- Evaluate the large Rust-shaped own-assert tail without unfolding it at the chip boundary.
 `DivRemCore.ownAsserts_map_eval` is the expensive carrier-generic theorem; this wrapper supplies
 its projection pins from the standard `ProvableStruct` evaluators once. The exact whole-chip

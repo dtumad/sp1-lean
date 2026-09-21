@@ -307,6 +307,7 @@ private theorem evalRType_opCPrev (env : Environment (ZMod p))
   provable_struct_simp
   exact ProvableType.eval_fields env _
 
+omit [Fact (2 ^ 24 < p)] in
 /-- Raw satisfaction of the Rust own-assert list transports to the folded value-row contract without
 unfolding `populatedRowAt` or the complete derived `ProvableStruct` evaluator. -/
 theorem evaluatedOwnAssertsHold (env : ProverEnvironment (ZMod p))
