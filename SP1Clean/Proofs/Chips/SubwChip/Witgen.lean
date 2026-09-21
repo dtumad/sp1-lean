@@ -27,17 +27,17 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_⟩
   · simp [circuit_norm]
   · refine SubwOperation.valueIR_congr env env' _ _ (fun i hi => ?_) (fun i hi => ?_)
-    · have hv := Inputs.eval_congr_op_b_val h_input
+    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
       simp only [eval_opBVal] at hv
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
-    · have hv := Inputs.eval_congr_op_c_val h_input
+    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
       simp only [eval_opCVal] at hv
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
   · refine SubwOperation.msbIR_congr env env' _ _ (fun i hi => ?_) (fun i hi => ?_)
-    · have hv := Inputs.eval_congr_op_b_val h_input
+    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
       simp only [eval_opBVal] at hv
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
-    · have hv := Inputs.eval_congr_op_c_val h_input
+    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
       simp only [eval_opCVal] at hv
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
   · simp [circuit_norm]

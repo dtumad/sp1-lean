@@ -68,8 +68,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     · simp only [circuit_norm]
       exact h_agree.get_eq (by omega)
     · have hv := Inputs.eval_congr_is_real h_input
-      rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval] at hv
-      simpa only [eval_inputIsReal] using hv
+      exact hv
   · -- The ten `LtOperationSigned` cells: rs1/rs2 inputs, the two comparison flag cells, `is_real`.
     refine LtOperationSigned.populateFE_congr_flat env env' _ _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_ ?_
@@ -102,8 +101,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     · simp only [circuit_norm]
       rw [h_agree.get_eq (by omega), h_agree.get_eq (by omega)]
     · have hv := Inputs.eval_congr_is_real h_input
-      rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval] at hv
-      simpa only [eval_inputIsReal] using hv
+      exact hv
   · simp [circuit_norm]
   · simp [circuit_norm]
   · simp [circuit_norm]

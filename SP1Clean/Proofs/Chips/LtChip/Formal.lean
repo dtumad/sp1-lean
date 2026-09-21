@@ -1,6 +1,7 @@
 import SP1Clean.Native.Chips.LtChip.Defs
 import SP1Clean.Math.EvalVec
 import Clean.Air.Circuit
+import ToClean.Circuit.WitgenEval
 
 /-! # `SP1Clean.LtChip` — contract: `Assumptions` / soundness / completeness / `circuit` -/
 
@@ -245,6 +246,16 @@ theorem completeness :
   -- cell and `is_real` input evaluated to their value forms).
   have hsig : Expression.eval env.toEnvironment (var { index := i₀ } : Expression (ZMod p))
       = env.get i₀ := by simp [circuit_norm]
+  -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.
+  replace h_env_cols := fun j : Fin 10 =>
+    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Extracted.LtOperationSigned) env.toEnvironment (i₀ + 2) _
+      (by simpa only [circuit_norm] using h_env_cols) j (by
+        have h : size Extracted.LtOperationSigned = 10 := rfl
+        have := j.isLt
+        omega)).trans (Witgen.getElem_eval_toElements _ _ j (by
+      have h : size Extracted.LtOperationSigned = 10 := rfl
+      have := j.isLt
+      omega)).symm
   have hcolsPop : ∀ j : Fin 10, env.get (i₀ + 2 + (j : ℕ))
       = (toElements (LtOperationSigned.populate input_adapter_op_b_memory_prev_value
           input_adapter_op_c_memory_prev_value (env.get i₀) input_is_real))[(j : ℕ)]'(by
@@ -313,7 +324,7 @@ theorem completeness :
   refine Eq.trans ?_
     ((getElem_toElements_eval_varFromOffset env.toEnvironment (i₀ + 2) i hi).trans
       (hcolsPop ⟨i, hi⟩))
-  simp only [circuit_norm]; rfl
+  simp only [circuit_norm]
   -- RegisterWrite's `isU64 #v[bit, 0, 0, 0]` (the op_a write push): the upper three limbs are literal
   -- `0`; the witnessed compare `bit` `env`-evaluates (via the same ascription trick, index `0`) to the
   -- `populate`d column 0, i.e. `U16CompareOperation.populate_bit …`, which is binary by `populate_bit_bool`.
@@ -499,7 +510,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           GeneralFormalCircuit.toSubcircuit_interactions]
         simp only [circuit_norm, Gadgets.Equality.main, List.filter_cons, List.filter_nil,
           h_byte, h_program, h_memory, decide_false, decide_true, Bool.false_eq_true,
-          if_true, List.nil_append]
+          List.nil_append]
       · simp only [main, Readers.CPUState.circuit, Readers.CPUState.main,
           Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
           Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,

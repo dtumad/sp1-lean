@@ -73,9 +73,9 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
   · -- the address gadget's input row: the two operand words, the offset bit, and the row selector
     simp only [circuit_norm]
     refine ⟨?_, ?_, Inputs.eval_congr_offset_bit h_input, ?_⟩
-    · have hv := Inputs.eval_congr_op_b_val h_input
+    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
       simpa only [eval_opBVal] using hv
-    · have hv := Inputs.eval_congr_op_c_imm h_input
+    · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_imm) h_input
       simpa only [eval_opCImm] using hv
     · rw [Inputs.eval_congr_is_lw h_input,
         Inputs.eval_congr_is_lwu h_input]

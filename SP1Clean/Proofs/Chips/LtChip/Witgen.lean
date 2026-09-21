@@ -36,18 +36,15 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     refine LtOperationSigned.populateFE_congr_flat env env' _ _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_ ?_
     · have hv := Inputs.eval_congr_op_b_val h_input
-      simp only [eval_opBVal] at hv
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · have hv := Inputs.eval_congr_op_c_val h_input
-      simp only [eval_opCVal] at hv
       simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · -- `is_slt` is the flag cell below the payload (the Jalr same-row lesson).
       simp only [circuit_norm]
       exact h_agree.get_eq (by omega)
     · -- `is_real` is an input column.
       have hv := Inputs.eval_congr_is_real h_input
-      rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval] at hv
-      simpa only [eval_inputIsReal] using hv
+      exact hv
   · simp [circuit_norm]
   · simp [circuit_norm]
   · simp [circuit_norm]
