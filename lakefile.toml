@@ -95,12 +95,17 @@ name = "Clean"
 git = "https://github.com/Verified-zkEVM/clean"
 rev = "fba2a29f5e36420d797c1de118ac9f11f23b819e"
 
-# lean-sail runtime, upstream release tag `v5` — the revision the in-tree generated model pairs
-# with (a v4-generated model against v5 fails with `unknown namespace Sail.ConcurrencyInterfaceV2`).
+# lean-sail runtime: upstream release tag `v5` (`07946313`, the revision the in-tree generated
+# model pairs with — a v4-generated model against v5 fails with `unknown namespace
+# Sail.ConcurrencyInterfaceV2`) plus ONE line, the `open PreSail` disambiguation of
+# rems-project/lean-sail#14: Lean 4.33's `ambiguousOpen` linter warns on the original, Lake
+# replays a dependency's warnings on every build, and the build runs `--wfail`. TEMPORARY pin on
+# the fork branch `dtumad/lean-sail` `sp1-pin`; re-pin to the upstream merge commit when #14
+# merges (docs/agents/lean-sail-notes.md). The branch must stay reachable (see the PolyFun note).
 [[require]]
 name = "Sail"
-git = "https://github.com/rems-project/lean-sail"
-rev = "079463134b9c50450b8393e1566a09fc492a34d9"
+git = "https://github.com/dtumad/lean-sail"
+rev = "bde9ecc665b663bbdb29afb11fb6634870fdc7df"
 
 # PolyFun supplies the `DynSystem`/`Labeled`/`Prefix`/`ReachableIn` machine vocabulary. Lenses and
 # the broader extensible-machine theory are not used; circuit construction and bus proofs remain
