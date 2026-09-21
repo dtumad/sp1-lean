@@ -7,7 +7,7 @@ name = "sp1-clean-native"
 # docs/agents/compile-profile-2026-09.md.
 defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun"]
 
-moreLeanArgs = ["--tstack=400000"]
+moreLeanArgs = ["--tstack=400000", "-j1"]
 # `allowNonModules` is set per library below (the `SP1Clean/` and test trees are non-module until
 # their migration), not package-wide, so the three module-mode `To*` libraries are enforced.
 
