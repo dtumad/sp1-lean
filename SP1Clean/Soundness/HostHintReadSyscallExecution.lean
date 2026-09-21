@@ -29,7 +29,11 @@ private theorem event_eq (left right : Machine.CoreSyscallEvent)
     left = right := by
   have next : left.nextPc = right.nextPc := by
     simp only [Machine.CoreSyscallEvent.PcLaw, Machine.CoreSyscallEvent.syscallId, code, pc] at leftLaw rightLaw
-    split_ifs at leftLaw rightLaw <;> exact leftLaw.trans rightLaw.symm
+    by_cases h : right.rawCode.toNat % 256 = Machine.haltSyscallId
+    · simp only [h, if_true] at leftLaw rightLaw
+      exact leftLaw.trans rightLaw.symm
+    · simp only [h, if_false] at leftLaw rightLaw
+      exact leftLaw.trans rightLaw.symm
   cases left
   cases right
   simp only at clock pc code arg1 arg2 result next
