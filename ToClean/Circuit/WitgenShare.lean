@@ -11,7 +11,7 @@ public import Std.Data.HashMap
 Clean's witness-IR wire format (`Clean/Circuit/WitnessIR.lean`, `Clean/Circuit/WitnessExport.lean`)
 supports sharing — a program is a list of scalar `let`-steps referenced by `localVar` — but nothing
 upstream *produces* steps from a tree-shaped payload, and `Operations.witgenJson?` serializes the
-authored tree verbatim. This file is Clean PR #453 (`dtumad/clean`, branch `sp1-integration`) as a
+authored tree verbatim. This file is the content of Clean PR #453 (closed unmerged 2026-09-21) as a
 pure addition: the hash-consing pass `WitgenIR.share`, its evaluation-preservation theorem
 `WitgenIR.eval_share`, and — at the end of the file — the serializer entry point
 `Operations.witgenJsonShared?` the SP1 ensemble exporter calls. The PR also factors the body of
