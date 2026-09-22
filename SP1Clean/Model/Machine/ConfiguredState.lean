@@ -1,5 +1,7 @@
 import SP1Clean.Model.Machine.Execution
 import ToMathlib.ExtDHashMapOfFintype
+import Mathlib.Tactic.DeriveFintype
+import Mathlib.Tactic.IntervalCases
 
 /-! # Canonical SP1 register initialization
 

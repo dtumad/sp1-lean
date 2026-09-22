@@ -1,7 +1,15 @@
 import SP1Clean.Math.Word
 import SP1Clean.Math.ShiftBounds
 import SP1Clean.Math.HWord
-import Mathlib.Tactic
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.LinearCombination
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.NormNum.Prime
+import Mathlib.Tactic.Positivity
+import Mathlib.Tactic.FieldSimp
+import Mathlib.Tactic.Set
+import Mathlib.Tactic.Use
 
 /-! # ShiftRight native arithmetic — the SRL math layer
 

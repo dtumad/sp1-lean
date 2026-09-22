@@ -155,7 +155,8 @@ theorem rejectsMalformedInventories :
        [false, false, false, false, false] := by native_decide
 
 private def finalRecord (address value clock : ℕ) : Channels.MemoryMsg Fp :=
-  ⟨clock / 4, clock % 4, (word address)[0], (word address)[1], (word address)[2], word value⟩
+  ⟨((clock / 4 : ℕ) : Fp), ((clock % 4 : ℕ) : Fp), (word address)[0], (word address)[1], (word address)[2],
+    word value⟩
 
 private def finalInput (previous address current value clock : ℕ) :
     OrderedMemoryProvider.Inputs Channels.MemoryMsg Fp :=

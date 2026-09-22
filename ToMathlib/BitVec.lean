@@ -1,6 +1,7 @@
 module
 
-public import Mathlib.Tactic
+public import Mathlib.Tactic.Positivity
+public import Mathlib.Tactic.Ring
 public import Mathlib.Data.BitVec
 
 /-!

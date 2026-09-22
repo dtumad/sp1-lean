@@ -7,7 +7,12 @@ import SP1Clean.Extracted.U16toU8OperationUnsafe
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
-import Mathlib.Tactic
+import Mathlib.Tactic.IntervalCases
+import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Set
+import Mathlib.Tactic.Linarith
 import ToClean.Circuit.IteDecide
 
 /-! # `BitwiseU16Operation` as a Clean-native composed `FormalAssertion`
