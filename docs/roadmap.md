@@ -200,6 +200,9 @@ those complete instance data later become succinct authenticated commitments is 
 - `InstructionChipId`, `InstructionRouting`, `SP1TransitionView`, and existing access plans remain
   the common identities, decoder/routing and compiler views. Never copy an opcode dispatch table.
 - `ExecutionCarrier` and `CoreExecutionTrajectory` own physical occurrence transport and replay.
+  Native, local and host grounding use the same carrier, including the event walk derived from
+  State balance. Their theorem entry points remain instance adapters; the native ordinary/HALT
+  handler view still needs a whole-path adapter to the full stateful execution contract.
   Local/protected/host projections share these. Ledger projections retain every relevant occurrence;
   State projection alone does not justify projecting Memory or Byte balance.
 - `Soundness/Shard/` is the public assembly/contract home. Move live implementation families only
