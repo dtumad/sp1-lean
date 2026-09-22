@@ -83,6 +83,52 @@ theorem subwChip_circuit_output_eq (input : Var SubwChip.Inputs (ZMod p)) (offse
           ⟨var { index := offset + 2 }⟩⟩⟩ : Var SubwChip.Columns (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
+/-- SUBW's completed output row is the evaluated symbolic output (definitional; the rewrite surface
+the view lemmas below use, kept folded as `circuit.output`). -/
+theorem subwChip_rowOutput_eq (env : Environment (ZMod p)) :
+    (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env =
+      Eval.eval env ((SubwChip.circuit (p := p)).output (varFromOffset SubwChip.Inputs 0)
+        (size SubwChip.Inputs)) := rfl
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Scalar state projection of the completed SUBW view (the stable rewrite surface for bus proofs,
+as `divRemViewOf_state`): SUBW's output row carries the input's `state` through unchanged. -/
+theorem subwViewOf_state (env : Environment (ZMod p)) :
+    (subwViewOf env).state =
+      (Eval.eval env (varFromOffset (F := ZMod p) SubwChip.Inputs 0)).state := by
+  simp only [subwViewOf, SubwChip.rowView, subwChip_rowOutput_eq, subwChip_circuit_output_eq,
+    ProvableStruct.eval_eq_eval, SubwChip.Columns.eval_state, SubwChip.Inputs.eval_state]
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Scalar adapter projection of the completed SUBW view. -/
+theorem subwViewOf_adapter (env : Environment (ZMod p)) :
+    (subwViewOf env).adapter =
+      (Eval.eval env (varFromOffset (F := ZMod p) SubwChip.Inputs 0)).adapter.toAdapterView := by
+  simp only [subwViewOf, SubwChip.rowView, subwChip_rowOutput_eq, subwChip_circuit_output_eq,
+    ProvableStruct.eval_eq_eval, SubwChip.Columns.eval_adapter, SubwChip.Inputs.eval_adapter]
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Scalar selector projection of the completed SUBW view. -/
+theorem subwViewOf_isReal_eval (env : Environment (ZMod p)) :
+    (subwViewOf env).is_real =
+      (Eval.eval env (varFromOffset (F := ZMod p) SubwChip.Inputs 0)).is_real := by
+  simp only [subwViewOf, SubwChip.rowView]
+  rw [eval_varFromOffset_valueFromOffset SubwChip.Inputs 0 env]
+  rfl
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Scalar destination-word projection of the completed SUBW view, in the exposed list's spelling. -/
+theorem subwViewOf_rdWrite (env : Environment (ZMod p)) :
+    (subwViewOf env).rdWrite =
+      Eval.eval env
+        (#v[var { index := size SubwChip.Inputs }, var { index := size SubwChip.Inputs + 1 },
+          var { index := size SubwChip.Inputs + 2 } * 65535,
+          var { index := size SubwChip.Inputs + 2 } * 65535] : Var Word (ZMod p)) := by
+  simp only [subwViewOf, SubwChip.rowView, subwChip_rowOutput_eq, subwChip_circuit_output_eq,
+    ProvableStruct.eval_eq_eval, SubwChip.Columns.eval_subw_operation]
+  simp only [circuit_norm]
+
+omit [Fact (2 ^ 25 < p)] in
 /-- SUBW's public exposed Memory list evaluates to the canonical R-type six-pack. -/
 theorem subwChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
@@ -93,20 +139,14 @@ theorem subwChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
       (((SubwChip.main (varFromOffset SubwChip.Inputs 0)).operations
         (size SubwChip.Inputs)).interactionsWith (memoryChannel (p := p)).toRaw) = _
   rw [SubwChip.interactionsWith_memory_eq]
-  have inputEq : Eval.eval env (varFromOffset SubwChip.Inputs 0) =
-      (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
-    eval_varFromOffset_valueFromOffset SubwChip.Inputs 0 env
-  have outputEq : Eval.eval env
-      ((SubwChip.circuit (p := p)).output (varFromOffset SubwChip.Inputs 0)
-        (size SubwChip.Inputs)) =
-      (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env := by
-    simp only [Component.rowOutput, circuit_norm]
   simp only [SubwChip.exposedMemoryInteractions, rtypeMemoryInteractions, List.map_cons,
     List.map_nil, TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw,
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
-  simp only [subwViewOf, ← inputEq, ← outputEq, rtypePriorMessage, rtypeReadBackMessage,
-    rtypeWriteMessage, SubwChip.rowView, Extracted.RTypeReader.toAdapterView]
-  simp only [circuit_norm, subwChip_circuit_output_eq]
+  -- Project the view through the four scalar lemmas above BEFORE `circuit_norm`: normalising the
+  -- whole output row here produced a proof term the kernel took 10 s to check (measured 2026-09-22).
+  simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
+    subwViewOf_state, subwViewOf_adapter, subwViewOf_isReal_eval, subwViewOf_rdWrite,
+    Extracted.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift SUBW's evaluated six-pack to the typed decoded-row boundary. -/
 theorem subwChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -214,6 +254,46 @@ theorem mulChip_circuit_output_eq (input : Var MulChip.Inputs (ZMod p)) (offset 
         var { index := offset + 4 }⟩ : Var MulChip.Columns (ZMod p)) := rfl
 
 omit [Fact (2 ^ 17 < p)] in
+/-- MUL's completed output row is the evaluated symbolic output (definitional). -/
+theorem mulChip_rowOutput_eq (env : Environment (ZMod p)) :
+    (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env =
+      Eval.eval env ((MulChip.circuit (p := p)).output (varFromOffset MulChip.Inputs 0)
+        (size MulChip.Inputs)) := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Scalar state projection of the completed MUL view (as `divRemViewOf_state`). -/
+theorem mulViewOf_state (env : Environment (ZMod p)) :
+    (mulViewOf env).state =
+      (Eval.eval env (varFromOffset (F := ZMod p) MulChip.Inputs 0)).state := by
+  simp only [mulViewOf, MulChip.rowView, mulChip_rowOutput_eq, mulChip_circuit_output_eq,
+    ProvableStruct.eval_eq_eval, MulChip.Columns.eval_state, MulChip.Inputs.eval_state]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Scalar adapter projection of the completed MUL view. -/
+theorem mulViewOf_adapter (env : Environment (ZMod p)) :
+    (mulViewOf env).adapter =
+      (Eval.eval env (varFromOffset (F := ZMod p) MulChip.Inputs 0)).adapter.toAdapterView := by
+  simp only [mulViewOf, MulChip.rowView, mulChip_rowOutput_eq, mulChip_circuit_output_eq,
+    ProvableStruct.eval_eq_eval, MulChip.Columns.eval_adapter, MulChip.Inputs.eval_adapter]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Scalar selector projection of the completed MUL view, in the symbolic evaluator spelling. -/
+theorem mulViewOf_isReal_eval (env : Environment (ZMod p)) :
+    (mulViewOf env).is_real =
+      (Eval.eval env (varFromOffset (F := ZMod p) MulChip.Inputs 0)).is_real := by
+  rw [mulViewOf_isReal, eval_varFromOffset_valueFromOffset MulChip.Inputs 0 env]
+  rfl
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Scalar destination-word projection of the completed MUL view, in the exposed list's spelling. -/
+theorem mulViewOf_rdWrite (env : Environment (ZMod p)) :
+    (mulViewOf env).rdWrite =
+      Eval.eval env
+        (Vector.mapRange 4 fun i => (var { index := size MulChip.Inputs + 50 + i } : Expression (ZMod p))) := by
+  simp only [mulViewOf, MulChip.rowView, mulChip_rowOutput_eq, mulChip_circuit_output_eq,
+    ProvableStruct.eval_eq_eval, MulChip.Columns.eval_a]
+
+omit [Fact (2 ^ 17 < p)] in
 /-- MUL's exposed Memory list evaluates to the canonical R-type six-pack. -/
 theorem mulChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
@@ -224,20 +304,14 @@ theorem mulChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
       (((MulChip.main (varFromOffset MulChip.Inputs 0)).operations
         (size MulChip.Inputs)).interactionsWith (memoryChannel (p := p)).toRaw) = _
   rw [MulChip.interactionsWith_memory_eq]
-  have inputEq : Eval.eval env (varFromOffset MulChip.Inputs 0) =
-      (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
-    eval_varFromOffset_valueFromOffset MulChip.Inputs 0 env
-  have outputEq : Eval.eval env
-      ((MulChip.circuit (p := p)).output (varFromOffset MulChip.Inputs 0)
-        (size MulChip.Inputs)) =
-      (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env := by
-    simp only [Component.rowOutput, circuit_norm]
   simp only [MulChip.exposedMemoryInteractions, rtypeMemoryInteractions, List.map_cons,
     List.map_nil, TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw,
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
-  simp only [mulViewOf, ← inputEq, ← outputEq, rtypePriorMessage, rtypeReadBackMessage,
-    rtypeWriteMessage, MulChip.rowView, Extracted.RTypeReader.toAdapterView]
-  simp only [circuit_norm, mulChip_circuit_output_eq]
+  -- Project the view through the four scalar lemmas above BEFORE `circuit_norm`: normalising the
+  -- whole output row here produced a proof term the kernel took 16 s to check (measured 2026-09-22).
+  simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
+    mulViewOf_state, mulViewOf_adapter, mulViewOf_isReal_eval, mulViewOf_rdWrite,
+    Extracted.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift MUL's evaluated six-pack to the typed decoded-row boundary. -/
 theorem mulChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
