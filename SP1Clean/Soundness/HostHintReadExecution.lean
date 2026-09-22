@@ -70,7 +70,7 @@ private theorem trajectory_halt (valid : image.Valid)
     (n : ℕ) (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = carrier.timeline.start n) :
     carrier.trajectory valid (n + 1) = (carrier.trajectory valid n).map
       (fun state => { state with regs := state.regs.insert LeanRV64D.Defs.Register.PC Machine.haltPc }) := by
-  obtain ⟨m, state, present, atTime, pc, _⟩ := pull
+  obtain ⟨m, state, present, atTime, pc, rom, _⟩ := pull
   have same : m = n := start_injective carrier.timeline (atTime.symm.trans time)
   subst m
   change (carrier.pairedTrajectory valid n).map ExecutionState.sail = some state at present
@@ -89,7 +89,8 @@ private theorem trajectory_halt (valid : image.Valid)
     rw [carrier.timeline_events constraints balanced, eventTimeline_start_le _ _ _ covered]
     exact replayEvents?_clock paired
   have step := HaltChip.executionStep_of_currency row ⟨{ readOnly := image.readOnly }, p⟩ rfl _ whole
-    facts.1.1 facts.1.2.1 running (currentTime.trans time.symm) atPc facts.2 before time currency
+    facts.1.1 facts.1.2.1 running (currentTime.trans time.symm) atPc facts.2
+    (by rwa [sail]) before time currency
   change (ExecutionCarrier.pairedTrajectory carrier _ _ _ (n + 1)).map ExecutionState.sail = _
   rw [ExecutionCarrier.pairedTrajectory_succ carrier _ _ _ member time]
   change ((carrier.pairedTrajectory valid n).bind _).map ExecutionState.sail = _

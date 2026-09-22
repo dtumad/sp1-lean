@@ -40,6 +40,15 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Host dispatch authenticates committed ECALL bytes in both memory representations.
+    ("SP1Clean/Model/Core/InstructionBytes.lean", "check_iff"),
+    ("SP1Clean/Model/Core/InstructionBytes.lean", "check_of_romLoaded"),
+    ("SP1Clean/Model/Core/HostSail.lean", "HostState.step_instructionBytes"),
+    ("SP1Clean/Model/Core/Execution.lean", "syscall_instructionBytes"),
+    ("SP1CleanTest/Core/ExecutionSnapshot.lean", "rejectsCodeMemoryMismatch"),
+    ("SP1CleanTest/Alignment/Core/ExecutionPath.lean", "rejectsMissingCodeBytes"),
+    ("SP1CleanTest/Alignment/Core/ExecutionPath.lean", "rejectsCorruptedContinuation"),
+
     # Native target-value authentication and complete finite change coverage.
     ("SP1Clean/Model/Core/MemoryFinalCheck.lean", "changes"),
     ("SP1Clean/Model/Core/MemoryFinalCheck.lean", "mem_changes_iff"),

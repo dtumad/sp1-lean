@@ -1730,6 +1730,13 @@
       "typeFingerprint": "2483337771"
     },
     {
+      "bodyFingerprint": "1026608380",
+      "local": false,
+      "module": "Init.Data.Nat.Lemmas",
+      "name": "Nat.decidableForallFin",
+      "typeFingerprint": "1205130257"
+    },
+    {
       "bodyFingerprint": "3427342542",
       "local": false,
       "module": "Init.Data.Nat.Bitwise.Basic",
@@ -3046,7 +3053,7 @@
       "typeFingerprint": "1789520444"
     },
     {
-      "bodyFingerprint": "1764668796",
+      "bodyFingerprint": "2891449193",
       "local": true,
       "module": "SP1Clean.Model.Core.HostSail",
       "name": "SP1Clean.Model.Core.HostState.step",
@@ -3072,6 +3079,13 @@
       "module": "SP1Clean.Model.Core.HostExecution",
       "name": "SP1Clean.Model.Core.HostState.writeOutput.match_1",
       "typeFingerprint": "778687755"
+    },
+    {
+      "bodyFingerprint": "551586987",
+      "local": true,
+      "module": "SP1Clean.Model.Core.InstructionBytes",
+      "name": "SP1Clean.Model.Core.InstructionBytes.check",
+      "typeFingerprint": "756137116"
     },
     {
       "bodyFingerprint": "877097884",

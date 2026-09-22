@@ -439,6 +439,10 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Composition.extracted_instructionTables_constraints
 #print axioms SP1Clean.Composition.signedSum_eq_sent_sub_received
 #print axioms SP1Clean.Composition.signedSum_eq_zero
+#print axioms SP1Clean.Model.Core.InstructionBytes.check_iff
+#print axioms SP1Clean.Model.Core.InstructionBytes.check_of_romLoaded
+#print axioms SP1Clean.Model.Core.HostState.step_instructionBytes
+#print axioms SP1Clean.Model.Core.ExecutionStep.syscall_instructionBytes
 #print axioms SP1Clean.Model.Core.MemorySnapshot.changes
 #print axioms SP1Clean.Model.Core.MemorySnapshot.mem_changes_iff
 #print axioms SP1Clean.Model.Core.MemorySnapshot.changes_nodup

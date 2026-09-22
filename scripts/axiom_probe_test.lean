@@ -1,13 +1,13 @@
+import SP1CleanTest.Core.ExecutionSnapshot
+import SP1CleanTest.Alignment.Core.ExecutionPath
 import SP1CleanTest.Core.FinalMemoryValue
 import SP1CleanTest.Core.MemoryFinalCheck
 import SP1CleanTest.Alignment.Core.LocalCore
-import SP1CleanTest.Alignment.Core.ExecutionPath
 import SP1CleanTest.Core.HostExecution
 import SP1CleanTest.Core.HostQueue
 import SP1CleanTest.Alignment.Core.HostCommitBoundary
 import SP1CleanTest.Alignment.Core.HostHintReadPartition
 import SP1CleanTest.Alignment.Core.HostCall
-import SP1CleanTest.Core.ExecutionSnapshot
 import SP1CleanTest.Core.SnapshotBoundary
 import SP1CleanTest.Core.HostBuffer32
 import SP1CleanTest.Core.HostRamBytes
@@ -43,6 +43,9 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.ExecutionSnapshot.rejectsCodeMemoryMismatch
+#print axioms SP1CleanTest.Core.ExecutionPath.rejectsMissingCodeBytes
+#print axioms SP1CleanTest.Core.ExecutionPath.rejectsCorruptedContinuation
 #print axioms SP1CleanTest.Core.FinalMemoryValue.constructedRows
 #print axioms SP1CleanTest.Core.FinalMemoryValue.rejectsForgedValues
 #print axioms SP1CleanTest.Core.FinalMemoryValue.receiptAccounting

@@ -82,6 +82,17 @@ theorem executesPaddedHint :
         decide (result.1.sail.memory.read 80000 = 42))).getD false = true := by
   native_decide
 
+/-- An otherwise valid host request cannot bypass a mismatch in any of the four code bytes.
+Sparse omitted bytes denote present zeros in the realized memory, so the positive fixture above
+needs only the nonzero opcode byte; changing one of its zero bytes must still fail. -/
+theorem rejectsCodeMemoryMismatch :
+    (source.host.run policy source.sail.readContext).isSome = true ∧
+      ((List.range 4).map fun offset =>
+        ({ source with sail.memory := (source.sail.memory.write (65536 + offset)
+          (if offset = 0 then 0 else 1)) }.hostStep? policy program).isNone) =
+        [true, true, true, true] := by
+  native_decide
+
 /-- The executable check reaches the official full-state host semantics through the general
 commuting theorem; this conclusion never evaluates the dense Sail memory realization. -/
 theorem paddedHint_semanticStep :
