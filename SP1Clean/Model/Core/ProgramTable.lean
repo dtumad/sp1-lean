@@ -2,6 +2,7 @@ import SP1Clean.Model.Core.InstructionDecode
 import SP1Clean.Model.Core.ProgramImage
 import SP1Clean.Model.BusMessages
 import ToClean.Circuit.StaticTable
+import Mathlib.Tactic.IntervalCases
 
 /-! # Fixed Program rows computed from the finite image
 

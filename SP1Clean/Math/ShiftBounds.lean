@@ -1,5 +1,7 @@
 import SP1Clean.Math.Word
-import Mathlib.Tactic
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.Ring
 
 /-! # Shared `.val`-bridge and bound lemmas for the shift within-byte proofs
 

@@ -1,7 +1,11 @@
 module
 
-public import Mathlib.Tactic
+public import Mathlib.Tactic.SplitIfs
+public import Aesop
+public import Mathlib.Tactic.Positivity
+public import Mathlib.Tactic.Ring
 public import Mathlib.Data.ZMod.Basic
+public import Mathlib.Algebra.Field.ZMod
 public import Std.Data.ExtDHashMap
 public import Std.Data.ExtHashMap
 

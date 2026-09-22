@@ -1,5 +1,6 @@
 import Mathlib.Data.ZMod.Basic
-import Mathlib.Tactic
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Linarith
 
 /-! # Binary-field gates and BitVec comparisons
 

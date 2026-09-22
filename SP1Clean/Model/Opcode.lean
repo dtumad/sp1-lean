@@ -1,4 +1,5 @@
-import Mathlib.Tactic
+import Mathlib.Tactic.DeriveFintype
+import Mathlib.Data.Fintype.Basic
 
 /-! # `Opcode` — the RISC-V instruction alphabet (a faithful mirror of SP1's `Opcode`)
 

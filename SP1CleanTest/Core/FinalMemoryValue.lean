@@ -72,7 +72,8 @@ private def balanced (rows : List (Bool × List (String × List Fp × Fp))) : Bo
 private def word (value : ℕ) : Word Fp := bitVecToWord (BitVec.ofNat 64 value)
 
 private def record (address value clock : ℕ) : Channels.MemoryMsg Fp :=
-  ⟨clock / 2 ^ 24, clock % 2 ^ 24, (word address)[0], (word address)[1], (word address)[2], word value⟩
+  ⟨((clock / 2 ^ 24 : ℕ) : Fp), ((clock % 2 ^ 24 : ℕ) : Fp), (word address)[0], (word address)[1],
+    (word address)[2], word value⟩
 
 private def register : Channels.MemoryMsg Fp := record 1 123 (2 ^ 24 + 8)
 private def ram : Channels.MemoryMsg Fp := record 65536 (target.memory.readWord 65536).toNat 264

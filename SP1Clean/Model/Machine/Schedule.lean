@@ -1,4 +1,5 @@
-import Mathlib.Tactic
+import Mathlib.Tactic.Use
+import Mathlib.Tactic.Ring
 
 /-! # SP1 step schedules
 
