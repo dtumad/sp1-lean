@@ -929,6 +929,18 @@ always means a *local* regression against one of these.
   PR #51); hand-written code should never build such chains inside one term in the first place.
   Entry chunking does not help when one entry's closure is the chain (the Poseidon output).
 
+- **Never let `circuit_norm` normalise a whole chip row when a projection will do.** Four bus
+  lemmas (`{add,sub,subw,mul}Chip_memoryInteractionValues_eq`) rewrote the row view with
+  `← inputEq / ← outputEq` and then ran `simp only [circuit_norm]` over `circuit.output`; the
+  resulting proof terms cost the **kernel** 10.6, 11, 11 and 15.8 s — 48 of the two files'
+  114 CPU-s, and the files sat on the alignment build's critical path. The DivRem lemma beside
+  them was already under a second because it projects the view through four small scalar lemmas
+  (`divRemViewOf_{state,adapter,isReal_eval,rdWrite}`) first, so `circuit_norm` never sees the
+  row. Copying that shape (a `rfl` `rowOutput_eq`, the four projections through the generated
+  per-field `eval_*` lemmas, then the bus lemma) took `Grounding/RTypeChips` 61.7 → 10.2 CPU-s
+  and `GroundingAdapter` 52.3 → 10.6 (fork PRs #55). When a kernel figure dominates a file,
+  `-Dtrace.profiler` names the declaration; the fix is almost always to keep the big value folded.
+
 - **Per-field `simp only [circuit_norm]` on a struct is quadratic in the field count.** A lemma
   `(ProvableStruct.eval env s).f = eval env s.f` proved by `cases s; simp only [circuit_norm]`
   normalises the *whole* struct's evaluation before projecting, so `n` such lemmas cost `n²`: the
@@ -939,6 +951,15 @@ always means a *local* regression against one of these.
   the field's kind (`ProvableType.eval_field` / `eval_fields` / `ProvableStruct.eval_eq_eval`),
   never the whole `circuit_norm` set. `provable_struct_eval_lemmas` does this (fork PR #52); apply
   the same rule to any hand-written per-field lemma.
+
+- **A wholesale `import Mathlib.Tactic` can silently change what your code *means*.** It pulls in
+  `Mathlib.Algebra.EuclideanDomain.Field`, whose instance makes `/` and `%` typecheck on a field:
+  two test modules wrote `⟨clock / 2 ^ 24, clock % 2 ^ 24, …⟩` at `Fp` and got the *field's*
+  Euclidean quotient and remainder on coerced operands (`clk_low` identically 0, `clk_high` a
+  field inverse) instead of the intended ℕ arithmetic. The tests passed because nothing there
+  constrained the decomposition. Narrowing the import (fork PR #54) turned it into an instance
+  error. Compute in ℕ and cast (`((clock % 2 ^ 24 : ℕ) : Fp)`), and treat "it only compiles with
+  the whole tactic library imported" as a signal to look at the elaborated term.
 
 - **`interpretation` in the profiler is Mathlib's tactics, and it is where whole modules go.**
   Lean-core tactics (`omega`, `decide`, `bv_decide`, `simp`, `rfl`) are native; Mathlib's

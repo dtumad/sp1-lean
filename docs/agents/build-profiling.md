@@ -97,6 +97,17 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
 - Run local profiles **solo**: a `lake build` in another shell (or an agent's) inflates every
   number, including `import` (measured 1.2 s → 4.8 s). And never switch git branches in a checkout
   while a `lake build` runs there — Lake reads sources as it reaches them.
+- **A measurement loop can put the machine into swap and void its own results.** Eight
+  elaborations of a 5 900-line file back to back left `vm_stat` at 14 M swap-outs and turned a
+  34 s file into 348–673 s; the per-declaration numbers from that loop were meaningless. Check
+  `sysctl vm.swapusage` / `vm_stat` before trusting a solo number, reap `lean --worker` processes
+  (`pkill -f "lean --worker"`, never `lean --server`), and re-run the two configurations you
+  actually want to compare back to back.
+- **Do not attribute kernel time by replacing a proof with `sorry`.** `sorry` changes the
+  elaboration path, not just the term: replacing one structure field of
+  `divRemChip_rtypeGroundingData` with `sorry` took the file from 34 s to 673 s. Attribute with
+  `-Dtrace.profiler=true` (its `[Kernel] typechecking declarations [X]` nodes name the
+  declaration) and, within a declaration, by truncating the tactic block at successive points.
 - `lake env lean` applies no package flags (`scripts/lean_flags.py` prints them); it also exits 0
   on a stack overflow.
 
@@ -117,6 +128,12 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
   also defaults to all cores. 16 threads on 4 vCPU cost a third of the CPU-seconds; 3 jobs × 2
   threads (`LEAN_NUM_THREADS=3` + `-j2` in `moreLeanArgs`) is −17 % wall on a cold build.
 - GitHub serves a job's log only after it completes; `gh run view --log` is empty in progress.
+- **The full-tree `lake lint` and the conformance gates run only in `build-full`**, which a PR
+  skips unless it carries the `ci:alignment` label. A PR that touches the alignment layers — or
+  anything generated, `ToClean`, the pins or the exporter — must carry that label, or its
+  regression lands on `main`: #51 added 3 963 generated definitions whose uniform binder block
+  made `unusedArguments` fire 384 times, PR CI was green, and `main`'s next `build-full` went
+  red. `guards` prints a notice naming the touched files when the label is missing.
 
 ## Measurement protocol for a build-time PR
 
