@@ -30,6 +30,7 @@ Each document has one role:
 | [`audits/2026-09-build-semantics.md`](audits/2026-09-build-semantics.md) | build cost joined to the claim map: layers, import floor, hotspot mechanisms, per-cluster verdicts, proposals |
 | [`agents/`](agents/README.md) | maintained contributor techniques and provenance procedures |
 | [`snapshots/axiom-ledger.md`](snapshots/axiom-ledger.md) | generated per-theorem axiom inventory |
+| [`snapshots/capstone-contract.json`](snapshots/capstone-contract.json) | compiled capstone target/definition dependencies, excluding theorem proof bodies |
 
 > **Upstream authority: read Clean's own docs.** Read the pinned copy under
 > `.lake/packages/Clean/` or upstream at <https://github.com/Verified-zkEVM/clean>:
@@ -51,6 +52,12 @@ instruction identities retain a native definition, Formal/Bridge/Complete proof 
 whole-chip Rust oracle and faithfulness anchor, real-row satisfiability theorem, SP1 dump, and all
 three witgen artifacts. `scripts/check_current_docs.py` checks local Markdown links, rejects retired
 paths, and requires module documentation on hand-written Lean modules.
+
+`python3 scripts/check_capstone_contract.py` builds and checks the compiled shard target types,
+then compares their definition-dependency manifest. `--update` refreshes that manifest only after
+reviewing the type/semantic delta. The release harness runs it against the just-built oleans;
+updating the axiom census does not implicitly update this separate contract record. The gate
+records a conditional target while its implementation instances remain open.
 
 ## Historical records
 

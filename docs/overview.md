@@ -8,11 +8,36 @@ trust boundaries. SP1 is pinned to `v6.4.0`, and Lean/mathlib to v4.33.1.
 
 The current mixed AIR derives a local path from a complete checked incoming Sail/host state,
 with exact active-event coverage and final PC/clock/Memory-frontier agreement. Complete outgoing
-state/Exit binding, WRITE/VERIFY with authenticated allocations, and full constructive completeness
+state binding, WRITE/VERIFY with authenticated allocations, and full constructive completeness
 remain open. The checked end-to-end targets reuse the existing execution path and generic Clean
 interfaces; they are not completed instances. See [the roadmap](roadmap.md) for the compact status
 and implementation order, and the [report](verification-report.md#72-full-state-local-shard-semantics-and-the-installed-mixed-air)
 for the proof boundary.
+
+## Coverage register
+
+The first capstone targets the existing native ensemble and the supported decoder's normal
+RV64 integer execution, with all eight selected host calls. It is not a claim about every RISC-V
+instruction or every SP1 mode. The categories below are part of the review contract; proof gaps
+must not be relabelled as intentional exclusions merely to close a theorem.
+
+| Classification | Behavior and enforcement | Exit criterion / owner |
+|---|---|---|
+| Intentional profile exclusion | Dynamic SP1 `mprotect`, user-mode/trap tables, precompiles, and optional retention clusters are absent from `CoreProfile`; extraction checks that Cargo does not enable `mprotect`. | Separate profiles and whole-table refinement, outside the first capstone. Native immutable-ROM protection is a different mechanism. |
+| Intentional ISA exclusion | `InstructionDecode.decode` selects the supported 32-bit integer/M encodings and ECALL. Compressed, atomic, floating/vector, privileged and trapping execution are outside this profile. | An explicit decoder/semantic/circuit extension; never infer full RV64IM coverage from the 25 chip families. |
+| Platform and resource policy | Configured Sail machine mode, immutable checked ROM, aligned accesses, 48-bit native address/clock space, and finite field/host capacities. SP1's trusted/supervisor profile is not Sail Supervisor privilege. | State every bound in the concrete semantic profile and derive/check it in the AIR; capacities must not be defined by compiler success. |
+| Temporary decoder limitation | Enabled Zicbop/Zihintntl encodings that overlap integer no-ops are rejected by `reservedHint`, because Sail selects distinct constructors. | Prove those constructors' bridges and extend the decoder/profile explicitly (campaign B). |
+| Temporary SP1 compatibility restriction | Native syscall decoding requires canonical full 64-bit words. Rust dispatches on the low 32 bits; executor return normalization and AIR raw-word preservation need separate comparison. | A proved executor/AIR compatibility domain or a changed native syscall adapter, with alias regressions (campaign A's exact-refinement follow-up). |
+| Deliberate execution observation | Commit banks are mutable, as in the Rust executor. Exact SyscallInstrs AIR compares every commit to a fixed public digest. | State the compatible trace/public-value domain in exact refinement; do not erase intermediate execution updates. |
+| Explicit external boundary | ENTER models constrained replay and returns zero. Hook replies are request-bound input data; WRITE records bytes. VERIFY records an observed request, not cryptographic acceptance. | Authenticate all observations/effects in the native AIR. Verification of external proofs and unconstrained execution are separate claims. |
+| Capstone-blocking proof debt | Free resource `Profile`, ordinary ROM/store policy, full supplied-target binding, WRITE/VERIFY and fresh allocation installation, mixed compiler totality, and dummy-HALT participation. | Close campaign A; none may become a caller premise or permanent syscall exclusion. |
+| Separate refinement | Pinned SP1's complete AIR, preprocessing/PCS identity, succinct boundary commitments, and cryptographic verifier soundness. | Separate proved interfaces, assumptions and error bounds; native correctness does not imply these results. |
+
+The code authorities are `Model/Core/{InstructionDecode,Execution,HostExecution,SyscallCode}`,
+`Model/Core/SourceExecution`, `FormalModel/{Shard,CoreProfile}`, and `update_extracted.py`'s
+`verify_no_mprotect`. [The roadmap](roadmap.md) owns progress; this table owns the meaning of each
+restriction. Complete finite source/target snapshots are public instance data in the native
+statement, even when only a bounded canonical header occupies the field-valued public input.
 
 ## Retained 55-table native soundness
 
