@@ -104,6 +104,7 @@ import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.HostTerminal
 import SP1Clean.Model.Core.InstructionBytes
 import SP1Clean.Model.Core.InstructionDecode
+import SP1Clean.Model.Core.InstructionWrite
 import SP1Clean.Model.Core.Memory
 import SP1Clean.Model.Core.MemoryEquality
 import SP1Clean.Model.Core.MemoryFinalCheck

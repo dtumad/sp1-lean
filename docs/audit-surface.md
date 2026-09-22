@@ -59,6 +59,9 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `circuit` | `SP1Clean/Proofs/Chips/OrderedSnapshotProvider.lean` | Existing canonical ordering wrapper instantiated for snapshot records, with internal constructor obligations discharged |
 | `ExecutionStep` | `SP1Clean/Model/Core/Execution.lean` | Normal official-Sail retirement or concrete stateful host execution, with no transition from a halted source |
 | `InstructionBytes.check` | `SP1Clean/Model/Core/InstructionBytes.lean` | All four little-endian instruction bytes, including present zero bytes, agree with the committed word |
+| `InstructionWrite.spans?` | `SP1Clean/Model/Core/InstructionWrite.lean` | Supported ordinary writes are derived from the decoded instruction and incoming base register, including same-value writes; failure differs from an empty footprint |
+| `InstructionWrite.check` | `SP1Clean/Model/Core/InstructionWrite.lean` | Every byte of the exact store width must avoid the immutable-code mask; address bounds and alignment are separate obligations |
+| `InstructionWrite.PermittedAt` | `SP1Clean/Model/Core/InstructionWrite.lean` | Fetch/decode at the actual PC and live operands bind that policy to a semantic source state; not yet required by `ExecutionPath` |
 | `HostState.step` | `SP1Clean/Model/Core/HostSail.lean` | Host dispatch requires ECALL in both the committed program and actual Sail memory before interpreting the request |
 | `ExecutionSegment` | `SP1Clean/Model/Core/ExecutionPath.lean` | Exactly the requested number of local semantic steps, independent of boot, HALT, padding, and AIR witness layout |
 | `executionSystem` | `SP1Clean/Model/Core/ExecutionPath.lean` | The equivalent PolyFun finite-path view; directions are actual semantic steps |
@@ -115,6 +118,8 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `supportedChip_fetchDiscriminantShape` | `SP1Clean/Soundness/FetchDiscriminant.lean` | Why no instruction row can claim the `ECALL` opcode — the per-chip step that recovers decode-only Program truth from the re-based committed-fragment provider |
 | `ChipKind` | `SP1Clean/Soundness/ChipRow.lean` | The per-chip interface (`chipSpec`, `advanceReady`, `view`, `advance`) — 25 registrations |
 | `RowEffect` | `SP1Clean/Soundness/RowEffectDefs.lean` | What each row is proved to *do* |
+| `store_permittedAt` | `SP1Clean/Soundness/StoreWritePolicy.lean` | A committed store interval with byte permission authorizes its independent decoded footprint |
+| `GroundingCarrier.romLoaded_prefix` | `SP1Clean/Soundness/HostHintReadRom.lean` | Checked source ROM and actual AIR permissions preserve code at every replayed prefix of the installed instruction/control/hint ensemble |
 | `ValueOperandsBound` | `SP1Clean/Soundness/RowEffectDefs.lean` | How a row's operands are tied to machine state |
 
 ## The assumed semantic boundary

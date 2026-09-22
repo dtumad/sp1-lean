@@ -119,9 +119,19 @@ Host dispatch now checks the complete ECALL word in actual Sail memory as well a
 program. The finite snapshot interpreter uses the same byte check, and its soundness/completeness
 commuting theorems are retained. Installed host/HALT grounding derives the new guard from its
 existing ROM invariant, without an additional capstone premise. Regressions reject missing zero
-bytes, each corrupted code byte, and corruption at a continuation. Ordinary store-byte permission,
-whole-path ROM preservation in the independent semantic profile, and its resource limits remain
-the next obligations; the host fetch check alone does not close them.
+bytes, each corrupted code byte, and corruption at a continuation.
+
+`InstructionWrite` computes ordinary write spans from the decoded instruction and incoming base
+register, using the shared access-plan arithmetic. Its byte policy counts same-value stores and
+uses the exact SB/SH/SW/SD width rather than the enclosing RAM cell. All four store-chip adapters
+bind their AIR-authorized writes to this independent policy at the actual PC and live operands.
+`HostHintReadCPU.GroundingCarrier.romLoaded_prefix` derives ROM preservation at every successful
+prefix of the installed mixed replay from the checked source and AIR permissions. Regressions
+cover signed offsets, all four widths, partial-cell writes beside ROM, malformed footprints,
+and a same-value store accepted by the unprotected AIR but rejected by the protected AIR.
+Installing this ordinary policy in the independent semantic profile, proving preservation/fetch
+agreement on that domain (including branch/JALR edges), and fixing its resource limits remain
+open. The raw `ExecutionPath` and free `Profile` are unchanged by these component proofs.
 
 **Next boundary work:** bind the complete supplied outgoing snapshot to the already-derived
 Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks
