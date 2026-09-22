@@ -3,6 +3,7 @@ import SP1Clean.Soundness.ProtectedLocalCore
 import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Model.Core.HostSnapshot
+import SP1Clean.Model.Core.InstructionWrite
 import SP1CleanTest.Alignment.Audit.OneAddNativePremises
 import ToClean.Air.EnsembleExport
 
@@ -671,6 +672,39 @@ theorem unguardedStoreIntoRom :
 private def permissionRow (address : ℕ) : Row :=
   (59, ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage address).map
     (fun input => (toElements input).toList)).getD [])
+
+private def sameValueRomSource : ExecutionSnapshot :=
+  { storeRomSource with sail.registers := storeRomSource.sail.registers.insert .x1 0x23 }
+
+private def sameValueRomInput : StoreByteChip.Inputs Fp :=
+  { storeRomInput with
+    adapter.op_a_memory.prev_value := word 0x23,
+    register_low_byte := 0x23, increment := 0, store_value := word 0x00110023 }
+
+private def sameValueRomRows : List Row :=
+  let sourceRow (previous index : ℕ) : Row :=
+    (0, (toElements (OrderedSnapshotProvider.populate
+      (SnapshotRegisterProvider.populate sameValueRomSource.sail.memorySnapshot (BitVec.ofNat 5 index))
+      previous index)).toList)
+  [sourceRow 0 1, sourceRow 2 2,
+    (1, (toElements (OrderedSnapshotProvider.populate
+      (InitialMemoryRead.populate (p := SP1Prime) sameValueRomSource.sail.memory 65536) 3 65536)).toList),
+    terminal 2 65537,
+    (3, finalRecord 0 1 13 0x23), (3, finalRecord 2 2 12 65536),
+    (4, finalRecord 3 65536 10 0x00110023), terminal 5 65537,
+    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) storeRomImage (65536, 0x00110023) 1).map
+      (fun input => (toElements input).toList)).getD []),
+    (25, (toElements sameValueRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
+
+/-- An SB that leaves its entire RAM cell unchanged still needs code-write permission.
+The unprotected AIR accepts the real row; both the protected AIR and semantic policy reject it. -/
+theorem rejectsSameValueRomStore :
+    check storeRomImage sameValueRomSource publicInput sameValueRomRows = true ∧
+    check storeRomImage sameValueRomSource publicInput sameValueRomRows true = false ∧
+    sameValueRomInput.store_value = sameValueRomInput.memory_access.prev_value ∧
+    InstructionWrite.check storeRomImage.readOnly
+      sameValueRomSource.sail.readContext.register (.STORE (0, .Regidx 1, .Regidx 2, 1)) = false := by
+  native_decide
 
 private def besideRomSource : ExecutionSnapshot :=
   { storeRomSource with

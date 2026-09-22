@@ -66,6 +66,21 @@ theorem RowEffect.memory_outside_of_writeAuthorization {image : ProgramImage} (v
     have := (authorized footprint write address covered).1
     omega
 
+/-- Byte permissions frame each protected address, even when its stored value would be unchanged. -/
+theorem RowEffect.readOnly_of_writePermission {image : ProgramImage} {program : GuestProgram}
+    {row : Trace.RowView (ZMod p)} {state next : SailState}
+    (effect : RowEffect program row state next) (permitted : RowWritePermitted image row)
+    (address : ℕ) (readOnly : image.readOnly address = true) :
+    next.mem.get? address = state.mem.get? address := by
+  cases write : row.commit.memWrite with
+  | none => exact effect.mem.1 write address
+  | some footprint =>
+      apply (effect.mem.2 footprint write).2
+      intro covered
+      have denied := permitted footprint write address covered
+      rw [readOnly] at denied
+      contradiction
+
 theorem RowEffect.romLoaded_of_writePermission {image : ProgramImage} (valid : image.Valid)
     {row : Trace.RowView (ZMod p)} {state next : SailState}
     (effect : RowEffect (image.toGuestProgram valid) row state next)
@@ -79,15 +94,7 @@ theorem RowEffect.romLoaded_of_writePermission {image : ProgramImage} (valid : i
     have atPc : entry.1 = pc := by simpa using List.find?_some found
     apply (image.readOnly_iff _).mpr
     exact ⟨entry, member, by rw [atPc]; omega, by rw [atPc]; have := index.isLt; omega⟩
-  have frame : next.mem.get? (pc.toNat + index) = state.mem.get? (pc.toNat + index) := by
-    cases write : row.commit.memWrite with
-    | none => exact effect.mem.1 write _
-    | some footprint =>
-        apply (effect.mem.2 footprint write).2
-        intro covered
-        have denied := permitted footprint write _ covered
-        rw [readonly] at denied
-        contradiction
+  have frame := effect.readOnly_of_writePermission permitted _ readonly
   exact frame.trans (loaded pc word fetched index)
 
 end SP1Clean.Soundness.Target

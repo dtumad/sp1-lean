@@ -40,6 +40,25 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Independent ordinary write inventory, store-chip bindings, and installed prefix ROM.
+    ("SP1Clean/Model/Core/InstructionWrite.lean", "spans?"),
+    ("SP1Clean/Model/Core/InstructionWrite.lean", "check"),
+    ("SP1Clean/Model/Core/InstructionWrite.lean", "check_iff"),
+    ("SP1Clean/Model/Core/InstructionWrite.lean", "spans?_store"),
+    ("SP1Clean/Model/Core/InstructionWrite.lean", "check_store_iff"),
+    ("SP1Clean/Model/Core/InstructionWrite.lean", "PermittedAt"),
+    ("SP1Clean/Soundness/StoreWritePolicy.lean", "store_permittedAt"),
+    ("SP1Clean/Soundness/StoreWritePolicy.lean", "write_permittedAt"),
+    ("SP1Clean/Soundness/RomWriteProtection.lean", "RowEffect.readOnly_of_writePermission"),
+    ("SP1Clean/Soundness/HostHintReadRom.lean", "GroundingCarrier.readOnly_prefix"),
+    ("SP1Clean/Soundness/HostHintReadRom.lean", "GroundingCarrier.romLoaded_prefix"),
+    ("SP1CleanTest/Core/InstructionWrite.lean", "fullStoreSpans"),
+    ("SP1CleanTest/Core/InstructionWrite.lean", "signedOffsets"),
+    ("SP1CleanTest/Core/InstructionWrite.lean", "partialCellPolicy"),
+    ("SP1CleanTest/Core/InstructionWrite.lean", "failClosed"),
+    ("SP1CleanTest/Core/InstructionWrite.lean", "decodedStore"),
+    ("SP1CleanTest/Alignment/Core/LocalCore.lean", "rejectsSameValueRomStore"),
+
     # Host dispatch authenticates committed ECALL bytes in both memory representations.
     ("SP1Clean/Model/Core/InstructionBytes.lean", "check_iff"),
     ("SP1Clean/Model/Core/InstructionBytes.lean", "check_of_romLoaded"),

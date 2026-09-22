@@ -259,6 +259,7 @@ import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Soundness.HostHintReadCoverage
 import SP1Clean.Soundness.HostHintReadExecution
 import SP1Clean.Soundness.HostHintReadExecutionPath
+import SP1Clean.Soundness.HostHintReadRom
 import SP1Clean.Soundness.HostHintReadExecutionRows
 import SP1Clean.Soundness.HostHintReadExit
 import SP1Clean.Soundness.HostHintReadFinalMemory
@@ -360,6 +361,7 @@ import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.RefreshElimination
 import SP1Clean.Soundness.RefreshWiring
 import SP1Clean.Soundness.RomWriteProtection
+import SP1Clean.Soundness.StoreWritePolicy
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.SP1Ensemble
