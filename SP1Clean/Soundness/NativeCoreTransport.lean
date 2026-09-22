@@ -6,6 +6,7 @@ import SP1Clean.Soundness.CoreRowTransport
 The carrier passed to grounding keeps every ordinary/HALT/syscall occurrence, rewrites only prior
 Memory records, and uses canonical State endpoints. Its complete structural row contract and
 semantic step/frame transport are derived from the checked image and raw constraints/balance.
+The carrier is an instance of the same `ExecutionCarrier` used by the local and host assemblies.
 The original rows' actual execution facts remain the next semantic obligation.
 -/
 
@@ -61,21 +62,11 @@ private theorem canonical_times {image : ProgramImage}
 
 /-- A complete structural carrier for the generic grounding walk. The semantic alignment points
 back to the actual event rows, so later step/frame proofs do not depend on refresh implementation. -/
-structure GroundingCarrier {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) where
-  ordered : List (ExecutionRow p)
-  rows : List (RowFacts p)
-  final : MemLoc → Option (MemoryMsg (ZMod p))
-  exhaustive : ordered.Perm (executionRows witness)
-  aligned : List.Forall₂ WindowAligned rows (ordered.map (ExecutionRow.facts witness.data))
-  rowOK : ∀ row ∈ rows, RowOKCore (StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput)) row
-  stateWalk : Walk.IsWalk (fun row : RowFacts p => (row.statePull, row.statePush))
-    (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) rows
-  memoryBalance : ∀ loc, optMS (memoryInitialFrontier witness loc) + pushesAt rows loc =
-    optMS (final loc) + pullsAt rows loc
-  finalRewrite : ∀ loc message, memoryFinalFrontier witness loc = some message →
-    ∃ earlier, final loc = some earlier ∧ MemoryMsg.locOf earlier = MemoryMsg.locOf message ∧
-      earlier.value = message.value ∧ MemoryMsg.timeNat earlier ≤ MemoryMsg.timeNat message
+abbrev GroundingCarrier {image : ProgramImage}
+    (witness : EnsembleWitness (ensemble (p := p) image)) :=
+  ExecutionCarrier (ExecutionRow.facts witness.data) (executionRows witness)
+    (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput)
+    (memoryInitialFrontier witness) (memoryFinalFrontier witness)
 
 /-- The checked image and raw AIR construct the final structural carrier. No row order, touch
 permutation, prior bounds, refresh order, or semantic boundary is supplied by the caller. -/
@@ -106,7 +97,7 @@ theorem grounding_carrier {image : ProgramImage} (valid : image.Valid)
     · exact congrArg canonState localAlignment.statePull
     · exact congrArg canonState localAlignment.statePush
   refine ⟨⟨ordered, rewrittenRows rows touches, final, exhaustive,
-    paired.imp (fun _ _ facts => facts.1), ?_, ?_, ?_, finalRewrite⟩⟩
+    paired.imp (fun _ _ facts => facts.1), ?_, ?_, ?_, ?_, finalRewrite⟩⟩
   · intro row member
     obtain ⟨_, _, facts⟩ := forall₂_exists_right paired row member
     exact facts.2.1
@@ -120,6 +111,8 @@ theorem grounding_carrier {image : ProgramImage} (valid : image.Valid)
         dsimp only [ExecutionRow.canonEdge]
         rw [ExecutionRow.edge_eq_facts]
         exact Prod.ext related.1.symm related.2.symm) edges.flip walk
+  · rw [ExecutionRow.canonEdge_facts]
+    exact walk
   · intro loc
     rw [(rewritten_memory rows touches loc).1, (rewritten_memory rows touches loc).2]
     exact balance loc
@@ -130,7 +123,7 @@ theorem GroundingCarrier.stateBalance {image : ProgramImage}
     initialBoundaryStateMessage witness.publicInput ::ₘ
         (↑(carrier.rows.map (·.statePush)) : Multiset (StateMsg (ZMod p))) =
       finalBoundaryStateMessage witness.publicInput ::ₘ ↑(carrier.rows.map (·.statePull)) :=
-  endpointBalance_of_stateWalk _ carrier.stateWalk
+  ExecutionCarrier.stateBalance carrier
 
 /-- Per-event step and frame facts transport to the final carrier uniformly, over any trajectory
 and timeline. These semantic premises are explicitly separate from carrier construction. -/
@@ -141,11 +134,7 @@ theorem GroundingCarrier.engineFacts {image : ProgramImage}
       LocalStepFactG program trajectory initial timeline (event.facts witness.data) ∧
       FrameFactG program trajectory initial timeline (event.facts witness.data)) :
     ∀ row ∈ carrier.rows, LocalStepFactG program trajectory initial timeline row ∧
-      FrameFactG program trajectory initial timeline row := by
-  intro row member
-  obtain ⟨original, originalMem, aligned⟩ := forall₂_exists_right carrier.aligned row member
-  obtain ⟨event, eventMem, rfl⟩ := List.mem_map.mp originalMem
-  have semantic := facts event (carrier.exhaustive.mem_iff.mp eventMem)
-  exact ⟨aligned.stepFact semantic.1, aligned.frameFact semantic.2⟩
+      FrameFactG program trajectory initial timeline row :=
+  ExecutionCarrier.engineFacts carrier program trajectory initial timeline facts
 
 end SP1Clean.Soundness.NativeCore

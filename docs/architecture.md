@@ -227,7 +227,7 @@ Adapters must state what they preserve; no equivalence is assumed merely from si
 | `HostLocalCore.ensemble` | Full-code syscall wrapper and extensible physical handler/resource tables |
 | `HostHintReadLocal` / `HostHintQueueBoundary` | Installed source-hint handlers, word consumers, verifier-owned queue and bank endpoints |
 | `CoreTableProjection`, `CoreRowBalance`, `CoreMemoryBalance` | Shared physical table projections and complete occurrence accounting |
-| `StateChronology`, `CoreMemoryChronology`, `CoreRowTransport` | Order, refresh elimination and the shared `ExecutionCarrier` |
+| `StateChronology`, `CoreMemoryChronology`, `CoreRowTransport` | Order, refresh elimination and the shared `ExecutionCarrier`; native, local and host `GroundingCarrier` names are instance abbreviations |
 | `CoreExecutionTrajectory` | Actual paired replay and alignment with the AIR timeline |
 | `HostHintReadExecutionPath` / `HostHintReadFinalMemory` | Installed mixed-AIR path with final PC/clock, all native register/RAM values, complete RAM domain, all Sail bookkeeping observations and host reconstruction |
 | `Model/Core/SailBookkeeping` / `HostHintReadBookkeeping` | Source-controlled retirement count and final nextPC from the existing semantic tape, connected to actual grounded chip effects |

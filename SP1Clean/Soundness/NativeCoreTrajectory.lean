@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.NativeCoreInstructionExecution
-import SP1Clean.Soundness.CoreExecutionEvents
+import SP1Clean.Soundness.CoreExecutionTrajectory
 
 /-! # Executing the native AIR's ordered events
 
@@ -20,7 +20,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 noncomputable def GroundingCarrier.events {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness) :
     List Machine.ExecutionEvent :=
-  carrier.ordered.map ExecutionRow.event
+  ExecutionCarrier.events carrier
 
 /-- Execute the carrier's transcript with canonical HALT and the supplied non-HALT host. -/
 noncomputable def GroundingCarrier.trajectory {image : ProgramImage} (valid : image.Valid)
@@ -39,17 +39,16 @@ theorem GroundingCarrier.ordered_at {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness)
     {event : ExecutionRow p} (member : event ∈ executionRows witness) {n : ℕ}
     (atIndex : StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n) :
-    carrier.ordered[n]? = some event := by
-  exact ordered_at_of_alignment (ExecutionRow.facts witness.data) (n := n) carrier.aligned carrier.stateWalk
-    (fun row member => (carrier.rowOK row member).timeGap) (carrier.exhaustive.mem_iff.mpr member) atIndex
+    carrier.ordered[n]? = some event :=
+  ExecutionCarrier.ordered_at carrier member atIndex
 
 /-- The semantic transcript and the clock-indexed event are the same occurrence. -/
 theorem GroundingCarrier.event_at {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness)
     {event : ExecutionRow p} (member : event ∈ executionRows witness) {n : ℕ}
     (atIndex : StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n) :
-    carrier.events[n]? = some event.event := by
-  simp only [events, List.getElem?_map, carrier.ordered_at member atIndex, Option.map_some]
+    carrier.events[n]? = some event.event :=
+  ExecutionCarrier.event_at carrier member atIndex
 
 /-- Each ordinary event executes the official Sail step at its own derived timeline position. -/
 theorem GroundingCarrier.trajectory_ordinary {image : ProgramImage} (valid : image.Valid)

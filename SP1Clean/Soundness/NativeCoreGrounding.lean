@@ -21,27 +21,26 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 /-- The timeline is determined by the carrier's State edges, including wide system rows. -/
 noncomputable def GroundingCarrier.timeline {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness) : Timeline :=
-  rowTimeline (StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput)) carrier.rows
-    (fun row member => (carrier.rowOK row member).timeGap)
+  ExecutionCarrier.timeline carrier
 
 /-- The constructed timeline starts at the verifier's public initial clock. -/
 theorem GroundingCarrier.timeline_start {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness) :
     carrier.timeline.start 0 = StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput) :=
-  rowTimeline_start _ _ _
+  ExecutionCarrier.timeline_start carrier
 
 /-- Every carrier row advances to the actual successor index of its own timeline. -/
 theorem GroundingCarrier.timeStep {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness) :
     ∀ row ∈ carrier.rows, ∀ n, StateMsg.timeNat row.statePull = carrier.timeline.start n →
       StateMsg.timeNat row.statePush = carrier.timeline.start (n + 1) :=
-  rowTimeline_step_of_walk carrier.stateWalk _
+  ExecutionCarrier.timeStep carrier
 
 /-- The public final clock is the timeline's last covered index. -/
 theorem GroundingCarrier.finalClock {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} (carrier : GroundingCarrier witness) :
     carrier.timeline.start carrier.rows.length = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) :=
-  rowTimeline_end_of_walk carrier.stateWalk _
+  ExecutionCarrier.finalClock carrier
 
 private theorem initial_pc {image : ProgramImage} (valid : image.Valid)
     (publicInput : SP1PublicIO (ZMod p)) (boot : publicInput.BootFor image) :
