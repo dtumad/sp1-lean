@@ -89,22 +89,30 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
           if body'.isAppOfArity ``Vector 2 then
             pure (if body'.getAppArgs[0]! == xs[0]! then 1 else 3)
           else pure 2
+    -- Proof: on the constructor literal `cases s` exposes, `ProvableStruct.eval` reduces
+    -- definitionally (`toComponents` / `eval.go` / `fromComponents` all compute), so the
+    -- projection is `rfl`. A `simp only [circuit_norm]` here normalises the WHOLE struct's
+    -- evaluation before projecting — quadratic in the field count (45-field `DivRemChip.Columns`:
+    -- 27 s of `simp` for its 45 lemmas, 5 s with `rfl`; measured 2026-09-22).
     let cmd ← if kind == 1 || kind == 3 then `(
       theorem $lemmaIdent:ident {F : Type} [FiniteField F] (env : Environment F)
           (s : Var $structIdent F) :
           (ProvableStruct.eval env s).$fieldIdent:ident = Eval.eval env s.$fieldIdent:ident := by
         cases s
-        simp only [circuit_norm])
+        rfl)
     else `(
       @[circuit_norm]
       theorem $lemmaIdent:ident {F : Type} [FiniteField F] (env : Environment F)
           (s : Var $structIdent F) :
           (ProvableStruct.eval env s).$fieldIdent:ident = Eval.eval env s.$fieldIdent:ident := by
         cases s
-        simp only [circuit_norm])
+        rfl)
     elabCommand cmd
     -- `S.eval_congr_f : eval env s = eval env' s → <field f of s agrees>`, stated in the field's
     -- `circuit_norm` normal form so `rw`/`exact` at a constraint-form goal need no further step.
+    -- Proof: project `h`, rewrite both sides with the field's `eval_f` lemma just proved, then the
+    -- one Clean lemma that puts the field's kind into that normal form — never the whole
+    -- `circuit_norm` set (which re-normalises the entire struct evaluation per lemma).
     let congrIdent := mkIdent (`_root_ ++ structName ++ Name.mkSimple s!"eval_congr_{field}")
     let congrCmd ← match kind with
       | 0 => `(
@@ -113,7 +121,8 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
             (h : ProvableStruct.eval env s = ProvableStruct.eval env' s) :
             Expression.eval env s.$fieldIdent:ident = Expression.eval env' s.$fieldIdent:ident := by
           have := congrArg (fun r => r.$fieldIdent:ident) h
-          simp only [circuit_norm] at this
+          rw [$lemmaIdent:ident, $lemmaIdent:ident, ProvableType.eval_field,
+            ProvableType.eval_field] at this
           exact this)
       | 1 => `(
         theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
@@ -122,7 +131,8 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
             Vector.map (Expression.eval env) s.$fieldIdent:ident
               = Vector.map (Expression.eval env') s.$fieldIdent:ident := by
           have := congrArg (fun r => r.$fieldIdent:ident) h
-          simp only [$lemmaIdent:ident, circuit_norm] at this
+          rw [$lemmaIdent:ident, $lemmaIdent:ident, ProvableType.eval_fields,
+            ProvableType.eval_fields] at this
           exact this)
       | 2 => `(
         theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
@@ -131,7 +141,8 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
             ProvableStruct.eval env s.$fieldIdent:ident
               = ProvableStruct.eval env' s.$fieldIdent:ident := by
           have := congrArg (fun r => r.$fieldIdent:ident) h
-          simp only [circuit_norm] at this
+          rw [$lemmaIdent:ident, $lemmaIdent:ident, ProvableStruct.eval_eq_eval,
+            ProvableStruct.eval_eq_eval] at this
           exact this)
       | _ => `(
         theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
@@ -139,7 +150,7 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
             (h : ProvableStruct.eval env s = ProvableStruct.eval env' s) :
             Eval.eval env s.$fieldIdent:ident = Eval.eval env' s.$fieldIdent:ident := by
           have := congrArg (fun r => r.$fieldIdent:ident) h
-          simp only [$lemmaIdent:ident] at this
+          rw [$lemmaIdent:ident, $lemmaIdent:ident] at this
           exact this)
     elabCommand congrCmd
 
