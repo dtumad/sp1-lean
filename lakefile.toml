@@ -7,7 +7,12 @@ name = "sp1-clean-native"
 # docs/agents/compile-profile-2026-09.md.
 defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun"]
 
-moreLeanArgs = ["--tstack=400000"]
+# `-j2`: two elaboration threads per `lean` process. Lake runs one `lean` per core (its pool is
+# `LEAN_NUM_THREADS`, default = cores) and each child would otherwise also take every core for
+# async proof elaboration — 16 threads on the 4-vCPU runner, which cost a third of the build's
+# CPU-seconds in contention (cold build 32.4 min at 4 × 4 vs 26.9 min at 3 × 2, 2026-09-21 matrix,
+# fork issue #39). Two threads keep most of the async benefit for a single heavy module built alone.
+moreLeanArgs = ["--tstack=400000", "-j2"]
 # `allowNonModules` is set per library below (the `SP1Clean/` and test trees are non-module until
 # their migration), not package-wide, so the three module-mode `To*` libraries are enforced.
 
