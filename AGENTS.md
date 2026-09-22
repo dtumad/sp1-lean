@@ -118,7 +118,8 @@ refinement; only their `_of_obligations` combinators are currently declared.
   `toBitVec64`/carry proofs are the slowest). Before starting a new build, **let the running one
   finish or kill it** (`pkill -f "lake build"` / `pkill -f "lake env lean"`). Cap at **2–3 builds at once**.
   A `run_in_background` build can outlive its shell — check with `ps -ef | grep -E "lake|lean" | grep -v lsp`
-  before spawning another. The lean LSP server (`uvx lean-lsp-mcp`) also keeps several GB warm.
+  before spawning another. **Never switch git branches (or `git checkout -- file`) in a checkout
+  while a `lake build` runs there** — Lake reads sources as it reaches them; use a second worktree. The lean LSP server (`uvx lean-lsp-mcp`) also keeps several GB warm.
   **There is no `-j` option** in Lake here (only `-J/--json`; re-verified at v4.33.1): Lake's
   concurrency is the Lean runtime pool of the `lake` process, `LEAN_NUM_THREADS` (default = cores),
   inherited by every child `lean`; the lakefile's `moreLeanArgs` `-j2` caps each child at two
@@ -614,6 +615,15 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
   (`scripts/check_no_native_decide.sh`, run by the audit + the `guards` job; any hit in `SP1Clean/**/*.lean`
   fails the build). Conformance checks that genuinely need it live in the separate top-level `SP1CleanTest`
   library (`lake test`); to disclose a new one, put the anchor there, not in `SP1Clean/`.
+- **Two super-linear elaboration shapes to avoid** (`docs/agents/proof-patterns.md` § Compile-time
+  landmines): a long nested `let` chain in one term (535 bindings 2 s, 1 649 bindings 30 s and
+  14 GB — hoist to one `def` per binding), and per-field `simp only [circuit_norm]` on a struct
+  (quadratic in the field count — `cases s; rfl`, then rewrite with the field's `eval_f` lemma).
+- **Interpreted Mathlib tactics are the expensive ones**: `fin_cases`, `aesop`, `nlinarith`/
+  `linarith`, `push_cast`, `interval_cases` run in the interpreter; `omega`, `decide +kernel`,
+  `bv_decide`, `simp`, `rfl` are native. Over a small finite type prefer `revert x; decide +kernel`
+  (kernel evaluation, not `native_decide`); when a goal is linear in its product atoms prefer
+  `omega` (the 2026-09 numbers are in proof-patterns.md).
 - `mul_eq_zero` won't fire on `ZMod p` (a `Nat.rec` Mul-instance quirk) — derive booleanness via
   `inv_mul_cancel₀` / a `bool_of_mul_pred`-style lemma instead.
 - `Word` is an `abbrev` for `Vector` — `w.toBitVec64` dot-notation fails; write `Word.toBitVec64 w`.
