@@ -125,7 +125,9 @@ private def sailSource : SailState :=
   let regs := (regs.insert Register.x11 2).insert Register.x12 88
   { (default : SailState) with
     regs
-    mem := (∅ : Std.ExtHashMap ℕ (BitVec 8)).insertMany [(65551, 77), (65552, 99), (65560, 66)] }
+    mem := (∅ : Std.ExtHashMap ℕ (BitVec 8)).insertMany
+      [(65536, 0x73), (65537, 0), (65538, 0), (65539, 0),
+        (65551, 77), (65552, 99), (65560, 66)] }
 
 private def sailApplication : Bool :=
   match ({ io.hints := [[7, 8]] } : HostState).run policy (.ofSail sailSource) with

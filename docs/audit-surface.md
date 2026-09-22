@@ -58,6 +58,8 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `circuit` | `SP1Clean/Proofs/Chips/SnapshotRamProvider.lean` | Authenticated arbitrary source RAM and exact aligned-address constructor domain; boot is a specialization |
 | `circuit` | `SP1Clean/Proofs/Chips/OrderedSnapshotProvider.lean` | Existing canonical ordering wrapper instantiated for snapshot records, with internal constructor obligations discharged |
 | `ExecutionStep` | `SP1Clean/Model/Core/Execution.lean` | Normal official-Sail retirement or concrete stateful host execution, with no transition from a halted source |
+| `InstructionBytes.check` | `SP1Clean/Model/Core/InstructionBytes.lean` | All four little-endian instruction bytes, including present zero bytes, agree with the committed word |
+| `HostState.step` | `SP1Clean/Model/Core/HostSail.lean` | Host dispatch requires ECALL in both the committed program and actual Sail memory before interpreting the request |
 | `ExecutionSegment` | `SP1Clean/Model/Core/ExecutionPath.lean` | Exactly the requested number of local semantic steps, independent of boot, HALT, padding, and AIR witness layout |
 | `executionSystem` | `SP1Clean/Model/Core/ExecutionPath.lean` | The equivalent PolyFun finite-path view; directions are actual semantic steps |
 | `replayHost?` | `SP1Clean/Model/Core/ExecutionReplay.lean` | Checks the full event against actual interpreter observations and threads the next host state |

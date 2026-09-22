@@ -9,7 +9,8 @@ particular, equal PCs and clocks do not identify a boundary: RAM, registers, pen
 replies, accumulated outputs, commitment banks, and terminal status must agree as well.
 
 Ordinary steps retire normally in official Sail. ECALL steps use the concrete host interpreter,
-threading its returned state. Both arms require a running source; HALT is a real transition and
+after checking the committed word against all four bytes in actual Sail memory, threading its
+returned state. Both arms require a running source; HALT is a real transition and
 there are no transitions out of a stopped state. Padding and provider/refresh rows are not
 semantic steps. Supported decoding, ROM-write exclusion, and shard resource limits belong to the
 native profile layered over this execution relation; no AIR correctness is asserted here.
@@ -54,17 +55,18 @@ theorem HostState.step_observations {host nextHost : HostState} {policy : HostPo
   split_ifs at success with fetched
   · simp only [Option.bind_eq_some_iff, Option.some.injEq, Prod.mk.injEq] at success
     obtain ⟨execution, ran, hostEq, targetEq, eventEq⟩ := success
-    exact ⟨pc, execution, atPc, fetched, ran, hostEq.symm, targetEq.symm, eventEq.symm⟩
+    exact ⟨pc, execution, atPc, fetched.1, ran, hostEq.symm, targetEq.symm, eventEq.symm⟩
 
 /-- Construct a host step from observations and the concrete dispatcher result. -/
 theorem HostState.step_of_run {host : HostState} {policy : HostPolicy} {program : GuestProgram}
     {source : SailState} {pc : BitVec 64} {execution : HostExecution}
     (atPc : source.regs.get? LeanRV64D.Defs.Register.PC = some pc)
     (fetched : program.fetchWord pc = some ECALL_ENC)
+    (loaded : InstructionBytes.check source.mem.get? pc ECALL_ENC = true)
     (ran : host.run policy (.ofSail source) = some execution) (clock : ℕ) :
     host.step policy program clock source =
       some (execution.effect.state, execution.apply source pc, execution.toEvent clock pc) := by
-  simp only [HostState.step, atPc, bind, Option.bind_some, fetched, ↓reduceIte, ran]
+  simp only [HostState.step, atPc, bind, Option.bind_some, fetched, loaded, and_self, ↓reduceIte, ran]
 
 namespace ExecutionStep
 
@@ -108,6 +110,15 @@ theorem sailEvent (step : ExecutionStep policy program source event target) :
   | syscall success =>
       have interpreted := HostState.step_sound success
       exact .syscall interpreted.1 interpreted.2
+
+/-- A syscall label's PC names an ECALL in the actual incoming Sail memory as well as ROM. -/
+theorem syscall_instructionBytes {call : CoreSyscallEvent}
+    (step : ExecutionStep policy program source (.syscall call) target) :
+    InstructionBytes.check source.sail.mem.get? call.pc ECALL_ENC = true := by
+  cases step with
+  | syscall success =>
+      obtain ⟨pc, execution, atPc, _, _, _, _, rfl⟩ := HostState.step_observations success
+      exact HostState.step_instructionBytes success atPc
 
 /-- A halted boundary has no outgoing semantic step, including an ordinary instruction. -/
 theorem not_of_halted (halted : source.host.exitCode ≠ none) :

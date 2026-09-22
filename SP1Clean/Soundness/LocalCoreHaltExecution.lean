@@ -108,7 +108,7 @@ theorem GroundingCarrier.halt_step {image : ProgramImage} {source : ExecutionSna
       ⟨{ whole.sail with regs := whole.sail.regs.insert LeanRV64D.Defs.Register.PC Machine.haltPc },
         { whole.host with exitCode := some ((Word.toBitVec64 row.x10_memory.prev_value).setWidth 32) },
         whole.clock + Machine.syscallSchedule.duration⟩ := by
-  obtain ⟨m, state, present, atIndex, pc, _⟩ := pull
+  obtain ⟨m, state, present, atIndex, pc, rom, _⟩ := pull
   have same : m = n := start_injective carrier.timeline (atIndex.symm.trans time)
   subst m
   have sail : whole.sail = state := by
@@ -124,7 +124,8 @@ theorem GroundingCarrier.halt_step {image : ProgramImage} {source : ExecutionSna
   obtain ⟨covered, _⟩ := List.getElem?_eq_some_iff.mp (carrier.event_at member time)
   have clock := (carrier.pairedTrajectory_clock valid policy constraints balanced (Nat.le_of_lt covered) paired).trans time.symm
   have facts := haltRows_staticFacts witness constraints balanced member
-  exact HaltChip.executionStep_of_currency row policy field _ whole facts.1 facts.2.1 running clock atPc fetch before time currency
+  exact HaltChip.executionStep_of_currency row policy field _ whole facts.1 facts.2.1 running clock atPc fetch
+    (by rwa [sail]) before time currency
 
 /-- Incoming State truth and Memory currency discharge HALT replay's actual host guards. -/
 theorem GroundingCarrier.trajectory_halt {image : ProgramImage} {source : ExecutionSnapshot}

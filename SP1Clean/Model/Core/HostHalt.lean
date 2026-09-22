@@ -47,6 +47,7 @@ theorem ExecutionStep.halt {policy : HostPolicy} {program : GuestProgram}
     (source : ExecutionState) (pc exit arg2 : BitVec 64)
     (running : source.host.exitCode = none) (atPc : source.sail.regs.get? Register.PC = some pc)
     (fetched : program.fetchWord pc = some ECALL_ENC)
+    (loaded : InstructionBytes.check source.sail.mem.get? pc ECALL_ENC = true)
     (code : source.sail.get_reg? 5 = some 0) (a0 : source.sail.get_reg? 10 = some exit)
     (a1 : source.sail.get_reg? 11 = some arg2)
     (bounds : exit.toNat < policy.characteristic ∧ exit.toNat < 2 ^ 32) :
@@ -54,7 +55,7 @@ theorem ExecutionStep.halt {policy : HostPolicy} {program : GuestProgram}
       (.syscall ((source.host.haltExecution exit arg2).toEvent source.clock pc))
       ⟨{ source.sail with regs := source.sail.regs.insert Register.PC haltPc },
         { source.host with exitCode := some (exit.setWidth 32) }, source.clock + syscallSchedule.duration⟩ := by
-  have step := HostState.step_of_run atPc fetched
+  have step := HostState.step_of_run atPc fetched loaded
     (source.host.run_halt policy (.ofSail source.sail) exit arg2 running code a0 a1 bounds) source.clock
   rw [source.host.haltExecution_apply source.sail pc exit arg2 code] at step
   exact .syscall step

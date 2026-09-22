@@ -115,6 +115,14 @@ the one `ExecutionPath`, prove fetch agreement and policy preservation, and esta
 semantic fixtures before claiming a concrete profile. Generic `Realizes.admissible` remains a
 general predicate; it is the concrete native domain that must be independently fixed.
 
+Host dispatch now checks the complete ECALL word in actual Sail memory as well as the committed
+program. The finite snapshot interpreter uses the same byte check, and its soundness/completeness
+commuting theorems are retained. Installed host/HALT grounding derives the new guard from its
+existing ROM invariant, without an additional capstone premise. Regressions reject missing zero
+bytes, each corrupted code byte, and corruption at a continuation. Ordinary store-byte permission,
+whole-path ROM preservation in the independent semantic profile, and its resource limits remain
+the next obligations; the host fetch check alone does not close them.
+
 **Next boundary work:** bind the complete supplied outgoing snapshot to the already-derived
 Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks
 and enforce coverage of every computed source-to-target change; then bind the complete

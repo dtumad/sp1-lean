@@ -1,15 +1,15 @@
 # Axiom and trust ledger
 
-Checked against the consolidated stack on 2026-09-20. Each raw file retains the source revision
-at which its unchanged declaration inventory was recorded:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2798 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 323 declarations).
+Checked against the host instruction-byte hardening on 2026-09-22. Each raw file records the
+source revision whose declarations were probed:
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2802 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 326 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 3121 released declarations are probed.
+- 3128 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -34,6 +34,16 @@ The census reports several classes that should not be conflated:
 | generated Sail platform hooks | the official interpreter's external platform operations |
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
+
+Host instruction-byte authentication adds four main probes and three executable regressions.
+All preceding 2798 main dependency sets are unchanged. Three new main lemmas use subsets of the
+logical baseline; `ExecutionStep.syscall_instructionBytes` inherits the existing Sail platform
+hooks from the execution relation, with no new main-library axiom names. Each new test has one
+disclosed compiler-trust constant. Ten existing path regressions gain only the compiler-trust
+constants for their added concrete code-byte premises. No probes are removed. The semantic
+contract manifest separately records the strengthened `HostState.step` body and its new byte-check
+dependency; all eight target types are unchanged. Ordinary-store policy and full-path ROM
+preservation remain open.
 
 The PolyFun additions, the ensemble-realization statement, and its SP1 shard instances add eleven
 main probes and no test probes. All preceding 2787 main and 323 test dependency sets are

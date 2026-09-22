@@ -68,6 +68,7 @@ theorem HaltChip.executionStep_of_currency (row : HaltChip.Inputs (ZMod p))
     (clock : source.clock = StateMsg.timeNat (HaltChip.statePulledMessage row))
     (pc : source.sail.regs.get? Register.PC = some (StateMsg.pcBits (HaltChip.statePulledMessage row)))
     (fetch : program.fetchWord (StateMsg.pcBits (HaltChip.statePulledMessage row)) = some Target.ECALL_ENC)
+    (rom : Target.RomLoaded program source.sail)
     {trajectory : Trajectory} {initial : SailState} {timeline : Timeline} {n : ℕ}
     (before : trajectory n = some source.sail)
     (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n)
@@ -85,7 +86,8 @@ theorem HaltChip.executionStep_of_currency (row : HaltChip.Inputs (ZMod p))
     rw [field]
     have := Fact.out (p := 2 ^ 25 < p)
     omega
-  have step := ExecutionStep.halt source _ _ _ running pc fetch code a0 a1 bounds
+  have step := ExecutionStep.halt source _ _ _ running pc fetch
+    (InstructionBytes.check_of_romLoaded rom fetch) code a0 a1 bounds
   have event : (source.host.haltExecution (Word.toBitVec64 row.x10_memory.prev_value)
       (Word.toBitVec64 row.x11_memory.prev_value)).toEvent source.clock
         (StateMsg.pcBits (HaltChip.statePulledMessage row)) = haltEventOfRow row := by

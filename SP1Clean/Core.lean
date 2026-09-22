@@ -102,6 +102,7 @@ import SP1Clean.Model.Core.HostReplay
 import SP1Clean.Model.Core.HostSail
 import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.HostTerminal
+import SP1Clean.Model.Core.InstructionBytes
 import SP1Clean.Model.Core.InstructionDecode
 import SP1Clean.Model.Core.Memory
 import SP1Clean.Model.Core.MemoryEquality
