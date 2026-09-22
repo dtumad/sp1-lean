@@ -1,24 +1,24 @@
 # The audit surface
 
-*Machine-checked by `scripts/check_audit_surface.sh` (run by `scripts/run_audit.sh` and the CI
-`guards` job): every declaration named below must still exist at the file named beside it. Adding a
-premise, or removing one, changes this table — that is the point.*
+*The resolution check `scripts/check_audit_surface.sh` (run by `scripts/run_audit.sh` and CI)
+checks that every declaration named below exists at the recorded file. It does not detect a
+changed premise or definition body. The capstone contract check separately checks the compiled
+target types and records their definition dependencies; semantic changes require review.*
 
 ## Why this list exists, and why it is short
 
-The external PR #110 review (§9) states the right criterion, and it is not "theorems versus lemmas".
+The external PR #110 review (§9) distinguishes statement meaning from proof implementation.
 For a closed theorem `T` in an environment with no `sorryAx` and no project axiom, write `Stmt(T)`
 for the constants reachable from `T`'s **type** and `Prf(T)` for those reachable from its **value**.
 Everything in `Prf(T) \ Stmt(T)` is a proof-only artefact: if it were wrong the kernel would have
 rejected `T`. The entire risk of *proving the wrong thing* lives in `Stmt(T)` and in the ambient
 instance context.
 
-That is what makes auditing this repository tractable. The review measured the split for
-the then-current (model-scheduled) `supported_core_native_sound` — the headline has since moved
-to the plain-Sail statement, which only shrinks the statement closure: 13,943 constants in the proof closure, 10,665 in the statement
-closure, of which 7,487 are proof-typed (inert for meaning) — leaving **3,178 data/definition-typed
-constants across 243 modules** as the real surface, and confirming the repository's own claim that
-`FormalModel/Contracts/` is where it concentrates.
+The historical review measured the then-current `supported_core_native_sound`: 13,943 constants
+in the proof closure and 10,665 in the statement closure. These are not measurements of the
+full-state shard target. The current target is `Soundness/Shard/Contract`, interpreted through
+`FormalModel/Shard` and `Model/Core/ExecutionPath`; its two implementation targets remain open.
+The 55-table theorem is a retained result with a narrower, explicit premise set.
 
 This file is the human-sized version: the definitions where a defect would be undetectable by the
 kernel, each with the question it decides. Reading these, plus `FormalModel/Contracts/` and the 25
@@ -28,6 +28,14 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 
 | Declaration | File | Question it decides |
 |---|---|---|
+| `Executes` | `SP1Clean/FormalModel/Shard.lean` | A checked source and an existing full-state path to the supplied target, before the resource profile |
+| `Profile` | `SP1Clean/FormalModel/Shard.lean` | The still-free semantic domain parameter; replacing it with concrete policy/limits is a capstone obligation |
+| `AdmissibleExecution` | `SP1Clean/FormalModel/Shard.lean` | The common domain of soundness and completeness |
+| `SoundnessTarget` | `SP1Clean/Soundness/Shard/Contract.lean` | Raw Clean acceptance must imply the complete supplied-boundary execution; no additional caller assumptions |
+| `CompilerTarget` | `SP1Clean/Soundness/Shard/Contract.lean` | A data-only compiler whose success is proved on that same domain |
+| `statement_iff` | `SP1Clean/Soundness/Shard/Contract.lean` | Conditional assembly law over two unfilled targets, not an instantiated capstone |
+| `sp1Machine` | `SP1Clean/FormalModel/ShardMachine.lean` | The existing full-state execution system in PolyFun's labeled-machine vocabulary |
+| `Realizes` | `ToClean/Air/Realizes.lean` | Generic machine realization with raw-AIR soundness and constructive completeness |
 | `WitnessRelation.Relation` | `SP1Clean/FormalModel/Relations.lean` | What a statement/witness relation is |
 | `Relation.restrict` | `SP1Clean/FormalModel/Relations.lean` | How capacity/profile domains refine one relation without changing its witness representation |
 | `SP1Prime` | `SP1Clean/Model/SP1Field.lean` | The one concrete KoalaBear characteristic used by exact/test instantiations |
@@ -59,7 +67,7 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `CoreProfile.WithinOrdinaryRowLimit` | `SP1Clean/FormalModel/CoreProfile.lean` | The one numeric Core row-budget policy used by both witness representations |
 | `SupportedCoreNativeRelation` | `SP1Clean/Soundness/AIR.lean` | The hypothesis side: the ensemble algebra, the semantic boundary binding, and the interim `SyscallTableInactive` placeholder |
 | `SupportedCoreNativeShardRelation` | `SP1Clean/Soundness/AIR.lean` | The same native relation restricted to the pinned active-row budget |
-| `supported_core_native_sound` | `SP1Clean/Soundness/AIR.lean` | The headline theorem: the plain-Sail conclusion, no model parameter, no schedule hypothesis |
+| `supported_core_native_sound` | `SP1Clean/Soundness/AIR.lean` | Retained 55-table result: plain-Sail conclusion under its semantic boundary and syscall-inactivity premises |
 | `supported_core_native_sound_scheduled` | `SP1Clean/Soundness/AIR.lean` | The model-scheduled corollary — the shard-composition seam |
 | `supported_core_native_shard_sound` | `SP1Clean/Soundness/AIR.lean` | Capacity-aligned soundness into the one canonical semantic relation |
 | `SupportedCoreLocalExecutionRelation` | `SP1Clean/FormalModel/Execution.lean` | What the model-scheduled conclusion actually says |
@@ -111,7 +119,8 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 
 The image-authenticated boot assembly and the local snapshot assembly derive the following boundary
 facts directly. Neither has yet replaced the older execution theorem whose assumptions are listed
-below. The local assembly's complete Sail/host endpoint binding and timed grounding remain open.
+below. The installed mixed assembly derives a full-state path; binding its complete endpoint to
+the supplied target remains open. Its proof does not make grounding a caller premise.
 
 | Declaration | File | Question it decides |
 |---|---|---|

@@ -71,6 +71,28 @@ execution models.
 
 ## Implementation order and acceptance
 
+Development and review take place in the [fork](https://github.com/dtumad/sp1-lean), using small
+PRs based on its current `main`. The first complete instance is the existing native ensemble.
+Architecture improvements may precede proof completion when they migrate concrete consumers and
+preserve existing claims; an alternative `RiscvAir` implementation is not on the critical path.
+
+| Campaign | Tracker | Delivery order |
+|---|---|---|
+| A: native capstone | [#12](https://github.com/dtumad/sp1-lean/issues/12) | Audit contract and coverage register → ROM/fetch/write policy → concrete resources → shared carriers/adapters → full boundary → WRITE/VERIFY and allocation → mixed compiler → closed realization/composition |
+| B: reusable RISC-V architecture | [#16](https://github.com/dtumad/sp1-lean/issues/16) | Consumer-driven abstractions for A; later the alternative `RiscvAir` instance against the same contract |
+| C: export and verified replacement | [#29](https://github.com/dtumad/sp1-lean/issues/29), whole ensemble [#28](https://github.com/dtumad/sp1-lean/issues/28) | Complete ensemble/compiler export → lookup-free backend fixtures and challenges → replacement contract → fixed-profile whole-ensemble cost |
+| Maintenance | [#6](https://github.com/dtumad/sp1-lean/issues/6), [#33](https://github.com/dtumad/sp1-lean/issues/33), [#41](https://github.com/dtumad/sp1-lean/issues/41) | Durable Sail fix, module migration, and measured residual hotspots; only block A when a concrete dependency requires them |
+
+The build campaign #43 is complete. The plug-in map from #24 has landed. Campaign A absorbs #20's
+remaining claim/consumer decisions: retain the active full-state frontier in the existing build
+and CI coverage, retain the cheap exact-refinement stack and the 25 chip anchors, and migrate
+constructors needed by the mixed compiler with their consumers. A module absent from today's
+headline closure is not thereby dead. Retire other scaffolding only after checking imports,
+tests, export consumers and census entries, and preserving any released result by an adapter.
+The [coverage register](overview.md#coverage-register) owns exclusions and their exit criteria;
+[architecture](architecture.md) separates semantic choices, reusable ledger arguments and local
+implementation obligations.
+
 Work from the checked end-to-end targets downward. Each change must identify which target it
 advances and finish with the appropriate build/test/audit evidence. Do not introduce a second
 execution carrier to make a local proof convenient.
@@ -87,7 +109,13 @@ execution carrier to make a local proof convenient.
 | Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-**Next proof work:** bind the complete supplied outgoing snapshot to the already-derived
+**First hardening work:** close the ROM/fetch/store-policy gap and replace the free `Profile`
+parameter with data-only resource limits and a fixed derived admissibility predicate. Preserve
+the one `ExecutionPath`, prove fetch agreement and policy preservation, and establish nonempty
+semantic fixtures before claiming a concrete profile. Generic `Realizes.admissible` remains a
+general predicate; it is the concrete native domain that must be independently fixed.
+
+**Next boundary work:** bind the complete supplied outgoing snapshot to the already-derived
 Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks
 and enforce coverage of every computed source-to-target change; then bind the complete
 Sail register map (including key presence), bookkeeping/runtime and host fields.
@@ -221,9 +249,11 @@ rules, not a second progress log. Historical development details remain availabl
 
 ## Capstone integration and review
 
-`dtumad/core-verification-capstone` already contains the eight-PR predecessor history. Continue on
-this combined branch with reviewable commits; do not replay the stack or squash away provenance
-merely to produce one PR. Keep the original instruction faithfulness and dump-conformance gates.
+The eight-PR predecessor history is already contained in the fork's `main`. Do not replay it.
+Open reviewable fork PRs for the milestones above, with semantic changes separate from mechanical
+moves and proof-performance work. Keep instruction faithfulness and dump-conformance gates.
+Every full-stack change carries `ci:alignment` before merge. Each PR names the target advanced,
+the exact semantic/assumption change (if any), and its closed proofs and validation evidence.
 
 Before publication, construct mixed compiled local shards with memory, host effects, nonzero banks,
 and queue allocations across cuts; compose them from boot through HALT. Include continuing shards,
@@ -234,7 +264,7 @@ queue words/allocations, permissions, and Exit. Inspect the propositions themsel
 Every implementation milestone ends with:
 
 ```bash
-lake build SP1Clean
+lake build --wfail --iofail SP1Clean SP1CleanTest
 lake test
 lake lint
 scripts/run_audit.sh

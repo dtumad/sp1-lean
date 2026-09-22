@@ -2,10 +2,9 @@
 # Gate the audit-surface index: every declaration named in docs/audit-surface.md must still exist
 # at the file named beside it.
 #
-# The point is bidirectional. A premise silently ADDED to the boundary, or a definition renamed out
-# from under the index, fails here. A premise REMOVED (the good direction — e.g. the 2026-08 W3
-# wave deriving MemoryPullTimestampHighBound, which took the count from twelve to eleven) also
-# fails, forcing the index and its prose to be updated to claim the win rather than drift.
+# This gates declaration locations only. A changed premise/body under the same name is invisible
+# here; scripts/check_capstone_contract.py checks the compiled capstone types and fingerprints
+# their definition dependencies. Semantic changes still require human review.
 #
 # This is a resolution check, not a semantic one: it says the audit surface is where the doc says it
 # is. What those definitions MEAN is what a human auditor reads them for.

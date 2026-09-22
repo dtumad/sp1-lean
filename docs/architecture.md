@@ -52,6 +52,38 @@ an explicit Rust-facing projection, never a second native ledger definition.
 
 ## Repository layers
 
+### Model choices, reusable arguments, and implementation obligations
+
+The full-state capstone has three review boundaries. A change must identify which one it affects:
+
+| Boundary | Owns | Must not contain |
+|---|---|---|
+| Semantic contract | Official Sail retirement, the selected instruction/host policy, complete snapshots, ROM/write permissions, and semantic resource limits | Circuit rows, compiler success, provider validity, or grounding certificates as execution preconditions |
+| Ensemble argument | Raw Clean ledger accounting, authentication, exhaustive ranked State order, Memory chronology, and complete-boundary composition | A second execution semantics or discarded physical interactions |
+| Implementation obligations | Chip dispatch, field encodings, access plans, row population, and local arithmetic/bounds proofs | Undisclosed restrictions on the public execution language |
+
+```mermaid
+flowchart LR
+  AIR[Raw Clean constraints and balance] --> Ledger[Authenticated complete ledger]
+  Ledger --> Order[Exhaustive order and current memory]
+  Order --> Path[Official Sail and stateful host path]
+  Path --> Boundary[Complete supplied endpoints]
+  Spec[Independent bounded execution contract] --> Compiler[Data-only compiler]
+  Compiler --> AIR
+```
+
+PolyFun owns machine/path vocabulary; Clean owns circuits, ensembles, and balance. Use their
+existing interfaces and the additions in `ToPolyFun`/`ToClean`. Clean's `VmTables` result does not
+expose the exhaustive ordered path needed here; its verifier-guarantee theorem is not a substitute
+for the ranked State/Memory argument. Reusable additions must migrate a real consumer and state
+their gap against the pinned upstream interface. SP1 schedules, physical codecs, and syscall
+dispatch stay in the SP1 instance. An alternative RISC-V ensemble is a later consumer of the same
+semantic contract, not a prerequisite for completing the current one.
+
+The [coverage register](overview.md#coverage-register) distinguishes model exclusions from proof
+debt. The [plug-in map](plugin-points.md) records the contracts consumed at each circuit boundary;
+the [audit surface](audit-surface.md) records the definitions that determine the claim.
+
 | Layer | Responsibility |
 |---|---|
 | `Math/` | field-generic words, carries, bit operations, and arithmetic lemmas |

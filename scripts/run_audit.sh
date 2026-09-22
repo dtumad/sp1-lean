@@ -162,6 +162,16 @@ else
 fi
 
 echo
+echo "== A1 compiled capstone contract (gate) =="
+# This harness requires current library oleans. Updating the axiom census does not authorize
+# changing the semantic contract snapshot: review and refresh that separately.
+if python3 scripts/check_capstone_contract.py --no-build; then
+  :
+else
+  echo "FAIL: capstone target type or definition dependencies changed"; fail=1
+fi
+
+echo
 echo "== A2 proof-deferral inventory (gate: none) =="
 # Both `sorry` and start-of-proof `stop` introduce `sorryAx`; neither is permitted in the main
 # library. Conditional theorem hypotheses and relation parameters are audited at the statement
