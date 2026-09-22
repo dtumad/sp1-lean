@@ -771,12 +771,14 @@ theorem syscallInstrsChipConstraintsFaithful
     neg_eq_zero,
     true_and, and_assoc]
   constructor
-  · rintro ⟨hb0, hb1, hb2, hb3, hb4, hb5, hb6, hE9, hE12, hE16, hE23, hE27, hE29, hE31, hE33,
-      hE36, hE43, hE50, hE55, hE60, hE64, hE68, hE70, hE72, hE74, hE75, hE76, hE78, hE82, hE83,
-      hE84, hE88, hE91, hE93, hE94, hE95, hE99, hE102, hE107, hE110, hE113, hE116, hE121, hE124,
-      hE127, hE130, hE134, hE136, hE139, hE143, hE147, hE151, hE155, hE159, hE163, hE167, hE172,
-      hE176, hE179, hE182, hE185, hE188, hE191, hE194, hE197, hE200, hE205, hE275, hE277, hE279,
-      hE281, hE283, hE286, hE289, hE292, hE295, hE322, hE324, hE325, hE326, hE336⟩
+  · rintro ⟨hb0, hb1, hb2, hb3, hb4, hb5, hb6, hE9, hE12, hE16, hE23, hE27, hE29, hE31, hE33, hE36, hE43,
+      hE50, hE55, hE60, rest⟩
+    obtain ⟨hE64, hE68, hE70, hE72, hE74, hE75, hE76, hE78, hE82, hE83, hE84, hE88, hE91, hE93, hE94, hE95,
+      hE99, hE102, hE107, hE110, rest⟩ := rest
+    obtain ⟨hE113, hE116, hE121, hE124, hE127, hE130, hE134, hE136, hE139, hE143, hE147, hE151, hE155,
+      hE159, hE163, hE167, hE172, hE176, hE179, hE182, rest⟩ := rest
+    obtain ⟨hE185, hE188, hE191, hE194, hE197, hE200, hE205, hE275, hE277, hE279, hE281, hE283, hE286,
+      hE289, hE292, hE295, hE322, hE324, hE325, hE326, hE336⟩ := rest
     exact ⟨hE9, hE275, hE93, hE82, hE78, hE16, hb0, hb3, hb4, hb5, hb6, hE12, hE70, hE72, hE74,
       hE23, hE36, hE43, hE50, hE55, hE27, hE29, hE31, hE33, hE107, hE110, hE113, hE116, hE121,
       hE124, hE127, hE130, hE60, hE64, hE68, hE324, hE325, hE326, hE75, hE76, hE83, hE84, hb1,
@@ -785,11 +787,13 @@ theorem syscallInstrsChipConstraintsFaithful
       by linear_combination hE286 - (Expression.eval env r.is_real) * hE277 - (Expression.eval env r.is_real * 256) * hE279,
       by linear_combination hE289 - (Expression.eval env r.is_real) * hE281 - (Expression.eval env r.is_real * 256) * hE283,
       hE292, hE295, hE134, hE136, hE277, hE279, hE281, hE283, hE322, hE336⟩
-  · rintro ⟨n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18,
-      n19, n20, n21, n22, n23, n24, n25, n26, n27, n28, n29, n30, n31, n32, n33, n34, n35, n36,
-      n37, n38, n39, n40, n41, n42, n43, n44, n45, n46, n47, n48, n49, n50, n51, n52, n53, n54,
-      n55, n56, n57, n58, n59, n60, n61, n62, n63, n64, n65, n66, n67, n68, n69, n70, n71, n72,
-      c0, c1, c2, c3, c4, c5, c6, c7⟩
+  · rintro ⟨n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19, rest⟩
+    obtain ⟨n20, n21, n22, n23, n24, n25, n26, n27, n28, n29, n30, n31, n32, n33, n34, n35, n36, n37, n38,
+      n39, rest⟩ := rest
+    obtain ⟨n40, n41, n42, n43, n44, n45, n46, n47, n48, n49, n50, n51, n52, n53, n54, n55, n56, n57, n58,
+      n59, rest⟩ := rest
+    obtain ⟨n60, n61, n62, n63, n64, n65, n66, n67, n68, n69, n70, n71, n72, c0, c1, c2, c3, c4, c5, c6,
+      c7⟩ := rest
     exact ⟨n6, n42, n47, n7, n8, n9, n10, n0, n11, n5, n15, n20, n21, n22, n23, n16, n17, n18,
       n19, n32, n33, n34, n12, n13, n14, n38, n39, n4, n3, n40, n41, n43, n44, n2, n45, n46, n48,
       n49, n24, n25, n26, n27, n28, n29, n30, n31, c0, c1, n50, n51, n52, n53, n54, n55, n56,
