@@ -512,7 +512,9 @@ def _hoist_let_chains(body: str) -> str:
     """Rewrite every `@[irreducible] def X <binders> : List F := let E0 := …; …; [E_i, …]` block whose
     body is a `let` chain into one `private def X_E<k> <binders> : F := …` per binding (references to
     earlier bindings become applications to the same binder names) followed by
-    `@[irreducible] def X <binders> : List F := [X_E<i> <binders>, …]`. Definitionally the same list
+    `@[irreducible] def X <binders> : List F := [X_E<i> <binders>, …]` (each hoisted def carries
+    `@[nolint unusedArguments]`: the binder block is uniform, the individual bindings are not).
+    Definitionally the same list
     (each hoisted def zeta-reduces to the original binding); elaboration goes from super-linear in
     the chain length to linear, and the recursion-depth/heartbeat overrides the chains needed go
     with them. See HOISTED_LET_CHAIN_TABLES."""
@@ -528,7 +530,10 @@ def _hoist_let_chains(body: str) -> str:
         out: List[str] = []
         for binding, expr in lets:
             expr = _LET_REF_RE.sub(lambda r: f"({name}_{r.group(1)} {args})", expr)
-            out.append(f"private def {name}_{binding} {flat} : F := {expr}")
+            # Every hoisted binding takes the part's whole binder block so the applications stay
+            # uniform; most bindings use only some of it (a constant fold uses none), so the
+            # environment linter's `unusedArguments` would fire on the majority of them.
+            out.append(f"@[nolint unusedArguments]\nprivate def {name}_{binding} {flat} : F := {expr}")
         items = ", ".join(f"{name}_{e} {args}" for e in entries)
         out.append(f"\n{m.group('attr')}{name}{header}\n  : List F :=\n  [{items}]")
         return "\n".join(out)
