@@ -929,6 +929,15 @@ always means a *local* regression against one of these.
   PR #51); hand-written code should never build such chains inside one term in the first place.
   Entry chunking does not help when one entry's closure is the chain (the Poseidon output).
 
+- **Chunk a destructuring at ≈ 80+ conjuncts — and not below.** `rintro`/`obtain`/`cases` on a
+  right-nested conjunction is super-linear in its length, so a long pattern should be split into
+  chunks of about twenty through a `rest` tail (`obtain ⟨a, …, t, rest⟩ := h` then
+  `obtain ⟨u, …, rest⟩ := rest`; keep the last chunk at two or more names, since a one-name tail
+  is not a conjunction). Measured 2026-09-22 across every site of ≥ 30 conjuncts in the tree:
+  121 conjuncts (`DivRemChip/Evidence`) −81 % file CPU, 80 (`Faithful/SyscallInstrsChip`) −55 %,
+  but 43–53 (`ShiftRight`/`ShiftLeft` soundness, `MulOperation/Formal`, `DivRemOperation/Core`)
+  −3 % to nothing — below the threshold it is churn, so leave those alone.
+
 - **Never let `circuit_norm` normalise a whole chip row when a projection will do.** Four bus
   lemmas (`{add,sub,subw,mul}Chip_memoryInteractionValues_eq`) rewrote the row view with
   `← inputEq / ← outputEq` and then ran `simp only [circuit_norm]` over `circuit.output`; the

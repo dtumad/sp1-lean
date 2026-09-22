@@ -30,5 +30,7 @@ Lean's category split), `scripts/build_semantics.py` (the cost joined to the lay
 headline-claim closures, the critical path, a before/after comparison) and the
 `build-experiment.yml` workflow (a controlled cold or warm build on the CI runner), and kept with
 the review that motivated them, not as evergreen documentation: [compile-profile-2026-09.md](compile-profile-2026-09.md) is the fork's compile-time
-baseline and [`../audits/2026-09-build-semantics.md`](../audits/2026-09-build-semantics.md) the
-cost-versus-claims investigation.
+baseline, [`../audits/2026-09-build-semantics.md`](../audits/2026-09-build-semantics.md) the
+cost-versus-claims investigation, and
+[`../audits/2026-09-build-time-campaign.md`](../audits/2026-09-build-time-campaign.md) the results
+of the campaign that followed it.
