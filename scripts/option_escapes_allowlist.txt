@@ -27,9 +27,9 @@
 # (That check matters because this gate is exact set equality — a site the toolchain no longer
 # needs FAILS the build until its line is deleted.)
 #
-# ---- maxHeartbeats: 2 sites, both on GENERATED definitions ---------------------------------------
-# Both are emitted by update_extracted.py and reproduced by a regeneration; fixes go in the
-# generator, never by editing the file.
+# ---- maxHeartbeats: 1 site, on a GENERATED definition ------------------------------------------
+# Emitted by update_extracted.py and reproduced by a regeneration; fixes go in the generator, never
+# by editing the file.
 
 # The only generated AIR definition that needs any budget. Fails in `«LCNF simp»` — the CODE GENERATOR,
 # not elaboration; the elaborator handles every generated def at the plain default. Ladder: 200000 FAIL
@@ -38,23 +38,15 @@
 # cascades into hand-written Faithful/ files; that trade is deliberately declined.
 maxHeartbeats  SP1Clean/Extracted/ChipOracle/DivRem.lean            400000   1
 
-# The one genuinely irreducible site in this tree. `assertsPart2` contains a SINGLE list entry whose
-# transitive `let`-closure is 1239 bindings (a Poseidon-style accumulation chain). The Rust emitter
-# chunks at 64 entries per part; chunking at ONE entry per part still leaves 1239, so no chunk size
-# reaches the default. Measured, not argued — this is the standard an "irreducible" claim has to meet.
-# File-level because the recombining `asserts` needs it too.
-# Ladder at v4.32.2: 200000 FAIL / 400000 FAIL / 600000 FAIL / 800000 ok -> floor (600000, 800000].
-# This entry previously carried no recorded bracket; the value is left at 1000000 (~1.25x the floor).
-maxHeartbeats  SP1Clean/Extracted/SystemOracle/Global.lean         1000000   1
+# (Retired 2026-09-22: `SystemOracle/Global.lean`'s file-level 1000000. Its `assertsPart*` chains —
+# one Poseidon-style entry with a 1239-binding `let` closure — are now hoisted by the emitter into
+# one top-level def per binding (`_hoist_let_chains` in update_extracted.py): elaboration is linear
+# again, 62 s / 14 GB → 7 s / 3 GB for the module, and no budget is needed.)
 
+# ---- maxRecDepth: 1 site (Lean's default is 512) ------------------------------------------------
 
-# ---- maxRecDepth: 5 sites (Lean's default is 512) ------------------------------------------------
-
-# Global's four `assertsPart*` definitions — the same Poseidon chain as the heartbeat entry above.
-# Ladder: 800 FAIL / 1200 FAIL / 2000 ok → floor (1200, 2000], set ~2x. The file's other two defs need
-# nothing, and 11 of the 12 generated system-oracle modules need nothing at all — including every
-# definition in PublicValues.lean. Generated size does not imply a need.
-maxRecDepth    SP1Clean/Extracted/SystemOracle/Global.lean             4000   4
+# (Retired 2026-09-22 with the heartbeat entry above: Global's four `assertsPart*` sites at 4000 —
+# the recursion was the nested `let` chain, gone with the hoisting.)
 
 # `deriving instance Fintype for Register` — recurses once per constructor and just misses the default.
 # Bracket (512, 600], the narrowest in the tree; set to 800 rather than 600 because 17% over a measured

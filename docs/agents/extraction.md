@@ -141,13 +141,18 @@ Large generated lists are split into opaque `assertsPartN`/`interactionsPartN` d
 concatenated in order. This is only a Lean elaboration boundary: it follows Clean's advice to keep
 expensive values folded and does not alter the extracted list.
 
-The pinned `Global` table is the sole Core AIR exception to the default elaboration budget. One of its
-output terms has a dependency closure of roughly 1,300 shared IR bindings, so splitting the surrounding
-list cannot make that term smaller (and finer factoring duplicates the closure). Its generated module
-therefore carries a module-local budget directive, named with its measured floor in
-`scripts/option_escapes_allowlist.txt`; no other generated Core AIR module receives one. If the emitter
-starts producing a module that needs a budget, right-size the emit in `update_extracted.py` — do not
-allowlist the output.
+The pinned `Global` table gets one more emitter pass (`_hoist_let_chains`, scoped by
+`HOISTED_LET_CHAIN_TABLES`): one of its output terms has a dependency closure of roughly 1,300
+shared IR bindings, so splitting the surrounding list cannot make that term smaller, and a nested
+`let` chain of that length elaborates super-linearly (30 s and 14 GB for the 1,649-binding part).
+The pass turns every binding of a part's chain into a one-line top-level `private def` applied to
+the part's binders — definitionally the same list, linear to elaborate (the module went from 62 s
+to 7 s solo) and free of the budget directives it used to carry. It applies only to tables whose
+lists are consumed opaquely (`Faithful/CoreAIR` applies `GlobalCols.asserts` as an irreducible
+value); the chip oracles' lists are unfolded element-wise by the `ChipFaithful` proofs and keep the
+emitter's shape. No generated Core AIR module carries an elaboration budget; if the emitter starts
+producing one that needs one, right-size the emit in `update_extracted.py` — do not allowlist the
+output.
 
 ## The Lean side
 

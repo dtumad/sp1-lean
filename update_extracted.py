@@ -488,6 +488,53 @@ def _expand_large_derives(body: str) -> str:
     return _DERIVE_STRUCT_RE.sub(repl, body)
 
 
+# System tables whose emitted `let` chains are hoisted into one top-level `private def` per binding
+# (`_hoist_let_chains`). Only tables whose lists are consumed OPAQUELY qualify: `Global`'s
+# `asserts`/`interactions` are only ever applied as `@[irreducible]` values (`Faithful/CoreAIR`),
+# whereas the chip oracles' lists are unfolded element-wise by the `ChipFaithful` proofs and must
+# keep the emitter's shape. `Global` is the sole member because it is the sole pathological case:
+# the Poseidon-style closure makes its parts 535–1 649 nested `let`s, and nested-`let` elaboration
+# is super-linear (measured 2026-09-22: 535 → 2 s, 668 → 4 s, 1 111 → 18 s, 1 649 → 30 s and 14 GB;
+# hoisted, the 1 649-binding part elaborates in 0.9 s and 2.5 GB). Finer entry chunking cannot
+# help there — every chunk holding a Poseidon output re-derives its ≈ 1 300 bindings.
+HOISTED_LET_CHAIN_TABLES = frozenset({"Global"})
+
+_LET_CHAIN_DEF_RE = re.compile(
+    r"^(?P<attr>@\[irreducible\] def )(?P<name>\S+)(?P<sig>(?:[^\n]*\n)*?)  : List F :=\n"
+    r"(?P<lets>(?:  let E\d+ : F := [^\n]*\n)+)"
+    r"  \[\n(?P<entries>(?:    E\d+,\n)*)  \]",
+    re.M,
+)
+_LET_REF_RE = re.compile(r"\b(E\d+)\b")
+
+
+def _hoist_let_chains(body: str) -> str:
+    """Rewrite every `@[irreducible] def X <binders> : List F := let E0 := …; …; [E_i, …]` block whose
+    body is a `let` chain into one `private def X_E<k> <binders> : F := …` per binding (references to
+    earlier bindings become applications to the same binder names) followed by
+    `@[irreducible] def X <binders> : List F := [X_E<i> <binders>, …]`. Definitionally the same list
+    (each hoisted def zeta-reduces to the original binding); elaboration goes from super-linear in
+    the chain length to linear, and the recursion-depth/heartbeat overrides the chains needed go
+    with them. See HOISTED_LET_CHAIN_TABLES."""
+    def repl(m: "re.Match[str]") -> str:
+        name, sig = m.group("name"), m.group("sig")
+        binder_names = re.findall(r"^  \((\w+) :", sig, re.M)
+        args = " ".join(binder_names)
+        lets = re.findall(r"^  let (E\d+) : F := ([^\n]*)$", m.group("lets"), re.M)
+        entries = re.findall(r"^    (E\d+),$", m.group("entries"), re.M)
+        header = sig.rstrip("\n")
+        # one line per hoisted binding: the binder block joined with single spaces
+        flat = " ".join(part.strip() for part in header.split("\n") if part.strip())
+        out: List[str] = []
+        for binding, expr in lets:
+            expr = _LET_REF_RE.sub(lambda r: f"({name}_{r.group(1)} {args})", expr)
+            out.append(f"private def {name}_{binding} {flat} : F := {expr}")
+        items = ", ".join(f"{name}_{e} {args}" for e in entries)
+        out.append(f"\n{m.group('attr')}{name}{header}\n  : List F :=\n  [{items}]")
+        return "\n".join(out)
+    return _LET_CHAIN_DEF_RE.sub(repl, body)
+
+
 def _sanity_gate(label: str, body: str) -> None:
     """The emitted module must carry the two-list `asserts` / `interactions` defs; if it emits a
     struct it must derive `ProvableStruct` (or carry an explicit `instance : ProvableStruct` from
@@ -619,18 +666,10 @@ def render_struct_carrier(carrier: str, donor: str, struct_names: Sequence[str],
 # CONSTRAINT_HEARTBEAT_OVERRIDES as "<scope>:<innermost-namespace>.<def>". Default: NO override.
 #
 # `render_system_table` and `render_public_values` emit an override only where this table names one.
-# **Never emit a blanket bump.** Eleven of the twelve generated system-oracle modules need nothing at
-# all, `PublicValues.lean` included; only `Global`'s four `assertsPart*` definitions recurse past Lean's
-# 512 default, and their floor is (1200, 2000].
-SYSTEM_RECDEPTH_OVERRIDES: Dict[str, int] = {
-    # The Poseidon-style accumulation chain; same definitions that force this file's heartbeat
-    # exception. Ladder: 800 FAIL / 1200 FAIL / 2000 ok -> floor (1200, 2000], set at ~2x.
-    # The file's other two defs (`asserts`, `interactions`) need nothing.
-    "system:Global:GlobalCols.assertsPart0": 4000,
-    "system:Global:GlobalCols.assertsPart1": 4000,
-    "system:Global:GlobalCols.assertsPart2": 4000,
-    "system:Global:GlobalCols.assertsPart3": 4000,
-}
+# **Never emit a blanket bump.** No generated system-oracle module needs one today: `Global`'s four
+# `assertsPart*` definitions used to recurse past Lean's 512 default (floor (1200, 2000]) until their
+# `let` chains were hoisted (`_hoist_let_chains`); the table stays as the mechanism for the next case.
+SYSTEM_RECDEPTH_OVERRIDES: Dict[str, int] = {}
 
 
 def _bump_recdepth(body: str, scope: str) -> str:
@@ -665,6 +704,8 @@ def render_system_table(
     # override per data definition would hide a chunk-size regression from the repository's
     # no-new-heartbeat audit gate.
     body = _preserve_raw_byte_opcodes(body)
+    if table in HOISTED_LET_CHAIN_TABLES:
+        body = _hoist_let_chains(body)
     body = _bump_recdepth(body.strip(), f"system:{table}")
     body = _expand_large_derives(body)
     _sanity_gate(f"{table} (system table)", body)
@@ -678,11 +719,7 @@ def render_system_table(
         f"vector deliberately avoids inventing semantic field names in the extraction layer; "
         f"audited adapters may name selected indices above this anchor. {reused} -/"
     )
-    # `Global` contains a Poseidon-style algebraic closure in which a single output depends on
-    # roughly 1,300 shared bindings.  Entry-list chunking cannot make that one term smaller (and
-    # finer chunks only duplicate it), so this is the sole new term-intrinsic heartbeat exception.
-    intrinsic_limit = "set_option maxHeartbeats 1000000\n\n" if table == "Global" else ""
-    return _header(import_modules, doc) + "\n" + intrinsic_limit + body + "\n\n" + FOOTER
+    return _header(import_modules, doc) + "\n" + body + "\n\n" + FOOTER
 
 
 def render_public_values(body: str) -> str:

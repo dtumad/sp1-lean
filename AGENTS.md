@@ -582,8 +582,10 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
   reason. Where a family is uniform (the 25 chips' `circuit`/`main`/`Spec`), say it once in the
   module docstring and keep the per-declaration line short.
 - **This repo does not raise elaboration budgets.** Hand-written Lean carries **zero**
-  `set_option maxHeartbeats`, matching upstream Clean (none in 44,603 lines), and two measured structural
-  `maxRecDepth` sites; every other site is on a generated definition.
+  `set_option maxHeartbeats`, matching upstream Clean (none in 44,603 lines), and one measured structural
+  `maxRecDepth` site; the only other site is one generated codegen-bound definition (the emitter
+  hoists the generated `let` chains that used to need budgets — `_hoist_let_chains` in
+  `update_extracted.py`).
   `scripts/check_option_escapes.sh` (the CI `guards` job + `run_audit.sh`) **prohibits** both options: any
   site not named in `scripts/option_escapes_allowlist.txt` fails the build. It is not a ratchet and not a
   budget — a ratchet permits a new hatch as long as an old one leaves; this does not. When a proof blows
