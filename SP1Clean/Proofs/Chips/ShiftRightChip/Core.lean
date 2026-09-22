@@ -332,7 +332,7 @@ lemma srl_within_byte_shift_1 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
   have h_L_lt : (hl1.val + ll2.val * M) + (hl2.val + ll3.val * M) * 2 ^ 16 + hl3.val * 2 ^ 32 < 2 ^ 64 := by
     omega
   have h_rem_lt : (hl0.val * N + ll0.val) + 2 ^ 16 * ll1.val < N * 2 ^ 16 := by
-    nlinarith [lt_lh0, lt_ll0, lt_ll1, h_MN, h_NM, h_N_pos]
+    omega
   have h_NM16_pos : 0 < N * 2 ^ 16 := Nat.mul_pos h_N_pos (by omega)
   -- Key identity: (N * 2^16) * L_1 + (b_0 + 2^16 * ll_1) = B.
   have h_key : (N * 2 ^ 16) * ((hl1.val + ll2.val * M) + (hl2.val + ll3.val * M) * 2 ^ 16
@@ -389,7 +389,7 @@ lemma srl_within_byte_shift_2 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
   have h_L_lt : (hl2.val + ll3.val * M) + hl3.val * 2 ^ 16 < 2 ^ 64 := by
     omega
   have h_rem_lt : ((hl0.val * N + ll0.val) + (hl1.val * N + ll1.val) * 2 ^ 16) + 2 ^ 32 * ll2.val < N * 2 ^ 32 := by
-    nlinarith [lt_lh0, lt_ll0, lt_lh1, lt_ll1, lt_ll2, h_MN, h_NM, h_N_pos]
+    omega
   have h_NM32_pos : 0 < N * 2 ^ 32 := Nat.mul_pos h_N_pos (by omega)
   have h_key : (N * 2 ^ 32) * ((hl2.val + ll3.val * M) + hl3.val * 2 ^ 16)
               + (((hl0.val * N + ll0.val) + (hl1.val * N + ll1.val) * 2 ^ 16) + 2 ^ 32 * ll2.val)
@@ -441,7 +441,7 @@ lemma srl_within_byte_shift_3 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)]
   have h_L_lt : hl3.val < 2 ^ 64 := by omega
   have h_rem_lt : ((hl0.val * N + ll0.val) + (hl1.val * N + ll1.val) * 2 ^ 16
                  + (hl2.val * N + ll2.val) * 2 ^ 32) + 2 ^ 48 * ll3.val < N * 2 ^ 48 := by
-    nlinarith [lt_lh0, lt_ll0, lt_lh1, lt_ll1, lt_lh2, lt_ll2, lt_ll3, h_MN, h_NM, h_N_pos]
+    omega
   have h_NM48_pos : 0 < N * 2 ^ 48 := Nat.mul_pos h_N_pos (by omega)
   have h_key : (N * 2 ^ 48) * hl3.val
               + (((hl0.val * N + ll0.val) + (hl1.val * N + ll1.val) * 2 ^ 16
@@ -1669,14 +1669,14 @@ lemma srlw_within_byte_shift_1 {p : ℕ} [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)
     List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ, ZMod.val_zero,
     zero_mul, add_zero]
   rw [h_b0_val, h_b1_val]
-  have h_b0_lt : hl0.val * N + ll0.val < 65536 := by nlinarith [lt_lh0, lt_ll0, h_MN]
-  have h_b1_lt : hl1.val * N + ll1.val < 65536 := by nlinarith [lt_lh1, lt_ll1, h_MN]
-  have h_hl1_lt : hl1.val < 65536 := by nlinarith [lt_lh1, h_MN]
+  have h_b0_lt : hl0.val * N + ll0.val < 65536 := hi_lo_lt h_MN lt_lh0 lt_ll0
+  have h_b1_lt : hl1.val * N + ll1.val < 65536 := hi_lo_lt h_MN lt_lh1 lt_ll1
+  have h_hl1_lt : hl1.val < 65536 := lt_65536_of_lt_M h_MN lt_lh1
   have h_B_lt : (hl0.val * N + ll0.val) + (hl1.val * N + ll1.val) * 2 ^ 16 < 2 ^ 32 := by
     omega
   have h_L_lt : hl1.val < 2 ^ 32 := by omega
   have h_rem_lt : (hl0.val * N + ll0.val) + 2 ^ 16 * ll1.val < N * 2 ^ 16 := by
-    nlinarith [lt_lh0, lt_ll0, lt_ll1, h_MN, h_NM, h_N_pos]
+    omega
   have h_NM16_pos : 0 < N * 2 ^ 16 := Nat.mul_pos h_N_pos (by omega)
   -- Key Nat identity: (N * 2^16) * hl1 + (b0 + 2^16 * ll1) = B.
   have h_key : (N * 2 ^ 16) * hl1.val + ((hl0.val * N + ll0.val) + 2 ^ 16 * ll1.val)
