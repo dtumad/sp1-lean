@@ -918,6 +918,52 @@ always means a *local* regression against one of these.
   folding the term does. And **measure with a low ceiling, not `#count_heartbeats`**, which runs with an
   unlimited budget and under-reports (Clean's `doc/performance-problems.md` §"Measuring honestly").
 
+- **Nested `let` chains elaborate super-linearly — hoist them.** The elaborator's cost for a term
+  `let E0 := …; let E1 := …; …; [E_i, …]` grows much faster than the chain: the generated
+  `SystemOracle/Global` parts measured 535 bindings → 2 s, 668 → 4 s, 1 111 → 18 s, 1 649 → 30 s
+  and 14 GB (62 s / 124 CPU-s for the module solo, 435–706 s on the 4-vCPU runner, plus the tree's
+  only file-level `maxHeartbeats` and four `maxRecDepth` sites). The kernel was 39 ms of that — it
+  is elaboration. One top-level `def` per binding, applied to the same binders, is the same list
+  definitionally and linear to elaborate: 0.9 s for the 1 649-binding part, 7 s for the module.
+  Generated code gets this from `_hoist_let_chains` in `update_extracted.py` (2026-09, fork
+  PR #51); hand-written code should never build such chains inside one term in the first place.
+  Entry chunking does not help when one entry's closure is the chain (the Poseidon output).
+
+- **Per-field `simp only [circuit_norm]` on a struct is quadratic in the field count.** A lemma
+  `(ProvableStruct.eval env s).f = eval env s.f` proved by `cases s; simp only [circuit_norm]`
+  normalises the *whole* struct's evaluation before projecting, so `n` such lemmas cost `n²`: the
+  45-field `DivRemChip.Columns` spent 27 s of `simp` on its 90 generated lemmas (45 CPU-s for an
+  83-line file, the #1 core module on the runner). On the constructor literal `cases s` exposes,
+  `ProvableStruct.eval` reduces definitionally, so the projection is **`rfl`** (5 CPU-s for the
+  same 90); a congruence consequence is the field's `eval_f` lemma plus the *one* Clean lemma for
+  the field's kind (`ProvableType.eval_field` / `eval_fields` / `ProvableStruct.eval_eq_eval`),
+  never the whole `circuit_norm` set. `provable_struct_eval_lemmas` does this (fork PR #52); apply
+  the same rule to any hand-written per-field lemma.
+
+- **`interpretation` in the profiler is Mathlib's tactics, and it is where whole modules go.**
+  Lean-core tactics (`omega`, `decide`, `bv_decide`, `simp`, `rfl`) are native; Mathlib's
+  (`fin_cases`, `aesop`, `linarith`/`nlinarith`, `push_cast`, `interval_cases`, `ring`'s
+  extensions, `norm_num` extensions) run in the IR interpreter, and so do Clean's and ours. This
+  cannot be precompiled from here (Mathlib is not precompiled upstream). Two measured cases:
+  `Model/Register`'s 62 lemmas `reg_idx_to_Register idx = .x_k ↔ idx = k#5` by
+  `fin_cases idx <;> trivial` = 16 s of interpretation in a module that otherwise costs 5 s;
+  `revert idx; decide +kernel` (kernel evaluation of the decidable instance — not `native_decide`)
+  is 0.7 s (module −53 % CPU, fork PR #48). `ShiftRightChip/Core`'s four `h_rem_lt` goals of the
+  form `(hl.val * N + ll.val) + 2 ^ 16 * ll'.val < N * 2 ^ 16` cost ≈ 5 s of `nlinarith` each;
+  with the `< 65536` bound already in context they are linear over the atoms `hl.val * N`, and
+  `omega` closes them in milliseconds (module −44 %, fork PR #49). Rule: over a small finite type,
+  `decide +kernel`; when a goal is linear in its product atoms, `omega`; reach for `nlinarith`
+  only for genuinely nonlinear facts, and reach for a lemma before a 30-way enumeration.
+  Attribution: `-Dtrace.profiler.output` (docs/agents/build-profiling.md), which names the tactic
+  call; the plain profiler only names the interpreted constant.
+
+- **A per-module Lake option is a one-module library.** Lake applies `leanOptions` per library,
+  and the last declared library matching a module owns it, so `[[lean_lib]] name = "X" roots =
+  ["A.B.C"]` declared after `A`'s library gives exactly `A.B.C` a different option set. That is how
+  the generated `LeanRV64D.RvfiDii` gets `backward.do.legacy` (718 s → 2.5 s, fork PR #46) after
+  the library-wide option turned out to break other generated modules (the legacy elaborator
+  rejects `← doElem` forms). Options are traced, so any such change is one cold rebuild.
+
 - **For many-case chips, extract semantic evidence instead of splitting full circuit soundness.** The old
   DivRem architecture proved nine `GeneralFormalCircuit.Soundness` theorems over the same enormous `main`
   and shared their requirements tail through a custom `SpecObligation` tactic. Lean 4.30/4.31 made even

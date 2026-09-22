@@ -76,6 +76,48 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
 - `do element elaborator` — the `do` notation elaborator (the generated Sail model's
   `print_rvfi_exec`, lean4#13858).
 
+## Measurement pitfalls (each cost a wrong conclusion once)
+
+- `lean -Dprofiler=true`'s `cumulative profiling times:` block goes to **stderr**; the per-event
+  lines go to stdout. Capture both.
+- A profiler category sum is not wall: proof bodies elaborate on parallel threads, and
+  `blocked (unaccounted)` is the main thread waiting for them — it can exceed wall many times over.
+  Compare `user+sys` CPU across runs, not the category sums.
+- Per-module `Built` times in a parallel build are noisy: two cold builds of the same tree gave a
+  median 8 % per-module difference with a long tail beyond ±15 %, while their sums differed by 5 %.
+  The same configuration on two runner models differed by 18 % (hosted runners alternate CPU
+  models; the experiment workflow records `lscpu`, the production jobs do not). Judge a change by
+  Σ, wall and critical path across a pair; judge a module by a solo timing.
+- The tool's numbers age with the toolchain: the 2026-09-20 solo sweep's "26 % interpretation,
+  9 s per load/store `Formal` file" was true on v4.32.2 + the Clean fork and false one bump later
+  (0.5 s). Re-sweep before citing a category split after a toolchain or Clean move.
+- `interpretation` is interpreted *tactic* code (Mathlib/Clean/ours), not `decide` proofs or the
+  kernel — see proof-patterns.md. The plain profiler names the interpreted constant; only
+  `trace.profiler.output` names the call site.
+- Run local profiles **solo**: a `lake build` in another shell (or an agent's) inflates every
+  number, including `import` (measured 1.2 s → 4.8 s). And never switch git branches in a checkout
+  while a `lake build` runs there — Lake reads sources as it reaches them.
+- `lake env lean` applies no package flags (`scripts/lean_flags.py` prints them); it also exits 0
+  on a stack overflow.
+
+## CI pitfalls (the design that answers them is in the workflow headers)
+
+- `actions/cache` restore-key fallbacks match the **newest** entry with the prefix, blind to branch
+  history: a bare `<prefix>-` fallback restored a stale lineage and rebuilt a scripts-only PR from
+  scratch (582 modules, 22.5 min). `scripts/ci/cache_pick.py` chooses by first-parent lineage; no
+  bare prefix fallback exists any more.
+- The `path:` list is part of an entry's version hash: editing it invalidates every entry, so it
+  ships with a `SP1_CACHE_VERSION` bump and one cold transition.
+- A PR's entries live on `refs/pull/N/merge` and are invisible to `main`, so every merge used to
+  redo the PR's build; the `handoff` job passes the build to `main` as an artifact.
+- Never save the cache from a cancelled job (a truncated `.olean` behind a written trace poisons
+  every later restore); `main` runs queue instead of cancelling.
+- The 4-vCPU runner does not swap; the 5–11× CI-vs-solo inflation of big modules was **CPU
+  oversubscription** — Lake runs `LEAN_NUM_THREADS` jobs (default = cores) and each child `lean`
+  also defaults to all cores. 16 threads on 4 vCPU cost a third of the CPU-seconds; 3 jobs × 2
+  threads (`LEAN_NUM_THREADS=3` + `-j2` in `moreLeanArgs`) is −17 % wall on a cold build.
+- GitHub serves a job's log only after it completes; `gh run view --log` is empty in progress.
+
 ## Measurement protocol for a build-time PR
 
 1. **Before**: a CI pair from `build-experiment.yml` on the base and the head commit with identical
