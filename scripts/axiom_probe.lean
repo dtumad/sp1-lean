@@ -439,6 +439,14 @@ Run via `lake env lean scripts/axiom_probe.lean` (see `scripts/run_audit.sh`). -
 #print axioms SP1Clean.Composition.extracted_instructionTables_constraints
 #print axioms SP1Clean.Composition.signedSum_eq_sent_sub_received
 #print axioms SP1Clean.Composition.signedSum_eq_zero
+#print axioms SP1Clean.Model.Core.InstructionWrite.PermittedAt.check
+#print axioms SP1Clean.Model.Core.ExecutionPath.WritesPermitted
+#print axioms SP1Clean.Model.Core.ExecutionPath.writesPermitted_nil
+#print axioms SP1Clean.Model.Core.ExecutionPath.writesPermitted_cons_iff
+#print axioms SP1Clean.Model.Core.ExecutionPath.writesPermitted_append_iff
+#print axioms SP1Clean.Model.Core.ExecutionPath.WritesPermitted.append
+#print axioms SP1Clean.Model.Core.ExecutionPath.WritesPermitted.split
+#print axioms SP1Clean.Model.Core.ExecutionPath.WritesPermitted.head
 #print axioms SP1Clean.Model.Core.InstructionWrite.spans?
 #print axioms SP1Clean.Model.Core.InstructionWrite.check
 #print axioms SP1Clean.Model.Core.InstructionWrite.check_iff

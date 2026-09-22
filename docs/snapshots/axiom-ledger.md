@@ -1,15 +1,15 @@
 # Axiom and trust ledger
 
-Checked against the ordinary write policy and installed prefix ROM proofs on 2026-09-22. Each raw file records the
+Checked against the mandatory semantic-path write policy on 2026-09-22. Each raw file records the
 source revision whose declarations were probed:
-[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2816 declarations) and
-[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 332 declarations).
+[`axiom-census.txt`](axiom-census.txt) (the main `SP1Clean` library, 2824 declarations) and
+[`axiom-census-test.txt`](axiom-census-test.txt) (the `SP1CleanTest` anchors, 338 declarations).
 `scripts/run_audit.sh` reproduces both and rejects dependency drift. The main and test split lets
 CI elaborate each probe against the library built by that job.
 
 ## Result
 
-- 3148 released declarations are probed.
+- 3162 released declarations are probed.
 - No source proof deferrals or project `axiom` declarations occur in the main library.
 - No probed declaration carries `sorryAx`.
 - Kernel bypasses and `native_decide` are absent from the main library.
@@ -35,16 +35,32 @@ The census reports several classes that should not be conflated:
 | generated `native_decide` constants | executable conformance tests only |
 | `sorryAx` | forbidden; absent |
 
-The ordinary write policy and installed prefix ROM proofs add fourteen main probes and six
+The mandatory semantic-path write policy adds eight main probes and six regressions. The policy
+observes each ordinary event's replayed source and composes/splits at the complete execution
+boundary. `Shard.Executes` now requires it independently of the free resource profile. Tests
+accept a genuine JAL self-loop and host-only paths, reject a same-value ROM store with any target
+or continuation even under an unrestricted resource profile, and retain empty identities.
+All preceding 2816 main and 332 test dependency sets are unchanged, with no removals or new
+main-library axiom names. Seven path declarations retain the existing 77-dependency Sail set;
+decode uniqueness uses the logical baseline and the existing experimental-extensions hook.
+Six new compiler-trust constants occur only in the test library's finite source/register/byte
+checks; the positive execution fixtures reuse their previously disclosed dependencies.
+The semantic contract manifest keeps the same eight root type fingerprints but records the
+stronger `Executes` body: its dependency inventory grows from 607 to 1277 declarations, adding
+shared replay, decoded write footprints, routing and their existing Sail dependencies. It adds
+no AIR or compiler premise. Deriving permission from the installed AIR and proving independent
+semantic ROM/fetch preservation remain open, alongside the concrete resource profile.
+
+The preceding ordinary write policy and installed prefix ROM proofs added fourteen main probes and six
 executable regressions. All preceding 2802 main and 326 test dependency sets are unchanged;
 there are no removals or new main-library axiom names. Footprint computation and its local laws
 use subsets of the logical baseline. The decoded policy and four store adapters inherit the
 existing `sys_enable_experimental_extensions` hook through official decoding. Protected-byte
 and installed-prefix proofs inherit the already-disclosed Sail hooks and, for the installed
 ensemble, existing bit-vector proof constants. Each new regression has one compiler-trust
-constant, confined to the test library. All eight capstone target types and their 607 recorded
-definition dependencies are unchanged: the new policy is not yet a requirement of the independent
-semantic domain, and its resource profile remains open.
+constant, confined to the test library. At that checkpoint all eight capstone target types and their 607 recorded
+definition dependencies were unchanged. The semantic-path increment above installs the policy
+in the independent domain; its resource profile remains open.
 
 Host instruction-byte authentication added four main probes and three executable regressions.
 All preceding 2798 main dependency sets are unchanged. Three new main lemmas use subsets of the

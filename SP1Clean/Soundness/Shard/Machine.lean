@@ -6,8 +6,9 @@ import SP1Clean.Soundness.Shard.Contract
 
 `SoundnessTarget` and `CompilerTarget` are exactly the two fields of `Air.Flat.Realizes` at the SP1
 machine, with the fixed complete endpoints as the boundary and the header identity, source
-validity, and resource profile as admissibility. `statement_iff_of_realizes` re-derives the
-intended single statement from `Realizes.statement_iff`; nothing is proved twice and no second
+validity, fixed ordinary-write policy, and resource profile as admissibility.
+`statement_iff_of_realizes` re-derives the intended single statement from `Realizes.statement_iff`;
+nothing is proved twice and no second
 carrier is introduced: the machine is PolyFun's `Labeled` bundle of the existing `executionSystem`.
 Both targets remain unfilled; this file fixes their generic shape.
 -/
@@ -24,11 +25,14 @@ def boundary (source target : ExecutionSnapshot) :
     PublicIO (ZMod p) → ExecutionState × ExecutionState :=
   fun _ => (source.realize, target.realize)
 
-/-- The header identity, source validity, and the resource profile. -/
-def admissible (profile : Profile) (image : ProgramImage) (source target : ExecutionSnapshot)
-    (header : PublicIO (ZMod p)) : PublicIO (ZMod p) → List ExecutionEvent → Prop :=
+/-- The header identity, source validity, ordinary-write permission, and resource profile. -/
+def admissible (profile : Profile) (image : ProgramImage) (valid : image.Valid)
+    (source target : ExecutionSnapshot) (header : PublicIO (ZMod p)) :
+    PublicIO (ZMod p) → List ExecutionEvent → Prop :=
   fun publicInput events =>
-    publicInput = header ∧ ExecutionSourceValid image source ∧ profile p image source target events
+    publicInput = header ∧ ExecutionSourceValid image source ∧
+      ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid) source.realize events ∧
+      profile p image source target events
 
 omit [Fact p.Prime] [ProvableType PublicIO] in
 theorem interpretation_iff {profile : Profile} {image : ProgramImage} (valid : image.Valid)
@@ -36,7 +40,7 @@ theorem interpretation_iff {profile : Profile} {image : ProgramImage} (valid : i
     {events : List ExecutionEvent} :
     Interpretation profile image source target header publicInput events ↔
       Air.Flat.Interpretation (sp1Machine p image valid) (boundary source target)
-        (admissible profile image source target header) publicInput events := by
+        (admissible profile image valid source target header) publicInput events := by
   simp only [Interpretation, AdmissibleExecution, Air.Flat.Interpretation, boundary, admissible,
     executes_iff (valid := valid)]
   tauto
@@ -47,7 +51,7 @@ def realizes {ensemble : Ensemble (ZMod p) PublicIO} {profile : Profile} {image 
     (sound : SoundnessTarget ensemble profile image source target header)
     (compiler : CompilerTarget ensemble profile image source target header) :
     Air.Flat.Realizes (sp1Machine p image valid) ensemble (boundary source target)
-      (admissible profile image source target header) where
+      (admissible profile image valid source target header) where
   sound publicInput _ accepted :=
     let ⟨events, interpretation⟩ := sound publicInput trivial accepted
     ⟨events, (interpretation_iff valid).mp interpretation⟩

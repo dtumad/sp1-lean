@@ -1,4 +1,5 @@
 import SP1Clean.Model.Core.SourceExecution
+import SP1Clean.Model.Core.ExecutionWritePolicy
 
 /-! # Complete-state semantics for the native shard capstone
 
@@ -7,9 +8,11 @@ second machine nor replaces the official Sail step. All eight concrete host call
 `ExecutionPath`. A shard may start at any checked local source, continue, halt, or be empty.
 Padding and ledger administration are absent from the semantic event tape.
 
-`Executes` is the semantic spine, before resource restrictions. `Profile` names the still-open
-semantic domain of the bounded AIR: clock phase/ranges, actual writable store bytes, and finite
-resource capacities must be fixed and enforced by that AIR before a capstone can be instantiated.
+`Executes` is the semantic spine, including the ordinary write-byte policy and before resource
+restrictions. The policy observes each actual replayed source, so same-value ROM writes are
+excluded independently of circuit or compiler success. `Profile` names the still-open resource
+domain of the bounded AIR: clock phase/ranges and finite capacities must be fixed and enforced
+by that AIR before a capstone can be instantiated.
 It must not be instantiated with compiler success, row readiness, or a witness-grounding premise.
 There is deliberately no default profile and no claim that the current mixed assembly realizes
 this complete-state contract. See `Soundness/Shard/Contract` for the two end-to-end targets.
@@ -23,14 +26,17 @@ open Model.Core Machine
 def policy (characteristic : ℕ) (image : ProgramImage) : HostPolicy :=
   ⟨{ readOnly := image.readOnly }, characteristic⟩
 
-/-- One local execution, including literal equality with the complete outgoing realization. -/
+/-- One permitted local execution, including literal equality with the complete outgoing realization.
+Ordinary write permission is mandatory independently of the remaining resource profile. -/
 def Executes (characteristic : ℕ) (image : ProgramImage)
     (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=
   ∃ valid : ExecutionSourceValid image source,
     ExecutionPath (policy characteristic image) (image.toGuestProgram valid.1.1)
-      source.realize events target.realize
+      source.realize events target.realize ∧
+    ExecutionPath.WritesPermitted (policy characteristic image) (image.toGuestProgram valid.1.1)
+      source.realize events
 
-/-- Semantic restrictions to be fixed by the native resource/permission policy, independently
+/-- Semantic restrictions to be fixed by the native resource policy, independently
 of AIR rows and compiler internals. This is a target parameter, not a completed native profile. -/
 abbrev Profile := ℕ → ProgramImage → ExecutionSnapshot → ExecutionSnapshot →
   List ExecutionEvent → Prop
@@ -50,12 +56,12 @@ variable {characteristic : ℕ} {image : ProgramImage}
 theorem nil_iff : Executes characteristic image source target [] ↔
     ExecutionSourceValid image source ∧ source.equivalent target = true := by
   constructor
-  · rintro ⟨valid, path⟩
+  · rintro ⟨valid, path, _⟩
     exact ⟨valid, (ExecutionSnapshot.equivalent_iff _ _).mpr
       (ExecutionPath.nil_iff.mp path).symm⟩
   · rintro ⟨valid, same⟩
     exact ⟨valid, ExecutionPath.nil_iff.mpr
-      ((ExecutionSnapshot.equivalent_iff _ _).mp same).symm⟩
+      ((ExecutionSnapshot.equivalent_iff _ _).mp same).symm, ExecutionPath.writesPermitted_nil⟩
 
 /-- Semantic composition uses the executable full-boundary comparison. Resource limits are
 intentionally separate: two legal shards need not fit in a single shard. -/
@@ -63,21 +69,21 @@ theorem append (firstPath : Executes characteristic image source left first)
     (secondPath : Executes characteristic image right target second)
     (same : left.equivalent right = true) :
     Executes characteristic image source target (first ++ second) := by
-  obtain ⟨sourceValid, firstPath⟩ := firstPath
-  obtain ⟨_, secondPath⟩ := secondPath
-  rw [← (ExecutionSnapshot.equivalent_iff _ _).mp same] at secondPath
-  exact ⟨sourceValid, firstPath.append secondPath⟩
+  obtain ⟨sourceValid, firstPath, firstPermission⟩ := firstPath
+  obtain ⟨_, secondPath, secondPermission⟩ := secondPath
+  rw [← (ExecutionSnapshot.equivalent_iff _ _).mp same] at secondPath secondPermission
+  exact ⟨sourceValid, firstPath.append secondPath, firstPermission.append secondPermission firstPath⟩
 
 /-- Event duration, rather than padding or table height, determines the endpoint clock. -/
 theorem clock (execution : Executes characteristic image source target first) :
     target.clock = source.clock + (first.map ExecutionEvent.duration).sum :=
-  execution.2.clock
+  execution.2.1.clock
 
 /-- A stopped incoming host admits only an identity execution. -/
 theorem of_halted (execution : Executes characteristic image source target first)
     (halted : source.host.exitCode ≠ none) :
     first = [] ∧ source.equivalent target = true := by
-  obtain ⟨empty, same⟩ := execution.2.of_halted halted
+  obtain ⟨empty, same⟩ := execution.2.1.of_halted halted
   exact ⟨empty, (ExecutionSnapshot.equivalent_iff _ _).mpr same.symm⟩
 
 end Executes

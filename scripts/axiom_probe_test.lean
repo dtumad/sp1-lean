@@ -1,7 +1,8 @@
+import SP1CleanTest.Core.ExecutionWritePolicy
+import SP1CleanTest.Alignment.Core.ExecutionPath
 import SP1CleanTest.Core.InstructionWrite
 import SP1CleanTest.Alignment.Core.LocalCore
 import SP1CleanTest.Core.ExecutionSnapshot
-import SP1CleanTest.Alignment.Core.ExecutionPath
 import SP1CleanTest.Core.FinalMemoryValue
 import SP1CleanTest.Core.MemoryFinalCheck
 import SP1CleanTest.Core.HostExecution
@@ -44,6 +45,12 @@ Test-library census probe (the `SP1CleanTest` conformance anchors; requires the
 test-library oleans — run `lake test` first).
 Run via `lake env lean scripts/axiom_probe_test.lean` (see `scripts/run_audit.sh`). -/
 
+#print axioms SP1CleanTest.Core.ExecutionWritePolicy.sameValueStoreSource
+#print axioms SP1CleanTest.Core.ExecutionWritePolicy.rejectsSameValueStore
+#print axioms SP1CleanTest.Core.ExecutionWritePolicy.rejectsProfileBypass
+#print axioms SP1CleanTest.Core.ExecutionWritePolicy.acceptsIdentity
+#print axioms SP1CleanTest.Core.ExecutionPath.ordinaryWritePermission
+#print axioms SP1CleanTest.Core.ExecutionPath.hostWritePermission
 #print axioms SP1CleanTest.Core.InstructionWrite.fullStoreSpans
 #print axioms SP1CleanTest.Core.InstructionWrite.signedOffsets
 #print axioms SP1CleanTest.Core.InstructionWrite.partialCellPolicy

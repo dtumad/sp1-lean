@@ -40,6 +40,22 @@ OUT_TEST = ROOT / "scripts" / "axiom_probe_test.lean"
 # Entries may name theorem or definition headlines; in particular functional-completeness maps are
 # deliberately proof-independent definitions whose proof fields are retained by the structure.
 EXACT_REQUIRED_THEOREMS = [
+    # Fixed ordinary-write permission on the native shard's shared semantic path.
+    ("SP1Clean/Model/Core/InstructionWrite.lean", "PermittedAt.check"),
+    ("SP1Clean/Model/Core/ExecutionWritePolicy.lean", "WritesPermitted"),
+    ("SP1Clean/Model/Core/ExecutionWritePolicy.lean", "writesPermitted_nil"),
+    ("SP1Clean/Model/Core/ExecutionWritePolicy.lean", "writesPermitted_cons_iff"),
+    ("SP1Clean/Model/Core/ExecutionWritePolicy.lean", "writesPermitted_append_iff"),
+    ("SP1Clean/Model/Core/ExecutionWritePolicy.lean", "WritesPermitted.append"),
+    ("SP1Clean/Model/Core/ExecutionWritePolicy.lean", "WritesPermitted.split"),
+    ("SP1Clean/Model/Core/ExecutionWritePolicy.lean", "WritesPermitted.head"),
+    ("SP1CleanTest/Core/ExecutionWritePolicy.lean", "sameValueStoreSource"),
+    ("SP1CleanTest/Core/ExecutionWritePolicy.lean", "rejectsSameValueStore"),
+    ("SP1CleanTest/Core/ExecutionWritePolicy.lean", "rejectsProfileBypass"),
+    ("SP1CleanTest/Core/ExecutionWritePolicy.lean", "acceptsIdentity"),
+    ("SP1CleanTest/Alignment/Core/ExecutionPath.lean", "ordinaryWritePermission"),
+    ("SP1CleanTest/Alignment/Core/ExecutionPath.lean", "hostWritePermission"),
+
     # Independent ordinary write inventory, store-chip bindings, and installed prefix ROM.
     ("SP1Clean/Model/Core/InstructionWrite.lean", "spans?"),
     ("SP1Clean/Model/Core/InstructionWrite.lean", "check"),

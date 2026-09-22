@@ -21,7 +21,8 @@ and physical table heights are distinct. Padding contributes no semantic step.
 
 The checked statement spine is now in
 [`FormalModel/Shard.lean`](../SP1Clean/FormalModel/Shard.lean). It requires a checked source and
-literal equality with the complete outgoing realization. Its identity, composition, clock,
+literal equality with the complete outgoing realization, and ordinary write-byte permission
+at every replayed source. Its identity, composition, clock,
 and stopped-source laws are proved using the existing path. The AIR and compiler target types in
 [`Soundness/Shard/Contract.lean`](../SP1Clean/Soundness/Shard/Contract.lean) reuse `CompleteEnsemble`
 and `EnsembleCompiler`, with a conditional equivalence law. **They are not instantiated capstones.**
@@ -129,9 +130,14 @@ bind their AIR-authorized writes to this independent policy at the actual PC and
 prefix of the installed mixed replay from the checked source and AIR permissions. Regressions
 cover signed offsets, all four widths, partial-cell writes beside ROM, malformed footprints,
 and a same-value store accepted by the unprotected AIR but rejected by the protected AIR.
-Installing this ordinary policy in the independent semantic profile, proving preservation/fetch
-agreement on that domain (including branch/JALR edges), and fixing its resource limits remain
-open. The raw `ExecutionPath` and free `Profile` are unchanged by these component proofs.
+The native `Executes` contract now requires `ExecutionPath.WritesPermitted`, which observes the
+incoming state at every ordinary occurrence using the shared replay. Even a resource `Profile`
+of `True` cannot admit a same-value ROM store. Permission composes and splits at the actual
+complete boundary; empty identities and non-writing instructions remain permitted. The raw
+`ExecutionPath` is unchanged. Deriving this path-level predicate from the installed AIR,
+proving ROM preservation/fetch agreement on the independent semantic domain (including branch/JALR
+edges), and fixing the remaining free resource limits are still open. The four store adapters and
+installed prefix ROM theorem are components of those proofs, not substitutes for them.
 
 **Next boundary work:** bind the complete supplied outgoing snapshot to the already-derived
 Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks

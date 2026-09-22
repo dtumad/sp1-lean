@@ -28,7 +28,7 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 
 | Declaration | File | Question it decides |
 |---|---|---|
-| `Executes` | `SP1Clean/FormalModel/Shard.lean` | A checked source and an existing full-state path to the supplied target, before the resource profile |
+| `Executes` | `SP1Clean/FormalModel/Shard.lean` | A checked source, an existing full-state path to the supplied target, and fixed ordinary-write permission, before the resource profile |
 | `Profile` | `SP1Clean/FormalModel/Shard.lean` | The still-free semantic domain parameter; replacing it with concrete policy/limits is a capstone obligation |
 | `AdmissibleExecution` | `SP1Clean/FormalModel/Shard.lean` | The common domain of soundness and completeness |
 | `SoundnessTarget` | `SP1Clean/Soundness/Shard/Contract.lean` | Raw Clean acceptance must imply the complete supplied-boundary execution; no additional caller assumptions |
@@ -61,7 +61,8 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | `InstructionBytes.check` | `SP1Clean/Model/Core/InstructionBytes.lean` | All four little-endian instruction bytes, including present zero bytes, agree with the committed word |
 | `InstructionWrite.spans?` | `SP1Clean/Model/Core/InstructionWrite.lean` | Supported ordinary writes are derived from the decoded instruction and incoming base register, including same-value writes; failure differs from an empty footprint |
 | `InstructionWrite.check` | `SP1Clean/Model/Core/InstructionWrite.lean` | Every byte of the exact store width must avoid the immutable-code mask; address bounds and alignment are separate obligations |
-| `InstructionWrite.PermittedAt` | `SP1Clean/Model/Core/InstructionWrite.lean` | Fetch/decode at the actual PC and live operands bind that policy to a semantic source state; not yet required by `ExecutionPath` |
+| `InstructionWrite.PermittedAt` | `SP1Clean/Model/Core/InstructionWrite.lean` | Fetch/decode at the actual PC and live operands bind the write policy to a semantic source state |
+| `ExecutionPath.WritesPermitted` | `SP1Clean/Model/Core/ExecutionWritePolicy.lean` | Every ordinary occurrence uses its actual replayed incoming state; mandatory in native `Executes`, independent of AIR/compiler success and the remaining resource parameter |
 | `HostState.step` | `SP1Clean/Model/Core/HostSail.lean` | Host dispatch requires ECALL in both the committed program and actual Sail memory before interpreting the request |
 | `ExecutionSegment` | `SP1Clean/Model/Core/ExecutionPath.lean` | Exactly the requested number of local semantic steps, independent of boot, HALT, padding, and AIR witness layout |
 | `executionSystem` | `SP1Clean/Model/Core/ExecutionPath.lean` | The equivalent PolyFun finite-path view; directions are actual semantic steps |
