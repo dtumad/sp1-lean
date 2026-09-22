@@ -38,19 +38,34 @@ name: Lean Action CI
 # commit's second parent, unpacks it, deletes it, and its `lake build` is then seconds. A squash
 # merge, an expired artifact or a failed PR run simply fall through to the lineage restore.
 #
-# Scope: `lake build` = `SP1Core` + `ToClean` + `ToMathlib` + `ToPolyFun` (the generic/semantic
-# layers and the chip circuits with their proofs, through the gated root index `SP1Clean/Core.lean`)
-# and `lake test` = `SP1CoreTest`. Every build runs with `--wfail --iofail`: a warning (the Mathlib
-# standard linter set is on package-wide) or a stray `info:` note fails the job. The SP1-alignment
-# layers, their tests, the witgen/dump conformance gates, and the axiom census run in
-# `alignment.yml` (weekly, on demand, and on pushes to `main`), which restores this workflow's
-# entry for the same commit. Measurement and tooling: docs/agents/build-profiling.md.
+# Scope: `build` = `lake build` of `SP1Core` + `ToClean` + `ToMathlib` + `ToPolyFun` (the
+# generic/semantic layers and the chip circuits with their proofs, through the gated root index
+# `SP1Clean/Core.lean`) and `lake test` = `SP1CoreTest`; it is the required check on every PR.
+# `build-full` = the SP1-alignment layers (`lake build SP1Clean`: extracted oracles, Faithful, the
+# per-chip Sail bridges and machine contracts, Proofs/Sail, Proofs/Completeness, Soundness,
+# Composition), the full test library, `lake lint` over everything, the witgen/dump conformance
+# gates, and both axiom censuses. It runs after `build` on every push to `main`, weekly, on a
+# dispatch with `alignment` set, and on a PR carrying the `ci:alignment` label — restoring the
+# exact core entry `build` just saved, so it only ever builds the alignment closure of the change
+# (the old separate workflow raced the core save and restored stale entries). It is not gated on
+# paths: a PR touching the alignment strata gets a notice from `guards` and opts in with the
+# label, so that PR CI stays a core build by default. Every build runs with `--wfail --iofail`: a
+# warning (the Mathlib standard linter set is on package-wide) or a stray `info:` note fails the
+# job. Measurement and tooling: docs/agents/build-profiling.md.
 
 on:
   push:
     branches: ["main", "ci-testing"]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: "17 3 * * 1"
   workflow_dispatch:
+    inputs:
+      alignment:
+        description: "also run build-full (the alignment layers, tests, lint, censuses)"
+        type: boolean
+        default: false
 
 env:
   # Bump to invalidate every cache entry (toolchain and manifest changes already rekey; a change to
@@ -104,6 +119,16 @@ jobs:
         run: scripts/check_audit_surface.sh
       - name: Layering contract holds
         run: scripts/check_layering.sh
+      - name: Alignment strata touched without the ci:alignment label?
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:alignment')
+        run: |
+          git fetch -q --depth=1 origin "${{ github.event.pull_request.base.sha }}"
+          touched=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD \
+            | grep -E '^(SP1Clean/(Faithful|Soundness|Composition|Alignment|Extracted|Proofs/Sail|Proofs/Completeness)/|SP1Clean/Proofs/Chips/[^/]+/(Bridge|Contracts)\.lean|SP1CleanTest/Alignment/|update_extracted\.py|export/)' || true)
+          if [ -n "$touched" ]; then
+            echo "::notice title=alignment layers touched::This PR changes alignment-layer files but has no ci:alignment label, so build-full will not run before merge:"
+            echo "$touched"
+          fi
 
   build:
     runs-on: ubuntu-latest
@@ -245,3 +270,103 @@ jobs:
           path: lake-build.tar.zst
           retention-days: 3
           compression-level: 0
+
+  build-full:
+    # The alignment layers on top of the core entry `build` just saved (same run, exact key: no
+    # race, no stale lineage). One job for the full build, the full test library, `lake lint`, the
+    # export/witgen gates and both censuses — the old four-job workflow paid the toolchain/mathlib
+    # setup four times. `main` queues; a PR run supersedes its previous one.
+    needs: build
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.alignment) ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci:alignment'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency:
+      group: align-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LEAN_NUM_THREADS: "3"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # run_audit.sh verifies the census provenance stamp with `git merge-base --is-ancestor`
+          fetch-depth: 0
+      - name: Free disk space if the image is short of it
+        run: |
+          avail=$(df --output=avail -BG / | tail -1 | tr -dc 0-9)
+          if [ "$avail" -lt 25 ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+              /usr/local/share/boost /usr/local/.ghcup
+          fi
+          df -h /
+      - name: Compute cache keys and pick the entry to restore
+        id: key
+        run: |
+          prefix="${{ needs.build.outputs.cache-prefix }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "key=${prefix}-align-pr${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+            git rev-list --first-parent -n 30 HEAD^1 > lineage.txt
+          else
+            echo "key=${prefix}-align-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+            git rev-list --first-parent -n 30 HEAD > lineage.txt
+          fi
+          python3 scripts/ci/cache_pick.py --mode align --prefix "$prefix" --lineage lineage.txt \
+            --core-key "${{ needs.build.outputs.cache-key }}" >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+      - name: Restore the core entry this run saved (else by lineage)
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CACHE_PATHS }}
+          key: ${{ steps.key.outputs.pick || format('{0}-none', needs.build.outputs.cache-prefix) }}
+          restore-keys: |
+            ${{ steps.key.outputs.fallback1 }}
+            ${{ steps.key.outputs.fallback2 }}
+      - uses: leanprover/lean-action@v1
+        with:
+          build: "false"
+          test: "false"
+          lint: "false"
+          use-mathlib-cache: "true"
+          use-github-cache: "false"
+      - name: Full build (resumable — a cold cache may need one re-run)
+        run: timeout 5h lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun
+      - name: Full test library (lake build SP1CleanTest)
+        run: timeout 5h lake build --wfail --iofail SP1CleanTest
+      - name: Save the alignment build cache
+        if: success() || failure()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CACHE_PATHS }}
+          key: ${{ steps.key.outputs.key }}
+      - name: Environment linters (lake lint = batteries/runLinter over the four roots)
+        run: lake lint -- --no-build
+      - name: Whole-ensemble export identity
+        run: bash scripts/check_ensemble_export.sh
+      # The committed export/witgen goldens must match a fresh regeneration byte-for-byte; the
+      # exporter maps native rows through the `Faithful` reconfigure maps, so it needs the full
+      # library built above even though the exportability battery itself is core.
+      - name: Witgen export matches a fresh regeneration
+        run: scripts/check_witgen_export.sh --regen
+      - name: Test-library axiom census (scripts/run_audit.sh --test-only)
+        run: scripts/run_audit.sh --test-only
+      # The release audit harness over the whole library: pin cross-checks, the zero-tolerance
+      # proof-deferral and project-axiom scans, the source-policy guards, and the `#print axioms`
+      # census gated against docs/snapshots/axiom-census.txt.
+      - name: Release audit, main scope (scripts/run_audit.sh --main-only)
+        run: scripts/run_audit.sh --main-only
+      - name: Garbage-collect the cache by rule
+        if: github.event_name != 'pull_request' && (success() || failure())
+        run: python3 scripts/ci/cache_gc.py --repo "${{ github.repository }}" --prefix "${{ needs.build.outputs.cache-prefix }}" --apply
+      - name: Drop this PR's older alignment entries
+        if: github.event_name == 'pull_request' && (success() || failure())
+        run: |
+          python3 scripts/ci/cache_gc.py --repo "${{ github.repository }}" --prefix "${{ needs.build.outputs.cache-prefix }}" \
+            --only-ref "refs/pull/${{ github.event.pull_request.number }}/merge" --apply
