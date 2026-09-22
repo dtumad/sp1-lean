@@ -24,22 +24,18 @@ theorem routedWord {cols : Columns (ZMod p)} {case : Case}
       | .remainder => cols.remainder := by
   obtain ⟨_, hown, _, _⟩ := hcore
   simp only [DivRemCore.OwnAssertsHold, ownAsserts, List.forall_mem_cons] at hown
-  obtain ⟨e13, e15, e17, e19, e20, e21, e22, e23,
-    e29, e35, e41, e47, e48, e49, e51, e54,
-    e57, e59, e61, e64, e67, e69, e70, e71,
-    e73, e76, e79, e81, e83, e86, e89, e91,
-    e96, e99, e103, e105, e107, e109, e111, e113,
-    e115, e117, e119, e154, e157, e160, e163, e167,
-    e171, e175, e179, e184, e189, e194, e199, e204,
-    e209, e214, e219, e225, e228, e230, e232, e234,
-    e236, e238, e240, e242, e244, e247, e250, e253,
-    e256, e259, e262, e265, e268, e270, e272, e274,
-    e276, e278, e280, e282, e284, e286, e288, e299,
-    e300, e301, e302, e305, e307, e309, e311, e313,
-    e315, e317, e319, e321, e323, e325, e327, e329,
-    e331, e333, e335, e337, e339, e341, e343, e345,
-    e347, e349, e351, e353, e355, e357, e359, e367,
-    eopa0⟩ := hown
+  obtain ⟨e13, e15, e17, e19, e20, e21, e22, e23, e29, e35, e41, e47, e48, e49, e51, e54, e57, e59, e61,
+    e64, rest⟩ := hown
+  obtain ⟨e67, e69, e70, e71, e73, e76, e79, e81, e83, e86, e89, e91, e96, e99, e103, e105, e107, e109,
+    e111, e113, rest⟩ := rest
+  obtain ⟨e115, e117, e119, e154, e157, e160, e163, e167, e171, e175, e179, e184, e189, e194, e199, e204,
+    e209, e214, e219, e225, rest⟩ := rest
+  obtain ⟨e228, e230, e232, e234, e236, e238, e240, e242, e244, e247, e250, e253, e256, e259, e262, e265,
+    e268, e270, e272, e274, rest⟩ := rest
+  obtain ⟨e276, e278, e280, e282, e284, e286, e288, e299, e300, e301, e302, e305, e307, e309, e311, e313,
+    e315, e317, e319, e321, rest⟩ := rest
+  obtain ⟨e323, e325, e327, e329, e331, e333, e335, e337, e339, e341, e343, e345, e347, e349, e351, e353,
+    e355, e357, e359, e367, eopa0⟩ := rest
   have hqGate : cols.is_divu + cols.is_div + cols.is_divw + cols.is_divuw =
       if case.output = .quotient then 1 else 0 := by
     cases case
@@ -117,22 +113,18 @@ theorem compareAssumptionsOfCore {input : Inputs (ZMod p)} {cols : Columns (ZMod
     DivRemCompare.Assumptions (DivRemCompare.Inputs.ofCols cols) := by
   obtain ⟨_, hown, hselection, hrange⟩ := hcore
   simp only [DivRemCore.OwnAssertsHold, ownAsserts, List.forall_mem_cons] at hown
-  obtain ⟨e13, e15, e17, e19, e20, e21, e22, e23,
-    e29, e35, e41, e47, e48, e49, e51, e54,
-    e57, e59, e61, e64, e67, e69, e70, e71,
-    e73, e76, e79, e81, e83, e86, e89, e91,
-    e96, e99, e103, e105, e107, e109, e111, e113,
-    e115, e117, e119, e154, e157, e160, e163, e167,
-    e171, e175, e179, e184, e189, e194, e199, e204,
-    e209, e214, e219, e225, e228, e230, e232, e234,
-    e236, e238, e240, e242, e244, e247, e250, e253,
-    e256, e259, e262, e265, e268, e270, e272, e274,
-    e276, e278, e280, e282, e284, e286, e288, e299,
-    e300, e301, e302, e305, e307, e309, e311, e313,
-    e315, e317, e319, e321, e323, e325, e327, e329,
-    e331, e333, e335, e337, e339, e341, e343, e345,
-    e347, e349, e351, e353, e355, e357, e359, e367,
-    eopa0⟩ := hown
+  obtain ⟨e13, e15, e17, e19, e20, e21, e22, e23, e29, e35, e41, e47, e48, e49, e51, e54, e57, e59, e61,
+    e64, rest⟩ := hown
+  obtain ⟨e67, e69, e70, e71, e73, e76, e79, e81, e83, e86, e89, e91, e96, e99, e103, e105, e107, e109,
+    e111, e113, rest⟩ := rest
+  obtain ⟨e115, e117, e119, e154, e157, e160, e163, e167, e171, e175, e179, e184, e189, e194, e199, e204,
+    e209, e214, e219, e225, rest⟩ := rest
+  obtain ⟨e228, e230, e232, e234, e236, e238, e240, e242, e244, e247, e250, e253, e256, e259, e262, e265,
+    e268, e270, e272, e274, rest⟩ := rest
+  obtain ⟨e276, e278, e280, e282, e284, e286, e288, e299, e300, e301, e302, e305, e307, e309, e311, e313,
+    e315, e317, e319, e321, rest⟩ := rest
+  obtain ⟨e323, e325, e327, e329, e331, e333, e335, e337, e339, e341, e343, e345, e347, e349, e351, e353,
+    e355, e357, e359, e367, eopa0⟩ := rest
   simp only [DivRemCore.SelectionEvidenceSpec] at hselection
   obtain ⟨bIr, bIrnw, bDiv, bDivu, bRem, bRemu, bDivw, bRemw, bDivuw, bRemuw,
     hsum, hselected⟩ := hselection
