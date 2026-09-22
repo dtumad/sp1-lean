@@ -92,15 +92,18 @@ refinement; only their `_of_obligations` combinators are currently declared.
   layers `Extracted/{ChipOracle,SystemOracle}`, `Faithful/`, `Alignment/`, `Proofs/Sail`,
   `Proofs/Completeness`, `Soundness/`, `Composition/`). **Wire every new module into
   `SP1Clean.lean`, and a core module into `SP1Clean/Core.lean` as well** — `scripts/check_root_index.sh`
-  and `scripts/check_layering.sh` (check 3) gate both. PR CI runs the core; the alignment workflow
-  (`.github/workflows/alignment.yml`, weekly/on demand/on `main`) runs the full build, `lake lint`,
-  the full test library, the conformance gates, and both censuses.
+  and `scripts/check_layering.sh` (check 3) gate both. PR CI (`.github/workflows/lean_action_ci.yml`,
+  job `build`) runs the core; the `build-full` job of the same workflow — on every push to `main`,
+  weekly, on a dispatch with `alignment` set, or on a PR labelled `ci:alignment` — runs the full
+  build, `lake lint`, the full test library, the conformance gates, and both censuses on top of the
+  core entry `build` just saved (`guards` prints a notice when a PR touches the alignment strata
+  without the label).
   Passing = **0 errors AND 0 warnings**, and **no stray `info:` notes**: CI builds with
   `lake build --wfail --iofail`, so a linter warning or an `info:` note (see the `ring` note below)
   fails the job — use the same flags locally. Neither target carries `native_decide` (gated by
   `scripts/check_no_native_decide.sh`).
 - Tests: `lake test` (the `SP1CoreTest` `testDriver`: the test modules whose import closure stays in
-  the core). The full library `lake build SP1CleanTest` (alignment workflow) adds the anchors under
+  the core). The full library `lake build SP1CleanTest` (the `build-full` job) adds the anchors under
   `SP1CleanTest/Alignment/`, moved there by import closure. Together they build/elaborate the exportability battery and
   the non-vacuity/real-row satisfiability anchors — including the active official-Sail-step ↔
   deterministic-compiler ↔ circuit-event regression — and is the project's **only**
@@ -269,7 +272,7 @@ Mirror-rust layout under `SP1Clean/`:
   gate in `scripts/witgenExport.lean --testdata` (every event row recomputed via
   `FlatOperation.witgen` + the symbolic row map and matched cell-for-cell, all 25 chips) + the Rust
   reference-interpreter differential (`scripts/run_interp_diff.sh`). The gate re-runs in the
-  alignment workflow only (`check_witgen_export.sh --regen` in `test-full`; the exporter imports the
+  `build-full` job only (`check_witgen_export.sh --regen`; the exporter imports the
   umbrella, which PR CI does not build) — **a PR that touches the pins, `ToClean/`, or the exporter
   runs `scripts/check_witgen_export.sh --regen` locally before merging**, since PR CI cannot.
 - **`Soundness/`** — the whole-machine layer: `RowView.lean` carries the live normalized
@@ -566,7 +569,7 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
     "batteries/runLinter"`, the same as Mathlib, cslib and PolyFun): every default `@[env_linter]`
     (`docBlame`, `defsWithUnderscore`, `unusedArguments`, `simpNF`, …) over the declarations of
     the four roots `SP1Clean`, `ToClean`, `ToMathlib`, `ToPolyFun`. It needs built oleans: `lake
-    lint` (full tree, the alignment workflow) or, on a core build, `lake exe runLinter --no-build
+    lint` (full tree, the `build-full` job) or, on a core build, `lake exe runLinter --no-build
     SP1Clean.Core ToClean ToMathlib ToPolyFun` (PR CI). `scripts/nolints.json` is the
     **burn-down list**: `scripts/update_nolints.sh` regenerates it (Batteries' `--update` handles one
     root at a time; the script runs it per root and merges), every entry is a debt, and CI
