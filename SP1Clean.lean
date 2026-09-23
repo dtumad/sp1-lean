@@ -191,7 +191,6 @@ import SP1Clean.Proofs.Sail.InstructionDecode
 import SP1Clean.Proofs.Sail.InstructionDecode.Families
 import SP1Clean.Proofs.Sail.InstructionDecode.Tactic
 import SP1Clean.Proofs.Sail.RV64Bridge
-import SP1Clean.Proofs.Sail.TryStepReduction
 import SP1Clean.Soundness.AIR
 import SP1Clean.Soundness.AIRCompleteness
 import SP1Clean.Soundness.AlignedCarrier

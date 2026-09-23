@@ -491,7 +491,7 @@ narrow `simp only` stages rather than one wide `simp`: `checked_mem_*` is a deep
 `ExceptT`-over-`EStateM` tower, and a non-`only` pass over it builds intermediates that are ill-typed
 at `instances` transparency under Lean 4.32 (`physaddrbits` vs `BitVec 64`, `PreSailME … Unit` vs
 `EStateM …`), after which every later tactic silently no-ops. Stepping with typed lemmas never
-constructs such a term. `Proofs/Sail/TryStepReduction.lean` carries the same laws specialised to
+constructs such a term. `Model/Semantics/SailStepReduction.lean` carries the same laws specialised to
 `SailME Step Step`; these are generic in the result type because that file is downstream of this one.
 -/
 

@@ -2,7 +2,7 @@ import SP1Clean.Model.SailWrap
 import SP1Clean.Model.SailMemory
 import SP1Clean.Model.Semantics.GuestProgram
 
-/-! # Phase 3 — the `try_step` reduction (the W7 `lift` seam)
+/-! # Official Sail fetch, dispatch, and retirement reduction
 
 Reduces the official Sail `try_step 0 false` step function, over a straight-line-ready machine-mode state,
 to the execute-stage dispatch — so a chip's `advance` obligation (`∃ s', SailStep s s' ∧ RowEffect …`,

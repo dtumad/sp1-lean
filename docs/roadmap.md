@@ -145,6 +145,12 @@ their existing contracts and grounded readiness. ROM preservation/fetch agreemen
 independent semantic domain (including branch/JALR edges), and the remaining free resource
 limits, are still open. Installed-AIR preservation does not discharge those semantic obligations.
 
+The shared fetch/dispatch and retirement-tail proofs live below the circuits in
+`Model/Semantics/Sail{StepReduction,Fetch,Retirement}`. The existing chip bridges consume these
+same declarations. `ExecutionSourceValid.fetch_eq` identifies a committed current instruction
+with official Sail fetch from the complete realized source; it requires no successor fetch.
+The arbitrary-step preservation laws remain the next semantic proof obligation in #12.
+
 **Next boundary work:** bind the complete supplied outgoing snapshot to the already-derived
 Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks
 and enforce coverage of every computed source-to-target change; then bind the complete

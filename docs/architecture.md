@@ -226,8 +226,9 @@ The native shard capstone targets arbitrary bounded local paths, with complete i
 outgoing Sail/host states. `FormalModel/Shard.lean` fixes the execution spine;
 `Soundness/Shard/Contract.lean` gives checked AIR soundness and constructive-compiler target types
 using the existing `CompleteEnsemble` and `EnsembleCompiler`. The concrete resource profile and
-instances remain open. Current proof scope and implementation order are maintained in
-[the roadmap](roadmap.md), rather than repeated as a module-by-module progress log here.
+instances remain open. Current progress and implementation order are maintained in the
+[fork campaign issues](https://github.com/dtumad/sp1-lean/issues); [the roadmap](roadmap.md)
+records the durable contract and acceptance gates.
 
 ### Semantic ownership
 
@@ -237,6 +238,13 @@ and clock. `ExecutionPath` composes those steps and supplies split/join and Poly
 normally in eight ticks; each host call takes 264 ticks. HALT is an actual transition that sets
 host exit status. A stopped source permits only an empty identity. Padding never becomes a step.
 `ExecutionBoot` specializes the same semantics at boot/HALT endpoints.
+
+`Model/Semantics/SailStepReduction`, `SailFetch`, and `SailRetirement` own the circuit-independent
+official-Sail reduction, fetch, configuration-transport, and retirement-tail lemmas. Their existing
+namespaces are retained, and `Proofs/Sail/Advance` consumes them to construct chip row effects.
+`Model/Core/InstructionFetch` applies actual fetch agreement at checked finite boundaries without
+importing chip rows. This does not yet prove configuration or ROM preservation for every arbitrary
+supported semantic step; those laws must consume normal retirement and decoded write permission.
 
 `ExecutionSnapshot` is the finite representation of the whole boundary: every Sail register and
 its presence, sparse RAM, runtime counter/output, complete host state, and clock. Its executable
