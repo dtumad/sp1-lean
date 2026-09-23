@@ -152,7 +152,7 @@ properties, three different gates, and conflating them is easy:
 |---|---|---|
 | Every module is compiled and indexed | `check_root_index.sh` | "is this file in the build?" |
 | Imports respect the order; declarations sit at their vocabulary | `check_layering.sh` | "is this file in the right place?" |
-| A capstone's proof actually reaches a given module | *(the axiom census, partially)* | "does the theorem depend on it?" |
+| A capstone's proof actually reaches a given module | compiled constant-dependency inspection | "does the theorem depend on it?" |
 
 The third is what the external review's Finding 1 was about, and neither of the first two can detect
 it. Every `Faithful/` module was always compiled and always imported by `SP1Clean.lean`; what was
@@ -164,4 +164,6 @@ module can be imported without the proof term touching it. The sharp version is 
 So: a universal-import check (`lake exe mk_all`, or our `check_root_index.sh`) cannot catch Finding 1,
 and this layering gate cannot either. Holding that composition in place wants a gate that *requires*
 edges rather than forbidding them — asserting that named modules are in the closure of named capstone
-theorems. Today it is held only by convention plus a comment at `scripts/gen_axiom_probe.py:132`.
+theorems. The trust policy checks permitted axioms, not required proof edges; the separate capstone
+contract checks statement/definition dependencies, not theorem bodies. Required proof composition
+still needs direct inspection and explicit composition theorems, not an axiom-count proxy.

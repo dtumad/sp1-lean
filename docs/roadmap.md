@@ -89,7 +89,7 @@ remaining claim/consumer decisions: retain the active full-state frontier in the
 and CI coverage, retain the cheap exact-refinement stack and the 25 chip anchors, and migrate
 constructors needed by the mixed compiler with their consumers. A module absent from today's
 headline closure is not thereby dead. Retire other scaffolding only after checking imports,
-tests, export consumers and census entries, and preserving any released result by an adapter.
+tests, export consumers and documented release claims, and preserving any released result by an adapter.
 The [coverage register](overview.md#coverage-register) owns exclusions and their exit criteria;
 [architecture](architecture.md) separates semantic choices, reusable ledger arguments and local
 implementation obligations.
@@ -232,7 +232,7 @@ those complete instance data later become succinct authenticated commitments is 
 - `Soundness/Shard/` is the public assembly/contract home. Move live implementation families only
   after establishing their consumers; keep namespaces stable and separate moves from proof changes.
   Existing `Proofs/Completeness/` remains the compiler owner. Do not create another obligations framework.
-- Retire duplicate scaffolding only after migrating consumers and census probes. Preserve exact-Core
+- Retire duplicate scaffolding only after migrating consumers and preserving documented release claims. Preserve exact-Core
   contracts and old audited theorems unless an equivalent replacement is proved.
 
 The roadmap owns current status and next actions. Architecture owns module roles and trust

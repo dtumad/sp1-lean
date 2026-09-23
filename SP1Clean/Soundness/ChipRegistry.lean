@@ -29,9 +29,9 @@ The instruction → chip → Sail **routing/identity** home is `Soundness/Covera
 registry and everything downstream (`sp1Tables`, the capstone, `Coverage`) are stated under
 `[Fact (2 ^ 24 < p)]` with a local `Fact (2 ^ 17 < p)` derived from it; KoalaBear (p ≈ 2³¹) satisfies it.
 
-Every chip's `circuit` is axiom-clean in both directions (soundness and completeness): the census in
-`docs/snapshots/axiom-ledger.md` and the zero-deferral gate in `scripts/run_audit.sh` certify no
-`sorryAx` anywhere in the released set. -/
+Every chip's `circuit` has complete soundness and completeness proofs. The compiled-library trust
+policy and source guards in `scripts/run_audit.sh` reject `sorryAx` and unknown axioms; permitted
+logical, Sail and native-bitvector dependencies are described in `docs/trust-policy.md`. -/
 
 namespace SP1Clean.Soundness
 

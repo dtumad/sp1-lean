@@ -173,6 +173,6 @@ The AIR-to-execution workstream is complete when all of the following hold:
 - syscall handler behavior claimed by the theorem has a concrete refinement proof;
 - boot-to-halt shard composition is proved separately;
 - no proof deferrals or project axioms appear in the released theorem graph;
-- every generated pin, table, width, and axiom census guard passes; and
+- every generated pin, table, width, and compiled-library trust guard passes; and
 - the human-facing report states the cryptographic, Sail, extraction, and program-level trust
   boundaries without folding them into “AIR soundness.”

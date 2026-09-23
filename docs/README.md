@@ -12,7 +12,7 @@ Each document has one role:
 |---|---|
 | [`overview.md`](overview.md) | ten-minute technical orientation |
 | [`verification-report.md`](verification-report.md) | self-contained external technical report |
-| [`release-audit.md`](release-audit.md) | machine-adjacent pin, gate, trust, and census record |
+| [`release-audit.md`](release-audit.md) | reproducible pin, gate, and trust report |
 | [`audit-surface.md`](audit-surface.md) | short semantic definition inventory, mechanically gated |
 | [`layering.md`](layering.md) | structural layering and namespace contract |
 | [`architecture.md`](architecture.md) | module ownership, proof chain, and deliberate exceptions |
@@ -29,7 +29,6 @@ Each document has one role:
 | [`audits/2026-09-19-capstone-branch-review.md`](audits/2026-09-19-capstone-branch-review.md) | independent review of the full-state capstone branch: model, statement, installed proofs, findings |
 | [`audits/2026-09-build-semantics.md`](audits/2026-09-build-semantics.md) | build cost joined to the claim map: layers, import floor, hotspot mechanisms, per-cluster verdicts, proposals |
 | [`agents/`](agents/README.md) | maintained contributor techniques and provenance procedures |
-| [`snapshots/axiom-ledger.md`](snapshots/axiom-ledger.md) | generated per-theorem axiom inventory |
 | [`trust-policy.md`](trust-policy.md) | compiled-library trust policy and diagnostic reports |
 | [`snapshots/capstone-contract.json`](snapshots/capstone-contract.json) | compiled capstone target/definition dependencies, excluding theorem proof bodies |
 
@@ -57,7 +56,7 @@ paths, and requires module documentation on hand-written Lean modules.
 `python3 scripts/check_capstone_contract.py` builds and checks the compiled shard target types,
 then compares their definition-dependency manifest. `--update` refreshes that manifest only after
 reviewing the type/semantic delta. The release harness runs it against the just-built oleans;
-updating the axiom census does not implicitly update this separate contract record. The gate
+changing the trust policy does not implicitly update this separate contract record. The gate
 records a conditional target while its implementation instances remain open.
 
 ## Historical records

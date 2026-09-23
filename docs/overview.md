@@ -151,9 +151,9 @@ the Rust executor's `u32` dispatch alone does not establish it.
 
 ## Reproduction and review
 
-Run `lake build SP1Clean`, `lake test`, `lake lint`, and `scripts/run_audit.sh`.
-The [axiom ledger](snapshots/axiom-ledger.md) records the main/test split and disclosed dependency
-classes. The main library contains no proof deferrals, project axioms, or `native_decide`.
+Run `lake build --wfail --iofail SP1Clean SP1CleanTest`, `lake test`, `lake lint`, and `scripts/run_audit.sh`.
+The [trust policy](trust-policy.md) explains the main/test split and accepted dependency classes;
+detailed reports are generated as build artifacts. The main library contains no proof deferrals, project axioms, or `native_decide`.
 
 Regenerating witness exports, SP1 trace dumps, and extracted AIR lists tests separate boundaries.
 The Rust differential compares all committed fixture rows, while a fresh project build checks

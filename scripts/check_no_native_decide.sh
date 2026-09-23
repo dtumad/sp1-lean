@@ -2,7 +2,7 @@
 # Gate: no `native_decide` anywhere in the main `SP1Clean/` library.
 #
 # `native_decide` discharges a goal by running compiled code, so it trusts the **entire Lean
-# compiler** (surfaced in the census as generated `._native.native_decide.ax_*` compiler-trust
+# compiler** (surfaced in the dependency report as generated `._native.native_decide.ax_*` compiler-trust
 # constants — formerly the named `Lean.ofReduceBool`/`Lean.trustCompiler` axioms) rather than just the
 # kernel — the same reason mathlib bans it from its main library. No released theorem may acquire
 # compiler-trust constants this way: pure chip/AIR theorems normally retain only the logical

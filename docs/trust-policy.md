@@ -30,6 +30,7 @@ After building current oleans:
 lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun SP1CleanTest
 python3 scripts/check_trust.py
 lake env python3 scripts/test_trust_integration.py
+scripts/run_audit.sh
 ```
 
 `--scope main` and `--scope test` select one library scope. `--validate-policy-only` checks the
@@ -52,12 +53,17 @@ before elaboration at a use site. Source-level admission and kernel-bypass guard
 complementary. This scanner inspects built environments; it is not an independent kernel
 implementation and does not make stale oleans current. Build before checking.
 
-## Migration
+## Audit workflow
 
-The policy checker initially runs alongside the historical census. A one-time comparison of
-the old probes with the whole-library report is migration evidence. The follow-up removes
-committed census/probe generation and count bookkeeping, leaving detailed reports as build
-artifacts and retaining the independent semantic-contract checks.
+`scripts/run_audit.sh` runs the policy check alongside the pin, source and semantic-contract
+gates. Its `--main-only` and `--test-only` flags retain their library scope. Normal runs never
+rewrite tracked inputs. There are no census snapshots, declaration-count synchronizations, or
+per-theorem registration steps. The retired `--update` flag fails with a migration message;
+trust exceptions are explicit policy edits, not approval of whatever the current build uses.
+
+The main/test split is about proof dependencies, not namespace spelling. Moving an ordinary
+helper, adding a theorem, or changing its use of standard logical axioms needs no policy update.
+Choose public/private visibility for API and implementation needs, independently of this check.
 
 Fixtures live outside all released libraries. They exercise private and transitive admissions,
 axioms in types, mutual dependencies, actual native computations, misleading names, missing

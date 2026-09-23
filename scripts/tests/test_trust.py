@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -99,6 +100,15 @@ class TrustPolicyTests(unittest.TestCase):
                  contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(trust.scan("test", self.policy, trust.POLICY, directory), 2)
             self.assertEqual(json.loads((directory / "test.json").read_text())["status"], "error")
+
+    def test_retired_update_and_conflicting_scopes_fail_before_work(self):
+        before = trust.POLICY.read_bytes()
+        for args in (["--update"], ["--main-only", "--test-only"], ["--unknown"]):
+            run = subprocess.run([str(trust.ROOT / "scripts/run_audit.sh"), *args],
+                                 text=True, capture_output=True)
+            self.assertEqual(run.returncode, 2)
+            self.assertNotIn("== A0 pins ==", run.stdout)
+        self.assertEqual(trust.POLICY.read_bytes(), before)
 
 
 if __name__ == "__main__":

@@ -145,7 +145,7 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
    modules' solo CPU before/after (median of 3), the profiler category the change claims to move,
    both run ids.
 4. **Acceptance**: a Lean-source PR shows ≥ 20 % solo CPU on every module it names, adds no entry to
-   `scripts/option_escapes_allowlist.txt`, leaves the axiom census unchanged and no untouched module
+   `scripts/option_escapes_allowlist.txt`, adds no trust-policy exception and no untouched module
    consistently regressed (beyond the ≈ ±15 % per-module noise); a CI/lakefile PR moves Σ or wall
    beyond the ≈ 5 % noise floor on same-CPU runs, two repeats when the effect is small.
 
