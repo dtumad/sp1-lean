@@ -30,6 +30,7 @@ Each document has one role:
 | [`audits/2026-09-build-semantics.md`](audits/2026-09-build-semantics.md) | build cost joined to the claim map: layers, import floor, hotspot mechanisms, per-cluster verdicts, proposals |
 | [`agents/`](agents/README.md) | maintained contributor techniques and provenance procedures |
 | [`snapshots/axiom-ledger.md`](snapshots/axiom-ledger.md) | generated per-theorem axiom inventory |
+| [`trust-policy.md`](trust-policy.md) | compiled-library trust policy and diagnostic reports |
 | [`snapshots/capstone-contract.json`](snapshots/capstone-contract.json) | compiled capstone target/definition dependencies, excluding theorem proof bodies |
 
 > **Upstream authority: read Clean's own docs.** Read the pinned copy under
