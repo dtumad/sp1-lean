@@ -88,8 +88,8 @@ The deliverables:
   consequence is that such synthetic rows sit inside the row-level conformance claim and outside
   the semantic one.
 - **D7 — A reproducible audit harness.** One script (`scripts/run_audit.sh`) re-derives the
-  dependency pins, gates zero proof deferrals with an empty allowlist, and regenerates a
-  per-theorem `#print axioms` census (§13).
+  dependency pins, gates zero proof deferrals, and checks the compiled libraries against an
+  explicit trust policy (§13), with detailed reports as build artifacts.
 - **D8 — Deterministic native ensemble completeness.**
   `supported_core_native_functionalCompleteness`
   (`SP1Clean/Soundness/NativeCompleteness.lean`) maps an admissible supported
@@ -305,7 +305,7 @@ named invariants.)
 ### 3.3 What the Sail layer contributes to the trust base
 
 The generated model's *platform hooks* remain external axioms of the Lean environment, disclosed
-per-theorem by the axiom census. Seven of them concern the supported slice's own effects:
+by the explicit policy and generated dependency reports. Seven of them concern the supported slice's own effects:
 `plat_term_write`, the four LR/SC reservation operations (`load_reservation`, `match_reservation`,
 `valid_reservation`, `cancel_reservation`), `get_16_random_bits`, and
 `sys_enable_experimental_extensions`. (The Sail runtime's `print` is a total definition, not an
@@ -313,14 +313,12 @@ axiom.) None is given a nontrivial axiomatized *property*; they are opaque effec
 instruction slice does not semantically depend on.
 
 A theorem whose target is the *complete* generated interpreter inherits the whole hook surface of
-that target, including hooks the supported RV64IM path never executes, and the census discloses
-this rather than pruning it. Measured at this snapshot,
-`SP1Clean.Soundness.supported_core_native_sound` depends on 100 axioms: the three logical baseline
-constants (`propext`, `Classical.choice`, `Quot.sound`), the seven platform hooks above, 67
-`riscv_f*`/`riscv_i*`/`riscv_ui*` floating-point and integer-conversion hooks reached through
-`try_step`'s full instruction dispatch, and 23 generated `bv_decide` proof constants inherited from
-the shift/multiply/store bridge lemmas. See `docs/snapshots/axiom-ledger.md` for the per-class
-reading and `docs/snapshots/axiom-census.txt` for the raw entry.
+that target, including hooks the supported RV64IM path never executes. The policy and reports
+retain this distinction. `SP1Clean.Soundness.supported_core_native_sound` reaches the logical
+baseline, the platform and floating-point/conversion interfaces through `try_step`'s full
+instruction dispatch, and native bitvector proof constants from selected shift/multiply/store
+bridges. See [the trust policy](trust-policy.md) for the accepted origins and reproduction commands;
+per-declaration details are generated from the built library rather than committed as a census.
 
 ## 4. Extraction and Rust faithfulness
 
@@ -939,7 +937,7 @@ deterministic completeness compiler still emits only the padding Halt row.
 There is no
 machine-model parameter and no schedule hypothesis; the model-scheduled form is the corollary
 `supported_core_native_sound_scheduled` via the no-strength-lost adapter
-`supportedCoreLocalExecution_of_sailRelation`. Axiom census: `propext`, `Classical.choice`,
+`supportedCoreLocalExecution_of_sailRelation`. Logical dependencies: `propext`, `Classical.choice`,
 `Quot.sound`, plus the disclosed Sail
 platform hooks and `bv_decide` constants inherited from the bridges (§3.3). No `sorryAx`
 anywhere in the released set (empty allowlist, gated in CI).
@@ -1048,8 +1046,9 @@ dump-anchored conformance pipeline closes that gap empirically at SP1's own fiel
 The remaining `native_decide` uses live in the separate test library (`SP1CleanTest/`, never
 imported by the main library — a CI guard forbids `native_decide` there): the exportability
 battery and the satisfiability anchors below, each disclosed per-declaration in the test-scope
-axiom census (surfaced as generated `._native.native_decide.ax_*` constants, the post-v4.32 form of
-the former named `Lean.ofReduceBool`/`Lean.trustCompiler` axioms). What conformance establishes:
+dependency report. These use generated `._native.native_decide.ax_*` constants, the post-v4.32 form of
+the former named `Lean.ofReduceBool`/`Lean.trustCompiler` axioms; reports normalize the counter suffixes.
+What conformance establishes:
 populate fidelity and non-vacuity evidence on real prover data. What it does not: proof. The two
 layers are complementary by construction.
 
@@ -1060,7 +1059,7 @@ rows, per-family decode facts, and the joint hypothesis bundle:
   `Assumptions` (all 20 chips whose assumptions are not literally `True`) — mostly at padding
   rows, so it rules out contradictory *preconditions* only.
 - `SP1CleanTest/Core/NonVacuityReal.lean` goes further: for **every one of the 25 instruction
-  chips**, a named, census-visible theorem exhibits a concrete `is_real = 1` row with
+  chips**, a named, compiled theorem exhibits a concrete `is_real = 1` row with
   non-degenerate operands satisfying the chip's **complete flattened constraint system**
   (every subcircuit `assertZero`, evaluated at SP1's KoalaBear field with the witness values
   produced by the chip's own `main` witness closures), with Lt/Bitwise/UType exercising both
@@ -1106,20 +1105,17 @@ rows, per-family decode facts, and the joint hypothesis bundle:
 
 Everything the results depend on beyond the Lean kernel, numbered for reference. **T** = tooling,
 **M** = model premises (semantic hypotheses of the proved theorems), **C** = cryptographic layers
-(future work, no claim made here). The per-theorem axiom census (`docs/snapshots/axiom-ledger.md`)
-discloses which of these each headline declaration actually touches.
+(future work, no claim made here). The [trust policy](trust-policy.md) states accepted axiom
+origins; the generated report records each declaration's actual transitive dependencies.
 
-**What "axiom-clean" means here.** The phrase is used throughout this repository to mean the three
-standard Lean axioms — `propext`, `Classical.choice`, `Quot.sound` — and nothing project-specific.
-It does **not** mean a declaration's `#print axioms` output is three names long. Any theorem whose
-statement reaches the Sail model also carries that model's platform hooks (T2), and a few carry
-`bv_decide`'s generated constants; the capstone's census entry lists around a hundred names for
-that reason. The useful split is by kind rather than by count: the Sail externs are *data-valued*
-opaque operations — a proof may not assume anything about what they return, so they weaken the
-model, not the logic — whereas a *Prop-valued* project axiom would be an unproved assumption and
-there are none. Chip-level and AIR-level theorems that do not mention Sail are genuinely on the
-three (for instance the transport layer's `transportTable_constraints` and the balance bridge's
-`signedSum_eq_zero`).
+**Trust terminology.** A logical-baseline-only proof uses `propext`, `Classical.choice`, and
+`Quot.sound`. Passing this project's trust policy also permits the named existing Sail externs
+and native bitvector proof owners. It must not be described as kernel-only: `bv_decide` also
+trusts compiled computation. Sail externs are opaque model operations without axiomatized
+correctness properties; their relationship to the actual platform remains a model boundary.
+Project proof axioms and `sorryAx` are prohibited. For focused inspection, `#print axioms` remains
+useful alongside the whole-library check. Pure chip/AIR lemmas such as `transportTable_constraints`
+and `signedSum_eq_zero` use the logical baseline alone.
 
 - **T1 — The constraint exporter.** SP1's constraint compiler, run at the pin-checked overlay, is
   trusted to print the constraint/interaction lists its `air.eval` recorded. Mitigations: §4.1's
@@ -1264,10 +1260,10 @@ the mechanism in this tree that addresses it; every citation below is machine-ch
 |---|---|
 | JALR's theorem assumed `(rs1+imm) % 4 = 0`, omitting the architectural `& ~1` LSB clear | The mask is a *proven Spec conjunct*: `toBitVec64 nextPcWord = ~~~1#64 &&& toBitVec64 value` (`SP1Clean/FormalModel/Contracts/Chips.lean`, the Jalr `Spec`), derived from the constraint system in `JalrChip.soundness` and consumed against the generated `execute_JALR` (which jumps to `BitVec.update target 0 0#1`) by `jalr_chip_reaches_sail` (`SP1Clean/Alignment/Chips/JalrChip/Bridge.lean`). The unconditional limb-to-word lift is `Word.toBitVec64_toNat_mod_four` (`SP1Clean/Math/Word.lean`); alignment implies trap-free retirement via `jump_to_of_mod4_eq_zero` (`SP1Clean/Model/SailWrap.lean`). |
 | LH/LHU/LW/LWU theorems proved the wrong (byte-width) specification; several loads unproved or `sorry`-dependent | All five load chips carry closed per-width soundness, completeness, Sail bridges, and whole-chip faithfulness. Width and lane selection are kernel-checked: e.g. `loadHalf_selectedBytes` binds *both* little-endian bytes at `ea`/`ea+1` against the width-2 Sail read, and `loadByte_selectedMemoryByte` closes all eight lane cases (`SP1Clean/Soundness/Grounding/MemoryChips.lean`); sign/zero-extension per variant is constraint-forced (§5.3). Zero `sorry` anywhere is CI-gated. |
-| SLTI's theorem was vacuously true (contradictory hypotheses) | Selector flags are circuit-constrained one-hot (never assumptions); `LtChip.Assumptions` is two operand-range facts only. Beyond structure, `SP1CleanTest/Core/NonVacuityReal.lean` exhibits concrete satisfying `is_real = 1` rows for **every** chip's complete flattened constraint system — for Lt, both a true and a false comparison — as named, census-visible theorems (§9). |
+| SLTI's theorem was vacuously true (contradictory hypotheses) | Selector flags are circuit-constrained one-hot (never assumptions); `LtChip.Assumptions` is two operand-range facts only. Beyond structure, `SP1CleanTest/Core/NonVacuityReal.lean` exhibits concrete satisfying `is_real = 1` rows for **every** chip's complete flattened constraint system — for Lt, both a true and a false comparison — as named, compiled theorems (§9). |
 | LUI and AUIPC had no theorem at all | `UTypeChip` has the full stack: `soundness`/`completeness`/`circuit` (axiom-clean), the bridge family through the registered `advance` (`SP1Clean/Alignment/Chips/UTypeChip/Bridge.lean`), and whole-chip Rust faithfulness `uTypeChip_faithful` (`SP1Clean/Faithful/UTypeChip.lean`) — including RV64 LUI's *sign*-extension and AUIPC's full-width carry. |
-| Four project axioms, including "memory protection disabled" assumed as an axiom | Zero project `axiom` declarations in the main library (CI-gated); zero `sorryAx` across the mechanically checked released-declaration census. The sole current count lives in `docs/snapshots/axiom-ledger.md`. Platform shaping is not assumed per-proof: the Sail model is *generated* with SP1's platform configuration (§3.2), and the supervisor-only scope is a stated structural restriction (§12.6), not an axiom. |
-| Version pinning and reproducible extraction were absent | Every dependency is an immutable git pin cross-checked by `scripts/check_pins.sh`; extraction is a pin-gated, fail-closed pipeline (§4.1) with byte-idempotency; the audit harness (§13) regenerates the census and fails on drift. |
+| Four project axioms, including "memory protection disabled" assumed as an axiom | Zero project `axiom` declarations in the main library (CI-gated); zero `sorryAx` across the compiled-library trust scan. Permitted exceptions are explicit in `scripts/trust_policy.json`. Platform shaping is not assumed per-proof: the Sail model is *generated* with SP1's platform configuration (§3.2), and the supervisor-only scope is a stated structural restriction (§12.6), not an axiom. |
+| Version pinning and reproducible extraction were absent | Every dependency is an immutable git pin cross-checked by `scripts/check_pins.sh`; extraction is a pin-gated, fail-closed pipeline (§4.1) with byte-idempotency; the audit harness (§13) checks the current compiled libraries and rejects unknown axioms. |
 | Recommendation: independent adversarial review before public claims | The 2026-07 and 2026-08 release-readiness campaigns (this report's §12 discloses their durable findings) ran blind-derivation adversarial reviews of all 25 chip Specs against the generated Sail model, per-claim validation against upstream sources, and a full file-by-file documentation sweep. |
 
 The review also found the predecessor's public claim of 62 verified opcodes overstated (~51
@@ -1332,9 +1328,8 @@ and durable findings from that newer work.
    directly in the field, with no `ProviderMultiplicitiesFit` restriction; `NativeTraceFootprint`
    retains the actual interaction-count no-wrap bound `< p`. These
    named regressions pass in the full `lake test` target, and the complete main library builds with
-   zero warnings or stray information output. The release axiom census is restamped only after the
-   source commit; that restamp landed in `af6c8b11`, and `check_pins.sh` gates both snapshots'
-   entry counts against their generated probes.
+   zero warnings or stray information output. The current trust policy is checked against the
+   built libraries without per-theorem registration or snapshot restamping.
 5. **No cryptographic claim.** Nothing here says anything about STARK soundness, FRI, LogUp/GKR,
    or Fiat–Shamir. The planned final form is probabilistic and lives in the ArkLib/VCVio
    integration: an executable `verifyCore` agreeing with the pinned Rust verifier, ArkLib
@@ -1418,17 +1413,18 @@ docs/audits/2026-07-release-readiness.md (no longer in the tree) from git histor
 ## 13. Reproduction
 
 ```sh
-lake build --wfail --iofail SP1Clean   # the main library: 0 errors, 0 warnings, 0 info notes
-lake test                  # the conformance anchors (the only native_decide)
+lake build --wfail --iofail SP1Clean SP1CleanTest # main + full test library; no warnings/info notes
+lake test                  # the core conformance anchors
 lake lint                  # Batteries runLinter, every default environment linter
-scripts/run_audit.sh       # pins + zero-deferral gates + per-theorem axiom census
+scripts/run_audit.sh       # pins + zero-deferral gates + compiled-library trust policy
 ```
 
 Toolchain: Lean `v4.33.1` / mathlib `v4.33.1`; every dependency is an immutable git pin (the
 generated Sail model is config-generated from pinned sources — T4). Extraction
 regeneration requires a clean checkout of the pinned sp1 extraction branch
 (`dtumad/lean-extraction`) and a Rust toolchain — see `docs/agents/extraction.md`. The
-axiom census snapshot lives at `docs/snapshots/axiom-ledger.md`; regenerate before citing.
+trust policy is documented in `docs/trust-policy.md`; detailed current reports go to ignored
+`.lake/build/trust/` artifacts and CI uploads, without tracked census snapshots.
 Report citations — every cited repo path and cited declaration name — are checked by
 `scripts/check_report_citations.sh`, maintained documentation by `scripts/check_current_docs.py`,
 the exact 25-chip release inventory by `scripts/check_release_surface.py`, and recorded pin values

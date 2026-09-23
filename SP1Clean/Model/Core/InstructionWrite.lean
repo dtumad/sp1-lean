@@ -11,7 +11,7 @@ as the instruction access plan; the interval uses the store width, not its enclo
 
 This is the ordinary supported-instruction policy component. It rejects unsupported constructors,
 invalid widths and missing base registers. It does not check fetch, alignment, address bounds,
-normal retirement or resources, and does not yet install a policy on `ExecutionPath`.
+normal retirement or resources. `ExecutionWritePolicy` lifts it to occurrences in the existing path.
 -/
 
 namespace SP1Clean.Model.Core.InstructionWrite
@@ -82,5 +82,20 @@ def PermittedAt (readOnly : ℕ → Bool) (program : GuestProgram) (source : Sai
   ∃ pc word decoded, source.regs.get? Register.PC = some pc ∧
     program.fetchWord pc = some word ∧ ConfiguredDecode word decoded ∧
     check readOnly source.get_reg? decoded = true
+
+/-- On a configured source, any authenticated decode observes the same permitted instruction.
+Existential witnesses cannot evade a denied store by choosing another word or decoding. -/
+theorem PermittedAt.check {readOnly : ℕ → Bool} {program : GuestProgram} {source : SailState}
+    (permitted : PermittedAt readOnly program source) (configured : SailConfigured source)
+    {pc : BitVec 64} {word : BitVec 32} {decoded : instruction}
+    (atPc : source.regs.get? Register.PC = some pc)
+    (fetched : program.fetchWord pc = some word) (decode : ConfiguredDecode word decoded) :
+    check readOnly source.get_reg? decoded = true := by
+  obtain ⟨actualPc, actualWord, actual, pcEq, wordEq, decodedEq, allowed⟩ := permitted
+  obtain rfl := Option.some.inj (pcEq.symm.trans atPc)
+  obtain rfl := Option.some.inj (wordEq.symm.trans fetched)
+  have same := (decodedEq source configured).symm.trans (decode source configured)
+  cases same
+  exact allowed
 
 end SP1Clean.Model.Core.InstructionWrite

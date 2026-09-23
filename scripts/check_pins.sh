@@ -7,9 +7,7 @@
 #   3. the SP1 semantic revision quoted in README/report against the single authoritative
 #      source, `SP1Clean.FormalModel.CoreProfile.sp1SemanticRevision` (itself `rfl`-checked
 #      against the extracted provenance);
-#   4. the authoritative census ledger and committed raw snapshots against the
-#      generated probes (`scripts/axiom_probe.lean` + `scripts/axiom_probe_test.lean`);
-#   5. `lakefile.toml` invariants Lake does not check: the two test libraries carry identical
+#   4. `lakefile.toml` invariants Lake does not check: the two test libraries carry identical
 #      option blocks, the one-module `LeanRV64DRvfi` mirrors `LeanRV64D` plus only
 #      `backward.do.legacy`, and no other library carries linter options (they are package-level).
 #
@@ -20,23 +18,16 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-allow_census_snapshot_drift=0
-if [ "${1:-}" = "--census-update" ]; then
-  allow_census_snapshot_drift=1
-  shift
-fi
 if [ "$#" -ne 0 ]; then
-  echo "usage: scripts/check_pins.sh [--census-update]" >&2
+  echo "usage: scripts/check_pins.sh" >&2
   exit 2
 fi
 
-python3 - "$allow_census_snapshot_drift" <<'EOF'
+python3 - <<'EOF'
 import hashlib
 import pathlib, json, re, sys
 
 fail = 0
-allow_census_snapshot_drift = sys.argv[1] == "1"
-census_update_pending = False
 def err(msg):
     global fail
     print(f"FAIL: {msg}")
@@ -189,53 +180,7 @@ else:
         err(f"export/sp1dump/index.json sp1Commit {dump_index.get('sp1Commit')} != "
             f"update_extracted.py SP1_PINNED_COMMIT {pinned.group(1)}")
 
-# -- 4. authoritative census ledger + raw snapshots vs generated probes ----------------
-# Numeric census claims live in one place: docs/snapshots/axiom-ledger.md. Reader docs link
-# there instead of copying a count that can drift. Gate the main/test split independently,
-# the ledger total, and the number of entries in each committed raw snapshot.
-scopes = {
-    "main": ("scripts/axiom_probe.lean", "docs/snapshots/axiom-census.txt"),
-    "test": ("scripts/axiom_probe_test.lean", "docs/snapshots/axiom-census-test.txt"),
-}
-probe_counts = {}
-for scope, (probe, snapshot) in scopes.items():
-    probe_counts[scope] = sum(1 for line in open(probe)
-                              if line.startswith("#print axioms "))
-    snapshot_count = sum(1 for line in open(snapshot) if line.startswith("'"))
-    if snapshot_count != probe_counts[scope]:
-        census_update_pending = True
-        message = (f"{snapshot} has {snapshot_count} entries but {probe} has "
-                   f"{probe_counts[scope]} probes")
-        if allow_census_snapshot_drift:
-            print(f"UPDATE-PENDING: {message}")
-        else:
-            err(message)
-
-ledger_path = "docs/snapshots/axiom-ledger.md"
-ledger = open(ledger_path).read()
-ledger_patterns = {
-    "main": (r"\[`axiom-census\.txt`\]\(axiom-census\.txt\).*?"
-             r"`SP1Clean` library,\s*(\d+) declarations"),
-    "test": (r"\[`axiom-census-test\.txt`\]\(axiom-census-test\.txt\).*?"
-             r"(\d+) declarations"),
-}
-for scope, pattern in ledger_patterns.items():
-    match = re.search(pattern, ledger, re.S)
-    if not match:
-        err(f"{ledger_path} does not state the authoritative {scope} census count")
-    elif int(match.group(1)) != probe_counts[scope]:
-        err(f"{ledger_path} cites {match.group(1)} {scope} declarations; "
-            f"{scopes[scope][0]} has {probe_counts[scope]} probes")
-
-probe_count = sum(probe_counts.values())
-total = re.search(r"(\d+) released declarations are probed", ledger)
-if not total:
-    err(f"{ledger_path} does not state the authoritative total census count")
-elif int(total.group(1)) != probe_count:
-    err(f"{ledger_path} cites {total.group(1)} released declarations; "
-        f"the generated probes contain {probe_count}")
-
-# 5. lakefile invariants that Lake will not check for us. The two test libraries must carry
+# 4. lakefile invariants that Lake will not check for us. The two test libraries must carry
 #    identical `leanOptions` blocks: Lake gives a module the options of the LAST declared library
 #    that matches it, and `SP1CleanTest` matches every test module, so a divergent `SP1CoreTest`
 #    block would silently not apply to anything. Any other library carrying linter options would
@@ -266,11 +211,6 @@ for name, opts in lib_opts.items():
             "package level (see AGENTS.md § Linters)")
 
 if fail == 0:
-    if census_update_pending:
-        print(f"PASS: pins and census ledger match {probe_count} generated probes; "
-              "raw census restamp remains update-pending")
-    else:
-        print(f"PASS: pins agree; census ledger and raw snapshots match "
-              f"{probe_count} generated probes")
+    print("PASS: recorded pins and Lake configuration agree")
 sys.exit(fail)
 EOF

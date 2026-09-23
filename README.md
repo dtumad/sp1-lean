@@ -101,7 +101,7 @@ All dependencies are pinned in `lake-manifest.json`, with Lean/mathlib v4.33.1 a
   the checked-in SP1 platform configuration; loader and initial-state hypotheses remain explicit.
 - **Lean:** main-library proofs have no proof deferrals, project axioms, kernel bypasses, or
   `native_decide`. Generated Sail platform hooks and selected bit-vector proof constants are
-  disclosed in the [axiom ledger](docs/snapshots/axiom-ledger.md). Compiler-trusted executable
+  disclosed in the [trust policy](docs/trust-policy.md). Compiler-trusted executable
   tests live separately in `SP1CleanTest/`.
 
 Do not run bare `lake update`; dependency changes require a reviewed pin change.

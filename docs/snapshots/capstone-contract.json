@@ -190,6 +190,13 @@
       "typeFingerprint": "564351676"
     },
     {
+      "bodyFingerprint": "158398435",
+      "local": false,
+      "module": "Init.Data.BitVec.Basic",
+      "name": "BitVec.signExtend",
+      "typeFingerprint": "564351676"
+    },
+    {
       "bodyFingerprint": "705711483",
       "local": false,
       "module": "Init.Prelude",
@@ -279,6 +286,20 @@
       "module": "Init.Prelude",
       "name": "EStateM.Result",
       "typeFingerprint": "4128957396"
+    },
+    {
+      "bodyFingerprint": "3791658051",
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "EStateM.Result.casesOn",
+      "typeFingerprint": "3833984966"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "EStateM.Result.error",
+      "typeFingerprint": "2140750212"
     },
     {
       "bodyFingerprint": null,
@@ -393,6 +414,13 @@
       "typeFingerprint": "3896813378"
     },
     {
+      "bodyFingerprint": "3590164822",
+      "local": false,
+      "module": "Init.GetElem",
+      "name": "GetElem?.getElem?",
+      "typeFingerprint": "67006209"
+    },
+    {
       "bodyFingerprint": "1075339295",
       "local": false,
       "module": "Init.Prelude",
@@ -461,6 +489,27 @@
       "module": "Init.Core",
       "name": "Iff",
       "typeFingerprint": "2232915537"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Data.Int.Basic",
+      "name": "Int",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "916495689",
+      "local": false,
+      "module": "Init.Data.Int.Basic",
+      "name": "Int.instDecidableEq",
+      "typeFingerprint": "3857945085"
+    },
+    {
+      "bodyFingerprint": "3519161993",
+      "local": false,
+      "module": "Init.Data.Int.Basic",
+      "name": "Int.toNat",
+      "typeFingerprint": "4199175030"
     },
     {
       "bodyFingerprint": "3524454254",
@@ -907,6 +956,13 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.Signedness",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.Signedness.Signed",
       "typeFingerprint": "2784562222"
     },
@@ -916,6 +972,27 @@
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.Signedness.Unsigned",
       "typeFingerprint": "2784562222"
+    },
+    {
+      "bodyFingerprint": "668741319",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.Signedness.casesOn",
+      "typeFingerprint": "3036795973"
+    },
+    {
+      "bodyFingerprint": "2959064549",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.Signedness.ctorIdx",
+      "typeFingerprint": "1309991543"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.Signedness.rec",
+      "typeFingerprint": "457831097"
     },
     {
       "bodyFingerprint": null,
@@ -935,6 +1012,13 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.VectorHalf",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.VectorHalf.High",
       "typeFingerprint": "2143391582"
     },
@@ -944,6 +1028,34 @@
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.VectorHalf.Low",
       "typeFingerprint": "2143391582"
+    },
+    {
+      "bodyFingerprint": "3586795226",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.VectorHalf.casesOn",
+      "typeFingerprint": "4061844942"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.amoop",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.biop",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.biop_zbs",
+      "typeFingerprint": "3931117990"
     },
     {
       "bodyFingerprint": null,
@@ -995,10 +1107,388 @@
       "typeFingerprint": "3256722354"
     },
     {
+      "bodyFingerprint": "1585889609",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.bop.casesOn",
+      "typeFingerprint": "3585142385"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.brop_zbb",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.brop_zbkb",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.brop_zbs",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.bropw_zbb",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.cbop_zicbom",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.cbop_zicbop",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.cfregidx",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.cregidx",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "3675463493",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.csreg",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.csrop",
+      "typeFingerprint": "3931117990"
+    },
+    {
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.exception",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.extop_zbb",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_f_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_f_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_op_f_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_op_x_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_rm_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_rm_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_rm_op_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_x_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_bin_x_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_madd_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_madd_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_madd_op_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_f_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_f_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_op_f_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_op_x_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_ff_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_ff_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_ff_op_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_fx_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_fx_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_fx_op_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_xf_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_xf_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_rm_xf_op_S",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_x_op_D",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.f_un_x_op_H",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fregidx",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fvffunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fvfmafunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fvfmfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fvvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fvvmafunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fvvmfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fwffunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fwvffunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fwvfmafunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fwvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fwvvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.fwvvmafunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "3411968951",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.half",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.indexed_mop",
       "typeFingerprint": "3931117990"
     },
     {
@@ -1040,8 +1530,589 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES32DSI",
+      "typeFingerprint": "1039684922"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES32DSMI",
+      "typeFingerprint": "1039684922"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES32ESI",
+      "typeFingerprint": "1039684922"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES32ESMI",
+      "typeFingerprint": "1039684922"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES64DS",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES64DSM",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES64ES",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES64ESM",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES64IM",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES64KS1I",
+      "typeFingerprint": "2655172863"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AES64KS2",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.AMO",
+      "typeFingerprint": "355230032"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.BITYPE",
+      "typeFingerprint": "4157164749"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.BREV8",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instruction.BTYPE",
       "typeFingerprint": "24501031"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CLMUL",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CLMULH",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CLMULR",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CLZ",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CLZW",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CPOP",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CPOPW",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CSRImm",
+      "typeFingerprint": "2586634733"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CSRReg",
+      "typeFingerprint": "2101366851"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CTZ",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.CTZW",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ADD",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ADDI",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ADDI16SP",
+      "typeFingerprint": "2361685622"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ADDI4SPN",
+      "typeFingerprint": "1257886409"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ADDIW",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ADDW",
+      "typeFingerprint": "1894370716"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_AND",
+      "typeFingerprint": "1894370716"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ANDI",
+      "typeFingerprint": "35607312"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_BEQZ",
+      "typeFingerprint": "1096188849"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_BNEZ",
+      "typeFingerprint": "1096188849"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_EBREAK",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_FLD",
+      "typeFingerprint": "4119291685"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_FLDSP",
+      "typeFingerprint": "4220396023"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_FLW",
+      "typeFingerprint": "4119291685"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_FLWSP",
+      "typeFingerprint": "4220396023"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_FSD",
+      "typeFingerprint": "4119291685"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_FSDSP",
+      "typeFingerprint": "4220396023"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_FSW",
+      "typeFingerprint": "4119291685"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_FSWSP",
+      "typeFingerprint": "4220396023"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ILLEGAL",
+      "typeFingerprint": "2643841077"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_J",
+      "typeFingerprint": "224164678"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_JAL",
+      "typeFingerprint": "224164678"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_JALR",
+      "typeFingerprint": "160661840"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_JR",
+      "typeFingerprint": "160661840"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LBU",
+      "typeFingerprint": "1398076865"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LD",
+      "typeFingerprint": "1404488089"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LDSP",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LH",
+      "typeFingerprint": "1398076865"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LHU",
+      "typeFingerprint": "1398076865"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LI",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LUI",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LW",
+      "typeFingerprint": "1404488089"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_LWSP",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_MUL",
+      "typeFingerprint": "1894370716"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_MV",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_NOP",
+      "typeFingerprint": "2361685622"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_NOT",
+      "typeFingerprint": "176545470"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_NTL",
+      "typeFingerprint": "3631212844"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_OR",
+      "typeFingerprint": "1894370716"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SB",
+      "typeFingerprint": "1398076865"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SD",
+      "typeFingerprint": "1404488089"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SDSP",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SEXT_B",
+      "typeFingerprint": "176545470"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SEXT_H",
+      "typeFingerprint": "176545470"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SH",
+      "typeFingerprint": "1398076865"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SLLI",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SRAI",
+      "typeFingerprint": "35607312"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SRLI",
+      "typeFingerprint": "35607312"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SSPOPCHK",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SSPUSH",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SUB",
+      "typeFingerprint": "1894370716"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SUBW",
+      "typeFingerprint": "1894370716"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SW",
+      "typeFingerprint": "1404488089"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_SWSP",
+      "typeFingerprint": "3010633747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_XOR",
+      "typeFingerprint": "1894370716"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ZEXT_B",
+      "typeFingerprint": "176545470"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ZEXT_H",
+      "typeFingerprint": "176545470"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.C_ZEXT_W",
+      "typeFingerprint": "176545470"
     },
     {
       "bodyFingerprint": null,
@@ -1061,8 +2132,498 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.EBREAK",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instruction.ECALL",
       "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FCVTMOD_W_D",
+      "typeFingerprint": "1813688121"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FCVT_BF16_S",
+      "typeFingerprint": "1098095342"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FCVT_S_BF16",
+      "typeFingerprint": "1098095342"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FENCE",
+      "typeFingerprint": "2871775619"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FENCEI",
+      "typeFingerprint": "4173428195"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FENCE_TSO",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLEQ_D",
+      "typeFingerprint": "2852226718"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLEQ_H",
+      "typeFingerprint": "2852226718"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLEQ_S",
+      "typeFingerprint": "2852226718"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLI_D",
+      "typeFingerprint": "4028724991"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLI_H",
+      "typeFingerprint": "4028724991"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLI_S",
+      "typeFingerprint": "4028724991"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLTQ_D",
+      "typeFingerprint": "2852226718"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLTQ_H",
+      "typeFingerprint": "2852226718"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FLTQ_S",
+      "typeFingerprint": "2852226718"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FMAXM_D",
+      "typeFingerprint": "1261771349"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FMAXM_H",
+      "typeFingerprint": "1261771349"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FMAXM_S",
+      "typeFingerprint": "1261771349"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FMINM_D",
+      "typeFingerprint": "1261771349"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FMINM_H",
+      "typeFingerprint": "1261771349"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FMINM_S",
+      "typeFingerprint": "1261771349"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FMVH_X_D",
+      "typeFingerprint": "1813688121"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FMVP_D_X",
+      "typeFingerprint": "461524949"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FROUNDNX_D",
+      "typeFingerprint": "1098095342"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FROUNDNX_H",
+      "typeFingerprint": "1098095342"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FROUNDNX_S",
+      "typeFingerprint": "1098095342"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FROUND_D",
+      "typeFingerprint": "1098095342"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FROUND_H",
+      "typeFingerprint": "1098095342"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FROUND_S",
+      "typeFingerprint": "1098095342"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FVFMATYPE",
+      "typeFingerprint": "847083793"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FVFMTYPE",
+      "typeFingerprint": "1638036140"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FVFTYPE",
+      "typeFingerprint": "1294434943"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FVVMATYPE",
+      "typeFingerprint": "3329987959"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FVVMTYPE",
+      "typeFingerprint": "1783454513"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FVVTYPE",
+      "typeFingerprint": "2079833194"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FWFTYPE",
+      "typeFingerprint": "129625994"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FWVFMATYPE",
+      "typeFingerprint": "1841447378"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FWVFTYPE",
+      "typeFingerprint": "2935505667"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FWVTYPE",
+      "typeFingerprint": "884295206"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FWVVMATYPE",
+      "typeFingerprint": "2368720600"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.FWVVTYPE",
+      "typeFingerprint": "4235015377"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_F_TYPE_D",
+      "typeFingerprint": "3027005583"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_F_TYPE_H",
+      "typeFingerprint": "2736640166"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_RM_TYPE_D",
+      "typeFingerprint": "2935900185"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_RM_TYPE_H",
+      "typeFingerprint": "2178748383"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_RM_TYPE_S",
+      "typeFingerprint": "3389899270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_TYPE_F_S",
+      "typeFingerprint": "3227262765"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_TYPE_X_S",
+      "typeFingerprint": "1804910816"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_X_TYPE_D",
+      "typeFingerprint": "1947987741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_BIN_X_TYPE_H",
+      "typeFingerprint": "633806615"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_MADD_TYPE_D",
+      "typeFingerprint": "2376984378"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_MADD_TYPE_H",
+      "typeFingerprint": "327110999"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_MADD_TYPE_S",
+      "typeFingerprint": "2822596722"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_F_TYPE_D",
+      "typeFingerprint": "3986832745"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_F_TYPE_H",
+      "typeFingerprint": "3932369993"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_FF_TYPE_D",
+      "typeFingerprint": "3420470102"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_FF_TYPE_H",
+      "typeFingerprint": "481141909"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_FF_TYPE_S",
+      "typeFingerprint": "2541262700"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_FX_TYPE_D",
+      "typeFingerprint": "3551535234"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_FX_TYPE_H",
+      "typeFingerprint": "660186477"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_FX_TYPE_S",
+      "typeFingerprint": "1284344536"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_XF_TYPE_D",
+      "typeFingerprint": "1546780685"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_XF_TYPE_H",
+      "typeFingerprint": "4117075497"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_RM_XF_TYPE_S",
+      "typeFingerprint": "1919383887"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_TYPE_F_S",
+      "typeFingerprint": "2742221192"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_TYPE_X_S",
+      "typeFingerprint": "63233786"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_X_TYPE_D",
+      "typeFingerprint": "1999309297"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.F_UN_X_TYPE_H",
+      "typeFingerprint": "1849019965"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ILLEGAL",
+      "typeFingerprint": "3193213789"
     },
     {
       "bodyFingerprint": null,
@@ -1096,6 +2657,83 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.LOADRES",
+      "typeFingerprint": "2343414400"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.LOAD_FP",
+      "typeFingerprint": "3104645880"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.LPAD",
+      "typeFingerprint": "3921547926"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MASKTYPEI",
+      "typeFingerprint": "2922592067"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MASKTYPEV",
+      "typeFingerprint": "2797291333"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MASKTYPEX",
+      "typeFingerprint": "1037543704"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MMTYPE",
+      "typeFingerprint": "3014784149"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MOVETYPEI",
+      "typeFingerprint": "3063500591"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MOVETYPEV",
+      "typeFingerprint": "3857138364"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MOVETYPEX",
+      "typeFingerprint": "687839035"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MRET",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instruction.MUL",
       "typeFingerprint": "1741360292"
     },
@@ -1105,6 +2743,104 @@
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instruction.MULW",
       "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MVVCOMPRESS",
+      "typeFingerprint": "2797291333"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MVVMATYPE",
+      "typeFingerprint": "3357178492"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MVVTYPE",
+      "typeFingerprint": "263238020"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MVXMATYPE",
+      "typeFingerprint": "2013597648"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.MVXTYPE",
+      "typeFingerprint": "2244199327"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.NISTYPE",
+      "typeFingerprint": "819843791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.NITYPE",
+      "typeFingerprint": "351249597"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.NTL",
+      "typeFingerprint": "3631212844"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.NVSTYPE",
+      "typeFingerprint": "3188200026"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.NVTYPE",
+      "typeFingerprint": "2892999692"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.NXSTYPE",
+      "typeFingerprint": "3380367638"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.NXTYPE",
+      "typeFingerprint": "2339170409"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ORCB",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.PAUSE",
+      "typeFingerprint": "2199292791"
     },
     {
       "bodyFingerprint": null,
@@ -1124,6 +2860,55 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.REV8",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.RFVVTYPE",
+      "typeFingerprint": "1624314752"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.RFWVVTYPE",
+      "typeFingerprint": "1876692166"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.RIVVTYPE",
+      "typeFingerprint": "2122360762"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.RMVVTYPE",
+      "typeFingerprint": "1044916722"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.RORI",
+      "typeFingerprint": "1518090488"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.RORIW",
+      "typeFingerprint": "2950892378"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instruction.RTYPE",
       "typeFingerprint": "1282334644"
     },
@@ -1133,6 +2918,125 @@
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instruction.RTYPEW",
       "typeFingerprint": "1076571799"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SFENCE_INVAL_IR",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SFENCE_VMA",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SFENCE_W_INVAL",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA256SIG0",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA256SIG1",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA256SUM0",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA256SUM1",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SIG0",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SIG0H",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SIG0L",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SIG1",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SIG1H",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SIG1L",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SUM0",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SUM0R",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SUM1",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SHA512SUM1R",
+      "typeFingerprint": "62811699"
     },
     {
       "bodyFingerprint": null,
@@ -1152,6 +3056,83 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SINVAL_VMA",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SLLIUW",
+      "typeFingerprint": "1518090488"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SM3P0",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SM3P1",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SM4ED",
+      "typeFingerprint": "1039684922"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SM4KS",
+      "typeFingerprint": "1039684922"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SRET",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SSAMOSWAP",
+      "typeFingerprint": "4112044691"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SSPOPCHK",
+      "typeFingerprint": "160661840"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SSPUSH",
+      "typeFingerprint": "160661840"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.SSRDP",
+      "typeFingerprint": "160661840"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instruction.STORE",
       "typeFingerprint": "3413343978"
     },
@@ -1159,8 +3140,869 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.STORECON",
+      "typeFingerprint": "4112044691"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.STORE_FP",
+      "typeFingerprint": "1583813539"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.UNZIP",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instruction.UTYPE",
       "typeFingerprint": "2415193121"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VABS_V",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VAESDF",
+      "typeFingerprint": "4086318900"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VAESDM",
+      "typeFingerprint": "3914097566"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VAESEF",
+      "typeFingerprint": "682117620"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VAESEM",
+      "typeFingerprint": "28494125"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VAESKF1_VI",
+      "typeFingerprint": "2922592067"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VAESKF2_VI",
+      "typeFingerprint": "2922592067"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VAESZ_VS",
+      "typeFingerprint": "3857138364"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VANDN_VV",
+      "typeFingerprint": "3644663265"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VANDN_VX",
+      "typeFingerprint": "964500322"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VBREV8_V",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VBREV_V",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VCLMULH_VV",
+      "typeFingerprint": "3644663265"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VCLMULH_VX",
+      "typeFingerprint": "964500322"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VCLMUL_VV",
+      "typeFingerprint": "3644663265"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VCLMUL_VX",
+      "typeFingerprint": "964500322"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VCLZ_V",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VCPOP_M",
+      "typeFingerprint": "1171811611"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VCPOP_V",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VCTZ_V",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VEXTTYPE",
+      "typeFingerprint": "1569397465"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFIRST_M",
+      "typeFingerprint": "1171811611"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFMERGE",
+      "typeFingerprint": "2532899725"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFMV",
+      "typeFingerprint": "2618891023"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFMVFS",
+      "typeFingerprint": "273928785"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFMVSF",
+      "typeFingerprint": "2618891023"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFNCVTBF16_F_F_W",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFNUNARY0",
+      "typeFingerprint": "3385932117"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFUNARY0",
+      "typeFingerprint": "3511946351"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFUNARY1",
+      "typeFingerprint": "1575889676"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFWCVTBF16_F_F_V",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFWMACCBF16_VF",
+      "typeFingerprint": "1711523346"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFWMACCBF16_VV",
+      "typeFingerprint": "3644663265"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VFWUNARY0",
+      "typeFingerprint": "2174024465"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VGHSH_VV",
+      "typeFingerprint": "2797291333"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VGMUL_VV",
+      "typeFingerprint": "3857138364"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VICMPTYPE",
+      "typeFingerprint": "1431592381"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VID_V",
+      "typeFingerprint": "3473790743"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VIMCTYPE",
+      "typeFingerprint": "2316882141"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VIMSTYPE",
+      "typeFingerprint": "3369987264"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VIMTYPE",
+      "typeFingerprint": "2230119397"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VIOTA_M",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VISG",
+      "typeFingerprint": "2795910065"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VITYPE",
+      "typeFingerprint": "3315146301"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VLRETYPE",
+      "typeFingerprint": "1372850420"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VLSEGFFTYPE",
+      "typeFingerprint": "2331937962"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VLSEGTYPE",
+      "typeFingerprint": "2331937962"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VLSSEGTYPE",
+      "typeFingerprint": "1518391724"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VLXSEGTYPE",
+      "typeFingerprint": "2782650327"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VMSBF_M",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VMSIF_M",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VMSOF_M",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VMTYPE",
+      "typeFingerprint": "3158072151"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VMVRTYPE",
+      "typeFingerprint": "3541867041"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VMVSX",
+      "typeFingerprint": "687839035"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VMVXS",
+      "typeFingerprint": "3282072257"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VREV8_V",
+      "typeFingerprint": "875686741"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VROL_VV",
+      "typeFingerprint": "3644663265"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VROL_VX",
+      "typeFingerprint": "964500322"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VROR_VI",
+      "typeFingerprint": "2515094431"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VROR_VV",
+      "typeFingerprint": "3644663265"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VROR_VX",
+      "typeFingerprint": "964500322"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSETIVLI",
+      "typeFingerprint": "892877160"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSETVL",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSETVLI",
+      "typeFingerprint": "2238301521"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSHA2MS_VV",
+      "typeFingerprint": "2797291333"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSM3C_VI",
+      "typeFingerprint": "2922592067"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSM3ME_VV",
+      "typeFingerprint": "2797291333"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSM4K_VI",
+      "typeFingerprint": "2922592067"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSRETYPE",
+      "typeFingerprint": "3399070634"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSSEGTYPE",
+      "typeFingerprint": "2331937962"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSSSEGTYPE",
+      "typeFingerprint": "1518391724"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VSXSEGTYPE",
+      "typeFingerprint": "2782650327"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VVCMPTYPE",
+      "typeFingerprint": "1565477880"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VVMCTYPE",
+      "typeFingerprint": "1481778942"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VVMSTYPE",
+      "typeFingerprint": "901446903"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VVMTYPE",
+      "typeFingerprint": "3268616631"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VVTYPE",
+      "typeFingerprint": "1592413580"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VWSLL_VI",
+      "typeFingerprint": "1083136563"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VWSLL_VV",
+      "typeFingerprint": "3644663265"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VWSLL_VX",
+      "typeFingerprint": "964500322"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VXCMPTYPE",
+      "typeFingerprint": "611896519"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VXMCTYPE",
+      "typeFingerprint": "1409896890"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VXMSTYPE",
+      "typeFingerprint": "1316591011"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VXMTYPE",
+      "typeFingerprint": "1707291579"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VXSG",
+      "typeFingerprint": "328568174"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.VXTYPE",
+      "typeFingerprint": "4007364101"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.WFI",
+      "typeFingerprint": "2199292791"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.WMVVTYPE",
+      "typeFingerprint": "3033423837"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.WMVXTYPE",
+      "typeFingerprint": "4000402406"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.WRS",
+      "typeFingerprint": "2705779661"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.WVTYPE",
+      "typeFingerprint": "1631551036"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.WVVTYPE",
+      "typeFingerprint": "3063453893"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.WVXTYPE",
+      "typeFingerprint": "4211559691"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.WXTYPE",
+      "typeFingerprint": "3294135707"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.XPERM4",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.XPERM8",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBA_RTYPE",
+      "typeFingerprint": "604513649"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBA_RTYPEUW",
+      "typeFingerprint": "604513649"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBB_EXTOP",
+      "typeFingerprint": "1254404747"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBB_RTYPE",
+      "typeFingerprint": "1673340917"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBB_RTYPEW",
+      "typeFingerprint": "203894373"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBKB_PACKW",
+      "typeFingerprint": "62811699"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBKB_RTYPE",
+      "typeFingerprint": "3280963120"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBS_IOP",
+      "typeFingerprint": "1734872142"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZBS_RTYPE",
+      "typeFingerprint": "1659203814"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZCMOP",
+      "typeFingerprint": "3188200325"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZICBOM",
+      "typeFingerprint": "3911449187"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZICBOP",
+      "typeFingerprint": "3060119670"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZICBOZ",
+      "typeFingerprint": "160661840"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZICOND_RTYPE",
+      "typeFingerprint": "201899905"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZIMOP_MOP_R",
+      "typeFingerprint": "2950892378"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZIMOP_MOP_RR",
+      "typeFingerprint": "2383237375"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZIP",
+      "typeFingerprint": "3233341380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZVABDTYPE",
+      "typeFingerprint": "3801402579"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZVKSHA2TYPE",
+      "typeFingerprint": "267897414"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZVKSM4RTYPE",
+      "typeFingerprint": "504436148"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ZVWABDATYPE",
+      "typeFingerprint": "598651458"
+    },
+    {
+      "bodyFingerprint": "1821502601",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.ctorIdx",
+      "typeFingerprint": "4101531250"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.instruction.rec",
+      "typeFingerprint": "2422210875"
     },
     {
       "bodyFingerprint": null,
@@ -1212,11 +4054,25 @@
       "typeFingerprint": "491811758"
     },
     {
+      "bodyFingerprint": "15811671",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.iop.casesOn",
+      "typeFingerprint": "3747761669"
+    },
+    {
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.landing_pad_expectation.LP_EXPECTED",
       "typeFingerprint": "1291775500"
+    },
+    {
+      "bodyFingerprint": "4210586803",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.landing_pad_label",
+      "typeFingerprint": "3931117990"
     },
     {
       "bodyFingerprint": "421340980",
@@ -1243,6 +4099,13 @@
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.mmfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.mul_op",
       "typeFingerprint": "3931117990"
     },
@@ -1252,6 +4115,118 @@
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.mul_op.mk",
       "typeFingerprint": "4097202328"
+    },
+    {
+      "bodyFingerprint": "3989243715",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.mul_op.result_part",
+      "typeFingerprint": "1865614214"
+    },
+    {
+      "bodyFingerprint": "810321766",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.mul_op.signed_rs1",
+      "typeFingerprint": "3088206456"
+    },
+    {
+      "bodyFingerprint": "223960368",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.mul_op.signed_rs2",
+      "typeFingerprint": "3088206456"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.mvvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.mvvmafunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.mvxfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.mvxmafunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "630578061",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.nfields",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "630578061",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.nfields_pow2",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.nifunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.nisfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.ntl_type",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.nvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.nvsfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.nxfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.nxsfunct6",
+      "typeFingerprint": "3931117990"
     },
     {
       "bodyFingerprint": null,
@@ -1266,6 +4241,41 @@
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.regidx.Regidx",
       "typeFingerprint": "2042013660"
+    },
+    {
+      "bodyFingerprint": "2524625143",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.regidx.casesOn",
+      "typeFingerprint": "2452799473"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.rfvvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.rfwvvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.rivvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.rmvvfunct6",
+      "typeFingerprint": "3931117990"
     },
     {
       "bodyFingerprint": null,
@@ -1345,6 +4355,13 @@
       "typeFingerprint": "3333610453"
     },
     {
+      "bodyFingerprint": "2048058830",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.rop.casesOn",
+      "typeFingerprint": "2760419289"
+    },
+    {
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
@@ -1387,6 +4404,27 @@
       "typeFingerprint": "3836261510"
     },
     {
+      "bodyFingerprint": "4293204182",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.ropw.casesOn",
+      "typeFingerprint": "3187612406"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.rounding_mode",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4154453327",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.shamt_zba",
+      "typeFingerprint": "3931117990"
+    },
+    {
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
@@ -1413,6 +4451,13 @@
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.sop.SRLI",
       "typeFingerprint": "1266541041"
+    },
+    {
+      "bodyFingerprint": "446351104",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.sop.casesOn",
+      "typeFingerprint": "676767770"
     },
     {
       "bodyFingerprint": null,
@@ -1443,6 +4488,13 @@
       "typeFingerprint": "374609413"
     },
     {
+      "bodyFingerprint": "1547319875",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.sopw.casesOn",
+      "typeFingerprint": "4103842658"
+    },
+    {
       "bodyFingerprint": null,
       "local": false,
       "module": "LeanRV64D.Defs",
@@ -1464,10 +4516,318 @@
       "typeFingerprint": "3347510970"
     },
     {
+      "bodyFingerprint": "185934126",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.uop.casesOn",
+      "typeFingerprint": "1203443268"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vextfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vfnunary0",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vfunary0",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vfunary1",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vfwunary0",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vicmpfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vifunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vimcfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vimfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vimsfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.visgfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vlewidth",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vmlsop",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vregidx",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vvcmpfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vvmcfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vvmfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vvmsfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vxcmpfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vxfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vxmcfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vxmfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vxmsfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.vxsgfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.wmvvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.wmvxfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "1720491714",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.word",
+      "typeFingerprint": "3931117990"
+    },
+    {
       "bodyFingerprint": "630578061",
       "local": false,
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.word_width",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "630578061",
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.word_width_wide",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.wrsop",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.wvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.wvvfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.wvxfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.wxfunct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zicondop",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zvabd_vabd_func6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zvabd_vwabda_func6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zvk_vaesdf_funct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zvk_vaesdm_funct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zvk_vaesef_funct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zvk_vaesem_funct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zvk_vsha2_funct6",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "LeanRV64D.Defs",
+      "name": "LeanRV64D.Defs.zvk_vsm4r_funct6",
       "typeFingerprint": "3931117990"
     },
     {
@@ -1483,6 +4843,13 @@
       "module": "LeanRV64D.SysRegs",
       "name": "LeanRV64D.Functions._get_Mstatus_MIE",
       "typeFingerprint": "2225856330"
+    },
+    {
+      "bodyFingerprint": "659690273",
+      "local": false,
+      "module": "LeanRV64D.DecodeExt",
+      "name": "LeanRV64D.Functions.ext_decode",
+      "typeFingerprint": "3975592125"
     },
     {
       "bodyFingerprint": "3236754390",
@@ -1548,6 +4915,20 @@
       "typeFingerprint": "3046096836"
     },
     {
+      "bodyFingerprint": "2504273128",
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "List.below",
+      "typeFingerprint": "3025785622"
+    },
+    {
+      "bodyFingerprint": "49670084",
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "List.brecOn",
+      "typeFingerprint": "2582626051"
+    },
+    {
       "bodyFingerprint": "4092855021",
       "local": false,
       "module": "Init.Prelude",
@@ -1560,6 +4941,13 @@
       "module": "Init.Prelude",
       "name": "List.cons",
       "typeFingerprint": "584724244"
+    },
+    {
+      "bodyFingerprint": "1334856221",
+      "local": false,
+      "module": "Init.Data.List.Basic",
+      "name": "List.contains",
+      "typeFingerprint": "3838015464"
     },
     {
       "bodyFingerprint": "1352478561",
@@ -1602,6 +4990,13 @@
       "module": "Init.Data.List.Control",
       "name": "List.instForIn'InferInstanceMembershipOfMonad",
       "typeFingerprint": "1520328203"
+    },
+    {
+      "bodyFingerprint": "3103211996",
+      "local": false,
+      "module": "Init.GetElem",
+      "name": "List.instGetElem?NatLtLength",
+      "typeFingerprint": "2409277097"
     },
     {
       "bodyFingerprint": "1692876863",
@@ -1658,6 +5053,13 @@
       "module": "Init.Data.List.Basic",
       "name": "List.replicate",
       "typeFingerprint": "3760459601"
+    },
+    {
+      "bodyFingerprint": "1158082376",
+      "local": false,
+      "module": "Init.Data.List.Basic",
+      "name": "List.take",
+      "typeFingerprint": "3196346589"
     },
     {
       "bodyFingerprint": null,
@@ -1814,6 +5216,13 @@
       "typeFingerprint": "3807510281"
     },
     {
+      "bodyFingerprint": "2999867028",
+      "local": false,
+      "module": "Init.Data.Option.Basic",
+      "name": "Option.bind",
+      "typeFingerprint": "2597777487"
+    },
+    {
       "bodyFingerprint": "1859998341",
       "local": false,
       "module": "Init.Prelude",
@@ -1826,6 +5235,13 @@
       "module": "Init.Prelude",
       "name": "Option.getD",
       "typeFingerprint": "4036711064"
+    },
+    {
+      "bodyFingerprint": "2150235865",
+      "local": false,
+      "module": "Init.Data.Option.Basic",
+      "name": "Option.instBEq",
+      "typeFingerprint": "2649763405"
     },
     {
       "bodyFingerprint": "1783025470",
@@ -2045,7 +5461,7 @@
       "typeFingerprint": "1479840492"
     },
     {
-      "bodyFingerprint": "2315138466",
+      "bodyFingerprint": "3184713903",
       "local": true,
       "module": "SP1Clean.FormalModel.Shard",
       "name": "SP1Clean.FormalModel.Shard.Executes",
@@ -2078,6 +5494,258 @@
       "module": "SP1Clean.FormalModel.ShardMachine",
       "name": "SP1Clean.FormalModel.Shard.sp1Machine",
       "typeFingerprint": "2407840449"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.add",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.addi",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.addw",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": "3590362118",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.all",
+      "typeFingerprint": "3586242361"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.aluX0",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.bitwise",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.branch",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": "1160567767",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.casesOn",
+      "typeFingerprint": "2074227298"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.divRem",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.jal",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.jalr",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.loadByte",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.loadDouble",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.loadHalf",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.loadWord",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.loadX0",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.lt",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.mul",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.rec",
+      "typeFingerprint": "4239765042"
+    },
+    {
+      "bodyFingerprint": "2291866611",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.InstructionChipId.route",
+      "typeFingerprint": "1359602762"
+    },
+    {
+      "bodyFingerprint": "3185168955",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.InstructionChipId.route.match_1",
+      "typeFingerprint": "566904349"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.shiftLeft",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.shiftRight",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.storeByte",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.storeDouble",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.storeHalf",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.storeWord",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.sub",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.subw",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionChipId",
+      "name": "SP1Clean.InstructionChipId.uType",
+      "typeFingerprint": "576756219"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.InstructionRoute",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "245210071",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.InstructionRoute.claims",
+      "typeFingerprint": "4203135097"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.InstructionRoute.mk",
+      "typeFingerprint": "4222218712"
+    },
+    {
+      "bodyFingerprint": "1210355480",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.InstructionRoute.opcodes",
+      "typeFingerprint": "3393691593"
+    },
+    {
+      "bodyFingerprint": "1657124416",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.InstructionRoute.rdGuard",
+      "typeFingerprint": "2116131040"
     },
     {
       "bodyFingerprint": "1609907393",
@@ -2150,6 +5818,13 @@
       "typeFingerprint": "3931117990"
     },
     {
+      "bodyFingerprint": "2617372163",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.CoreSyscallEvent.casesOn",
+      "typeFingerprint": "2188993372"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Model.Machine.Syscall",
@@ -2159,9 +5834,23 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.CoreSyscallEvent.rec",
+      "typeFingerprint": "224183761"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Model.Machine.EventExecution",
       "name": "SP1Clean.Machine.ExecutionEvent",
       "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "2138175970",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.EventExecution",
+      "name": "SP1Clean.Machine.ExecutionEvent.casesOn",
+      "typeFingerprint": "1533213835"
     },
     {
       "bodyFingerprint": null,
@@ -2169,6 +5858,13 @@
       "module": "SP1Clean.Model.Machine.EventExecution",
       "name": "SP1Clean.Machine.ExecutionEvent.ordinary",
       "typeFingerprint": "2607949285"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.EventExecution",
+      "name": "SP1Clean.Machine.ExecutionEvent.rec",
+      "typeFingerprint": "2050645487"
     },
     {
       "bodyFingerprint": null,
@@ -2227,6 +5923,83 @@
       "typeFingerprint": "3843065550"
     },
     {
+      "bodyFingerprint": "3161198682",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent",
+      "typeFingerprint": "1042095469"
+    },
+    {
+      "bodyFingerprint": "1205393866",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq",
+      "typeFingerprint": "1508559907"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq._proof_1",
+      "typeFingerprint": "1083536498"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq._proof_2",
+      "typeFingerprint": "344668238"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq._proof_3",
+      "typeFingerprint": "2518966535"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq._proof_4",
+      "typeFingerprint": "2469346025"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq._proof_5",
+      "typeFingerprint": "320361521"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq._proof_6",
+      "typeFingerprint": "2471220097"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq._proof_7",
+      "typeFingerprint": "3237925162"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq._proof_8",
+      "typeFingerprint": "2863194727"
+    },
+    {
+      "bodyFingerprint": "1851036055",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.instDecidableEqCoreSyscallEvent.decEq.match_1",
+      "typeFingerprint": "3830159926"
+    },
+    {
       "bodyFingerprint": "3885022323",
       "local": true,
       "module": "SP1Clean.Model.Machine.Schedule",
@@ -2246,6 +6019,20 @@
       "module": "SP1Clean.Model.Machine.Schedule",
       "name": "SP1Clean.Machine.ordinarySchedule._proof_3",
       "typeFingerprint": "2242171857"
+    },
+    {
+      "bodyFingerprint": "194165589",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Execution",
+      "name": "SP1Clean.Machine.stepOnce",
+      "typeFingerprint": "2625137841"
+    },
+    {
+      "bodyFingerprint": "3376690030",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Execution",
+      "name": "SP1Clean.Machine.stepOnce.match_1",
+      "typeFingerprint": "2392004305"
     },
     {
       "bodyFingerprint": "1730136596",
@@ -2360,6 +6147,13 @@
       "typeFingerprint": "3496224419"
     },
     {
+      "bodyFingerprint": "2000768545",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionWritePolicy",
+      "name": "SP1Clean.Model.Core.ExecutionPath.WritesPermitted",
+      "typeFingerprint": "182931834"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Model.Core.ExecutionPath",
@@ -2435,6 +6229,13 @@
       "module": "SP1Clean.Model.Core.Execution",
       "name": "SP1Clean.Model.Core.ExecutionState",
       "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "4161418152",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionReplay",
+      "name": "SP1Clean.Model.Core.ExecutionState.atEcall",
+      "typeFingerprint": "2634471632"
     },
     {
       "bodyFingerprint": "3045811313",
@@ -3221,6 +7022,48 @@
       "typeFingerprint": "2839693712"
     },
     {
+      "bodyFingerprint": "3054486501",
+      "local": true,
+      "module": "SP1Clean.Model.Core.InstructionWrite",
+      "name": "SP1Clean.Model.Core.InstructionWrite.PermittedAt",
+      "typeFingerprint": "1927468767"
+    },
+    {
+      "bodyFingerprint": "2863457392",
+      "local": true,
+      "module": "SP1Clean.Model.Core.InstructionWrite",
+      "name": "SP1Clean.Model.Core.InstructionWrite.check",
+      "typeFingerprint": "3260075879"
+    },
+    {
+      "bodyFingerprint": "3687161516",
+      "local": true,
+      "module": "SP1Clean.Model.Core.InstructionWrite",
+      "name": "SP1Clean.Model.Core.InstructionWrite.check.match_1",
+      "typeFingerprint": "4042753277"
+    },
+    {
+      "bodyFingerprint": "3814108064",
+      "local": true,
+      "module": "SP1Clean.Model.Core.InstructionWrite",
+      "name": "SP1Clean.Model.Core.InstructionWrite.spans?",
+      "typeFingerprint": "2995407544"
+    },
+    {
+      "bodyFingerprint": "2025410115",
+      "local": true,
+      "module": "SP1Clean.Model.Core.InstructionWrite",
+      "name": "SP1Clean.Model.Core.InstructionWrite.spans?._sparseCasesOn_1",
+      "typeFingerprint": "1723309565"
+    },
+    {
+      "bodyFingerprint": "3724665894",
+      "local": true,
+      "module": "SP1Clean.Model.Core.InstructionWrite",
+      "name": "SP1Clean.Model.Core.InstructionWrite.spans?.match_1",
+      "typeFingerprint": "2018573591"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Model.Core.MemorySnapshot",
@@ -3261,6 +7104,34 @@
       "module": "SP1Clean.Model.Core.MemorySnapshot",
       "name": "SP1Clean.Model.Core.MemorySnapshot.registers",
       "typeFingerprint": "3009099994"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Core.MemorySpan",
+      "name": "SP1Clean.Model.Core.MemorySpan",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "3304262050",
+      "local": true,
+      "module": "SP1Clean.Model.Core.MemorySpan",
+      "name": "SP1Clean.Model.Core.MemorySpan.address",
+      "typeFingerprint": "2828475024"
+    },
+    {
+      "bodyFingerprint": "2066594422",
+      "local": true,
+      "module": "SP1Clean.Model.Core.MemorySpan",
+      "name": "SP1Clean.Model.Core.MemorySpan.length",
+      "typeFingerprint": "2828475024"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Core.MemorySpan",
+      "name": "SP1Clean.Model.Core.MemorySpan.mk",
+      "typeFingerprint": "4033788669"
     },
     {
       "bodyFingerprint": null,
@@ -3655,6 +7526,111 @@
       "typeFingerprint": "3715964977"
     },
     {
+      "bodyFingerprint": "738284870",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionReplay",
+      "name": "SP1Clean.Model.Core.replayEvents?",
+      "typeFingerprint": "3129645522"
+    },
+    {
+      "bodyFingerprint": "2919556862",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionReplay",
+      "name": "SP1Clean.Model.Core.replayEvents?._f",
+      "typeFingerprint": "3050334380"
+    },
+    {
+      "bodyFingerprint": "2508599627",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionReplay",
+      "name": "SP1Clean.Model.Core.replayEvents?.match_1",
+      "typeFingerprint": "1986783531"
+    },
+    {
+      "bodyFingerprint": "8167421",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionReplay",
+      "name": "SP1Clean.Model.Core.replayHost?",
+      "typeFingerprint": "1381353275"
+    },
+    {
+      "bodyFingerprint": "1117492433",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionReplay",
+      "name": "SP1Clean.Model.Core.replayHost?.match_1",
+      "typeFingerprint": "4167506677"
+    },
+    {
+      "bodyFingerprint": "4170621385",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionReplay",
+      "name": "SP1Clean.Model.Core.replayStep?",
+      "typeFingerprint": "3516780885"
+    },
+    {
+      "bodyFingerprint": "2774585135",
+      "local": true,
+      "module": "SP1Clean.Model.Core.ExecutionReplay",
+      "name": "SP1Clean.Model.Core.replayStep?.match_1",
+      "typeFingerprint": "2819375395"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.RdGuard",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.RdGuard.any",
+      "typeFingerprint": "3730855853"
+    },
+    {
+      "bodyFingerprint": "2390698685",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.RdGuard.casesOn",
+      "typeFingerprint": "2952066739"
+    },
+    {
+      "bodyFingerprint": "474929186",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.RdGuard.holds",
+      "typeFingerprint": "2196927876"
+    },
+    {
+      "bodyFingerprint": "136688374",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.RdGuard.holds.match_1",
+      "typeFingerprint": "3764356605"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.RdGuard.nonX0",
+      "typeFingerprint": "3730855853"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.RdGuard.onlyX0",
+      "typeFingerprint": "3730855853"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.RdGuard.rec",
+      "typeFingerprint": "2791612227"
+    },
+    {
       "bodyFingerprint": "1546897127",
       "local": true,
       "module": "SP1Clean.Model.SailMemory",
@@ -3667,6 +7643,426 @@
       "module": "SP1Clean.Model.SailMemory",
       "name": "SP1Clean.SailMem.SP1_PMA_Region",
       "typeFingerprint": "2111629053"
+    },
+    {
+      "bodyFingerprint": "2219177693",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.InstructionPlan",
+      "name": "SP1Clean.Semantics.memoryEffectiveAddress",
+      "typeFingerprint": "2908051431"
+    },
+    {
+      "bodyFingerprint": "3789526983",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.InstructionPlan",
+      "name": "SP1Clean.Semantics.regidxBits",
+      "typeFingerprint": "3824501597"
+    },
+    {
+      "bodyFingerprint": "1158651996",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.InstructionPlan",
+      "name": "SP1Clean.Semantics.regidxBits.match_1",
+      "typeFingerprint": "857007064"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.ADD",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.ADDI",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.ADDW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.AND",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.AUIPC",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.BEQ",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.BGE",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.BGEU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.BLT",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.BLTU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.BNE",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.DIV",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.DIVU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.DIVUW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.DIVW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.EBREAK",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.ECALL",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.JAL",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.JALR",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.LB",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.LBU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.LD",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.LH",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.LHU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.LUI",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.LW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.LWU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.MUL",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.MULH",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.MULHSU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.MULHU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.MULW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.OR",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.REM",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.REMU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.REMUW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.REMW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SB",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SD",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SH",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SLL",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SLLW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SLT",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SLTU",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SRA",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SRAW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SRL",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SRLW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SUB",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SUBW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.SW",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.UNIMP",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.XOR",
+      "typeFingerprint": "2926163270"
+    },
+    {
+      "bodyFingerprint": "666587244",
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.casesOn",
+      "typeFingerprint": "2815258340"
+    },
+    {
+      "bodyFingerprint": "4203348834",
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.ctorIdx",
+      "typeFingerprint": "667194120"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.Opcode.rec",
+      "typeFingerprint": "160491160"
     },
     {
       "bodyFingerprint": "1324977647",
@@ -3695,6 +8091,13 @@
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.statement_iff",
       "typeFingerprint": "1631046685"
+    },
+    {
+      "bodyFingerprint": "686291405",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.GuestProgram",
+      "name": "SP1Clean.Soundness.Target.ConfiguredDecode",
+      "typeFingerprint": "2727573433"
     },
     {
       "bodyFingerprint": "638106793",
@@ -3734,6 +8137,34 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.InstructionRouteKey",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.InstructionRouteKey.mk",
+      "typeFingerprint": "1820112955"
+    },
+    {
+      "bodyFingerprint": "3193996513",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.InstructionRouteKey.opAIsX0",
+      "typeFingerprint": "3836851523"
+    },
+    {
+      "bodyFingerprint": "2242307261",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.InstructionRouteKey.opcode",
+      "typeFingerprint": "3939554294"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Model.Semantics.GuestProgram",
       "name": "SP1Clean.Soundness.Target.SailConfigured",
       "typeFingerprint": "989414044"
@@ -3765,6 +8196,265 @@
       "module": "SP1Clean.Model.Semantics.GuestProgram",
       "name": "SP1Clean.Soundness.Target.SailRetiresNormally._proof_2",
       "typeFingerprint": "668385771"
+    },
+    {
+      "bodyFingerprint": "986245374",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.bopToOpcode",
+      "typeFingerprint": "4277010525"
+    },
+    {
+      "bodyFingerprint": "2399273939",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.bopToOpcode.match_1",
+      "typeFingerprint": "795407965"
+    },
+    {
+      "bodyFingerprint": "3845453681",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.instructionImageOK",
+      "typeFingerprint": "41193085"
+    },
+    {
+      "bodyFingerprint": "1104883933",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.instructionImageOK._sparseCasesOn_1",
+      "typeFingerprint": "489054266"
+    },
+    {
+      "bodyFingerprint": "3810205200",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.instructionImageOK.match_1",
+      "typeFingerprint": "2824974404"
+    },
+    {
+      "bodyFingerprint": "1319977294",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.instructionRouteId",
+      "typeFingerprint": "4263356326"
+    },
+    {
+      "bodyFingerprint": "3701320381",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.instructionRouteKey",
+      "typeFingerprint": "898011437"
+    },
+    {
+      "bodyFingerprint": "3459915795",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.instructionRouteKey._sparseCasesOn_1",
+      "typeFingerprint": "645722030"
+    },
+    {
+      "bodyFingerprint": "996006155",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.instructionRouteKey.match_1",
+      "typeFingerprint": "772923218"
+    },
+    {
+      "bodyFingerprint": "3507493483",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.iopToOpcode",
+      "typeFingerprint": "3984117391"
+    },
+    {
+      "bodyFingerprint": "973208240",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.iopToOpcode.match_1",
+      "typeFingerprint": "3620185331"
+    },
+    {
+      "bodyFingerprint": "4221358435",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.loadOpcode",
+      "typeFingerprint": "786152750"
+    },
+    {
+      "bodyFingerprint": "2192464960",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.loadWidthOK",
+      "typeFingerprint": "3103904964"
+    },
+    {
+      "bodyFingerprint": "1646139913",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.mulOpCanonical",
+      "typeFingerprint": "2651539372"
+    },
+    {
+      "bodyFingerprint": "295525913",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.mulOpCanonical._sparseCasesOn_1",
+      "typeFingerprint": "1555415063"
+    },
+    {
+      "bodyFingerprint": "4187977001",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.mulOpCanonical._sparseCasesOn_2",
+      "typeFingerprint": "2905750635"
+    },
+    {
+      "bodyFingerprint": "3002548287",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.mulOpCanonical.match_1",
+      "typeFingerprint": "2658088814"
+    },
+    {
+      "bodyFingerprint": "2962264053",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.mulOpToOpcode",
+      "typeFingerprint": "1370904738"
+    },
+    {
+      "bodyFingerprint": "229881978",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.mulOpToOpcode.match_1",
+      "typeFingerprint": "890853396"
+    },
+    {
+      "bodyFingerprint": "365276652",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.regidxIsX0",
+      "typeFingerprint": "381576240"
+    },
+    {
+      "bodyFingerprint": "1158651996",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.regidxVal.match_1",
+      "typeFingerprint": "857007064"
+    },
+    {
+      "bodyFingerprint": "3539631625",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.ropToOpcode",
+      "typeFingerprint": "550279774"
+    },
+    {
+      "bodyFingerprint": "3606241418",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.ropToOpcode.match_1",
+      "typeFingerprint": "3118484385"
+    },
+    {
+      "bodyFingerprint": "1909254481",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.ropwToOpcode",
+      "typeFingerprint": "2802145263"
+    },
+    {
+      "bodyFingerprint": "1260440621",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.ropwToOpcode.match_1",
+      "typeFingerprint": "409194240"
+    },
+    {
+      "bodyFingerprint": "3082810586",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.sopToOpcode",
+      "typeFingerprint": "1317209261"
+    },
+    {
+      "bodyFingerprint": "3700243362",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.sopToOpcode.match_1",
+      "typeFingerprint": "42487746"
+    },
+    {
+      "bodyFingerprint": "3233407744",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.sopwToOpcode",
+      "typeFingerprint": "4233354169"
+    },
+    {
+      "bodyFingerprint": "3106966083",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.sopwToOpcode.match_1",
+      "typeFingerprint": "830803537"
+    },
+    {
+      "bodyFingerprint": "424222355",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.storeOpcode",
+      "typeFingerprint": "3794782824"
+    },
+    {
+      "bodyFingerprint": "1041287305",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.storeWidthOK",
+      "typeFingerprint": "1750617561"
+    },
+    {
+      "bodyFingerprint": "2685944987",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.uopToOpcode",
+      "typeFingerprint": "2469784840"
+    },
+    {
+      "bodyFingerprint": "229858315",
+      "local": true,
+      "module": "SP1Clean.Model.Semantics.Decode",
+      "name": "SP1Clean.Soundness.Target.uopToOpcode.match_1",
+      "typeFingerprint": "2868750090"
+    },
+    {
+      "bodyFingerprint": "2236580257",
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.instDecidableEqOpcode",
+      "typeFingerprint": "3363378520"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.instDecidableEqOpcode._proof_1",
+      "typeFingerprint": "668890649"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Opcode",
+      "name": "SP1Clean.Soundness.instDecidableEqOpcode._proof_2",
+      "typeFingerprint": "4053312711"
+    },
+    {
+      "bodyFingerprint": "1433433399",
+      "local": true,
+      "module": "SP1Clean.Model.InstructionRouting",
+      "name": "SP1Clean.routeId",
+      "typeFingerprint": "2232850635"
     },
     {
       "bodyFingerprint": null,

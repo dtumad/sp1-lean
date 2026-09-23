@@ -1,38 +1,24 @@
 #!/usr/bin/env bash
-# The reproducible audit harness behind `docs/release-audit.md` / `docs/snapshots/axiom-ledger.md`.
-#
-# Runs, in order: (A0) pin record, (A1) recorded-pin cross-checks + root-index +
-# release-surface + report-citation gates, (A2) sorry/axiom text inventory with gates, (A3) the
-# authoritative `#print axioms` census
-# over the released theorem set (via `scripts/gen_axiom_probe.py`), split into two scopes so each
-# probe elaborates against exactly the oleans its build target produces:
-#   main — `scripts/axiom_probe.lean`      vs `docs/snapshots/axiom-census.txt`      (needs `lake build SP1Clean`)
-#   test — `scripts/axiom_probe_test.lean` vs `docs/snapshots/axiom-census-test.txt` (needs `lake test`)
-# Both scopes gate that no released declaration carries `sorryAx`; the main scope additionally
-# gates that no compiler-trusted proof constant (native_decide) appears at all. Run on a green
-# tree. Exit 0 = all gates pass, and the tree is left untouched.
-#
-# Usage: scripts/run_audit.sh              (repo root; both scopes; ~3-5 min, dominated by probes)
-#        scripts/run_audit.sh --main-only  (A0-A2 + the main census; what the CI `audit` job runs —
-#                                           no SP1CleanTest oleans required)
-#        scripts/run_audit.sh --test-only  (just the test census; the CI `test` job runs this
-#                                           after `lake test`)
-#        scripts/run_audit.sh --update     (additionally rewrite the census snapshot(s) for the
-#                                           scope(s) run — use after an intended census change,
-#                                           then commit the diff)
+# Reproduce the release audit against current built library oleans.
+# Pin/source/model gates run in the main scope. Compiled-library trust policy runs in
+# both scopes; detailed reports go only to .lake/build/trust/, never tracked snapshots.
+# Usage: scripts/run_audit.sh [--main-only|--test-only]
+# Build SP1Clean/To* before main, and SP1CleanTest before test. The no-flag default runs both.
 
 set -uo pipefail
 cd "$(dirname "$0")/.."
 fail=0
-update=0
 run_main=1
 run_test=1
 for arg in "$@"; do
   case "$arg" in
-    --update) update=1 ;;
+    --update)
+      echo "--update is retired: trust reports are build artifacts, not committed snapshots." >&2
+      echo "Review explicit trust-policy changes in scripts/trust_policy.json; no auto-approval is available." >&2
+      exit 2 ;;
     --main-only) run_test=0 ;;
     --test-only) run_main=0 ;;
-    *) echo "unknown flag: $arg (usage: run_audit.sh [--update] [--main-only|--test-only])"; exit 2 ;;
+    *) echo "unknown flag: $arg (usage: run_audit.sh [--main-only|--test-only])"; exit 2 ;;
   esac
 done
 if [ "$run_main" -eq 0 ] && [ "$run_test" -eq 0 ]; then
@@ -40,11 +26,6 @@ if [ "$run_main" -eq 0 ] && [ "$run_test" -eq 0 ]; then
   exit 2
 fi
 
-echo "== A-1 axiom probe generation =="
-python3 scripts/gen_axiom_probe.py || { echo "FAIL: probe generation"; exit 1; }
-
-# A0-A2 are pin/source-policy gates over the main library; the test-only mode (the CI `test`
-# job's census step) skips straight to its census scope.
 if [ "$run_main" -eq 1 ]; then
 
 echo "== A0 pins =="
@@ -83,15 +64,7 @@ fi
 
 echo
 echo "== A1 recorded-pin cross-checks (gate) =="
-if [ "$update" -eq 1 ]; then
-  # A clean census update must be able to replace an intentionally stale raw snapshot after the
-  # generated probe set grows. The authoritative ledger still has to match the probes here; only
-  # the raw-snapshot count check is deferred to A3, which rewrites and validates both files.
-  pin_check=(scripts/check_pins.sh --census-update)
-else
-  pin_check=(scripts/check_pins.sh)
-fi
-if "${pin_check[@]}"; then
+if scripts/check_pins.sh; then
   :
 else
   echo "FAIL: a recorded pin value disagrees with the build graph (see above)"; fail=1
@@ -163,8 +136,8 @@ fi
 
 echo
 echo "== A1 compiled capstone contract (gate) =="
-# This harness requires current library oleans. Updating the axiom census does not authorize
-# changing the semantic contract snapshot: review and refresh that separately.
+# This harness requires current library oleans. Trust-policy compliance does not establish
+# the intended theorem statement: review semantic-contract changes separately.
 if python3 scripts/check_capstone_contract.py --no-build; then
   :
 else
@@ -177,8 +150,8 @@ echo "== A2 proof-deferral inventory (gate: none) =="
 # library. Conditional theorem hypotheses and relation parameters are audited at the statement
 # boundary instead of being disguised as proof deferrals.
 sorry_re='(^[[:space:]]*sorry[[:space:]]*$)|(:=[[:space:]]*sorry)|(=>[[:space:]]*sorry)|(^[[:space:]]*stop([[:space:]]|$))'
-actual=$(grep -rlE "$sorry_re" SP1Clean --include='*.lean' | sort)
-grep -rnE "$sorry_re" SP1Clean --include='*.lean'
+actual=$(grep -rlE "$sorry_re" SP1Clean ToClean ToMathlib ToPolyFun SP1CleanTest --include='*.lean' | sort)
+grep -rnE "$sorry_re" SP1Clean ToClean ToMathlib ToPolyFun SP1CleanTest --include='*.lean'
 if [ -z "$actual" ]; then
   echo "PASS: no proof deferrals"
 else
@@ -186,8 +159,8 @@ else
 fi
 
 echo
-echo "== A2 axiom declarations (gate: none in SP1Clean/) =="
-if grep -rnE '^[[:space:]]*axiom[[:space:]]' SP1Clean --include='*.lean'; then
+echo "== A2 axiom declarations (gate: none in project proof/test libraries) =="
+if grep -rnE '^[[:space:]]*axiom[[:space:]]' SP1Clean ToClean ToMathlib ToPolyFun SP1CleanTest --include='*.lean'; then
   echo "FAIL: unexpected axiom declaration(s) above"; fail=1
 else
   echo "PASS: no axiom declarations"
@@ -208,9 +181,6 @@ if scripts/check_no_native_decide.sh; then
 else
   echo "FAIL: native_decide in SP1Clean/ (see above)"; fail=1
 fi
-echo "native_decide occurrences in SP1CleanTest/ (disclosed — the witness/trace conformance battery,"
-echo "the sole sanctioned native_decide; trusts the compiler via generated ._native.native_decide.ax_* constants, confined off the main library):"
-grep -rn 'native_decide' SP1CleanTest --include='*.lean' | wc -l
 
 echo
 echo "== A2 witness-generation escape-hatch gate (enforced — the witgen cutover is complete) =="
@@ -225,7 +195,7 @@ echo
 echo "== A2 witgen export structural (gate) =="
 # The committed export/witgen tree (the wire-format artifact the Rust interpreter consumes)
 # must always be well-formed; byte-identity against a fresh regeneration is checked in the
-# CI `test` job (`check_witgen_export.sh --regen`), where the SP1CleanTest oleans are warm.
+# CI `build-full` job (`check_witgen_export.sh --regen`), where the SP1CleanTest oleans are warm.
 if scripts/check_witgen_export.sh; then
   :
 else
@@ -243,158 +213,12 @@ fi
 fi  # run_main (A0-A2)
 
 echo
-echo "== A3 axiom census (the authoritative oracle) =="
-
-# One census scope: elaborate a probe file, gate its entries, diff against its committed
-# snapshot ignoring only the two `#`-comment header lines (commit stamp + date). A pass leaves
-# the tree untouched; a drift is a FAIL unless --update. With --update the fresh census (and
-# its current-commit stamp) is always installed — a content-identical restamp is hygienic and
-# records the verifying commit.
-#
-# Stamp integrity (Alex Hicks's PR #110 review, F16): --update refuses to stamp from a dirty working tree —
-# a stamp names a commit, and a census generated over uncommitted changes would attribute the
-# wrong tree. (The generated snapshots themselves are exempt from the dirtiness check, so an
-# --update run that only rewrites them is fine.) A content-identical snapshot whose stamp is not
-# an ancestor of HEAD is still stale provenance: without --update that is a hard failure, and a
-# clean --update run repairs it by restamping the snapshot at the verified commit.
-census_stamp_guard() {
-  if [ "$update" -eq 1 ]; then
-    local dirty
-    # Only the census outputs may be dirty during an update.  The generated probe sources are
-    # inputs to the census and must already be committed, or the HEAD stamp would name a tree that
-    # did not contain the declarations actually probed.
-    dirty=$(git status --porcelain=v1 -- . \
-      ':!docs/snapshots/axiom-census.txt' \
-      ':!docs/snapshots/axiom-census-test.txt' || true)
-    if [ -n "$dirty" ]; then
-      echo "FAIL: --update refuses to stamp a census from a dirty working tree:"
-      echo "$dirty" | head -10
-      echo "(commit the changes first — the stamp must name the tree the census describes)"
-      exit 1
-    fi
-  fi
-}
-census_scope() {
-  local scope="$1" probe="$2" census="$3"
-  echo
-  echo "-- census scope: $scope ($probe vs $census) --"
-  local fresh
-  fresh=$(mktemp)
-  {
-    echo "# Raw #print axioms census ($scope scope) — generated by scripts/run_audit.sh"
-    echo "# sp1-lean $(git rev-parse HEAD) · $(date -u +%Y-%m-%d)"
-    lake env lean "$probe"
-  } > "$fresh" 2>&1
-  if grep -q "error" "$fresh"; then
-    echo "FAIL: probe elaboration errors:"; grep "error" "$fresh"; fail=1
-  fi
-
-  python3 - "$fresh" "$probe" "$scope" <<'EOF' || fail=1
-import re, sys
-text = open(sys.argv[1]).read()
-probe, scope = sys.argv[2], sys.argv[3]
-entries = re.findall(r"'([^']+)' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)", text, re.S)
-print(f"census entries ({scope}): {len(entries)}")
-expected = sum(1 for line in open(probe) if line.startswith("#print axioms "))
-if len(entries) != expected:
-    print(f"FAIL: parsed {len(entries)} census entries for {expected} generated probes")
-    sys.exit(1)
-buckets = {}
-for fqn, axs in entries:
-    key = frozenset(a.strip() for a in axs.split(",") if a.strip())
-    buckets.setdefault(key, []).append(fqn)
-print("bucket sizes:")
-for key, fqns in sorted(buckets.items(), key=lambda kv: -len(kv[1])):
-    print(f"  [{len(fqns):3}] {{{', '.join(sorted(key))}}}")
-bad = [f for f, axs in entries if "sorryAx" in axs]
-if bad:
-    print("FAIL: unexpected sorryAx carriers:", *bad, sep="\n  "); sys.exit(1)
-print("PASS: no probed declaration carries sorryAx")
-compiler_trust = [
-    fqn for fqn, axioms in entries
-    if ("native_decide" in axioms or "Lean.ofReduceBool" in axioms or
-        "Lean.trustCompiler" in axioms)
-]
-if scope == "main":
-    # The main library carries no native_decide at all (CI-gated at the source level too);
-    # a compiler-trusted constant here means the quarantine failed.
-    if compiler_trust:
-        print("FAIL: compiler-trusted proof constants escaped into the main library:",
-              *compiler_trust, sep="\n  ")
-        sys.exit(1)
-    print("PASS: no compiler-trusted proof constant in the main-library census")
-else:
-    # The test scope exists to DISCLOSE the compiler-trusted anchors, not to forbid them.
-    print(f"disclosed: {len(compiler_trust)}/{len(entries)} test anchors carry "
-          "compiler-trust axioms (native_decide)")
-    trusted = set(compiler_trust)
-    for fqn, _ in entries:
-        if fqn not in trusted:
-            print(f"  note: {fqn} carries no compiler-trust axiom (proved without native_decide)")
-EOF
-
-  if [ ! -f "$census" ]; then
-    if [ "$update" -eq 1 ]; then
-      cp "$fresh" "$census"
-      echo "UPDATED: $census created from this run — inspect and commit"
-    else
-      echo "FAIL: committed snapshot $census does not exist (run with --update to create it)"
-      fail=1
-    fi
-    rm -f "$fresh"
-    return
-  fi
-  if diff -q <(grep -v '^#' "$census") <(grep -v '^#' "$fresh") >/dev/null 2>&1; then
-    echo "PASS: census matches the committed snapshot ($census)"
-    local stamped
-    stamped=$(sed -n 's/^# sp1-lean \([0-9a-f]\{40\}\).*/\1/p' "$census" | head -1)
-    if [ -z "$stamped" ]; then
-      if [ "$update" -eq 0 ]; then
-        echo "FAIL: $census has no valid '# sp1-lean <40-hex>' provenance stamp"
-        echo "(rerun with --update from a clean committed tree to repair it)"
-        fail=1
-      fi
-    elif ! git cat-file -e "${stamped}^{commit}" 2>/dev/null; then
-      # Distinguish "this clone cannot see the stamp" from "the stamp is not an ancestor".
-      # A shallow checkout (actions/checkout's default fetch-depth: 1) has neither the commit
-      # nor the history to decide, and must not be reported as a provenance failure.
-      if [ "$update" -eq 0 ]; then
-        echo "FAIL: the committed census stamp $stamped is not present in this clone"
-        echo "(cannot verify provenance from a shallow checkout; fetch full history, e.g."
-        echo " actions/checkout with 'fetch-depth: 0')"
-        fail=1
-      fi
-    elif ! git merge-base --is-ancestor "$stamped" HEAD; then
-      if [ "$update" -eq 0 ]; then
-        echo "FAIL: the committed census stamp $stamped is not an ancestor of HEAD"
-        echo "(content equality does not repair provenance; rerun with --update from a clean committed tree)"
-        fail=1
-      fi
-    fi
-    if [ "$update" -eq 1 ]; then
-      cp "$fresh" "$census"
-      echo "UPDATED: $census restamped from this run (content unchanged)"
-    fi
-  else
-    if [ "$update" -eq 1 ]; then
-      cp "$fresh" "$census"
-      echo "UPDATED: $census rewritten from this run — inspect and commit the diff"
-    else
-      echo "FAIL: census drifted from the committed snapshot:"
-      diff <(grep -v '^#' "$census") <(grep -v '^#' "$fresh") | head -40
-      echo "(inspect the drift; if intended, rerun with --update and commit)"
-      fail=1
-    fi
-  fi
-  rm -f "$fresh"
-}
-
-census_stamp_guard
+echo "== A3 compiled-library trust policy =="
 if [ "$run_main" -eq 1 ]; then
-  census_scope "main" scripts/axiom_probe.lean docs/snapshots/axiom-census.txt
+  python3 scripts/check_trust.py --scope main || fail=1
 fi
 if [ "$run_test" -eq 1 ]; then
-  census_scope "test" scripts/axiom_probe_test.lean docs/snapshots/axiom-census-test.txt
+  python3 scripts/check_trust.py --scope test || fail=1
 fi
 
 echo

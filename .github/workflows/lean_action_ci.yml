@@ -44,7 +44,7 @@ name: Lean Action CI
 # `build-full` = the SP1-alignment layers (`lake build SP1Clean`: extracted oracles, Faithful, the
 # per-chip Sail bridges and machine contracts, Proofs/Sail, Proofs/Completeness, Soundness,
 # Composition), the full test library, `lake lint` over everything, the witgen/dump conformance
-# gates, and both axiom censuses. It runs after `build` on every push to `main`, weekly, on a
+# gates, and both trust-policy scopes. It runs after `build` on every push to `main`, weekly, on a
 # dispatch with `alignment` set, and on a PR carrying the `ci:alignment` label — restoring the
 # exact core entry `build` just saved, so it only ever builds the alignment closure of the change
 # (the old separate workflow raced the core save and restored stale entries). It is not gated on
@@ -63,7 +63,7 @@ on:
   workflow_dispatch:
     inputs:
       alignment:
-        description: "also run build-full (the alignment layers, tests, lint, censuses)"
+        description: "also run build-full (the alignment layers, tests, lint, trust policy)"
         type: boolean
         default: false
 
@@ -103,8 +103,8 @@ jobs:
         run: scripts/check_witgen_export.sh
       - name: Recorded pins match the build graph
         run: scripts/check_pins.sh
-      - name: Axiom probe inventory matches source
-        run: python3 scripts/gen_axiom_probe.py --check
+      - name: Trust policy is well-formed
+        run: python3 scripts/check_trust.py --validate-policy-only
       - name: Audit tooling regressions
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Root index imports every module
@@ -274,7 +274,7 @@ jobs:
   build-full:
     # The alignment layers on top of the core entry `build` just saved (same run, exact key: no
     # race, no stale lineage). One job for the full build, the full test library, `lake lint`, the
-    # export/witgen gates and both censuses — the old four-job workflow paid the toolchain/mathlib
+    # export/witgen gates and both trust-policy scopes — the old four-job workflow paid the toolchain/mathlib
     # setup four times. `main` queues; a PR run supersedes its previous one.
     needs: build
     if: >-
@@ -297,7 +297,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # run_audit.sh verifies the census provenance stamp with `git merge-base --is-ancestor`
+          # Cache selection uses the first-parent lineage below.
           fetch-depth: 0
       - name: Free disk space if the image is short of it
         run: |
@@ -355,13 +355,18 @@ jobs:
       # library built above even though the exportability battery itself is core.
       - name: Witgen export matches a fresh regeneration
         run: scripts/check_witgen_export.sh --regen
-      - name: Test-library axiom census (scripts/run_audit.sh --test-only)
-        run: scripts/run_audit.sh --test-only
-      # The release audit harness over the whole library: pin cross-checks, the zero-tolerance
-      # proof-deferral and project-axiom scans, the source-policy guards, and the `#print axioms`
-      # census gated against docs/snapshots/axiom-census.txt.
-      - name: Release audit, main scope (scripts/run_audit.sh --main-only)
-        run: scripts/run_audit.sh --main-only
+      - name: Compiled trust-checker regression fixtures
+        run: lake env python3 scripts/test_trust_integration.py
+      - name: Release audit and compiled-library trust policy
+        run: scripts/run_audit.sh
+      - name: Upload trust diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trust-policy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lake/build/trust/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Garbage-collect the cache by rule
         if: github.event_name != 'pull_request' && (success() || failure())
         run: python3 scripts/ci/cache_gc.py --repo "${{ github.repository }}" --prefix "${{ needs.build.outputs.cache-prefix }}" --apply

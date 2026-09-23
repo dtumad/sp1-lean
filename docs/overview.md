@@ -30,7 +30,7 @@ must not be relabelled as intentional exclusions merely to close a theorem.
 | Temporary SP1 compatibility restriction | Native syscall decoding requires canonical full 64-bit words. Rust dispatches on the low 32 bits; executor return normalization and AIR raw-word preservation need separate comparison. | A proved executor/AIR compatibility domain or a changed native syscall adapter, with alias regressions (campaign A's exact-refinement follow-up). |
 | Deliberate execution observation | Commit banks are mutable, as in the Rust executor. Exact SyscallInstrs AIR compares every commit to a fixed public digest. | State the compatible trace/public-value domain in exact refinement; do not erase intermediate execution updates. |
 | Explicit external boundary | ENTER models constrained replay and returns zero. Hook replies are request-bound input data; WRITE records bytes. VERIFY records an observed request, not cryptographic acceptance. | Authenticate all observations/effects in the native AIR. Verification of external proofs and unconstrained execution are separate claims. |
-| Capstone-blocking proof debt | Free resource `Profile`, ordinary ROM/store policy, full supplied-target binding, WRITE/VERIFY and fresh allocation installation, mixed compiler totality, and dummy-HALT participation. | Close campaign A; none may become a caller premise or permanent syscall exclusion. |
+| Capstone-blocking proof debt | Free resource `Profile`, AIR derivation of the fixed ordinary-write policy and independent path ROM/fetch preservation, full supplied-target binding, WRITE/VERIFY and fresh allocation installation, and mixed compiler totality. | Close campaign A; none may become a caller premise or permanent syscall exclusion. |
 | Separate refinement | Pinned SP1's complete AIR, preprocessing/PCS identity, succinct boundary commitments, and cryptographic verifier soundness. | Separate proved interfaces, assumptions and error bounds; native correctness does not imply these results. |
 
 The code authorities are `Model/Core/{InstructionDecode,Execution,HostExecution,SyscallCode}`,
@@ -151,9 +151,9 @@ the Rust executor's `u32` dispatch alone does not establish it.
 
 ## Reproduction and review
 
-Run `lake build SP1Clean`, `lake test`, `lake lint`, and `scripts/run_audit.sh`.
-The [axiom ledger](snapshots/axiom-ledger.md) records the main/test split and disclosed dependency
-classes. The main library contains no proof deferrals, project axioms, or `native_decide`.
+Run `lake build --wfail --iofail SP1Clean SP1CleanTest`, `lake test`, `lake lint`, and `scripts/run_audit.sh`.
+The [trust policy](trust-policy.md) explains the main/test split and accepted dependency classes;
+detailed reports are generated as build artifacts. The main library contains no proof deferrals, project axioms, or `native_decide`.
 
 Regenerating witness exports, SP1 trace dumps, and extracted AIR lists tests separate boundaries.
 The Rust differential compares all committed fixture rows, while a fresh project build checks

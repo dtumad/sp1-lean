@@ -84,6 +84,7 @@ import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionBoot
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Model.Core.ExecutionWritePolicy
 import SP1Clean.Model.Core.ExecutionSnapshot
 import SP1Clean.Model.Core.HintQueue
 import SP1Clean.Model.Core.HintQueueEvent

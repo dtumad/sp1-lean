@@ -7,7 +7,7 @@ import SP1Clean.FormalModel.Shard
 `PFunctor.DynSystem.Labeled` machine. Its traces are the existing `ExecutionPath`
 (`trace_iff_executionPath`, from the orbit correspondence proved beside the system), so the
 generic realization statement applies to the shard contract with no new execution carrier:
-`Executes` is source validity plus a machine trace between the realized snapshots
+`Executes` is source validity plus a write-permitted machine trace between the realized snapshots
 (`executes_iff`).
 -/
 
@@ -37,15 +37,17 @@ theorem trace_iff_executionPath {source target : ExecutionState} {events : List 
     obtain ⟨orbit, endpoint, labels⟩ := path.exists_prefix
     exact ⟨_, orbit, labels, endpoint⟩
 
-/-- `Executes` is source validity plus a machine trace between the realized snapshots. -/
+/-- `Executes` is source validity, a machine trace, and the fixed ordinary-write policy. -/
 theorem executes_iff {source target : ExecutionSnapshot} {events : List ExecutionEvent} :
     Executes characteristic image source target events ↔
       ExecutionSourceValid image source ∧
-        (sp1Machine characteristic image valid).Trace source.realize events target.realize := by
+        (sp1Machine characteristic image valid).Trace source.realize events target.realize ∧
+        ExecutionPath.WritesPermitted (policy characteristic image) (image.toGuestProgram valid)
+          source.realize events := by
   constructor
-  · rintro ⟨sourceValid, path⟩
-    exact ⟨sourceValid, trace_iff_executionPath.mpr path⟩
-  · rintro ⟨sourceValid, trace⟩
-    exact ⟨sourceValid, trace_iff_executionPath.mp trace⟩
+  · rintro ⟨sourceValid, path, permitted⟩
+    exact ⟨sourceValid, trace_iff_executionPath.mpr path, permitted⟩
+  · rintro ⟨sourceValid, trace, permitted⟩
+    exact ⟨sourceValid, trace_iff_executionPath.mp trace, permitted⟩
 
 end SP1Clean.FormalModel.Shard

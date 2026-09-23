@@ -95,7 +95,6 @@ handwritten_lean = sorted(
     for path in source_paths
     if not relative(path).startswith("SP1Clean/Extracted/")
     and not path.name.endswith("Vectors.lean")
-    and path.name not in {"axiom_probe.lean", "axiom_probe_test.lean"}
 )
 
 for source in handwritten_lean:

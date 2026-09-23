@@ -33,7 +33,7 @@ This project is **independent** of `sp1-lean`. It does **not** import `SP1Founda
 `fromMain`/`toMain` pattern. Needed foundations are re-created here (`Math/` + `Model/`). Every released
 theorem must be proof-complete: no `sorryAx`. Pure chip/AIR proofs should normally show only
 `[propext, Classical.choice, Quot.sound]`; selected `bv_decide` lemmas and the generated Sail target's
-platform hooks are separately disclosed by the axiom census.
+platform hooks are separately disclosed by the compiled-library trust policy (docs/trust-policy.md).
 `update_extracted.py` and `scripts/update_sp1_dumps.sh` do invoke SP1's constraint compiler and
 trace-dump tooling as trusted, pin-checked Rust oracles; generated outputs are never treated as
 self-authenticating.
@@ -95,7 +95,7 @@ refinement; only their `_of_obligations` combinators are currently declared.
   and `scripts/check_layering.sh` (check 3) gate both. PR CI (`.github/workflows/lean_action_ci.yml`,
   job `build`) runs the core; the `build-full` job of the same workflow — on every push to `main`,
   weekly, on a dispatch with `alignment` set, or on a PR labelled `ci:alignment` — runs the full
-  build, `lake lint`, the full test library, the conformance gates, and both censuses on top of the
+  build, `lake lint`, the full test library, the conformance gates, and both trust-policy scopes on top of the
   core entry `build` just saved (`guards` prints a notice when a PR touches the alignment strata
   without the label).
   Passing = **0 errors AND 0 warnings**, and **no stray `info:` notes**: CI builds with
@@ -258,9 +258,10 @@ Mirror-rust layout under `SP1Clean/`:
 - **`SP1CleanTest/`** (top-level, **not** under `SP1Clean/`) — the **test library**, the sole home of
   `native_decide` and the `lake test` target (`testDriver`). It imports the main `SP1Clean` library and
   is never imported by it, so the default `lake build SP1Clean` stays `native_decide`-free (enforced by
-  `scripts/check_no_native_decide.sh`; `native_decide` trusts the whole compiler — since v4.32 the census
-  shows this as generated `._native.native_decide.ax_*` constants, the successors of the named
-  `Lean.ofReduceBool`/`Lean.trustCompiler` axioms). Contents: `Exportable.lean` (the
+  `scripts/check_no_native_decide.sh`; `native_decide` trusts the whole compiler — since v4.32 this
+  uses generated `._native.native_decide.ax_*` constants, the successors of the named
+  `Lean.ofReduceBool`/`Lean.trustCompiler` axioms; reports normalize the counter suffixes).
+  Contents: `Exportable.lean` (the
   `#assert_exportable` battery using the canonical `Model/SP1Field.lean` `SP1Prime`), `NonVacuity.lean` /
   `NonVacuityReal.lean` (satisfiability anchors for the chip `Assumptions` — the real-row battery
   builds rows through `TraceGenTests/EventPopulate.lean`), `Audit/` (the joint-premise regression),
@@ -334,7 +335,7 @@ Mirror-rust layout under `SP1Clean/`:
   `Soundness/Decode.lean` walk half) was deleted 2026-08 — its scheduled post-seam retirement; the
   live-path survivors are `Walk.lean`'s graph core, `RowEffectDefs.lean`'s `RefinesAt`/`RowEffect`
   interface, and `Soundness/Decode.lean`'s hoist/evidence half. Audit harness: `scripts/run_audit.sh`
-  (pins + sorry gates + the `#print axioms` census via `scripts/gen_axiom_probe.py`).
+  (pins + sorry gates + the compiled-library policy via `scripts/check_trust.py`).
 - `Soundness/RowView.lean` (the reader-agnostic `RowView`/`AdapterView` row-view infra the bus layer reads —
   formerly the top-level `Trace.lean`). The design rationale for the whole-chip semantic boundary is in
   `docs/architecture.md`. The root index is `SP1Clean.lean` — **wire every new module's import there**.
@@ -533,11 +534,11 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
    `is_real`-gated), not a restatement of the constraint list. No `InlinedSpec` / `inlinedSpec_iff_spec`
    bridging helpers — they only exist when `main` and `Spec` were defined in mismatched forms; the fix is to
    align them.
-4. **Axiom-clean target.** After each artifact, check `#print axioms <decl>` (or the `lean_verify` MCP tool) is
-   only `[propext, Classical.choice, Quot.sound]` (bv_decide may add generated
-   `._native.bv_decide.ax_*` constants — the v4.32.2 form of the former
-   `Lean.ofReduceBool`/`trustCompiler`) — and
-   **no `sorryAx`**.
+4. **Explicit trust policy.** Pure arithmetic/AIR proofs normally use only
+   `[propext, Classical.choice, Quot.sound]`. Run the compiled-library policy through
+   `scripts/run_audit.sh`; it rejects `sorryAx` and unknown axioms, with named existing exceptions
+   for Sail externs and native bitvector proofs. Use `#print axioms <decl>` for focused inspection.
+   Ordinary theorem additions need no registration, snapshot update, or axiom-count bookkeeping.
 
 ## Proof-style quick notes
 
@@ -613,10 +614,10 @@ These are the keepers from sp1-lean's "faithful sub-circuit composition" discipl
   silence the kernel. See `docs/agents/proof-patterns.md` §"Bit-shift chip soundness" (the `2^64` bullet) for
   the worked fix.
 - **Never `native_decide` in the main `SP1Clean/` library.** It discharges goals by running compiled code,
-  trusting the **whole compiler** (surfaced in the census as generated
+  trusting the **whole compiler** (represented by generated
   `._native.native_decide.ax_*` constants — formerly the named `Lean.ofReduceBool`/
-  `Lean.trustCompiler` axioms) — so headline soundness
-  theorems would no longer be `[propext, Classical.choice, Quot.sound]`-clean. It is **CI-gated**
+  `Lean.trustCompiler` axioms), beyond the named existing `bv_decide` exceptions in the
+  production policy. It is **CI-gated**
   (`scripts/check_no_native_decide.sh`, run by the audit + the `guards` job; any hit in `SP1Clean/**/*.lean`
   fails the build). Conformance checks that genuinely need it live in the separate top-level `SP1CleanTest`
   library (`lake test`); to disclose a new one, put the anchor there, not in `SP1Clean/`.
@@ -701,17 +702,16 @@ after installing or toggling.
   gates; exact Core refinement and ArkLib are separate follow-ups.
 - `docs/goal-overview.md` — the completed-state contract (verifier + completeness targets). Not
   current status; never cite it as such.
-- `docs/release-audit.md` — the honest-claim / trust-boundary report (axiom census and zero-deferral gate;
-  regenerate with `scripts/run_audit.sh`). The census is **split by library**: the main scope diffs
-  `docs/snapshots/axiom-census.txt` (needs the `SP1Clean` oleans; CI `audit` job runs
-  `--main-only`), the test scope diffs `docs/snapshots/axiom-census-test.txt` (needs `lake test`
-  first; CI `test` job runs `--test-only`); the no-flag default runs both. The harness leaves the
-  tree **clean on a pass**: it diffs each fresh census against its committed snapshot and fails on
-  drift; only an explicit `scripts/run_audit.sh --update` rewrites the snapshot(s) for the scope(s)
-  run (inspect and commit the delta — a moved auto-generated `bv_decide` `ax_N_M✝` index is
-  hygienic). It also runs `check_pins.sh`, `check_root_index.sh`, `check_current_docs.py`,
-  `check_release_surface.py`, and `check_report_citations.sh` as gates, so none need a separate
-  invocation.
+- `docs/release-audit.md` — the honest-claim / trust-boundary report. Reproduce with
+  `scripts/run_audit.sh` after building current `SP1Clean`/`To*` and `SP1CleanTest` oleans.
+  `--main-only` and `--test-only` select one scope; the default and full CI job run both.
+  The compiled-library scanner checks every source module against `scripts/trust_policy.json`,
+  including private declarations and transitive dependencies. Reports go to ignored build
+  artifacts and CI uploads; normal audits never rewrite tracked files. There is no census to
+  regenerate or stamp, and `--update` is retired. Policy changes are explicit reviewed edits.
+  Pins, source guards, root coverage, docs/citations, release coverage and the separate capstone
+  definition manifest remain gates. Choose public/private visibility for API needs, never for
+  audit stability; no per-theorem registration is required.
 - `docs/agents/lean-sail-notes.md` — the v4.33.1 environment, the git dependency pins (incl. the
   temporary lean-sail pin and its exit), the Sail code-generation workaround, and the
   `lake update` trap.
@@ -737,5 +737,5 @@ after installing or toggling.
   build on the CI runner); keep
   point-in-time timings with the review artifact that uses them rather than in the maintained
   documentation set (`docs/audits/2026-09-build-semantics.md` is the current one).
-- `docs/snapshots/axiom-ledger.md` — machine-checked `#print axioms` inventory per theorem (point-in-time
-  snapshot; re-generate before release).
+- `docs/trust-policy.md` — the accepted logical/Sail/native trust classes, checker commands,
+  report locations, coverage guarantees, and limits of compiled-environment inspection.

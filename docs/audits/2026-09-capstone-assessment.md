@@ -103,7 +103,9 @@ recorded inventories before writing either file and rejects lost declarations. `
 read-only and runs in CI. Intentional removals require `--allow-removals` and review of the probe
 diff. Seven regressions cover partial matches, both library files, intentional renames, and
 read-only checks. The existing generated probes and raw axiom snapshots remain unchanged.
-The [ledger](../snapshots/axiom-ledger.md) states the remaining coverage limits.
+The [historical ledger](https://github.com/dtumad/sp1-lean/blob/6428cd45/docs/snapshots/axiom-ledger.md)
+records the census approach's coverage limits. The current replacement is described in the
+[trust policy](../trust-policy.md).
 
 ### Current documentation described incompatible theorem versions
 

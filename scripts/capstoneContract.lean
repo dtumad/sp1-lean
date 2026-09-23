@@ -33,14 +33,18 @@ example : SoundnessTarget ensemble profile image source target header =
       ∃ events, publicInput = header ∧
         (∃ valid : ExecutionSourceValid image source,
           ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events target.realize) ∧ profile p image source target events) := rfl
+            source.realize events target.realize ∧
+          ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid.1.1)
+            source.realize events) ∧ profile p image source target events) := rfl
 
 example : CompilerTarget ensemble profile image source target header =
     EnsembleCompiler ensemble (List ExecutionEvent)
       (fun publicInput events => publicInput = header ∧
         (∃ valid : ExecutionSourceValid image source,
           ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events target.realize) ∧ profile p image source target events) := rfl
+            source.realize events target.realize ∧
+          ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid.1.1)
+            source.realize events) ∧ profile p image source target events) := rfl
 
 example (sound : SoundnessTarget ensemble profile image source target header)
     (compiler : CompilerTarget ensemble profile image source target header) :

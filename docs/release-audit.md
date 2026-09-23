@@ -3,8 +3,8 @@
 Snapshot date: 2026-08-06, re-audited on the Lean v4.31 -> v4.32.2 + Sail v4 -> v5 migration, and
 re-audited on 2026-09-19 for the full-state capstone branch (see the
 [branch review](audits/2026-09-19-capstone-branch-review.md)). The
-generated records in `docs/snapshots/` are authoritative for exact declaration dependencies; rerun the
-commands below before citing this report for another commit.
+compiled trust reports are regenerated under `.lake/build/trust/`; the committed trust policy
+states permitted dependencies. Rerun the commands below before citing this report for another commit.
 
 ## Executive assessment
 
@@ -308,7 +308,7 @@ stream.
 
 - manifest-resolved pin reporting, gating any present `.lake` checkout against the manifest;
 - recorded-value cross-checks (`scripts/check_pins.sh`: lakefile ↔ manifest ↔ this report's pin
-  table ↔ `CoreProfile.sp1SemanticRevision` ↔ the authoritative census ledger and raw snapshots);
+  table ↔ `CoreProfile.sp1SemanticRevision`, plus generated-model provenance);
 - root-index completeness (`scripts/check_root_index.sh`), maintained-document/link/module-docstring
   freshness (`scripts/check_current_docs.py`), report-citation resolution
   (`scripts/check_report_citations.sh`), and an independent exact 25-chip release inventory
@@ -317,23 +317,21 @@ stream.
 - a zero-tolerance project-axiom scan;
 - `skipKernelTC` and main-library `native_decide` guards;
 - an elaboration-budget escape-hatch prohibition (allowlist-gated); and
-- a generated `#print axioms` census over the released theorem surface, split by library and
-  diffed against the committed `docs/snapshots/axiom-census.txt` (main) and
-  `docs/snapshots/axiom-census-test.txt` (test anchors) — drift fails; only `--update` rewrites
-  the snapshots, so a passing run leaves the tree clean. The mechanically checked main/test counts
-  and total live only in `docs/snapshots/axiom-ledger.md`.
+- the [compiled-library trust policy](trust-policy.md), covering private declarations and
+  transitive dependencies in every production/test source module. Unknown axioms and `sorryAx`
+  fail; named existing Sail and native-bitvector exceptions remain explicit.
 
-CI runs the three cross-check gates in its fast `guards` job, the harness's main scope
-(`--main-only`) in a dedicated `audit` job on the built `SP1Clean` oleans, and the test-scope
-census (`--test-only`) in the `test` job right after `lake test` produces the `SP1CleanTest`
-oleans that probe needs.
+CI runs source/pin/coverage gates in its lightweight `guards` job. The `build-full` job builds
+`SP1Clean`, the `To*` libraries and `SP1CleanTest`, runs the full audit, and uploads its main/test
+reports. Local `--main-only` and `--test-only` audit flags select the corresponding built scope.
+No per-theorem inventory, snapshot update, or committed declaration count is required.
 
-Current classes in the census are:
+Current policy classes are:
 
 | Class | Interpretation |
 |---|---|
 | `propext`, `Classical.choice`, `Quot.sound` | accepted Lean/mathlib logical baseline |
-| generated `bv_decide` constants | kernel-checked bit-vector proof artifacts used by selected lemmas |
+| generated `bv_decide` constants | compiler-trusted certificate checking at named existing bit-vector proof owners |
 | Sail platform hooks | external operations present in the generated official model |
 | generated `native_decide` constants | compiler-trusted tests, confined to `SP1CleanTest/` |
 | `sorryAx` | forbidden; current count is zero |
@@ -341,7 +339,7 @@ Current classes in the census are:
 The Sail model's hooks include reservation, floating-point, randomness, and platform termination
 operations. The supported ordinary instruction path does not intend to execute most of them, but a
 theorem whose target is the complete generated interpreter inherits dependencies from that target and
-its reduction lemmas. The raw census discloses this boundary instead of describing the headline theorem
+its reduction lemmas. The policy and generated reports disclose this boundary instead of describing the headline theorem
 as depending only on three logical axioms.
 
 The test library's `native_decide` occurrences (the exportability battery's prime instance, the
@@ -407,19 +405,18 @@ See [`roadmap.md`](roadmap.md) for the dependency order.
 Run from the repository root:
 
 ```bash
-lake build SP1Clean
+lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun SP1CleanTest
 lake test
 lake lint
 scripts/run_audit.sh
 ```
 
-The final command regenerates the two probe sources and validates their output against the committed
-census snapshots:
+The final command validates the compiled libraries against `scripts/trust_policy.json`, writing
+only ignored diagnostic reports under `.lake/build/trust/`. The retired `--update` flag fails;
+trust exceptions require explicit policy review. No clean-commit stamp is needed to inspect
+work in progress, and reports identify the revision and whether tracked inputs differ.
 
-- `scripts/axiom_probe.lean` and `scripts/axiom_probe_test.lean` are always regenerated;
-- `docs/snapshots/axiom-census.txt` and `docs/snapshots/axiom-census-test.txt` are read-only in the
-  normal audit and are rewritten only by `scripts/run_audit.sh --update` from a clean committed tree.
-
-An unknown declaration makes the probe fail. A new proof deferral, project axiom, forbidden kernel
-bypass, main-library `native_decide`, non-allowlisted elaboration-budget directive, or `sorryAx` carrier
-makes the audit fail.
+Missing modules, scanner errors, incomplete coverage, proof deferrals, project axioms, forbidden
+kernel bypasses, main-library native decision proofs, unapproved native-bitvector proof owners,
+and other unknown axioms make the audit fail. The capstone's statement/definition manifest and
+extraction/model provenance are checked independently of the axiom policy.

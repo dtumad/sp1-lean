@@ -1081,13 +1081,11 @@ in `Proofs/Chips/ShiftLeftChip/Core.lean`.
 >
 > **A hoisted `have key := fun … =>` binding has no expected type**, so named arguments like `(cb4 := cb4)`
 > become mandatory where the original `exact` did not need them. Give `key` an explicit `∀` type and the trap
-> disappears; that is the better habit. Relatedly, **the `private` visibility that keeps the axiom census
-> stable cannot cross a module boundary**, so preferring `private` can *force* a duplicate: the same 3-line
-> `registerIndexCast` lemma exists in both `Soundness/GroundingAdapter.lean` and
-> `Soundness/Grounding/ITypeChips.lean` because the importer cannot see a `private` declaration in its
-> dependency. That is an
-> accepted cost — `scripts/gen_axiom_probe.py` skips `private` lines, and a stable census matters more than
-> two duplicated lines — but record such pairs as an owner decision rather than promoting one to public.
+> disappears; that is the better habit. **Private visibility cannot cross a module boundary.**
+> Choose visibility for the intended API and reuse: a shared helper may be public when its consumers
+> need it. The compiled-library trust check includes private declarations, so neither visibility nor
+> duplicated helpers should be chosen to stabilize an audit artifact. Measure downstream elaboration
+> before moving a performance-sensitive helper.
 
 **Traps — `have`s that look dead but are load-bearing** (verify with `lean_goal` / a build before removing):
 - `have hp : 2 ^ 17 < p := Fact.out` (and `have : 131072 < p`) — feeds a downstream `omega` that needs the
@@ -1194,8 +1192,8 @@ What a macro *cannot* reach: caller binders (`env`, `input`, `real`, `decoded`, 
 unreachable from a quotation without `Lean.mkIdent`, and repetition that is a **term inside a `have` type**
 rather than a tactic shape needs an ordinary (`private`) helper lemma instead. And prefer macros that
 generate **tactics** over macros that generate **declarations**: the latter removes parsed signatures from
-the source text, which is exactly what `scripts/gen_axiom_probe.py` (regex over source) and
-`scripts/check_report_citations.sh` (16 hard-coded file+declaration pairs) rely on being there.
+the source text, which `scripts/check_report_citations.sh` relies on for named report targets.
+The compiled-library trust check itself does not depend on source-level declaration signatures.
 
 **Don't golf:**
 - **`Faithful/*` anchors** — conservative only (drop `by exact` / dead `let` / `from by`); never restructure
@@ -1207,8 +1205,8 @@ the source text, which is exactly what `scripts/gen_axiom_probe.py` (regex over 
   blanket comment-strip on `ShiftLeftChip/Soundness/Sll` was reverted for exactly this.)
 
 **Verify every batch:** `lake build SP1Clean` clean (0 warn, no `info:`), then
-`scripts/run_audit.sh` (zero proof deferrals, citation checks, and no unexpected axiom-census
-change). `scripts/check_report_citations.sh` remains useful as a faster standalone documentation
+`scripts/run_audit.sh` (zero proof deferrals, citation checks, and the compiled-library trust
+policy). `scripts/check_report_citations.sh` remains useful as a faster standalone documentation
 check. On heavy files watch the per-file elaboration time in the build log and **revert on regression**.
 
 > **Never *infer* an axiom change from the tactics you removed — measure both versions.** A report that
@@ -1289,12 +1287,11 @@ the reader-local `<reader>_*Interactions` lemmas over unfolding a whole chip.
   indistinguishable from stuck. A stack sample discriminates immediately — `Lean_Meta_isDefEqDelta` /
   `whnfImp` / `unfoldDefinition` / `reduceRec` is a delta-unfolding blowup, not progress. It is cheap; reach
   for it before killing or before waiting longer.
-- **Audit-harness behavior.** A normal `scripts/run_audit.sh` regenerates the probe sources, validates
-  them against the committed raw censuses, invokes the report-citation gate, and leaves a passing tree
-  unchanged. Only `scripts/run_audit.sh --update` rewrites the census snapshots, and it refuses to stamp
-  them unless every non-census input is already committed. Inspect an intended update before committing:
-  an auto-generated `bv_decide` `ax_N_M✝` index moving *because a proof term changed* is hygienic — no
-  axiom entered or left a set.
+- **Audit-harness behavior.** `scripts/run_audit.sh` checks current built libraries against the
+  explicit trust policy, invokes source/pin/coverage/citation/semantic-contract gates, and writes only
+  ignored diagnostic reports. No theorem registration or census update is required. Generated native
+  axiom counters are normalized by the pinned scanner; a new native proof owner or external axiom
+  requires an explicit policy review. `--update` is retired.
 - Work one file and one build at a time; avoid batching many edit + LSP calls in a single turn.
 - **LSP times out on a big chip file → introspect via a scratch `import`.** `lean_goal` on a 600+-line chip
   (e.g. `ShiftLeftChip.lean`'s completeness) times out because it re-elaborates the whole file. Instead write
