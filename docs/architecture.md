@@ -239,6 +239,13 @@ normally in eight ticks; each host call takes 264 ticks. HALT is an actual trans
 host exit status. A stopped source permits only an empty identity. Padding never becomes a step.
 `ExecutionBoot` specializes the same semantics at boot/HALT endpoints.
 
+`ExecutionCompatibility` projects complete ordinary/HALT paths to the existing fixed-handler
+`EventExecutionTrace`, preserving the event tape, Sail endpoint and local clock. The installed
+source-execution theorem exposes that projection through `source_execution_ordinaryHalt`.
+Trajectory agreement includes all covered boundaries; after the tape, the legacy trajectory
+returns `none` while complete replay holds its endpoint. Arbitrary mixed host calls continue to
+use paired replay, with the returned host state passed to the next call.
+
 `Model/Semantics/SailStepReduction`, `SailFetch`, and `SailRetirement` own the circuit-independent
 official-Sail reduction, fetch, configuration-transport, and retirement-tail lemmas. Their existing
 namespaces are retained, and `Proofs/Sail/Advance` consumes them to construct chip row effects.

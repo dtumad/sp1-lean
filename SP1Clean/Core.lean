@@ -82,6 +82,7 @@ import SP1Clean.Model.Core.BankReplay
 import SP1Clean.Model.Core.Boot
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionBoot
+import SP1Clean.Model.Core.ExecutionCompatibility
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
 import SP1Clean.Model.Core.ExecutionSnapshot

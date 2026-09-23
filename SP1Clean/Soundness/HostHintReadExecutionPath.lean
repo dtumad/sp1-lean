@@ -1,4 +1,5 @@
 import SP1Clean.Model.Core.ExecutionWritePolicy
+import SP1Clean.Model.Core.ExecutionCompatibility
 import SP1Clean.Soundness.HostHintReadExecution
 
 /-! # Local execution soundness for the installed instruction, control, and hint AIR
@@ -275,5 +276,39 @@ theorem source_execution (valid : image.Valid)
   obtain ⟨carrier⟩ := source_grounding_carrier valid witness constraints balanced
   obtain ⟨target, path, endpoint⟩ := carrier.execution valid constraints balanced
   exact ⟨carrier.events, target, path, carrier.writesPermitted valid constraints balanced, carrier.exhaustive.map ExecutionRow.event, endpoint⟩
+
+/-- The installed ordinary/HALT fragment supplies the legacy trace from its complete stateful
+path, using one fixed handler for the whole trace. All endpoint and inventory conclusions of
+`source_execution` are retained. General mixed callers keep the complete paired replay. -/
+theorem source_execution_ordinaryHalt (valid : image.Valid)
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (fragment : ∀ event ∈ (LocalCore.executionRows
+      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).map ExecutionRow.event,
+        OrdinaryOrHalt event) (handler : Machine.ExecutableSyscallHandler) :
+    ∃ (target : ExecutionState) (trace : Machine.EventExecutionTrace),
+      ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+        source.realize trace.events target ∧
+      ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+        source.realize trace.events ∧
+      Machine.traceOfEvents? handler.withHalt (image.toGuestProgram valid) source.sail.realize trace.events =
+        some trace ∧
+      trace.Valid handler.withHalt.relation (image.toGuestProgram valid) ∧ trace.Clocked source.clock ∧
+      trace.initialState = source.sail.realize ∧ trace.finalState = target.sail ∧
+      trace.events.Perm ((LocalCore.executionRows
+        (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).map ExecutionRow.event) ∧
+      target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
+      target.sail.regs.get? Register.PC =
+        some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
+      ∀ loc message, LocalCore.memoryFinalFrontier
+          (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc = some message →
+        locContent target.sail loc = some (Word.toBitVec64 message.value) := by
+  obtain ⟨events, target, path, permitted, inventory, endpoint⟩ :=
+    source_execution valid witness constraints balanced
+  obtain ⟨trace, replay, legacy, clocked, initial, tape, final, _⟩ := path.ordinaryHalt_trace
+    (fun event member => fragment event (inventory.mem_iff.mp member)) handler
+  rw [← tape] at path permitted inventory replay
+  exact ⟨target, trace, path, permitted, replay, legacy, clocked, initial, final, inventory, endpoint⟩
 
 end SP1Clean.Soundness.HostHintReadCPU

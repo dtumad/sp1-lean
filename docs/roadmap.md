@@ -151,6 +151,13 @@ same declarations. `ExecutionSourceValid.fetch_eq` identifies a committed curren
 with official Sail fetch from the complete realized source; it requires no successor fetch.
 The arbitrary-step preservation laws remain the next semantic proof obligation in #12.
 
+`ExecutionPath.ordinaryHalt_trace` and `ordinaryHalt_trajectory` connect the complete path to the
+legacy fixed-handler view over the ordinary/HALT fragment. The installed AIR's
+`source_execution_ordinaryHalt` derives that trace from `source_execution` and retains its complete
+path, permissions, physical inventory and endpoint conclusions. Agreement holds through the last
+covered boundary; the two trajectory definitions deliberately differ after the tape. Mixed host
+calls retain the single evolving host/clock in paired replay.
+
 **Next boundary work:** bind the complete supplied outgoing snapshot to the already-derived
 Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks
 and enforce coverage of every computed source-to-target change; then bind the complete

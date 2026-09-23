@@ -1,4 +1,5 @@
 import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Model.Core.ExecutionCompatibility
 import SP1Clean.Model.Core.ExecutionWritePolicy
 import SP1Clean.Model.Core.SailBookkeeping
 import SP1Clean.Model.Core.QueueReplay
@@ -396,5 +397,45 @@ theorem queueWriteNeedsAllocation :
       (queueSource.host.writeOutput 14 [99]).map (·.io.hints) = some ([99] :: queueSource.host.io.hints) := by
   unfold QueueProjectionSafe
   native_decide
+
+/-- A nonzero HALT from an evolved, nonempty host produces the same legacy Sail endpoint,
+with the actual local clock. The fixed handler is immaterial on this fragment. -/
+theorem legacyHaltEndpoint (handler : ExecutableSyscallHandler) :
+    ∃ trace : EventExecutionTrace,
+      traceOfEvents? handler.withHalt program middle.sail
+        [.syscall (halt.toEvent middle.clock 65540)] = some trace ∧
+      trace.Valid handler.withHalt.relation program ∧ trace.Clocked 281 ∧
+      trace.finalState = target.sail ∧ target.host.exitCode = some 70000 ∧
+      target.clock = 545 := by
+  obtain ⟨trace, replay, valid, clocked, _, _, final, _⟩ :=
+    (SP1Clean.Model.Core.ExecutionPath.cons halt_step (.nil _)).ordinaryHalt_trace
+      (by simp [OrdinaryOrHalt, halt, SP1Clean.Model.Core.HostExecution.toEvent, SyscallKind.code]) handler
+  exact ⟨trace, replay, valid, clocked, final, rfl, rfl⟩
+
+/-- The legacy ordinary trajectory and complete replay agree throughout a genuine Sail step. -/
+theorem legacyOrdinaryTrajectory (host : HostState) (running : host.exitCode = none)
+    (clock position : ℕ) (covered : position ≤ 1) (handler : ExecutableSyscallHandler) :
+    Semantics.eventTrajectory handler.withHalt Audit.JointNonVacuity.anchorProgram
+      [.ordinary] Audit.JointNonVacuity.anchorState position =
+      (executionTrajectory policy Audit.JointNonVacuity.anchorProgram
+        ⟨Audit.JointNonVacuity.anchorState, host, clock⟩ [.ordinary] position).map ExecutionState.sail :=
+  (SP1Clean.Model.Core.ExecutionPath.cons (ordinaryContinues host running clock) (.nil _)).ordinaryHalt_trajectory
+    (by simp [OrdinaryOrHalt]) handler position covered
+
+/-- A stopped identity remains empty in the compatibility projection; it does not resume HALT. -/
+theorem legacyStoppedIdentity (handler : ExecutableSyscallHandler) :
+    ∃ trace : EventExecutionTrace,
+      traceOfEvents? handler.withHalt program target.sail [] = some trace ∧
+      trace.Valid handler.withHalt.relation program ∧ trace.events = [] ∧
+      trace.finalState = target.sail := by
+  obtain ⟨trace, replay, valid, _, _, tape, final, _⟩ :=
+    (SP1Clean.Model.Core.ExecutionPath.nil (policy := policy) (program := program) target).ordinaryHalt_trace
+      (by simp) handler
+  exact ⟨trace, replay, valid, tape, final⟩
+
+/-- A non-HALT host call is outside this compatibility fragment even when concrete replay succeeds. -/
+theorem enterOutsideLegacyFragment : ¬ OrdinaryOrHalt (.syscall (enter.toEvent source.clock 65536)) := by
+  unfold OrdinaryOrHalt
+  decide
 
 end SP1CleanTest.Core.ExecutionPath
