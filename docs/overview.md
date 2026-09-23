@@ -35,7 +35,7 @@ must not be relabelled as intentional exclusions merely to close a theorem.
 
 The code authorities are `Model/Core/{InstructionDecode,Execution,HostExecution,SyscallCode}`,
 `Model/Core/SourceExecution`, `FormalModel/{Shard,CoreProfile}`, and `update_extracted.py`'s
-`verify_no_mprotect`. [The roadmap](roadmap.md) owns progress; this table owns the meaning of each
+`verify_no_mprotect`. [The fork campaigns](https://github.com/dtumad/sp1-lean/issues) own progress; this table owns the meaning of each
 restriction. Complete finite source/target snapshots are public instance data in the native
 statement, even when only a bounded canonical header occupies the field-valued public input.
 

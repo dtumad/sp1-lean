@@ -1,3 +1,4 @@
+import SP1Clean.Soundness.InstructionWritePolicy
 import SP1Clean.Soundness.HostHintReadTrajectory
 import SP1Clean.Soundness.HostLocalCoreRom
 import SP1Clean.Soundness.CoreInstructionExecution
@@ -151,7 +152,8 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
   · exact trajectory_ordinary valid carrier constraints balanced member checked.2
 
 /-- Grounded ordinary operands yield a normally retiring semantic step from the actual paired
-state. Instruction dispatch and readiness stay inside the registered chip contracts. -/
+state, with write permission from the installed AIR. Instruction dispatch and readiness stay
+inside the registered chip contracts. -/
 theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
@@ -170,7 +172,8 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     (time : StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePull = carrier.timeline.start n) :
     ∃ next, ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       current .ordinary next ∧
-      Target.RowEffect (image.toGuestProgram valid) (row.toChipRow witness.data).view current.sail next.sail := by
+      Target.RowEffect (image.toGuestProgram valid) (row.toChipRow witness.data).view current.sail next.sail ∧
+      InstructionWrite.PermittedAt image.readOnly (image.toGuestProgram valid) current.sail := by
   have checked := instruction_inputs valid witness constraints balanced member
   have contracts := supportedChip_groundingContracts row.chip checked.1.registered
   have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
@@ -201,11 +204,25 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
       some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) := by
     rw [program_pc_eq_statePull]
     exact pc
+  have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.expanded witness)
+    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source final bankFinal))
+    (HostHintQueueBoundary.expanded_constraints witness constraints)
+    (HostHintQueueBoundary.expanded_balanced witness balanced) active.1 active.2
+  rw [source_data] at permission
+  have operands := wiring.valueOperandsBound_of_pullCurrencyG
+    (fun mp hmp => (currency mp hmp).2.2) before time
+  have sourceA := wiring.sourceAValueBound_of_pullCurrencyG
+    (fun mp hmp => (currency mp hmp).2.2) before time
+  have pulls := wiring.memoryPullsBound_of_pullCurrencyG
+    (fun mp hmp => (currency mp hmp).2.2) before time
+  have permitted := row.write_permittedAt checked.1.registered witness.data _ current.sail
+    active.2 (checked.1.chipSpec inputs) (ready current.sail operands sourceA pulls)
+    atPc operands checked.2 permission
   have notEcall := checked.2.notEcall configured atPc
   obtain ⟨_, _, fetched, _, _⟩ := checked.2
   have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member present atPc fetched
   exact ⟨⟨next, current.host, current.clock + Machine.ordinarySchedule.duration⟩,
-    .ordinary running notEcall effect.normal, effect⟩
+    .ordinary running notEcall effect.normal, effect, permitted⟩
 
 /-- Projection to normal retirement keeps the original instruction-step interface. -/
 theorem GroundingCarrier.instruction_step (valid : image.Valid)

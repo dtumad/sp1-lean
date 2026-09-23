@@ -361,6 +361,7 @@ import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.RefreshElimination
 import SP1Clean.Soundness.RefreshWiring
 import SP1Clean.Soundness.RomWriteProtection
+import SP1Clean.Soundness.InstructionWritePolicy
 import SP1Clean.Soundness.StoreWritePolicy
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.RowSoundness

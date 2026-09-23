@@ -2,6 +2,10 @@
 
 ## Native Clean core
 
+The [fork issues](https://github.com/dtumad/sp1-lean/issues) own current progress and next PRs;
+[#12](https://github.com/dtumad/sp1-lean/issues/12) tracks the semantic foundations batch.
+This document records the durable contract, proof boundaries, semantic findings, and acceptance gates.
+
 The capstone is a sound and complete native Clean AIR for **bounded local RISC-V execution
 segments**, with complete Sail/host boundaries and all eight concrete host calls. A segment can
 continue, halt, or be empty. Boot-to-HALT is an endpoint corollary. Instruction dispatch, physical
@@ -38,7 +42,7 @@ Faithfulness to the pinned SP1 Rust AIR is a separate theorem. Preserve the 25 w
 native ROM protection and host strengthening do not acquire upstream faithfulness automatically.
 The capstone does not prove a cryptographic verifier or acceptance of recursive-proof requests.
 
-## Current state
+## Proved surfaces and open boundaries
 
 | Surface | What is proved | Remaining boundary |
 |---|---|---|
@@ -46,7 +50,7 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
-| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction with the supplied optional exit, and the public Exit value for a newly halted endpoint | Complete supplied-target equality |
+| Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path with ordinary write permission, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction with the supplied optional exit, and the public Exit value for a newly halted endpoint | Complete supplied-target equality |
 | Memory endpoint | Complete final and untouched values, executable target comparison equivalent to every GPR and literal Sail RAM equality, native target-value checks, and a complete finite change inventory | Install the checks and enforce complete change coverage in the verifier |
 | Sail bookkeeping | The installed path preserves runtime/other registers and derives all three bookkeeping slots: source-controlled retirement count, increment flag, and nextPC from the semantic host suffix and final PC | Bind these observations to the supplied target |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
@@ -134,10 +138,12 @@ The native `Executes` contract now requires `ExecutionPath.WritesPermitted`, whi
 incoming state at every ordinary occurrence using the shared replay. Even a resource `Profile`
 of `True` cannot admit a same-value ROM store. Permission composes and splits at the actual
 complete boundary; empty identities and non-writing instructions remain permitted. The raw
-`ExecutionPath` is unchanged. Deriving this path-level predicate from the installed AIR,
-proving ROM preservation/fetch agreement on the independent semantic domain (including branch/JALR
-edges), and fixing the remaining free resource limits are still open. The four store adapters and
-installed prefix ROM theorem are components of those proofs, not substitutes for them.
+`ExecutionPath` is unchanged. `GroundingCarrier.writesPermitted` derives the policy from the
+installed mixed AIR at each actual incoming state; `source_execution_with_memory` retains it
+alongside all existing endpoint observations. The registry proof covers all 25 chips through
+their existing contracts and grounded readiness. ROM preservation/fetch agreement on the
+independent semantic domain (including branch/JALR edges), and the remaining free resource
+limits, are still open. Installed-AIR preservation does not discharge those semantic obligations.
 
 **Next boundary work:** bind the complete supplied outgoing snapshot to the already-derived
 Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks
@@ -235,8 +241,8 @@ those complete instance data later become succinct authenticated commitments is 
 - Retire duplicate scaffolding only after migrating consumers and preserving documented release claims. Preserve exact-Core
   contracts and old audited theorems unless an equivalent replacement is proved.
 
-The roadmap owns current status and next actions. Architecture owns module roles and trust
-boundaries; the verification report owns external claims and evidence. `AGENTS.md` supplies working
+The fork campaign issues own current status and next actions. This roadmap owns the durable
+contract and acceptance gates. Architecture owns module roles and trust boundaries; the verification report owns external claims and evidence. `AGENTS.md` supplies working
 rules, not a second progress log. Historical development details remain available in git history.
 
 ## Semantic findings to retain
@@ -298,8 +304,9 @@ scripts/run_audit.sh
 ```
 
 Require zero errors, warnings, stray `info:` notes, proof deferrals, kernel bypasses, and main-library
-`native_decide`. Add public declarations to the axiom inventory, independently review dependency
-changes, then regenerate committed snapshots from committed source. Final publication also needs
+`native_decide`. Run the [compiled-library trust policy](trust-policy.md) on current oleans and
+review the capstone contract manifest when its definitions change. Independently review dependency
+changes; adding ordinary declarations needs no trust registration or committed census update. Final publication also needs
 complete ensemble/witgen export checks, existing Rust dump/interpreter conformance, regeneration
 checks at unchanged pins, and fresh-build CI. The PR must state the actual theorem, native profile,
 trust base, and remaining exact/cryptographic work, linking the eight predecessor PRs.
