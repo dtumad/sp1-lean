@@ -149,7 +149,11 @@ The shared fetch/dispatch and retirement-tail proofs live below the circuits in
 `Model/Semantics/Sail{StepReduction,Fetch,Retirement}`. The existing chip bridges consume these
 same declarations. `ExecutionSourceValid.fetch_eq` identifies a committed current instruction
 with official Sail fetch from the complete realized source; it requires no successor fetch.
-The arbitrary-step preservation laws remain the next semantic proof obligation in #12.
+`SailArithmeticFrame.arithmetic_retire` constructs a normal retirement for all 13 arithmetic
+constructors, without a chip row, and preserves configuration and the entire byte map.
+`arithmetic_normal_frame` transfers that result to every actual arithmetic retirement by Sail
+determinism. The original chip bridges share the factored `SailArithmeticExecute` lemmas.
+Independent load/store/control-flow frames and the full path induction remain open in #12.
 
 `ExecutionPath.ordinaryHalt_trace` and `ordinaryHalt_trajectory` connect the complete path to the
 legacy fixed-handler view over the ordinary/HALT fragment. The installed AIR's

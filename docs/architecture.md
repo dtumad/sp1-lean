@@ -253,6 +253,13 @@ namespaces are retained, and `Proofs/Sail/Advance` consumes them to construct ch
 importing chip rows. This does not yet prove configuration or ROM preservation for every arbitrary
 supported semantic step; those laws must consume normal retirement and decoded write permission.
 
+`SailArithmeticExecute` holds the shared official execute reductions for the 13 arithmetic
+constructors, still consumed by the existing chip bridges. `SailArithmeticFrame` constructs their
+normal retirements directly from configured state, loaded ROM and authenticated decoding, and
+proves configuration and complete-memory preservation for any actual arithmetic retirement.
+Its constructor classification is a proof helper, not a replacement for native opcode support.
+Loads, stores, branches and jumps still require their own independent semantic frame laws.
+
 `ExecutionSnapshot` is the finite representation of the whole boundary: every Sail register and
 its presence, sparse RAM, runtime counter/output, complete host state, and clock. Its executable
 comparison is proved equivalent to literal equality of realized states. `MemorySnapshot` is only

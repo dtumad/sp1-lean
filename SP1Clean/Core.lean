@@ -165,6 +165,8 @@ import SP1Clean.Model.Semantics.ImageContent
 import SP1Clean.Model.Semantics.InstructionPlan
 import SP1Clean.Model.Semantics.MicroTime
 import SP1Clean.Model.Semantics.ProgramCommitment
+import SP1Clean.Model.Semantics.SailArithmeticExecute
+import SP1Clean.Model.Semantics.SailArithmeticFrame
 import SP1Clean.Model.Semantics.SailFetch
 import SP1Clean.Model.Semantics.SailRetirement
 import SP1Clean.Model.Semantics.SailStepReduction
