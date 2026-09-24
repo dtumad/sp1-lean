@@ -174,9 +174,10 @@ theorem rejectsUnboundSource :
 /-- Platform configuration is checked even when the affected register is untouched by the row. -/
 theorem rejectsInvalidPlatform :
     [check image { source with sail.registers := source.sail.registers.insert .misa 0 } publicInput baseRows,
+     check image { source with sail.registers := source.sail.registers.insert .misa 4100 } publicInput baseRows,
      check image { source with sail.registers := source.sail.registers.insert .mstatus 8 } publicInput baseRows,
      check image { source with sail.registers := source.sail.registers.erase .pma_regions } publicInput baseRows] =
-      [false, false, false] := by native_decide
+      [false, false, false, false] := by native_decide
 
 /-- ROM agreement is enforced even when no source/final RAM row reads the changed code byte. -/
 theorem checksUntouchedRom :

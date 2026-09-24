@@ -4831,6 +4831,13 @@
       "typeFingerprint": "3931117990"
     },
     {
+      "bodyFingerprint": "1017700228",
+      "local": false,
+      "module": "LeanRV64D.PlatformConfig",
+      "name": "LeanRV64D.Functions._get_Misa_C",
+      "typeFingerprint": "2225856330"
+    },
+    {
       "bodyFingerprint": "514175364",
       "local": false,
       "module": "LeanRV64D.PlatformConfig",
@@ -8174,7 +8181,7 @@
       "local": true,
       "module": "SP1Clean.Model.Semantics.GuestProgram",
       "name": "SP1Clean.Soundness.Target.SailConfigured.mk",
-      "typeFingerprint": "2343827788"
+      "typeFingerprint": "4132366448"
     },
     {
       "bodyFingerprint": "4218663169",

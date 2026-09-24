@@ -150,6 +150,7 @@ theorem cfgState_configured (pc : BitVec 64) : SailConfigured (configuredState p
            exact (by decide :
              (default : RegisterType Register.pmpcfg_n) = Vector.replicate 64 0#8)
          misa_m := by rw [cfgState_misa pc _]; decide
+         misa_c_disabled := by rw [cfgState_misa pc _]; decide
          pma_regions := cfgState_pma pc _ }
 
 /-- Every `x`-register index maps away from the four registers `configuredState` overrides. -/

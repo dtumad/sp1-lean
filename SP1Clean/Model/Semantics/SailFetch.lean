@@ -169,6 +169,7 @@ theorem SailConfigured.writeMinstret {s : SailState} (cfg : SailConfigured s) (b
   htif_disabled := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.htif_disabled
   pmp_off := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.pmp_off
   misa_m := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.misa_m
+  misa_c_disabled := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.misa_c_disabled
   pma_regions := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.pma_regions
 
 /-- **`SailConfigured` transfers along a config-register frame.** A state `sf` that is initialized and agrees
@@ -197,7 +198,19 @@ theorem SailConfigured.congr {sf s : SailState} (cfg : SailConfigured s) (hinit 
       htif_disabled := by rw [hget Register.htif_tohost_base (hinit _) (hf _ (by tauto))]; exact cfg.htif_disabled
       pmp_off := by rw [hget Register.pmpcfg_n (hinit _) (hf _ (by tauto))]; exact cfg.pmp_off
       misa_m := by rw [hget Register.misa (hinit _) (hf _ (by tauto))]; exact cfg.misa_m
+      misa_c_disabled := by rw [hget Register.misa (hinit _) (hf _ (by tauto))]; exact cfg.misa_c_disabled
       pma_regions := by rw [hget Register.pma_regions (hinit _) (hf _ (by tauto))]; exact cfg.pma_regions }
+
+/-- The native platform disables the compressed-instruction mode consulted by Sail jump alignment.
+The generated model supports C/Zca, so this follows from the checked CSR, not a constant platform hook. -/
+theorem currentlyEnabled_zca_eq_false (source : SailState) (cfg : SailConfigured source) :
+    (currentlyEnabled .Ext_Zca).run source = .ok false source := by
+  have supportsC : hartSupports .Ext_C = true := by
+    simp [hartSupports, LeanRV64D.Functions.xlen, LeanRV64D.Functions.not]
+  simp only [currentlyEnabled,
+    show hartSupports .Ext_Zca = true by simp [hartSupports], supportsC, bind_assoc, pure_bind]
+  rw [run_bind_of_run source _ _ (Sail.run_readReg_of_isInitialized source Register.misa cfg.init)]
+  simp [cfg.misa_c_disabled, LeanRV64D.Functions.not]
 
 /-- Actual Sail fetch returns the authenticated committed word without changing state. This
 requires a fetch only at the current executed PC, never at a successor or terminal boundary. -/

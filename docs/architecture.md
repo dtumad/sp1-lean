@@ -260,6 +260,12 @@ proves configuration and complete-memory preservation for any actual arithmetic 
 Its constructor classification is a proof helper, not a replacement for native opcode support.
 Loads, stores, branches and jumps still require their own independent semantic frame laws.
 
+The native configuration fixes `misa.M = 1` and `misa.C = 0`. The latter is an intentional platform
+restriction: the pinned generated Sail model supports C/Zca, and jump alignment depends on the
+source CSR even when the ROM contains only full-width instructions. The existing complete-source
+check enforces it in both the semantic domain and the installed local AIR verifier; it is not a
+caller-supplied control-flow premise. Boot and configuration-frame proofs preserve the condition.
+
 `ExecutionSnapshot` is the finite representation of the whole boundary: every Sail register and
 its presence, sparse RAM, runtime counter/output, complete host state, and clock. Its executable
 comparison is proved equivalent to literal equality of realized states. `MemorySnapshot` is only

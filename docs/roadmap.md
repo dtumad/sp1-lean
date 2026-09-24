@@ -155,6 +155,13 @@ constructors, without a chip row, and preserves configuration and the entire byt
 determinism. The original chip bridges share the factored `SailArithmeticExecute` lemmas.
 Independent load/store/control-flow frames and the full path induction remain open in #12.
 
+The native platform must also exclude compressed **alignment mode**, not just compressed words.
+`SailConfigured.misa_c_disabled` fixes `misa.C = 0`; `currentlyEnabled_zca_eq_false` proves the
+official Sail query returns false. Source validation enforces this condition for active, empty
+and stopped boundaries, and the installed local AIR rejects the formerly accepted `misa.M = 1,
+misa.C = 1` mutation. This is the documented compressed-ISA exclusion made explicit, not a temporary
+readiness assumption. The capstone definition manifest records the stronger configuration.
+
 `ExecutionPath.ordinaryHalt_trace` and `ordinaryHalt_trajectory` connect the complete path to the
 legacy fixed-handler view over the ordinary/HALT fragment. The installed AIR's
 `source_execution_ordinaryHalt` derives that trace from `source_execution` and retains its complete
