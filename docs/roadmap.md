@@ -153,7 +153,11 @@ with official Sail fetch from the complete realized source; it requires no succe
 constructors, without a chip row, and preserves configuration and the entire byte map.
 `arithmetic_normal_frame` transfers that result to every actual arithmetic retirement by Sail
 determinism. The original chip bridges share the factored `SailArithmeticExecute` lemmas.
-Independent load/store/control-flow frames and the full path induction remain open in #12.
+`SailControlFrame.control_normal_frame` covers JAL, JALR and all six branch conditions by
+recovering the actual direct execute result from normal retirement. It adds no alignment or
+successor-fetch premise. `SailExecuteFrame` shares configuration, operand-observation and
+retirement composition across both families; the chip bridges also share `SailControlExecute`.
+Independent load/store frames and the full path induction remain open in #12.
 
 The native platform must also exclude compressed **alignment mode**, not just compressed words.
 `SailConfigured.misa_c_disabled` fixes `misa.C = 0`; `currentlyEnabled_zca_eq_false` proves the

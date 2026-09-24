@@ -257,8 +257,13 @@ supported semantic step; those laws must consume normal retirement and decoded w
 constructors, still consumed by the existing chip bridges. `SailArithmeticFrame` constructs their
 normal retirements directly from configured state, loaded ROM and authenticated decoding, and
 proves configuration and complete-memory preservation for any actual arithmetic retirement.
-Its constructor classification is a proof helper, not a replacement for native opcode support.
-Loads, stores, branches and jumps still require their own independent semantic frame laws.
+`SailControlExecute` supplies the same shared boundary for JAL, JALR and BTYPE. Their frame theorem
+recovers the actual execute result from normal retirement, so it needs neither a separately
+assumed jump alignment nor a fetch at the outgoing boundary. All six branch conditions, discarded
+links and JALR masking are covered. `SailExecuteFrame` owns the shared configuration frames,
+observed-register composition and retirement inversion used by these semantic proofs. The
+constructor classifications are proof helpers, not replacements for native opcode support.
+Loads and stores still require their independent semantic frame laws.
 
 The native configuration fixes `misa.M = 1` and `misa.C = 0`. The latter is an intentional platform
 restriction: the pinned generated Sail model supports C/Zca, and jump alignment depends on the

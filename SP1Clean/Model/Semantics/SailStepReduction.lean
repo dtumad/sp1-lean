@@ -105,12 +105,20 @@ structure StraightLineReady (s : SailState) (w : BitVec 32) : Prop where
 /-- **The lift-bind law** (the master peel): a `liftM m`-prefixed `PreSail.PreSailME.run` do-block runs `m` first
 (threading its state change), then continues with `PreSail.PreSailME.run ∘ k` on the value — for ANY `SailM` action
 `m`, state-preserving or not (so it peels the state-changing `writeReg`/`execute` tail too). -/
-theorem run_SailME_liftM_bind {β : Type} (m : SailM β) (k : β → SailME Step Step) :
-    PreSail.PreSailME.run (liftM m >>= k) = (m >>= fun a => PreSail.PreSailME.run (k a) : SailM Step) := by
+theorem run_SailME_liftM_bind {α β : Type} (m : SailM α) (k : α → SailME β β) :
+    PreSail.PreSailME.run (liftM m >>= k) = (m >>= fun a => PreSail.PreSailME.run (k a) : SailM β) := by
   funext s
   simp only [PreSail.PreSailME.run, ExceptT.run, ExceptT.mk, ExceptT.bindCont,
     ExceptT.bind, ExceptT.lift, ExceptT.map, Functor.map, Except.map, MonadLift.monadLift,
     liftM, monadLift, bind, EStateM.bind, EStateM.run, EStateM.map]
+  cases m s <;> rfl
+
+/-- Running a lifted Sail action introduces no extra return or state behavior. -/
+theorem run_SailME_liftM {α : Type} (m : SailM α) :
+    PreSail.PreSailME.run (liftM m : SailME α α) = m := by
+  funext s
+  simp only [PreSail.PreSailME.run, ExceptT.run, ExceptT.mk, ExceptT.lift,
+    Functor.map, MonadLift.monadLift, liftM, monadLift, bind, EStateM.bind, EStateM.map]
   cases m s <;> rfl
 
 /-- Peel a trailing `PreSail.PreSailME.run (pure a)` to the `SailM` `pure a` (no throw, no state change). -/
