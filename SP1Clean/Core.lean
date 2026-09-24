@@ -171,8 +171,15 @@ import SP1Clean.Model.Semantics.SailControlExecute
 import SP1Clean.Model.Semantics.SailControlFrame
 import SP1Clean.Model.Semantics.SailExecuteFrame
 import SP1Clean.Model.Semantics.SailFetch
+import SP1Clean.Model.Semantics.SailInstructionFrame
+import SP1Clean.Model.Semantics.SailLoadFrame
+import SP1Clean.Model.Semantics.SailMemoryRead
+import SP1Clean.Model.Semantics.SailMemorySplit
+import SP1Clean.Model.Semantics.SailMemoryWrite
+import SP1Clean.Model.Semantics.SailReadOnly
 import SP1Clean.Model.Semantics.SailRetirement
 import SP1Clean.Model.Semantics.SailStepReduction
+import SP1Clean.Model.Semantics.SailStoreFrame
 import SP1Clean.Model.Semantics.TransitionDecode
 import SP1Clean.Model.Semantics.TransitionView
 import SP1Clean.Model.Semantics.Truth

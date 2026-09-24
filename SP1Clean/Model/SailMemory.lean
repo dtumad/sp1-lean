@@ -496,7 +496,7 @@ constructs such a term. `Model/Semantics/SailStepReduction.lean` carries the sam
 -/
 
 /-- Peel one `SailME` bind whose first block succeeds with value `a` at state `s'`. -/
-private theorem run_ME_bind_ok {γ α β : Type} (m : SailME γ α) (k : α → SailME γ β)
+theorem run_ME_bind_ok {γ α β : Type} (m : SailME γ α) (k : α → SailME γ β)
     (s s' : SailState) (a : α)
     (h : EStateM.run (ExceptT.run m) s = .ok (.ok a) s') :
     EStateM.run (ExceptT.run (m >>= k)) s = EStateM.run (ExceptT.run (k a)) s' := by
@@ -505,7 +505,7 @@ private theorem run_ME_bind_ok {γ α β : Type} (m : SailME γ α) (k : α → 
   rw [h]
 
 /-- A `liftM`-ed state-threading `SailM` action succeeds in the `SailME` layer. -/
-private theorem run_ME_liftM {γ β : Type} (m : SailM β) (s s' : SailState) (a : β)
+theorem run_ME_liftM {γ β : Type} (m : SailM β) (s s' : SailState) (a : β)
     (h : EStateM.run m s = .ok a s') :
     EStateM.run (ExceptT.run (liftM m : SailME γ β)) s = .ok (.ok a) s' := by
   simp only [ExceptT.run, ExceptT.mk, ExceptT.lift, ExceptT.map, MonadLift.monadLift, liftM,
@@ -513,7 +513,7 @@ private theorem run_ME_liftM {γ β : Type} (m : SailM β) (s s' : SailState) (a
   rw [h]
 
 /-- A `pure` in the `SailME` layer. -/
-private theorem run_ME_pure {γ β : Type} (a : β) (s : SailState) :
+theorem run_ME_pure {γ β : Type} (a : β) (s : SailState) :
     EStateM.run (ExceptT.run (pure a : SailME γ β)) s = .ok (.ok a) s := rfl
 
 /-- `pure` up to a proved equation on the value. The split loop re-`setWidth`s its payload at three
@@ -524,7 +524,7 @@ private theorem run_ME_pure' {γ β : Type} (a b : β) (s : SailState) (h : a = 
   subst h; rfl
 
 /-- Close a `PreSailME.run` whose body succeeded: the `.ok` arm of `PreSailME.run`'s match. -/
-private theorem run_PreSailME_of_ok {γ : Type} (m : SailME γ γ) (s s' : SailState) (a : γ)
+theorem run_PreSailME_of_ok {γ : Type} (m : SailME γ γ) (s s' : SailState) (a : γ)
     (h : EStateM.run (ExceptT.run m) s = .ok (.ok a) s') :
     EStateM.run (PreSail.PreSailME.run m) s = .ok a s' := by
   simp only [PreSail.PreSailME.run, bind, EStateM.bind, EStateM.run, pure, EStateM.pure] at h ⊢
@@ -710,7 +710,7 @@ away: `sys_pmp_count` is the stock `16`. Instead every entry is OFF by the state
 instructions at all — its disassembler maps every `process_csrr*` to `Instruction::unimp()`. Each
 iteration then takes `pmpMatchAddr`'s `.OFF` arm and yields with the state untouched, the walk is
 discharged by `run_ME_loop_const`, and the no-match tail returns `none` at `Machine`. -/
-private lemma run_pmpCheck_none (paddr : physaddr) (width : ℕ)
+lemma run_pmpCheck_none (paddr : physaddr) (width : ℕ)
     (access : MemoryAccessType mem_payload) (s : SailState) (hs : SailState.isInitialized s)
     (h_pmp : s.regs.get Register.pmpcfg_n (hs _) = Vector.replicate 64 0#8) :
     (pmpCheck paddr width access Privilege.Machine).run s = .ok none s := by
@@ -768,7 +768,7 @@ private lemma updateSubrange_full {w hi lo : ℕ} (x : BitVec w) (y : BitVec (hi
 
 /-- With `mstatus.MPRV` clear, `effectivePrivilege` is the current privilege for any non-fetch
 access — SP1 runs in Machine mode throughout. -/
-private lemma run_effectivePrivilege_of_mprv_clear (access : MemoryAccessType mem_payload)
+lemma run_effectivePrivilege_of_mprv_clear (access : MemoryAccessType mem_payload)
     (mst : BitVec 64) (priv : Privilege) (s : SailState)
     (hmprv : Sail.BitVec.extractLsb mst 17 17 = 0#1) :
     (effectivePrivilege access mst priv).run s = .ok priv s := by
@@ -1323,7 +1323,7 @@ private lemma vmem_len_eq (width : ℕ) (hw : 0 < width) :
   omega
 
 /-- In Machine mode `translationMode` short-circuits to `Bare` without reading `satp`. -/
-private lemma run_translationMode_machine (s : SailState) :
+lemma run_translationMode_machine (s : SailState) :
     (translationMode Privilege.Machine).run s = .ok SATPMode.Bare s := rfl
 
 /-- Scaffolding of `vmem_read_addr` under SP1's config. Translation is `Bare`, so `do_split_access`
@@ -1383,7 +1383,7 @@ private lemma run_vmem_read_addr_aligned (vaddr_val : BitVec 64) (e width : ℕ)
 and adds the immediate, and `transform_effective_address` is the identity under SP1's config.
 Despite the `_load` name this lemma is **access-generic** (any non-fetch, non-page-table-entry
 access) and is used on both the load and store paths below. -/
-private lemma run_get_transformed_data_addr_load (rs_addr_bv : BitVec 5)
+lemma run_get_transformed_data_addr_load (rs_addr_bv : BitVec 5)
     (reg_val offset : BitVec 64) (width : ℕ) (access : MemoryAccessType mem_payload)
     (h_acc : (access != MemoryAccessType.InstructionFetch ()) = true)
     (h_acc2 : (access != MemoryAccessType.Load mem_payload.PageTableEntry) = true)
@@ -1404,7 +1404,7 @@ private lemma run_get_transformed_data_addr_load (rs_addr_bv : BitVec 5)
   · exact (run_bind_eq _ _ s s (virtaddr.Virtaddr (reg_val + offset)) htrans).trans rfl
 
 /-- `translateAddr` on the load path. Same Bare-mode short-circuit as the fetch version above. -/
-private lemma run_translateAddr_load_of_isInitialized
+lemma run_translateAddr_load_of_isInitialized
     (addr : BitVec 64) (s : SailState) (hs : SailState.isInitialized s)
     (hconfig : SailState.isValidMemConfig s hs) :
     (translateAddr (virtaddr.Virtaddr addr) (MemoryAccessType.Load mem_payload.Data)).run s
@@ -1448,7 +1448,7 @@ private lemma run_translate_and_read_value_load (addr : BitVec 64) (width : ℕ)
   exact (run_bind_eq _ _ s s (Result.Ok v) h_mem_read).trans rfl
 
 /-- `translateAddr` on the store path. -/
-private lemma run_translateAddr_store_of_isInitialized
+lemma run_translateAddr_store_of_isInitialized
     (addr : BitVec 64) (s : SailState) (hs : SailState.isInitialized s)
     (hconfig : SailState.isValidMemConfig s hs) :
     (translateAddr (virtaddr.Virtaddr addr) (MemoryAccessType.Store mem_payload.Data)).run s

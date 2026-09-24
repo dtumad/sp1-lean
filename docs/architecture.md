@@ -250,8 +250,8 @@ use paired replay, with the returned host state passed to the next call.
 official-Sail reduction, fetch, configuration-transport, and retirement-tail lemmas. Their existing
 namespaces are retained, and `Proofs/Sail/Advance` consumes them to construct chip row effects.
 `Model/Core/InstructionFetch` applies actual fetch agreement at checked finite boundaries without
-importing chip rows. This does not yet prove configuration or ROM preservation for every arbitrary
-supported semantic step; those laws must consume normal retirement and decoded write permission.
+importing chip rows. The independent one-step frames consume normal retirement and decoded write
+permission; whole-path ROM preservation is the remaining induction over the existing execution path.
 
 `SailArithmeticExecute` holds the shared official execute reductions for the 13 arithmetic
 constructors, still consumed by the existing chip bridges. `SailArithmeticFrame` constructs their
@@ -261,9 +261,17 @@ proves configuration and complete-memory preservation for any actual arithmetic 
 recovers the actual execute result from normal retirement, so it needs neither a separately
 assumed jump alignment nor a fetch at the outgoing boundary. All six branch conditions, discarded
 links and JALR masking are covered. `SailExecuteFrame` owns the shared configuration frames,
-observed-register composition and retirement inversion used by these semantic proofs. The
+observed-register/memory composition and retirement inversion used by these semantic proofs. The
 constructor classifications are proof helpers, not replacements for native opcode support.
-Loads and stores still require their independent semantic frame laws.
+`SailReadOnly` supplies state frames for actual Sail actions and bounded early-return loops.
+`SailMemoryRead` proves that physical checks, loads and store-address validation preserve state;
+`SailMemorySplit` derives exact split geometry and non-wrapping bounds from the executed checks;
+`SailMemoryWrite` composes protected-byte/register frames through the actual physical write loop.
+`SailLoadFrame` and `SailStoreFrame` carry these results through virtual accesses and retirement,
+without assuming alignment or address readiness. `SailInstructionFrame.ordinary_normal_frame`
+dispatches through the authoritative instruction routing projection to combine all four families.
+It preserves configuration and every byte selected by the existing decoded write policy, including
+absence of a byte; it neither constructs chip rows nor redefines instruction support.
 
 The native configuration fixes `misa.M = 1` and `misa.C = 0`. The latter is an intentional platform
 restriction: the pinned generated Sail model supports C/Zca, and jump alignment depends on the
