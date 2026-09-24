@@ -933,6 +933,9 @@ theorem configuredState_sailConfigured (pc : BitVec 64) : SailConfigured (config
   misa_m := by
     rw [cfgState_misa pc _]
     decide
+  misa_c_disabled := by
+    rw [cfgState_misa pc _]
+    decide
   pma_regions := cfgState_pma pc _
 
 /-- The enriched state keeps the register-only configuration (the memory update is invisible to
@@ -951,6 +954,7 @@ theorem anchorState_configured : SailConfigured anchorState :=
     htif_disabled := base.htif_disabled
     pmp_off := base.pmp_off
     misa_m := base.misa_m
+    misa_c_disabled := base.misa_c_disabled
     pma_regions := base.pma_regions }
 
 /-- The committed ROM's bytes are loaded in the witness state, little-endian. -/

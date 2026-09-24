@@ -116,6 +116,9 @@ structure SailConfigured (s : SailState) : Prop where
   row — the silent-vacuity hazard the external PR110 report's Finding 3 warns about, found real
   for this family and closed by this field (2026-08-20). -/
   misa_m : _get_Misa_M (s.regs.get Register.misa (init _)) = 1#1
+  /-- Fixed four-byte instruction alignment (`IALIGN=32`). The native profile excludes compressed
+  execution, including its relaxed jump alignment, so the source must disable `misa.C`. -/
+  misa_c_disabled : _get_Misa_C (s.regs.get Register.misa (init _)) = 0#1
   /-- The single fixed SP1 PMA region (bare translation) — the fetch/load address decode. -/
   pma_regions : s.regs.get Register.pma_regions (init _) = [SailMem.SP1_PMA_Region]
 

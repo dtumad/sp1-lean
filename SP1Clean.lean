@@ -191,7 +191,6 @@ import SP1Clean.Proofs.Sail.InstructionDecode
 import SP1Clean.Proofs.Sail.InstructionDecode.Families
 import SP1Clean.Proofs.Sail.InstructionDecode.Tactic
 import SP1Clean.Proofs.Sail.RV64Bridge
-import SP1Clean.Proofs.Sail.TryStepReduction
 import SP1Clean.Soundness.AIR
 import SP1Clean.Soundness.AIRCompleteness
 import SP1Clean.Soundness.AlignedCarrier
@@ -361,6 +360,7 @@ import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.RefreshElimination
 import SP1Clean.Soundness.RefreshWiring
 import SP1Clean.Soundness.RomWriteProtection
+import SP1Clean.Soundness.InstructionWritePolicy
 import SP1Clean.Soundness.StoreWritePolicy
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.RowSoundness

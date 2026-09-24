@@ -24,7 +24,7 @@ must not be relabelled as intentional exclusions merely to close a theorem.
 | Classification | Behavior and enforcement | Exit criterion / owner |
 |---|---|---|
 | Intentional profile exclusion | Dynamic SP1 `mprotect`, user-mode/trap tables, precompiles, and optional retention clusters are absent from `CoreProfile`; extraction checks that Cargo does not enable `mprotect`. | Separate profiles and whole-table refinement, outside the first capstone. Native immutable-ROM protection is a different mechanism. |
-| Intentional ISA exclusion | `InstructionDecode.decode` selects the supported 32-bit integer/M encodings and ECALL. Compressed, atomic, floating/vector, privileged and trapping execution are outside this profile. | An explicit decoder/semantic/circuit extension; never infer full RV64IM coverage from the 25 chip families. |
+| Intentional ISA exclusion | `InstructionDecode.decode` selects the supported 32-bit integer/M encodings and ECALL. `SailConfigured` requires `misa.C = 0`, fixing four-byte instruction alignment even at arbitrary local boundaries. Compressed, atomic, floating/vector, privileged and trapping execution are outside this profile. | An explicit decoder/semantic/circuit extension; never infer full RV64IM coverage from the 25 chip families. |
 | Platform and resource policy | Configured Sail machine mode, immutable checked ROM, aligned accesses, 48-bit native address/clock space, and finite field/host capacities. SP1's trusted/supervisor profile is not Sail Supervisor privilege. | State every bound in the concrete semantic profile and derive/check it in the AIR; capacities must not be defined by compiler success. |
 | Temporary decoder limitation | Enabled Zicbop/Zihintntl encodings that overlap integer no-ops are rejected by `reservedHint`, because Sail selects distinct constructors. | Prove those constructors' bridges and extend the decoder/profile explicitly (campaign B). |
 | Temporary SP1 compatibility restriction | Native syscall decoding requires canonical full 64-bit words. Rust dispatches on the low 32 bits; executor return normalization and AIR raw-word preservation need separate comparison. | A proved executor/AIR compatibility domain or a changed native syscall adapter, with alias regressions (campaign A's exact-refinement follow-up). |
@@ -35,7 +35,7 @@ must not be relabelled as intentional exclusions merely to close a theorem.
 
 The code authorities are `Model/Core/{InstructionDecode,Execution,HostExecution,SyscallCode}`,
 `Model/Core/SourceExecution`, `FormalModel/{Shard,CoreProfile}`, and `update_extracted.py`'s
-`verify_no_mprotect`. [The roadmap](roadmap.md) owns progress; this table owns the meaning of each
+`verify_no_mprotect`. [The fork campaigns](https://github.com/dtumad/sp1-lean/issues) own progress; this table owns the meaning of each
 restriction. Complete finite source/target snapshots are public instance data in the native
 statement, even when only a bounded canonical header occupies the field-valued public input.
 

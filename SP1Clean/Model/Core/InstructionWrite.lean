@@ -38,6 +38,16 @@ def check (readOnly : ℕ → Bool) (register : BitVec 5 → Option (BitVec 64))
   | some spans => spans.all fun span =>
       (List.range span.length).all fun offset => !readOnly (span.address + offset)
 
+/-- A supported non-store has no memory writes and needs no register observations for permission. -/
+theorem check_of_nonstore (readOnly : ℕ → Bool) (register : BitVec 5 → Option (BitVec 64))
+    (decoded : instruction) (valid : instructionImageOK decoded = true)
+    (routed : (instructionRouteId decoded).isSome = true)
+    (nonstore : ∀ offset rs2 rs1 width, decoded ≠ .STORE (offset, rs2, rs1, width)) :
+    check readOnly register decoded = true := by
+  unfold check spans?
+  simp only [valid, routed, Bool.and_self, ↓reduceIte]
+  rfl
+
 /-- Permission is exactly successful footprint extraction plus byte-level exclusion. -/
 theorem check_iff (readOnly : ℕ → Bool) (register : BitVec 5 → Option (BitVec 64))
     (decoded : instruction) :

@@ -76,7 +76,7 @@ open Sail LeanRV64D SP1Clean.Soundness.Target
 /-- Platform configuration depends only on registers; replacing memory preserves all its facts. -/
 theorem configured_with_memory {state : SailState} (configured : SailConfigured state)
     (memory : Std.ExtHashMap ℕ (BitVec 8)) : SailConfigured { state with mem := memory } := by
-  rcases configured with ⟨a, b, c, d, e, f, g, h, i, j, k, l, m⟩
-  exact ⟨a, b, c, d, e, f, g, h, i, j, k, l, m⟩
+  rcases configured with ⟨a, b, c, d, e, f, g, h, i, j, k, l, m, n⟩
+  exact ⟨a, b, c, d, e, f, g, h, i, j, k, l, m, n⟩
 
 end SP1Clean.Model.Core

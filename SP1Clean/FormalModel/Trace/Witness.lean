@@ -75,6 +75,7 @@ theorem isInitialState_nonvacuous_loaded :
           htif_disabled := (cfgState_configured 65536#64).htif_disabled
           pmp_off := (cfgState_configured 65536#64).pmp_off
           misa_m := (cfgState_configured 65536#64).misa_m
+          misa_c_disabled := (cfgState_configured 65536#64).misa_c_disabled
           pma_regions := (cfgState_configured 65536#64).pma_regions } },
     registersZero_configuredState 65536#64⟩
   · intro a w hf i

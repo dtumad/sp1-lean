@@ -82,10 +82,11 @@ import SP1Clean.Model.Core.BankReplay
 import SP1Clean.Model.Core.Boot
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionBoot
+import SP1Clean.Model.Core.ExecutionCompatibility
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.ExecutionWritePolicy
 import SP1Clean.Model.Core.ExecutionSnapshot
+import SP1Clean.Model.Core.ExecutionWritePolicy
 import SP1Clean.Model.Core.HintQueue
 import SP1Clean.Model.Core.HintQueueEvent
 import SP1Clean.Model.Core.HintQueueRecords
@@ -105,6 +106,7 @@ import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.HostTerminal
 import SP1Clean.Model.Core.InstructionBytes
 import SP1Clean.Model.Core.InstructionDecode
+import SP1Clean.Model.Core.InstructionFetch
 import SP1Clean.Model.Core.InstructionWrite
 import SP1Clean.Model.Core.Memory
 import SP1Clean.Model.Core.MemoryEquality
@@ -163,6 +165,14 @@ import SP1Clean.Model.Semantics.ImageContent
 import SP1Clean.Model.Semantics.InstructionPlan
 import SP1Clean.Model.Semantics.MicroTime
 import SP1Clean.Model.Semantics.ProgramCommitment
+import SP1Clean.Model.Semantics.SailArithmeticExecute
+import SP1Clean.Model.Semantics.SailArithmeticFrame
+import SP1Clean.Model.Semantics.SailControlExecute
+import SP1Clean.Model.Semantics.SailControlFrame
+import SP1Clean.Model.Semantics.SailExecuteFrame
+import SP1Clean.Model.Semantics.SailFetch
+import SP1Clean.Model.Semantics.SailRetirement
+import SP1Clean.Model.Semantics.SailStepReduction
 import SP1Clean.Model.Semantics.TransitionDecode
 import SP1Clean.Model.Semantics.TransitionView
 import SP1Clean.Model.Semantics.Truth

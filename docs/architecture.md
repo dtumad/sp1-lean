@@ -226,8 +226,9 @@ The native shard capstone targets arbitrary bounded local paths, with complete i
 outgoing Sail/host states. `FormalModel/Shard.lean` fixes the execution spine;
 `Soundness/Shard/Contract.lean` gives checked AIR soundness and constructive-compiler target types
 using the existing `CompleteEnsemble` and `EnsembleCompiler`. The concrete resource profile and
-instances remain open. Current proof scope and implementation order are maintained in
-[the roadmap](roadmap.md), rather than repeated as a module-by-module progress log here.
+instances remain open. Current progress and implementation order are maintained in the
+[fork campaign issues](https://github.com/dtumad/sp1-lean/issues); [the roadmap](roadmap.md)
+records the durable contract and acceptance gates.
 
 ### Semantic ownership
 
@@ -237,6 +238,38 @@ and clock. `ExecutionPath` composes those steps and supplies split/join and Poly
 normally in eight ticks; each host call takes 264 ticks. HALT is an actual transition that sets
 host exit status. A stopped source permits only an empty identity. Padding never becomes a step.
 `ExecutionBoot` specializes the same semantics at boot/HALT endpoints.
+
+`ExecutionCompatibility` projects complete ordinary/HALT paths to the existing fixed-handler
+`EventExecutionTrace`, preserving the event tape, Sail endpoint and local clock. The installed
+source-execution theorem exposes that projection through `source_execution_ordinaryHalt`.
+Trajectory agreement includes all covered boundaries; after the tape, the legacy trajectory
+returns `none` while complete replay holds its endpoint. Arbitrary mixed host calls continue to
+use paired replay, with the returned host state passed to the next call.
+
+`Model/Semantics/SailStepReduction`, `SailFetch`, and `SailRetirement` own the circuit-independent
+official-Sail reduction, fetch, configuration-transport, and retirement-tail lemmas. Their existing
+namespaces are retained, and `Proofs/Sail/Advance` consumes them to construct chip row effects.
+`Model/Core/InstructionFetch` applies actual fetch agreement at checked finite boundaries without
+importing chip rows. This does not yet prove configuration or ROM preservation for every arbitrary
+supported semantic step; those laws must consume normal retirement and decoded write permission.
+
+`SailArithmeticExecute` holds the shared official execute reductions for the 13 arithmetic
+constructors, still consumed by the existing chip bridges. `SailArithmeticFrame` constructs their
+normal retirements directly from configured state, loaded ROM and authenticated decoding, and
+proves configuration and complete-memory preservation for any actual arithmetic retirement.
+`SailControlExecute` supplies the same shared boundary for JAL, JALR and BTYPE. Their frame theorem
+recovers the actual execute result from normal retirement, so it needs neither a separately
+assumed jump alignment nor a fetch at the outgoing boundary. All six branch conditions, discarded
+links and JALR masking are covered. `SailExecuteFrame` owns the shared configuration frames,
+observed-register composition and retirement inversion used by these semantic proofs. The
+constructor classifications are proof helpers, not replacements for native opcode support.
+Loads and stores still require their independent semantic frame laws.
+
+The native configuration fixes `misa.M = 1` and `misa.C = 0`. The latter is an intentional platform
+restriction: the pinned generated Sail model supports C/Zca, and jump alignment depends on the
+source CSR even when the ROM contains only full-width instructions. The existing complete-source
+check enforces it in both the semantic domain and the installed local AIR verifier; it is not a
+caller-supplied control-flow premise. Boot and configuration-frame proofs preserve the condition.
 
 `ExecutionSnapshot` is the finite representation of the whole boundary: every Sail register and
 its presence, sparse RAM, runtime counter/output, complete host state, and clock. Its executable

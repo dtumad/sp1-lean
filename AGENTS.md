@@ -75,7 +75,8 @@ and the existing decoder, routing, access plans, and compiler. The older `CoreSh
 is a legacy ordinary/exact-Core view, not a second full-state model. Keep the native profile's
 ROM/host strengthening separate from the unchanged 25 whole-chip Rust faithfulness anchors.
 
-Current proof scope, the next obligation, durable semantic findings, and acceptance gates live in
+Current progress and the next obligations live in the [fork campaign issues](https://github.com/dtumad/sp1-lean/issues),
+primarily #12 and #16. The durable contract, semantic findings, and acceptance gates live in
 [docs/roadmap.md](docs/roadmap.md); module ownership and trust boundaries live in
 [docs/architecture.md](docs/architecture.md) and [docs/layering.md](docs/layering.md).
 Update that status in one place rather than appending a development log here. The full mixed

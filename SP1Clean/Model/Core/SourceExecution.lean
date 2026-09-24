@@ -30,16 +30,17 @@ private instance (state : SailState) : Decidable (SailConfigured state) :=
        state.regs.get Register.htif_tohost_base (init _) = none ∧
        state.regs.get Register.pmpcfg_n (init _) = Vector.replicate 64 0#8 ∧
        _get_Misa_M (state.regs.get Register.misa (init _)) = 1#1 ∧
+       _get_Misa_C (state.regs.get Register.misa (init _)) = 0#1 ∧
        state.regs.get Register.pma_regions (init _) == [SP1Clean.SailMem.SP1_PMA_Region]) (by
       simp only [beq_iff_eq]
       constructor
-      · rintro ⟨priv, active, mie, delegation, landing, mprv, security, masking, htif, pmp, misa, pma⟩
-        exact ⟨init, priv, active, mie, delegation, landing, mprv, security, masking, htif, pmp, misa, pma⟩
+      · rintro ⟨priv, active, mie, delegation, landing, mprv, security, masking, htif, pmp, misa, compressed, pma⟩
+        exact ⟨init, priv, active, mie, delegation, landing, mprv, security, masking, htif, pmp, misa, compressed, pma⟩
       · intro configured
         exact ⟨configured.priv, configured.active, configured.mie, configured.mideleg,
           configured.no_landing_pad, configured.mprv_disabled, configured.mseccfg_disabled,
           configured.mseccfg_pmm, configured.htif_disabled, configured.pmp_off,
-          configured.misa_m, configured.pma_regions⟩)
+          configured.misa_m, configured.misa_c_disabled, configured.pma_regions⟩)
   else isFalse (fun configured => init configured.init)
 
 /-- The finite carrier suffices for every platform check; the memory map is never materialized. -/

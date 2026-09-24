@@ -1,3 +1,5 @@
+import SP1Clean.Model.Core.ExecutionWritePolicy
+import SP1Clean.Model.Core.ExecutionCompatibility
 import SP1Clean.Soundness.HostHintReadExecution
 
 /-! # Local execution soundness for the installed instruction, control, and hint AIR
@@ -41,6 +43,32 @@ local instance pathLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
+/-- The registered chip step, effect and permission at an actual replayed instruction occurrence. Incoming
+truth and operand currency are supplied by the same installed grounding proof. -/
+theorem GroundingCarrier.instruction_step_at (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    {n : ℕ} {current : ExecutionState} {row : DecodedInstructionRow p}
+    (atRow : carrier.ordered[n]? = some (.instruction row))
+    (prefixReplay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize (carrier.events.take n) = some current) :
+    ∃ next, ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current .ordinary next ∧
+      Target.RowEffect (image.toGuestProgram valid) (row.toChipRow witness.data).view current.sail next.sail ∧
+      InstructionWrite.PermittedAt image.readOnly (image.toGuestProgram valid) current.sail := by
+  have member := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
+  have grounded := (carrier.ground valid constraints balanced).1 _ member
+  have time := carrier.time_of_ordered_at atRow
+  rw [(eventFacts_state_fetch _ _ _).1] at time
+  have currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
+      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
+        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
+          (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+    intro mp mem
+    apply grounded.2 mp
+    exact List.mem_append_left _ mem
+  exact carrier.instruction_step_effect valid constraints balanced member grounded.1 currency prefixReplay time
+
 /-- The registered chip effect at an actual replayed instruction occurrence. All incoming
 truth and operand currency are supplied by the same installed grounding proof. -/
 theorem GroundingCarrier.instruction_effect_at (valid : image.Valid)
@@ -55,21 +83,27 @@ theorem GroundingCarrier.instruction_effect_at (valid : image.Valid)
       current .ordinary = some next) :
     ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current .ordinary next ∧
       Target.RowEffect (image.toGuestProgram valid) (row.toChipRow witness.data).view current.sail next.sail := by
-  have member := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
-  have grounded := (carrier.ground valid constraints balanced).1 _ member
-  have time := carrier.time_of_ordered_at atRow
-  rw [(eventFacts_state_fetch _ _ _).1] at time
-  have currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
-      MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
-          (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
-    intro mp mem
-    apply grounded.2 mp
-    exact List.mem_append_left _ mem
-  obtain ⟨target, step, effect⟩ := carrier.instruction_step_effect valid constraints balanced member grounded.1 currency prefixReplay time
+  obtain ⟨target, step, effect, _⟩ := carrier.instruction_step_at valid constraints balanced atRow prefixReplay
   have same : target = next := Option.some.inj (step.replay.symm.trans replay)
   subst target
   exact ⟨step, effect⟩
+
+/-- The actual installed AIR enforces the public ordinary write policy at every replayed prefix.
+No permission, decoded-operand, or grounding premise is required from the caller. -/
+theorem GroundingCarrier.writesPermitted (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize carrier.events := by
+  intro n current atEvent prefixReplay
+  simp only [ExecutionCarrier.events, List.getElem?_map] at atEvent
+  obtain ⟨row, atRow, event⟩ := Option.map_eq_some_iff.mp atEvent
+  cases row with
+  | instruction row =>
+    obtain ⟨_, _, _, permitted⟩ := carrier.instruction_step_at valid constraints balanced atRow prefixReplay
+    exact permitted
+  | syscall row | halt row => cases event
 
 private theorem step_of_replay (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
@@ -229,6 +263,8 @@ theorem source_execution (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ events target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧
+      ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+        source.realize events ∧
       events.Perm ((LocalCore.executionRows
         (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).map ExecutionRow.event) ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
@@ -239,6 +275,40 @@ theorem source_execution (valid : image.Valid)
         locContent target.sail loc = some (Word.toBitVec64 message.value) := by
   obtain ⟨carrier⟩ := source_grounding_carrier valid witness constraints balanced
   obtain ⟨target, path, endpoint⟩ := carrier.execution valid constraints balanced
-  exact ⟨carrier.events, target, path, carrier.exhaustive.map ExecutionRow.event, endpoint⟩
+  exact ⟨carrier.events, target, path, carrier.writesPermitted valid constraints balanced, carrier.exhaustive.map ExecutionRow.event, endpoint⟩
+
+/-- The installed ordinary/HALT fragment supplies the legacy trace from its complete stateful
+path, using one fixed handler for the whole trace. All endpoint and inventory conclusions of
+`source_execution` are retained. General mixed callers keep the complete paired replay. -/
+theorem source_execution_ordinaryHalt (valid : image.Valid)
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (fragment : ∀ event ∈ (LocalCore.executionRows
+      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).map ExecutionRow.event,
+        OrdinaryOrHalt event) (handler : Machine.ExecutableSyscallHandler) :
+    ∃ (target : ExecutionState) (trace : Machine.EventExecutionTrace),
+      ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+        source.realize trace.events target ∧
+      ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+        source.realize trace.events ∧
+      Machine.traceOfEvents? handler.withHalt (image.toGuestProgram valid) source.sail.realize trace.events =
+        some trace ∧
+      trace.Valid handler.withHalt.relation (image.toGuestProgram valid) ∧ trace.Clocked source.clock ∧
+      trace.initialState = source.sail.realize ∧ trace.finalState = target.sail ∧
+      trace.events.Perm ((LocalCore.executionRows
+        (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).map ExecutionRow.event) ∧
+      target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
+      target.sail.regs.get? Register.PC =
+        some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
+      ∀ loc message, LocalCore.memoryFinalFrontier
+          (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc = some message →
+        locContent target.sail loc = some (Word.toBitVec64 message.value) := by
+  obtain ⟨events, target, path, permitted, inventory, endpoint⟩ :=
+    source_execution valid witness constraints balanced
+  obtain ⟨trace, replay, legacy, clocked, initial, tape, final, _⟩ := path.ordinaryHalt_trace
+    (fun event member => fragment event (inventory.mem_iff.mp member)) handler
+  rw [← tape] at path permitted inventory replay
+  exact ⟨target, trace, path, permitted, replay, legacy, clocked, initial, final, inventory, endpoint⟩
 
 end SP1Clean.Soundness.HostHintReadCPU
