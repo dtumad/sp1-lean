@@ -122,6 +122,34 @@ theorem ram_receipts (witness : EnsembleWitness (ensemble auxiliary channels)) :
       (FinalReceiptEnsemble.records witness).map (FinalMemoryValue.channel true).pushedValue :=
   FinalReceiptEnsemble.table_receipts _ ram_silent
 
+/-- The installed RAM receipts retain the actual finalizer's RAM domain. Only Byte guarantees
+are needed locally; Memory values and timestamps still come from the global grounding proof. -/
+theorem ram_records_spec (witness : EnsembleWitness (ensemble auxiliary channels))
+    (constraints : witness.Constraints)
+    (bytes : (ramTable witness).ChannelGuarantees byteChannel.toRaw) :
+    ∀ record ∈ FinalReceiptEnsemble.records witness, MemoryBoundary.RamFinalSpec record := by
+  intro record member
+  obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp member
+  have checks := constraints (ramTable witness)
+    (witness.mem_allTables_of_mem_tables (List.getElem_mem _)) row rowMem
+  have guarantees := bytes row rowMem
+  change (FinalReceiptEnsemble.table witness).component.operations.ConstraintsHold _ at checks
+  change (FinalReceiptEnsemble.table witness).component.operations.ChannelGuarantees _ _ at guarantees
+  rw [FinalReceiptEnsemble.table_component witness] at checks guarantees
+  rw [Operations.ConstraintsHold, FinalMemoryReceipt.constraints,
+    FinalMemoryReceipt.lookups] at checks
+  have providerBytes := Operations.channelGuarantees_of_interactionsWith_subset
+    (⟨ramCircuit⟩ : Component (ZMod p)).operations
+    (⟨FinalMemoryReceipt.circuit true ramCircuit⟩ : Component (ZMod p)).operations
+    byteChannel.toRaw (by
+      rw [FinalMemoryReceipt.interactions true ramCircuit byteChannel.toRaw (by
+        intro equal
+        have names := congrArg RawChannel.name equal
+        change "SP1Byte" = "SP1FinalRamValue" at names
+        contradiction)]
+      exact List.Subset.refl _) _ guarantees
+  exact (FinalMemoryEnsemble.view_spec .ram _ checks providerBytes).1
+
 /-- The only added occurrences are one receipt for each register row and one for each RAM row. -/
 theorem receipt_cost (witness : EnsembleWitness (ensemble auxiliary channels)) :
     ((registerTable witness).interactionsWith (FinalMemoryValue.channel false).toRaw).length +

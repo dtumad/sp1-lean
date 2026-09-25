@@ -24,8 +24,8 @@ def registerCircuit :
 
 def ramCircuit :
     GeneralFormalCircuit (ZMod p) (OrderedMemoryProvider.Inputs MemoryMsg) MemoryMsg :=
-  OrderedMemoryProvider.circuit channelName MemoryBoundary.FinalSpec FinalRamProvider.circuit
-    (fun _ _ _ valid => valid.1) (fun _ valid => valid)
+  OrderedMemoryProvider.circuit channelName MemoryBoundary.RamFinalSpec FinalRamProvider.circuit
+    (fun _ _ _ valid => valid.1) (fun _ valid => valid.1)
 
 def populateRegister? (previous : ℕ) (record : MemoryMsg (ZMod p)) :
     Option (OrderedMemoryProvider.Inputs MemoryMsg (ZMod p)) :=
@@ -78,9 +78,9 @@ theorem populateRam?_sound (previous : ℕ) (record : MemoryMsg (ZMod p))
   split at found
   next valid =>
     obtain rfl := Option.some.inj found
-    exact OrderedMemoryProvider.populate_assumptions channelName MemoryBoundary.FinalSpec
+    exact OrderedMemoryProvider.populate_assumptions channelName MemoryBoundary.RamFinalSpec
       FinalRamProvider.circuit (fun input => Word.toNat (MemoryBoundary.address input))
-      (fun _ _ _ spec => spec) (fun _ spec => spec) record previous data hint
+      (fun _ _ _ spec => spec) (fun _ spec => spec.1) record previous data hint
       ((FinalRamProvider.proverAssumptions_iff record data hint).mpr valid.1) trivial valid.1.2.2.1 valid.2
   next invalid => contradiction
 

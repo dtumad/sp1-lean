@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
+import SP1Clean.FormalModel.Contracts.FinalRam
 import ToClean.Circuit.InteractionRecovery
 import ToClean.Circuit.EmittedInteraction
 import SP1Clean.Native.Operations.WordRangeCheck
@@ -25,9 +25,9 @@ private theorem zero_u64 : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) := by
   apply Word.isU64_of_cases <;> norm_num
 
 omit [Fact (2 ^ 17 < p)] in
-theorem canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryBoundary.address record))
+theorem ram_canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryBoundary.address record))
     (output : Extracted.AddressOperation (ZMod p))
-    (checked : AddressOperation.Spec (addressInput record) output) : MemoryBoundary.CanonicalSpec record := by
+    (checked : AddressOperation.Spec (addressInput record) output) : MemoryBoundary.RamFinalSpec record := by
   have fits : Word.toNat (MemoryBoundary.address record) < 2 ^ 64 := by
     rw [← Word.toBitVec64_toNat bound]
     exact BitVec.isLt _
@@ -41,7 +41,16 @@ theorem canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryBound
   have location := MemoryBoundary.ram_location_of_key record _
     (by simpa only [Nat.mod_eq_of_lt facts.1] using facts.2.1)
     facts.1 (by simpa only [Nat.mod_eq_of_lt facts.1] using facts.2.2.symm) packed
-  exact ⟨location.1, bound, location.2.1⟩
+  refine ⟨⟨location.1, bound, location.2.1⟩, ?_⟩
+  rw [← location.2.1]
+  simpa only [Nat.mod_eq_of_lt facts.1] using facts.2.1
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Existing generic Memory consumers retain the canonical-address projection. -/
+theorem canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryBoundary.address record))
+    (output : Extracted.AddressOperation (ZMod p))
+    (checked : AddressOperation.Spec (addressInput record) output) : MemoryBoundary.CanonicalSpec record :=
+  (ram_canonical record bound output checked).1
 
 def main (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
   assertion WordRangeCheck.circuit (MemoryBoundary.address input)
@@ -75,7 +84,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
 def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
   main
   elaborated := elaborated
-  Spec input output _ := MemoryBoundary.FinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
+  Spec input output _ := MemoryBoundary.RamFinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
   ProverAssumptions input _ _ := Word.isU64 (MemoryBoundary.address input) ∧
     AddressOperation.Assumptions (addressInput input)
   channelsWithRequirements := [memoryChannel.toRaw]
@@ -83,7 +92,7 @@ def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
     circuit_proof_start [WordRangeCheck.circuit, AddressOperation.circuit, addressInput,
       MemoryBoundary.address]
     have checked := (h_holds.2 ⟨h_holds.1 trivial, zero_u64, Or.inr rfl⟩).2.2.2 rfl
-    exact ⟨canonical ⟨input_clk_high, input_clk_low, input_addr0, input_addr1, input_addr2, input_value⟩
+    exact ⟨ram_canonical ⟨input_clk_high, input_clk_low, input_addr0, input_addr1, input_addr2, input_value⟩
       (h_holds.1 trivial) _ checked, rfl⟩
   completeness := by
     circuit_proof_start [WordRangeCheck.circuit, AddressOperation.circuit, addressInput,
