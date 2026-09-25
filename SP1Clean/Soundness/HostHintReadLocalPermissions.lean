@@ -124,7 +124,7 @@ private theorem permission_request_lower (tables : List (Table (ZMod p)))
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 private theorem byte_permitted (readOnly : ℕ → Bool) (address : ℕ)
     (lower : 2 ^ 16 ≤ address) (upper : address < 2 ^ 48) (writable : readOnly address = false) :
-    (HostMemoryPolicy.mk readOnly (2 ^ 16) (2 ^ 48)).permits address 1 = true := by
+    (HostMemoryPolicy.mk readOnly NativeLayout.guestMemory).permits address 1 = true := by
   apply (HostMemoryPolicy.permits_iff _ _ _).mpr
   refine ⟨lower, upper, ?_⟩
   intro byte bound
@@ -141,7 +141,7 @@ theorem word_permission_policy (witness : EnsembleWitness (ensemble image source
     (address : fields 3 (ZMod p))
     (member : WritePermissionProvider.channel.pulledValue address ∈
       (wordTables witness).flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw)) :
-    (HostMemoryPolicy.mk image.readOnly (2 ^ 16) (2 ^ 48)).permits (Address.toNat address) 1 = true := by
+    (HostMemoryPolicy.mk image.readOnly NativeLayout.guestMemory).permits (Address.toNat address) 1 = true := by
   have permitted := word_permission_permitted witness pulls constraints balanced address member
   exact byte_permitted image.readOnly (Address.toNat address)
     (permission_request_lower (wordTables witness) (wordTables_aligned witness) wordSpecs

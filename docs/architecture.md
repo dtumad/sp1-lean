@@ -308,6 +308,10 @@ Adapters must state what they preserve; no equivalence is assumed merely from si
 
 ### Assembly and proof ownership
 
+The [native resource contract](resource-contract.md) records shared range ownership, numeric
+units, enforcement/construction consumers and compatibility retirement conditions. Range and
+resource data do not introduce another execution or memory model.
+
 | Layer | Role |
 |---|---|
 | `LocalCore.ensemble` | Checked complete source, fixed Program ROM, ordered register/RAM boundary providers, source/public PC/clock binding |

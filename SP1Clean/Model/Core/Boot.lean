@@ -68,7 +68,8 @@ theorem initialSailState_loaded (input : ProgramImage) (valid : input.Valid) :
     obtain ⟨row, found, wordEq⟩ := Option.map_eq_some_iff.mp fetched
     have member : row ∈ input.rom := List.mem_of_find?_eq_some found
     have atPC : row.1 = address := by simpa using List.find?_some found
-    have inWindow := (valid.2.1 row member).2.1
+    have inWindow : 2 ^ 16 ≤ row.1.toNat ∧ row.1.toNat + 4 ≤ 2 ^ 48 :=
+      (valid.2.1 row member).2.1
     rw [← atPC, ← wordEq, input.initialSailState_memory _ (by have := index.isLt; omega),
       input.initialMemory_rom valid row member index]
   imageLoaded := by

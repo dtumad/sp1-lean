@@ -10,7 +10,7 @@ namespace SP1CleanTest.Core
 
 open SP1Clean.Model.Core
 
-private def policy : HostMemoryPolicy := ⟨fun _ => false, 65536, 2 ^ 48⟩
+private def policy : HostMemoryPolicy := ⟨fun _ => false, NativeLayout.guestMemory⟩
 
 private def bytes (length : ℕ) : Bytes :=
   (List.range length).map (fun index => BitVec.ofNat 8 (index + 1))
@@ -41,7 +41,7 @@ example : (HostIO.mk [[1]] []).readHint ⟨[]⟩ policy 65537 1 = none := by nat
 
 -- Padding alone would overlap the instruction byte, so even an empty hint is rejected.
 example : (HostIO.mk [[]] []).readHint ⟨[]⟩
-    ⟨fun address => address == 65543, 65536, 2 ^ 48⟩ 65536 0 = none := by native_decide
+    ⟨fun address => address == 65543, NativeLayout.guestMemory⟩ 65536 0 = none := by native_decide
 
 example : (HostIO.mk [[]] []).readHint ⟨[]⟩ policy (2 ^ 48 - 4) 0 = none := by native_decide
 

@@ -1,5 +1,6 @@
 import SP1Clean.Model.Machine.Boot
 import SP1Clean.Model.Core.Memory
+import SP1Clean.Model.Core.NativeLayout
 
 /-! # Checked finite program images
 
@@ -26,11 +27,11 @@ namespace ProgramImage
 def Valid (input : ProgramImage) : Prop :=
   (input.rom.map Prod.fst).Nodup ∧
   (∀ row ∈ input.rom, row.1.toNat % 4 = 0 ∧
-    (2 ^ 16 ≤ row.1.toNat ∧ row.1.toNat + 4 ≤ 2 ^ 48) ∧
+    NativeLayout.guestMemory.ContainsSpan row.1.toNat 4 ∧
     row.2.extractLsb' 0 2 = 0b11#2) ∧
   (input.rom.any (fun row => row.1 == input.entry) = true) ∧
   (input.image.map Prod.fst).Nodup ∧
-  (∀ byte ∈ input.image, 2 ^ 16 ≤ byte.1.toNat ∧ byte.1.toNat < 2 ^ 48) ∧
+  (∀ byte ∈ input.image, NativeLayout.guestMemory.Contains byte.1.toNat) ∧
   (∀ row ∈ input.rom, ∀ byte ∈ input.image, ∀ index : Fin 4,
     byte.1.toNat = row.1.toNat + index → byte.2 = row.2.extractLsb' (8 * index) 8)
 
@@ -38,11 +39,11 @@ def Valid (input : ProgramImage) : Prop :=
 def checkFields (input : ProgramImage) : Bool :=
   decide (input.rom.map Prod.fst).Nodup &&
   input.rom.all (fun row => decide (row.1.toNat % 4 = 0 ∧
-    (2 ^ 16 ≤ row.1.toNat ∧ row.1.toNat + 4 ≤ 2 ^ 48) ∧
+    NativeLayout.guestMemory.ContainsSpan row.1.toNat 4 ∧
     row.2.extractLsb' 0 2 = 0b11#2)) &&
   input.rom.any (fun row => row.1 == input.entry) &&
   decide (input.image.map Prod.fst).Nodup &&
-  input.image.all (fun byte => decide (2 ^ 16 ≤ byte.1.toNat ∧ byte.1.toNat < 2 ^ 48)) &&
+  input.image.all (fun byte => decide (NativeLayout.guestMemory.Contains byte.1.toNat)) &&
   input.rom.all (fun row => input.image.all (fun byte =>
     (List.finRange 4).all (fun index => decide
       (byte.1.toNat = row.1.toNat + index → byte.2 = row.2.extractLsb' (8 * index) 8))))
