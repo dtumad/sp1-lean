@@ -1,6 +1,6 @@
 import SP1Clean.Model.Core.MemorySnapshot
 import SP1Clean.FormalModel.Contracts.InitialMemoryRead
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
+import SP1Clean.FormalModel.Contracts.FinalRam
 import SP1Clean.Model.FinalMemoryValue
 
 /-! # Complete outgoing RAM values
@@ -35,5 +35,11 @@ theorem Spec.snapshot (target : MemorySnapshot) (record : MemoryMsg (ZMod p))
     Word.toBitVec64 record.value = target.read (MemoryMsg.locOf record) := by
   rw [target.read_of_ram_address _ ram, ← canonical.2]
   exact checked.2.2.2
+
+/-- The native RAM finalizer supplies the location kind needed by the target-value check. -/
+theorem Spec.final_snapshot (target : MemorySnapshot) (record : MemoryMsg (ZMod p))
+    (checked : Spec target record) (finalized : MemoryBoundary.RamFinalSpec record) :
+    Word.toBitVec64 record.value = target.read (MemoryMsg.locOf record) :=
+  checked.snapshot target record finalized.1.2 (le_trans (by decide) finalized.2)
 
 end SP1Clean.FinalRamValue
