@@ -156,8 +156,22 @@ determinism. The original chip bridges share the factored `SailArithmeticExecute
 `SailControlFrame.control_normal_frame` covers JAL, JALR and all six branch conditions by
 recovering the actual direct execute result from normal retirement. It adds no alignment or
 successor-fetch premise. `SailExecuteFrame` shares configuration, operand-observation and
-retirement composition across both families; the chip bridges also share `SailControlExecute`.
-Independent load/store frames and the full path induction remain open in #12.
+retirement composition across the families; the chip bridges also share `SailControlExecute`.
+`SailLoadFrame.load_normal_frame` preserves the complete byte map, including loads to x0.
+`SailStoreFrame.store_normal_frame` preserves every protected byte under the existing decoded
+`InstructionWrite.PermittedAt` policy, including byte presence. That policy rejects writes into
+protected bytes even when the stored value would not change. The PMA
+window and physical split bounds are derived from actual checks, not caller premises.
+`SailInstructionFrame.ordinary_normal_frame` dispatches through the existing routing projection
+and supplies one circuit-independent configuration/protected-memory frame for every supported
+ordinary retirement. The full path induction remains open in #12.
+
+**Misalignment is not a Sail fault assumption.** The pinned platform and SP1 PMA permit ordinary
+misaligned loads/stores, which Sail splits into physical sub-accesses. The frame proofs cover
+the actual arbitrary-fuel split loop. Any alignment enforced by the native circuits must be
+represented explicitly in the eventual semantic resource profile; normal retirement alone does
+not establish it. A store's protected interval remains its decoded byte span, not the enclosing
+eight-byte Memory-bus cell.
 
 The native platform must also exclude compressed **alignment mode**, not just compressed words.
 `SailConfigured.misa_c_disabled` fixes `misa.C = 0`; `currentlyEnabled_zca_eq_false` proves the

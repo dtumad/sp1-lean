@@ -38,6 +38,14 @@ def check (readOnly : ℕ → Bool) (register : BitVec 5 → Option (BitVec 64))
   | some spans => spans.all fun span =>
       (List.range span.length).all fun offset => !readOnly (span.address + offset)
 
+/-- A successful permission check certifies that the decoded instruction is supported. -/
+theorem check_supported (readOnly : ℕ → Bool) (register : BitVec 5 → Option (BitVec 64))
+    (decoded : instruction) (checked : check readOnly register decoded = true) :
+    instructionImageOK decoded = true ∧ (instructionRouteId decoded).isSome = true := by
+  by_cases supported : (instructionImageOK decoded && (instructionRouteId decoded).isSome) = true
+  · simpa only [Bool.and_eq_true] using supported
+  · simp [check, spans?, supported] at checked
+
 /-- A supported non-store has no memory writes and needs no register observations for permission. -/
 theorem check_of_nonstore (readOnly : ℕ → Bool) (register : BitVec 5 → Option (BitVec 64))
     (decoded : instruction) (valid : instructionImageOK decoded = true)
