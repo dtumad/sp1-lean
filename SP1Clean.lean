@@ -222,6 +222,8 @@ import SP1Clean.Soundness.EnsembleChannels
 import SP1Clean.Soundness.ExitAccounting
 import SP1Clean.Soundness.FetchDiscriminant
 import SP1Clean.Soundness.FinalMemoryEnsemble
+import SP1Clean.Soundness.FinalReceiptEnsemble
+import SP1Clean.Soundness.FinalMemoryReceipts
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.GoodnessFilter

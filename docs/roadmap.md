@@ -30,8 +30,16 @@ at every replayed source. Its identity, composition, clock,
 and stopped-source laws are proved using the existing path. The AIR and compiler target types in
 [`Soundness/Shard/Contract.lean`](../SP1Clean/Soundness/Shard/Contract.lean) reuse `CompleteEnsemble`
 and `EnsembleCompiler`, with a conditional equivalence law. **They are not instantiated capstones.**
-`Profile` is an explicit, uninstantiated semantic-domain parameter; fixing and enforcing it is
-part of the work below. It must never become a caller-supplied readiness or compiler-totality bundle.
+The concrete targets use `nativeProfile limits`, computed from the existing complete execution
+path and data-only `ResourceLimits`. Endpoint checks are installed; complete outgoing-state and
+intermediate resource enforcement remain open. The generic `Profile` parameter is retained only
+for reusable relation lemmas. It must never become a caller-supplied readiness or compiler-totality bundle.
+
+The final equivalence is to be proved for numerically compatible limits, with a proved concrete
+preset. Compatibility must bound the full compiler expansion across all registered channels;
+independent `p - 1` ceilings do not establish this. A conservative expansion estimate may certify
+the instance's numeric parameters, but must not narrow individual executions on the semantic side.
+The same limits must be enforced by the AIR, including cumulative work and intermediate occupancy.
 
 The AIR side must remain exactly raw Clean constraints, fixed lookups, and balanced channels.
 Do not add execution correctness, provider authenticity, ordering, or grounding as conjuncts to
@@ -52,7 +60,7 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Semantic ROM and fetch | Independent mixed-path configuration/ROM preservation and official/committed fetch agreement at every executed position; installed AIR consumes the same path proof | Concrete semantic resource profile and its enforced bounds |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
 | Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path with ordinary write permission, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction with the supplied optional exit, and the public Exit value for a newly halted endpoint | Complete supplied-target equality |
-| Memory endpoint | Complete final and untouched values, executable target comparison equivalent to every GPR and literal Sail RAM equality, native target-value checks, and a complete finite change inventory | Install the checks and enforce complete change coverage in the verifier |
+| Memory endpoint | Complete final and untouched values, executable target comparison equivalent to every GPR and literal Sail RAM equality, native target-value checks, a complete finite change inventory, and a receipt adapter for the existing ordered finalizers | Install target-value consumers with their Byte closure and enforce complete change coverage in the verifier |
 | Sail bookkeeping | The installed path preserves runtime/other registers and derives all three bookkeeping slots: source-controlled retirement count, increment flag, and nextPC from the semantic host suffix and final PC | Bind these observations to the supplied target |
 | Host inventory | HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ are installed; source-backed hint bytes and padded reads are authenticated | WRITE, VERIFY, new-node/word authorization and allocation history |
 | Host endpoint | Final hints and banks agree with CPU replay; other host fields are preserved; the supplied optional exit equals actual replay status, whose new HALT code equals the public Exit field | Bind the remaining fields of the complete outgoing instance |
