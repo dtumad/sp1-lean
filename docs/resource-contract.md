@@ -85,11 +85,44 @@ The enforcement obligations remain explicit:
 | Arbitrary independent event/read/write/allocation ceilings | A4/A5 exact occurrence/cost accounting, including padded writes and both VERIFY observations |
 | Fixed pointer/length widths and cumulative persistent allocation | A5 queue/request installation; individual field-count ceilings are insufficient |
 | Whole `ExecutionPath.Encoded` derived from registered rows | Shared CPU phase is derived from its actual specification; A6 assembly must combine each ordinary chip's address/alignment facts with actual prefix decoding |
-| Physical height and every channel's occurrence ceiling | R5 inventory/capacity accounting; final A4/A5/A6 tables must be included when installed |
+| Physical height and every channel's occurrence ceiling | Exact inventory accounting below; final A4/A5/A6 construction must prove its full expansion fits, and silent tables need explicit height bounds |
 
 These are unproved implementation obligations, not additional capstone premises. The endpoint
 checker regression deliberately accepts a boundary whose tape exceeds the padded-write budget:
 it prevents an endpoint-only check from being mistaken for complete resource enforcement.
+
+## Exact physical accounting
+
+`ToClean/Air/Footprint.lean` measures the actual Clean witness, with its singleton verifier and
+every physical table. For each raw channel, `channelOccurrences` is the sum of each table's
+height times its circuit's syntactic interaction width. `channelOccurrences_eq_length` proves
+this is exactly the evaluated ledger length. Repeated keys, zero multiplicities, refreshes and
+inactive padding all spend capacity. No deduplication or multiplicity filter is involved.
+`PhysicalFits` checks every table height and every registered channel against numeric ceilings;
+`ChannelCapacity` is precisely Clean's existing strict field-characteristic bound.
+
+The retained ordinary compiler consumes `ChannelCapacity` in `NativeTraceAdmissible` and its
+functional completeness proof. `Proofs/Completeness/PhysicalFootprint.lean` proves its exact
+height and demand formulas from the existing event buckets and provider occurrence lists:
+one row per instruction event or provider occurrence, one mandatory Halt padding row, an empty
+ordinary SyscallInstrs table, and one verifier row. Provider closure and refresh occurrences are
+already in those lists. The resulting `physicalFits_iff` and `channelCapacity_iff` are exact
+arithmetic equivalences; they do not replace the accepted language with an upper estimate.
+
+`Soundness/ResourceFootprint.lean` applies the same accounting to the installed host assembly.
+Raw balance gives the native `p-1` occurrence ceiling on **every registered channel**, including
+host/boundary channels. Any table with a positive syntactic interaction width on a registered
+channel inherits its native height bound. A silent table needs separate evidence. Installing
+the endpoint checker preserves both physical budgets exactly in both directions and adds no
+rows or interactions.
+
+This is not yet a proof that the fixed semantic limits imply full mixed construction capacity.
+Independent ceilings of `p-1` do not imply that the sum of provider, boundary, host and padding
+costs is below `p`. A4/A5 must finish authenticating and enforcing the complete resource domain;
+A6 must give the full mixed constructor's exact demand, including those installations, and
+prove capacity against the same domain. If these limits are insufficient, the policy and its
+actual enforcement must be reviewed together. Adding compiler success or a conservative
+footprint bound as a capstone premise would not discharge this obligation.
 
 ## Representation and retirement
 
@@ -106,7 +139,8 @@ writes. Both state and tape usage are invariant under equivalent complete snapsh
 ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. This phase implies
 the low-clock window (`clock % 2^24 + 4 < 2^24`). Normal Sail retirement alone does not imply width alignment. Final PC/clock
 fit their native encodings but need no subsequent fetch. The physical `tableRows` and
-`channelOccurrences` ceilings still await the R5 capacity consumer; the semantic measurements do
+`channelOccurrences` ceilings have actual witness consumers through `PhysicalFits`; they are
+not yet derived from `nativeProfile` for the full mixed constructor. Semantic measurements do
 not stand in for that proof. `boundaryBytes` is a variable-payload measure, not a full Sail
 serialization-size theorem: fixed public register/platform data and the final boundary circuit's
 actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by these definitions. `MemorySnapshot` remains the provider view.
@@ -116,7 +150,7 @@ actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by
 |---|---|
 | `EventExecutionTrace`, `CoreShardSemanticWitness` | Retain for ordinary/exact-Core consumers; migrate the mixed compiler to the complete path in A6. Delete only after retained exact/export consumers have adapters. |
 | `InstructionPlanReady`, `NativeCompilerReady`, `NativeTraceReady` | Prove their applicable fields from semantics for retained APIs; no occurrence in the new domain. Remove wrappers once all relevant consumers use the derived results. The legacy `syscallFree` field cannot describe mixed execution. |
-| `NativeTraceFootprint` | Migrate to shared accounting over every registered channel; retain an adapter while the ordinary compiler still consumes its named projections. |
+| `NativeTraceFootprint` | The active ordinary compiler now consumes shared `ChannelCapacity`. Retain the five-field record and old theorem signatures only as proved compatibility views; their equivalence uses this constructor's two silent host channels. Delete after external callers migrate. Never reuse that equivalence for mixed host traces. |
 | Explicit numeric range checks in older chip/Sail lemmas | Retain encoding-specific statements, derive their range facts from `NativeLayout`; factor more generally only with a migrated consumer. |
 
 `ExecutionMemory` proves presence and outside-domain framing along the existing Sail/host path,
