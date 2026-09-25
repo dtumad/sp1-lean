@@ -129,7 +129,7 @@ only a padding Halt row and an empty SyscallInstrs table.
 
 This is the retained ordinary/HALT theorem. The newer complete-state local-shard target is
 specified in `SP1Clean/FormalModel/Shard.lean` and `SP1Clean/Soundness/Shard/Contract.lean`;
-its resource profile and soundness/compiler instances remain unfilled. The installed mixed AIR
+it now uses numeric limits and a fixed semantic resource profile; resource enforcement/capacity and soundness/compiler instances remain unfilled. The installed mixed AIR
 already derives an actual execution path and final PC/clock/frontier agreement, but not the full
 outgoing snapshot or all-eight-call completeness. See [the roadmap](roadmap.md).
 

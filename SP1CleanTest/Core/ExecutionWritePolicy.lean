@@ -72,10 +72,10 @@ theorem rejectsSameValueStore (characteristic : ℕ) (target : ExecutionSnapshot
   rintro ⟨_, _, permitted⟩
   exact denied permitted.head
 
-/-- Even a permissive resource predicate cannot remove the contract's fixed write policy. -/
-theorem rejectsProfileBypass (characteristic : ℕ) (target : ExecutionSnapshot)
+/-- No choice of numeric ceilings can remove the contract's fixed write policy. -/
+theorem rejectsProfileBypass (limits : ResourceLimits) (characteristic : ℕ) (target : ExecutionSnapshot)
     (events : List Machine.ExecutionEvent) :
-    ¬ FormalModel.Shard.AdmissibleExecution (fun _ _ _ _ _ => True)
+    ¬ FormalModel.Shard.AdmissibleExecution limits
       characteristic image source target (.ordinary :: events) :=
   fun execution => rejectsSameValueStore characteristic target events execution.1
 

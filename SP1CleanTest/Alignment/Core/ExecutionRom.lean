@@ -1,4 +1,5 @@
 import SP1Clean.FormalModel.ShardPreservation
+import SP1Clean.Model.Core.ExecutionResources
 import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.SP1Field
 import SP1Clean.Model.Semantics.SailControlExecute
@@ -166,6 +167,16 @@ theorem hintThenBranch : Preserved 0x00310463 7 7 := by
   have ran := Advance.execute_BTYPE_reaches 8 2 3 .BEQ 65540 65548 7 7 state cfg.init pc nextPc
     left right (fun _ => rfl) (by decide) (by decide)
   exact ⟨_, ran, (Advance.branch_execute_frame state cfg _ _ _ _ _ _ ran).2⟩
+
+/-- The same mixed semantic fixture counts one host event and one ordinary event at their actual costs. -/
+theorem mixedResourceWork :
+    ∃ valid : ExecutionSourceValid (image 0x000100e7) (source 0x000100e7 65553 0),
+      executionResources (FormalModel.Shard.policy SP1Prime (image 0x000100e7))
+        ((image 0x000100e7).toGuestProgram valid.1.1) (source 0x000100e7 65553 0).realize tape .events = 2 ∧
+      executionResources (FormalModel.Shard.policy SP1Prime (image 0x000100e7))
+        ((image 0x000100e7).toGuestProgram valid.1.1) (source 0x000100e7 65553 0).realize tape .ticks = 272 := by
+  obtain ⟨valid, _, path, _⟩ := hintThenJalr
+  exact ⟨valid, path.resources_events, path.resources_ticks⟩
 
 /-- The concrete intermediate boundary consumed one hint and overwrote the old padding byte. -/
 theorem paddedHostEffect :

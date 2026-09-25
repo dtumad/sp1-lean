@@ -26,32 +26,32 @@ def boundary (source target : ExecutionSnapshot) :
   fun _ => (source.realize, target.realize)
 
 /-- The header identity, source validity, ordinary-write permission, and resource profile. -/
-def admissible (profile : Profile) (image : ProgramImage) (valid : image.Valid)
+noncomputable def admissible (limits : ResourceLimits) (image : ProgramImage) (valid : image.Valid)
     (source target : ExecutionSnapshot) (header : PublicIO (ZMod p)) :
     PublicIO (ZMod p) → List ExecutionEvent → Prop :=
   fun publicInput events =>
     publicInput = header ∧ ExecutionSourceValid image source ∧
       ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid) source.realize events ∧
-      profile p image source target events
+      nativeProfile limits p image source target events
 
 omit [Fact p.Prime] [ProvableType PublicIO] in
-theorem interpretation_iff {profile : Profile} {image : ProgramImage} (valid : image.Valid)
+theorem interpretation_iff {limits : ResourceLimits} {image : ProgramImage} (valid : image.Valid)
     {source target : ExecutionSnapshot} {header publicInput : PublicIO (ZMod p)}
     {events : List ExecutionEvent} :
-    Interpretation profile image source target header publicInput events ↔
+    Interpretation limits image source target header publicInput events ↔
       Air.Flat.Interpretation (sp1Machine p image valid) (boundary source target)
-        (admissible profile image valid source target header) publicInput events := by
+        (admissible limits image valid source target header) publicInput events := by
   simp only [Interpretation, AdmissibleExecution, Air.Flat.Interpretation, boundary, admissible,
     executes_iff (valid := valid)]
   tauto
 
 /-- The two shard targets are exactly a realization of the SP1 machine. -/
-def realizes {ensemble : Ensemble (ZMod p) PublicIO} {profile : Profile} {image : ProgramImage}
+def realizes {ensemble : Ensemble (ZMod p) PublicIO} {limits : ResourceLimits} {image : ProgramImage}
     (valid : image.Valid) {source target : ExecutionSnapshot} {header : PublicIO (ZMod p)}
-    (sound : SoundnessTarget ensemble profile image source target header)
-    (compiler : CompilerTarget ensemble profile image source target header) :
+    (sound : SoundnessTarget ensemble limits image source target header)
+    (compiler : CompilerTarget ensemble limits image source target header) :
     Air.Flat.Realizes (sp1Machine p image valid) ensemble (boundary source target)
-      (admissible profile image valid source target header) where
+      (admissible limits image valid source target header) where
   sound publicInput _ accepted :=
     let ⟨events, interpretation⟩ := sound publicInput trivial accepted
     ⟨events, (interpretation_iff valid).mp interpretation⟩
@@ -64,13 +64,13 @@ def realizes {ensemble : Ensemble (ZMod p) PublicIO} {profile : Profile} {image 
         compiler.complete publicInput events ((interpretation_iff valid).mpr interpretation) }
 
 /-- The intended single statement, derived from the machine realization. -/
-theorem statement_iff_of_realizes {ensemble : Ensemble (ZMod p) PublicIO} {profile : Profile}
+theorem statement_iff_of_realizes {ensemble : Ensemble (ZMod p) PublicIO} {limits : ResourceLimits}
     {image : ProgramImage} (valid : image.Valid) {source target : ExecutionSnapshot}
     {header : PublicIO (ZMod p)}
-    (sound : SoundnessTarget ensemble profile image source target header)
-    (compiler : CompilerTarget ensemble profile image source target header) :
+    (sound : SoundnessTarget ensemble limits image source target header)
+    (compiler : CompilerTarget ensemble limits image source target header) :
     ensemble.Statement header ↔
-      ∃ events, AdmissibleExecution profile p image source target events := by
+      ∃ events, AdmissibleExecution limits p image source target events := by
   rw [(realizes valid sound compiler).statement_iff header]
   refine exists_congr fun events => ?_
   -- `executes_iff` is instantiated by hand: `events : List (sp1Machine …).Event` only unfolds to

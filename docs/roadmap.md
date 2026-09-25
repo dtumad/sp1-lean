@@ -105,7 +105,7 @@ execution carrier to make a local proof convenient.
 
 | Milestone | Implementation | Completion criterion |
 |---|---|---|
-| Statement and ownership | Use `FormalModel.Shard.Executes` and the existing generic AIR interfaces; keep the resource parameter visibly open | Checked targets exist (done); concrete profile and canonical header below still required |
+| Statement and ownership | Use `FormalModel.Shard.Executes` and the existing generic AIR interfaces; use data-only limits and the fixed `nativeProfile` | Checked targets and semantic usage exist; enforcement/capacity and canonical header below still required |
 | Semantic resource policy | Fix active clock phase/ranges, actual ordinary-store byte permissions, finite host/queue identity bounds, and channel-count capacity in one semantic profile | Soundness derives every restriction from the AIR; every permitted semantic execution fits; identities need no active-clock phase |
 | Complete outgoing boundary | Use the proved bank/CPU agreement; prove complete final Sail/register/RAM/runtime/host agreement; bind the full target and terminal Exit | A changed untouched register/byte, host field, bank, PC/clock, or exit cannot retain acceptance; target equality is a conclusion |
 | Full host inventory | Install WRITE/VERIFY effects, x12 and RAM reads, request/reply binding, hook/hint prepends, authenticated allocations and node words | All eight calls grounded on the same evolving host; no static-source-queue or syscall-inactivity restriction |
@@ -116,9 +116,9 @@ execution carrier to make a local proof convenient.
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
 **Semantic hardening:** ROM/fetch/store-policy preservation is now proved over the existing
-`ExecutionPath`, with nonempty mixed semantic fixtures. Next replace the free `Profile` parameter
-with data-only resource limits and a fixed derived admissibility predicate, then derive the
-compiler's bounds from it. Generic `Realizes.admissible` remains a general predicate; it is the
+`ExecutionPath`, with nonempty mixed semantic fixtures. The concrete targets now use data-only `ResourceLimits` and a fixed `nativeProfile` over actual replay
+and native encoding conditions. Semantic usage and cut/append arithmetic are proved; derive the
+AIR enforcement and compiler capacity from the same quantities before closing the domain. Generic `Realizes.admissible` remains a general predicate; it is the
 concrete native domain that must be independently fixed.
 
 Host dispatch now checks the complete ECALL word in actual Sail memory as well as the committed

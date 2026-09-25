@@ -1,5 +1,7 @@
 import SP1Clean.Model.Core.SourceExecution
 import SP1Clean.Model.Core.ExecutionWritePolicy
+import SP1Clean.Model.Core.ExecutionEncoding
+import SP1Clean.Model.Core.ExecutionResources
 
 /-! # Complete-state semantics for the native shard capstone
 
@@ -10,12 +12,11 @@ Padding and ledger administration are absent from the semantic event tape.
 
 `Executes` is the semantic spine, including the ordinary write-byte policy and before resource
 restrictions. The policy observes each actual replayed source, so same-value ROM writes are
-excluded independently of circuit or compiler success. `Profile` names the still-open resource
-domain of the bounded AIR: clock phase/ranges and finite capacities must be fixed and enforced
-by that AIR before a capstone can be instantiated.
-It must not be instantiated with compiler success, row readiness, or a witness-grounding premise.
-There is deliberately no default profile and no claim that the current mixed assembly realizes
-this complete-state contract. See `Soundness/Shard/Contract` for the two end-to-end targets.
+excluded independently of circuit or compiler success. `nativeProfile` fixes encoding conditions
+and semantic resource measurements from data-only numeric limits. Physical capacity proofs and
+complete boundary/host installation remain separate implementation obligations; this contract
+contains no compiler readiness or supplied grounding certificate.
+See `Soundness/Shard/Contract` for the two end-to-end targets.
 -/
 
 namespace SP1Clean.FormalModel.Shard
@@ -36,16 +37,22 @@ def Executes (characteristic : ℕ) (image : ProgramImage)
     ExecutionPath.WritesPermitted (policy characteristic image) (image.toGuestProgram valid.1.1)
       source.realize events
 
-/-- Semantic restrictions to be fixed by the native resource policy, independently
-of AIR rows and compiler internals. This is a target parameter, not a completed native profile. -/
-abbrev Profile := ℕ → ProgramImage → ExecutionSnapshot → ExecutionSnapshot →
-  List ExecutionEvent → Prop
+/-- Fixed native resource domain over the existing complete replay. The image proof selects the
+same committed program as `Executes`; it supplies no row or compiler evidence. -/
+noncomputable def nativeProfile (limits : ResourceLimits) (characteristic : ℕ) (image : ProgramImage)
+    (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=
+  ∃ valid : image.Valid,
+    ExecutionPath.Encoded (policy characteristic image) (image.toGuestProgram valid) source.realize events ∧
+    (executionResources (policy characteristic image) (image.toGuestProgram valid)
+      source.realize events).Fits limits ∧
+    source.realize.resources.Fits limits ∧ target.realize.resources.Fits limits ∧
+    target.clock < NativeLayout.clocks.upper ∧ target.pc.toNat < NativeLayout.guestMemory.upper
 
-/-- Both directions of the bounded capstone must use this same independently specified domain. -/
-def AdmissibleExecution (profile : Profile) (characteristic : ℕ) (image : ProgramImage)
+/-- Both capstone directions use this one fixed domain, indexed only by numeric instance data. -/
+noncomputable def AdmissibleExecution (limits : ResourceLimits) (characteristic : ℕ) (image : ProgramImage)
     (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=
   Executes characteristic image source target events ∧
-    profile characteristic image source target events
+    nativeProfile limits characteristic image source target events
 
 namespace Executes
 
