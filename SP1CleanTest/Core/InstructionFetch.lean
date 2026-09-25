@@ -1,5 +1,5 @@
 import SP1Clean.Model.Core.InstructionFetch
-import SP1Clean.FormalModel.Shard
+import SP1Clean.FormalModel.ShardPreservation
 
 /-! # Authenticated ordinary fetch and boundaries without a successor instruction
 
@@ -50,5 +50,28 @@ theorem identityWithoutFetch (characteristic : ℕ) :
   refine ⟨by native_decide, ?_⟩
   exact FormalModel.Shard.Executes.nil_iff.mpr
     ⟨unused_valid, (ExecutionSnapshot.equivalent_iff _ _).mpr rfl⟩
+
+private def stoppedBoundary : ExecutionSnapshot :=
+  { unusedBoundary with host.exitCode := some 7 }
+
+private theorem stopped_valid : ExecutionSourceValid image stoppedBoundary := by
+  apply (checkExecutionSource_iff image stoppedBoundary).mp
+  native_decide
+
+/-- A stopped empty shard preserves ROM at every held prefix without fetching its unused PC. -/
+theorem stoppedIdentityPreservesRom (characteristic cut : ℕ) :
+    (image.toGuestProgram stopped_valid.1.1).fetchWord stoppedBoundary.pc = none ∧
+      executionTrajectory (FormalModel.Shard.policy characteristic image) (image.toGuestProgram stopped_valid.1.1)
+        stoppedBoundary.realize [] cut = some stoppedBoundary.realize ∧
+      SailConfigured stoppedBoundary.sail.realize ∧
+      RomLoaded (image.toGuestProgram stopped_valid.1.1) stoppedBoundary.sail.realize := by
+  have execution : FormalModel.Shard.Executes characteristic image stoppedBoundary stoppedBoundary [] :=
+    FormalModel.Shard.Executes.nil_iff.mpr
+      ⟨stopped_valid, (ExecutionSnapshot.equivalent_iff _ _).mpr rfl⟩
+  have replay : executionTrajectory (FormalModel.Shard.policy characteristic image)
+      (image.toGuestProgram stopped_valid.1.1) stoppedBoundary.realize [] cut = some stoppedBoundary.realize := by
+    simp only [executionTrajectory, List.take_nil, replayEvents?]
+  have frame := execution.frame_prefix replay
+  exact ⟨by native_decide, replay, frame.1, frame.2.1⟩
 
 end SP1CleanTest.Core.InstructionFetch

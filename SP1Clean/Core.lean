@@ -50,6 +50,7 @@ import SP1Clean.FormalModel.OpcodeTable
 import SP1Clean.FormalModel.Relations
 import SP1Clean.FormalModel.Shard
 import SP1Clean.FormalModel.ShardMachine
+import SP1Clean.FormalModel.ShardPreservation
 import SP1Clean.FormalModel.SupportedShard
 import SP1Clean.FormalModel.Trace.Witness
 import SP1Clean.FormalModel.TraceGen.AluGenerator
@@ -83,6 +84,7 @@ import SP1Clean.Model.Core.Boot
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionBoot
 import SP1Clean.Model.Core.ExecutionCompatibility
+import SP1Clean.Model.Core.ExecutionFrame
 import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
 import SP1Clean.Model.Core.ExecutionSnapshot

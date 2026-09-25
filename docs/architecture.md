@@ -251,7 +251,7 @@ official-Sail reduction, fetch, configuration-transport, and retirement-tail lem
 namespaces are retained, and `Proofs/Sail/Advance` consumes them to construct chip row effects.
 `Model/Core/InstructionFetch` applies actual fetch agreement at checked finite boundaries without
 importing chip rows. The independent one-step frames consume normal retirement and decoded write
-permission; whole-path ROM preservation is the remaining induction over the existing execution path.
+permission; `Model/Core/ExecutionFrame` composes them over the existing mixed execution path.
 
 `SailArithmeticExecute` holds the shared official execute reductions for the 13 arithmetic
 constructors, still consumed by the existing chip bridges. `SailArithmeticFrame` constructs their
@@ -272,6 +272,21 @@ without assuming alignment or address readiness. `SailInstructionFrame.ordinary_
 dispatches through the authoritative instruction routing projection to combine all four families.
 It preserves configuration and every byte selected by the existing decoded write policy, including
 absence of a byte; it neither constructs chip rows nor redefines instruction support.
+
+`ExecutionFrame` also owns the concrete host adapter's configuration and protected-byte frame
+for all eight calls, including the full padded HINT_READ write. `ExecutionPath.frame` preserves
+configuration, ROM and protected byte presence/value; `frame_prefix` applies at every replayed
+cut, including the held endpoint. `fetch_at` derives the actual state, committed word and official
+Sail fetch at each executed position. A generic policy must protect the image; the native shard
+policy satisfies this by construction. `FormalModel/ShardPreservation` exposes these consequences
+of `Executes` without a resource profile, circuit witness or extra caller invariant. Empty and
+stopped identities retain ROM without needing a fetch at their unused PC.
+
+`Soundness/HostExecutionEffect` retains its existing public statements as wrappers over these
+core lemmas. `HostHintReadRom` discharges the path theorem's hypotheses from the installed AIR's
+checked source, complete semantic path and mandatory write permissions. This reuses the same
+induction for the installed mixed prefix and fetch conclusions; it does not complete outgoing
+boundary authentication or install the remaining WRITE/VERIFY circuits.
 
 The native configuration fixes `misa.M = 1` and `misa.C = 0`. The latter is an intentional platform
 restriction: the pinned generated Sail model supports C/Zca, and jump alignment depends on the

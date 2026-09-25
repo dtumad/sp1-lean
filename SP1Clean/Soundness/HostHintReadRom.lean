@@ -2,13 +2,11 @@ import SP1Clean.Soundness.HostHintReadExecutionPath
 
 /-! # Protected instruction memory throughout the installed mixed replay
 
-Every replayed prefix preserves the incoming protected bytes. Ordinary instructions obtain
-write permission from the actual AIR ledger; host steps use the same byte policy through their
-semantic interpreter. The checked incoming boundary therefore supplies ROM contents at every
-prefix, including empty and host-only segments, without a caller-supplied ROM invariant.
-
-This theorem concerns the installed instruction/control/hint ensemble. It does not impose an
-ordinary write policy or resource bounds on the independent `ExecutionPath` relation.
+The installed AIR supplies a complete semantic path, its ordinary write permissions and checked
+source. The circuit-independent path induction then supplies configuration, protected-byte and
+ROM preservation at every prefix, and actual Sail fetch agreement at every executed position.
+The final boundary has no next-fetch obligation. Existing preservation statements are retained;
+resource bounds and complete outgoing-boundary authentication remain separate obligations.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -23,35 +21,33 @@ local instance romLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 2
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
-private theorem readOnly_step (valid : image.Valid)
+private theorem source_valid
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ExecutionSourceValid image source := by
+  have checked := HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.expanded_constraints witness constraints)
+  have ordering := HostLocalCore.orderingChannels (HostHintQueueBoundary.expanded witness)
+    (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints)))
+    (HostHintQueueBoundary.expanded_constraints witness constraints)
+    (HostHintQueueBoundary.expanded_balanced witness balanced)
+  exact (LocalCore.public_contract_of_byte _ checked (ordering.byte _ (HostLocalCore.localWitness
+    (HostHintQueueBoundary.expanded witness)).mem_allTables_verifierTable)).2.1
+
+/-- Raw installed AIR premises discharge the independent path's source and permission hypotheses. -/
+theorem GroundingCarrier.frame_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (n : ℕ) (current next : ExecutionState) (event : Machine.ExecutionEvent)
-    (atEvent : carrier.events[n]? = some event)
-    (prefixReplay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
-      source.realize (carrier.events.take n) = some current)
-    (replay : replayStep? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
-      current event = some next) (address : ℕ) (readOnly : image.readOnly address = true) :
-    next.sail.mem.get? address = current.sail.mem.get? address := by
-  simp only [ExecutionCarrier.events, List.getElem?_map] at atEvent
-  obtain ⟨row, atRow, rfl⟩ := Option.map_eq_some_iff.mp atEvent
-  have member := carrier.exhaustive.mem_iff.mp (List.mem_of_getElem? atRow)
-  cases row with
-  | instruction row =>
-    obtain ⟨_, effect⟩ := carrier.instruction_effect_at valid constraints balanced atRow prefixReplay replay
-    have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
-        (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data).is_real = 1 := by
-      simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
-    have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.expanded witness)
-      (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source final bankFinal))
-      (HostHintQueueBoundary.expanded_constraints witness constraints)
-      (HostHintQueueBoundary.expanded_balanced witness balanced) active.1 active.2
-    have dataEq : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
-    rw [dataEq] at permission
-    exact effect.readOnly_of_writePermission permission address readOnly
-  | syscall row | halt row =>
-    exact (hostStep_effect ((replayHost?_eq_some_iff _ _ _ _ _).mp replay)).2.2.2 address readOnly
+    {cut : ℕ} {target : ExecutionState}
+    (replay : carrier.pairedTrajectory valid cut = some target) :
+    Target.SailConfigured target.sail ∧ Target.RomLoaded (image.toGuestProgram valid) target.sail ∧
+      ∀ address, image.readOnly address = true →
+        target.sail.mem.get? address = source.sail.realize.mem.get? address := by
+  have checked := source_valid witness constraints balanced
+  obtain ⟨_, path, _⟩ := carrier.execution valid constraints balanced
+  exact path.frame_prefix valid (carrier.writesPermitted valid constraints balanced)
+    (fun _ selected => selected) checked.configured checked.romLoaded replay
 
 /-- Every successful prefix of the installed replay preserves each protected byte exactly. -/
 theorem GroundingCarrier.readOnly_prefix (valid : image.Valid)
@@ -61,15 +57,8 @@ theorem GroundingCarrier.readOnly_prefix (valid : image.Valid)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target)
     (address : ℕ) (readOnly : image.readOnly address = true) :
-    target.sail.mem.get? address = source.sail.realize.mem.get? address := by
-  apply replayEvents?_preserves (fun state => state.sail.mem.get? address) replay
-  intro n current next event atEvent prefixReplay step
-  obtain ⟨bound, _⟩ := List.getElem?_eq_some_iff.mp atEvent
-  simp only [List.length_take] at bound
-  have before : n < cut := lt_of_lt_of_le bound (Nat.min_le_left _ _)
-  rw [List.getElem?_take_of_lt before] at atEvent
-  simp only [List.take_take, Nat.min_eq_left before.le] at prefixReplay
-  exact readOnly_step valid carrier constraints balanced n current next event atEvent prefixReplay step address readOnly
+    target.sail.mem.get? address = source.sail.realize.mem.get? address :=
+  (carrier.frame_prefix valid constraints balanced replay).2.2 address readOnly
 
 /-- The incoming boundary's authenticated ROM survives every prefix of the installed replay. -/
 theorem GroundingCarrier.romLoaded_prefix (valid : image.Valid)
@@ -78,14 +67,23 @@ theorem GroundingCarrier.romLoaded_prefix (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target) :
-    Target.RomLoaded (image.toGuestProgram valid) target.sail := by
-  have checked := HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.expanded_constraints witness constraints)
-  have ordering := HostLocalCore.orderingChannels (HostHintQueueBoundary.expanded witness)
-    (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints)))
-    (HostHintQueueBoundary.expanded_constraints witness constraints)
-    (HostHintQueueBoundary.expanded_balanced witness balanced)
-  have contract := LocalCore.public_contract_of_byte _ checked (ordering.byte _ (HostLocalCore.localWitness
-    (HostHintQueueBoundary.expanded witness)).mem_allTables_verifierTable)
-  exact romLoaded_of_readOnly image valid (carrier.readOnly_prefix valid constraints balanced replay) contract.2.1.romLoaded
+    Target.RomLoaded (image.toGuestProgram valid) target.sail :=
+  (carrier.frame_prefix valid constraints balanced replay).2.1
+
+/-- Every actual event of the installed tape fetches its committed word through official Sail. -/
+theorem GroundingCarrier.fetch_at (valid : image.Valid)
+    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (cut : ℕ) (active : cut < carrier.events.length) :
+    ∃ current pc word, carrier.pairedTrajectory valid cut = some current ∧
+      current.sail.regs.get? LeanRV64D.Defs.Register.PC = some pc ∧
+      (image.toGuestProgram valid).fetchWord pc = some word ∧
+      (LeanRV64D.Functions.fetch ()).run current.sail =
+        .ok (LeanRV64D.Defs.FetchResult.F_Base word) current.sail := by
+  have checked := source_valid witness constraints balanced
+  obtain ⟨_, path, _⟩ := carrier.execution valid constraints balanced
+  exact path.fetch_at valid (carrier.writesPermitted valid constraints balanced)
+    (fun _ selected => selected) checked.configured checked.romLoaded cut active
 
 end SP1Clean.Soundness.HostHintReadCPU
