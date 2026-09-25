@@ -423,7 +423,7 @@ theorem anchorExecution_memoryGenesis :
 
 /-- The canonical zero-step closure carries 37 interactions: the boundary skeleton's 34 (two
 State, twelve verifier Byte pulls, the verifier's Exit pull, and the padding Halt row's own
-eighteen entries — seventeen gated to multiplicity zero, plus its zero-code Exit push) and the
+nineteen entries — eighteen gated to multiplicity zero, plus its zero-code Exit push) and the
 three aggregate Byte-provider pushes that close the shard's actual demand. -/
 theorem anchorExecution_nativeTrace_interactions_length :
     (nativeTrace stmt anchorExecution).witness.interactions.length = 37 := by
@@ -448,24 +448,50 @@ private theorem witness_interactionsWith_length_le
       rw [Table.interactionsWith_eq_filter]
       exact Nat.add_le_add (List.length_filter_le _ _) ih
 
-/-- Actual Clean occurrence capacity for the compiled boundary-only shard. -/
-theorem anchorExecution_footprintFits :
-    (NativeTraceFootprint.ofTrace (nativeTrace stmt anchorExecution)).Fits SP1Prime := by
-  unfold NativeTraceFootprint.Fits NativeTraceFootprint.ofTrace
-  have bound (channel : RawChannel (ZMod SP1Prime)) :
-      ((nativeTrace stmt anchorExecution).witness.interactionsWith channel).length ≤ 37 := by
+/-- Actual Clean occurrence capacity for every registered channel of the boundary-only shard. -/
+theorem anchorExecution_channelCapacity :
+    (nativeTrace stmt anchorExecution).witness.ChannelCapacity SP1Prime := by
+  apply (EnsembleWitness.channelCapacity_iff _ _).mpr
+  intro channel _
+  have bound : ((nativeTrace stmt anchorExecution).witness.interactionsWith channel).length ≤ 37 := by
     rw [← anchorExecution_nativeTrace_interactions_length]
     exact witness_interactionsWith_length_le _ _
-  simp only [Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness]
-  constructor
-  · exact lt_of_le_of_lt (bound stateChannel.toRaw) (by native_decide)
-  constructor
-  · exact lt_of_le_of_lt (bound byteChannel.toRaw) (by native_decide)
-  constructor
-  · exact lt_of_le_of_lt (bound programChannel.toRaw) (by native_decide)
-  constructor
-  · exact lt_of_le_of_lt (bound memoryChannel.toRaw) (by native_decide)
-  · exact lt_of_le_of_lt (bound exitChannel.toRaw) (by native_decide)
+  exact lt_of_le_of_lt bound (by native_decide)
+
+/-- The old projection remains available through its proved compatibility adapter. -/
+theorem anchorExecution_footprintFits :
+    (NativeTraceFootprint.ofTrace (nativeTrace stmt anchorExecution)).Fits SP1Prime :=
+  NativeTraceFootprint.fits_of_channelCapacity _ anchorExecution_channelCapacity
+
+/-- Exact event/provider demand agrees with the full constructed ledger at the active consumer. -/
+theorem anchorExecution_demandFits :
+    ∀ channel ∈ (sp1Ensemble (p := SP1Prime)).channels,
+      (nativeTrace stmt anchorExecution).channelDemand channel < SP1Prime :=
+  (SupportedCoreTraceWitness.channelCapacity_iff _).mp anchorExecution_channelCapacity
+
+/-- The actual boundary skeleton spends occurrence capacity on eighteen inactive interactions.
+Filtering by nonzero multiplicity would undercount the ledger proved above. -/
+theorem boundarySkeletonLedger_inactiveCost :
+    boundarySkeletonLedger.length = 34 ∧
+      (boundarySkeletonLedger.filter fun access => multOf access != 0).length = 16 := by
+  decide
+
+/-- Repeated provider keys are repeated physical demand, not a set of unique lookup keys. -/
+theorem boundarySkeletonLedger_repeatedKeys :
+    (boundarySkeletonLedger.map keyOf).dedup.length < boundarySkeletonLedger.length := by
+  decide
+
+/-- Even an empty semantic tape constructs the mandatory ordinary Halt padding row. -/
+theorem anchorExecution_haltPaddingHeight :
+    ((nativeTrace stmt anchorExecution).providerTableFor .halt).length = 1 :=
+  SupportedCoreTraceWitness.providerTableFor_length _ .halt
+
+/-- A zero table-height ceiling rejects the boundary-only witness, despite its empty event tape. -/
+theorem anchorExecution_zeroRows_rejected (occurrences : ℕ) :
+    ¬ (nativeTrace stmt anchorExecution).witness.PhysicalFits 0 occurrences := by
+  intro fits
+  have bound := fits.1 1 (by simp only [EnsembleWitness.tableHeights_eq, List.mem_cons, true_or])
+  omega
 
 /-! ## Joint admissibility and capstone consequences -/
 
@@ -490,9 +516,9 @@ theorem anchorExecution_nativeTraceReady : NativeTraceReady stmt anchorExecution
 theorem anchorExecution_admissible :
     SupportedCoreNativeAdmissibleShardRelation stmt anchorSemanticWitness :=
   ⟨anchorExecution_semantic,
-    anchorExecution_nativeTraceReady, anchorExecution_footprintFits⟩
+    anchorExecution_nativeTraceReady, anchorExecution_channelCapacity⟩
 
-/-- The capacity-aligned functional capstone validates the compiler's literal 53-table witness in
+/-- The capacity-aligned functional capstone validates the compiler's literal 55-table witness in
 the same bounded native relation consumed by soundness. -/
 theorem anchorExecution_yields_boundedAirWitness :
     SupportedCoreNativeShardRelation stmt (nativeTrace stmt anchorExecution).witness :=

@@ -175,6 +175,7 @@ import SP1Clean.Proofs.Completeness.FieldClosure
 import SP1Clean.Proofs.Completeness.Footprint
 import SP1Clean.Proofs.Completeness.InstructionEvent
 import SP1Clean.Proofs.Completeness.SemanticAccess
+import SP1Clean.Proofs.Completeness.PhysicalFootprint
 import SP1Clean.Proofs.Completeness.Ledger
 import SP1Clean.Proofs.Completeness.MemoryHistory
 import SP1Clean.Proofs.Completeness.NativeBoundaryAgreement
@@ -361,6 +362,7 @@ import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.RefreshElimination
 import SP1Clean.Soundness.RefreshWiring
 import SP1Clean.Soundness.ResourceEnsemble
+import SP1Clean.Soundness.ResourceFootprint
 import SP1Clean.Soundness.RomWriteProtection
 import SP1Clean.Soundness.InstructionWritePolicy
 import SP1Clean.Soundness.StoreWritePolicy

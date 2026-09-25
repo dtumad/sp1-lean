@@ -3,14 +3,14 @@ import SP1Clean.Proofs.Completeness.MemoryHistory
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
 import SP1Clean.Proofs.Completeness.ConsumerClosure
-import SP1Clean.Proofs.Completeness.Footprint
+import SP1Clean.Proofs.Completeness.PhysicalFootprint
 import SP1Clean.Soundness.AIR
 
 /-!
 # Deterministic native ensemble trace compiler
 
 This is the low-level functional seam between the common shard witness's evaluated
-`Machine.EventExecutionTrace` and the ordinary 53-table Clean ensemble. The compiler has no proof
+`Machine.EventExecutionTrace` and the ordinary 55-table Clean ensemble. The compiler has no proof
 argument and makes no row choices:
 
 * `Execution.compileExecution` selects the chronological instruction events and Memory refreshes;
@@ -336,7 +336,7 @@ theorem NativeTraceReady.wellFormed
   exact (nativeBaseTrace statement execution).canonicalClosure_wellFormed
     (ready.baseWellFormed publicWellFormed) ready.demandServable
 
-/-- The exact assertion system of all 53 native tables plus the verifier row. -/
+/-- The exact assertion system of all 55 native tables plus the verifier row. -/
 theorem NativeTraceReady.constraints
     {statement : SupportedCoreStatement p} {execution : Machine.EventExecutionTrace}
     (ready : NativeTraceReady statement execution)
@@ -367,7 +367,7 @@ theorem NativeTraceReady.skeletonNonpositive
   apply hnonpos_of_consumersOnlyPull
   exact ready.consumers publicWellFormed
 
-/-- Convert the four-component footprint carrier into the channel-indexed length premise used by
+/-- Convert the five-component compatibility footprint carrier into the channel-indexed length premise used by
 Clean's balance theorem. -/
 theorem NativeTraceFootprint.interactionLengths
     {trace : SupportedCoreTraceWitness p}
@@ -392,6 +392,15 @@ theorem NativeTraceFootprint.interactionLengths
   · rw [witness_publicValuesChannel_silent _ trace.witness_syscallTable_nil]
     simpa using (Fact.out (p := p.Prime)).pos
 
+/-- The retained ordinary constructor has silent syscall/public-value tables, so the old
+five-channel projection is equivalent to the complete seven-channel capacity interface. -/
+theorem NativeTraceFootprint.fits_iff_channelCapacity (trace : SupportedCoreTraceWitness p) :
+    (NativeTraceFootprint.ofTrace trace).Fits p ↔ trace.witness.ChannelCapacity p := by
+  constructor
+  · intro fits
+    exact (Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mpr (interactionLengths fits)
+  · exact fits_of_channelCapacity trace
+
 /-- Public limb well-formedness makes the arbitrary-shard prover-data clock representable. -/
 theorem nativeInitialClock_encodable (statement : SupportedCoreStatement p)
     (publicWellFormed : statement.publicValues.LimbBounds) :
@@ -408,7 +417,15 @@ in `FormalModel.SupportedShard`. -/
 def NativeTraceAdmissible (statement : SupportedCoreStatement p)
     (execution : Machine.EventExecutionTrace) : Prop :=
   NativeTraceReady statement execution ∧
-    (NativeTraceFootprint.ofTrace (nativeTrace statement execution)).Fits p
+    (nativeTrace statement execution).witness.ChannelCapacity p
+
+/-- Source compatibility for the legacy five-channel admissibility view. Its omission of two
+channels is justified only by this ordinary constructor's proved silence. -/
+theorem nativeTraceAdmissible_iff_legacy (statement : SupportedCoreStatement p)
+    (execution : Machine.EventExecutionTrace) :
+    NativeTraceAdmissible statement execution ↔ NativeTraceReady statement execution ∧
+      (NativeTraceFootprint.ofTrace (nativeTrace statement execution)).Fits p := by
+  rw [NativeTraceAdmissible, NativeTraceFootprint.fits_iff_channelCapacity]
 
 /-! ## Canonical shard source
 

@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Completeness.Assembly
+import ToClean.Air.Footprint
 
 /-!
 # Exact native interaction footprint
@@ -9,8 +10,10 @@ small, explicit carrier.  It is deliberately separate from semantic trace readin
 provider multiplicity: aggregate provider counts may wrap as field elements without harming field
 balance, while the number of interaction *occurrences* may not reach the characteristic.
 
-`NativeTraceFootprint.ofTrace` measures the actual assembled Clean witness.  A future exact-Core
-adapter may add padding and then recompute this value; the unpadded native compiler uses it as-is.
+`NativeTraceFootprint.ofTrace` retains the five named legacy projections. The active ordinary
+compiler now consumes `EnsembleWitness.ChannelCapacity` over every registered channel; its
+compatibility equivalence lives next to that constructor in `NativeTraceCompiler.lean` and uses
+the ordinary trace's two silent host channels. It is not an equivalence for mixed host traces.
 -/
 
 namespace SP1Clean.Soundness
@@ -19,7 +22,8 @@ open SP1Clean.Channels (stateChannel byteChannel programChannel memoryChannel ex
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-/-- Exact per-channel occurrence counts of one native ensemble witness. -/
+/-- Legacy five-channel projection. New consumers use `EnsembleWitness.ChannelCapacity` over
+every registered channel; this record remains only for source compatibility. -/
 structure NativeTraceFootprint where
   state : ℕ
   byte : ℕ
@@ -38,7 +42,7 @@ def Fits (footprint : NativeTraceFootprint) (characteristic : ℕ) : Prop :=
     footprint.memory < characteristic ∧
     footprint.exit < characteristic
 
-/-- Measure the four channels of the actual generated native witness. -/
+/-- Measure the five legacy channels of the actual generated native witness. -/
 noncomputable def ofTrace (trace : SupportedCoreTraceWitness p) : NativeTraceFootprint where
   state := (trace.witness.allTablesWitness.interactionsWith stateChannel.toRaw).length
   byte := (trace.witness.allTablesWitness.interactionsWith byteChannel.toRaw).length
@@ -46,32 +50,21 @@ noncomputable def ofTrace (trace : SupportedCoreTraceWitness p) : NativeTraceFoo
   memory := (trace.witness.allTablesWitness.interactionsWith memoryChannel.toRaw).length
   exit := (trace.witness.allTablesWitness.interactionsWith exitChannel.toRaw).length
 
+/-- The generic all-channel capacity implies the retained five-channel compatibility view. -/
+theorem fits_of_channelCapacity (trace : SupportedCoreTraceWitness p)
+    (capacity : trace.witness.ChannelCapacity p) : (ofTrace trace).Fits p := by
+  have bounds := (Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mp capacity
+  exact ⟨bounds stateChannel.toRaw (by simp [sp1Ensemble_channels]),
+    bounds byteChannel.toRaw (by simp [sp1Ensemble_channels]),
+    bounds programChannel.toRaw (by simp [sp1Ensemble_channels]),
+    bounds memoryChannel.toRaw (by simp [sp1Ensemble_channels]),
+    bounds exitChannel.toRaw (by simp [sp1Ensemble_channels])⟩
+
 theorem fits_of_balancedChannels (trace : SupportedCoreTraceWitness p)
     (balanced : trace.witness.BalancedChannels) : (ofTrace trace).Fits p := by
-  have stateBalanced := balanced stateChannel.toRaw (by
-    simp [sp1Ensemble_channels])
-  have byteBalanced := balanced byteChannel.toRaw (by
-    simp [sp1Ensemble_channels])
-  have programBalanced := balanced programChannel.toRaw (by
-    simp [sp1Ensemble_channels])
-  have memoryBalanced := balanced memoryChannel.toRaw (by
-    simp [sp1Ensemble_channels])
-  have exitBalanced := balanced exitChannel.toRaw (by
-    simp [sp1Ensemble_channels])
-  have primePos : 0 < p := (Fact.out : p.Prime).pos
-  have charNe : ringChar (ZMod p) ≠ 0 := by
-    simpa only [ZMod.ringChar_zmod_n] using (Nat.ne_of_gt primePos)
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · simpa only [ofTrace, Fits, ZMod.ringChar_zmod_n] using
-      stateBalanced.1.resolve_right charNe
-  · simpa only [ofTrace, ZMod.ringChar_zmod_n] using
-      byteBalanced.1.resolve_right charNe
-  · simpa only [ofTrace, ZMod.ringChar_zmod_n] using
-      programBalanced.1.resolve_right charNe
-  · simpa only [ofTrace, ZMod.ringChar_zmod_n] using
-      memoryBalanced.1.resolve_right charNe
-  · simpa only [ofTrace, ZMod.ringChar_zmod_n] using
-      exitBalanced.1.resolve_right charNe
+  apply fits_of_channelCapacity
+  simpa only [ZMod.ringChar_zmod_n] using trace.witness.channelCapacity_of_balanced balanced
+    (by simpa only [ZMod.ringChar_zmod_n] using (Fact.out : p.Prime).pos)
 
 end NativeTraceFootprint
 

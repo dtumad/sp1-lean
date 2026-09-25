@@ -16,6 +16,7 @@ public import ToClean.Gadgets.ComputableWitnesses
 public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension
 public import ToClean.Air.PublicVerifier
+public import ToClean.Air.Footprint
 public import ToClean.Air.ChannelClosure
 public import ToClean.Air.Authentication
 public import ToClean.Air.CompleteEnsemble
