@@ -1,5 +1,6 @@
 import SP1Clean.FormalModel.ShardResources
 import SP1Clean.Model.SP1Field
+import SP1Clean.Native.Operations.ResourceBoundary
 
 /-! # A nonempty bounded complete-state shard
 
@@ -97,5 +98,41 @@ theorem stoppedIdentity :
   rw [ExecutionSnapshot.resources_realize]
   intro kind
   cases kind <;> native_decide
+
+private def header : SP1PublicIO (ZMod SP1Prime) :=
+  ⟨2, 0, 0, 0, 0, 1, 0, 266, 0, 0, 0, 4, 1, 0, 0, 1, Vector.replicate 32 0⟩
+
+/-- The nonempty semantic fixture passes the actual added verifier assertions. -/
+theorem paddedHint_resourceChecks (data : ProverData (ZMod SP1Prime)) :
+    (ResourceBoundary.checker limits source target).Checks header data := by
+  apply (ResourceBoundary.checks_iff ..).mpr
+  exact ⟨paddedHint_admissible.boundaryBounds, by unfold ResourceBoundary.ClockFor; decide⟩
+
+/-- Tick overflow is rejected by raw constraints, independently of the old ensemble's witness. -/
+theorem rawRejectsTickOverflow (data : ProverData (ZMod SP1Prime)) :
+    ¬ (ResourceBoundary.checker { limits with ticks := 263 } source target).Checks header data := by
+  rw [ResourceBoundary.checks_iff]
+  intro checked
+  exact (by decide : ¬ (264 : ℕ) ≤ 263) checked.1.2.2.2.1
+
+/-- A changed public clock cannot be hidden behind a valid fixed-snapshot budget. -/
+theorem rawRejectsClockMutation (data : ProverData (ZMod SP1Prime)) :
+    ¬ (ResourceBoundary.checker limits source target).Checks
+      { header with final_clk_0_16 := 267 } data := by
+  rw [ResourceBoundary.checks_iff]
+  intro checked
+  exact (by unfold ResourceBoundary.ClockFor; decide :
+    ¬ ResourceBoundary.ClockFor target { header with final_clk_0_16 := 267 }) checked.2
+
+/-- Endpoint checks admit stopped identities without imposing a phase-one clock restriction. -/
+theorem stoppedIdentity_resourceBounds : ResourceBoundary.checkBounds limits
+    { source with host.exitCode := some 7 } { source with host.exitCode := some 7 } = true :=
+  (ResourceBoundary.checkBounds_iff ..).mpr stoppedIdentity.boundaryBounds
+
+/-- Boundary checks alone do not claim the cumulative padded-write bound: event enforcement
+must reject this tape even though its endpoint payload fits. -/
+theorem endpointChecks_doNotEnforceWriteWork :
+    ResourceBoundary.checkBounds { limits with writeBytes := 15 } source target = true := by
+  native_decide
 
 end SP1CleanTest.Core.ShardResources

@@ -1,4 +1,5 @@
 import SP1Clean.FormalModel.Shard
+import SP1Clean.FormalModel.Contracts.ResourceBoundary
 
 /-! # Numeric monotonicity and composition of the fixed shard resource domain
 
@@ -50,6 +51,16 @@ theorem AdmissibleExecution.work
   change (events.map ExecutionEvent.duration).sum ≤ limits.ticks at ticks
   rw [execution.1.clock]
   exact ⟨count, by omega⟩
+
+/-- Every admissible path passes the concrete verifier's finite endpoint checks. -/
+theorem AdmissibleExecution.boundaryBounds
+    (execution : AdmissibleExecution limits characteristic image source target events) :
+    ResourceBoundary.Bounds limits source target := by
+  obtain ⟨_, _, _, incoming, outgoing, clocks, pc⟩ := execution.2
+  rw [source.resources_realize] at incoming
+  rw [target.resources_realize] at outgoing
+  exact ⟨incoming, outgoing, by have := execution.1.clock; omega,
+    execution.work.2, clocks, pc⟩
 
 /-- Join complete boundaries and check the combined work/occupancy against one numeric budget. -/
 theorem AdmissibleExecution.append

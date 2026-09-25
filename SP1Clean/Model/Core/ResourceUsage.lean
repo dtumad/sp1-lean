@@ -51,6 +51,23 @@ def combine (first second : ResourceUsage) : ResourceUsage :=
 def Fits (usage : ResourceUsage) (limits : ResourceLimits) : Prop :=
   ∀ kind, usage kind ≤ limits.ceiling kind
 
+/-- Executable comparison of all semantic quantities, with no compiler or witness input. -/
+def checkFits (usage : ResourceUsage) (limits : ResourceLimits) : Bool :=
+  [.events, .ticks, .readBytes, .writeBytes, .allocatedHints,
+    .liveHints, .liveHintBytes, .requests, .outputBytes, .boundaryBytes].all
+      (fun kind => decide (usage kind ≤ limits.ceiling kind))
+
+/-- The finite comparison checks exactly the semantic predicate. -/
+theorem checkFits_iff (usage : ResourceUsage) (limits : ResourceLimits) :
+    usage.checkFits limits = true ↔ usage.Fits limits := by
+  simp only [checkFits, List.all_cons, List.all_nil, Bool.and_eq_true,
+    decide_eq_true_eq, and_true]
+  constructor
+  · rintro ⟨a, b, c, d, e, f, g, h, i, j⟩ kind
+    cases kind <;> assumption
+  · intro fits
+    exact ⟨fits _, fits _, fits _, fits _, fits _, fits _, fits _, fits _, fits _, fits _⟩
+
 theorem zero_fits (limits : ResourceLimits) : zero.Fits limits := fun _ => Nat.zero_le _
 
 @[simp] theorem zero_combine (usage : ResourceUsage) : zero.combine usage = usage := by
