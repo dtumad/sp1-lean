@@ -1,4 +1,5 @@
 import SP1Clean.Model.MemoryClock
+import SP1Clean.Model.Core.ExecutionEncoding
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Model.Semantics.MicroTime
 
@@ -37,6 +38,37 @@ open SP1Clean.Semantics
 open SP1Clean.Channels (MemoryMsg)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+
+/-- The actual CPUState lookup enforces phase one modulo eight. This is a circuit restriction,
+including for syscall rows, rather than a premise introduced by the compiler's scheduler. -/
+theorem clkNat_phase_of_cpuState_bounds (clkHigh clk0 clk1 : ZMod p)
+    (clk0Bound : ((clk0 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
+    (clk1Bound : clk1.val < 2 ^ 8) :
+    Model.Core.activeClockPhase (clkNat clkHigh (clk0 + clk1 * 65536)) := by
+  have hp := Fact.out (p := 2 ^ 25 < p)
+  let scaled := (clk0 - 1) * (8 : ZMod p)⁻¹
+  have scaledBound : scaled.val < 2 ^ 13 := clk0Bound
+  have reconstruct : scaled * 8 + 1 = clk0 := by
+    dsimp only [scaled]
+    rw [mul_assoc, inv_mul_cancel₀ val_8_ne_zero, mul_one, sub_add_cancel]
+  have scaledMulVal : (scaled * 8).val = scaled.val * 8 := by
+    rw [ZMod.val_mul_of_lt (by rw [val_8_zmod_p]; omega), val_8_zmod_p]
+  have clk0Val : clk0.val = scaled.val * 8 + 1 := by
+    rw [← reconstruct, ZMod.val_add_of_lt (by rw [scaledMulVal, ZMod.val_one]; omega),
+      scaledMulVal, ZMod.val_one]
+  have highLimbVal : (clk1 * 65536).val = clk1.val * 65536 := by
+    rw [ZMod.val_mul_of_lt (by rw [val_65536_zmod_p]; omega), val_65536_zmod_p]
+  have lowVal : (clk0 + clk1 * 65536).val = clk0.val + clk1.val * 65536 := by
+    rw [ZMod.val_add_of_lt (by rw [clk0Val, highLimbVal]; omega), highLimbVal]
+  simp only [Model.Core.activeClockPhase, clkNat, lowVal, clk0Val]
+  omega
+
+/-- An active reader contract supplies exactly the clock phase used by the semantic profile. -/
+theorem cpuState_clock_phase (input : Readers.CPUState.Inputs (ZMod p))
+    (spec : Readers.CPUState.Spec input) (active : input.is_real = 1) :
+    Model.Core.activeClockPhase
+      (clkNat input.cols.clk_high (input.cols.clk_0_16 + input.cols.clk_16_24 * 65536)) :=
+  clkNat_phase_of_cpuState_bounds _ _ _ (spec active).1 (spec active).2
 
 /-- The two CPUState range checks make the field-valued low-clock increment an exact natural-number
 increment.  The stronger machine-level field bound leaves enough room for the final `+ 8` after the

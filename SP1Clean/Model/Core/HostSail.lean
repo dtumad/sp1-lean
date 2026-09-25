@@ -48,12 +48,34 @@ theorem HostMemoryWrite.read_outside (write : HostMemoryWrite)
   have := index.isLt
   omega
 
+/-- A host write may replace bytes but never removes an existing address. -/
+theorem HostMemoryWrite.preserves_present (write : HostMemoryWrite)
+    (memory : Std.ExtHashMap ℕ (BitVec 8)) (query : ℕ)
+    (present : (memory.get? query).isSome) :
+    ((memory.insertMany write.entries).get? query).isSome := by
+  by_cases outside : query < write.address ∨ write.address + write.bytes.length ≤ query
+  · rw [write.read_outside memory query outside]
+    exact present
+  · have bound : query - write.address < write.bytes.length := by omega
+    have atByte : query = write.address + (query - write.address) := by omega
+    rw [atByte, write.read_written memory _ bound]
+    rfl
+
 /-- Apply the complete emitted write, including hint padding. -/
 def HostEffect.applyMemory (effect : HostEffect) (memory : Std.ExtHashMap ℕ (BitVec 8)) :
     Std.ExtHashMap ℕ (BitVec 8) :=
   match effect.write with
   | none => memory
   | some write => memory.insertMany write.entries
+
+/-- Every host effect preserves the incoming memory domain, including mandatory padding writes. -/
+theorem HostEffect.preserves_present (effect : HostEffect) (memory : Std.ExtHashMap ℕ (BitVec 8))
+    (query : ℕ) (present : (memory.get? query).isSome) :
+    ((effect.applyMemory memory).get? query).isSome := by
+  unfold applyMemory
+  cases effect.write with
+  | none => exact present
+  | some write => exact write.preserves_present memory query present
 
 /-- The actual Sail memory update preserves every protected byte. -/
 theorem HostMemoryWrite.preserves_readOnly (write : HostMemoryWrite)

@@ -26,7 +26,7 @@ open LeanRV64D.Defs
 namespace SP1Clean.Semantics
 
 open Sail LeanRV64D LeanRV64D.Functions
-open SP1Clean.Soundness.Target (instructionRouteId)
+open SP1Clean.Soundness.Target (instructionRouteId instructionRouteKey)
 
 /-! ## Field-free operand projections -/
 
@@ -229,6 +229,34 @@ def instructionAccessPlan? (decoded : instruction) (source target : SailState) :
 def InstructionPlanReady (decoded : instruction) (source target : SailState) : Prop :=
   ∃ plan, instructionAccessPlan? decoded source target = some plan
 
+/-- The role-only projection of the canonical instruction plan. This carries no values, clocks,
+or alternative execution semantics; the event compiler uses it to check adapter shape agreement. -/
+def instructionAccessSlots : instruction → List AccessSlot
+  | .RTYPE _ | .RTYPEW _ | .MUL _ | .MULW _ | .DIV _ | .DIVW _ | .REM _ | .REMW _ =>
+      [.opC, .opB, .opA]
+  | .ITYPE _ | .JALR _ | .BTYPE _ | .SHIFTIOP _ | .SHIFTIWOP _ | .ADDIW _ => [.opB, .opA]
+  | .UTYPE _ | .JAL _ => [.opA]
+  | .LOAD _ | .STORE _ => [.ram, .opB, .opA]
+  | _ => []
+
+/-- Erasing values from a successful canonical extraction yields exactly its instruction roles. -/
+theorem instructionAccessPlan_slots {decoded : instruction} {source target : SailState}
+    {plan : InstructionAccessPlan}
+    (generated : instructionAccessPlan? decoded source target = some plan) :
+    plan.map PlannedTouch.slot = instructionAccessSlots decoded := by
+  unfold instructionAccessPlan? certifiedInstructionPlan? at generated
+  split at generated
+  · contradiction
+  · cases decoded <;>
+      simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?,
+        loadPlan?, storePlan?, Option.map_eq_some_iff, Option.bind_eq_bind,
+        Option.bind_eq_some_iff, pure, Option.some.injEq] at generated
+    all_goals try contradiction
+    all_goals
+      rcases generated with ⟨certified, generated, rfl⟩
+      repeat' rcases generated with ⟨_, _, generated⟩
+      rfl
+
 /-- A produced plan is routed by one of the twenty-five canonical instruction-table identities. -/
 theorem instructionRouteId_exists_of_accessPlan {decoded : instruction} {source target : SailState}
     {plan : InstructionAccessPlan}
@@ -264,6 +292,53 @@ theorem instructionAccessPlan_length_le_three {decoded : instruction} {source ta
       simp only [certifiedEq, Option.map_some, Option.some.injEq] at generated
       subst plan
       exact certified.length_le_three
+
+/-- Availability of the one RAM cell selected by a decoded memory instruction. This local
+projection lemma's premise is derived from complete execution memory, not added to shard validity. -/
+def InstructionCellsPresent (decoded : instruction) (source target : SailState) : Prop :=
+  match decoded with
+  | .LOAD (offset, rs1, _, _, _) | .STORE (offset, _, rs1, _) =>
+      ∀ base, source.get_reg? (regidxBits rs1) = some base →
+        (ramWord64? source (memoryRamCell base offset).baseAddr).isSome ∧
+          (ramWord64? target (memoryRamCell base offset).baseAddr).isSome
+  | _ => True
+
+/-- The existing access extractor is total when registers and the decoded instruction's
+actual RAM cell are present. The complete-path adapter derives these observations from semantics. -/
+theorem instructionAccessPlan?_isSome {decoded : instruction} {source target : SailState}
+    (routed : (instructionRouteId decoded).isSome)
+    (incoming : ∀ index, (source.get_reg? index).isSome)
+    (outgoing : ∀ index, (target.get_reg? index).isSome)
+    (memory : InstructionCellsPresent decoded source target) :
+    (instructionAccessPlan? decoded source target).isSome := by
+  classical
+  choose prior priorEq using fun index => Option.isSome_iff_exists.mp (incoming index)
+  choose post postEq using fun index => Option.isSome_iff_exists.mp (outgoing index)
+  obtain ⟨id, route⟩ := Option.isSome_iff_exists.mp routed
+  simp only [instructionAccessPlan?, certifiedInstructionPlan?, route, Option.isSome_map]
+  have keySome : (instructionRouteKey decoded).isSome := by
+    exact Option.isSome_of_isSome_bind routed
+  obtain ⟨key, keyEq⟩ := Option.isSome_iff_exists.mp keySome
+  simp only [SP1Clean.Soundness.Target.instructionRouteKey] at keyEq
+  split at keyEq
+  all_goals try first
+    | contradiction
+    | solve
+      | simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?,
+          priorEq, destinationPost?]
+        split_ifs <;> simp [postEq]
+      | simp [instructionPlanByShape?, baReadbackPlan?, priorEq]
+  · rename_i offset rs1 rd unsigned width
+    obtain ⟨oldPresent, newPresent⟩ := memory _ (priorEq (regidxBits rs1))
+    obtain ⟨oldRam, oldEq⟩ := Option.isSome_iff_exists.mp oldPresent
+    obtain ⟨newRam, newEq⟩ := Option.isSome_iff_exists.mp newPresent
+    simp only [instructionPlanByShape?, loadPlan?, priorEq, destinationPost?]
+    split_ifs <;> simp [postEq, oldEq, newEq]
+  · rename_i offset rs2 rs1 width
+    obtain ⟨oldPresent, newPresent⟩ := memory _ (priorEq (regidxBits rs1))
+    obtain ⟨oldRam, oldEq⟩ := Option.isSome_iff_exists.mp oldPresent
+    obtain ⟨newRam, newEq⟩ := Option.isSome_iff_exists.mp newPresent
+    simp [instructionPlanByShape?, storePlan?, priorEq, oldEq, newEq]
 
 /-- Constructor form of readiness, useful when the compiler retains the extracted plan. -/
 theorem InstructionPlanReady.of_generated {decoded : instruction} {source target : SailState}

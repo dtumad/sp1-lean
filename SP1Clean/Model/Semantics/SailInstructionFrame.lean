@@ -15,21 +15,23 @@ open LeanRV64D.Defs SP1Clean.Soundness.Target
 
 /-- A permitted supported ordinary retirement preserves configuration and every protected byte.
 The outgoing PC need not fetch unless a subsequent step executes. -/
-theorem ordinary_normal_frame {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
+theorem ordinary_normal_memory_frame {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
     (configured : SailConfigured source) (loaded : RomLoaded program source)
     (permission : Model.Core.InstructionWrite.PermittedAt readOnly program source)
     (normal : SailRetiresNormally source target) :
     SailConfigured target ∧
-      ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address := by
+      (∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address) ∧
+      ∀ address, (source.mem.get? address).isSome → (target.mem.get? address).isSome := by
   obtain ⟨pc, word, decoded, atPc, fetched, decode, checked⟩ := permission
   have permitted : Model.Core.InstructionWrite.PermittedAt readOnly program source :=
     ⟨pc, word, decoded, atPc, fetched, decode, checked⟩
   have supported := (Model.Core.InstructionWrite.check_supported readOnly source.get_reg? decoded checked).2
   have liftFrame : SailConfigured target ∧ target.mem = source.mem →
-      SailConfigured target ∧ ∀ address, readOnly address = true →
-        target.mem.get? address = source.mem.get? address := by
+      SailConfigured target ∧ (∀ address, readOnly address = true →
+        target.mem.get? address = source.mem.get? address) ∧
+        ∀ address, (source.mem.get? address).isSome → (target.mem.get? address).isSome := by
     rintro ⟨cfg, memory⟩
-    exact ⟨cfg, fun _ _ => by rw [memory]⟩
+    exact ⟨cfg, fun _ _ => by rw [memory], fun _ present => by simpa only [memory] using present⟩
   unfold instructionRouteId at supported
   cases routed : instructionRouteKey decoded with
   | none => simp [routed] at supported
@@ -47,6 +49,17 @@ theorem ordinary_normal_frame {readOnly : ℕ → Bool} {program : GuestProgram}
     · rename_i imm rs2 rs1 width
       rcases rs2 with ⟨rs2⟩
       rcases rs1 with ⟨rs1⟩
-      exact store_normal_frame configured loaded atPc fetched decode permitted normal
+      exact store_normal_memory_frame configured loaded atPc fetched decode permitted normal
+
+/-- A permitted supported ordinary retirement preserves configuration and every protected byte.
+The outgoing PC need not fetch unless a subsequent step executes. -/
+theorem ordinary_normal_frame {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
+    (configured : SailConfigured source) (loaded : RomLoaded program source)
+    (permission : Model.Core.InstructionWrite.PermittedAt readOnly program source)
+    (normal : SailRetiresNormally source target) :
+    SailConfigured target ∧
+      ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address := by
+  have frame := ordinary_normal_memory_frame configured loaded permission normal
+  exact ⟨frame.1, frame.2.1⟩
 
 end SP1Clean.Advance

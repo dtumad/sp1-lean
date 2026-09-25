@@ -21,9 +21,13 @@ projections, not additional stored bounds. Program-image checks use the same gue
 Other range values are meaningful for the generic arithmetic/host interface, not a claim that
 arbitrary layouts have been proved against the fixed generated Sail model or SP1 chips.
 
-The clock encoding has two 24-bit limbs. An active access must additionally fit its actual local
-timestamp window. Source validity alone does not imply phase one modulo eight; that premise of
-an older compiler helper must not become a silent domain restriction. Sail permits misaligned
+The clock encoding has two 24-bit limbs. Every active native CPU row also has phase one modulo
+eight: the shared `Native/Readers/CPUState.lean` circuit constrains `(clk_0_16 - 1) / 8` by a
+13-bit range lookup. Ordinary instruction and host rows both use it. `TimeExtraction.cpuState_clock_phase`
+derives the phase from that actual specification. Source validity and the broader Sail/host
+execution relation do not imply it. The native profile therefore requires the phase explicitly;
+empty/stopped identities do not. The generic scheduler needs only room for its four local offsets,
+and its window lemmas retain phase-one compatibility wrappers. Sail permits misaligned
 ordinary data accesses. The specific alignment imposed by native chip encodings is a separate
 representability condition, not a Sail fault assumption.
 
@@ -80,7 +84,7 @@ The enforcement obligations remain explicit:
 | Every intermediate live queue/RAM/output/request peak fits | A4/A5 constrained resource accounting at actual prefixes |
 | Arbitrary independent event/read/write/allocation ceilings | A4/A5 exact occurrence/cost accounting, including padded writes and both VERIFY observations |
 | Fixed pointer/length widths and cumulative persistent allocation | A5 queue/request installation; individual field-count ceilings are insufficient |
-| Whole `ExecutionPath.Encoded` derived from registered rows | R4 adapter from existing chip contracts and actual prefix decoding |
+| Whole `ExecutionPath.Encoded` derived from registered rows | Shared CPU phase is derived from its actual specification; A6 assembly must combine each ordinary chip's address/alignment facts with actual prefix decoding |
 | Physical height and every channel's occurrence ceiling | R5 inventory/capacity accounting; final A4/A5/A6 tables must be included when installed |
 
 These are unproved implementation obligations, not additional capstone premises. The endpoint
@@ -99,8 +103,8 @@ without materializing dense Sail memory; `ByteMemory.supportBelow` removes zeros
 writes. Both state and tape usage are invariant under equivalent complete snapshots.
 
 `nativeProfile` is fixed at the Shard and PolyFun target consumers. It requires width-aligned
-ordinary LOAD/STORE spans and the actual low-clock window (`clock % 2^24 + 4 < 2^24`), not phase
-one modulo eight. Normal Sail retirement alone does not imply width alignment. Final PC/clock
+ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. This phase implies
+the low-clock window (`clock % 2^24 + 4 < 2^24`). Normal Sail retirement alone does not imply width alignment. Final PC/clock
 fit their native encodings but need no subsequent fetch. The physical `tableRows` and
 `channelOccurrences` ceilings still await the R5 capacity consumer; the semantic measurements do
 not stand in for that proof. `boundaryBytes` is a variable-payload measure, not a full Sail
@@ -114,6 +118,15 @@ actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by
 | `InstructionPlanReady`, `NativeCompilerReady`, `NativeTraceReady` | Prove their applicable fields from semantics for retained APIs; no occurrence in the new domain. Remove wrappers once all relevant consumers use the derived results. The legacy `syscallFree` field cannot describe mixed execution. |
 | `NativeTraceFootprint` | Migrate to shared accounting over every registered channel; retain an adapter while the ordinary compiler still consumes its named projections. |
 | Explicit numeric range checks in older chip/Sail lemmas | Retain encoding-specific statements, derive their range facts from `NativeLayout`; factor more generally only with a migrated consumer. |
+
+`ExecutionMemory` proves presence and outside-domain framing along the existing Sail/host path,
+including padded host writes, independently of AIR grounding. `ShardAccess` derives canonical
+access projection at every ordinary position. `Proofs/Completeness/SemanticAccess.admissibleExecution_compile_at`
+then derives event extraction, role ordering, valid refreshes and the outgoing frontier invariant
+for all 25 routed families. The family lemmas inspect the existing router and constructors;
+`instructionAccessSlots` only erases values from the canonical plan. No second instruction model
+or path is introduced. The old readiness wrappers remain for legacy consumers; extraction
+readiness is now derived, while per-chip event validity and all-table mixed assembly remain A6.
 
 No whole-chip faithfulness anchor is retired by this work. Native range/resource strengthening
 does not automatically become exact upstream SP1 refinement.

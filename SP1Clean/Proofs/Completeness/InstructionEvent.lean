@@ -324,6 +324,372 @@ private def instructionEventFor? (id : InstructionChipId) (decoded : instruction
   | .divRem => rTypeEvent? decoded stamped clk pc opcode
   | .aluX0 => aluTypeEvent? decoded stamped clk pc opcode
 
+private theorem instructionEventFor?_utype {args : BitVec 20 × regidx × uop}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.UTYPE args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.UTYPE args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.UTYPE args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rd, op⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases op
+  all_goals
+    simp_all only [uopToOpcode]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, jTypeEvent?]
+    rfl
+
+private theorem instructionEventFor?_jal {args : BitVec 21 × regidx}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.JAL args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.JAL args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.JAL args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rd⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  all_goals
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, jTypeEvent?]
+    rfl
+
+private theorem instructionEventFor?_jalr {args : BitVec 12 × regidx × regidx}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.JALR args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.JALR args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.JALR args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rs1, rd⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  all_goals
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, iTypeEvent?, iWriteEventOf?]
+    rfl
+
+private theorem instructionEventFor?_btype {args : BitVec 13 × regidx × regidx × bop}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.BTYPE args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.BTYPE args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.BTYPE args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rs2, rs1, op⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases op
+  all_goals
+    simp_all only [bopToOpcode]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, iTypeEvent?]
+    rfl
+
+private theorem instructionEventFor?_itype {args : BitVec 12 × regidx × regidx × iop}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.ITYPE args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.ITYPE args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.ITYPE args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rs1, rd, op⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases op <;> cases flag : regidxIsX0 rd
+  all_goals
+    simp_all only [iopToOpcode]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, iTypeEvent?, iWriteEventOf?, aluTypeEvent?, aluImmediateEventOf?]
+    rfl
+
+private theorem instructionEventFor?_shiftiop {args : BitVec 6 × regidx × regidx × sop}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.SHIFTIOP args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.SHIFTIOP args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.SHIFTIOP args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rs1, rd, op⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases op <;> cases flag : regidxIsX0 rd
+  all_goals
+    simp_all only [sopToOpcode]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, aluTypeEvent?, aluImmediateEventOf?]
+    rfl
+
+private theorem instructionEventFor?_rtype {args : regidx × regidx × regidx × rop}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.RTYPE args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.RTYPE args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.RTYPE args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨rs2, rs1, rd, op⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases op <;> cases flag : regidxIsX0 rd
+  all_goals
+    simp_all only [ropToOpcode]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, rTypeEvent?, cbaRegisters?, aluTypeEvent?, aluRegisterEvent?]
+    rfl
+
+private theorem instructionEventFor?_load {args : BitVec 12 × regidx × regidx × Bool × word_width}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.LOAD args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.LOAD args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.LOAD args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rs1, rd, isU, width⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  simp only [loadOpcode] at routed
+  split_ifs at routed <;> cases isU <;> cases flag : regidxIsX0 rd
+  all_goals
+    try simp_all only []
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, memoryEvent?] <;> rfl
+
+private theorem instructionEventFor?_store {args : BitVec 12 × regidx × regidx × word_width}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.STORE args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.STORE args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.STORE args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rs2, rs1, width⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  simp only [storeOpcode] at routed
+  split_ifs at routed
+  all_goals
+    try simp_all only [↓reduceIte]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, memoryEvent?]
+    rfl
+
+private theorem instructionEventFor?_addiw {args : BitVec 12 × regidx × regidx}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.ADDIW args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.ADDIW args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.ADDIW args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rs1, rd⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases flag : regidxIsX0 rd
+  all_goals
+    try simp_all only []
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, aluTypeEvent?, aluImmediateEventOf?]
+    rfl
+
+private theorem instructionEventFor?_rtypew {args : regidx × regidx × regidx × ropw}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.RTYPEW args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.RTYPEW args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.RTYPEW args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨rs2, rs1, rd, op⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases op <;> cases flag : regidxIsX0 rd
+  all_goals
+    simp_all only [ropwToOpcode]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, rTypeEvent?, cbaRegisters?, aluTypeEvent?, aluRegisterEvent?]
+    rfl
+
+private theorem instructionEventFor?_shiftiwop {args : BitVec 5 × regidx × regidx × sopw}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.SHIFTIWOP args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.SHIFTIWOP args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.SHIFTIWOP args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨imm, rs1, rd, op⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases op <;> cases flag : regidxIsX0 rd
+  all_goals
+    simp_all only [sopwToOpcode]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, aluTypeEvent?, aluImmediateEventOf?]
+    rfl
+
+private theorem instructionEventFor?_mul {args : regidx × regidx × regidx × mul_op}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.MUL args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.MUL args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.MUL args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨rs2, rs1, rd, op⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  rcases op with ⟨part, signed1, signed2⟩
+  cases part <;> cases signed1 <;> cases signed2 <;> cases flag : regidxIsX0 rd
+  all_goals
+    simp_all only [mulOpToOpcode]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, rTypeEvent?, cbaRegisters?, aluTypeEvent?, aluRegisterEvent?]
+    rfl
+
+private theorem instructionEventFor?_mulw {args : regidx × regidx × regidx}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.MULW args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.MULW args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.MULW args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨rs2, rs1, rd⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases flag : regidxIsX0 rd
+  all_goals
+    try simp_all only []
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, rTypeEvent?, cbaRegisters?, aluTypeEvent?, aluRegisterEvent?]
+    rfl
+
+private theorem instructionEventFor?_div {args : regidx × regidx × regidx × Bool}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.DIV args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.DIV args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.DIV args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨rs2, rs1, rd, isU⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases isU <;> cases flag : regidxIsX0 rd
+  all_goals
+    try simp_all only [↓reduceIte]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, rTypeEvent?, cbaRegisters?, aluTypeEvent?, aluRegisterEvent?]
+    rfl
+
+private theorem instructionEventFor?_divw {args : regidx × regidx × regidx × Bool}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.DIVW args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.DIVW args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.DIVW args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨rs2, rs1, rd, isU⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases isU <;> cases flag : regidxIsX0 rd
+  all_goals
+    try simp_all only [↓reduceIte]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, rTypeEvent?, cbaRegisters?, aluTypeEvent?, aluRegisterEvent?]
+    rfl
+
+private theorem instructionEventFor?_rem {args : regidx × regidx × regidx × Bool}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.REM args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.REM args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.REM args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨rs2, rs1, rd, isU⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases isU <;> cases flag : regidxIsX0 rd
+  all_goals
+    try simp_all only [↓reduceIte]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, rTypeEvent?, cbaRegisters?, aluTypeEvent?, aluRegisterEvent?]
+    rfl
+
+private theorem instructionEventFor?_remw {args : regidx × regidx × regidx × Bool}
+    {id : InstructionChipId} {stamped : List StampedTouch}
+    (routed : instructionRouteId (.REMW args) = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots (.REMW args))
+    (clk pc opcode : ℕ) : (instructionEventFor? id (.REMW args) stamped clk pc opcode).isSome := by
+  rcases args with ⟨rs2, rs1, rd, isU⟩
+  simp only [instructionRouteId, instructionRouteKey, Option.bind_some] at routed
+  simp only [instructionAccessSlots, List.map_eq_cons_iff, List.map_eq_nil_iff] at shape
+  rcases shape with ⟨first, rest, rfl, firstSlot, shape⟩
+  repeat' rcases shape with ⟨next, rest, rfl, nextSlot, shape⟩
+  cases isU <;> cases flag : regidxIsX0 rd
+  all_goals
+    try simp_all only [↓reduceIte]
+    simp [routeId, InstructionChipId.all, InstructionRoute.claims,
+      InstructionChipId.route, RdGuard.holds] at routed
+    cases routed
+    simp_all [instructionEventFor?, rTypeEvent?, cbaRegisters?, aluTypeEvent?, aluRegisterEvent?]
+    rfl
+
+/-- Canonical roles make every selected family constructor total, including aliases and `x0`. -/
+private theorem instructionEventFor?_isSome {id : InstructionChipId} {decoded : instruction}
+    {stamped : List StampedTouch} (routed : instructionRouteId decoded = some id)
+    (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots decoded)
+    (clk pc opcode : ℕ) : (instructionEventFor? id decoded stamped clk pc opcode).isSome := by
+  cases decoded
+  case UTYPE => exact instructionEventFor?_utype routed shape clk pc opcode
+  case JAL => exact instructionEventFor?_jal routed shape clk pc opcode
+  case JALR => exact instructionEventFor?_jalr routed shape clk pc opcode
+  case BTYPE => exact instructionEventFor?_btype routed shape clk pc opcode
+  case ITYPE => exact instructionEventFor?_itype routed shape clk pc opcode
+  case SHIFTIOP => exact instructionEventFor?_shiftiop routed shape clk pc opcode
+  case RTYPE => exact instructionEventFor?_rtype routed shape clk pc opcode
+  case LOAD => exact instructionEventFor?_load routed shape clk pc opcode
+  case STORE => exact instructionEventFor?_store routed shape clk pc opcode
+  case ADDIW => exact instructionEventFor?_addiw routed shape clk pc opcode
+  case RTYPEW => exact instructionEventFor?_rtypew routed shape clk pc opcode
+  case SHIFTIWOP => exact instructionEventFor?_shiftiwop routed shape clk pc opcode
+  case MUL => exact instructionEventFor?_mul routed shape clk pc opcode
+  case MULW => exact instructionEventFor?_mulw routed shape clk pc opcode
+  case DIV => exact instructionEventFor?_div routed shape clk pc opcode
+  case DIVW => exact instructionEventFor?_divw routed shape clk pc opcode
+  case REM => exact instructionEventFor?_rem routed shape clk pc opcode
+  case REMW => exact instructionEventFor?_remw routed shape clk pc opcode
+  all_goals simp [instructionRouteId, instructionRouteKey] at routed
+
 /-- The complete proof-independent result for one instruction.  The access schedule retains the
 stamped instruction roles, any preceding refresh events, and the outgoing frontier in one carrier;
 later compiler stages never reconstruct a parallel access model from event fields. -/
@@ -384,6 +750,23 @@ theorem instructionEventReady_iff {view : SP1TransitionView}
     InstructionEventReady view frontier clk ↔
       ∃ result, compileInstructionEvent? view frontier clk = some result := by
   exact Option.isSome_iff_exists
+
+/-- Canonical access extraction suffices for event compilation, for every frontier and clock.
+Readiness is a derived compatibility result; it is not an extra semantic-domain condition. -/
+theorem instructionEventReady_of_projection {program : GuestProgram} {located : Machine.LocatedTransition}
+    {view : SP1TransitionView} {plan : InstructionAccessPlan}
+    (projected : projectSP1Transition? program located = some view)
+    (accesses : view.accessPlan? = some plan) (frontier : AccessFrontier) (clk : ℕ) :
+    InstructionEventReady view frontier clk := by
+  have shape : (scheduleAccessPlan frontier clk plan).stampedTouches.map (fun touch => touch.touch.slot) =
+      instructionAccessSlots view.decoded := by
+    change List.map (PlannedTouch.slot ∘ StampedTouch.touch) _ = _
+    rw [← List.map_map, scheduleAccessPlan_erase]
+    exact instructionAccessPlan_slots ((projectSP1Transition?_accesses projected).trans accesses)
+  obtain ⟨event, generated⟩ := Option.isSome_iff_exists.mp
+    (instructionEventFor?_isSome (projectSP1Transition?_route projected) shape clk
+      view.pc.toNat view.routeKey.opcode.toNat)
+  simp only [InstructionEventReady, compileInstructionEvent?, accesses, generated, Option.isSome_some]
 
 /-- Successful compilation exposes each proof-independent projection used by the `do` block. -/
 private theorem compileInstructionEvent?_components {view : SP1TransitionView}
