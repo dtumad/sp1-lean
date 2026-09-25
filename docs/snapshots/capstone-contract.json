@@ -8135,10 +8135,10 @@
       "typeFingerprint": "1903034641"
     },
     {
-      "bodyFingerprint": "2265839999",
+      "bodyFingerprint": "3739995789",
       "local": true,
       "module": "SP1Clean.Model.Core.ExecutionEncoding",
-      "name": "SP1Clean.Model.Core.activeClockWindow",
+      "name": "SP1Clean.Model.Core.activeClockPhase",
       "typeFingerprint": "1379455552"
     },
     {
@@ -8149,7 +8149,7 @@
       "typeFingerprint": "3793470806"
     },
     {
-      "bodyFingerprint": "1943480712",
+      "bodyFingerprint": "2988297141",
       "local": true,
       "module": "SP1Clean.Model.Core.ExecutionEncoding",
       "name": "SP1Clean.Model.Core.eventEncodedAt",

@@ -16,10 +16,12 @@ structure ProtectedMemoryFrame (readOnly : ℕ → Bool) (source target : SailSt
   registers : target.regs = source.regs
   /-- Both the value and presence of every selected byte remain unchanged. -/
   memory : ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address
+  /-- Writes may insert or replace bytes, but never remove an existing byte. -/
+  present : ∀ address, (source.mem.get? address).isSome → (target.mem.get? address).isSome
 
 /-- An unchanged state satisfies every selected-byte frame. -/
 theorem ProtectedMemoryFrame.refl (readOnly : ℕ → Bool) (source : SailState) :
-    ProtectedMemoryFrame readOnly source source := ⟨rfl, fun _ _ => rfl⟩
+    ProtectedMemoryFrame readOnly source source := ⟨rfl, fun _ _ => rfl, fun _ present => present⟩
 
 /-- Consecutive actual writes compose their selected-byte frames. -/
 theorem ProtectedMemoryFrame.trans {readOnly : ℕ → Bool} {source middle target : SailState}
@@ -27,7 +29,8 @@ theorem ProtectedMemoryFrame.trans {readOnly : ℕ → Bool} {source middle targ
     (second : ProtectedMemoryFrame readOnly middle target) :
     ProtectedMemoryFrame readOnly source target :=
   ⟨second.registers.trans first.registers, fun address selected =>
-    (second.memory address selected).trans (first.memory address selected)⟩
+    (second.memory address selected).trans (first.memory address selected),
+    fun address present => second.present address (first.present address present)⟩
 
 /-- Identity of the complete register map preserves platform configuration. -/
 theorem ProtectedMemoryFrame.configured {readOnly : ℕ → Bool} {source target : SailState}
@@ -42,10 +45,14 @@ private theorem run_writeByte_frame (readOnly : ℕ → Bool) (source : SailStat
     (address : ℕ) (value : BitVec 8) (allowed : readOnly address = false) :
     ∃ target, (PreSail.writeByte address value : SailM PUnit).run source = .ok () target ∧
       ProtectedMemoryFrame readOnly source target := by
-  refine ⟨{ source with mem := source.mem.insert address value }, rfl, rfl, ?_⟩
-  intro query selected
-  have different : address ≠ query := by intro same; subst query; simp_all
-  simp [Std.ExtHashMap.getElem?_insert, different]
+  refine ⟨{ source with mem := source.mem.insert address value }, rfl, rfl, ?_, ?_⟩
+  · intro query selected
+    have different : address ≠ query := by intro same; subst query; simp_all
+    simp [Std.ExtHashMap.getElem?_insert, different]
+  · intro query present
+    by_cases same : address = query
+    · simp [same]
+    · simpa [Std.ExtHashMap.getElem?_insert, same] using present
 
 private theorem run_writeList_frame (readOnly : ℕ → Bool) (source : SailState)
     (bytes : List (ℕ × BitVec 8)) (allowed : ∀ entry ∈ bytes, readOnly entry.1 = false) :

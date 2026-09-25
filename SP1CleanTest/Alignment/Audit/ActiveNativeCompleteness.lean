@@ -130,10 +130,8 @@ theorem activeView_accessPlan :
 
 /-- The one-row event compiler succeeds for every incoming access frontier and row clock. -/
 theorem activeView_instructionEventReady (frontier : SP1Clean.Semantics.AccessFrontier)
-    (clock : ℕ) : InstructionEventReady activeView frontier clock := by
-  unfold InstructionEventReady compileInstructionEvent?
-  rw [activeView_accessPlan]
-  rfl
+    (clock : ℕ) : InstructionEventReady activeView frontier clock :=
+  instructionEventReady_of_projection activeExecution_projected activeView_accessPlan frontier clock
 
 /-- Every successful compiler result for the anchored input routes the exact circuit event. -/
 theorem activeView_compiled_event
