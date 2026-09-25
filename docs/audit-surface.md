@@ -29,7 +29,7 @@ kernel, each with the question it decides. Reading these, plus `FormalModel/Cont
 | Declaration | File | Question it decides |
 |---|---|---|
 | `Executes` | `SP1Clean/FormalModel/Shard.lean` | A checked source, an existing full-state path to the supplied target, and fixed ordinary-write permission, before the resource profile |
-| `Profile` | `SP1Clean/FormalModel/Shard.lean` | The still-free semantic domain parameter; replacing it with concrete policy/limits is a capstone obligation |
+| `nativeProfile` | `SP1Clean/FormalModel/Shard.lean` | Fixed replay usage and native encoding conditions indexed by numeric `ResourceLimits`; AIR enforcement and physical capacity remain obligations |
 | `AdmissibleExecution` | `SP1Clean/FormalModel/Shard.lean` | The common domain of soundness and completeness |
 | `SoundnessTarget` | `SP1Clean/Soundness/Shard/Contract.lean` | Raw Clean acceptance must imply the complete supplied-boundary execution; no additional caller assumptions |
 | `CompilerTarget` | `SP1Clean/Soundness/Shard/Contract.lean` | A data-only compiler whose success is proved on that same domain |

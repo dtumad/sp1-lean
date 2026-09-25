@@ -42,9 +42,9 @@ mixed AIR's accepted language. The exact-Core budget uses the same named tick co
 | writeBytes | Actual emitted host bytes, including mandatory HINT_READ padding | Word/write inventory and permission checks; hint word construction |
 | allocatedHints | Cumulative fresh hints, including hook replies, independently of later pops | Fresh-node inventory; persistent queue construction |
 | liveHints, liveHintBytes | Maximum actual queue occupancy over complete prefixes | Queue head/state binding; interpreter and queue representation |
-| requests | Cumulative proof/hook observations | Request-bound host tables; host interpreter |
+| requests | Peak complete request-list length, including incoming observations | Request-bound host tables; host interpreter |
 | outputBytes | Accumulated public/stdout/stderr bytes | Complete host boundary and WRITE observations |
-| boundaryBytes | Canonical represented boundary data, not sparse update-history length | Complete source/target verifier; finite snapshot normalization |
+| boundaryBytes | Live nonzero RAM plus length-prefixed host payload and Sail output strings, maximized over boundaries | Complete source/target verifier; finite snapshot normalization |
 | tableRows | Physical rows in each table, including providers/refresh/padding | Actual table inventory and all-table construction |
 | channelOccurrences | Complete occurrence count in each registered channel | Clean ledger capacity and exact footprint accounting |
 
@@ -57,7 +57,21 @@ prove bounds for actual consumers and must not substitute a witness/readiness pr
 
 The only complete execution model is `ExecutionPath` over Sail/host/clock, with paired replay and
 `ExecutionSnapshot` boundaries. New resource records measure it; they do not carry a second path.
-Usage must be invariant under equivalent snapshots. `MemorySnapshot` remains the provider view.
+`ExecutionResources` observes the existing replay, summing events/ticks/read/write/allocation work
+and taking maxima for live resources. It includes both sides of each real step; empty identities
+check their incoming occupancy separately. `resources_append` and `resources_split` prove the
+arithmetic at complete semantic cuts. `ExecutionSnapshot.resources_realize` computes occupancy
+without materializing dense Sail memory; `ByteMemory.supportBelow` removes zeros and shadowed
+writes. Both state and tape usage are invariant under equivalent complete snapshots.
+
+`nativeProfile` is fixed at the Shard and PolyFun target consumers. It requires width-aligned
+ordinary LOAD/STORE spans and the actual low-clock window (`clock % 2^24 + 4 < 2^24`), not phase
+one modulo eight. Normal Sail retirement alone does not imply width alignment. Final PC/clock
+fit their native encodings but need no subsequent fetch. The physical `tableRows` and
+`channelOccurrences` ceilings still await the R5 capacity consumer; the semantic measurements do
+not stand in for that proof. `boundaryBytes` is a variable-payload measure, not a full Sail
+serialization-size theorem: fixed public register/platform data and the final boundary circuit's
+actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by these definitions. `MemorySnapshot` remains the provider view.
 `HintQueue.Store` is a persistent implementation of semantic host queues, related by `Represents`.
 
 | Compatibility surface | Replacement / removal condition |
