@@ -49,6 +49,7 @@ The capstone does not prove a cryptographic verifier or acceptance of recursive-
 | Whole instructions | All 25 native chip contracts, Sail bridges, and whole-chip Rust faithfulness anchors | Preserve these while changing ensemble wrappers |
 | Full-state semantics | `ExecutionPath`, paired replay, split/join, PolyFun equivalence, finite snapshot comparison, semantic boot/HALT corollaries | AIR certification of both complete boundaries |
 | Source and program | Checked finite source, complete registers/configuration/ROM, fixed Program provider, physical fetch/decode agreement | Shared active-clock/resource profile |
+| Semantic ROM and fetch | Independent mixed-path configuration/ROM preservation and official/committed fetch agreement at every executed position; installed AIR consumes the same path proof | Concrete semantic resource profile and its enforced bounds |
 | Mixed ledger and grounding | Exhaustive CPU order, complete instruction/host Memory accounting, aligned touches, bounds, refresh elimination, shared carrier and actual replay | Extend the installed host inventory |
 | Installed mixed soundness | `HostHintReadCPU.source_execution_with_memory` derives a real local path with ordinary write permission, exact active event multiset, final PC/clock, all native register/RAM values, absence beyond native RAM, all Sail bookkeeping observations, complete host reconstruction with the supplied optional exit, and the public Exit value for a newly halted endpoint | Complete supplied-target equality |
 | Memory endpoint | Complete final and untouched values, executable target comparison equivalent to every GPR and literal Sail RAM equality, native target-value checks, and a complete finite change inventory | Install the checks and enforce complete change coverage in the verifier |
@@ -114,11 +115,11 @@ execution carrier to make a local proof convenient.
 | Complete export | Instantiate `EnsembleExport` for the final facade and export the data-only event/provider compiler | Lean/Rust agree on complete tables, fixed lookups, public verifier, interactions and generated witnesses, including padding |
 | Review and handoff | Consolidate modules after their consumers use the facade; audit assumptions, negative cases, docs and provenance | One reviewable combined branch/PR with the closed statement and reproducible gates |
 
-**First hardening work:** close the ROM/fetch/store-policy gap and replace the free `Profile`
-parameter with data-only resource limits and a fixed derived admissibility predicate. Preserve
-the one `ExecutionPath`, prove fetch agreement and policy preservation, and establish nonempty
-semantic fixtures before claiming a concrete profile. Generic `Realizes.admissible` remains a
-general predicate; it is the concrete native domain that must be independently fixed.
+**Semantic hardening:** ROM/fetch/store-policy preservation is now proved over the existing
+`ExecutionPath`, with nonempty mixed semantic fixtures. Next replace the free `Profile` parameter
+with data-only resource limits and a fixed derived admissibility predicate, then derive the
+compiler's bounds from it. Generic `Realizes.admissible` remains a general predicate; it is the
+concrete native domain that must be independently fixed.
 
 Host dispatch now checks the complete ECALL word in actual Sail memory as well as the committed
 program. The finite snapshot interpreter uses the same byte check, and its soundness/completeness
@@ -131,7 +132,8 @@ register, using the shared access-plan arithmetic. Its byte policy counts same-v
 uses the exact SB/SH/SW/SD width rather than the enclosing RAM cell. All four store-chip adapters
 bind their AIR-authorized writes to this independent policy at the actual PC and live operands.
 `HostHintReadCPU.GroundingCarrier.romLoaded_prefix` derives ROM preservation at every successful
-prefix of the installed mixed replay from the checked source and AIR permissions. Regressions
+prefix of the installed mixed replay from the checked source and AIR permissions, now through
+the independent semantic path theorem. Regressions
 cover signed offsets, all four widths, partial-cell writes beside ROM, malformed footprints,
 and a same-value store accepted by the unprotected AIR but rejected by the protected AIR.
 The native `Executes` contract now requires `ExecutionPath.WritesPermitted`, which observes the
@@ -141,9 +143,11 @@ complete boundary; empty identities and non-writing instructions remain permitte
 `ExecutionPath` is unchanged. `GroundingCarrier.writesPermitted` derives the policy from the
 installed mixed AIR at each actual incoming state; `source_execution_with_memory` retains it
 alongside all existing endpoint observations. The registry proof covers all 25 chips through
-their existing contracts and grounded readiness. ROM preservation/fetch agreement on the
-independent semantic domain (including branch/JALR edges), and the remaining free resource
-limits, are still open. Installed-AIR preservation does not discharge those semantic obligations.
+their existing contracts and grounded readiness. `FormalModel/ShardPreservation` derives
+configuration, protected-byte and ROM preservation directly from the existing `Executes`
+contract, independently of an AIR witness or resource profile. Its `fetch_at` derives the actual
+prefix state and matching official/committed fetch at every executed position. The remaining
+free resource limits are still open.
 
 The shared fetch/dispatch and retirement-tail proofs live below the circuits in
 `Model/Semantics/Sail{StepReduction,Fetch,Retirement}`. The existing chip bridges consume these
@@ -164,7 +168,14 @@ protected bytes even when the stored value would not change. The PMA
 window and physical split bounds are derived from actual checks, not caller premises.
 `SailInstructionFrame.ordinary_normal_frame` dispatches through the existing routing projection
 and supplies one circuit-independent configuration/protected-memory frame for every supported
-ordinary retirement. The full path induction remains open in #12.
+ordinary retirement. `Model/Core/ExecutionFrame` combines it with the concrete host interpreter's
+frame for all eight calls and inducts over the existing mixed path. `frame_prefix` includes empty,
+final and held endpoints; `fetch_at` applies only at executed positions and introduces no
+successor-fetch premise. The installed AIR's `GroundingCarrier.frame_prefix` and `fetch_at`
+consume these same independent results. Semantic regressions execute a padded HINT_READ followed
+by JALR or a taken branch, check every prefix, reject corrupted code and protected padding, and
+retain stopped empty identities outside the fetch domain. This closes the independent
+ROM/fetch induction in #12; concrete resource limits and their consumers remain next.
 
 **Misalignment is not a Sail fault assumption.** The pinned platform and SP1 PMA permit ordinary
 misaligned loads/stores, which Sail splits into physical sub-accesses. The frame proofs cover
@@ -273,8 +284,9 @@ those complete instance data later become succinct authenticated commitments is 
   the common identities, decoder/routing and compiler views. Never copy an opcode dispatch table.
 - `ExecutionCarrier` and `CoreExecutionTrajectory` own physical occurrence transport and replay.
   Native, local and host grounding use the same carrier, including the event walk derived from
-  State balance. Their theorem entry points remain instance adapters; the native ordinary/HALT
-  handler view still needs a whole-path adapter to the full stateful execution contract.
+  State balance. Their theorem entry points remain instance adapters; `ExecutionCompatibility`
+  projects whole ordinary/HALT paths and covered trajectories to the retained fixed-handler view.
+  Mixed host calls use the complete paired replay with one evolving host and clock.
   Local/protected/host projections share these. Ledger projections retain every relevant occurrence;
   State projection alone does not justify projecting Memory or Byte balance.
 - `Soundness/Shard/` is the public assembly/contract home. Move live implementation families only
