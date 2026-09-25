@@ -31,7 +31,7 @@ private def hook : HostExecution :=
 theorem hookAllocation : oldHost.executionResources context hook .allocatedHints = 2 ∧
     hook.effect.state.io.hints.length = 3 := by decide +kernel
 
-/-- Non-phase-one clocks are legal if their real access window fits; carries at +4 are rejected. -/
+/-- The generic scheduler admits non-phase-one windows; native CPU rows additionally require phase one. -/
 theorem windows : activeClockWindow 0 ∧ activeClockWindow 2 ∧
     activeClockWindow (2 ^ 24 - 5) ∧ ¬ activeClockWindow (2 ^ 24 - 4) := by
   unfold activeClockWindow

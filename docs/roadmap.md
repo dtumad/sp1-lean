@@ -306,8 +306,10 @@ rules, not a second progress log. Historical development details remain availabl
   Memory inventories is insufficient. Sparse snapshots compare their full realizations extensionally.
 - Zero-time source records are local seeds at arbitrary shard clocks. They do not assert historical
   last-access times. Refresh elimination does not prove truth about rewritten historical events.
-- Active CPU clocks use phase 1 modulo 8. Range-only source validation is broader; empty identities
-  remain legal at any checked source clock. The full profile must account for field/count bounds as
+- Active CPU clocks use phase 1 modulo 8, enforced by the shared CPUState circuit's 13-bit
+  range check on `(clk_0_16 - 1) / 8`; ordinary and host rows both inherit it. The native profile
+  states this encoding restriction explicitly. The broader execution semantics admits other
+  phases, and empty identities remain legal at any checked source clock. The full profile must account for field/count bounds as
   well as CPU steps: a short host trace can still allocate or access many bytes.
 - Store permission concerns every byte actually written, including same-value writes. Preservation
   of ROM contents alone is weaker. HINT_READ writes mandatory final padding even for aligned or empty

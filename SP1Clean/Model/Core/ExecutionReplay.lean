@@ -274,4 +274,47 @@ theorem ExecutionPath.replay_split {policy : HostPolicy} {program : GuestProgram
   obtain ⟨middle, left, right⟩ := path.split cut
   exact ⟨middle, left.replay, left, right⟩
 
+/-- Every actual event has a replayed source and its genuine next semantic step. -/
+theorem ExecutionPath.step_at {policy : HostPolicy} {program : GuestProgram}
+    {source target : ExecutionState} {events : List ExecutionEvent}
+    (path : ExecutionPath policy program source events target) {cut : ℕ} {event : ExecutionEvent}
+    (atEvent : events[cut]? = some event) :
+    ∃ current next, executionTrajectory policy program source events cut = some current ∧
+      ExecutionStep policy program current event next := by
+  induction path generalizing cut with
+  | nil => simp at atEvent
+  | @cons source middle target label events step rest ih =>
+    cases cut with
+    | zero =>
+      have same : label = event := by simpa using atEvent
+      subst event
+      exact ⟨source, middle, rfl, step⟩
+    | succ cut =>
+      obtain ⟨current, next, prefixReplay, nextStep⟩ := ih (by simpa using atEvent)
+      refine ⟨current, next, ?_, nextStep⟩
+      simpa only [executionTrajectory, List.take_succ_cons, replayEvents?, step.replay, Option.bind_some]
+        using prefixReplay
+
+/-- Every replayed active position and its full event duration fit before the final clock. -/
+theorem ExecutionPath.clock_at {policy : HostPolicy} {program : GuestProgram}
+    {source target current : ExecutionState} {events : List ExecutionEvent} {event : ExecutionEvent}
+    (path : ExecutionPath policy program source events target) {cut : ℕ}
+    (atEvent : events[cut]? = some event)
+    (replay : executionTrajectory policy program source events cut = some current) :
+    current.clock + event.duration ≤ target.clock := by
+  induction path generalizing cut with
+  | nil => simp at atEvent
+  | cons step tail ih =>
+    cases cut with
+    | zero =>
+      cases Option.some.inj atEvent
+      cases Option.some.inj replay
+      have final := tail.clock
+      have next := step.clock
+      omega
+    | succ cut =>
+      apply ih (by simpa only [List.getElem?_cons_succ] using atEvent)
+      simpa only [executionTrajectory, List.take_succ_cons, replayEvents?, step.replay,
+        Option.bind_some] using replay
+
 end SP1Clean.Model.Core

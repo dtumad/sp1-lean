@@ -5,7 +5,8 @@ import SP1Clean.Model.Core.NativeLayout
 
 Sail's successful memory accesses need not be aligned. The native instruction chips additionally
 require width alignment; this named semantic restriction is independent of compiler success.
-The active clock condition is the actual 24-bit access window, not a global phase-one rule.
+The active clock phase comes from the native CPUState circuit's thirteen-bit range check of
+`(clk_0_16 - 1) / 8`, used by ordinary and host rows alike. It implies the local access window.
 Unused endpoints, including stopped identities, have no active-window or fetch obligation.
 -/
 
@@ -30,9 +31,21 @@ def ordinaryEncodedAt (program : GuestProgram) (source : SailState) : Prop :=
 /-- The active source's RAM/C/B/A offsets fit the same low timestamp limb without carry. -/
 def activeClockWindow (clock : ℕ) : Prop := clock % 2 ^ 24 + 4 < 2 ^ 24
 
+/-- Active native CPU rows have phase one modulo eight, enforced by their shared range lookup. -/
+def activeClockPhase (clock : ℕ) : Prop := clock % 8 = 1
+
+/-- The circuit-enforced phase leaves room for all four ordinary memory positions. -/
+theorem activeClockPhase.window {clock : ℕ} (phase : activeClockPhase clock) : activeClockWindow clock := by
+  have congruent : clock % 2 ^ 24 % 8 = 1 := by
+    rw [Nat.mod_mod_of_dvd clock (by decide : 8 ∣ 2 ^ 24)]
+    exact phase
+  have bound := Nat.mod_lt clock (by decide : 0 < 2 ^ 24)
+  unfold activeClockWindow
+  omega
+
 /-- Encoding conditions on one actual event source. Host access bounds are checked by its interpreter. -/
 def eventEncodedAt (program : GuestProgram) (source : ExecutionState) (event : ExecutionEvent) : Prop :=
-  activeClockWindow source.clock ∧
+  activeClockPhase source.clock ∧
     (event = .ordinary → ordinaryEncodedAt program source.sail)
 
 namespace ExecutionPath

@@ -72,11 +72,10 @@ theorem ordinaryBase_remainder_lt {base : ℕ} (aligned : base % ordinaryClkInc 
   omega
 
 /-- Every planned record position lies in the same timestamp window as the refresh position
-`base + 1` when `base` has the ordinary executor alignment. -/
-theorem PlannedTouch.recordTime_sameWindow {base : ℕ} (touch : PlannedTouch)
-    (aligned : base % ordinaryClkInc = 1) :
+`base + 1` when all four role offsets fit the local window. -/
+theorem PlannedTouch.recordTime_sameWindow_of_window {base : ℕ} (touch : PlannedTouch)
+    (remainderBound : base % 2 ^ 24 + 4 < 2 ^ 24) :
     timestampWindow (touch.recordTime base) = timestampWindow (base + 1) := by
-  have remainderBound := ordinaryBase_remainder_lt aligned
   have offsetLe : touch.slot.recordOffset ≤ 4 := touch.slot.recordOffset_le_four
   have offsetLt : touch.slot.recordOffset < 2 ^ 24 := by
     omega
@@ -93,18 +92,31 @@ theorem PlannedTouch.recordTime_sameWindow {base : ℕ} (touch : PlannedTouch)
     Nat.add_div_eq_of_add_mod_lt refreshNoCarry,
     Nat.div_eq_of_lt oneLt, Nat.add_zero]
 
-/-- Posting one touch preserves refresh readiness for the remaining roles in an aligned row. -/
-theorem AccessFrontier.RefreshReadyAt.advanceFrontier {frontier : AccessFrontier} {base : ℕ}
-    (ready : frontier.RefreshReadyAt base) (touch : PlannedTouch)
+/-- The native phase-one clock is a sufficient instance of the generic window condition. -/
+theorem PlannedTouch.recordTime_sameWindow {base : ℕ} (touch : PlannedTouch)
     (aligned : base % ordinaryClkInc = 1) :
+    timestampWindow (touch.recordTime base) = timestampWindow (base + 1) :=
+  touch.recordTime_sameWindow_of_window (ordinaryBase_remainder_lt aligned)
+
+/-- Posting one touch preserves readiness when all role offsets fit the local window. -/
+theorem AccessFrontier.RefreshReadyAt.advanceFrontier_of_window {frontier : AccessFrontier} {base : ℕ}
+    (ready : frontier.RefreshReadyAt base) (touch : PlannedTouch)
+    (window : base % 2 ^ 24 + 4 < 2 ^ 24) :
     (advanceFrontier frontier base touch).RefreshReadyAt base := by
   intro loc
   by_cases sameLoc : loc = touch.loc
   · subst loc
     rw [advanceFrontier_same]
-    exact Or.inr (touch.recordTime_sameWindow aligned)
+    exact Or.inr (touch.recordTime_sameWindow_of_window window)
   · rw [advanceFrontier_of_ne frontier base touch sameLoc]
     exact ready loc
+
+/-- Compatibility wrapper for native phase-one rows. -/
+theorem AccessFrontier.RefreshReadyAt.advanceFrontier {frontier : AccessFrontier} {base : ℕ}
+    (ready : frontier.RefreshReadyAt base) (touch : PlannedTouch)
+    (aligned : base % ordinaryClkInc = 1) :
+    (advanceFrontier frontier base touch).RefreshReadyAt base :=
+  ready.advanceFrontier_of_window touch (ordinaryBase_remainder_lt aligned)
 
 /-! ## The total scheduler -/
 
@@ -318,7 +330,7 @@ theorem memoryBumpEvent?_wellFormed {frontier : AccessFrontier} {base : ℕ}
 private theorem scheduledAccesses_bumps_wellFormed_of_ready
     {frontier : AccessFrontier} {base : ℕ} {plan : InstructionAccessPlan}
     (wellFormed : plan.WellFormed) (ready : frontier.RefreshReadyAt base)
-    (aligned : base % ordinaryClkInc = 1) (currLt : base + 1 < 2 ^ 48) :
+    (window : base % 2 ^ 24 + 4 < 2 ^ 24) (currLt : base + 1 < 2 ^ 48) :
     ∀ access ∈ (scheduleAccessPlan frontier base plan).accesses,
       ∀ event, access.memoryBump? = some event → event.WellFormed := by
   induction plan generalizing frontier with
@@ -328,23 +340,32 @@ private theorem scheduledAccesses_bumps_wellFormed_of_ready
       simp only [scheduleAccessPlan, List.mem_cons] at member
       rcases member with rfl | member
       · exact memoryBumpEvent?_wellFormed ready currLt emitted
-      · exact ih wellFormed.tail (ready.advanceFrontier touch aligned)
+      · exact ih wellFormed.tail (ready.advanceFrontier_of_window touch window)
           access member event emitted
 
-/-- Every refresh filtered from a well-formed aligned plan satisfies the MemoryBump event contract.
+/-- Every refresh filtered from a well-formed plan with room in its local window satisfies the MemoryBump event contract.
 The hypotheses are exactly the semantic scheduler boundary: a bounded incoming frontier and a
 48-bit ordinary base clock. -/
-theorem scheduleAccessPlan_memoryBumps_wellFormed
+theorem scheduleAccessPlan_memoryBumps_wellFormed_of_window
     {frontier : AccessFrontier} {base : ℕ} {plan : InstructionAccessPlan}
     (wellFormed : plan.WellFormed) (bounded : frontier.BoundedAt base)
-    (aligned : base % ordinaryClkInc = 1) (currLt : base + 1 < 2 ^ 48) :
+    (window : base % 2 ^ 24 + 4 < 2 ^ 24) (currLt : base + 1 < 2 ^ 48) :
     ∀ event ∈ (scheduleAccessPlan frontier base plan).memoryBumps,
       event.WellFormed := by
   intro event member
   rw [AccessSchedule.memoryBumps] at member
   rcases List.mem_filterMap.mp member with ⟨access, accessMem, emitted⟩
   exact scheduledAccesses_bumps_wellFormed_of_ready wellFormed bounded.refreshReadyAt
-    aligned currLt access accessMem event emitted
+    window currLt access accessMem event emitted
+
+/-- The native phase-one wrapper retains the original scheduler API. -/
+theorem scheduleAccessPlan_memoryBumps_wellFormed
+    {frontier : AccessFrontier} {base : ℕ} {plan : InstructionAccessPlan}
+    (wellFormed : plan.WellFormed) (bounded : frontier.BoundedAt base)
+    (aligned : base % ordinaryClkInc = 1) (currLt : base + 1 < 2 ^ 48) :
+    ∀ event ∈ (scheduleAccessPlan frontier base plan).memoryBumps, event.WellFormed :=
+  scheduleAccessPlan_memoryBumps_wellFormed_of_window wellFormed bounded
+    (ordinaryBase_remainder_lt aligned) currLt
 
 /-- Every filtered refresh uses the canonical pre-instruction timestamp. -/
 theorem scheduleAccessPlan_memoryBump_currTs

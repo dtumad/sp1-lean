@@ -1,5 +1,6 @@
 import SP1Clean.FormalModel.Shard
 import SP1Clean.Model.Core.ExecutionFrame
+import SP1Clean.Model.Core.ExecutionMemory
 
 /-! # ROM preservation and official fetch for the shard's semantic domain
 
@@ -33,6 +34,17 @@ theorem frame_prefix (execution : Executes characteristic image source target ev
         current.sail.mem.get? address = source.sail.realize.mem.get? address :=
   execution.2.1.frame_prefix execution.1.1.1 execution.2.2 (fun _ selected => selected)
     execution.1.configured execution.1.romLoaded replay
+
+/-- Every actual prefix has all bytes needed to materialize native RAM cells. This is derived
+from complete incoming memory and actual writes, independently of final AIR grounding. -/
+theorem memory_present_prefix (execution : Executes characteristic image source target events)
+    {cut : ℕ} {current : ExecutionState}
+    (replay : executionTrajectory (policy characteristic image) (image.toGuestProgram execution.1.1.1)
+      source.realize events cut = some current)
+    (address : ℕ) (inside : address < NativeLayout.sailMemory.upper) :
+    (current.sail.mem.get? address).isSome :=
+  execution.2.1.memory_present_prefix execution.1.1.1 execution.2.2 (fun _ selected => selected)
+    execution.1.configured execution.1.romLoaded replay address inside
 
 /-- Each executed position fetches its committed instruction through official Sail. The prefix
 state and instruction are derived from the path, rather than supplied by a caller. -/

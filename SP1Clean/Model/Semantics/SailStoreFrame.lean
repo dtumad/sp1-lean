@@ -85,15 +85,14 @@ private theorem store_width_bounds (width : word_width) (valid : storeWidthOK wi
   simp only [storeWidthOK, Bool.or_eq_true, beq_iff_eq] at valid
   rcases valid with ((rfl | rfl) | rfl) | rfl <;> decide
 
-/-- A permitted decoded store preserves configuration and every protected byte. -/
-theorem store_execute_frame (readOnly : ℕ → Bool) (source : SailState) (cfg : SailConfigured source)
+/-- Actual store execution retains the complete write frame, including byte presence. -/
+theorem store_execute_memory_frame (readOnly : ℕ → Bool) (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 12) (rs2 rs1 : BitVec 5) (width : word_width)
     (permission : Model.Core.InstructionWrite.check readOnly source.get_reg?
       (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true)
     (result : ExecutionResult) (target : SailState)
     (ran : (execute (.STORE (imm, .Regidx rs2, .Regidx rs1, width))).run source = .ok result target) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧
-      ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address := by
+    (∀ other, result ≠ .ExecuteAs other) ∧ ProtectedMemoryFrame readOnly source target := by
   have valid := (Model.Core.InstructionWrite.check_supported readOnly source.get_reg? _ permission).1
   change storeWidthOK width = true at valid
   obtain ⟨positive, small⟩ := store_width_bounds width valid
@@ -110,11 +109,50 @@ theorem store_execute_frame (readOnly : ℕ → Bool) (source : SailState) (cfg 
     cases value with
     | Ok value =>
       cases rest
-      exact ⟨(fun _ h => nomatch h), frame.configured cfg, frame.memory⟩
+      exact ⟨(fun _ h => nomatch h), frame⟩
     | Err error =>
       cases rest
-      exact ⟨fun other same => direct other (congrArg Result.Err same), frame.configured cfg, frame.memory⟩
+      exact ⟨fun other same => direct other (congrArg Result.Err same), frame⟩
   · cases ran
+
+/-- A permitted decoded store preserves configuration and every protected byte. -/
+theorem store_execute_frame (readOnly : ℕ → Bool) (source : SailState) (cfg : SailConfigured source)
+    (imm : BitVec 12) (rs2 rs1 : BitVec 5) (width : word_width)
+    (permission : Model.Core.InstructionWrite.check readOnly source.get_reg?
+      (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true)
+    (result : ExecutionResult) (target : SailState)
+    (ran : (execute (.STORE (imm, .Regidx rs2, .Regidx rs1, width))).run source = .ok result target) :
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧
+      ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address := by
+  obtain ⟨direct, frame⟩ := store_execute_memory_frame readOnly source cfg imm rs2 rs1 width permission result target ran
+  exact ⟨direct, frame.configured cfg, frame.memory⟩
+
+/-- Normally retiring SB/SH/SW/SD preserve configuration and every byte protected by their actual
+decoded write permission. Existing byte presence is retained as well; no alignment or compiler-readiness premise is added. -/
+theorem store_normal_memory_frame {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
+    {pc : BitVec 64} {word : BitVec 32} {imm : BitVec 12} {rs2 rs1 : BitVec 5} {width : word_width}
+    (configured : SailConfigured source) (loaded : RomLoaded program source)
+    (atPc : source.regs.get? Register.PC = some pc) (fetched : program.fetchWord pc = some word)
+    (decode : ConfiguredDecode word (.STORE (imm, .Regidx rs2, .Regidx rs1, width)))
+    (permission : Model.Core.InstructionWrite.PermittedAt readOnly program source)
+    (normal : SailRetiresNormally source target) :
+    SailConfigured target ∧
+      (∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address) ∧
+      ∀ address, (source.mem.get? address).isSome → (target.mem.get? address).isSome := by
+  have checked := permission.check configured atPc fetched decode
+  apply normal_memory_of_observed_direct_execute configured loaded atPc fetched decode
+    (fun memory => (∀ address, readOnly address = true → memory.get? address = source.mem.get? address) ∧
+      ∀ address, (source.mem.get? address).isSome → (memory.get? address).isSome) ?_ normal
+  intro state cfg observed sameMemory result next ran
+  have permitted : Model.Core.InstructionWrite.check readOnly state.get_reg?
+      (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true := by
+    rw [funext observed]
+    exact checked
+  obtain ⟨direct, frame⟩ := store_execute_memory_frame readOnly state cfg imm rs2 rs1 width permitted result next ran
+  refine ⟨direct, frame.configured cfg, ?_, ?_⟩
+  · exact fun address selected => (frame.memory address selected).trans (by rw [sameMemory])
+  · intro address present
+    exact frame.present address (by simpa only [sameMemory] using present)
 
 /-- Normally retiring SB/SH/SW/SD preserve configuration and every byte protected by their actual
 decoded write permission. No alignment, address-window or compiler-readiness premise is added. -/
@@ -127,15 +165,7 @@ theorem store_normal_frame {readOnly : ℕ → Bool} {program : GuestProgram} {s
     (normal : SailRetiresNormally source target) :
     SailConfigured target ∧
       ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address := by
-  have checked := permission.check configured atPc fetched decode
-  apply normal_memory_of_observed_direct_execute configured loaded atPc fetched decode
-    (fun memory => ∀ address, readOnly address = true → memory.get? address = source.mem.get? address) ?_ normal
-  intro state cfg observed sameMemory result next ran
-  have permitted : Model.Core.InstructionWrite.check readOnly state.get_reg?
-      (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true := by
-    rw [funext observed]
-    exact checked
-  obtain ⟨direct, nextCfg, preserved⟩ := store_execute_frame readOnly state cfg imm rs2 rs1 width permitted result next ran
-  exact ⟨direct, nextCfg, fun address selected => (preserved address selected).trans (by rw [sameMemory])⟩
+  have frame := store_normal_memory_frame configured loaded atPc fetched decode permission normal
+  exact ⟨frame.1, frame.2.1⟩
 
 end SP1Clean.Advance
