@@ -44,7 +44,8 @@ theorem SourceValid.romLoaded {image : ProgramImage} {snapshot : MemorySnapshot}
   obtain ⟨entry, found, wordEq⟩ := Option.map_eq_some_iff.mp fetched
   have member : entry ∈ image.rom := List.mem_of_find?_eq_some found
   have atPC : entry.1 = address := by simpa using List.find?_some found
-  have window := (valid.1.2.1 entry member).2.1
+  have window : 2 ^ 16 ≤ entry.1.toNat ∧ entry.1.toNat + 4 ≤ 2 ^ 48 :=
+    (valid.1.2.1 entry member).2.1
   rw [← atPC, ← wordEq]
   exact (realizes.2 _ (by have := index.isLt; omega)).trans
     (congrArg some (valid.2.2.2 entry member index))

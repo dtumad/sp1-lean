@@ -13,7 +13,7 @@ namespace SP1CleanTest.Core.HostFootprint
 open SP1Clean SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
 open LeanRV64D LeanRV64D.Defs
 
-private def policy : HostPolicy := ⟨⟨fun _ => false, 65536, 2 ^ 48⟩, SP1Prime⟩
+private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 
 private def source (code arg1 arg2 length : BitVec 64) : SailState :=
   let regs := (default : SailState).regs.insert Register.x5 code

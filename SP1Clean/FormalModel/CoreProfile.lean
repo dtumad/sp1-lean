@@ -1,6 +1,7 @@
 import Mathlib.Data.List.Nodup
 import SP1Clean.Extracted.CoreAIRManifest
 import SP1Clean.Model.Machine.Syscall
+import SP1Clean.Model.Core.NativeLayout
 
 /-! # The pinned SP1 Core AIR profile
 
@@ -28,7 +29,7 @@ def sp1SemanticDescription : String := "v6.4.0"
 /-- Maximum execution-clock budget of one Core shard in the pinned executor.  This is
 `MAX_SHARD_SIZE = 1 << 24` from `crates/core/executor/src/opts.rs` at
 `sp1SemanticRevision`.  The ordinary instruction schedule consumes eight clock ticks per row. -/
-def maxShardCycles : ℕ := 2 ^ 24
+def maxShardCycles : ℕ := Model.Core.NativeLayout.maxShardTicks
 
 /-- Maximum number of ordinary instruction rows in a shard that uses no syscall windows. -/
 def maxOrdinaryTransitions : ℕ := maxShardCycles / 8

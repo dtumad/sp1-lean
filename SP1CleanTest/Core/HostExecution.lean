@@ -12,7 +12,7 @@ namespace SP1CleanTest.Core.HostExecution
 
 open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Defs
 
-private def policy : HostPolicy := ⟨⟨fun _ => false, 65536, 2 ^ 48⟩, SP1Prime⟩
+private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 
 private def context (code arg1 arg2 : BitVec 64) (length : Option (BitVec 64) := none)
     (memory : List (ℕ × BitVec 8) := []) : HostReadContext where

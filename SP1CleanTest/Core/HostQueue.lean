@@ -13,7 +13,7 @@ namespace SP1CleanTest.Core.HostQueue
 
 open SP1Clean SP1Clean.Model.Core
 
-private def policy : HostPolicy := ⟨⟨fun _ => false, 65536, 2 ^ 48⟩, SP1Prime⟩
+private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 
 private def context (kind : SyscallKind) (arg1 arg2 length : BitVec 64) : HostReadContext where
   register index :=

@@ -48,7 +48,8 @@ private theorem initial_pc {image : ProgramImage} (valid : image.Valid)
   obtain ⟨entry, member, entryEq⟩ := List.any_eq_true.mp valid.2.2.1
   have same : entry.1 = image.entry := by simpa using entryEq
   have bound : image.entry.toNat < 2 ^ 48 := by
-    have bounds := (valid.2.1 entry member).2.1
+    have bounds : 2 ^ 16 ≤ entry.1.toNat ∧ entry.1.toNat + 4 ≤ 2 ^ 48 :=
+      (valid.2.1 entry member).2.1
     rw [same] at bounds
     omega
   have high : (BitVec.extractLsb' 48 16 image.entry).toNat = 0 := by
