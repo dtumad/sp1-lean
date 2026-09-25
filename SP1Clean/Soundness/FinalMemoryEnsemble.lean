@@ -25,8 +25,8 @@ def registerView : TransitionView (OrderedBoundary.channel (p := p) channelName)
         OrderedBoundary.channel, channelName, memoryChannel])
 
 def ramView : TransitionView (OrderedBoundary.channel (p := p) channelName) :=
-  OrderedMemoryEnsemble.providerView channelName (by decide) MemoryBoundary.FinalSpec
-    FinalRamProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid) (by
+  OrderedMemoryEnsemble.providerView channelName (by decide) MemoryBoundary.RamFinalSpec
+    FinalRamProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid.1) (by
       simp [GeneralFormalCircuit.channels, FinalRamProvider.circuit, circuit_norm,
         OrderedBoundary.channel, channelName, memoryChannel, byteChannel])
 
@@ -105,7 +105,7 @@ def inventory : OrderedMemoryEnsemble.Inventory channelName (MemoryBoundary.Fina
       exact ⟨valid.1, valid.2.2⟩
     | ram =>
       obtain rfl := Option.some.inj found
-      exact ⟨valid.1, valid.2.2⟩
+      exact ⟨valid.1.1, valid.2.2⟩
     | terminal => contradiction
 
 def ensemble (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p))) :=
