@@ -225,8 +225,8 @@ the 25-entry instruction coverage certificate.
 The native shard capstone targets arbitrary bounded local paths, with complete incoming and
 outgoing Sail/host states. `FormalModel/Shard.lean` fixes the execution spine;
 `Soundness/Shard/Contract.lean` gives checked AIR soundness and constructive-compiler target types
-using the existing `CompleteEnsemble` and `EnsembleCompiler`. The concrete resource profile and
-instances remain open. Current progress and implementation order are maintained in the
+using the existing `CompleteEnsemble` and `EnsembleCompiler`. `ResourceLimits` and the fixed `nativeProfile` now replace the free predicate parameter.
+Resource enforcement/capacity and the complete assembly/compiler instances remain open. Current progress and implementation order are maintained in the
 [fork campaign issues](https://github.com/dtumad/sp1-lean/issues); [the roadmap](roadmap.md)
 records the durable contract and acceptance gates.
 
