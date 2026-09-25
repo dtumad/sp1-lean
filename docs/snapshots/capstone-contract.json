@@ -5489,7 +5489,7 @@
       "typeFingerprint": "3931117990"
     },
     {
-      "bodyFingerprint": "281713262",
+      "bodyFingerprint": "1998752104",
       "local": true,
       "module": "SP1Clean.FormalModel.Shard",
       "name": "SP1Clean.FormalModel.Shard.policy",
@@ -6065,6 +6065,55 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Model.Core.AddressRange",
+      "name": "SP1Clean.Model.Core.AddressRange",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "3313594478",
+      "local": true,
+      "module": "SP1Clean.Model.Core.AddressRange",
+      "name": "SP1Clean.Model.Core.AddressRange.Contains",
+      "typeFingerprint": "1774666080"
+    },
+    {
+      "bodyFingerprint": "3782187806",
+      "local": true,
+      "module": "SP1Clean.Model.Core.AddressRange",
+      "name": "SP1Clean.Model.Core.AddressRange.ContainsSpan",
+      "typeFingerprint": "3915760075"
+    },
+    {
+      "bodyFingerprint": "895437379",
+      "local": true,
+      "module": "SP1Clean.Model.Core.AddressRange",
+      "name": "SP1Clean.Model.Core.AddressRange.instDecidableContainsSpan",
+      "typeFingerprint": "2839904405"
+    },
+    {
+      "bodyFingerprint": "3647058720",
+      "local": true,
+      "module": "SP1Clean.Model.Core.AddressRange",
+      "name": "SP1Clean.Model.Core.AddressRange.lower",
+      "typeFingerprint": "2541857444"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Core.AddressRange",
+      "name": "SP1Clean.Model.Core.AddressRange.mk",
+      "typeFingerprint": "2527128487"
+    },
+    {
+      "bodyFingerprint": "1428793657",
+      "local": true,
+      "module": "SP1Clean.Model.Core.AddressRange",
+      "name": "SP1Clean.Model.Core.AddressRange.upper",
+      "typeFingerprint": "2541857444"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Model.Core.Memory",
       "name": "SP1Clean.Model.Core.ByteMemory",
       "typeFingerprint": "3931117990"
@@ -6553,7 +6602,7 @@
       "typeFingerprint": "3931117990"
     },
     {
-      "bodyFingerprint": "2705349923",
+      "bodyFingerprint": "475750928",
       "local": true,
       "module": "SP1Clean.Model.Core.HostIO",
       "name": "SP1Clean.Model.Core.HostMemoryPolicy.lower",
@@ -6564,14 +6613,21 @@
       "local": true,
       "module": "SP1Clean.Model.Core.HostIO",
       "name": "SP1Clean.Model.Core.HostMemoryPolicy.mk",
-      "typeFingerprint": "1596996728"
+      "typeFingerprint": "2973726007"
     },
     {
-      "bodyFingerprint": "368870628",
+      "bodyFingerprint": "1402385459",
       "local": true,
       "module": "SP1Clean.Model.Core.HostIO",
       "name": "SP1Clean.Model.Core.HostMemoryPolicy.permits",
       "typeFingerprint": "3238882850"
+    },
+    {
+      "bodyFingerprint": "2705349923",
+      "local": true,
+      "module": "SP1Clean.Model.Core.HostIO",
+      "name": "SP1Clean.Model.Core.HostMemoryPolicy.range",
+      "typeFingerprint": "3113163862"
     },
     {
       "bodyFingerprint": "2117504650",
@@ -6581,7 +6637,7 @@
       "typeFingerprint": "3872777926"
     },
     {
-      "bodyFingerprint": "1900633484",
+      "bodyFingerprint": "1213286924",
       "local": true,
       "module": "SP1Clean.Model.Core.HostIO",
       "name": "SP1Clean.Model.Core.HostMemoryPolicy.upper",
@@ -6707,7 +6763,7 @@
       "typeFingerprint": "721120408"
     },
     {
-      "bodyFingerprint": "813866222",
+      "bodyFingerprint": "2280765118",
       "local": true,
       "module": "SP1Clean.Model.Core.HostExecution",
       "name": "SP1Clean.Model.Core.HostReadContext.readGuest?",
@@ -7141,6 +7197,13 @@
       "typeFingerprint": "4033788669"
     },
     {
+      "bodyFingerprint": "1133393148",
+      "local": true,
+      "module": "SP1Clean.Model.Core.NativeLayout",
+      "name": "SP1Clean.Model.Core.NativeLayout.guestMemory",
+      "typeFingerprint": "156433592"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Model.Core.ProgramImage",
@@ -7155,7 +7218,7 @@
       "typeFingerprint": "3712377427"
     },
     {
-      "bodyFingerprint": "3259666806",
+      "bodyFingerprint": "3941959543",
       "local": true,
       "module": "SP1Clean.Model.Core.ProgramImage",
       "name": "SP1Clean.Model.Core.ProgramImage.Valid",
@@ -7222,7 +7285,7 @@
       "local": true,
       "module": "SP1Clean.Model.Core.ProgramImage",
       "name": "SP1Clean.Model.Core.ProgramImage.toGuestProgram._proof_3",
-      "typeFingerprint": "3603449888"
+      "typeFingerprint": "2311934076"
     },
     {
       "bodyFingerprint": null,
@@ -8898,6 +8961,13 @@
       "typeFingerprint": "1367565911"
     },
     {
+      "bodyFingerprint": "2534830807",
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "instNatPowNat",
+      "typeFingerprint": "2930520895"
+    },
+    {
       "bodyFingerprint": "3330765976",
       "local": false,
       "module": "Init.Data.Int.Basic",
@@ -8910,6 +8980,13 @@
       "module": "Init.Prelude",
       "name": "instOfNatNat",
       "typeFingerprint": "3464002136"
+    },
+    {
+      "bodyFingerprint": "33729244",
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "instPowNat",
+      "typeFingerprint": "493145897"
     },
     {
       "bodyFingerprint": "3087512524",

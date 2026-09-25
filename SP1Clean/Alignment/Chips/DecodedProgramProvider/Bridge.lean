@@ -27,7 +27,8 @@ theorem spec_committed {image : ProgramImage} (valid : image.Valid)
   obtain ⟨row, decodedRow, messageEq⟩ := Option.map_eq_some_iff.mp decoded
   have rowEq : Semantics.rowOfMsg input.toMessage = row := by rw [← messageEq]; rfl
   rw [rowEq]
-  have bounds := (valid.2.1 entry member).2.1
+  have bounds : 2 ^ 16 ≤ entry.1.toNat ∧ entry.1.toNat + 4 ≤ 2 ^ 48 :=
+    (valid.2.1 entry member).2.1
   exact ProgramTable.row_committed_of_decode SailDecode.instructionDecode_agrees
     (image.fetchWord_of_mem valid member) (by omega) decodedRow
 

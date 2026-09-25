@@ -18,7 +18,7 @@ namespace SP1CleanTest.Core.ExecutionPath
 open SP1Clean SP1Clean.Model.Core SP1Clean.Machine SP1Clean.Soundness.Target
   LeanRV64D LeanRV64D.Defs
 
-private def policy : HostPolicy := ⟨⟨fun _ => false, 65536, 2 ^ 48⟩, SP1Prime⟩
+private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 
 private def program : GuestProgram where
   rom := [(65536, 0x73), (65540, 0x73)]

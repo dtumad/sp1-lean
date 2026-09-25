@@ -1,4 +1,5 @@
 import SP1Clean.Model.Core.Memory
+import SP1Clean.Model.Core.NativeLayout
 
 /-! # Executable guest-visible hint and output semantics
 
@@ -40,19 +41,23 @@ deriving DecidableEq, Repr
 /-- Native memory policy. Code protection is byte-precise, including padding writes. -/
 structure HostMemoryPolicy where
   readOnly : ℕ → Bool
-  lower : ℕ := 2 ^ 16
-  upper : ℕ := 2 ^ 48
+  /-- The complete permitted guest address window. -/
+  range : AddressRange := NativeLayout.guestMemory
+
+/-- Compatibility projections; the range owns both endpoints. -/
+abbrev HostMemoryPolicy.lower (policy : HostMemoryPolicy) : ℕ := policy.range.lower
+abbrev HostMemoryPolicy.upper (policy : HostMemoryPolicy) : ℕ := policy.range.upper
 
 /-- A finite check: no wrapping address arithmetic and no overlap with instruction bytes. -/
 def HostMemoryPolicy.permits (policy : HostMemoryPolicy) (address length : ℕ) : Bool :=
-  decide (policy.lower ≤ address ∧ address + length ≤ policy.upper) &&
+  decide (policy.range.ContainsSpan address length) &&
     (List.range length).all (fun offset => !policy.readOnly (address + offset))
 
 theorem HostMemoryPolicy.permits_iff (policy : HostMemoryPolicy) (address length : ℕ) :
     policy.permits address length = true ↔
       policy.lower ≤ address ∧ address + length ≤ policy.upper ∧
         ByteMemory.Avoids policy.readOnly address length := by
-  simp [permits, ByteMemory.Avoids, List.all_eq_true, and_assoc]
+  simp [permits, AddressRange.ContainsSpan, ByteMemory.Avoids, List.all_eq_true, and_assoc]
 
 /-- `HINT_LEN` observes the next queue item without consuming it. -/
 def HostIO.hintLength (host : HostIO) : BitVec 64 :=

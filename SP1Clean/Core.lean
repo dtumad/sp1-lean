@@ -81,6 +81,9 @@ import SP1Clean.Model.Channels
 import SP1Clean.Model.CleanLedger
 import SP1Clean.Model.Core.BankReplay
 import SP1Clean.Model.Core.Boot
+import SP1Clean.Model.Core.AddressRange
+import SP1Clean.Model.Core.NativeLayout
+import SP1Clean.Model.Core.ResourceLimits
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionBoot
 import SP1Clean.Model.Core.ExecutionCompatibility
