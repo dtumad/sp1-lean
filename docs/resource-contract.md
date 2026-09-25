@@ -29,11 +29,14 @@ representability condition, not a Sail fault assumption.
 
 ## Quantities and proof ownership
 
-All `ResourceLimits` fields are inclusive ceilings. The `native` preset records encoding ceilings:
+All `ResourceLimits` fields are inclusive ceilings. The `native` preset records count budgets:
 `2^24` elapsed ticks from pinned SP1 v6.4.0 `opts.rs`, `2^21` events, and `p-1` for the remaining
 finite inventories. The preset does not assert that all ceilings can be saturated simultaneously;
 construction must establish its complete expansion fits. It is not a theorem about the current
-mixed AIR's accepted language. The exact-Core budget uses the same named tick constant.
+mixed AIR's accepted language. In particular, `p-1` is a field-count ceiling, not a proof that
+all pointer/length encodings fit for an arbitrarily large characteristic. Fixed bit-width bounds
+and combined persistent-allocation bounds remain separate checks. The exact-Core budget uses
+the same named tick constant.
 
 | Quantity | Measurement | Enforcement / construction owner |
 |---|---|---|
@@ -52,6 +55,37 @@ Numeric definitions do not close these rows. In particular the existing installe
 omits WRITE/VERIFY, full target authentication remains open, and the legacy compiler accepts
 ordinary executions only. These installation obligations belong to A4–A6. The resource work must
 prove bounds for actual consumers and must not substitute a witness/readiness predicate for usage.
+
+## Installed endpoint checks and remaining enforcement
+
+`Native/Operations/ResourceBoundary.lean` implements a real verifier subcircuit checking the
+source and supplied target's finite occupancy, natural elapsed ticks, and target PC/clock range.
+Its clock equations bind that target clock to the actual outgoing State token.
+`Soundness/ResourceEnsemble.lean` installs it over the current source-hint assembly and derives
+actual elapsed-work bounds from raw constraints and balance. Every event consumes at least
+eight ticks; this proves the native preset's event ceiling, including 264-tick host calls.
+It does **not** enforce an arbitrarily tighter independent `events` ceiling.
+
+`ToClean/Air/PublicVerifier.lean` preserves the literal tables and all-channel interaction lists,
+including order, repetitions and zero-multiplicity occurrences. The installed statement is proved
+equivalent to the original raw statement plus the exact endpoint checks. The semantic domain
+proves these checks for completeness; no conservative expansion estimate is imposed here.
+Stopped identities retain their original clock and need no active-event phase.
+
+The enforcement obligations remain explicit:
+
+| Remaining conclusion | Owner / required evidence |
+|---|---|
+| Supplied target occupancy equals actual outgoing occupancy | A4 complete target authentication; clock equality alone is insufficient |
+| Every intermediate live queue/RAM/output/request peak fits | A4/A5 constrained resource accounting at actual prefixes |
+| Arbitrary independent event/read/write/allocation ceilings | A4/A5 exact occurrence/cost accounting, including padded writes and both VERIFY observations |
+| Fixed pointer/length widths and cumulative persistent allocation | A5 queue/request installation; individual field-count ceilings are insufficient |
+| Whole `ExecutionPath.Encoded` derived from registered rows | R4 adapter from existing chip contracts and actual prefix decoding |
+| Physical height and every channel's occurrence ceiling | R5 inventory/capacity accounting; final A4/A5/A6 tables must be included when installed |
+
+These are unproved implementation obligations, not additional capstone premises. The endpoint
+checker regression deliberately accepts a boundary whose tape exceeds the padded-write budget:
+it prevents an endpoint-only check from being mistaken for complete resource enforcement.
 
 ## Representation and retirement
 

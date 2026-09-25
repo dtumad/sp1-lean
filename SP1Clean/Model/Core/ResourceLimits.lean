@@ -3,7 +3,7 @@ import SP1Clean.Model.Core.NativeLayout
 /-! # Numeric limits for the bounded native facade
 
 All values are inclusive ceilings. Semantic usage and physical accounting are separate consumers
-of this data. In particular, encoding-safe individual ceilings do not establish that their combined
+of this data. In particular, individual count ceilings do not establish that their combined
 physical expansion fits: the capacity proof must include providers, refreshes and boundaries.
 There is no predicate-valued field and no compiler or witness in this interface.
 -/
@@ -40,8 +40,8 @@ deriving DecidableEq, Repr, Inhabited
 
 namespace ResourceLimits
 
-/-- Encoding ceilings for the native instance. This is not a compiler-capacity theorem;
-semantic and physical consumers must establish their own comparisons with these limits. -/
+/-- Native tick and field-count ceilings. Fixed pointer/length widths and combined physical
+capacity require separate proofs; arbitrary characteristics need not fit fixed bit widths. -/
 def native (characteristic : ℕ) : ResourceLimits where
   events := NativeLayout.maxShardTicks / 8
   ticks := NativeLayout.maxShardTicks

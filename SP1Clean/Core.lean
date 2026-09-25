@@ -37,6 +37,7 @@ import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.PublicValues
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.FormalModel.Contracts.RegisterRead
+import SP1Clean.FormalModel.Contracts.ResourceBoundary
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
 import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 import SP1Clean.FormalModel.Contracts.SystemChips
@@ -292,6 +293,7 @@ import SP1Clean.Native.Operations.MulOperation.RawSpec
 import SP1Clean.Native.Operations.OrderedBoundary
 import SP1Clean.Native.Operations.OrderedBoundaryEnd
 import SP1Clean.Native.Operations.OrderedBoundaryVerifier
+import SP1Clean.Native.Operations.ResourceBoundary
 import SP1Clean.Native.Operations.ShiftLeftOperation.Core
 import SP1Clean.Native.Operations.ShiftRightOperation.Core
 import SP1Clean.Native.Operations.SubOperation.Defs

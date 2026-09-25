@@ -13,6 +13,15 @@ choices of intermediate states. Failed tapes have a total observation, but are e
 namespace SP1Clean.Model.Core
 open Machine Soundness.Target
 
+/-- Every real event consumes at least one ordinary eight-tick window. -/
+theorem event_count_le_ticks (events : List ExecutionEvent) :
+    8 * events.length ≤ (events.map ExecutionEvent.duration).sum := by
+  induction events with
+  | nil => simp
+  | cons event rest ih =>
+    cases event <;> simp only [List.length_cons, List.map_cons, List.sum_cons,
+      ExecutionEvent.duration_ordinary, ExecutionEvent.duration_syscall] <;> omega
+
 /-- Length-prefixed byte payload cost; empty buffers still occupy one length word. -/
 def bytePayloadCost (bytes : Bytes) : ℕ := 8 + bytes.length
 
