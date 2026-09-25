@@ -359,6 +359,7 @@ import SP1Clean.Soundness.ProviderBindings
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.RefreshElimination
 import SP1Clean.Soundness.RefreshWiring
+import SP1Clean.Soundness.ResourceEnsemble
 import SP1Clean.Soundness.RomWriteProtection
 import SP1Clean.Soundness.InstructionWritePolicy
 import SP1Clean.Soundness.StoreWritePolicy
