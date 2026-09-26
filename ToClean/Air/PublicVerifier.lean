@@ -160,5 +160,21 @@ theorem lift_balanced [DecidableEq F] {ens : Ensemble F PublicIO} (witness : Ens
     (balanced : witness.BalancedChannels) : (check.lift witness).BalancedChannels :=
   (check.project_balanced _).mp balanced
 
+/-- A data-independent public check strengthens the statement by exactly its proved meaning.
+Both directions retain the same witness arrays and prover data. -/
+theorem statement_iff [DecidableEq F] (ens : Ensemble F PublicIO) (meaning : PublicIO F → Prop)
+    (checks : ∀ input data, check.Checks input data ↔ meaning input) (input : PublicIO F) :
+    (check.install ens).Statement input ↔ ens.Statement input ∧ meaning input := by
+  constructor
+  · rintro ⟨witness, same, constraints, balanced⟩
+    obtain ⟨original, checked⟩ := (check.project_constraints witness).mp constraints
+    refine ⟨⟨check.project witness, same, original, (check.project_balanced witness).mpr balanced⟩, ?_⟩
+    rw [← same]
+    exact (checks ..).mp checked
+  · rintro ⟨⟨witness, same, constraints, balanced⟩, spec⟩
+    refine ⟨check.lift witness, same, check.lift_constraints witness constraints ?_,
+      check.lift_balanced witness balanced⟩
+    exact (checks ..).mpr (same ▸ spec)
+
 end PublicVerifier
 end Air.Flat
