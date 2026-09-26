@@ -186,19 +186,28 @@ theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnaps
   exact (component_projection image source auxiliary ⟨index.val, by
     simpa only [LocalCore.ensemble, LocalCore.tables_length] using index.isLt⟩).1
 
-theorem localWitness_byte {image : ProgramImage} {source : ExecutionSnapshot}
+/-- Transfer already established Byte guarantees from the complete physical assembly.
+This requires no balance claim about the projected Byte ledger. -/
+theorem localWitness_byte_of_guarantees {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble image source auxiliary channels))
-    (interface : AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannel byteChannel.toRaw) :
+    (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ table ∈ (localWitness witness).allTables, table.ChannelGuarantees byteChannel.toRaw := by
-  have byte := witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints balanced
-    (component_byte_requirements image source auxiliary channels interface)
   apply witness.project_channelGuarantees_of (target := LocalCore.ensemble image source)
     (projectionLength image source auxiliary channels) rfl byteChannel.toRaw ?_ byte
   intro index
   exact (component_projection image source auxiliary ⟨index.val, by
     simpa only [LocalCore.ensemble, LocalCore.tables_length] using index.isLt⟩).2.1
+
+theorem localWitness_byte {image : ProgramImage} {source : ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (interface : AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannel byteChannel.toRaw) :
+    ∀ table ∈ (localWitness witness).allTables, table.ChannelGuarantees byteChannel.toRaw :=
+  localWitness_byte_of_guarantees witness
+    (witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints balanced
+      (component_byte_requirements image source auxiliary channels interface))
 
 private theorem suffix_components (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) :
@@ -297,17 +306,41 @@ theorem localWitness_program {image : ProgramImage} {source : ExecutionSnapshot}
     (by simp [programChannel, HostCallChip.channel, Channel.toRaw])
     (by simp [programChannel, WritePermissionProvider.channel, Channel.toRaw]) silent
 
+/-- CPU chronology needs inherited Byte guarantees and the unchanged State ledger only.
+The full assembly may have additional Byte consumers with no balanced projected counterpart. -/
+theorem orderingChannels_of_guarantees {image : ProgramImage} {source : ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (interface : AuxiliaryInterface auxiliary)
+    (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (state : witness.BalancedChannel stateChannel.toRaw) : LocalCore.OrderingChannels (localWitness witness) := by
+  refine ⟨localWitness_byte_of_guarantees witness byte, ?_⟩
+  change BalancedInteractions ((localWitness witness).interactionsWith stateChannel.toRaw)
+  rw [localWitness_state witness interface]
+  exact state
+
 /-- Raw constraints and the extended ensemble's own balance supply exactly the facts chronology uses. -/
 theorem orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble image source auxiliary channels))
     (interface : AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) : LocalCore.OrderingChannels (localWitness witness) := by
-  refine ⟨localWitness_byte witness interface constraints (balanced _ ?_), ?_⟩
-  · simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels]
-  · change BalancedInteractions ((localWitness witness).interactionsWith stateChannel.toRaw)
-    rw [localWitness_state witness interface]
-    exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
+  apply orderingChannels_of_guarantees witness interface
+  · apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints (balanced _ ?_)
+      (component_byte_requirements image source auxiliary channels interface)
+    simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels]
+  · exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
+
+/-- Reuse the original exhaustive CPU walk from the channel facts supplied by its enclosing assembly. -/
+theorem executionRows_ordered_of_orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (constraints : witness.Constraints) (ordering : LocalCore.OrderingChannels (localWitness witness)) :
+    ∃ ordered : List (NativeCore.ExecutionRow p), ordered.Perm (LocalCore.executionRows (localWitness witness)) ∧
+      Walk.IsWalk (NativeCore.ExecutionRow.canonEdge witness.data)
+        (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered :=
+  LocalCore.executionRows_ordered_of_orderingChannels (localWitness witness)
+    (localWitness_constraints witness constraints) ordering
 
 /-- An exhaustive CPU walk between the shard's actual public endpoints, with every host-call
 instruction retained. Full Memory balance stays in the extended ensemble. -/
@@ -319,8 +352,7 @@ theorem executionRows_ordered {image : ProgramImage} {source : ExecutionSnapshot
     ∃ ordered : List (NativeCore.ExecutionRow p), ordered.Perm (LocalCore.executionRows (localWitness witness)) ∧
       Walk.IsWalk (NativeCore.ExecutionRow.canonEdge witness.data)
         (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered :=
-  LocalCore.executionRows_ordered_of_orderingChannels (localWitness witness)
-    (localWitness_constraints witness constraints) (orderingChannels witness interface constraints balanced)
+  executionRows_ordered_of_orderingChannels witness constraints (orderingChannels witness interface constraints balanced)
 
 /-- The installed syscall wrapper's actual physical table. -/
 def hostCallTable {image : ProgramImage} {source : ExecutionSnapshot}
@@ -362,6 +394,16 @@ theorem hostCallTable_projection {image : ProgramImage} {source : ExecutionSnaps
     HostCallProjection.original, Component.rowInput]
   rfl
 
+/-- Host-call clock uniqueness uses exactly the CPU chronology evidence on the original rows. -/
+theorem hostCalls_clocks_nodup_of_orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
+    {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels))
+    (constraints : witness.Constraints) (ordering : LocalCore.OrderingChannels (localWitness witness)) :
+    ((HostCallLedger.calls (hostCallTable witness)).map HostCallLedger.clock).Nodup :=
+  LocalCore.hostCalls_clocks_nodup_of_orderingChannels (localWitness witness)
+    (localWitness_constraints witness constraints) ordering
+    (hostCallTable witness) (hostCallTable_projection witness)
+
 /-- Distinct clocks for actual wrapper calls follow from the extended AIR's own constraints and balance. -/
 theorem hostCalls_clocks_nodup {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
@@ -369,8 +411,6 @@ theorem hostCalls_clocks_nodup {image : ProgramImage} {source : ExecutionSnapsho
     (interface : AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) :
     ((HostCallLedger.calls (hostCallTable witness)).map HostCallLedger.clock).Nodup :=
-  LocalCore.hostCalls_clocks_nodup_of_orderingChannels (localWitness witness)
-    (localWitness_constraints witness constraints) (orderingChannels witness interface constraints balanced)
-    (hostCallTable witness) (hostCallTable_projection witness)
+  hostCalls_clocks_nodup_of_orderingChannels witness constraints (orderingChannels witness interface constraints balanced)
 
 end SP1Clean.Soundness.HostLocalCore
