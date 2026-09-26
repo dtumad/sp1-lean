@@ -1,5 +1,6 @@
 import SP1Clean.Native.Operations.FinalMemoryReceipt
 import ToClean.Air.EnsembleProjection
+import ToClean.Air.TableSlot
 import ToClean.Air.Footprint
 import ToClean.Circuit.InteractionRecovery
 
@@ -38,14 +39,19 @@ theorem bound (witness : EnsembleWitness (install ens index ram provider)) :
   rw [← witness.same_length]
   simpa only [install, List.length_set] using index.isLt
 
-/-- Read the actual receipt-bearing finalizer table. -/
+/-- Register the installed receipt-bearing finalizer at its original physical position. -/
+def slot : TableSlot (install ens index ram provider).tables
+    ⟨FinalMemoryReceipt.circuit ram provider⟩ where
+  index := ⟨index.val, by simpa only [install, List.length_set] using index.isLt⟩
+  component_eq := List.getElem_set_self (by simpa only [install, List.length_set] using index.isLt)
+
+/-- Read the original physical table through its registered receipt-producing component. -/
 def table (witness : EnsembleWitness (install ens index ram provider)) : Table (ZMod p) :=
-  witness.tables[index.val]'(bound witness)
+  slot.table witness
 
 theorem table_component (witness : EnsembleWitness (install ens index ram provider)) :
     (table witness).component = ⟨FinalMemoryReceipt.circuit ram provider⟩ := by
-  rw [table, ← witness.same_circuits]
-  exact List.getElem_set_self (by simpa only [install, List.length_set] using index.isLt)
+  exact slot.table_component witness
 
 /-- Forget the receipt while retaining the row arrays, shared data, and public input. -/
 def project (same : ens.tables[index.val] = ⟨provider⟩)
@@ -89,7 +95,7 @@ theorem project_lift_tables (same : ens.tables[index.val] = ⟨provider⟩)
     (witness : EnsembleWitness ens) :
     (project same (lift (ram := ram) witness)).tables = witness.tables := by
   rw [project_tables]
-  simp only [lift, EnsembleWitness.ofTables_tables, table, List.getElem_set_self]
+  simp only [lift, EnsembleWitness.ofTables_tables, table, TableSlot.table, slot, List.getElem_set_self]
   have component : (witness.tables[index.val]'(by rw [← witness.same_length]; exact index.isLt)).component =
       ⟨provider⟩ := by rw [← witness.same_circuits index.val index.isLt, same]
   rw [show ((witness.tables[index.val]'_).withComponent

@@ -84,7 +84,7 @@ theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels)) :
   rw [FinalMemoryEnsemble.records_eq]
   simp only [original, registerWitness, FinalReceiptEnsemble.project, EnsembleWitness.ofTables_tables,
     FinalReceiptEnsemble.records, FinalReceiptEnsemble.table, List.getElem_set_self,
-    List.getElem_set_ne (by decide : 0 ≠ 1), List.getElem_set_ne (by decide : 1 ≠ 0),
+    List.getElem_set_ne (by decide : 0 ≠ 1),
     Table.withComponent, Table.environment]
 
 /-- The receipt records are precisely the actual Memory pulls of the original three final tables. -/

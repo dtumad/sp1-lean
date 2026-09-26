@@ -254,6 +254,7 @@ import SP1Clean.Soundness.HostCommitHistory
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint
 import SP1Clean.Soundness.HostHintQueueBoundary
+import SP1Clean.Soundness.HostTableRegistry
 import SP1Clean.Soundness.HostHintQueueHistory
 import SP1Clean.Soundness.HostHintReadBankAgreement
 import SP1Clean.Soundness.HostHintReadBanks

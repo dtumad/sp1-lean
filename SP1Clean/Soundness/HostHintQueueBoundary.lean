@@ -175,45 +175,35 @@ theorem boundary_silent (channel : RawChannel (ZMod p)) (different : channel ≠
 omit [Fact (2 ^ 25 < p)] in
 theorem expanded_interface (interface : ExtensionInterface others resources) :
     ExtensionInterface others (resources ++ [⟨(boundary source final bankFinal).circuit⟩]) := by
-  have split (component : Component (ZMod p))
-      (member : component ∈ others.map (·.component) ++ (resources ++ [⟨(boundary source final bankFinal).circuit⟩])) :
-      component ∈ others.map (·.component) ++ resources ∨ component = ⟨(boundary source final bankFinal).circuit⟩ := by
-    simpa only [List.mem_append, List.mem_singleton, or_assoc] using member
-  have byte : Channels.byteChannel.toRaw ∉ (boundary source final bankFinal).circuit.channels :=
-    boundary_silent _ (by simp [Channels.byteChannel, stateChannel, Channel.toRaw])
-      (by simp [Channels.byteChannel, HostCommitChip.stateChannel, Channel.toRaw])
-      (by simp [Channels.byteChannel, HostCommitChip.stateChannel, Channel.toRaw])
-      (by simp [Channels.byteChannel, HostExitBoundary.channel, Channel.toRaw])
-  constructor
-  · constructor
-    · intro component member env checked
-      rcases split component member with old | rfl
-      · exact interface.chronology.byte component old env checked
-      · apply Operations.requirements_of_not_mem _ _ _
-          (Component.inChannelsOrRequirements_of_constraints env checked)
-        exact fun used => byte (List.mem_append_right _ used)
+  apply interface.appendResources
+  · apply HostLocalCore.AuxiliaryInterface.of_channels
     · intro component member
-      rcases split component member with old | rfl
-      · exact interface.chronology.state component old
-      · exact boundary_silent _ (by simp [Channels.stateChannel, stateChannel, Channel.toRaw])
-          (by simp [Channels.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
-          (by simp [Channels.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
-          (by simp [Channels.stateChannel, HostExitBoundary.channel, Channel.toRaw])
+      obtain rfl := List.mem_singleton.mp member
+      have silent := boundary_silent (source := source) (final := final) (bankFinal := bankFinal)
+        Channels.byteChannel.toRaw
+        (by simp [Channels.byteChannel, stateChannel, Channel.toRaw])
+        (by simp [Channels.byteChannel, HostCommitChip.stateChannel, Channel.toRaw])
+        (by simp [Channels.byteChannel, HostCommitChip.stateChannel, Channel.toRaw])
+        (by simp [Channels.byteChannel, HostExitBoundary.channel, Channel.toRaw])
+      exact fun used => silent (List.mem_append_right _ used)
+    · intro component member
+      obtain rfl := List.mem_singleton.mp member
+      exact boundary_silent _ (by simp [Channels.stateChannel, stateChannel, Channel.toRaw])
+        (by simp [Channels.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+        (by simp [Channels.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+        (by simp [Channels.stateChannel, HostExitBoundary.channel, Channel.toRaw])
   · intro component member
-    rcases List.mem_append.mp member with old | added
-    · exact interface.hostCall component old
-    · obtain rfl := List.mem_singleton.mp added
-      exact boundary_silent _ (by simp [HostCallChip.channel, stateChannel, Channel.toRaw])
-        (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
-        (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
-        (by simp [HostCallChip.channel, HostExitBoundary.channel, Channel.toRaw])
+    obtain rfl := List.mem_singleton.mp member
+    exact boundary_silent _ (by simp [HostCallChip.channel, stateChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, HostExitBoundary.channel, Channel.toRaw])
   · intro component member
-    rcases split component member with old | rfl
-    · exact interface.cursor component old
-    · exact boundary_silent _ (by simp [HintReadWordChip.stateChannel, stateChannel, Channel.toRaw])
-        (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
-        (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
-        (by simp [HintReadWordChip.stateChannel, HostExitBoundary.channel, Channel.toRaw])
+    obtain rfl := List.mem_singleton.mp member
+    exact boundary_silent _ (by simp [HintReadWordChip.stateChannel, stateChannel, Channel.toRaw])
+      (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HintReadWordChip.stateChannel, HostExitBoundary.channel, Channel.toRaw])
 
 theorem extraTables_eq
     (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available resources channels)) :

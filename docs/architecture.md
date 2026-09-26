@@ -80,6 +80,15 @@ their gap against the pinned upstream interface. SP1 schedules, physical codecs,
 dispatch stay in the SP1 instance. An alternative RISC-V ensemble is a later consumer of the same
 semantic contract, not a prerequisite for completing the current one.
 
+Physical table selection uses `Air.Flat.TableSlot` (`ToClean/Air/TableSlot.lean`): a position
+paired with its component identity. Appending resource blocks or replacing another component
+preserves that registration and selects the original witness table, including its arrays and data.
+`HostTableRegistry` registers the installed bank tables, and `FinalReceiptEnsemble` registers its
+wrapped finalizer. Constraints and individual channel guarantees restrict to these tables; balance
+requires a separate proof about the complete channel ledger. In particular, adding Byte consumers
+does not justify projecting Byte balance to an older assembly. Legacy bank slices remain only as
+proved views of the registered tables for the existing ledger partition proofs.
+
 The [coverage register](overview.md#coverage-register) distinguishes model exclusions from proof
 debt. The [plug-in map](plugin-points.md) records the contracts consumed at each circuit boundary;
 the [audit surface](audit-surface.md) records the definitions that determine the claim.

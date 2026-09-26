@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.HostHintQueueBoundary
+import SP1Clean.Soundness.HostTableRegistry
 
 /-! # Commitment histories in the installed local machine
 
@@ -36,7 +36,8 @@ private def outside {α : Type*} (deferred : Bool) (tables : List α) : List α 
 /-- The physical COMMIT or deferred tables, followed by that bank's physical terminal. -/
 def bankTables (deferred : Bool) (witness : Witness (p := p) (image := image) (source := source)
     (final := final) (bankFinal := bankFinal) (channels := channels)) : List (Table (ZMod p)) :=
-  selected deferred (witness.tables.drop 60)
+  indices.map fun index =>
+    (HostTableRegistry.installedBankSlot image source final bankFinal channels deferred index).table witness
 
 private theorem auxiliary_components
     (witness : Witness (p := p) (image := image) (source := source)
@@ -57,6 +58,32 @@ private theorem auxiliary_length
   have size := congrArg List.length (auxiliary_components witness)
   simp only [List.length_map] at size
   exact size
+
+private theorem slice_eq_ofFn {α : Type*} (rows : List α) (offset count : ℕ)
+    (bound : offset + count ≤ rows.length) :
+    (rows.drop offset).take count =
+      List.ofFn (fun index : Fin count => rows[offset + index.val]'(by have := index.isLt; omega)) := by
+  apply List.ext_getElem
+  · simp only [List.length_take, List.length_drop, List.length_ofFn]
+    omega
+  · intro index left right
+    simp only [List.getElem_take, List.getElem_drop, List.getElem_ofFn]
+
+/-- The registered references select exactly the retained receiver/terminal inventory. -/
+private theorem bankTables_eq (deferred : Bool)
+    (witness : Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+    bankTables deferred witness = selected deferred (witness.tables.drop 60) := by
+  have size := auxiliary_length witness
+  simp only [bankTables, indices, List.map_append, List.map_map, List.map_cons, List.map_nil,
+    Function.comp_def, TableSlot.table, HostTableRegistry.installedBankSlot_index]
+  rw [← List.ofFn_eq_map]
+  cases deferred <;>
+    simp only [selected, start, gap, Bool.false_eq_true, if_false, if_true, Nat.reduceAdd] <;>
+    rw [slice_eq_ofFn _ _ 8 (by omega), slice_eq_ofFn _ _ 1 (by omega)] <;>
+    simp only [List.ofFn_succ, List.ofFn_zero, List.getElem_drop, HostTableRegistry.bankPosition,
+      Bool.false_eq_true, if_false, if_true, Fin.val_zero, Fin.val_succ, Nat.add_zero, Nat.reduceAdd,
+      Nat.add_assoc]
 
 /-- The instruction receivers precede the resources and the appended boundary verifier. -/
 theorem receiver_tables
@@ -107,7 +134,7 @@ theorem calls_eq_slot_tables (deferred : Bool)
     (((witness.tables.drop 60).drop (start deferred + 8 + gap deferred)).take 1) slotsSize
   rw [receiver_tables]
   simp only [List.drop_take, List.take_take]
-  cases deferred <;> simpa only [bankTables, selected, start, indices, Bool.false_eq_true,
+  cases deferred <;> simpa only [bankTables_eq, selected, start, indices, Bool.false_eq_true,
     if_false, if_true, Nat.reduceSub, min_eq_left (by decide : 8 ≤ 18),
     min_eq_left (by decide : 8 ≤ 10), List.ofFn_eq_map] using read
 
@@ -118,11 +145,7 @@ theorem tables_aligned (deferred : Bool)
       indices (bankTables deferred witness) := by
   have mapped : (bankTables deferred witness).map (·.component) =
       indices.map (fun index => (view deferred index).component) := by
-    have components := auxiliary_components witness
-    rw [List.map_drop] at components
-    simp only [bankTables, selected, List.map_append, List.map_take, List.map_drop,
-      components]
-    cases deferred <;> rfl
+    simp only [bankTables, List.map_map, Function.comp_def, TableSlot.table_component]
   have aligned : List.Forall₂ (· = ·)
       (indices.map fun index => (view (p := p) deferred index).component)
       ((bankTables deferred witness).map (·.component)) := by
@@ -135,6 +158,7 @@ private theorem bank_mem (deferred : Bool)
     (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
     table ∈ (HostHintQueueBoundary.expanded witness).allTables := by
   have within : table ∈ witness.tables.drop 60 := by
+    rw [bankTables_eq] at member
     rcases List.mem_append.mp member with member | member <;>
       exact List.mem_of_mem_drop (List.mem_of_mem_take member)
   have bound : 60 ≤ witness.tables.length := by
@@ -166,6 +190,7 @@ private theorem auxiliary_interactions (deferred : Bool)
       (final := final) (bankFinal := bankFinal) (channels := channels)) :
     (witness.tables.drop 60).flatMap (·.interactionsWith (HostCommitChip.stateChannel deferred).toRaw) =
       (bankTables deferred witness).flatMap (·.interactionsWith (HostCommitChip.stateChannel deferred).toRaw) := by
+  rw [bankTables_eq]
   apply flatMap_selected
   have checked : (outside deferred ((receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
       (wordResources ++ sourceResources source.host.io.hints))).all

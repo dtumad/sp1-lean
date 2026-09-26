@@ -45,6 +45,28 @@ structure ExtensionInterface (others : List (HostLocalHandoff.Receiver (p := p))
   cursor : ∀ component ∈ others.map (·.component) ++ resources,
     HintReadWordChip.stateChannel.toRaw ∉ component.circuit.channels
 
+omit [Fact (2 ^ 25 < p)] in
+/-- New resource blocks retain the existing handler registration and prove their own interface. -/
+theorem ExtensionInterface.appendResources
+    {others : List (HostLocalHandoff.Receiver (p := p))}
+    {resources extra : List (Component (ZMod p))}
+    (interface : ExtensionInterface others resources)
+    (chronology : HostLocalCore.AuxiliaryInterface extra)
+    (hostCall : ∀ component ∈ extra, HostCallChip.channel.toRaw ∉ component.circuit.channels)
+    (cursor : ∀ component ∈ extra, HintReadWordChip.stateChannel.toRaw ∉ component.circuit.channels) :
+    ExtensionInterface others (resources ++ extra) := by
+  constructor
+  · simpa only [List.append_assoc] using interface.chronology.append chronology
+  · intro component member
+    rcases List.mem_append.mp member with old | added
+    · exact interface.hostCall component old
+    · exact hostCall component added
+  · intro component member
+    rw [← List.append_assoc] at member
+    rcases List.mem_append.mp member with old | added
+    · exact interface.cursor component old
+    · exact cursor component added
+
 /-- The currently implemented control, commitment, and HINT_LEN handlers need no cursor premise. -/
 theorem availableInterface : ExtensionInterface (HostCallReceivers.available (p := p)) [] := by
   refine ⟨?_, by simp, ?_⟩

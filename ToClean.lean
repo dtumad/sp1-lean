@@ -3,6 +3,7 @@ module
 public import ToClean.Circuit.StructEvalLemmas
 public import ToClean.Circuit.SubcircuitProjection
 public import ToClean.Air.EnsembleProjection
+public import ToClean.Air.TableSlot
 public import ToClean.Circuit.WitnessCombinator
 public import ToClean.Circuit.WitgenBridge
 public import ToClean.Circuit.WitgenEval
