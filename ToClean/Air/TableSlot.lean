@@ -22,7 +22,9 @@ variable {F : Type} [FiniteField F]
 
 /-- A bounded physical position carrying the identity of the component installed there. -/
 structure TableSlot (components : List (Component F)) (component : Component F) where
+  /-- The bounded position in the physical component inventory. -/
   index : Fin components.length
+  /-- The component at this position is exactly the registered circuit. -/
   component_eq : components[index.val] = component
 
 namespace TableSlot
