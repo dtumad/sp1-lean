@@ -362,6 +362,12 @@ balance, including the assembly's full Byte ledger, matched finalizer address pr
 complete-record permutations. It decodes through `FinalMemoryEnsemble.records`; there is no second
 final inventory. Transport into the mixed machine must retain those Byte consumers and their
 providers. Forgetting the closed verifier is only a physical proof view, not a balance theorem.
+The live host chronology, complete-call handoff and HINT_READ cursor consumers have channel-specific
+entry points: inherited Byte guarantees, CPU ordering, and individual State/HostCall/cursor
+balances. Their full-acceptance wrappers use those same proofs. The boundary comparison likewise
+uses inherited Byte guarantees and only its two full-record balances plus change balance. This
+lets physical assembly transports preserve exactly the evidence a consumer uses; it does not
+turn a projected Byte ledger into a balanced one.
 The current source-hint installation has neither WRITE/VERIFY nor authenticated dynamic allocation;
 its restricted inventory is not the final public profile. Every semantic resource/permission
 restriction must also be enforced or derived by the AIR. In particular, same-value writes to ROM
