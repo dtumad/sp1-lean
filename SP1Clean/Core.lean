@@ -10,7 +10,10 @@ import SP1Clean.FormalModel.Contracts.DivRem
 import SP1Clean.FormalModel.Contracts.DivRemColumns
 import SP1Clean.FormalModel.Contracts.FinalRam
 import SP1Clean.FormalModel.Contracts.FinalRamValue
+import SP1Clean.FormalModel.Contracts.FinalRamCheck
+import SP1Clean.FormalModel.Contracts.FinalMemoryChange
 import SP1Clean.FormalModel.Contracts.FinalRegisterValue
+import SP1Clean.FormalModel.Contracts.FinalRegisterCheck
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.FormalModel.Contracts.HintQueue
 import SP1Clean.FormalModel.Contracts.HintReadSpan
@@ -144,6 +147,7 @@ import SP1Clean.Model.Core.SyscallCode
 import SP1Clean.Model.Core.SyscallTable
 import SP1Clean.Model.Core.WritePermission
 import SP1Clean.Model.FinalMemoryValue
+import SP1Clean.Model.FinalMemoryChange
 import SP1Clean.Model.HostExit
 import SP1Clean.Model.InstructionChipId
 import SP1Clean.Model.InstructionRouting
@@ -260,7 +264,11 @@ import SP1Clean.Native.Operations.DivRemOperation.Core
 import SP1Clean.Native.Operations.DivRemOperation.OwnAsserts
 import SP1Clean.Native.Operations.FinalMemoryReceipt
 import SP1Clean.Native.Operations.FinalRamValue
+import SP1Clean.Native.Operations.FinalRamCheck
+import SP1Clean.Native.Operations.FinalMemoryChange
+import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
 import SP1Clean.Native.Operations.FinalRegisterValue
+import SP1Clean.Native.Operations.FinalRegisterCheck
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Native.Operations.HintQueueBoundary
 import SP1Clean.Native.Operations.HintQueueSource

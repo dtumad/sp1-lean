@@ -1,6 +1,9 @@
 import SP1Clean.Native.Operations.FinalRegisterValue
 import SP1Clean.Native.Operations.FinalRamValue
 import SP1Clean.Native.Operations.FinalMemoryReceipt
+import SP1Clean.Native.Operations.FinalRegisterCheck
+import SP1Clean.Native.Operations.FinalRamCheck
+import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
 import SP1Clean.Proofs.Chips.OrderedFinalProvider
 import SP1Clean.Model.SP1Field
 import Clean.Circuit.WitnessExport
@@ -60,7 +63,8 @@ private def evaluate {Input Output : TypeMap} [ProvableType Input] [ProvableType
       byteValid (interaction.msg.map env).toList
   (localConstraints snapshot env operations && bytes,
     (interactions.filter fun interaction =>
-      interaction.channel.name == "SP1FinalRegisterValue" || interaction.channel.name == "SP1FinalRamValue").map
+      interaction.channel.name == "SP1FinalRegisterValue" || interaction.channel.name == "SP1FinalRamValue" ||
+        interaction.channel.name == "SP1FinalMemoryChange").map
       fun interaction => (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
 
 private def balanced (rows : List (Bool × List (String × List Fp × Fp))) : Bool :=
@@ -137,5 +141,72 @@ theorem receiptAccounting :
      balanced [registerReceipt, registerRow { register with clk_low := 9 }],
      balanced [ramReceipt, registerRow register], balanced []] =
       [true, false, false, false, false, true] := by native_decide
+
+private def source : MemorySnapshot :=
+  { target with registers := target.registers.set 1 17, memory := target.memory.write 65536 10 }
+
+private def registerCheck (value : Channels.MemoryMsg Fp) (selected : Fp) :=
+  evaluate target (FinalRegisterCheck.circuit target) ⟨value, selected⟩
+
+private def ramCheck (value : Channels.MemoryMsg Fp) (selected : Fp) :=
+  evaluate target (FinalRamCheck.circuit target)
+    ⟨⟨value, InitialMemoryRead.populate target.memory 65536⟩, selected⟩
+
+private def changes (before after : MemorySnapshot) :=
+  evaluate after (FinalMemoryChangeBoundary.closed (p := SP1Prime) before after).circuit ()
+
+/-- All three accounting channels are checked on real rows, including the verifier-owned
+complete change demand. Omission, duplication, and unrelated target changes cannot balance. -/
+theorem changeCoverage :
+    [balanced [registerReceipt, ramReceipt, registerCheck register 1, ramCheck ram 1, changes source target],
+     balanced [registerReceipt, ramReceipt, registerCheck register 1, ramCheck ram 0, changes source target],
+     balanced [registerReceipt, ramReceipt, registerCheck register 0, ramCheck ram 1, changes source target],
+     balanced [registerReceipt, ramReceipt, registerCheck register 1, ramCheck ram 1,
+       changes source target, changes source target],
+     balanced [registerReceipt, ramReceipt, registerCheck register 1, ramCheck ram 1,
+       changes source { target with registers := target.registers.set 2 1 }],
+     balanced [registerReceipt, ramReceipt, registerCheck register 0, ramCheck ram 0, changes target target],
+     balanced [registerReceipt, ramReceipt, registerCheck register 1, ramCheck ram 0, changes target target],
+     balanced [changes target target]] =
+      [true, false, false, false, false, true, false, true] := by native_decide
+
+/-- Disabled selectors still validate target bytes and leave their zero-multiplicity
+occurrences in the physical ledger. Non-Boolean selectors fail the actual assertions. -/
+theorem selectorDiscipline :
+    [(registerCheck { register with value := word 124 } 0).1,
+     (ramCheck { ram with value := word 9 } 0).1,
+     (registerCheck register 2).1,
+     (ramCheck ram 2).1] = [false, false, false, false] ∧
+      (registerCheck register 0).2.length = 2 ∧
+      (ramCheck ram 0).2.length = 2 := by native_decide
+
+/-- A register at numeric address zero cannot supply a changed low-RAM key at address zero. -/
+theorem lowRamIsDistinct :
+    let value := record 0 0 8
+    let receipt := evaluate target
+      (FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit)
+      (OrderedMemoryProvider.populate value 0 0)
+    balanced [receipt, registerCheck value 1,
+      changes target { target with memory := target.memory.write 0 1 }] = false := by native_decide
+
+/-- Constructors retain complete target receipts and select exactly the computed change keys. -/
+theorem changeConstructors :
+    ((FinalRegisterCheck.populate? source target register).map fun input =>
+      input.selected == 1 && (evaluate target (FinalRegisterCheck.circuit target) input).1).getD false = true ∧
+    ((FinalRamCheck.populate? source target ram).map fun input =>
+      input.selected == 1 && (evaluate target (FinalRamCheck.circuit target) input).1).getD false = true := by
+  native_decide
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (FinalRegisterCheck.circuit (p := SP1Prime) target)
+
+/-- info: exportable ✓ (512 witness cells) -/
+#guard_msgs in
+#assert_exportable (FinalRamCheck.circuit (p := SP1Prime) target)
+
+/-- info: exportable ✓ (0 witness cells) -/
+#guard_msgs in
+#assert_exportable (FinalMemoryChangeBoundary.closed (p := SP1Prime) source target).circuit
 
 end SP1CleanTest.Core.FinalMemoryValue
