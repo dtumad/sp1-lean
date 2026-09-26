@@ -220,6 +220,11 @@ Sail state once the remaining execution observations are derived. Dynamic nextPC
 complete host binding remain open, as does migrating the grounding consumers to the combined
 assembly through channel-specific evidence. The fixed-handler resource assembly's older clock
 checker is a compatibility consumer; the final facade should consolidate this endpoint binding.
+Ordinary receipt producers now reuse all 25 registered instruction circuits and their existing
+State decoder, with unchanged widths/assertions/lookups/old ledgers and an exact per-row receipt
+cost. The ordered consumer and protected mixed installation must still authenticate the ordinary
+count and last ordinary successor before nextPC/retirement can be bound to the target. Host-only
+and empty cases preserve the incoming observations; receipt producers alone do not close C2.
 Terminal receipt/replay agreement is closed.
 `HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
 cell below `2^48`, including locations absent from the final inventory, and excludes entries outside

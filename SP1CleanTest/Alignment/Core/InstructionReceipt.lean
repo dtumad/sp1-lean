@@ -1,0 +1,62 @@
+import SP1Clean.Soundness.OrdinaryStateReceipt
+import SP1CleanTest.Alignment.Core.LocalCore
+import SP1CleanTest.Core.NonVacuityReal
+
+/-! # Actual ordinary receipt programs
+
+Existing active ADD and JAL/JALR rows exercise the receipt program, including a computed jump
+target and JALR's low-bit masking. Every old assertion/lookup and ledger is preserved by the
+generic theorems. These regressions inspect the added raw occurrences and reject forged
+successors, missing/duplicate receipts and attempts to count a padding row as an instruction.
+-/
+
+namespace SP1CleanTest.Alignment.Core.InstructionReceipt
+
+open Circuit Air.Flat SP1Clean SP1Clean.Soundness SP1Clean.NonVacuityRealTests
+
+private abbrev Fp := ZMod SP1Prime
+private def image := SP1CleanTest.Core.LocalCore.addFixture.1
+private def source := SP1CleanTest.Core.LocalCore.addFixture.2.1
+
+private def evaluate (id : InstructionChipId) (inputs : List Fp) :=
+  SP1CleanTest.Core.LocalCore.evaluateComponent image source
+    (OrdinaryStateReceipt.component id) inputs []
+
+private def receipts (id : InstructionChipId) (inputs : List Fp) :=
+  (evaluate id inputs).2.filter (fun entry => entry.1 == "SP1OrdinaryStateReceipt")
+
+private def addInputs : List Fp := SP1Clean.Audit.OneAddNativePremises.inputs
+private def paddingInputs : List Fp := addInputs.set 0 0
+private def oddJalr : JalrChip.Inputs Fp :=
+  { jalrInputs with adapter.op_c_imm := Target.bitVecToWord (BitVec.ofNat 64 0x11) }
+
+/-- Active sequential and control-flow rows publish their actual successors. -/
+theorem active :
+    receipts .add addInputs = [("SP1OrdinaryStateReceipt", [0, 17, 4, 1, 0], 1)] ∧
+    receipts .jal (toElements jalInputs).toList =
+      [("SP1OrdinaryStateReceipt", [0, 17, 0x1100, 0, 0], 1)] ∧
+    receipts .jalr (toElements oddJalr).toList =
+      [("SP1OrdinaryStateReceipt", [0, 17, 0x2010, 0, 0], 1)] ∧
+    (evaluate .add addInputs).1 = true ∧
+    (evaluate .jal (toElements jalInputs).toList).1 = true ∧
+    (evaluate .jalr (toElements oddJalr).toList).1 = true := by native_decide
+
+/-- A padding row still costs one physical occurrence, with zero active multiplicity. -/
+theorem padding : receipts .add paddingInputs =
+    [("SP1OrdinaryStateReceipt", [0, 17, 4, 1, 0], 0)] := by native_decide
+
+private def agrees (id : InstructionChipId) (inputs : List Fp) (claimed : List (List Fp)) : Bool :=
+  let produced := (receipts id inputs).filter (fun entry => entry.2.2 != 0) |>.map (·.2.1)
+  decide (produced.Perm claimed)
+
+/-- Comparing the actual emitted multiset rejects omissions, duplicates and forged successors.
+This is a ledger regression; the ordered bookkeeping consumer is a separate installation. -/
+theorem mutations :
+    [agrees .add addInputs [],
+     agrees .add addInputs [[0, 17, 4, 1, 0], [0, 17, 4, 1, 0]],
+     agrees .add addInputs [[0, 18, 4, 1, 0]],
+     agrees .jal (toElements jalInputs).toList [[0, 17, 0x1004, 0, 0]],
+     agrees .jalr (toElements oddJalr).toList [[0, 17, 0x2011, 0, 0]],
+     agrees .add paddingInputs [[0, 17, 4, 1, 0]]] = List.replicate 6 false := by native_decide
+
+end SP1CleanTest.Alignment.Core.InstructionReceipt
