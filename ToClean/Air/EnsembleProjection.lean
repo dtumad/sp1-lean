@@ -78,6 +78,25 @@ namespace EnsembleWitness
 
 variable {source target : Ensemble F PublicIO}
 
+/-- Transfer channel guarantees along the actual evaluated ledger, with shared prover data.
+Unlike balance, this property survives dropping interactions and does not require equal public
+input types or matching table layouts. -/
+theorem channelGuarantees_of_interactions_subset
+    {OtherIO : TypeMap} [ProvableType OtherIO] {other : Ensemble F OtherIO}
+    (original : EnsembleWitness source) (projected : EnsembleWitness other)
+    (channel : RawChannel F) (data : projected.data = original.data)
+    (subset : projected.interactionsWith channel ⊆ original.interactionsWith channel)
+    (guarantees : ∀ table ∈ original.allTables, table.ChannelGuarantees channel) :
+    ∀ table ∈ projected.allTables, table.ChannelGuarantees channel := by
+  intro table member
+  rw [Table.channelGuarantees_iff_forall, projected.data_eq_of_mem_allTables table member, data]
+  intro interaction present
+  obtain ⟨sourceTable, sourceMember, emitted⟩ := EnsembleWitness.mem_interactionsWith.mp
+    (subset (EnsembleWitness.mem_interactionsWith.mpr ⟨table, member, present⟩))
+  have valid := (sourceTable.channelGuarantees_iff_forall channel).mp
+    (guarantees sourceTable sourceMember) interaction emitted
+  rwa [original.data_eq_of_mem_allTables sourceTable sourceMember] at valid
+
 /-- Retain a physical prefix and interpret it using the target's components. -/
 def project (witness : EnsembleWitness source) (target : Ensemble F PublicIO)
     (length : target.tables.length ≤ source.tables.length) : EnsembleWitness target :=
