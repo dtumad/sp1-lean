@@ -368,6 +368,11 @@ balances. Their full-acceptance wrappers use those same proofs. The boundary com
 uses inherited Byte guarantees and only its two full-record balances plus change balance. This
 lets physical assembly transports preserve exactly the evidence a consumer uses; it does not
 turn a projected Byte ledger into a balanced one.
+`HostFinalMemory` installs these same circuits in the existing host resource block and publishes
+receipts from its original finalizer positions. Its proof views preserve row arrays, shared data
+and the public header. `HostFinalMemoryByte` closes the actual combined Byte ledger before
+transporting guarantees to host consumers. The remaining receipt/change transport must identify
+this physical inventory with the decoder used by mixed grounding and the endpoint theorem.
 The current source-hint installation has neither WRITE/VERIFY nor authenticated dynamic allocation;
 its restricted inventory is not the final public profile. Every semantic resource/permission
 restriction must also be enforced or derived by the AIR. In particular, same-value writes to ROM
