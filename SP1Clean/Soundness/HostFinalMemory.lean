@@ -20,7 +20,7 @@ local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 
 /-- Install the existing target consumers in the host resource block. Their channels are
 registered by the same host assembly as every other resource. -/
-def base (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
+@[reducible] def base (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p))) : Ensemble (ZMod p) SP1PublicIO :=
@@ -154,6 +154,28 @@ private theorem withRegisters_ram_component :
       rw [List.length_set, base_tables_length]; omega) = _
   rw [List.getElem_set_ne (by decide : 3 ≠ 4)]
   exact base_ram_component
+
+/-- The three original finalizer positions, with the two receipt wrappers installed. -/
+def finalSlot (index : Fin 3) : TableSlot
+    (ensemble image source target final bankFinal others resources channels).tables
+    ((FinalMemoryChecks.ensemble (p := p) source.sail.memorySnapshot target [] []).tables[index.val]'(by
+      rw [FinalMemoryChecks.tables_eq]; simp; omega)) := by
+  refine ⟨⟨3 + index.val, by
+    simp only [ensemble, ClosedVerifier.install, withReceipts, withRegisters,
+      FinalReceiptEnsemble.install, List.length_set, base_tables_length]
+    omega⟩, ?_⟩
+  change (((base image source target final bankFinal others resources channels).tables.set 3
+    ⟨FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit⟩).set 4
+    ⟨FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit⟩)[3 + index.val]'(by
+      rw [List.length_set, List.length_set, base_tables_length]; omega) = _
+  fin_cases index <;> dsimp only
+  · rw [List.getElem_set_ne (by decide : 4 ≠ 3), List.getElem_set_self]
+    rfl
+  · rw [List.getElem_set_self]
+    rfl
+  · rw [List.getElem_set_ne (by decide : 4 ≠ 5), List.getElem_set_ne (by decide : 3 ≠ 5),
+      base_boundary_component (index := ⟨5, by decide⟩)]
+    rfl
 
 /-- Retain all physical tables while viewing the old verifier without its new change demand. -/
 def receiptWitness (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels)) :

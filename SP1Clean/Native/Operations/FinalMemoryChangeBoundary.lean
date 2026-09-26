@@ -59,6 +59,14 @@ theorem values (keys : List (Key (ZMod p))) (offset : ℕ) (env : Environment (Z
         simpa only [List.map_cons, Operations.interactionValuesWith, circuit_norm,
           Ne.symm same, same, ↓reduceIte] using ih
 
+/-- Fixed demand has no local assertions or lookups; its force comes entirely from balance. -/
+theorem constraints_hold (keys : List (Key (ZMod p))) (offset : ℕ) (env : Environment (ZMod p)) :
+    ((main keys ()).operations offset).ConstraintsHold env := by
+  rw [operations, Operations.ConstraintsHold]
+  induction keys with
+  | nil => simp [circuit_norm]
+  | cons key rest ih => simpa [circuit_norm] using ih
+
 /-- Invoke the canonical source-to-target change inventory exactly once in a verifier. -/
 def closed (source target : MemorySnapshot) : ClosedVerifier (ZMod p) where
   circuit := circuit ((source.changes target).map encode)
@@ -73,5 +81,12 @@ def closed (source target : MemorySnapshot) : ClosedVerifier (ZMod p) where
   interactions := by
     intro offset env selected
     exact (values _ offset env selected).trans (values _ 0 _ selected).symm
+
+/-- The exactly-once fixed demand contributes no additional assertion or lookup premise. -/
+theorem closed_constraints (source target : MemorySnapshot) (data : ProverData (ZMod p)) :
+    ((closed source target).singleton data).Constraints := by
+  rw [ClosedVerifier.singleton_constraints]
+  exact constraints_hold ((source.changes target).map encode) 0
+    (Environment.fromInput (Input := unit) () data)
 
 end SP1Clean.FinalMemoryChangeBoundary
