@@ -225,6 +225,9 @@ import SP1Clean.Soundness.FinalMemoryEnsemble
 import SP1Clean.Soundness.FinalReceiptEnsemble
 import SP1Clean.Soundness.FinalMemoryReceipts
 import SP1Clean.Soundness.FinalMemoryChangeCoverage
+import SP1Clean.Soundness.FinalMemoryChecks
+import SP1Clean.Soundness.FinalMemoryCheckLedger
+import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.GoodnessFilter
