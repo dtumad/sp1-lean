@@ -83,15 +83,33 @@ theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source 
   rw [resourceSilent, List.append_nil, ReceiverView.messages_interactions _ _ (receiverTables_aligned witness)]
   rfl
 
-/-- Every handler occurrence corresponds to exactly one active instruction with the same full call. -/
-theorem calls_perm (witness : EnsembleWitness (ensemble image source receivers resources channels))
+/-- Complete handler accounting needs only the actual HostCall channel balance. -/
+theorem calls_perm_of_balancedChannel (witness : EnsembleWitness (ensemble image source receivers resources channels))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw) :
     (HostCallLedger.calls (HostLocalCore.hostCallTable witness)).Perm (calls witness) := by
   apply HostCallLedger.calls_perm _ (HostLocalCore.hostCallTable_component witness)
     (constraints _ (HostLocalCore.hostCallTable_mem witness))
   rw [← hostCall_interactions witness silent]
-  exact balanced _ (List.mem_cons_self ..)
+  exact balanced
+
+/-- Every handler occurrence corresponds to exactly one active instruction with the same full call. -/
+theorem calls_perm (witness : EnsembleWitness (ensemble image source receivers resources channels))
+    (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (HostCallLedger.calls (HostLocalCore.hostCallTable witness)).Perm (calls witness) :=
+  calls_perm_of_balancedChannel witness silent constraints (balanced _ (List.mem_cons_self ..))
+
+/-- CPU chronology and HostCall balance transfer uniqueness to every registered handler. -/
+theorem calls_clocks_nodup_of_orderingChannels
+    (witness : EnsembleWitness (ensemble image source receivers resources channels))
+    (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
+    (constraints : witness.Constraints)
+    (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
+    (balanced : witness.BalancedChannel HostCallChip.channel.toRaw) :
+    ((calls witness).map HostCallLedger.clock).Nodup :=
+  ((calls_perm_of_balancedChannel witness silent constraints balanced).map HostCallLedger.clock).nodup_iff.mp
+    (HostLocalCore.hostCalls_clocks_nodup_of_orderingChannels witness constraints ordering)
 
 /-- CPU ordering rules out duplicate handler clocks across the entire heterogeneous registry. -/
 theorem calls_clocks_nodup (witness : EnsembleWitness (ensemble image source receivers resources channels))
@@ -99,8 +117,22 @@ theorem calls_clocks_nodup (witness : EnsembleWitness (ensemble image source rec
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((calls witness).map HostCallLedger.clock).Nodup :=
-  ((calls_perm witness silent constraints balanced).map HostCallLedger.clock).nodup_iff.mp
-    (HostLocalCore.hostCalls_clocks_nodup witness interface constraints balanced)
+  calls_clocks_nodup_of_orderingChannels witness silent constraints
+    (HostLocalCore.orderingChannels witness interface constraints balanced) (balanced _ (List.mem_cons_self ..))
+
+/-- Select one physical handler from the registered clock inventory without whole-ensemble balance. -/
+theorem receiver_clocks_nodup_of_orderingChannels
+    (witness : EnsembleWitness (ensemble image source receivers resources channels))
+    (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
+    (constraints : witness.Constraints)
+    (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
+    (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
+    (index : ℕ) (bound : index < receivers.length) :
+    ((ReceiverView.tableMessages receivers[index]
+      ((receiverTables witness)[index]'(by rw [← (receiverTables_aligned witness).length_eq]; exact bound))).map
+        HostCallLedger.clock).Nodup :=
+  ReceiverView.tableMessages_keys_nodup _ _ (receiverTables_aligned witness) _
+    (calls_clocks_nodup_of_orderingChannels witness silent constraints ordering balanced) index bound
 
 /-- Every physical row of any registered handler inherits the global clock uniqueness. -/
 theorem receiver_clocks_nodup (witness : EnsembleWitness (ensemble image source receivers resources channels))
@@ -111,7 +143,8 @@ theorem receiver_clocks_nodup (witness : EnsembleWitness (ensemble image source 
     ((ReceiverView.tableMessages receivers[index]
       ((receiverTables witness)[index]'(by rw [← (receiverTables_aligned witness).length_eq]; exact bound))).map
         HostCallLedger.clock).Nodup :=
-  ReceiverView.tableMessages_keys_nodup _ _ (receiverTables_aligned witness) _
-    (calls_clocks_nodup witness interface silent constraints balanced) index bound
+  receiver_clocks_nodup_of_orderingChannels witness silent constraints
+    (HostLocalCore.orderingChannels witness interface constraints balanced)
+    (balanced _ (List.mem_cons_self ..)) index bound
 
 end SP1Clean.Soundness.HostLocalHandoff

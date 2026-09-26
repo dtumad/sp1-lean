@@ -240,6 +240,25 @@ private theorem callClock_nodup_of_receiver (table : Table (ZMod p))
     HostCallLedger.clock, HostHintReadPartition.callClock, HostHintReadPartition.clock,
     HostHintReadChip.Inputs.first] using unique
 
+/-- Registration and the actual CPU/HostCall evidence fix the physical handler clocks.
+No Byte balance is required of this proof view. -/
+theorem handler_clocks_nodup_of_registered_channels
+    {image : Model.Core.ProgramImage} {source : Model.Core.ExecutionSnapshot}
+    {receivers : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
+    {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (HostLocalHandoff.ensemble image source receivers resources channels))
+    (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
+    (constraints : witness.Constraints)
+    (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
+    (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
+    (index : Fin receivers.length) (registered : receivers[index.val] = receiver) :
+    let handlers := HostLocalHandoff.receiverTable witness index
+    ((handlers.table.map handlers.environment).map HostHintReadPartition.callClock).Nodup := by
+  have unique := HostLocalHandoff.receiver_clocks_nodup_of_orderingChannels witness silent constraints ordering balanced
+    index.val index.isLt
+  rw [registered] at unique
+  exact callClock_nodup_of_receiver (HostLocalHandoff.receiverTable witness index) unique
+
 /-- Registration fixes the handler's physical table. Its clocks are unique by the installed
 ensemble's complete HostCall ledger and CPU chronology, with no caller-supplied accounting. -/
 theorem handler_clocks_nodup_of_registered {image : Model.Core.ProgramImage} {source : Model.Core.ExecutionSnapshot}
@@ -251,11 +270,10 @@ theorem handler_clocks_nodup_of_registered {image : Model.Core.ProgramImage} {so
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (index : Fin receivers.length) (registered : receivers[index.val] = receiver) :
     let handlers := HostLocalHandoff.receiverTable witness index
-    ((handlers.table.map handlers.environment).map HostHintReadPartition.callClock).Nodup := by
-  have unique := HostLocalHandoff.receiver_clocks_nodup witness interface silent constraints balanced
-    index.val index.isLt
-  rw [registered] at unique
-  exact callClock_nodup_of_receiver (HostLocalHandoff.receiverTable witness index) unique
+    ((handlers.table.map handlers.environment).map HostHintReadPartition.callClock).Nodup :=
+  handler_clocks_nodup_of_registered_channels witness silent constraints
+    (HostLocalCore.orderingChannels witness interface constraints balanced)
+    (balanced _ (List.mem_cons_self ..)) index registered
 
 /-- Complete installed handler accounting and the shared cursor ledger give per-call word balance.
 The remaining cursor premise concerns the actual RAM consumer tables, not the HostCall inventory. -/

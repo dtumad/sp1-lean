@@ -138,6 +138,19 @@ private def check (target : MemorySnapshot) (rows : List Row) (supplyBytes : Boo
 /-- Changed register and sparse RAM pass the complete installed boundary AIR. -/
 theorem completeAcceptance : check target rows = true := by native_decide
 
+private def projectedByteBalance : Bool :=
+  let head := evaluate target (assembly target).verifierTable []
+  let original := head :: rows.map (evaluateRow target)
+  let providers := (original.flatMap Prod.snd).filterMap byteProvider
+  let projected := head :: (rows.filter (fun row => row.1 != 4)).map (evaluateRow target)
+  let ledger := (projected ++ providers.map (evaluateRow target)).flatMap Prod.snd
+  let bytes := ledger.filter (fun entry => entry.1 == "SP1Byte")
+  bytes.all fun entry => ((bytes.filter (fun other => other.2.1 == entry.2.1)).map (·.2.2)).sum == 0
+
+/-- Dropping the target-RAM consumer from a valid full witness leaves its providers unmatched.
+Proof views must inherit Byte guarantees; they cannot inherit whole Byte balance. -/
+theorem projectionLosesByteBalance : projectedByteBalance = false := by native_decide
+
 /-- Empty identity inventories still retain the canonical ordering terminal and its Byte closure. -/
 theorem emptyIdentity : check source [terminal 0] = true := by native_decide
 
