@@ -204,14 +204,21 @@ private theorem byte_requirements (interface : Interface auxiliary)
     contradiction
   · exact interface.byte component resource env checked
 
+/-- Close Byte from its actual channel without assuming other ledgers are balanced. -/
+theorem byte_guarantees_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (checked : witness.Constraints)
+    (balanced : witness.BalancedChannel byteChannel.toRaw) :
+    ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw := by
+  apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw checked
+    balanced (byte_requirements interface)
+
 /-- Target reads stay inside the actual Byte ledger. Its own constraints and balance supply
 their guarantees, together with those of the finalizers and every auxiliary table. -/
 theorem byte_guarantees (witness : EnsembleWitness (ensemble source target auxiliary channels))
     (interface : Interface auxiliary) (checked : witness.Constraints)
     (balanced : witness.BalancedChannels) :
     ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw := by
-  apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw checked
-    (balanced _ ?_) (byte_requirements interface)
+  apply byte_guarantees_of_balancedChannel witness interface checked (balanced _ ?_)
   simp [ensemble, ClosedVerifier.install, base, FinalMemoryReceipts.ensemble,
     FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install, FinalMemoryEnsemble.ensemble,
     OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble]
@@ -253,28 +260,42 @@ private theorem check_spec (component : Component (ZMod p)) (member : component 
       exact Operations.channelGuarantees_of_trivial _ (by
         simp [FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw]) _ _
 
-/-- Raw constraints and the complete Byte closure prove all registered target-check contracts. -/
-theorem registerInputs_spec (witness : EnsembleWitness (ensemble source target auxiliary channels))
-    (interface : Interface auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
+/-- Registered target contracts inherit Byte guarantees from the complete enclosing assembly. -/
+theorem registerInputs_spec_of_byte (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (checked : witness.Constraints)
+    (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ input ∈ registerInputs witness, FinalRegisterCheck.Spec target input := by
   intro input member
   obtain ⟨row, present, rfl⟩ := List.mem_map.mp member
   have constraints := (registerSlot.table_constraints witness checked) row present
   have bytes := (registerSlot.table_channelGuarantees witness byteChannel.toRaw
-    (byte_guarantees witness interface checked balanced)) row present
+    byte) row present
   rw [registerSlot.table_component witness] at constraints bytes
   exact check_spec (target := target) _ (by simp [checkTables]) _ constraints bytes
 
-/-- The RAM target read is authenticated by the actual assembly's Byte ledger. -/
-theorem ramInputs_spec (witness : EnsembleWitness (ensemble source target auxiliary channels))
-    (interface : Interface auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
+/-- Authenticate target RAM reads with inherited Byte guarantees, retaining their physical rows. -/
+theorem ramInputs_spec_of_byte (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (checked : witness.Constraints)
+    (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ input ∈ ramInputs witness, FinalRamCheck.Spec target input := by
   intro input member
   obtain ⟨row, present, rfl⟩ := List.mem_map.mp member
   have constraints := (ramSlot.table_constraints witness checked) row present
   have bytes := (ramSlot.table_channelGuarantees witness byteChannel.toRaw
-    (byte_guarantees witness interface checked balanced)) row present
+    byte) row present
   rw [ramSlot.table_component witness] at constraints bytes
   exact check_spec (target := target) _ (by simp [checkTables]) _ constraints bytes
+
+/-- Raw constraints and the complete Byte closure prove all registered target-check contracts. -/
+theorem registerInputs_spec (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ input ∈ registerInputs witness, FinalRegisterCheck.Spec target input :=
+  registerInputs_spec_of_byte witness checked (byte_guarantees witness interface checked balanced)
+
+/-- The RAM target read is authenticated by the actual assembly's Byte ledger. -/
+theorem ramInputs_spec (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ input ∈ ramInputs witness, FinalRamCheck.Spec target input :=
+  ramInputs_spec_of_byte witness checked (byte_guarantees witness interface checked balanced)
 
 end SP1Clean.Soundness.FinalMemoryChecks
