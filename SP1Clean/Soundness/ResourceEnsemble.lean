@@ -28,18 +28,9 @@ def install (limits : ResourceLimits) (source target : ExecutionSnapshot)
 theorem statement_iff (limits : ResourceLimits) (source target : ExecutionSnapshot)
     (base : Ensemble (ZMod p) SP1PublicIO) (input : SP1PublicIO (ZMod p)) :
     (install limits source target base).Statement input ↔
-      base.Statement input ∧ ResourceBoundary.Spec limits source target input := by
-  let check := ResourceBoundary.checker (p := p) limits source target
-  constructor
-  · rintro ⟨witness, same, constraints, balanced⟩
-    obtain ⟨original, checked⟩ := (check.project_constraints witness).mp constraints
-    refine ⟨⟨check.project witness, same, original, (check.project_balanced witness).mpr balanced⟩, ?_⟩
-    rw [← same]
-    exact (ResourceBoundary.checks_iff ..).mp checked
-  · rintro ⟨⟨witness, same, constraints, balanced⟩, spec⟩
-    refine ⟨check.lift witness, same, check.lift_constraints witness constraints ?_,
-      check.lift_balanced witness balanced⟩
-    exact (ResourceBoundary.checks_iff ..).mpr (same ▸ spec)
+      base.Statement input ∧ ResourceBoundary.Spec limits source target input :=
+  (ResourceBoundary.checker limits source target).statement_iff base
+    (ResourceBoundary.Spec limits source target) (ResourceBoundary.checks_iff limits source target) input
 
 /-- Completeness can add the resource circuit using only the semantic domain and header encoding. -/
 theorem checks_of_admissible {limits : ResourceLimits} {image : ProgramImage}
