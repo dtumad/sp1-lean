@@ -356,7 +356,12 @@ These conclusions must still be bound to the complete supplied target snapshot.
 The `FinalRegisterValue`/`FinalRamValue` contracts and native circuits authenticate target values;
 `FinalMemoryReceipt` preserves the original finalizer and hands off its full record. Source and
 target use the shared named byte/word lookup circuits with distinct fixed-table identities.
-Coverage enforcement and mixed installation belong to the enclosing boundary, not these row contracts.
+`FinalMemoryChecks.ensemble` installs both value/selection consumers and the verifier-owned complete
+change demand. Its `checkFinal` theorem derives the finite comparison from raw constraints and
+balance, including the assembly's full Byte ledger, matched finalizer address provenance, and
+complete-record permutations. It decodes through `FinalMemoryEnsemble.records`; there is no second
+final inventory. Transport into the mixed machine must retain those Byte consumers and their
+providers. Forgetting the closed verifier is only a physical proof view, not a balance theorem.
 The current source-hint installation has neither WRITE/VERIFY nor authenticated dynamic allocation;
 its restricted inventory is not the final public profile. Every semantic resource/permission
 restriction must also be enforced or derived by the AIR. In particular, same-value writes to ROM
