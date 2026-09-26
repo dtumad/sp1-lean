@@ -118,6 +118,12 @@ theorem project_getElem (witness : EnsembleWitness source)
         target.tables[index.val] := by
   simp only [project, ofTables_tables, List.getElem_ofFn]
 
+/-- Reinterpreting a physical prefix preserves its shared prover data. -/
+@[simp] theorem project_data (witness : EnsembleWitness source)
+    (length : target.tables.length ≤ source.tables.length) :
+    (witness.project target length).data = witness.data := by
+  simp only [project, ofTables_data]
+
 theorem project_verifierTable (witness : EnsembleWitness source)
     (length : target.tables.length ≤ source.tables.length)
     (verifier : target.verifier = source.verifier) :
