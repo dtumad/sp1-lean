@@ -53,6 +53,12 @@ def appendRight (slot : TableSlot components component) (before : List (Componen
 def cast {other : List (Component F)} (slot : TableSlot components component)
     (same : components = other) : TableSlot other component := same ▸ slot
 
+/-- Inventory transport preserves the numerical physical position. -/
+@[simp] theorem cast_index {other : List (Component F)} (slot : TableSlot components component)
+    (same : components = other) : (slot.cast same).index.val = slot.index.val := by
+  cases same
+  rfl
+
 /-- Replacing another component preserves this registration and its physical position. -/
 def setOther (slot : TableSlot components component) (position : ℕ) (replacement : Component F)
     (different : position ≠ slot.index.val) : TableSlot (components.set position replacement) component where

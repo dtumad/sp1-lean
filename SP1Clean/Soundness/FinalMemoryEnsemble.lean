@@ -197,4 +197,34 @@ theorem memory_interactions_eq (witness : EnsembleWitness (ensemble auxiliary ch
       (records witness).map (memoryChannel.emittedValue (-1)) := by
   exact inventory.memory_interactions_eq witness (memoryChannel.emittedValue (-1)) recordFor_interactions
 
+/-- The decoder depends only on the two finalizer row arrays and their shared prover data.
+Different physical proof views may retain different suffixes or verifier interfaces. -/
+theorem records_congr_rows {otherAuxiliary : List (Component (ZMod p))}
+    {otherChannels : List (RawChannel (ZMod p))}
+    (first : EnsembleWitness (ensemble auxiliary channels))
+    (second : EnsembleWitness (ensemble otherAuxiliary otherChannels))
+    (rows : (first.tables.take 2).map (·.table) = (second.tables.take 2).map (·.table))
+    (data : first.data = second.data) : records first = records second := by
+  have firstBound : 2 ≤ first.tables.length := by
+    rw [← first.same_length]
+    simp [ensemble, OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+      OrderedMemoryEnsemble.Inventory.views, inventory]
+  have secondBound : 2 ≤ second.tables.length := by
+    rw [← second.same_length]
+    simp [ensemble, OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+      OrderedMemoryEnsemble.Inventory.views, inventory]
+  have arrays (index : Fin 2) :
+      (first.tables[index.val]'(by omega)).table = (second.tables[index.val]'(by omega)).table := by
+    have same := congrArg (fun arrays => arrays[index.val]?) rows
+    simpa only [List.getElem?_map, List.getElem?_take, if_pos index.isLt,
+      List.getElem?_eq_getElem (by omega : index.val < first.tables.length),
+      List.getElem?_eq_getElem (by omega : index.val < second.tables.length),
+      Option.map_some, Option.some.injEq] using same
+  have firstData (index : ℕ) (bound : index < first.tables.length) :
+      (first.tables[index]'bound).data = first.data := first.same_data _ (List.getElem_mem _)
+  have secondData (index : ℕ) (bound : index < second.tables.length) :
+      (second.tables[index]'bound).data = second.data := second.same_data _ (List.getElem_mem _)
+  simp only [records_eq, Table.environment, firstData, secondData, data,
+    arrays ⟨0, by decide⟩, arrays ⟨1, by decide⟩]
+
 end SP1Clean.Soundness.FinalMemoryEnsemble

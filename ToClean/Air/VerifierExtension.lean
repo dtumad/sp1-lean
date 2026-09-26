@@ -213,6 +213,15 @@ def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.insta
 @[simp] theorem project_publicInput {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
     (closed.project witness).publicInput = witness.publicInput := rfl
 
+/-- The installed verifier contributes the old verifier ledger and the single closed invocation. -/
+theorem installed_verifier_interactions {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) (channel : RawChannel F) :
+    witness.verifierTable.interactionsWith channel =
+      (closed.project witness).verifierTable.interactionsWith channel ++
+        (closed.singleton witness.data).interactionsWith channel := by
+  rw [verifier_table_interactions, verifier_table_interactions, project_publicInput, project_data]
+  exact closed.verifier_interactions ens witness.publicInput witness.data channel
+
 /-- The original verifier and all original table checks are consequences of the extended checks. -/
 theorem project_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
     (checked : witness.Constraints) : (closed.project witness).Constraints := by

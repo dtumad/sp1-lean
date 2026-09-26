@@ -230,6 +230,11 @@ import SP1Clean.Soundness.FinalMemoryCheckLedger
 import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.HostFinalMemory
 import SP1Clean.Soundness.HostFinalMemoryByte
+import SP1Clean.Soundness.HostFinalMemoryView
+import SP1Clean.Soundness.HostFinalMemoryLedger
+import SP1Clean.Soundness.HostFinalMemoryTransport
+import SP1Clean.Soundness.HostFinalMemoryInventory
+import SP1Clean.Soundness.HostFinalMemorySoundness
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.GoodnessFilter

@@ -27,7 +27,7 @@ def checkTables (target : MemorySnapshot) : List (Component (ZMod p)) :=
   [⟨FinalRegisterCheck.circuit target⟩, ⟨FinalRamCheck.circuit target⟩]
 
 /-- Receipt-bearing finalizers with both target-check tables installed. -/
-def base (target : MemorySnapshot) (auxiliary : List (Component (ZMod p)))
+@[reducible] def base (target : MemorySnapshot) (auxiliary : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p))) : Ensemble (ZMod p) unit :=
   FinalMemoryReceipts.ensemble (checkTables target ++ auxiliary)
     (byteChannel.toRaw :: memoryChannel.toRaw ::
@@ -90,6 +90,11 @@ def receiptWitness (witness : EnsembleWitness (ensemble source target auxiliary 
 def records (witness : EnsembleWitness (ensemble source target auxiliary channels)) :
     List (MemoryMsg (ZMod p)) :=
   FinalMemoryEnsemble.records (FinalMemoryReceipts.original (receiptWitness witness))
+
+/-- The receipt proof view uses the actual shared fixed-lookup environment. -/
+theorem receiptWitness_data (witness : EnsembleWitness (ensemble source target auxiliary channels)) :
+    (receiptWitness witness).data = witness.data :=
+  (FinalMemoryChangeBoundary.closed source target).project_data witness
 
 theorem ramFinalTable_eq (witness : EnsembleWitness (ensemble source target auxiliary channels)) :
     FinalMemoryReceipts.ramTable (receiptWitness witness) = ramFinalSlot.table witness := rfl

@@ -32,6 +32,12 @@ def finalWitness {image : ProgramImage} {source : ExecutionSnapshot}
       intro table member
       exact witness.same_data table (List.mem_of_mem_drop member))
 
+/-- The finalizer proof view retains the local witness's shared environment. -/
+theorem finalWitness_data {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    (finalWitness witness).data = witness.data := by
+  simp only [finalWitness, EnsembleWitness.ofTables_data]
+
 /-- Finalizer contracts follow before any Memory guarantees or execution facts are available. -/
 theorem finalTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
