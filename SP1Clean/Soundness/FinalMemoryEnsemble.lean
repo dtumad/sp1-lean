@@ -25,8 +25,8 @@ def registerView : TransitionView (OrderedBoundary.channel (p := p) channelName)
         OrderedBoundary.channel, channelName, memoryChannel])
 
 def ramView : TransitionView (OrderedBoundary.channel (p := p) channelName) :=
-  OrderedMemoryEnsemble.providerView channelName (by decide) MemoryBoundary.FinalSpec
-    FinalRamProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid) (by
+  OrderedMemoryEnsemble.providerView channelName (by decide) MemoryBoundary.RamFinalSpec
+    FinalRamProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid.1) (by
       simp [GeneralFormalCircuit.channels, FinalRamProvider.circuit, circuit_norm,
         OrderedBoundary.channel, channelName, memoryChannel, byteChannel])
 
@@ -105,7 +105,7 @@ def inventory : OrderedMemoryEnsemble.Inventory channelName (MemoryBoundary.Fina
       exact ⟨valid.1, valid.2.2⟩
     | ram =>
       obtain rfl := Option.some.inj found
-      exact ⟨valid.1, valid.2.2⟩
+      exact ⟨valid.1.1, valid.2.2⟩
     | terminal => contradiction
 
 def ensemble (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p))) :=
@@ -114,6 +114,41 @@ def ensemble (auxiliary : List (Component (ZMod p))) (channels : List (RawChanne
 variable {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 
 def records (witness : EnsembleWitness (ensemble auxiliary channels)) := inventory.records witness
+
+/-- The shared decoder reads the original output of each physical register and RAM row;
+the ordering terminal contributes no Memory record. -/
+theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels)) :
+    records witness =
+      (witness.tables[0]'(by rw [← witness.same_length]; simp [ensemble,
+        OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+        OrderedMemoryEnsemble.Inventory.views, inventory])).table.map
+          (fun row => (⟨registerCircuit⟩ : Component (ZMod p)).rowOutput
+            ((witness.tables[0]'(by rw [← witness.same_length]; simp [ensemble,
+              OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+              OrderedMemoryEnsemble.Inventory.views, inventory])).environment row)) ++
+      (witness.tables[1]'(by rw [← witness.same_length]; simp [ensemble,
+        OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+        OrderedMemoryEnsemble.Inventory.views, inventory])).table.map
+          (fun row => (⟨ramCircuit⟩ : Component (ZMod p)).rowOutput
+            ((witness.tables[1]'(by rw [← witness.same_length]; simp [ensemble,
+              OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+              OrderedMemoryEnsemble.Inventory.views, inventory])).environment row)) := by
+  have length : 3 ≤ witness.tables.length := by
+    rw [← witness.same_length]
+    simp [ensemble, OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+      OrderedMemoryEnsemble.Inventory.views, inventory]
+  have front : witness.tables.take 3 = [witness.tables[0], witness.tables[1], witness.tables[2]] := by
+    rw [List.take_succ_eq_append_getElem (by omega : 2 < witness.tables.length),
+      List.take_succ_eq_append_getElem (by omega : 1 < witness.tables.length),
+      List.take_succ_eq_append_getElem (by omega : 0 < witness.tables.length)]
+    rfl
+  change ((TransitionView.readIndexedRows [TableId.registers, .ram, .terminal]
+    (witness.tables.take 3)).filterMap fun row => recordFor row.1 row.2) = _
+  rw [front]
+  simp only [TransitionView.readIndexedRows, List.zip_cons_cons, List.zip_nil_right,
+    List.flatMap_cons, List.flatMap_nil, List.filterMap_append, List.filterMap_map,
+    Function.comp_def, recordFor, List.filterMap_eq_map', List.filterMap_none,
+    List.append_nil]
 
 theorem records_valid (witness : EnsembleWitness (ensemble auxiliary channels))
     (valid : witness.Spec) : ∀ record ∈ records witness, MemoryBoundary.FinalSpec record :=

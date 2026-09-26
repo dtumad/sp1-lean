@@ -8,6 +8,7 @@ import SP1Clean.FormalModel.Contracts.CoreAIR
 import SP1Clean.FormalModel.Contracts.CoreSyscall
 import SP1Clean.FormalModel.Contracts.DivRem
 import SP1Clean.FormalModel.Contracts.DivRemColumns
+import SP1Clean.FormalModel.Contracts.FinalRam
 import SP1Clean.FormalModel.Contracts.FinalRamValue
 import SP1Clean.FormalModel.Contracts.FinalRegisterValue
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate

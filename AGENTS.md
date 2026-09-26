@@ -65,8 +65,9 @@ to a canonical Rust exporter so it does not obscure the verifier/refinement boun
 bounded local execution segments, with authenticated complete boundaries, all eight constrained
 host calls, native shard composition, and generic whole-ensemble export. Boot-to-HALT is an
 endpoint corollary. Work from the checked end-to-end targets in `FormalModel/Shard.lean` and
-`Soundness/Shard/Contract.lean`; their concrete semantic resource profile and implementation
-instances remain open. Do not add compiler readiness, provider validity, grounding, or syscall
+`Soundness/Shard/Contract.lean`; their concrete native resource profile is fixed, while complete
+resource enforcement, compatible construction budgets, and implementation instances remain open.
+Do not add compiler readiness, provider validity, grounding, or syscall
 inactivity as caller premises of the final capstone.
 
 `Model/Core/Execution{,Path,Replay,Boot,Snapshot}.lean` owns complete Sail/host/clock semantics.
