@@ -88,6 +88,28 @@ structure AuxiliaryInterface (auxiliary : List (Component (ZMod p))) : Prop wher
   state : ∀ component ∈ auxiliary, stateChannel.toRaw ∉ component.circuit.channels
 
 omit [Fact (2 ^ 25 < p)] in
+/-- Static channel interfaces compose over appended physical component blocks. -/
+theorem AuxiliaryInterface.append {left right : List (Component (ZMod p))}
+    (first : AuxiliaryInterface left) (second : AuxiliaryInterface right) :
+    AuxiliaryInterface (left ++ right) := by
+  constructor
+  · intro component member env checked
+    rcases List.mem_append.mp member with member | member
+    · exact first.byte component member env checked
+    · exact second.byte component member env checked
+  · intro component member
+    rcases List.mem_append.mp member with member | member
+    · exact first.state component member
+    · exact second.state component member
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Restriction and reordering preserve a component-local interface. -/
+theorem AuxiliaryInterface.of_subset {left right : List (Component (ZMod p))}
+    (interface : AuxiliaryInterface right) (subset : left ⊆ right) : AuxiliaryInterface left :=
+  ⟨fun component member => interface.byte component (subset member),
+    fun component member => interface.state component (subset member)⟩
+
+omit [Fact (2 ^ 25 < p)] in
 /-- Most host components only consume Byte checks; their declared interfaces suffice. -/
 theorem AuxiliaryInterface.of_channels (auxiliary : List (Component (ZMod p)))
     (byte : ∀ component ∈ auxiliary, byteChannel.toRaw ∉ component.circuit.channelsWithRequirements)
