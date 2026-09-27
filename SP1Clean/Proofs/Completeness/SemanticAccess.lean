@@ -6,8 +6,8 @@ import SP1Clean.Proofs.Completeness.InstructionEvent
 Every ordinary occurrence in an admissible mixed path compiles through the existing transition
 view, access extractor and refresh-aware scheduler. The only extra input is the compiler's running
 frontier. Its invariant is preserved for the next row, rather than becoming a capstone premise.
-This removes extractor readiness; per-chip arithmetic validity and the full mixed-table assembly
-remain the separate A6 compiler obligations.
+This removes extractor readiness. The five R-type adapter tables also have derived event validity
+below; the remaining families and full mixed-table assembly remain separate compiler obligations.
 -/
 
 namespace SP1Clean.TraceGen
@@ -51,5 +51,32 @@ theorem admissibleExecution_compile_at {limits : ResourceLimits} {characteristic
   exact ⟨compileInstructionEvent?_timestamps generated resultWellFormed bounded,
     compileInstructionEvent?_memoryBumps_wellFormed generated resultWellFormed bounded phase currentLt,
     compileInstructionEvent?_frontier_bounded_next generated bounded⟩
+
+/-- At every actual ordinary occurrence, the five R-type adapter tables already receive valid
+compiler events. The clock phase is obtained from the fixed native profile, PC bounds from the
+committed ROM, and operand/timestamp facts from the shared extractor and scheduler. This staged
+result leaves the semantic domain unchanged and makes no all-instruction completeness claim. -/
+theorem admissibleExecution_compile_at_rtype_valid
+    {limits : ResourceLimits} {characteristic : ℕ}
+    {image : ProgramImage} {source target : ExecutionSnapshot} {events : List ExecutionEvent}
+    (execution : AdmissibleExecution limits characteristic image source target events)
+    {cut : ℕ} (ordinary : events[cut]? = some .ordinary) (frontier : AccessFrontier) :
+    ∃ current next view result,
+      executionTrajectory (policy characteristic image) (image.toGuestProgram execution.1.1.1.1)
+        source.realize events cut = some current ∧
+      ExecutionStep (policy characteristic image) (image.toGuestProgram execution.1.1.1.1)
+        current .ordinary next ∧
+      projectSP1Transition? (image.toGuestProgram execution.1.1.1.1)
+        ⟨current.sail, ⟨.ordinary, next.sail⟩⟩ = some view ∧
+      compileInstructionEvent? view frontier current.clock = some result ∧
+      (frontier.BoundedAt current.clock →
+        view.chipId ∈ [.add, .sub, .subw, .mul, .divRem] →
+        result.routed.id.Valid result.routed.event) := by
+  obtain ⟨current, next, view, result, replay, step, projected, generated, _⟩ :=
+    admissibleExecution_compile_at execution ordinary frontier
+  refine ⟨current, next, view, result, replay, step, projected, generated, ?_⟩
+  intro bounded family
+  have phase := (execution.2.choose_spec.1 cut current .ordinary ordinary replay).1
+  exact compileInstructionEvent?_rtype_valid projected generated family phase bounded
 
 end SP1Clean.TraceGen

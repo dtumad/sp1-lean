@@ -55,6 +55,90 @@ theorem missingCellByte : (instructionAccessPlan? (.LOAD (0, .Regidx 1, .Regidx 
     { source with mem := source.mem.erase 70007 } source).isNone := by
   native_decide
 
+private def addProgram : GuestProgram where
+  rom := [(65536, 0x003100B3)]
+  pc_start := 65536
+  memImage := []
+  rom_nodup := by decide
+  rom_aligned := by simp
+  rom_in_window := by simp
+  rom_full_width := by simp
+
+private def addState : SailState := configuredState 65536
+
+private def addView : SP1TransitionView :=
+  ⟨65536, 0x003100B3, .RTYPE (.Regidx 3, .Regidx 2, .Regidx 1, .ADD),
+    ⟨.ADD, false⟩, .add,
+    instructionAccessPlan? (.RTYPE (.Regidx 3, .Regidx 2, .Regidx 1, .ADD)) addState addState⟩
+
+private theorem addProjected :
+    projectSP1Transition? addProgram ⟨addState, ⟨.ordinary, addState⟩⟩ = some addView := by
+  have cfg := cfgState_configured 65536
+  have atPc : addState.regs.get? Register.PC = some (65536#64) := cfgState_pc _
+  have fetched : addProgram.fetchWord 65536 = some (0x003100B3#32) := rfl
+  have decoded := SailDecode.decode_ADD addState cfg.init cfg.priv cfg.mseccfg_disabled
+  have observed := decodeLocated?_eq_some_of (located := ⟨addState, ⟨.ordinary, addState⟩⟩)
+    atPc fetched decoded
+  unfold projectSP1Transition?
+  simp only [atPc, Option.bind_eq_bind, Option.bind_some, observed]
+  rfl
+
+/-- A real committed word is decoded by official Sail and compiled at a refresh boundary.
+The event's validity is obtained from the universal theorem, with no manually supplied event
+well-formedness. This tests decode/projection/compilation, not a complete execution segment. -/
+theorem decodedAdd_compiles_valid :
+    ∃ result, compileInstructionEvent? addView AccessFrontier.initial (2 ^ 24 + 1) = some result ∧
+      result.routed.id.Valid result.routed.event := by
+  obtain ⟨plan, accesses⟩ := Option.isSome_iff_exists.mp
+    (by native_decide : addView.accessPlan?.isSome)
+  obtain ⟨result, generated⟩ := instructionEventReady_iff.mp
+    (instructionEventReady_of_projection addProjected accesses AccessFrontier.initial (2 ^ 24 + 1))
+  refine ⟨result, generated, compileInstructionEvent?_rtype_valid addProjected generated
+    (by decide) (by decide) ?_⟩
+  intro loc
+  simp [AccessFrontier.initial]
+
+/-- Three aliased arithmetic roles refresh once and then consume the immediately preceding
+role's timestamp; the destination value remains the actual target-state projection. -/
+theorem rtypeAlias : summary (compiled (.RTYPE (.Regidx 1, .Regidx 1, .Regidx 1, .ADD))
+    { source with regs := source.regs.insert Register.x1 140000 }) =
+      some (.add, [2 ^ 24 + 2, 2 ^ 24 + 3, 2 ^ 24 + 4], [(1, 2 ^ 24 + 2)],
+        [70000, 70000, 140000]) := by
+  native_decide
+
+private def divOperands (word unsigned remainder : Bool) (left right : BitVec 64) :
+    Option (ℕ × ℕ × ℕ) := do
+  let state := { configuredState 65536 with
+    regs := ((configuredState 65536).regs.insert Register.x2 left).insert Register.x3 right }
+  let decoded := if remainder then
+      if word then instruction.REMW (.Regidx 3, .Regidx 2, .Regidx 1, unsigned)
+      else .REM (.Regidx 3, .Regidx 2, .Regidx 1, unsigned)
+    else if word then .DIVW (.Regidx 3, .Regidx 2, .Regidx 1, unsigned)
+    else .DIV (.Regidx 3, .Regidx 2, .Regidx 1, unsigned)
+  let key ← instructionRouteKey decoded
+  let id ← instructionRouteId decoded
+  let result ← compileInstructionEvent?
+    ⟨65536, 0, decoded, key, id, instructionAccessPlan? decoded state state⟩ AccessFrontier.initial 1
+  let event ← result.routed.forId? .divRem
+  pure (event.b, event.c, event.opcode)
+
+/-- Zero divisors are valid RISC-V operands, not a compiler-readiness restriction. All eight
+signed/unsigned word/full-width divide/remainder opcodes preserve them. -/
+theorem divZeroOperands :
+    ([(false, false, false), (false, true, false), (false, false, true), (false, true, true),
+      (true, false, false), (true, true, false), (true, false, true), (true, true, true)].map
+        fun (word, unsigned, remainder) => divOperands word unsigned remainder 123 0) =
+      [some (123, 0, 15), some (123, 0, 16), some (123, 0, 17), some (123, 0, 18),
+        some (123, 0, 25), some (123, 0, 26), some (123, 0, 27), some (123, 0, 28)] := by
+  native_decide
+
+/-- The signed overflow operands survive event compilation exactly at both integer widths. -/
+theorem divSignedOverflowOperands :
+    (divOperands false false false (BitVec.ofNat 64 (2 ^ 63)) (-1),
+      divOperands true false false (BitVec.ofNat 64 (2 ^ 31)) (-1)) =
+      (some (2 ^ 63, 2 ^ 64 - 1, 15), some (2 ^ 31, 2 ^ 64 - 1, 25)) := by
+  native_decide
+
 private def branchImmediate (immediate : BitVec 13) : Option (ℕ × ℕ) := do
   let result ← compiled (.BTYPE (immediate, .Regidx 0, .Regidx 0, .BEQ)) source
   let event ← result.routed.forId? .branch
