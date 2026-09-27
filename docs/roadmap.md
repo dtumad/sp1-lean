@@ -222,9 +222,14 @@ assembly through channel-specific evidence. The fixed-handler resource assembly'
 checker is a compatibility consumer; the final facade should consolidate this endpoint binding.
 Ordinary receipt producers now reuse all 25 registered instruction circuits and their existing
 State decoder, with unchanged widths/assertions/lookups/old ledgers and an exact per-row receipt
-cost. The ordered consumer and protected mixed installation must still authenticate the ordinary
-count and last ordinary successor before nextPC/retirement can be bound to the target. Host-only
-and empty cases preserve the incoming observations; receipt producers alone do not close C2.
+cost. The ordinary observation consumer now uses the shared ranked engine to order all physical
+consumer rows, binds their counter to the existing semantic retirement fold, and retains the last
+raw successor PC. Its clock comparison recovers the ordinary source clock before checking ranges,
+so successor window crossings remain legal. Standard Clean table construction has proved witness
+computability, constraints and guarantees; exact costs include four Byte pulls per row. Protected
+mixed installation, receipt/Byte closure, private observation endpoints and supplied target binding
+remain open. Host-only and empty cases must preserve incoming observations; the standalone
+observation subsystem does not close C2.
 Terminal receipt/replay agreement is closed.
 `HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
 cell below `2^48`, including locations absent from the final inventory, and excludes entries outside
