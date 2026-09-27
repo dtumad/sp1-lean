@@ -48,6 +48,18 @@ def lift (witness : EnsembleWitness (FinalMemoryEnsemble.ensemble auxiliary chan
     EnsembleWitness (ensemble auxiliary channels) :=
   FinalReceiptEnsemble.lift (FinalReceiptEnsemble.lift witness)
 
+/-- Forgetting both receipts keeps every physical row array of the boundary inventory. -/
+theorem original_rows (witness : EnsembleWitness (ensemble auxiliary channels)) :
+    (original witness).tables.map (·.table) = witness.tables.map (·.table) :=
+  (FinalReceiptEnsemble.project_rows _ (registerWitness witness)).trans
+    (FinalReceiptEnsemble.project_rows _ witness)
+
+/-- The original inventory retains the actual shared environment. -/
+theorem original_data (witness : EnsembleWitness (ensemble auxiliary channels)) :
+    (original witness).data = witness.data :=
+  (FinalReceiptEnsemble.project_data _ (registerWitness witness)).trans
+    (FinalReceiptEnsemble.project_data _ witness)
+
 /-- Receipt publication adds no row-construction obligation to the existing finalizers. -/
 theorem lift_constraints (witness : EnsembleWitness (FinalMemoryEnsemble.ensemble auxiliary channels))
     (constraints : witness.Constraints) : (lift witness).Constraints :=

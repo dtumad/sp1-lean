@@ -371,8 +371,13 @@ turn a projected Byte ledger into a balanced one.
 `HostFinalMemory` installs these same circuits in the existing host resource block and publishes
 receipts from its original finalizer positions. Its proof views preserve row arrays, shared data
 and the public header. `HostFinalMemoryByte` closes the actual combined Byte ledger before
-transporting guarantees to host consumers. The remaining receipt/change transport must identify
-this physical inventory with the decoder used by mixed grounding and the endpoint theorem.
+transporting guarantees to host consumers. `HostFinalMemory.source_checkFinal` derives the complete
+Memory comparison from raw acceptance of the concrete six-call assembly, with all static interfaces
+discharged. `HostFinalMemoryInventory` proves literal equality with the final-record decoder used
+by the existing grounding projection. The five-table boundary view inherits Byte guarantees and
+exact receipt ledgers, including zero multiplicities and count bounds; it makes no claim of full
+balance in that smaller view. Connecting the complete mixed execution proof to the supplied Sail
+and host target remains open.
 The current source-hint installation has neither WRITE/VERIFY nor authenticated dynamic allocation;
 its restricted inventory is not the final public profile. Every semantic resource/permission
 restriction must also be enforced or derived by the AIR. In particular, same-value writes to ROM

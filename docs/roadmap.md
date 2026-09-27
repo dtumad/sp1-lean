@@ -207,9 +207,12 @@ covered boundary; the two trajectory definitions deliberately differ after the t
 calls retain the single evolving host/clock in paired replay.
 
 **Next boundary work:** bind the complete supplied outgoing snapshot to the already-derived
-Sail/register/RAM/runtime/host endpoint. For Memory, install the proved native final-value checks
-and enforce coverage of every computed source-to-target change; then bind the complete
-Sail register map (including key presence), bookkeeping/runtime and host fields.
+Sail/register/RAM/runtime/host endpoint. `HostFinalMemory.source_checkFinal` now derives the complete
+finite Memory comparison from raw acceptance of the installed six-call host assembly, including
+its full Byte ledger and every computed source-to-target change. Its final records are proved
+equal to the existing grounding decoder's records. The next endpoint work binds the complete
+Sail register map (including key presence), bookkeeping/runtime and host fields, and extends the
+grounding consumers to the combined assembly through channel-specific evidence.
 Terminal receipt/replay agreement is closed.
 `HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
 cell below `2^48`, including locations absent from the final inventory, and excludes entries outside
