@@ -55,4 +55,34 @@ theorem missingCellByte : (instructionAccessPlan? (.LOAD (0, .Regidx 1, .Regidx 
     { source with mem := source.mem.erase 70007 } source).isNone := by
   native_decide
 
+private def branchImmediate (immediate : BitVec 13) : Option (ℕ × ℕ) := do
+  let result ← compiled (.BTYPE (immediate, .Regidx 0, .Regidx 0, .BEQ)) source
+  let event ← result.routed.forId? .branch
+  pure (event.imm, event.branchTarget)
+
+/-- Branches retain their thirteenth immediate bit before sign extension. This positive offset
+used to be truncated to twelve bits and miscompiled as -4. -/
+theorem branchPositiveHigh : branchImmediate 4092 = some (4092, 69628) := by
+  native_decide
+
+/-- The most negative branch offset used to be truncated to zero. -/
+theorem branchNegativeLimit : branchImmediate 4096 = some (2 ^ 64 - 4096, 61440) := by
+  native_decide
+
+/-- Both sides of the twelve-bit sign boundary remain positive thirteen-bit immediates. -/
+theorem branchPositiveSignBoundary :
+    (branchImmediate 2044, branchImmediate 2048) =
+      (some (2044, 67580), some (2048, 67584)) := by
+  native_decide
+
+/-- Negative offsets retain their full thirteen-bit signed meaning at both limits. -/
+theorem branchNegativeSignBoundary :
+    (branchImmediate 6144, branchImmediate 8188) =
+      (some (2 ^ 64 - 2048, 63488), some (2 ^ 64 - 4, 65532)) := by
+  native_decide
+
+/-- A zero branch offset remains unchanged. -/
+theorem branchZero : branchImmediate 0 = some (0, 65536) := by
+  native_decide
+
 end SP1CleanTest.Core.SemanticAccess
