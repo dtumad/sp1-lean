@@ -1,0 +1,34 @@
+build-full	Run actions/checkout@v4	2026-09-27T20:59:48.6872608Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/* +6d6a6238dc80c7007bff7c498cd64072b3b87b8c:refs/remotes/pull/104/merge
+build-full	Run actions/checkout@v4	2026-09-27T20:59:51.8243775Z  * [new ref]           6d6a6238dc80c7007bff7c498cd64072b3b87b8c -> pull/104/merge
+build-full	Run actions/checkout@v4	2026-09-27T20:59:51.8292838Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/104/merge
+build-full	Run actions/checkout@v4	2026-09-27T20:59:52.0919925Z Note: switching to 'refs/remotes/pull/104/merge'.
+build-full	Run actions/checkout@v4	2026-09-27T20:59:52.0934528Z HEAD is now at 6d6a6238 Merge 698bec03cf75327921a694c55a219d340a77ea47 into 9e383aaa85aec0eaf8ed0856f243ed8806520aef
+build-full	Run actions/checkout@v4	2026-09-27T20:59:52.1017166Z 6d6a6238dc80c7007bff7c498cd64072b3b87b8c
+build-full	Compute cache keys and pick the entry to restore	2026-09-27T20:59:52.1789187Z ^[[36;1m  echo "key=${prefix}-align-6d6a6238dc80c7007bff7c498cd64072b3b87b8c-36349817969-1" >> "$GITHUB_OUTPUT"^[[0m
+build-full	Clean WASM and R1CS gadget conformance	﻿2026-09-27T21:10:36.4216038Z ##[group]Run scripts/check_backend_gadgets.sh
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:36.4219153Z ^[[36;1mscripts/check_backend_gadgets.sh^[[0m
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:36.4286034Z shell: /usr/bin/bash -e {0}
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:36.4288388Z env:
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:36.4290542Z   SP1_CACHE_VERSION: v2
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:36.4291668Z   CACHE_PATHS: .lake/build
+build-full	Clean WASM and R1CS gadget conformance	.lake/packages/*
+build-full	Clean WASM and R1CS gadget conformance	!.lake/packages/mathlib
+build-full	Clean WASM and R1CS gadget conformance	!.lake/packages/batteries
+build-full	Clean WASM and R1CS gadget conformance	!.lake/packages/aesop
+build-full	Clean WASM and R1CS gadget conformance	!.lake/packages/Qq
+build-full	Clean WASM and R1CS gadget conformance	!.lake/packages/proofwidgets
+build-full	Clean WASM and R1CS gadget conformance	!.lake/packages/importGraph
+build-full	Clean WASM and R1CS gadget conformance	!.lake/packages/LeanSearchClient
+build-full	Clean WASM and R1CS gadget conformance	!.lake/packages/plausible
+build-full	Clean WASM and R1CS gadget conformance	
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:36.4297322Z   GH_TOKEN: ***
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:36.4299856Z   LEAN_NUM_THREADS: 3
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:36.4301842Z ##[endgroup]
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:39.3558571Z Build completed successfully (4004 jobs).
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:39.4732856Z Exported 3 unchanged gadget constraint systems to .lake/backend-gadgets.lEr62v/generated
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:10:39.5170045Z PASS deterministic backend artifact regeneration
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:11:03.2416903Z PASS is-zero: 2 Lean witness cells, 6 R1CS constraints, 7 total signals
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:11:03.2421367Z PASS is-zero-word: 11 Lean witness cells, 33 R1CS constraints, 32 total signals
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:11:03.2425072Z PASS word-range-check: 64 Lean witness cells, 132 R1CS constraints, 133 total signals
+build-full	Clean WASM and R1CS gadget conformance	2026-09-27T21:11:03.2428661Z PASS 29 generated witnesses and 26 explicit mutations; every original Lean cell compared and full R1CS checked
+build-full	Release audit and compiled-library trust policy	2026-09-27T21:11:14.8222479Z sp1-lean:  6d6a6238dc80c7007bff7c498cd64072b3b87b8c

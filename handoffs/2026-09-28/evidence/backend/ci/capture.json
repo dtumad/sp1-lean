@@ -1,0 +1,86 @@
+[
+  {
+    "file": "pr-104.json",
+    "command": [
+      "gh",
+      "pr",
+      "view",
+      "104",
+      "--repo",
+      "dtumad/sp1-lean",
+      "--json",
+      "number,url,state,headRefName,headRefOid,baseRefName,baseRefOid,statusCheckRollup"
+    ],
+    "startedUTC": "2026-09-27T21:46:04.726819+00:00",
+    "finishedUTC": "2026-09-27T21:46:05.474637+00:00",
+    "returncode": 0
+  },
+  {
+    "file": "runs.json",
+    "command": [
+      "gh",
+      "run",
+      "list",
+      "--repo",
+      "dtumad/sp1-lean",
+      "--branch",
+      "codex/backend-gadget-conformance",
+      "--limit",
+      "20",
+      "--json",
+      "databaseId,headSha,name,event,status,conclusion,createdAt,updatedAt,url"
+    ],
+    "startedUTC": "2026-09-27T21:46:05.474682+00:00",
+    "finishedUTC": "2026-09-27T21:46:06.217159+00:00",
+    "returncode": 0
+  },
+  {
+    "file": "successful-run.json",
+    "command": [
+      "gh",
+      "run",
+      "view",
+      "36349817969",
+      "--repo",
+      "dtumad/sp1-lean",
+      "--json",
+      "databaseId,headSha,name,event,status,conclusion,createdAt,updatedAt,url,jobs"
+    ],
+    "startedUTC": "2026-09-27T21:46:06.217198+00:00",
+    "finishedUTC": "2026-09-27T21:46:07.515482+00:00",
+    "returncode": 0
+  },
+  {
+    "file": "superseded-run.json",
+    "command": [
+      "gh",
+      "run",
+      "view",
+      "36349817287",
+      "--repo",
+      "dtumad/sp1-lean",
+      "--json",
+      "databaseId,headSha,name,event,status,conclusion,createdAt,updatedAt,url,jobs"
+    ],
+    "startedUTC": "2026-09-27T21:46:07.515538+00:00",
+    "finishedUTC": "2026-09-27T21:46:08.657899+00:00",
+    "returncode": 0
+  },
+  {
+    "file": "successful-build-full.log",
+    "command": [
+      "gh",
+      "run",
+      "view",
+      "36349817969",
+      "--repo",
+      "dtumad/sp1-lean",
+      "--job",
+      "108706743599",
+      "--log"
+    ],
+    "startedUTC": "2026-09-27T21:46:08.658071+00:00",
+    "finishedUTC": "2026-09-27T21:46:11.338606+00:00",
+    "returncode": 0
+  }
+]

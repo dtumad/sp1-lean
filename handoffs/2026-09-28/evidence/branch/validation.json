@@ -1,0 +1,97 @@
+[
+  {
+    "name": "full-build",
+    "command": [
+      "lake",
+      "build",
+      "--wfail",
+      "--iofail",
+      "SP1Clean",
+      "SP1CleanTest"
+    ],
+    "exitCode": 0,
+    "seconds": 32.41
+  },
+  {
+    "name": "core-tests",
+    "command": [
+      "lake",
+      "test"
+    ],
+    "exitCode": 0,
+    "seconds": 1.06
+  },
+  {
+    "name": "lint",
+    "command": [
+      "lake",
+      "lint"
+    ],
+    "exitCode": 0,
+    "seconds": 18.36
+  },
+  {
+    "name": "core-lint",
+    "command": [
+      "lake",
+      "exe",
+      "runLinter",
+      "--no-build",
+      "SP1Clean.Core",
+      "ToClean",
+      "ToMathlib",
+      "ToPolyFun"
+    ],
+    "exitCode": 0,
+    "seconds": 12.16
+  },
+  {
+    "name": "audit",
+    "command": [
+      "scripts/run_audit.sh"
+    ],
+    "exitCode": 0,
+    "seconds": 83.82
+  },
+  {
+    "name": "export",
+    "command": [
+      "scripts/check_witgen_export.sh",
+      "--regen"
+    ],
+    "exitCode": 0,
+    "seconds": 41.6
+  },
+  {
+    "name": "interpreter",
+    "command": [
+      "scripts/run_interp_diff.sh"
+    ],
+    "exitCode": 0,
+    "seconds": 0.41
+  },
+  {
+    "name": "driver",
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "scripts/branchCompilerExample.lean"
+    ],
+    "exitCode": 0,
+    "seconds": 1.91,
+    "stderrEmpty": true
+  },
+  {
+    "name": "theorems-and-axioms",
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      ".lake/branch-evidence-probe.lean"
+    ],
+    "exitCode": 0,
+    "seconds": 1.86,
+    "stderrEmpty": true
+  }
+]

@@ -1,0 +1,8 @@
+✔ [3247/3255] Built SP1Clean (5.5s)
+✔ [3249/3255] Built SP1CleanTest.Alignment.Audit.OneAddNativePremises (2.1s)
+✔ [3250/3255] Built SP1CleanTest.Alignment.Audit.MixedMemoryRows (2.1s)
+✔ [3251/3255] Built SP1CleanTest.Alignment.Core.LocalCore (17s)
+✔ [3252/3255] Built SP1CleanTest.Alignment.Core.SailBoundary (1.0s)
+✔ [3253/3255] Built SP1CleanTest.Alignment.Core.InstructionReceipt (1.8s)
+✔ [3254/3255] Built SP1CleanTest.Alignment.Core.HostFinalMemory (6.8s)
+Build completed successfully (3255 jobs).

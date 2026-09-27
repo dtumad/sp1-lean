@@ -1,0 +1,15 @@
+Counter over ZMod 97: executable fixture checks, not proof certificates
+PASS compile-2-to-5: expected true, actual true
+PASS empty-0-to-0: expected true, actual true
+PASS empty-15-to-15: expected true, actual true
+PASS maximum-0-to-15: expected true, actual true
+PASS shuffled-physical-rows: expected true, actual true
+PASS missing-transition: expected false, actual false
+PASS duplicate-transition: expected false, actual false
+PASS wrong-public-endpoint: expected false, actual false
+PASS wrong-event-count: expected false, actual false
+PASS endpoint-16: expected false, actual false
+PASS decreasing-boundary: expected false, actual false
+PASS empty-unequal-boundaries: expected false, actual false
+PASS modular-wrap-row: expected false, actual false
+Compiled 2 -> 5: rows [[2, 3], [3, 4], [4, 5]]; State interactions 8

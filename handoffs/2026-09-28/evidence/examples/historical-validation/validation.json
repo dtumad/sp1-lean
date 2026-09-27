@@ -1,0 +1,84 @@
+{
+  "revision": "80092c9a0a2aea3db9db3066fba51018b095e628",
+  "checks": [
+    {
+      "name": "build",
+      "command": [
+        "lake",
+        "build",
+        "--wfail",
+        "--iofail",
+        "SP1Clean",
+        "SP1CleanTest"
+      ],
+      "exit_code": 0,
+      "seconds": 56.513
+    },
+    {
+      "name": "core-tests",
+      "command": [
+        "lake",
+        "test"
+      ],
+      "exit_code": 0,
+      "seconds": 1.074
+    },
+    {
+      "name": "lint",
+      "command": [
+        "lake",
+        "lint"
+      ],
+      "exit_code": 0,
+      "seconds": 19.508
+    },
+    {
+      "name": "core-lint",
+      "command": [
+        "lake",
+        "exe",
+        "runLinter",
+        "--no-build",
+        "SP1Clean.Core",
+        "ToClean",
+        "ToMathlib",
+        "ToPolyFun"
+      ],
+      "exit_code": 0,
+      "seconds": 12.253
+    },
+    {
+      "name": "audit",
+      "command": [
+        "scripts/run_audit.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 86.164
+    },
+    {
+      "name": "export",
+      "command": [
+        "scripts/check_witgen_export.sh",
+        "--regen"
+      ],
+      "exit_code": 0,
+      "seconds": 42.472
+    },
+    {
+      "name": "interpreter",
+      "command": [
+        "scripts/run_interp_diff.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 0.569
+    },
+    {
+      "name": "add-regression",
+      "command": [
+        "scripts/check_talk_examples.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 26.811
+    }
+  ]
+}

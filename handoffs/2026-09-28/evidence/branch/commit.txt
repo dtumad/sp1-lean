@@ -1,0 +1,32 @@
+commit 70b73fa363d38ffb0f08c9e605032ec13000146e
+Merge: fc3a8683 d87660f8
+Author:     Devon Tuma <dtumad@gmail.com>
+AuthorDate: Sun Sep 27 15:00:33 2026 -0700
+Commit:     Devon Tuma <dtumad@gmail.com>
+CommitDate: Sun Sep 27 15:00:33 2026 -0700
+
+    Merge remote-tracking branch 'origin/codex/semantic-compiler-validity' into codex/branch-compiler-roundtrip
+
+ README.md                                          |   4 +
+ SP1Clean.lean                                      |   4 +
+ SP1Clean/Soundness/Examples/Counter.lean           | 476 +++++++++++++++++++++
+ SP1Clean/Soundness/Examples/StateBalance.lean      |  66 +++
+ SP1Clean/Soundness/HostOrdinaryReceipts.lean       | 261 +++++++++++
+ SP1Clean/Soundness/OrdinaryStateReceipt.lean       |   3 +-
+ SP1Clean/Soundness/ProtectedOrdinaryReceipt.lean   | 167 ++++++++
+ SP1CleanTest/Alignment/Core/HostFinalMemory.lean   |  67 +--
+ .../Alignment/Core/InstructionReceipt.lean         |  50 +++
+ SP1CleanTest/Alignment/Core/LocalCore.lean         | 125 ++----
+ SP1CleanTest/Alignment/Examples/Counter.lean       | 108 +++++
+ .../Alignment/Support/HostFinalMemoryFixture.lean  |  91 ++++
+ .../Alignment/Support/LocalCoreFixture.lean        | 111 +++++
+ SP1CleanTest/Alignment/TalkExamples.lean           |  85 ++++
+ docs/README.md                                     |   1 +
+ docs/architecture.md                               |  54 ++-
+ docs/roadmap.md                                    |  55 ++-
+ docs/talk-examples.md                              | 152 +++++++
+ scripts/check_talk_examples.sh                     |  64 +++
+ scripts/counterExample.lean                        |  10 +
+ scripts/run_talk_examples.sh                       | 120 ++++++
+ scripts/talkExamples.lean                          |  19 +
+ 22 files changed, 1922 insertions(+), 171 deletions(-)

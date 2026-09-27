@@ -1,0 +1,29 @@
+{
+  "recorded_at_utc": "2026-09-27T21:57:49.233060+00:00",
+  "reviews": [
+    {
+      "artifact": "examples/README.md and supporting raw evidence",
+      "reviewer": "counter_realizes",
+      "mode": "read-only, no builds or edits",
+      "result": "No findings: revision provenance, verbatim outputs, relative links and trust/scope disclosures verified."
+    },
+    {
+      "artifact": "fc3a868347920db9b364c4159c6afc6ad045c787 branch fixture and driver",
+      "reviewer": "counter_realizes",
+      "mode": "read-only, no builds or edits",
+      "result": "No substantive findings: same-transition projection/compiler/physical-row join, full Sail normal retirement and local acceptance; driver distinguishes theorem evidence from computed facts."
+    },
+    {
+      "artifact": "backend package",
+      "reviewer": "root",
+      "mode": "source/output review plus package consistency checks",
+      "result": "Fixed Markdown table delimiter count; raw verdicts, pins, counts, CI merge-checkout provenance and package hashes verified."
+    },
+    {
+      "artifact": "70b73fa363d38ffb0f08c9e605032ec13000146e integration",
+      "reviewer": "root",
+      "mode": "git content/diff inspection",
+      "result": "Both reviewed fixture/driver files are byte-identical to fc3a8683. Diff against current103 d87660f8 contains exactly these two additions. Integration build/test evidence is recorded separately by the compiler agent."
+    }
+  ]
+}

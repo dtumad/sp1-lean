@@ -1,0 +1,5 @@
+# Preserve byte-identical captured evidence and its checksums.
+evidence/** -text
+evidence.tar.gz -text
+# These raw CI transcripts include terminal spacing; retain their recorded bytes.
+evidence/backend/ci/*.log whitespace=-blank-at-eol

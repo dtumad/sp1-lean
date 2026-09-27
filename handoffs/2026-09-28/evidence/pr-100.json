@@ -1,0 +1,93 @@
+{
+  "baseRefName": "main",
+  "baseRefOid": "9e383aaa85aec0eaf8ed0856f243ed8806520aef",
+  "headRefOid": "80092c9a0a2aea3db9db3066fba51018b095e628",
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 100,
+  "state": "OPEN",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:24:23Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892591/job/108700720450",
+      "name": "guards",
+      "startedAt": "2026-09-27T20:24:15Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:24:30Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958/job/108700721632",
+      "name": "guards",
+      "startedAt": "2026-09-27T20:24:17Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:24:14Z",
+      "conclusion": "CANCELLED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892591/job/108700720702",
+      "name": "build",
+      "startedAt": "2026-09-27T20:24:14Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:27:22Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958/job/108700721784",
+      "name": "build",
+      "startedAt": "2026-09-27T20:24:18Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:24:14Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892591/job/108700724371",
+      "name": "handoff",
+      "startedAt": "2026-09-27T20:24:15Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:27:55Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958/job/108701276080",
+      "name": "handoff",
+      "startedAt": "2026-09-27T20:27:24Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:24:14Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892591/job/108700724265",
+      "name": "build-full",
+      "startedAt": "2026-09-27T20:24:15Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:36:29Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958/job/108701276195",
+      "name": "build-full",
+      "startedAt": "2026-09-27T20:27:25Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    }
+  ],
+  "title": "Add runnable AIR examples and a complete counter arithmetization",
+  "url": "https://github.com/dtumad/sp1-lean/pull/100"
+}

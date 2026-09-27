@@ -1,0 +1,108 @@
+# Presentation evidence follow-up for the coding agent
+
+This is a forwardable follow-up to the existing handoffs, reviewed September 27, 2026.
+The presentation now has a [short spoken script and private coaching](../SCRIPT.md).
+Its main narration still uses sp1-lean `5419467add2aba396e2a76eda7ebdf2eac6ce954` and Clean
+`fba2a29f5e36420d797c1de118ac9f11f23b819e`. New PRs are recorded as optional updates.
+
+Please work in the fork, following its AGENTS.md and the ongoing campaigns. Return reviewable
+evidence here through the user; the presentation agent will handle slide changes and re-pinning.
+The user will pull this talk repository into your environment. These requests are documented
+here, not posted to GitHub or sent to another agent automatically.
+
+## Priority 1: package the useful work already delivered
+
+The strongest near-term additions are #100 and #104. Reuse the existing implementations and
+runners; a new demo framework is unnecessary. For each, return one compact evidence package:
+
+- Exact tested commit, dependency pins, clean/dirty status, and reproducible commands.
+- Actual representative output, with expected outcomes and a clear indication of which
+  build artifacts/dependency caches were already present. Do not reconstruct output by hand.
+- Validation log or CI links tied to that exact revision, distinguishing passed, pending,
+  skipped, and locally reported checks. If the branch changes, refresh the evidence.
+- One paragraph the speaker can say: what was checked or proved, why it matters, and the
+  remaining boundary. Include exact public theorem signatures where applicable.
+
+### #100: examples and complete counter
+
+Reviewed head: `80092c9a0a2aea3db9db3066fba51018b095e628` —
+[PR #100](https://github.com/dtumad/sp1-lean/pull/100).
+The source contains `CounterExample.statement_iff`, `compile_sound`, and `compile_complete`;
+the docs already explain the actual 89-table complete-Memory runner and setup.
+
+Please supply the actual `scripts/run_talk_examples.sh --json` output and the counter driver's
+output from the delivered revision. Identify the two accepted and seven rejected ADD cases.
+For the counter, include its independent domain, raw ensemble acceptance equivalence, and
+executable compiler theorem. Preserve the distinction between executable tests and universal
+production proofs.
+
+The talk's schematic counter uses `3→5`; the documented driver prints `2→5` with three rows.
+No new example is required just to match the picture: flag that difference so the presentation
+can use the actual output when refreshing the backup. Keep the counter in the appendix;
+the substantive SP1 coverage stays in the main narrative.
+
+### #104: standalone backend conformance
+
+Reviewed head: `698bec03cf75327921a694c55a219d340a77ea47` —
+[PR #104](https://github.com/dtumad/sp1-lean/pull/104).
+The checker already compares mapped Lean cells, checks full R1CS, corrupts auxiliaries, and
+requires an explicit witness verdict instead of treating a crash as rejection.
+
+Please supply a compact actual-output summary for IsZero, IsZeroWord, and WordRangeCheck:
+field, original witness-cell count, full R1CS constraints/signals, and case/mutation totals.
+Include one invalid witness rejected by the R1CS and one deliberately valid zero-inverse
+mutation. The latter usefully shows that the semantic relation admits witnesses other than
+the canonical generator output. Do not describe all 26 mutations as rejecting tests.
+
+State that this uses BN254 and the existing supported lowering, not SP1's deployed field or
+a verified full backend. The zero-gadget adapters use the active gate; do not generalize that
+coverage to every conditional consumer. The recorded counts 6/33/132 are measured constraints
+for these examples, not optimization gains. The reviewed head's full-build CI check completed
+successfully during script preparation; refresh that evidence if the delivered revision changes.
+
+## Priority 2: one joined branch example, if time permits
+
+[PR #102](https://github.com/dtumad/sp1-lean/pull/102), reviewed at
+`c31ee7d70b65fc070421da4dd0146ed7341de6de`, fixes the 13-bit branch immediate being coerced
+through 12 bits. It already provides successful-compilation immediate preservation and
+boundary regressions. That is useful material for the compiler/specification-review discussion.
+
+The valuable next example would connect the layers in one checked case:
+
+1. Use an actual decoded, taken branch with offset `+4092`, equal source operands, and a valid
+   ordinary source at PC 65536, away from the separately investigated upper-PC boundary.
+2. Obtain the corresponding official Sail step with successor PC 69628.
+3. Compile that same transition using the real semantic event compiler and construct its
+   actual local circuit witness through existing machinery.
+4. Check that the event target agrees with Sail and the resulting witness passes the actual
+   applicable circuit relation. State precisely whether this is a local chip or assembled
+   witness; include every readiness/program/provider premise used.
+
+Reuse a joined example if one already exists. If the final connection still needs an unproved
+bridge, return the exact missing obligation and the strongest checked example available.
+Do not replace the real compiler with handwritten rows and call that compiler validation,
+or narrow the semantic domain to make the example appear complete.
+
+Explain that the old immediate became `-4`, while the corrected one remains `+4092`.
+Keep the bug attribution precise: the fork's semantic event compiler, not SP1's production
+branch circuit or Lean's kernel. This example should supplement, not displace, the current
+same-value-store review lesson. It is not required for the presentation to proceed.
+
+## Other work and delivery boundary
+
+Continue the existing endpoint and compiler campaigns without duplicating them for the talk.
+If a stronger result lands, provide its literal statement, actual assembly identity, and the
+remaining join to the recovered execution. In particular, #103's five-family event-validity
+bridge is distinct from the existing 25-family local proof inventory and does not establish
+registry-wide totality. Public endpoint checks and receipt producers alone do not close the
+complete supplied-target theorem.
+
+For later backend work, a useful milestone is one generated component at its real consumer,
+including selector/padding behavior and complete costs. Full generated Rust/SP1 integration,
+a Byte replacement, and a whole-core challenge remain separate projects. Do not rush those
+onto the presentation's critical path.
+
+Keep the existing handoff cutoff: evidence delivered four hours before the actual talk start,
+deck frozen three hours before. No clock time is assumed here. Late work remains useful after
+the talk. The presentation agent will review the evidence, update the pin coherently, regenerate
+source excerpts, and rebuild the deck before any optional wording becomes a main-slide claim.

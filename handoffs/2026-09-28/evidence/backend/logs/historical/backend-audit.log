@@ -1,0 +1,69 @@
+== A0 pins ==
+sp1-lean:  9e383aaa85aec0eaf8ed0856f243ed8806520aef
+toolchain: leanprover/lean4:v4.33.1
+PolyFun:   997828ce4c04ccdc01f5f199069e26a6195ef6e7
+Sail:      bde9ecc665b663bbdb29afb11fb6634870fdc7df
+Clean:     fba2a29f5e36420d797c1de118ac9f11f23b819e
+mathlib:   0df444a360eaa60ab8c11dca51a86af692955474
+
+== A1 recorded-pin cross-checks (gate) ==
+PASS: recorded pins and Lake configuration agree
+
+== A1 root-index completeness (gate) ==
+PASS: root indices import all 1039 modules across SP1Clean/ToClean/ToMathlib/ToPolyFun, no dangling imports
+
+== A1 maintained documentation (gate) ==
+PASS: maintained documentation is current (30 Markdown files, 1048 hand-written Lean module docstrings)
+
+== A1 report citations (gate) ==
+PASS: report citations resolve
+
+== A1 layering contract (gate) ==
+check_layering: PASS (1043 modules, 24 stratum rules, 7 import + 8 namespace exception(s); core index = 578 modules)
+
+== A1 SP1 field singleton (gate) ==
+SP1 field singleton OK: SP1Clean/Model/SP1Field.lean is the sole Lean owner
+
+== A1 shared relation vocabulary (gate) ==
+Shared vocabulary OK: statement, decode, transition, syscall message, support, and capacity each have one owner
+
+== A1 audit-surface index (gate) ==
+check_audit_surface: PASS (222 declarations resolve)
+
+== A1 25-chip release surface (gate) ==
+PASS: 25-chip release surface is complete (identity/order, native definitions, formal/bridge/completeness proofs, whole-chip oracles, faithfulness anchors, real-row models, dumps, and witgen artifacts)
+
+== A1 compiled capstone contract (gate) ==
+PASS: capstone target types and 1396 definition dependencies
+
+== A2 proof-deferral inventory (gate: none) ==
+PASS: no proof deferrals
+
+== A2 axiom declarations (gate: none in project proof/test libraries) ==
+PASS: no axiom declarations
+
+== A2 skipKernelTC guard (gate: none in SP1Clean/) ==
+PASS: no skipKernelTC usage
+
+== A2 native_decide guard (gate: none in SP1Clean/) ==
+PASS: no native_decide in the main library
+
+== A2 witness-generation escape-hatch gate (enforced — the witgen cutover is complete) ==
+check_no_witness_native: clean (0 escape-hatch witness sites in SP1Clean/ + ToClean/).
+
+== A2 witgen export structural (gate) ==
+check_witgen_export: export/witgen structurally clean (25 payloads + 25 manifests + index).
+check_witgen_export: export/testdata structurally clean (25 fixtures, rows consistent with manifests).
+check_witgen_export: export/sp1dump structurally clean (25 dumps, rows match width x height).
+
+== A2 elaboration-budget escape-hatch gate (allowlist, not a budget) ==
+check_option_escapes: PASS (3 allowlisted site(s), 0 unlisted)
+PASS: every maxHeartbeats/maxRecDepth site is allowlisted with a measured ladder
+
+== A3 compiled-library trust policy ==
+trust (main): 38601 declarations / 1043 modules; 0 forbidden dependencies
+  report: .lake/build/trust/main.json
+trust (test): 1603 declarations / 67 modules; 0 forbidden dependencies
+  report: .lake/build/trust/test.json
+
+== AUDIT PASS ==

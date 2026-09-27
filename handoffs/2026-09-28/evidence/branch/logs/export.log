@@ -1,0 +1,6 @@
+check_witgen_export: export/witgen structurally clean (25 payloads + 25 manifests + index).
+check_witgen_export: export/testdata structurally clean (25 fixtures, rows consistent with manifests).
+check_witgen_export: export/sp1dump structurally clean (25 dumps, rows match width x height).
+check_witgen_export: /var/folders/ty/f3jftn757gz4sj5rl0jcv5qm0000gn/T/tmp.LNhzHsHyys/witgen structurally clean (25 payloads + 25 manifests + index).
+check_witgen_export: /var/folders/ty/f3jftn757gz4sj5rl0jcv5qm0000gn/T/tmp.LNhzHsHyys/testdata structurally clean (25 fixtures, rows consistent with manifests).
+check_witgen_export (--regen): committed export matches a fresh regeneration byte-for-byte.

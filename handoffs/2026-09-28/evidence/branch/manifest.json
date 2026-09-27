@@ -1,0 +1,172 @@
+{
+  "branch": "codex/branch-compiler-roundtrip",
+  "commit": "70b73fa363d38ffb0f08c9e605032ec13000146e",
+  "baseCommit": "d87660f83603bc0157583b45666891c1205c7d38",
+  "stackBasePR": 103,
+  "worktree": "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/worktrees/branch-roundtrip",
+  "cleanTrackedAndUntrackedStatus": true,
+  "sourceFiles": [
+    "SP1CleanTest/Alignment/Audit/BranchCompilerRoundTrip.lean",
+    "scripts/branchCompilerExample.lean"
+  ],
+  "relativeDiffOnlyTheseTwoFiles": true,
+  "exampleSourcesIdenticalToInitialCommit": true,
+  "scope": "one local Branch chip table; no assembled channel balance or capstone claim",
+  "sourcePc": 65536,
+  "targetPc": 69628,
+  "initialClock": 1,
+  "finalClock": 9,
+  "instruction": "BEQ x1,x2,+4092",
+  "instructionWord": "0x7e208ee3",
+  "operands": [
+    0,
+    0
+  ],
+  "rowCount": 1,
+  "rowWidth": 46,
+  "constraintCount": 50,
+  "driverEvidence": "Computed compiler/event/generated-row facts; parsed JSON and exact expected values; stderr empty",
+  "semanticEvidence": "Imported Lean proof of full official try_step and normal ExecutionStep; not executed by driver",
+  "cache": "Only .lake/packages and .lake/build cloned via cp -cR from compiler-validity; warm full graph validation",
+  "initialImplementationCommit": "fc3a868347920db9b364c4159c6afc6ad045c787",
+  "finalSourceValidation": "Fresh full validation on the merged revision, followed by parsed driver output and theorem/axiom capture",
+  "trust": "Existing standard logical axioms, generated Sail hooks, approved bv_decide alignment lemmas, and test-only native_decide; policy unchanged",
+  "validation": [
+    {
+      "name": "full-build",
+      "command": [
+        "lake",
+        "build",
+        "--wfail",
+        "--iofail",
+        "SP1Clean",
+        "SP1CleanTest"
+      ],
+      "exitCode": 0,
+      "seconds": 32.41
+    },
+    {
+      "name": "core-tests",
+      "command": [
+        "lake",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 1.06
+    },
+    {
+      "name": "lint",
+      "command": [
+        "lake",
+        "lint"
+      ],
+      "exitCode": 0,
+      "seconds": 18.36
+    },
+    {
+      "name": "core-lint",
+      "command": [
+        "lake",
+        "exe",
+        "runLinter",
+        "--no-build",
+        "SP1Clean.Core",
+        "ToClean",
+        "ToMathlib",
+        "ToPolyFun"
+      ],
+      "exitCode": 0,
+      "seconds": 12.16
+    },
+    {
+      "name": "audit",
+      "command": [
+        "scripts/run_audit.sh"
+      ],
+      "exitCode": 0,
+      "seconds": 83.82
+    },
+    {
+      "name": "export",
+      "command": [
+        "scripts/check_witgen_export.sh",
+        "--regen"
+      ],
+      "exitCode": 0,
+      "seconds": 41.6
+    },
+    {
+      "name": "interpreter",
+      "command": [
+        "scripts/run_interp_diff.sh"
+      ],
+      "exitCode": 0,
+      "seconds": 0.41
+    },
+    {
+      "name": "driver",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "scripts/branchCompilerExample.lean"
+      ],
+      "exitCode": 0,
+      "seconds": 1.91,
+      "stderrEmpty": true
+    },
+    {
+      "name": "theorems-and-axioms",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        ".lake/branch-evidence-probe.lean"
+      ],
+      "exitCode": 0,
+      "seconds": 1.86,
+      "stderrEmpty": true
+    }
+  ],
+  "sha256": {
+    "README.md": "eeed717ca7f22b95a0dc60fefec1b8e2317b38585a8afe533ac0a05854102b3c",
+    "check-driver-and-probe.py": "56585a85bc0071dff047c09a6720702057422b758927e627dc831797c1758c96",
+    "commit.txt": "02694a478715800b9ad759477edd366bd3e6898b321d5249092d16f1c1dd67b7",
+    "driver-output.json": "f91d5e095b0c302a481d1ba39ced7f6d4d57e2cf25b6c79f8e0c2aee07219bcd",
+    "driver-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "history-only-integration.json": "0b0e1fe15c402c3a2a617b1e15cba13cd9836801f6e0c076ff2ff65f0fceefae",
+    "logs/audit.log": "87da998e0f209ea6ac50e104e7360bc2a06c37badde9ba375a05fe0132502a3f",
+    "logs/core-lint.log": "39c84c82973f1daa375ab377b07a55bf43f480c3b481234524433969e86c7055",
+    "logs/core-tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "logs/export.log": "93d366ce9fd5cd2ec266525a10369323d842fc9da86c1a44f2003033b968abbd",
+    "logs/final-history-build.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "logs/final-history-build.stdout": "47b21926f0ed0e11097dd7551cb3ebb173188a88e35fe85da4e5d728733eb4da",
+    "logs/final-history-driver.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "logs/final-history-driver.stdout": "f91d5e095b0c302a481d1ba39ced7f6d4d57e2cf25b6c79f8e0c2aee07219bcd",
+    "logs/full-build.log": "512228401f8233e9b7d6b0caa92c570d12ef36c3a50dfaee81f1aabfb13136c5",
+    "logs/interpreter.log": "26a526ceb472839a2fb36b257904b8d39cdebc035b1b768326ad9ee1861836db",
+    "logs/lint.log": "8387aaa50e76484a5c40ae67efbd41f57707cd5f4fa15bbf1e1d14c709dd1104",
+    "publication.json": "f69901056be7e2815c18d18a371585525827238da432a1ed43b442f970586d22",
+    "source/BranchCompilerRoundTrip.lean": "4490ec493bc6f374a797bf0402a41866bb2f9d9e8cc8967304e1e8d1c64c63aa",
+    "source/branchCompilerExample.lean": "d11e9761f8e42a3722f16678ae9a40d3fe729159424ddd129597dd9167c19dd1",
+    "source.patch": "4be3457022f28285cb1338f1860ccab00c660035a42fddf9f4418637bbeefba9",
+    "theorem-probe-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "theorem-probe.lean": "a54e381c3d8e81e7ac8978210c630607f3aa9354d4c22ee612708cd38d08cc2d",
+    "theorems-and-axioms.txt": "8668bd67a8dd395caf98daf422ca5c77b40d65a431a3101dbc5f4e9bcb6820e9",
+    "trust-main-summary.json": "6604956215fc69730cedf0628b0faf373c0a92d3a79971a712603f15d152024f",
+    "trust-policy.json": "5e114a8a02e61e65a31c81c8ee2403f3029523cfd4c6aee2ed83baec22d142e6",
+    "trust-test-summary.json": "f7de959a3e974544f9d11a94079a46fd703a8be5df378783d6deb10180eafe5c",
+    "validation.json": "2e0d49ff8e0404548f2cb370713d38398b33999950c0445e14c843e671b79796"
+  },
+  "publication": {
+    "pr": 106,
+    "url": "https://github.com/dtumad/sp1-lean/pull/106",
+    "commit": "066d52a73e01c46e1df8fc4a155176ee59bc660d",
+    "baseCommit": "112eb5d8e95312bffbc257b286d6bc55527ca792",
+    "basePR": 103,
+    "fullValidationCommit": "70b73fa363d38ffb0f08c9e605032ec13000146e",
+    "identicalTrackedTree": "4be4c9f840b1d30c707525ed8a1df66c6852d8cb",
+    "localValidation": "passed; complete gates on identical source tree plus final strict build and parsed driver at published head",
+    "ci": "pending; see parent pr-106.json for captured check status"
+  }
+}

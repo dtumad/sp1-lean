@@ -1,0 +1,462 @@
+{
+  "capturedAtUTC": "2026-09-27 22:13:33 UTC",
+  "pullRequests": [
+    {
+      "baseRefName": "main",
+      "baseRefOid": "9e383aaa85aec0eaf8ed0856f243ed8806520aef",
+      "headRefOid": "6248553c1d35eea9309ef434509bdc249208be3d",
+      "mergedAt": "2026-09-27T21:33:22Z",
+      "number": 99,
+      "state": "MERGED",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T21:33:35Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36352163805/job/108712794476",
+          "name": "gc",
+          "startedAt": "2026-09-27T21:33:27Z",
+          "status": "COMPLETED",
+          "workflowName": "Cache cleanup"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T19:33:14Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36344757306/job/108691597089",
+          "name": "guards",
+          "startedAt": "2026-09-27T19:33:03Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T19:36:22Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36344757306/job/108691597343",
+          "name": "build",
+          "startedAt": "2026-09-27T19:33:03Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T19:37:09Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36344757306/job/108692193687",
+          "name": "handoff",
+          "startedAt": "2026-09-27T19:36:25Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T19:42:46Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36344757306/job/108692193934",
+          "name": "build-full",
+          "startedAt": "2026-09-27T19:36:24Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        }
+      ],
+      "url": "https://github.com/dtumad/sp1-lean/pull/99"
+    },
+    {
+      "baseRefName": "main",
+      "baseRefOid": "9e383aaa85aec0eaf8ed0856f243ed8806520aef",
+      "headRefOid": "80092c9a0a2aea3db9db3066fba51018b095e628",
+      "mergedAt": "2026-09-27T21:35:43Z",
+      "number": 100,
+      "state": "MERGED",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T21:35:53Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36352303212/job/108713187260",
+          "name": "gc",
+          "startedAt": "2026-09-27T21:35:47Z",
+          "status": "COMPLETED",
+          "workflowName": "Cache cleanup"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:24:23Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892591/job/108700720450",
+          "name": "guards",
+          "startedAt": "2026-09-27T20:24:15Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:24:30Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958/job/108700721632",
+          "name": "guards",
+          "startedAt": "2026-09-27T20:24:17Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:24:14Z",
+          "conclusion": "CANCELLED",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892591/job/108700720702",
+          "name": "build",
+          "startedAt": "2026-09-27T20:24:14Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:27:22Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958/job/108700721784",
+          "name": "build",
+          "startedAt": "2026-09-27T20:24:18Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:24:14Z",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892591/job/108700724371",
+          "name": "handoff",
+          "startedAt": "2026-09-27T20:24:15Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:27:55Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958/job/108701276080",
+          "name": "handoff",
+          "startedAt": "2026-09-27T20:27:24Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:24:14Z",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892591/job/108700724265",
+          "name": "build-full",
+          "startedAt": "2026-09-27T20:24:15Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:36:29Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958/job/108701276195",
+          "name": "build-full",
+          "startedAt": "2026-09-27T20:27:25Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        }
+      ],
+      "url": "https://github.com/dtumad/sp1-lean/pull/100"
+    },
+    {
+      "baseRefName": "main",
+      "baseRefOid": "9e383aaa85aec0eaf8ed0856f243ed8806520aef",
+      "headRefOid": "68f90db8111895600bc437c8a341b07df712d291",
+      "mergedAt": "2026-09-27T21:35:53Z",
+      "number": 101,
+      "state": "MERGED",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T21:36:04Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36352312746/job/108713216673",
+          "name": "gc",
+          "startedAt": "2026-09-27T21:35:58Z",
+          "status": "COMPLETED",
+          "workflowName": "Cache cleanup"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:28:12Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348130124/job/108701388405",
+          "name": "guards",
+          "startedAt": "2026-09-27T20:28:04Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:31:26Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348130124/job/108701388567",
+          "name": "build",
+          "startedAt": "2026-09-27T20:28:04Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:32:00Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348130124/job/108701992683",
+          "name": "handoff",
+          "startedAt": "2026-09-27T20:31:29Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:31:27Z",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348130124/job/108701993393",
+          "name": "build-full",
+          "startedAt": "2026-09-27T20:31:27Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        }
+      ],
+      "url": "https://github.com/dtumad/sp1-lean/pull/101"
+    },
+    {
+      "baseRefName": "main",
+      "baseRefOid": "f71567be6e52f2c10008b45d01c62bde5e3e0582",
+      "headRefOid": "9173a0da8dbda1c4ed2c16167a23ed665f807763",
+      "mergedAt": "2026-09-27T22:02:03Z",
+      "number": 102,
+      "state": "MERGED",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T22:02:18Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36353851892/job/108717555245",
+          "name": "gc",
+          "startedAt": "2026-09-27T22:02:08Z",
+          "status": "COMPLETED",
+          "workflowName": "Cache cleanup"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T21:36:32Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36352341533/job/108713294276",
+          "name": "guards",
+          "startedAt": "2026-09-27T21:36:25Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T21:39:23Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36352341533/job/108713294478",
+          "name": "build",
+          "startedAt": "2026-09-27T21:36:25Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T21:40:02Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36352341533/job/108713791273",
+          "name": "handoff",
+          "startedAt": "2026-09-27T21:39:26Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T21:49:28Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36352341533/job/108713791486",
+          "name": "build-full",
+          "startedAt": "2026-09-27T21:39:26Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        }
+      ],
+      "url": "https://github.com/dtumad/sp1-lean/pull/102"
+    },
+    {
+      "baseRefName": "main",
+      "baseRefOid": "df2b2dcd94be5cde5faad7f879964b24a3f23a66",
+      "headRefOid": "112eb5d8e95312bffbc257b286d6bc55527ca792",
+      "mergedAt": null,
+      "number": 103,
+      "state": "OPEN",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T22:02:21Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36353857112/job/108717569824",
+          "name": "guards",
+          "startedAt": "2026-09-27T22:02:13Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T22:05:27Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36353857112/job/108717569837",
+          "name": "build",
+          "startedAt": "2026-09-27T22:02:13Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T22:05:57Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36353857112/job/108718140585",
+          "name": "handoff",
+          "startedAt": "2026-09-27T22:05:29Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T22:13:15Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36353857112/job/108718140673",
+          "name": "build-full",
+          "startedAt": "2026-09-27T22:05:29Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        }
+      ],
+      "url": "https://github.com/dtumad/sp1-lean/pull/103"
+    },
+    {
+      "baseRefName": "main",
+      "baseRefOid": "9e383aaa85aec0eaf8ed0856f243ed8806520aef",
+      "headRefOid": "698bec03cf75327921a694c55a219d340a77ea47",
+      "mergedAt": null,
+      "number": 104,
+      "state": "OPEN",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:55:51Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817287/job/108706176264",
+          "name": "guards",
+          "startedAt": "2026-09-27T20:55:41Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:55:52Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817969/job/108706178200",
+          "name": "guards",
+          "startedAt": "2026-09-27T20:55:41Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:55:40Z",
+          "conclusion": "CANCELLED",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817287/job/108706176519",
+          "name": "build",
+          "startedAt": "2026-09-27T20:55:39Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:59:08Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817969/job/108706178426",
+          "name": "build",
+          "startedAt": "2026-09-27T20:55:42Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:55:40Z",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817287/job/108706181080",
+          "name": "handoff",
+          "startedAt": "2026-09-27T20:55:40Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:59:42Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817969/job/108706743478",
+          "name": "handoff",
+          "startedAt": "2026-09-27T20:59:10Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T20:55:40Z",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817287/job/108706181392",
+          "name": "build-full",
+          "startedAt": "2026-09-27T20:55:41Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T21:14:02Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817969/job/108706743599",
+          "name": "build-full",
+          "startedAt": "2026-09-27T20:59:10Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        }
+      ],
+      "url": "https://github.com/dtumad/sp1-lean/pull/104"
+    },
+    {
+      "baseRefName": "codex/semantic-compiler-validity",
+      "baseRefOid": "112eb5d8e95312bffbc257b286d6bc55527ca792",
+      "headRefOid": "066d52a73e01c46e1df8fc4a155176ee59bc660d",
+      "mergedAt": null,
+      "number": 106,
+      "state": "OPEN",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "2026-09-27T22:12:24Z",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36354453320/job/108719261289",
+          "name": "guards",
+          "startedAt": "2026-09-27T22:12:13Z",
+          "status": "COMPLETED",
+          "workflowName": "Lean Action CI"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36354453320/job/108719261543",
+          "name": "build",
+          "startedAt": "2026-09-27T22:12:13Z",
+          "status": "IN_PROGRESS",
+          "workflowName": "Lean Action CI"
+        }
+      ],
+      "url": "https://github.com/dtumad/sp1-lean/pull/106"
+    }
+  ]
+}

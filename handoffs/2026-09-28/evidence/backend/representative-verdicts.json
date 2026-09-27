@@ -1,0 +1,112 @@
+[
+  {
+    "command": [
+      "node",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/worktrees/backend-gadgets/tools/backend-gadgets/node_modules/snarkjs/build/cli.cjs",
+      "wtns",
+      "check",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/artifacts/is-zero/circuit.r1cs",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/witnesses/is-zero/zero-corrupt-zero-result.wtns"
+    ],
+    "startedUTC": "2026-09-27T21:47:13.001488+00:00",
+    "finishedUTC": "2026-09-27T21:47:13.208734+00:00",
+    "returncode": 1,
+    "expectedAccepted": false,
+    "rawOutput": "logs/fresh/zero-corrupt-zero-result.log",
+    "witness": "witnesses/is-zero/zero-corrupt-zero-result.wtns",
+    "exportCommand": [
+      "node",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/worktrees/backend-gadgets/tools/backend-gadgets/node_modules/snarkjs/build/cli.cjs",
+      "wtns",
+      "export",
+      "json",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/witnesses/is-zero/zero-corrupt-zero-result.wtns",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/witnesses/is-zero/zero-corrupt-zero-result.json"
+    ],
+    "exportReturncode": 0,
+    "originalCells": [
+      {
+        "cell": 0,
+        "name": "a",
+        "signal": 2,
+        "value": "0"
+      },
+      {
+        "cell": 1,
+        "name": "inverse",
+        "signal": 3,
+        "value": "0"
+      },
+      {
+        "cell": 2,
+        "name": "result",
+        "signal": 1,
+        "value": "0"
+      }
+    ],
+    "allSignals": [
+      "1",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ]
+  },
+  {
+    "command": [
+      "node",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/worktrees/backend-gadgets/tools/backend-gadgets/node_modules/snarkjs/build/cli.cjs",
+      "wtns",
+      "check",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/artifacts/is-zero/circuit.r1cs",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/witnesses/is-zero/zero-zero-inverse-is-free.wtns"
+    ],
+    "startedUTC": "2026-09-27T21:47:13.208816+00:00",
+    "finishedUTC": "2026-09-27T21:47:13.409600+00:00",
+    "returncode": 0,
+    "expectedAccepted": true,
+    "rawOutput": "logs/fresh/zero-zero-inverse-is-free.log",
+    "witness": "witnesses/is-zero/zero-zero-inverse-is-free.wtns",
+    "exportCommand": [
+      "node",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/worktrees/backend-gadgets/tools/backend-gadgets/node_modules/snarkjs/build/cli.cjs",
+      "wtns",
+      "export",
+      "json",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/witnesses/is-zero/zero-zero-inverse-is-free.wtns",
+      "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/witnesses/is-zero/zero-zero-inverse-is-free.json"
+    ],
+    "exportReturncode": 0,
+    "originalCells": [
+      {
+        "cell": 0,
+        "name": "a",
+        "signal": 2,
+        "value": "0"
+      },
+      {
+        "cell": 1,
+        "name": "inverse",
+        "signal": 3,
+        "value": "7"
+      },
+      {
+        "cell": 2,
+        "name": "result",
+        "signal": 1,
+        "value": "1"
+      }
+    ],
+    "allSignals": [
+      "1",
+      "1",
+      "0",
+      "7",
+      "0",
+      "0",
+      "0"
+    ]
+  }
+]

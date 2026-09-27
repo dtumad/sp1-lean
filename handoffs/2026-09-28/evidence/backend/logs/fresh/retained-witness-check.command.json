@@ -1,0 +1,17 @@
+{
+  "command": [
+    "python3",
+    "scripts/check_backend_gadgets.py",
+    "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/artifacts",
+    "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/build/talk-handoff/presentation-evidence/backend/witnesses",
+    "--cli",
+    "tools/backend-gadgets/node_modules/snarkjs/build/cli.cjs"
+  ],
+  "cwd": "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/worktrees/backend-gadgets",
+  "startedUTC": "2026-09-27T21:46:27.489023+00:00",
+  "finishedUTC": "2026-09-27T21:46:37.198265+00:00",
+  "elapsedSeconds": 9.709,
+  "returncode": 0,
+  "rawOutput": "retained-witness-check.log",
+  "purpose": "Repeat the existing Python checker using identical copied artifacts to retain the actual generated and mutated witnesses."
+}

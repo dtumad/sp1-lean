@@ -1,0 +1,93 @@
+{
+  "baseRefName": "codex/branch-immediate-width",
+  "baseRefOid": "c31ee7d70b65fc070421da4dd0146ed7341de6de",
+  "headRefOid": "09c5b243f4776feb8eacd8cb7ffaf841165773a8",
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 103,
+  "state": "OPEN",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:52:43Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349634752/job/108705659247",
+      "name": "guards",
+      "startedAt": "2026-09-27T20:52:36Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:52:42Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349634834/job/108705659621",
+      "name": "guards",
+      "startedAt": "2026-09-27T20:52:36Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:52:35Z",
+      "conclusion": "CANCELLED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349634752/job/108705659438",
+      "name": "build",
+      "startedAt": "2026-09-27T20:52:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:55:45Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349634834/job/108705659897",
+      "name": "build",
+      "startedAt": "2026-09-27T20:52:37Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:52:36Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349634752/job/108705662104",
+      "name": "handoff",
+      "startedAt": "2026-09-27T20:52:36Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:56:32Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349634834/job/108706194782",
+      "name": "handoff",
+      "startedAt": "2026-09-27T20:55:48Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:52:36Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349634752/job/108705662241",
+      "name": "build-full",
+      "startedAt": "2026-09-27T20:52:36Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T21:05:52Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349634834/job/108706194924",
+      "name": "build-full",
+      "startedAt": "2026-09-27T20:55:49Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    }
+  ],
+  "title": "Derive arithmetic event validity from semantic compilation",
+  "url": "https://github.com/dtumad/sp1-lean/pull/103"
+}

@@ -1,0 +1,65 @@
+{
+  "baseRefName": "main",
+  "baseRefOid": "9e383aaa85aec0eaf8ed0856f243ed8806520aef",
+  "headRefOid": "6248553c1d35eea9309ef434509bdc249208be3d",
+  "mergeCommit": {
+    "oid": "58a2e4195d74ac479a2425e3eb1f56be4e4a7adb"
+  },
+  "mergedAt": "2026-09-27T21:33:22Z",
+  "number": 99,
+  "state": "MERGED",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T21:33:35Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36352163805/job/108712794476",
+      "name": "gc",
+      "startedAt": "2026-09-27T21:33:27Z",
+      "status": "COMPLETED",
+      "workflowName": "Cache cleanup"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T19:33:14Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36344757306/job/108691597089",
+      "name": "guards",
+      "startedAt": "2026-09-27T19:33:03Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T19:36:22Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36344757306/job/108691597343",
+      "name": "build",
+      "startedAt": "2026-09-27T19:33:03Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T19:37:09Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36344757306/job/108692193687",
+      "name": "handoff",
+      "startedAt": "2026-09-27T19:36:25Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T19:42:46Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36344757306/job/108692193934",
+      "name": "build-full",
+      "startedAt": "2026-09-27T19:36:24Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    }
+  ],
+  "title": "Install ordinary receipts without dropping store protection",
+  "url": "https://github.com/dtumad/sp1-lean/pull/99"
+}

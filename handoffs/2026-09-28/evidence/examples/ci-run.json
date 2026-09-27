@@ -1,0 +1,12 @@
+{
+  "conclusion": "success",
+  "created_at": "2026-09-27T20:24:13Z",
+  "event": "pull_request",
+  "head_branch": "codex/talk-artifacts",
+  "head_sha": "80092c9a0a2aea3db9db3066fba51018b095e628",
+  "html_url": "https://github.com/dtumad/sp1-lean/actions/runs/36347892958",
+  "id": 36347892958,
+  "pull_requests": [],
+  "run_attempt": 1,
+  "updated_at": "2026-09-27T20:36:30Z"
+}

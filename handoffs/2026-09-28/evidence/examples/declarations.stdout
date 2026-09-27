@@ -1,0 +1,38 @@
+@[reducible] def SP1Clean.Soundness.CounterExample.F : Type :=
+ZMod 97
+@[reducible] def SP1Clean.Soundness.CounterExample.machine : PFunctor.DynSystem.Labeled interface :=
+{ State := ℕ, toDynSystem := PFunctor.DynSystem.mk' id fun n x => n + 1, Event := Event,
+  event := fun x x_1 => Event.increment }
+def SP1Clean.Soundness.CounterExample.boundary : fieldPair SP1Clean.Soundness.CounterExample.F →
+  machine.State × machine.State :=
+fun input => (ZMod.val input.1, ZMod.val input.2)
+def SP1Clean.Soundness.CounterExample.admissible : fieldPair SP1Clean.Soundness.CounterExample.F → List Event → Prop :=
+fun input events => ZMod.val input.1 ≤ 15 ∧ ZMod.val input.2 ≤ 15 ∧ events.length ≤ 15
+SP1Clean.Soundness.CounterExample.compile (input : fieldPair SP1Clean.Soundness.CounterExample.F)
+  (events : List Event) : Option (Air.Flat.EnsembleWitness ensemble)
+SP1Clean.Soundness.CounterExample.soundness :
+  ensemble.Soundness (fun x => True) fun input =>
+    ∃ events, Air.Flat.Interpretation machine boundary admissible input events
+SP1Clean.Soundness.CounterExample.compile_sound (input : fieldPair SP1Clean.Soundness.CounterExample.F)
+  (events : List Event) (witness : Air.Flat.EnsembleWitness ensemble) (compiled : compile input events = some witness) :
+  Air.Flat.Interpretation machine boundary admissible input events ∧ witness.Valid input
+SP1Clean.Soundness.CounterExample.compile_complete (input : fieldPair SP1Clean.Soundness.CounterExample.F)
+  (events : List Event) (execution : Air.Flat.Interpretation machine boundary admissible input events) :
+  ∃ witness, compile input events = some witness
+SP1Clean.Soundness.CounterExample.realizes : Air.Flat.Realizes machine ensemble boundary admissible
+SP1Clean.Soundness.CounterExample.statement_iff (input : fieldPair SP1Clean.Soundness.CounterExample.F) :
+  ensemble.Statement input ↔
+    ∃ events, machine.Trace (boundary input).1 events (boundary input).2 ∧ admissible input events
+SP1Clean.Soundness.CounterExample.compiled_interaction_bound (input : fieldPair SP1Clean.Soundness.CounterExample.F)
+  (events : List Event) (admitted : admissible input events) :
+  ((witnessOfRows input (consecutiveRows (ZMod.val input.1) events.length)).interactionsWith state.toRaw).length =
+      2 * events.length + 2 ∧
+    2 * events.length + 2 ≤ 32 ∧ 32 < 97
+'SP1Clean.Soundness.CounterExample.soundness' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SP1Clean.Soundness.CounterExample.compile_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SP1Clean.Soundness.CounterExample.compile_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SP1Clean.Soundness.CounterExample.realizes' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SP1Clean.Soundness.CounterExample.statement_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SP1Clean.Soundness.CounterExample.compiled_interaction_bound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]

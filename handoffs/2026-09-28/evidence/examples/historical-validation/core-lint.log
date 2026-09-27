@@ -1,0 +1,5 @@
+Running linter on specified modules: [SP1Clean.Core, ToClean, ToMathlib, ToPolyFun]
+-- Linting passed for SP1Clean.Core.
+-- Linting passed for ToClean.
+-- Linting passed for ToMathlib.
+-- Linting passed for ToPolyFun.

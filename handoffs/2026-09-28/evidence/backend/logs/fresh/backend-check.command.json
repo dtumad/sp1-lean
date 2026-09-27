@@ -1,0 +1,15 @@
+{
+  "command": [
+    "bash",
+    "scripts/check_backend_gadgets.sh"
+  ],
+  "cwd": "/Users/devontuma/Documents/SP1/sp1-lean-fork/.lake/worktrees/backend-gadgets",
+  "environmentOverrides": {
+    "LEAN_NUM_THREADS": "2"
+  },
+  "startedUTC": "2026-09-27T21:37:12.382366+00:00",
+  "finishedUTC": "2026-09-27T21:37:25.031646+00:00",
+  "elapsedSeconds": 12.649,
+  "returncode": 0,
+  "rawOutput": "backend-check.log"
+}

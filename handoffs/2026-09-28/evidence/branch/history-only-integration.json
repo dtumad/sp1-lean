@@ -1,0 +1,38 @@
+{
+  "recorded_at_utc": "2026-09-27T22:11:41.276315+00:00",
+  "commit": "066d52a73e01c46e1df8fc4a155176ee59bc660d",
+  "baseCommit": "112eb5d8e95312bffbc257b286d6bc55527ca792",
+  "tree": "4be4c9f840b1d30c707525ed8a1df66c6852d8cb",
+  "fullValidationCommit": "70b73fa363d38ffb0f08c9e605032ec13000146e",
+  "fullValidationTree": "4be4c9f840b1d30c707525ed8a1df66c6852d8cb",
+  "identicalEntireTrackedTree": true,
+  "reason": "Concurrent base rebase changed commit history only. Both complete tracked source trees are identical. Prior full gates cover this exact source tree; final strict build and parsed driver were rerun at the new clean head.",
+  "checks": [
+    {
+      "command": [
+        "lake",
+        "build",
+        "--wfail",
+        "--iofail",
+        "SP1Clean",
+        "SP1CleanTest"
+      ],
+      "exitCode": 0,
+      "seconds": 1.449,
+      "stdout": "logs/final-history-build.stdout",
+      "stderr": "logs/final-history-build.stderr"
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "scripts/branchCompilerExample.lean"
+      ],
+      "exitCode": 0,
+      "seconds": 2.358,
+      "stdout": "logs/final-history-driver.stdout",
+      "stderr": "logs/final-history-driver.stderr"
+    }
+  ]
+}

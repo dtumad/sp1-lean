@@ -1,0 +1,93 @@
+{
+  "baseRefName": "main",
+  "baseRefOid": "9e383aaa85aec0eaf8ed0856f243ed8806520aef",
+  "headRefOid": "c31ee7d70b65fc070421da4dd0146ed7341de6de",
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 102,
+  "state": "OPEN",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:40:56Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348915806/job/108703606028",
+      "name": "guards",
+      "startedAt": "2026-09-27T20:40:45Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:40:54Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348916298/job/108703607283",
+      "name": "guards",
+      "startedAt": "2026-09-27T20:40:45Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:40:44Z",
+      "conclusion": "CANCELLED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348915806/job/108703606158",
+      "name": "build",
+      "startedAt": "2026-09-27T20:40:43Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:43:51Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348916298/job/108703607621",
+      "name": "build",
+      "startedAt": "2026-09-27T20:40:45Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:40:44Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348915806/job/108703610693",
+      "name": "handoff",
+      "startedAt": "2026-09-27T20:40:44Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:44:29Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348916298/job/108704150071",
+      "name": "handoff",
+      "startedAt": "2026-09-27T20:43:54Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:40:44Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348915806/job/108703610420",
+      "name": "build-full",
+      "startedAt": "2026-09-27T20:40:44Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:53:38Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36348916298/job/108704150160",
+      "name": "build-full",
+      "startedAt": "2026-09-27T20:43:53Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    }
+  ],
+  "title": "Preserve 13-bit branch immediates during semantic compilation",
+  "url": "https://github.com/dtumad/sp1-lean/pull/102"
+}

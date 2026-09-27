@@ -1,0 +1,31 @@
+{
+  "baseRefName": "codex/semantic-compiler-validity",
+  "baseRefOid": "112eb5d8e95312bffbc257b286d6bc55527ca792",
+  "headRefOid": "066d52a73e01c46e1df8fc4a155176ee59bc660d",
+  "mergedAt": null,
+  "number": 106,
+  "state": "OPEN",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T22:12:24Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36354453320/job/108719261289",
+      "name": "guards",
+      "startedAt": "2026-09-27T22:12:13Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36354453320/job/108719261543",
+      "name": "build",
+      "startedAt": "2026-09-27T22:12:13Z",
+      "status": "IN_PROGRESS",
+      "workflowName": "Lean Action CI"
+    }
+  ],
+  "url": "https://github.com/dtumad/sp1-lean/pull/106"
+}

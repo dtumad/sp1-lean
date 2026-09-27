@@ -1,0 +1,11 @@
+{
+  "pr": 106,
+  "url": "https://github.com/dtumad/sp1-lean/pull/106",
+  "commit": "066d52a73e01c46e1df8fc4a155176ee59bc660d",
+  "baseCommit": "112eb5d8e95312bffbc257b286d6bc55527ca792",
+  "basePR": 103,
+  "fullValidationCommit": "70b73fa363d38ffb0f08c9e605032ec13000146e",
+  "identicalTrackedTree": "4be4c9f840b1d30c707525ed8a1df66c6852d8cb",
+  "localValidation": "passed; complete gates on identical source tree plus final strict build and parsed driver at published head",
+  "ci": "pending; see parent pr-106.json for captured check status"
+}

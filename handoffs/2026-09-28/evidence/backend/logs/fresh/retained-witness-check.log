@@ -1,0 +1,4 @@
+PASS is-zero: 2 Lean witness cells, 6 R1CS constraints, 7 total signals
+PASS is-zero-word: 11 Lean witness cells, 33 R1CS constraints, 32 total signals
+PASS word-range-check: 64 Lean witness cells, 132 R1CS constraints, 133 total signals
+PASS 29 generated witnesses and 26 explicit mutations; every original Lean cell compared and full R1CS checked

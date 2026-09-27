@@ -1,0 +1,60 @@
+{
+  "captured_at_utc": "2026-09-27T21:34:22.967026+00:00",
+  "revision": "80092c9a0a2aea3db9db3066fba51018b095e628",
+  "status_before": "",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "cache_conditions": "Pinned dependency checkouts and dependency/project build artifacts were already present. Warm reproduction; no claim of fresh-clone or cold dependency build.",
+  "checks": [
+    {
+      "command": [
+        "scripts/run_talk_examples.sh",
+        "--json"
+      ],
+      "exit_code": 0,
+      "seconds": 23.512,
+      "stdout": "add.stdout",
+      "stderr": "add.stderr"
+    },
+    {
+      "command": [
+        "lake",
+        "build",
+        "--wfail",
+        "--iofail",
+        "SP1CleanTest.Alignment.Examples.Counter"
+      ],
+      "exit_code": 0,
+      "seconds": 0.864,
+      "stdout": "counter-build.stdout",
+      "stderr": "counter-build.stderr"
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "scripts/counterExample.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 1.725,
+      "stdout": "counter.stdout",
+      "stderr": "counter.stderr"
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        ".lake/build/talk-handoff/presentation-evidence/examples/declarations.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 1.872,
+      "stdout": "declarations.stdout",
+      "stderr": "declarations.stderr"
+    }
+  ],
+  "status_after": "",
+  "lean_version": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "git_version": "git version 2.54.0",
+  "dependency_validation": "run_talk_examples.sh verified every resolved git dependency against lake-manifest.json and rejected tracked local edits before building."
+}

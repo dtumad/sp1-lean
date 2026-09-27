@@ -1,0 +1,54 @@
+{
+  "recordedAtUTC": "2026-09-27 22:21:59 UTC",
+  "pr": {
+    "baseRefName": "codex/semantic-compiler-validity",
+    "headRefOid": "066d52a73e01c46e1df8fc4a155176ee59bc660d",
+    "mergedAt": null,
+    "number": 106,
+    "state": "OPEN",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-27T22:12:24Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36354453320/job/108719261289",
+        "name": "guards",
+        "startedAt": "2026-09-27T22:12:13Z",
+        "status": "COMPLETED",
+        "workflowName": "Lean Action CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-27T22:15:18Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36354453320/job/108719261543",
+        "name": "build",
+        "startedAt": "2026-09-27T22:12:13Z",
+        "status": "COMPLETED",
+        "workflowName": "Lean Action CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-09-27T22:15:54Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36354453320/job/108719802142",
+        "name": "handoff",
+        "startedAt": "2026-09-27T22:15:20Z",
+        "status": "COMPLETED",
+        "workflowName": "Lean Action CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36354453320/job/108719802276",
+        "name": "build-full",
+        "startedAt": "2026-09-27T22:15:20Z",
+        "status": "IN_PROGRESS",
+        "workflowName": "Lean Action CI"
+      }
+    ],
+    "url": "https://github.com/dtumad/sp1-lean/pull/106"
+  },
+  "note": "This publication snapshot supplements the unchanged historical snapshots inside the evidence bundle."
+}

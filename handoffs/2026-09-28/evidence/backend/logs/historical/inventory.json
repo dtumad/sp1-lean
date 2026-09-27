@@ -1,0 +1,68 @@
+[
+  {
+    "file": "backend-audit.log",
+    "bytes": 2985,
+    "mtimeUTC": "2026-09-27T20:49:48.764983+00:00",
+    "sha256": "72032cab8abcc9c09222031f194a9b0f705158f59fb5f0df870f5a3439d2008c"
+  },
+  {
+    "file": "backend-build.log",
+    "bytes": 198,
+    "mtimeUTC": "2026-09-27T20:41:07.975773+00:00",
+    "sha256": "afd1d2192e989179a3e3797691abe61049200b0ac3ab1134c291de32cb4e8a33"
+  },
+  {
+    "file": "backend-check-final.log",
+    "bytes": 529,
+    "mtimeUTC": "2026-09-27T20:46:39.939710+00:00",
+    "sha256": "4109129bd3aa17dc2ff9393c14c98df05a3d4561a1c37fba4e9bb4692d83e91a"
+  },
+  {
+    "file": "backend-check.log",
+    "bytes": 529,
+    "mtimeUTC": "2026-09-27T20:44:15.812721+00:00",
+    "sha256": "835cdaa857ceb21b77b6242a233b70c8cf01313fe7a371bc3bbae99c50dafb81"
+  },
+  {
+    "file": "backend-core-lint.log",
+    "bytes": 218,
+    "mtimeUTC": "2026-09-27T20:48:19.028954+00:00",
+    "sha256": "39c84c82973f1daa375ab377b07a55bf43f480c3b481234524433969e86c7055"
+  },
+  {
+    "file": "backend-full-build.log",
+    "bytes": 518,
+    "mtimeUTC": "2026-09-27T20:47:42.838594+00:00",
+    "sha256": "0b996629c2ddf2f7fc1ccc4d722ada7e51f5a5828df6b2e96308ab0525b96e0f"
+  },
+  {
+    "file": "backend-lake-test.log",
+    "bytes": 0,
+    "mtimeUTC": "2026-09-27T20:47:42.852166+00:00",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "backend-lint.log",
+    "bytes": 208,
+    "mtimeUTC": "2026-09-27T20:48:06.150712+00:00",
+    "sha256": "8387aaa50e76484a5c40ae67efbd41f57707cd5f4fa15bbf1e1d14c709dd1104"
+  },
+  {
+    "file": "backend-npm-notice.log",
+    "bytes": 313,
+    "mtimeUTC": "2026-09-27T20:47:10.251933+00:00",
+    "sha256": "dad5b9c05c7e4fc9764fe5987017a3b57745157fcb3bac846febb419fdf12787"
+  },
+  {
+    "file": "backend-rust-diff.log",
+    "bytes": 3450,
+    "mtimeUTC": "2026-09-27T20:50:33.036926+00:00",
+    "sha256": "26a526ceb472839a2fb36b257904b8d39cdebc035b1b768326ad9ee1861836db"
+  },
+  {
+    "file": "backend-witgen.log",
+    "bytes": 690,
+    "mtimeUTC": "2026-09-27T20:50:30.315929+00:00",
+    "sha256": "3aba3fc0364c2cdf89aaf99b9d20fc95c787b2f31b5a5a374aa0c72953b147e9"
+  }
+]

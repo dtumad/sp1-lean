@@ -1,0 +1,93 @@
+{
+  "baseRefName": "main",
+  "baseRefOid": "9e383aaa85aec0eaf8ed0856f243ed8806520aef",
+  "headRefOid": "698bec03cf75327921a694c55a219d340a77ea47",
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 104,
+  "state": "OPEN",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:55:51Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817287/job/108706176264",
+      "name": "guards",
+      "startedAt": "2026-09-27T20:55:41Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:55:52Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817969/job/108706178200",
+      "name": "guards",
+      "startedAt": "2026-09-27T20:55:41Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:55:40Z",
+      "conclusion": "CANCELLED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817287/job/108706176519",
+      "name": "build",
+      "startedAt": "2026-09-27T20:55:39Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:59:08Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817969/job/108706178426",
+      "name": "build",
+      "startedAt": "2026-09-27T20:55:42Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:55:40Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817287/job/108706181080",
+      "name": "handoff",
+      "startedAt": "2026-09-27T20:55:40Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:59:42Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817969/job/108706743478",
+      "name": "handoff",
+      "startedAt": "2026-09-27T20:59:10Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T20:55:40Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817287/job/108706181392",
+      "name": "build-full",
+      "startedAt": "2026-09-27T20:55:41Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-09-27T21:14:02Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/dtumad/sp1-lean/actions/runs/36349817969/job/108706743599",
+      "name": "build-full",
+      "startedAt": "2026-09-27T20:59:10Z",
+      "status": "COMPLETED",
+      "workflowName": "Lean Action CI"
+    }
+  ],
+  "title": "Check native gadgets through Clean WASM and full R1CS",
+  "url": "https://github.com/dtumad/sp1-lean/pull/104"
+}

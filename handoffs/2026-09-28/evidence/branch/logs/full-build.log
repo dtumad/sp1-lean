@@ -1,0 +1,13 @@
+✔ [3250/3265] Built SP1Clean.Soundness.OrdinaryStateReceipt (7.1s)
+✔ [3253/3265] Built SP1Clean.Soundness.OrdinaryObservation (1.4s)
+✔ [3254/3265] Built SP1Clean (1.3s)
+✔ [3256/3265] Built SP1CleanTest.Alignment.Audit.MixedMemoryRows (1.6s)
+✔ [3257/3265] Built SP1CleanTest.Alignment.Audit.OneAddNativePremises (1.7s)
+✔ [3258/3265] Built SP1CleanTest.Alignment.Support.LocalCoreFixture (1.5s)
+✔ [3259/3265] Built SP1CleanTest.Alignment.Support.HostFinalMemoryFixture (1.5s)
+✔ [3260/3265] Built SP1CleanTest.Alignment.Core.HostFinalMemory (6.1s)
+✔ [3261/3265] Built SP1CleanTest.Alignment.TalkExamples (1.5s)
+✔ [3262/3265] Built SP1CleanTest.Alignment.Core.LocalCore (16s)
+✔ [3263/3265] Built SP1CleanTest.Alignment.Core.SailBoundary (1.8s)
+✔ [3264/3265] Built SP1CleanTest.Alignment.Core.InstructionReceipt (1.8s)
+Build completed successfully (3265 jobs).

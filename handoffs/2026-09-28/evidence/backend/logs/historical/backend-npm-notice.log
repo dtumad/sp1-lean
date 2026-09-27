@@ -1,0 +1,1 @@
+npm ci --ignore-scripts --prefix tools/backend-gadgets installed the locked snarkjs 0.7.6 graph successfully. npm reported 3 high severity advisories. No dependency versions were changed to address them; advisory details were not fetched. These dependencies are used only for local/CI backend conformance checks.
