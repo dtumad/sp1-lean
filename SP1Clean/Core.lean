@@ -4,6 +4,7 @@ import SP1Clean.FormalModel.Contracts.BoundedWord
 import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ClockOrder
+import SP1Clean.FormalModel.Contracts.OrdinaryObservation
 import SP1Clean.FormalModel.Contracts.CoreAIR
 import SP1Clean.FormalModel.Contracts.CoreSyscall
 import SP1Clean.FormalModel.Contracts.DivRem
@@ -309,6 +310,9 @@ import SP1Clean.Native.Operations.OrderedBoundaryEnd
 import SP1Clean.Native.Operations.OrderedBoundaryVerifier
 import SP1Clean.Native.Operations.ResourceBoundary
 import SP1Clean.Native.Operations.SailBoundary
+import SP1Clean.Native.Operations.InstructionReceipt
+import SP1Clean.Native.Operations.OrdinaryObservation
+import SP1Clean.Proofs.Operations.OrdinaryObservation
 import SP1Clean.Native.Operations.ShiftLeftOperation.Core
 import SP1Clean.Native.Operations.ShiftRightOperation.Core
 import SP1Clean.Native.Operations.SubOperation.Defs

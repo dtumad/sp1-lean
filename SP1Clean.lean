@@ -238,6 +238,7 @@ import SP1Clean.Soundness.HostFinalMemoryTransport
 import SP1Clean.Soundness.HostFinalMemoryInventory
 import SP1Clean.Soundness.HostFinalMemorySoundness
 import SP1Clean.Soundness.HostSailBoundary
+import SP1Clean.Soundness.OrdinaryStateReceipt
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.GoodnessFilter
@@ -265,6 +266,8 @@ import SP1Clean.Soundness.HostCallReceivers
 import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Soundness.HostCommitEnsemble
 import SP1Clean.Soundness.HostCommitHistory
+import SP1Clean.Soundness.OrdinaryObservation
+import SP1Clean.Proofs.Completeness.OrdinaryObservation
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint
 import SP1Clean.Soundness.HostHintQueueBoundary

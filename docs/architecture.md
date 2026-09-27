@@ -333,6 +333,8 @@ resource data do not introduce another execution or memory model.
 | `HostHintReadExecutionPath` / `HostHintReadFinalMemory` | Installed mixed-AIR path with final PC/clock, all native register/RAM values, complete RAM domain, all Sail bookkeeping observations and host reconstruction |
 | `Model/Core/SailBookkeeping` / `HostHintReadBookkeeping` | Source-controlled retirement count and final nextPC from the existing semantic tape, connected to actual grounded chip effects |
 | `Model/Core/SailFinalCheck` / `HostSailBoundary` | Complete preserved Sail register map and runtime check, initialized target presence, and actual public PC/clock assertions above the installed Memory comparison; dynamic bookkeeping binding remains open |
+| `InstructionReceipt` / `OrdinaryStateReceipt` | Wrappers with unchanged row width publishing the existing decoded successor State for all 25 instruction families; exact old-ledger preservation and one physical receipt occurrence per row, including padding |
+| `OrdinaryObservation` contract/circuit/history/construction | Unit receipt consumption, strict source-clock order, enabled/inhibited u64 retirement and last raw PC; exhaustive physical histories use the existing ranked engine and semantic retirement fold |
 | `CoreMemoryFrame` | Original-ledger support from strict access/refresh clocks, and untouched values transported through the existing carrier |
 | `Model/Core/BankReplay` / `HostBankCPUReplay` | Bank observations of the existing interpreter and occurrence-preserving agreement between physical histories and CPU subsequences |
 | `Model/Core/HostReplay` | Host frame and optional exit-status laws of the existing full-state path; the installed receiver inventory discharges the frame restriction |
@@ -360,6 +362,18 @@ target initialization, runtime equality, canonical PC/clock ranges and public en
 balance are therefore preserved exactly. `SailSnapshot.realize_eq_of_observations` is the complete
 state equality lemma, retaining the remaining nextPC/retirement and execution observations as
 implementation obligations. It does not add observations as final capstone caller premises.
+`OrdinaryStateReceipt` supplies the ordinary observation producers for dynamic bookkeeping. Its
+symbolic wiring is proved equal to the existing `RowView`/State decoder at every offset; table
+construction retains the original arrays, checks and lookups. It is neither an execution model
+nor a new instruction inventory. `OrdinaryObservation` consumes unit receipts and links counter/PC
+observations with the existing `ClockOrder` and addition gadgets. Ranked grounding orders every
+physical consumer row; the counter agrees with `SailBookkeeping.retirementTick`, while the last
+raw successor PC is retained without adding canonical-limb restrictions. Ranking subtracts the
+ordinary eight ticks from the receipt low limb, admitting successor window crossings. Its standard
+Clean table constructor has proved computability, constraints and guarantees; each row has 204
+cells and seven interactions. Mixed installation must retain the protected-store wrappers, derive
+the full Byte/receipt/observation-channel evidence, authenticate the observation endpoints, and bind
+them to the supplied Sail target. Those integration obligations remain open.
 `Model/Core/MemoryFinalCheck` owns the finite endpoint comparison and complete change inventory.
 The `FinalRegisterValue`/`FinalRamValue` contracts and native circuits authenticate target values;
 `FinalMemoryReceipt` preserves the original finalizer and hands off its full record. Source and
