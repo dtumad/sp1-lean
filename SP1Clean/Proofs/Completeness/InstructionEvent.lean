@@ -877,6 +877,103 @@ theorem compileInstructionEvent?_frontier_bounded_next {view : SP1TransitionView
     compileInstructionEvent?_components generated
   exact scheduleAccessPlan_outgoing_bounded_next accesses bounded
 
+private theorem cbaRegisters?_nonzero {decoded : instruction}
+    {registers : BitVec 5 × BitVec 5 × BitVec 5} {key : InstructionRouteKey}
+    (extracted : cbaRegisters? decoded = some registers)
+    (keyEq : instructionRouteKey decoded = some key) (nonzero : key.opAIsX0 = false) :
+    registers.2.2.toNat ≠ 0 := by
+  cases decoded <;> simp only [cbaRegisters?] at extracted
+  all_goals first | contradiction | skip
+  all_goals
+    cases Option.some.inj extracted
+    simp only [instructionRouteKey, Option.some.injEq] at keyEq
+    subst key
+    simp only [regidxIsX0, regidxBits] at nonzero ⊢
+    intro zero
+    exact (decide_eq_false_iff_not.mp nonzero) (BitVec.eq_of_toNat_eq zero)
+
+private theorem rTypeEvent?_wellFormed {decoded : instruction}
+    {stamped : List StampedTouch} {clk pc : ℕ} {key : InstructionRouteKey} {event : RTypeEvent}
+    (keyEq : instructionRouteKey decoded = some key) (nonzero : key.opAIsX0 = false)
+    (phase : clk % 8 = 1) (pcBound : pc < 2 ^ 48)
+    (ordered : ∀ touch ∈ stamped, touch.previous < touch.current clk)
+    (generated : rTypeEvent? decoded stamped clk pc key.opcode.toNat = some event) :
+    event.WellFormed ∧ event.opcode = key.opcode.toNat := by
+  unfold rTypeEvent? at generated
+  cases registersEq : cbaRegisters? decoded with
+  | none => simp [registersEq] at generated
+  | some registers =>
+    simp only [registersEq] at generated
+    split at generated
+    · rename_i original c b a
+      split at generated
+      · rename_i cSlot bSlot aSlot
+        cases Option.some.inj generated
+        have cTime := ordered c (by simp)
+        have bTime := ordered b (by simp)
+        have aTime := ordered a (by simp)
+        simp only [StampedTouch.current, PlannedTouch.recordTime, cSlot, bSlot, aSlot,
+          AccessSlot.recordOffset_opC, AccessSlot.recordOffset_opB, AccessSlot.recordOffset_opA] at cTime bTime aTime
+        exact ⟨⟨phase, pcBound, registers.2.2.isLt, registers.2.1.isLt, registers.1.isLt,
+          cbaRegisters?_nonzero registersEq keyEq nonzero,
+          b.touch.pulled.isLt, c.touch.pulled.isLt, a.touch.pulled.isLt,
+          aTime, bTime, cTime⟩, rfl⟩
+      · contradiction
+    · contradiction
+
+/-- The five R-type adapter tables obtain their complete event validity from canonical projection
+and the running scheduler invariant. Operand bounds come from the bitvectors themselves; routing
+supplies the destination and opcode conditions. This includes all multiply/divide/remainder values,
+without any nonzero-divisor or no-overflow restriction. -/
+theorem compileInstructionEvent?_rtype_valid
+    {program : GuestProgram} {located : Machine.LocatedTransition} {view : SP1TransitionView}
+    {frontier : AccessFrontier} {clk : ℕ} {result : CompiledInstructionEvent}
+    (projected : projectSP1Transition? program located = some view)
+    (generated : compileInstructionEvent? view frontier clk = some result)
+    (family : view.chipId ∈ [.add, .sub, .subw, .mul, .divRem])
+    (phase : clk % 8 = 1) (bounded : frontier.BoundedAt clk) :
+    result.routed.id.Valid result.routed.event := by
+  have components := projectSP1Transition?_components projected
+  have pcBound : view.pc.toNat < 2 ^ 48 := by
+    obtain ⟨entry, found, _⟩ := Option.map_eq_some_iff.mp components.2.1
+    have same : entry.1 = view.pc := by simpa only [beq_iff_eq] using List.find?_some found
+    have window := program.rom_in_window entry (List.mem_of_find?_eq_some found)
+    rw [same] at window
+    omega
+  have keyEq := components.2.2.2.2.1
+  have routed := components.2.2.2.2.2.1
+  have wellFormed := instructionAccessPlan_wellFormed
+    (compileInstructionEvent?_accessPlan_generated projected generated)
+  have ordered := compileInstructionEvent?_timestamps generated wellFormed bounded
+  have claimed : view.chipId.route.claims view.routeKey.opcode view.routeKey.opAIsX0 = true := by
+    rw [instructionRouteId, keyEq, Option.bind_some] at routed
+    change (fun id => id.route.claims view.routeKey.opcode view.routeKey.opAIsX0) view.chipId = true
+    exact List.find?_some (p := fun id : InstructionChipId =>
+      id.route.claims view.routeKey.opcode view.routeKey.opAIsX0) routed
+  rcases view with ⟨pc, word, decoded, key, id, plan⟩
+  dsimp only at family claimed keyEq pcBound
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at family
+  rcases family with rfl | rfl | rfl | rfl | rfl
+  all_goals
+    obtain ⟨accesses, event, _, constructed, rfl⟩ := compileInstructionEvent?_components generated
+    have nonzero : key.opAIsX0 = false := by
+      simpa only [InstructionChipId.route, RdGuard.holds, Bool.not_eq_true']
+        using (Bool.and_eq_true_iff.mp claimed).2
+    have valid := rTypeEvent?_wellFormed keyEq nonzero phase pcBound ordered constructed
+  · exact valid.1
+  · exact valid.1
+  · exact valid.1
+  · refine ⟨valid.1, ?_⟩
+    simp only [InstructionChipId.route, InstructionRoute.claims, RdGuard.holds,
+      Bool.and_eq_true, List.contains_iff_mem, List.mem_cons, List.not_mem_nil, or_false] at claimed
+    rcases claimed.1 with h | h | h | h | h <;>
+      simp [RTypeEvent.IsMul, valid.2, h, Soundness.Opcode.toNat]
+  · refine ⟨valid.1, ?_⟩
+    simp only [InstructionChipId.route, InstructionRoute.claims, RdGuard.holds,
+      Bool.and_eq_true, List.contains_iff_mem, List.mem_cons, List.not_mem_nil, or_false] at claimed
+    rcases claimed.1 with h | h | h | h | h | h | h | h <;>
+      simp [RTypeEvent.IsDivRem, valid.2, h, Soundness.Opcode.toNat]
+
 /-- The branch event keeps the entire signed thirteen-bit Sail immediate. In particular the
 compiler does not coerce it through the twelve-bit I-type immediate representation. -/
 theorem compileInstructionEvent?_branch_immediate
