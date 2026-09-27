@@ -332,6 +332,7 @@ resource data do not introduce another execution or memory model.
 | `CoreExecutionTrajectory` | Actual paired replay and alignment with the AIR timeline |
 | `HostHintReadExecutionPath` / `HostHintReadFinalMemory` | Installed mixed-AIR path with final PC/clock, all native register/RAM values, complete RAM domain, all Sail bookkeeping observations and host reconstruction |
 | `Model/Core/SailBookkeeping` / `HostHintReadBookkeeping` | Source-controlled retirement count and final nextPC from the existing semantic tape, connected to actual grounded chip effects |
+| `Model/Core/SailFinalCheck` / `HostSailBoundary` | Complete preserved Sail register map and runtime check, initialized target presence, and actual public PC/clock assertions above the installed Memory comparison; dynamic bookkeeping binding remains open |
 | `CoreMemoryFrame` | Original-ledger support from strict access/refresh clocks, and untouched values transported through the existing carrier |
 | `Model/Core/BankReplay` / `HostBankCPUReplay` | Bank observations of the existing interpreter and occurrence-preserving agreement between physical histories and CPU subsequences |
 | `Model/Core/HostReplay` | Host frame and optional exit-status laws of the existing full-state path; the installed receiver inventory discharges the frame restriction |
@@ -352,6 +353,13 @@ location below `2^48`: final records supply their values, and locations absent f
 retain their source values by the original ledger and the carrier's frame proofs. Host reconstruction
 identifies every host field from queue/bank endpoints, actual HALT events and preserved source I/O.
 These conclusions must still be bound to the complete supplied target snapshot.
+`SailBoundary` supplies the executable static part: complete preserved-register map equality,
+target initialization, runtime equality, canonical PC/clock ranges and public endpoint assertions.
+`HostSailBoundary` installs it above the Memory assembly, taking every target projection from one
+`ExecutionSnapshot`. Its checker emits no interactions; the existing physical ledger and its
+balance are therefore preserved exactly. `SailSnapshot.realize_eq_of_observations` is the complete
+state equality lemma, retaining the remaining nextPC/retirement and execution observations as
+implementation obligations. It does not add observations as final capstone caller premises.
 `Model/Core/MemoryFinalCheck` owns the finite endpoint comparison and complete change inventory.
 The `FinalRegisterValue`/`FinalRamValue` contracts and native circuits authenticate target values;
 `FinalMemoryReceipt` preserves the original finalizer and hands off its full record. Source and

@@ -210,9 +210,16 @@ calls retain the single evolving host/clock in paired replay.
 Sail/register/RAM/runtime/host endpoint. `HostFinalMemory.source_checkFinal` now derives the complete
 finite Memory comparison from raw acceptance of the installed six-call host assembly, including
 its full Byte ledger and every computed source-to-target change. Its final records are proved
-equal to the existing grounding decoder's records. The next endpoint work binds the complete
-Sail register map (including key presence), bookkeeping/runtime and host fields, and extends the
-grounding consumers to the combined assembly through channel-specific evidence.
+equal to the existing grounding decoder's records. `HostSailBoundary` installs a silent public
+checker above that assembly using one supplied target for Memory, the Sail frame, PC/clock and
+bank parameters. Its executable frame check preserves the complete non-execution register map
+(including key presence), simulator cycles and output, requires initialized target registers,
+and rejects out-of-range PC/clock before field conversion. The six public assertions bind those
+checks and the final PC/clock. `SailSnapshot.realize_eq_of_observations` identifies the complete
+Sail state once the remaining execution observations are derived. Dynamic nextPC/retirement and
+complete host binding remain open, as does migrating the grounding consumers to the combined
+assembly through channel-specific evidence. The fixed-handler resource assembly's older clock
+checker is a compatibility consumer; the final facade should consolidate this endpoint binding.
 Terminal receipt/replay agreement is closed.
 `HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
 cell below `2^48`, including locations absent from the final inventory, and excludes entries outside
