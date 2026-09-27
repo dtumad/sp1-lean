@@ -242,7 +242,8 @@ theorem original_silent (id : InstructionChipId) :
     exact Bool.noConfusion names
 
 omit [Fact (2 ^ 24 < p)] in
-private theorem row_meaning {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
+/-- Symbolic agreement identifies the observation in the original physical row. -/
+theorem row_meaning {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
     (provider : GeneralFormalCircuit (ZMod p) Input Output)
     (observation : Receipt.Projection (ZMod p) Input StateMsg)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))

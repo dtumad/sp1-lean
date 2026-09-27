@@ -219,6 +219,8 @@ import SP1Clean.Soundness.CoreTouches
 import SP1Clean.Soundness.Coverage
 import SP1Clean.Soundness.Decode
 import SP1Clean.Soundness.EnsembleChannels
+import SP1Clean.Soundness.Examples.Counter
+import SP1Clean.Soundness.Examples.StateBalance
 import SP1Clean.Soundness.ExitAccounting
 import SP1Clean.Soundness.FetchDiscriminant
 import SP1Clean.Soundness.FinalMemoryEnsemble
@@ -237,6 +239,8 @@ import SP1Clean.Soundness.HostFinalMemoryInventory
 import SP1Clean.Soundness.HostFinalMemorySoundness
 import SP1Clean.Soundness.HostSailBoundary
 import SP1Clean.Soundness.OrdinaryStateReceipt
+import SP1Clean.Soundness.ProtectedOrdinaryReceipt
+import SP1Clean.Soundness.HostOrdinaryReceipts
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.GoodnessFilter

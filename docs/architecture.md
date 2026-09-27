@@ -2,7 +2,7 @@
 
 ## Design rule
 
-The stable verification boundary is a complete SP1 chip.
+For comparison with the pinned SP1 Rust AIR, the stable verification boundary is a complete chip.
 
 Rust operations and Lean gadgets may use different intermediate structures. A native Lean chip is
 proved against a semantic contract, connected to Sail, and then compared with the complete upstream
@@ -334,6 +334,7 @@ resource data do not introduce another execution or memory model.
 | `Model/Core/SailBookkeeping` / `HostHintReadBookkeeping` | Source-controlled retirement count and final nextPC from the existing semantic tape, connected to actual grounded chip effects |
 | `Model/Core/SailFinalCheck` / `HostSailBoundary` | Complete preserved Sail register map and runtime check, initialized target presence, and actual public PC/clock assertions above the installed Memory comparison; dynamic bookkeeping binding remains open |
 | `InstructionReceipt` / `OrdinaryStateReceipt` | Wrappers with unchanged row width publishing the existing decoded successor State for all 25 instruction families; exact old-ledger preservation and one physical receipt occurrence per row, including padding |
+| `ProtectedOrdinaryReceipt` / `HostOrdinaryReceipts` | Receipt producers compose the protected store circuits at the original 25 mixed-table positions; construction and projection preserve old ledgers and endpoint checks |
 | `OrdinaryObservation` contract/circuit/history/construction | Unit receipt consumption, strict source-clock order, enabled/inhibited u64 retirement and last raw PC; exhaustive physical histories use the existing ranked engine and semantic retirement fold |
 | `CoreMemoryFrame` | Original-ledger support from strict access/refresh clocks, and untouched values transported through the existing carrier |
 | `Model/Core/BankReplay` / `HostBankCPUReplay` | Bank observations of the existing interpreter and occurrence-preserving agreement between physical histories and CPU subsequences |
@@ -365,14 +366,18 @@ implementation obligations. It does not add observations as final capstone calle
 `OrdinaryStateReceipt` supplies the ordinary observation producers for dynamic bookkeeping. Its
 symbolic wiring is proved equal to the existing `RowView`/State decoder at every offset; table
 construction retains the original arrays, checks and lookups. It is neither an execution model
-nor a new instruction inventory. `OrdinaryObservation` consumes unit receipts and links counter/PC
+nor a new instruction inventory. `ProtectedOrdinaryReceipt` composes the four existing protected
+store circuits, retaining their complete byte-permission ledger. `HostOrdinaryReceipts` installs all
+25 producers at the original positions above `HostSailBoundary`, preserving every old table's rows,
+checks and channel occurrences in construction and projection. Typed slots read the receipts from
+the actual arrays using the same decoder. `OrdinaryObservation` consumes unit receipts and links counter/PC
 observations with the existing `ClockOrder` and addition gadgets. Ranked grounding orders every
 physical consumer row; the counter agrees with `SailBookkeeping.retirementTick`, while the last
 raw successor PC is retained without adding canonical-limb restrictions. Ranking subtracts the
 ordinary eight ticks from the receipt low limb, admitting successor window crossings. Its standard
 Clean table constructor has proved computability, constraints and guarantees; each row has 204
-cells and seven interactions. Mixed installation must retain the protected-store wrappers, derive
-the full Byte/receipt/observation-channel evidence, authenticate the observation endpoints, and bind
+cells and seven interactions. Consumer installation must derive the full Byte/receipt/observation-channel
+evidence, authenticate the observation endpoints, and bind
 them to the supplied Sail target. Those integration obligations remain open.
 `Model/Core/MemoryFinalCheck` owns the finite endpoint comparison and complete change inventory.
 The `FinalRegisterValue`/`FinalRamValue` contracts and native circuits authenticate target values;
@@ -423,6 +428,47 @@ Native host/permission strengthening is independent of the original 25 instructi
 `ChipFaithful` anchors. Exact Rust refinement, succinct authenticated boundary commitments, and
 cryptographic verifier soundness are separate layers. The pinned Rust and native host profiles
 have disclosed differences; see the roadmap's semantic findings and the report's trust boundary.
+
+### Reuse across arithmetizations
+
+The lifetime of a pinned Rust AIR and the lifetime of the semantic proof interfaces are different.
+Review portability at four boundaries:
+
+| Boundary | Reusable content | Instance obligations |
+|---|---|---|
+| Clean/PolyFun | Circuits, labeled paths, `Realizes`, channel balance, ranked exhaustive ordering, and typed ensemble export | Instantiate the interfaces and discharge their hypotheses; serialization and backend execution remain separate boundaries |
+| RISC-V | Instruction meaning and register/RAM reasoning through official Sail | Preserve the selected ISA and Sail platform configuration; SP1-specific bridge assumptions do not disappear automatically |
+| Platform policy | Complete-boundary and composition interfaces | Specify host calls, clocks, ROM permissions and resource limits; the current native policy is one concrete choice |
+| Pinned SP1 AIR | Whole-chip comparison and extraction provenance | Match the pinned rows, assertions, interactions and routing; a changed AIR needs new compatibility evidence |
+
+Byte checks illustrate this split. Channels are public Clean interfaces; the opcode-tagged Byte
+message, multiplicities and provider inventory are SP1 choices. `Model/ByteTable.lean` supplies
+the semantic `ByteRowSpec` and a predicate-defined `Table` view. Active consumers pull from
+`byteChannel`; native providers establish membership using arithmetic and, for XOR, Clean's
+static `ByteXorTable`, before pushing. Clean's `StaticTable` supplies a finite row family with
+proved membership, and `FiniteLookup.ofStatic` already carries such tables into the typed ensemble
+export. Native program, memory and host tables already use static lookups.
+
+A future static-lookup implementation could share the byte meaning while changing physical
+interactions and costs. Its obligation is soundness and constructive completeness for the same
+semantic statement, with explicit witness transport and resource accounting. Merely replacing a
+pull with a lookup does not preserve an existing `ChipFaithful` theorem or the enclosing ledger.
+The roadmap records this option; the current implementation retains its audited providers.
+
+Backend suitability is another boundary. At the pinned Clean revision, the Circom-compatible
+backend emits WASM witness generators and R1CS, but R1CS export rejects lookups and interactions.
+WASM witness generation alone does not check constraints. A static lookup therefore still needs
+an appropriate lowering, such as a proved arithmetic implementation, for that backend. The
+pinned Plonky3 backend is a proof of concept, not a complete flat-ensemble export path.
+
+The eventual source direction is verified Clean circuits and witness programs to generated
+backend code, including Rust constraint evaluation and trace generation consumed by an SP1
+adapter. This would make the semantic contract the enduring boundary when an AIR changes.
+It requires lowering correctness and integration evidence for public inputs, fields, constraints,
+lookups, interactions and witnesses. The existing Rust reference interpreter is a conformance
+consumer, not that generated implementation or a proof of backend correctness. Likewise, a
+proof-independent `EnsembleCompiler` can still be noncomputable; execution and exportability
+require separate evidence.
 
 ## Structural buses and semantic grounding
 
