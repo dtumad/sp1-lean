@@ -158,30 +158,42 @@ theorem ram_ledger (witness : EnsembleWitness (ensemble source target auxiliary 
   simp only [List.nil_append, List.append_nil]
 
 /-- Register receipt balance matches every finalizer record with exactly one validator input. -/
-theorem register_receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels))
-    (interface : Interface auxiliary) (balanced : witness.BalancedChannels) :
+theorem register_receipts_perm_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (balance : witness.BalancedChannel (FinalMemoryValue.channel false).toRaw) :
     ((registerInputs witness).map (·.record)).Perm
       (FinalReceiptEnsemble.records (FinalMemoryReceipts.registerWitness (receiptWitness witness))) := by
-  have balance := balanced (FinalMemoryValue.channel false).toRaw (by
-    simp [ensemble, ClosedVerifier.install, base, FinalMemoryReceipts.ensemble,
-      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install])
   change BalancedInteractions (witness.interactionsWith (FinalMemoryValue.channel false).toRaw) at balance
   rw [register_ledger witness interface] at balance
   exact ((FinalMemoryValue.channel false).balanced_unit_iff _ _).mp
     (by simpa only [List.map_map, Function.comp_def] using balance) |>.2.symm
 
 /-- RAM receipt balance preserves complete values, addresses, and timestamps. -/
-theorem ram_receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels))
-    (interface : Interface auxiliary) (balanced : witness.BalancedChannels) :
+theorem ram_receipts_perm_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (balance : witness.BalancedChannel (FinalMemoryValue.channel true).toRaw) :
     ((ramInputs witness).map (fun input => input.value.record)).Perm
       (FinalReceiptEnsemble.records (receiptWitness witness)) := by
-  have balance := balanced (FinalMemoryValue.channel true).toRaw (by
-    simp [ensemble, ClosedVerifier.install, base, FinalMemoryReceipts.ensemble,
-      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install])
   change BalancedInteractions (witness.interactionsWith (FinalMemoryValue.channel true).toRaw) at balance
   rw [ram_ledger witness interface] at balance
   exact ((FinalMemoryValue.channel true).balanced_unit_iff _ _).mp
     (by simpa only [List.map_map, Function.comp_def] using balance) |>.2.symm
+
+/-- The full accepted assembly supplies the registered register receipt balance. -/
+theorem register_receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (balanced : witness.BalancedChannels) :
+    ((registerInputs witness).map (·.record)).Perm
+      (FinalReceiptEnsemble.records (FinalMemoryReceipts.registerWitness (receiptWitness witness))) :=
+  register_receipts_perm_of_balancedChannel witness interface (balanced _ (by
+    simp [ensemble, ClosedVerifier.install, base, FinalMemoryReceipts.ensemble,
+      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install]))
+
+/-- The full accepted assembly supplies the registered RAM receipt balance. -/
+theorem ram_receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (balanced : witness.BalancedChannels) :
+    ((ramInputs witness).map (fun input => input.value.record)).Perm
+      (FinalReceiptEnsemble.records (receiptWitness witness)) :=
+  ram_receipts_perm_of_balancedChannel witness interface (balanced _ (by
+    simp [ensemble, ClosedVerifier.install, base, FinalMemoryReceipts.ensemble,
+      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install]))
 
 /-- One common accounting view of the two actual validator tables. -/
 def validationRows (witness : EnsembleWitness (ensemble source target auxiliary channels)) :
@@ -189,13 +201,25 @@ def validationRows (witness : EnsembleWitness (ensemble source target auxiliary 
   (registerInputs witness).map (fun input => (false, input)) ++
     (ramInputs witness).map (fun input => (true, ⟨input.value.record, input.selected⟩))
 
+/-- Only the two full-record receipt balances identify the validated final inventory. -/
+theorem receipts_perm_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary)
+    (balanced : ∀ ram, witness.BalancedChannel (FinalMemoryValue.channel ram).toRaw) :
+    ((validationRows witness).map fun row => row.2.record).Perm (records witness) := by
+  rw [records, FinalMemoryReceipts.records_eq (receiptWitness witness)]
+  simpa only [validationRows, List.map_append, List.map_map, Function.comp_def] using
+    (register_receipts_perm_of_balancedChannel witness interface (balanced false)).append
+      (ram_receipts_perm_of_balancedChannel witness interface (balanced true))
+
 /-- Complete receipt balance identifies the validated inventory with the original final decoder. -/
 theorem receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels))
     (interface : Interface auxiliary) (balanced : witness.BalancedChannels) :
     ((validationRows witness).map fun row => row.2.record).Perm (records witness) := by
-  rw [records, FinalMemoryReceipts.records_eq (receiptWitness witness)]
-  simpa only [validationRows, List.map_append, List.map_map, Function.comp_def] using
-    (register_receipts_perm witness interface balanced).append (ram_receipts_perm witness interface balanced)
+  apply receipts_perm_of_channels witness interface
+  intro ram
+  apply balanced
+  cases ram <;> simp [ensemble, ClosedVerifier.install, base, FinalMemoryReceipts.ensemble,
+    FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install]
 
 /-- Every physical change occurrence is accounted for, including the verifier and disabled rows. -/
 theorem changes_ledger (witness : EnsembleWitness (ensemble source target auxiliary channels))
@@ -211,12 +235,17 @@ theorem changes_ledger (witness : EnsembleWitness (ensemble source target auxili
     List.map_map, Function.comp_def, List.append_nil, List.append_assoc]
   exact List.perm_append_comm.trans (List.Perm.of_eq (List.append_assoc ..))
 
+/-- Exact transport of the canonical change ledger needs only that channel's actual balance. -/
+theorem changes_balanced_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (balanced : witness.BalancedChannel FinalMemoryChange.channel.toRaw) :
+    BalancedInteractions (FinalMemoryChangeCoverage.ledger source target (validationRows witness)) :=
+  balancedInteractions_of_perm balanced (changes_ledger witness interface)
+
 /-- Actual full-ensemble balance closes the complete change ledger. -/
 theorem changes_balanced (witness : EnsembleWitness (ensemble source target auxiliary channels))
     (interface : Interface auxiliary) (balanced : witness.BalancedChannels) :
     BalancedInteractions (FinalMemoryChangeCoverage.ledger source target (validationRows witness)) := by
-  apply balancedInteractions_of_perm (balanced FinalMemoryChange.channel.toRaw ?_)
-    (changes_ledger witness interface)
+  apply changes_balanced_of_balancedChannel witness interface (balanced _ ?_)
   apply List.mem_append_right
   exact List.mem_append_right _ (List.mem_cons_self ..)
 

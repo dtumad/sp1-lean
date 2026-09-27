@@ -44,18 +44,60 @@ private theorem ram_key (record : MemoryMsg (ZMod p)) (valid : MemoryBoundary.Ra
 
 /-- RAM-domain provenance is inherited from the matched physical finalizer, not assumed by
 the target checker or supplied independently of the receipt ledger. -/
-theorem ramInputs_finalSpec (witness : EnsembleWitness (ensemble source target auxiliary channels))
-    (interface : Interface auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
+theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (checked : witness.Constraints)
+    (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (balanced : witness.BalancedChannel (FinalMemoryValue.channel true).toRaw) :
     ∀ input ∈ ramInputs witness, MemoryBoundary.RamFinalSpec input.value.record := by
   have bytes : (FinalMemoryReceipts.ramTable (receiptWitness witness)).ChannelGuarantees byteChannel.toRaw := by
     rw [ramFinalTable_eq]
     exact ramFinalSlot.table_channelGuarantees witness byteChannel.toRaw
-      (byte_guarantees witness interface checked balanced)
+      byte
   have finalized := FinalMemoryReceipts.ram_records_spec (receiptWitness witness)
     (receiptWitness_constraints witness checked) bytes
   intro input present
-  exact finalized _ ((ram_receipts_perm witness interface balanced).mem_iff.mp
+  exact finalized _ ((ram_receipts_perm_of_balancedChannel witness interface balanced).mem_iff.mp
     (List.mem_map_of_mem (f := fun input : FinalRamCheck.Inputs (ZMod p) => input.value.record) present))
+
+/-- Target comparison uses inherited Byte guarantees and exactly the three receipt balances.
+All facts concern the original physical rows; the enclosing assembly proves them from acceptance. -/
+theorem checkFinal_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (checked : witness.Constraints)
+    (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (receipts : ∀ ram, witness.BalancedChannel (FinalMemoryValue.channel ram).toRaw)
+    (changes : witness.BalancedChannel FinalMemoryChange.channel.toRaw) :
+    source.checkFinal target
+      ((records witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by
+  apply FinalMemoryChangeCoverage.checkFinal_of_balanced source target (records witness) (validationRows witness)
+    (receipts_perm_of_channels witness interface receipts) ?_ ?_ ?_
+    (changes_balanced_of_balancedChannel witness interface changes)
+  · intro row member
+    rcases List.mem_append.mp member with register | ram
+    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
+      exact (registerInputs_spec_of_byte witness checked byte input present).1.2.2.2.2.symm
+    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp ram
+      exact ((ramInputs_spec_of_byte witness checked byte input present).1.final_snapshot target _
+        (ramInputs_finalSpec_of_channels witness interface checked byte (receipts true) input present)).symm
+  · intro row member
+    rcases List.mem_append.mp member with register | ram
+    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
+      exact (registerInputs_spec_of_byte witness checked byte input present).2
+    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp ram
+      exact (ramInputs_spec_of_byte witness checked byte input present).2
+  · intro row member
+    rcases List.mem_append.mp member with register | ram
+    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
+      exact register_key _ (registerInputs_spec_of_byte witness checked byte input present).1
+    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp ram
+      exact ram_key _ (ramInputs_finalSpec_of_channels witness interface checked byte (receipts true) input present)
+
+/-- The full accepted assembly derives RAM address provenance from its actual finalizer. -/
+theorem ramInputs_finalSpec (witness : EnsembleWitness (ensemble source target auxiliary channels))
+    (interface : Interface auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
+    ∀ input ∈ ramInputs witness, MemoryBoundary.RamFinalSpec input.value.record :=
+  ramInputs_finalSpec_of_channels witness interface checked (byte_guarantees witness interface checked balanced)
+    (balanced _ (by simp [ensemble, ClosedVerifier.install, base, FinalMemoryReceipts.ensemble,
+      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install]))
 
 /-- Raw constraints and complete channel balance imply complete target Memory validation.
 There is no witness-supplied inventory, readiness predicate, or endpoint-comparison premise. -/
@@ -63,26 +105,11 @@ theorem checkFinal (witness : EnsembleWitness (ensemble source target auxiliary 
     (interface : Interface auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     source.checkFinal target
       ((records witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by
-  apply FinalMemoryChangeCoverage.checkFinal_of_balanced source target (records witness) (validationRows witness)
-    (receipts_perm witness interface balanced) ?_ ?_ ?_ (changes_balanced witness interface balanced)
-  · intro row member
-    rcases List.mem_append.mp member with register | ram
-    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
-      exact (registerInputs_spec witness interface checked balanced input present).1.2.2.2.2.symm
-    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp ram
-      exact ((ramInputs_spec witness interface checked balanced input present).1.final_snapshot target _
-        (ramInputs_finalSpec witness interface checked balanced input present)).symm
-  · intro row member
-    rcases List.mem_append.mp member with register | ram
-    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
-      exact (registerInputs_spec witness interface checked balanced input present).2
-    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp ram
-      exact (ramInputs_spec witness interface checked balanced input present).2
-  · intro row member
-    rcases List.mem_append.mp member with register | ram
-    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
-      exact register_key _ (registerInputs_spec witness interface checked balanced input present).1
-    · obtain ⟨input, present, rfl⟩ := List.mem_map.mp ram
-      exact ram_key _ (ramInputs_finalSpec witness interface checked balanced input present)
+  apply checkFinal_of_channels witness interface checked (byte_guarantees witness interface checked balanced)
+  · intro ram
+    apply balanced
+    cases ram <;> simp [ensemble, ClosedVerifier.install, base, FinalMemoryReceipts.ensemble,
+      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install]
+  · exact balanced _ (List.mem_append_right _ (List.mem_append_right _ (List.mem_cons_self ..)))
 
 end SP1Clean.Soundness.FinalMemoryChecks
