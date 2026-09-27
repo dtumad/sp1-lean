@@ -83,6 +83,39 @@ carry over as acceptable assumptions of the new theorem. The 59-table boot assem
 checked-source/protected assemblies are retained implementation layers, not alternative public
 execution models.
 
+## Portability and eventual code generation
+
+The semantic contract and its realization in Clean should remain useful when an SP1 AIR changes.
+The [architecture's portability boundaries](architecture.md#reuse-across-arithmetizations)
+separate generic machinery, RISC-V meaning, platform policy and pinned AIR compatibility.
+Preserve the current whole-chip anchors while assessing future compatibility work separately
+from progress on native soundness, completeness and usable backend export.
+
+The independent backend milestone is conformance for the existing `IsZeroOperation`,
+`IsZeroWordOperation` and `WordRangeCheck` gadgets over BN254 using pinned Clean's
+Circom-compatible WASM/R1CS output. It must compare generated witnesses with Lean and check the
+complete R1CS, including rejected mutations. This exercises an existing export capability;
+it does not close whole-ensemble export or prove the backend implementation correct.
+
+Later work may replace SP1-shaped byte interactions with direct static membership or arithmetic
+checks. A replacement must prove the same semantic acceptance relation, construct witnesses,
+realize any fixed lookup concretely, and account for changed resource costs. Clean channels are
+already idiomatic; the candidate simplification concerns the SP1-specific messages and provider
+inventory. Static lookup support is backend-dependent: the pinned R1CS exporter rejects lookups
+and interactions, so using a `StaticTable` alone does not make a circuit exportable there.
+
+The eventual direction is semantic specification → verified Clean circuits and witness compiler
+→ backend lowering → generated constraints and witness code → Rust/SP1 integration. Generated
+Rust would make Clean the implementation source instead of requiring extraction from separately
+maintained Rust AIRs. Integration must cover the consumer's fields, public inputs, constraints,
+lookups, interactions, witness programs and resource limits. The pinned Plonky3 backend is a
+proof of concept with circuit and lookup examples; supporting this repository's complete flat
+ensemble and proving its lowering remain separate milestones.
+
+Replacement pilots and Rust generation are roadmap directions, not commitments of the current
+compiler or three-gadget backend campaigns. Close the native capstone using the existing execution
+model; let concrete consumers justify later abstractions and upstream Clean contributions.
+
 ## Implementation order and acceptance
 
 Development and review take place in the [fork](https://github.com/dtumad/sp1-lean), using small
@@ -94,7 +127,7 @@ preserve existing claims; an alternative `RiscvAir` implementation is not on the
 |---|---|---|
 | A: native capstone | [#12](https://github.com/dtumad/sp1-lean/issues/12) | Audit contract and coverage register → ROM/fetch/write policy → concrete resources → shared carriers/adapters → full boundary → WRITE/VERIFY and allocation → mixed compiler → closed realization/composition |
 | B: reusable RISC-V architecture | [#16](https://github.com/dtumad/sp1-lean/issues/16) | Consumer-driven abstractions for A; later the alternative `RiscvAir` instance against the same contract |
-| C: export and verified replacement | [#29](https://github.com/dtumad/sp1-lean/issues/29), whole ensemble [#28](https://github.com/dtumad/sp1-lean/issues/28) | Complete ensemble/compiler export → lookup-free backend fixtures and challenges → replacement contract → fixed-profile whole-ensemble cost |
+| C: export and verified replacement | [#29](https://github.com/dtumad/sp1-lean/issues/29), whole ensemble [#28](https://github.com/dtumad/sp1-lean/issues/28) | Independent lookup-free backend conformance; complete ensemble/compiler export before whole-machine backend claims; later verified replacement and fixed-profile whole-ensemble cost |
 | Maintenance | [#6](https://github.com/dtumad/sp1-lean/issues/6), [#33](https://github.com/dtumad/sp1-lean/issues/33), [#41](https://github.com/dtumad/sp1-lean/issues/41) | Durable Sail fix, module migration, and measured residual hotspots; only block A when a concrete dependency requires them |
 
 The build campaign #43 is complete. The plug-in map from #24 has landed. Campaign A absorbs #20's

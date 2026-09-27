@@ -2,7 +2,7 @@
 
 ## Design rule
 
-The stable verification boundary is a complete SP1 chip.
+For comparison with the pinned SP1 Rust AIR, the stable verification boundary is a complete chip.
 
 Rust operations and Lean gadgets may use different intermediate structures. A native Lean chip is
 proved against a semantic contract, connected to Sail, and then compared with the complete upstream
@@ -423,6 +423,47 @@ Native host/permission strengthening is independent of the original 25 instructi
 `ChipFaithful` anchors. Exact Rust refinement, succinct authenticated boundary commitments, and
 cryptographic verifier soundness are separate layers. The pinned Rust and native host profiles
 have disclosed differences; see the roadmap's semantic findings and the report's trust boundary.
+
+### Reuse across arithmetizations
+
+The lifetime of a pinned Rust AIR and the lifetime of the semantic proof interfaces are different.
+Review portability at four boundaries:
+
+| Boundary | Reusable content | Instance obligations |
+|---|---|---|
+| Clean/PolyFun | Circuits, labeled paths, `Realizes`, channel balance, ranked exhaustive ordering, and typed ensemble export | Instantiate the interfaces and discharge their hypotheses; serialization and backend execution remain separate boundaries |
+| RISC-V | Instruction meaning and register/RAM reasoning through official Sail | Preserve the selected ISA and Sail platform configuration; SP1-specific bridge assumptions do not disappear automatically |
+| Platform policy | Complete-boundary and composition interfaces | Specify host calls, clocks, ROM permissions and resource limits; the current native policy is one concrete choice |
+| Pinned SP1 AIR | Whole-chip comparison and extraction provenance | Match the pinned rows, assertions, interactions and routing; a changed AIR needs new compatibility evidence |
+
+Byte checks illustrate this split. Channels are public Clean interfaces; the opcode-tagged Byte
+message, multiplicities and provider inventory are SP1 choices. `Model/ByteTable.lean` supplies
+the semantic `ByteRowSpec` and a predicate-defined `Table` view. Active consumers pull from
+`byteChannel`; native providers establish membership using arithmetic and, for XOR, Clean's
+static `ByteXorTable`, before pushing. Clean's `StaticTable` supplies a finite row family with
+proved membership, and `FiniteLookup.ofStatic` already carries such tables into the typed ensemble
+export. Native program, memory and host tables already use static lookups.
+
+A future static-lookup implementation could share the byte meaning while changing physical
+interactions and costs. Its obligation is soundness and constructive completeness for the same
+semantic statement, with explicit witness transport and resource accounting. Merely replacing a
+pull with a lookup does not preserve an existing `ChipFaithful` theorem or the enclosing ledger.
+The roadmap records this option; the current implementation retains its audited providers.
+
+Backend suitability is another boundary. At the pinned Clean revision, the Circom-compatible
+backend emits WASM witness generators and R1CS, but R1CS export rejects lookups and interactions.
+WASM witness generation alone does not check constraints. A static lookup therefore still needs
+an appropriate lowering, such as a proved arithmetic implementation, for that backend. The
+pinned Plonky3 backend is a proof of concept, not a complete flat-ensemble export path.
+
+The eventual source direction is verified Clean circuits and witness programs to generated
+backend code, including Rust constraint evaluation and trace generation consumed by an SP1
+adapter. This would make the semantic contract the enduring boundary when an AIR changes.
+It requires lowering correctness and integration evidence for public inputs, fields, constraints,
+lookups, interactions and witnesses. The existing Rust reference interpreter is a conformance
+consumer, not that generated implementation or a proof of backend correctness. Likewise, a
+proof-independent `EnsembleCompiler` can still be noncomputable; execution and exportability
+require separate evidence.
 
 ## Structural buses and semantic grounding
 
