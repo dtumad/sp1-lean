@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.LocalCoreGrounding
 import SP1Clean.Soundness.ProtectedLocalCore
+import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Model.Core.HostSnapshot
@@ -751,6 +752,34 @@ theorem protectedPartialStoreBesideRom :
      check storeRomImage besideRomSource publicInput besideRomRows true,
      check storeRomImage besideRomSource publicInput (besideRomRows ++ [permissionRow 65541]) true] =
       [true, false, false] := by native_decide
+
+private def receiptStore (source : ExecutionSnapshot) (input : StoreByteChip.Inputs Fp) :=
+  evaluate storeRomImage source (ProtectedOrdinaryReceipt.component .storeByte) (toElements input).toList
+
+private def receiptPermission (source : ExecutionSnapshot) (input : StoreByteChip.Inputs Fp)
+    (permissions : List (List Fp)) : Bool :=
+  let produced := receiptStore source input
+  let providers := permissions.map fun row =>
+    evaluate storeRomImage source ⟨WritePermissionProvider.circuit storeRomImage⟩ row
+  let ledger := ((produced :: providers).flatMap (·.2)).filter
+    (fun entry => entry.1 == (WritePermissionProvider.channel (p := SP1Prime)).name)
+  produced.1 && providers.all (·.1) && ledger.all (fun key =>
+    ((ledger.filter (fun item => item.2.1 == key.2.1)).map (·.2.2)).sum == 0)
+
+/-- Publishing a receipt retains byte-precise permission enforcement. Even an unchanged code
+store fails, while a writable byte beside code succeeds only with the matching provider.
+This checks the actual permission subsystem; observation endpoint installation is separate. -/
+theorem receiptStoreProtection :
+    (receiptStore sameValueRomSource sameValueRomInput).1 = true ∧
+    ((receiptStore sameValueRomSource sameValueRomInput).2.filter
+      (fun entry => entry.1 == "SP1OrdinaryStateReceipt")) =
+        [("SP1OrdinaryStateReceipt", [0, 17, 4, 1, 0], 1)] ∧
+    [receiptPermission sameValueRomSource sameValueRomInput [],
+     receiptPermission sameValueRomSource sameValueRomInput [(permissionRow 65540).2],
+     receiptPermission besideRomSource besideRomInput [],
+     receiptPermission besideRomSource besideRomInput [(permissionRow 65541).2],
+     receiptPermission besideRomSource besideRomInput [(permissionRow 65540).2]] =
+      [false, false, false, false, true] := by native_decide
 
 /-- Adding the permission ledger preserves ordinary non-store and HALT local segments. -/
 theorem protectedNonStores :
