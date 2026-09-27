@@ -224,3 +224,10 @@ globs = ["SP1CleanTest.+"]
 allowNonModules = true
 leanOptions.weak.linter.style.nativeDecide = false
 leanOptions.weak.linter.hashCommand = false
+
+# Native exporter with a narrow, Sail-free import closure. Kept outside the proof/test indices:
+# it produces the deterministic WASM/R1CS fixtures checked by the alignment job.
+[[lean_exe]]
+name = "backendGadgets"
+root = "scripts.backendGadgets"
+allowNonModules = true

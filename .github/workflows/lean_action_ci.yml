@@ -337,7 +337,7 @@ jobs:
           use-mathlib-cache: "true"
           use-github-cache: "false"
       - name: Full build (resumable — a cold cache may need one re-run)
-        run: timeout 5h lake build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun
+        run: timeout 5h lake --no-cache build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun backendGadgets
       - name: Full test library (lake build SP1CleanTest)
         run: timeout 5h lake build --wfail --iofail SP1CleanTest
       - name: Save the alignment build cache
@@ -355,6 +355,16 @@ jobs:
       # library built above even though the exportability battery itself is core.
       - name: Witgen export matches a fresh regeneration
         run: scripts/check_witgen_export.sh --regen
+      - name: Pinned Node for backend conformance
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: tools/backend-gadgets/package-lock.json
+      - name: Install pinned backend checker
+        run: npm ci --prefix tools/backend-gadgets
+      - name: Clean WASM and R1CS gadget conformance
+        run: scripts/check_backend_gadgets.sh
       - name: Compiled trust-checker regression fixtures
         run: lake env python3 scripts/test_trust_integration.py
       - name: Release audit and compiled-library trust policy

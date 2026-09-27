@@ -21,6 +21,7 @@ Each document has one role:
 | [`plugin-points.md`](plugin-points.md) | the circuit seams of the semantics core, their contracts, and current work by seam |
 | [`leanervm-comparison.md`](leanervm-comparison.md) | pinned comparison, capstone decisions, and possible shared contributions |
 | [`goal-overview.md`](goal-overview.md) | completed-state contract; never current status |
+| [Standalone backend conformance](../tools/backend-gadgets/README.md) | pinned Clean WASM/R1CS fixtures, setup, checks, and measured gadget costs |
 | [`witgen-wire-format.md`](witgen-wire-format.md) | witness-export wire format |
 | [`rust-integration-memo.md`](rust-integration-memo.md) | SP1-side witness-generation integration memo |
 | [`audits/2026-08-independent-semantic-audit.md`](audits/2026-08-independent-semantic-audit.md) | retained independent semantic review |
