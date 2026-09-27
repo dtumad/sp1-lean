@@ -1,6 +1,8 @@
 import SP1Clean.Soundness.OrdinaryStateReceipt
 import SP1CleanTest.Alignment.Core.LocalCore
 import SP1CleanTest.Core.NonVacuityReal
+import SP1Clean.Native.Operations.OrdinaryObservation
+import SP1CleanTest.Core.HostChecks
 
 /-! # Actual ordinary receipt programs
 
@@ -58,5 +60,31 @@ theorem mutations :
      agrees .jal (toElements jalInputs).toList [[0, 17, 0x1004, 0, 0]],
      agrees .jalr (toElements oddJalr).toList [[0, 17, 0x2011, 0, 0]],
      agrees .add paddingInputs [[0, 17, 4, 1, 0]]] = List.replicate 6 false := by native_decide
+
+private def consumed (message : Channels.StateMsg Fp) :=
+  let input := OrdinaryObservation.populate true ⟨0, 0, 0, #v[0, 0, 0]⟩ message
+  SP1CleanTest.Core.HostChecks.evaluateProgram
+    (OrdinaryObservation.main true (varFromOffset OrdinaryObservation.Inputs 0))
+    (toElements input).toList
+
+private def joined (id : InstructionChipId) (inputs : List Fp)
+    (messages : List (Channels.StateMsg Fp)) : Bool :=
+  let consumers := messages.map consumed
+  let ledger := receipts id inputs ++ ((consumers.flatMap (·.2)).filter
+    (fun entry => entry.1 == "SP1OrdinaryStateReceipt"))
+  (evaluate id inputs).1 && consumers.all (·.1) && ledger.all (fun key =>
+    ((ledger.filter (fun item => item.2.1 == key.2.1)).map (·.2.2)).sum == 0)
+
+/-- The actual consumer agrees with actual ADD/JALR producers. Missing, repeated and forged
+messages fail real receipt balance, while inactive producer rows require no consumer. -/
+theorem actualConsumer :
+    joined .add addInputs [⟨0, 17, 4, 1, 0⟩] = true ∧
+    joined .jalr (toElements oddJalr).toList [⟨0, 17, 0x2010, 0, 0⟩] = true ∧
+    joined .add paddingInputs [] = true ∧
+    [joined .add addInputs [],
+     joined .add addInputs [⟨0, 17, 4, 1, 0⟩, ⟨0, 17, 4, 1, 0⟩],
+     joined .add addInputs [⟨0, 18, 4, 1, 0⟩],
+     joined .jalr (toElements oddJalr).toList [⟨0, 17, 0x2011, 0, 0⟩],
+     joined .add paddingInputs [⟨0, 17, 4, 1, 0⟩]] = List.replicate 5 false := by native_decide
 
 end SP1CleanTest.Alignment.Core.InstructionReceipt
