@@ -6,6 +6,9 @@ Formal verification of SP1 Core instruction AIRs and native AIR-to-execution ref
 
 </div>
 
+Try the [runnable ADD and rejection walkthrough](docs/talk-examples.md): one command checks an
+accepted ADD witness and seven adversarial mutations against the actual assembled AIR.
+
 ## Verified result
 
 This repository verifies SP1's Core RISC-V instruction chips in Lean using the Clean circuit DSL

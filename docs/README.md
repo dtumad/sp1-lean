@@ -11,6 +11,7 @@ Each document has one role:
 | Document | Role |
 |---|---|
 | [`overview.md`](overview.md) | ten-minute technical orientation |
+| [`talk-examples.md`](talk-examples.md) | executable ADD witness, rejecting mutations, and their theorem boundary |
 | [`verification-report.md`](verification-report.md) | self-contained external technical report |
 | [`release-audit.md`](release-audit.md) | reproducible pin, gate, and trust report |
 | [`audit-surface.md`](audit-surface.md) | short semantic definition inventory, mechanically gated |
