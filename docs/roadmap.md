@@ -220,16 +220,24 @@ Sail state once the remaining execution observations are derived. Dynamic nextPC
 complete host binding remain open, as does migrating the grounding consumers to the combined
 assembly through channel-specific evidence. The fixed-handler resource assembly's older clock
 checker is a compatibility consumer; the final facade should consolidate this endpoint binding.
-Ordinary receipt producers now reuse all 25 registered instruction circuits and their existing
-State decoder, with unchanged widths/assertions/lookups/old ledgers and an exact per-row receipt
-cost. The ordinary observation consumer now uses the shared ranked engine to order all physical
+`ProtectedOrdinaryReceipt` composes each existing protected store before publishing its receipt;
+the other instructions reuse their registered circuits. `HostOrdinaryReceipts` installs these
+producers at all 25 existing mixed-table positions above the complete Memory and Sail frame checks.
+Its constructor and proof projection retain the original arrays, assertions, lookups and every old
+channel occurrence, including write permissions. Typed registrations identify each actual receipt
+with the existing State decoder and count padding occurrences. The ordinary observation consumer
+uses the shared ranked engine to order all physical
 consumer rows, binds their counter to the existing semantic retirement fold, and retains the last
 raw successor PC. Its clock comparison recovers the ordinary source clock before checking ranges,
 so successor window crossings remain legal. Standard Clean table construction has proved witness
-computability, constraints and guarantees; exact costs include four Byte pulls per row. Protected
-mixed installation, receipt/Byte closure, private observation endpoints and supplied target binding
-remain open. Host-only and empty cases must preserve incoming observations; the standalone
+computability, constraints and guarantees; exact costs include four Byte pulls per row. Consumer
+installation, receipt/Byte closure, private observation endpoints and supplied target binding
+remain open. Host-only and empty cases must preserve incoming observations; the current
 observation subsystem does not close C2.
+The eventual observation endpoint must preserve raw PC limbs (a carry can leave a limb at
+`65536`) or prove an equivalent normalization. With no ordinary events, preserve the source's
+exact optional nextPC and increment flag; the initial nextPC must not inherit the native current-PC
+address bound merely because an observation link uses three limbs.
 Terminal receipt/replay agreement is closed.
 `HostHintReadCPU.source_execution_with_memory` identifies every integer register and aligned RAM
 cell below `2^48`, including locations absent from the final inventory, and excludes entries outside

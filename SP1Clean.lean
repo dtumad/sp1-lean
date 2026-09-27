@@ -237,6 +237,8 @@ import SP1Clean.Soundness.HostFinalMemoryInventory
 import SP1Clean.Soundness.HostFinalMemorySoundness
 import SP1Clean.Soundness.HostSailBoundary
 import SP1Clean.Soundness.OrdinaryStateReceipt
+import SP1Clean.Soundness.ProtectedOrdinaryReceipt
+import SP1Clean.Soundness.HostOrdinaryReceipts
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.GoodnessFilter
