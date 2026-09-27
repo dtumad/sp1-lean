@@ -1,4 +1,4 @@
-# Run an ADD witness and its rejecting mutations
+# Run circuit witnesses and their rejecting mutations
 
 This walkthrough executes actual Clean row programs, fixed lookups, and complete interaction
 ledgers for `SP1Clean.Soundness.HostFinalMemory.ensemble`. It is executable fixture evidence;
@@ -83,6 +83,45 @@ scripts/check_talk_examples.sh
 ```
 
 ## Follow the universal statements
+
+### A complete counter arithmetization
+
+The [counter example](../SP1Clean/Soundness/Examples/Counter.lean) closes both directions
+for a small actual Clean ensemble. Its independently defined machine increments a natural
+number below 15. Public endpoints lie in `0..15`, and the event list has at most 15 increments.
+The circuit uses `ZMod 97`: each physical transition stores a predecessor and successor,
+looks up the predecessor in the fixed table `0..14`, asserts successor = predecessor + 1,
+and pulls/pushes a State message. The verifier checks both public endpoints against `0..15`
+and contributes the opposite boundary messages.
+
+`CounterExample.statement_iff` proves that raw `ensemble.Statement input` holds exactly
+when an admissible `machine.Trace` connects the interpreted endpoints. Soundness recovers
+an exhaustive ordering of the physical rows from the actual balanced ledger and a strictly
+increasing natural rank. `CounterExample.compile` takes only endpoints and events and
+returns an actual `EnsembleWitness`; `compile_sound` and `compile_complete` prove its
+correctness without a compiler-readiness premise. For `n` events the State ledger contains
+exactly `2*n+2` interactions, at most 32 and strictly below the field characteristic 97.
+
+Run the executable compiler and physical-witness regressions with:
+
+```sh
+lake build --wfail --iofail SP1CleanTest.Alignment.Examples.Counter
+lake env lean scripts/counterExample.lean
+```
+
+The output includes the compiled rows `[(2,3), (3,4), (4,5)]` and their eight State
+interactions. The [test module](../SP1CleanTest/Alignment/Examples/Counter.lean) checks
+empty and maximum-length traces, shuffled physical rows, missing/duplicated rows, wrong
+endpoints and event counts, and inadmissible boundaries. Its isolated wraparound check
+demonstrates why the lookup matters: `0 = 96 + 1` holds in `ZMod 97`, but the actual
+transition circuit rejects the row `(96,0)`.
+
+This is a complete counter theorem, independent of RISC-V and the SP1 Rust faithfulness
+boundary. It explains the proof structure needed by the larger capstone without claiming
+that capstone is already closed. The executable regressions use the test/compiler trust
+boundary; the universal theorem is checked in the production library.
+
+### The larger SP1 assemblies
 
 [HostFinalMemory.source_checkFinal](../SP1Clean/Soundness/HostFinalMemorySoundness.lean)
 quantifies over an arbitrary witness of the concrete six-call assembly. From its constraints

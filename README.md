@@ -6,8 +6,9 @@ Formal verification of SP1 Core instruction AIRs and native AIR-to-execution ref
 
 </div>
 
-Try the [runnable ADD and rejection walkthrough](docs/talk-examples.md): one command checks an
-accepted ADD witness and seven adversarial mutations against the actual assembled AIR.
+Try the [runnable circuit walkthrough](docs/talk-examples.md): check an accepted ADD witness
+and seven adversarial mutations against the actual assembled AIR, then follow a complete
+counter arithmetization from natural-number semantics to compiled witness and equivalence theorem.
 
 ## Verified result
 

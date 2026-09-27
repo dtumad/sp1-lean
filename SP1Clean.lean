@@ -219,6 +219,7 @@ import SP1Clean.Soundness.CoreTouches
 import SP1Clean.Soundness.Coverage
 import SP1Clean.Soundness.Decode
 import SP1Clean.Soundness.EnsembleChannels
+import SP1Clean.Soundness.Examples.Counter
 import SP1Clean.Soundness.Examples.StateBalance
 import SP1Clean.Soundness.ExitAccounting
 import SP1Clean.Soundness.FetchDiscriminant

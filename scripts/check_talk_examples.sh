@@ -14,9 +14,10 @@ def require(condition, message):
     if not condition:
         raise RuntimeError(message)
 
-with tempfile.TemporaryDirectory(prefix='sp1-talk-check-') as outside:
+Path('.lake').mkdir(exist_ok=True)
+with tempfile.TemporaryDirectory(prefix='talk-check-', dir=Path('.lake').resolve()) as scratch:
     first = subprocess.run([str(runner), '--json'], check=True, text=True, stdout=subprocess.PIPE)
-    second = subprocess.run([str(runner), '--json'], cwd=outside, check=True,
+    second = subprocess.run([str(runner), '--json'], cwd=runner.parents[2], check=True,
                             text=True, stdout=subprocess.PIPE)
     require(first.stdout == second.stdout, 'unchanged runs must produce identical JSON')
     require(len(json.loads(first.stdout)['cases']) == 9, 'all nine cases must run')
@@ -31,9 +32,9 @@ with tempfile.TemporaryDirectory(prefix='sp1-talk-check-') as outside:
 
     # Fault-inject only the subprocess boundary after measuring actual fixture results above.
     # This covers Lean's known zero-exit stack-overflow trap, even after complete JSON output.
-    fake_bin = Path(outside) / 'bin'
+    fake_bin = Path(scratch) / 'bin'
     fake_bin.mkdir()
-    payload = Path(outside) / 'payload.json'
+    payload = Path(scratch) / 'payload.json'
     payload.write_text(first.stdout)
     fake_elan = fake_bin / 'elan'
     fake_elan.write_text('''#!/usr/bin/env python3
