@@ -70,6 +70,16 @@ def project (same : ens.tables[index.val] = ⟨provider⟩)
       · change (table witness).data = witness.data
         exact witness.same_data _ (List.getElem_mem _))
 
+/-- Receipt projection keeps the shared prover data. -/
+@[simp] theorem project_data (same : ens.tables[index.val] = ⟨provider⟩)
+    (witness : EnsembleWitness (install ens index ram provider)) :
+    (project same witness).data = witness.data := rfl
+
+/-- Receipt projection keeps the original public input. -/
+@[simp] theorem project_publicInput (same : ens.tables[index.val] = ⟨provider⟩)
+    (witness : EnsembleWitness (install ens index ram provider)) :
+    (project same witness).publicInput = witness.publicInput := rfl
+
 /-- Projection changes only the selected table's component. -/
 theorem project_tables (same : ens.tables[index.val] = ⟨provider⟩)
     (witness : EnsembleWitness (install ens index ram provider)) :
@@ -146,6 +156,17 @@ theorem lift_constraints (same : ens.tables[index.val] = ⟨provider⟩)
   rw [project_lift_tables same witness]
   exact fun physical member => checked physical (witness.mem_allTables_of_mem_tables member)
 
+/-- Forgetting a receipt retains every original physical row array. -/
+theorem project_rows (same : ens.tables[index.val] = ⟨provider⟩)
+    (witness : EnsembleWitness (install ens index ram provider)) :
+    (project same witness).tables.map (·.table) = witness.tables.map (·.table) := by
+  rw [project_tables, List.map_set]
+  change (witness.tables.map (·.table)).set index.val
+    (witness.tables[index.val]'(bound witness)).table = _
+  rw [← List.getElem_map (l := witness.tables) (i := index.val) (f := fun physical => physical.table),
+    List.set_getElem_self]
+  simpa only [List.length_map] using bound witness
+
 /-- Projection preserves every table height, including the singleton verifier. -/
 theorem project_tableHeights (same : ens.tables[index.val] = ⟨provider⟩)
     (witness : EnsembleWitness (install ens index ram provider)) :
@@ -178,6 +199,26 @@ theorem project_interactions (same : ens.tables[index.val] = ⟨provider⟩)
     (f := fun physical : Table (ZMod p) => physical.interactionsWith channel), List.set_getElem_self]
   · rfl
   · simpa only [List.length_map] using bound witness
+
+/-- Existing-channel guarantees survive forgetting a receipt without assuming projected balance. -/
+theorem project_channelGuarantees (same : ens.tables[index.val] = ⟨provider⟩)
+    (witness : EnsembleWitness (install ens index ram provider)) (channel : RawChannel (ZMod p))
+    (different : channel ≠ (FinalMemoryValue.channel ram).toRaw)
+    (guarantees : ∀ physical ∈ witness.allTables, physical.ChannelGuarantees channel) :
+    ∀ physical ∈ (project same witness).allTables, physical.ChannelGuarantees channel := by
+  rw [EnsembleWitness.forall_mem_allTables_iff]
+  constructor
+  · exact guarantees witness.verifierTable witness.mem_allTables_verifierTable
+  · intro physical member
+    rw [project_tables] at member
+    rcases List.mem_or_eq_of_mem_set member with old | rfl
+    · exact guarantees physical (witness.mem_allTables_of_mem_tables old)
+    · apply Table.withComponent_channelGuarantees_of
+      · intro env valid
+        apply Operations.channelGuarantees_of_interactionsWith_subset _ _ _ ?_ env valid
+        rw [table_component, FinalMemoryReceipt.interactions ram provider channel different]
+        exact List.Subset.refl _
+      · exact guarantees _ (witness.mem_allTables_of_mem_tables (List.getElem_mem _))
 
 /-- A fresh receipt channel permits reuse of the original ensemble balance proof. -/
 theorem project_balanced (same : ens.tables[index.val] = ⟨provider⟩)

@@ -89,7 +89,8 @@ private def baseRows : List Row :=
 private def withoutRam : List Row :=
   baseRows.filter (fun row => !([1, 2, 4, 5].contains row.1)) ++ [terminal 2 4, terminal 5 4]
 
-private def evaluate (image : ProgramImage) (source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp) : Bool × Ledger :=
+private def evaluate (image : ProgramImage) (source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp)
+    (extraLookups : List (FiniteLookup Fp) := []) : Bool × Ledger :=
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
@@ -97,7 +98,7 @@ private def evaluate (image : ProgramImage) (source : ExecutionSnapshot) (compon
     FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
     FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
     FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))]
+    FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))] ++ extraLookups
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
@@ -791,5 +792,17 @@ theorem protectedPaddingIdentity :
        (28, List.replicate (size StoreDoubleChip.Inputs) 0)]
     check image source identityPublic rows true = true ∧
       check image { source with host.exitCode := some 0 } identityPublic rows true = true := by native_decide
+
+/-- Shared active ADD fixture for extensions of the same native physical assembly. -/
+def addFixture : ProgramImage × ExecutionSnapshot × SP1PublicIO Fp × List Row :=
+  (image, source, publicInput, baseRows)
+
+/-- Execute actual row programs and fixed lookups, allowing an extension's additional fixed tables. -/
+def evaluateComponent (image : ProgramImage) (source : ExecutionSnapshot) (component : Component Fp)
+    (inputs : List Fp) (extraLookups : List (FiniteLookup Fp)) : Bool × Ledger :=
+  evaluate image source component inputs extraLookups
+
+/-- Construct real Byte/Range providers at their stable local-assembly positions. -/
+def provideBytes := byteProvider
 
 end SP1CleanTest.Core.LocalCore

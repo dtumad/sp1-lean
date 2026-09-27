@@ -1,6 +1,6 @@
 module
 
-public import ToClean.Air.EnsembleBuild
+public import ToClean.Air.EnsembleProjection
 public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Exactly-once closed circuits in an ensemble verifier
@@ -195,10 +195,80 @@ theorem expand_interactions {ens : Ensemble F PublicIO} (witness : EnsembleWitne
   simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil, List.append_assoc]
   exact (List.perm_append_comm ..).append_left _
 
+/-- Forget a closed verifier extension while keeping every physical row. This is a proof view;
+balance is not inherited on channels used by the omitted extension. -/
+def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) : EnsembleWitness ens :=
+  EnsembleWitness.ofTables ens witness.tables witness.data witness.publicInput
+    witness.tables_map_component witness.same_data
+
+/-- The projected table arrays are the literal original inventory. -/
+@[simp] theorem project_tables {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
+    (closed.project witness).tables = witness.tables := rfl
+
+/-- The closed verifier proof view retains the same prover data. -/
+@[simp] theorem project_data {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
+    (closed.project witness).data = witness.data := rfl
+
+/-- The closed verifier proof view retains the same public input. -/
+@[simp] theorem project_publicInput {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
+    (closed.project witness).publicInput = witness.publicInput := rfl
+
+/-- The original verifier and all original table checks are consequences of the extended checks. -/
+theorem project_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
+    (checked : witness.Constraints) : (closed.project witness).Constraints := by
+  rw [EnsembleWitness.Constraints, EnsembleWitness.forall_mem_allTables_iff]
+  constructor
+  · rw [← EnsembleWitness.verifierConstraints_iff_verifierTable_constraints]
+    exact (closed.verifier_constraints ens witness.publicInput witness.data).mp
+      (EnsembleWitness.verifierConstraints_of_constraints checked) |>.1
+  · intro table member
+    exact checked table (witness.mem_allTables_of_mem_tables member)
+
+/-- The singleton representation accounts for exactly the interactions omitted by projection. -/
+theorem expand_interactions_eq {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
+    (channel : RawChannel F) :
+    (closed.expand witness).interactionsWith channel =
+      (closed.project witness).interactionsWith channel ++ (closed.singleton witness.data).interactionsWith channel := by
+  change _ ++ (witness.tables ++ [closed.singleton witness.data]).flatMap (·.interactionsWith channel) =
+    (_ ++ witness.tables.flatMap (·.interactionsWith channel)) ++ _
+  simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil, List.append_assoc]
+  rfl
+
+/-- Local guarantees survive forgetting a closed extension, independently of its channel balance. -/
+theorem project_channelGuarantees {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
+    (channel : RawChannel F)
+    (guarantees : ∀ table ∈ witness.allTables, table.ChannelGuarantees channel) :
+    ∀ table ∈ (closed.project witness).allTables, table.ChannelGuarantees channel := by
+  apply witness.channelGuarantees_of_interactions_subset (closed.project witness) channel rfl ?_ guarantees
+  apply List.Subset.trans (l₂ := (closed.expand witness).interactionsWith channel)
+  · rw [closed.expand_interactions_eq]
+    exact List.subset_append_left _ _
+  · exact (closed.expand_interactions witness channel).subset
+
+/-- A channel unused by the omitted extension retains its exact ledger and count bound. -/
+theorem project_balancedChannel [DecidableEq F] {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) (channel : RawChannel F)
+    (silent : channel ∉ closed.circuit.channels) (balanced : witness.BalancedChannel channel) :
+    (closed.project witness).BalancedChannel channel := by
+  have empty : (closed.singleton witness.data).interactionsWith channel = [] :=
+    (closed.singleton witness.data).interactionsWith_nil_of_channel_not_mem silent
+  have perm := closed.expand_interactions witness channel
+  rw [closed.expand_interactions_eq, empty, List.append_nil] at perm
+  exact balancedInteractions_of_perm balanced perm.symm
+
 theorem expand_balanced [DecidableEq F] {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
     (balanced : witness.BalancedChannels) : (closed.expand witness).BalancedChannels := by
   intro channel member
   exact balancedInteractions_of_perm (balanced channel member) (closed.expand_interactions witness channel).symm
+
+/-- The singleton proof representation inherits already established local guarantees on every
+channel, including one whose balance was established in a larger enclosing assembly. -/
+theorem expand_channelGuarantees {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
+    (channel : RawChannel F)
+    (guarantees : ∀ table ∈ witness.allTables, table.ChannelGuarantees channel) :
+    ∀ table ∈ (closed.expand witness).allTables, table.ChannelGuarantees channel :=
+  witness.channelGuarantees_of_interactions_subset (closed.expand witness) channel rfl
+    (closed.expand_interactions witness channel).subset guarantees
 
 theorem expand_balanced_iff [DecidableEq F] {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (closed.install ens)) :
