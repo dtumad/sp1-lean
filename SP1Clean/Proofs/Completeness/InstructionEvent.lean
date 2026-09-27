@@ -32,7 +32,9 @@ open SP1Clean.Soundness.Target
 
 /-! ## Small family-neutral projections -/
 
-private def sext12Nat (immediate : BitVec 12) : ℕ :=
+/-- Preserve the decoded immediate width: branches use thirteen bits, while I-type and memory
+operands use twelve. Narrowing before sign extension changes valid branch targets. -/
+private def sextNat {width : ℕ} (immediate : BitVec width) : ℕ :=
   (immediate.signExtend 64).toNat
 
 private def utypeImmediateNat (immediate : BitVec 20) : ℕ :=
@@ -183,7 +185,7 @@ private def iWriteEventOf? (stamped : List StampedTouch) (clk pc opcode : ℕ)
               opcode := opcode
               opA := (regidxBits rd).toNat
               opB := (regidxBits rs1).toNat
-              imm := sext12Nat immediate
+              imm := sextNat immediate
               b := b.touch.pulled.toNat
               prevA := a.touch.pulled.toNat
               prevTsA := a.previous
@@ -208,7 +210,7 @@ private def iTypeEvent? (decoded : instruction) (stamped : List StampedTouch)
                   opcode := opcode
                   opA := (regidxBits rs1).toNat
                   opB := (regidxBits rs2).toNat
-                  imm := sext12Nat imm
+                  imm := sextNat imm
                   b := b.touch.pulled.toNat
                   prevA := a.touch.pulled.toNat
                   prevTsA := a.previous
@@ -265,7 +267,7 @@ private def memoryEvent? (decoded : instruction) (stamped : List StampedTouch)
                   opcode := opcode
                   opA := (regidxBits rd).toNat
                   opB := (regidxBits rs1).toNat
-                  imm := sext12Nat imm
+                  imm := sextNat imm
                   b := b.touch.pulled.toNat
                   prevA := a.touch.pulled.toNat
                   prevTsA := a.previous
@@ -279,7 +281,7 @@ private def memoryEvent? (decoded : instruction) (stamped : List StampedTouch)
                   opcode := opcode
                   opA := (regidxBits rs2).toNat
                   opB := (regidxBits rs1).toNat
-                  imm := sext12Nat imm
+                  imm := sextNat imm
                   b := b.touch.pulled.toNat
                   prevA := a.touch.pulled.toNat
                   prevTsA := a.previous
@@ -874,5 +876,28 @@ theorem compileInstructionEvent?_frontier_bounded_next {view : SP1TransitionView
   obtain ⟨accesses, event, accessEq, eventEq, rfl⟩ :=
     compileInstructionEvent?_components generated
   exact scheduleAccessPlan_outgoing_bounded_next accesses bounded
+
+/-- The branch event keeps the entire signed thirteen-bit Sail immediate. In particular the
+compiler does not coerce it through the twelve-bit I-type immediate representation. -/
+theorem compileInstructionEvent?_branch_immediate
+    {view : SP1TransitionView} {frontier : AccessFrontier} {clk : ℕ}
+    {result : CompiledInstructionEvent} {imm : BitVec 13} {rs2 rs1 : regidx} {op : bop}
+    (decoded : view.decoded = .BTYPE (imm, rs2, rs1, op))
+    (routed : view.chipId = .branch)
+    (generated : compileInstructionEvent? view frontier clk = some result) :
+    ∃ event : ITypeEvent, result.routed = ⟨.branch, event⟩ ∧
+      event.imm = (imm.signExtend 64).toNat := by
+  rcases view with ⟨pc, word, instruction, key, id, plan⟩
+  dsimp only at decoded routed
+  subst instruction id
+  obtain ⟨accesses, event, _, constructed, rfl⟩ := compileInstructionEvent?_components generated
+  refine ⟨event, rfl, ?_⟩
+  simp only [instructionEventFor?, iTypeEvent?] at constructed
+  split at constructed
+  · split at constructed
+    · cases Option.some.inj constructed
+      rfl
+    · contradiction
+  · contradiction
 
 end SP1Clean.TraceGen
