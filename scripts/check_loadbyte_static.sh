@@ -26,6 +26,8 @@ import time
 root = Path.cwd()
 out = root / '.lake/build/loadbyte-static'
 out.mkdir(parents=True, exist_ok=True)
+for artifact in ['results.json', 'axioms.log']:
+    (out / artifact).unlink(missing_ok=True)
 manifest = json.loads(Path('lake-manifest.json').read_text())
 toolchain = Path('lean-toolchain').read_text().strip()
 def git(*args):
