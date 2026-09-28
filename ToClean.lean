@@ -15,6 +15,7 @@ public import ToClean.Circuit.WitgenShare
 public import ToClean.Circuit.InteractionRecovery
 public import ToClean.Circuit.EmittedInteraction
 public import ToClean.Gadgets.ComputableWitnesses
+public import ToClean.Air.ChannelRegistry
 public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension
 public import ToClean.Air.PublicVerifier
