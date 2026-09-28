@@ -353,6 +353,19 @@ jobs:
       # The committed export/witgen goldens must match a fresh regeneration byte-for-byte; the
       # exporter maps native rows through the `Faithful` reconfigure maps, so it needs the full
       # library built above even though the exportability battery itself is core.
+      - name: Assembled branch witness evidence
+        id: branch_ensemble_evidence
+        env:
+          SP1_BRANCH_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: scripts/check_branch_ensemble.sh
+      - name: Upload assembled branch evidence
+        if: always() && steps.branch_ensemble_evidence.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-ensemble-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lake/build/branch-ensemble/
+          if-no-files-found: error
+          retention-days: 30
       - name: Witgen export matches a fresh regeneration
         run: scripts/check_witgen_export.sh --regen
       - name: Pinned Node for backend conformance
