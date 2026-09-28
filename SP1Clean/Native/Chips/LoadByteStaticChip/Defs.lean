@@ -19,6 +19,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 local instance : Fact (p > 512) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 
+/-- Original LoadByte arithmetic and readers, with the selected pair checked by fixed lookups. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p)) := do
   let is_real := input.is_lb + input.is_lbu
   let high := (input.selected_limb - input.selected_limb_low_byte)
