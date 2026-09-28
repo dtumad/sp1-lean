@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.Proofs.Chips.AddChip.Witgen
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # `SP1Clean.AddChip` — from trace events to a valid AIR table (the completeness pilot)
 
@@ -9,7 +9,7 @@ trace events, run through the builder of `FormalModel/TraceGen/`, produces a fla
 constraints and channel guarantees hold. Nothing about the *row* is hand-built — only the
 `size Inputs` committed input cells come from the event; every witnessed cell is computed by the
 chip circuit's own witness generators (`Air.Flat.Component.buildRow`, in
-`ToClean/Air/TableBuild.lean`).
+`Clean/Air/TableBuild.lean`).
 
 The chain, and where each link lives:
 

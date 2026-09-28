@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Completeness.ProviderWitgen
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.Soundness.SP1Ensemble
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # From provider occurrences to valid AIR tables
 
@@ -879,7 +879,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 /-- The boundary verifier has computable witnesses vacuously: the row declares no cells. -/
 theorem sp1StateVerifier_computableWitnesses :
-    (sp1StateVerifier (p := p)).base.ComputableWitnessesWithData := fun k input env env' =>
+    (sp1StateVerifier (p := p)).base.ComputableWitnesses := fun k input env env' =>
   Operations.forAllFlat_witnessCongr_of_localLength_zero _ _
     (by simp [sp1StateVerifier, sp1StateVerifierMain, circuit_norm,
       Channels.stateChannel, Channels.byteChannel])

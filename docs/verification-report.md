@@ -1139,24 +1139,14 @@ and `signedSum_eq_zero` use the logical baseline alone.
   backend and the config — no longer a hand-maintained delta; the four top-level configured
   values remain disclosed as `rfl` lemmas (the two `ValidateConfig`-internal sites are visible
   in the generated source, §3.2), and every dependency stays an immutable git pin.
-- **T5 — Dependency pins outside upstream tags.** Every circuit here is built on Clean, pinned to
-  upstream `Verified-zkEVM/clean` `main` (2026-09-16). From 2026-08 to 2026-09 that dependency was
-  a fork carrying two modifying changes; both are now pure additions in this project's `ToClean/`
-  library (no Clean declaration is modified); the first remains proposed upstream as Clean PR
-  #450, the second's PR #453 was closed unmerged on 2026-09-21:
-  (1) `AgreesBelowWithData`, the strengthening of `ProverEnvironment.AgreesBelow` that also
-  constrains a prover environment's committed `data` and `hint` — a bug fix rather than an
-  ergonomics request, since PR #450's `not_computable_from_cells_alone` proves the unstrengthened
-  obligation *false* for any witness generator reading committed data — carried here with the
-  matching `…ComputableWitnessesWithData` obligations and the honesty chain re-proved at the
-  strengthened predicate; (2) `WitgenIR.share`, the proven subterm-sharing pass for witness
-  programs (kernel-checked `WitgenIR.eval_share`), which the committed witness-export goldens
-  depend on. The one dependency not at an upstream revision is `lean-sail`: `dtumad/lean-sail`
-  `sp1-pin` is upstream tag `v5` plus a one-line `open` disambiguation (rems-project/lean-sail#14,
-  a Lean 4.33 linter fix with no semantic content); it returns to upstream when that merges. Full
-  disclosure, including the standing rule for what may be a temporary fork pin versus an additive
-  `ToClean/` file, is in `docs/agents/clean-upstream.md`; the pin table is in
-  `docs/release-audit.md`.
+- **T5 — Dependency pins outside upstream tags.** This draft pins the Clean construction fork
+  (`dtumad/clean`, `codex/construction-core`, based on upstream `fba2a29f`). Canonical agreement
+  preserves both fixed data and hints; the list/array generator and generic row/table/ensemble
+  builders replace four local duplicate modules. The fork adds no trust axioms. Its upstream
+  submission remains a merge gate; see `docs/agents/clean-upstream.md`. `WitgenIR.share` stays
+  an additive local pass with its kernel-checked evaluation theorem. The other temporary fork
+  is `lean-sail`: `dtumad/lean-sail` `sp1-pin` is tag `v5` plus the one-line disambiguation of
+  rems-project/lean-sail#14. Exact pins and trust consequences are in `docs/release-audit.md`.
 - **M1 — The semantic boundary binding.** Provider/boundary tables mean the selected program and
   initial state (`SP1SemanticBoundaryRelation`, §8.1). Its provider-content facts are to be
   derived from the exact upstream system tables (the `executionCase` obligation). Separately, the

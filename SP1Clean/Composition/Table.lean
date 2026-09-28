@@ -1,6 +1,6 @@
 import SP1Clean.Faithful.ChipOracle
 import SP1Clean.Model.CleanLedger
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # Transporting an extracted Rust table to a native Clean table
 

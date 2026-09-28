@@ -6,7 +6,7 @@ import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import SP1CleanTest.Core.HintReadFixtures
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # Executed instruction-to-host handoff regressions
 

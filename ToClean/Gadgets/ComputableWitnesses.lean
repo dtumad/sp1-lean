@@ -12,8 +12,7 @@ Clean's gadget library carries exactly one `ComputableWitnesses` instance in tre
 "any environment consistent with my generators satisfies my constraints" — which is enough to
 compose a circuit but not to *build* a row: an AIR trace-generation argument needs the environment
 Clean's array-backed interpreter actually produces, and `Circuit.witgen_usesLocalWitnesses` is
-gated on `ComputableWitnesses` (here at the strengthened `ComputableWitnessesWithData` of
-`ToClean.Circuit.AgreesBelowWithData`).
+gated on the canonical `ComputableWitnesses` of `Clean.Circuit.Subcircuit`.
 
 This file supplies the missing instances for the three gadgets a byte/range table provider
 composes. All three are honest for the same reason — their witness generators are witness-IR terms
@@ -49,7 +48,7 @@ input expression, so an environment agreeing on the input agrees on every declar
 tails — the per-bit boolean assertions (a `forEach` of zero-witness assertions) and the closing
 equality subcircuit — declare no cells at all. -/
 theorem toBits_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
-    (toBits n hn (p := p)).base.ComputableWitnessesWithData := by
+    (toBits n hn (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [toBits, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _ h_in => ?_,
@@ -60,7 +59,7 @@ theorem toBits_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
 /-- `rangeCheck` has computable witnesses: it is the assertion wrapper around `toBits`, whose own
 `ComputableWitnesses` dispatches the single composed subcircuit. -/
 theorem rangeCheck_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
-    (rangeCheck n hn (p := p)).base.ComputableWitnessesWithData := by
+    (rangeCheck n hn (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [rangeCheck, circuit_norm, Operations.forAllFlat, Operations.forAll]
   exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
@@ -76,7 +75,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (p > 512)]
 
 /-- `And8` has computable witnesses: its single cell is `x &&& y` over the two input cells, and the
 `ByteXorTable` lookup that certifies it declares none. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k ⟨x, y⟩ env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   intro _ ⟨hx, hy⟩
@@ -91,7 +90,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (p > 512)]
 
 /-- `Or8` has computable witnesses — the `And8` argument verbatim, at `|||`. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k ⟨x, y⟩ env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   intro _ ⟨hx, hy⟩

@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.Proofs.Chips.AddiChip.Witgen
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # `SP1Clean.AddiChip` — from trace events to a valid AIR table (the I-type template)
 

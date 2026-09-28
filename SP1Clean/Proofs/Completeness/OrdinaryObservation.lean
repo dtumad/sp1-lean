@@ -19,7 +19,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem zeroComputable :
-    (Gadgets.IsZeroField.circuit (F := ZMod p)).base.ComputableWitnessesWithData := by
+    (Gadgets.IsZeroField.circuit (F := ZMod p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [Gadgets.IsZeroField.circuit, circuit_norm, Operations.forAllFlat]
   refine ⟨fun _ h => ?_, fun below h => ?_,
@@ -32,7 +32,7 @@ private theorem zeroComputable :
 namespace ClockOrder
 
 /-- Clock comparison witnesses depend only on the input and previously generated cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   refine ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
@@ -75,7 +75,7 @@ private theorem eval_counter (env : Environment (ZMod p)) (input : Var Inputs (Z
 
 /-- All private cells are generated honestly by the existing clock and word gadgets. -/
 theorem computableWitnesses (enabled : Bool) :
-    (circuit (p := p) enabled).base.ComputableWitnessesWithData := by
+    (circuit (p := p) enabled).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   refine ⟨FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _

@@ -450,7 +450,8 @@ theorem SupportedCoreTraceWitness.memoryInitProviderTable_witness
     (trace : SupportedCoreTraceWitness p) :
     memoryInitProviderTable trace.witness = trace.providerTableFor .memoryInit := by
   unfold memoryInitProviderTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
+  simp [Air.Flat.EnsembleWitness.ofTables_tables,
+    SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
     SupportedCoreTraceWitness.providerTables, memoryInitProviderIndex, programProviderIndex,
     instructionTableCount,
     byteProviderTableCount, rangeProviderTableCount, InstructionChipId.all,
@@ -462,7 +463,8 @@ theorem SupportedCoreTraceWitness.memoryFinalizeProviderTable_witness
     memoryFinalizeProviderTable trace.witness =
       trace.providerTableFor .memoryFinalize := by
   unfold memoryFinalizeProviderTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
+  simp [Air.Flat.EnsembleWitness.ofTables_tables,
+    SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
     SupportedCoreTraceWitness.providerTables, memoryFinalizeProviderIndex,
     programProviderIndex, instructionTableCount, byteProviderTableCount,
     rangeProviderTableCount, InstructionChipId.all, ProviderTableId.all, ByteProviderId.all]

@@ -1,6 +1,6 @@
 import SP1Clean.Composition.Extracted
 import SP1Clean.Composition.ProviderSegment
-import ToClean.Air.EnsembleBuild
+import Clean.Air.EnsembleBuild
 
 /-! # Exact Core rows assembled as the native fifty-three-table ensemble
 

@@ -1,5 +1,5 @@
 import SP1Clean.Model.InteractionProjection
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # The literal Clean access ledger of a built table
 

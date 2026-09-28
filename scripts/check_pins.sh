@@ -97,7 +97,7 @@ for label, expected in expected_rows.items():
 # update, so gate it against the same resolved Clean revision.
 agents = open("AGENTS.md").read()
 agents_clean = re.search(
-    r"The Clean pin is upstream `main`\*\* \(`([0-9a-f]{40})`", agents, re.S)
+    r"The Clean pin\*\* is `([0-9a-f]{40})`", agents, re.S)
 if not agents_clean:
     err("AGENTS.md does not record the current Clean pin as a full 40-hex commit")
 elif agents_clean.group(1) != expected_rows["Clean pin"]:

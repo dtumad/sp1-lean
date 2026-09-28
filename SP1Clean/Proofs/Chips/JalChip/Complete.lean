@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Arith
 import SP1Clean.Proofs.Chips.JalChip.Witgen
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # `SP1Clean.JalChip` — from trace events to a valid AIR table
 

@@ -1,5 +1,5 @@
 import SP1Clean
-import ToClean.Circuit.WitnessGenerationData
+import Clean.Circuit.WitnessGeneration
 import SP1CleanTest.Core.Exportable
 import SP1CleanTest.TraceGenTests.TraceGenerator
 
@@ -332,11 +332,9 @@ def serializeHints (uses : List TableUse) (h : ProverHint Fp) : Json :=
       ("width", toJson u.width),
       ("rows", toJson ((h u.table u.width).toList.map fun v => v.toList.map ZMod.val))])
 
-/-- Clean's array-backed `FlatOperation.witgen` at the empty commitment, spelled through the
-data-carrying `ToClean` generalization: Clean's own `Circuit/WitnessGeneration.lean` is orphaned
-upstream (unwired, non-`module`), so the module-mode `ToClean` no longer reaches it. -/
+/-- Clean's canonical array-backed generator, retaining the empty commitment for chip exports. -/
 def witgen (hint : ProverHint Fp) (ops : List (FlatOperation Fp)) (init : Array Fp) : Array Fp :=
-  FlatOperation.witgenWithData (fun _ _ => #[]) hint ops init
+  FlatOperation.witgen hint ops init
 
 /-- The Lean reference witness evaluation over the shared flat operations. -/
 def expectedWitnessOf (flatShared : List (FlatOperation Fp)) (hint : ProverHint Fp)
@@ -488,10 +486,10 @@ def derivedPadChips : List String := ["ShiftLeft", "ShiftRight", "DivRem"]
 
 /-- Evaluate the symbolic Rust row at the generated witness cells (canonical values).
 The environment is exactly the one witness generation itself evaluates against
-(`witgenWithData_eq_dynamicWitnessesWithData`). -/
+(`witgen_eq_dynamicWitnesses`). -/
 def rowValsOf (rowMap : List (Expression Fp)) (cells : Array Fp) : List Nat :=
   let env :=
-    (ProverEnvironment.fromArrayWithData cells (fun _ _ => #[]) (ProverHint.empty Fp)).toEnvironment
+    (ProverEnvironment.fromArray cells (ProverHint.empty Fp)).toEnvironment
   rowMap.map fun ex => (Expression.eval env ex).val
 
 /-- First differing column of two equal-length rows, as `(column, lean, sp1)`. -/

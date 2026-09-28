@@ -339,7 +339,7 @@ A multi-opcode chip does not commit its variant selectors as `Inputs` columns: t
 chip's `ProverAssumptions` pins them against the row's own `is_real` — e.g. Bitwise's
 `is_real = f[0] + f[1] + f[2]`. So the hint is part of what a builder produces for a row, exactly
 as the input columns are, and it is **per row**: a table-level hint could not carry both a real
-row's one-hot flags and a padding row's zeros (`ToClean/Air/TableBuild.lean`, `Table.buildHinted`).
+row's one-hot flags and a padding row's zeros (`Clean/Air/TableBuild.lean`, `Table.buildHinted`).
 
 `hintAdd`/`flagHint` are the builder side of that. They are stated at an arbitrary read width `n`
 because `ProverHint` is dependently typed (`String → (n : ℕ) → Array (Vector F n)`) while each chip

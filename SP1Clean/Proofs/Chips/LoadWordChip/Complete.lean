@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Memory
 import SP1Clean.Proofs.Chips.LoadWordChip.Witgen
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # `SP1Clean.LoadWordChip` — from trace events to a valid AIR table (the memory template)
 

@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.Proofs.Chips.BitwiseChip.Witgen
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # `SP1Clean.BitwiseChip` — from trace events to a valid AIR table (the hint-flag template)
 

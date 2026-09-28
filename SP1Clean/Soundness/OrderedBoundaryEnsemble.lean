@@ -1,7 +1,7 @@
 import SP1Clean.Native.Operations.OrderedBoundaryVerifier
 import SP1Clean.Soundness.RankedGrounding
 import ToClean.Air.TransitionView
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # Ordered inventories from the actual Clean ensemble ledger
 

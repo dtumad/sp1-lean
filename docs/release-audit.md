@@ -36,7 +36,7 @@ No main-library proof is deferred. This audit found no `sorry`, `stop`, project 
 | SP1 description | `v6.4.0` |
 | SP1 extraction branch | `b5616f908c393d6050970630871f69afe233a21c` (`dtumad/lean-extraction`, `v6.4.0-10-gb5616f908`) |
 | mathlib pin | `0df444a360eaa60ab8c11dca51a86af692955474` (tag `v4.33.1`) |
-| Clean pin | `fba2a29f5e36420d797c1de118ac9f11f23b819e` (upstream `main`, 2026-09-16; the 2026-08 fork is retired — see below) |
+| Clean pin | `f2d0c2ac0499a428f98172eaad94420714e8aed6` (`dtumad/clean`, `codex/construction-core`; temporary draft migration) |
 | CompPoly pin | `a09455a22fea4623a2a1c5b363cf6efc61486a83` (tag `v4.33.1`; Clean's own dependency, Apache-2.0) |
 | Generated Sail model | sha256 `7426b9c3d35d1b625a1aa2a16248f8015f70acb80699dca3df552e8db2291af7` (161 files) — the in-tree `LeanRV64D/` + `LeanRV64D.lean` |
 | Sail compiler source | `41694abd58b27b687af5db275810dfeb8a88cfc0` (rems-project/sail, `sail2`) |
@@ -60,19 +60,14 @@ dependency was retired 2026-09-20: the RV64 reference functions the chip specs u
 `SP1Clean/Model/SailPure.lean`, and the equalities between them are proved in
 `SP1Clean/Proofs/Sail/RV64Bridge.lean`, so the ISA-equivalence chain has no third-party link.
 
-**`Clean` is upstream again.** From 2026-08 to 2026-09 the DSL was pinned to a fork
-(`dtumad/clean` `sp1-integration`, base upstream `0e53b9f2`) carrying two modifying changes; the
-2026-09 toolchain move retired it. Both changes are now pure additions in this repository's
-`ToClean/` library, so no Clean declaration is modified: `ToClean/Circuit/AgreesBelowWithData.lean`
-(the data/hint-preserving `AgreesBelowWithData` predicate, its `…ComputableWitnessesWithData`
-obligations and `FormalCircuitBase.computableWitnessesWithData_implies` — the fork's strengthening of
-Clean's `AgreesBelow`, needed rather than convenient: Clean PR #450's
-`not_computable_from_cells_alone` shows the unstrengthened obligation is **false** for any witness
-program reading `FExpr.dataGet`) and `ToClean/Circuit/WitgenShare.lean` (`WitgenIR.share`
-with its proven `WitgenIR.eval_share`, the subterm-sharing pass that takes the DivRem witness
-programs' wire format from 1.22 GB to 1.04 MB). Clean PR #450 remains the upstream proposal for
-the first; its acceptance deletes that file and repoints its importers. #453 (the sharing pass)
-was closed unmerged on 2026-09-21, so `WitgenShare.lean` is a permanent `ToClean/` addition.
+**`Clean` has a temporary construction fork pin in this draft.** It generalizes canonical
+`AgreesBelow` and witness generation to preserve fixed data/hints, and supplies proved generic
+row/table/ensemble construction. Four local duplicate modules are removed. The generated SP1
+rows and the 25 whole-chip faithfulness anchors are unchanged. This fork does not add axioms:
+construction proof reports permit only the standard logical axioms. The user authorized fork
+review and portable patches; upstream publication is still required by the merge gate in
+`agents/clean-upstream.md`. Keep the pin reachable and return to upstream after acceptance.
+The older `sp1-integration` fork remains retired; `ToClean/Circuit/WitgenShare.lean` remains local.
 
 **`lean-sail` is a documented temporary pin.** `dtumad/lean-sail` branch `sp1-pin` is tag `v5`
 plus one line — `open PreSail` → `open Sail.ConcurrencyInterfaceV1.PreSail` in `Sail/Sail.lean`,

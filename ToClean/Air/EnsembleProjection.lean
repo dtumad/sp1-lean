@@ -1,6 +1,6 @@
 module
 
-public import ToClean.Air.EnsembleBuild
+public import Clean.Air.EnsembleBuild
 
 /-! # Physical witness projection between flat ensembles
 

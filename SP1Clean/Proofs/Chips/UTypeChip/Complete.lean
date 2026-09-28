@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.Proofs.Chips.UTypeChip.Witgen
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # `SP1Clean.UTypeChip` — from trace events to a valid AIR table (the J-type template)
 

@@ -83,15 +83,14 @@ name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
 rev = "v4.33.1"
 
-# Clean, upstream `main` (`fba2a29f`, 2026-09-16, module-ified, `requiresModuleSystem`). The
-# 2026-08 fork is retired: what it modified (the `AgreesBelow` data/hint constraint, `WitgenIR.share`)
-# now lives as pure additions in `ToClean/`, so a pin bump is a rev change and nothing else.
-# History, the upstream PR queue, and the rule for what may go in a fork versus `ToClean/` are in
-# `docs/agents/clean-upstream.md`.
+# Temporary Clean construction fork, based on upstream main fba2a29f (Lean 4.33.1).
+# Canonical data-aware generation and generic builders replace four local duplicate modules.
+# Keep this migration draft until the upstream-submission merge gate in
+# `docs/agents/clean-upstream.md` is satisfied; keep the published pin reachable.
 [[require]]
 name = "Clean"
-git = "https://github.com/Verified-zkEVM/clean"
-rev = "fba2a29f5e36420d797c1de118ac9f11f23b819e"
+git = "https://github.com/dtumad/clean"
+rev = "f2d0c2ac0499a428f98172eaad94420714e8aed6"
 
 # lean-sail runtime: upstream release tag `v5` (`07946313`, the revision the in-tree generated
 # model pairs with — a v4-generated model against v5 fails with `unknown namespace

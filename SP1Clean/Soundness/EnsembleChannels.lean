@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.SP1Ensemble
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-!
 # Every table speaks only on the ensemble's channels

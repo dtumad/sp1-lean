@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.HaltChip.Formal
 import ToClean.Gadgets.ComputableWitnesses
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # Halt table: component, padding row, and honest witness generation
 
@@ -44,7 +44,7 @@ theorem spec_paddingInputs : Spec (paddingInputs (p := p)) := by
 
 /-- Halt has computable witnesses vacuously: the table declares no cells (its composed readers are
 zero-witness input-takers). -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := fun k input env env' =>
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := fun k input env env' =>
   Operations.forAllFlat_witnessCongr_of_localLength_zero _ _
     (by simp [circuit, main, Readers.CPUState.circuit, Readers.RegisterAccessCols.circuit,
       circuit_norm])

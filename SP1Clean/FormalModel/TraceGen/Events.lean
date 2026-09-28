@@ -4,7 +4,7 @@ import SP1Clean.Math.Word
 
 The completeness direction of the AIR needs a *source of rows*: a real SP1 execution produces a
 list of instruction events, SP1's `generate_trace` turns each into a row, and the AIR is supposed
-to hold on the result. `ToClean/Air/TableBuild.lean` supplies the generic half of that chain (a
+to hold on the result. `Clean/Air/TableBuild.lean` supplies the generic half of that chain (a
 component builds a valid row from any semantic input satisfying its `ProverAssumptions`); this
 directory supplies the SP1 half — the *event* a real trace is made of, the typed row it builds,
 and the proof that the built row satisfies the chip's `ProverAssumptions`.

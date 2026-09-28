@@ -27,7 +27,7 @@ import SP1Clean.Proofs.Chips.StoreDoubleChip.Complete
 import SP1Clean.Proofs.Chips.MulChip.Complete
 import SP1Clean.Proofs.Chips.DivRemChip.Complete
 import SP1Clean.Proofs.Chips.AluX0Chip.Complete
-import ToClean.Air.EnsembleBuild
+import Clean.Air.EnsembleBuild
 
 /-! # Assembling one shard's AIR witness from a generated trace
 

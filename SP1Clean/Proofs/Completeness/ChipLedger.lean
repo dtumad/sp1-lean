@@ -158,7 +158,8 @@ theorem SupportedCoreTraceWitness.haltTable_witness
     (trace : SupportedCoreTraceWitness p) :
     haltTable trace.witness = trace.providerTableFor .halt := by
   unfold haltTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
+  simp [Air.Flat.EnsembleWitness.ofTables_tables,
+    SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
     SupportedCoreTraceWitness.providerTables, haltIndex, instructionTableCount,
     stateSilentProviderTableCount, InstructionChipId.all, ProviderTableId.all,
     ByteProviderId.all]

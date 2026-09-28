@@ -29,7 +29,8 @@ theorem SupportedCoreTraceWitness.stateBumpTable_witness
     (trace : SupportedCoreTraceWitness p) :
     stateBumpTable trace.witness = trace.providerTableFor .stateBump := by
   unfold stateBumpTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
+  simp [Air.Flat.EnsembleWitness.ofTables_tables,
+    SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
     SupportedCoreTraceWitness.providerTables, stateBumpIndex, instructionTableCount,
     stateSilentProviderTableCount, InstructionChipId.all, ProviderTableId.all,
     ByteProviderId.all]

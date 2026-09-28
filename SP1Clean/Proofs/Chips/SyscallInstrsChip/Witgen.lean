@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # `SyscallInstrs` table: component and (for now empty) witness generation
 

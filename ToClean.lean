@@ -8,14 +8,11 @@ public import ToClean.Air.TableSlot
 public import ToClean.Circuit.WitnessCombinator
 public import ToClean.Circuit.WitgenBridge
 public import ToClean.Circuit.WitgenEval
-public import ToClean.Circuit.WitnessGenerationData
-public import ToClean.Circuit.AgreesBelowWithData
 public import ToClean.Circuit.IteDecide
 public import ToClean.Circuit.WitgenShare
 public import ToClean.Circuit.InteractionRecovery
 public import ToClean.Circuit.EmittedInteraction
 public import ToClean.Gadgets.ComputableWitnesses
-public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension
 public import ToClean.Air.PublicVerifier
 public import ToClean.Air.Footprint
@@ -25,7 +22,6 @@ public import ToClean.Air.CompleteEnsemble
 public import ToClean.Air.ComponentOutput
 public import ToClean.Air.EnsembleExport
 public import ToClean.Circuit.StaticTable
-public import ToClean.Air.TableBuild
 public import ToClean.Air.UnitBalance
 public import ToClean.Air.TransitionView
 public import ToClean.Air.ReceiverView

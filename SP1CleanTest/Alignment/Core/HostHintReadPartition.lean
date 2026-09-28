@@ -9,10 +9,10 @@ import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.Soundness.HostQueueCPUReplay
 import SP1Clean.Soundness.HostHintReadCPUMemory
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
-import ToClean.Air.EnsembleBuild
+import Clean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # Executed shared HINT_READ table selection
 

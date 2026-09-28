@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.NativeCoreEnsemble
-import ToClean.Air.EnsembleBuild
+import Clean.Air.EnsembleBuild
 
 /-! # Authenticated boundaries from the combined native AIR
 

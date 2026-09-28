@@ -1,14 +1,18 @@
 # Clean upstream — the pin, the split rule, and the PR queue
 
 This project builds on the [Clean](https://github.com/Verified-zkEVM/clean) zk-circuit DSL. The
-dependency is pinned to upstream `main` (`fba2a29f5e36420d797c1de118ac9f11f23b819e`, 2026-09-16,
-Lean v4.33.1). From 2026-08-13 to the 2026-09 toolchain move it was pinned to a **fork**
-(`dtumad/clean` `sp1-integration`, base upstream `0e53b9f2`, rev `2dad7788d5…`), because two of the
-changes below modify existing Clean declarations; the move re-derived both as pure additions
-(`ToClean/Circuit/AgreesBelowWithData.lean`, `ToClean/Circuit/WitgenShare.lean`) so the fork could
-be retired without waiting on the upstream PRs. This file records the split rule, the retired
-fork's state (kept for the PR queue's provenance), and the queue of changes with the measurements
-that justify each one.
+dependency in this draft migration is temporarily pinned to `dtumad/clean`
+`codex/construction-core` at `f2d0c2ac0499a428f98172eaad94420714e8aed6`, based on upstream
+`fba2a29f5e36420d797c1de118ac9f11f23b819e` (Lean v4.33.1). The canonical generator now
+preserves fixed data and hints; the generic row/table/ensemble builders live in Clean.
+Four duplicated local modules have been removed. The older `sp1-integration` fork remains retired;
+`ToClean/Circuit/WitgenShare.lean` remains an independent additive sharing pass.
+
+**Merge gate:** the user authorized fork PRs and upstream-ready patches, not upstream submission.
+This migration stays draft until the canonical changes have the upstream PR coverage required by
+the standing split below. Do not merge it merely because the fork builds. Keep the published pin
+reachable and re-pin to upstream when the canonical changes are accepted. See the construction
+handoff for exact review branches, validation, and the separate Lean 4.32.2 scheduler adapter.
 
 Reader-facing trust consequence: `../release-audit.md` § "Audited sources". The short version of the
 rule also lives in `../../AGENTS.md` § "Clean-native principles".
@@ -20,11 +24,10 @@ life.** It *cannot* be shimmed in `ToClean/` when a Clean theorem downstream of 
 needed at the modified declaration, because that theorem refers to Clean's declaration and not to
 our copy. `AgreesBelow` was the worked example — a local copy carrying the two extra conjuncts
 yields a *weaker* `ComputableWitnesses` obligation, and Clean's `witgen_usesLocalWitnesses` needs
-the stronger one. What retired the fork is that the SP1 development does not need Clean's
-`witgen_usesLocalWitnesses` at the strengthened predicate: the honesty chain it uses is re-proved
-at `AgreesBelowWithData` in `ToClean/Circuit/WitnessGenerationData.lean` (each proof Clean's own
-plus the parameter), so the strengthened predicate is a pure addition after all. Check that before
-queueing anything as a fork change.
+the stronger one. The previous additive workaround re-proved the honesty chain under duplicate `WithData` names.
+The construction migration deliberately removes that duplication and consumes the canonical
+Clean proofs. Its fork-only publication is an explicit draft-stage exception, not satisfaction
+of the upstream-submission merge gate.
 
 **Pure addition → `ToClean/`.** No pin bump, and acceptance upstream is a plain deletion plus a
 repoint of importers to `Clean.*`. Current residents: `Circuit/WitgenBridge` (the zero-witness
@@ -50,11 +53,11 @@ this category: upstreaming them is courtesy, not a blocker, and they stay local.
 
 | | |
 |---|---|
-| Pinned | upstream `Verified-zkEVM/clean` `main` at `fba2a29f5e36420d797c1de118ac9f11f23b819e` (2026-09-16; module-ified, `requiresModuleSystem` — the package sets `allowNonModules = true`), with its `CompPoly` dependency |
+| Pinned | `dtumad/clean` `codex/construction-core` at `f2d0c2ac0499a428f98172eaad94420714e8aed6`; temporary draft migration, unchanged Lean/CompPoly pins |
 | Retired fork | `https://github.com/dtumad/clean`, branch `sp1-integration` = upstream `0e53b9f2` (v4.32.2) + the `agreesbelow-data-hint` and `witgen-share` branches; last pinned rev `2dad7788d58b09eabeb3898506e4cb896e5d3e9d` (2026-08-13 → 2026-09-20) |
 | Toolchain | `leanprover/lean4:v4.33.1` — identical to Clean `main`'s |
 
-If a future change ever needs a fork pin again, the branch **must keep the pinned rev reachable**:
+The construction fork branch **must keep the pinned rev reachable**:
 Lake clones `refs/heads/*` plus tags and then checks out, so a commit living only on `refs/pull/*`
 fails with `fatal: unable to read tree` on every machine without a warm cache. Never force-push or
 delete such a branch. Pin it for the life of the upstream PR only, document it in
@@ -62,8 +65,8 @@ delete such a branch. Pin it for the life of the upstream PR only, document it i
 `lean-sail-notes.md`).
 
 **Exit condition of the retired fork — met 2026-09-20.** The two branches are re-derived as `ToClean/`
-additions; PR #450 stays open as the upstream proposal whose acceptance deletes
-`AgreesBelowWithData.lean`; PR #453 was closed unmerged on 2026-09-21 (no review received), so
+additions. The later construction migration has removed the additive agreement module; PR #450
+remains the upstream agreement proposal; PR #453 was closed unmerged on 2026-09-21 (no review received), so
 `WitgenShare.lean` stays.
 
 ### Branch → PR map
@@ -73,7 +76,7 @@ additions; PR #450 stays open as the upstream proposal whose acceptance deletes
 | `agreesbelow-data-hint` | U1 — `AgreesBelow` constrains `data`/`hint` | **[#450](https://github.com/Verified-zkEVM/clean/pull/450) — open, approved 2026-08-14, pending merge** | in `sp1-integration` |
 | `witgen-share` | U11 — `WitgenIR.share` subterm sharing + proven `eval_share` (the wire format has `steps`/`localVar` sharing but nothing produced it; without the pass, SP1's DivRem witness programs serialize to 1.22 GB — 1.04 MB with it), plus the two PR riders: the scoped `Hashable` instance and `doc/witgen-wire-format.md`. Adjacent upstream context: issue #404 (the requested Rust interpreter needs shared programs to evaluate at sane cost) | [#453](https://github.com/Verified-zkEVM/clean/pull/453) — filed as a draft rebased onto `agent/fixed-columns-prover-data` @ `89e9abec`, gated by `shareIfSmaller` (see U11); **closed unmerged 2026-09-21** | first 2 commits in `sp1-integration`; riders on the branch only |
 | `u64wrap-prefilter` | U3 — two `u64Wrap` screens | — | **not merged**; pushed as a record of a rejected approach (see U3) |
-| *(unfiled)* | **U12 — thread `ProverData` through witness generation.** `ProverEnvironment.fromArray`/`fromList` hard-code `data _ _ := #[]`, so `Circuit.witgen_usesLocalWitnesses` — the theorem that makes array-backed witness generation *honest* — is available only at the **empty** commitment. Any consumer that builds an AIR `Table` needs it at the table's real `data`, and the fact cannot be transported across a change of `data`: witness IR has `FExpr.dataGet`, and `AgreesBelow` deliberately refuses to identify environments committing different data (`Clean/Examples/DataWitness.lean`'s `not_computable_from_cells_alone` is the falseness witness). Clean's own module docstring records the omission as deferred. Staged additively as `ToClean/Circuit/WitnessGenerationData.lean` (`witgenWithData` + the chain, each proof Clean's own plus the parameter). **Upstream this is a generalization of existing declarations — add the argument in place — so by the standing split it belongs in the fork, not `ToClean/`, and the `WithData` suffix disappears on acceptance.** Found 2026-08-22 while building the W4 completeness substrate. | — | **not filed** |
+| `codex/construction-generator` | **U12 — thread fixed `ProverData` through canonical witness generation.** The construction fork generalizes the existing list/array functions with default-empty data, adapts #450 agreement, and proves array/list equality and honesty. The SP1 migration deletes `WitnessGenerationData.lean`; callers use `(data:=data)`. | [fork #1](https://github.com/dtumad/clean/pull/1) | draft; upstream-ready, not submitted upstream |
 
 A branch reaching `sp1-integration` means it earned its way there: Clean's own suite green *and* a
 measured effect on local chip work. `u64wrap-prefilter` cleared the first bar and failed the second,

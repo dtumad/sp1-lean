@@ -38,7 +38,8 @@ theorem SupportedCoreTraceWitness.programProviderTable_witness
     (trace : SupportedCoreTraceWitness p) :
     programProviderTable trace.witness = trace.providerTableFor .program := by
   unfold programProviderTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
+  simp [Air.Flat.EnsembleWitness.ofTables_tables,
+    SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
     SupportedCoreTraceWitness.providerTables, programProviderIndex, instructionTableCount,
     byteProviderTableCount, rangeProviderTableCount, InstructionChipId.all, ProviderTableId.all,
     ByteProviderId.all]

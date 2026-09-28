@@ -4,7 +4,7 @@ import SP1Clean.Faithful.StateBumpChip
 import SP1Clean.Composition.Table
 import SP1Clean.Proofs.Chips.HaltChip.Witgen
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # Exact Core system tables transported to native Clean tables
 

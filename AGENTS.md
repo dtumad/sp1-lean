@@ -134,8 +134,8 @@ refinement; only their `_of_obligations` combinators are currently declared.
   `lake serve`** — that is the `lean-lsp` MCP server, and killing it drops the MCP connection for the whole
   session. *Build workers* carry no `--worker` token, so use `ps -ef | grep tstack` for build liveness, and
   `sample <pid>` (not RSS — a healthy run also plateaus at ~3.2 GB) to tell a hang from progress.
-- **Toolchain:** `lean-toolchain` and mathlib are `v4.33.1`; Clean is upstream `main`
-  (`fba2a29f`, module-ified — the package sets `allowNonModules = true` until the `SP1Clean/`
+- **Toolchain:** `lean-toolchain` and mathlib are `v4.33.1`; Clean is the documented temporary construction fork
+  (`f2d0c2ac`, module-ified — the package sets `allowNonModules = true` until the `SP1Clean/`
   tree migrates) with its `CompPoly` dependency; PolyFun is `997828ce` (its last v4.33.1
   commit); lean-sail is the documented temporary pin `dtumad/lean-sail` `sp1-pin` (= `v5` + the
   one-line `ambiguousOpen` fix of rems-project/lean-sail#14, re-pinned to upstream when that
@@ -491,11 +491,9 @@ local checkout: Clean is a pinned **git** dependency, and a local sibling path m
 permanent docs or into `lakefile.toml`. (The pin can still lag upstream `main`; if a doc named below is
 missing from `.lake/packages/Clean`, read it on GitHub.)
 
-**The Clean pin is upstream `main`** (`fba2a29f5e36420d797c1de118ac9f11f23b819e`, 2026-09-16); the
-2026-08 fork (`dtumad/clean` `sp1-integration`) was retired in the 2026-09 toolchain move — its
-two modifying changes are re-derived as pure additions (`ToClean/Circuit/AgreesBelowWithData.lean`,
-`ToClean/Circuit/WitgenShare.lean`; Clean PR #450 remains the upstream proposal for the first,
-#453 for the second was closed unmerged 2026-09-21 — the sharing pass is ours to keep). The
+**The Clean pin** is `f2d0c2ac0499a428f98172eaad94420714e8aed6` (temporary
+`dtumad/clean` `codex/construction-core`, based on upstream `fba2a29f`). Canonical data-aware generation and generic row/table/ensemble builders replace
+four local duplicate modules. `ToClean/Circuit/WitgenShare.lean` remains additive. The
 **standing split** still applies: a change that MODIFIES an existing Clean declaration cannot be
 shimmed in `ToClean/` (downstream Clean theorems refer to Clean's declaration, not ours) and needs
 an upstream PR — pin a fork branch only for the life of that PR, documented as such; a **pure

@@ -238,7 +238,7 @@ def main (args : List String) : IO UInt32 := do
       costs := costs ++ [← BackendGadgets.exportGadget directory gadget]
     BackendGadgets.writeJson (directory / "manifest.json") (Lean.Json.mkObj [
       ("field", Lean.toJson "BN254 scalar field"), ("prime", BackendGadgets.jsonNat BackendGadgets.prime),
-      ("cleanRevision", Lean.toJson "fba2a29f5e36420d797c1de118ac9f11f23b819e"),
+      ("cleanRevision", Lean.toJson "f2d0c2ac0499a428f98172eaad94420714e8aed6"),
       ("snarkjs", Lean.toJson "0.7.6"), ("numWords", Lean.toJson (4 : Nat)),
       ("claim", Lean.toJson "standalone backend conformance; not a verified backend or ensemble export"),
       ("gadgets", Lean.toJson costs), ("rejected", rejected)])

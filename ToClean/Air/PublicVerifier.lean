@@ -1,6 +1,6 @@
 module
 
-public import ToClean.Air.EnsembleBuild
+public import Clean.Air.EnsembleBuild
 public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Silent public checks in an ensemble verifier

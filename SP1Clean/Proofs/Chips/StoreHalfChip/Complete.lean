@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Memory
 import SP1Clean.Proofs.Chips.StoreHalfChip.Witgen
-import ToClean.Air.TableBuild
+import Clean.Air.TableBuild
 
 /-! # `SP1Clean.StoreHalfChip` — from trace events to a valid AIR table
 

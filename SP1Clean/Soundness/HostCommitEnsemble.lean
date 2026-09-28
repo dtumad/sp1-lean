@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.HostCommitBank
-import ToClean.Air.EnsembleBuild
+import Clean.Air.EnsembleBuild
 
 /-! # A commitment bank bound by its actual Clean verifier
 
