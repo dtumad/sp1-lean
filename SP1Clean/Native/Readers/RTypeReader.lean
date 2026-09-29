@@ -3,7 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Extracted.RTypeReader
+import SP1Clean.Circuits.Types.RTypeReader
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -31,7 +31,7 @@ so this reader emits no Clean lookup for them. The genuine per-row constraints i
 - the four `op_a_0 * op_a_write_value[i] = 0` gates (the `rd = x0` zeroing rule).
 
 It is a **zero-witness** `GeneralFormalCircuit` (`Unit` output): the chip threads the whole
-`Extracted.RTypeReader` column struct in as the `cols` input, and the reader composes a
+`Circuits.Types.RTypeReader` column struct in as the `cols` input, and the reader composes a
 `RegisterAccessCols.circuit` per operand over the six register-access columns — every sub-circuit a
 true Clean `subcircuit` boundary. The cross-block inputs: `clk_low` (the recombined low clock, from the
 CPUState block) and the four `op_a_write_value` limbs (`wv0..wv3`, the ALU result, for the `op_a_0`
@@ -49,7 +49,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- Component-wise evaluation of the canonical R-type reader row.  Kept beside the native reader so
 soundness and faithfulness clients share one folded evaluator boundary. -/
 @[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a,
          op_a_memory := Eval.eval env cols.op_a_memory,
@@ -57,27 +57,27 @@ soundness and faithfulness clients share one folded evaluator boundary. -/
          op_b := Eval.eval env cols.op_b,
          op_b_memory := Eval.eval env cols.op_b_memory,
          op_c := Eval.eval env cols.op_c,
-         op_c_memory := Eval.eval env cols.op_c_memory } : Extracted.RTypeReader F) := by
+         op_c_memory := Eval.eval env cols.op_c_memory } : Circuits.Types.RTypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 /-- Component-wise evaluation of one nested register-access block. -/
 @[circuit_norm] theorem eval_registerAccessCols {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RegisterAccessCols (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value,
          access_timestamp := Eval.eval env cols.access_timestamp } :
-        Extracted.RegisterAccessCols F) := by
+        Circuits.Types.RegisterAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 /-- Component-wise evaluation of the innermost register timestamp block. -/
 @[circuit_norm] theorem eval_registerAccessTimestamp {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RegisterAccessTimestamp (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RegisterAccessTimestamp (Expression F)) :
     Eval.eval env cols =
       ({ prev_low := Eval.eval env cols.prev_low,
          diff_low_limb := Eval.eval env cols.diff_low_limb } :
-        Extracted.RegisterAccessTimestamp F) := by
+        Circuits.Types.RegisterAccessTimestamp F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -87,7 +87,7 @@ loose block.  Going through `simp only [circuit_norm]` instead blows the heartbe
 folded `rw` chain is what keeps the nested `Eval.eval` opaque. -/
 
 private theorem evalPrevLow_aux {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RegisterAccessCols (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     (Eval.eval env cols).access_timestamp.prev_low =
       Expression.eval env cols.access_timestamp.prev_low := by
   calc
@@ -96,7 +96,7 @@ private theorem evalPrevLow_aux {F : Type} [FiniteField F]
     _ = _ := by simp only [circuit_norm]
 
 private theorem evalDiffLow_aux {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RegisterAccessCols (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     (Eval.eval env cols).access_timestamp.diff_low_limb =
       Expression.eval env cols.access_timestamp.diff_low_limb := by
   calc
@@ -106,47 +106,47 @@ private theorem evalDiffLow_aux {F : Type} [FiniteField F]
 
 /-- Evaluation of the canonical zero-register indicator through the folded reader row. -/
 @[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_a_0 = Expression.eval env cols.op_a_0 := by
   simp only [circuit_norm]
 
 @[circuit_norm] theorem eval_opAPrevLow {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_a_memory.access_timestamp.prev_low =
       Expression.eval env cols.op_a_memory.access_timestamp.prev_low := by
   rw [eval_cols]
   exact evalPrevLow_aux env cols.op_a_memory
 
 @[circuit_norm] theorem eval_opADiffLow {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_a_memory.access_timestamp.diff_low_limb =
       Expression.eval env cols.op_a_memory.access_timestamp.diff_low_limb := by
   rw [eval_cols]
   exact evalDiffLow_aux env cols.op_a_memory
 
 @[circuit_norm] theorem eval_opBPrevLow {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_b_memory.access_timestamp.prev_low =
       Expression.eval env cols.op_b_memory.access_timestamp.prev_low := by
   rw [eval_cols]
   exact evalPrevLow_aux env cols.op_b_memory
 
 @[circuit_norm] theorem eval_opBDiffLow {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_b_memory.access_timestamp.diff_low_limb =
       Expression.eval env cols.op_b_memory.access_timestamp.diff_low_limb := by
   rw [eval_cols]
   exact evalDiffLow_aux env cols.op_b_memory
 
 @[circuit_norm] theorem eval_opCPrevLow {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_c_memory.access_timestamp.prev_low =
       Expression.eval env cols.op_c_memory.access_timestamp.prev_low := by
   rw [eval_cols]
   exact evalPrevLow_aux env cols.op_c_memory
 
 @[circuit_norm] theorem eval_opCDiffLow {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_c_memory.access_timestamp.diff_low_limb =
       Expression.eval env cols.op_c_memory.access_timestamp.diff_low_limb := by
   rw [eval_cols]
@@ -154,9 +154,9 @@ private theorem evalDiffLow_aux {F : Type} [FiniteField F]
 
 /-- Witness the four scalar adapter columns (`op_a`, `op_a_0`, `op_b`, `op_c`, all `0`) and compose a
 `RegisterAccessCols.circuit` per operand (access clocks `clk_low + 4/3/2`) — emitting columns in the
-`Extracted.RTypeReader` field order so the assembled output's offsets line up. Then impose the four
+`Circuits.Types.RTypeReader` field order so the assembled output's offsets line up. Then impose the four
 `op_a_0` zeroing gates (unconditional `assertZero`, matching SP1's bare gates). Returns the assembled
-`Extracted.RTypeReader` column struct. -/
+`Circuits.Types.RTypeReader` column struct. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   let cols := input.cols
   -- The adapter block `cols` is an **input** (the composing chip witnesses it); this reader witnesses

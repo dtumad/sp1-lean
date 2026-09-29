@@ -26,6 +26,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -33,7 +34,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- **Faithfulness anchor.** SP1's `U16CompareOperation` constraint list holds iff the native
 gadget's `RawSpec` holds. -/
 theorem u16compare_constraints_faithful (a b : ZMod p)
-    (cols : Extracted.U16CompareOperation (ZMod p)) :
+    (cols : Circuits.Types.U16CompareOperation (ZMod p)) :
     (List.Forall (· = 0) (Extracted.U16CompareOperation.asserts a b cols 1) ∧
       List.Forall Interaction.toProp (Extracted.U16CompareOperation.interactions a b cols 1)) ↔
       SP1Clean.U16CompareOperation.RawSpec a b cols := by
@@ -45,10 +46,10 @@ theorem u16compare_constraints_faithful (a b : ZMod p)
 
 @[circuit_norm] theorem eval_u16CompareColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16CompareOperation (Expression F)) :
+    (cols : Circuits.Types.U16CompareOperation (Expression F)) :
     Eval.eval env cols =
       ({ bit := Eval.eval env cols.bit } :
-        Extracted.U16CompareOperation F) := by
+        Circuits.Types.U16CompareOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -83,7 +84,7 @@ and the Clean circuit's emitted byte interaction project to the **same** `Lookup
 (another computed-expression leaf). -/
 theorem u16compare_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var SP1Clean.U16CompareOperation.Inputs (ZMod p)) (offset : ℕ)
-    (a b is_real : ZMod p) (cols : Extracted.U16CompareOperation (ZMod p))
+    (a b is_real : ZMod p) (cols : Circuits.Types.U16CompareOperation (ZMod p))
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_a : Expression.eval env input.a = a)
     (h_b : Expression.eval env input.b = b)

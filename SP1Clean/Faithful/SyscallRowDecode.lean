@@ -15,6 +15,7 @@ vector and the event type — not the other system tables the exact relation ass
 namespace SP1Clean.CoreAIR.Current
 
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

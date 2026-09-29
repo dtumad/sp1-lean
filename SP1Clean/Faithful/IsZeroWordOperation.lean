@@ -27,6 +27,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -35,7 +36,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- **Faithfulness anchor.** SP1's `IsZeroWordOperation` constraint list holds iff the native
 gadget's `RawSpec` holds. (No range bounds, so `NeZero p` follows from primality.) -/
 theorem isZeroWord_constraints_faithful (a : Word (ZMod p))
-    (cols : Extracted.IsZeroWordOperation (ZMod p)) :
+    (cols : Circuits.Types.IsZeroWordOperation (ZMod p)) :
     (List.Forall (· = 0) (Extracted.IsZeroWordOperation.asserts a cols 1) ∧
       List.Forall Interaction.toProp (Extracted.IsZeroWordOperation.interactions a cols 1)) ↔
       SP1Clean.IsZeroWordOperation.RawSpec a cols := by
@@ -52,7 +53,7 @@ theorem isZeroWord_constraints_faithful (a : Word (ZMod p))
 omit [Fact (2 ^ 17 < p)] in
 @[circuit_norm] theorem eval_isZeroWordColumns
     (env : Environment (ZMod p))
-    (cols : Extracted.IsZeroWordOperation (Expression (ZMod p))) :
+    (cols : Circuits.Types.IsZeroWordOperation (Expression (ZMod p))) :
     Eval.eval env cols =
       ({ is_zero_limb_0 := Eval.eval env cols.is_zero_limb_0
          is_zero_limb_1 := Eval.eval env cols.is_zero_limb_1
@@ -63,7 +64,7 @@ omit [Fact (2 ^ 17 < p)] in
          is_zero_second_half :=
            Expression.eval env cols.is_zero_second_half
          result := Expression.eval env cols.result } :
-        Extracted.IsZeroWordOperation (ZMod p)) := by
+        Circuits.Types.IsZeroWordOperation (ZMod p)) := by
   provable_struct_simp
 
 private def isZeroWordChild
@@ -176,7 +177,7 @@ omit [Fact (2 ^ 17 < p)] in
 interactions, matching SP1's empty extracted `interactions` (the four composed `IsZero` lists are each `[]`). -/
 theorem isZeroWord_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var SP1Clean.IsZeroWordOperation.Inputs (ZMod p)) (offset : ℕ)
-    (a : Word (ZMod p)) (is_real : ZMod p) (cols : Extracted.IsZeroWordOperation (ZMod p)) :
+    (a : Word (ZMod p)) (is_real : ZMod p) (cols : Circuits.Types.IsZeroWordOperation (ZMod p)) :
     (Extracted.IsZeroWordOperation.interactions a cols is_real).map Extracted.Interaction.toAccess
       = (((SP1Clean.IsZeroWordOperation.main input).operations offset).interactionsWith
           byteChannel.toRaw).map (AbstractInteraction.toAccess env) := by

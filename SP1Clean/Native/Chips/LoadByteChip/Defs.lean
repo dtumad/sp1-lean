@@ -33,15 +33,15 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native LoadByte-chip row (Rust field order). The reader and memory blocks reuse the project
-substrate (`Extracted.AddressOperation` is still a standalone generated module — the other loads and
-stores compose the same gadget; `Extracted.MemoryAccessCols` lives in the generated `MemoryAccess`
+substrate (`Circuits.Types.AddressOperation` is still a standalone generated module — the other loads and
+stores compose the same gadget; `Circuits.Types.MemoryAccessCols` lives in the generated `MemoryAccess`
 struct carrier). `Faithful.LoadByteChip.loadByteChipReconfigure` is the sole bridge to Rust's
 separately generated whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
-  address_operation : Extracted.AddressOperation F
-  memory_access : Extracted.MemoryAccessCols F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
+  address_operation : Circuits.Types.AddressOperation F
+  memory_access : Circuits.Types.MemoryAccessCols F
   offset_bit : Vector F 3
   selected_limb : F
   selected_limb_low_byte : F
@@ -55,9 +55,9 @@ provable_struct_eval_lemmas Columns
 structure Inputs (F : Type) where
   is_lb : F
   is_lbu : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
-  memory_access : Extracted.MemoryAccessCols F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
+  memory_access : Circuits.Types.MemoryAccessCols F
   offset_bit : fields 3 F
   selected_limb : F
   selected_limb_low_byte : F
@@ -85,7 +85,7 @@ provable_struct_eval_lemmas Inputs
   rw [ProvableStruct.eval_eq_eval]; rfl
 
 
-@[reducible] def clkLow (state : Extracted.CPUState (ZMod p)) : ZMod p :=
+@[reducible] def clkLow (state : Circuits.Types.CPUState (ZMod p)) : ZMod p :=
   state.clk_0_16 + state.clk_16_24 * 65536
 
 @[reducible] def isReal (input : Inputs (ZMod p)) : ZMod p := input.is_lb + input.is_lbu

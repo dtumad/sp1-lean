@@ -22,7 +22,7 @@ private theorem halt_register_current {row : HaltChip.Inputs (ZMod p)}
     {trajectory : Trajectory} {initial state : SailState} {timeline : Timeline} {n : ℕ}
     (before : trajectory n = some state)
     (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n)
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : BitVec 5)
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : BitVec 5)
     (current : LocalValueAtG trajectory initial timeline
       (MemoryMsg.locOf (HaltChip.memPulledMessage row block idx.toNat))
       (StateMsg.timeNat (HaltChip.statePulledMessage row)) block.prev_value) :

@@ -1,5 +1,4 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.SystemOracle.SyscallInstrs
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.FormalModel.Contracts.Operations
 import Clean.Utils.Tactics.ProvableStructDeriving
@@ -57,7 +56,7 @@ Every other identifier is a *generic* syscall, dispatched over the syscall bus. 
 
 namespace SP1Clean.SyscallInstrsChip
 
-open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.IsZeroOperation
+import SP1Clean.Circuits.Types.IsZeroOperation
 import Mathlib.Tactic.LinearCombination
 
 /-! # `IsZeroOperation` — the arithmetic core (`AssertSpec` + the zero-test lemma)
@@ -22,19 +22,19 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- **Assertion half** — the literal meaning of SP1's `IsZeroOperation` `asserts` list at
 `is_real = 1`, stated against the result columns: `result = 1 - inverse*a`, `result` boolean, and
 `result * a = 0`. (`IsZero` has no bus interactions, so this is the whole structural spec.) -/
-def AssertSpec (a : ZMod p) (cols : Extracted.IsZeroOperation (ZMod p)) : Prop :=
+def AssertSpec (a : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) : Prop :=
   ((1 - cols.inverse * a) - cols.result = 0) ∧
   (cols.result = 0 ∨ cols.result = 1) ∧
   (cols.result * a = 0)
 
 /-- **Interaction half** — trivial: `IsZeroOperation` emits no bus interactions. -/
-def InteractSpec (_a : ZMod p) (_cols : Extracted.IsZeroOperation (ZMod p)) : Prop := True
+def InteractSpec (_a : ZMod p) (_cols : Circuits.Types.IsZeroOperation (ZMod p)) : Prop := True
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Soundness core: `AssertSpec` forces `result` to be the zero indicator of `a`. On `a = 0` the
 defining equation gives `result = 1`; on `a ≠ 0` the `result * a = 0` constraint forces `result = 0`
 (via `mul_inv_cancel₀`, since `mul_eq_zero` won't fire on `ZMod p`). -/
-theorem isZero_of_assert {a : ZMod p} {cols : Extracted.IsZeroOperation (ZMod p)}
+theorem isZero_of_assert {a : ZMod p} {cols : Circuits.Types.IsZeroOperation (ZMod p)}
     (h_assert : AssertSpec a cols) :
     cols.result = if a = 0 then 1 else 0 := by
   obtain ⟨h_eq, _, h_mul⟩ := h_assert
@@ -50,7 +50,7 @@ theorem isZero_of_assert {a : ZMod p} {cols : Extracted.IsZeroOperation (ZMod p)
 omit [Fact (2 ^ 17 < p)] in
 /-- On `a ≠ 0`, `AssertSpec` pins `inverse` to `a⁻¹` (the defining equation with `result = 0`). The
 composing word-level completeness needs this to reconstruct the gated inverse column. -/
-theorem inverse_of_assert {a : ZMod p} {cols : Extracted.IsZeroOperation (ZMod p)}
+theorem inverse_of_assert {a : ZMod p} {cols : Circuits.Types.IsZeroOperation (ZMod p)}
     (h_assert : AssertSpec a cols) (ha : a ≠ 0) : cols.inverse * a = 1 := by
   have hr : cols.result = 0 := by
     have := isZero_of_assert h_assert; rwa [if_neg ha] at this
@@ -60,14 +60,14 @@ theorem inverse_of_assert {a : ZMod p} {cols : Extracted.IsZeroOperation (ZMod p
 
 /-- Alias for `AssertSpec` — composing ops and faithfulness anchors `simp` on `IsZeroOperation.RawSpec`;
 keeping this alias means they build without change. Defeq to `AssertSpec` (`IsZero` has no interactions). -/
-def RawSpec (a : ZMod p) (cols : Extracted.IsZeroOperation (ZMod p)) : Prop :=
+def RawSpec (a : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) : Prop :=
   ((1 - cols.inverse * a) - cols.result = 0) ∧
   (cols.result = 0 ∨ cols.result = 1) ∧
   (cols.result * a = 0)
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Alias for `isZero_of_assert` (see `RawSpec`). -/
-theorem isZero_of_raw {a : ZMod p} {cols : Extracted.IsZeroOperation (ZMod p)}
+theorem isZero_of_raw {a : ZMod p} {cols : Circuits.Types.IsZeroOperation (ZMod p)}
     (h_raw : RawSpec a cols) : cols.result = if a = 0 then 1 else 0 := isZero_of_assert h_raw
 
 end SP1Clean.IsZeroOperation

@@ -1,3 +1,5 @@
+import SP1Clean.Extracted.ITypeReader
+import SP1Clean.Extracted.ALUTypeReader
 import SP1Clean.Extracted.ExtractionDSL
 import SP1Clean.Extracted.CPUState
 import SP1Clean.Extracted.ITypeReaderImmutable
@@ -122,27 +124,27 @@ proofs reuse the generated row types without reconstructing parallel reader stru
 
 @[circuit_norm] theorem eval_registerAccessTimestamp
     {F : Type} [FiniteField F] (env : Environment F)
-    (x : Extracted.RegisterAccessTimestamp (Expression F)) :
+    (x : Circuits.Types.RegisterAccessTimestamp (Expression F)) :
     Eval.eval env x =
       ({ prev_low := Eval.eval env x.prev_low
          diff_low_limb := Eval.eval env x.diff_low_limb } :
-        Extracted.RegisterAccessTimestamp F) := by
+        Circuits.Types.RegisterAccessTimestamp F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] theorem eval_registerAccessCols
     {F : Type} [FiniteField F] (env : Environment F)
-    (x : Extracted.RegisterAccessCols (Expression F)) :
+    (x : Circuits.Types.RegisterAccessCols (Expression F)) :
     Eval.eval env x =
       ({ prev_value := Eval.eval env x.prev_value
          access_timestamp := Eval.eval env x.access_timestamp } :
-        Extracted.RegisterAccessCols F) := by
+        Circuits.Types.RegisterAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] theorem eval_rTypeReader
     {F : Type} [FiniteField F] (env : Environment F)
-    (x : Extracted.RTypeReader (Expression F)) :
+    (x : Circuits.Types.RTypeReader (Expression F)) :
     Eval.eval env x =
       ({ op_a := Eval.eval env x.op_a
          op_a_memory := Eval.eval env x.op_a_memory
@@ -150,13 +152,13 @@ proofs reuse the generated row types without reconstructing parallel reader stru
          op_b := Eval.eval env x.op_b
          op_b_memory := Eval.eval env x.op_b_memory
          op_c := Eval.eval env x.op_c
-         op_c_memory := Eval.eval env x.op_c_memory } : Extracted.RTypeReader F) := by
+         op_c_memory := Eval.eval env x.op_c_memory } : Circuits.Types.RTypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] theorem eval_aluTypeReader
     {F : Type} [FiniteField F] (env : Environment F)
-    (x : Extracted.ALUTypeReader (Expression F)) :
+    (x : Circuits.Types.ALUTypeReader (Expression F)) :
     Eval.eval env x =
       ({ op_a := Eval.eval env x.op_a
          op_a_memory := Eval.eval env x.op_a_memory
@@ -165,18 +167,18 @@ proofs reuse the generated row types without reconstructing parallel reader stru
          op_b_memory := Eval.eval env x.op_b_memory
          op_c := Eval.eval env x.op_c
          op_c_memory := Eval.eval env x.op_c_memory
-         imm_c := Eval.eval env x.imm_c } : Extracted.ALUTypeReader F) := by
+         imm_c := Eval.eval env x.imm_c } : Circuits.Types.ALUTypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] theorem eval_cpuState
     {F : Type} [FiniteField F] (env : Environment F)
-    (x : Extracted.CPUState (Expression F)) :
+    (x : Circuits.Types.CPUState (Expression F)) :
     Eval.eval env x =
       ({ clk_high := Eval.eval env x.clk_high
          clk_16_24 := Eval.eval env x.clk_16_24
          clk_0_16 := Eval.eval env x.clk_0_16
-         pc := Eval.eval env x.pc } : Extracted.CPUState F) := by
+         pc := Eval.eval env x.pc } : Circuits.Types.CPUState F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -315,7 +317,7 @@ theorem registerAccessTimestampConstraints
 omit [Fact (2 ^ 17 < p)] in
 theorem cpuStateAssertions
     (env : Environment (ZMod p)) (input : Var Readers.CPUState.Inputs (ZMod p))
-    (offset : ℕ) (cols : Extracted.CPUState (ZMod p)) (nextPc : Vector (ZMod p) 3)
+    (offset : ℕ) (cols : Circuits.Types.CPUState (ZMod p)) (nextPc : Vector (ZMod p) 3)
     (clkInc isReal : ZMod p)
     (hr : (ProvableStruct.eval env input).is_real = isReal) :
     List.Forall (· = 0)
@@ -362,7 +364,7 @@ theorem registerWriteAssertions
 theorem rTypeAssertions
     (env : Environment (ZMod p)) (input : Var Readers.RTypeReader.Inputs (ZMod p))
     (offset : ℕ) (clkHigh clkLow opcode isReal isTrusted : ZMod p)
-    (pc : Vector (ZMod p) 3) (wv : Word (ZMod p)) (cols : Extracted.RTypeReader (ZMod p))
+    (pc : Vector (ZMod p) 3) (wv : Word (ZMod p)) (cols : Circuits.Types.RTypeReader (ZMod p))
     (hreal : (ProvableStruct.eval env input).is_real = isReal)
     (htrusted : (ProvableStruct.eval env input).is_trusted = isTrusted)
     (hop : Expression.eval env input.cols.op_a_0 = cols.op_a_0)
@@ -402,7 +404,7 @@ theorem iTypeAssertionsExact
     (env : Environment (ZMod p)) (input : Var Readers.ITypeReader.Inputs (ZMod p))
     (offset : ℕ) (clkHigh clkLow opcode isReal isTrusted : ZMod p)
     (pc : Vector (ZMod p) 3) (writeValue : Word (ZMod p))
-    (cols : Extracted.ITypeReader (ZMod p))
+    (cols : Circuits.Types.ITypeReader (ZMod p))
     (hreal : (ProvableStruct.eval env input).is_real = isReal)
     (htrusted : (ProvableStruct.eval env input).is_trusted = isTrusted)
     (hopA0 : Expression.eval env input.cols.op_a_0 = cols.op_a_0)
@@ -440,7 +442,7 @@ theorem iTypeImmutableAssertionsExact
     (env : Environment (ZMod p))
     (input : Var Readers.ITypeReaderImmutable.Inputs (ZMod p))
     (offset : ℕ) (clkHigh clkLow opcode isReal isTrusted : ZMod p)
-    (pc : Vector (ZMod p) 3) (cols : Extracted.ITypeReader (ZMod p))
+    (pc : Vector (ZMod p) 3) (cols : Circuits.Types.ITypeReader (ZMod p))
     (hreal : (ProvableStruct.eval env input).is_real = isReal)
     (htrusted : (ProvableStruct.eval env input).is_trusted = isTrusted)
     (hopA0 : Expression.eval env input.cols.op_a_0 = cols.op_a_0)
@@ -486,7 +488,7 @@ theorem iTypeAssertions
     (env : Environment (ZMod p)) (input : Var Readers.ITypeReader.Inputs (ZMod p))
     (offset : ℕ) (clkHigh clkLow opcode isReal isTrusted : ZMod p)
     (pc : Vector (ZMod p) 3) (writeValue : Word (ZMod p))
-    (cols : Extracted.ITypeReader (ZMod p))
+    (cols : Circuits.Types.ITypeReader (ZMod p))
     (hreal : (ProvableStruct.eval env input).is_real = isReal)
     (htrusted : (ProvableStruct.eval env input).is_trusted = isTrusted)
     (hopA0 : Expression.eval env input.cols.op_a_0 = cols.op_a_0)
@@ -512,7 +514,7 @@ theorem jTypeAssertions
     (env : Environment (ZMod p)) (input : Var Readers.JTypeReader.Inputs (ZMod p))
     (offset : ℕ) (clkHigh clkLow opcode isReal isTrusted : ZMod p)
     (pc : Vector (ZMod p) 3) (writeValue : Word (ZMod p))
-    (cols : Extracted.JTypeReader (ZMod p))
+    (cols : Circuits.Types.JTypeReader (ZMod p))
     (hreal : (ProvableStruct.eval env input).is_real = isReal)
     (htrusted : (ProvableStruct.eval env input).is_trusted = isTrusted)
     (hopA0 : Expression.eval env input.cols.op_a_0 = cols.op_a_0)
@@ -609,7 +611,7 @@ theorem aluTypeAssertions
     (env : Environment (ZMod p)) (input : Var Readers.ALUTypeReader.Inputs (ZMod p))
     (offset : ℕ) (clkHigh clkLow opcode isReal isTrusted : ZMod p)
     (pc : Vector (ZMod p) 3) (writeValue : Word (ZMod p))
-    (cols : Extracted.ALUTypeReader (ZMod p))
+    (cols : Circuits.Types.ALUTypeReader (ZMod p))
     (hreal : (ProvableStruct.eval env input).is_real = isReal)
     (htrusted : (ProvableStruct.eval env input).is_trusted = isTrusted)
     (hcols : ProvableStruct.eval env input.cols = cols)

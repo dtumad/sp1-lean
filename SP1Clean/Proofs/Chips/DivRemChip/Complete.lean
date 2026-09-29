@@ -76,14 +76,14 @@ def RTypeEvent.toDivRemHint (e : RTypeEvent) : ProverHint (ZMod p) :=
 /-- The `op_c` access block of a `DivRem` padding row: the **read value** is the word `1` (SP1's
 "0 divided by 1" template — `alu/divrem/mod.rs:561-563`), both timestamp columns zero, as for any
 padded row. -/
-def oneAccessCols : Extracted.RegisterAccessCols (ZMod p) where
+def oneAccessCols : Circuits.Types.RegisterAccessCols (ZMod p) where
   prev_value := #v[1, 0, 0, 0]
   access_timestamp := { prev_low := 0, diff_low_limb := 0 }
 
 /-- The R-type adapter block of a `DivRem` padding row: zero everywhere except the `op_c` read
 value, which is the word `1`. This is SP1's padded row verbatim — it zero-initializes the whole
 row and then writes `op_c_memory.prev_value = Word::from(1)`. -/
-def divRemPaddingRTypeReaderCols : Extracted.RTypeReader (ZMod p) where
+def divRemPaddingRTypeReaderCols : Circuits.Types.RTypeReader (ZMod p) where
   op_a := 0
   op_a_memory := zeroAccessCols
   op_a_0 := 0

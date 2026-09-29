@@ -2,7 +2,7 @@ import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Math.Word
 import SP1Clean.Model.ByteTable
 import SP1Clean.Model.Channels
-import SP1Clean.Extracted.RTypeReader
+import SP1Clean.Circuits.Types.RTypeReader
 import SP1Clean.Native.Readers.RegisterAccessTimestamp
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -18,7 +18,7 @@ normalize the whole nested struct in one shot (minutes, then a `whnf` timeout ev
 Composing small sub-circuits instead lets `circuit_norm` treat each as a black box — exactly how
 `Clean/Gadgets/Keccak/KeccakRound.lean` proves a 1288-column state with plain `circuit_proof_start`.
 
-The block is SP1's nested `RegisterAccessCols` (`Extracted/RTypeReader.lean`): a `prev_value : Word`
+The block is SP1's nested `RegisterAccessCols` (`Circuits/Types/RegisterAccess.lean`): a `prev_value : Word`
 plus an `access_timestamp : RegisterAccessTimestamp` of `{prev_low, diff_low_limb}`. The **nesting** is
 what defeated a single inline witness, so we mirror the nesting with **two composed sub-circuits**:
 
@@ -48,7 +48,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 namespace RegisterAccessCols
 
 /-- Witness the 4 `prev_value` columns (`0`) and compose the timestamp sub-circuit, returning the
-assembled `Extracted.RegisterAccessCols`. **SP1's register-access read range-checks no `prev_value`**
+assembled `Circuits.Types.RegisterAccessCols`. **SP1's register-access read range-checks no `prev_value`**
 (`crates/core/machine/src/air/memory.rs:122-166`: it only sends/receives the Memory interactions and the
 timestamp check) — the operand's `isU64` is a *received* fact from the writer (the offline-memory balance),
 not a local check here, so this reader imposes none. The only byte-bus checks are the two timestamp checks

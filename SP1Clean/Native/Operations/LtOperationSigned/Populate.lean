@@ -1,6 +1,7 @@
+import Mathlib.Tactic.IntervalCases
 import SP1Clean.Native.Operations.LtOperationUnsigned.Populate
 import SP1Clean.Native.Operations.U16MSBOperation.Populate
-import SP1Clean.Extracted.LtOperationSigned
+import SP1Clean.Circuits.Types.LtOperationSigned
 import ToClean.Circuit.IteDecide
 
 /-! # `LtOperationSigned` — native witness generation
@@ -24,12 +25,12 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 sign bits and the `LtOperationUnsigned` compare columns on the sign-adjusted words — the latter zeroed
 on a padding row (`is_real = 0`), where the threaded unsigned compare contributes nothing. -/
 def populate (b cc : Word (ZMod p)) (is_signed is_real : ZMod p) :
-    Extracted.LtOperationSigned (ZMod p) :=
+    Circuits.Types.LtOperationSigned (ZMod p) :=
   let bm := is_signed * U16MSBOperation.populate_msb b[3]
   let cm := is_signed * U16MSBOperation.populate_msb cc[3]
   let bAdj : Word (ZMod p) := #v[b[0], b[1], b[2], b[3] + is_signed * 32768 - 65536 * bm]
   let cAdj : Word (ZMod p) := #v[cc[0], cc[1], cc[2], cc[3] + is_signed * 32768 - 65536 * cm]
-  let result : Extracted.LtOperationUnsigned (ZMod p) :=
+  let result : Circuits.Types.LtOperationUnsigned (ZMod p) :=
     if is_real = 1 then LtOperationUnsigned.populate bAdj cAdj
     else ⟨⟨0⟩, #v[0, 0, 0, 0], 0, #v[0, 0]⟩
   ⟨result, ⟨bm⟩, ⟨cm⟩⟩
@@ -53,7 +54,7 @@ def adjLimbsF (w : Word (Expression (ZMod p))) (is_signed : Expression (ZMod p))
 /-- The witness-IR twin of `populate`, over the chip's input expressions (`is_signed` is the chip's
 witnessed flag cell; `is_real` the input selector). -/
 def populateFE (b cc : Word (Expression (ZMod p))) (is_signed is_real : Expression (ZMod p)) :
-    Extracted.LtOperationSigned (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.LtOperationSigned (Witgen.FExpr (ZMod p)) :=
   let bAdj := adjLimbsF b is_signed
   let cAdj := adjLimbsF cc is_signed
   let gate : Witgen.FExpr (ZMod p) → Witgen.FExpr (ZMod p) :=
@@ -72,8 +73,8 @@ section Navigators
 set_option linter.unusedSectionVars false
 
 /-- Cell `0` of a flattened `LtOperationSigned` struct is the compare bit. -/
-private lemma toElements_cell_bit {F : Type} (s : Extracted.LtOperationSigned F) :
-    (toElements s)[0]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
+private lemma toElements_cell_bit {F : Type} (s : Circuits.Types.LtOperationSigned F) :
+    (toElements s)[0]'(by have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl; omega)
       = s.result.u16_compare_operation.bit := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -83,9 +84,9 @@ private lemma toElements_cell_bit {F : Type} (s : Extracted.LtOperationSigned F)
       ((Vector.getElem_cast ?_).trans (Vector.getElem_append_left ?_)))) <;> decide
 
 /-- Cell `1 + k` (`k < 4`) is the `k`-th one-hot flag. -/
-private lemma toElements_cell_flag {F : Type} (s : Extracted.LtOperationSigned F)
+private lemma toElements_cell_flag {F : Type} (s : Circuits.Types.LtOperationSigned F)
     (k : ℕ) (hk : k < 4) :
-    (toElements s)[1 + k]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
+    (toElements s)[1 + k]'(by have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl; omega)
       = s.result.u16_flags[k] := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
   interval_cases k <;>
@@ -96,8 +97,8 @@ private lemma toElements_cell_flag {F : Type} (s : Extracted.LtOperationSigned F
          (Vector.getElem_append_left ?_))) <;> decide)
 
 /-- Cell `5` is the non-equality inverse. -/
-private lemma toElements_cell_notEqInv {F : Type} (s : Extracted.LtOperationSigned F) :
-    (toElements s)[5]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
+private lemma toElements_cell_notEqInv {F : Type} (s : Circuits.Types.LtOperationSigned F) :
+    (toElements s)[5]'(by have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl; omega)
       = s.result.not_eq_inv := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -107,9 +108,9 @@ private lemma toElements_cell_notEqInv {F : Type} (s : Extracted.LtOperationSign
       ((Vector.getElem_append_right ?_ ?_).trans (Vector.getElem_append_left ?_)))) <;> decide
 
 /-- Cell `6 + k` (`k < 2`) is the `k`-th comparison limb. -/
-private lemma toElements_cell_compLimb {F : Type} (s : Extracted.LtOperationSigned F)
+private lemma toElements_cell_compLimb {F : Type} (s : Circuits.Types.LtOperationSigned F)
     (k : ℕ) (hk : k < 2) :
-    (toElements s)[6 + k]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
+    (toElements s)[6 + k]'(by have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl; omega)
       = s.result.comparison_limbs[k] := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
   interval_cases k <;>
@@ -121,8 +122,8 @@ private lemma toElements_cell_compLimb {F : Type} (s : Extracted.LtOperationSign
            (Vector.getElem_append_left ?_))))) <;> decide)
 
 /-- Cell `8` is the gated `b` sign bit. -/
-private lemma toElements_cell_bMsb {F : Type} (s : Extracted.LtOperationSigned F) :
-    (toElements s)[8]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
+private lemma toElements_cell_bMsb {F : Type} (s : Circuits.Types.LtOperationSigned F) :
+    (toElements s)[8]'(by have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl; omega)
       = s.b_msb.msb := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -132,8 +133,8 @@ private lemma toElements_cell_bMsb {F : Type} (s : Extracted.LtOperationSigned F
       ((Vector.getElem_cast ?_).trans (Vector.getElem_append_left ?_))) <;> decide
 
 /-- Cell `9` is the gated `c` sign bit. -/
-private lemma toElements_cell_cMsb {F : Type} (s : Extracted.LtOperationSigned F) :
-    (toElements s)[9]'(by have h10 : size Extracted.LtOperationSigned = 10 := rfl; omega)
+private lemma toElements_cell_cMsb {F : Type} (s : Circuits.Types.LtOperationSigned F) :
+    (toElements s)[9]'(by have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl; omega)
       = s.c_msb.msb := by
   obtain ⟨⟨⟨a⟩, f, ni, cl⟩, ⟨bm⟩, ⟨cm⟩⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -219,10 +220,10 @@ theorem populateFE_eval (env : ProverEnvironment (ZMod p))
   rw [hpop]
   refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
   have hi10 : i < 10 := by
-    have hsz : size Extracted.LtOperationSigned = 10 := rfl
+    have hsz : size Circuits.Types.LtOperationSigned = 10 := rfl
     omega
   rw [show (Witgen.eval { env := env } (populateFE b cc is_signed is_real) :
-          Extracted.LtOperationSigned (ZMod p))
+          Circuits.Types.LtOperationSigned (ZMod p))
         = fromElements ((toElements (populateFE b cc is_signed is_real)).map
             (Witgen.FExpr.eval { env := env })) from rfl,
     ProvableType.toElements_fromElements, Vector.getElem_map]
@@ -271,19 +272,19 @@ theorem populateFE_eval_cell (env : ProverEnvironment (ZMod p))
     (hb : vb.isU64) (hcc : vcc.isU64) (j : ℕ) (hj : j < 10) :
     Witgen.FExpr.eval { env := env }
         ((toElements (populateFE b cc is_signed is_real))[j]'(by
-          have h10 : size Extracted.LtOperationSigned = 10 := rfl
+          have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl
           omega))
       = (toElements (populate vb vcc (Expression.eval env.toEnvironment is_signed)
           (Expression.eval env.toEnvironment is_real)))[j]'(by
-          have h10 : size Extracted.LtOperationSigned = 10 := rfl
+          have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl
           omega) := by
   have h := congrArg
-    (fun s : Extracted.LtOperationSigned (ZMod p) => (toElements s)[j]'(by
-      have h10 : size Extracted.LtOperationSigned = 10 := rfl
+    (fun s : Circuits.Types.LtOperationSigned (ZMod p) => (toElements s)[j]'(by
+      have h10 : size Circuits.Types.LtOperationSigned = 10 := rfl
       omega))
     (populateFE_eval env b cc is_signed is_real vb vcc hvb hvcc hb hcc)
   rw [show (Witgen.eval { env := env } (populateFE b cc is_signed is_real) :
-          Extracted.LtOperationSigned (ZMod p))
+          Circuits.Types.LtOperationSigned (ZMod p))
         = fromElements ((toElements (populateFE b cc is_signed is_real)).map
             (Witgen.FExpr.eval { env := env })) from rfl,
     ProvableType.toElements_fromElements] at h
@@ -292,10 +293,10 @@ theorem populateFE_eval_cell (env : ProverEnvironment (ZMod p))
 omit [Fact (2 ^ 17 < p)] in
 /-- `ofFExprs`-of-`toElements` evaluation is the flattened struct evaluation. -/
 private lemma ofFExprs_eval_eq (env : ProverEnvironment (ZMod p))
-    (xs : Extracted.LtOperationSigned (Witgen.FExpr (ZMod p))) :
+    (xs : Circuits.Types.LtOperationSigned (Witgen.FExpr (ZMod p))) :
     (Witgen.WitgenIR.ofFExprs (toElements xs)).eval env
       = toElements (Witgen.eval { env := env } xs) := by
-  rw [show (Witgen.eval { env := env } xs : Extracted.LtOperationSigned (ZMod p))
+  rw [show (Witgen.eval { env := env } xs : Circuits.Types.LtOperationSigned (ZMod p))
         = fromElements ((toElements xs).map (Witgen.FExpr.eval { env := env })) from rfl,
     ProvableType.toElements_fromElements]
   apply Vector.ext
@@ -341,14 +342,14 @@ theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
   refine congrArg toElements ?_
   refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
   have hi10 : i < 10 := by
-    have hsz : size Extracted.LtOperationSigned = 10 := rfl
+    have hsz : size Circuits.Types.LtOperationSigned = 10 := rfl
     omega
   rw [show (Witgen.eval { env := env } (populateFE b cc is_signed is_real) :
-          Extracted.LtOperationSigned (ZMod p))
+          Circuits.Types.LtOperationSigned (ZMod p))
         = fromElements ((toElements (populateFE b cc is_signed is_real)).map
             (Witgen.FExpr.eval { env := env })) from rfl,
     show (Witgen.eval { env := env' } (populateFE b cc is_signed is_real) :
-          Extracted.LtOperationSigned (ZMod p))
+          Circuits.Types.LtOperationSigned (ZMod p))
         = fromElements ((toElements (populateFE b cc is_signed is_real)).map
             (Witgen.FExpr.eval { env := env' })) from rfl,
     ProvableType.toElements_fromElements, ProvableType.toElements_fromElements,

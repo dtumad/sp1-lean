@@ -5,7 +5,7 @@ import ToClean.Air.TableBuild
 /-! # `SP1Clean.JalChip` — from trace events to a valid AIR table
 
 `JAL` through the trace-generation chain (see `AddChip/Complete.lean` for the programme note). It
-reads the very `Extracted.JTypeReader` block `UType` reads — one register access, the `op_a` write —
+reads the very `Circuits.Types.JTypeReader` block `UType` reads — one register access, the `op_a` write —
 so the adapter half is `UTypeChip/Complete.lean` verbatim. What is new is the **jump**.
 
 `Jal` is the first chip of the rollout whose `next_pc` is *computed data* rather than `pc + 4`: the

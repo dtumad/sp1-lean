@@ -25,12 +25,12 @@ instance : Fact (2 ^ 17 < prime) := ⟨by decide⟩
 
 def zeroProgram : Circuit F Unit := do
   let a : Expression F := .var ⟨0⟩
-  let cols : Var Extracted.IsZeroOperation F ← witness (IsZeroOperation.populateFE (.expr a))
+  let cols : Var Circuits.Types.IsZeroOperation F ← witness (IsZeroOperation.populateFE (.expr a))
   assertion IsZeroOperation.circuit ⟨a, cols, 1⟩
 
 def wordZeroProgram : Circuit F Unit := do
   let a : Var Word F := varFromOffset Word 0
-  let cols : Var Extracted.IsZeroWordOperation F ← witness (IsZeroWordOperation.populateFE (a.map Witgen.FExpr.expr))
+  let cols : Var Circuits.Types.IsZeroWordOperation F ← witness (IsZeroWordOperation.populateFE (a.map Witgen.FExpr.expr))
   assertion IsZeroWordOperation.circuit ⟨a, cols, 1⟩
 
 def rangeProgram : Circuit F Unit :=

@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.LtOperationSigned
+import SP1Clean.Circuits.Types.LtOperationSigned
 import SP1Clean.Native.Operations.LtOperationUnsigned.RawSpec
 import SP1Clean.Native.Operations.U16MSBOperation.RawSpec
 import Mathlib.Tactic.LinearCombination
@@ -98,7 +98,7 @@ lemma toBitVec64_eq_iff {b cc : Word (ZMod p)} (hb : b.isU64) (hcc : cc.isU64) :
 /-- Literal meaning of SP1's `LtOperationSigned` constraint list at `is_real = 1`, with `is_signed`
 free: the two `is_signed`-gated MSB sub-lists and the composed unsigned compare on the adjusted
 words. -/
-def RawSpec (b cc : Word (ZMod p)) (cols : Extracted.LtOperationSigned (ZMod p))
+def RawSpec (b cc : Word (ZMod p)) (cols : Circuits.Types.LtOperationSigned (ZMod p))
     (is_signed : ZMod p) : Prop :=
   let bm := cols.b_msb.msb; let cm := cols.c_msb.msb
   let e13 := b[3] + is_signed * 32768 - 65536 * bm
@@ -124,7 +124,7 @@ Heartbeat ladder (2026-07-28; the control run at 1 heartbeat produced a real tim
 rather than lowered. The file's unceilinged siblings `adj_bias`/`toInt_compare_of_bias` do the
 heavier `omega`-over-`2 ^ 64` work and never needed one — the sibling screen called this
 correctly. -/
-theorem ltSigned_semantic {b cc : Word (ZMod p)} {cols : Extracted.LtOperationSigned (ZMod p)}
+theorem ltSigned_semantic {b cc : Word (ZMod p)} {cols : Circuits.Types.LtOperationSigned (ZMod p)}
     {is_signed : ZMod p}
     (hb : Word.isU64 b) (hcc : Word.isU64 cc)
     (h_raw : RawSpec b cc cols is_signed) :

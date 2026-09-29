@@ -24,6 +24,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -33,7 +34,7 @@ constraint list holds iff the two clock-range bounds hold — i.e. iff `Readers.
 The `.state` `receive`/`send` interactions contribute `True` (their meaning is the trace-level bus);
 the binary gate is vacuous at `is_real = 1`. -/
 theorem cpustate_constraints_faithful
-    (cols : Extracted.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_increment : ZMod p) :
+    (cols : Circuits.Types.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_increment : ZMod p) :
     (List.Forall (· = 0) (Extracted.CPUState.asserts cols next_pc clk_increment 1) ∧
       List.Forall Interaction.toProp (Extracted.CPUState.interactions cols next_pc clk_increment 1)) ↔
       ((cols.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧ cols.clk_16_24.val < 2 ^ 8 := by
@@ -48,7 +49,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- **CPUState fragment — assertion half.** `CPUState` emits only the (vacuous at `is_real = 1`)
 binary gate as an `assert`, so its `asserts` list trivially holds. -/
 theorem cpustate_asserts_faithful
-    (cols : Extracted.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_increment : ZMod p) :
+    (cols : Circuits.Types.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_increment : ZMod p) :
     List.Forall (· = 0) (Extracted.CPUState.asserts cols next_pc clk_increment 1) ↔ True := by
   simp only [Extracted.CPUState.asserts, List.Forall, sub_self, mul_zero]
 
@@ -56,7 +57,7 @@ theorem cpustate_asserts_faithful
 `interactions` list holds iff the two clock-range bounds hold — i.e. iff `Readers.CPUState.Spec`. The
 `.state` interactions contribute `True`; the two clock bounds come from the byte sends. -/
 theorem cpustate_interactions_faithful
-    (cols : Extracted.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_increment : ZMod p) :
+    (cols : Circuits.Types.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_increment : ZMod p) :
     List.Forall Interaction.toProp (Extracted.CPUState.interactions cols next_pc clk_increment 1) ↔
       ((cols.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧ cols.clk_16_24.val < 2 ^ 8 := by
   simp only [Extracted.CPUState.interactions, List.Forall,
@@ -75,7 +76,7 @@ byte,byte,state,state while the oracle lists state,state,byte,byte). The U8Range
 `⟨3, 0, clk_16_24, 0⟩` slot order matters — `toProp` had masked an earlier mismatch. -/
 theorem cpustate_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var Readers.CPUState.Inputs (ZMod p)) (offset : ℕ)
-    (cols : Extracted.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_inc is_real : ZMod p)
+    (cols : Circuits.Types.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_inc is_real : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_ch : Expression.eval env input.cols.clk_high = cols.clk_high)
     (h_c0 : Expression.eval env input.cols.clk_0_16 = cols.clk_0_16)
@@ -123,7 +124,7 @@ override was removed rather than lowered. -/
 theorem cpustate_state_interactions_faithful_syntactic
     (env : Environment (ZMod p))
     (input : Var Readers.CPUState.Inputs (ZMod p))
-    (cols : Extracted.CPUState (ZMod p))
+    (cols : Circuits.Types.CPUState (ZMod p))
     (next_pc : Vector (ZMod p) 3) (clk_inc is_real : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_ch : Expression.eval env input.cols.clk_high = cols.clk_high)
@@ -189,7 +190,7 @@ fails at 2000 (`isDefEq` inside the closing `simp`), so the true floor is in (20
 override was removed rather than lowered. -/
 theorem cpustate_byte_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var Readers.CPUState.Inputs (ZMod p)) (offset : ℕ)
-    (cols : Extracted.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_inc is_real : ZMod p)
+    (cols : Circuits.Types.CPUState (ZMod p)) (next_pc : Vector (ZMod p) 3) (clk_inc is_real : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_c0 : Expression.eval env input.cols.clk_0_16 = cols.clk_0_16)
     (h_c1 : Expression.eval env input.cols.clk_16_24 = cols.clk_16_24) :

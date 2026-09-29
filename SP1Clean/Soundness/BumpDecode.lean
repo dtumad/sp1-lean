@@ -271,24 +271,24 @@ close by `rfl` with every `Eval.eval` leaf kept opaque. -/
 /-- Component-wise evaluation of the innermost five-column timestamp block of the shared
 `MemoryAccessCols` carrier. -/
 theorem eval_bumpAccessTimestamp {F : Type} [FiniteField F]
-    (env : Environment F) (ts : Extracted.MemoryAccessTimestamp (Expression F)) :
+    (env : Environment F) (ts : Circuits.Types.MemoryAccessTimestamp (Expression F)) :
     Eval.eval env ts =
       ({ prev_high := Eval.eval env ts.prev_high,
          prev_low := Eval.eval env ts.prev_low,
          compare_low := Eval.eval env ts.compare_low,
          diff_low_limb := Eval.eval env ts.diff_low_limb,
          diff_high_limb := Eval.eval env ts.diff_high_limb } :
-        Extracted.MemoryAccessTimestamp F) := by
+        Circuits.Types.MemoryAccessTimestamp F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 /-- Component-wise evaluation of the `MemoryAccessCols` carrier. -/
 theorem eval_bumpAccessCols {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.MemoryAccessCols (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.MemoryAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value,
          access_timestamp := Eval.eval env cols.access_timestamp } :
-        Extracted.MemoryAccessCols F) := by
+        Circuits.Types.MemoryAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -767,7 +767,7 @@ theorem syscallInstrsRow_eq [Fact p.Prime] (t : Table (ZMod p)) (row : Array (ZM
 
 /-- One syscall register read's pulled prior record. -/
 def SyscallInstrsChip.memPulledMessage (r : SyscallInstrsChip.Inputs (ZMod p))
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) : MemoryMsg (ZMod p) :=
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) : MemoryMsg (ZMod p) :=
   ⟨r.state.clk_high, block.access_timestamp.prev_low, idx, 0, 0, block.prev_value⟩
 
 /-- One syscall register access's read-back record at this row's access clock, carrying `value` —
@@ -798,12 +798,12 @@ def HaltChip.programMessage (r : HaltChip.Inputs (ZMod p)) : ProgramMsg (ZMod p)
 
 /-- One halt register read's pulled prior record. -/
 def HaltChip.memPulledMessage (r : HaltChip.Inputs (ZMod p))
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) : MemoryMsg (ZMod p) :=
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) : MemoryMsg (ZMod p) :=
   ⟨r.state.clk_high, block.access_timestamp.prev_low, idx, 0, 0, block.prev_value⟩
 
 /-- One halt register read's read-back record at this row's access clock. -/
 def HaltChip.memPushedMessage (r : HaltChip.Inputs (ZMod p))
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx off : ZMod p) : MemoryMsg (ZMod p) :=
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx off : ZMod p) : MemoryMsg (ZMod p) :=
   ⟨r.state.clk_high, r.state.clk_0_16 + r.state.clk_16_24 * 65536 + off, idx, 0, 0,
     block.prev_value⟩
 

@@ -32,6 +32,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -46,7 +47,7 @@ rungs): passes at 5000, fails at 1500 (`isDefEq`, inside the `simp only` list be
 headroom, so the override was removed rather than lowered. -/
 theorem alutypereader_constraints_faithful
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.ALUTypeReader (ZMod p)) :
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.ALUTypeReader (ZMod p)) :
     (List.Forall (· = 0)
           (Extracted.ALUTypeReader.asserts clk_high clk_low pc opcode op_a_write_value cols 1 1) ∧
         List.Forall Interaction.toProp
@@ -92,7 +93,7 @@ override was removed rather than lowered. -/
 theorem alutypereader_program_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var Readers.ALUTypeReader.Inputs (ZMod p)) (offset : ℕ)
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.ALUTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.ALUTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
     (h_it : Expression.eval env input.is_trusted = is_trusted)
     (h_p0 : Expression.eval env input.pc[0] = pc[0])
     (h_p1 : Expression.eval env input.pc[1] = pc[1])
@@ -151,7 +152,7 @@ override was removed rather than lowered. -/
 theorem alutypereader_memory_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var Readers.ALUTypeReader.Inputs (ZMod p)) (offset : ℕ)
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.ALUTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.ALUTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_ch : Expression.eval env input.clk_high = clk_high)
     (h_cl : Expression.eval env input.clk_low = clk_low)
@@ -221,7 +222,7 @@ override was removed rather than lowered. -/
 theorem alutypereader_byte_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var Readers.ALUTypeReader.Inputs (ZMod p)) (offset : ℕ)
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.ALUTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.ALUTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_cl : Expression.eval env input.clk_low = clk_low)
     (h_imm : Expression.eval env input.cols.imm_c = cols.imm_c)

@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
 import SP1Clean.Native.Operations.IsZeroOperation.RawSpec
-import SP1Clean.Extracted.IsZeroWordOperation
+import SP1Clean.Circuits.Types.IsZeroWordOperation
 
 /-! # `IsZeroWordOperation` — the arithmetic core (`RawSpec` + the AND-tree lemma)
 
@@ -21,7 +21,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Literal meaning of SP1's `IsZeroWordOperation` constraint list at `is_real = 1`: the four
 per-limb `IsZeroOperation.RawSpec`s, `result` boolean, and the half-product gluing equalities. -/
-def RawSpec (a : Word (ZMod p)) (cols : Extracted.IsZeroWordOperation (ZMod p)) : Prop :=
+def RawSpec (a : Word (ZMod p)) (cols : Circuits.Types.IsZeroWordOperation (ZMod p)) : Prop :=
   IsZeroOperation.RawSpec a[0] cols.is_zero_limb_0 ∧
   IsZeroOperation.RawSpec a[1] cols.is_zero_limb_1 ∧
   IsZeroOperation.RawSpec a[2] cols.is_zero_limb_2 ∧
@@ -48,7 +48,7 @@ theorem result_collapse {a0 a1 a2 a3 z0 z1 z2 z3 first second result : ZMod p}
 omit [Fact (2 ^ 17 < p)] in
 /-- Soundness core: the per-limb `IsZeroOperation.RawSpec`s + AND-tree gluing force the word
 zero-indicator. -/
-theorem isZeroWord_of_raw {a : Word (ZMod p)} {cols : Extracted.IsZeroWordOperation (ZMod p)}
+theorem isZeroWord_of_raw {a : Word (ZMod p)} {cols : Circuits.Types.IsZeroWordOperation (ZMod p)}
     (h_raw : RawSpec a cols) :
     cols.result = if (a[0] = 0 ∧ a[1] = 0 ∧ a[2] = 0 ∧ a[3] = 0) then 1 else 0 := by
   obtain ⟨r0, r1, r2, r3, _, hf, hs, hr⟩ := h_raw

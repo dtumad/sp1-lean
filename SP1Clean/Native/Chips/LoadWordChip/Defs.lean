@@ -41,19 +41,19 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native LoadWord-chip row (Rust field order). The reader, memory, and sign-bit blocks reuse the
-project substrate (`Extracted.AddressOperation`/`Extracted.U16MSBOperation` are still standalone
+project substrate (`Circuits.Types.AddressOperation`/`Circuits.Types.U16MSBOperation` are still standalone
 generated modules — the other loads/stores and the compare ops compose the same gadgets;
-`Extracted.MemoryAccessCols` lives in the generated `MemoryAccess` struct carrier).
+`Circuits.Types.MemoryAccessCols` lives in the generated `MemoryAccess` struct carrier).
 `Faithful.LoadWordChip.loadWordChipReconfigure` is the sole bridge to Rust's separately generated
 whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
-  address_operation : Extracted.AddressOperation F
-  memory_access : Extracted.MemoryAccessCols F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
+  address_operation : Circuits.Types.AddressOperation F
+  memory_access : Circuits.Types.MemoryAccessCols F
   offset_bit : F
   selected_word : Vector F 2
-  msb : Extracted.U16MSBOperation F
+  msb : Circuits.Types.U16MSBOperation F
   is_lw : F
   is_lwu : F
 deriving ProvableStruct
@@ -69,9 +69,9 @@ them from the I-type adapter. -/
 structure Inputs (F : Type) where
   is_lw : F
   is_lwu : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
-  memory_access : Extracted.MemoryAccessCols F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
+  memory_access : Circuits.Types.MemoryAccessCols F
   offset_bit : F
   selected_word : fields 2 F
   msb : F
@@ -97,7 +97,7 @@ provable_struct_eval_lemmas Inputs
   rw [ProvableStruct.eval_eq_eval]; rfl
 
 /-- The recombined low clock `clk_0_16 + clk_16_24 · 2^16` (matching SP1's `clk_low`). -/
-@[reducible] def clkLow (state : Extracted.CPUState (ZMod p)) : ZMod p :=
+@[reducible] def clkLow (state : Circuits.Types.CPUState (ZMod p)) : ZMod p :=
   state.clk_0_16 + state.clk_16_24 * 65536
 
 /-- The row selector `is_lw + is_lwu` (SP1's `is_real`). -/

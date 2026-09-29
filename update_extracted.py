@@ -11,7 +11,7 @@ between a fixed header/footer, and writes the whole file. It never emits an exec
 
 The stable target is `Extracted/ChipOracle/<Chip>.lean`: one chip-specific namespace containing the
 complete Rust row shape, helper definitions used by the emitted expression, `asserts`, and
-`interactions`. Canonical reader structs are reused from their generated modules; chip-private
+`interactions`. Canonical reader structs are reused from native type modules; chip-private
 arithmetic structs/functions remain namespaced inside that chip oracle and are not public
 operation-level faithfulness boundaries. All 25 supported chips are migrated to this form;
 `OPERATIONS` persists as deliberate shared substrate (canonical reader modules + statement
@@ -20,13 +20,13 @@ targets that multiple chip anchors reference). Native Clean circuits are hand-ma
 in the dump-anchored pipeline (`scripts/update_sp1_dumps.sh` + `scripts/witgenExport.lean
 --testdata`), not here — this script emits AIR artifacts only.
 
-**Why auto-derive?** Each `Extracted/` file must own exactly one column struct; a module that
-composes sub-operations imports their already-generated modules (`--reuse-struct <Name>`)
-instead of re-emitting them. Rather than hand-maintain a per-entry reuse list, this script:
+Shared column types are owned by `Circuits/Types`. Their field layouts are checked against
+the independent Rust discovery output before reuse. Private Rust-oracle types remain generated;
+modules use `--reuse-struct <Name>` and imports to avoid duplicate shared definitions. Rather than hand-maintain a per-entry reuse list, this script:
 
   1. *Discovery pass* — runs the compiler for every module with NO reuse and parses which
      `structure <Name>` blocks each emits, building a global struct→owning-module map (seeded by
-     `STRUCT_OWNERSHIP` for the struct≠module / shared-struct cases). Collisions fail loudly.
+     the native type declarations for shared-struct cases). Collisions fail loudly.
   2. *Emit pass* — for each module, reuse = every struct it emits that another module owns; those
      are passed as `--reuse-struct` and their owners are imported. The compiler re-runs and the
      file is written.
@@ -53,8 +53,7 @@ from typing import Dict, List, Sequence, Set, Tuple
 
 # Operation / reader / compare-op modules → `Extracted/<name>.lean`.
 OPERATIONS: List[str] = [
-    # Instruction readers + CPU state. `RTypeReader` owns the nested register-access structs
-    # (`RegisterAccessCols` / `RegisterAccessTimestamp`); the other readers reuse them.
+    # Instruction readers + CPU state. These helpers reuse native column types.
     "RTypeReader", "ITypeReader", "ITypeReaderImmutable", "ALUTypeReader", "JTypeReader", "CPUState",
     # Leaf arithmetic / byte ops (compose nothing).
     "AddOperation", "SubOperation", "AddrAddOperation", "BitwiseOperation",
@@ -114,14 +113,13 @@ CHIP_ORACLES: Set[str] = {
     "StoreDouble",
 }
 
-# Stable generated reader substrate shared by native chip rows and whole-chip Rust oracles. Reusing
+# Native reader substrate shared by native chip rows and whole-chip Rust oracles. Reusing
 # these types avoids creating a fresh CPU/register-reader hierarchy per oracle while keeping Rust
 # arithmetic operation structs chip-private. Extend this set when a new canonical reader lands.
 CHIP_ORACLE_SHARED_STRUCTS: Set[str] = {
     "CPUState", "RTypeReader", "ITypeReader", "JTypeReader", "ALUTypeReader",
     "RegisterAccessCols", "RegisterAccessTimestamp",
-    # The memory-access blocks nested in every load/store row, owned by the `MemoryAccess`
-    # struct-carrier module (see `STRUCT_CARRIERS`).
+    # Native memory-access blocks nested in every load/store row.
     "MemoryAccessCols", "MemoryAccessTimestamp",
     # `ITypeReaderImmutable` operates on the `ITypeReader` row and so owns no struct of its own;
     # it is listed here for reader-roster uniformity (a no-op for struct reuse) and does its real
@@ -143,40 +141,6 @@ CHIP_ORACLE_IMPORTED_HELPERS: Set[str] = {
 # generated definitions inside the owning chip namespace.
 CHIP_ONLY_HELPERS: Set[str] = {
     "SubOperation", "SubwOperation", "AddwOperation", "BitwiseOperation", "BitwiseU16Operation",
-}
-
-# Explicit struct→owning-module overrides, ONLY for cases the default rules can't infer:
-#   * struct name ≠ its owning module's name, or
-#   * a struct emitted by several modules (shared column layout) where one module is canonical.
-# The default owner rules (no entry needed) are:
-#   * a struct named exactly like an OPERATIONS module → that module owns it;
-#   * a `<Chip>Cols` struct → the chip `<Chip>` owns it.
-STRUCT_OWNERSHIP: Dict[str, str] = {
-    # The byte-decomposition column struct `U16toU8Operation` backs BOTH the `Unsafe` and `Safe`
-    # operation builders (same Rust column struct). Canonical owner = the `Unsafe` module; the
-    # `Safe` module emits only its `constraints` def and imports the struct.
-    "U16toU8Operation": "U16toU8OperationUnsafe",
-    # The register-access column structs are owned by `RTypeReader`; every other reader reuses them
-    # (and importing `RTypeReader` provides both, so they need not be imported separately).
-    "RegisterAccessCols": "RTypeReader",
-    "RegisterAccessTimestamp": "RTypeReader",
-    # The memory-access column structs (`MemoryAccessCols`/`MemoryAccessTimestamp`) are nested only
-    # in the Load/Store chip column structs (no standalone operation emits them), so they have no
-    # natural operation owner. They used to fall to the first-emitting chip (LoadByte), but a chip
-    # oracle cannot be a struct definition site (every load/store eventually migrates), so they are
-    # owned by the dedicated struct-carrier module `MemoryAccess` (see `STRUCT_CARRIERS`).
-    "MemoryAccessCols": "MemoryAccess",
-    "MemoryAccessTimestamp": "MemoryAccess",
-}
-
-# Struct-carrier modules: canonical definition sites for structs with no operation owner whose
-# definition must outlive the chip files that emit them. Each entry maps a carrier module name to
-# `(donor, struct names in emission order)`: the carrier file is rendered by carving those struct
-# declarations byte-for-byte out of the donor chip's no-reuse discovery body (so the definitions
-# remain compiler-derived, never hand-written). The carrier is written only on runs that discover
-# the donor. `STRUCT_OWNERSHIP` must point each carried struct at its carrier module.
-STRUCT_CARRIERS: Dict[str, Tuple[str, Tuple[str, ...]]] = {
-    "MemoryAccess": ("LoadByte", ("MemoryAccessTimestamp", "MemoryAccessCols")),
 }
 
 DEFAULT_SP1_DIR = "../sp1"
@@ -320,7 +284,7 @@ def _preserve_raw_byte_opcodes(body: str) -> str:
 # ── Ownership resolution ────────────────────────────────────────────────────────────────────
 
 def _default_owner(struct: str) -> str:
-    """Owner of a struct under the default rules (no `STRUCT_OWNERSHIP` entry)."""
+    """Owner of a struct under the default rules (no native owner)."""
     if struct in OPERATIONS:
         return struct
     if struct.endswith("Cols") and struct[:-len("Cols")] in [*CHIPS, *SYSTEM_TABLES]:
@@ -333,9 +297,10 @@ def resolve_ownership(emitted: Dict[str, List[str]]) -> Dict[str, str]:
 
     `emitted` maps each module name to the structs it emits with no reuse."""
     owner: Dict[str, str] = {}
+    native = native_structs()
     for struct in {s for structs in emitted.values() for s in structs}:
-        if struct in STRUCT_OWNERSHIP:
-            owner[struct] = STRUCT_OWNERSHIP[struct]
+        if struct in native:
+            owner[struct] = native[struct][0]
             continue
         default = _default_owner(struct)
         if default is not None:
@@ -345,7 +310,7 @@ def resolve_ownership(emitted: Dict[str, List[str]]) -> Dict[str, str]:
         if len(emitters) == 1:
             owner[struct] = emitters[0]
         else:
-            # A struct emitted by several modules with no operation/STRUCT_OWNERSHIP owner (e.g.
+            # A struct emitted by several modules with no native or operation owner (e.g.
             # `MemoryAccessColsU8`, which only ever appears nested in the Load/Store chips and in
             # no standalone operation). Make the first emitter — in registry order, operations
             # before chips — the canonical owner; the others skip it and import that module. This
@@ -360,8 +325,7 @@ def resolve_ownership(emitted: Dict[str, List[str]]) -> Dict[str, str]:
 def _import_module(owner: str) -> str:
     """The `Extracted.<…>` module file name for an owner. A chip cannot be an importable struct
     definition site (the legacy flat `<Chip>Chip.lean` modules were retired with the whole-chip
-    oracle migration), so a chip owner is a registry error — add a `STRUCT_OWNERSHIP` or
-    `STRUCT_CARRIERS` entry for the struct instead."""
+    oracle migration), so a chip owner is a registry error — give the shared type a native owner instead."""
     if owner in CHIPS:
         raise ValueError(
             f"struct owner {owner} is a chip; chips no longer own importable structs")
@@ -424,6 +388,58 @@ _DERIVE_STRUCT_RE = re.compile(
     r"^structure (\w+) \(F : Type\) where\n((?:[ \t]+\w+ : .+\n)+)deriving ProvableStruct$",
     re.MULTILINE,
 )
+
+
+def native_structs(directory: Path = None) -> Dict[str, Tuple[str, str]]:
+    """Read shared native column declarations; the extractor never writes their definitions."""
+    result = {}
+    directory = directory or Path(__file__).resolve().parent / "SP1Clean/Circuits/Types"
+    for path in sorted(directory.glob("*.lean")):
+        # Documentation is not part of a column layout. Nested block comments are deliberately
+        # not consumed by this small parser: unsupported syntax must fail the layout comparison.
+        source = re.sub(r"^[ \t]*/--(?:(?!/-|-/).)*-/[ \t]*(?:\n|$)", "",
+                        path.read_text(), flags=re.M | re.S)
+        declarations = list(_DERIVE_STRUCT_RE.finditer(source))
+        unsupported = set(_STRUCT_RE.findall(source)) - {match[1] for match in declarations}
+        if unsupported:
+            raise ValueError(f"{path}: unsupported native column declarations: {sorted(unsupported)}")
+        for match in declarations:
+            name, fields = match.group(1, 2)
+            if name in result:
+                raise ValueError(f"duplicate native column type: {name}")
+            result[name] = (f"SP1Clean.Circuits.Types.{path.stem}", fields)
+    if not result:
+        raise ValueError("no native column types found")
+    return result
+
+
+def validate_native_layouts(discovery: Dict[str, str], native: Dict[str, Tuple[str, str]],
+                            complete: bool) -> None:
+    """Compare independently extracted Rust fields with native declarations before reuse.
+
+    Whitespace is immaterial; names, order, nesting and vector lengths must agree. This is a
+    migration check on Rust reflection output, not a proof of the reflection implementation.
+    """
+    seen = set()
+    for module, body in discovery.items():
+        for match in _DERIVE_STRUCT_RE.finditer(body):
+            name, fields = match.group(1, 2)
+            if name in native:
+                if fields.split() != native[name][1].split():
+                    raise ValueError(f"{module}: Rust layout of {name} differs from native columns")
+                seen.add(name)
+    if complete and (missing := set(native) - seen):
+        raise ValueError(f"native column layouts were not checked against Rust: {sorted(missing)}")
+
+
+def _render_imports(modules: Sequence[str]) -> str:
+    return "".join(f"import {m if m.startswith('SP1Clean.') else 'SP1Clean.Extracted.' + m}\n"
+                   for m in modules)
+
+
+def _native_open(modules: Sequence[str]) -> str:
+    return ("open SP1Clean.Circuits.Types\n"
+            if any(m.startswith("SP1Clean.Circuits.Types.") for m in modules) else "")
 
 
 def _component_of(ty: str) -> str:
@@ -549,12 +565,12 @@ def _sanity_gate(label: str, body: str) -> None:
 
 def _header(import_modules: Sequence[str], doc: str) -> str:
     """Clean-native module header: common imports, reused-module imports, doc, namespace."""
-    reuse_imports = "".join(f"import SP1Clean.Extracted.{m}\n" for m in import_modules)
+    reuse_imports = _render_imports(import_modules)
     return (
         COMMON_IMPORTS + "\n" + reuse_imports + "\n"
         + doc + "\n\n"
         + LINTERS_OFF + "\n\n"
-        + "namespace SP1Clean.Extracted\nopen SP1Clean\n"
+        + "namespace SP1Clean.Extracted\nopen SP1Clean\n" + _native_open(import_modules)
     )
 
 
@@ -635,30 +651,6 @@ def _bump_constraints_heartbeats(body: str, scope: str) -> str:
                 out.append(f"set_option maxHeartbeats {value} in")
         out.append(line)
     return "\n".join(out)
-
-
-def render_struct_carrier(carrier: str, donor: str, struct_names: Sequence[str],
-                          donor_body: str) -> str:
-    """Render a struct-carrier module (see `STRUCT_CARRIERS`): the named struct declarations are
-    carved byte-for-byte out of the donor chip's no-reuse discovery body, so the canonical
-    definitions stay compiler-derived while outliving the donor's legacy chip file."""
-    blocks: Dict[str, str] = {
-        match.group(1): match.group(0) for match in _DERIVE_STRUCT_RE.finditer(donor_body)
-    }
-    missing = [name for name in struct_names if name not in blocks]
-    if missing:
-        raise ValueError(
-            f"struct carrier {carrier}: donor {donor} discovery body does not declare {missing}")
-    body = "\n\n".join(_expand_large_derives(blocks[name]) for name in struct_names)
-    struct_list = ", ".join(f"`{name}`" for name in struct_names)
-    doc = (
-        f"/-! # AUTO-GENERATED — do not edit by hand.\n\n"
-        f"Struct-carrier module: the canonical definition site for {struct_list}.\n"
-        f"Carved by `update_extracted.py` out of the `sp1-constraint-compiler --chip {donor}`\n"
-        f"discovery output (no standalone operation emits these structs; every load/store chip\n"
-        f"row nests them). Regenerate with `SP1_DIR=… python3 update_extracted.py`. -/"
-    )
-    return _header([], doc) + "\n" + body + "\n\n" + FOOTER
 
 
 # Measured recursion-depth overrides for generated AIR definitions, keyed like
@@ -831,6 +823,7 @@ def render_chip_oracle(
     import_modules = list(import_modules) + [
         h for h in shared_helpers if h not in import_modules
     ]
+    native_open = _native_open(import_modules)
     import_modules = _prune_transitive_imports(import_modules, module_imports)
     helper_defs = "\n\n".join(
         _without_generated_structures(discovery[h]) for h in embedded_helpers
@@ -852,17 +845,17 @@ def render_chip_oracle(
         f"/-! # AUTO-GENERATED whole-chip Rust AIR oracle — do not edit by hand.\n\n"
         f"Generated by `update_extracted.py` from `sp1-constraint-compiler --chip {chip} --format lean`.\n"
         f"Contains the complete Rust `{chip}` row shape, `assertZero` list, and interaction list,\n"
-        f"reusing the canonical generated struct/reader modules imported above ({imported_list}).\n"
+        f"reusing native columns and generated reader helpers imported above ({imported_list}).\n"
         f"The compiler's chip-private helper definitions ({helper_list}) are embedded in this namespace\n"
         f"rather than imported as operation-level verification artifacts. Regenerate with\n"
         f"`SP1_DIR=… python3 update_extracted.py`. -/"
     )
     return (
         COMMON_IMPORTS + "\n"
-        + "".join(f"import SP1Clean.Extracted.{m}\n" for m in import_modules)
+        + _render_imports(import_modules)
         + "\n" + doc + "\n\n" + LINTERS_OFF + "\n\n"
         + f"namespace SP1Clean.Extracted.{chip}Oracle\n"
-        + "open SP1Clean\n\n" + body + "\n\n"
+        + "open SP1Clean\n" + native_open + "\n" + body + "\n\n"
         + f"end SP1Clean.Extracted.{chip}Oracle\n"
     )
 
@@ -1268,6 +1261,7 @@ def main() -> None:
             print(f"    ✗ required public-values block failed: {reason}")
             required_failures.append(f"public-values discovery: {reason}")
 
+    validate_native_layouts(discovery, native_structs(), complete=not only)
     owner = resolve_ownership(emitted)
     print(f"Resolved ownership for {len(owner)} structs.")
 
@@ -1309,17 +1303,8 @@ def main() -> None:
     _write(os.path.join(EXTRACTED_DIR, "CoreAIRManifest.lean"), profile_output)
     _write(os.path.join(EXTRACTED_DIR, "OpcodeTable.lean"), opcode_output)
     written = 3
-    for carrier, (carrier_donor, carrier_structs) in STRUCT_CARRIERS.items():
-        if carrier_donor not in discovery:
-            continue
-        print(f"Processing struct carrier {carrier}")
-        try:
-            _write(os.path.join(EXTRACTED_DIR, f"{carrier}.lean"),
-                   render_struct_carrier(carrier, carrier_donor, carrier_structs,
-                                         discovery[carrier_donor]))
-            written += 1
-        except Exception as e:  # noqa: BLE001
-            raise SystemExit(f"struct-carrier render {carrier} failed: {e}")
+    # The native library now owns these columns; retire the old generated carrier.
+    Path(EXTRACTED_DIR, "MemoryAccess.lean").unlink(missing_ok=True)
     for op in [o for o in OPERATIONS if o in emitted and o not in CHIP_ONLY_HELPERS]:
         print(f"Processing {op}")
         try:

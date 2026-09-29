@@ -26,7 +26,7 @@ theorem profile_of_constraints (input : Var SyscallInstrsChip.Inputs (ZMod p))
       simp [FormalAssertion.toSubcircuit, SyscallCodeGuard.circuit, SyscallCodeGuard.main,
         circuit_norm, FlatOperation.interactions])
   convert spec.1 using 1
-  have memoryEval (memory : Extracted.RegisterAccessCols (Expression (ZMod p))) :
+  have memoryEval (memory : Circuits.Types.RegisterAccessCols (Expression (ZMod p))) :
       (ProvableStruct.eval env memory).prev_value = memory.prev_value.map (Expression.eval env) := by
     cases memory
     simp only [circuit_norm]

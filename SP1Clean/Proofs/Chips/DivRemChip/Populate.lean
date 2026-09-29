@@ -227,7 +227,7 @@ def populateRemNeg (B C : Word (ZMod p)) (f : Vector (ZMod p) 8) : ZMod p :=
 /-- The `is_overflow_b` struct: populated on real rows only (zero on padding), with the
 word-truncated form `(b as u32, i32::MIN)` on the W-variants and `(b, i64::MIN)` otherwise. -/
 def ovbWitness (ir : ZMod p) (B : Word (ZMod p)) (f : Vector (ZMod p) 8) :
-    Extracted.IsEqualWordOperation (ZMod p) :=
+    Circuits.Types.IsEqualWordOperation (ZMod p) :=
   if ir = 1 then
     if f[4] + f[5] + f[6] + f[7] = 1 then
       IsEqualWordOperation.populate #v[B[0], B[1], 0, 0] #v[0, 32768, 0, 0]
@@ -236,7 +236,7 @@ def ovbWitness (ir : ZMod p) (B : Word (ZMod p)) (f : Vector (ZMod p) 8) :
 
 /-- The `is_overflow_c` struct: `(c as u32, -1i32)` on the W-variants, `(c, -1i64)` otherwise. -/
 def ovcWitness (ir : ZMod p) (C : Word (ZMod p)) (f : Vector (ZMod p) 8) :
-    Extracted.IsEqualWordOperation (ZMod p) :=
+    Circuits.Types.IsEqualWordOperation (ZMod p) :=
   if ir = 1 then
     if f[4] + f[5] + f[6] + f[7] = 1 then
       IsEqualWordOperation.populate #v[C[0], C[1], 0, 0] #v[65535, 65535, 0, 0]
@@ -282,7 +282,7 @@ def populateMaxAbsCOr1 (C : Word (ZMod p)) (f : Vector (ZMod p) 8) : Word (ZMod 
 /-- The `is_c_0` struct, populated **ungated** on the computational `c` (SP1 calls
 `is_c_0.populate` on padding rows too — `mod.rs:568`). -/
 def isC0Witness (C : Word (ZMod p)) (f : Vector (ZMod p) 8) :
-    Extracted.IsZeroWordOperation (ZMod p) :=
+    Circuits.Types.IsZeroWordOperation (ZMod p) :=
   IsZeroWordOperation.populate (cComp C f)
 
 /-- The `remainder_check_multiplicity = is_real · (1 − is_c_0.result)` gate cell. -/
@@ -296,7 +296,7 @@ def ltGate (ir : ZMod p) (C : Word (ZMod p)) (f : Vector (ZMod p) 8) : ZMod p :=
 `MulOperation.populate 0 (1,0,0,0)` would fill `c_lower_byte[0] = 1`, which SP1's padding does
 not). -/
 def populateMulLower (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8) :
-    Extracted.MulOperation (ZMod p) :=
+    Circuits.Types.MulOperation (ZMod p) :=
   if ir = 1 then MulOperation.populate (populateQuotComp B C f) (cComp C f) 0 0 0
   else MulOperation.zeroCols
 
@@ -304,7 +304,7 @@ def populateMulLower (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
 the signed pair, unsigned otherwise); the W-variants leave it all-zero (SP1 `mod.rs:484-503` — the
 upper Mul's multiplicity is `is_real_not_word`). -/
 def populateMulUpper (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8) :
-    Extracted.MulOperation (ZMod p) :=
+    Circuits.Types.MulOperation (ZMod p) :=
   if ir = 1 ∧ f[0] + f[1] + f[2] + f[3] = 1 then
     MulOperation.populate (populateQuotComp B C f) (cComp C f) (f[0] + f[2]) 0 0
   else MulOperation.zeroCols

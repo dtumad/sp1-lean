@@ -440,12 +440,12 @@ def ovbResFE (ir : Expression (ZMod p)) (B : Word (Expression (ZMod p))) :
     (.ite ((wSumF (p := p)) =? (1 : ZMod p))
       ((toElements (IsEqualWordOperation.populateFE
           #v[.expr B[0], .expr B[1], 0, 0] #v[0, .const 32768, 0, 0]))[10]'(by
-        have h : size Extracted.IsEqualWordOperation = 11 := rfl
+        have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
         omega))
       ((toElements (IsEqualWordOperation.populateFE
           #v[.expr B[0], .expr B[1], .expr B[2], .expr B[3]]
           #v[0, 0, 0, .const 32768]))[10]'(by
-        have h : size Extracted.IsEqualWordOperation = 11 := rfl
+        have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
         omega)))
     0
 
@@ -457,12 +457,12 @@ def ovcResFE (ir : Expression (ZMod p)) (C : Word (Expression (ZMod p))) :
       ((toElements (IsEqualWordOperation.populateFE
           #v[.expr C[0], .expr C[1], 0, 0]
           #v[.const 65535, .const 65535, 0, 0]))[10]'(by
-        have h : size Extracted.IsEqualWordOperation = 11 := rfl
+        have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
         omega))
       ((toElements (IsEqualWordOperation.populateFE
           #v[.expr C[0], .expr C[1], .expr C[2], .expr C[3]]
           #v[.const 65535, .const 65535, .const 65535, .const 65535]))[10]'(by
-        have h : size Extracted.IsEqualWordOperation = 11 := rfl
+        have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
         omega)))
     0
 
@@ -511,8 +511,8 @@ theorem ovbResFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (by intro k hk; interval_cases k <;> simp [circuit_norm])
   -- fully manual: unfold the two ites by `rfl`, resolve the conditions, rewrite the leaves
   -- (the mixed simp route loops in the `fields (size M)` projection machinery)
-  have h11 : (10 : ℕ) < size Extracted.IsEqualWordOperation := by
-    have h : size Extracted.IsEqualWordOperation = 11 := rfl
+  have h11 : (10 : ℕ) < size Circuits.Types.IsEqualWordOperation := by
+    have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
     omega
   have hl1 : Witgen.FExpr.eval { env := env }
       ((toElements (IsEqualWordOperation.populateFE
@@ -570,8 +570,8 @@ theorem ovcResFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
           simp [circuit_norm, hWC 0 (by omega), hWC 1 (by omega), hWC 2 (by omega),
             hWC 3 (by omega)])
     (by intro k hk; interval_cases k <;> simp [circuit_norm])
-  have h11 : (10 : ℕ) < size Extracted.IsEqualWordOperation := by
-    have h : size Extracted.IsEqualWordOperation = 11 := rfl
+  have h11 : (10 : ℕ) < size Circuits.Types.IsEqualWordOperation := by
+    have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
     omega
   have hl1 : Witgen.FExpr.eval { env := env }
       ((toElements (IsEqualWordOperation.populateFE
@@ -677,7 +677,7 @@ section IsC0Site
 /-- The `is_c_0` struct site (ungated, flat 11 cells). -/
 def isC0FE (C : Word (Expression (ZMod p))) : Vector (Witgen.FExpr (ZMod p)) 11 :=
   (toElements (IsZeroWordOperation.populateFE (compF C))).cast
-    (show size Extracted.IsZeroWordOperation = 11 from rfl)
+    (show size Circuits.Types.IsZeroWordOperation = 11 from rfl)
 
 /-- The remainder-check gate cell `is_real · (1 − is_c_0.result)`. -/
 def ltGateFE (ir : Expression (ZMod p)) (C : Word (Expression (ZMod p))) :
@@ -695,7 +695,7 @@ include hWC hUC in
 theorem isC0FE_eval (i : ℕ) (hi : i < 11) :
     ((isC0FE C)[i]).eval { env := env }
       = ((toElements (isC0Witness vC (hintFlags env.hint))).cast
-          (show size Extracted.IsZeroWordOperation = 11 from rfl))[i] := by
+          (show size Circuits.Types.IsZeroWordOperation = 11 from rfl))[i] := by
   have h := IsZeroWordOperation.populateFE_eval env (compF C)
     (va := cComp vC (hintFlags env.hint)) (compF_eval env C vC hWC hUC)
   rw [isC0FE, Vector.getElem_cast, Vector.getElem_cast,
@@ -928,14 +928,14 @@ section MulSites
 
 /-- The `c_times_quotient_lower` struct payload (real rows only). -/
 def mulLowerFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Extracted.MulOperation (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.MulOperation (Witgen.FExpr (ZMod p)) :=
   Witgen.gateFE ((Witgen.FExpr.expr ir) =? (1 : ZMod p))
     (MulOperation.populateFEW (quotCompFE B C) (compF C) 0 0 0)
 
 /-- The `c_times_quotient_upper` struct payload (64-bit variants of real rows only; the signed
 pair runs the `is_mulh` stream). -/
 def mulUpperFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Extracted.MulOperation (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.MulOperation (Witgen.FExpr (ZMod p)) :=
   Witgen.gateFE (((Witgen.FExpr.expr ir) =? (1 : ZMod p)).and
       ((longSumF (p := p)) =? (1 : ZMod p)))
     (MulOperation.populateFEW (quotCompFE B C) (compF C) (flagF 0 + flagF 2) 0 0)
@@ -1048,7 +1048,7 @@ section OvSites
 
 /-- The `is_overflow_b` struct payload (real rows; word-truncated on the W classes). -/
 def ovbFE (ir : Expression (ZMod p)) (B : Word (Expression (ZMod p))) :
-    Extracted.IsEqualWordOperation (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.IsEqualWordOperation (Witgen.FExpr (ZMod p)) :=
   Witgen.gateFE ((Witgen.FExpr.expr ir) =? (1 : ZMod p))
     (Witgen.iteFE ((wSumF (p := p)) =? (1 : ZMod p))
       (IsEqualWordOperation.populateFE
@@ -1058,7 +1058,7 @@ def ovbFE (ir : Expression (ZMod p)) (B : Word (Expression (ZMod p))) :
 
 /-- The `is_overflow_c` struct payload. -/
 def ovcFE (ir : Expression (ZMod p)) (C : Word (Expression (ZMod p))) :
-    Extracted.IsEqualWordOperation (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.IsEqualWordOperation (Witgen.FExpr (ZMod p)) :=
   Witgen.gateFE ((Witgen.FExpr.expr ir) =? (1 : ZMod p))
     (Witgen.iteFE ((wSumF (p := p)) =? (1 : ZMod p))
       (IsEqualWordOperation.populateFE

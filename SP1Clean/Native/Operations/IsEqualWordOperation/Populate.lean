@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
 import SP1Clean.Native.Operations.IsZeroWordOperation.Populate
-import SP1Clean.Extracted.IsEqualWordOperation
+import SP1Clean.Circuits.Types.IsEqualWordOperation
 
 /-! # `IsEqualWordOperation` — `populate` (the witness generator)
 
@@ -14,7 +14,7 @@ namespace SP1Clean.IsEqualWordOperation
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The witnessed column struct: `IsZeroWordOperation.populate` on the limb-wise difference `a - b`. -/
-def populate (a b : Word (ZMod p)) : Extracted.IsEqualWordOperation (ZMod p) :=
+def populate (a b : Word (ZMod p)) : Circuits.Types.IsEqualWordOperation (ZMod p) :=
   ⟨IsZeroWordOperation.populate #v[a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]⟩
 
 section FE
@@ -22,7 +22,7 @@ section FE
 /-- The witness-IR twin of `populate`: `IsZeroWordOperation.populateFE` on the limb-wise
 difference (the IR's derived `sub` sugar). -/
 def populateFE (a b : Vector (Witgen.FExpr (ZMod p)) 4) :
-    Extracted.IsEqualWordOperation (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.IsEqualWordOperation (Witgen.FExpr (ZMod p)) :=
   ⟨IsZeroWordOperation.populateFE #v[a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]⟩
 
 omit [Fact (2 ^ 17 < p)] in
@@ -49,7 +49,7 @@ theorem populateFE_eval (env : ProverEnvironment (ZMod p))
   rw [Witgen.StructEval.eval_eq_eval]
   show (⟨Witgen.eval { env := env }
       (IsZeroWordOperation.populateFE #v[a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]])⟩ :
-    Extracted.IsEqualWordOperation (ZMod p)) = populate va vb
+    Circuits.Types.IsEqualWordOperation (ZMod p)) = populate va vb
   rw [h]
   rfl
 
@@ -79,7 +79,7 @@ theorem populateFE_congr (env env' : ProverEnvironment (ZMod p))
   rw [Witgen.StructEval.eval_eq_eval, Witgen.StructEval.eval_eq_eval]
   show (⟨Witgen.eval { env := env }
       (IsZeroWordOperation.populateFE #v[a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]])⟩ :
-    Extracted.IsEqualWordOperation (ZMod p))
+    Circuits.Types.IsEqualWordOperation (ZMod p))
     = ⟨Witgen.eval { env := env' }
         (IsZeroWordOperation.populateFE #v[a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]])⟩
   rw [h]
@@ -91,10 +91,10 @@ section Flatten
 set_option linter.unusedSectionVars false in
 /-- The single-field wrapper flattens to its field's flattening (kills the nested `toElements`
 tower: one rewrite lands in `IsZeroWordOperation`, whose navigators finish). -/
-lemma toElements_mk {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    toElements (⟨s⟩ : Extracted.IsEqualWordOperation F)
+lemma toElements_mk {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    toElements (⟨s⟩ : Circuits.Types.IsEqualWordOperation F)
       = (toElements s).cast (by rfl) := by
-  change ProvableStruct.structToElements (⟨s⟩ : Extracted.IsEqualWordOperation F) = _
+  change ProvableStruct.structToElements (⟨s⟩ : Circuits.Types.IsEqualWordOperation F) = _
   rw [ProvableStruct.structToElements_eq]
   simp only [ProvableStruct.toComponents, components, ProvableStruct.componentsToElements]
   ext i hi
@@ -104,9 +104,9 @@ lemma toElements_mk {F : Type} (s : Extracted.IsZeroWordOperation F) :
 set_option linter.unusedSectionVars false in
 /-- The nested result field is flattened cell `10` (for composing chips that read the
 overflow-result cell of a struct payload). -/
-lemma result_eq_toElements {F : Type} (s : Extracted.IsEqualWordOperation F) :
+lemma result_eq_toElements {F : Type} (s : Circuits.Types.IsEqualWordOperation F) :
     s.is_diff_zero.result = (toElements s)[10]'(by
-      have h : size Extracted.IsEqualWordOperation = 11 := rfl
+      have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
       omega) := by
   obtain ⟨z⟩ := s
   rw [toElements_mk, Vector.getElem_cast]
@@ -114,17 +114,17 @@ lemma result_eq_toElements {F : Type} (s : Extracted.IsEqualWordOperation F) :
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Every flattened cell of the zero struct is zero. -/
-lemma zc_cell (i : ℕ) (hi : i < size Extracted.IsEqualWordOperation) :
+lemma zc_cell (i : ℕ) (hi : i < size Circuits.Types.IsEqualWordOperation) :
     (toElements (⟨IsZeroWordOperation.zeroCols⟩ :
-        Extracted.IsEqualWordOperation (ZMod p)))[i] = 0 := by
+        Circuits.Types.IsEqualWordOperation (ZMod p)))[i] = 0 := by
   rw [toElements_mk, Vector.getElem_cast, IsZeroWordOperation.zc_cell]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The flattened zero struct, as a `fromElements` of zeros (the shape `Witgen.eval_gateFE`'s
 else branch produces). -/
 lemma fromElements_zero :
-    (fromElements (Vector.replicate (size Extracted.IsEqualWordOperation) 0)
-      : Extracted.IsEqualWordOperation (ZMod p)) = ⟨IsZeroWordOperation.zeroCols⟩ := by
+    (fromElements (Vector.replicate (size Circuits.Types.IsEqualWordOperation) 0)
+      : Circuits.Types.IsEqualWordOperation (ZMod p)) = ⟨IsZeroWordOperation.zeroCols⟩ := by
   rw [ProvableType.ext_iff]
   intro i hi
   rw [ProvableType.toElements_fromElements, Vector.getElem_replicate]

@@ -15,7 +15,7 @@ open Circuit Channels
 
 structure Inputs (F : Type) where
   instruction : SyscallInstrsChip.Inputs F
-  length : Extracted.RegisterAccessCols F
+  length : Circuits.Types.RegisterAccessCols F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 

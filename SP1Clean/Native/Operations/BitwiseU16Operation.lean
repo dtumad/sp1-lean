@@ -3,7 +3,7 @@ import SP1Clean.Math.Bitwise
 import SP1Clean.Proofs.Operations.BitwiseOperation.Formal
 import SP1Clean.Native.Operations.BitwiseOperation.Populate
 import SP1Clean.Native.Operations.U16toU8OperationSafe
-import SP1Clean.Extracted.U16toU8OperationUnsafe
+import SP1Clean.Circuits.Types.U16toU8Operation
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
@@ -40,12 +40,12 @@ open SP1Clean.Channels (byteChannel)
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Proof-oriented local columns for the composed u16 bitwise gadget: the two low-byte decomposition
-blocks (the shared `Extracted.U16toU8Operation` struct, kept because the decomposition is the shared
-generated substrate) plus the native `BitwiseOperation.Columns` result block. The assembled chip
+blocks (the shared `Circuits.Types.U16toU8Operation` struct, kept because the decomposition is the shared
+native column type) plus the native `BitwiseOperation.Columns` result block. The assembled chip
 faithfulness map is the only place that relates this shape to SP1 Rust's helper-operation columns. -/
 structure Columns (F : Type) where
-  b_low_bytes : Extracted.U16toU8Operation F
-  c_low_bytes : Extracted.U16toU8Operation F
+  b_low_bytes : Circuits.Types.U16toU8Operation F
+  c_low_bytes : Circuits.Types.U16toU8Operation F
   bitwise_operation : BitwiseOperation.Columns F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
@@ -64,7 +64,7 @@ provable_struct_eval_lemmas Inputs
 /-- The eight little-endian bytes of a word given its low-byte columns: `byte[2i] = low[i]`,
 `byte[2i+1] = (w[i] − low[i])·256⁻¹` (SP1's `eval_u16_to_u8_unsafe`). Reducible so it unifies with the
 byte expressions `main` feeds the composed `BitwiseOperation`. -/
-@[reducible] def decompBytes (w : Word (ZMod p)) (low : Extracted.U16toU8Operation (ZMod p)) :
+@[reducible] def decompBytes (w : Word (ZMod p)) (low : Circuits.Types.U16toU8Operation (ZMod p)) :
     Vector (ZMod p) 8 :=
   #v[low.low_bytes[0], (w[0] - low.low_bytes[0]) * (256 : ZMod p)⁻¹,
      low.low_bytes[1], (w[1] - low.low_bytes[1]) * (256 : ZMod p)⁻¹,
@@ -104,7 +104,7 @@ lemma limb_split {w low : ZMod p} (hlo : low.val < 256)
 
 /-- A limb of `w` splits as its two decomposed bytes (low + 256·high), given both are bytes. Keeps the
 split in `decompBytes`-indexed form so it unifies syntactically with `toBitVec64_asm8`. -/
-lemma decomp_limb_split {w : Word (ZMod p)} {low : Extracted.U16toU8Operation (ZMod p)} (i : Fin 4)
+lemma decomp_limb_split {w : Word (ZMod p)} {low : Circuits.Types.U16toU8Operation (ZMod p)} (i : Fin 4)
     (hlo : (decompBytes w low)[2 * (i : ℕ)].val < 256)
     (hhi : (decompBytes w low)[2 * (i : ℕ) + 1].val < 256) :
     w[(i : ℕ)].val
@@ -183,10 +183,10 @@ theorem result_semantic (input : Inputs (ZMod p))
 /-- The decomposition + result columns for `populate`: the low bytes are `w[i] % 256`, the result bytes
 are the per-byte `byteOp opcode` of the decomposed operand bytes (mirroring SP1's `populate`). -/
 def populate (b c : Word (ZMod p)) (opcode : ZMod p) : Columns (ZMod p) :=
-  let lb : Extracted.U16toU8Operation (ZMod p) :=
+  let lb : Circuits.Types.U16toU8Operation (ZMod p) :=
     ⟨#v[((b[0].val % 256 : ℕ) : ZMod p), ((b[1].val % 256 : ℕ) : ZMod p),
         ((b[2].val % 256 : ℕ) : ZMod p), ((b[3].val % 256 : ℕ) : ZMod p)]⟩
-  let lc : Extracted.U16toU8Operation (ZMod p) :=
+  let lc : Circuits.Types.U16toU8Operation (ZMod p) :=
     ⟨#v[((c[0].val % 256 : ℕ) : ZMod p), ((c[1].val % 256 : ℕ) : ZMod p),
         ((c[2].val % 256 : ℕ) : ZMod p), ((c[3].val % 256 : ℕ) : ZMod p)]⟩
   ⟨lb, lc, BitwiseOperation.populate (decompBytes b lb) (decompBytes c lc) opcode⟩

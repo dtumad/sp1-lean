@@ -61,7 +61,7 @@ local macro "aluViewAdapter " inputs:term ", " circuit:term ", " inputOutput:ter
         (⟨$circuit (p := p)⟩ : Component (ZMod p)).rowInput $env :=
       eval_varFromOffset_valueFromOffset $inputs 0 $env
     simp only [$unfolds,*]
-    exact congrArg Extracted.ALUTypeReader.toAdapterView
+    exact congrArg Circuits.Types.ALUTypeReader.toAdapterView
       (($inputOutput $env).symm.trans
         (congrArg (fun input : $inputs (ZMod p) => input.adapter) inputEq.symm))))
 
@@ -928,7 +928,7 @@ theorem addwChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     addwViewOf_state, addwViewOf_adapter, addwViewOf_isReal, addwViewOf_rdWrite,
-    Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift Addw's evaluated conditional six-pack to the typed decoded-row boundary. -/
 theorem addwChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -959,7 +959,7 @@ theorem AddwChip.aluTypeTimestampContract :
   intro env _constraints
   constructor <;>
     simp only [input, offset, readerInput, AddwChip.aluTypeReaderInput, AddwChip.circuit,
-      AddwChip.rowView, Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+      AddwChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 theorem addwChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = addwChipDescriptor (p := p))
@@ -1094,7 +1094,7 @@ theorem bitwiseChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     bitwiseViewOf_state, bitwiseViewOf_adapter, bitwiseViewOf_isReal, bitwiseViewOf_rdWrite,
-    Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift Bitwise's evaluated conditional six-pack to the typed decoded-row boundary. -/
 theorem bitwiseChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -1125,7 +1125,7 @@ theorem BitwiseChip.aluTypeTimestampContract :
   intro env _constraints
   constructor <;>
     simp only [input, offset, readerInput, BitwiseChip.aluTypeReaderInput, BitwiseChip.circuit,
-      BitwiseChip.rowView, Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+      BitwiseChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 theorem bitwiseChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = bitwiseChipDescriptor (p := p))
@@ -1251,7 +1251,7 @@ theorem ltChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     ltViewOf_state, ltViewOf_adapter, ltViewOf_isReal, ltViewOf_rdWrite,
-    Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift Lt's evaluated conditional six-pack to the typed decoded-row boundary. -/
 theorem ltChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -1281,7 +1281,7 @@ theorem LtChip.aluTypeTimestampContract :
   intro env _constraints
   constructor <;>
     simp only [input, offset, readerInput, LtChip.aluTypeReaderInput, LtChip.circuit,
-      LtChip.rowView, Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+      LtChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 theorem ltChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = ltChipDescriptor (p := p))
@@ -1445,7 +1445,7 @@ theorem shiftLeftChip_memoryInteractionValues_eq (env : Environment (ZMod p))
   rw [shiftLeftGate_eval_eq_isReal env constraints]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     shiftLeftViewOf_state, shiftLeftViewOf_adapter, shiftLeftViewOf_isReal,
-    shiftLeftViewOf_rdWrite, Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+    shiftLeftViewOf_rdWrite, Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
   simp only [← vec4_eval, Vector.getElem_mapRange, Expression.eval]
 
 /-- Lift ShiftLeft's constraint-normalized six-pack to the typed decoded-row boundary. -/
@@ -1497,7 +1497,7 @@ theorem ShiftLeftChip.aluTypeTimestampContract :
   constructor <;>
     simp only [input, offset, readerInput, ShiftLeftChip.aluReaderInput,
       shiftLeftViewOf_state, shiftLeftViewOf_adapter,
-      Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+      Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
   simpa only [ShiftLeftChip.exposedGate, Expression.eval, circuit_norm] using
     shiftLeftGate_eval_eq_isReal env constraints
 
@@ -1670,7 +1670,7 @@ theorem shiftRightChip_memoryInteractionValues_eq (env : Environment (ZMod p))
   rw [shiftRightWriteGate_eval_eq_isReal env constraints]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     shiftRightViewOf_state, shiftRightViewOf_adapter, shiftRightViewOf_isReal,
-    shiftRightViewOf_rdWrite, Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+    shiftRightViewOf_rdWrite, Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
   simp only [← vec4_eval, Vector.getElem_mapRange, Expression.eval]
 
 /-- Lift ShiftRight's constraint-normalized six-pack to the typed decoded-row boundary. -/
@@ -1707,7 +1707,7 @@ theorem ShiftRightChip.aluTypeTimestampContract :
   constructor <;>
     simp only [input, offset, readerInput, ShiftRightChip.aluReaderInput,
       ShiftRightChip.circuit, ShiftRightChip.rowView,
-      Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+      Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 theorem shiftRightChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))
@@ -1900,7 +1900,7 @@ theorem aluX0Chip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeReadBackMessage, aluX0ViewOf_state,
     aluX0ViewOf_adapter, aluX0ViewOf_isReal,
-    Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift AluX0's evaluated Memory list to the typed decoded-row boundary. -/
 theorem aluX0Chip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -1948,7 +1948,7 @@ theorem AluX0Chip.immutableAluTypeTimestampContract :
     constructor <;>
       simp only [input, readerInput, AluX0Chip.immutableAluReaderInput,
         AluX0Chip.circuit, AluX0Chip.rowView,
-        Extracted.ALUTypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
 
 theorem aluX0Chip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))

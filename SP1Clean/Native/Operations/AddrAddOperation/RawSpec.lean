@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.AddrAddOperation
+import SP1Clean.Circuits.Types.AddrAddOperation
 import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.IntervalCases
 
@@ -19,7 +19,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The carry-bool + limb-range form (the literal meaning of the extracted constraint list at
 `is_real = 1`), stated against the 3-limb result `value`. The high carry runs against `0`. -/
-def RawSpec (a b : Word (ZMod p)) (cols : Extracted.AddrAddOperation (ZMod p)) : Prop :=
+def RawSpec (a b : Word (ZMod p)) (cols : Circuits.Types.AddrAddOperation (ZMod p)) : Prop :=
   let c0 : ZMod p := (a[0] + b[0] - cols.value[0]) * 65536⁻¹
   let c1 : ZMod p := (a[1] + b[1] - cols.value[1] + c0) * 65536⁻¹
   let c2 : ZMod p := (a[2] + b[2] - cols.value[2] + c1) * 65536⁻¹
@@ -39,7 +39,7 @@ result is `(a + b) mod 2^48`. The high carry `c3` runs against `0` (no `value[3]
 needs only its booleanity (from `RawSpec`), not the address-fits assumption. Stated over plain words
 `a`, `b` (not `Inputs`) so the implicit args unify with a composing soundness goal. -/
 theorem addrAddSemantics_of_carries {a b : Word (ZMod p)}
-    {cols : Extracted.AddrAddOperation (ZMod p)}
+    {cols : Circuits.Types.AddrAddOperation (ZMod p)}
     (ha : Word.isU64 a) (hb : Word.isU64 b)
     (h_raw : RawSpec a b cols) :
     cols.value[0].val + 65536 * cols.value[1].val + 65536 ^ 2 * cols.value[2].val =
@@ -79,7 +79,7 @@ theorem addrAddSemantics_of_carries {a b : Word (ZMod p)}
 the three-limb address. This is an AIR conclusion, not a soundness precondition: the fourth carry
 runs against zero, so any satisfying row necessarily represents a 48-bit address. -/
 theorem addrAddFits_of_carries {a b : Word (ZMod p)}
-    {cols : Extracted.AddrAddOperation (ZMod p)}
+    {cols : Circuits.Types.AddrAddOperation (ZMod p)}
     (ha : Word.isU64 a) (hb : Word.isU64 b)
     (h_raw : RawSpec a b cols) :
     (Word.toNat a + Word.toNat b) % 2 ^ 64 < 2 ^ 48 := by
@@ -132,7 +132,7 @@ The low carries `c0, c1, c2` are pinned by the value equation; the high carry `c
 65536⁻¹` runs against `0` and is *not* fixed by the result — its booleanity is exactly what `hfit`
 (the 64-bit-truncated sum keeps no bits above 48) provides. -/
 theorem carries_of_addrAddSemantics {a b : Word (ZMod p)}
-    {cols : Extracted.AddrAddOperation (ZMod p)}
+    {cols : Circuits.Types.AddrAddOperation (ZMod p)}
     (ha : Word.isU64 a) (hb : Word.isU64 b)
     (hfit : (Word.toNat a + Word.toNat b) % 2 ^ 64 < 2 ^ 48)
     (hr0 : cols.value[0].val < 2 ^ 16) (hr1 : cols.value[1].val < 2 ^ 16)

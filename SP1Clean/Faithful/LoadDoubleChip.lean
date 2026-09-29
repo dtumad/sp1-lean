@@ -1,3 +1,5 @@
+import SP1Clean.Extracted.AddrAddOperation
+import SP1Clean.Extracted.AddressOperation
 import SP1Clean.Faithful.ChipOracle
 import SP1Clean.Extracted.ChipOracle.LoadDouble
 import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
@@ -14,13 +16,14 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Rebuild the shared standalone `AddressOperation` block as the byte-identical struct embedded in
 the generated LoadDouble oracle namespace. -/
-def loadDoubleOracleAddressOperation {F : Type} (cols : Extracted.AddressOperation F) :
+def loadDoubleOracleAddressOperation {F : Type} (cols : Circuits.Types.AddressOperation F) :
     Extracted.LoadDoubleOracle.AddressOperation F :=
   { addr_operation := { value := cols.addr_operation.value }
     top_two_limb_inv := cols.top_two_limb_inv }
@@ -28,7 +31,7 @@ def loadDoubleOracleAddressOperation {F : Type} (cols : Extracted.AddressOperati
 /-- Inverse of `loadDoubleOracleAddressOperation`. -/
 def loadDoubleNativeAddressOperation {F : Type}
     (cols : Extracted.LoadDoubleOracle.AddressOperation F) :
-    Extracted.AddressOperation F :=
+    Circuits.Types.AddressOperation F :=
   { addr_operation := { value := cols.addr_operation.value }
     top_two_limb_inv := cols.top_two_limb_inv }
 
@@ -166,20 +169,20 @@ theorem loadDoubleChipColumnsOfInput_roundtrip {F : Type}
 
 @[circuit_norm] private theorem loadDoubleEvalAddress
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.AddressOperation (Expression F)) :
+    (cols : Circuits.Types.AddressOperation (Expression F)) :
     Eval.eval env cols =
       ({ addr_operation := Eval.eval env cols.addr_operation
          top_two_limb_inv := Eval.eval env cols.top_two_limb_inv } :
-        Extracted.AddressOperation F) := by
+        Circuits.Types.AddressOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem loadDoubleEvalAddrAdd
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.AddrAddOperation (Expression F)) :
+    (cols : Circuits.Types.AddrAddOperation (Expression F)) :
     Eval.eval env cols =
       ({ value := Eval.eval env cols.value } :
-        Extracted.AddrAddOperation F) := by
+        Circuits.Types.AddrAddOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -227,24 +230,24 @@ theorem loadDoubleChipColumnsOfInput_roundtrip {F : Type}
 
 @[circuit_norm] private theorem loadDoubleEvalMemoryTimestamp
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MemoryAccessTimestamp (Expression F)) :
+    (cols : Circuits.Types.MemoryAccessTimestamp (Expression F)) :
     Eval.eval env cols =
       ({ prev_high := Eval.eval env cols.prev_high
          prev_low := Eval.eval env cols.prev_low
          compare_low := Eval.eval env cols.compare_low
          diff_low_limb := Eval.eval env cols.diff_low_limb
          diff_high_limb := Eval.eval env cols.diff_high_limb } :
-        Extracted.MemoryAccessTimestamp F) := by
+        Circuits.Types.MemoryAccessTimestamp F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem loadDoubleEvalMemoryCols
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MemoryAccessCols (Expression F)) :
+    (cols : Circuits.Types.MemoryAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value
          access_timestamp := Eval.eval env cols.access_timestamp } :
-        Extracted.MemoryAccessCols F) := by
+        Circuits.Types.MemoryAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -264,9 +267,9 @@ theorem evalLoadDoubleDirectOutput
   have hinputEval := eval_inputFirstRow input locals data
   rw [LoadDoubleChip.eval_inputs, LoadDoubleChip.Inputs.mk.injEq] at hinputEval
   refine ⟨hinputEval.2.1, hinputEval.2.2.1, ?_, hinputEval.2.2.2, hinputEval.1⟩
-  rw [loadDoubleEvalAddress, Extracted.AddressOperation.mk.injEq]
+  rw [loadDoubleEvalAddress, Circuits.Types.AddressOperation.mk.injEq]
   constructor
-  · rw [loadDoubleEvalAddrAdd, Extracted.AddrAddOperation.mk.injEq]
+  · rw [loadDoubleEvalAddrAdd, Circuits.Types.AddrAddOperation.mk.injEq]
     apply Vector.ext
     intro i hi
     change
@@ -324,7 +327,7 @@ theorem loadDoubleChipLookupsEmpty :
     Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
 
 private def loadDoubleAddressCols (offset : ℕ) :
-    Extracted.AddressOperation (Expression (ZMod p)) :=
+    Circuits.Types.AddressOperation (Expression (ZMod p)) :=
   ⟨⟨Vector.mapRange 3 fun i => var { index := offset + i }⟩,
     var { index := offset + 3 }⟩
 
@@ -336,11 +339,11 @@ private theorem loadDoubleEvalAddressCols
           { value := #v[env.get offset, env.get (offset + 1),
             env.get (offset + 2)] }
          top_two_limb_inv := env.get (offset + 3) } :
-        Extracted.AddressOperation (ZMod p)) := by
+        Circuits.Types.AddressOperation (ZMod p)) := by
   simp only [loadDoubleAddressCols]
-  rw [loadDoubleEvalAddress, Extracted.AddressOperation.mk.injEq]
+  rw [loadDoubleEvalAddress, Circuits.Types.AddressOperation.mk.injEq]
   constructor
-  · rw [loadDoubleEvalAddrAdd, Extracted.AddrAddOperation.mk.injEq]
+  · rw [loadDoubleEvalAddrAdd, Circuits.Types.AddrAddOperation.mk.injEq]
     apply Vector.ext
     intro i hi
     rw [← ProvableType.getElem_eval_fields env

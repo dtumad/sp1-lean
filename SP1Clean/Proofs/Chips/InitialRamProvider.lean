@@ -20,7 +20,7 @@ abbrev message := @SnapshotRamProvider.message
 omit [Fact (2 ^ 17 < p)] in
 /-- The pushed RAM record has its canonical value in the actual native boot state. -/
 theorem initialSpec (image : ProgramImage) (input : Inputs (ZMod p))
-    (value : Word (ZMod p)) (address : Extracted.AddressOperation (ZMod p))
+    (value : Word (ZMod p)) (address : Circuits.Types.AddressOperation (ZMod p))
     (read : InitialMemoryRead.Spec image.initialMemory input value)
     (checked : AddressOperation.Spec (addressInput input) address) :
     MemoryBoundary.InitialAtSpec image (Word.toNat input.bytes[0].address) (message address value) := by

@@ -1,3 +1,4 @@
+import SP1Clean.Extracted.LtOperationSigned
 import SP1Clean.Faithful.ChipOracle
 import SP1Clean.Extracted.ChipOracle.Lt
 import SP1Clean.Faithful.LtOperationUnsigned
@@ -28,19 +29,20 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 @[circuit_norm] private theorem ltChip_eval_ltUnsignedColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.LtOperationUnsigned (Expression F)) :
+    (cols : Circuits.Types.LtOperationUnsigned (Expression F)) :
     Eval.eval env cols =
       ({ u16_compare_operation := Eval.eval env cols.u16_compare_operation
          u16_flags := Eval.eval env cols.u16_flags
          not_eq_inv := Eval.eval env cols.not_eq_inv
          comparison_limbs := Eval.eval env cols.comparison_limbs } :
-        Extracted.LtOperationUnsigned F) := by
+        Circuits.Types.LtOperationUnsigned F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -56,10 +58,10 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 @[circuit_norm] private theorem ltChip_eval_u16CompareColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16CompareOperation (Expression F)) :
+    (cols : Circuits.Types.U16CompareOperation (Expression F)) :
     Eval.eval env cols =
       ({ bit := Eval.eval env cols.bit } :
-        Extracted.U16CompareOperation F) := by
+        Circuits.Types.U16CompareOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -103,7 +105,7 @@ private theorem ltChip_u16Compare_assertions_exact
   simp only [circuit_norm, eval_sub, Expression.eval, sub_zero]
 
 private def ltUnsignedAssertionTail (b cc : Word (ZMod p))
-    (cols : Extracted.LtOperationUnsigned (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.LtOperationUnsigned (ZMod p)) (isReal : ZMod p) :
     List (ZMod p) :=
   let sum3 := (0 : ZMod p) + cols.u16_flags[3]
   let sum2 := sum3 + cols.u16_flags[2]
@@ -136,7 +138,7 @@ private def ltUnsignedAssertionTail (b cc : Word (ZMod p))
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem extracted_ltUnsigned_assertions_decompose
-    (b cc : Word (ZMod p)) (cols : Extracted.LtOperationUnsigned (ZMod p))
+    (b cc : Word (ZMod p)) (cols : Circuits.Types.LtOperationUnsigned (ZMod p))
     (isReal : ZMod p) :
     Extracted.LtOperationUnsigned.asserts b cc cols isReal =
       Extracted.U16CompareOperation.asserts
@@ -304,12 +306,12 @@ private theorem ltChip_ltUnsigned_assertions_exact
 
 @[circuit_norm] theorem eval_ltSignedColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.LtOperationSigned (Expression F)) :
+    (cols : Circuits.Types.LtOperationSigned (Expression F)) :
     Eval.eval env cols =
       ({ result := Eval.eval env cols.result
          b_msb := Eval.eval env cols.b_msb
          c_msb := Eval.eval env cols.c_msb } :
-        Extracted.LtOperationSigned F) := by
+        Circuits.Types.LtOperationSigned F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -327,16 +329,16 @@ private theorem ltChip_ltUnsigned_assertions_exact
 
 @[circuit_norm] private theorem ltChip_eval_u16MSBColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16MSBOperation (Expression F)) :
+    (cols : Circuits.Types.U16MSBOperation (Expression F)) :
     Eval.eval env cols =
       ({ msb := Eval.eval env cols.msb } :
-        Extracted.U16MSBOperation F) := by
+        Circuits.Types.U16MSBOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem eval_aluOpBPrev
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.ALUTypeReader (Expression F)) :
+    (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).op_b_memory.prev_value =
       Eval.eval env cols.op_b_memory.prev_value := by
   rw [Readers.ALUTypeReader.eval_cols]
@@ -346,7 +348,7 @@ private theorem ltChip_ltUnsigned_assertions_exact
 
 @[circuit_norm] private theorem eval_ltSignedBit
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.LtOperationSigned (Expression F)) :
+    (cols : Circuits.Types.LtOperationSigned (Expression F)) :
     (Eval.eval env cols).result.u16_compare_operation.bit =
       Expression.eval env cols.result.u16_compare_operation.bit := by
   rw [eval_ltSignedColumns]
@@ -388,19 +390,19 @@ private theorem eval_vec4_literal {F : Type} [FiniteField F]
   interval_cases i <;> rfl
 
 private theorem ltUnsigned_eta {F : Type}
-    (cols : Extracted.LtOperationUnsigned F) :
+    (cols : Circuits.Types.LtOperationUnsigned F) :
     (⟨cols.u16_compare_operation,
       #v[cols.u16_flags[0], cols.u16_flags[1],
         cols.u16_flags[2], cols.u16_flags[3]],
       cols.not_eq_inv,
       #v[cols.comparison_limbs[0], cols.comparison_limbs[1]]⟩ :
-      Extracted.LtOperationUnsigned F) = cols := by
+      Circuits.Types.LtOperationUnsigned F) = cols := by
   cases cols
   simp only
   rw [vec4_eta, vec2_eta]
 
 private theorem ltSigned_eta {F : Type}
-    (cols : Extracted.LtOperationSigned F) :
+    (cols : Circuits.Types.LtOperationSigned F) :
     ({ result :=
         { u16_compare_operation :=
             { bit := cols.result.u16_compare_operation.bit }
@@ -413,17 +415,17 @@ private theorem ltSigned_eta {F : Type}
               cols.result.comparison_limbs[1]] }
        b_msb := { msb := cols.b_msb.msb }
        c_msb := { msb := cols.c_msb.msb } } :
-      Extracted.LtOperationSigned F) = cols := by
+      Circuits.Types.LtOperationSigned F) = cols := by
   cases cols with
   | mk result bMsb cMsb =>
       cases bMsb
       cases cMsb
-      rw [Extracted.LtOperationSigned.mk.injEq]
+      rw [Circuits.Types.LtOperationSigned.mk.injEq]
       exact ⟨ltUnsigned_eta result, rfl, rfl⟩
 
 private theorem eval_ltSigned_eta {F : Type} [FiniteField F]
     (env : Environment F)
-    (cols : Extracted.LtOperationSigned (Expression F)) :
+    (cols : Circuits.Types.LtOperationSigned (Expression F)) :
     ({ result :=
         { u16_compare_operation :=
             { bit := Eval.eval env cols.result.u16_compare_operation.bit }
@@ -438,27 +440,27 @@ private theorem eval_ltSigned_eta {F : Type} [FiniteField F]
               (Eval.eval env cols.result.comparison_limbs)[1]] }
        b_msb := { msb := Eval.eval env cols.b_msb.msb }
        c_msb := { msb := Eval.eval env cols.c_msb.msb } } :
-      Extracted.LtOperationSigned F) = Eval.eval env cols := by
+      Circuits.Types.LtOperationSigned F) = Eval.eval env cols := by
   rw [eval_ltSignedColumns, eval_ltUnsignedColumns,
     eval_u16CompareColumns]
   rw [vec4_eta, vec2_eta]
-  rw [Extracted.LtOperationSigned.mk.injEq]
+  rw [Circuits.Types.LtOperationSigned.mk.injEq]
   exact ⟨rfl, (eval_u16MSBColumns env cols.b_msb).symm,
     (eval_u16MSBColumns env cols.c_msb).symm⟩
 
 private theorem registerAccess_eta {F : Type}
-    (cols : Extracted.RegisterAccessCols F) :
+    (cols : Circuits.Types.RegisterAccessCols F) :
     ({ prev_value :=
         #v[cols.prev_value[0], cols.prev_value[1],
           cols.prev_value[2], cols.prev_value[3]]
        access_timestamp := cols.access_timestamp } :
-      Extracted.RegisterAccessCols F) = cols := by
+      Circuits.Types.RegisterAccessCols F) = cols := by
   cases cols
-  rw [Extracted.RegisterAccessCols.mk.injEq]
+  rw [Circuits.Types.RegisterAccessCols.mk.injEq]
   exact ⟨vec4_eta _, rfl⟩
 
 private theorem aluType_eta {F : Type}
-    (cols : Extracted.ALUTypeReader F) :
+    (cols : Circuits.Types.ALUTypeReader F) :
     ({ op_a := cols.op_a
        op_a_memory :=
         { prev_value :=
@@ -486,23 +488,23 @@ private theorem aluType_eta {F : Type}
               cols.op_c_memory.prev_value[3]]
           access_timestamp := cols.op_c_memory.access_timestamp }
        imm_c := cols.imm_c } :
-      Extracted.ALUTypeReader F) = cols := by
+      Circuits.Types.ALUTypeReader F) = cols := by
   cases cols
   simp only
   rw [registerAccess_eta, registerAccess_eta, vec4_eta, registerAccess_eta]
 
 private theorem cpuState_eta {F : Type}
-    (cols : Extracted.CPUState F) :
+    (cols : Circuits.Types.CPUState F) :
     ({ clk_high := cols.clk_high
        clk_16_24 := cols.clk_16_24
        clk_0_16 := cols.clk_0_16
        pc := #v[cols.pc[0], cols.pc[1], cols.pc[2]] } :
-      Extracted.CPUState F) = cols := by
+      Circuits.Types.CPUState F) = cols := by
   cases cols
-  rw [Extracted.CPUState.mk.injEq]
+  rw [Circuits.Types.CPUState.mk.injEq]
   exact ⟨rfl, rfl, rfl, vec3_eta _⟩
 
-private def ltSignedAssertionTail (cols : Extracted.LtOperationSigned (ZMod p))
+private def ltSignedAssertionTail (cols : Circuits.Types.LtOperationSigned (ZMod p))
     (isSigned isReal : ZMod p) : List (ZMod p) :=
   [ isSigned * (isSigned - 1),
     isReal * (isReal - 1),
@@ -512,7 +514,7 @@ private def ltSignedAssertionTail (cols : Extracted.LtOperationSigned (ZMod p))
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem extracted_ltSigned_assertions_decompose
-    (b cc : Word (ZMod p)) (cols : Extracted.LtOperationSigned (ZMod p))
+    (b cc : Word (ZMod p)) (cols : Circuits.Types.LtOperationSigned (ZMod p))
     (isSigned isReal : ZMod p) :
     Extracted.LtOperationSigned.asserts b cc cols isSigned isReal =
       Extracted.U16MSBOperation.asserts b[3] cols.b_msb isSigned ++
@@ -641,7 +643,7 @@ theorem ltSigned_assertions_exact
 
 /-- Rebuild the shared standalone `LtOperationSigned` block as the byte-identical struct embedded in
 the generated Lt oracle namespace. -/
-def ltOracleOperation {F : Type} (cols : Extracted.LtOperationSigned F) :
+def ltOracleOperation {F : Type} (cols : Circuits.Types.LtOperationSigned F) :
     Extracted.LtOracle.LtOperationSigned F :=
   { result :=
       { u16_compare_operation := { bit := cols.result.u16_compare_operation.bit }
@@ -653,7 +655,7 @@ def ltOracleOperation {F : Type} (cols : Extracted.LtOperationSigned F) :
 
 /-- Inverse of `ltOracleOperation`. -/
 def ltNativeOperation {F : Type} (cols : Extracted.LtOracle.LtOperationSigned F) :
-    Extracted.LtOperationSigned F :=
+    Circuits.Types.LtOperationSigned F :=
   { result :=
       { u16_compare_operation := { bit := cols.result.u16_compare_operation.bit }
         u16_flags := cols.result.u16_flags
@@ -789,7 +791,7 @@ def ltChipPhysicalRow {F : Type} [Add F]
   inputFirstRow (ltChipInput cols) (ltChipLocals cols)
 
 def ltChipOperationOfLocals {F : Type} (locals : Vector F 12) :
-    Extracted.LtOperationSigned F :=
+    Circuits.Types.LtOperationSigned F :=
   fromElements (Vector.cast (by rfl) (locals.drop 2))
 
 def ltChipColumnsOfInput {F : Type} (input : LtChip.Inputs F)
@@ -812,7 +814,7 @@ private theorem ltChipLocals_one {F : Type} (cols : LtChip.Columns F) :
 private theorem ltChipOperationOfLocals_roundtrip {F : Type}
     (cols : LtChip.Columns F) :
     ltChipOperationOfLocals (ltChipLocals cols) = cols.lt_operation := by
-  refine (ProvableType.ext_iff (α := Extracted.LtOperationSigned) _ _).mpr
+  refine (ProvableType.ext_iff (α := Circuits.Types.LtOperationSigned) _ _).mpr
     (fun i hi => ?_)
   unfold ltChipOperationOfLocals ltChipLocals
   rw [ProvableType.toElements_fromElements, Vector.getElem_cast,
@@ -839,10 +841,10 @@ private theorem eval_ltChipOperationOfLocals
     (input : LtChip.Inputs (ZMod p)) (locals : Vector (ZMod p) 12)
     (data : ProverData (ZMod p)) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
-        (varFromOffset Extracted.LtOperationSigned (F := ZMod p)
+        (varFromOffset Circuits.Types.LtOperationSigned (F := ZMod p)
           (size LtChip.Inputs + 2)) =
       ltChipOperationOfLocals locals := by
-  refine (ProvableType.ext_iff (α := Extracted.LtOperationSigned) _ _).mpr
+  refine (ProvableType.ext_iff (α := Circuits.Types.LtOperationSigned) _ _).mpr
     (fun i hi => ?_)
   rw [ProvableType.eval_varFromOffset, ProvableType.toElements_fromElements,
     Vector.getElem_mapRange]
@@ -850,7 +852,7 @@ private theorem eval_ltChipOperationOfLocals
   rw [ProvableType.toElements_fromElements, Vector.getElem_cast,
     Vector.getElem_drop]
   have hlocal := eval_local_inputFirstRow input locals data (2 + i) (by
-    have hsize : size Extracted.LtOperationSigned = 10 := rfl
+    have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
     rw [hsize] at hi
     omega)
   simp only [Expression.eval] at hlocal
@@ -927,8 +929,8 @@ private def lt_chip_is_real (offset : ℕ) : Expression (ZMod p) :=
   lt_chip_is_slt offset + lt_chip_is_sltu offset
 
 private def lt_chip_operation (offset : ℕ) :
-    Var Extracted.LtOperationSigned (ZMod p) :=
-  varFromOffset Extracted.LtOperationSigned (offset + 2)
+    Var Circuits.Types.LtOperationSigned (ZMod p) :=
+  varFromOffset Circuits.Types.LtOperationSigned (offset + 2)
 
 private def lt_chip_write_value (offset : ℕ) :
     Word (Expression (ZMod p)) :=
@@ -1064,13 +1066,13 @@ theorem ltChip_constraints_faithful
   rw [LtChip.directOutput_eq] at hbind
   rw [← ProvableStruct.eval_eq_eval, LtChip.eval_columns] at hbind
   subst cols
-  let operation : Var Extracted.LtOperationSigned (ZMod p) :=
+  let operation : Var Circuits.Types.LtOperationSigned (ZMod p) :=
     lt_chip_operation offset
   let writeValue : Word (Expression (ZMod p)) :=
     lt_chip_write_value offset
   let stateValue := Eval.eval env input.state
   let adapterValue := Eval.eval env input.adapter
-  let rustOperation : Extracted.LtOperationSigned (ZMod p) :=
+  let rustOperation : Circuits.Types.LtOperationSigned (ZMod p) :=
     Eval.eval env operation
   let rustB : Word (ZMod p) :=
     #v[adapterValue.op_b_memory.prev_value[0],
@@ -1091,7 +1093,7 @@ theorem ltChip_constraints_faithful
     ⟨input.state,
       #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
       8, input.is_real⟩
-  let rustState : Extracted.CPUState (ZMod p) := stateValue
+  let rustState : Circuits.Types.CPUState (ZMod p) := stateValue
   let rustNextPc : Vector (ZMod p) 3 :=
     #v[stateValue.pc[0] + 4, stateValue.pc[1], stateValue.pc[2]]
   have hCpu := CanonicalReader.cpuStateAssertions (p := p) env cpuInput offset
@@ -1119,7 +1121,7 @@ theorem ltChip_constraints_faithful
     rw [hOpExact, hB, hC]
     simp only [opInput, rustOperation, rustIsSlt, rustIsReal]
     rw [hinputReal]
-  let rustAdapter : Extracted.ALUTypeReader (ZMod p) := adapterValue
+  let rustAdapter : Circuits.Types.ALUTypeReader (ZMod p) := adapterValue
   let aluInput : Var Readers.ALUTypeReader.Inputs (ZMod p) :=
     ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,

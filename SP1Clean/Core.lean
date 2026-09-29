@@ -1,3 +1,22 @@
+import SP1Clean.Circuits.Types.ALUTypeReader
+import SP1Clean.Circuits.Types.AddOperation
+import SP1Clean.Circuits.Types.AddrAddOperation
+import SP1Clean.Circuits.Types.AddressOperation
+import SP1Clean.Circuits.Types.CPUState
+import SP1Clean.Circuits.Types.ITypeReader
+import SP1Clean.Circuits.Types.IsEqualWordOperation
+import SP1Clean.Circuits.Types.IsZeroOperation
+import SP1Clean.Circuits.Types.IsZeroWordOperation
+import SP1Clean.Circuits.Types.JTypeReader
+import SP1Clean.Circuits.Types.LtOperationSigned
+import SP1Clean.Circuits.Types.LtOperationUnsigned
+import SP1Clean.Circuits.Types.MemoryAccess
+import SP1Clean.Circuits.Types.MulOperation
+import SP1Clean.Circuits.Types.RTypeReader
+import SP1Clean.Circuits.Types.RegisterAccess
+import SP1Clean.Circuits.Types.U16CompareOperation
+import SP1Clean.Circuits.Types.U16MSBOperation
+import SP1Clean.Circuits.Types.U16toU8Operation
 import SP1Clean.FormalModel.Contracts.AddressDiv8
 import SP1Clean.FormalModel.Contracts.AddressOrder
 import SP1Clean.FormalModel.Contracts.BoundedWord
@@ -586,7 +605,7 @@ import SP1Clean.Soundness.RowView
 /-! # The core index
 
 Root of the `SP1Core` library: every hand-written module of strata 0–6 of `scripts/layering.txt`
-(`Math`, `Model`, `FormalModel`, `Native`, `Proofs/Operations`, `Proofs/CircuitProofStart`,
+(`Math`, `Model`, `FormalModel`, `Circuits/Types`, `Native`, `Proofs/Operations`, `Proofs/CircuitProofStart`,
 `Proofs/Chips`, `Soundness/RowView`). The generated `Extracted/` modules are not indexed; the ones
 the core needs are built as imports. `lake build SP1Core` builds this module's import closure, and
 `scripts/check_layering.sh` fails if this list and the stratum map disagree. Wire every new core

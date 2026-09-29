@@ -3,7 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Extracted.ITypeReader
+import SP1Clean.Circuits.Types.ITypeReader
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -13,7 +13,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 /-! # Native `ITypeReaderImmutable` reader — the store-adapter per-row checks as a Clean `GeneralFormalCircuit`
 
 The register adapter for **stores** (and any I-type op where `op_a` is a source read): `op_a` = rs2 read,
-`op_b` = rs1 read, `op_c_imm` = immediate. Reuses the `Extracted.ITypeReader` column struct. SP1's
+`op_b` = rs1 read, `op_c_imm` = immediate. Reuses the `Circuits.Types.ITypeReader` column struct. SP1's
 `ITypeReaderImmutable::eval` (`crates/core/machine/src/adapter/register/i_type.rs`, mirrored in
 `Extracted/ITypeReaderImmutable.lean`) has op_a as a **read**: the receive carries `prev_value`, the
 `op_a_0` zeroing gates pin the *read* value of `x0` to `0` (`op_a_0 * prev_value_i = 0`), and there is

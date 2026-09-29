@@ -33,6 +33,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -42,7 +43,7 @@ generated `ITypeReaderImmutable` constraint list holds iff the four `op_a_0` *re
 the two register operands' (op_a, op_b) timestamp byte bounds hold. -/
 theorem itypereaderimmutable_constraints_faithful
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (cols : Extracted.ITypeReader (ZMod p)) :
+    (cols : Circuits.Types.ITypeReader (ZMod p)) :
     (List.Forall (· = 0)
           (Extracted.ITypeReaderImmutable.asserts clk_high clk_low pc opcode cols 1 1) ∧
         List.Forall Interaction.toProp
@@ -77,7 +78,7 @@ theorem itypereaderimmutable_memory_interactions_faithful_syntactic
     (env : Environment (ZMod p))
     (input : Var Readers.ITypeReaderImmutable.Inputs (ZMod p)) (offset : ℕ)
     (clkHigh clkLow : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (cols : Extracted.ITypeReader (ZMod p)) (isReal isTrusted : ZMod p)
+    (cols : Circuits.Types.ITypeReader (ZMod p)) (isReal isTrusted : ZMod p)
     (hreal : Expression.eval env input.is_real = isReal)
     (hclkHigh : Expression.eval env input.clk_high = clkHigh)
     (hclkLow : Expression.eval env input.clk_low = clkLow)
@@ -143,7 +144,7 @@ theorem itypereaderimmutable_program_interactions_faithful_syntactic
     (env : Environment (ZMod p))
     (input : Var Readers.ITypeReaderImmutable.Inputs (ZMod p)) (offset : ℕ)
     (clkHigh clkLow : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (cols : Extracted.ITypeReader (ZMod p)) (isReal isTrusted : ZMod p)
+    (cols : Circuits.Types.ITypeReader (ZMod p)) (isReal isTrusted : ZMod p)
     (htrusted : Expression.eval env input.is_trusted = isTrusted)
     (hpc0 : Expression.eval env input.pc[0] = pc[0])
     (hpc1 : Expression.eval env input.pc[1] = pc[1])
@@ -198,7 +199,7 @@ theorem itypereaderimmutable_byte_interactions_faithful_syntactic
     (env : Environment (ZMod p))
     (input : Var Readers.ITypeReaderImmutable.Inputs (ZMod p)) (offset : ℕ)
     (clkHigh clkLow : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (cols : Extracted.ITypeReader (ZMod p)) (isReal isTrusted : ZMod p)
+    (cols : Circuits.Types.ITypeReader (ZMod p)) (isReal isTrusted : ZMod p)
     (hreal : Expression.eval env input.is_real = isReal)
     (hclkLow : Expression.eval env input.clk_low = clkLow)
     (hprevA : Expression.eval env input.cols.op_a_memory.access_timestamp.prev_low =

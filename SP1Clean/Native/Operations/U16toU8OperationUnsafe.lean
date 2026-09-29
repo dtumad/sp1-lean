@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.Word
 import SP1Clean.Math.Bitwise
-import SP1Clean.Extracted.U16toU8OperationUnsafe
+import SP1Clean.Circuits.Types.U16toU8Operation
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics
@@ -26,7 +26,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The literal meaning of SP1's `U16toU8OperationUnsafe` constraint list: it is **empty**, so the
 unsafe split imposes nothing. -/
-def RawSpec (_u16_values : Vector (ZMod p) 4) (_cols : Extracted.U16toU8Operation (ZMod p)) : Prop :=
+def RawSpec (_u16_values : Vector (ZMod p) 4) (_cols : Circuits.Types.U16toU8Operation (ZMod p)) : Prop :=
   True
 
 /-- No preconditions: SP1's `eval_u16_to_u8_unsafe` takes no `is_real` gate and asserts nothing. -/

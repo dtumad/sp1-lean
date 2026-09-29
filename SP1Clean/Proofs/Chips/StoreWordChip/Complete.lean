@@ -6,7 +6,7 @@ import ToClean.Air.TableBuild
 
 The first chip of the **store** family through the trace-generation chain (see
 `AddChip/Complete.lean` for the programme note and `LoadWordChip/Complete.lean` for the memory
-family's). `StoreWord` is `LoadWord` read backwards: the same `Extracted.ITypeReader` columns, the
+family's). `StoreWord` is `LoadWord` read backwards: the same `Circuits.Types.ITypeReader` columns, the
 same `AddressOperation`, the same `MemoryAccess` primitive at the same 8-byte-aligned cell — and
 three differences, each of which is where this file's real content is.
 

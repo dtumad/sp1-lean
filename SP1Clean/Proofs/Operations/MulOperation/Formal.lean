@@ -312,7 +312,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
 byte stream `extStream` at `k` (used by the witnessed `schoolProduct`/`schoolCarry`). Bytes `0..7` are
 the `U16toU8` decomposition (low byte / high byte of each limb); bytes `8..15` are the sign fill
 `s * 255` (a genuine byte since `s ∈ {0,1}`). -/
-lemma byteAt_extendedBytes_val (w : Word (ZMod p)) (lower : Extracted.U16toU8Operation (ZMod p))
+lemma byteAt_extendedBytes_val (w : Word (ZMod p)) (lower : Circuits.Types.U16toU8Operation (ZMod p))
     (s : ZMod p) (hspec : U16toU8OperationSafe.DecompSpec w lower) (hs : s.val ≤ 1) (i : ℕ) :
     (byteAt (extendedBytes w lower s) i).val
       = extStream w[0].val w[1].val w[2].val w[3].val s.val i := by
@@ -359,7 +359,7 @@ lemma byteAt_extendedBytes_val (w : Word (ZMod p)) (lower : Extracted.U16toU8Ope
 `ℕ`-level byte convolution `cpNat` over the matching `extStream`s (for `k < 16`). This is the bridge
 from the in-circuit gate (phrased via `colSum`) to the witnessed `schoolProduct`/`schoolCarry` (built
 from `cpNat`). -/
-lemma colSum_eq_cpNat (w w' : Word (ZMod p)) (lower lower' : Extracted.U16toU8Operation (ZMod p))
+lemma colSum_eq_cpNat (w w' : Word (ZMod p)) (lower lower' : Circuits.Types.U16toU8Operation (ZMod p))
     (s s' : ZMod p) (hspec : U16toU8OperationSafe.DecompSpec w lower)
     (hspec' : U16toU8OperationSafe.DecompSpec w' lower') (hs : s = 0 ∨ s = 1) (hs' : s' = 0 ∨ s' = 1)
     (k : ℕ) (hk : k < 16) :

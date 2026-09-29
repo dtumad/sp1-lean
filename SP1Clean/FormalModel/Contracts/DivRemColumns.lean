@@ -1,19 +1,19 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.CPUState
-import SP1Clean.Extracted.RTypeReader
-import SP1Clean.Extracted.MulOperation
-import SP1Clean.Extracted.AddOperation
-import SP1Clean.Extracted.LtOperationUnsigned
-import SP1Clean.Extracted.IsZeroWordOperation
-import SP1Clean.Extracted.IsEqualWordOperation
-import SP1Clean.Extracted.U16MSBOperation
+import SP1Clean.Circuits.Types.CPUState
+import SP1Clean.Circuits.Types.RTypeReader
+import SP1Clean.Circuits.Types.MulOperation
+import SP1Clean.Circuits.Types.AddOperation
+import SP1Clean.Circuits.Types.LtOperationUnsigned
+import SP1Clean.Circuits.Types.IsZeroWordOperation
+import SP1Clean.Circuits.Types.IsEqualWordOperation
+import SP1Clean.Circuits.Types.U16MSBOperation
 import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native DIVREM-chip row
 
 The native `DivRemChip.Columns` struct: field-for-field the shape of SP1 Rust's 246-cell
-`DivRemCols` row, with every nested arithmetic block kept at the shared standalone generated
-column structs (`Extracted.MulOperation`, `Extracted.AddOperation`, ...) that other chips also
+`DivRemCols` row, with every nested arithmetic block using shared native
+column types (`Circuits.Types.MulOperation`, `Circuits.Types.AddOperation`, ...) that other chips also
 compose. `Faithful.divRemChipReconfigure` is the sole bridge to Rust's separately generated
 whole-chip oracle row (`Extracted.DivRemOracle.DivRemCols`).
 
@@ -24,7 +24,7 @@ because `deriving` on a 45-field struct is elaboration-heavy. -/
 
 namespace SP1Clean.DivRemChip
 
-open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 
 structure Columns (F : Type) where
   state : (CPUState F)

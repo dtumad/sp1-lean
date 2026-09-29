@@ -48,7 +48,7 @@ lemma field_fromElements_one {F : Type} (v : Vector F 1) :
   | [_], _ => rfl
 
 lemma iszeroword_result_proj {F : Type} (W : Vector F 11) :
-    (fromElements W : Extracted.IsZeroWordOperation F).result = W[10] := by
+    (fromElements W : Circuits.Types.IsZeroWordOperation F).result = W[10] := by
   -- 4.30: `ProvableType.fromStruct` is an *instance* that `simp` no longer unfolds; unfold the
   -- `fromElements` projection + the instance explicitly to expose the `field`-`fromElements` slice.
   unfold ProvableType.fromElements ProvableType.fromStruct
@@ -62,40 +62,40 @@ overflow flags `is_overflow_b`/`is_overflow_c` (witnessed `fromElements` over 11
 is **defeq** to the inner `IsZeroWord` `fromElements` (cast/take only — does NOT force the expensive
 `.result` field), so a cheap `rfl` bridges to `iszeroword_result_proj`. -/
 lemma iseqword_result_proj {F : Type} (W : Vector F 11) :
-    (fromElements W : Extracted.IsEqualWordOperation F).is_diff_zero.result = W[10] := by
-  have hd : toComponents (fromElements W : Extracted.IsEqualWordOperation F)
+    (fromElements W : Circuits.Types.IsEqualWordOperation F).is_diff_zero.result = W[10] := by
+  have hd : toComponents (fromElements W : Circuits.Types.IsEqualWordOperation F)
       = ProvableStruct.ProvableTypeList.cons
-          (fromElements W : Extracted.IsEqualWordOperation F).is_diff_zero
+          (fromElements W : Circuits.Types.IsEqualWordOperation F).is_diff_zero
           ProvableStruct.ProvableTypeList.nil := rfl
-  have ht : toComponents (fromElements W : Extracted.IsEqualWordOperation F)
-      = ProvableStruct.ProvableTypeList.cons (fromElements W : Extracted.IsZeroWordOperation F)
+  have ht : toComponents (fromElements W : Circuits.Types.IsEqualWordOperation F)
+      = ProvableStruct.ProvableTypeList.cons (fromElements W : Circuits.Types.IsZeroWordOperation F)
           ProvableStruct.ProvableTypeList.nil := by
-    rw [show (fromElements W : Extracted.IsEqualWordOperation F)
+    rw [show (fromElements W : Circuits.Types.IsEqualWordOperation F)
           = fromComponents (ProvableStruct.componentsFromElements
-              (components Extracted.IsEqualWordOperation)
+              (components Circuits.Types.IsEqualWordOperation)
               ((W).cast ProvableStruct.combinedSize_eq)) from
-          ProvableStruct.structFromElements_eq (α := Extracted.IsEqualWordOperation) W,
+          ProvableStruct.structFromElements_eq (α := Circuits.Types.IsEqualWordOperation) W,
         ProvableStruct.toComponents_fromComponents]
     -- Lean 4.31 no longer unfolds this implicit-reducible instance at `simp`'s default transparency.
     -- Reduce it once, coherently with the dependent vector casts, before peeling the one-field list.
-    dsimp +instances only [components, Extracted.instProvableStructIsEqualWordOperation]
+    dsimp +instances only [components, Circuits.Types.instProvableStructIsEqualWordOperation]
     rw [← ProvableStruct.fromElements_toElements
-      [{ type := Extracted.IsZeroWordOperation, provableType := inferInstance }]
+      [{ type := Circuits.Types.IsZeroWordOperation, provableType := inferInstance }]
       (ProvableStruct.ProvableTypeList.cons
-        (fromElements W : Extracted.IsZeroWordOperation F)
+        (fromElements W : Circuits.Types.IsZeroWordOperation F)
         ProvableStruct.ProvableTypeList.nil)]
     apply congrArg (ProvableStruct.componentsFromElements
-      [{ type := Extracted.IsZeroWordOperation, provableType := inferInstance }])
+      [{ type := Circuits.Types.IsZeroWordOperation, provableType := inferInstance }])
     simp only [ProvableStruct.componentsToElements, ProvableType.toElements_fromElements,
       Vector.cast_rfl]
     apply Vector.ext
     intro i hi
     rfl
-  have h1 : (fromElements W : Extracted.IsEqualWordOperation F).is_diff_zero
-      = (fromElements W : Extracted.IsZeroWordOperation F) := by
+  have h1 : (fromElements W : Circuits.Types.IsEqualWordOperation F).is_diff_zero
+      = (fromElements W : Circuits.Types.IsZeroWordOperation F) := by
     have h := hd.symm.trans ht
     injection h
-  exact (congrArg Extracted.IsZeroWordOperation.result h1).trans (iszeroword_result_proj W)
+  exact (congrArg Circuits.Types.IsZeroWordOperation.result h1).trans (iszeroword_result_proj W)
 
 /-! ## Byte-bus range extraction -/
 
@@ -134,7 +134,7 @@ conjunct, returning the result word's `toBitVec64` product form. -/
 
 /-- `mul_lower`: with `is_mul = ir = 1` (the row is real), the result word is the **low 64 bits** of
 `qc · c`. -/
-lemma mul_lo_spec {qc c : Word (ZMod p)} {ir : ZMod p} {cols : Extracted.MulOperation (ZMod p)}
+lemma mul_lo_spec {qc c : Word (ZMod p)} {ir : ZMod p} {cols : Circuits.Types.MulOperation (ZMod p)}
     (h : MulOperation.circuit.Assumptions
            (⟨qc, c, cols, ir, ir, 0, 0, 0, 0⟩ : MulOperation.Inputs (ZMod p)) →
          MulOperation.circuit.Spec ⟨qc, c, cols, ir, ir, 0, 0, 0, 0⟩)
@@ -151,7 +151,7 @@ lemma mul_lo_spec {qc c : Word (ZMod p)} {ir : ZMod p} {cols : Extracted.MulOper
 /-- `mul_upper`, unsigned branch: with `is_mulhu = ihmu = 1` and `is_mulh = ihm = 0`, the result word
 is the **unsigned high 64 bits** of `qc · c`. -/
 lemma mul_hi_spec_unsigned {qc c : Word (ZMod p)} {ir ihm ihmu : ZMod p}
-    {cols : Extracted.MulOperation (ZMod p)}
+    {cols : Circuits.Types.MulOperation (ZMod p)}
     (h : MulOperation.circuit.Assumptions
            (⟨qc, c, cols, ir, 0, ihm, ihmu, 0, 0⟩ : MulOperation.Inputs (ZMod p)) →
          MulOperation.circuit.Spec ⟨qc, c, cols, ir, 0, ihm, ihmu, 0, 0⟩)
@@ -168,7 +168,7 @@ lemma mul_hi_spec_unsigned {qc c : Word (ZMod p)} {ir ihm ihmu : ZMod p}
 /-- `mul_upper`, signed branch: with `is_mulh = ihm = 1` and `is_mulhu = ihmu = 0`, the result word is
 the **signed high 64 bits** of `qc · c`. -/
 lemma mul_hi_spec_signed {qc c : Word (ZMod p)} {ir ihm ihmu : ZMod p}
-    {cols : Extracted.MulOperation (ZMod p)}
+    {cols : Circuits.Types.MulOperation (ZMod p)}
     (h : MulOperation.circuit.Assumptions
            (⟨qc, c, cols, ir, 0, ihm, ihmu, 0, 0⟩ : MulOperation.Inputs (ZMod p)) →
          MulOperation.circuit.Spec ⟨qc, c, cols, ir, 0, ihm, ihmu, 0, 0⟩)
@@ -194,7 +194,7 @@ low/high Word's `toBitVec64` *is* the corresponding slice of the product `qc · 
 /-- Low `ctq` limbs (`mul_lower`): `#v[r0,r1,r2,r3].toBitVec64 = qc.toBitVec64 * c.toBitVec64`. The
 `hi` hypotheses are the chip's `h_ctq0..3` verbatim (`c_times_quotient[i] = product[2i] +
 product[2i+1]·256`). -/
-lemma rwlo_product {qc c : Word (ZMod p)} {ir : ZMod p} {cols : Extracted.MulOperation (ZMod p)}
+lemma rwlo_product {qc c : Word (ZMod p)} {ir : ZMod p} {cols : Circuits.Types.MulOperation (ZMod p)}
     {r0 r1 r2 r3 : ZMod p}
     (h : MulOperation.circuit.Assumptions
            (⟨qc, c, cols, ir, ir, 0, 0, 0, 0⟩ : MulOperation.Inputs (ZMod p)) →
@@ -212,7 +212,7 @@ lemma rwlo_product {qc c : Word (ZMod p)} {ir : ZMod p} {cols : Extracted.MulOpe
 
 /-- High `ctq` limbs (`mul_upper`, unsigned): the unsigned high 64 of `qc · c`. -/
 lemma rwhi_product_unsigned {qc c : Word (ZMod p)} {ir ihm ihmu : ZMod p}
-    {cols : Extracted.MulOperation (ZMod p)} {r4 r5 r6 r7 : ZMod p}
+    {cols : Circuits.Types.MulOperation (ZMod p)} {r4 r5 r6 r7 : ZMod p}
     (h : MulOperation.circuit.Assumptions
            (⟨qc, c, cols, ir, 0, ihm, ihmu, 0, 0⟩ : MulOperation.Inputs (ZMod p)) →
          MulOperation.circuit.Spec ⟨qc, c, cols, ir, 0, ihm, ihmu, 0, 0⟩)
@@ -231,7 +231,7 @@ lemma rwhi_product_unsigned {qc c : Word (ZMod p)} {ir ihm ihmu : ZMod p}
 
 /-- High `ctq` limbs (`mul_upper`, signed): the signed high 64 of `qc · c`. -/
 lemma rwhi_product_signed {qc c : Word (ZMod p)} {ir ihm ihmu : ZMod p}
-    {cols : Extracted.MulOperation (ZMod p)} {r4 r5 r6 r7 : ZMod p}
+    {cols : Circuits.Types.MulOperation (ZMod p)} {r4 r5 r6 r7 : ZMod p}
     (h : MulOperation.circuit.Assumptions
            (⟨qc, c, cols, ir, 0, ihm, ihmu, 0, 0⟩ : MulOperation.Inputs (ZMod p)) →
          MulOperation.circuit.Spec ⟨qc, c, cols, ir, 0, ihm, ihmu, 0, 0⟩)
@@ -257,7 +257,7 @@ lemma rwhi_product_signed {qc c : Word (ZMod p)} {ir ihm ihmu : ZMod p}
 forces both conditions. Loose over the structs, so `Formal` supplies the evaluated `Spec`s + the product
 fact (no cast-fold on the spec side). -/
 lemma overflow_of_iseqword {b c : Word (ZMod p)}
-    {ovb ovc : Extracted.IsEqualWordOperation (ZMod p)} {ir : ZMod p}
+    {ovb ovc : Circuits.Types.IsEqualWordOperation (ZMod p)} {ir : ZMod p}
     (hbU : b.isU64) (hcU : c.isU64) (hir : ir = 1)
     (hb_spec : IsEqualWordOperation.Spec ⟨b, #v[0, 0, 0, 32768], ovb, ir⟩)
     (hc_spec : IsEqualWordOperation.Spec ⟨c, #v[65535, 65535, 65535, 65535], ovc, ir⟩)
@@ -287,7 +287,7 @@ columns' bottom two limbs, top two zeroed, against `i32::MIN`/`-1` low halves). 
 pins the low-32 operands `extractLsb 31 0 b = i32::MIN`, `extractLsb 31 0 c = -1`, feeding
 `Math.divw_remw_overflow`. The 32-bit analogue of `overflow_of_iseqword`. -/
 lemma overflow_of_iseqword_word {b c : Word (ZMod p)}
-    {ovb ovc : Extracted.IsEqualWordOperation (ZMod p)} {ir : ZMod p}
+    {ovb ovc : Circuits.Types.IsEqualWordOperation (ZMod p)} {ir : ZMod p}
     (hbU : b.isU64) (hcU : c.isU64) (hir : ir = 1)
     (hb_spec : IsEqualWordOperation.Spec ⟨#v[b[0], b[1], 0, 0], #v[0, 32768, 0, 0], ovb, ir⟩)
     (hc_spec : IsEqualWordOperation.Spec ⟨#v[c[0], c[1], 0, 0], #v[65535, 65535, 0, 0], ovc, ir⟩)

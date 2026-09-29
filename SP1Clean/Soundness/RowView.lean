@@ -1,7 +1,8 @@
-import SP1Clean.Extracted.ALUTypeReader
-import SP1Clean.Extracted.JTypeReader
-import SP1Clean.Extracted.ITypeReader
-import SP1Clean.Extracted.CPUState
+import SP1Clean.Circuits.Types.RTypeReader
+import SP1Clean.Circuits.Types.ALUTypeReader
+import SP1Clean.Circuits.Types.JTypeReader
+import SP1Clean.Circuits.Types.ITypeReader
+import SP1Clean.Circuits.Types.CPUState
 import SP1Clean.Model.ProgramChip
 
 /-! # Row-view adapter infrastructure (the chip-agnostic trace row)
@@ -22,7 +23,7 @@ namespace SP1Clean.Trace
 
 /-- The **reader-agnostic register adapter** the Memory/Program/Byte bus projections read. SP1 (and
 the extraction) model the register adapter as *two distinct* column structs —
-`Extracted.RTypeReader` (scalar `op_c`) and `Extracted.ALUTypeReader` (`Word`-typed `op_c` + an
+`Circuits.Types.RTypeReader` (scalar `op_c`) and `Circuits.Types.ALUTypeReader` (`Word`-typed `op_c` + an
 `imm_c` immediate flag) — but a single heterogeneous trace materialises one *homogeneous*
 `List RowView`, so `RowView.adapter` must be a single concrete type. `AdapterView` is that type: the
 superset shape (`op_b op_c : Word`, `imm_b imm_c : F`) every reader projects into via its
@@ -34,13 +35,13 @@ behaviour. A J-type reader (JAL/AUIPC) projects `op_b := op_b_imm` (a full immed
 faithful to SP1 emitting no op_b memory interaction for an immediate operand. -/
 structure AdapterView (F : Type) where
   op_a : F
-  op_a_memory : Extracted.RegisterAccessCols F
+  op_a_memory : Circuits.Types.RegisterAccessCols F
   op_a_0 : F
   op_b : Word F
-  op_b_memory : Extracted.RegisterAccessCols F
+  op_b_memory : Circuits.Types.RegisterAccessCols F
   imm_b : F
   op_c : Word F
-  op_c_memory : Extracted.RegisterAccessCols F
+  op_c_memory : Circuits.Types.RegisterAccessCols F
   imm_c : F
 
 /-- The chip-independent physical view of one generic RAM `MemoryAccess` block. The address is the
@@ -64,16 +65,16 @@ structure RamAccessView (F : Type) where
 /-- The `RTypeReader` (scalar `op_c`, no immediate) projection: widen `op_c` to `#v[op_c, 0, 0, 0]`
 and pin `imm_c := 0`. The op_c gating `is_real - imm_c` and the `op_c[1..3]`/`imm_c` Program slots
 then collapse to the scalar R-type behaviour. -/
-def _root_.SP1Clean.Extracted.RTypeReader.toAdapterView {F : Type} [Zero F]
-    (c : Extracted.RTypeReader F) : AdapterView F :=
+def _root_.SP1Clean.Circuits.Types.RTypeReader.toAdapterView {F : Type} [Zero F]
+    (c : Circuits.Types.RTypeReader F) : AdapterView F :=
   { op_a := c.op_a, op_a_memory := c.op_a_memory, op_a_0 := c.op_a_0,
     op_b := #v[c.op_b, 0, 0, 0], op_b_memory := c.op_b_memory, imm_b := 0,
     op_c := #v[c.op_c, 0, 0, 0], op_c_memory := c.op_c_memory, imm_c := 0 }
 
 /-- The `ALUTypeReader` (immediate-capable, `Word`-typed `op_c`) projection: op_b is still a scalar
 register read (`#v[op_b, 0, 0, 0]`, `imm_b := 0`); op_c/imm_c are identity. -/
-def _root_.SP1Clean.Extracted.ALUTypeReader.toAdapterView {F : Type} [Zero F]
-    (c : Extracted.ALUTypeReader F) : AdapterView F :=
+def _root_.SP1Clean.Circuits.Types.ALUTypeReader.toAdapterView {F : Type} [Zero F]
+    (c : Circuits.Types.ALUTypeReader F) : AdapterView F :=
   { op_a := c.op_a, op_a_memory := c.op_a_memory, op_a_0 := c.op_a_0,
     op_b := #v[c.op_b, 0, 0, 0], op_b_memory := c.op_b_memory, imm_b := 0,
     op_c := c.op_c, op_c_memory := c.op_c_memory, imm_c := c.imm_c }
@@ -82,8 +83,8 @@ def _root_.SP1Clean.Extracted.ALUTypeReader.toAdapterView {F : Type} [Zero F]
 are immediate `Word`s (`imm_b := imm_c := 1`), so their register accesses are gated off on every
 row. J-type has no op_b/op_c memory columns, so the (gated-to-zero) memory slots reuse
 `op_a_memory` as a harmless placeholder. -/
-def _root_.SP1Clean.Extracted.JTypeReader.toAdapterView {F : Type} [Zero F] [One F]
-    (c : Extracted.JTypeReader F) : AdapterView F :=
+def _root_.SP1Clean.Circuits.Types.JTypeReader.toAdapterView {F : Type} [One F]
+    (c : Circuits.Types.JTypeReader F) : AdapterView F :=
   { op_a := c.op_a, op_a_memory := c.op_a_memory, op_a_0 := c.op_a_0,
     op_b := c.op_b_imm, op_b_memory := c.op_a_memory, imm_b := 1,
     op_c := c.op_c_imm, op_c_memory := c.op_a_memory, imm_c := 1 }
@@ -92,8 +93,8 @@ def _root_.SP1Clean.Extracted.JTypeReader.toAdapterView {F : Type} [Zero F] [One
 register read (rs1, `#v[op_b, 0, 0, 0]`, `imm_b := 0`), and op_c is the **immediate** `op_c_imm`
 (`imm_c := 1`), so the op_c register access is gated off on every row. I-type has no op_c memory
 column, so the (gated-to-zero) op_c memory slot reuses `op_b_memory` as a harmless placeholder. -/
-def _root_.SP1Clean.Extracted.ITypeReader.toAdapterView {F : Type} [Zero F] [One F]
-    (c : Extracted.ITypeReader F) : AdapterView F :=
+def _root_.SP1Clean.Circuits.Types.ITypeReader.toAdapterView {F : Type} [Zero F] [One F]
+    (c : Circuits.Types.ITypeReader F) : AdapterView F :=
   { op_a := c.op_a, op_a_memory := c.op_a_memory, op_a_0 := c.op_a_0,
     op_b := #v[c.op_b, 0, 0, 0], op_b_memory := c.op_b_memory, imm_b := 0,
     op_c := c.op_c_imm, op_c_memory := c.op_b_memory, imm_c := 1 }
@@ -145,7 +146,7 @@ to this via `ChipRow.view` (R-type readers through `RTypeReader.toAdapterView`, 
 `ALUTypeReader.toAdapterView`), so the machine grounding and execution layers share one normalized
 view across chips. -/
 structure RowView (F : Type) where
-  state : Extracted.CPUState F
+  state : Circuits.Types.CPUState F
   /-- The committed `next_pc` (3 u16 limbs) the chip passes to `CPUState::eval` — the chip-agnostic
   trace shadow of SP1's dedicated `next_pc` column block (e.g. the Branch oracle row). For a
   straight-line chip it is `#v[pc[0]+4, pc[1], pc[2]]`; for a control-flow chip it is the

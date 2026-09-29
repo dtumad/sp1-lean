@@ -246,28 +246,28 @@ theorem completeness :
     (vir := input_is_real) (hir := hir) (hf02 := hf02)
   -- flag pins
   have hfl0 : env.get i₀ = F[0] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Extracted.MulOperation = 45 from rfl, eFLAGS 0 (by omega), hFlags]
+    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 0 (by omega), hFlags]
       using h_env_flags ⟨0, by omega⟩
   have hfl1 : env.get (i₀ + 1) = F[1] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Extracted.MulOperation = 45 from rfl, eFLAGS 1 (by omega), hFlags]
+    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 1 (by omega), hFlags]
       using h_env_flags ⟨1, by omega⟩
   have hfl2 : env.get (i₀ + 2) = F[2] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Extracted.MulOperation = 45 from rfl, eFLAGS 2 (by omega), hFlags]
+    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 2 (by omega), hFlags]
       using h_env_flags ⟨2, by omega⟩
   have hfl3 : env.get (i₀ + 3) = F[3] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Extracted.MulOperation = 45 from rfl, eFLAGS 3 (by omega), hFlags]
+    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 3 (by omega), hFlags]
       using h_env_flags ⟨3, by omega⟩
   have hfl4 : env.get (i₀ + 4) = F[4] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Extracted.MulOperation = 45 from rfl, eFLAGS 4 (by omega), hFlags]
+    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 4 (by omega), hFlags]
       using h_env_flags ⟨4, by omega⟩
   have hfl5 : env.get (i₀ + 5) = F[5] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Extracted.MulOperation = 45 from rfl, eFLAGS 5 (by omega), hFlags]
+    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 5 (by omega), hFlags]
       using h_env_flags ⟨5, by omega⟩
   have hfl6 : env.get (i₀ + 6) = F[6] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Extracted.MulOperation = 45 from rfl, eFLAGS 6 (by omega), hFlags]
+    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 6 (by omega), hFlags]
       using h_env_flags ⟨6, by omega⟩
   have hfl7 : env.get (i₀ + 7) = F[7] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Extracted.MulOperation = 45 from rfl, eFLAGS 7 (by omega), hFlags]
+    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 7 (by omega), hFlags]
       using h_env_flags ⟨7, by omega⟩
   -- scalar witness pins (each `env.get` atom in goal form = its populate value)
   have hSC4 : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4)
@@ -425,8 +425,8 @@ theorem completeness :
   have hMULLO : ∀ i : Fin 45, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + ↑i)
       = (SubSpecs.mulWitnessElements (populateMulLower input_is_real B C F)).get i := by
     intro i
-    have hsz : (↑i : ℕ) < size Extracted.MulOperation := by
-      have h45 : size Extracted.MulOperation = 45 := rfl
+    have hsz : (↑i : ℕ) < size Circuits.Types.MulOperation := by
+      have h45 : size Circuits.Types.MulOperation = 45 := rfl
       omega
     have h := h_env_mullo i
     dsimp only [] at h
@@ -438,8 +438,8 @@ theorem completeness :
   have hMULHI : ∀ i : Fin 45, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + ↑i)
       = (SubSpecs.mulWitnessElements (populateMulUpper input_is_real B C F)).get i := by
     intro i
-    have hsz : (↑i : ℕ) < size Extracted.MulOperation := by
-      have h45 : size Extracted.MulOperation = 45 := rfl
+    have hsz : (↑i : ℕ) < size Circuits.Types.MulOperation := by
+      have h45 : size Circuits.Types.MulOperation = 45 := rfl
       omega
     have h := h_env_mulhi i
     dsimp only [] at h
@@ -451,8 +451,8 @@ theorem completeness :
   have hOVB : ∀ i : Fin 11, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + ↑i)
       = (SubSpecs.eqWordWitnessElements (ovbWitness input_is_real B F)).get i := by
     intro i
-    have hsz : (↑i : ℕ) < size Extracted.IsEqualWordOperation := by
-      have h11 : size Extracted.IsEqualWordOperation = 11 := rfl
+    have hsz : (↑i : ℕ) < size Circuits.Types.IsEqualWordOperation := by
+      have h11 : size Circuits.Types.IsEqualWordOperation = 11 := rfl
       omega
     have h := h_env_ovb i
     dsimp only [] at h
@@ -465,8 +465,8 @@ theorem completeness :
   have hOVC : ∀ i : Fin 11, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + ↑i)
       = (SubSpecs.eqWordWitnessElements (ovcWitness input_is_real C F)).get i := by
     intro i
-    have hsz : (↑i : ℕ) < size Extracted.IsEqualWordOperation := by
-      have h11 : size Extracted.IsEqualWordOperation = 11 := rfl
+    have hsz : (↑i : ℕ) < size Circuits.Types.IsEqualWordOperation := by
+      have h11 : size Circuits.Types.IsEqualWordOperation = 11 := rfl
       omega
     have h := h_env_ovc i
     dsimp only [] at h
@@ -476,7 +476,7 @@ theorem completeness :
         ((Witgen.getElem_eval_toElements { env := env } _ ↑i hsz).trans
           (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz) (eOVC.trans (by rw [hFlags])))))).trans
       (SubSpecs.eqWordWitnessElements_get (ovcWitness input_is_real C F) i).symm
-  let isc0Witness : Extracted.IsZeroWordOperation (ZMod p) := isC0Witness C F
+  let isc0Witness : Circuits.Types.IsZeroWordOperation (ZMod p) := isC0Witness C F
   have hISC0 : ∀ i : Fin 11,
       env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + ↑i) =
         (SubSpecs.isZeroWitnessElements (p := p) isc0Witness).get i := by

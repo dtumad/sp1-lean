@@ -4,7 +4,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Model.ByteTable
 import SP1Clean.Model.Channels
 import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
-import SP1Clean.Extracted.AddressOperation
+import SP1Clean.Circuits.Types.AddressOperation
 import ToClean.Circuit.WitnessCombinator
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -42,7 +42,7 @@ instance : NeZero p := ⟨(Fact.out : p.Prime).pos.ne'⟩
 `AddrAddOperation.RawSpec`, the three boolean offset bits, the top-two-limb inverse gate, and the
 low-3-bits range check. -/
 def RawSpec (b cc : Word (ZMod p)) (offset_bit0 offset_bit1 offset_bit2 : ZMod p)
-    (cols : Extracted.AddressOperation (ZMod p)) : Prop :=
+    (cols : Circuits.Types.AddressOperation (ZMod p)) : Prop :=
   AddrAddOperation.RawSpec #v[b[0], b[1], b[2], b[3]] #v[cc[0], cc[1], cc[2], cc[3]]
       cols.addr_operation ∧
   (offset_bit0 = 0 ∨ offset_bit0 = 1) ∧
@@ -149,7 +149,7 @@ at `is_real = 1` implies the semantic `Spec` — the address sum from the compos
 `AddrAddOperation.RawSpec` (via `addrAddSemantics_of_carries`), the offset booleans verbatim, and
 the valid-address facts from `metadata_of_constraints`. -/
 theorem addressSemantics_of_raw {input : Inputs (ZMod p)}
-    {cols : Extracted.AddressOperation (ZMod p)}
+    {cols : Circuits.Types.AddressOperation (ZMod p)}
     (hb : Word.isU64 input.b) (hcc : Word.isU64 input.cc)
     (h_raw : RawSpec input.b input.cc input.offset_bit0 input.offset_bit1 input.offset_bit2 cols) :
     Spec input cols := by
@@ -187,7 +187,7 @@ Witnesses the address limbs via `AddrAddOperation.populate` and composes the gad
 the offset booleans, the top-two-limb inverse gate, and the low-3-bits offset range check stay here. -/
 
 def main (input : Var Inputs (ZMod p)) :
-    Circuit (ZMod p) (Var Extracted.AddressOperation (ZMod p)) := do
+    Circuit (ZMod p) (Var Circuits.Types.AddressOperation (ZMod p)) := do
   let value ← witnessVectorIR 3 (AddrAddOperation.populateIR input.b input.cc)
   assertion AddrAddOperation.circuit ⟨input.b, input.cc, ⟨value⟩, input.is_real⟩
   -- The inverse gate, on the IR: `is_real * (value[1] + value[2])⁻¹`, with `0⁻¹ = 0` — which is
@@ -210,7 +210,7 @@ def main (input : Var Inputs (ZMod p)) :
        Expression.const ((13 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))
   return ⟨⟨value⟩, inv[0]⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Extracted.AddressOperation main where
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Circuits.Types.AddressOperation main where
   -- 3 address limbs + 1 inverse witness; the offset range check is now a byte-bus `Range` receive
   -- (witnesses nothing), and AddrAddOperation (FormalAssertion) adds no cells.
   localLength _ := 3 + 1
@@ -385,7 +385,7 @@ theorem completeness :
 
 /-- The witnessed `GeneralFormalCircuit` for the address operation. Soundness assumes only 64-bit
 operands; completeness retains the stronger valid-address witness contract. -/
-def circuit : GeneralFormalCircuit (ZMod p) Inputs Extracted.AddressOperation :=
+def circuit : GeneralFormalCircuit (ZMod p) Inputs Circuits.Types.AddressOperation :=
   { main, elaborated,
     Assumptions := fun input _ => SoundnessAssumptions input,
     Spec := fun input cols _ => RowSpec input cols,

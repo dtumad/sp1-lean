@@ -12,24 +12,24 @@
 # ---------------------------------------------------------------------------
 # 1. DivRem's rich contract. FormalModel/Contracts/DivRem.lean states the four semantic families
 #    against the operation circuits and their soundness, so it reaches stratum 5 from stratum 4.
-#    Moving it out of Contracts/ would take DivRem's contract off the audit surface, which is a
-#    semantic regression, not a layering fix. Reviewed and kept.
+#    A future split must preserve the complete semantic contract while moving circuit-dependent
+#    helper statements/proofs above the pure contract. These edges remain until that migration.
 import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Native/Operations/DivRemOperation/OwnAsserts.lean
 import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Proofs/Operations/IsEqualWordOperation/Formal.lean
 import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Proofs/Operations/LtOperationUnsigned/Formal.lean
 import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Proofs/Operations/MulOperation/Formal.lean
 
 # ---------------------------------------------------------------------------
-# 2. The two documented proof-decomposition exceptions (docs/architecture.md § "Deliberate layering
-#    exceptions", item 1). DivRem and the shifts keep `main` in Proofs/ because their mains are
+# 2. The two proof-decomposition exceptions. DivRem and the shifts keep `main` in Proofs/ because
+#    their mains are
 #    entangled with proof-layer decomposition; the cost is these two edges.
 import SP1Clean/Proofs/Operations/DivRemOperation/Core.lean SP1Clean/Proofs/Chips/DivRemChip/Extract.lean
 import SP1Clean/Proofs/Chips/BranchChip/Core.lean SP1Clean/Proofs/Chips/BranchChip/Contracts.lean
 
 # ---------------------------------------------------------------------------
 # 3. Namespace exceptions where the PATH is right and the namespace is a deliberate naming choice,
-#    not a placement signal. AGENTS.md sanctions this explicitly for Model/Opcode.lean ("namespace
-#    `SP1Clean.Soundness` per the decoupling rule"): these declarations are *consumed* by the
+#    not a placement signal. These legacy namespace choices identify their first consumers;
+#    complete API migration may rename them. The declarations are consumed by the
 #    soundness layer and named for it, while structurally belonging to the substrate — and Model/ is
 #    measurably clean, with zero imports into any higher pillar.
 #

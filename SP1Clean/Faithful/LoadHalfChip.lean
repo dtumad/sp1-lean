@@ -1,3 +1,6 @@
+import SP1Clean.Extracted.AddrAddOperation
+import SP1Clean.Extracted.AddressOperation
+import SP1Clean.Extracted.U16MSBOperation
 import SP1Clean.Faithful.ChipOracle
 import SP1Clean.Extracted.ChipOracle.LoadHalf
 import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
@@ -14,20 +17,21 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Rebuild the shared standalone `AddressOperation` block as the byte-identical struct embedded in
 the generated LoadHalf oracle namespace. -/
-def loadHalfOracleAddressOperation {F : Type} (cols : Extracted.AddressOperation F) :
+def loadHalfOracleAddressOperation {F : Type} (cols : Circuits.Types.AddressOperation F) :
     Extracted.LoadHalfOracle.AddressOperation F :=
   { addr_operation := { value := cols.addr_operation.value }
     top_two_limb_inv := cols.top_two_limb_inv }
 
 /-- Inverse of `loadHalfOracleAddressOperation`. -/
 def loadHalfNativeAddressOperation {F : Type} (cols : Extracted.LoadHalfOracle.AddressOperation F) :
-    Extracted.AddressOperation F :=
+    Circuits.Types.AddressOperation F :=
   { addr_operation := { value := cols.addr_operation.value }
     top_two_limb_inv := cols.top_two_limb_inv }
 
@@ -192,20 +196,20 @@ theorem loadHalfChipColumnsOfInput_roundtrip {F : Type}
 
 @[circuit_norm] private theorem loadHalfEvalAddress
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.AddressOperation (Expression F)) :
+    (cols : Circuits.Types.AddressOperation (Expression F)) :
     Eval.eval env cols =
       ({ addr_operation := Eval.eval env cols.addr_operation
          top_two_limb_inv := Eval.eval env cols.top_two_limb_inv } :
-        Extracted.AddressOperation F) := by
+        Circuits.Types.AddressOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem loadHalfEvalAddrAdd
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.AddrAddOperation (Expression F)) :
+    (cols : Circuits.Types.AddrAddOperation (Expression F)) :
     Eval.eval env cols =
       ({ value := Eval.eval env cols.value } :
-        Extracted.AddrAddOperation F) := by
+        Circuits.Types.AddrAddOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -253,33 +257,33 @@ theorem loadHalfChipColumnsOfInput_roundtrip {F : Type}
 
 @[circuit_norm] private theorem loadHalfEvalMemoryTimestamp
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MemoryAccessTimestamp (Expression F)) :
+    (cols : Circuits.Types.MemoryAccessTimestamp (Expression F)) :
     Eval.eval env cols =
       ({ prev_high := Eval.eval env cols.prev_high
          prev_low := Eval.eval env cols.prev_low
          compare_low := Eval.eval env cols.compare_low
          diff_low_limb := Eval.eval env cols.diff_low_limb
          diff_high_limb := Eval.eval env cols.diff_high_limb } :
-        Extracted.MemoryAccessTimestamp F) := by
+        Circuits.Types.MemoryAccessTimestamp F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem loadHalfEvalMemoryCols
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MemoryAccessCols (Expression F)) :
+    (cols : Circuits.Types.MemoryAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value
          access_timestamp := Eval.eval env cols.access_timestamp } :
-        Extracted.MemoryAccessCols F) := by
+        Circuits.Types.MemoryAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem loadHalfEvalU16MSB
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16MSBOperation (Expression F)) :
+    (cols : Circuits.Types.U16MSBOperation (Expression F)) :
     Eval.eval env cols =
       ({ msb := Eval.eval env cols.msb } :
-        Extracted.U16MSBOperation F) := by
+        Circuits.Types.U16MSBOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -299,10 +303,10 @@ private theorem loadHalfEvalU16MSBSingleton
     (value : Expression F) (target : F)
     (hvalue : Expression.eval env value = target) :
     Eval.eval env ({ msb := value } :
-      Extracted.U16MSBOperation (Expression F)) =
+      Circuits.Types.U16MSBOperation (Expression F)) =
         ({ msb := target } :
-          Extracted.U16MSBOperation F) := by
-  rw [loadHalfEvalU16MSB, Extracted.U16MSBOperation.mk.injEq]
+          Circuits.Types.U16MSBOperation F) := by
+  rw [loadHalfEvalU16MSB, Circuits.Types.U16MSBOperation.mk.injEq]
   exact (ProvableType.eval_field env value).trans hvalue
 
 theorem evalLoadHalfDirectOutput
@@ -331,9 +335,9 @@ theorem evalLoadHalfDirectOutput
       (Environment.fromArray (inputFirstRow input locals) data)
       (varFromOffset LoadHalfChip.Inputs 0).msb).symm.trans hMsb
   refine ⟨hState, hAdapter, ?_, hMemory, hOffset, hSelected, ?_, hLw, hLwu⟩
-  rw [loadHalfEvalAddress, Extracted.AddressOperation.mk.injEq]
+  rw [loadHalfEvalAddress, Circuits.Types.AddressOperation.mk.injEq]
   constructor
-  · rw [loadHalfEvalAddrAdd, Extracted.AddrAddOperation.mk.injEq]
+  · rw [loadHalfEvalAddrAdd, Circuits.Types.AddrAddOperation.mk.injEq]
     apply Vector.ext
     intro i hi
     change
@@ -395,7 +399,7 @@ theorem loadHalfChipLookupsEmpty :
     Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
 
 private def loadHalfAddressCols (offset : ℕ) :
-    Extracted.AddressOperation (Expression (ZMod p)) :=
+    Circuits.Types.AddressOperation (Expression (ZMod p)) :=
   ⟨⟨Vector.mapRange 3 fun i => var { index := offset + i }⟩,
     var { index := offset + 3 }⟩
 
@@ -407,11 +411,11 @@ private theorem loadHalfEvalAddressCols
           { value := #v[env.get offset, env.get (offset + 1),
             env.get (offset + 2)] }
          top_two_limb_inv := env.get (offset + 3) } :
-        Extracted.AddressOperation (ZMod p)) := by
+        Circuits.Types.AddressOperation (ZMod p)) := by
   simp only [loadHalfAddressCols]
-  rw [loadHalfEvalAddress, Extracted.AddressOperation.mk.injEq]
+  rw [loadHalfEvalAddress, Circuits.Types.AddressOperation.mk.injEq]
   constructor
-  · rw [loadHalfEvalAddrAdd, Extracted.AddrAddOperation.mk.injEq]
+  · rw [loadHalfEvalAddrAdd, Circuits.Types.AddrAddOperation.mk.injEq]
     apply Vector.ext
     intro i hi
     rw [← ProvableType.getElem_eval_fields env
@@ -754,7 +758,7 @@ private def loadHalfChipRustColumns
     offset_bit := Eval.eval env input.offset_bit
     selected_half := Expression.eval env input.selected_half
     msb := Eval.eval env
-      (⟨input.msb⟩ : Extracted.U16MSBOperation (Expression (ZMod p)))
+      (⟨input.msb⟩ : Circuits.Types.U16MSBOperation (Expression (ZMod p)))
     is_lh := Expression.eval env input.is_lh
     is_lhu := Expression.eval env input.is_lhu }
 

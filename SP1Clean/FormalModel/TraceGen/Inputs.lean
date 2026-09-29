@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Events
 import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Extracted.MemoryAccess
+import SP1Clean.Circuits.Types.MemoryAccess
 
 /-! # Trace generation — events to typed chip inputs
 
@@ -75,7 +75,7 @@ lemma wordOfNat_three (n : ℕ) :
 
 /-- SP1's `CPUState::populate`: the clock as `clk_high`/`clk_16_24`/`clk_0_16` and the program
 counter as three u16 limbs. -/
-def cpuStateCols (clk pc : ℕ) : Extracted.CPUState (ZMod p) where
+def cpuStateCols (clk pc : ℕ) : Circuits.Types.CPUState (ZMod p) where
   clk_high := ((clk >>> 24 : ℕ) : ZMod p)
   clk_16_24 := ((clk >>> 16 % 256 : ℕ) : ZMod p)
   clk_0_16 := ((clk % 2 ^ 16 : ℕ) : ZMod p)
@@ -118,7 +118,7 @@ def diffLowOf (prevTs currTs : ℕ) : ℕ :=
 /-- SP1's `RegisterAccessCols::populate`: the previous value of the register as a committed word,
 plus the previous-access timestamp block. `currTs` is the clock of *this* row's access to the
 register (`clk + 4` for the `op_a` write, `clk + 3` / `clk + 2` for the `op_b` / `op_c` reads). -/
-def registerAccessCols (value prevTs currTs : ℕ) : Extracted.RegisterAccessCols (ZMod p) where
+def registerAccessCols (value prevTs currTs : ℕ) : Circuits.Types.RegisterAccessCols (ZMod p) where
   prev_value := wordOfNat value
   access_timestamp :=
     { prev_low := ((prevLowOf prevTs currTs : ℕ) : ZMod p)
@@ -160,7 +160,7 @@ def memDiffOf (prevTs currTs : ℕ) : ℕ :=
 /-- SP1's `MemoryAccessCols::populate`: the cell's previous value as a committed word, the previous
 access's two clock halves, the comparison selector, and the gap's two limbs. `currTs` is this row's
 RAM access clock (`clk + 1`, `MemoryAccessPosition::Memory = 1`). -/
-def memoryAccessCols (value prevTs currTs : ℕ) : Extracted.MemoryAccessCols (ZMod p) where
+def memoryAccessCols (value prevTs currTs : ℕ) : Circuits.Types.MemoryAccessCols (ZMod p) where
   prev_value := wordOfNat value
   access_timestamp :=
     { prev_high := ((prevTs >>> 24 : ℕ) : ZMod p)
@@ -193,14 +193,14 @@ lemma memoryAccessCols_diff_high_limb (value prevTs currTs : ℕ) :
       = ((memDiffOf prevTs currTs / 2 ^ 16 : ℕ) : ZMod p) := rfl
 
 /-- The all-zero RAM access block of a padding row. -/
-def zeroMemoryAccessCols : Extracted.MemoryAccessCols (ZMod p) where
+def zeroMemoryAccessCols : Circuits.Types.MemoryAccessCols (ZMod p) where
   prev_value := #v[0, 0, 0, 0]
   access_timestamp :=
     { prev_high := 0, prev_low := 0, compare_low := 0, diff_low_limb := 0, diff_high_limb := 0 }
 
 /-- SP1's `RTypeReader::populate`: the three register indices, their access blocks at the
 `MemoryAccessPosition` offsets `A = 4` / `B = 3` / `C = 2`, and the `rd = x0` flag. -/
-def rTypeReaderCols (e : RTypeEvent) : Extracted.RTypeReader (ZMod p) where
+def rTypeReaderCols (e : RTypeEvent) : Circuits.Types.RTypeReader (ZMod p) where
   op_a := ((e.opA : ℕ) : ZMod p)
   op_a_memory := registerAccessCols e.prevA e.prevTsA (e.clk + 4)
   op_a_0 := if e.opA = 0 then 1 else 0
@@ -230,7 +230,7 @@ lemma rTypeReaderCols_op_c_memory (e : RTypeEvent) :
 /-- SP1's `ITypeReader::populate`: the two register indices and their access blocks at the
 `MemoryAccessPosition` offsets `A = 4` / `B = 3`, the `rd = x0` flag, and the decoded immediate as
 a committed word (`self.op_c_imm = Word::from(record.op_c)`) — no `op_c` register access. -/
-def iTypeReaderCols (e : ITypeEvent) : Extracted.ITypeReader (ZMod p) where
+def iTypeReaderCols (e : ITypeEvent) : Circuits.Types.ITypeReader (ZMod p) where
   op_a := ((e.opA : ℕ) : ZMod p)
   op_a_memory := registerAccessCols e.prevA e.prevTsA (e.clk + 4)
   op_a_0 := if e.opA = 0 then 1 else 0
@@ -260,7 +260,7 @@ lemma iTypeReaderCols_op_c_imm (e : ITypeEvent) :
 file. On an immediate row (`imm_c = 1`) the populate copies the committed `op_c` word into
 `prev_value` and zeroes both timestamp columns; on a register row it fills the block from the
 `rs2` read record at `MemoryAccessPosition::C = 2`, exactly as the R-type adapter does. -/
-def aluTypeOpCCols (e : ALUTypeEvent) : Extracted.RegisterAccessCols (ZMod p) :=
+def aluTypeOpCCols (e : ALUTypeEvent) : Circuits.Types.RegisterAccessCols (ZMod p) :=
   if e.immC = 1 then
     { prev_value := wordOfNat e.opC, access_timestamp := { prev_low := 0, diff_low_limb := 0 } }
   else registerAccessCols e.c e.prevTsC (e.clk + 2)
@@ -274,7 +274,7 @@ lemma aluTypeOpCCols_of_reg {e : ALUTypeEvent} (h : e.immC = 0) :
 /-- SP1's `ALUTypeReader::populate`: as the R-type block, but the `op_c` slot is the committed
 word `Word::from(record.op_c)` plus the row-dependent access block above, and the row commits the
 `imm_c` flag. -/
-def aluTypeReaderCols (e : ALUTypeEvent) : Extracted.ALUTypeReader (ZMod p) where
+def aluTypeReaderCols (e : ALUTypeEvent) : Circuits.Types.ALUTypeReader (ZMod p) where
   op_a := ((e.opA : ℕ) : ZMod p)
   op_a_memory := registerAccessCols e.prevA e.prevTsA (e.clk + 4)
   op_a_0 := if e.opA = 0 then 1 else 0
@@ -312,7 +312,7 @@ lemma aluTypeReaderCols_imm_c (e : ALUTypeEvent) :
 /-- SP1's `JTypeReader::populate`: the destination index, its write access block at
 `MemoryAccessPosition::A = 4`, the `rd = x0` flag, and the two decoded immediates as committed
 words — a J-type row makes no other register access. -/
-def jTypeReaderCols (e : JTypeEvent) : Extracted.JTypeReader (ZMod p) where
+def jTypeReaderCols (e : JTypeEvent) : Circuits.Types.JTypeReader (ZMod p) where
   op_a := ((e.opA : ℕ) : ZMod p)
   op_a_memory := registerAccessCols e.prevA e.prevTsA (e.clk + 4)
   op_a_0 := if e.opA = 0 then 1 else 0
@@ -478,12 +478,12 @@ row carries almost no obligation. It is a separate builder rather than an event,
 row corresponds to no execution step. -/
 
 /-- The all-zero register-access block of a padding row. -/
-def zeroAccessCols : Extracted.RegisterAccessCols (ZMod p) where
+def zeroAccessCols : Circuits.Types.RegisterAccessCols (ZMod p) where
   prev_value := #v[0, 0, 0, 0]
   access_timestamp := { prev_low := 0, diff_low_limb := 0 }
 
 /-- The all-zero R-type adapter block of a padding row. -/
-def zeroRTypeReaderCols : Extracted.RTypeReader (ZMod p) where
+def zeroRTypeReaderCols : Circuits.Types.RTypeReader (ZMod p) where
   op_a := 0
   op_a_memory := zeroAccessCols
   op_a_0 := 0
@@ -493,7 +493,7 @@ def zeroRTypeReaderCols : Extracted.RTypeReader (ZMod p) where
   op_c_memory := zeroAccessCols
 
 /-- The all-zero I-type adapter block of a padding row. -/
-def zeroITypeReaderCols : Extracted.ITypeReader (ZMod p) where
+def zeroITypeReaderCols : Circuits.Types.ITypeReader (ZMod p) where
   op_a := 0
   op_a_memory := zeroAccessCols
   op_a_0 := 0
@@ -502,7 +502,7 @@ def zeroITypeReaderCols : Extracted.ITypeReader (ZMod p) where
   op_c_imm := #v[0, 0, 0, 0]
 
 /-- The all-zero ALU-type adapter block of a padding row. -/
-def zeroALUTypeReaderCols : Extracted.ALUTypeReader (ZMod p) where
+def zeroALUTypeReaderCols : Circuits.Types.ALUTypeReader (ZMod p) where
   op_a := 0
   op_a_memory := zeroAccessCols
   op_a_0 := 0
@@ -513,7 +513,7 @@ def zeroALUTypeReaderCols : Extracted.ALUTypeReader (ZMod p) where
   imm_c := 0
 
 /-- The all-zero J-type adapter block of a padding row. -/
-def zeroJTypeReaderCols : Extracted.JTypeReader (ZMod p) where
+def zeroJTypeReaderCols : Circuits.Types.JTypeReader (ZMod p) where
   op_a := 0
   op_a_memory := zeroAccessCols
   op_a_0 := 0
@@ -521,7 +521,7 @@ def zeroJTypeReaderCols : Extracted.JTypeReader (ZMod p) where
   op_c_imm := #v[0, 0, 0, 0]
 
 /-- The all-zero `CPUState` block of a padding row. -/
-def zeroCPUStateCols : Extracted.CPUState (ZMod p) where
+def zeroCPUStateCols : Circuits.Types.CPUState (ZMod p) where
   clk_high := 0
   clk_16_24 := 0
   clk_0_16 := 0

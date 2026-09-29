@@ -1,3 +1,4 @@
+import SP1Clean.Extracted.MulOperation
 import SP1Clean.Faithful.DivRemChip
 import SP1Clean.Faithful.AddOperation
 import SP1Clean.Faithful.IsEqualWordOperation
@@ -17,6 +18,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 open SP1Clean.Channels (byteChannel stateChannel memoryChannel programChannel)
 
@@ -366,7 +368,7 @@ private theorem divRemCompareNativeExact
     ProvableType.eval_field,
     ProvableType.getElem_eval_fields,
     eval_isEqualWordColumns, eval_isZeroWordColumns,
-    eval_extractedAddColumns, eval_ltUnsignedColumns,
+    eval_addColumns, eval_ltUnsignedColumns,
     eval_u16CompareColumns, eval_u16MSBColumns,
     Expression.eval]
 
@@ -388,7 +390,7 @@ private def divRemUpperMulAssertions {F : Type} [Field F]
     (cols.is_divu + cols.is_remu) 0
 
 private def divRemCpuAssertions {F : Type} [Field F]
-    [CoeHead F ℕ] (state : Extracted.CPUState F) (isReal : F) : List F :=
+    [CoeHead F ℕ] (state : Circuits.Types.CPUState F) (isReal : F) : List F :=
   Extracted.CPUState.asserts state
     #v[state.pc[0] + 4, state.pc[1], state.pc[2]]
     8 isReal
@@ -403,8 +405,8 @@ private def divRemOpcode {F : Type} [Add F] [Mul F]
     cols.is_divuw * 26 + cols.is_remuw * 28
 
 private def divRemReaderAssertions {F : Type} [Field F]
-    [CoeHead F ℕ] (state : Extracted.CPUState F) (opcode : F)
-    (a : Word F) (adapter : Extracted.RTypeReader F)
+    [CoeHead F ℕ] (state : Circuits.Types.CPUState F) (opcode : F)
+    (a : Word F) (adapter : Circuits.Types.RTypeReader F)
     (isReal : F) : List F :=
   Extracted.RTypeReader.asserts state.clk_high
     (state.clk_0_16 + state.clk_16_24 * 65536)
@@ -438,17 +440,17 @@ private theorem divRemVec16Eta {F : Type} (value : Vector F 16) :
   interval_cases i <;> rfl
 
 private theorem divRemU16toU8Eta {F : Type}
-    (cols : Extracted.U16toU8Operation F) :
+    (cols : Circuits.Types.U16toU8Operation F) :
     ({ low_bytes :=
         #v[cols.low_bytes[0], cols.low_bytes[1],
           cols.low_bytes[2], cols.low_bytes[3]] } :
-      Extracted.U16toU8Operation F) = cols := by
+      Circuits.Types.U16toU8Operation F) = cols := by
   cases cols
   simp only
   rw [divRemVec4Eta]
 
 private theorem divRemMulEta {F : Type}
-    (cols : Extracted.MulOperation F) :
+    (cols : Circuits.Types.MulOperation F) :
     ({ carry :=
         #v[cols.carry[0], cols.carry[1], cols.carry[2], cols.carry[3],
           cols.carry[4], cols.carry[5], cols.carry[6], cols.carry[7],
@@ -476,7 +478,7 @@ private theorem divRemMulEta {F : Type}
        product_msb := { msb := cols.product_msb.msb }
        b_sign_extend := cols.b_sign_extend
        c_sign_extend := cols.c_sign_extend } :
-      Extracted.MulOperation F) = cols := by
+      Circuits.Types.MulOperation F) = cols := by
   cases cols with
   | mk carry product bLower cLower bMsb cMsb productMsb bSign cSign =>
       cases bLower
@@ -487,29 +489,29 @@ private theorem divRemMulEta {F : Type}
         divRemVec4Eta, divRemVec4Eta]
 
 private theorem divRemCpuEta {F : Type}
-    (cols : Extracted.CPUState F) :
+    (cols : Circuits.Types.CPUState F) :
     ({ clk_high := cols.clk_high
        clk_16_24 := cols.clk_16_24
        clk_0_16 := cols.clk_0_16
        pc := #v[cols.pc[0], cols.pc[1], cols.pc[2]] } :
-      Extracted.CPUState F) = cols := by
+      Circuits.Types.CPUState F) = cols := by
   cases cols
   simp only
   rw [divRemVec3Eta]
 
 private theorem divRemRegisterAccessEta {F : Type}
-    (cols : Extracted.RegisterAccessCols F) :
+    (cols : Circuits.Types.RegisterAccessCols F) :
     ({ prev_value :=
         #v[cols.prev_value[0], cols.prev_value[1],
           cols.prev_value[2], cols.prev_value[3]]
        access_timestamp := cols.access_timestamp } :
-      Extracted.RegisterAccessCols F) = cols := by
+      Circuits.Types.RegisterAccessCols F) = cols := by
   cases cols
   simp only
   rw [divRemVec4Eta]
 
 private theorem divRemRTypeEta {F : Type}
-    (cols : Extracted.RTypeReader F) :
+    (cols : Circuits.Types.RTypeReader F) :
     ({ op_a := cols.op_a
        op_a_memory :=
         { prev_value :=
@@ -535,24 +537,24 @@ private theorem divRemRTypeEta {F : Type}
               cols.op_c_memory.prev_value[2],
               cols.op_c_memory.prev_value[3]]
           access_timestamp := cols.op_c_memory.access_timestamp } } :
-      Extracted.RTypeReader F) = cols := by
+      Circuits.Types.RTypeReader F) = cols := by
   cases cols
   simp only
   rw [divRemRegisterAccessEta, divRemRegisterAccessEta,
     divRemRegisterAccessEta]
 
 private theorem divRemAddEta {F : Type}
-    (cols : Extracted.AddOperation F) :
+    (cols : Circuits.Types.AddOperation F) :
     ({ value :=
         #v[cols.value[0], cols.value[1],
           cols.value[2], cols.value[3]] } :
-      Extracted.AddOperation F) = cols := by
+      Circuits.Types.AddOperation F) = cols := by
   cases cols
   simp only
   rw [divRemVec4Eta]
 
 private theorem divRemLtEta {F : Type}
-    (cols : Extracted.LtOperationUnsigned F) :
+    (cols : Circuits.Types.LtOperationUnsigned F) :
     ({ u16_compare_operation := cols.u16_compare_operation
        u16_flags :=
         #v[cols.u16_flags[0], cols.u16_flags[1],
@@ -560,7 +562,7 @@ private theorem divRemLtEta {F : Type}
        not_eq_inv := cols.not_eq_inv
        comparison_limbs :=
         #v[cols.comparison_limbs[0], cols.comparison_limbs[1]] } :
-      Extracted.LtOperationUnsigned F) = cols := by
+      Circuits.Types.LtOperationUnsigned F) = cols := by
   cases cols
   simp only
   rw [divRemVec4Eta, divRemVec2Eta]
@@ -706,102 +708,102 @@ private theorem rc_c_msb_msb {F : Type} (cols : DivRemChip.Columns F) :
 private theorem rc_quot_msb_msb {F : Type} (cols : DivRemChip.Columns F) :
     (divRemChipReconfigure cols).quot_msb.msb = cols.quot_msb.msb := rfl
 
-private theorem om_carry {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_carry {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).carry = x.carry := rfl
 
-private theorem om_product {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_product {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).product = x.product := rfl
 
-private theorem om_b_msb {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_b_msb {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).b_msb = x.b_msb := rfl
 
-private theorem om_c_msb {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_c_msb {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).c_msb = x.c_msb := rfl
 
-private theorem om_b_sign_extend {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_b_sign_extend {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).b_sign_extend = x.b_sign_extend := rfl
 
-private theorem om_c_sign_extend {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_c_sign_extend {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).c_sign_extend = x.c_sign_extend := rfl
 
-private theorem om_blb {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_blb {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).b_lower_byte.low_bytes = x.b_lower_byte.low_bytes := rfl
 
-private theorem om_clb {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_clb {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).c_lower_byte.low_bytes = x.c_lower_byte.low_bytes := rfl
 
-private theorem om_pmsb {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_pmsb {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).product_msb.msb = x.product_msb.msb := rfl
 
-private theorem olt_bit {F : Type} (x : Extracted.LtOperationUnsigned F) :
+private theorem olt_bit {F : Type} (x : Circuits.Types.LtOperationUnsigned F) :
     (divRemOracleLtOperation x).u16_compare_operation.bit = x.u16_compare_operation.bit := rfl
 
-private theorem olt_u16_flags {F : Type} (x : Extracted.LtOperationUnsigned F) :
+private theorem olt_u16_flags {F : Type} (x : Circuits.Types.LtOperationUnsigned F) :
     (divRemOracleLtOperation x).u16_flags = x.u16_flags := rfl
 
-private theorem olt_not_eq_inv {F : Type} (x : Extracted.LtOperationUnsigned F) :
+private theorem olt_not_eq_inv {F : Type} (x : Circuits.Types.LtOperationUnsigned F) :
     (divRemOracleLtOperation x).not_eq_inv = x.not_eq_inv := rfl
 
-private theorem olt_comparison_limbs {F : Type} (x : Extracted.LtOperationUnsigned F) :
+private theorem olt_comparison_limbs {F : Type} (x : Circuits.Types.LtOperationUnsigned F) :
     (divRemOracleLtOperation x).comparison_limbs = x.comparison_limbs := rfl
 
-private theorem ozw_l0_inverse {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_l0_inverse {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_0.inverse = x.is_zero_limb_0.inverse := rfl
 
-private theorem ozw_l0_result {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_l0_result {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_0.result = x.is_zero_limb_0.result := rfl
 
-private theorem ozw_l1_inverse {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_l1_inverse {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_1.inverse = x.is_zero_limb_1.inverse := rfl
 
-private theorem ozw_l1_result {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_l1_result {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_1.result = x.is_zero_limb_1.result := rfl
 
-private theorem ozw_l2_inverse {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_l2_inverse {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_2.inverse = x.is_zero_limb_2.inverse := rfl
 
-private theorem ozw_l2_result {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_l2_result {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_2.result = x.is_zero_limb_2.result := rfl
 
-private theorem ozw_l3_inverse {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_l3_inverse {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_3.inverse = x.is_zero_limb_3.inverse := rfl
 
-private theorem ozw_l3_result {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_l3_result {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_3.result = x.is_zero_limb_3.result := rfl
 
-private theorem ozw_is_zero_first_half {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_is_zero_first_half {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_first_half = x.is_zero_first_half := rfl
 
-private theorem ozw_is_zero_second_half {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_is_zero_second_half {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_second_half = x.is_zero_second_half := rfl
 
-private theorem ozw_result {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_result {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).result = x.result := rfl
 
-private theorem oew_diff {F : Type} (x : Extracted.IsEqualWordOperation F) :
+private theorem oew_diff {F : Type} (x : Circuits.Types.IsEqualWordOperation F) :
     (divRemOracleIsEqualWord x).is_diff_zero = divRemOracleIsZeroWord x.is_diff_zero := rfl
 
 
-private theorem om_product_msb {F : Type} (x : Extracted.MulOperation F) :
+private theorem om_product_msb {F : Type} (x : Circuits.Types.MulOperation F) :
     (divRemOracleMulOperation x).product_msb = ⟨x.product_msb.msb⟩ := rfl
 
-private theorem olt_u16co {F : Type} (x : Extracted.LtOperationUnsigned F) :
+private theorem olt_u16co {F : Type} (x : Circuits.Types.LtOperationUnsigned F) :
     (divRemOracleLtOperation x).u16_compare_operation =
       ⟨x.u16_compare_operation.bit⟩ := rfl
 
-private theorem ozw_limb_0 {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_limb_0 {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_0 =
       ⟨x.is_zero_limb_0.inverse, x.is_zero_limb_0.result⟩ := rfl
 
-private theorem ozw_limb_1 {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_limb_1 {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_1 =
       ⟨x.is_zero_limb_1.inverse, x.is_zero_limb_1.result⟩ := rfl
 
-private theorem ozw_limb_2 {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_limb_2 {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_2 =
       ⟨x.is_zero_limb_2.inverse, x.is_zero_limb_2.result⟩ := rfl
 
-private theorem ozw_limb_3 {F : Type} (x : Extracted.IsZeroWordOperation F) :
+private theorem ozw_limb_3 {F : Type} (x : Circuits.Types.IsZeroWordOperation F) :
     (divRemOracleIsZeroWord x).is_zero_limb_3 =
       ⟨x.is_zero_limb_3.inverse, x.is_zero_limb_3.result⟩ := rfl
 
@@ -1004,7 +1006,7 @@ private theorem divRemOracle_mulOperation_interactions_eq {F : Type} [Field F] [
 
 set_option linter.unusedSimpArgs false in
 private theorem divRemOracle_isZeroWord_asserts_eq' {F : Type} [Field F] [CoeHead F ℕ]
-    (a : Word F) (x : Extracted.IsZeroWordOperation F) (is_real : F) :
+    (a : Word F) (x : Circuits.Types.IsZeroWordOperation F) (is_real : F) :
     Extracted.DivRemOracle.IsZeroWordOperation.asserts a
         (divRemOracleIsZeroWord x) is_real =
       Extracted.IsZeroWordOperation.asserts a x is_real := by
@@ -1018,7 +1020,7 @@ private theorem divRemOracle_isZeroWord_asserts_eq' {F : Type} [Field F] [CoeHea
 
 set_option linter.unusedSimpArgs false in
 private theorem divRemOracle_isZeroWord_interactions_eq' {F : Type} [Field F] [CoeHead F ℕ]
-    (a : Word F) (x : Extracted.IsZeroWordOperation F) (is_real : F) :
+    (a : Word F) (x : Circuits.Types.IsZeroWordOperation F) (is_real : F) :
     Extracted.DivRemOracle.IsZeroWordOperation.interactions a
         (divRemOracleIsZeroWord x) is_real =
       Extracted.IsZeroWordOperation.interactions a x is_real := by
@@ -1031,7 +1033,7 @@ private theorem divRemOracle_isZeroWord_interactions_eq' {F : Type} [Field F] [C
 
 set_option linter.unusedSimpArgs false in
 private theorem divRemOracle_isEqualWord_asserts_eq' {F : Type} [Field F] [CoeHead F ℕ]
-    (a b : Word F) (x : Extracted.IsEqualWordOperation F) (is_real : F) :
+    (a b : Word F) (x : Circuits.Types.IsEqualWordOperation F) (is_real : F) :
     Extracted.DivRemOracle.IsEqualWordOperation.asserts a b
         (divRemOracleIsEqualWord x) is_real =
       Extracted.IsEqualWordOperation.asserts a b x is_real := by
@@ -1045,7 +1047,7 @@ private theorem divRemOracle_isEqualWord_asserts_eq' {F : Type} [Field F] [CoeHe
 
 set_option linter.unusedSimpArgs false in
 private theorem divRemOracle_isEqualWord_interactions_eq' {F : Type} [Field F] [CoeHead F ℕ]
-    (a b : Word F) (x : Extracted.IsEqualWordOperation F) (is_real : F) :
+    (a b : Word F) (x : Circuits.Types.IsEqualWordOperation F) (is_real : F) :
     Extracted.DivRemOracle.IsEqualWordOperation.interactions a b
         (divRemOracleIsEqualWord x) is_real =
       Extracted.IsEqualWordOperation.interactions a b x is_real := by
@@ -1058,7 +1060,7 @@ private theorem divRemOracle_isEqualWord_interactions_eq' {F : Type} [Field F] [
 
 set_option linter.unusedSimpArgs false in
 private theorem divRemOracle_ltOperation_asserts_eq' {F : Type} [Field F] [CoeHead F ℕ]
-    (b cc : Word F) (x : Extracted.LtOperationUnsigned F) (is_real : F) :
+    (b cc : Word F) (x : Circuits.Types.LtOperationUnsigned F) (is_real : F) :
     Extracted.DivRemOracle.LtOperationUnsigned.asserts b cc
         (divRemOracleLtOperation x) is_real =
       Extracted.LtOperationUnsigned.asserts b cc x is_real := by
@@ -1069,7 +1071,7 @@ private theorem divRemOracle_ltOperation_asserts_eq' {F : Type} [Field F] [CoeHe
 
 set_option linter.unusedSimpArgs false in
 private theorem divRemOracle_ltOperation_interactions_eq' {F : Type} [Field F] [CoeHead F ℕ]
-    (b cc : Word F) (x : Extracted.LtOperationUnsigned F) (is_real : F) :
+    (b cc : Word F) (x : Circuits.Types.LtOperationUnsigned F) (is_real : F) :
     Extracted.DivRemOracle.LtOperationUnsigned.interactions b cc
         (divRemOracleLtOperation x) is_real =
       Extracted.LtOperationUnsigned.interactions b cc x is_real := by
@@ -1080,7 +1082,7 @@ private theorem divRemOracle_ltOperation_interactions_eq' {F : Type} [Field F] [
 
 set_option linter.unusedSimpArgs false in
 private theorem divRemOracle_mulOperation_asserts_eq' {F : Type} [Field F] [CoeHead F ℕ]
-    (a b c : Word F) (x : Extracted.MulOperation F)
+    (a b c : Word F) (x : Circuits.Types.MulOperation F)
     (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : F) :
     Extracted.DivRemOracle.MulOperation.asserts a b c (divRemOracleMulOperation x)
         is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu =
@@ -1094,7 +1096,7 @@ private theorem divRemOracle_mulOperation_asserts_eq' {F : Type} [Field F] [CoeH
 
 set_option linter.unusedSimpArgs false in
 private theorem divRemOracle_mulOperation_interactions_eq' {F : Type} [Field F] [CoeHead F ℕ]
-    (a b c : Word F) (x : Extracted.MulOperation F)
+    (a b c : Word F) (x : Circuits.Types.MulOperation F)
     (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : F) :
     Extracted.DivRemOracle.MulOperation.interactions a b c (divRemOracleMulOperation x)
         is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu =
@@ -1644,7 +1646,7 @@ private theorem divRemGroupGateFacts
 private theorem divRemEvalMulOperation
     {F : Type} [FiniteField F]
     (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     Eval.eval env cols =
       ({ carry := Eval.eval env cols.carry
          product := Eval.eval env cols.product
@@ -1655,7 +1657,7 @@ private theorem divRemEvalMulOperation
          product_msb := Eval.eval env cols.product_msb
          b_sign_extend := Eval.eval env cols.b_sign_extend
          c_sign_extend := Eval.eval env cols.c_sign_extend } :
-        Extracted.MulOperation F) := by
+        Circuits.Types.MulOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -2021,7 +2023,7 @@ private theorem divRemEvalCompareOfCols
     ProvableType.eval_field, ProvableType.eval_fields,
     eval_rTypeReader, eval_registerAccessCols,
     eval_u16MSBColumns, eval_isEqualWordColumns,
-    eval_isZeroWordColumns, eval_extractedAddColumns,
+    eval_isZeroWordColumns, eval_addColumns,
     eval_ltUnsignedColumns, eval_u16CompareColumns]
 
 private theorem divRemCompareAssertionsExact
@@ -2359,14 +2361,14 @@ private def divRemCompareInteractions {F : Type} [Field F]
       cols.quotient[1] cols.quot_msb wordGate
 
 private def divRemCpuInteractions {F : Type} [Field F]
-    [CoeHead F ℕ] (state : Extracted.CPUState F) (isReal : F) :
+    [CoeHead F ℕ] (state : Circuits.Types.CPUState F) (isReal : F) :
     List (Extracted.Interaction F) :=
   Extracted.CPUState.interactions state
     #v[state.pc[0] + 4, state.pc[1], state.pc[2]] 8 isReal
 
 private def divRemReaderInteractions {F : Type} [Field F]
-    [CoeHead F ℕ] (state : Extracted.CPUState F) (opcode : F)
-    (a : Word F) (adapter : Extracted.RTypeReader F)
+    [CoeHead F ℕ] (state : Circuits.Types.CPUState F) (opcode : F)
+    (a : Word F) (adapter : Circuits.Types.RTypeReader F)
     (isReal : F) : List (Extracted.Interaction F) :=
   Extracted.RTypeReader.interactions state.clk_high
     (state.clk_0_16 + state.clk_16_24 * 65536)
@@ -2734,7 +2736,7 @@ private theorem divRemCompareInteractionsExact
     ProvableType.eval_field,
     ProvableType.getElem_eval_fields,
     eval_isEqualWordColumns, eval_isZeroWordColumns,
-    eval_extractedAddColumns, eval_ltUnsignedColumns,
+    eval_addColumns, eval_ltUnsignedColumns,
     eval_u16CompareColumns, eval_u16MSBColumns,
     Expression.eval]
   simp only [Extracted.IsEqualWordOperation.interactions,
@@ -2904,17 +2906,17 @@ private theorem divRemCoreByteDecompose
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemEvalU16toU8
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16toU8Operation (Expression F)) :
+    (cols : Circuits.Types.U16toU8Operation (Expression F)) :
     Eval.eval env cols =
       ({ low_bytes := Eval.eval env cols.low_bytes } :
-        Extracted.U16toU8Operation F) := by
+        Circuits.Types.U16toU8Operation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemEvalMulProduct
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F))
+    (cols : Circuits.Types.MulOperation (Expression F))
     (i : ℕ) (hi : i < 16) :
     (Eval.eval env cols).product[i] =
       Expression.eval env cols.product[i] := by
@@ -2925,7 +2927,7 @@ private theorem divRemEvalMulProduct
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemEvalMulCarry
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F))
+    (cols : Circuits.Types.MulOperation (Expression F))
     (i : ℕ) (hi : i < 16) :
     (Eval.eval env cols).carry[i] =
       Expression.eval env cols.carry[i] := by
@@ -2936,7 +2938,7 @@ private theorem divRemEvalMulCarry
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemEvalMulBLower
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F))
+    (cols : Circuits.Types.MulOperation (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).b_lower_byte.low_bytes[i] =
       Expression.eval env cols.b_lower_byte.low_bytes[i] := by
@@ -2949,7 +2951,7 @@ private theorem divRemEvalMulBLower
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemEvalMulCLower
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F))
+    (cols : Circuits.Types.MulOperation (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).c_lower_byte.low_bytes[i] =
       Expression.eval env cols.c_lower_byte.low_bytes[i] := by
@@ -2962,7 +2964,7 @@ private theorem divRemEvalMulCLower
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemEvalMulBMsb
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     (Eval.eval env cols).b_msb =
       Expression.eval env cols.b_msb := by
   rw [divRemEvalMulOperation]
@@ -2971,7 +2973,7 @@ private theorem divRemEvalMulBMsb
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemEvalMulCMsb
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     (Eval.eval env cols).c_msb =
       Expression.eval env cols.c_msb := by
   rw [divRemEvalMulOperation]
@@ -2980,7 +2982,7 @@ private theorem divRemEvalMulCMsb
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemEvalMulProductMsb
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     (Eval.eval env cols).product_msb.msb =
       Expression.eval env cols.product_msb.msb := by
   rw [divRemEvalMulOperation, eval_u16MSBColumns]
@@ -3139,7 +3141,7 @@ private theorem divRemUpperMulInteractionsActive
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemMulAccessesAllByte
     (a b c : Word (ZMod p))
-    (cols : Extracted.MulOperation (ZMod p))
+    (cols : Circuits.Types.MulOperation (ZMod p))
     (isReal isMul isMulh isMulw isMulhu isMulhsu : ZMod p) :
     (((Extracted.MulOperation.interactions a b c cols
       isReal isMul isMulh isMulw isMulhu isMulhsu).map

@@ -2,8 +2,8 @@ name = "sp1-clean-native"
 # The default build is the CORE: strata 0–6 of `scripts/layering.txt` (the generic/semantic layers
 # and the chip circuits with their proofs), reached through the gated root index
 # `SP1Clean/Core.lean` (library `SP1Core`), plus the three upstream-destined libraries. The
-# SP1-alignment strata 7–11 are built through the umbrella `SP1Clean` by the scheduled/dispatch
-# `alignment` CI workflow, not on every PR. Measurement behind the split:
+# SP1-alignment strata 7–11 are built through the umbrella `SP1Clean` by the full CI job
+# on every PR, main update and scheduled run. Measurement behind the split:
 # docs/agents/compile-profile-2026-09.md.
 defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun"]
 
@@ -19,17 +19,17 @@ moreLeanArgs = ["--tstack=400000", "-j2"]
 # `lake lint` driver — Batteries' `runLinter` (what Mathlib, cslib and PolyFun use): every default
 # environment linter (`docBlame`, `defsWithUnderscore`, `unusedArguments`, `simpNF`, …) over the
 # declarations of the four hand-written roots. `lake lint` lints the full tree (the alignment
-# workflow); PR CI lints the core through its index with
+# job); the core CI job also lints its index with
 # `lake exe runLinter --no-build SP1Clean.Core ToClean ToMathlib ToPolyFun`. `scripts/nolints.json`
 # is the burn-down list of known findings (`scripts/update_nolints.sh` regenerates it), every entry a
-# debt under AGENTS.md § Linters; a permanent exception is a `@[nolint …]` attribute at the site
+# debt under AGENTS.md; a permanent exception is a `@[nolint …]` attribute at the site
 # with its reason, never an entry. Needs built oleans (`--no-build` refuses to build them; without
 # it `runLinter` builds what is missing).
 lintDriver = "batteries/runLinter"
 lintDriverArgs = ["SP1Clean", "ToClean", "ToMathlib", "ToPolyFun"]
 
 # `lake test` driver — builds the core test set (`SP1CoreTest`, below). The full `SP1CleanTest`
-# library (alignment-only anchors included) is built by the alignment workflow.
+# library (alignment-only anchors included) is built by the full CI job on every PR.
 testDriver = "SP1CoreTest"
 
 # Package-wide options. Lake applies `buildType ++ package ++ library` (the library's win), records
@@ -57,7 +57,7 @@ weak.linter.mathlibStandardSet = true
 weak.linter.style.admit = true
 # Temporary opt-outs, measured on the 2026-09-20 full build of every library (unique sites /
 # files). Every one is DEBT, not policy: the practices these linters enforce are adopted, the sites
-# are fixed in the lint burn-down series (docs/roadmap.md § Lint debt), and a line is deleted the
+# are fixed while their owning modules migrate, and a line is deleted the
 # moment its count reaches 0. Do not add a line without a count.
 weak.linter.style.header = false               # ~950 files: no copyright headers in this tree; the
                                                # upstream-destined files get Mathlib/Clean headers at PR time
@@ -198,7 +198,7 @@ roots = ["SP1Clean.Core"]
 allowNonModules = true
 
 # Umbrella: `SP1Clean.lean` imports `SP1Clean.Core` plus strata 7–11 and every generated module;
-# `lake build SP1Clean` is the full build (the alignment workflow's target).
+# `lake build SP1Clean` is the full CI build.
 [[lean_lib]]
 name = "SP1Clean"
 allowNonModules = true

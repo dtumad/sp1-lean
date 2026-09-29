@@ -76,7 +76,7 @@ theorem populate?_isSome_iff (memory : ByteMemory) (limit address : ℕ) :
   simpa only [populate?, Option.isSome_map] using memory.intervalAt?_isSome_iff limit address
 
 private theorem compare_lower {address lower : Word (ZMod p)}
-    {cols : Extracted.LtOperationUnsigned (ZMod p)}
+    {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (addressBound : Word.isU64 address) (lowerBound : Word.isU64 lower)
     (spec : LtOperationUnsigned.Spec ⟨address, lower, cols, 1⟩)
     (zero : cols.u16_compare_operation.bit = 0) : Word.toNat lower ≤ Word.toNat address := by
@@ -88,7 +88,7 @@ private theorem compare_lower {address lower : Word (ZMod p)}
   · omega
 
 private theorem compare_upper {address upper : Word (ZMod p)}
-    {cols : Extracted.LtOperationUnsigned (ZMod p)}
+    {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (addressBound : Word.isU64 address) (upperBound : Word.isU64 upper)
     (spec : LtOperationUnsigned.Spec ⟨address, upper, cols, 1⟩)
     (one : cols.u16_compare_operation.bit - 1 = 0) : Word.toNat address < Word.toNat upper := by

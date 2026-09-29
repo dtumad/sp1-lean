@@ -3,7 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Extracted.ITypeReader
+import SP1Clean.Circuits.Types.ITypeReader
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -37,20 +37,20 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- Component-wise evaluation of the canonical I-type reader row.  This is the folded evaluator
 boundary used by chip-level grounding and faithfulness proofs. -/
 @[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ITypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ITypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a,
          op_a_memory := Eval.eval env cols.op_a_memory,
          op_a_0 := Eval.eval env cols.op_a_0,
          op_b := Eval.eval env cols.op_b,
          op_b_memory := Eval.eval env cols.op_b_memory,
-         op_c_imm := Eval.eval env cols.op_c_imm } : Extracted.ITypeReader F) := by
+         op_c_imm := Eval.eval env cols.op_c_imm } : Circuits.Types.ITypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 /-- Evaluation of the destination-zero routing flag through the folded I-type reader row. -/
 @[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ITypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ITypeReader (Expression F)) :
     (Eval.eval env cols).op_a_0 = Expression.eval env cols.op_a_0 := by
   simp only [circuit_norm]
 

@@ -1,15 +1,16 @@
+import SP1Clean.Circuits.Types.AddOperation
 import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Extracted.MulOperation
-import SP1Clean.Extracted.U16CompareOperation
-import SP1Clean.Extracted.U16MSBOperation
-import SP1Clean.Extracted.U16toU8OperationUnsafe
-import SP1Clean.Extracted.AddrAddOperation
-import SP1Clean.Extracted.AddressOperation
-import SP1Clean.Extracted.IsZeroOperation
-import SP1Clean.Extracted.IsZeroWordOperation
-import SP1Clean.Extracted.IsEqualWordOperation
-import SP1Clean.Extracted.LtOperationUnsigned
-import SP1Clean.Extracted.LtOperationSigned
+import SP1Clean.Circuits.Types.MulOperation
+import SP1Clean.Circuits.Types.U16CompareOperation
+import SP1Clean.Circuits.Types.U16MSBOperation
+import SP1Clean.Circuits.Types.U16toU8Operation
+import SP1Clean.Circuits.Types.AddrAddOperation
+import SP1Clean.Circuits.Types.AddressOperation
+import SP1Clean.Circuits.Types.IsZeroOperation
+import SP1Clean.Circuits.Types.IsZeroWordOperation
+import SP1Clean.Circuits.Types.IsEqualWordOperation
+import SP1Clean.Circuits.Types.LtOperationUnsigned
+import SP1Clean.Circuits.Types.LtOperationSigned
 import Mathlib.Data.Fin.VecNotation
 
 /-! # Consolidated specs — operation gadgets
@@ -18,17 +19,17 @@ The `Inputs` structs, semantic `Spec`s, and the pure result helpers a `Spec` dir
 (`resultWord`, and Mul's `productVal`) for the witnessed operation gadgets. Second file in the
 `FormalModel/Contracts/` sequence (`Readers.lean → Operations.lean → Chips.lean`); the structural
 `RawSpec`s stay in the per-operation proof files. Depends only on
-`Math/` + `Model/` + `Extracted/` (+ `Contracts/Readers.lean` for sequencing). -/
+`Math/` + `Model/` + `Circuits/Types/` (+ `Contracts/Readers.lean` for sequencing). -/
 
 namespace SP1Clean.U16MSBOperation
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Proof-oriented inputs for the native MSB gadget. The column payload remains the exact Rust
-anchor type, but the circuit interface is owned by the formal model. -/
+/-- Proof-oriented inputs for the native MSB gadget. The native library owns both the
+column type and this semantic interface; Rust layout agreement is checked separately. -/
 structure Inputs (F : Type) where
   a : F
-  cols : Extracted.U16MSBOperation F
+  cols : Circuits.Types.U16MSBOperation F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -52,7 +53,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 structure Inputs (F : Type) where
   a : F
   b : F
-  cols : Extracted.U16CompareOperation F
+  cols : Circuits.Types.U16CompareOperation F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -76,7 +77,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 `is_real` gate (the `eval` params verbatim, faithful to SP1's `U16toU8OperationSafeInput`). -/
 structure Inputs (F : Type) where
   u16_values : fields 4 F
-  cols : Extracted.U16toU8Operation F
+  cols : Circuits.Types.U16toU8Operation F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -84,7 +85,7 @@ provable_struct_eval_lemmas Inputs
 /-- The ungated byte-decomposition content (2-arg, over explicit operand limbs + columns): for each
 limb the low and high bytes are genuine bytes and reassemble the limb. Reused by composing operations
 (e.g. `MulOperation`) that need the decomposition fact directly. -/
-def DecompSpec (u16_values : Word (ZMod p)) (cols : Extracted.U16toU8Operation (ZMod p)) : Prop :=
+def DecompSpec (u16_values : Word (ZMod p)) (cols : Circuits.Types.U16toU8Operation (ZMod p)) : Prop :=
   ∀ i : Fin 4,
     cols.low_bytes[i].val < 256 ∧
     ((u16_values[i] - cols.low_bytes[i]) * 256⁻¹).val < 256 ∧
@@ -105,7 +106,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 faithful to SP1's `eval_u16_to_u8_unsafe(_, u16_values, cols)`, which witnesses nothing). -/
 structure Inputs (F : Type) where
   u16_values : fields 4 F
-  cols : Extracted.U16toU8Operation F
+  cols : Circuits.Types.U16toU8Operation F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -125,7 +126,7 @@ namespace SP1Clean.IsZeroOperation
 /-- Inputs for the native field-zero test. -/
 structure Inputs (F : Type) where
   a : F
-  cols : Extracted.IsZeroOperation F
+  cols : Circuits.Types.IsZeroOperation F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -137,7 +138,7 @@ namespace SP1Clean.IsZeroWordOperation
 /-- Inputs for the native word-zero test. -/
 structure Inputs (F : Type) where
   a : Word F
-  cols : Extracted.IsZeroWordOperation F
+  cols : Circuits.Types.IsZeroWordOperation F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -150,7 +151,7 @@ namespace SP1Clean.IsEqualWordOperation
 structure Inputs (F : Type) where
   a : Word F
   b : Word F
-  cols : Extracted.IsEqualWordOperation F
+  cols : Circuits.Types.IsEqualWordOperation F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -168,7 +169,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 structure Inputs (F : Type) where
   a : Word F
   b : Word F
-  cols : Extracted.AddrAddOperation F
+  cols : Circuits.Types.AddrAddOperation F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -218,7 +219,7 @@ the contract surface makes the distinction between the Sail-visible effective ad
 8-byte-aligned RAM-bus address explicit. -/
 @[reducible] def alignedValue {F : Type} [Sub F] [Mul F] [OfNat F 2] [OfNat F 4]
     (input : Inputs F)
-    (cols : Extracted.AddressOperation F) : Vector F 3 :=
+    (cols : Circuits.Types.AddressOperation F) : Vector F 3 :=
   #v[cols.addr_operation.value[0] - 4 * input.offset_bit2 - 2 * input.offset_bit1 -
       input.offset_bit0,
     cols.addr_operation.value[1], cols.addr_operation.value[2]]
@@ -286,7 +287,7 @@ committed address limbs are genuine 16-bit limbs. Every conjunct is forced by th
 (respectively the address-add carry chain and byte-range pulls, offset boolean gates, low-three-bit
 range check, and top-two-limb inverse gate). Keeping the limb bounds on this semantic surface is
 important: the machine layer interprets the three fields as one canonical 48-bit byte address. -/
-def Spec (input : Inputs (ZMod p)) (cols : Extracted.AddressOperation (ZMod p)) : Prop :=
+def Spec (input : Inputs (ZMod p)) (cols : Circuits.Types.AddressOperation (ZMod p)) : Prop :=
   (cols.addr_operation.value[0].val + 65536 * cols.addr_operation.value[1].val +
       65536 ^ 2 * cols.addr_operation.value[2].val =
     (Word.toNat input.b + Word.toNat input.cc) % 2 ^ 48) ∧
@@ -305,7 +306,7 @@ def Spec (input : Inputs (ZMod p)) (cols : Extracted.AddressOperation (ZMod p)) 
 boolean on every row, while the address-add chain, non-reserved-address inverse, and byte lookup
 only claim an effective address on a real row.  Keeping the unconditional booleans here is
 important for parent load/store selector equations, which Rust also leaves ungated. -/
-def RowSpec (input : Inputs (ZMod p)) (cols : Extracted.AddressOperation (ZMod p)) : Prop :=
+def RowSpec (input : Inputs (ZMod p)) (cols : Circuits.Types.AddressOperation (ZMod p)) : Prop :=
   (input.offset_bit0 = 0 ∨ input.offset_bit0 = 1) ∧
     (input.offset_bit1 = 0 ∨ input.offset_bit1 = 1) ∧
     (input.offset_bit2 = 0 ∨ input.offset_bit2 = 1) ∧
@@ -314,7 +315,7 @@ def RowSpec (input : Inputs (ZMod p)) (cols : Extracted.AddressOperation (ZMod p
 omit [Fact (2 ^ 17 < p)] in
 /-- Project the compact Sail-facing address contract from the complete operation `Spec`. -/
 theorem validAddress_of_spec {input : Inputs (ZMod p)}
-    {cols : Extracted.AddressOperation (ZMod p)} (h : Spec input cols) :
+    {cols : Circuits.Types.AddressOperation (ZMod p)} (h : Spec input cols) :
     ValidAddress input :=
   ⟨h.2.2.2.2.1, h.2.2.2.2.2.1, h.2.2.2.2.2.2.1⟩
 
@@ -322,7 +323,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- The retained address-add byte pulls make the public three-limb address representation
 canonical. This projection is used by the RAM-cell bridge without reopening the circuit. -/
 theorem limbBounds_of_spec {input : Inputs (ZMod p)}
-    {cols : Extracted.AddressOperation (ZMod p)} (h : Spec input cols) :
+    {cols : Circuits.Types.AddressOperation (ZMod p)} (h : Spec input cols) :
     cols.addr_operation.value[0].val < 2 ^ 16 ∧
       cols.addr_operation.value[1].val < 2 ^ 16 ∧
       cols.addr_operation.value[2].val < 2 ^ 16 :=
@@ -334,18 +335,11 @@ namespace SP1Clean.AddOperation
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Proof-oriented local columns for the addition gadget. This shape is independent of SP1 Rust's
-`AddOperation` columns; the assembled chip faithfulness map is the only place that relates them. -/
-structure Columns (F : Type) where
-  value : Word F
-deriving ProvableStruct
-provable_struct_eval_lemmas Columns
-
 /-- Local addition-gadget inputs. Rust operation inputs are deliberately not an interface here. -/
 structure Inputs (F : Type) where
   a : Word F
   b : Word F
-  cols : Columns F
+  cols : Circuits.Types.AddOperation F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -396,12 +390,12 @@ namespace SP1Clean.AddwOperation
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Proof-oriented local columns for the 32-bit add gadget: the two witnessed low result limbs
-plus the composed sign-bit block (the shared `Extracted.U16MSBOperation` struct, kept because the
+plus the composed sign-bit block (the shared `Circuits.Types.U16MSBOperation` struct, kept because the
 native gadget composes `U16MSBOperation.circuit`). The assembled chip faithfulness map is the only
 place that relates this shape to SP1 Rust's helper-operation columns. -/
 structure Columns (F : Type) where
   value : Vector F 2
-  msb : Extracted.U16MSBOperation F
+  msb : Circuits.Types.U16MSBOperation F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
@@ -428,12 +422,12 @@ namespace SP1Clean.SubwOperation
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Proof-oriented local columns for the 32-bit subtract gadget: the two witnessed low result limbs
-plus the composed sign-bit block (the shared `Extracted.U16MSBOperation` struct, kept because the
+plus the composed sign-bit block (the shared `Circuits.Types.U16MSBOperation` struct, kept because the
 native gadget composes `U16MSBOperation.circuit`). The assembled chip faithfulness map is the only
 place that relates this shape to SP1 Rust's helper-operation columns. -/
 structure Columns (F : Type) where
   value : Vector F 2
-  msb : Extracted.U16MSBOperation F
+  msb : Circuits.Types.U16MSBOperation F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
@@ -461,7 +455,7 @@ namespace SP1Clean.LtOperationUnsigned
 structure Inputs (F : Type) where
   b : Word F
   cc : Word F
-  cols : Extracted.LtOperationUnsigned F
+  cols : Circuits.Types.LtOperationUnsigned F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -474,7 +468,7 @@ namespace SP1Clean.LtOperationSigned
 structure Inputs (F : Type) where
   b : Word F
   cc : Word F
-  cols : Extracted.LtOperationSigned F
+  cols : Circuits.Types.LtOperationSigned F
   is_signed : F
   is_real : F
 deriving ProvableStruct
@@ -536,7 +530,7 @@ word is **reconstructed** from the `product` columns (see `resultWord`), placed 
 structure Inputs (F : Type) where
   b : fields 4 F
   c : fields 4 F
-  cols : Extracted.MulOperation F
+  cols : Circuits.Types.MulOperation F
   is_real : F
   is_mul : F
   is_mulh : F
@@ -547,13 +541,13 @@ deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 /-- Witnessed product byte `k`, `0` outside `0..15`. -/
-def productVal (cols : Extracted.MulOperation (ZMod p)) (k : ℕ) : ZMod p :=
+def productVal (cols : Circuits.Types.MulOperation (ZMod p)) (k : ℕ) : ZMod p :=
   if h : k < 16 then cols.product[k]'h else 0
 
 /-- The 64-bit result word, read off the witnessed `product` per active variant: the low 64 bits
 (bytes `0..7`) for `MUL`; the high 64 bits (bytes `8..15`) for the `MULH*` family; the
 sign-extended low 32 bits for `MULW`. -/
-def resultWord (input : Inputs (ZMod p)) (cols : Extracted.MulOperation (ZMod p)) : Word (ZMod p) :=
+def resultWord (input : Inputs (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p)) : Word (ZMod p) :=
   if input.is_mulw = 1 then
     #v[productVal cols 0 + productVal cols 1 * 256, productVal cols 2 + productVal cols 3 * 256,
        cols.product_msb.msb * 65535, cols.product_msb.msb * 65535]
@@ -568,7 +562,7 @@ def resultWord (input : Inputs (ZMod p)) (cols : Extracted.MulOperation (ZMod p)
 appropriate slice of the `BitVec` product for the active variant — low 64 for `MUL`, high 64 of the
 unsigned/signed 128-bit product for the `MULH*` family, sign-extended low 32 for `MULW`. The
 `FormalAssertion` `Spec` (below) gates this on `is_real`. -/
-def SemanticSpec (input : Inputs (ZMod p)) (cols : Extracted.MulOperation (ZMod p)) : Prop :=
+def SemanticSpec (input : Inputs (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p)) : Prop :=
   (resultWord input cols).isU64 ∧
   (input.is_mul = 1 →
     Word.toBitVec64 (resultWord input cols)

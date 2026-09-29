@@ -53,14 +53,14 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- One register read's **read-prior** Memory pull: the record at the pulled timestamp
 (`prev_low` from the access block), register index `idx`, value = the read-back word. -/
 @[circuit_norm] def memPullMsg (input : Var Inputs (ZMod p))
-    (block : Extracted.RegisterAccessCols (Expression (ZMod p))) (idx : Expression (ZMod p)) :
+    (block : Circuits.Types.RegisterAccessCols (Expression (ZMod p))) (idx : Expression (ZMod p)) :
     MemoryMsg (Expression (ZMod p)) :=
   ⟨input.state.clk_high, block.access_timestamp.prev_low, idx, 0, 0, block.prev_value⟩
 
 /-- One register read's **read-back** Memory push: the same record re-established at this row's
 access clock `clk_low + off`. -/
 @[circuit_norm] def memPushMsg (input : Var Inputs (ZMod p))
-    (block : Extracted.RegisterAccessCols (Expression (ZMod p))) (idx off : Expression (ZMod p)) :
+    (block : Circuits.Types.RegisterAccessCols (Expression (ZMod p))) (idx off : Expression (ZMod p)) :
     MemoryMsg (Expression (ZMod p)) :=
   ⟨input.state.clk_high, clkLow input + off, idx, 0, 0, block.prev_value⟩
 

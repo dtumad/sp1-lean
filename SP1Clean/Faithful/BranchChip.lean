@@ -1,3 +1,4 @@
+import SP1Clean.Extracted.LtOperationSigned
 import SP1Clean.Faithful.LtChip
 import SP1Clean.Extracted.ChipOracle.Branch
 import SP1Clean.Faithful.LtOperationUnsigned
@@ -17,13 +18,14 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Rebuild the shared standalone `LtOperationSigned` block as the byte-identical struct embedded in
 the generated Branch oracle namespace. -/
-def branchOracleCompareOperation {F : Type} (cols : Extracted.LtOperationSigned F) :
+def branchOracleCompareOperation {F : Type} (cols : Circuits.Types.LtOperationSigned F) :
     Extracted.BranchOracle.LtOperationSigned F :=
   { result :=
       { u16_compare_operation := { bit := cols.result.u16_compare_operation.bit }
@@ -35,7 +37,7 @@ def branchOracleCompareOperation {F : Type} (cols : Extracted.LtOperationSigned 
 
 /-- Inverse of `branchOracleCompareOperation`. -/
 def branchNativeCompareOperation {F : Type} (cols : Extracted.BranchOracle.LtOperationSigned F) :
-    Extracted.LtOperationSigned F :=
+    Circuits.Types.LtOperationSigned F :=
   { result :=
       { u16_compare_operation := { bit := cols.result.u16_compare_operation.bit }
         u16_flags := cols.result.u16_flags
@@ -212,16 +214,16 @@ private theorem branchChipLocals_prefix {F : Type}
 
 private theorem branchChipLocals_suffix {F : Type}
     (cols : BranchChip.Columns F) (i : ℕ)
-    (hi : i < size Extracted.LtOperationSigned) :
+    (hi : i < size Circuits.Types.LtOperationSigned) :
     (branchChipLocals cols)[10 + i]'(by
-      have hsize : size Extracted.LtOperationSigned = 10 := rfl
+      have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
       rw [hsize] at hi
       omega) =
       (toElements cols.compare_operation)[i] := by
   unfold branchChipLocals
   rw [Vector.getElem_cast,
     Vector.getElem_append_right (by
-      have hsize : size Extracted.LtOperationSigned = 10 := rfl
+      have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
       rw [hsize] at hi
       omega) (by omega)]
   congr
@@ -275,7 +277,7 @@ private theorem eval_branchChipCompare
         (Environment.fromArray
           (inputFirstRow (branchChipInput cols)
             (branchChipLocals cols)) data)
-        (varFromOffset Extracted.LtOperationSigned (F := ZMod p)
+        (varFromOffset Circuits.Types.LtOperationSigned (F := ZMod p)
           (size BranchChip.Inputs + 10)) =
       cols.compare_operation := by
   rw [ProvableType.eval_varFromOffset]
@@ -286,7 +288,7 @@ private theorem eval_branchChipCompare
   rw [Vector.getElem_mapRange]
   have hlocal := eval_local_inputFirstRow
     (branchChipInput cols) (branchChipLocals cols) data (10 + i) (by
-      have hsize : size Extracted.LtOperationSigned = 10 := rfl
+      have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
       rw [hsize] at hi
       omega)
   simp only [Expression.eval] at hlocal
@@ -418,8 +420,8 @@ private def branchNextPc (offset : ℕ) :
     var { index := offset + 9 }]
 
 private def branchCompare (offset : ℕ) :
-    Extracted.LtOperationSigned (Expression (ZMod p)) :=
-  varFromOffset Extracted.LtOperationSigned (offset + 10)
+    Circuits.Types.LtOperationSigned (Expression (ZMod p)) :=
+  varFromOffset Circuits.Types.LtOperationSigned (offset + 10)
 
 private def branchSum (offset : ℕ) : Expression (ZMod p) :=
   branchFlag offset 0 + branchFlag offset 1 +
@@ -540,7 +542,7 @@ private theorem branchNativeAssertionsDecompose
         (nativeAssertZeros env
           ((BranchChip.main input).operations offset)) ↔
       branchNativeMeaning env input offset := by
-  have hLtSize : size Extracted.LtOperationSigned = 10 := rfl
+  have hLtSize : size Circuits.Types.LtOperationSigned = 10 := rfl
   unfold branchNativeMeaning
   simp only [nativeAssertZeros, BranchChip.main,
     Circuit.operations, Circuit.bind_def, Circuit.pure_def,
@@ -593,18 +595,18 @@ private theorem vec4_eta {F : Type} (value : Vector F 4) :
   interval_cases i <;> rfl
 
 private theorem branchCpuEta {F : Type}
-    (cols : Extracted.CPUState F) :
+    (cols : Circuits.Types.CPUState F) :
     ({ clk_high := cols.clk_high
        clk_16_24 := cols.clk_16_24
        clk_0_16 := cols.clk_0_16
        pc := #v[cols.pc[0], cols.pc[1], cols.pc[2]] } :
-      Extracted.CPUState F) = cols := by
+      Circuits.Types.CPUState F) = cols := by
   cases cols
   simp only
   rw [vec3_eta]
 
 private theorem branchITypeEta {F : Type}
-    (cols : Extracted.ITypeReader F) :
+    (cols : Circuits.Types.ITypeReader F) :
     ({ op_a := cols.op_a
        op_a_memory :=
          { prev_value :=
@@ -631,7 +633,7 @@ private theorem branchITypeEta {F : Type}
        op_c_imm :=
          #v[cols.op_c_imm[0], cols.op_c_imm[1],
            cols.op_c_imm[2], cols.op_c_imm[3]] } :
-      Extracted.ITypeReader F) = cols := by
+      Circuits.Types.ITypeReader F) = cols := by
   cases cols with
   | mk opA opAMemory opA0 opB opBMemory opCImm =>
       cases opAMemory with
@@ -644,7 +646,7 @@ private theorem branchITypeEta {F : Type}
               rw [vec4_eta, vec4_eta, vec4_eta]
 
 private theorem branchLtUnsignedEta {F : Type}
-    (cols : Extracted.LtOperationUnsigned F) :
+    (cols : Circuits.Types.LtOperationUnsigned F) :
     ({ u16_compare_operation :=
          { bit := cols.u16_compare_operation.bit }
        u16_flags :=
@@ -653,7 +655,7 @@ private theorem branchLtUnsignedEta {F : Type}
        not_eq_inv := cols.not_eq_inv
        comparison_limbs :=
          #v[cols.comparison_limbs[0], cols.comparison_limbs[1]] } :
-      Extracted.LtOperationUnsigned F) = cols := by
+      Circuits.Types.LtOperationUnsigned F) = cols := by
   cases cols with
   | mk compare flags inv limbs =>
       cases compare
@@ -661,7 +663,7 @@ private theorem branchLtUnsignedEta {F : Type}
       rw [vec4_eta, vec2_eta]
 
 private theorem branchLtSignedEta {F : Type}
-    (cols : Extracted.LtOperationSigned F) :
+    (cols : Circuits.Types.LtOperationSigned F) :
     ({ result :=
          { u16_compare_operation :=
              { bit := cols.result.u16_compare_operation.bit }
@@ -676,12 +678,12 @@ private theorem branchLtSignedEta {F : Type}
                cols.result.comparison_limbs[1]] }
        b_msb := { msb := cols.b_msb.msb }
        c_msb := { msb := cols.c_msb.msb } } :
-      Extracted.LtOperationSigned F) = cols := by
+      Circuits.Types.LtOperationSigned F) = cols := by
   cases cols with
   | mk result bMsb cMsb =>
       cases bMsb
       cases cMsb
-      rw [Extracted.LtOperationSigned.mk.injEq]
+      rw [Circuits.Types.LtOperationSigned.mk.injEq]
       exact ⟨branchLtUnsignedEta result, rfl, rfl⟩
 
 private def branchRustTail
@@ -1264,7 +1266,7 @@ private theorem ltSigned_interactions_exact
     ⟨input.b[3], { msb := input.cols.b_msb.msb }, input.is_signed⟩
   let secondInput : Var U16MSBOperation.Inputs (ZMod p) :=
     ⟨input.cc[3], { msb := input.cols.c_msb.msb }, input.is_signed⟩
-  let unsignedCols : Extracted.LtOperationUnsigned (ZMod p) :=
+  let unsignedCols : Circuits.Types.LtOperationUnsigned (ZMod p) :=
     { u16_compare_operation :=
         { bit := signedCols.result.u16_compare_operation.bit }
       u16_flags :=
@@ -1468,7 +1470,7 @@ private theorem branchByteInteractions_decompose
           (offset + 20)).interactionsWith byteChannel.toRaw ++
       (branchTailByteInteractions input offset).map
         ChannelInteraction.toRaw := by
-  have hLtSize : size Extracted.LtOperationSigned = 10 := rfl
+  have hLtSize : size Circuits.Types.LtOperationSigned = 10 := rfl
   have heq := fun (n : ℕ)
       (inp : Var (ProvablePair field field) (ZMod p))
       (ops : Operations (ZMod p)) =>

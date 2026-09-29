@@ -32,8 +32,8 @@ Memory-bus register reads) — see `Inputs.op_b_val`/`op_c_val` below — rather
 committed columns. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -42,8 +42,8 @@ real-row selector is the flag sum). The reader blocks reuse the project substrat
 u16 bitwise block is owned by the local Lean gadget. `Faithful.BitwiseChip.bitwiseChipReconfigure` is
 the sole bridge to Rust's separately generated whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
   bitwise_operation : BitwiseU16Operation.Columns F
   is_xor : F
   is_or : F

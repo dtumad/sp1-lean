@@ -21,7 +21,7 @@ than through the `ChipFaithful` structure, whose `ChipRowCodec` is keyed on the 
 type map. Both clauses are stated against the real `⟨MemoryBumpChip.circuit⟩` flat component the
 ensemble registers; `memoryBumpChip_faithful` bundles them.
 
-The row reuses the shared `Extracted.MemoryAccessCols` carrier, so the first nine cells are the same
+The row reuses the shared `Circuits.Types.MemoryAccessCols` carrier, so the first nine cells are the same
 `prev_value ++ access_timestamp` block the load/store chips carry.
 
 ## The Memory polarity bridge
@@ -159,24 +159,24 @@ theorem memoryBumpEnvironment_eval (cols : Extracted.MemoryBumpCols (ZMod p))
 /-- Component-wise evaluation of the innermost timestamp block of the shared `MemoryAccessCols`
 carrier. -/
 theorem eval_memoryBumpTimestamp {F : Type} [FiniteField F]
-    (env : Environment F) (ts : Extracted.MemoryAccessTimestamp (Expression F)) :
+    (env : Environment F) (ts : Circuits.Types.MemoryAccessTimestamp (Expression F)) :
     Eval.eval env ts =
       ({ prev_high := Eval.eval env ts.prev_high
          prev_low := Eval.eval env ts.prev_low
          compare_low := Eval.eval env ts.compare_low
          diff_low_limb := Eval.eval env ts.diff_low_limb
          diff_high_limb := Eval.eval env ts.diff_high_limb } :
-        Extracted.MemoryAccessTimestamp F) := by
+        Circuits.Types.MemoryAccessTimestamp F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 /-- Component-wise evaluation of the shared `MemoryAccessCols` carrier. -/
 theorem eval_memoryBumpAccess {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.MemoryAccessCols (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.MemoryAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value
          access_timestamp := Eval.eval env cols.access_timestamp } :
-        Extracted.MemoryAccessCols F) := by
+        Circuits.Types.MemoryAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -220,10 +220,10 @@ private theorem memoryBumpFieldEqs (env : Environment (ZMod p))
   rw [eval_memoryBumpAccess] at haccess
   have hword : Eval.eval env r.access.prev_value =
       (memoryBumpDeconfigure cols).access.prev_value :=
-    congrArg Extracted.MemoryAccessCols.prev_value haccess
+    congrArg Circuits.Types.MemoryAccessCols.prev_value haccess
   have hts : Eval.eval env r.access.access_timestamp =
       (memoryBumpDeconfigure cols).access.access_timestamp :=
-    congrArg Extracted.MemoryAccessCols.access_timestamp haccess
+    congrArg Circuits.Types.MemoryAccessCols.access_timestamp haccess
   rw [eval_memoryBumpTimestamp] at hts
   simp only [ProvableType.eval_field] at hrow hts
   exact ⟨(ProvableType.getElem_eval_fields env r.access.prev_value 0 (by decide)).trans
@@ -234,11 +234,11 @@ private theorem memoryBumpFieldEqs (env : Environment (ZMod p))
       (congrArg (fun value => value[2]) hword),
     (ProvableType.getElem_eval_fields env r.access.prev_value 3 (by decide)).trans
       (congrArg (fun value => value[3]) hword),
-    congrArg Extracted.MemoryAccessTimestamp.prev_high hts,
-    congrArg Extracted.MemoryAccessTimestamp.prev_low hts,
-    congrArg Extracted.MemoryAccessTimestamp.compare_low hts,
-    congrArg Extracted.MemoryAccessTimestamp.diff_low_limb hts,
-    congrArg Extracted.MemoryAccessTimestamp.diff_high_limb hts,
+    congrArg Circuits.Types.MemoryAccessTimestamp.prev_high hts,
+    congrArg Circuits.Types.MemoryAccessTimestamp.prev_low hts,
+    congrArg Circuits.Types.MemoryAccessTimestamp.compare_low hts,
+    congrArg Circuits.Types.MemoryAccessTimestamp.diff_low_limb hts,
+    congrArg Circuits.Types.MemoryAccessTimestamp.diff_high_limb hts,
     congrArg MemoryBumpChip.Inputs.clk_32_48 hrow,
     congrArg MemoryBumpChip.Inputs.clk_24_32 hrow,
     congrArg MemoryBumpChip.Inputs.clk_16_24 hrow,

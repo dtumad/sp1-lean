@@ -2,7 +2,7 @@ import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.Proofs.Operations.AddOperation.Formal
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.ITypeReader
--- for `eval_registerAccessCols`, a lemma about the shared `Extracted.RegisterAccessCols` struct
+-- for `eval_registerAccessCols`, a lemma about the shared `Circuits.Types.RegisterAccessCols` struct
 -- that happens to live in the R-type reader's namespace (cf. `AddiChip/Defs.lean`).
 import SP1Clean.Native.Readers.RTypeReader
 import SP1Clean.Native.Readers.RegisterWrite

@@ -25,7 +25,7 @@ def addressInput {R : Type} [Zero R] [One R] (input : Inputs R) : AddressOperati
   ⟨input.bytes[0].address, #v[0, 0, 0, 0], 0, 0, 0, 1⟩
 
 /-- The actual message emitted by the provider; the address is the checked gadget's output. -/
-def message {R : Type} [Zero R] (address : Extracted.AddressOperation R)
+def message {R : Type} [Zero R] (address : Circuits.Types.AddressOperation R)
     (value : Word R) : MemoryMsg R :=
   ⟨0, 0, address.addr_operation.value[0], address.addr_operation.value[1],
     address.addr_operation.value[2], value⟩
@@ -49,7 +49,7 @@ private theorem key_reorder (a b c total : ℕ)
 omit [Fact (2 ^ 17 < p)] in
 /-- Aligned 48-bit addresses decode to exactly the RAM word that was authenticated. -/
 private theorem ram_location (input : Inputs (ZMod p))
-    (value : Word (ZMod p)) (address : Extracted.AddressOperation (ZMod p))
+    (value : Word (ZMod p)) (address : Circuits.Types.AddressOperation (ZMod p))
     (footprint : Word.toNat input.bytes[0].address + 8 ≤ 2 ^ 48)
     (checked : AddressOperation.Spec (addressInput input) address) :
     (MemoryMsg.locOf (message address value)).CanonicalAddress ∧
@@ -73,7 +73,7 @@ private theorem ram_location (input : Inputs (ZMod p))
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem address_eq (input : Inputs (ZMod p)) (value : Word (ZMod p))
-    (address : Extracted.AddressOperation (ZMod p))
+    (address : Circuits.Types.AddressOperation (ZMod p))
     (footprint : Word.toNat input.bytes[0].address + 8 ≤ 2 ^ 48)
     (checked : AddressOperation.Spec (addressInput input) address) :
     Word.toNat (MemoryBoundary.address (message address value)) = Word.toNat input.bytes[0].address := by
@@ -91,7 +91,7 @@ private theorem address_eq (input : Inputs (ZMod p)) (value : Word (ZMod p))
 omit [Fact (2 ^ 17 < p)] in
 /-- The pushed RAM record has the canonical value from the supplied finite snapshot. -/
 theorem snapshotSpec (snapshot : MemorySnapshot) (input : Inputs (ZMod p))
-    (value : Word (ZMod p)) (address : Extracted.AddressOperation (ZMod p))
+    (value : Word (ZMod p)) (address : Circuits.Types.AddressOperation (ZMod p))
     (read : InitialMemoryRead.Spec snapshot.memory input value)
     (checked : AddressOperation.Spec (addressInput input) address) :
     MemoryBoundary.SnapshotAtSpec snapshot (Word.toNat input.bytes[0].address) (message address value) := by

@@ -126,7 +126,7 @@ recovers the decoded immediate `imm` exactly when `op_b_imm` is the canonical en
 `bitVecToWord ((imm.signExtend 64) <<< 12)` (which `decodesUType` supplies). Axiom-clean (`omega`, no
 `bv_decide`) — the low-4/high-16 limb split inverts the `<< 12` shift. This is the fact the chip's
 deliberately-opaque `immOf` finally connects to the Sail decode. -/
-lemma immOf_bind (imm : BitVec 20) (adapter : Extracted.JTypeReader (ZMod p))
+lemma immOf_bind (imm : BitVec 20) (adapter : Circuits.Types.JTypeReader (ZMod p))
     (h : adapter.op_b_imm = bitVecToWord ((imm.signExtend 64) <<< 12)) :
     UTypeChip.immOf adapter = imm := by
   unfold UTypeChip.immOf; rw [h]

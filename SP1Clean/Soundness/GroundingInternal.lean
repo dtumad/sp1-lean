@@ -1314,7 +1314,7 @@ about the halt row is proved here against an **opaque** `HaltChip.Inputs` value
 private theorem haltPush_timeNat (r : HaltChip.Inputs (ZMod p))
     (clk0B : ((r.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
     (clk1B : r.state.clk_16_24.val < 2 ^ 8)
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) (k : ℕ) (hk : k ≤ 264) :
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) (k : ℕ) (hk : k ≤ 264) :
     Semantics.MemoryMsg.timeNat (HaltChip.memPushedMessage r block idx ((k : ℕ) : ZMod p)) =
       Semantics.StateMsg.timeNat (HaltChip.statePulledMessage r) + k := by
   have hval := (TimeExtraction.clkVal_small_add_of_cpuState_bounds
@@ -1327,7 +1327,7 @@ private theorem haltPush_timeNat (r : HaltChip.Inputs (ZMod p))
 private theorem haltPush_clkFacts (r : HaltChip.Inputs (ZMod p))
     (clk0B : ((r.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
     (clk1B : r.state.clk_16_24.val < 2 ^ 8) (highB : r.state.clk_high.val < 2 ^ 24)
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) (k : ℕ) (hk : k ≤ 6) :
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) (k : ℕ) (hk : k ≤ 6) :
     Channels.MemoryMsg.ClkBound (HaltChip.memPushedMessage r block idx ((k : ℕ) : ZMod p)) ∧
       (HaltChip.memPushedMessage r block idx ((k : ℕ) : ZMod p)).clk_high.val < 2 ^ 24 := by
   have hval := TimeExtraction.clkVal_small_add_of_cpuState_bounds
@@ -1342,7 +1342,7 @@ private theorem haltPush_clkFacts (r : HaltChip.Inputs (ZMod p))
 private theorem haltPull_lt_push (r : HaltChip.Inputs (ZMod p))
     (clk0B : ((r.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
     (clk1B : r.state.clk_16_24.val < 2 ^ 8)
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) (k : ℕ) (hk : k ≤ 6)
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) (k : ℕ) (hk : k ≤ 6)
     (diffB : block.access_timestamp.diff_low_limb.val < 2 ^ 16)
     (scaledB : ((r.state.clk_0_16 + r.state.clk_16_24 * 65536 + ((k : ℕ) : ZMod p) -
       block.access_timestamp.prev_low - 1 -
@@ -1507,7 +1507,7 @@ omit [Fact (2 ^ 25 < p)] in
 /-- Transport one grounded pulled-operand currency fact to the register-typed statement the
 halted certificate publishes. -/
 private theorem haltPull_valueAt (r : HaltChip.Inputs (ZMod p))
-    (blk : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) (reg : BitVec 5)
+    (blk : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) (reg : BitVec 5)
     (hloc : Semantics.MemoryMsg.locOf (HaltChip.memPulledMessage r blk idx) =
       Semantics.MemLoc.reg reg)
     (initial : SailState) (c0 t : ℕ)

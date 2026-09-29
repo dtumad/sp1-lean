@@ -48,7 +48,7 @@ private theorem main_binary (row : Var HostCallChip.Inputs (ZMod p)) (offset : â
   exact profile.1
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem eval_memory (memory : Extracted.RegisterAccessCols (Expression (ZMod p)))
+private theorem eval_memory (memory : Circuits.Types.RegisterAccessCols (Expression (ZMod p)))
     (env : Environment (ZMod p)) :
     (ProvableStruct.eval env memory).prev_value = memory.prev_value.map (Expression.eval env) := by
   cases memory

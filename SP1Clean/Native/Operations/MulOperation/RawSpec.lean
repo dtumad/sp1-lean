@@ -4,7 +4,7 @@ import SP1Clean.Model.Channels
 import SP1Clean.Math.MulCarryChain
 import SP1Clean.Proofs.Operations.U16MSBOperation.Formal
 import SP1Clean.Native.Operations.U16toU8OperationSafe
-import SP1Clean.Extracted.MulOperation
+import SP1Clean.Circuits.Types.MulOperation
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -221,7 +221,7 @@ operand's own bytes (low byte `low_bytes[i]`, high byte `(w[i] - low_bytes[i]) *
 operands). -/
 
 /-- The 16 little-endian sign/zero-extended bytes of operand word `w`. -/
-def extendedBytes (w : Word (ZMod p)) (lower : Extracted.U16toU8Operation (ZMod p))
+def extendedBytes (w : Word (ZMod p)) (lower : Circuits.Types.U16toU8Operation (ZMod p))
     (sign_extend : ZMod p) : Fin 16 → ZMod p :=
   ![ lower.low_bytes[0], (w[0] - lower.low_bytes[0]) * 256⁻¹,
      lower.low_bytes[1], (w[1] - lower.low_bytes[1]) * 256⁻¹,
@@ -239,7 +239,7 @@ def colSum (bb cc : Fin 16 → ZMod p) (k : ℕ) : ZMod p :=
   Finset.sum (Finset.range 16) (fun i => if i ≤ k then byteAt bb i * byteAt cc (k - i) else 0)
 
 /-- Witnessed column carry `k`, `0` outside `0..15`. -/
-def carryVal (cols : Extracted.MulOperation (ZMod p)) (k : ℕ) : ZMod p :=
+def carryVal (cols : Circuits.Types.MulOperation (ZMod p)) (k : ℕ) : ZMod p :=
   if h : k < 16 then cols.carry[k]'h else 0
 
 /-! ### Schoolbook column expansions, proven once on tiny abstract goals.
@@ -523,7 +523,7 @@ chip witnesses its register-write word `a` and ties it to this selector; given t
 are boolean with exactly one set, it collapses to `resultWord` (see `aSelector_eq_resultWord`). `MUL`
 takes product bytes `0..7` (low 64), the `MULH*` family bytes `8..15` (high 64), and `MULW` the low 32
 (bytes `0..3`) with the product sign bit `msb * 65535` filling the upper two limbs. -/
-def aSelector (cols : Extracted.MulOperation (ZMod p))
+def aSelector (cols : Circuits.Types.MulOperation (ZMod p))
     (is_mul is_mulh is_mulhu is_mulhsu is_mulw : ZMod p) : Word (ZMod p) :=
   let msb := cols.product_msb.msb
   #v[ is_mul * (productVal cols 0 + productVal cols 1 * 256)
@@ -542,7 +542,7 @@ def aSelector (cols : Extracted.MulOperation (ZMod p))
 set_option linter.unusedSimpArgs false in
 /-- With the five variant flags boolean and exactly one set, the flag-weighted `aSelector` collapses to
 the variant's `resultWord` slice. (`resultWord` ignores `input.b`/`input.c`, so only the flags matter.) -/
-lemma aSelector_eq_resultWord (input : Inputs (ZMod p)) (cols : Extracted.MulOperation (ZMod p))
+lemma aSelector_eq_resultWord (input : Inputs (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p))
     (hmul : input.is_mul = 0 ∨ input.is_mul = 1) (hmh : input.is_mulh = 0 ∨ input.is_mulh = 1)
     (hmhu : input.is_mulhu = 0 ∨ input.is_mulhu = 1) (hmhsu : input.is_mulhsu = 0 ∨ input.is_mulhsu = 1)
     (hmw : input.is_mulw = 0 ∨ input.is_mulw = 1)
@@ -593,7 +593,7 @@ lemma byte_compose_val {x lo hi : ZMod p} (hlo : lo.val < 256) (hhi : hi.val < 2
 /-- The operand word reassembles from its eight little-endian bytes (the low byte / high byte of each
 of its four limbs, as exposed by the `U16toU8OperationSafe` sub-op): its `toNat` is the byte sum that
 the schoolbook product consumes. -/
-lemma lower_toNat (w : Word (ZMod p)) (lower : Extracted.U16toU8Operation (ZMod p)) (s : ZMod p)
+lemma lower_toNat (w : Word (ZMod p)) (lower : Circuits.Types.U16toU8Operation (ZMod p)) (s : ZMod p)
     (hspec : U16toU8OperationSafe.DecompSpec w lower) :
     w.toNat
       = (byteAt (extendedBytes w lower s) 0).val + (byteAt (extendedBytes w lower s) 1).val * 256
@@ -623,7 +623,7 @@ lemma lower_toNat (w : Word (ZMod p)) (lower : Extracted.U16toU8Operation (ZMod 
 
 /-- Every one of the sixteen sign/zero-extended operand bytes is a genuine byte: bytes `0..7` from the
 `U16toU8` decomposition, bytes `8..15` from the `{0,1}` sign-extend selector. -/
-lemma extendedBytes_byte_lt (w : Word (ZMod p)) (lower : Extracted.U16toU8Operation (ZMod p))
+lemma extendedBytes_byte_lt (w : Word (ZMod p)) (lower : Circuits.Types.U16toU8Operation (ZMod p))
     (s : ZMod p)
     (hlow : ∀ i : Fin 4, (lower.low_bytes[i]).val < 256)
     (hhigh : ∀ i : Fin 4, ((w[i] - lower.low_bytes[i]) * 256⁻¹).val < 256)
@@ -662,7 +662,7 @@ lemma colSum_lt (bb cc : Fin 16 → ZMod p)
     _ < 2 ^ 21 := by norm_num
 
 /-- The uniform per-column `ℕ` equation: the raw schoolbook chain at column `k`, lifted to `ℕ`. -/
-lemma colEq (cols : Extracted.MulOperation (ZMod p)) (bb cc : Fin 16 → ZMod p)
+lemma colEq (cols : Circuits.Types.MulOperation (ZMod p)) (bb cc : Fin 16 → ZMod p)
     (hbb : ∀ i : Fin 16, (bb i).val < 256) (hcc : ∀ i : Fin 16, (cc i).val < 256)
     (h_chain : ∀ k : ℕ, k < 16 →
       productVal cols k = colSum bb cc k
@@ -690,7 +690,7 @@ lemma colEq (cols : Extracted.MulOperation (ZMod p)) (bb cc : Fin 16 → ZMod p)
 chain (via `colEq`): the witnessed `product` reassembles — mod `2^128` — to the integer
 product of the two 16-byte sign/zero-extended operands. The high-half/`MULW` semantic conjuncts
 read their result slices off this. -/
-lemma product_reassembly (cols : Extracted.MulOperation (ZMod p)) (bb cc : Fin 16 → ZMod p)
+lemma product_reassembly (cols : Circuits.Types.MulOperation (ZMod p)) (bb cc : Fin 16 → ZMod p)
     (hbb : ∀ i : Fin 16, (bb i).val < 256) (hcc : ∀ i : Fin 16, (cc i).val < 256)
     (h_chain : ∀ k : ℕ, k < 16 →
       productVal cols k = colSum bb cc k
@@ -789,7 +789,7 @@ cols: each product byte is the column sum plus incoming carry minus the outgoing
 product bytes are genuine bytes and carries are 16-bit-bounded; the sign-extend selectors are the
 gated operand MSBs; all booleanity. (The byte-MSB table lookups tying `b_msb`/`c_msb` to the operand
 top bytes are deferred to the faithfulness anchor.) -/
-def RawSpec (input : Inputs (ZMod p)) (cols : Extracted.MulOperation (ZMod p)) : Prop :=
+def RawSpec (input : Inputs (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p)) : Prop :=
   let bb := extendedBytes input.b cols.b_lower_byte cols.b_sign_extend
   let cc := extendedBytes input.c cols.c_lower_byte cols.c_sign_extend
   (∀ k : ℕ, k < 16 →
@@ -806,7 +806,7 @@ def RawSpec (input : Inputs (ZMod p)) (cols : Extracted.MulOperation (ZMod p)) :
 
 /-- The full 16-byte sign/zero-extended operand value: the low eight bytes reassemble to
 `w.toNat` (via `lower_toNat`); the high eight bytes are all the sign fill `s * 255`. -/
-lemma extendedBytes_toNat (w : Word (ZMod p)) (lower : Extracted.U16toU8Operation (ZMod p))
+lemma extendedBytes_toNat (w : Word (ZMod p)) (lower : Circuits.Types.U16toU8Operation (ZMod p))
     (s : ZMod p) (hspec : U16toU8OperationSafe.DecompSpec w lower) :
     (byteAt (extendedBytes w lower s) 0).val + (byteAt (extendedBytes w lower s) 1).val*256^1 + (byteAt (extendedBytes w lower s) 2).val*256^2 + (byteAt (extendedBytes w lower s) 3).val*256^3 + (byteAt (extendedBytes w lower s) 4).val*256^4 + (byteAt (extendedBytes w lower s) 5).val*256^5 + (byteAt (extendedBytes w lower s) 6).val*256^6 + (byteAt (extendedBytes w lower s) 7).val*256^7 + (byteAt (extendedBytes w lower s) 8).val*256^8 + (byteAt (extendedBytes w lower s) 9).val*256^9 + (byteAt (extendedBytes w lower s) 10).val*256^10 + (byteAt (extendedBytes w lower s) 11).val*256^11 + (byteAt (extendedBytes w lower s) 12).val*256^12 + (byteAt (extendedBytes w lower s) 13).val*256^13 + (byteAt (extendedBytes w lower s) 14).val*256^14 + (byteAt (extendedBytes w lower s) 15).val*256^15
       = w.toNat + (s * 255).val * (256^8 + 256^9 + 256^10 + 256^11 + 256^12 + 256^13 + 256^14 + 256^15) := by
@@ -858,7 +858,7 @@ lemma signExtend128_toNat (w : Word (ZMod p)) (hw : w.isU64) :
 -- 8000000 ceiling was ~200-400x over. Ceiling removed; do not reinstate without a measurement.
 /-- The high-64 slice (`MULH*` family) of the witnessed product equals bits 64..127 of the
 128-bit product of the two extended operand values `Bext`, `Cext`. -/
-lemma high_half_eq (cols : Extracted.MulOperation (ZMod p)) (bb cc : Fin 16 → ZMod p)
+lemma high_half_eq (cols : Circuits.Types.MulOperation (ZMod p)) (bb cc : Fin 16 → ZMod p)
     (Bext Cext : ℕ)
     (hbb : ∀ i : Fin 16, (bb i).val < 256) (hcc : ∀ i : Fin 16, (cc i).val < 256)
     (h_chain : ∀ k : ℕ, k < 16 → productVal cols k = colSum bb cc k
@@ -923,7 +923,7 @@ reassembly, and the four high-half / `MULW` variants off further slices of the f
 `product_reassembly`. The `U16toU8`/`U16MSB` sub-op `Spec`s are threaded in (they are discharged by
 the composed subcircuits in `soundness`). This theorem is `[propext, Classical.choice, Quot.sound]`;
 it carries no `sorryAx` and no `bv_decide` axiom. -/
-theorem mulSemantics_of_raw {input : Inputs (ZMod p)} {cols : Extracted.MulOperation (ZMod p)}
+theorem mulSemantics_of_raw {input : Inputs (ZMod p)} {cols : Circuits.Types.MulOperation (ZMod p)}
     (hbU : Word.isU64 input.b) (hcU : Word.isU64 input.c)
     (hmul_b : input.is_mul = 0 ∨ input.is_mul = 1) (hmh_b : input.is_mulh = 0 ∨ input.is_mulh = 1)
     (hmhu_b : input.is_mulhu = 0 ∨ input.is_mulhu = 1) (hmhsu_b : input.is_mulhsu = 0 ∨ input.is_mulhsu = 1)

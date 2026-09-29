@@ -33,9 +33,9 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 extracted `AddCols` oracle.  The reader blocks remain layout-compatible while that migration proceeds. -/
 structure Columns (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
-  add_operation : AddOperation.Columns F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
+  add_operation : Circuits.Types.AddOperation F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
@@ -45,8 +45,8 @@ committed columns — they are projected from the adapter's register slots (`op_
 the chip's operand is *definitionally* the value the Memory bus pins. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -84,23 +84,23 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native Addi-chip row.  Its arithmetic block follows the local Lean gadget, not Rust's
 `AddOperation` type.  `Faithful.addiChipReconfigure` is the explicit whole-chip bridge to the
-extracted `AddiOracle.AddiCols` oracle.  The reader blocks remain the shared generated substrate. -/
+extracted `AddiOracle.AddiCols` oracle.  The reader blocks also use the shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
-  add_operation : AddOperation.Columns F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
+  add_operation : Circuits.Types.AddOperation F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
 /-- The `is_real` selector and the **threaded reader column blocks** `state`/`adapter` (the latter an
-**I-type** `Extracted.ITypeReader` carrying the immediate). The `rs1` source operand and the immediate
+**I-type** `Circuits.Types.ITypeReader` carrying the immediate). The `rs1` source operand and the immediate
 are **not** separate committed columns — they are projected from the adapter (`op_b_val`/`op_c_val`
 below), so the chip's operands are *definitionally* the values the reader pins. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -143,8 +143,8 @@ owned by the local Lean gadget. `Faithful.subChipReconfigure` is the sole bridge
 separately generated whole-chip row. -/
 structure Columns (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
   sub_operation : SubOperation.Columns F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
@@ -153,8 +153,8 @@ provable_struct_eval_lemmas Columns
 `rs1`/`rs2` operands are projected from the adapter register slots — see `Inputs.op_b_val` below. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -200,8 +200,8 @@ owned by the local Lean gadget (two witnessed low limbs + the composed sign-bit 
 row. -/
 structure Columns (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
   addw_operation : AddwOperation.Columns F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
@@ -211,8 +211,8 @@ immediate-capable `ALUTypeReader`, unlike SUBW's `RTypeReader`). The
 `rs1`/`rs2` operands are projected from the adapter register slots — see `Inputs.op_b_val` below. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -268,8 +268,8 @@ owned by the local Lean gadget (two witnessed low limbs + the composed sign-bit 
 row. -/
 structure Columns (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
   subw_operation : SubwOperation.Columns F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
@@ -278,8 +278,8 @@ provable_struct_eval_lemmas Columns
 adapter is the register `RTypeReader`). The `rs1`/`rs2` operands are projected — see `Inputs.op_b_val`. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -319,8 +319,8 @@ shift-amount source (`rs2`/immediate, `op_c_val`) are **adapter projections**, n
 because `op_c` may be an immediate (`SLLI`/`SLLIW`). -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -332,12 +332,12 @@ constraints bind this word to the decoded `adapter.op_c` shift amount. -/
 
 /-- Native ShiftLeft-chip row (Rust field order — the chip has no separate `is_real` column; the
 real-row selector is `is_sll + is_sllw`). The reader blocks and the SLLW MSB block reuse the project
-substrate (`Extracted.U16MSBOperation` is still a standalone generated module — the Branch/load
+substrate (`Circuits.Types.U16MSBOperation` is still a standalone generated module — the Branch/load
 chip families compose the same gadget). `Faithful.shiftLeftChipReconfigure` is the sole bridge to
 Rust's separately generated whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
   a : Word F
   c_bits : Vector F 6
   v_01 : F
@@ -347,7 +347,7 @@ structure Columns (F : Type) where
   lower_limb : Word F
   higher_limb : Word F
   limb_result : Word F
-  sllw_msb : Extracted.U16MSBOperation F
+  sllw_msb : Circuits.Types.U16MSBOperation F
   is_sll : F
   is_sllw : F
   is_sllw_imm : F
@@ -443,22 +443,22 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 (`ShiftRight` is also an `ALUTypeReader` ALU op — `SRLI`/`SRAI`/`SRLIW`/`SRAIW` take an immediate). -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 /-- Native ShiftRight-chip row (Rust field order — the chip has no separate `is_real` column; the
 real-row selector is the four-flag sum). The reader blocks and the two MSB blocks reuse the project
-substrate (`Extracted.U16MSBOperation` stays a standalone generated module).
+substrate (`Circuits.Types.U16MSBOperation` stays a standalone generated module).
 `Faithful.shiftRightChipReconfigure` is the sole bridge to Rust's separately generated whole-chip
 row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
   a : Word F
-  b_msb : Extracted.U16MSBOperation F
-  srw_msb : Extracted.U16MSBOperation F
+  b_msb : Circuits.Types.U16MSBOperation F
+  srw_msb : Circuits.Types.U16MSBOperation F
   c_bits : Vector F 6
   sra_msb_v0123 : F
   v_0123 : F
@@ -591,14 +591,13 @@ namespace SP1Clean.MulChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 /-- Native MUL-chip row. The reader blocks reuse the project substrate and the arithmetic block is the
-shared `Extracted.MulOperation` column struct (still a standalone generated module — `DivRem` composes
-the same gadget). The five variant selectors are committed columns. `Faithful.mulChipReconfigure` is
+shared `Circuits.Types.MulOperation` column type (also used by the `DivRem` gadget). The five variant selectors are committed columns. `Faithful.mulChipReconfigure` is
 the sole bridge to Rust's separately generated whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
   a : Word F
-  mul_operation : Extracted.MulOperation F
+  mul_operation : Circuits.Types.MulOperation F
   is_mul : F
   is_mulh : F
   is_mulhu : F
@@ -613,8 +612,8 @@ adapter is the register `RTypeReader`). The five variant selectors are *committe
 (gated on in the `Spec` via `cols.is_mul` etc.), not inputs. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -754,8 +753,8 @@ for the W-variants. The eight variant selectors are likewise *committed columns*
 the `Spec` via `cols.is_div` etc.), not inputs. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.RTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.RTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -798,15 +797,15 @@ namespace SP1Clean.JalChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native JAL-chip row.  The two arithmetic blocks follow the local Lean gadget
-(`AddOperation.Columns`), not Rust's `AddOperation` type; `Faithful.jalChipReconfigure` is the
+(`Circuits.Types.AddOperation`); `Faithful.jalChipReconfigure` is the
 explicit whole-chip bridge to the extracted `JalOracle.JalColumns` oracle.  The reader blocks
-remain the shared generated substrate. -/
+also use the shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.JTypeReader F
-  add_operation : AddOperation.Columns F
-  op_a_operation : AddOperation.Columns F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.JTypeReader F
+  add_operation : Circuits.Types.AddOperation F
+  op_a_operation : Circuits.Types.AddOperation F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
@@ -817,8 +816,8 @@ are **no** `op_b_val`/`op_c_val` register operands — both source operands are 
 adapter. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.JTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.JTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -859,15 +858,15 @@ namespace SP1Clean.UTypeChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native U-type chip row.  The arithmetic block follows the local Lean gadget
-(`AddOperation.Columns`), not Rust's `AddOperation` type; `Faithful.uTypeChipReconfigure` is the
+(`Circuits.Types.AddOperation`); `Faithful.uTypeChipReconfigure` is the
 explicit whole-chip bridge to the extracted `UTypeOracle.UTypeColumns` oracle.  The reader blocks
-remain the shared generated substrate. -/
+also use the shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.JTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.JTypeReader F
   addend : Vector F 3
-  add_operation : AddOperation.Columns F
+  add_operation : Circuits.Types.AddOperation F
   is_auipc : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
@@ -880,8 +879,8 @@ adapter; unlike JAL the chip additionally commits `is_auipc` (and the `addend` c
 `Columns`). -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.JTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.JTypeReader F
   is_auipc : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
@@ -894,7 +893,7 @@ def pcWord (cols : Columns (ZMod p)) : Word (ZMod p) :=
 /-- The 20-bit U-type immediate recovered from the committed `op_b_imm` limbs (the high 20 bits of the
 constrained 32-bit immediate). Appears identically in the chip's decode `Assumption` (LHS) and the `Spec`
 (the `RV64.lui`/`RV64.auipc` argument), so the proofs never unfold its extraction formula. -/
-def immOf (adapter : Extracted.JTypeReader (ZMod p)) : BitVec 20 :=
+def immOf (adapter : Circuits.Types.JTypeReader (ZMod p)) : BitVec 20 :=
   BitVec.ofNat 20 (adapter.op_b_imm[0].val / 4096 + adapter.op_b_imm[1].val * 16)
 
 /-- Semantic contract for the U-type row, composed from the J-type reader sub-`Spec` plus the
@@ -927,15 +926,15 @@ namespace SP1Clean.JalrChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native JALR-chip row.  The two arithmetic blocks follow the local Lean gadget
-(`AddOperation.Columns`), not Rust's `AddOperation` type; `Faithful.jalrChipReconfigure` is the
+(`Circuits.Types.AddOperation`); `Faithful.jalrChipReconfigure` is the
 explicit whole-chip bridge to the extracted `JalrOracle.JalrColumns` oracle.  The reader blocks
-remain the shared generated substrate. -/
+also use the shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
-  add_operation : AddOperation.Columns F
-  op_a_operation : AddOperation.Columns F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
+  add_operation : Circuits.Types.AddOperation F
+  op_a_operation : Circuits.Types.AddOperation F
   lsb : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
@@ -947,8 +946,8 @@ the immediate word `op_c_imm`). Unlike JAL the jump base is a register operand (
 adapter's `op_b_memory.prev_value`, not the program counter. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -1008,12 +1007,12 @@ namespace SP1Clean.BranchChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native Branch-chip row (Rust field order). The reader blocks and the compare block reuse the
-project substrate (`Extracted.LtOperationSigned` is still a standalone generated module — the Lt
+project substrate (`Circuits.Types.LtOperationSigned` is still a standalone generated module — the Lt
 chip composes the same gadget family). `Faithful.branchChipReconfigure` is the sole
 bridge to Rust's separately generated whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
   next_pc : Vector F 3
   is_beq : F
   is_bne : F
@@ -1022,7 +1021,7 @@ structure Columns (F : Type) where
   is_bltu : F
   is_bgeu : F
   is_branching : F
-  compare_operation : Extracted.LtOperationSigned F
+  compare_operation : Circuits.Types.LtOperationSigned F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
@@ -1034,8 +1033,8 @@ flags, `is_branching`, the `compare_operation`, and `next_pc` are committed **co
 `main`), not inputs. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 

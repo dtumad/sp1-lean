@@ -2,7 +2,7 @@ import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Math.Word
 import SP1Clean.Model.ByteTable
 import SP1Clean.Model.Channels
-import SP1Clean.Extracted.RTypeReader
+import SP1Clean.Circuits.Types.RTypeReader
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -11,7 +11,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 /-! # Native `RegisterAccessTimestamp` reader — one operand's timestamp columns as a Clean `FormalCircuit`
 
 The genuinely-tiny (2-column) inner block of SP1's `RegisterAccessCols`
-(`Extracted/RTypeReader.lean`): `{prev_low, diff_low_limb}`. Its own file (one circuit per file, like
+(`Circuits/Types/RegisterAccess.lean`): `{prev_low, diff_low_limb}`. Its own file (one circuit per file, like
 `Readers/CPUState.lean`).
 
 SP1's `eval_register_access_*` emits, per operand, two byte-bus timestamp checks

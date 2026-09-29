@@ -69,18 +69,18 @@ private structure WordView (F : Type) where
   max_abs_c_or_1 : Word F
 
 private structure OperationView (F : Type) where
-  is_c_0 : Extracted.IsZeroWordOperation F
-  is_overflow_b : Extracted.IsEqualWordOperation F
-  is_overflow_c : Extracted.IsEqualWordOperation F
-  c_neg_operation : Extracted.AddOperation F
-  rem_neg_operation : Extracted.AddOperation F
-  remainder_lt_operation : Extracted.LtOperationUnsigned F
+  is_c_0 : Circuits.Types.IsZeroWordOperation F
+  is_overflow_b : Circuits.Types.IsEqualWordOperation F
+  is_overflow_c : Circuits.Types.IsEqualWordOperation F
+  c_neg_operation : Circuits.Types.AddOperation F
+  rem_neg_operation : Circuits.Types.AddOperation F
+  remainder_lt_operation : Circuits.Types.LtOperationUnsigned F
 
 private structure MsbView (F : Type) where
-  b_msb : Extracted.U16MSBOperation F
-  rem_msb : Extracted.U16MSBOperation F
-  c_msb : Extracted.U16MSBOperation F
-  quot_msb : Extracted.U16MSBOperation F
+  b_msb : Circuits.Types.U16MSBOperation F
+  rem_msb : Circuits.Types.U16MSBOperation F
+  c_msb : Circuits.Types.U16MSBOperation F
+  quot_msb : Circuits.Types.U16MSBOperation F
 
 private structure ScalarView (F : Type) where
   is_divw : F

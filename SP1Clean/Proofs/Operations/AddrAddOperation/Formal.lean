@@ -45,7 +45,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   have Rb0 := (byteRowSpec_range _ sixteen_lt).mp R0
   have Rb1 := (byteRowSpec_range _ sixteen_lt).mp R1
   have Rb2 := (byteRowSpec_range _ sixteen_lt).mp R2
-  have hraw : RawSpec input_a input_b (⟨input_cols_value⟩ : Extracted.AddrAddOperation (ZMod p)) := by
+  have hraw : RawSpec input_a input_b (⟨input_cols_value⟩ : Circuits.Types.AddrAddOperation (ZMod p)) := by
     simp only [RawSpec]
     exact ⟨bool_of_mul_pred hgc0, bool_of_mul_pred hgc1, bool_of_mul_pred hgc2,
     bool_of_mul_pred hgc3, by rw [← h65536]; exact Rb0, by rw [← h65536]; exact Rb1,
@@ -71,7 +71,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   · rcases hbin with h0 | h1
     · simp [h0]
     · obtain ⟨heq, hrng0, hrng1, hrng2, hfit⟩ := h_spec h1
-      have hraw : RawSpec input_a input_b (⟨input_cols_value⟩ : Extracted.AddrAddOperation (ZMod p)) :=
+      have hraw : RawSpec input_a input_b (⟨input_cols_value⟩ : Circuits.Types.AddrAddOperation (ZMod p)) :=
         carries_of_addrAddSemantics ha hb hfit hrng0 hrng1 hrng2 heq
       simp only [RawSpec] at hraw
       obtain ⟨hc0, hc1, hc2, hc3, _, _, _⟩ := hraw

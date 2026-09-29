@@ -5,7 +5,7 @@ import ToClean.Air.TableBuild
 /-! # `SP1Clean.LoadWordChip` — from trace events to a valid AIR table (the memory template)
 
 The first chip of the **memory** family through the trace-generation chain (see
-`AddChip/Complete.lean` for the programme note). `LoadWord` reads the same `Extracted.ITypeReader`
+`AddChip/Complete.lean` for the programme note). `LoadWord` reads the same `Circuits.Types.ITypeReader`
 adapter as `Addi`, so its register half is `iTypeReader_spec` verbatim; everything else is new, and
 splits into three pieces.
 

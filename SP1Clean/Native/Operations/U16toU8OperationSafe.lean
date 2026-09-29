@@ -3,7 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Math.Bitwise
 import SP1Clean.Model.Channels
 import SP1Clean.Model.ByteTable
-import SP1Clean.Extracted.U16toU8OperationSafe
+import SP1Clean.Circuits.Types.U16toU8Operation
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Gadgets.Bits
@@ -30,7 +30,7 @@ lemma hn8 : 2 ^ 8 < p := by
 
 /-- The literal meaning of SP1's `U16toU8OperationSafe` constraint list at `is_real = 1`: each
 low byte and each derived high byte `(u16_values[i] - low_bytes[i]) * 256⁻¹` is a genuine byte. -/
-def RawSpec (u16_values : Vector (ZMod p) 4) (cols : Extracted.U16toU8Operation (ZMod p)) : Prop :=
+def RawSpec (u16_values : Vector (ZMod p) 4) (cols : Circuits.Types.U16toU8Operation (ZMod p)) : Prop :=
   (cols.low_bytes[0].val < 256 ∧ ((u16_values[0] - cols.low_bytes[0]) * 256⁻¹).val < 256) ∧
   (cols.low_bytes[1].val < 256 ∧ ((u16_values[1] - cols.low_bytes[1]) * 256⁻¹).val < 256) ∧
   (cols.low_bytes[2].val < 256 ∧ ((u16_values[2] - cols.low_bytes[2]) * 256⁻¹).val < 256) ∧
@@ -61,7 +61,7 @@ private lemma byteComposeVal {x lo hi : ZMod p} (hlo : lo.val < 256) (hhi : hi.v
 /-- A successful byte decomposition proves that every input limb is genuinely 16-bit. This is the
 semantic range fact that composing arithmetic gadgets should consume instead of assuming it. -/
 theorem isU64_of_decomp {u16_values : Word (ZMod p)}
-    {cols : Extracted.U16toU8Operation (ZMod p)} (h : DecompSpec u16_values cols) :
+    {cols : Circuits.Types.U16toU8Operation (ZMod p)} (h : DecompSpec u16_values cols) :
     Word.isU64 u16_values := by
   intro i
   have hi := h i
@@ -90,7 +90,7 @@ lemma high_byte_lt (u : ZMod p) (hu : u.val < 2 ^ 16) :
 
 /-- The witness assignment (trace generation): each low byte is `u16_values[i] % 256` (the `% 256`
 makes it a genuine byte unconditionally). Mirrors SP1's `populate_u16_to_u8_safe`. -/
-def populate (u16_values : Word (ZMod p)) : Extracted.U16toU8Operation (ZMod p) :=
+def populate (u16_values : Word (ZMod p)) : Circuits.Types.U16toU8Operation (ZMod p) :=
   ⟨#v[((u16_values[0].val % 256 : ℕ) : ZMod p), ((u16_values[1].val % 256 : ℕ) : ZMod p),
       ((u16_values[2].val % 256 : ℕ) : ZMod p), ((u16_values[3].val % 256 : ℕ) : ZMod p)]⟩
 

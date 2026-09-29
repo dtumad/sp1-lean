@@ -3,7 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Extracted.ALUTypeReader
+import SP1Clean.Circuits.Types.ALUTypeReader
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -57,18 +57,18 @@ faithfulness proofs. -/
 
 /-- Component-wise evaluation of the nested register-access block. -/
 @[circuit_norm] theorem eval_accessCols {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RegisterAccessCols (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value,
          access_timestamp := Eval.eval env cols.access_timestamp } :
-        Extracted.RegisterAccessCols F) := by
+        Circuits.Types.RegisterAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 /-- Component-wise evaluation of the canonical immediate-capable ALU reader row.  Chip-level
 grounding proofs use this folded boundary instead of normalizing a completed reader circuit. -/
 @[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ALUTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a,
          op_a_memory := Eval.eval env cols.op_a_memory,
@@ -77,31 +77,31 @@ grounding proofs use this folded boundary instead of normalizing a completed rea
          op_b_memory := Eval.eval env cols.op_b_memory,
          op_c := Eval.eval env cols.op_c,
          op_c_memory := Eval.eval env cols.op_c_memory,
-         imm_c := Eval.eval env cols.imm_c } : Extracted.ALUTypeReader F) := by
+         imm_c := Eval.eval env cols.imm_c } : Circuits.Types.ALUTypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 /-- Evaluation of the destination-zero routing flag through the folded ALU reader row. -/
 @[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ALUTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).op_a_0 = Expression.eval env cols.op_a_0 := by
   simp only [circuit_norm]
 
 /-- Scalar immediate-selector projection through the folded ALU reader row. -/
 @[circuit_norm] theorem eval_immC {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ALUTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).imm_c = Expression.eval env cols.imm_c := by
   simp only [circuit_norm]
 
 /-- Source-C word projection through the folded ALU reader row. -/
 @[circuit_norm] theorem eval_opC {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ALUTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).op_c = Eval.eval env cols.op_c := by
   rw [eval_cols]
 
 /-- Source-C prior-value projection through the folded nested register-access row. -/
 @[circuit_norm] theorem eval_opCPrev {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ALUTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).op_c_memory.prev_value =
       Eval.eval env cols.op_c_memory.prev_value := by
   rw [eval_cols]

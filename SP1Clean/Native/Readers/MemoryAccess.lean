@@ -1,7 +1,7 @@
 import SP1Clean.Math.Word
 import SP1Clean.Model.ByteTable
 import SP1Clean.Model.Channels
-import SP1Clean.Extracted.MemoryAccess
+import SP1Clean.Circuits.Types.MemoryAccess
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -41,7 +41,7 @@ columns); `clk_high`/`clk_low` are the current clock limbs; `addr0/1/2` the 3-li
 `AddressOperation`); `new_value` the value placed at the current timestamp (`= prev_value` for a read,
 `= store_value` for a write); `is_real` the row selector. -/
 structure Inputs (F : Type) where
-  mem : Extracted.MemoryAccessCols F
+  mem : Circuits.Types.MemoryAccessCols F
   clk_high : F
   clk_low : F
   addr0 : F
@@ -53,11 +53,11 @@ deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 /-- The previous-timestamp representative `compare_low · prev_low + (1 − compare_low) · prev_high`. -/
-@[reducible] def selPrev (ts : Extracted.MemoryAccessTimestamp (ZMod p)) : ZMod p :=
+@[reducible] def selPrev (ts : Circuits.Types.MemoryAccessTimestamp (ZMod p)) : ZMod p :=
   ts.compare_low * ts.prev_low + (1 - ts.compare_low) * ts.prev_high
 
 /-- The current-timestamp representative `compare_low · (clk_low + 1) + (1 − compare_low) · clk_high`. -/
-@[reducible] def selCur (ts : Extracted.MemoryAccessTimestamp (ZMod p)) (clk_high clk_low : ZMod p) : ZMod p :=
+@[reducible] def selCur (ts : Circuits.Types.MemoryAccessTimestamp (ZMod p)) (clk_high clk_low : ZMod p) : ZMod p :=
   ts.compare_low * (clk_low + 1) + (1 - ts.compare_low) * clk_high
 
 /-- Semantic contract (`is_real`-gated): on a real row the timestamp columns are well-formed — `compare_low`

@@ -16,27 +16,27 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-noncomputable def start (state : Extracted.CPUState (ZMod p)) : ℕ :=
+noncomputable def start (state : Circuits.Types.CPUState (ZMod p)) : ℕ :=
   clkNat state.clk_high (state.clk_0_16 + state.clk_16_24 * 65536)
 
-def prior (state : Extracted.CPUState (ZMod p)) (block : Extracted.RegisterAccessCols (ZMod p))
+def prior (state : Circuits.Types.CPUState (ZMod p)) (block : Circuits.Types.RegisterAccessCols (ZMod p))
     (idx : ZMod p) : MemoryMsg (ZMod p) :=
   ⟨state.clk_high, block.access_timestamp.prev_low, idx, 0, 0, block.prev_value⟩
 
-def push (state : Extracted.CPUState (ZMod p)) (idx off : ZMod p) (value : Word (ZMod p)) :
+def push (state : Circuits.Types.CPUState (ZMod p)) (idx off : ZMod p) (value : Word (ZMod p)) :
     MemoryMsg (ZMod p) :=
   ⟨state.clk_high, state.clk_0_16 + state.clk_16_24 * 65536 + off, idx, 0, 0, value⟩
 
 /-- The exact three paired touches, with separate pre-write and read-back currency points. -/
-noncomputable def touches (state : Extracted.CPUState (ZMod p))
-    (a b c : Extracted.RegisterAccessCols (ZMod p)) (value : Word (ZMod p)) : List (Touch p) :=
+noncomputable def touches (state : Circuits.Types.CPUState (ZMod p))
+    (a b c : Circuits.Types.RegisterAccessCols (ZMod p)) (value : Word (ZMod p)) : List (Touch p) :=
   [((prior state a 5, start state), push state 5 4 value),
    ((prior state b 10, start state + 3), push state 10 3 b.prev_value),
    ((prior state c 11, start state + 2), push state 11 2 c.prev_value)]
 
 /-- The three byte-checked timestamp differences, independent of Memory truth. -/
-def TimestampBounds (state : Extracted.CPUState (ZMod p))
-    (a b c : Extracted.RegisterAccessCols (ZMod p)) : Prop :=
+def TimestampBounds (state : Circuits.Types.CPUState (ZMod p))
+    (a b c : Circuits.Types.RegisterAccessCols (ZMod p)) : Prop :=
   ActiveTimestampBounds a.access_timestamp.prev_low a.access_timestamp.diff_low_limb
       (state.clk_0_16 + state.clk_16_24 * 65536 + 4) ∧
     ActiveTimestampBounds b.access_timestamp.prev_low b.access_timestamp.diff_low_limb
@@ -44,7 +44,7 @@ def TimestampBounds (state : Extracted.CPUState (ZMod p))
     ActiveTimestampBounds c.access_timestamp.prev_low c.access_timestamp.diff_low_limb
       (state.clk_0_16 + state.clk_16_24 * 65536 + 2)
 
-private theorem push_time (state : Extracted.CPUState (ZMod p))
+private theorem push_time (state : Circuits.Types.CPUState (ZMod p))
     (clock : ((state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧ state.clk_16_24.val < 2 ^ 8)
     (idx : ZMod p) (value : Word (ZMod p)) (off : ℕ) (bound : off ≤ 6) :
     MemoryMsg.timeNat (push state idx off value) = start state + off ∧
@@ -57,15 +57,15 @@ private theorem push_time (state : Extracted.CPUState (ZMod p))
   · change (state.clk_0_16 + state.clk_16_24 * 65536 + (off : ZMod p)).val < 2 ^ 24
     omega
 
-private theorem locations (state : Extracted.CPUState (ZMod p))
-    (block : Extracted.RegisterAccessCols (ZMod p)) (value : Word (ZMod p)) (idx : BitVec 5) (off : ZMod p) :
+private theorem locations (state : Circuits.Types.CPUState (ZMod p))
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (value : Word (ZMod p)) (idx : BitVec 5) (off : ZMod p) :
     MemoryMsg.locOf (prior state block idx.toNat) = MemLoc.reg idx ∧
       MemoryMsg.locOf (push state idx.toNat off value) = MemLoc.reg idx :=
   ⟨MemoryMsg.locOf_register _ idx rfl rfl rfl, MemoryMsg.locOf_register _ idx rfl rfl rfl⟩
 
 /-- All alignment facts for the shared three-register layout. -/
-theorem touches_spec (state : Extracted.CPUState (ZMod p))
-    (a b c : Extracted.RegisterAccessCols (ZMod p)) (value : Word (ZMod p))
+theorem touches_spec (state : Circuits.Types.CPUState (ZMod p))
+    (a b c : Circuits.Types.RegisterAccessCols (ZMod p)) (value : Word (ZMod p))
     (clock : ((state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧ state.clk_16_24.val < 2 ^ 8)
     (timestamps : TimestampBounds state a b c) :
     (∀ touch ∈ touches state a b c value, TouchOK (start state) touch.1 touch.2) ∧

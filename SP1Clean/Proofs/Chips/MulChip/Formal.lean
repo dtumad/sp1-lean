@@ -245,12 +245,12 @@ theorem completeness :
   simp only [Inputs.op_b_val, Inputs.op_c_val] at h_env_cols
   -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.
   replace h_env_cols := fun j : Fin 45 =>
-    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Extracted.MulOperation) env.toEnvironment (i₀ + 5) _
+    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Circuits.Types.MulOperation) env.toEnvironment (i₀ + 5) _
       (by simpa only [circuit_norm] using h_env_cols) j (by
-        have h : size Extracted.MulOperation = 45 := rfl
+        have h : size Circuits.Types.MulOperation = 45 := rfl
         have := j.isLt
         omega)).trans (Witgen.getElem_eval_toElements _ _ j (by
-      have h : size Extracted.MulOperation = 45 := rfl
+      have h : size Circuits.Types.MulOperation = 45 := rfl
       have := j.isLt
       omega)).symm
   -- The witness stream is the `populateFE` IR; `populateFE_eval_cell` evaluates each pinned cell to
@@ -275,10 +275,10 @@ theorem completeness :
   -- `RegisterWrite` `isU64` bullet's `product`/`product_msb` field reads (sidesteps any manual
   -- `toElements`/`Vector.getElem_append_*`/cast reasoning about `MulOperation`'s 9-field layout).
   have hcols_eq : Eval.eval env.toEnvironment
-      (ProvableStruct.varFromOffset Extracted.MulOperation (i₀ + 5) : Var Extracted.MulOperation (ZMod p))
+      (ProvableStruct.varFromOffset Circuits.Types.MulOperation (i₀ + 5) : Var Circuits.Types.MulOperation (ZMod p))
       = MulOperation.populate input_adapter_op_b_memory_prev_value input_adapter_op_c_memory_prev_value
           (env.get (i₀ + 1)) (env.get (i₀ + 3)) (env.get (i₀ + 4)) :=
-    (ProvableType.ext_iff (α := Extracted.MulOperation) _ _).mpr (fun i hi =>
+    (ProvableType.ext_iff (α := Circuits.Types.MulOperation) _ _).mpr (fun i hi =>
       (getElem_toElements_eval_varFromOffset env.toEnvironment (i₀ + 5) i hi).trans (h_env_cols' i hi))
   refine ⟨⟨hbin, h_cpu⟩,
     ⟨⟨hsum01', hmw', hf0', hf1', hf2', hf3', hf4', hsum01'⟩, ?_⟩,

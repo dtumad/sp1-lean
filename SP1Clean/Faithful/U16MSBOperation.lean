@@ -25,6 +25,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -50,10 +51,10 @@ theorem u16msb_constraints_faithful (a msb : ZMod p) :
 
 @[circuit_norm] theorem eval_u16MSBColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16MSBOperation (Expression F)) :
+    (cols : Circuits.Types.U16MSBOperation (Expression F)) :
     Eval.eval env cols =
       ({ msb := Eval.eval env cols.msb } :
-        Extracted.U16MSBOperation F) := by
+        Circuits.Types.U16MSBOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 

@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.LtOperationUnsigned
+import SP1Clean.Circuits.Types.LtOperationUnsigned
 
 /-! # Strictly ordered boundary keys
 
@@ -13,7 +13,7 @@ namespace SP1Clean.OrderedBoundary
 structure Inputs (F : Type) where
   previous : Word F
   current : Word F
-  comparison : Extracted.LtOperationUnsigned F
+  comparison : Circuits.Types.LtOperationUnsigned F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -21,7 +21,7 @@ provable_struct_eval_lemmas Inputs
 a circuit parameter, never a witness column. -/
 structure TerminalInputs (F : Type) where
   previous : Word F
-  comparison : Extracted.LtOperationUnsigned F
+  comparison : Circuits.Types.LtOperationUnsigned F
 deriving ProvableStruct
 provable_struct_eval_lemmas TerminalInputs
 

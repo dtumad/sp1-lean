@@ -24,6 +24,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
@@ -35,13 +36,13 @@ private theorem divRemInputs_size :
     size DivRemChip.Inputs = 29 := rfl
 
 private theorem divRemMulOperation_size :
-    size Extracted.MulOperation = 45 := rfl
+    size Circuits.Types.MulOperation = 45 := rfl
 
 private theorem divRemIsEqualWordOperation_size :
-    size Extracted.IsEqualWordOperation = 11 := rfl
+    size Circuits.Types.IsEqualWordOperation = 11 := rfl
 
 private theorem divRemIsZeroWordOperation_size :
-    size Extracted.IsZeroWordOperation = 11 := rfl
+    size Circuits.Types.IsZeroWordOperation = 11 := rfl
 
 private theorem divRemWord_size :
     size Word = 4 := rfl
@@ -65,10 +66,10 @@ private theorem divRemField_size :
     size field = 1 := rfl
 
 private theorem divRemAddOperation_size :
-    size Extracted.AddOperation = 4 := rfl
+    size Circuits.Types.AddOperation = 4 := rfl
 
 private theorem divRemU16MSBOperation_size :
-    size Extracted.U16MSBOperation = 1 := rfl
+    size Circuits.Types.U16MSBOperation = 1 := rfl
 
 private theorem divRem_toElements_fields {F : Type} {n : ℕ}
     (v : Vector F n) :
@@ -78,7 +79,7 @@ private theorem divRem_toElements_field {F : Type} (x : F) :
     toElements (M := field) x = #v[x] := rfl
 
 private theorem divRem_toElements_addOperation {F : Type}
-    (op : Extracted.AddOperation F) :
+    (op : Circuits.Types.AddOperation F) :
     toElements op = op.value := by
   obtain ⟨v⟩ := op
   simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
@@ -88,7 +89,7 @@ private theorem divRem_toElements_addOperation {F : Type}
   exact Vector.getElem_append_left _
 
 private theorem divRem_toElements_u16MSBOperation {F : Type}
-    (op : Extracted.U16MSBOperation F) :
+    (op : Circuits.Types.U16MSBOperation F) :
     toElements op = #v[op.msb] := by
   obtain ⟨v⟩ := op
   simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
@@ -97,7 +98,7 @@ private theorem divRem_toElements_u16MSBOperation {F : Type}
 
 /-- Copy a shared standalone arithmetic block into the DivRem oracle's chip-private struct copy.
 Same field names; definitional field-copy, not an operation-level faithfulness claim. -/
-def divRemOracleMulOperation {F : Type} (cols : Extracted.MulOperation F) :
+def divRemOracleMulOperation {F : Type} (cols : Circuits.Types.MulOperation F) :
     Extracted.DivRemOracle.MulOperation F :=
   { carry := cols.carry
     product := cols.product
@@ -111,7 +112,7 @@ def divRemOracleMulOperation {F : Type} (cols : Extracted.MulOperation F) :
 
 /-- Inverse of `divRemOracleMulOperation`. -/
 def divRemNativeMulOperation {F : Type} (cols : Extracted.DivRemOracle.MulOperation F) :
-    Extracted.MulOperation F :=
+    Circuits.Types.MulOperation F :=
   { carry := cols.carry
     product := cols.product
     b_lower_byte := { low_bytes := cols.b_lower_byte.low_bytes }
@@ -122,8 +123,8 @@ def divRemNativeMulOperation {F : Type} (cols : Extracted.DivRemOracle.MulOperat
     b_sign_extend := cols.b_sign_extend
     c_sign_extend := cols.c_sign_extend }
 
-/-- `Extracted.LtOperationUnsigned` → the DivRem oracle's embedded copy. -/
-def divRemOracleLtOperation {F : Type} (cols : Extracted.LtOperationUnsigned F) :
+/-- `Circuits.Types.LtOperationUnsigned` → the DivRem oracle's embedded copy. -/
+def divRemOracleLtOperation {F : Type} (cols : Circuits.Types.LtOperationUnsigned F) :
     Extracted.DivRemOracle.LtOperationUnsigned F :=
   { u16_compare_operation := { bit := cols.u16_compare_operation.bit }
     u16_flags := cols.u16_flags
@@ -132,14 +133,14 @@ def divRemOracleLtOperation {F : Type} (cols : Extracted.LtOperationUnsigned F) 
 
 /-- Inverse of `divRemOracleLtOperation`. -/
 def divRemNativeLtOperation {F : Type} (cols : Extracted.DivRemOracle.LtOperationUnsigned F) :
-    Extracted.LtOperationUnsigned F :=
+    Circuits.Types.LtOperationUnsigned F :=
   { u16_compare_operation := { bit := cols.u16_compare_operation.bit }
     u16_flags := cols.u16_flags
     not_eq_inv := cols.not_eq_inv
     comparison_limbs := cols.comparison_limbs }
 
-/-- `Extracted.IsZeroWordOperation` → the DivRem oracle's embedded copy. -/
-def divRemOracleIsZeroWord {F : Type} (cols : Extracted.IsZeroWordOperation F) :
+/-- `Circuits.Types.IsZeroWordOperation` → the DivRem oracle's embedded copy. -/
+def divRemOracleIsZeroWord {F : Type} (cols : Circuits.Types.IsZeroWordOperation F) :
     Extracted.DivRemOracle.IsZeroWordOperation F :=
   { is_zero_limb_0 := { inverse := cols.is_zero_limb_0.inverse, result := cols.is_zero_limb_0.result }
     is_zero_limb_1 := { inverse := cols.is_zero_limb_1.inverse, result := cols.is_zero_limb_1.result }
@@ -151,7 +152,7 @@ def divRemOracleIsZeroWord {F : Type} (cols : Extracted.IsZeroWordOperation F) :
 
 /-- Inverse of `divRemOracleIsZeroWord`. -/
 def divRemNativeIsZeroWord {F : Type} (cols : Extracted.DivRemOracle.IsZeroWordOperation F) :
-    Extracted.IsZeroWordOperation F :=
+    Circuits.Types.IsZeroWordOperation F :=
   { is_zero_limb_0 := { inverse := cols.is_zero_limb_0.inverse, result := cols.is_zero_limb_0.result }
     is_zero_limb_1 := { inverse := cols.is_zero_limb_1.inverse, result := cols.is_zero_limb_1.result }
     is_zero_limb_2 := { inverse := cols.is_zero_limb_2.inverse, result := cols.is_zero_limb_2.result }
@@ -160,14 +161,14 @@ def divRemNativeIsZeroWord {F : Type} (cols : Extracted.DivRemOracle.IsZeroWordO
     is_zero_second_half := cols.is_zero_second_half
     result := cols.result }
 
-/-- `Extracted.IsEqualWordOperation` → the DivRem oracle's embedded copy. -/
-def divRemOracleIsEqualWord {F : Type} (cols : Extracted.IsEqualWordOperation F) :
+/-- `Circuits.Types.IsEqualWordOperation` → the DivRem oracle's embedded copy. -/
+def divRemOracleIsEqualWord {F : Type} (cols : Circuits.Types.IsEqualWordOperation F) :
     Extracted.DivRemOracle.IsEqualWordOperation F :=
   { is_diff_zero := divRemOracleIsZeroWord cols.is_diff_zero }
 
 /-- Inverse of `divRemOracleIsEqualWord`. -/
 def divRemNativeIsEqualWord {F : Type} (cols : Extracted.DivRemOracle.IsEqualWordOperation F) :
-    Extracted.IsEqualWordOperation F :=
+    Circuits.Types.IsEqualWordOperation F :=
   { is_diff_zero := divRemNativeIsZeroWord cols.is_diff_zero }
 
 /-- Whole-chip row reconfiguration. The reader blocks and the scalar/word columns are already the
@@ -377,13 +378,13 @@ def divRemColumnsOfInput {F : Type}
     c_times_quotient :=
       divRemLocalBlock (fields 8) locals 121 (by decide)
     c_times_quotient_lower :=
-      divRemLocalBlock Extracted.MulOperation locals 24 (by decide)
+      divRemLocalBlock Circuits.Types.MulOperation locals 24 (by decide)
     c_times_quotient_upper :=
-      divRemLocalBlock Extracted.MulOperation locals 69 (by decide)
+      divRemLocalBlock Circuits.Types.MulOperation locals 69 (by decide)
     c_neg_operation :=
-      divRemLocalBlock Extracted.AddOperation locals 186 (by decide)
+      divRemLocalBlock Circuits.Types.AddOperation locals 186 (by decide)
     rem_neg_operation :=
-      divRemLocalBlock Extracted.AddOperation locals 190 (by decide)
+      divRemLocalBlock Circuits.Types.AddOperation locals 190 (by decide)
     remainder_lt_operation :=
       { u16_compare_operation :=
           ⟨divRemLocalBlock field locals 204 (by decide)⟩
@@ -393,7 +394,7 @@ def divRemColumnsOfInput {F : Type}
           divRemLocalBlock (fields 2) locals 197 (by decide) }
     carry := divRemLocalBlock (fields 8) locals 129 (by decide)
     is_c_0 :=
-      divRemLocalBlock Extracted.IsZeroWordOperation locals 159 (by decide)
+      divRemLocalBlock Circuits.Types.IsZeroWordOperation locals 159 (by decide)
     is_div := flags[0]
     is_divu := flags[1]
     is_rem := flags[2]
@@ -404,17 +405,17 @@ def divRemColumnsOfInput {F : Type}
     is_remuw := flags[7]
     is_overflow := scalars[0]
     is_overflow_b :=
-      divRemLocalBlock Extracted.IsEqualWordOperation locals 137 (by decide)
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 137 (by decide)
     is_overflow_c :=
-      divRemLocalBlock Extracted.IsEqualWordOperation locals 148 (by decide)
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 148 (by decide)
     b_msb :=
-      divRemLocalBlock Extracted.U16MSBOperation locals 213 (by decide)
+      divRemLocalBlock Circuits.Types.U16MSBOperation locals 213 (by decide)
     rem_msb :=
-      divRemLocalBlock Extracted.U16MSBOperation locals 215 (by decide)
+      divRemLocalBlock Circuits.Types.U16MSBOperation locals 215 (by decide)
     c_msb :=
-      divRemLocalBlock Extracted.U16MSBOperation locals 214 (by decide)
+      divRemLocalBlock Circuits.Types.U16MSBOperation locals 214 (by decide)
     quot_msb :=
-      divRemLocalBlock Extracted.U16MSBOperation locals 216 (by decide)
+      divRemLocalBlock Circuits.Types.U16MSBOperation locals 216 (by decide)
     b_neg := scalars[1]
     b_neg_not_overflow := scalars[2]
     b_not_neg_not_overflow := scalars[3]
@@ -459,10 +460,10 @@ private theorem divRemHeaderBlocks_roundtrip {F : Type}
         cols.b ∧
       divRemLocalBlock Word (divRemChipLocals cols) 20 (by decide) =
         cols.c ∧
-      divRemLocalBlock Extracted.MulOperation
+      divRemLocalBlock Circuits.Types.MulOperation
           (divRemChipLocals cols) 24 (by decide) =
         cols.c_times_quotient_lower ∧
-      divRemLocalBlock Extracted.MulOperation
+      divRemLocalBlock Circuits.Types.MulOperation
           (divRemChipLocals cols) 69 (by decide) =
         cols.c_times_quotient_upper := by
   repeat' apply And.intro
@@ -503,13 +504,13 @@ private theorem divRemComparisonBlocks_roundtrip {F : Type}
         cols.c_times_quotient ∧
       divRemLocalBlock (fields 8) (divRemChipLocals cols) 129 (by decide) =
         cols.carry ∧
-      divRemLocalBlock Extracted.IsEqualWordOperation
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation
           (divRemChipLocals cols) 137 (by decide) =
         cols.is_overflow_b ∧
-      divRemLocalBlock Extracted.IsEqualWordOperation
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation
           (divRemChipLocals cols) 148 (by decide) =
         cols.is_overflow_c ∧
-      divRemLocalBlock Extracted.IsZeroWordOperation
+      divRemLocalBlock Circuits.Types.IsZeroWordOperation
           (divRemChipLocals cols) 159 (by decide) =
         cols.is_c_0 := by
   repeat' apply And.intro
@@ -550,10 +551,10 @@ private theorem divRemArithmeticBlocks_roundtrip {F : Type}
         cols.remainder_comp ∧
       divRemLocalBlock Word (divRemChipLocals cols) 182 (by decide) =
         cols.max_abs_c_or_1 ∧
-      divRemLocalBlock Extracted.AddOperation
+      divRemLocalBlock Circuits.Types.AddOperation
           (divRemChipLocals cols) 186 (by decide) =
         cols.c_neg_operation ∧
-      divRemLocalBlock Extracted.AddOperation
+      divRemLocalBlock Circuits.Types.AddOperation
           (divRemChipLocals cols) 190 (by decide) =
         cols.rem_neg_operation ∧
       divRemLocalBlock (fields 3) (divRemChipLocals cols) 194 (by decide) =
@@ -607,16 +608,16 @@ private theorem divRemResultBlocks_roundtrip {F : Type}
         cols.remainder ∧
       divRemLocalBlock Word (divRemChipLocals cols) 209 (by decide) =
         cols.quotient ∧
-      divRemLocalBlock Extracted.U16MSBOperation
+      divRemLocalBlock Circuits.Types.U16MSBOperation
           (divRemChipLocals cols) 213 (by decide) =
         cols.b_msb ∧
-      divRemLocalBlock Extracted.U16MSBOperation
+      divRemLocalBlock Circuits.Types.U16MSBOperation
           (divRemChipLocals cols) 214 (by decide) =
         cols.c_msb ∧
-      divRemLocalBlock Extracted.U16MSBOperation
+      divRemLocalBlock Circuits.Types.U16MSBOperation
           (divRemChipLocals cols) 215 (by decide) =
         cols.rem_msb ∧
-      divRemLocalBlock Extracted.U16MSBOperation
+      divRemLocalBlock Circuits.Types.U16MSBOperation
           (divRemChipLocals cols) 216 (by decide) =
         cols.quot_msb := by
   repeat' apply And.intro
@@ -696,12 +697,12 @@ private theorem eval_divRemLocalBlock
 private theorem eval_divRemIsC0OfLocals
     (input : DivRemChip.Inputs (ZMod p))
     (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p))
-    (hbound : 159 + size Extracted.IsZeroWordOperation ≤ 217) :
+    (hbound : 159 + size Circuits.Types.IsZeroWordOperation ≤ 217) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (DivRemChip.populatedRowAt
           (varFromOffset (F := ZMod p) DivRemChip.Inputs 0)
           (size DivRemChip.Inputs)).is_c_0 =
-      divRemLocalBlock Extracted.IsZeroWordOperation locals 159 hbound := by
+      divRemLocalBlock Circuits.Types.IsZeroWordOperation locals 159 hbound := by
   rw [DivRemChip.populatedRowAt_isC0_eq,
     ProvableType.eval_fromElements]
   unfold divRemLocalBlock
@@ -732,12 +733,12 @@ private theorem eval_divRemIsC0OfLocals
 private theorem eval_divRemIsOverflowBOfLocals
     (input : DivRemChip.Inputs (ZMod p))
     (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p))
-    (hbound : 137 + size Extracted.IsEqualWordOperation ≤ 217) :
+    (hbound : 137 + size Circuits.Types.IsEqualWordOperation ≤ 217) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (DivRemChip.populatedRowAt
           (varFromOffset (F := ZMod p) DivRemChip.Inputs 0)
           (size DivRemChip.Inputs)).is_overflow_b =
-      divRemLocalBlock Extracted.IsEqualWordOperation locals 137 hbound := by
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 137 hbound := by
   rw [DivRemChip.populatedRowAt_isOverflowB_eq,
     ProvableType.eval_fromElements]
   unfold divRemLocalBlock
@@ -768,12 +769,12 @@ private theorem eval_divRemIsOverflowBOfLocals
 private theorem eval_divRemIsOverflowCOfLocals
     (input : DivRemChip.Inputs (ZMod p))
     (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p))
-    (hbound : 148 + size Extracted.IsEqualWordOperation ≤ 217) :
+    (hbound : 148 + size Circuits.Types.IsEqualWordOperation ≤ 217) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (DivRemChip.populatedRowAt
           (varFromOffset (F := ZMod p) DivRemChip.Inputs 0)
           (size DivRemChip.Inputs)).is_overflow_c =
-      divRemLocalBlock Extracted.IsEqualWordOperation locals 148 hbound := by
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 148 hbound := by
   rw [DivRemChip.populatedRowAt_isOverflowC_eq,
     ProvableType.eval_fromElements]
   unfold divRemLocalBlock
@@ -818,22 +819,22 @@ private theorem eval_divRemLocalFieldsGet
 
 private theorem eval_divRemLtUnsigned {F : Type} [FiniteField F]
     (env : Environment F)
-    (cols : Extracted.LtOperationUnsigned (Expression F)) :
+    (cols : Circuits.Types.LtOperationUnsigned (Expression F)) :
     Eval.eval env cols =
       ({ u16_compare_operation := Eval.eval env cols.u16_compare_operation
          u16_flags := Eval.eval env cols.u16_flags
          not_eq_inv := Eval.eval env cols.not_eq_inv
          comparison_limbs := Eval.eval env cols.comparison_limbs } :
-        Extracted.LtOperationUnsigned F) := by
+        Circuits.Types.LtOperationUnsigned F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 private theorem eval_divRemU16Compare {F : Type} [FiniteField F]
     (env : Environment F)
-    (cols : Extracted.U16CompareOperation (Expression F)) :
+    (cols : Circuits.Types.U16CompareOperation (Expression F)) :
     Eval.eval env cols =
       ({ bit := Eval.eval env cols.bit } :
-        Extracted.U16CompareOperation F) := by
+        Circuits.Types.U16CompareOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -850,12 +851,12 @@ private theorem eval_divRemLtOfLocals
          not_eq_inv := divRemLocalBlock field locals 203 (by decide)
          comparison_limbs :=
            divRemLocalBlock (fields 2) locals 197 (by decide) } :
-        Extracted.LtOperationUnsigned (ZMod p)) := by
+        Circuits.Types.LtOperationUnsigned (ZMod p)) := by
   rw [eval_divRemLtUnsigned,
-    Extracted.LtOperationUnsigned.mk.injEq]
+    Circuits.Types.LtOperationUnsigned.mk.injEq]
   constructor
   · rw [eval_divRemU16Compare,
-      Extracted.U16CompareOperation.mk.injEq]
+      Circuits.Types.U16CompareOperation.mk.injEq]
     rw [DivRemChip.populatedRowAt_ltBit_eq]
     exact eval_divRemLocalBlock input locals data field 204 (by decide)
   constructor
@@ -942,32 +943,32 @@ theorem eval_divRemChipDirectOutput
   constructor
   · rw [DivRemChip.populatedRowAt_mulLower_eq]
     exact (eval_divRemLocalBlock input locals data
-      Extracted.MulOperation 24 (by decide)).trans hlo
+      Circuits.Types.MulOperation 24 (by decide)).trans hlo
   constructor
   · rw [DivRemChip.populatedRowAt_mulUpper_eq]
     exact (eval_divRemLocalBlock input locals data
-      Extracted.MulOperation 69 (by decide)).trans hup
+      Circuits.Types.MulOperation 69 (by decide)).trans hup
   constructor
   · rw [DivRemChip.populatedRowAt_cNegOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Extracted.AddOperation 186 (by decide)).trans hcneg
+      Circuits.Types.AddOperation 186 (by decide)).trans hcneg
   constructor
   · rw [DivRemChip.populatedRowAt_remNegOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Extracted.AddOperation 190 (by decide)).trans hrneg
+      Circuits.Types.AddOperation 190 (by decide)).trans hrneg
   constructor
   · refine (eval_divRemLtOfLocals input locals data).trans ?_
-    rw [Extracted.LtOperationUnsigned.mk.injEq,
-      Extracted.U16CompareOperation.mk.injEq]
+    rw [Circuits.Types.LtOperationUnsigned.mk.injEq,
+      Circuits.Types.U16CompareOperation.mk.injEq]
     exact ⟨hltbit, hltf, hltinv, hltc⟩
   constructor
   · rw [DivRemChip.populatedRowAt_carry_eq]
     exact (eval_divRemLocalBlock input locals data
       (fields 8) 129 (by decide)).trans hcarry
   constructor
-  · let h159 : 159 + size Extracted.IsZeroWordOperation ≤ 217 := by decide
+  · let h159 : 159 + size Circuits.Types.IsZeroWordOperation ≤ 217 := by decide
     have hisc0' := hisc0
-    change divRemLocalBlock Extracted.IsZeroWordOperation
+    change divRemLocalBlock Circuits.Types.IsZeroWordOperation
       locals 159 h159 = cols.is_c_0 at hisc0'
     exact (eval_divRemIsC0OfLocals input locals data h159).trans hisc0'
   constructor
@@ -1025,33 +1026,33 @@ theorem eval_divRemChipDirectOutput
       7 114 0 (by decide) (by decide)).trans
         (congrArg (fun value => value[0]) hscalars)
   constructor
-  · let h137 : 137 + size Extracted.IsEqualWordOperation ≤ 217 := by decide
+  · let h137 : 137 + size Circuits.Types.IsEqualWordOperation ≤ 217 := by decide
     have hovb' := hovb
-    change divRemLocalBlock Extracted.IsEqualWordOperation
+    change divRemLocalBlock Circuits.Types.IsEqualWordOperation
       locals 137 h137 = cols.is_overflow_b at hovb'
     exact (eval_divRemIsOverflowBOfLocals input locals data h137).trans hovb'
   constructor
-  · let h148 : 148 + size Extracted.IsEqualWordOperation ≤ 217 := by decide
+  · let h148 : 148 + size Circuits.Types.IsEqualWordOperation ≤ 217 := by decide
     have hovc' := hovc
-    change divRemLocalBlock Extracted.IsEqualWordOperation
+    change divRemLocalBlock Circuits.Types.IsEqualWordOperation
       locals 148 h148 = cols.is_overflow_c at hovc'
     exact (eval_divRemIsOverflowCOfLocals input locals data h148).trans hovc'
   constructor
   · rw [DivRemChip.populatedRowAt_bMsbOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Extracted.U16MSBOperation 213 (by decide)).trans hbmsb
+      Circuits.Types.U16MSBOperation 213 (by decide)).trans hbmsb
   constructor
   · rw [DivRemChip.populatedRowAt_remMsbOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Extracted.U16MSBOperation 215 (by decide)).trans hrmsb
+      Circuits.Types.U16MSBOperation 215 (by decide)).trans hrmsb
   constructor
   · rw [DivRemChip.populatedRowAt_cMsbOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Extracted.U16MSBOperation 214 (by decide)).trans hcmsb
+      Circuits.Types.U16MSBOperation 214 (by decide)).trans hcmsb
   constructor
   · rw [DivRemChip.populatedRowAt_quotMsbOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Extracted.U16MSBOperation 216 (by decide)).trans hqmsb
+      Circuits.Types.U16MSBOperation 216 (by decide)).trans hqmsb
   constructor
   · rw [DivRemChip.populatedRowAt_bNeg_eq,
       CircuitType.eval_expr]
@@ -1172,7 +1173,7 @@ theorem divRemOwnAsserts_eval
     ProvableType.eval_fields, eval_rTypeReader,
     eval_registerAccessCols, eval_u16MSBColumns,
     eval_isEqualWordColumns, eval_isZeroWordColumns,
-    eval_extractedAddColumns, eval_ltUnsignedColumns,
+    eval_addColumns, eval_ltUnsignedColumns,
     eval_u16CompareColumns]
 
 end SP1Clean.Faithful

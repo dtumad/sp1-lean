@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.MemoryAccess
+import SP1Clean.Circuits.Types.MemoryAccess
 import SP1Clean.FormalModel.Contracts.Readers
 import Clean.Utils.Tactics.ProvableStructDeriving
 
@@ -94,7 +94,7 @@ five timestamp-comparison columns, exactly as in the load/store chips); `clk_*` 
 limbs of the **refreshed** timestamp the row pushes (`clk_high' = clk_24_32 + clk_32_48 · 2^8`,
 `clk_low' = clk_0_16 + clk_16_24 · 2^16`); `addr` the register index; `is_real` the row selector. -/
 structure Inputs (F : Type) where
-  access : Extracted.MemoryAccessCols F
+  access : Circuits.Types.MemoryAccessCols F
   clk_32_48 : F
   clk_24_32 : F
   clk_16_24 : F
@@ -157,10 +157,10 @@ halting shard. One real row per halting shard:
 
 The row struct: the `CPUState` block, the three register-access blocks, and the selector. -/
 structure Inputs (F : Type) where
-  state : Extracted.CPUState F
-  x5_memory : Extracted.RegisterAccessCols F
-  x10_memory : Extracted.RegisterAccessCols F
-  x11_memory : Extracted.RegisterAccessCols F
+  state : Circuits.Types.CPUState F
+  x5_memory : Circuits.Types.RegisterAccessCols F
+  x10_memory : Circuits.Types.RegisterAccessCols F
+  x11_memory : Circuits.Types.RegisterAccessCols F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
