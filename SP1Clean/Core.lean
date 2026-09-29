@@ -226,6 +226,7 @@ import SP1Clean.Native.Chips.HostRamReadChip.Defs
 import SP1Clean.Native.Chips.JalChip.Defs
 import SP1Clean.Native.Chips.JalrChip.Defs
 import SP1Clean.Native.Chips.LoadByteChip.Defs
+import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
 import SP1Clean.Native.Chips.LoadDoubleChip.Defs
 import SP1Clean.Native.Chips.LoadHalfChip.Defs
 import SP1Clean.Native.Chips.LoadWordChip.Defs
@@ -453,6 +454,11 @@ import SP1Clean.Proofs.Chips.JalrChip.Formal
 import SP1Clean.Proofs.Chips.JalrChip.Witgen
 import SP1Clean.Proofs.Chips.LoadByteChip.Complete
 import SP1Clean.Proofs.Chips.LoadByteChip.Formal
+import SP1Clean.Proofs.Chips.LoadByteStaticChip.Complete
+import SP1Clean.Proofs.Chips.LoadByteStaticChip.Formal
+import SP1Clean.Proofs.Chips.LoadByteStaticChip.FixedTable
+import SP1Clean.Proofs.Chips.LoadByteStaticChip.Witgen
+import SP1Clean.Proofs.Chips.LoadByteStaticChip.Transport
 import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
 import SP1Clean.Proofs.Chips.LoadDoubleChip.Complete
 import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal

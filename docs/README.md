@@ -12,6 +12,7 @@ Each document has one role:
 |---|---|
 | [`overview.md`](overview.md) | ten-minute technical orientation |
 | [`talk-examples.md`](talk-examples.md) | executable ADD mutations, complete counter arithmetization, and theorem boundaries |
+| [`loadbyte-static.md`](loadbyte-static.md) | fixed-byte LoadByte alternative, occurrence transport, regression matrix and scoped cost report |
 | [`verification-report.md`](verification-report.md) | self-contained external technical report |
 | [`release-audit.md`](release-audit.md) | reproducible pin, gate, and trust report |
 | [`audit-surface.md`](audit-surface.md) | short semantic definition inventory, mechanically gated |

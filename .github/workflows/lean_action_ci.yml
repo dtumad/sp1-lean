@@ -340,6 +340,19 @@ jobs:
         run: timeout 5h lake --no-cache build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun backendGadgets
       - name: Full test library (lake build SP1CleanTest)
         run: timeout 5h lake build --wfail --iofail SP1CleanTest
+      - name: LoadByte fixed-table replacement evidence
+        id: loadbyte_evidence
+        env:
+          SP1_LOADBYTE_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: scripts/check_loadbyte_static.sh
+      - name: Upload LoadByte replacement evidence
+        if: always() && steps.loadbyte_evidence.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadbyte-static-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lake/build/loadbyte-static/
+          if-no-files-found: error
+          retention-days: 30
       - name: Save the alignment build cache
         if: success() || failure()
         uses: actions/cache/save@v4
