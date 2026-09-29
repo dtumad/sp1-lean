@@ -15,6 +15,7 @@ public import ToClean.Circuit.WitgenShare
 public import ToClean.Circuit.InteractionRecovery
 public import ToClean.Circuit.EmittedInteraction
 public import ToClean.Gadgets.ComputableWitnesses
+public import ToClean.Air.ChannelRegistry
 public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension
 public import ToClean.Air.PublicVerifier
@@ -24,6 +25,7 @@ public import ToClean.Air.Authentication
 public import ToClean.Air.CompleteEnsemble
 public import ToClean.Air.ComponentOutput
 public import ToClean.Air.EnsembleExport
+public import ToClean.Air.EnsembleCheck
 public import ToClean.Circuit.StaticTable
 public import ToClean.Air.TableBuild
 public import ToClean.Air.UnitBalance
