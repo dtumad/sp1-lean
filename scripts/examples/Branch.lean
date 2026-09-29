@@ -1,7 +1,7 @@
 import SP1CleanTest.Alignment.Audit.BranchEnsembleRoundTrip
 import Lean.Data.Json
 
-/-! Run through `scripts/check_branch_ensemble.sh`. This evaluates the compiler-derived physical
+/-! Run through `python3 scripts/check_examples.py branch`. This evaluates the compiler-derived physical
 witness and its mutations. The imported theorem supplies official Sail execution; this driver
 does not execute the noncomputable full Sail state. -/
 
@@ -21,10 +21,10 @@ private def rowStats (position : Nat) (table : Table Fp) : Json :=
 
 /-- Print revision-tagged computed outcomes and fail on any expectation mismatch. -/
 private def runBranchEnsembleExample : IO Unit := do
-  let revision ← IO.getEnv "SP1_BRANCH_REVISION"
-  let status ← IO.getEnv "SP1_BRANCH_STATUS"
+  let revision ← IO.getEnv "SP1_EXAMPLE_REVISION"
+  let status ← IO.getEnv "SP1_EXAMPLE_STATUS"
   unless revision.isSome && (status == some "clean" || status == some "dirty") do
-    throw (IO.userError "Run scripts/check_branch_ensemble.sh to attach revision provenance")
+    throw (IO.userError "Run python3 scripts/check_examples.py branch to attach revision provenance")
   let cases := results
   let sourcePc := header.init_pc0.val + 65536 * header.init_pc1.val + 4294967296 * header.init_pc2.val
   let targetPc := header.final_pc0.val + 65536 * header.final_pc1.val + 4294967296 * header.final_pc2.val

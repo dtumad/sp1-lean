@@ -30,7 +30,7 @@ This does not prove enum membership: `CoreSyscallChip` separately checks the ful
 
 **Public values.** SP1 states five of its conjuncts against `public_values` directly. Clean's flat
 AIR reserves the public input to the verifier row, so each becomes one message built from columns
-this row already has (`docs/release-audit.md`, the native-only-bus disclosure): the exit binding on
+this row already has (`docs/assurance.md`, the native-only-bus disclosure): the exit binding on
 `exitChannel`, and the two commit digests and two commit flags on `publicValuesChannel`. No witness
 cell is added, so the row keeps its upstream width.
 

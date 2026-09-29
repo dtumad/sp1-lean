@@ -15,7 +15,7 @@
 # The committed `export/sp1dump/` tree (25 `<Chip>.dump.json` SP1 trace dumps +
 # `index.json`; sole writer `scripts/update_sp1_dumps.sh`) is validated structurally
 # too: parseable, 25 dumps, rows match the declared width x height, index consistent.
-# Its `sp1Commit` pin is cross-checked by `scripts/check_pins.sh`, and byte-level
+# Its `sp1Commit` pin is cross-checked by `scripts/check_pins.py`, and byte-level
 # reproducibility by `update_sp1_dumps.sh --check` (needs the pinned sp1 checkout).
 #
 # Modes:

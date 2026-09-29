@@ -3,11 +3,11 @@ import Lean.Data.Json
 
 /-! # Executable ADD and rejection walkthrough
 
-Run through `scripts/run_talk_examples.sh`. JSON is deterministic fixture evidence from the
+Run through `python3 scripts/check_examples.py add`. JSON is deterministic fixture evidence from the
 actual AIR interpreter; it is not a proof certificate or a full execution-equivalence claim.
 -/
 
-namespace SP1CleanTest.Alignment.TalkExamples
+namespace SP1CleanTest.Alignment.Examples.AddEnsemble
 
 open Lean SP1Clean
 open SP1CleanTest.Alignment.Core.HostFinalMemory.Fixture
@@ -65,7 +65,7 @@ def main (args : List String) : IO UInt32 := do
         return 2
       pure (mode == "--json", revision, status == "dirty", args.length == 4)
     | _ =>
-      IO.eprintln "Use scripts/run_talk_examples.sh [--json]"
+      IO.eprintln "Use python3 scripts/check_examples.py add [--json]"
       return 2
   let cases := if invert then results.modify 0 (fun (id, expected, actual) => (id, !expected, actual)) else results
   if json then
@@ -82,4 +82,4 @@ def main (args : List String) : IO UInt32 := do
     IO.eprintln "Fixture expectation mismatch."
     return 1
 
-end SP1CleanTest.Alignment.TalkExamples
+end SP1CleanTest.Alignment.Examples.AddEnsemble

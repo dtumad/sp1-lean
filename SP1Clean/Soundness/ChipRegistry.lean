@@ -31,7 +31,7 @@ registry and everything downstream (`sp1Tables`, the capstone, `Coverage`) are s
 
 Every chip's `circuit` has complete soundness and completeness proofs. The compiled-library trust
 policy and source guards in `scripts/run_audit.sh` reject `sorryAx` and unknown axioms; permitted
-logical, Sail and native-bitvector dependencies are described in `docs/trust-policy.md`. -/
+logical, Sail and native-bitvector dependencies are described in `docs/assurance.md`. -/
 
 namespace SP1Clean.Soundness
 

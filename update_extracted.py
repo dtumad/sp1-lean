@@ -42,6 +42,7 @@ commit on it.  The checkout is never modified by this script.
 
 import json
 import os
+from pathlib import Path
 import re
 import subprocess
 from typing import Dict, List, Sequence, Set, Tuple
@@ -179,18 +180,11 @@ STRUCT_CARRIERS: Dict[str, Tuple[str, Tuple[str, ...]]] = {
 }
 
 DEFAULT_SP1_DIR = "../sp1"
-# Exact unmodified SP1 source whose AIR semantics are being formalized: the v6.4.0 release tag.
-SP1_SEMANTIC_COMMIT = "f66b4bff51d0ccff51d152e0f7f66b2ffedf3529"
-# Audited extraction branch used to generate the checked-in artifacts
-# (`dtumad/lean-extraction`, based directly on the semantic tag). Every extraction change is an
-# ordinary commit on this branch — there is no uncommitted-patch mechanism; runtime chip-source
-# changes are restricted to reflection/`IntoShape` metadata and are checked below. The v6.3.1→
-# v6.4.0 semantic delta touches three `core/executor` plumbing files only (errors/opts/cow) and
-# no chip, compiler, or hypercube source; the AIR regeneration at this pin was byte-for-byte
-# identical to the previous artifacts modulo the provenance strings. The 2026-08-18 advance
-# (conformance library + vendored interpreter/artifacts + the in-repo witgen conformance test)
-# left the dumper output byte-identical.
-SP1_PINNED_COMMIT = "b5616f908c393d6050970630871f69afe233a21c"
+# The legacy Rust-to-Lean pipeline and dump checker share this provenance record.
+_SP1_PROVENANCE = json.loads(
+    (Path(__file__).resolve().parent / "scripts/provenance.json").read_text())["sp1"]
+SP1_SEMANTIC_COMMIT = _SP1_PROVENANCE["semanticRevision"]
+SP1_PINNED_COMMIT = _SP1_PROVENANCE["extractorRevision"]
 
 # The only machine AIR files the extraction branch may touch. The checker below additionally
 # verifies that every changed line in these files is an import or derive-attribute change.

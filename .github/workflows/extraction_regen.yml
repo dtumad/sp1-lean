@@ -4,7 +4,7 @@
 # Deliberately a SCHEDULED job, never PR-blocking: the repo's PR CI runs no cargo (rust/README.md);
 # this workflow is the standing cross-check that the committed artifacts are exactly what the pin
 # generates. The Sail snapshot half of F8 stays manual (regeneration needs the sail toolchain);
-# its pins and config hash are gated on every PR by scripts/check_pins.sh instead.
+# its pins and config hash are gated on every PR by scripts/check_pins.py instead.
 name: extraction-regen
 
 on:
@@ -24,9 +24,8 @@ jobs:
         id: pin
         run: |
           PIN=$(python3 - <<'EOF'
-          import re
-          src = open("update_extracted.py").read()
-          print(re.search(r'SP1_PINNED_COMMIT = "([0-9a-f]{40})"', src).group(1))
+          import json
+          print(json.load(open("scripts/provenance.json"))["sp1"]["extractorRevision"])
           EOF
           )
           echo "sha=$PIN" >> "$GITHUB_OUTPUT"

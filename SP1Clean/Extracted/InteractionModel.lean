@@ -190,7 +190,7 @@ theorem Interaction.toAccess_kind_not_native (intr : Interaction (ZMod p)) :
     cases kind <;> simp [Interaction.toAccess, AirInteractionKind.lookupKind]
   all_goals simp [Interaction.toAccess]
 
-/-- Retained under its historical name for `docs/release-audit.md`'s citation of the Exit half. -/
+/-- Retained under its historical name for `docs/assurance.md`'s citation of the Exit half. -/
 theorem Interaction.toAccess_kind_ne_exit (intr : Interaction (ZMod p)) :
     (Interaction.toAccess intr).1 ≠ InteractionKind.Exit :=
   (Interaction.toAccess_kind_not_native intr).1

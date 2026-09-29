@@ -3,7 +3,7 @@ name: Sail Model Regeneration
 # The in-tree `LeanRV64D/` library is GENERATED: the pinned rems-project/sail compiler run over the
 # pinned riscv/sail-riscv sources with the checked-in SP1 platform config. This workflow is the
 # machine check that the committed tree is exactly that generator output — it rebuilds the model
-# from the pins in `scripts/sail-config/generate_lean_rv64d.sh` and fails on any byte difference,
+# from the pins in `scripts/provenance.json` and fails on any byte difference,
 # so regeneration is idempotent and hand edits cannot hide in the generated tree.
 #
 # Steps mirror the script's modes: `--deps` (the OCaml switch and the Sail compiler, cached by
@@ -23,6 +23,7 @@ on:
   pull_request:
     paths:
       - "scripts/sail-config/**"
+      - "scripts/provenance.json"
       - "LeanRV64D/**"
       - "LeanRV64D.lean"
       - "lake-manifest.json"
@@ -41,14 +42,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read the toolchain pins from the generator script
+      - name: Read the toolchain provenance
         id: pins
         run: |
-          for key in SAIL_SHA OCAML_VERSION; do
-            value="$(sed -n "s/^${key}=\([^ ]*\).*/\1/p" scripts/sail-config/generate_lean_rv64d.sh)"
-            [ -n "$value" ] || { echo "no ${key} pin in generate_lean_rv64d.sh"; exit 1; }
-            echo "${key}=${value}" >> "$GITHUB_OUTPUT"
-          done
+          python3 - <<'PY'
+          import json, os
+          sail = json.load(open('scripts/provenance.json'))['sail']
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              print('SAIL_SHA=' + sail['compilerRevision'], file=out)
+              print('OCAML_VERSION=' + sail['ocamlVersion'], file=out)
+          PY
 
       - name: System packages
         run: |

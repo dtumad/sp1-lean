@@ -10,28 +10,31 @@
 #   --sp1          generate with the SP1 config; diff vs the base (four sites expected) AND the
 #                  in-tree copy (the gate: regeneration must be idempotent)
 #   --install      generate with the SP1 config and write the in-tree copy (then commit it and
-#                  refresh the tree-hash row in docs/release-audit.md via scripts/check_pins.sh)
+#                  refresh the fingerprints in scripts/provenance.json)
 #   --make-config  regenerate scripts/sail-config/sp1_rv64d_cfg.json (base config ⊕ overlay)
 #
 # Requires: opam, cmake, z3, python3, git. Work tree defaults to ~/.cache/sp1-sail-gen (override
 # with SAIL_GEN_DIR). Generation takes ~10 minutes after the one-time --deps (~20-40 minutes).
 # CI runs --make-config/--sp1/--stock on every generator, config, or model-tree change and monthly
-# (.github/workflows/sail-regen.yml); scripts/check_pins.sh checks the in-tree copy's hash
-# against the row recorded in docs/release-audit.md.
+# (.github/workflows/sail-regen.yml); scripts/check_pins.py checks the in-tree copy's hash
+# against scripts/provenance.json.
 #
-# Pins — the provenance record. Verified 2026-08-06: a --stock run under these pins reproduces
-# opencompl 11d8fa21 byte-identically, and --sp1 differs from it in exactly four generated
-# platform-value sites controlled by two config keys. Update all four pins together when re-pinning,
-# and re-run both verifications.
-SAIL_SHA=41694abd58b27b687af5db275810dfeb8a88cfc0        # rems-project/sail, branch sail2
-SAIL_RISCV_SHA=61266bd4dede6c7dd6e903e52dc80bcbf644b1b8  # riscv/sail-riscv, master
-OCAML_VERSION=5.2.1                                       # the opencompl nightly's version
-BASE_SNAPSHOT=11d8fa212a60c05dcc9fe5db925dd4d06dad65b5    # opencompl/sail-riscv-lean main
-
+# Generator inputs and output fingerprints are owned by scripts/provenance.json.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 MODE="${1:?usage: generate_lean_rv64d.sh --deps | --stock | --sp1 | --install | --make-config}"
+case "$MODE" in
+  --deps|--stock|--sp1|--install|--make-config) ;;
+  *) echo "unknown mode: $MODE" >&2; exit 2 ;;
+esac
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
+read -r SAIL_SHA SAIL_RISCV_SHA OCAML_VERSION BASE_SNAPSHOT < <(
+  python3 - "$REPO_ROOT/scripts/provenance.json" <<'PYPROVENANCE'
+import json, sys
+sail = json.load(open(sys.argv[1]))["sail"]
+print(*(sail[key] for key in ("compilerRevision", "modelRevision", "ocamlVersion", "baseSnapshot")))
+PYPROVENANCE
+)
 WORK="${SAIL_GEN_DIR:-$HOME/.cache/sp1-sail-gen}"
 SWITCH=sail-gen
 export OPAMYES=1
@@ -143,7 +146,7 @@ case "$MODE" in
     rm -rf "$REPO_ROOT/LeanRV64D"
     cp -R "$OUT/LeanRV64D" "$REPO_ROOT/LeanRV64D"
     cp "$OUT/LeanRV64D.lean" "$REPO_ROOT/LeanRV64D.lean"
-    echo "=== INSTALLED the generated model into $REPO_ROOT (commit it; refresh the tree-hash row) ===" ;;
+    echo "=== INSTALLED the generated model into $REPO_ROOT (commit it; refresh scripts/provenance.json) ===" ;;
 esac
 echo "config sha256: $H1"
 exit "$verdict"

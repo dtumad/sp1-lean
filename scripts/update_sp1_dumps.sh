@@ -10,8 +10,8 @@
 # ground truth the witgen differential is anchored to.
 #
 # Provenance discipline mirrors `update_extracted.py`: `$SP1_DIR` must be a CLEAN
-# checkout of exactly `SP1_PINNED_COMMIT` (read from `update_extracted.py` — the single
-# source of truth, cross-checked against `index.json` by `scripts/check_pins.sh`), so a
+# checkout of exactly `SP1_PINNED_COMMIT` (read from `scripts/provenance.json` — the single
+# source of truth, cross-checked against `index.json` by `scripts/check_pins.py`), so a
 # committed dump is always reproducible from the pin. The dumper is deterministic
 # (fixed LCG seed, no timestamps): regeneration at the pin is byte-identical.
 #
@@ -34,13 +34,9 @@ for arg in "$@"; do
 done
 
 SP1_DIR="${SP1_DIR:-../sp1}"
-PIN=$(python3 -c "
-import re
-src = open('update_extracted.py').read()
-print(re.search(r'SP1_PINNED_COMMIT = \"([0-9a-f]{40})\"', src).group(1))
-")
+PIN=$(python3 -c 'import json; print(json.load(open("scripts/provenance.json"))["sp1"]["extractorRevision"])')
 if [[ -z "$PIN" ]]; then
-  echo "FAIL: could not read SP1_PINNED_COMMIT from update_extracted.py" >&2
+  echo "FAIL: could not read extractorRevision from scripts/provenance.json" >&2
   exit 1
 fi
 

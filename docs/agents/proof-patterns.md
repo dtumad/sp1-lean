@@ -1006,12 +1006,10 @@ always means a *local* regression against one of these.
 
 ## Golf & cleanup discipline
 
-How to golf/clean a proof without breaking the repo's invariants (axiom-clean, 0-warning, no `info:`,
-no elaboration-budget escape hatch). The remaining cleanup TODOs live under `docs/roadmap.md`
-§ "Cleanup / polish backlog". Generic `mathlib-quality` advice is a useful discovery rubric, but
-the rules here win where it proposes changing public statement shape or source compatibility, making
-declarations private, replacing targeted `simp only`, unfolding a folded Clean term, or deleting a
-wrapper that belongs to the audit surface.
+Keep proofs kernel-checked, warning-free and within the existing elaboration budget. The approved
+consolidation permits complete API/statement migrations with all consumers updated; source
+compatibility and documentation-driven wrappers are not requirements. Review intended semantic
+changes explicitly and measure performance-sensitive proof changes downstream.
 
 **Instant, always-safe wins** (the bulk of the line savings):
 - `:= by rfl` → `:= rfl`; `show T from by tac` → `show T by tac`; `rw […] at h; exact h` → `rwa […] at h`;
@@ -1192,8 +1190,8 @@ What a macro *cannot* reach: caller binders (`env`, `input`, `real`, `decoded`, 
 unreachable from a quotation without `Lean.mkIdent`, and repetition that is a **term inside a `have` type**
 rather than a tactic shape needs an ordinary (`private`) helper lemma instead. And prefer macros that
 generate **tactics** over macros that generate **declarations**: the latter removes parsed signatures from
-the source text, which `scripts/check_report_citations.sh` relies on for named report targets.
-The compiled-library trust check itself does not depend on source-level declaration signatures.
+the source text, making public interfaces easier to review. The compiled-library trust check
+handles either form and does not depend on source-level signatures.
 
 **Don't golf:**
 - **`Faithful/*` anchors** — conservative only (drop `by exact` / dead `let` / `from by`); never restructure
@@ -1206,8 +1204,7 @@ The compiled-library trust check itself does not depend on source-level declarat
 
 **Verify every batch:** `lake build SP1Clean` clean (0 warn, no `info:`), then
 `scripts/run_audit.sh` (zero proof deferrals, citation checks, and the compiled-library trust
-policy). `scripts/check_report_citations.sh` remains useful as a faster standalone documentation
-check. On heavy files watch the per-file elaboration time in the build log and **revert on regression**.
+policy). `scripts/check_current_docs.py` checks documentation links and module docstrings. On heavy files watch the per-file elaboration time in the build log and **revert on regression**.
 
 > **Never *infer* an axiom change from the tactics you removed — measure both versions.** A report that
 > replacing some `omega` calls in `FormalModel/Contracts/Chips.lean` had dropped `Classical.choice` was
@@ -1220,15 +1217,6 @@ check. On heavy files watch the per-file elaboration time in the build log and *
 near each other — no conflict marker, but `lake build` fails with "`<name>` has already been declared". Always
 run the full `lake build` after a merge even when `git status` shows no conflicts (`Proofs/Chips/BitwiseChip/
 Bridge.lean` hit this when upstream #101's immediate-type bridges met a golfed copy).
-
-**Available cleanup skills:**
-- **`/cleanup`** — the per-file 7-phase workflow (style audit → per-decl golf → simplify → verify). Best for a
-  handful of named files.
-- **`/cleanup-all`** — the orchestrator marathon (dispatches per-batch workers across the whole tree). Best for a
-  project-wide sweep; honor the repo guardrails (auto-gen exclusion, axiom-clean, heavy-core caution).
-- **`/decompose-proof`** — break one long proof into named sub-lemmas.
-- **`/split-file`** — split an over-long file along namespace/section seams.
-- **`Skill(simplify)`** — a holistic reuse/altitude review pass on a file (invoked inside `/cleanup` Phase 6.5).
 
 ## Interaction projection and recovery kernels
 
@@ -1295,7 +1283,7 @@ the reader-local `<reader>_*Interactions` lemmas over unfolding a whole chip.
 - Work one file and one build at a time; avoid batching many edit + LSP calls in a single turn.
 - **LSP times out on a big chip file → introspect via a scratch `import`.** `lean_goal` on a 600+-line chip
   (e.g. `ShiftLeftChip.lean`'s completeness) times out because it re-elaborates the whole file. Instead write
-  a throwaway `SP1Clean/Scratch.lean` = `import …<Chip>` + `example : …Completeness … := by
+  a throwaway Lean scratch file = `import …<Chip>` + `example : …Completeness … := by
   circuit_proof_start; sorry`; the import is served from the cached olean, so only the tiny `example`
   elaborates live and `lean_goal` returns the full proof state instantly. Delete the scratch before
   committing (it lands in the lake glob).
