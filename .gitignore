@@ -1,11 +1,22 @@
-build/*
-build.log
-scratch/
+# Build products and dependencies, including nested Rust/Node tools.
+.lake/
+/build/
+target/
+node_modules/
+*.olean
+*.olean.private
+*.olean.server
+*.ilean
+*.profraw
 
-.lake/*
-.claude/*
+# Local runs, Python caches and workspace state.
+/build.log
+/scratch/
+/local-review/
+.claude/
 __pycache__/
-local-review/
+*.py[cod]
+.DS_Store
 
 # The external PR #110 audit report (owner decides whether to commit it)
 sp1clean_pr110_report.pdf
