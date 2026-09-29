@@ -1,295 +1,56 @@
-# Sail model provenance — the generated `LeanRV64D` library and its config
+# Generated Sail model
 
-The Sail RV64 model is the in-tree library `LeanRV64D/` + `LeanRV64D.lean`. It is **generator
-output, never hand-edited**: the pinned Sail compiler run over the pinned `riscv/sail-riscv`
-sources with the SP1 platform configuration `scripts/sail-config/sp1_rv64d_cfg.json`, written
-by `scripts/sail-config/generate_lean_rv64d.sh --install`. It equals the opencompl daily snapshot
-**`11d8fa21`** everywhere except the four platform-value sites the config sets. The maintained
-object is therefore a **two-key** config delta plus the three pins recorded in the generation
-script — not patched Lean — and the tree is treated like `SP1Clean/Extracted/`: an auto-generated
-part of the library, outside every hand-written-source guard, gated for byte-identity with a
-fresh regeneration.
+LeanRV64D/ and LeanRV64D.lean are generated, never hand-edited. The pinned Sail compiler and
+sail-riscv sources run with the checked-in SP1 platform configuration. Inputs, base snapshot,
+OCaml version and output fingerprints have one owner:
+[provenance.json](../../scripts/provenance.json). Lake's Sail dependency records the runtime.
 
-One build-configuration exception, in `lakefile.toml` rather than in the tree: the module
-`LeanRV64D.RvfiDii` is owned by the one-module library `LeanRV64DRvfi` and built with
-`backward.do.legacy = true`, because its generated `print_rvfi_exec` (18 consecutive
-`(pure (print_bits …))` statements) hits the new `do` elaborator's exponential re-elaboration
-(lean4#13858): 718 s and 15 GB for one file, the head of every cold CI build's critical path,
-against 2.5 s under the legacy elaborator. The option cannot be library-wide (the legacy
-elaborator rejects the `← doElem` forms other generated modules use). The durable fix is the
-backend emitting `let _ : Unit := e` for pure-unit calls, after which the library goes; tracked
-on fork issue #6.
+## Semantic configuration
 
-The full provenance record (compiler SHA, model SHA, config hash, invocation, environment,
-verification) lives in the snapshot's own commit message; the pins are also recorded in
-`docs/release-audit.md`'s table and re-checked by `scripts/check_pins.sh`.
+[sp1-overlay.json](../../scripts/sail-config/sp1-overlay.json) disables two devices SP1 does not
+implement: CLINT and the simple interrupt generator. Their stock address windows lie inside the
+native memory interval. Leaving them enabled would route permitted RAM accesses through MMIO and
+make the memory-bridge lemmas false as stated.
 
-## Why the SP1 configuration is required
+The two keys affect four generated sites: plat_have_clint / plat_have_sig in PlatformConfig, and
+clint_supported / sig_supported in ValidateConfig. Other platform restrictions remain explicit
+configured-state hypotheses. In particular PMP uses the stock 16 entries with every entry OFF
+as a Lean state condition, not a generator patch. Moving a condition from configuration to Lean
+makes it visible; it does not remove the assumption.
 
-The two **platform-device** keys are required for soundness of the statements; the two **PMP**
-keys are not, and the distinction is worth stating precisely (audited 2026-08-19).
+## Reproduce
 
-**CLINT and the interrupt generator — soundness- and faithfulness-necessary.** SP1's address
-chips bound every memory access to `[2^16, 2^48)`, and two upstream device windows lie **inside**
-that range: CLINT at `[0x0200_0000, 0x020C_0000)` and the simple interrupt generator at
-`[0x0C00_0000, 0x0C00_0020)`. With the devices enabled, a Sail access in either window routes to
-the device rather than to RAM, and `run_within_mmio_readable_mmio` /
-`run_within_mmio_writable_mmio` (`Model/SailMemory.lean`) are then **false as stated** — they
-quantify over `reg_val`, `offset` and `width` with no range side-condition and conclude
-`.ok false s`, so `reg_val := 0x0200_0000` refutes them. Not merely unproved. Their fan-out is
-not confined to the memory chips: through `run_checked_mem_read_four_bytes_fetch_of_isInitialized`
-they reach the **instruction-fetch** reduction and hence every chip's `advance` obligation, all 25,
-up to the grounding engine that fires them (`RowWiring.advance_at`). Recovering them would need a
-per-access disjointness hypothesis that SP1's AIR does not derive — a new trust assumption — and
-would exclude guest programs that legitimately touch those addresses. Independently, SP1
-implements neither device: `clint`, `mtimecmp`, `pmpcfg` and `pmpaddr` appear **nowhere** in its
-Rust tree, and its only `Interrupt` type is a synchronous trap code. Verifying against a
-CLINT-enabled model would be verifying a different machine.
+The [generator](../../scripts/sail-config/generate_lean_rv64d.sh) requires opam, CMake, Z3,
+Python and Git. Its work directory defaults to ~/.cache/sp1-sail-gen; SAIL_GEN_DIR overrides it.
 
-**The PMP keys were dropped on 2026-08-19 — PMP-off is now a state hypothesis.** The audit found
-they were not load-bearing the way the device keys are. `sys_pmp_count = 0` was consumed by exactly
-one lemma, `run_pmpCheck_none`, at three call sites, all at machine privilege — and under stock
-(`sys_pmp_count = 16`) with every `pmpcfg` entry OFF, `pmpMatchAddr` returns `PMP_NoMatch` for each
-entry and the M-mode tail yields `none`, i.e. **the same answer**. `sys_pmp_usable_count = 0` had no
-proof consumer at all; it existed only because upstream's `check_pmp` rejects `usable_count > count`,
-so the two moved together.
+| Mode | Action |
+|---|---|
+| --deps | Prepare the pinned OCaml/Sail toolchain |
+| --make-config | Deep-merge stock generated configuration with the SP1 overlay |
+| --stock | Regenerate and require byte identity with the pinned base snapshot |
+| --sp1 | Regenerate with SP1 configuration and require identity with the checked-in model |
+| --install | Regenerate and replace the checked-in model |
 
-So the model now carries upstream's stock 16 entries, and "every PMP entry is OFF" is the hypothesis
-`isValidMemConfig.h_pmp_off` (sourced from `SailConfigured.pmp_off`, beside `htif_disabled`).
-Nothing can falsify it: SP1 implements no CSR instructions at all — its disassembler maps every
-`process_csrr*` to `Instruction::unimp()` (`crates/core/executor/src/disassembler/rrs.rs`) — so no
-entry can ever be installed. It joins `mstatus.MPRV`, `mseccfg` and `htif_tohost_base` as the same
-kind of unconstrained-boot-register assumption, not a new class of trust.
+The SP1-config path currently copies the configuration into the upstream build and checks its
+hash before/after generation. Replace that workaround when the selected upstream build supports
+an equivalent config override without changing model identity.
 
-**Be precise about what this bought.** It *relocated* an assumption, it did not remove one: the
-config shrank from four keys / six sites to two / four, and `isValidMemConfig` grew a seventh field.
-The gain is auditability — PMP-off is now visible in Lean, in the execution model, rather than in a
-JSON file feeding a code generator.
+## Update the pair
 
-**The proof turned out cheap, contrary to the first estimate.** The worry was that reproving
-`run_pmpCheck_none` against 16 entries needed a 16-iteration `SailME` peel that would press the
-file's heartbeat budget. It does not: `pmpCheck`'s `for i in [0:15:1]i` elaborates to
-`IntRange.forIn'` (`.lake/packages/Sail/Sail/IntRange.lean`), which is **well-founded** recursion and
-so carries a generated `IntRange.forIn'.loop.induct`. The walk is discharged by `run_ME_loop_const`,
-an invariant proved **once by functional induction** — O(1) in the trip count, indifferent to whether
-the bound is 0 or 15. The supporting facts are small: `run_pmpMatchAddr_zero` (an all-zero cfg entry
-takes the `.OFF` arm), `run_pmpReadAddrReg` (it only reads registers, so it preserves the state), and
-`getElem!_replicate_zero` (any index of an all-zero vector is `0#8`, including out of range where
-`getElem!` returns the default). No budget escape was needed anywhere.
+1. Select compatible compiler, model, base snapshot and runtime revisions. Update provenance and
+   the single Lake requirement deliberately; do not run bare lake update.
+2. Verify --stock, regenerate the configuration, inspect the platform delta and run --install.
+3. Review the generated diff and update generatedTreeSha256, generatedFiles and configSha256.
+   scripts/check_pins.py uses a deterministic path/content tree hash; import its tree_hash helper
+   when recording a newly reviewed snapshot.
+4. Run --sp1, strict full build/tests, conformance and compiled trust checks. Expect proof updates
+   where Sail internals changed; do not paper over them with new assumptions.
+5. Record commands and generator environment with the PR evidence.
 
-The two top-level generated values (`plat_have_clint`, `plat_have_sig`) are disclosed to the audit surface as `rfl` lemmas in
-`Model/SailMemory.lean`; the other two generated sites are `let`-bindings inside
-`ValidateConfig` (config validation only) and are not addressable as lemmas.
+Sail regeneration CI independently checks configuration and byte identity. The fast pin check
+detects generated edits before that expensive job. Fingerprints authenticate the reviewed
+snapshot; fresh regeneration supplies the independent evidence.
 
-## The configuration (two keys → four generated sites)
-
-`scripts/sail-config/sp1-overlay.json` is the whole semantic delta from the stock rv64d config:
-
-```json
-{ "platform": { "clint":                      { "supported": false },
-                "simple_interrupt_generator": { "supported": false } } }
-```
-
-The generator constant-folds these into four definition sites (match on the `def` name — line
-numbers drift on every regeneration):
-
-| Generated site | Config key | Stock → SP1 | Meaning |
-|---|---|---|---|
-| `PlatformConfig.lean` `plat_have_clint` | `platform.clint.supported` | `true → false` | CLINT (core-local interrupt timer) off — SP1 has no timer device |
-| `PlatformConfig.lean` `plat_have_sig` | `platform.simple_interrupt_generator.supported` | `true → false` | The MMIO device that injects external interrupts, off — SP1 has no such device and no external interrupts. (`sig` is *simple interrupt generator*, not "signature": `sig_load` returns a version word, `sig_store` sets the external-interrupt-pending bits) |
-| `ValidateConfig.lean` `clint_supported` | `platform.clint.supported` (re-read) | `true → false` | Config validator's CLINT check |
-| `ValidateConfig.lean` `sig_supported` | `platform.simple_interrupt_generator.supported` (re-read) | `true → false` | Config validator's interrupt-generator check |
-
-Because the four sites are images of two config keys, the old hand-maintenance invariant ("all
-six must move together or the platform is incoherent") is now structural: the generator reads
-each key everywhere it is consumed.
-
-Downstream consumers, unmodified and listed for review: `Platform.lean` guards on
-`plat_have_clint`; `plat_have_sig` gates the simple interrupt generator; and
-`ValidateConfig.lean` re-reads both keys. The generated delta is therefore four sites total.
-
-## The pipeline
-
-`scripts/sail-config/generate_lean_rv64d.sh` carries the three pins at its top (Sail compiler
-SHA, sail-riscv SHA, the opencompl base snapshot) and five modes:
-
-- `--deps` — one-time toolchain: an OCaml 5.2.1 opam switch (matching the opencompl nightly) and
-  the pinned Sail compiler built from source. The opam release of sail is **not** sufficient —
-  the Lean backend and the JSON-comment handling in the pinned compiler postdate it.
-- `--make-config` — regenerate `sp1_rv64d_cfg.json` = the stock generated
-  `build/config/rv64d_v256_e64.json` (comments stripped) deep-merged with the overlay.
-- `--stock` — regenerate with the stock config and diff against the opencompl base. **Expected:
-  byte-identical.** This is the pin-verification run; it also proves the generator's output is
-  OS-independent (verified macOS vs the nightly's ubuntu, 2026-08-06).
-- `--sp1` — regenerate with the SP1 config; diff vs the base must show exactly the four sites,
-  and diff vs the in-tree copy must be identical (the script's exit gate: regeneration is
-  idempotent).
-- `--install` — regenerate with the SP1 config and write `LeanRV64D/` + `LeanRV64D.lean` in the
-  repository. This is the only way the tree changes.
-
-Installing a regenerated model is deliberate and manual: run `--install`, commit the tree diff
-with the provenance record in the commit message (compiler SHA, model SHA, config hash,
-invocation, environment, verification — the template is the snapshot commit `df1acf57` on
-`succinctlabs/sail-riscv-lean`, the pre-vendoring home of the model), and refresh the
-`Generated Sail model` row in `docs/release-audit.md` (`scripts/check_pins.sh` prints the
-expected hash). The lean-sail pairing is recorded by the `Sail` pin in `lake-manifest.json`.
-
-What the config cannot express stays where it was: `h_mseccfg_pmm` (pointer masking has no
-config toggle) remains a `SailConfigured` hypothesis, the platform-hook `axiom`s remain trust
-item T2, and dynamic register state remains the boot predicate's business.
-
-### The regeneration workflow
-
-`.github/workflows/sail-regen.yml` runs `--deps`, `--make-config`, `--sp1`, and `--stock` on
-GitHub-hosted runners: on demand, monthly, and on every pull request that touches
-`scripts/sail-config/`, the generated tree, `lake-manifest.json` (a lean-sail re-pin), or the
-workflow itself. It caches the opam root keyed by `OCAML_VERSION` +
-`SAIL_SHA` (the compiler build measured 6.5 min cold on `ubuntu-latest`, seconds warm; each
-regeneration 12–16 min; the whole job ≈ 36 min cold), checks that the committed config is base ⊕ overlay for the
-pinned sail-riscv, and fails on any byte difference between the regenerated model and the
-in-tree copy (`--sp1`, the idempotence gate) while also reporting identity against the opencompl
-base (`--stock`). Locally, `scripts/check_pins.sh` checks the tree's hash against the row in
-`docs/release-audit.md`, so a hand edit to the generated tree fails the fast gate before CI
-regenerates.
-
-## The runtime/model pairing rule
-
-⚠ **The generated model and the `lean-sail` runtime must move together.** A v4-generated
-snapshot against `lean-sail` v5 fails with `unknown namespace Sail.ConcurrencyInterfaceV2` — v5
-deleted that namespace and replaced it with `Sail.ArchSem.*`, while older generated models still
-emit `LeanRV64D.ConcurrencyInterfaceV2` shims that reference it.
-
-There is no way to dodge this by choosing a base: upstream `f700c484` is a *single* daily
-regeneration that both removed the V2 shims **and** changed `MemoryOpResult`'s error arm from
-`ExceptionType` to `physaddr × ExceptionType`. Every v5-compatible base carries the memory
-refactor.
-
-## Re-pinning against a new base
-
-opencompl regenerates the model *daily*, so any re-pin is a proof-churn event against the
-symbolically-reduced generated internals, independently of the config:
-
-1. Update `SAIL_SHA`/`SAIL_RISCV_SHA`/`BASE_SNAPSHOT` in the generation script to the new
-   pairing (opencompl's nightly clones both at head; recover its inputs by commit-time window if
-   needed — that is how the current pins were discovered).
-2. `--stock` until byte-identical vs the new base; then `--make-config` (the stock config may
-   have gained keys) and `--sp1`; audit that the base diff is still exactly the four sites.
-3. `--install`, commit the tree with the provenance record, and refresh the pin table in
-   `docs/release-audit.md` (the Sail/sail-riscv rows and the tree-hash row).
-4. Expect churn in `Model/SailMemory.lean` and the `Proofs/Sail/` decode-reduction lemmas that
-   pattern-match generated internals. The `11d8fa21` base carried a substantial such event: 158
-   files, +2333/−1040 over the previous `793034f3` pin — beyond the `MemoryOpResult` change it
-   moved `pmaCheck` to `Result Phys_Mem_Access_Info ExceptionType`, rewrote `VmemUtils`
-   (`plat_misaligned_exception` went monadic → pure), added fields to `PMA` and a *leading*
-   field to `pma_check_opts` (breaking positional constructors), and restricted
-   `plat_{me,mi}deleg_delegatable_bits` from all-ones to masks. `try_step`, `fetch`,
-   `ext_decode`, and the `execute_*` functions were unchanged.
-
-An upstream CMake option will replace the script's config-overwrite step with a plain `-D` flag
-when it lands: **riscv/sail-riscv [#1861](https://github.com/riscv/sail-riscv/pull/1861)**, since
-2026-08-19 reduced to a per-arch `SAIL_FORMAL_CONFIG_<ARCH>` override (see below). It and the
-related #1879 are **open and unmerged**; upstream `master` (`8f91355e`, 2026-08-14) has neither, so
-the `cp $CFG` + hash-guard pipeline stays as documented and nothing here is blocked on either.
-
-**Why the generated package must keep the name `Lean_RV64D` / `LeanRV64D`** (checked 2026-08-19,
-prompted by pmundkur asking on #1861 whether #1879 covers our use case). #1879 — "Refactor cmake
-build to enable custom Lean builds", a Lean-only alternative that hoists the per-backend blocks
-into `add_{rocq,lean,lem}_targets` functions and adds `CUSTOM_LEAN_CONFIG` + `CUSTOM_LEAN_ARCH` —
-derives both the output directory and the module name from `CUSTOM_LEAN_ARCH`
-(`string(TOUPPER …)`, `-o "Lean_${arch_uppercase}"`) **and forbids the only value we can use**:
-
-```cmake
-if ((${CUSTOM_LEAN_ARCH} STREQUAL "rv32d") OR (${CUSTOM_LEAN_ARCH} STREQUAL "rv64d"))
-    message(FATAL_ERROR "The value of CUSTOM_LEAN_ARCH (...) cannot be 'rv32d' or 'rv64d'.")
-```
-
-Any other value renames the package. Until 2026-09-20 that was not cosmetic: the (now retired)
-`riscv-lean` dependency transitively required package **`Lean_RV64D`** from
-`opencompl/sail-riscv-lean` at floating `rev = "main"`, and our root `lakefile.toml` requires it
-by that same real package name precisely so Lake **dedups onto our one configured copy**; a rename
-to `Lean_SP1` would have pulled the stock CLINT-enabled build in *as well*. With the dependency
-gone the name is kept for the remaining reason: renaming would touch 994 `LeanRV64D` occurrences
-across the 161 generated files and destroy the `--stock` / `--sp1` byte-identity gates below, which are the
-evidence for "four config keys, not patched Lean".
-
-So the ask upstream is narrow: let a custom config **replace** the `rv64d` family (as #1861 does
-by deriving the arch from the config stem), or decouple output name from arch name with a third
-variable. #1879 also uses `set(CACHE{VAR} …)`, added in **CMake 4.2** (confirmed in
-`cmake --help-command set`), while the repo's baseline is 3.20 and its own CI runs 3.20.0 / 4.1.2 —
-on those, `CUSTOM_LEAN_ARCH` gets no default and a config-only invocation should fail to configure
-on the `STREQUAL` line; CI is green only because no job exercises the custom path. (Inferred from
-the docs — only CMake 4.3.2 was available locally, where the custom path configures fine.)
-
-**The case-sensitivity loophole does not work — tested.** The guard is `STREQUAL "rv64d"`, which is
-case-sensitive, so `-DCUSTOM_LEAN_ARCH=RV64D` passes it and `TOUPPER` still yields the wanted
-`Lean_RV64D`. But the default `foreach (xlen IN ITEMS 32 64)` loop is unconditional and already
-claims that output. Configuring #1879's head (`e37a7ad4`) with
-`-DCUSTOM_LEAN_ARCH=RV64D -DCUSTOM_LEAN_CONFIG=…` fails with four errors, the first being
-
-```
-CMake Error at model/CMakeLists.txt:303 (add_custom_command):
-  Attempt to add a custom rule to output
-    …/model/Lean_RV64D/LeanRV64D.lean.rule
-```
-
-### Additive vs substitutive — the actual difference between the two PRs
-
-`riscv-lean` (opencompl's ISA-function layer, which this project no longer depends on) is not
-being inflexible; it consumes the *stock* model under the name upstream derives for it (`arch = rv64d` → `string(TOUPPER)` → `Lean_RV64D` / `LeanRV64D`), and `open
-LeanRV64D.Functions` / `LeanRV64D.readReg` follow from that. The unusual party is us: we do not
-want a *new* model, we want the *same* model *differently configured*, dropped in under the same
-name so every consumer picks it up unchanged. **The package name is the substitution seam.**
-
-- **#1879 is additive** — "build a custom Lean model *alongside* the standard ones". Its
-  `FATAL_ERROR` is not an oversight, it enforces that worldview; the collision test above shows it
-  is guarding something real.
-- **#1861 is substitutive** — the override *replaces* the default arch list, so nothing collides,
-  and the arch name comes from the config file's stem.
-
-There is no way to express substitution inside #1879's model. So we express it *outside* CMake.
-
-### The plan: get the substitution knob upstream, then delete the config hack
-
-**Chosen approach** (2026-08-19, revised the same day). Rather than absorb the renaming locally, ask
-for the ~10 lines upstream that make it unnecessary. #1861 was rewritten to exactly that and the
-`DEPENDS` half split out as [#1885](https://github.com/riscv/sail-riscv/pull/1885):
-
-```cmake
-    string(TOUPPER ${arch} arch_uc)
-    set(SAIL_FORMAL_CONFIG_${arch_uc} "" CACHE FILEPATH
-        "Configuration JSON the ${arch} formal backends are generated from instead of the default.")
-    if (SAIL_FORMAL_CONFIG_${arch_uc})
-        set(config_file "${SAIL_FORMAL_CONFIG_${arch_uc}}")
-        message(STATUS "Formal backends: ${arch} uses ${config_file}")
-    endif()
-```
-
-It sits in the default `foreach (xlen …)` loop, which already funnels every formal backend through
-one `config_file`, so it covers SMT/rmem/Rocq/Lean/Lem at once, adds no targets, renames nothing,
-and is **inert unless set** — so it applies to `master` as-is *and* unchanged on top of #1879's
-refactor. **Verified locally at master `8f91355e`**: configuring without the flag leaves the build
-rules unchanged; with it, the `generated_lean_rv64d` rule becomes
-`sail … --config /abs/path/to/config.json --lean … -o Lean_RV64D` — our config, upstream's name,
-upstream's target.
-
-When it lands, `--sp1` becomes one `-D` flag and the `cp` + `H0`/`H1` hash guard are deleted
-outright: `OUT`, the target name, the output path and the published package name are all unchanged,
-so there is no rename step and no downstream churn. **Expect one objection** — substitution means an
-artifact labelled `rv64d` need not come from the stock `rv64d` config, which is presumably why
-#1879 guards the standard names. It is opt-in behind an explicit `-D` and logged at configure time.
-
-**The alternatives we are not taking.** *Renaming our architecture to `Lean_SP1`* — the 161
-generated files would be free (the generator emits the new name consistently) and our own 586
-references across 64 files are a mechanical sed (and, since the `riscv-lean` retirement, nothing
-else names the package). *Generating as `SP1` and renaming the emitted tree back* — measured
-and it works (on the real 171-file snapshot the rename leaves zero residue in either direction and
-round-trips byte-identically), but a find-and-replace across generated output is a maintenance
-hazard we would own forever, and it weakens the "generated, never hand-edited" provenance story.
-Both stay on the shelf in case upstream declines substitution outright; the fallback of first
-resort is simply keeping the `cp` + hash guard, which works.
-
-The `riscv-lean` dependency (and the sibling `succinctlabs/riscv-lean` fork that pinned it) was
-retired on 2026-09-20: the chip specs are stated against `SP1Clean/Model/RV64Semantics.lean`, the
-monad-free Sail write values live in `SP1Clean/Model/SailPure.lean`, and
-`SP1Clean/Proofs/Sail/RV64Bridge.lean` proves the two equal, so the Sail side of the build is
-exactly lean-sail plus our generated snapshot.
+The narrow RvfiDii legacy-do Lake library is a temporary elaboration workaround (#6), not a
+generated-source modification. Coordinate its replacement with module-system support (#33);
+both require a compatible runtime/generator pairing.

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Gate the maintained documentation set and hand-written Lean module docstrings.
 
-Historical campaign notes belong in git history.  This check fails when a maintained source still
-links to one of the retired documents, when a relative Markdown link no longer resolves, or when a
-hand-written Lean module has no module docstring.  Generated Lean sources and retained external
-audit reports are intentionally outside the docstring/link-style policy.
+Check relative Markdown links, quoted repository paths, and hand-written Lean module docstrings.
+This checks resolution, not whether prose or theorem statements are semantically current.
+Generated Lean sources and retained external audit reports are outside this policy.
 """
 
 from __future__ import annotations
@@ -17,18 +16,6 @@ from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parent.parent
 
-RETIRED_DOCS = {
-    "docs/bus-model.md",
-    "docs/chip-standardization.md",
-    "docs/proposals/bus-representation-consolidation.md",
-    "docs/proposals/consolidation-progress.md",
-    "docs/agents/shard-completeness-handoff.md",
-    "docs/snapshots/compile-profile.md",
-    "docs/agents/cleanup-profile.md",
-    "docs/agents/cleanup-deferred.md",
-    "docs/agents/perf-findings.md",
-    "docs/agents/mul-operation-learnings.md",
-}
 
 LEAN_ROOTS = ("SP1Clean", "SP1CleanTest", "ToClean", "ToMathlib", "ToPolyFun")
 LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
@@ -44,8 +31,7 @@ def maintained_markdown() -> list[Path]:
     return sorted(
         path
         for path in paths
-        if relative(path) not in RETIRED_DOCS
-        and not relative(path).startswith("docs/audits/")
+        if not relative(path).startswith("docs/audits/")
     )
 
 
@@ -73,9 +59,9 @@ markdown = maintained_markdown()
 
 for source in markdown:
     text = source.read_text()
-    for retired in sorted(RETIRED_DOCS):
-        if retired in text:
-            failures.append(f"{relative(source)} still references retired `{retired}`")
+    for quoted in re.findall(r"`((?:SP1Clean|SP1CleanTest|ToClean|ToMathlib|ToPolyFun|docs|scripts)/[A-Za-z0-9_/.-]+)`", text):
+        if not (ROOT / quoted).exists():
+            failures.append(f"{relative(source)} cites missing path `{quoted}`")
     for match in LINK_RE.finditer(text):
         target = local_link_target(source, match.group(1))
         if target is not None and not target.exists():
@@ -88,7 +74,7 @@ for source in markdown:
 source_paths: list[Path] = []
 for root_name in LEAN_ROOTS:
     source_paths.extend((ROOT / root_name).rglob("*.lean"))
-source_paths.extend((ROOT / "scripts").glob("*.lean"))
+source_paths.extend((ROOT / "scripts").rglob("*.lean"))
 
 handwritten_lean = sorted(
     path
@@ -101,9 +87,6 @@ for source in handwritten_lean:
     text = source.read_text()
     if "/-!" not in text:
         failures.append(f"{relative(source)} has no module docstring (`/-! ... -/`)")
-    for retired in sorted(RETIRED_DOCS):
-        if retired in text:
-            failures.append(f"{relative(source)} still references retired `{retired}`")
 
 if failures:
     for failure in failures:
@@ -112,6 +95,6 @@ if failures:
     sys.exit(1)
 
 print(
-    "PASS: maintained documentation is current "
+    "PASS: documentation links and module docstrings resolve "
     f"({len(markdown)} Markdown files, {len(handwritten_lean)} hand-written Lean module docstrings)"
 )

@@ -1,36 +1,18 @@
-# Contributor and agent techniques
+# Specialized contributor notes
 
-These files contain maintained proof, build, provenance, and upstream-integration procedures. For
-the current theorem boundary, start with [`../architecture.md`](../architecture.md) and
-[`../release-audit.md`](../release-audit.md).
+Start with [contributing](../contributing.md), [semantics](../semantics.md) and
+[assurance](../assurance.md). Read Clean's pinned proving/performance documentation before local
+recipes.
 
-Read Clean's pinned upstream documentation first:
-`.lake/packages/Clean/doc/performance-problems.md`, `doc/proving-guide.md`, `AGENTS.md`, and
-`Clean/Air/README.md`. The files here specialize those rules to SP1.
+- [Proof patterns](proof-patterns.md): SP1-specific proof and performance pitfalls. The approved
+  complete API migration supersedes historical source-compatibility restrictions.
+- [Build profiling](build-profiling.md): measurement tools and interpretation.
+- [Porting a chip](porting-recipe.md): circuit/proof workflow while the current layout remains.
+- [Lean/Sail dependencies](lean-sail-notes.md): pairing and temporary compatibility choices.
+- [Clean extensions](clean-upstream.md): To-Upstream policy and canonical API gaps.
+- [Sail generation](sail-model-provenance.md): owned pipeline and platform configuration.
+- [Legacy Rust extraction](extraction.md): reproduction of migration evidence until retirement.
 
-- [proof-patterns.md](proof-patterns.md) — circuit proof recipes, performance landmines, and the
-  repository's cleanup discipline. Its source-stability and folded-term rules override generic
-  `mathlib-quality` transformations when they conflict.
-- [build-profiling.md](build-profiling.md) — which tool answers which build-time question
-  (whole build, one module, one declaration), how to read the profiler categories, and the
-  measurement protocol every build-time PR follows.
-- [porting-recipe.md](porting-recipe.md) — step-by-step chip-porting checklist.
-- [lean-sail-notes.md](lean-sail-notes.md) — Lean/Sail environment, immutable pins, and update
-  traps.
-- [clean-upstream.md](clean-upstream.md) — Clean fork state, upstream queue, and exit condition.
-- [sail-model-provenance.md](sail-model-provenance.md) — generated model provenance and
-  regeneration.
-- [extraction.md](extraction.md) — Rust constraint extraction and generated-artifact contract.
-- [sp1-upstream-draft.md](sp1-upstream-draft.md) — prepared SP1-side draft; nothing pushed.
-- [upstream-drafts.md](upstream-drafts.md) — prepared Clean issue/PR text; posting needs approval.
-
-Generated axiom records live in [`../snapshots/`](../snapshots/). Compile profiles are generated on
-demand with `scripts/profile_compile.sh` and `scripts/profile_aggregate.py` (per-module timings and
-Lean's category split), `scripts/build_semantics.py` (the cost joined to the layers, strata and
-headline-claim closures, the critical path, a before/after comparison) and the
-`build-experiment.yml` workflow (a controlled cold or warm build on the CI runner), and kept with
-the review that motivated them, not as evergreen documentation: [compile-profile-2026-09.md](compile-profile-2026-09.md) is the fork's compile-time
-baseline, [`../audits/2026-09-build-semantics.md`](../audits/2026-09-build-semantics.md) the
-cost-versus-claims investigation, and
-[`../audits/2026-09-build-time-campaign.md`](../audits/2026-09-build-time-campaign.md) the results
-of the campaign that followed it.
+Current progress belongs to [tracking issues](../roadmap.md). Keep profiles and experimental
+transcripts with their review artifact. The capstone definition manifest is a reviewed semantic
+input; trust reports are generated diagnostics, not a declaration census.

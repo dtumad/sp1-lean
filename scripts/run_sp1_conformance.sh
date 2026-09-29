@@ -23,11 +23,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 SP1_DIR="${SP1_DIR:-../sp1}"
-PIN=$(python3 -c "
-import re
-src = open('update_extracted.py').read()
-print(re.search(r'SP1_PINNED_COMMIT = \"([0-9a-f]{40})\"', src).group(1))
-")
+PIN=$(python3 -c 'import json; print(json.load(open("scripts/provenance.json"))["sp1"]["extractorRevision"])')
 
 ACTUAL=$(git -C "$SP1_DIR" rev-parse HEAD 2>/dev/null)
 if [[ "$ACTUAL" != "$PIN" ]]; then

@@ -32,7 +32,7 @@ echo "== A0 pins =="
 echo "sp1-lean:  $(git rev-parse HEAD)"
 echo "toolchain: $(cat lean-toolchain)"
 # The dependency graph is fully determined by lake-manifest.json (every pin is an immutable git
-# rev; scripts/check_pins.sh gates that below). Record it, and — when the package checkout is
+# rev; scripts/check_pins.py gates that below). Record it, and — when the package checkout is
 # present — gate that what is on disk is what the manifest says.
 python3 - <<'EOF' || fail=1
 import json, subprocess, sys
@@ -64,7 +64,7 @@ fi
 
 echo
 echo "== A1 recorded-pin cross-checks (gate) =="
-if scripts/check_pins.sh; then
+if scripts/check_pins.py; then
   :
 else
   echo "FAIL: a recorded pin value disagrees with the build graph (see above)"; fail=1
@@ -84,14 +84,6 @@ if python3 scripts/check_current_docs.py; then
   :
 else
   echo "FAIL: maintained documentation or module docstrings drifted (see above)"; fail=1
-fi
-
-echo
-echo "== A1 report citations (gate) =="
-if scripts/check_report_citations.sh; then
-  :
-else
-  echo "FAIL: a documented citation does not resolve (see above)"; fail=1
 fi
 
 echo
@@ -116,14 +108,6 @@ if scripts/check_shared_vocabulary.sh; then
   :
 else
   echo "FAIL: soundness/completeness vocabulary has duplicate owners"; fail=1
-fi
-
-echo
-echo "== A1 audit-surface index (gate) =="
-if scripts/check_audit_surface.sh; then
-  :
-else
-  echo "FAIL: docs/audit-surface.md is out of sync with the tree (see above)"; fail=1
 fi
 
 echo

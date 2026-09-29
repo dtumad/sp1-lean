@@ -128,12 +128,9 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
   also defaults to all cores. 16 threads on 4 vCPU cost a third of the CPU-seconds; 3 jobs × 2
   threads (`LEAN_NUM_THREADS=3` + `-j2` in `moreLeanArgs`) is −17 % wall on a cold build.
 - GitHub serves a job's log only after it completes; `gh run view --log` is empty in progress.
-- **The full-tree `lake lint` and the conformance gates run only in `build-full`**, which a PR
-  skips unless it carries the `ci:alignment` label. A PR that touches the alignment layers — or
-  anything generated, `ToClean`, the pins or the exporter — must carry that label, or its
-  regression lands on `main`: #51 added 3 963 generated definitions whose uniform binder block
-  made `unusedArguments` fire 384 times, PR CI was green, and `main`'s next `build-full` went
-  red. `guards` prints a notice naming the touched files when the label is missing.
+- Full-tree `lake lint`, export/conformance gates and both compiled trust scopes run in
+  `build-full` on every PR. It restores the exact core cache produced by `build`, so the
+  additional job builds the affected alignment closure. No label controls proof coverage.
 
 ## Measurement protocol for a build-time PR
 

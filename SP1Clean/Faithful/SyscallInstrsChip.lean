@@ -39,7 +39,7 @@ rather than a paraphrase. The eight messages that carry them are pinned by
 `syscallInstrsUnexpectedInteractions`. What is *not* yet proved is that each conjunct follows from
 its message's payload: that needs a provider for `Channels.publicValuesChannel` and
 `Channels.exitChannel`, which the ensemble does not have, and it is disclosed as the native-only-bus
-row in `docs/release-audit.md`.
+row in `docs/assurance.md`.
 
 ## What this file proves
 
@@ -1915,7 +1915,7 @@ verifier — states them as messages. Nothing is dropped in either clause. What 
 that the messages are honoured: `Channels.publicValuesChannel` still needs an authenticated
 provider. `Channels.exitChannel` already has the verifier pull and Halt-table producer, but its
 terminal-row policy must be extended before active syscall rows enter the soundness theorem.
-These integration obligations are disclosed in `docs/release-audit.md`.
+These integration obligations are disclosed in `docs/assurance.md`.
 
 Both clauses are stated against `⟨SyscallInstrsChip.circuit⟩`, the flat component registered in the
 ensemble. -/

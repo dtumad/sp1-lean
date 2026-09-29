@@ -26,7 +26,7 @@ of the strata of the constants in its **type**, not its proof and not its first 
 
 Why the type: it makes module altitude and audit altitude the same number. For a theorem `T`,
 everything in `Prf(T) \ Stmt(T)` is kernel-checked and cannot make `T` say something false, so the
-risk lives entirely in `Stmt(T)` (see `docs/audit-surface.md`). A declaration sitting above its
+risk lives entirely in `Stmt(T)` (see `docs/assurance.md`). A declaration sitting above its
 statement vocabulary is exactly one whose audit surface is narrower than its position suggests — and,
 concretely, one that a legitimate consumer below it cannot reach.
 

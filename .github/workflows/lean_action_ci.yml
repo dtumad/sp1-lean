@@ -45,19 +45,16 @@ name: Lean Action CI
 # per-chip Sail bridges and machine contracts, Proofs/Sail, Proofs/Completeness, Soundness,
 # Composition), the full test library, `lake lint` over everything, the witgen/dump conformance
 # gates, and both trust-policy scopes. It runs after `build` on every push to `main`, weekly, on a
-# dispatch with `alignment` set, and on a PR carrying the `ci:alignment` label — restoring the
-# exact core entry `build` just saved, so it only ever builds the alignment closure of the change
-# (the old separate workflow raced the core save and restored stale entries). It is not gated on
-# paths: a PR touching the alignment strata gets a notice from `guards` and opts in with the
-# label, so that PR CI stays a core build by default. Every build runs with `--wfail --iofail`: a
-# warning (the Mathlib standard linter set is on package-wide) or a stray `info:` note fails the
-# job. Measurement and tooling: docs/agents/build-profiling.md.
+# dispatch with `alignment` set, and on every PR. Restoring the exact core entry just saved
+# means only the affected alignment closure is rebuilt. No label is needed to obtain the full
+# proof, export and trust checks before merging. Every build runs with --wfail --iofail: warnings
+# and stray info diagnostics fail the job. Measurement and tooling: docs/agents/build-profiling.md.
 
 on:
   push:
     branches: ["main", "ci-testing"]
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
   schedule:
     - cron: "17 3 * * 1"
   workflow_dispatch:
@@ -102,7 +99,7 @@ jobs:
       - name: Committed witgen export is structurally clean
         run: scripts/check_witgen_export.sh
       - name: Recorded pins match the build graph
-        run: scripts/check_pins.sh
+        run: scripts/check_pins.py
       - name: Trust policy is well-formed
         run: python3 scripts/check_trust.py --validate-policy-only
       - name: Audit tooling regressions
@@ -113,22 +110,10 @@ jobs:
         run: scripts/check_sp1_field_singleton.sh
       - name: Shared shard vocabulary has one owner
         run: scripts/check_shared_vocabulary.sh
-      - name: Doc citations resolve
-        run: scripts/check_report_citations.sh
-      - name: Audit-surface index matches the tree
-        run: scripts/check_audit_surface.sh
+      - name: Documentation links and module docstrings
+        run: python3 scripts/check_current_docs.py
       - name: Layering contract holds
         run: scripts/check_layering.sh
-      - name: Alignment strata touched without the ci:alignment label?
-        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:alignment')
-        run: |
-          git fetch -q --depth=1 origin "${{ github.event.pull_request.base.sha }}"
-          touched=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD \
-            | grep -E '^(SP1Clean/(Faithful|Soundness|Composition|Alignment|Extracted|Proofs/Sail|Proofs/Completeness)/|SP1Clean/Proofs/Chips/[^/]+/(Bridge|Contracts)\.lean|SP1CleanTest/Alignment/|update_extracted\.py|export/)' || true)
-          if [ -n "$touched" ]; then
-            echo "::notice title=alignment layers touched::This PR changes alignment-layer files but has no ci:alignment label, so build-full will not run before merge:"
-            echo "$touched"
-          fi
 
   build:
     runs-on: ubuntu-latest
@@ -281,7 +266,7 @@ jobs:
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.alignment) ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci:alignment'))
+      github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 350
     concurrency:
@@ -340,19 +325,6 @@ jobs:
         run: timeout 5h lake --no-cache build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun backendGadgets
       - name: Full test library (lake build SP1CleanTest)
         run: timeout 5h lake build --wfail --iofail SP1CleanTest
-      - name: LoadByte fixed-table replacement evidence
-        id: loadbyte_evidence
-        env:
-          SP1_LOADBYTE_PR_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: scripts/check_loadbyte_static.sh
-      - name: Upload LoadByte replacement evidence
-        if: always() && steps.loadbyte_evidence.outcome != 'skipped'
-        uses: actions/upload-artifact@v4
-        with:
-          name: loadbyte-static-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .lake/build/loadbyte-static/
-          if-no-files-found: error
-          retention-days: 30
       - name: Save the alignment build cache
         if: success() || failure()
         uses: actions/cache/save@v4
@@ -366,17 +338,17 @@ jobs:
       # The committed export/witgen goldens must match a fresh regeneration byte-for-byte; the
       # exporter maps native rows through the `Faithful` reconfigure maps, so it needs the full
       # library built above even though the exportability battery itself is core.
-      - name: Assembled branch witness evidence
-        id: branch_ensemble_evidence
+      - name: Library examples and adversarial witnesses
+        id: examples
         env:
-          SP1_BRANCH_PR_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: scripts/check_branch_ensemble.sh
-      - name: Upload assembled branch evidence
-        if: always() && steps.branch_ensemble_evidence.outcome != 'skipped'
+          SP1_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_examples.py
+      - name: Upload example evidence
+        if: always() && steps.examples.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
-          name: branch-ensemble-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .lake/build/branch-ensemble/
+          name: examples-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lake/build/examples/
           if-no-files-found: error
           retention-days: 30
       - name: Witgen export matches a fresh regeneration

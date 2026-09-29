@@ -1,13 +1,13 @@
 # The witgen wire format (`version: 1`)
 
-The contract between the Lean-verified witness generators and any external consumer —
-first among them the Rust reference interpreter in `rust/witgen-interp/`. The committed
+This describes the transitional JSON export consumed by `rust/witgen-interp/`.
+The intended replacement is [Clean's direct Rust export](export.md). The committed
 artifacts under `export/witgen/` are instances of this format; `scripts/witgenExport.lean`
 is their only writer, and `scripts/check_witgen_export.sh` gates them.
 
 **Normative source.** This document is descriptive. The format is defined by the Clean
 pin's serializer — `Clean/Circuit/WitnessExport.lean` and `Clean/Circuit/Json.lean` at
-the rev recorded in `lakefile.toml` (currently `2dad7788`, fork `dtumad/clean`) — and the
+the revision recorded in `lakefile.toml` — and the
 evaluation semantics by `Clean/Circuit/WitnessIR.lean` (`FExpr.eval` and friends) and
 `Clean/Circuit/WitnessGeneration.lean` (`Circuit.witgen`). On any disagreement, the Lean
 code wins and this file gets fixed.

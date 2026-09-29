@@ -150,7 +150,7 @@ requiresModuleSystem = true
 # over the pinned riscv/sail-riscv sources with the SP1 platform config
 # `scripts/sail-config/sp1_rv64d_cfg.json` (`scripts/sail-config/generate_lean_rv64d.sh --install`
 # writes it; `--sp1` and `.github/workflows/sail-regen.yml` gate byte-identity with a fresh
-# regeneration; `scripts/check_pins.sh` checks the tree hash recorded in docs/release-audit.md;
+# regeneration; `scripts/check_pins.py` checks the tree hash recorded in docs/assurance.md;
 # provenance in docs/agents/sail-model-provenance.md). It equals the opencompl base `11d8fa21`
 # except the four generated platform-value sites controlled by two config keys. Stock upstream is
 # not usable: its CLINT and signature windows lie inside the address range SP1's chips bound

@@ -1,71 +1,19 @@
-# Documentation index
+# Documentation
 
-The top-level [`README.md`](../README.md) is the public entry point and [`AGENTS.md`](../AGENTS.md)
-is the contributor brief loaded by coding agents. Documents in this tree describe the current
-theorem boundary or provide an explicitly retained external audit record. Superseded proposals,
-handoffs, campaign queues, and timing snapshots are available from git history instead of living
-beside current claims.
+Start with the [repository README](../README.md). The maintained guides have distinct jobs:
 
-Each document has one role:
+- [Semantics and scope](semantics.md): durable execution contract and current theorem boundaries.
+- [Architecture](architecture.md): ownership, dependency direction and migration boundaries.
+- [Contributing](contributing.md): setup, changes and validation.
+- [Assurance](assurance.md): logical trust, semantic review and independent evidence.
+- [Export and integration](export.md): library consumers, backends and Rust comparison.
+- [Examples](examples.md): reproducible concrete witnesses and a small complete machine.
 
-| Document | Role |
-|---|---|
-| [`overview.md`](overview.md) | ten-minute technical orientation |
-| [`talk-examples.md`](talk-examples.md) | executable ADD mutations, complete counter arithmetization, and theorem boundaries |
-| [`loadbyte-static.md`](loadbyte-static.md) | fixed-byte LoadByte alternative, occurrence transport, regression matrix and scoped cost report |
-| [`verification-report.md`](verification-report.md) | self-contained external technical report |
-| [`release-audit.md`](release-audit.md) | reproducible pin, gate, and trust report |
-| [`audit-surface.md`](audit-surface.md) | short semantic definition inventory, mechanically gated |
-| [`layering.md`](layering.md) | structural layering and namespace contract |
-| [`architecture.md`](architecture.md) | module ownership, proof chain, and deliberate exceptions |
-| [`roadmap.md`](roadmap.md) | current native shard targets, status, acceptance gates, and separate follow-ups |
-| [`plugin-points.md`](plugin-points.md) | the circuit seams of the semantics core, their contracts, and current work by seam |
-| [`leanervm-comparison.md`](leanervm-comparison.md) | pinned comparison, capstone decisions, and possible shared contributions |
-| [`goal-overview.md`](goal-overview.md) | completed-state contract; never current status |
-| [Standalone backend conformance](../tools/backend-gadgets/README.md) | pinned Clean WASM/R1CS fixtures, setup, checks, and measured gadget costs |
-| [`witgen-wire-format.md`](witgen-wire-format.md) | witness-export wire format |
-| [`rust-integration-memo.md`](rust-integration-memo.md) | SP1-side witness-generation integration memo |
-| [`audits/2026-08-independent-semantic-audit.md`](audits/2026-08-independent-semantic-audit.md) | retained independent semantic review |
-| [`audits/2026-08-pr110-external-report-disposition.md`](audits/2026-08-pr110-external-report-disposition.md) | retained finding-by-finding external-review disposition |
-| [`audits/2026-08-unification-target-architecture.md`](audits/2026-08-unification-target-architecture.md) | unification campaign's measured architecture baseline and pin decision |
-| [`audits/2026-09-capstone-assessment.md`](audits/2026-09-capstone-assessment.md) | eight-PR provenance, reproduction evidence, confirmed defects, and finish-line assessment |
-| [`audits/2026-09-19-capstone-branch-review.md`](audits/2026-09-19-capstone-branch-review.md) | independent review of the full-state capstone branch: model, statement, installed proofs, findings |
-| [`audits/2026-09-build-semantics.md`](audits/2026-09-build-semantics.md) | build cost joined to the claim map: layers, import floor, hotspot mechanisms, per-cluster verdicts, proposals |
-| [`agents/`](agents/README.md) | maintained contributor techniques and provenance procedures |
-| [`trust-policy.md`](trust-policy.md) | compiled-library trust policy and diagnostic reports |
-| [`snapshots/capstone-contract.json`](snapshots/capstone-contract.json) | compiled capstone target/definition dependencies, excluding theorem proof bodies |
+[The roadmap](roadmap.md) links to current tracking issues; it does not duplicate their progress
+logs. [Contributor notes](agents/README.md) hold specialized proof, generation and profiling
+procedures. Historical independent reviews under [audits](audits/) are dated evidence, not the
+current status or architecture.
 
-> **Upstream authority: read Clean's own docs.** Read the pinned copy under
-> `.lake/packages/Clean/` or upstream at <https://github.com/Verified-zkEVM/clean>:
-> `doc/performance-problems.md`, `doc/proving-guide.md`, `AGENTS.md`, and
-> `Clean/Air/README.md`. [`agents/proof-patterns.md`](agents/proof-patterns.md) records only the
-> SP1-specific applications and cleanup constraints.
-
-## Read these first
-
-1. [`verification-report.md`](verification-report.md) — claim, evidence, limitations, and trust base.
-2. [`overview.md`](overview.md) — concise current implementation status.
-3. [`architecture.md`](architecture.md) — the whole-chip and whole-shard proof chain.
-4. [`release-audit.md`](release-audit.md) — machine-derived pins, gates, and axiom disclosures.
-5. [`audit-surface.md`](audit-surface.md) — the definitions requiring human semantic review.
-6. [`roadmap.md`](roadmap.md) — native capstone obligations and separate exact-AIR/verifier work.
-
-The release audit runs `scripts/check_release_surface.py`, which independently checks that all 25
-instruction identities retain a native definition, Formal/Bridge/Complete proof surface,
-whole-chip Rust oracle and faithfulness anchor, real-row satisfiability theorem, SP1 dump, and all
-three witgen artifacts. `scripts/check_current_docs.py` checks local Markdown links, rejects retired
-paths, and requires module documentation on hand-written Lean modules.
-
-`python3 scripts/check_capstone_contract.py` builds and checks the compiled shard target types,
-then compares their definition-dependency manifest. `--update` refreshes that manifest only after
-reviewing the type/semantic delta. The release harness runs it against the just-built oleans;
-changing the trust policy does not implicitly update this separate contract record. The gate
-records a conditional target while its implementation instances remain open.
-
-## Historical records
-
-Superseded internal design proposals and campaign handoffs are deliberately not kept in the working
-tree. Durable conclusions were moved into `architecture.md`, `roadmap.md`, `AGENTS.md`, source
-docstrings, and `agents/proof-patterns.md`. Use git history when reconstructing an old decision.
-The documents under `audits/` remain because they are review/measurement records rather than live
-design instructions.
+Source module docstrings describe individual APIs. Keep temporary restrictions explicit and
+attach an owning issue and an exit condition. Keep build reports, performance measurements and
+example output in ignored artifacts or the PR that uses them.

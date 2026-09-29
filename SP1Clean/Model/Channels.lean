@@ -21,7 +21,7 @@ Not every channel here corresponds to an SP1 `InteractionKind`. `Syscall` does (
 consumer is `SyscallCore`); `Exit` and `PublicValues` do **not** — SP1 states those bindings as
 direct chip-level `public_values` access, which Clean's flat AIR reserves to the verifier row, so
 they are factored through channels instead (upstream Clean's `Air/Vm.lean` requires the same shape
-of its own verifier). `docs/release-audit.md` discloses that as a native-only bus.
+of its own verifier). `docs/assurance.md` discloses that as a native-only bus.
 
 The last two are **declared but not yet ensemble members**. `kindOf` classifies both, so adding
 either to `sp1Ensemble` no longer risks folding it into State balance — but it does now owe
