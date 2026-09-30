@@ -120,7 +120,14 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
 - The `path:` list is part of an entry's version hash: editing it invalidates every entry, so it
   ships with a `SP1_CACHE_VERSION` bump and one cold transition.
 - A PR's entries live on `refs/pull/N/merge` and are invisible to `main`, so every merge used to
-  redo the PR's build; the `handoff` job passes the build to `main` as an artifact.
+  redo the PR's build. After all checks pass, `build-full` passes the completed core, alignment
+  and test build to `main` as an artifact. Lake still checks the merged tree's content hashes.
+- Mathlib's downloaded cache includes generated C but omits native objects. A separate cache,
+  keyed by toolchain and dependency pins, retains those objects and their traces for the
+  backend exporter. Only the full job saves it; downloaded oleans are not duplicated there.
+- Weekly runs and the manual `clean_build` input discard project outputs while reusing pinned
+  dependencies. The full job then restores only that run's fresh core, or starts cold if it is
+  unavailable. This catches stale project oleans, including imports of deleted modules.
 - Never save the cache from a cancelled job (a truncated `.olean` behind a written trace poisons
   every later restore); `main` runs queue instead of cancelling.
 - The 4-vCPU runner does not swap; the 5–11× CI-vs-solo inflation of big modules was **CPU
