@@ -1,7 +1,7 @@
 import SP1Clean.Native.Operations.LtOperationSigned.RawSpec
 import SP1Clean.Native.Operations.LtOperationSigned.Populate
 import SP1Clean.Native.Operations.LtOperationSigned.Defs
-import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Circuits.Gadgets.U16MSB
 
 /-! # `LtOperationSigned` — the `FormalAssertion` (Spec / soundness / completeness / contract)
@@ -109,8 +109,6 @@ theorem result_semantic {input : Inputs (ZMod p)}
        input.cols.result.u16_flags[0] + input.cols.result.u16_flags[1]
           + input.cols.result.u16_flags[2] + input.cols.result.u16_flags[3] = 1)) := by
   obtain ⟨his, _hirb, _hbmb, _hcmb, _hg5, hg7, hg9, hbm_eq, hcm_eq, h_uns⟩ := hs
-  obtain ⟨-, -, -, hb3⟩ := Word.lt_cases_of_isU64 hb
-  obtain ⟨-, -, -, hc3⟩ := Word.lt_cases_of_isU64 hcc
   have h01 : (0 : ZMod p) ≠ 1 := zero_ne_one'
   rcases his with hs0 | hs1
   · -- `is_signed = 0`: `bm = cm = 0`, the unsigned compare on the unbiased words.
@@ -118,8 +116,7 @@ theorem result_semantic {input : Inputs (ZMod p)}
     have hcm0 : input.cols.c_msb.msb = 0 := by rw [hs0] at hg9; linear_combination -hg9
     rw [hs0, hbm0, hcm0] at h_uns
     simp only [zero_mul, mul_zero, sub_zero, add_zero] at h_uns
-    have hbit := LtOperationUnsigned.result_semantic (isU64_top hb hb3) (isU64_top hcc hc3)
-      hir h_uns
+    have hbit := LtOperationUnsigned.result_semantic h_uns hir
     refine ⟨?_, fun _ => ?_, fun _ => ?_⟩
     · rw [hbit.1]
       simp only [hs0, if_neg h01, Word.toNat_def, Vector.getElem_mk, List.getElem_toArray,
@@ -130,18 +127,13 @@ theorem result_semantic {input : Inputs (ZMod p)}
       simp only [Word.toNat_def, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
         List.getElem_cons_succ] at key ⊢
       exact key
-    · exact h_uns.2.2.2.2.1
+    · exact LtOperationUnsigned.flags_sum_binary h_uns
   · -- `is_signed = 1`: `bm`/`cm` are the sign bits; the unsigned compare of the bias-flipped words.
     have hbm : input.cols.b_msb.msb = if input.b[3].val ≥ 32768 then 1 else 0 := hbm_eq hs1
     have hcm : input.cols.c_msb.msb = if input.cc[3].val ≥ 32768 then 1 else 0 := hcm_eq hs1
     rw [hs1] at h_uns
     simp only [one_mul] at h_uns
-    have hbU : (input.b[3] + 32768 - 65536 * input.cols.b_msb.msb).val < 2 ^ 16 := by
-      rw [hbm]; exact (adj_limb hb3).2
-    have hcU : (input.cc[3] + 32768 - 65536 * input.cols.c_msb.msb).val < 2 ^ 16 := by
-      rw [hcm]; exact (adj_limb hc3).2
-    have hbit := LtOperationUnsigned.result_semantic (isU64_top hb hbU) (isU64_top hcc hcU)
-      hir h_uns
+    have hbit := LtOperationUnsigned.result_semantic h_uns hir
     refine ⟨?_, fun h => absurd (h ▸ hs1) h01, fun h => absurd (h ▸ hs1) h01⟩
     rw [hbit.1]
     simp only [hs1, ↓reduceIte, toInt_compare_of_bias hb hcc hbm hcm]
@@ -163,6 +155,16 @@ theorem spec_populate {b cc : Word (ZMod p)} {is_signed is_real : ZMod p}
     U16MSBOperation.populate_msb_bool (by simpa using hb3)
   have hcmb : U16MSBOperation.populate_msb cc[3] = 0 ∨ U16MSBOperation.populate_msb cc[3] = 1 :=
     U16MSBOperation.populate_msb_bool (by simpa using hc3)
+  have hbtop : (b[3] + is_signed * 32768 -
+      65536 * (is_signed * U16MSBOperation.populate_msb b[3])).val < 2 ^ 16 := by
+    rcases hs_bin with hs0 | hs1
+    · simpa [hs0] using hb3
+    · simpa [hs1, hpmb] using (adj_limb hb3).2
+  have hctop : (cc[3] + is_signed * 32768 -
+      65536 * (is_signed * U16MSBOperation.populate_msb cc[3])).val < 2 ^ 16 := by
+    rcases hs_bin with hs0 | hs1
+    · simpa [hs0] using hc3
+    · simpa [hs1, hpmc] using (adj_limb hc3).2
   simp only [Spec, populate]
   refine ⟨hs_bin, hr_bin, ?_, ?_, h_gate, ?_, ?_, ?_, ?_, ?_⟩
   · -- `b_msb = is_signed * populate_msb` is boolean
@@ -182,12 +184,12 @@ theorem spec_populate {b cc : Word (ZMod p)} {is_signed is_real : ZMod p}
     by_cases hr1 : is_real = 1
     · subst hr1
       rw [if_pos rfl]
-      exact LtOperationUnsigned.spec_populate
+      exact LtOperationUnsigned.spec_populate (isU64_top hb hbtop) (isU64_top hcc hctop)
     · rw [if_neg hr1]
       have hr0 : is_real = 0 := Or.resolve_right hr_bin hr1
       subst hr0
       -- all-zero unsigned columns satisfy `LtOperationUnsigned.Spec` at `is_real = 0`
-      simp [LtOperationUnsigned.Spec]
+      exact LtOperationUnsigned.spec_zero _ _ rfl
 
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start

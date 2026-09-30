@@ -4,7 +4,7 @@ import SP1Clean.Circuits.Gadgets.U16Compare
 import SP1Clean.Native.Operations.MulOperation.Populate
 import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Circuits.Gadgets.IsEqualWord
-import SP1Clean.Native.Operations.LtOperationUnsigned.Populate
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Native.Operations.AddOperation.Populate
 
 /-! # `DivRemChip` — native witness generation (`populate`)

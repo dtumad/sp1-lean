@@ -9,7 +9,7 @@ import SP1Clean.Circuits.Types.AddressOperation
 import SP1Clean.Semantics.Specs.IsZero
 import SP1Clean.Semantics.Specs.IsZeroWord
 import SP1Clean.Semantics.Specs.IsEqualWord
-import SP1Clean.Circuits.Types.LtOperationUnsigned
+import SP1Clean.Semantics.Specs.LtUnsigned
 import SP1Clean.Circuits.Types.LtOperationSigned
 import Mathlib.Data.Fin.VecNotation
 
@@ -361,18 +361,6 @@ def resultWord (cols : Columns (ZMod p)) : Word (ZMod p) :=
 
 end SP1Clean.SubwOperation
 
-namespace SP1Clean.LtOperationUnsigned
-
-/-- Inputs for the native unsigned word comparison gadget. -/
-structure Inputs (F : Type) where
-  b : Word F
-  cc : Word F
-  cols : Circuits.Types.LtOperationUnsigned F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-end SP1Clean.LtOperationUnsigned
 
 namespace SP1Clean.LtOperationSigned
 

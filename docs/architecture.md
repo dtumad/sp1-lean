@@ -34,11 +34,17 @@ public entry points and private implementation details, with exposed definitions
 consumers need reduction. [#33](https://github.com/dtumad/sp1-lean/issues/33) owns that migration,
 including generated Sail prerequisites.
 
-The field/word zero tests, word equality and 16-bit comparison/high-bit gadgets follow this boundary:
+The field/word zero tests, word equality, 16-bit comparison/high-bit and unsigned word comparison
+gadgets follow this boundary:
 `Semantics/Specs/` owns their inputs, semantic relations and result interpretations;
 `Circuits/Gadgets/` owns their witness
 generation, circuits and bundled proofs. Legacy faithfulness imports the gadgets and their
 structural assertion relations from above.
+
+The unsigned comparison contract describes the selected limb and whole-word order. It also
+preserves inactive-row certificates with a nonzero selector: the selected limb and all lower
+limbs must agree. Equivalence with the AIR equations is proved inside the gadget; consumers
+do not need those equations to interpret the result.
 
 The bitwise arithmetic, bus message types, byte predicates and channel declarations also use
 module mode. They remain below the gadgets and contain no Sail or generated-oracle dependency.
@@ -47,8 +53,8 @@ DivRem's public row contract lives in `Semantics/Specs/DivRem`, with the pure RV
 `Semantics/ISA/RV64` and its native row in `Circuits/Types/DivRem`. Comparison and product-cluster
 contracts live under `Circuits/Gadgets/DivRem`: they describe implementation evidence, including
 the intermediate raw assertions, and are not dependencies of the public semantic contract.
-Those implementation modules still use legacy Mul/Lt gadgets; converting them to module mode
-depends on migrating those gadgets' public interfaces.
+The comparison cluster uses the pure unsigned comparison contract. The remaining aggregate
+operation contracts and product gadget still need migration before these clusters can use module mode.
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,

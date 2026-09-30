@@ -2,7 +2,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
 import SP1Clean.Model.ByteTable
 import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Circuits.Gadgets.U16MSB
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit

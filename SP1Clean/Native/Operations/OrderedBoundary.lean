@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Contracts.OrderedBoundary
 import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 import ToClean.Circuit.InteractionRecovery
 
 /-! # A constrained ordered boundary link
@@ -80,8 +80,8 @@ def circuit (name : String) : GeneralFormalCircuit (ZMod p) Inputs unit where
   soundness := by
     circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec, channel]
     obtain ⟨previousBound, currentBound, compare, one⟩ := h_holds
-    have result := (LtOperationUnsigned.result_semantic previousBound currentBound rfl
-      (compare ⟨fun _ => ⟨previousBound, currentBound⟩, Or.inr rfl⟩)).1
+    have result := (LtOperationUnsigned.result_semantic
+      (compare ⟨fun _ => ⟨previousBound, currentBound⟩, Or.inr rfl⟩) rfl).1
     change input_comparison_u16_compare_operation_bit =
       if Word.toNat input_previous < Word.toNat input_current then 1 else 0 at result
     rw [sub_eq_zero.mp one] at result
@@ -92,8 +92,8 @@ def circuit (name : String) : GeneralFormalCircuit (ZMod p) Inputs unit where
   completeness := by
     circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec, ProverAssumptions, Spec, channel]
     obtain ⟨⟨previousBound, currentBound, increases⟩, comparisonEq⟩ := h_assumptions
-    have compare := LtOperationUnsigned.spec_populate (b := input_previous) (cc := input_current)
-    have result := (LtOperationUnsigned.result_semantic previousBound currentBound rfl compare).1
+    have compare := LtOperationUnsigned.spec_populate (b := input_previous) (cc := input_current) previousBound currentBound
+    have result := (LtOperationUnsigned.result_semantic compare rfl).1
     rw [← comparisonEq] at compare result
     refine ⟨previousBound, currentBound,
       ⟨⟨fun _ => ⟨previousBound, currentBound⟩, Or.inr rfl⟩, compare⟩, ?_⟩

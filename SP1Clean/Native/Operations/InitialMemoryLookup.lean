@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Contracts.InitialMemory
 import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 
 /-! # A Clean-native lookup of canonical initial-memory bytes
 
@@ -75,24 +75,24 @@ theorem populate?_isSome_iff (memory : ByteMemory) (limit address : ℕ) :
     (populate? (p := p) memory limit address).isSome = true ↔ address < limit := by
   simpa only [populate?, Option.isSome_map] using memory.intervalAt?_isSome_iff limit address
 
+omit [Fact (2 ^ 17 < p)] in
 private theorem compare_lower {address lower : Word (ZMod p)}
     {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
-    (addressBound : Word.isU64 address) (lowerBound : Word.isU64 lower)
     (spec : LtOperationUnsigned.Spec ⟨address, lower, cols, 1⟩)
     (zero : cols.u16_compare_operation.bit = 0) : Word.toNat lower ≤ Word.toNat address := by
-  have equal := (LtOperationUnsigned.result_semantic addressBound lowerBound rfl spec).1
+  have equal := (LtOperationUnsigned.result_semantic spec rfl).1
   change cols.u16_compare_operation.bit = if Word.toNat address < Word.toNat lower then 1 else 0 at equal
   rw [zero] at equal
   split at equal
   · exact False.elim (zero_ne_one equal)
   · omega
 
+omit [Fact (2 ^ 17 < p)] in
 private theorem compare_upper {address upper : Word (ZMod p)}
     {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
-    (addressBound : Word.isU64 address) (upperBound : Word.isU64 upper)
     (spec : LtOperationUnsigned.Spec ⟨address, upper, cols, 1⟩)
     (one : cols.u16_compare_operation.bit - 1 = 0) : Word.toNat address < Word.toNat upper := by
-  have equal := (LtOperationUnsigned.result_semantic addressBound upperBound rfl spec).1
+  have equal := (LtOperationUnsigned.result_semantic spec rfl).1
   change cols.u16_compare_operation.bit = if Word.toNat address < Word.toNat upper then 1 else 0 at equal
   rw [sub_eq_zero.mp one] at equal
   split at equal
@@ -148,8 +148,8 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
     have ranges := memory.fixedTable_sound limit limitBound _ member
     have lower := lowerSpec ⟨fun _ => ⟨addressBound, ranges.1⟩, Or.inr rfl⟩
     have upper := upperSpec ⟨fun _ => ⟨addressBound, ranges.2.1⟩, Or.inr rfl⟩
-    have inside := And.intro (compare_lower addressBound ranges.1 lower lowerZero)
-      (compare_upper addressBound ranges.2.1 upper upperOne)
+    have inside := And.intro (compare_lower lower lowerZero)
+      (compare_upper upper upperOne)
     exact ⟨addressBound, memory.fixedTable_read limit limitBound _ member _ inside⟩
   completeness := by
     circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec,
@@ -157,9 +157,11 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
     obtain ⟨addressBound, member, lowerLe, upperLt, lowerEq, upperEq⟩ := h_assumptions
     have ranges := memory.fixedTable_sound limit limitBound _ member
     have lowerSpec := LtOperationUnsigned.spec_populate (b := input_address) (cc := input_interval_lower)
+      addressBound ranges.1
     have upperSpec := LtOperationUnsigned.spec_populate (b := input_address) (cc := input_interval_upper)
-    have lowerResult := (LtOperationUnsigned.result_semantic addressBound ranges.1 rfl lowerSpec).1
-    have upperResult := (LtOperationUnsigned.result_semantic addressBound ranges.2.1 rfl upperSpec).1
+      addressBound ranges.2.1
+    have lowerResult := (LtOperationUnsigned.result_semantic lowerSpec rfl).1
+    have upperResult := (LtOperationUnsigned.result_semantic upperSpec rfl).1
     rw [← lowerEq] at lowerSpec lowerResult
     rw [← upperEq] at upperSpec upperResult
     dsimp only at lowerResult upperResult

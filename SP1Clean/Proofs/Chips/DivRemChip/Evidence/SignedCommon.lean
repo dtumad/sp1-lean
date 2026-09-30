@@ -108,7 +108,6 @@ equations on a nonzero divisor. `max(|c|, 1)` collapses to `|c|`, the range-chec
 signed 64-bit and signed word proofs. -/
 lemma absRemainder_lt_absC {cols : Columns (ZMod p)} (hir : cols.is_real = 1)
     (hcnz : ¬ (cols.c[0] = 0 ∧ cols.c[1] = 0 ∧ cols.c[2] = 0 ∧ cols.c[3] = 0))
-    (habsRU : Word.isU64 cols.abs_remainder) (habsCU : Word.isU64 cols.abs_c)
     (hisZero : IsZeroWordOperation.Spec ⟨cols.c, cols.is_c_0, cols.is_real⟩)
     (hltSpec : LtOperationUnsigned.Spec ⟨cols.abs_remainder, cols.max_abs_c_or_1,
       cols.remainder_lt_operation, cols.remainder_check_multiplicity⟩)
@@ -137,8 +136,7 @@ lemma absRemainder_lt_absC {cols : Columns (ZMod p)} (hir : cols.is_real = 1)
     rw [hzeroResult] at e302; linear_combination e302
   have hmaxEq : cols.max_abs_c_or_1 = cols.abs_c := by
     apply Vector.ext; intro i hi; interval_cases i <;> assumption
-  have hmaxU : Word.isU64 cols.max_abs_c_or_1 := hmaxEq ▸ habsCU
-  have hbit := (LtOperationUnsigned.result_semantic habsRU hmaxU hrcm hltSpec).1
+  have hbit := (LtOperationUnsigned.result_semantic hltSpec hrcm).1
   have hbit1 : cols.remainder_lt_operation.u16_compare_operation.bit = 1 := by
     rw [hrcm] at e307; linear_combination -e307
   rw [hbit1] at hbit

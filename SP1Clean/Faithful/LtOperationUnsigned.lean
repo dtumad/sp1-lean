@@ -5,8 +5,7 @@ import Mathlib.Tactic.Tauto
 import Mathlib.Tactic.ITauto
 import Mathlib.Tactic.Linarith
 import Mathlib.Data.ZMod.Basic
-import SP1Clean.Native.Operations.LtOperationUnsigned.RawSpec
-import SP1Clean.Native.Operations.LtOperationUnsigned.Defs
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Model.SP1Constraint
 import SP1Clean.Model.InteractionProjection
 import ToClean.Circuit.InteractionRecovery
@@ -44,7 +43,8 @@ theorem ltUnsigned_constraints_faithful (b cc : Word (ZMod p))
     List.Forall, List.cons_append, List.nil_append,
     Interaction.toProp_send_byte, ByteOpcode.constrainField_six,
     ByteOpcode.constrain_Range, val_16, one_ne_zero, ne_eq, not_false_eq_true, true_implies,
-    SP1Clean.LtOperationUnsigned.RawSpec, SP1Clean.U16CompareOperation.RawSpec,
+    SP1Clean.LtOperationUnsigned.RawSpec, SP1Clean.LtOperationUnsigned.Selectors,
+    SP1Clean.U16CompareOperation.RawSpec,
     Nat.cast_zero, Nat.cast_one,
     zero_add, sub_self, mul_zero, true_and, and_assoc, bool_iff,
     show (2 : ℕ) ^ 16 = 65536 by norm_num]
