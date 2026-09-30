@@ -34,7 +34,7 @@ public entry points and private implementation details, with exposed definitions
 consumers need reduction. [#33](https://github.com/dtumad/sp1-lean/issues/33) owns that migration,
 including generated Sail prerequisites.
 
-The field/word zero tests, word equality, 16-bit comparison/high-bit and unsigned word comparison
+The field/word zero tests, word equality, 16-bit comparison/high-bit and signed/unsigned word comparison
 gadgets follow this boundary:
 `Semantics/Specs/` owns their inputs, semantic relations and result interpretations;
 `Circuits/Gadgets/` owns their witness
@@ -45,6 +45,12 @@ The unsigned comparison contract describes the selected limb and whole-word orde
 preserves inactive-row certificates with a nonzero selector: the selected limb and all lower
 limbs must agree. Equivalence with the AIR equations is proved inside the gadget; consumers
 do not need those equations to interpret the result.
+
+Signed comparison selects unsigned order with zero sign columns, or active signed order with
+the operands' high bits recorded. The latter compares sign-biased words through the unsigned
+contract. Its public result gives whole-word order and detects equality in either mode, so branch
+decisions need no separate mode condition for equality. Padding retains the unsigned contract's
+complete certificate domain.
 
 The bitwise arithmetic, bus message types, byte predicates and channel declarations also use
 module mode. They remain below the gadgets and contain no Sail or generated-oracle dependency.

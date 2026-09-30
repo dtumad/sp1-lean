@@ -10,7 +10,7 @@ import SP1Clean.Semantics.Specs.IsZero
 import SP1Clean.Semantics.Specs.IsZeroWord
 import SP1Clean.Semantics.Specs.IsEqualWord
 import SP1Clean.Semantics.Specs.LtUnsigned
-import SP1Clean.Circuits.Types.LtOperationSigned
+import SP1Clean.Semantics.Specs.LtSigned
 import Mathlib.Data.Fin.VecNotation
 
 /-! # Consolidated specs — operation gadgets
@@ -361,20 +361,6 @@ def resultWord (cols : Columns (ZMod p)) : Word (ZMod p) :=
 
 end SP1Clean.SubwOperation
 
-
-namespace SP1Clean.LtOperationSigned
-
-/-- Inputs for the native signed/unsigned word comparison selector gadget. -/
-structure Inputs (F : Type) where
-  b : Word F
-  cc : Word F
-  cols : Circuits.Types.LtOperationSigned F
-  is_signed : F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-end SP1Clean.LtOperationSigned
 
 namespace SP1Clean.BitwiseOperation
 

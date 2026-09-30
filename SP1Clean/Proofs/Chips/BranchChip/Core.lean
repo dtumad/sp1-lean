@@ -209,9 +209,9 @@ theorem soundness :
       Vector.getElem_mapRange, circuit_norm] using hsem
   · intro hr1
     change input_is_real = 1 at hr1
-    have h_lt_spec := LtOperationSigned.result_semantic hrs1U hrs2U hr1
-      (h_lt ⟨hrs1U, hrs2U, h_bin, h_sig_bin⟩)
-    obtain ⟨h_bit, h_eqf, -⟩ := h_lt_spec
+    have h_lt_spec := LtOperationSigned.result_semantic
+      (h_lt ⟨hrs1U, hrs2U, h_bin, h_sig_bin⟩) hr1
+    obtain ⟨h_bit, h_eqf⟩ := h_lt_spec
     simp only [circuit_norm] at h_bit h_eqf
     dsimp only [rs1, rs2] at hrs1eq hrs2eq
     rw [hrs1eq, hrs2eq] at h_bit h_eqf
@@ -793,8 +793,9 @@ theorem completeness :
     · rw [hsumreal, h]
       simp
     · rw [hsumreal, h, one_mul]
-      obtain ⟨h_bit, h_eqf, h_eqbin⟩ :=
-        LtOperationSigned.result_semantic hrs1U hrs2U h h_lt_spec
+      have h_eqbin := LtOperationSigned.flags_sum_binary h_lt_spec
+      obtain ⟨h_bit, h_eqf⟩ :=
+        LtOperationSigned.result_semantic h_lt_spec h
       simp only [circuit_norm] at h_bit h_eqf h_eqbin
       rw [hrs1eq, hrs2eq] at h_bit h_eqf
       have hdec := h_dec h
