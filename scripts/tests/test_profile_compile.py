@@ -54,9 +54,9 @@ if case == "overflow":
     print("error: stack overflow", file=sys.stderr)
     sys.exit(0)
 print("cumulative profiling times:", file=sys.stderr)
-print("\\timport 2ms", file=sys.stderr)
+print("\\timport " + ("1e+03ms" if case == "scientific" else "2ms"), file=sys.stderr)
 if case != "partial":
-    print("\\tmodule linting 0.1ms", file=sys.stderr)
+    print("\\tmodule linting " + ("6.25e-4ms" if case == "scientific" else "0.1ms"), file=sys.stderr)
 if case in ("error", "warning"):
     print(f"Example.lean:1:0: {case}: unexpected diagnostic")
 ''')
@@ -111,6 +111,12 @@ raise SystemExit("profiling must not signal unrelated processes")
         result = self.run_profile("SP1Clean/Missing", SKIP_BUILD="1")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("no modules selected", result.stderr)
+
+    def test_scientific_notation_is_a_complete_report(self):
+        # Lean prints e.g. `import 1e+03ms` on real, successful compiler runs.
+        result = self.run_profile(SKIP_BUILD="1", PROFILE_CASE="scientific")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(all(r["exit"] == 0 for r in self.measurements()))
 
     def test_failed_and_zero_exit_incomplete_runs_fail_the_sweep(self):
         for case in ("exit", "empty", "overflow", "partial", "error", "warning"):
