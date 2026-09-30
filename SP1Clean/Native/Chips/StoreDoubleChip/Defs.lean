@@ -35,15 +35,15 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native StoreDouble-chip row (Rust field order). The reader and memory blocks reuse the project
-substrate (`Extracted.AddressOperation` is still a standalone generated module — the other loads and
-stores compose the same gadget; `Extracted.MemoryAccessCols` lives in the generated `MemoryAccess`
+substrate (`Circuits.Types.AddressOperation` is still a standalone generated module — the other loads and
+stores compose the same gadget; `Circuits.Types.MemoryAccessCols` lives in the generated `MemoryAccess`
 struct carrier). `Faithful.StoreDoubleChip.storeDoubleChipReconfigure` is the sole bridge to Rust's
 separately generated whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
-  address_operation : Extracted.AddressOperation F
-  memory_access : Extracted.MemoryAccessCols F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
+  address_operation : Circuits.Types.AddressOperation F
+  memory_access : Circuits.Types.MemoryAccessCols F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
@@ -55,9 +55,9 @@ committed CPUState / I-type-adapter / memory-access columns. The stored word is 
 witnessed output, not an input. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ITypeReader F
-  memory_access : Extracted.MemoryAccessCols F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ITypeReader F
+  memory_access : Circuits.Types.MemoryAccessCols F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -92,7 +92,7 @@ provable_struct_eval_lemmas Inputs
   rw [← ProvableStruct.eval_eq_eval, eval_inputs]
 
 /-- The recombined low clock `clk_0_16 + clk_16_24 · 2^16` (matching SP1's `clk_low`). -/
-@[reducible] def clkLow (state : Extracted.CPUState (ZMod p)) : ZMod p :=
+@[reducible] def clkLow (state : Circuits.Types.CPUState (ZMod p)) : ZMod p :=
   state.clk_0_16 + state.clk_16_24 * 65536
 
 /-- Compose the four column blocks as Clean sub-circuits and assemble the extracted `Columns`.

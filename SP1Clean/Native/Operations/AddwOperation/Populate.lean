@@ -1,3 +1,4 @@
+import Mathlib.Tactic.IntervalCases
 import SP1Clean.Math.Word
 import SP1Clean.FormalModel.Contracts.Operations
 import Clean.Circuit.Basic

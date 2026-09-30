@@ -22,7 +22,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 omit [Fact (2 ^ 17 < p)] in
 /-- Canonical address limbs represent the same wrapped RV64 effective address as Sail. -/
 private theorem address_spec_value (input : AddressOperation.Inputs (ZMod p))
-    (cols : Extracted.AddressOperation (ZMod p))
+    (cols : Circuits.Types.AddressOperation (ZMod p))
     (spec : AddressOperation.Spec input cols)
     (base : Word.isU64 input.b) (immediate : Word.isU64 input.cc) :
     Address.toNat cols.addr_operation.value = (AddressOperation.effectiveAddress input).toNat := by

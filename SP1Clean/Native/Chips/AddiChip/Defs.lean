@@ -2,7 +2,7 @@ import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.Proofs.Operations.AddOperation.Formal
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.ITypeReader
--- for `eval_registerAccessCols`: it is a lemma about the *shared* `Extracted.RegisterAccessCols`
+-- for `eval_registerAccessCols`: it is a lemma about the *shared* `Circuits.Types.RegisterAccessCols`
 -- struct (I-type and R-type readers both nest it), but it currently lives in the R-type reader's
 -- namespace. Moving it to `Native/Readers/RegisterAccessCols.lean` would rename it at ~15 call
 -- sites, so it stays put and I-type consumers import it here.

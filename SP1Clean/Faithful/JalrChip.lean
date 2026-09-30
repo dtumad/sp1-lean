@@ -28,6 +28,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -111,10 +112,10 @@ private theorem vec4_eta {F : Type} (value : Vector F 4) :
 
 @[circuit_norm] private theorem evalAddOperationColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : AddOperation.Columns (Expression F)) :
+    (cols : Circuits.Types.AddOperation (Expression F)) :
     Eval.eval env cols =
       ({ value := Eval.eval env cols.value } :
-        AddOperation.Columns F) := by
+        Circuits.Types.AddOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -139,7 +140,7 @@ theorem eval_jalrChipDirectOutput
   have hinputEval := eval_inputFirstRow input locals data
   rw [JalrChip.eval_inputs, JalrChip.Inputs.mk.injEq] at hinputEval
   refine ⟨hinputEval.1, hinputEval.2.1, hinputEval.2.2, ?_, ?_, ?_⟩
-  · rw [evalAddOperationColumns, AddOperation.Columns.mk.injEq]
+  · rw [evalAddOperationColumns, Circuits.Types.AddOperation.mk.injEq]
     apply Vector.ext
     intro i hi
     rw [← ProvableType.getElem_eval_fields
@@ -154,7 +155,7 @@ theorem eval_jalrChipDirectOutput
     · exact eval_local_inputFirstRow input locals data 1 (by decide)
     · exact eval_local_inputFirstRow input locals data 2 (by decide)
     · exact eval_local_inputFirstRow input locals data 3 (by decide)
-  · rw [evalAddOperationColumns, AddOperation.Columns.mk.injEq]
+  · rw [evalAddOperationColumns, Circuits.Types.AddOperation.mk.injEq]
     apply Vector.ext
     intro i hi
     rw [← ProvableType.getElem_eval_fields
@@ -417,7 +418,7 @@ private theorem nativeConstraintsDecompose
 
 @[circuit_norm] private theorem evalITypeReader
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.ITypeReader (Expression F)) :
+    (cols : Circuits.Types.ITypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a
          op_a_memory := Eval.eval env cols.op_a_memory
@@ -425,7 +426,7 @@ private theorem nativeConstraintsDecompose
          op_b := Eval.eval env cols.op_b
          op_b_memory := Eval.eval env cols.op_b_memory
          op_c_imm := Eval.eval env cols.op_c_imm } :
-        Extracted.ITypeReader F) := by
+        Circuits.Types.ITypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -450,10 +451,10 @@ private def rustColumns
     adapter := Eval.eval env input.adapter
     add_operation := Eval.eval env
       ({ value := jumpValue offset } :
-        AddOperation.Columns (Expression (ZMod p)))
+        Circuits.Types.AddOperation (Expression (ZMod p)))
     op_a_operation := Eval.eval env
       ({ value := linkValue offset } :
-        AddOperation.Columns (Expression (ZMod p)))
+        Circuits.Types.AddOperation (Expression (ZMod p)))
     lsb := Expression.eval env (lsbValue offset) }
 
 private def rustCpuMeaning

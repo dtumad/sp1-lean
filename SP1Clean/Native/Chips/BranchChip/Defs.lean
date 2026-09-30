@@ -177,7 +177,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   let next_pc ← witnessVectorIR 3
     (nextPcIR #v[input.state.pc[0], input.state.pc[1], input.state.pc[2]]
       input.adapter.op_c_imm is_branching input.is_real)
-  let lt_cols ← witness (var := Var Extracted.LtOperationSigned)
+  let lt_cols ← witness (var := Var Circuits.Types.LtOperationSigned)
     (LtOperationSigned.populateFE rs1WordV rs2WordV (is_blt + is_bge) input.is_real)
   let cmp := lt_cols
   assertion LtOperationSigned.circuit ⟨rs1WordV, rs2WordV, lt_cols, is_blt + is_bge, input.is_real⟩
@@ -265,7 +265,7 @@ cells are, in order, the six opcode flags, `is_branching`, the three `next_pc` l
         var { index := offset + 4 },
         var { index := offset + 5 },
         var { index := offset + 6 },
-        varFromOffset Extracted.LtOperationSigned (offset + 10)⟩ :
+        varFromOffset Circuits.Types.LtOperationSigned (offset + 10)⟩ :
         Var Columns (ZMod p)) := rfl
 
 /-- Component-wise evaluation of the independent Branch input prefix. -/
@@ -317,21 +317,21 @@ the `ComputableWitnesses` proof projects the struct-level agreement onto these).
 the pair loops. -/
 
 theorem eval_statePc {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.CPUState (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.CPUState (Expression F)) :
     (ProvableStruct.eval env cols).pc = Vector.map (Expression.eval env) cols.pc := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Readers.CPUState.eval_cols]
   exact ProvableType.eval_fields env _
 
 theorem eval_opCImm {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ITypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ITypeReader (Expression F)) :
     (ProvableStruct.eval env cols).op_c_imm = Vector.map (Expression.eval env) cols.op_c_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Readers.ITypeReader.eval_cols]
   exact ProvableType.eval_fields env _
 
 theorem eval_prevValue {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RegisterAccessCols (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     (ProvableStruct.eval env cols).prev_value
       = Vector.map (Expression.eval env) cols.prev_value := by
   rw [← ProvableStruct.eval_eq_eval]

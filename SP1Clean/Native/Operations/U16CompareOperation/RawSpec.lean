@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.U16CompareOperation
+import SP1Clean.Circuits.Types.U16CompareOperation
 import Mathlib.Tactic.LinearCombination
 
 /-! # `U16CompareOperation` — the arithmetic core (`RawSpec` + the order lemma)
@@ -13,11 +13,11 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The literal meaning of SP1's `U16CompareOperation` constraint list at `is_real = 1`: `bit` is
 boolean and `(a - b) + bit * 2^16` is a genuine 16-bit value. -/
-def RawSpec (a b : ZMod p) (cols : Extracted.U16CompareOperation (ZMod p)) : Prop :=
+def RawSpec (a b : ZMod p) (cols : Circuits.Types.U16CompareOperation (ZMod p)) : Prop :=
   (cols.bit = 0 ∨ cols.bit = 1) ∧ (a - b + cols.bit * 65536).val < 2 ^ 16
 
 /-- Soundness core: `bit` boolean + `(a - b + bit·2^16)` a genuine 16-bit value force `bit = (a < b)`. -/
-theorem compare_of_raw {a b : ZMod p} {cols : Extracted.U16CompareOperation (ZMod p)}
+theorem compare_of_raw {a b : ZMod p} {cols : Circuits.Types.U16CompareOperation (ZMod p)}
     (ha : a.val < 2 ^ 16) (hb : b.val < 2 ^ 16) (h_raw : RawSpec a b cols) :
     cols.bit = if a.val < b.val then 1 else 0 := by
   obtain ⟨hbit, hlt⟩ := h_raw

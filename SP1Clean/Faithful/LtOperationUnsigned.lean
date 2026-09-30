@@ -27,6 +27,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -34,7 +35,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- **Faithfulness anchor.** SP1's `LtOperationUnsigned` constraint list holds iff the native
 gadget's `RawSpec` holds. -/
 theorem ltUnsigned_constraints_faithful (b cc : Word (ZMod p))
-    (cols : Extracted.LtOperationUnsigned (ZMod p)) :
+    (cols : Circuits.Types.LtOperationUnsigned (ZMod p)) :
     (List.Forall (· = 0) (Extracted.LtOperationUnsigned.asserts b cc cols 1) ∧
       List.Forall Interaction.toProp (Extracted.LtOperationUnsigned.interactions b cc cols 1)) ↔
       SP1Clean.LtOperationUnsigned.RawSpec b cc cols := by
@@ -51,14 +52,14 @@ theorem ltUnsigned_constraints_faithful (b cc : Word (ZMod p))
 
 @[circuit_norm] theorem eval_ltUnsignedColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.LtOperationUnsigned (Expression F)) :
+    (cols : Circuits.Types.LtOperationUnsigned (Expression F)) :
     Eval.eval env cols =
       ({ u16_compare_operation :=
            Eval.eval env cols.u16_compare_operation
          u16_flags := Eval.eval env cols.u16_flags
          not_eq_inv := Eval.eval env cols.not_eq_inv
          comparison_limbs := Eval.eval env cols.comparison_limbs } :
-        Extracted.LtOperationUnsigned F) := by
+        Circuits.Types.LtOperationUnsigned F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -72,7 +73,7 @@ private theorem ltUnsigned_equalityConstraintsExact
 
 private def ltUnsignedAssertionTail
     (b cc : Word (ZMod p))
-    (cols : Extracted.LtOperationUnsigned (ZMod p))
+    (cols : Circuits.Types.LtOperationUnsigned (ZMod p))
     (isReal : ZMod p) : List (ZMod p) :=
   let sum3 := (0 : ZMod p) + cols.u16_flags[3]
   let sum2 := sum3 + cols.u16_flags[2]
@@ -109,7 +110,7 @@ private def ltUnsignedAssertionTail
 omit [Fact (2 ^ 17 < p)] in
 private theorem extracted_ltUnsignedAssertions_decompose
     (b cc : Word (ZMod p))
-    (cols : Extracted.LtOperationUnsigned (ZMod p))
+    (cols : Circuits.Types.LtOperationUnsigned (ZMod p))
     (isReal : ZMod p) :
     Extracted.LtOperationUnsigned.asserts b cc cols isReal =
       Extracted.U16CompareOperation.asserts
@@ -299,7 +300,7 @@ the byte pull. The first op-level composition anchor — the template for `Addw`
 chip-level composed channels. -/
 theorem ltUnsigned_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var SP1Clean.LtOperationUnsigned.Inputs (ZMod p)) (offset : ℕ)
-    (b cc : Word (ZMod p)) (cols : Extracted.LtOperationUnsigned (ZMod p)) (is_real : ZMod p)
+    (b cc : Word (ZMod p)) (cols : Circuits.Types.LtOperationUnsigned (ZMod p)) (is_real : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_cl0 : Expression.eval env input.cols.comparison_limbs[0] = cols.comparison_limbs[0])
     (h_cl1 : Expression.eval env input.cols.comparison_limbs[1] = cols.comparison_limbs[1])

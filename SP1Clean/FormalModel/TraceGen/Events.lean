@@ -17,7 +17,7 @@ blocks it builds.
 ## Why one record for a whole family
 
 The register-adapter families — not the chips — determine what an event must carry. `RTypeEvent`
-is the `Extracted.RTypeReader` family: three register operands, `op_a` written, `op_b`/`op_c`
+is the `Circuits.Types.RTypeReader` family: three register operands, `op_a` written, `op_b`/`op_c`
 read. That is the shape of the **R-type ALU chips** (`Add`, `Sub`, `Subw`, `Mul`, `DivRem`), which
 is why the record — and every lemma stated over the blocks built from it — is shared, and only
 the final three-line assembly into a particular chip's `Inputs` is per-chip.
@@ -193,7 +193,7 @@ end RTypeEvent
 
 /-! ## The I-type family
 
-`Extracted.ITypeReader`: `op_a` written, `op_b` read, and `op_c` a **decoded immediate** rather
+`Circuits.Types.ITypeReader`: `op_a` written, `op_b` read, and `op_c` a **decoded immediate** rather
 than a register — so an I-type row makes only two register accesses, at `MemoryAccessPosition`
 offsets `A = 4` and `B = 3`. -/
 
@@ -315,7 +315,7 @@ end ITypeEvent
 
 /-! ## The ALU-type family
 
-`Extracted.ALUTypeReader`: the immediate-capable ALU adapter. `op_a` is written and `op_b` read as
+`Circuits.Types.ALUTypeReader`: the immediate-capable ALU adapter. `op_a` is written and `op_b` read as
 always, but the `op_c` slot is a **four-limb word plus its own access block**, and the committed
 `imm_c` flag says which of the two forms the row is in. -/
 
@@ -510,7 +510,7 @@ end ALUTypeEvent
 
 /-! ## The J-type family
 
-`Extracted.JTypeReader`: `op_a` written, and **both** `op_b` and `op_c` decoded immediates — so a
+`Circuits.Types.JTypeReader`: `op_a` written, and **both** `op_b` and `op_c` decoded immediates — so a
 J-type row makes a single register access, the `op_a` write at `MemoryAccessPosition::A = 4`. -/
 
 /--
@@ -752,7 +752,7 @@ def ITypeEvent.JalrTargets (e : ITypeEvent) : Prop :=
 
 /-! ## The branch family
 
-`Extracted.ITypeReader` once more — the same committed block `Addi`, `Jalr` and the nine memory
+`Circuits.Types.ITypeReader` once more — the same committed block `Addi`, `Jalr` and the nine memory
 chips read — but through the **immutable** adapter, and with *both* register slots as source reads:
 SP1's `Branch` row has `op_a = rs1`, `op_b = rs2`, and `op_c` the sign-extended branch offset. A
 branch performs no destination write at all, and its `next_pc` is data-dependent.
@@ -874,7 +874,7 @@ def ITypeEvent.BranchTargets (e : ITypeEvent) : Prop :=
 /-! ## The memory family
 
 The nine memory chips (`Load{Byte,Half,Word,Double}`, `LoadX0`, `Store{Byte,Half,Word,Double}`)
-read the very same `Extracted.ITypeReader` adapter as `Addi` — `op_a`, `op_b` a register, `op_c` a
+read the very same `Circuits.Types.ITypeReader` adapter as `Addi` — `op_a`, `op_b` a register, `op_c` a
 decoded immediate — and make **one access no register-adapter row makes**: an access to a RAM word
 at the effective address `rs1 + imm`, timestamped at `MemoryAccessPosition::Memory = 1`.
 
@@ -1008,7 +1008,7 @@ structure WellFormedX0 (e : MemoryEvent) : Prop where
 
 /--
 **What makes an event a real *store* trace event.** The store family reads the same
-`Extracted.ITypeReader` columns as the loads, but through the **immutable** adapter: `op_a` is the
+`Circuits.Types.ITypeReader` columns as the loads, but through the **immutable** adapter: `op_a` is the
 `rs2` **source read** whose value is written to RAM, not a destination write. Exactly one conjunct
 of `WellFormed` therefore has to change, and it is the one that is a *load* fact:
 

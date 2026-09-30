@@ -25,8 +25,8 @@ provable_struct_eval_lemmas State
 structure Inputs (F : Type) where
   call : HostCallChip.Message F
   previous : State F
-  comparison : Extracted.LtOperationUnsigned F
-  bytes : Extracted.U16toU8Operation F
+  comparison : Circuits.Types.LtOperationUnsigned F
+  bytes : Circuits.Types.U16toU8Operation F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 

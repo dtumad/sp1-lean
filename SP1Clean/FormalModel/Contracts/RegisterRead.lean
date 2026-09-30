@@ -12,7 +12,7 @@ namespace SP1Clean.Readers.RegisterRead
 open Circuit Channels
 
 structure Inputs (F : Type) where
-  cols : Extracted.RegisterAccessCols F
+  cols : Circuits.Types.RegisterAccessCols F
   clk_high : F
   clk_target : F
   index : F

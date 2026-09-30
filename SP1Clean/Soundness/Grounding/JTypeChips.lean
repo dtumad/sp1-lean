@@ -612,7 +612,7 @@ theorem jalChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     List.map_nil, TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw,
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeWriteMessage, jalViewOf_state, jalViewOf_adapter,
-    jalViewOf_isReal, jalViewOf_rdWrite, Extracted.JTypeReader.toAdapterView, circuit_norm]
+    jalViewOf_isReal, jalViewOf_rdWrite, Circuits.Types.JTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift JAL's evaluated pair to the typed decoded-row boundary. -/
 theorem jalChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -665,7 +665,7 @@ theorem JalChip.jtypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, jalChipJTypeInput, JalChip.circuit,
-        JalChip.rowView, Extracted.JTypeReader.toAdapterView, circuit_norm]
+        JalChip.rowView, Circuits.Types.JTypeReader.toAdapterView, circuit_norm]
 
 theorem jalChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = jalChipDescriptor (p := p))
@@ -845,7 +845,7 @@ theorem uTypeChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     List.map_nil, TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw,
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeWriteMessage, uTypeViewOf_state, uTypeViewOf_adapter,
-    uTypeViewOf_isReal, uTypeViewOf_rdWrite, Extracted.JTypeReader.toAdapterView, circuit_norm]
+    uTypeViewOf_isReal, uTypeViewOf_rdWrite, Circuits.Types.JTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift U-type's evaluated pair to the typed decoded-row boundary. -/
 theorem uTypeChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -892,7 +892,7 @@ theorem UTypeChip.jtypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, uTypeChipJTypeInput, UTypeChip.circuit,
-        UTypeChip.rowView, Extracted.JTypeReader.toAdapterView, circuit_norm]
+        UTypeChip.rowView, Circuits.Types.JTypeReader.toAdapterView, circuit_norm]
 
 theorem uTypeChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = uTypeChipDescriptor (p := p))

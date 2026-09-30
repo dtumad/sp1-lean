@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.LtOperationUnsigned
+import SP1Clean.Circuits.Types.LtOperationUnsigned
 
 /-! # A word below a fixed natural bound
 
@@ -11,7 +11,7 @@ namespace SP1Clean.BoundedWord
 
 structure Inputs (F : Type) where
   value : Word F
-  comparison : Extracted.LtOperationUnsigned F
+  comparison : Circuits.Types.LtOperationUnsigned F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 

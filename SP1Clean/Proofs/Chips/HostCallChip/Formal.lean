@@ -27,7 +27,7 @@ theorem writeFlag_binary (word : Word (ZMod p)) : writeFlag word = 0 ∨ writeFl
   split <;> simp
 
 private theorem read_assumptions (instruction : SyscallInstrsChip.Inputs (ZMod p))
-    (length : Extracted.RegisterAccessCols (ZMod p))
+    (length : Circuits.Types.RegisterAccessCols (ZMod p))
     (valid : CoreSyscallChip.Spec instruction) (flag : ZMod p) (binary : flag = 0 ∨ flag = 1) :
     Readers.RegisterRead.Assumptions ((⟨instruction, length⟩ : Inputs (ZMod p)).read flag) := by
   have realBinary : instruction.is_real = 0 ∨ instruction.is_real = 1 := valid.2.1

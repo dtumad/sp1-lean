@@ -16,6 +16,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -60,9 +61,9 @@ def addiChipColumnsOfInput {F : Type} (input : AddiChip.Inputs F) (value : Word 
   ⟨input.is_real, input.state, input.adapter, ⟨value⟩⟩
 
 @[circuit_norm] theorem eval_extractedAddOperation {F : Type} [FiniteField F]
-    (env : Environment F) (cols : AddOperation.Columns (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.AddOperation (Expression F)) :
     Eval.eval env cols =
-      ({ value := Eval.eval env cols.value } : AddOperation.Columns F) := by
+      ({ value := Eval.eval env cols.value } : Circuits.Types.AddOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -91,7 +92,7 @@ theorem eval_addiChipDirectOutput
   · exact hinputEval.2.1
   constructor
   · exact hinputEval.2.2
-  rw [eval_extractedAddOperation, AddOperation.Columns.mk.injEq]
+  rw [eval_extractedAddOperation, Circuits.Types.AddOperation.mk.injEq]
   dsimp only
   ext i hi
   rw [← ProvableType.getElem_eval_fields
@@ -213,7 +214,7 @@ theorem addiChip_constraints_faithful
   let cpuInput : Var Readers.CPUState.Inputs (ZMod p) :=
     ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
       8, input.is_real⟩
-  let rustState : Extracted.CPUState (ZMod p) :=
+  let rustState : Circuits.Types.CPUState (ZMod p) :=
     { clk_high := stateValue.clk_high
       clk_16_24 := stateValue.clk_16_24
       clk_0_16 := stateValue.clk_0_16
@@ -251,7 +252,7 @@ theorem addiChip_constraints_faithful
   have hAdd := addi_operation_assertions_local (p := p) env addInput (offset + 4)
     rustA rustB rustValue isReal ha hb hv (by
       simp only [addInput, isReal, ProvableStruct.structEvalLiteralProc])
-  let rustAdapter : Extracted.ITypeReader (ZMod p) :=
+  let rustAdapter : Circuits.Types.ITypeReader (ZMod p) :=
     { op_a := adapterValue.op_a
       op_a_memory :=
         { prev_value :=

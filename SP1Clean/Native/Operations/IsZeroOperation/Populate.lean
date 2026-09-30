@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.IsZeroOperation
+import SP1Clean.Circuits.Types.IsZeroOperation
 import ToClean.Circuit.IteDecide
 
 /-! # `IsZeroOperation` — `populate` (the witness generator)
@@ -19,14 +19,14 @@ def isZeroWitness (a : ZMod p) : Vector (ZMod p) 2 :=
 
 /-- The witnessed column struct `⟨inverse, result⟩` — `isZeroWitness` packaged as the extracted
 `IsZeroOperation` columns the composing op threads in. -/
-def populate (a : ZMod p) : Extracted.IsZeroOperation (ZMod p) :=
+def populate (a : ZMod p) : Circuits.Types.IsZeroOperation (ZMod p) :=
   if a = 0 then ⟨0, 1⟩ else ⟨a⁻¹, 0⟩
 
 section FE
 
 /-- The witness-IR twin of `populate`: `⟨x⁻¹, if x = 0 then 1 else 0⟩` (the IR's `.inv` shares
 the `0⁻¹ = 0` convention, so the inverse cell needs no dispatch). -/
-def populateFE (x : Witgen.FExpr (ZMod p)) : Extracted.IsZeroOperation (Witgen.FExpr (ZMod p)) :=
+def populateFE (x : Witgen.FExpr (ZMod p)) : Circuits.Types.IsZeroOperation (Witgen.FExpr (ZMod p)) :=
   ⟨.inv x, .ite (x =? (0 : ZMod p)) 1 0⟩
 
 omit [Fact (2 ^ 17 < p)] in

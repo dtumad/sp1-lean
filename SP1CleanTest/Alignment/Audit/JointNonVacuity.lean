@@ -1026,7 +1026,7 @@ application of the proved `advance_of_jal_x0` per step, plus determinism of the 
 interpreter run, closes the boundary contract outright — no preservation assumption remains. -/
 
 /-- A zeroed register-access block (gated off on the J-type row; never read by `advance`). -/
-def zeroAccess : Extracted.RegisterAccessCols (ZMod SP1Prime) := ⟨#v[0, 0, 0, 0], ⟨0, 0⟩⟩
+def zeroAccess : Circuits.Types.RegisterAccessCols (ZMod SP1Prime) := ⟨#v[0, 0, 0, 0], ⟨0, 0⟩⟩
 
 /-- The row view of the committed self-jump: opcode JAL, destination `x0`, immediate `op_b = 0`,
 current and next pc both `0x10000`, no commit effect. -/

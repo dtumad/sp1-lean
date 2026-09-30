@@ -30,7 +30,7 @@ private theorem instruction_var : (varFromOffset HostCallChip.Inputs (F := ZMod 
   rw [ProvableStruct.varFromOffset_eq_varFromOffset (α := HostCallChip.Inputs)]
   change (ProvableStruct.fromComponents (α := HostCallChip.Inputs)
     (.cons (varFromOffset SyscallInstrsChip.Inputs (F := ZMod p) 0)
-      (.cons (varFromOffset Extracted.RegisterAccessCols (size SyscallInstrsChip.Inputs)) .nil))).instruction = _
+      (.cons (varFromOffset Circuits.Types.RegisterAccessCols (size SyscallInstrsChip.Inputs)) .nil))).instruction = _
   rw [HostCallChip.Inputs.fromComponents_cons]
 
 omit [Fact (2 ^ 25 < p)] in
@@ -204,10 +204,10 @@ private theorem main_memory_values (input : Var HostCallChip.Inputs (ZMod p)) (o
   have hv : (ProvableStruct.eval env input.instruction).op_a_memory.prev_value =
       Vector.map (Expression.eval env) input.instruction.op_a_memory.prev_value := by
     rw [SyscallInstrsChip.Inputs.eval_op_a_memory, ProvableStruct.eval_eq_eval,
-      Extracted.RegisterAccessCols.eval_prev_value, ProvableType.eval_fields]
+      Circuits.Types.RegisterAccessCols.eval_prev_value, ProvableType.eval_fields]
   have hv' : (ProvableStruct.eval env input.length).prev_value =
       Vector.map (Expression.eval env) input.length.prev_value := by
-    rw [Extracted.RegisterAccessCols.eval_prev_value, ProvableType.eval_fields]
+    rw [Circuits.Types.RegisterAccessCols.eval_prev_value, ProvableType.eval_fields]
   simp only [HostCallChip.Inputs.read, Readers.RegisterRead.Inputs.prior,
     Readers.RegisterRead.Inputs.pushed, circuit_norm, hsel, hv, hv']
 

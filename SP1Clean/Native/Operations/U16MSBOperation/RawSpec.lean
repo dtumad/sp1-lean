@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.U16MSBOperation
+import SP1Clean.Circuits.Types.U16MSBOperation
 import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.IntervalCases
 
@@ -18,11 +18,11 @@ instance : Fact (p > 2) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 /-- The booleanness + range form of the msb constraint (the literal meaning of the extracted
 constraint list at `is_real = 1`), stated against the result column `cols.msb`. The range term
 `2 * a - cols.msb * 65536` is `2*a - msb*2^16` (the auto-generated `main`'s normal form). -/
-def RawSpec (a : ZMod p) (cols : Extracted.U16MSBOperation (ZMod p)) : Prop :=
+def RawSpec (a : ZMod p) (cols : Circuits.Types.U16MSBOperation (ZMod p)) : Prop :=
   (cols.msb = 0 ∨ cols.msb = 1) ∧ (2 * a - cols.msb * 65536).val < 2 ^ 16
 
 /-- Forward (soundness) core: booleanness + range force `msb` to be the high bit of `a`. -/
-theorem msb_of_raw {a : ZMod p} {cols : Extracted.U16MSBOperation (ZMod p)}
+theorem msb_of_raw {a : ZMod p} {cols : Circuits.Types.U16MSBOperation (ZMod p)}
     (ha : a.val < 2 ^ 16) (h_raw : RawSpec a cols) :
     cols.msb = if a.val ≥ 32768 then 1 else 0 := by
   have hp : 2 ^ 17 < p := Fact.out

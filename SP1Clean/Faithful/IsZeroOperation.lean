@@ -26,6 +26,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime]
@@ -33,7 +34,7 @@ variable {p : ℕ} [Fact p.Prime]
 /-- **Faithfulness anchor — assertion half.** SP1's `IsZeroOperation` `asserts` list holds iff the
 native gadget's `AssertSpec` holds. (No range bounds here, so `NeZero p` follows from primality
 alone.) -/
-theorem isZero_asserts_faithful (a : ZMod p) (cols : Extracted.IsZeroOperation (ZMod p)) :
+theorem isZero_asserts_faithful (a : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) :
     List.Forall (· = 0) (Extracted.IsZeroOperation.asserts a cols 1) ↔
       SP1Clean.IsZeroOperation.AssertSpec a cols := by
   simp only [Extracted.IsZeroOperation.asserts, List.Forall,
@@ -41,7 +42,7 @@ theorem isZero_asserts_faithful (a : ZMod p) (cols : Extracted.IsZeroOperation (
 
 /-- **Faithfulness anchor — interaction half.** `IsZeroOperation` emits no bus interactions, so its
 (empty) `interactions` list trivially holds, matching the trivial `InteractSpec`. -/
-theorem isZero_interactions_faithful (a : ZMod p) (cols : Extracted.IsZeroOperation (ZMod p)) :
+theorem isZero_interactions_faithful (a : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) :
     List.Forall Interaction.toProp (Extracted.IsZeroOperation.interactions a cols 1) ↔
       SP1Clean.IsZeroOperation.InteractSpec a cols := by
   simp only [Extracted.IsZeroOperation.interactions, List.Forall,
@@ -49,7 +50,7 @@ theorem isZero_interactions_faithful (a : ZMod p) (cols : Extracted.IsZeroOperat
 
 /-- Combined anchor (`asserts ∧ interactions ↔ RawSpec = AssertSpec`). Composed by
 `IsZeroWord`/`IsEqualWord`. -/
-theorem isZero_constraints_faithful (a : ZMod p) (cols : Extracted.IsZeroOperation (ZMod p)) :
+theorem isZero_constraints_faithful (a : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) :
     (List.Forall (· = 0) (Extracted.IsZeroOperation.asserts a cols 1) ∧
       List.Forall Interaction.toProp (Extracted.IsZeroOperation.interactions a cols 1)) ↔
       SP1Clean.IsZeroOperation.RawSpec a cols := by
@@ -59,11 +60,11 @@ theorem isZero_constraints_faithful (a : ZMod p) (cols : Extracted.IsZeroOperati
 
 @[circuit_norm] theorem eval_isZeroColumns
     (env : Environment (ZMod p))
-    (cols : Extracted.IsZeroOperation (Expression (ZMod p))) :
+    (cols : Circuits.Types.IsZeroOperation (Expression (ZMod p))) :
     Eval.eval env cols =
       ({ inverse := Expression.eval env cols.inverse
          result := Expression.eval env cols.result } :
-        Extracted.IsZeroOperation (ZMod p)) := by
+        Circuits.Types.IsZeroOperation (ZMod p)) := by
   provable_struct_simp
 
 private def isZeroAssertionExpressions
@@ -122,7 +123,7 @@ its `main` emits no byte interactions, matching SP1's empty extracted `interacti
 images are `[]`. -/
 theorem isZero_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var SP1Clean.IsZeroOperation.Inputs (ZMod p)) (offset : ℕ)
-    (a is_real : ZMod p) (cols : Extracted.IsZeroOperation (ZMod p)) :
+    (a is_real : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) :
     (Extracted.IsZeroOperation.interactions a cols is_real).map Extracted.Interaction.toAccess
       = (((SP1Clean.IsZeroOperation.main input).operations offset).interactionsWith
           byteChannel.toRaw).map (AbstractInteraction.toAccess env) := by

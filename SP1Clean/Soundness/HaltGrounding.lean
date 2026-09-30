@@ -117,7 +117,7 @@ private theorem currency_of_unchanged {trajectory : Trajectory} {initial source 
 private theorem halt_push_time (row : HaltChip.Inputs (ZMod p))
     (clock : ((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
       row.state.clk_16_24.val < 2 ^ 8)
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) (off : ℕ) (bound : off ≤ 4) :
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) (off : ℕ) (bound : off ≤ 4) :
     MemoryMsg.timeNat (HaltChip.memPushedMessage row block idx off) =
         StateMsg.timeNat (HaltChip.statePulledMessage row) + off ∧
       MemoryMsg.ClkBound (HaltChip.memPushedMessage row block idx off) := by
@@ -138,7 +138,7 @@ private theorem halt_pair_current {row : HaltChip.Inputs (ZMod p)}
     (after : trajectory (n + 1) =
       some { source with regs := source.regs.insert Register.PC Machine.haltPc })
     (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n)
-    (block : Extracted.RegisterAccessCols (ZMod p)) (idx : ZMod p) (off : ℕ) (bound : off ≤ 4)
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) (off : ℕ) (bound : off ≤ 4)
     (current : MemoryMsg.isU64 (HaltChip.memPulledMessage row block idx) ∧
       LocalValueAtG trajectory initial timeline (MemoryMsg.locOf (HaltChip.memPulledMessage row block idx))
         (StateMsg.timeNat (HaltChip.statePulledMessage row)) block.prev_value) :

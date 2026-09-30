@@ -120,7 +120,7 @@ local macro "chip_base_immediate " viewDecoded:ident ", " circ:ident ", " rowVie
        Environment.fromArray $(Lean.mkIdent `physical) $(Lean.mkIdent `proverData)
      have $(Lean.mkIdent `immediate) := $(Lean.mkIdent `decode).immediate_words_isU64.2 (by
        simp only [programAccess, ProgramAccess.toRow, $viewDecoded:ident,
-         circuitRowViewOf_eq_typed, $rowView:ident, Extracted.ITypeReader.toAdapterView])
+         circuitRowViewOf_eq_typed, $rowView:ident, Circuits.Types.ITypeReader.toAdapterView])
      have $(Lean.mkIdent `base) : Word.isU64
          ((circuitRowViewOf $circ $rowView
            $(Lean.mkIdent `env)).adapter.op_b_memory.prev_value) := by
@@ -1850,7 +1850,7 @@ private theorem loadByteChip_loadMemoryGroundingData_of_eq
           ((DecodedInstructionRow.mk loadByteChipDescriptor physical).toChipRow
             proverData).view).toRow.imm_c = 1 := by
       simp only [programAccess, ProgramAccess.toRow, loadByteViewOf_decoded,
-        loadByteViewOf, LoadByteChip.rowView, Extracted.ITypeReader.toAdapterView]
+        loadByteViewOf, LoadByteChip.rowView, Circuits.Types.ITypeReader.toAdapterView]
     have immediate := decode.immediate_words_isU64.2 immC
     have base :
         Word.isU64 (loadByteViewOf env).adapter.op_b_memory.prev_value := by
@@ -1911,7 +1911,7 @@ private theorem loadByteChip_loadMemoryGroundingData_of_eq
           proverData).view.adapter.op_a ≠ 0 at guard
       rw [loadByteViewOf_decoded] at guard
       simpa only [input, loadByteViewOf, LoadByteChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using guard
+        Circuits.Types.ITypeReader.toAdapterView] using guard
     have pcBound : input.state.pc[0].val < 2 ^ 16 := by
       have bound := programSpec.2.1
       change
@@ -2078,7 +2078,7 @@ private theorem loadHalfChip_loadMemoryGroundingData_of_eq
           proverData).view.adapter.op_a ≠ 0 at guard
       rw [loadHalfChip_viewOf_decoded, circuitRowViewOf_eq_typed] at guard
       simpa only [input, cols, LoadHalfChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using guard
+        Circuits.Types.ITypeReader.toAdapterView] using guard
     have pcBound : input.state.pc[0].val < 2 ^ 16 := by
       have bound := programSpec.2.1
       change
@@ -2278,7 +2278,7 @@ private theorem loadWordChip_loadMemoryGroundingData_of_eq
           proverData).view.adapter.op_a ≠ 0 at guard
       rw [loadWordChip_viewOf_decoded, circuitRowViewOf_eq_typed] at guard
       simpa only [input, cols, LoadWordChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using guard
+        Circuits.Types.ITypeReader.toAdapterView] using guard
     have pcBound : input.state.pc[0].val < 2 ^ 16 := by
       have bound := programSpec.2.1
       change
@@ -2493,7 +2493,7 @@ private theorem loadDoubleChip_loadMemoryGroundingData_of_eq
           proverData).view.adapter.op_a ≠ 0 at guard
       rw [loadDoubleChip_viewOf_decoded, circuitRowViewOf_eq_typed] at guard
       simpa only [input, cols, LoadDoubleChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using guard
+        Circuits.Types.ITypeReader.toAdapterView] using guard
     have pcBound : input.state.pc[0].val < 2 ^ 16 := by
       have bound := programSpec.2.1
       change
@@ -2752,7 +2752,7 @@ private theorem loadX0Chip_immutableLoadMemoryGroundingData_of_eq
           proverData).view.adapter.op_a = 0 at guard
       rw [loadX0Chip_viewOf_decoded, circuitRowViewOf_eq_typed] at guard
       simpa only [input, cols, LoadX0Chip.rowView,
-        Extracted.ITypeReader.toAdapterView] using guard
+        Circuits.Types.ITypeReader.toAdapterView] using guard
     have pcBound : input.state.pc[0].val < 2 ^ 16 := by
       have bound := programSpec.2.1
       change
@@ -2935,7 +2935,7 @@ private theorem storeByteChip_storeMemoryGroundingData_of_eq
       unfold SourceAValueBound at sourceA
       rw [storeByteChip_viewOf_decoded, circuitRowViewOf_eq_typed] at sourceA
       simpa only [input, cols, StoreByteChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using sourceA
+        Circuits.Types.ITypeReader.toAdapterView] using sourceA
     refine storeByteAdvanceReady_of_decoded proverData physical program state ?_
     change StoreByteChip.AdvanceReady input cols program state
     exact ⟨sourceAInput, baseBound, immediateBound, pcBound⟩
@@ -3018,7 +3018,7 @@ private theorem storeHalfChip_storeMemoryGroundingData_of_eq
         simpa only [storeHalfChip_viewOf_decoded, env] using pulled.2.1
       rw [circuitRowViewOf_eq_typed] at sourceView
       simpa only [StoreHalfChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using sourceView
+        Circuits.Types.ITypeReader.toAdapterView] using sourceView
     rw [storeHalfChipDescriptor_table] at rowConstraints
     have priorPhysical : Word.isU64
         ((⟨StoreHalfChip.circuit (p := p)⟩ :
@@ -3067,7 +3067,7 @@ private theorem storeHalfChip_storeMemoryGroundingData_of_eq
       unfold SourceAValueBound at sourceA
       rw [storeHalfChip_viewOf_decoded, circuitRowViewOf_eq_typed] at sourceA
       simpa only [input, cols, StoreHalfChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using sourceA
+        Circuits.Types.ITypeReader.toAdapterView] using sourceA
     refine storeHalfAdvanceReady_of_decoded proverData physical program state ?_
     change StoreHalfChip.AdvanceReady input cols program state
     exact ⟨sourceAInput, baseBound, immediateBound, pcBound⟩
@@ -3150,7 +3150,7 @@ private theorem storeWordChip_storeMemoryGroundingData_of_eq
         simpa only [storeWordChip_viewOf_decoded, env] using pulled.2.1
       rw [circuitRowViewOf_eq_typed] at sourceView
       simpa only [StoreWordChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using sourceView
+        Circuits.Types.ITypeReader.toAdapterView] using sourceView
     rw [storeWordChipDescriptor_table] at rowConstraints
     have priorPhysical : Word.isU64
         ((⟨StoreWordChip.circuit (p := p)⟩ :
@@ -3199,7 +3199,7 @@ private theorem storeWordChip_storeMemoryGroundingData_of_eq
       unfold SourceAValueBound at sourceA
       rw [storeWordChip_viewOf_decoded, circuitRowViewOf_eq_typed] at sourceA
       simpa only [input, cols, StoreWordChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using sourceA
+        Circuits.Types.ITypeReader.toAdapterView] using sourceA
     refine storeWordAdvanceReady_of_decoded proverData physical program state ?_
     change StoreWordChip.AdvanceReady input cols program state
     exact ⟨sourceAInput, baseBound, immediateBound, pcBound⟩
@@ -3291,7 +3291,7 @@ private theorem storeDoubleChip_storeMemoryGroundingData_of_eq
       unfold SourceAValueBound at sourceA
       rw [storeDoubleChip_viewOf_decoded, circuitRowViewOf_eq_typed] at sourceA
       simpa only [input, cols, StoreDoubleChip.rowView,
-        Extracted.ITypeReader.toAdapterView] using sourceA
+        Circuits.Types.ITypeReader.toAdapterView] using sourceA
     refine storeDoubleAdvanceReady_of_decoded proverData physical program state ?_
     change StoreDoubleChip.AdvanceReady input cols program state
     exact ⟨sourceAInput, baseBound, immediateBound, pcBound⟩
@@ -3341,7 +3341,7 @@ theorem addiChip_itypeGroundingData :
       (((addiChipDescriptor (p := p)).decodeRow proverData physical).view.adapter.op_c)
       at immediate
     rw [addiViewOf_decodeRow, addiViewOf_adapter] at immediate
-    simpa only [Extracted.ITypeReader.toAdapterView] using immediate
+    simpa only [Circuits.Types.ITypeReader.toAdapterView] using immediate
   routingLocal := by
     intro proverData decoded hchip rowConstraints real program decode
     chip_subst addiChipDescriptor (p := p)
@@ -3410,7 +3410,7 @@ theorem addwChip_aluTypeGroundingData :
       ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
     rw [AddwChip.inputOutputAdapter env]
     simpa only [DecodedInstructionRow.toChipRow, addwViewOf_decodeRow, addwViewOf,
-      AddwChip.rowView, Extracted.ALUTypeReader.toAdapterView, env] using opCU64
+      AddwChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, env] using opCU64
   routingLocal := by
     intro proverData decoded hchip rowConstraints real program decode
     chip_subst addwChipDescriptor (p := p)
@@ -3489,7 +3489,7 @@ theorem bitwiseChip_aluTypeGroundingData :
     rw [BitwiseChip.inputOutputAdapter env]
     simpa only [BitwiseChip.Inputs.op_b_val, BitwiseChip.Inputs.op_c_val,
       DecodedInstructionRow.toChipRow, bitwiseViewOf_decodeRow, bitwiseViewOf,
-      BitwiseChip.physicalView, BitwiseChip.rowView, Extracted.ALUTypeReader.toAdapterView, env]
+      BitwiseChip.physicalView, BitwiseChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, env]
       using ⟨operands.1, opCU64⟩
   routingLocal := by
     chip_routing_rowViewOpA0 BitwiseChip.rowViewOpA0_eq_zero_of_constraints,
@@ -3553,7 +3553,7 @@ theorem ltChip_aluTypeGroundingData :
     rw [LtChip.inputOutputAdapter env]
     simpa only [LtChip.Inputs.op_b_val, LtChip.Inputs.op_c_val,
       DecodedInstructionRow.toChipRow, ltViewOf_decodeRow, ltViewOf, LtChip.physicalView,
-      LtChip.rowView, Extracted.ALUTypeReader.toAdapterView, env] using ⟨operands.1, opCU64⟩
+      LtChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, env] using ⟨operands.1, opCU64⟩
   routingLocal := by
     chip_routing_rowViewOpA0 LtChip.rowViewOpA0_eq_zero_of_constraints,
       ltChipDescriptor (p := p)
@@ -3618,7 +3618,7 @@ theorem shiftLeftChip_aluTypeGroundingData :
     simpa only [ShiftLeftChip.Inputs.op_b_val, ShiftLeftChip.Inputs.op_c_val,
       DecodedInstructionRow.toChipRow, shiftLeftViewOf_decodeRow, shiftLeftViewOf,
       ShiftLeftChip.physicalView, ShiftLeftChip.rowView,
-      Extracted.ALUTypeReader.toAdapterView, env] using ⟨operands.1, opCU64⟩
+      Circuits.Types.ALUTypeReader.toAdapterView, env] using ⟨operands.1, opCU64⟩
   routingLocal := by
     chip_routing_rowViewOpA0 ShiftLeftChip.rowViewOpA0_eq_zero_of_constraints,
       shiftLeftChipDescriptor (p := p)
@@ -3685,7 +3685,7 @@ theorem shiftRightChip_aluTypeGroundingData :
     rw [ShiftRightChip.inputOutputAdapter env]
     simpa only [DecodedInstructionRow.toChipRow, shiftRightViewOf_decodeRow, shiftRightViewOf,
       ShiftRightChip.physicalView, ShiftRightChip.rowView,
-      Extracted.ALUTypeReader.toAdapterView, env] using ⟨operands.1, opCU64⟩
+      Circuits.Types.ALUTypeReader.toAdapterView, env] using ⟨operands.1, opCU64⟩
   routingLocal := by
     chip_routing_rowViewOpA0 ShiftRightChip.rowViewOpA0_eq_zero_of_constraints,
       shiftRightChipDescriptor (p := p)
@@ -4020,7 +4020,7 @@ theorem divRemChip_rtypeGroundingData :
         ((⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
     rw [adapter]
     simpa only [env, DecodedInstructionRow.toChipRow, divRemViewOf_decodeRow, divRemViewOf,
-      DivRemChip.rowView, Extracted.RTypeReader.toAdapterView] using operands
+      DivRemChip.rowView, Circuits.Types.RTypeReader.toAdapterView] using operands
   routingLocal := by
     chip_routing_rowViewOpA0 DivRemChip.rowViewOpA0_eq_zero_of_constraints,
       divRemChipDescriptor (p := p)
@@ -4116,7 +4116,7 @@ theorem jalChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverData
       Word.toBitVec64
         ((jalChipDescriptor (p := p)).decodeRow data physical).view.rdWrite = 0)
   rw [jalViewOf_decodeRow]
-  simp only [jalViewOf, JalChip.rowView, Extracted.JTypeReader.toAdapterView]
+  simp only [jalViewOf, JalChip.rowView, Circuits.Types.JTypeReader.toAdapterView]
   simpa only [env, readerInput, wordFour_eta] using facts
 
 /-- JAL's three circuit assumptions follow from the committed Program row on an active row. -/
@@ -4290,7 +4290,7 @@ theorem uTypeChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverDa
       Word.toBitVec64
         ((uTypeChipDescriptor (p := p)).decodeRow data physical).view.rdWrite = 0)
   rw [uTypeViewOf_decodeRow]
-  simp only [uTypeViewOf, UTypeChip.rowView, Extracted.JTypeReader.toAdapterView]
+  simp only [uTypeViewOf, UTypeChip.rowView, Circuits.Types.JTypeReader.toAdapterView]
   simpa only [env, readerInput, wordFour_eta] using facts
 
 /-- U-type's immediate, PC, padding, and U-immediate decode assumptions all come from the active
@@ -4517,7 +4517,7 @@ theorem jalrChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverDat
       Word.toBitVec64
         ((jalrChipDescriptor (p := p)).decodeRow data physical).view.rdWrite = 0)
   rw [jalrViewOf_decodeRow]
-  simp only [jalrViewOf, JalrChip.rowView, Extracted.ITypeReader.toAdapterView]
+  simp only [jalrViewOf, JalrChip.rowView, Circuits.Types.ITypeReader.toAdapterView]
   simpa only [env, readerInput, wordFour_eta] using facts
 
 omit [Fact (2 ^ 25 < p)] in
@@ -4560,7 +4560,7 @@ theorem jalrChip_assumptionsLocal :
       ((⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
         env).adapter.op_b_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, jalrViewOf_decodeRow,
-      jalrViewOf_adapter, inputEq, Extracted.ITypeReader.toAdapterView, env] using sourceU64
+      jalrViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceU64
   have sourceInput : Word.isU64
       (#v[((⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[0],
@@ -4576,7 +4576,7 @@ theorem jalrChip_assumptionsLocal :
       ((⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
         env).adapter.op_c_imm := by
     simpa only [DecodedInstructionRow.toChipRow, jalrViewOf_decodeRow,
-      jalrViewOf_adapter, inputEq, Extracted.ITypeReader.toAdapterView, env] using immediate
+      jalrViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using immediate
   have pcInput : Word.isU64
       (#v[((⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).state.pc[0],
         ((⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).state.pc[1],
@@ -4724,7 +4724,7 @@ theorem branchChip_assumptionsLocal :
       ((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
         env).adapter.op_a_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
-      branchViewOf_adapter, inputEq, Extracted.ITypeReader.toAdapterView, env] using sourceA
+      branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceA
   have sourceAInput : Word.isU64
       (#v[((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[0],
@@ -4740,7 +4740,7 @@ theorem branchChip_assumptionsLocal :
       ((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
         env).adapter.op_b_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
-      branchViewOf_adapter, inputEq, Extracted.ITypeReader.toAdapterView, env] using sourceB
+      branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceB
   have sourceBInput : Word.isU64
       (#v[((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[0],
@@ -4756,7 +4756,7 @@ theorem branchChip_assumptionsLocal :
       ((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
         env).adapter.op_c_imm := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
-      branchViewOf_adapter, inputEq, Extracted.ITypeReader.toAdapterView, env] using immediate
+      branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using immediate
   have pcInput : Word.isU64
       (#v[((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).state.pc[0],
         ((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).state.pc[1],

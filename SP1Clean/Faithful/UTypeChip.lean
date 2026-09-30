@@ -26,6 +26,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -107,23 +108,23 @@ private theorem vec4_eta {F : Type} (value : Vector F 4) :
 
 @[circuit_norm] private theorem evalAddOperationColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : AddOperation.Columns (Expression F)) :
+    (cols : Circuits.Types.AddOperation (Expression F)) :
     Eval.eval env cols =
       ({ value := Eval.eval env cols.value } :
-        AddOperation.Columns F) := by
+        Circuits.Types.AddOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem evalJTypeReader
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.JTypeReader (Expression F)) :
+    (cols : Circuits.Types.JTypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a
          op_a_memory := Eval.eval env cols.op_a_memory
          op_a_0 := Eval.eval env cols.op_a_0
          op_b_imm := Eval.eval env cols.op_b_imm
          op_c_imm := Eval.eval env cols.op_c_imm } :
-        Extracted.JTypeReader F) := by
+        Circuits.Types.JTypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -198,7 +199,7 @@ theorem eval_uTypeChipDirectOutput
         List.getElem_cons_zero, List.getElem_cons_succ] using
         (eval_local_inputFirstRow input locals data 2 (by decide))
   constructor
-  · rw [AddOperation.Columns.mk.injEq]
+  · rw [Circuits.Types.AddOperation.mk.injEq]
     rw [evalAddOperationColumns]
     apply Vector.ext
     intro i hi
@@ -469,29 +470,29 @@ private theorem uTypeChipConstraintsDecompose
   simp only [eval_sub, Expression.eval, sub_eq_zero]
 
 private theorem registerAccessEta {F : Type}
-    (cols : Extracted.RegisterAccessCols F) :
+    (cols : Circuits.Types.RegisterAccessCols F) :
     ({ prev_value :=
         #v[cols.prev_value[0], cols.prev_value[1],
           cols.prev_value[2], cols.prev_value[3]]
        access_timestamp :=
         { prev_low := cols.access_timestamp.prev_low
           diff_low_limb := cols.access_timestamp.diff_low_limb } } :
-      Extracted.RegisterAccessCols F) = cols := by
+      Circuits.Types.RegisterAccessCols F) = cols := by
   cases cols
   simp [vec4_eta]
 
 private theorem cpuStateEta {F : Type}
-    (cols : Extracted.CPUState F) :
+    (cols : Circuits.Types.CPUState F) :
     ({ clk_high := cols.clk_high
        clk_16_24 := cols.clk_16_24
        clk_0_16 := cols.clk_0_16
        pc := #v[cols.pc[0], cols.pc[1], cols.pc[2]] } :
-      Extracted.CPUState F) = cols := by
+      Circuits.Types.CPUState F) = cols := by
   cases cols
   simp [vec3_eta]
 
 private theorem jTypeEta {F : Type}
-    (cols : Extracted.JTypeReader F) :
+    (cols : Circuits.Types.JTypeReader F) :
     ({ op_a := cols.op_a
        op_a_memory :=
         { prev_value :=
@@ -511,7 +512,7 @@ private theorem jTypeEta {F : Type}
        op_c_imm :=
         #v[cols.op_c_imm[0], cols.op_c_imm[1],
           cols.op_c_imm[2], cols.op_c_imm[3]] } :
-      Extracted.JTypeReader F) = cols := by
+      Circuits.Types.JTypeReader F) = cols := by
   cases cols
   simp [vec4_eta]
 
@@ -577,7 +578,7 @@ private def uTypeRustColumns
         Vector (Expression (ZMod p)) 3)
     add_operation := Eval.eval env
       ({ value := uTypeChipValue offset } :
-        AddOperation.Columns (Expression (ZMod p)))
+        Circuits.Types.AddOperation (Expression (ZMod p)))
     is_auipc := Expression.eval env input.is_auipc }
 
 private def uTypeRustCpuMeaning

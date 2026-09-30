@@ -27,15 +27,15 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 committed CPUState / ALU-type-adapter columns; `opcode` is the dynamic ALU opcode (range-checked `< 29`),
 `is_real` the padding gate. Nothing is witnessed — every field is a threaded input. -/
 structure Inputs (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
   opcode : F
   is_real : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 /-- The recombined low clock `clk_0_16 + clk_16_24 · 2^16` (matching SP1's `clk_low`). -/
-@[reducible] def clkLow (state : Extracted.CPUState (ZMod p)) : ZMod p :=
+@[reducible] def clkLow (state : Circuits.Types.CPUState (ZMod p)) : ZMod p :=
   state.clk_0_16 + state.clk_16_24 * 65536
 
 /-- The umbrella `is_real` selector (a single column for `AluX0`, vs `LoadX0`'s seven-flag sum). -/
@@ -47,8 +47,8 @@ provable_struct_eval_lemmas Inputs
 /-- Native AluX0-chip row (Rust field order). All four blocks reuse the project substrate;
 `Faithful.aluX0ChipReconfigure` is the sole bridge to Rust's separately generated whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
   opcode : F
   is_real : F
 deriving ProvableStruct

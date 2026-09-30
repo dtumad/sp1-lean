@@ -94,7 +94,6 @@ import SP1Clean.Extracted.IsZeroWordOperation
 import SP1Clean.Extracted.JTypeReader
 import SP1Clean.Extracted.LtOperationSigned
 import SP1Clean.Extracted.LtOperationUnsigned
-import SP1Clean.Extracted.MemoryAccess
 import SP1Clean.Extracted.MulOperation
 import SP1Clean.Extracted.OpcodeTable
 import SP1Clean.Extracted.Provenance

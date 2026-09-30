@@ -693,7 +693,7 @@ it `locOf` falls through to `.ram`, whose `readWindow = 0` and `writeOffset = 1`
 read and the offset-4 write unrepresentable. -/
 theorem syscallRow_locOf_reg (r : SyscallInstrsChip.Inputs (ZMod p))
     {idx : ZMod p} {i : BitVec 5} (hidx : ((i.toNat : ℕ) : ZMod p) = idx)
-    (block : Extracted.RegisterAccessCols (ZMod p)) (v : Word (ZMod p)) (c : ZMod p) :
+    (block : Circuits.Types.RegisterAccessCols (ZMod p)) (v : Word (ZMod p)) (c : ZMod p) :
     Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPulledMessage r block idx) = Semantics.MemLoc.reg i ∧
       Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPushedMessage r idx c v)
         = Semantics.MemLoc.reg i :=

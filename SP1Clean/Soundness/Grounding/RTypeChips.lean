@@ -146,7 +146,7 @@ theorem subwChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   -- whole output row here produced a proof term the kernel took 10 s to check (measured 2026-09-22).
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     subwViewOf_state, subwViewOf_adapter, subwViewOf_isReal_eval, subwViewOf_rdWrite,
-    Extracted.RTypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift SUBW's evaluated six-pack to the typed decoded-row boundary. -/
 theorem subwChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -185,7 +185,7 @@ theorem SubwChip.rtypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, subwChipRTypeInput, SubwChip.circuit,
-        SubwChip.rowView, Extracted.RTypeReader.toAdapterView, circuit_norm]
+        SubwChip.rowView, Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Finished Byte guarantees bound SUBW's view clock limbs. -/
 theorem subwChip_viewClockBounds (decoded : DecodedInstructionRow p)
@@ -248,7 +248,7 @@ theorem mulChip_circuit_output_eq (input : Var MulChip.Inputs (ZMod p)) (offset 
     (MulChip.circuit (p := p)).output input offset =
       (⟨input.state, input.adapter,
         Vector.mapRange 4 fun i => var { index := offset + 50 + i },
-        varFromOffset Extracted.MulOperation (offset + 5),
+        varFromOffset Circuits.Types.MulOperation (offset + 5),
         var { index := offset }, var { index := offset + 1 },
         var { index := offset + 2 }, var { index := offset + 3 },
         var { index := offset + 4 }⟩ : Var MulChip.Columns (ZMod p)) := rfl
@@ -311,7 +311,7 @@ theorem mulChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   -- whole output row here produced a proof term the kernel took 16 s to check (measured 2026-09-22).
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     mulViewOf_state, mulViewOf_adapter, mulViewOf_isReal_eval, mulViewOf_rdWrite,
-    Extracted.RTypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift MUL's evaluated six-pack to the typed decoded-row boundary. -/
 theorem mulChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -337,7 +337,7 @@ theorem MulChip.rtypeTimestampContract :
     constructor <;>
       simp only [input, offset, readerInput, MulChip.rTypeReaderInput,
         MulChip.circuit, MulChip.rowView,
-        Extracted.RTypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 theorem mulChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = mulChipDescriptor (p := p))
@@ -419,7 +419,7 @@ theorem divRemViewOf_adapter (env : Environment (ZMod p)) :
     simp only [input, offset, Component.rowOutput, circuit_norm]
   simp only [divRemViewOf, DivRemChip.rowView]
   rw [← outputEq]
-  exact congrArg Extracted.RTypeReader.toAdapterView
+  exact congrArg Circuits.Types.RTypeReader.toAdapterView
     (DivRemChip.eval_output_adapter input offset env).symm
 
 omit [Fact (2 ^ 17 < p)] in
@@ -464,7 +464,7 @@ theorem divRemChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     divRemViewOf_state, divRemViewOf_adapter, divRemViewOf_isReal_eval,
-    divRemViewOf_rdWrite, Extracted.RTypeReader.toAdapterView, circuit_norm]
+    divRemViewOf_rdWrite, Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift DivRem's evaluated six-pack to the typed decoded-row boundary. -/
 theorem divRemChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -488,7 +488,7 @@ local macro "divRemTimestampField" : tactic => do
   `(tactic| simp only [$input:ident, $offset:ident, $readerInput:ident,
       DivRemChip.rTypeReaderInput, DivRemChip.eval_inputs, ↓ DivRemChip.circuit_output_eq,
       DivRemChip.populatedRowAt_adapter_eq, DivRemChip.populatedRowAt_state_eq,
-      Extracted.RTypeReader.toAdapterView, circuit_norm])
+      Circuits.Types.RTypeReader.toAdapterView, circuit_norm])
 
 theorem DivRemChip.rtypeTimestampContract :
     CircuitRTypeTimestampContract (p := p) (DivRemChip.circuit (p := p))

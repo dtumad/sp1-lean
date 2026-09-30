@@ -22,6 +22,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -583,7 +584,7 @@ theorem subChip_constraints_faithful
   let cpuInput : Var Readers.CPUState.Inputs (ZMod p) :=
     ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
       8, input.is_real⟩
-  let rustState : Extracted.CPUState (ZMod p) :=
+  let rustState : Circuits.Types.CPUState (ZMod p) :=
     { clk_high := stateValue.clk_high
       clk_16_24 := stateValue.clk_16_24
       clk_0_16 := stateValue.clk_0_16
@@ -624,7 +625,7 @@ theorem subChip_constraints_faithful
   have hSub := sub_operation_assertions_local (p := p) env subInput (offset + 4)
     rustA rustB rustValue isReal ha hb hv (by
       simp only [subInput, isReal, ProvableStruct.structEvalLiteralProc])
-  let rustAdapter : Extracted.RTypeReader (ZMod p) :=
+  let rustAdapter : Circuits.Types.RTypeReader (ZMod p) :=
     { op_a := adapterValue.op_a
       op_a_memory :=
         { prev_value :=

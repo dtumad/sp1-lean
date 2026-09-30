@@ -34,6 +34,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -44,7 +45,7 @@ timestamp byte bounds hold. The `.program`/`.memory` interactions contribute `Tr
 the trace-level buses); the four binary gates are vacuous at `is_real = 1`. -/
 theorem rtypereader_constraints_faithful
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.RTypeReader (ZMod p)) :
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.RTypeReader (ZMod p)) :
     (List.Forall (· = 0)
           (Extracted.RTypeReader.asserts clk_high clk_low pc opcode op_a_write_value cols 1 1) ∧
         List.Forall Interaction.toProp
@@ -78,7 +79,7 @@ omit [Fact (2 ^ 17 < p)] in
 gates are vacuous at `is_real = 1`. -/
 theorem rtypereader_asserts_faithful
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.RTypeReader (ZMod p)) :
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.RTypeReader (ZMod p)) :
     List.Forall (· = 0)
         (Extracted.RTypeReader.asserts clk_high clk_low pc opcode op_a_write_value cols 1 1) ↔
       (cols.op_a_0 * op_a_write_value[0] = 0 ∧ cols.op_a_0 * op_a_write_value[1] = 0 ∧
@@ -92,7 +93,7 @@ theorem rtypereader_asserts_faithful
 sends. -/
 theorem rtypereader_interactions_faithful
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.RTypeReader (ZMod p)) :
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.RTypeReader (ZMod p)) :
     List.Forall Interaction.toProp
         (Extracted.RTypeReader.interactions clk_high clk_low pc opcode op_a_write_value cols 1 1) ↔
       ((cols.op_a_memory.access_timestamp.diff_low_limb.val < 2 ^ 16 ∧
@@ -129,7 +130,7 @@ own emit, so the *combined* chip Memory block is a `List.Perm` of the full oracl
 theorem rtypereader_memory_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var Readers.RTypeReader.Inputs (ZMod p)) (offset : ℕ)
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.RTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.RTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_ch : Expression.eval env input.clk_high = clk_high)
     (h_cl : Expression.eval env input.clk_low = clk_low)
@@ -194,7 +195,7 @@ R-type operand shape (`0 + op_b = op_b`, literal-`0` higher limbs / `imm` flags)
 theorem rtypereader_program_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var Readers.RTypeReader.Inputs (ZMod p)) (offset : ℕ)
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.RTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.RTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
     (h_it : Expression.eval env input.is_trusted = is_trusted)
     (h_p0 : Expression.eval env input.pc[0] = pc[0])
     (h_p1 : Expression.eval env input.pc[1] = pc[1])
@@ -240,7 +241,7 @@ scaled high part; same `a,b,c` order as the oracle, so a clean `=`. -/
 theorem rtypereader_byte_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var Readers.RTypeReader.Inputs (ZMod p)) (offset : ℕ)
     (clk_high clk_low : ZMod p) (pc : Vector (ZMod p) 3) (opcode : ZMod p)
-    (op_a_write_value : Word (ZMod p)) (cols : Extracted.RTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
+    (op_a_write_value : Word (ZMod p)) (cols : Circuits.Types.RTypeReader (ZMod p)) (is_real is_trusted : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_cl : Expression.eval env input.clk_low = clk_low)
     (h_pl_a : Expression.eval env input.cols.op_a_memory.access_timestamp.prev_low =

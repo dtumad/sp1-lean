@@ -5,7 +5,7 @@ import ToClean.Air.TableBuild
 /-! # `SP1Clean.AluX0Chip` — from trace events to a valid AIR table
 
 The `rd = x0` form of every ALU instruction through the trace-generation chain (see
-`AddChip/Complete.lean` for the programme note). `AluX0` reads `Extracted.ALUTypeReader` — the same
+`AddChip/Complete.lean` for the programme note). `AluX0` reads `Circuits.Types.ALUTypeReader` — the same
 block `Addw`/`Bitwise`/`Lt`/the shifts read — but through the **immutable** adapter: `op_a` is a
 discarded source read, not a destination write, because RISC-V throws the result away.
 

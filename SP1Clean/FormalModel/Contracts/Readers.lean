@@ -1,10 +1,10 @@
 import SP1Clean.Math.Word
 import SP1Clean.Model.BusMessages
-import SP1Clean.Extracted.CPUState
-import SP1Clean.Extracted.RTypeReader
-import SP1Clean.Extracted.ALUTypeReader
-import SP1Clean.Extracted.ITypeReader
-import SP1Clean.Extracted.JTypeReader
+import SP1Clean.Circuits.Types.CPUState
+import SP1Clean.Circuits.Types.RTypeReader
+import SP1Clean.Circuits.Types.ALUTypeReader
+import SP1Clean.Circuits.Types.ITypeReader
+import SP1Clean.Circuits.Types.JTypeReader
 import Clean.Circuit.Basic
 import Clean.Utils.Tactics.ProvableStructDeriving
 
@@ -14,7 +14,7 @@ The `Inputs` structs and semantic `Spec`s for the nine register-adapter / state 
 (`CPUState`, `RegisterAccessTimestamp`, `RegisterAccessCols`, `RTypeReader`, `ALUTypeReader`,
 `ALUTypeReaderImmutable`, `ITypeReader`, `ITypeReaderImmutable`, `JTypeReader`). First file in the
 `FormalModel/Contracts/` sequence (`Readers.lean → Operations.lean → Chips.lean`); depends only on
-`Math/` + `Model/` + `Extracted/`.
+`Math/` + `Model/` + `Circuits/Types/`.
 Each declaration keeps its original namespace, so the reader proof files resolve them unchanged
 after `import SP1Clean.FormalModel.Contracts.Readers`. -/
 
@@ -22,17 +22,17 @@ namespace SP1Clean.Readers
 
 /-- Component-wise evaluation of a register-access column block. -/
 @[circuit_norm] theorem evalRegisterAccessColumns {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.RegisterAccessCols (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value
          access_timestamp := Eval.eval env cols.access_timestamp } :
-        Extracted.RegisterAccessCols F) := by
+        Circuits.Types.RegisterAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
 /-- Component-wise evaluation of the I-type adapter row shared by loads and stores.  Keeping this
 folded avoids repeatedly unfolding the derived `ProvableStruct` instance in parent-chip proofs. -/
 @[circuit_norm] theorem evalITypeColumns {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.ITypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.ITypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a
          op_a_memory := Eval.eval env cols.op_a_memory
@@ -40,7 +40,7 @@ folded avoids repeatedly unfolding the derived `ProvableStruct` instance in pare
          op_b := Eval.eval env cols.op_b
          op_b_memory := Eval.eval env cols.op_b_memory
          op_c_imm := Eval.eval env cols.op_c_imm } :
-        Extracted.ITypeReader F) := by
+        Circuits.Types.ITypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
 end SP1Clean.Readers
@@ -52,7 +52,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 and the operand's access clock `clk_target` (`clk_low + 4/3/2`). As a `FormalAssertion` the block is an
 *input* (the composing chip witnesses it), so the two byte checks are over `cols.*`. -/
 structure Inputs (F : Type) where
-  cols : Extracted.RegisterAccessTimestamp F
+  cols : Circuits.Types.RegisterAccessTimestamp F
   is_real : F
   clk_target : F
 deriving ProvableStruct
@@ -76,7 +76,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- The cross-block inputs: the **chip-owned** register-access block `cols` (a `prev_value : Word` plus the
 nested `access_timestamp`), the row selector `is_real`, and the operand's access clock `clk_target`. -/
 structure Inputs (F : Type) where
-  cols : Extracted.RegisterAccessCols F
+  cols : Circuits.Types.RegisterAccessCols F
   is_real : F
   clk_target : F
 deriving ProvableStruct
@@ -103,7 +103,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 prev-values, and access timestamps) is **witnessed** (the scalars) or **sub-circuit output** (the
 register-access blocks). -/
 structure Inputs (F : Type) where
-  cols : Extracted.RTypeReader F
+  cols : Circuits.Types.RTypeReader F
   is_real : F
   is_trusted : F
   clk_high : F
@@ -162,10 +162,10 @@ namespace SP1Clean.Readers.ALUTypeReader
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The cross-block inputs for the *ALU-type* register adapter (op_c may be an **immediate**). Same shape
-as `RTypeReader.Inputs` but `cols : Extracted.ALUTypeReader` (whose `op_c` is a `Word` and which carries
+as `RTypeReader.Inputs` but `cols : Circuits.Types.ALUTypeReader` (whose `op_c` is a `Word` and which carries
 the `imm_c` flag). Field order is fixed (the composing chip builds it positionally). -/
 structure Inputs (F : Type) where
-  cols : Extracted.ALUTypeReader F
+  cols : Circuits.Types.ALUTypeReader F
   is_real : F
   is_trusted : F
   clk_high : F
@@ -230,10 +230,10 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The cross-block inputs for the *immutable ALU-type* register adapter — op_a is a source **read**
 (written 0 to `x0`, the result discarded), not a destination write, so there is **no** `wv*` write value.
-Reuses the `Extracted.ALUTypeReader` column struct (op_c a `Word`, the `imm_c` flag). Mirrors SP1's
+Reuses the `Circuits.Types.ALUTypeReader` column struct (op_c a `Word`, the `imm_c` flag). Mirrors SP1's
 `ALUTypeReader::eval_op_a_immutable` (used by `AluX0Chip`). -/
 structure Inputs (F : Type) where
-  cols : Extracted.ALUTypeReader F
+  cols : Circuits.Types.ALUTypeReader F
   is_real : F
   is_trusted : F
   clk_high : F
@@ -291,12 +291,12 @@ namespace SP1Clean.Readers.ITypeReader
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The cross-block inputs for the *I-type* register adapter (op_c is an **immediate** `op_c_imm`, not a
-register read). Same shape as `RTypeReader.Inputs` but `cols : Extracted.ITypeReader` (which has
+register read). Same shape as `RTypeReader.Inputs` but `cols : Circuits.Types.ITypeReader` (which has
 `op_a`/`op_b` register reads and `op_c_imm : Word`), and op_a is the destination **write** (`wv*` is the
 written value, e.g. the loaded word for a Load). Only two register accesses (op_a write, op_b read).
 Field order is fixed (the composing chip builds it positionally). -/
 structure Inputs (F : Type) where
-  cols : Extracted.ITypeReader F
+  cols : Circuits.Types.ITypeReader F
   is_real : F
   is_trusted : F
   clk_high : F
@@ -360,9 +360,9 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The cross-block inputs for the *immutable I-type* register adapter — op_a is a source **read**
 (e.g. rs2 for a Store), not a write, so there is **no** `wv*` write value. Reuses the
-`Extracted.ITypeReader` column struct. Two register reads (op_a, op_b); op_c is the immediate. -/
+`Circuits.Types.ITypeReader` column struct. Two register reads (op_a, op_b); op_c is the immediate. -/
 structure Inputs (F : Type) where
-  cols : Extracted.ITypeReader F
+  cols : Circuits.Types.ITypeReader F
   is_real : F
   is_trusted : F
   clk_high : F
@@ -410,10 +410,10 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The cross-block inputs for the *J-type* register adapter (used by JAL / AUIPC): a destination write
 `op_a` (= rd) plus **two immediates** `op_b_imm`/`op_c_imm` (no second register read). `cols :
-Extracted.JTypeReader`. Only **one** register access (op_a write at `clk_low + 4`); `wv*` is the written
+Circuits.Types.JTypeReader`. Only **one** register access (op_a write at `clk_low + 4`); `wv*` is the written
 value (e.g. the return address `pc + 4`). Field order is fixed (the composing chip builds it positionally). -/
 structure Inputs (F : Type) where
-  cols : Extracted.JTypeReader F
+  cols : Circuits.Types.JTypeReader F
   is_real : F
   is_trusted : F
   clk_high : F
@@ -480,7 +480,7 @@ column block), the clock increment `clk_inc` (SP1's `CLK_INC = 8`), and the row 
 Faithful to the Rust: `next_pc`/`clk_inc` are genuine inputs (not baked-in literals), and the chip — which
 owns `cols` — forms `next_pc` from its own `cols.pc`. -/
 structure Inputs (F : Type) where
-  cols : Extracted.CPUState F
+  cols : Circuits.Types.CPUState F
   next_pc : fields 3 F
   clk_inc : F
   is_real : F
@@ -499,7 +499,7 @@ def Spec (input : Inputs (ZMod p)) : Prop :=
 /-- The State-bus **pull** message a CPUState block emits: the current `(clk, pc)` (clk recombined from
 the two byte limbs). Defined on the contract surface so the row circuit and global grounding engine
 reference the identical structural key. -/
-def stateMsgOf (cols : Extracted.CPUState (ZMod p)) : SP1Clean.Channels.StateMsg (ZMod p) :=
+def stateMsgOf (cols : Circuits.Types.CPUState (ZMod p)) : SP1Clean.Channels.StateMsg (ZMod p) :=
   ⟨cols.clk_high, cols.clk_0_16 + cols.clk_16_24 * 65536, cols.pc[0], cols.pc[1], cols.pc[2]⟩
 
 end SP1Clean.Readers.CPUState

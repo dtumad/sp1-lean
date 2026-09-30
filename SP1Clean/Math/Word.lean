@@ -1,15 +1,19 @@
-import Clean.Circuit.Basic
-import Clean.Circuit.StructEvalSimprocs
-import Clean.Utils.Field
-import Mathlib.Tactic.LinearCombination
-import ToClean.Tactic.GetElemFastPath
-import ToClean.Circuit.StructEvalLemmas
+module
+
+public import Clean.Circuit.Basic
+public import Clean.Circuit.StructEvalSimprocs
+public import Clean.Utils.Field
+public import Mathlib.Tactic.LinearCombination
+public meta import ToClean.Tactic.GetElemFastPath
+public import ToClean.Circuit.StructEvalLemmas
 
 /-! # Minimal numeric foundations
 
 A `Word` is four little-endian 16-bit limbs of a field element; `toBitVec64`
 reassembles the 64-bit value. Everything is field-generic over `ZMod p` with
 `Fact (2 ^ 17 < p)` (so each limb and small constant stays `< p`). -/
+
+@[expose] public section
 
 namespace SP1Clean
 

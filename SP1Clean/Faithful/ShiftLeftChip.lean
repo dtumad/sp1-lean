@@ -1,3 +1,4 @@
+import SP1Clean.Extracted.U16MSBOperation
 import SP1Clean.Faithful.ChipOracle
 import SP1Clean.Extracted.ChipOracle.ShiftLeft
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
@@ -14,6 +15,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -36,28 +38,28 @@ private theorem vec6_eta {F : Type} (value : Vector F 6) :
   intro i hi
   interval_cases i <;> rfl
 
-private theorem cpuState_eta {F : Type} (cols : Extracted.CPUState F) :
+private theorem cpuState_eta {F : Type} (cols : Circuits.Types.CPUState F) :
     ({ clk_high := cols.clk_high, clk_16_24 := cols.clk_16_24,
        clk_0_16 := cols.clk_0_16,
        pc := #v[cols.pc[0], cols.pc[1], cols.pc[2]] } :
-      Extracted.CPUState F) = cols := by
+      Circuits.Types.CPUState F) = cols := by
   cases cols
   simp only
   rw [vec3_eta]
 
 private theorem registerAccess_eta {F : Type}
-    (cols : Extracted.RegisterAccessCols F) :
+    (cols : Circuits.Types.RegisterAccessCols F) :
     ({ prev_value :=
         #v[cols.prev_value[0], cols.prev_value[1],
           cols.prev_value[2], cols.prev_value[3]],
        access_timestamp := cols.access_timestamp } :
-      Extracted.RegisterAccessCols F) = cols := by
+      Circuits.Types.RegisterAccessCols F) = cols := by
   cases cols
   simp only
   rw [vec4_eta]
 
 private theorem aluTypeReader_eta {F : Type}
-    (cols : Extracted.ALUTypeReader F) :
+    (cols : Circuits.Types.ALUTypeReader F) :
     ({ op_a := cols.op_a,
        op_a_memory := {
          prev_value :=
@@ -77,7 +79,7 @@ private theorem aluTypeReader_eta {F : Type}
            #v[cols.op_c_memory.prev_value[0], cols.op_c_memory.prev_value[1],
              cols.op_c_memory.prev_value[2], cols.op_c_memory.prev_value[3]],
          access_timestamp := cols.op_c_memory.access_timestamp },
-       imm_c := cols.imm_c } : Extracted.ALUTypeReader F) = cols := by
+       imm_c := cols.imm_c } : Circuits.Types.ALUTypeReader F) = cols := by
   cases cols
   simp only [vec4_eta]
 
@@ -276,10 +278,10 @@ theorem shiftLeftChipColumnsOfInput_roundtrip {F : Type} [Add F]
 
 @[circuit_norm] private theorem evalU16MSB
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16MSBOperation (Expression F)) :
+    (cols : Circuits.Types.U16MSBOperation (Expression F)) :
     Eval.eval env cols =
       ({ msb := Eval.eval env cols.msb } :
-        Extracted.U16MSBOperation F) := by
+        Circuits.Types.U16MSBOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -379,7 +381,7 @@ theorem eval_shiftLeftChipDirectOutput
     intro i hi
     interval_cases i <;> rfl
   constructor
-  · rw [evalU16MSB, Extracted.U16MSBOperation.mk.injEq]
+  · rw [evalU16MSB, Circuits.Types.U16MSBOperation.mk.injEq]
     simpa only [ProvableType.eval_field] using
       (eval_local_inputFirstRow input locals data 29 (by decide))
   constructor
@@ -570,7 +572,7 @@ private theorem shiftLeftRustColumns_eq
         sllw_msb :=
           Eval.eval env
             ({ msb := var { index := offset + 29 } } :
-              Var Extracted.U16MSBOperation (ZMod p))
+              Var Circuits.Types.U16MSBOperation (ZMod p))
         is_sll := Expression.eval env (slSll (p := p) offset)
         is_sllw := Expression.eval env (slSllw (p := p) offset)
         is_sllw_imm :=

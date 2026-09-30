@@ -31,8 +31,8 @@ an immediate-capable `ALUTypeReader`). The `rs1`/`rs2` operands are projected fr
 Memory-bus values) — see `Inputs.op_b_val` below — rather than carried as separate committed columns. -/
 structure Inputs (F : Type) where
   is_real : F
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -44,15 +44,15 @@ constraints copy `adapter.op_c` into this word; on register rows it is the actua
 
 /-- Native Lt-chip row (Rust field order — the chip has no separate `is_real` column; the real-row
 selector is `is_slt + is_sltu`). The reader blocks and the compare block reuse the project substrate
-(`Extracted.LtOperationSigned` is still a standalone generated module — the Branch chip composes the
+(`Circuits.Types.LtOperationSigned` is still a standalone generated module — the Branch chip composes the
 same gadget family). `Faithful.LtChip.ltChipReconfigure` is the sole bridge to Rust's separately
 generated whole-chip row. -/
 structure Columns (F : Type) where
-  state : Extracted.CPUState F
-  adapter : Extracted.ALUTypeReader F
+  state : Circuits.Types.CPUState F
+  adapter : Circuits.Types.ALUTypeReader F
   is_slt : F
   is_sltu : F
-  lt_operation : Extracted.LtOperationSigned F
+  lt_operation : Circuits.Types.LtOperationSigned F
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
@@ -115,7 +115,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   -- sign-bit columns) via the witness-IR twin `populateFE` (`populateFE_eval` ties it to
   -- `populate`), then composes `LtOperationSigned.circuit` as a Clean `assertion`
   -- (it is a `FormalAssertion`, witnessing nothing of its own; `is_signed := is_slt`).
-  let lt_cols ← witness (var := Var Extracted.LtOperationSigned)
+  let lt_cols ← witness (var := Var Circuits.Types.LtOperationSigned)
     (LtOperationSigned.populateFE input.op_b_val input.op_c_val is_slt input.is_real)
   assertion LtOperationSigned.circuit ⟨input.op_b_val, input.op_c_val, lt_cols, is_slt, input.is_real⟩
   -- `ALUTypeReader` is now a `GeneralFormalCircuit` (SC Phase 2pre) — composed via the GFC `CoeFun`
@@ -148,7 +148,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   output input offset :=
     ⟨input.state, input.adapter, var { index := offset }, var { index := offset + 1 },
-      varFromOffset Extracted.LtOperationSigned (offset + 2)⟩
+      varFromOffset Circuits.Types.LtOperationSigned (offset + 2)⟩
   output_eq := by intro input offset; simp only [main, circuit_norm]
   channelsLawful := by simp only [circuit_norm, main, LtOperationSigned.circuit, Readers.ALUTypeReader.circuit, Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
   -- witnesses the two flags (2) + the `LtOperationSigned` block (1 + 1 + 8 = 10); the readers/write are
@@ -163,7 +163,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
 @[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter, var { index := offset }, var { index := offset + 1 },
-        varFromOffset Extracted.LtOperationSigned (offset + 2)⟩ : Var Columns (ZMod p)) := rfl
+        varFromOffset Circuits.Types.LtOperationSigned (offset + 2)⟩ : Var Columns (ZMod p)) := rfl
 
 @[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :

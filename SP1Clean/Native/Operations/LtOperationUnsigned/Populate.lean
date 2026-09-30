@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.LtOperationUnsigned
+import SP1Clean.Circuits.Types.LtOperationUnsigned
 import SP1Clean.Native.Operations.U16CompareOperation.Populate
 
 /-! # `LtOperationUnsigned` — native witness generation
@@ -43,12 +43,12 @@ def notEqInvWitness (b cc : Word (ZMod p)) : Vector (ZMod p) 1 :=
 the struct unpopulated (`DivRemChip`'s `remainder_lt_operation` when the remainder-check
 multiplicity is `0`). `spec_zero` (in `Formal`) discharges the composed assertion's obligation at
 this value. -/
-def zeroCols : Extracted.LtOperationUnsigned (ZMod p) :=
+def zeroCols : Circuits.Types.LtOperationUnsigned (ZMod p) :=
   ⟨⟨0⟩, #v[0, 0, 0, 0], 0, #v[0, 0]⟩
 
 /-- Fully witnessed `LtOperationUnsigned` column struct (SP1's `populate_unsigned`): one-hot flags,
 comparison limbs, non-equality inverse, and the composed `U16CompareOperation` bit. -/
-def populate (b cc : Word (ZMod p)) : Extracted.LtOperationUnsigned (ZMod p) :=
+def populate (b cc : Word (ZMod p)) : Circuits.Types.LtOperationUnsigned (ZMod p) :=
   let cl := comparisonLimbsWitness b cc
   let f := flagsWitness b cc
   let ni := notEqInvWitness b cc

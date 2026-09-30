@@ -39,6 +39,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -202,10 +203,10 @@ theorem bitwiseChipColumnsOfInput_roundtrip {F : Type} [Add F]
     bitwiseChipLocals_zero cols, bitwiseChipLocals_one cols, bitwiseChipLocals_two cols⟩
 
 @[circuit_norm] theorem eval_extractedU16toU8Operation {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.U16toU8Operation (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.U16toU8Operation (Expression F)) :
     Eval.eval env cols =
       ({ low_bytes := Eval.eval env cols.low_bytes } :
-        Extracted.U16toU8Operation F) := by
+        Circuits.Types.U16toU8Operation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -520,7 +521,7 @@ theorem bitwiseChip_constraints_faithful
   let cpuInput : Var Readers.CPUState.Inputs (ZMod p) :=
     ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
       8, input.is_real⟩
-  let rustState : Extracted.CPUState (ZMod p) :=
+  let rustState : Circuits.Types.CPUState (ZMod p) :=
     { clk_high := stateValue.clk_high
       clk_16_24 := stateValue.clk_16_24
       clk_0_16 := stateValue.clk_0_16
@@ -538,7 +539,7 @@ theorem bitwiseChip_constraints_faithful
     rustB rustC rustOperation rustByteOpcode rustIsReal (by
       simp only [opInput, rustIsReal]
       exact hinputReal)
-  let rustAdapter : Extracted.ALUTypeReader (ZMod p) := adapterValue
+  let rustAdapter : Circuits.Types.ALUTypeReader (ZMod p) := adapterValue
   let aluInput : Var Readers.ALUTypeReader.Inputs (ZMod p) :=
     ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,

@@ -169,9 +169,9 @@ theorem AddChip.opBPullContract :
   · intro env
     exact (AddChip.eval_isReal env _).symm
   · intro env
-    simp only [AddChip.circuit, AddChip.rowView, Extracted.RTypeReader.toAdapterView, circuit_norm]
+    simp only [AddChip.circuit, AddChip.rowView, Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
   · intro env
-    simp only [AddChip.circuit, AddChip.rowView, Extracted.RTypeReader.toAdapterView, circuit_norm]
+    simp only [AddChip.circuit, AddChip.rowView, Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Closed-form facts for Add's source-C register pull. -/
 theorem AddChip.opCPullContract :
@@ -191,9 +191,9 @@ theorem AddChip.opCPullContract :
   · intro env
     exact (AddChip.eval_isReal env _).symm
   · intro env
-    simp only [AddChip.circuit, AddChip.rowView, Extracted.RTypeReader.toAdapterView, circuit_norm]
+    simp only [AddChip.circuit, AddChip.rowView, Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
   · intro env
-    simp only [AddChip.circuit, AddChip.rowView, Extracted.RTypeReader.toAdapterView, circuit_norm]
+    simp only [AddChip.circuit, AddChip.rowView, Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Add's two source-register values are carried by the exact `RTypeReader` Memory pulls composed
 into the chip.  This bundle is the template obligation for the other reader families. -/

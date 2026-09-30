@@ -1,6 +1,7 @@
+import Mathlib.Tactic.IntervalCases
 import SP1Clean.Math.Word
 import SP1Clean.Native.Operations.IsZeroOperation.Populate
-import SP1Clean.Extracted.IsZeroWordOperation
+import SP1Clean.Circuits.Types.IsZeroWordOperation
 
 /-! # `IsZeroWordOperation` — `populate` (the witness generator)
 
@@ -14,7 +15,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The witnessed column struct: per-limb `IsZeroOperation.populate`, the two half-products, and
 `result = first_half * second_half`. -/
-def populate (a : Word (ZMod p)) : Extracted.IsZeroWordOperation (ZMod p) :=
+def populate (a : Word (ZMod p)) : Circuits.Types.IsZeroWordOperation (ZMod p) :=
   let l0 := IsZeroOperation.populate a[0]
   let l1 := IsZeroOperation.populate a[1]
   let l2 := IsZeroOperation.populate a[2]
@@ -26,7 +27,7 @@ def populate (a : Word (ZMod p)) : Extracted.IsZeroWordOperation (ZMod p) :=
 /-- The all-zero column struct — the witness on rows where the gadget is inactive and SP1 leaves
 the struct unpopulated (gated `IsZeroWord`/`IsEqualWord` composition on padding rows). `spec_zero`
 (in `Formal`) discharges the composed assertion's obligation at this value. -/
-def zeroCols : Extracted.IsZeroWordOperation (ZMod p) :=
+def zeroCols : Circuits.Types.IsZeroWordOperation (ZMod p) :=
   ⟨⟨0, 0⟩, ⟨0, 0⟩, ⟨0, 0⟩, ⟨0, 0⟩, 0, 0, 0⟩
 
 /-- Vector form of the witness, used only for the conformance check in
@@ -49,7 +50,7 @@ section FE
 /-- The witness-IR twin of `populate`: per-limb `IsZeroOperation.populateFE`, the two half
 products, and the result product — over computed word cells. -/
 def populateFE (a : Vector (Witgen.FExpr (ZMod p)) 4) :
-    Extracted.IsZeroWordOperation (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.IsZeroWordOperation (Witgen.FExpr (ZMod p)) :=
   let l0 := IsZeroOperation.populateFE a[0]
   let l1 := IsZeroOperation.populateFE a[1]
   let l2 := IsZeroOperation.populateFE a[2]
@@ -97,8 +98,8 @@ collapses them generically. -/
 
 set_option linter.unusedSectionVars false in
 /-- Cell `0` is `is_zero_limb_0.inverse`. -/
-private lemma toElements_cell_0 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[0]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_0 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[0]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_0.inverse := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -107,8 +108,8 @@ private lemma toElements_cell_0 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `1` is `is_zero_limb_0.result`. -/
-private lemma toElements_cell_1 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[1]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_1 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[1]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_0.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -117,8 +118,8 @@ private lemma toElements_cell_1 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `2` is `is_zero_limb_1.inverse`. -/
-private lemma toElements_cell_2 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[2]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_2 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[2]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_1.inverse := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -127,8 +128,8 @@ private lemma toElements_cell_2 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `3` is `is_zero_limb_1.result`. -/
-private lemma toElements_cell_3 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[3]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_3 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[3]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_1.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -137,8 +138,8 @@ private lemma toElements_cell_3 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `4` is `is_zero_limb_2.inverse`. -/
-private lemma toElements_cell_4 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[4]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_4 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[4]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_2.inverse := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -148,8 +149,8 @@ private lemma toElements_cell_4 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `5` is `is_zero_limb_2.result`. -/
-private lemma toElements_cell_5 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[5]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_5 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[5]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_2.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -159,8 +160,8 @@ private lemma toElements_cell_5 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `6` is `is_zero_limb_3.inverse`. -/
-private lemma toElements_cell_6 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[6]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_6 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[6]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_3.inverse := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -171,8 +172,8 @@ private lemma toElements_cell_6 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `7` is `is_zero_limb_3.result`. -/
-private lemma toElements_cell_7 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[7]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_7 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[7]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_limb_3.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -183,8 +184,8 @@ private lemma toElements_cell_7 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `8` is `is_zero_first_half`. -/
-private lemma toElements_cell_8 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[8]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_8 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[8]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_first_half := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -196,8 +197,8 @@ private lemma toElements_cell_8 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `9` is `is_zero_second_half`. -/
-private lemma toElements_cell_9 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[9]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_9 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[9]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.is_zero_second_half := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -210,8 +211,8 @@ private lemma toElements_cell_9 {F : Type} (s : Extracted.IsZeroWordOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `10` is `result`. -/
-private lemma toElements_cell_10 {F : Type} (s : Extracted.IsZeroWordOperation F) :
-    (toElements s)[10]'(by have h : size Extracted.IsZeroWordOperation = 11 := rfl; omega)
+private lemma toElements_cell_10 {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
+    (toElements s)[10]'(by have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl; omega)
       = s.result := by
   obtain ⟨⟨i0, r0⟩, ⟨i1, r1⟩, ⟨i2, r2⟩, ⟨i3, r3⟩, fh, sh, r⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -226,16 +227,16 @@ private lemma toElements_cell_10 {F : Type} (s : Extracted.IsZeroWordOperation F
 set_option linter.unusedSectionVars false in
 /-- The result field is flattened cell `10` (the public face of the navigator family, for
 composing chips that read the result cell of a struct payload). -/
-lemma result_eq_toElements {F : Type} (s : Extracted.IsZeroWordOperation F) :
+lemma result_eq_toElements {F : Type} (s : Circuits.Types.IsZeroWordOperation F) :
     s.result = (toElements s)[10]'(by
-      have h : size Extracted.IsZeroWordOperation = 11 := rfl
+      have h : size Circuits.Types.IsZeroWordOperation = 11 := rfl
       omega) :=
   (toElements_cell_10 s).symm
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Every flattened cell of the zero struct is zero (the gated-composition else-branch fact). -/
-lemma zc_cell (i : ℕ) (hi : i < size Extracted.IsZeroWordOperation) :
-    (toElements (zeroCols : Extracted.IsZeroWordOperation (ZMod p)))[i] = 0 := by
+lemma zc_cell (i : ℕ) (hi : i < size Circuits.Types.IsZeroWordOperation) :
+    (toElements (zeroCols : Circuits.Types.IsZeroWordOperation (ZMod p)))[i] = 0 := by
   have hi' : i < 11 := hi
   interval_cases i
   · rw [toElements_cell_0]; rfl
@@ -254,8 +255,8 @@ omit [Fact (2 ^ 17 < p)] in
 /-- The flattened zero struct, as a `fromElements` of zeros (the shape `Witgen.eval_gateFE`'s
 else branch produces). -/
 lemma fromElements_zero :
-    (fromElements (Vector.replicate (size Extracted.IsZeroWordOperation) 0)
-      : Extracted.IsZeroWordOperation (ZMod p)) = zeroCols := by
+    (fromElements (Vector.replicate (size Circuits.Types.IsZeroWordOperation) 0)
+      : Circuits.Types.IsZeroWordOperation (ZMod p)) = zeroCols := by
   rw [ProvableType.ext_iff]
   intro i hi
   rw [ProvableType.toElements_fromElements, Vector.getElem_replicate]

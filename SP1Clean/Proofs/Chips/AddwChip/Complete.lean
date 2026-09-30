@@ -5,7 +5,7 @@ import ToClean.Air.TableBuild
 /-! # `SP1Clean.AddwChip` — from trace events to a valid AIR table (the ALU-type template)
 
 The first chip of the **ALU-type** family through the trace-generation chain (see
-`AddChip/Complete.lean` for the programme note). `Addw` reads `Extracted.ALUTypeReader`: the
+`AddChip/Complete.lean` for the programme note). `Addw` reads `Circuits.Types.ALUTypeReader`: the
 immediate-capable ALU adapter, whose `op_c` slot is a committed four-limb word *plus* an access
 block, with the committed `imm_c` flag selecting which of the two forms the row is in.
 

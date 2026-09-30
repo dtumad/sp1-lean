@@ -1,3 +1,4 @@
+import SP1Clean.Extracted.MulOperation
 import SP1Clean.Faithful.ChipOracle
 import SP1Clean.Faithful.CPUState
 import SP1Clean.Faithful.RTypeReader
@@ -17,14 +18,15 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-/-- Copy the shared `Extracted.MulOperation` arithmetic block into the Mul oracle's chip-private
+/-- Copy the shared `Circuits.Types.MulOperation` arithmetic block into the Mul oracle's chip-private
 `MulOperation` row (same field names; the two nested byte-decomposition blocks and the MSB block are
 rebuilt into the oracle's embedded struct copies). -/
-def mulOracleOperation {F : Type} (cols : Extracted.MulOperation F) :
+def mulOracleOperation {F : Type} (cols : Circuits.Types.MulOperation F) :
     Extracted.MulOracle.MulOperation F :=
   { carry := cols.carry
     product := cols.product
@@ -38,7 +40,7 @@ def mulOracleOperation {F : Type} (cols : Extracted.MulOperation F) :
 
 /-- Inverse of `mulOracleOperation`. -/
 def mulNativeOperation {F : Type} (cols : Extracted.MulOracle.MulOperation F) :
-    Extracted.MulOperation F :=
+    Circuits.Types.MulOperation F :=
   { carry := cols.carry
     product := cols.product
     b_lower_byte := { low_bytes := cols.b_lower_byte.low_bytes }
@@ -106,7 +108,7 @@ def mulChipPhysicalRow {F : Type} [Add F]
   inputFirstRow (mulChipInput cols) (mulChipLocals cols)
 
 def mulChipOperationOfLocals {F : Type} (locals : Vector F 54) :
-    Extracted.MulOperation F :=
+    Circuits.Types.MulOperation F :=
   fromElements (Vector.cast (by rfl) ((locals.drop 5).take 45))
 
 def mulChipAOfLocals {F : Type} (locals : Vector F 54) : Word F :=
@@ -132,12 +134,12 @@ private theorem mulChipOperationOfLocals_roundtrip {F : Type}
     (cols : MulChip.Columns F) :
     mulChipOperationOfLocals (mulChipLocals cols) =
       cols.mul_operation := by
-  refine (ProvableType.ext_iff (α := Extracted.MulOperation) _ _).mpr
+  refine (ProvableType.ext_iff (α := Circuits.Types.MulOperation) _ _).mpr
     (fun i hi => ?_)
   unfold mulChipOperationOfLocals mulChipLocals
   rw [ProvableType.toElements_fromElements, Vector.getElem_cast,
     Vector.getElem_take, Vector.getElem_drop, Vector.getElem_cast]
-  have hsize : size Extracted.MulOperation = 45 := rfl
+  have hsize : size Circuits.Types.MulOperation = 45 := rfl
   rw [hsize] at hi
   simp [hsize, hi]
 
@@ -148,10 +150,10 @@ private theorem mulChipAOfLocals_roundtrip {F : Type}
   intro i hi
   unfold mulChipAOfLocals mulChipLocals
   rw [Vector.getElem_cast, Vector.getElem_drop, Vector.getElem_cast,
-    Vector.getElem_append_right (by have : size Extracted.MulOperation = 45 := rfl; omega)
-      (by have : size Extracted.MulOperation = 45 := rfl; omega)]
+    Vector.getElem_append_right (by have : size Circuits.Types.MulOperation = 45 := rfl; omega)
+      (by have : size Circuits.Types.MulOperation = 45 := rfl; omega)]
   congr 1
-  have : size Extracted.MulOperation = 45 := rfl
+  have : size Circuits.Types.MulOperation = 45 := rfl
   omega
 
 theorem mulChipColumnsOfInput_roundtrip {F : Type} [Add F]
@@ -177,10 +179,10 @@ private theorem eval_mulChipOperationOfLocals
     (input : MulChip.Inputs (ZMod p))
     (locals : Vector (ZMod p) 54) (data : ProverData (ZMod p)) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
-        (varFromOffset Extracted.MulOperation (F := ZMod p)
+        (varFromOffset Circuits.Types.MulOperation (F := ZMod p)
           (size MulChip.Inputs + 5)) =
       mulChipOperationOfLocals locals := by
-  refine (ProvableType.ext_iff (α := Extracted.MulOperation) _ _).mpr
+  refine (ProvableType.ext_iff (α := Circuits.Types.MulOperation) _ _).mpr
     (fun i hi => ?_)
   rw [ProvableType.eval_varFromOffset,
     ProvableType.toElements_fromElements, Vector.getElem_mapRange]
@@ -188,7 +190,7 @@ private theorem eval_mulChipOperationOfLocals
   rw [ProvableType.toElements_fromElements, Vector.getElem_cast,
     Vector.getElem_take, Vector.getElem_drop]
   have hlocal := eval_local_inputFirstRow input locals data (5 + i) (by
-    have hsize : size Extracted.MulOperation = 45 := rfl
+    have hsize : size Circuits.Types.MulOperation = 45 := rfl
     rw [hsize] at hi
     omega)
   simp only [Expression.eval] at hlocal
@@ -308,8 +310,8 @@ private def mul_chip_is_real (offset : ℕ) : Expression (ZMod p) :=
     mul_chip_flag offset 4
 
 private def mul_chip_operation (offset : ℕ) :
-    Var Extracted.MulOperation (ZMod p) :=
-  varFromOffset Extracted.MulOperation (offset + 5)
+    Var Circuits.Types.MulOperation (ZMod p) :=
+  varFromOffset Circuits.Types.MulOperation (offset + 5)
 
 private def mul_chip_a (offset : ℕ) : Word (Expression (ZMod p)) :=
   Vector.mapRange 4 fun i => var { index := offset + 50 + i }
@@ -449,7 +451,7 @@ private theorem mul_chip_constraints_decompose
     mul_chip_a, mul_chip_selector, Readers.CPUState.circuit,
     MulOperation.circuit, Readers.RTypeReader.circuit,
     Readers.RegisterWrite.circuit, Nat.add_zero, Nat.add_assoc,
-    Nat.reduceAdd, show size Extracted.MulOperation = 45 by rfl,
+    Nat.reduceAdd, show size Circuits.Types.MulOperation = 45 by rfl,
     ProvableType.varFromOffset_fields, Vector.getElem_mapRange,
     Vector.getElem_mk, List.getElem_toArray,
     List.getElem_cons_zero, List.getElem_cons_succ,
@@ -477,38 +479,38 @@ private theorem vec16_eta {F : Type} (value : Vector F 16) :
   interval_cases i <;> rfl
 
 private theorem u16toU8_eta {F : Type}
-    (cols : Extracted.U16toU8Operation F) :
+    (cols : Circuits.Types.U16toU8Operation F) :
     ({ low_bytes :=
         #v[cols.low_bytes[0], cols.low_bytes[1],
           cols.low_bytes[2], cols.low_bytes[3]] } :
-      Extracted.U16toU8Operation F) = cols := by
+      Circuits.Types.U16toU8Operation F) = cols := by
   cases cols
   simp only
   rw [vec4_eta]
 
-private theorem cpuState_eta {F : Type} (cols : Extracted.CPUState F) :
+private theorem cpuState_eta {F : Type} (cols : Circuits.Types.CPUState F) :
     ({ clk_high := cols.clk_high
        clk_16_24 := cols.clk_16_24
        clk_0_16 := cols.clk_0_16
        pc := #v[cols.pc[0], cols.pc[1], cols.pc[2]] } :
-      Extracted.CPUState F) = cols := by
+      Circuits.Types.CPUState F) = cols := by
   cases cols
   simp only
   rw [vec3_eta]
 
 private theorem registerAccess_eta {F : Type}
-    (cols : Extracted.RegisterAccessCols F) :
+    (cols : Circuits.Types.RegisterAccessCols F) :
     ({ prev_value :=
         #v[cols.prev_value[0], cols.prev_value[1],
           cols.prev_value[2], cols.prev_value[3]]
        access_timestamp := cols.access_timestamp } :
-      Extracted.RegisterAccessCols F) = cols := by
+      Circuits.Types.RegisterAccessCols F) = cols := by
   cases cols
   simp only
   rw [vec4_eta]
 
 private theorem rTypeReader_eta {F : Type}
-    (cols : Extracted.RTypeReader F) :
+    (cols : Circuits.Types.RTypeReader F) :
     ({ op_a := cols.op_a
        op_a_memory :=
         { prev_value :=
@@ -534,13 +536,13 @@ private theorem rTypeReader_eta {F : Type}
               cols.op_c_memory.prev_value[2],
               cols.op_c_memory.prev_value[3]]
           access_timestamp := cols.op_c_memory.access_timestamp } } :
-      Extracted.RTypeReader F) = cols := by
+      Circuits.Types.RTypeReader F) = cols := by
   cases cols
   simp only
   rw [registerAccess_eta, registerAccess_eta, registerAccess_eta]
 
 private theorem mulOperation_eta {F : Type}
-    (cols : Extracted.MulOperation F) :
+    (cols : Circuits.Types.MulOperation F) :
     ({ carry :=
         #v[cols.carry[0], cols.carry[1], cols.carry[2], cols.carry[3],
           cols.carry[4], cols.carry[5], cols.carry[6], cols.carry[7],
@@ -568,7 +570,7 @@ private theorem mulOperation_eta {F : Type}
        product_msb := { msb := cols.product_msb.msb }
        b_sign_extend := cols.b_sign_extend
        c_sign_extend := cols.c_sign_extend } :
-      Extracted.MulOperation F) = cols := by
+      Circuits.Types.MulOperation F) = cols := by
   cases cols with
   | mk carry product bLower cLower bMsb cMsb productMsb bSign cSign =>
       cases bLower
@@ -583,7 +585,7 @@ bridge is a definitional unfolding, not a mathematical claim. They let every hea
 lemma below stay stated once against the standalone module (also consumed by the DivRem chip). -/
 
 private theorem mulOracleOperation_eta {F : Type}
-    (cols : Extracted.MulOperation F) :
+    (cols : Circuits.Types.MulOperation F) :
     ({ carry :=
         #v[cols.carry[0], cols.carry[1], cols.carry[2], cols.carry[3],
           cols.carry[4], cols.carry[5], cols.carry[6], cols.carry[7],
@@ -658,7 +660,7 @@ private theorem mulOracle_u16msb_interactions_eq {F : Type} [Field F] [CoeHead F
 /-- The Mul oracle's embedded `MulOperation.asserts` copy agrees with the canonical standalone
 module on every reconfigured arithmetic block. -/
 private theorem mulOracle_mulOperation_asserts_eq {F : Type} [Field F] [CoeHead F ℕ]
-    (a b c : Word F) (cols : Extracted.MulOperation F)
+    (a b c : Word F) (cols : Circuits.Types.MulOperation F)
     (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : F) :
     Extracted.MulOracle.MulOperation.asserts a b c (mulOracleOperation cols)
         is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu =
@@ -670,7 +672,7 @@ private theorem mulOracle_mulOperation_asserts_eq {F : Type} [Field F] [CoeHead 
 
 /-- Interaction-list half of `mulOracle_mulOperation_asserts_eq`. -/
 private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [CoeHead F ℕ]
-    (a b c : Word F) (cols : Extracted.MulOperation F)
+    (a b c : Word F) (cols : Circuits.Types.MulOperation F)
     (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : F) :
     Extracted.MulOracle.MulOperation.interactions a b c (mulOracleOperation cols)
         is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu =
@@ -683,7 +685,7 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
 
 @[circuit_norm] private theorem eval_mulOperationColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     Eval.eval env cols =
       ({ carry := Eval.eval env cols.carry
          product := Eval.eval env cols.product
@@ -694,25 +696,25 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
          product_msb := Eval.eval env cols.product_msb
          b_sign_extend := Eval.eval env cols.b_sign_extend
          c_sign_extend := Eval.eval env cols.c_sign_extend } :
-        Extracted.MulOperation F) := by
+        Circuits.Types.MulOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem eval_u16MsbColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16MSBOperation (Expression F)) :
+    (cols : Circuits.Types.U16MSBOperation (Expression F)) :
     Eval.eval env cols =
       ({ msb := Eval.eval env cols.msb } :
-        Extracted.U16MSBOperation F) := by
+        Circuits.Types.U16MSBOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] private theorem eval_u16toU8Columns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.U16toU8Operation (Expression F)) :
+    (cols : Circuits.Types.U16toU8Operation (Expression F)) :
     Eval.eval env cols =
       ({ low_bytes := Eval.eval env cols.low_bytes } :
-        Extracted.U16toU8Operation F) := by
+        Circuits.Types.U16toU8Operation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -735,7 +737,7 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
 
 @[circuit_norm] private theorem eval_mulOperation_productMsb
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     (Eval.eval env cols).product_msb.msb =
       Expression.eval env cols.product_msb.msb := by
   rw [eval_mulOperationColumns, eval_u16MsbColumns]
@@ -743,21 +745,21 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
 
 @[circuit_norm] private theorem eval_mulOperation_bMsb
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     (Eval.eval env cols).b_msb = Expression.eval env cols.b_msb := by
   rw [eval_mulOperationColumns]
   simp only [ProvableType.eval_field]
 
 @[circuit_norm] private theorem eval_mulOperation_cMsb
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     (Eval.eval env cols).c_msb = Expression.eval env cols.c_msb := by
   rw [eval_mulOperationColumns]
   simp only [ProvableType.eval_field]
 
 @[circuit_norm] private theorem eval_mulOperation_bSign
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     (Eval.eval env cols).b_sign_extend =
       Expression.eval env cols.b_sign_extend := by
   rw [eval_mulOperationColumns]
@@ -765,7 +767,7 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
 
 @[circuit_norm] private theorem eval_mulOperation_cSign
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F)) :
+    (cols : Circuits.Types.MulOperation (Expression F)) :
     (Eval.eval env cols).c_sign_extend =
       Expression.eval env cols.c_sign_extend := by
   rw [eval_mulOperationColumns]
@@ -773,7 +775,7 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
 
 @[circuit_norm] private theorem eval_mulOperation_product
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F))
+    (cols : Circuits.Types.MulOperation (Expression F))
     (i : ℕ) (hi : i < 16) :
     (Eval.eval env cols).product[i] =
       Expression.eval env cols.product[i] := by
@@ -783,7 +785,7 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
 
 @[circuit_norm] private theorem eval_mulOperation_carry
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F))
+    (cols : Circuits.Types.MulOperation (Expression F))
     (i : ℕ) (hi : i < 16) :
     (Eval.eval env cols).carry[i] =
       Expression.eval env cols.carry[i] := by
@@ -793,7 +795,7 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
 
 @[circuit_norm] private theorem eval_mulOperation_bLower
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F))
+    (cols : Circuits.Types.MulOperation (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).b_lower_byte.low_bytes[i] =
       Expression.eval env cols.b_lower_byte.low_bytes[i] := by
@@ -804,7 +806,7 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
 
 @[circuit_norm] private theorem eval_mulOperation_cLower
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.MulOperation (Expression F))
+    (cols : Circuits.Types.MulOperation (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).c_lower_byte.low_bytes[i] =
       Expression.eval env cols.c_lower_byte.low_bytes[i] := by
@@ -821,13 +823,13 @@ private theorem eval_word_getElem
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem mulProductVal_of_lt
-    (cols : Extracted.MulOperation (ZMod p)) (k : ℕ) (hk : k < 16) :
+    (cols : Circuits.Types.MulOperation (ZMod p)) (k : ℕ) (hk : k < 16) :
     MulOperation.productVal cols k = cols.product[k] := by
   simp [MulOperation.productVal, hk]
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value0 (w : Word (ZMod p))
-    (cols : Extracted.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
     (Extracted.U16toU8OperationSafe.value w cols isReal)[0] =
       cols.low_bytes[0] := by
   rw [Extracted.U16toU8OperationSafe.value]
@@ -835,7 +837,7 @@ private theorem u16Value0 (w : Word (ZMod p))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value1 (w : Word (ZMod p))
-    (cols : Extracted.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
     (Extracted.U16toU8OperationSafe.value w cols isReal)[1] =
       (w[0] - cols.low_bytes[0]) * 256⁻¹ := by
   rw [Extracted.U16toU8OperationSafe.value]
@@ -843,7 +845,7 @@ private theorem u16Value1 (w : Word (ZMod p))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value2 (w : Word (ZMod p))
-    (cols : Extracted.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
     (Extracted.U16toU8OperationSafe.value w cols isReal)[2] =
       cols.low_bytes[1] := by
   rw [Extracted.U16toU8OperationSafe.value]
@@ -851,7 +853,7 @@ private theorem u16Value2 (w : Word (ZMod p))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value3 (w : Word (ZMod p))
-    (cols : Extracted.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
     (Extracted.U16toU8OperationSafe.value w cols isReal)[3] =
       (w[1] - cols.low_bytes[1]) * 256⁻¹ := by
   rw [Extracted.U16toU8OperationSafe.value]
@@ -859,7 +861,7 @@ private theorem u16Value3 (w : Word (ZMod p))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value4 (w : Word (ZMod p))
-    (cols : Extracted.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
     (Extracted.U16toU8OperationSafe.value w cols isReal)[4] =
       cols.low_bytes[2] := by
   rw [Extracted.U16toU8OperationSafe.value]
@@ -867,7 +869,7 @@ private theorem u16Value4 (w : Word (ZMod p))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value5 (w : Word (ZMod p))
-    (cols : Extracted.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
     (Extracted.U16toU8OperationSafe.value w cols isReal)[5] =
       (w[2] - cols.low_bytes[2]) * 256⁻¹ := by
   rw [Extracted.U16toU8OperationSafe.value]
@@ -875,7 +877,7 @@ private theorem u16Value5 (w : Word (ZMod p))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value6 (w : Word (ZMod p))
-    (cols : Extracted.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
     (Extracted.U16toU8OperationSafe.value w cols isReal)[6] =
       cols.low_bytes[3] := by
   rw [Extracted.U16toU8OperationSafe.value]
@@ -883,7 +885,7 @@ private theorem u16Value6 (w : Word (ZMod p))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value7 (w : Word (ZMod p))
-    (cols : Extracted.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) (isReal : ZMod p) :
     (Extracted.U16toU8OperationSafe.value w cols isReal)[7] =
       (w[3] - cols.low_bytes[3]) * 256⁻¹ := by
   rw [Extracted.U16toU8OperationSafe.value]
@@ -931,7 +933,7 @@ private theorem mulCols_asserts_decompose
 
 /-- Rust's twelve selector-gated result-placement equations. -/
 private def RustMulOutputPlacement (a : Word (ZMod p))
-    (cols : Extracted.MulOperation (ZMod p))
+    (cols : Circuits.Types.MulOperation (ZMod p))
     (isMul isMulh isMulhu isMulhsu isMulw : ZMod p) : Prop :=
   let high := isMulh + isMulhu + isMulhsu
   isMulw * (cols.product[0] + cols.product[1] * 256 - a[0]) = 0 ∧
@@ -954,7 +956,7 @@ chips factor these four equations into their chip-local glue.  This named seam l
 whole-chip faithfulness proofs transport between those two decompositions without treating the
 operation as a separate verified boundary. -/
 def MulOutputPlacement (a : Word (ZMod p))
-    (cols : Extracted.MulOperation (ZMod p))
+    (cols : Circuits.Types.MulOperation (ZMod p))
     (isMul isMulh isMulhu isMulhsu isMulw : ZMod p) : Prop :=
   let isReal := isMul + isMulh + isMulhu + isMulhsu + isMulw
   let selected :=
@@ -1007,7 +1009,7 @@ private theorem mulFlags_all_zero
     (ZMod.val_eq_zero isMulw).mp (by omega)⟩
 
 private theorem mulOutputPlacement_iff
-    (a : Word (ZMod p)) (cols : Extracted.MulOperation (ZMod p))
+    (a : Word (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p))
     (isMul isMulh isMulhu isMulhsu isMulw : ZMod p)
     (hm : isMul = 0 ∨ isMul = 1)
     (hmh : isMulh = 0 ∨ isMulh = 1)
@@ -1713,12 +1715,12 @@ private theorem mulChip_constraints_faithful
   rw [MulChip.directOutput_eq] at hbind
   rw [← ProvableStruct.eval_eq_eval, MulChip.eval_columns] at hbind
   subst cols
-  let operation : Var Extracted.MulOperation (ZMod p) :=
+  let operation : Var Circuits.Types.MulOperation (ZMod p) :=
     mul_chip_operation offset
   let a : Word (Expression (ZMod p)) := mul_chip_a offset
   let stateValue := Eval.eval env input.state
   let adapterValue := Eval.eval env input.adapter
-  let rustOperation : Extracted.MulOperation (ZMod p) :=
+  let rustOperation : Circuits.Types.MulOperation (ZMod p) :=
     Eval.eval env operation
   let rustA : Word (ZMod p) := Eval.eval env a
   let rustB : Word (ZMod p) :=
@@ -1741,7 +1743,7 @@ private theorem mulChip_constraints_faithful
     ⟨input.state,
       #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
       8, input.is_real⟩
-  let rustState : Extracted.CPUState (ZMod p) := stateValue
+  let rustState : Circuits.Types.CPUState (ZMod p) := stateValue
   let rustNextPc : Vector (ZMod p) 3 :=
     #v[stateValue.pc[0] + 4, stateValue.pc[1], stateValue.pc[2]]
   have hCpu := CanonicalReader.cpuStateAssertions (p := p) env cpuInput
@@ -1776,7 +1778,7 @@ private theorem mulChip_constraints_faithful
         exact congrArg (fun value => value.prev_value)
           (congrArg (fun value => value.op_c_memory)
             (Readers.RTypeReader.eval_cols env input.adapter)).symm
-  let rustAdapter : Extracted.RTypeReader (ZMod p) := adapterValue
+  let rustAdapter : Circuits.Types.RTypeReader (ZMod p) := adapterValue
   let rtypeInput : Var Readers.RTypeReader.Inputs (ZMod p) :=
     ⟨input.adapter, input.is_real, input.is_real,
       input.state.clk_high,
@@ -2349,7 +2351,7 @@ theorem mulOperation_interactions_exact
     (env : Environment (ZMod p))
     (input : Var SP1Clean.MulOperation.Inputs (ZMod p)) (offset : ℕ)
     (a b c : Word (ZMod p))
-    (cols : Extracted.MulOperation (ZMod p))
+    (cols : Circuits.Types.MulOperation (ZMod p))
     (is_real is_mulw : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_mulw : Expression.eval env input.is_mulw = is_mulw)
@@ -2576,7 +2578,7 @@ theorem mulOperation_interactions_exact
 
 private theorem mulOp_active_rust_a1_irrelevant
     (a a' b c : Word (ZMod p))
-    (cols : Extracted.MulOperation (ZMod p))
+    (cols : Circuits.Types.MulOperation (ZMod p))
     (is_real is_mul is_mulh is_mulhu is_mulhsu : ZMod p) :
     LookupAccessList.active
         ((Extracted.MulOperation.interactions a b c cols
@@ -2600,7 +2602,7 @@ theorem mulOperation_interactions_active
     (env : Environment (ZMod p))
     (input : Var SP1Clean.MulOperation.Inputs (ZMod p)) (offset : ℕ)
     (a b c : Word (ZMod p))
-    (cols : Extracted.MulOperation (ZMod p))
+    (cols : Circuits.Types.MulOperation (ZMod p))
     (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : ZMod p)
     (hmulw : is_mulw = 0 ∨ is_mulw = 1)
     (hplacement :
@@ -2653,7 +2655,7 @@ theorem mulOperation_interactions_active
 omit [Fact (2 ^ 24 < p)] in
 theorem mulOperation_mulw_facts
     (a b c : Word (ZMod p))
-    (cols : Extracted.MulOperation (ZMod p))
+    (cols : Circuits.Types.MulOperation (ZMod p))
     (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : ZMod p)
     (hRust :
       List.Forall (· = 0)
@@ -3151,7 +3153,7 @@ private theorem mulChip_operation_interactions_active
 omit [Fact (2 ^ 24 < p)] in
 private theorem mulOperation_accesses_filter_byte
     (a b c : Word (ZMod p))
-    (cols : Extracted.MulOperation (ZMod p))
+    (cols : Circuits.Types.MulOperation (ZMod p))
     (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : ZMod p) :
     ((Extracted.MulOperation.interactions a b c cols
         is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu).map
@@ -3235,7 +3237,7 @@ private theorem mulChip_interactions_faithful
       eval_add, Expression.eval] using hinputReal
   have hStateEval := eval_cpuState env input.state
   have hStatePc :=
-    congrArg (fun state : Extracted.CPUState (ZMod p) => state.pc)
+    congrArg (fun state : Circuits.Types.CPUState (ZMod p) => state.pc)
       hStateEval
   have hClkHigh :
       Expression.eval env input.state.clk_high =
@@ -3243,7 +3245,7 @@ private theorem mulChip_interactions_faithful
     dsimp only [rustCols]
     exact (ProvableType.eval_field env input.state.clk_high).symm.trans
       (congrArg
-        (fun state : Extracted.CPUState (ZMod p) => state.clk_high)
+        (fun state : Circuits.Types.CPUState (ZMod p) => state.clk_high)
         hStateEval).symm
   have hClkLow :
       Expression.eval env input.state.clk_0_16 =
@@ -3251,7 +3253,7 @@ private theorem mulChip_interactions_faithful
     dsimp only [rustCols]
     exact (ProvableType.eval_field env input.state.clk_0_16).symm.trans
       (congrArg
-        (fun state : Extracted.CPUState (ZMod p) => state.clk_0_16)
+        (fun state : Circuits.Types.CPUState (ZMod p) => state.clk_0_16)
         hStateEval).symm
   have hClkHighLimb :
       Expression.eval env input.state.clk_16_24 =
@@ -3259,7 +3261,7 @@ private theorem mulChip_interactions_faithful
     dsimp only [rustCols]
     exact (ProvableType.eval_field env input.state.clk_16_24).symm.trans
       (congrArg
-        (fun state : Extracted.CPUState (ZMod p) => state.clk_16_24)
+        (fun state : Circuits.Types.CPUState (ZMod p) => state.clk_16_24)
         hStateEval).symm
   have hAdapterEval := eval_rTypeReader env input.adapter
   have hAdapterOpA :
@@ -3267,28 +3269,28 @@ private theorem mulChip_interactions_faithful
     dsimp only [rustCols]
     exact (ProvableType.eval_field env input.adapter.op_a).symm.trans
       (congrArg
-        (fun adapter : Extracted.RTypeReader (ZMod p) => adapter.op_a)
+        (fun adapter : Circuits.Types.RTypeReader (ZMod p) => adapter.op_a)
         hAdapterEval).symm
   have hAdapterOpB :
       Expression.eval env input.adapter.op_b = rustCols.adapter.op_b := by
     dsimp only [rustCols]
     exact (ProvableType.eval_field env input.adapter.op_b).symm.trans
       (congrArg
-        (fun adapter : Extracted.RTypeReader (ZMod p) => adapter.op_b)
+        (fun adapter : Circuits.Types.RTypeReader (ZMod p) => adapter.op_b)
         hAdapterEval).symm
   have hAdapterOpC :
       Expression.eval env input.adapter.op_c = rustCols.adapter.op_c := by
     dsimp only [rustCols]
     exact (ProvableType.eval_field env input.adapter.op_c).symm.trans
       (congrArg
-        (fun adapter : Extracted.RTypeReader (ZMod p) => adapter.op_c)
+        (fun adapter : Circuits.Types.RTypeReader (ZMod p) => adapter.op_c)
         hAdapterEval).symm
   have hAdapterOpA0 :
       Expression.eval env input.adapter.op_a_0 = rustCols.adapter.op_a_0 := by
     dsimp only [rustCols]
     exact (ProvableType.eval_field env input.adapter.op_a_0).symm.trans
       (congrArg
-        (fun adapter : Extracted.RTypeReader (ZMod p) => adapter.op_a_0)
+        (fun adapter : Circuits.Types.RTypeReader (ZMod p) => adapter.op_a_0)
         hAdapterEval).symm
   have hS := mulChip_state_interactions_faithful env input offset
     rustCols hReal hClkHigh hClkLow hClkHighLimb
@@ -3401,16 +3403,16 @@ private theorem mulChip_interactions_faithful
     calc
       _ = (Eval.eval env input.adapter.op_b_memory).prev_value := by
         exact (congrArg
-          (fun value : Extracted.RegisterAccessCols (ZMod p) =>
+          (fun value : Circuits.Types.RegisterAccessCols (ZMod p) =>
             value.prev_value)
           (Readers.RTypeReader.eval_registerAccessCols env
             input.adapter.op_b_memory)).symm
       _ = (Eval.eval env input.adapter).op_b_memory.prev_value := by
         exact congrArg
-          (fun value : Extracted.RegisterAccessCols (ZMod p) =>
+          (fun value : Circuits.Types.RegisterAccessCols (ZMod p) =>
             value.prev_value)
           (congrArg
-            (fun value : Extracted.RTypeReader (ZMod p) =>
+            (fun value : Circuits.Types.RTypeReader (ZMod p) =>
               value.op_b_memory)
             (Readers.RTypeReader.eval_cols env input.adapter)).symm
   have hEvalC :
@@ -3420,16 +3422,16 @@ private theorem mulChip_interactions_faithful
     calc
       _ = (Eval.eval env input.adapter.op_c_memory).prev_value := by
         exact (congrArg
-          (fun value : Extracted.RegisterAccessCols (ZMod p) =>
+          (fun value : Circuits.Types.RegisterAccessCols (ZMod p) =>
             value.prev_value)
           (Readers.RTypeReader.eval_registerAccessCols env
             input.adapter.op_c_memory)).symm
       _ = (Eval.eval env input.adapter).op_c_memory.prev_value := by
         exact congrArg
-          (fun value : Extracted.RegisterAccessCols (ZMod p) =>
+          (fun value : Circuits.Types.RegisterAccessCols (ZMod p) =>
             value.prev_value)
           (congrArg
-            (fun value : Extracted.RTypeReader (ZMod p) =>
+            (fun value : Circuits.Types.RTypeReader (ZMod p) =>
               value.op_c_memory)
             (Readers.RTypeReader.eval_cols env input.adapter)).symm
   have hRustOperation' :

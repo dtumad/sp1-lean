@@ -22,6 +22,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -105,9 +106,9 @@ theorem addwChipColumnsOfInput_roundtrip {F : Type} (cols : AddwChip.Columns F) 
               rw [vec2_eta]
 
 @[circuit_norm] theorem eval_extractedU16MSBOperation {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.U16MSBOperation (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.U16MSBOperation (Expression F)) :
     Eval.eval env cols =
-      ({ msb := Eval.eval env cols.msb } : Extracted.U16MSBOperation F) := by
+      ({ msb := Eval.eval env cols.msb } : Circuits.Types.U16MSBOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -186,7 +187,7 @@ theorem eval_addwChipDirectOutput
         (Vector.mapRange 2 fun i => var { index := size AddwChip.Inputs + i })
         1 (by decide), Vector.getElem_mapRange]
       exact eval_local_inputFirstRow input locals data 1 (by decide)
-  · rw [Extracted.U16MSBOperation.mk.injEq]
+  · rw [Circuits.Types.U16MSBOperation.mk.injEq]
     simpa only [eval_addwOperationColumns, eval_extractedU16MSBOperation,
       ProvableType.eval_field] using
         (eval_local_inputFirstRow input locals data 2 (by decide))
@@ -625,7 +626,7 @@ private theorem aluTypeAssertions
     (env : Environment (ZMod p)) (input : Var Readers.ALUTypeReader.Inputs (ZMod p))
     (offset : ℕ) (clkHigh clkLow opcode isReal isTrusted : ZMod p)
     (pc : Vector (ZMod p) 3) (writeValue : Word (ZMod p))
-    (cols : Extracted.ALUTypeReader (ZMod p))
+    (cols : Circuits.Types.ALUTypeReader (ZMod p))
     (hreal : (ProvableStruct.eval env input).is_real = isReal)
     (htrusted : (ProvableStruct.eval env input).is_trusted = isTrusted)
     (hcols : ProvableStruct.eval env input.cols = cols)
@@ -787,7 +788,7 @@ theorem addwChip_constraints_faithful
   let cpuInput : Var Readers.CPUState.Inputs (ZMod p) :=
     ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
       8, input.is_real⟩
-  let rustState : Extracted.CPUState (ZMod p) :=
+  let rustState : Circuits.Types.CPUState (ZMod p) :=
     { clk_high := stateValue.clk_high
       clk_16_24 := stateValue.clk_16_24
       clk_0_16 := stateValue.clk_0_16
@@ -830,12 +831,12 @@ theorem addwChip_constraints_faithful
       interval_cases i
       · rfl
       · rfl
-    · rw [Extracted.U16MSBOperation.mk.injEq]
+    · rw [Circuits.Types.U16MSBOperation.mk.injEq]
       rw [eval_extractedU16MSBOperation]
   have hOp := addwOperationAssertions (p := p) env opInput (offset + 3)
     rustA rustB rustOperation isReal ha hb hOpCols (by
       simp only [opInput, isReal, ProvableStruct.structEvalLiteralProc])
-  let rustAdapter : Extracted.ALUTypeReader (ZMod p) := adapterValue
+  let rustAdapter : Circuits.Types.ALUTypeReader (ZMod p) := adapterValue
   let aluInput : Var Readers.ALUTypeReader.Inputs (ZMod p) :=
     ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc, 19,

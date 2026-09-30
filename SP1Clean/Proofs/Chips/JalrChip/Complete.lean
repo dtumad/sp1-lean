@@ -5,7 +5,7 @@ import ToClean.Air.TableBuild
 /-! # `SP1Clean.JalrChip` — from trace events to a valid AIR table
 
 `JALR` through the trace-generation chain (see `AddChip/Complete.lean` for the programme note, and
-`JalChip/Complete.lean` for the jump half). It reads the ordinary `Extracted.ITypeReader` block —
+`JalChip/Complete.lean` for the jump half). It reads the ordinary `Circuits.Types.ITypeReader` block —
 the same one `Addi` and the nine memory chips read — so the adapter half is `Addi`'s verbatim, at
 both register-access offsets.
 

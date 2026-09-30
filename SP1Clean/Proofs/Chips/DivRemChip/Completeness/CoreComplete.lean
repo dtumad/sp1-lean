@@ -24,7 +24,7 @@ set_option linter.unusedSectionVars false in
 crosses the component-wise evaluator spelling to Clean's generic `varFromOffset` theorem without
 asking unification to unfold the generated struct. -/
 theorem evaluatedMulBlock_cell (env : Environment (ZMod p)) (off i : ℕ)
-    (hi : i < size Extracted.MulOperation) :
+    (hi : i < size Circuits.Types.MulOperation) :
     (ProvableType.toElements (evaluatedMulBlock env off))[i] = env.get (off + i) := by
   rw [evaluatedMulBlock]
   refine Eq.trans ?_ (getElem_toElements_eval_varFromOffset env off i hi)
@@ -33,7 +33,7 @@ theorem evaluatedMulBlock_cell (env : Environment (ZMod p)) (off i : ℕ)
 set_option linter.unusedSectionVars false in
 /-- Flat populate pins identify the opaque evaluated Mul block. -/
 theorem evaluatedMulBlock_eq_of_pins (env : Environment (ZMod p)) (off : ℕ)
-    (wit : Extracted.MulOperation (ZMod p))
+    (wit : Circuits.Types.MulOperation (ZMod p))
     (hpop : ∀ i : Fin 45, env.get (off + ↑i) = (SubSpecs.mulWitnessElements wit).get i) :
     evaluatedMulBlock env off = wit := by
   apply SubSpecs.mul_cols_eq_of_pins env off _ wit
@@ -246,14 +246,14 @@ causes the simplifier to traverse every sibling block; the local lemmas avoid th
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalU16MSB_msb (env : Environment (ZMod p))
-    (cols : Extracted.U16MSBOperation (Expression (ZMod p))) :
+    (cols : Circuits.Types.U16MSBOperation (Expression (ZMod p))) :
     (Eval.eval env cols).msb = Expression.eval env cols.msb := by
   provable_struct_simp
 
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalIsEqualWord_result (env : Environment (ZMod p))
-    (cols : Extracted.IsEqualWordOperation (Expression (ZMod p))) :
+    (cols : Circuits.Types.IsEqualWordOperation (Expression (ZMod p))) :
     (Eval.eval env cols).is_diff_zero.result =
       Expression.eval env cols.is_diff_zero.result := by
   provable_struct_simp
@@ -261,14 +261,14 @@ private theorem evalIsEqualWord_result (env : Environment (ZMod p))
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalIsZeroWord_result (env : Environment (ZMod p))
-    (cols : Extracted.IsZeroWordOperation (Expression (ZMod p))) :
+    (cols : Circuits.Types.IsZeroWordOperation (Expression (ZMod p))) :
     (Eval.eval env cols).result = Expression.eval env cols.result := by
   provable_struct_simp
 
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalLtUnsigned_bit (env : Environment (ZMod p))
-    (cols : Extracted.LtOperationUnsigned (Expression (ZMod p))) :
+    (cols : Circuits.Types.LtOperationUnsigned (Expression (ZMod p))) :
     (Eval.eval env cols).u16_compare_operation.bit =
       Expression.eval env cols.u16_compare_operation.bit := by
   provable_struct_simp
@@ -276,7 +276,7 @@ private theorem evalLtUnsigned_bit (env : Environment (ZMod p))
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalAdd_value (env : Environment (ZMod p))
-    (cols : Extracted.AddOperation (Expression (ZMod p))) :
+    (cols : Circuits.Types.AddOperation (Expression (ZMod p))) :
     (Eval.eval env cols).value =
       Vector.map (Expression.eval env) cols.value := by
   provable_struct_simp
@@ -285,14 +285,14 @@ private theorem evalAdd_value (env : Environment (ZMod p))
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalRType_opA0 (env : Environment (ZMod p))
-    (cols : Extracted.RTypeReader (Expression (ZMod p))) :
+    (cols : Circuits.Types.RTypeReader (Expression (ZMod p))) :
     (Eval.eval env cols).op_a_0 = Expression.eval env cols.op_a_0 := by
   provable_struct_simp
 
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalRType_opBPrev (env : Environment (ZMod p))
-    (cols : Extracted.RTypeReader (Expression (ZMod p))) :
+    (cols : Circuits.Types.RTypeReader (Expression (ZMod p))) :
     (Eval.eval env cols).op_b_memory.prev_value =
       Vector.map (Expression.eval env) cols.op_b_memory.prev_value := by
   provable_struct_simp
@@ -301,7 +301,7 @@ private theorem evalRType_opBPrev (env : Environment (ZMod p))
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalRType_opCPrev (env : Environment (ZMod p))
-    (cols : Extracted.RTypeReader (Expression (ZMod p))) :
+    (cols : Circuits.Types.RTypeReader (Expression (ZMod p))) :
     (Eval.eval env cols).op_c_memory.prev_value =
       Vector.map (Expression.eval env) cols.op_c_memory.prev_value := by
   provable_struct_simp
@@ -621,7 +621,7 @@ theorem evaluatedPopulatedOwnAssertsComplete
   · rw [populatedRowAt_adapter_eq]; exact hBPVvec
   · rw [populatedRowAt_adapter_eq]; exact hCPVvec
   · rw [populatedRowAt_isOverflowB_eq]
-    have hS : (ProvableType.fromElements (M := Extracted.IsEqualWordOperation)
+    have hS : (ProvableType.fromElements (M := Circuits.Types.IsEqualWordOperation)
           (Vector.mapRange 11 fun j =>
             env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + j))) =
         ovbWitness ir B f := by
@@ -631,7 +631,7 @@ theorem evaluatedPopulatedOwnAssertsComplete
     rw [← hS]
     simp only [iseqword_result_proj, circuit_norm]
   · rw [populatedRowAt_isOverflowC_eq]
-    have hS : (ProvableType.fromElements (M := Extracted.IsEqualWordOperation)
+    have hS : (ProvableType.fromElements (M := Circuits.Types.IsEqualWordOperation)
           (Vector.mapRange 11 fun j =>
             env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + j))) =
         ovcWitness ir C f := by
@@ -641,7 +641,7 @@ theorem evaluatedPopulatedOwnAssertsComplete
     rw [← hS]
     simp only [iseqword_result_proj, circuit_norm]
   · rw [populatedRowAt_isC0_eq]
-    have hS : (ProvableType.fromElements (M := Extracted.IsZeroWordOperation)
+    have hS : (ProvableType.fromElements (M := Circuits.Types.IsZeroWordOperation)
           (Vector.map (fun x => Expression.eval env.toEnvironment x)
             (Vector.mapRange 11 fun j => var { index :=
               off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + j }))) =

@@ -20,19 +20,19 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 /-- The State pull payload determined by a chip's shared CPU-state block. -/
 def cpuStatePullMessage {R : Type} [Add R] [Mul R] [OfNat R 65536]
-    (state : Extracted.CPUState R) : StateMsg R :=
+    (state : Circuits.Types.CPUState R) : StateMsg R :=
   ⟨state.clk_high, state.clk_0_16 + state.clk_16_24 * 65536,
     state.pc[0], state.pc[1], state.pc[2]⟩
 
 /-- A State push payload with an explicit successor PC and clock increment. -/
 def cpuStateNextMessage {R : Type} [Add R] [Mul R] [OfNat R 65536]
-    (state : Extracted.CPUState R) (nextPc : Vector R 3) (clkInc : R) : StateMsg R :=
+    (state : Circuits.Types.CPUState R) (nextPc : Vector R 3) (clkInc : R) : StateMsg R :=
   ⟨state.clk_high, state.clk_0_16 + state.clk_16_24 * 65536 + clkInc,
     nextPc[0], nextPc[1], nextPc[2]⟩
 
 /-- The ordinary `pc + 4`, `clk + 8` specialization used by every non-control-flow core chip. -/
 def cpuStatePushMessage {R : Type} [Add R] [Mul R] [OfNat R 65536]
-    [OfNat R 8] [OfNat R 4] (state : Extracted.CPUState R) : StateMsg R :=
+    [OfNat R 8] [OfNat R 4] (state : Circuits.Types.CPUState R) : StateMsg R :=
   ⟨state.clk_high, state.clk_0_16 + state.clk_16_24 * 65536 + 8,
     state.pc[0] + 4, state.pc[1], state.pc[2]⟩
 

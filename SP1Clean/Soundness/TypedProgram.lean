@@ -309,7 +309,7 @@ theorem AddChip.programEmissionShape :
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0],
       #v[input.adapter.op_c, 0, 0, 0], input.adapter.op_a_0, 0, 0⟩,
     ?_, ?_, ?_⟩
-  programExposureTail AddChip.circuit, AddChip.rowView, Extracted.RTypeReader.toAdapterView
+  programExposureTail AddChip.circuit, AddChip.rowView, Circuits.Types.RTypeReader.toAdapterView
 
 theorem AddiChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (AddiChip.circuit (p := p)) AddiChip.rowView := by
@@ -318,7 +318,7 @@ theorem AddiChip.programEmissionShape :
     ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], 1,
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c_imm,
       input.adapter.op_a_0, 0, 1⟩, ?_, ?_, ?_⟩
-  programExposureTail AddiChip.circuit, AddiChip.rowView, Extracted.ITypeReader.toAdapterView
+  programExposureTail AddiChip.circuit, AddiChip.rowView, Circuits.Types.ITypeReader.toAdapterView
 
 theorem AddwChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (AddwChip.circuit (p := p)) AddwChip.rowView := by
@@ -327,7 +327,7 @@ theorem AddwChip.programEmissionShape :
     ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], 19,
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
       input.adapter.op_a_0, 0, input.adapter.imm_c⟩, ?_, ?_, ?_⟩
-  programExposureTail AddwChip.circuit, AddwChip.rowView, Extracted.ALUTypeReader.toAdapterView
+  programExposureTail AddwChip.circuit, AddwChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView
 
 theorem SubChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (SubChip.circuit (p := p)) SubChip.rowView := by
@@ -337,7 +337,7 @@ theorem SubChip.programEmissionShape :
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0],
       #v[input.adapter.op_c, 0, 0, 0], input.adapter.op_a_0, 0, 0⟩,
     ?_, ?_, ?_⟩
-  programExposureTail SubChip.circuit, SubChip.rowView, Extracted.RTypeReader.toAdapterView
+  programExposureTail SubChip.circuit, SubChip.rowView, Circuits.Types.RTypeReader.toAdapterView
 
 theorem SubwChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (SubwChip.circuit (p := p)) SubwChip.rowView := by
@@ -347,7 +347,7 @@ theorem SubwChip.programEmissionShape :
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0],
       #v[input.adapter.op_c, 0, 0, 0], input.adapter.op_a_0, 0, 0⟩,
     ?_, ?_, ?_⟩
-  programExposureTail SubwChip.circuit, SubwChip.rowView, Extracted.RTypeReader.toAdapterView
+  programExposureTail SubwChip.circuit, SubwChip.rowView, Circuits.Types.RTypeReader.toAdapterView
 
 theorem BitwiseChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (BitwiseChip.circuit (p := p)) BitwiseChip.rowView := by
@@ -362,7 +362,7 @@ theorem BitwiseChip.programEmissionShape :
     simp [BitwiseChip.circuit, BitwiseChip.rowView, circuit_norm]
   · intro env
     simp [BitwiseChip.circuit, BitwiseChip.rowView, BitwiseChip.exposedOpcode,
-      Extracted.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
+      Circuits.Types.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
 
 theorem LtChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (LtChip.circuit (p := p)) LtChip.rowView := by
@@ -377,7 +377,7 @@ theorem LtChip.programEmissionShape :
     simp [LtChip.circuit, LtChip.rowView, circuit_norm]
   · intro env
     simp [LtChip.circuit, LtChip.rowView, LtChip.exposedOpcode,
-      Extracted.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
+      Circuits.Types.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
 
 theorem LoadDoubleChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (LoadDoubleChip.circuit (p := p))
@@ -392,7 +392,7 @@ theorem LoadDoubleChip.programEmissionShape :
   · intro env
     simp [LoadDoubleChip.rowView, circuit_norm]
   · intro env
-    simp [LoadDoubleChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [LoadDoubleChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem LoadByteChip.programEmissionShape :
@@ -409,7 +409,7 @@ theorem LoadByteChip.programEmissionShape :
   · intro env
     simp [LoadByteChip.rowView, LoadByteChip.isReal, circuit_norm]
   · intro env
-    simp [LoadByteChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [LoadByteChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem LoadHalfChip.programEmissionShape :
@@ -426,7 +426,7 @@ theorem LoadHalfChip.programEmissionShape :
   · intro env
     simp [LoadHalfChip.rowView, LoadHalfChip.isReal, circuit_norm]
   · intro env
-    simp [LoadHalfChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [LoadHalfChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem LoadWordChip.programEmissionShape :
@@ -443,7 +443,7 @@ theorem LoadWordChip.programEmissionShape :
   · intro env
     simp [LoadWordChip.rowView, LoadWordChip.isReal, circuit_norm]
   · intro env
-    simp [LoadWordChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [LoadWordChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem LoadX0Chip.programEmissionShape :
@@ -464,7 +464,7 @@ theorem LoadX0Chip.programEmissionShape :
     simp [LoadX0Chip.rowView, LoadX0Chip.isReal, circuit_norm]
   · intro env
     simp [LoadX0Chip.rowView, LoadX0Chip.opcodeVal,
-      Extracted.ITypeReader.toAdapterView, programMessageOfView, circuit_norm]
+      Circuits.Types.ITypeReader.toAdapterView, programMessageOfView, circuit_norm]
 
 theorem StoreByteChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (StoreByteChip.circuit (p := p))
@@ -479,7 +479,7 @@ theorem StoreByteChip.programEmissionShape :
   · intro env
     simp [StoreByteChip.rowView, circuit_norm]
   · intro env
-    simp [StoreByteChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [StoreByteChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem StoreHalfChip.programEmissionShape :
@@ -495,7 +495,7 @@ theorem StoreHalfChip.programEmissionShape :
   · intro env
     simp [StoreHalfChip.rowView, circuit_norm]
   · intro env
-    simp [StoreHalfChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [StoreHalfChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem StoreWordChip.programEmissionShape :
@@ -511,7 +511,7 @@ theorem StoreWordChip.programEmissionShape :
   · intro env
     simp [StoreWordChip.rowView, circuit_norm]
   · intro env
-    simp [StoreWordChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [StoreWordChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem StoreDoubleChip.programEmissionShape :
@@ -527,7 +527,7 @@ theorem StoreDoubleChip.programEmissionShape :
   · intro env
     simp [StoreDoubleChip.rowView, circuit_norm]
   · intro env
-    simp [StoreDoubleChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [StoreDoubleChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem AluX0Chip.programEmissionShape :
@@ -544,7 +544,7 @@ theorem AluX0Chip.programEmissionShape :
     simp [AluX0Chip.circuit, AluX0Chip.rowView, circuit_norm]
   · intro env
     simp [AluX0Chip.circuit, AluX0Chip.rowView,
-      Extracted.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
+      Circuits.Types.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
 
 theorem UTypeChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (UTypeChip.circuit (p := p)) UTypeChip.rowView := by
@@ -559,7 +559,7 @@ theorem UTypeChip.programEmissionShape :
   · intro env
     simp [UTypeChip.circuit, UTypeChip.rowView, circuit_norm]
   · intro env
-    simp [UTypeChip.circuit, UTypeChip.rowView, Extracted.JTypeReader.toAdapterView,
+    simp [UTypeChip.circuit, UTypeChip.rowView, Circuits.Types.JTypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem JalChip.programEmissionShape :
@@ -574,7 +574,7 @@ theorem JalChip.programEmissionShape :
   · intro env
     simp [JalChip.circuit, JalChip.rowView, circuit_norm]
   · intro env
-    simp [JalChip.circuit, JalChip.rowView, Extracted.JTypeReader.toAdapterView,
+    simp [JalChip.circuit, JalChip.rowView, Circuits.Types.JTypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem JalrChip.programEmissionShape :
@@ -589,7 +589,7 @@ theorem JalrChip.programEmissionShape :
   · intro env
     simp [JalrChip.circuit, JalrChip.rowView, circuit_norm]
   · intro env
-    simp [JalrChip.circuit, JalrChip.rowView, Extracted.ITypeReader.toAdapterView,
+    simp [JalrChip.circuit, JalrChip.rowView, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem BranchChip.programEmissionShape :
@@ -605,7 +605,7 @@ theorem BranchChip.programEmissionShape :
     simp [BranchChip.circuit, BranchChip.rowView, circuit_norm]
   · intro env
     simp [BranchChip.circuit, BranchChip.rowView, BranchChip.branchOpcode,
-      BranchChip.exposedOpcode, Extracted.ITypeReader.toAdapterView,
+      BranchChip.exposedOpcode, Circuits.Types.ITypeReader.toAdapterView,
       programMessageOfView, circuit_norm]
 
 theorem ShiftLeftChip.programEmissionShape :
@@ -633,7 +633,7 @@ theorem ShiftLeftChip.programEmissionShape :
       circuit_norm] using gateEq.symm
   · intro env
     simp [ShiftLeftChip.circuit, ShiftLeftChip.rowView, ShiftLeftChip.exposedOpcode,
-      Extracted.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
+      Circuits.Types.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
 
 theorem ShiftRightChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (ShiftRightChip.circuit (p := p))
@@ -651,7 +651,7 @@ theorem ShiftRightChip.programEmissionShape :
     simp [ShiftRightChip.circuit, ShiftRightChip.rowView, circuit_norm]
   · intro env
     simp [ShiftRightChip.circuit, ShiftRightChip.rowView, ShiftRightChip.exposedOpcode,
-      Extracted.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
+      Circuits.Types.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]
 
 theorem MulChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (MulChip.circuit (p := p)) MulChip.rowView := by
@@ -670,7 +670,7 @@ theorem MulChip.programEmissionShape :
     simp [MulChip.circuit, MulChip.rowView, circuit_norm]
   · intro env
     simp [MulChip.circuit, MulChip.rowView, MulChip.exposedOpcode,
-      Extracted.RTypeReader.toAdapterView, programMessageOfView, circuit_norm]
+      Circuits.Types.RTypeReader.toAdapterView, programMessageOfView, circuit_norm]
 
 theorem DivRemChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (DivRemChip.circuit (p := p))
@@ -708,7 +708,7 @@ theorem DivRemChip.programEmissionShape :
       DivRemChip.populatedRowAt_isDivw_eq, DivRemChip.populatedRowAt_isRemw_eq,
       DivRemChip.populatedRowAt_isDivuw_eq, DivRemChip.populatedRowAt_isRemuw_eq,
       DivRemContract.encodedOpcode,
-      Extracted.RTypeReader.toAdapterView, programMessageOfView, circuit_norm]
+      Circuits.Types.RTypeReader.toAdapterView, programMessageOfView, circuit_norm]
 
 /-! ## Supported-machine registry -/
 

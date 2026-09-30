@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
 import SP1Clean.Math.Gate
-import SP1Clean.Extracted.LtOperationUnsigned
+import SP1Clean.Circuits.Types.LtOperationUnsigned
 import SP1Clean.Native.Operations.U16CompareOperation.RawSpec
 import SP1Clean.Proofs.Operations.U16CompareOperation.Formal
 import Clean.Circuit.Basic
@@ -68,7 +68,7 @@ private lemma at_most_one {f0 f1 f2 f3 : ZMod p}
       | (exfalso; simp only [ZMod.val_zero, ZMod.val_one] at hle; omega)
 
 /-- Literal meaning of SP1's `LtOperationUnsigned` constraint list at `is_real = 1`. -/
-def RawSpec (b cc : Word (ZMod p)) (cols : Extracted.LtOperationUnsigned (ZMod p)) : Prop :=
+def RawSpec (b cc : Word (ZMod p)) (cols : Circuits.Types.LtOperationUnsigned (ZMod p)) : Prop :=
   let f0 := cols.u16_flags[0]; let f1 := cols.u16_flags[1]
   let f2 := cols.u16_flags[2]; let f3 := cols.u16_flags[3]
   let cl0 := cols.comparison_limbs[0]; let cl1 := cols.comparison_limbs[1]
@@ -87,7 +87,7 @@ def RawSpec (b cc : Word (ZMod p)) (cols : Extracted.LtOperationUnsigned (ZMod p
 /-- The non-`U16Compare` conjuncts of `RawSpec`: the flag booleans, the sum-bound, the four
 prefix-sum selectors, the two limb extractions, and the non-equality witness. `RawSpec` is exactly
 `U16CompareOperation.RawSpec … ∧ Selectors b cc cols`. -/
-def Selectors (b cc : Word (ZMod p)) (cols : Extracted.LtOperationUnsigned (ZMod p)) : Prop :=
+def Selectors (b cc : Word (ZMod p)) (cols : Circuits.Types.LtOperationUnsigned (ZMod p)) : Prop :=
   let f0 := cols.u16_flags[0]; let f1 := cols.u16_flags[1]
   let f2 := cols.u16_flags[2]; let f3 := cols.u16_flags[3]
   let cl0 := cols.comparison_limbs[0]; let cl1 := cols.comparison_limbs[1]
@@ -108,7 +108,7 @@ witness), so the `U16CompareOperation` on the selected limb pair reproduces the 
 Phrased on the subcircuit *implication* `hsub` (`Assumptions → Spec`) so it composes directly in the
 chip soundness. `at_most_one` reduces to five flag patterns; in each, the selected limb is bounded
 (discharging `hsub`) and the limb decomposition of `toNat` lets `omega` decide it dominates. -/
-theorem ltUnsigned_core {cols : Extracted.LtOperationUnsigned (ZMod p)}
+theorem ltUnsigned_core {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (b cc : Word (ZMod p)) (hb : Word.isU64 b) (hcc : Word.isU64 cc)
     (hsub : U16CompareOperation.circuit.Assumptions
         ⟨cols.comparison_limbs[0], cols.comparison_limbs[1], cols.u16_compare_operation, 1⟩ →
@@ -210,7 +210,7 @@ theorem ltUnsigned_core {cols : Extracted.LtOperationUnsigned (ZMod p)}
 
 /-- The selected comparison limbs are genuine 16-bit values (each is one operand limb or `0`). Needed
 to discharge the composed `U16CompareOperation`'s `Assumptions`. -/
-theorem comparison_limbs_lt {cols : Extracted.LtOperationUnsigned (ZMod p)}
+theorem comparison_limbs_lt {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (b cc : Word (ZMod p)) (hb : Word.isU64 b) (hcc : Word.isU64 cc)
     (h_sel : Selectors b cc cols) :
     cols.comparison_limbs[0].val < 2 ^ 16 ∧ cols.comparison_limbs[1].val < 2 ^ 16 := by
@@ -234,7 +234,7 @@ theorem comparison_limbs_lt {cols : Extracted.LtOperationUnsigned (ZMod p)}
 /-- Equality companion to `ltUnsigned_core`: the one-hot flags sum to `0` exactly when the operands are
 equal. Same five-case selector split — the all-flags-zero case forces every limb equal; each one-flag
 case forces the selected limb distinct (so the words differ) while the flag sum is `1 ≠ 0`. -/
-theorem flags_sum_zero_iff_eq {cols : Extracted.LtOperationUnsigned (ZMod p)}
+theorem flags_sum_zero_iff_eq {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (b cc : Word (ZMod p)) (hb : Word.isU64 b) (hcc : Word.isU64 cc)
     (h_sel : Selectors b cc cols) :
     (cols.u16_flags[0] + cols.u16_flags[1] + cols.u16_flags[2] + cols.u16_flags[3] = 0)
@@ -311,7 +311,7 @@ theorem flags_sum_zero_iff_eq {cols : Extracted.LtOperationUnsigned (ZMod p)}
 /-- Semantic readout from `RawSpec` (used by `LtOperationSigned` and the `Faithful` anchor): the
 `U16Compare` `RawSpec` yields the subcircuit implication via `compare_of_raw`, so the compare `bit`
 is the unsigned-less-than indicator; the equality conjunct comes from `flags_sum_zero_iff_eq`. -/
-theorem ltUnsigned_semantic {cols : Extracted.LtOperationUnsigned (ZMod p)}
+theorem ltUnsigned_semantic {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (b cc : Word (ZMod p)) (hb : Word.isU64 b) (hcc : Word.isU64 cc)
     (h_raw : RawSpec b cc cols) :
     (cols.u16_compare_operation.bit = if Word.toNat b < Word.toNat cc then 1 else 0) ∧

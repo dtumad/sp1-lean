@@ -248,7 +248,7 @@ low limbs and is settled by `prevLow_val_lt_of_accessTimestamp`.  The three inpu
 migrated chip has on hand: the pulled record's channel guarantee, the row's timestamp-block `Spec`,
 and the structural identification of the two messages' clock fields. -/
 theorem memoryTimeNat_lt_of_accessTimestamp (prior pushed : MemoryMsg (ZMod p))
-    (cols : Extracted.RegisterAccessTimestamp (ZMod p)) (is_real : ZMod p)
+    (cols : Circuits.Types.RegisterAccessTimestamp (ZMod p)) (is_real : ZMod p)
     (real : is_real = 1)
     (prevBound : MemoryMsg.ClkBound prior)
     (spec : Readers.RegisterAccessTimestamp.Spec
@@ -272,7 +272,7 @@ what lets the `rowAligned` derivations (`rowAligned_rtype_of_shape` and family,
 `Soundness/GroundingAdapter.lean`) build the `prev_clk < access_clk` order straight from the chip `Spec`
 without the metavariable-normalization blowup. -/
 theorem memoryTimeNat_lt_of_registerAccessCols (prior pushed : MemoryMsg (ZMod p))
-    (accessCols : Extracted.RegisterAccessCols (ZMod p)) (is_real clk_target : ZMod p)
+    (accessCols : Circuits.Types.RegisterAccessCols (ZMod p)) (is_real clk_target : ZMod p)
     (real : is_real = 1)
     (prevBound : MemoryMsg.ClkBound prior)
     (spec : Readers.RegisterAccessCols.Spec ⟨accessCols, is_real, clk_target⟩)

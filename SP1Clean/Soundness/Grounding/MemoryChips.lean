@@ -697,7 +697,7 @@ AIR address: `raw = cellBase + offset`. The proof consumes only the folded seman
 three-field representation from reaching the machine layer. -/
 theorem rawAddress_eq_ramCellBase_add_offset
     (input : AddressOperation.Inputs (ZMod p))
-    (cols : Extracted.AddressOperation (ZMod p))
+    (cols : Circuits.Types.AddressOperation (ZMod p))
     (access : Trace.RamAccessView (ZMod p))
     (addressEq : access.address = AddressOperation.alignedValue input cols)
     (spec : AddressOperation.Spec input cols) :
@@ -783,7 +783,7 @@ omit [Fact (2 ^ 25 < p)] in
 AIR columns, hence the aligned RAM-cell base plus its three-bit offset. -/
 theorem effectiveAddress_eq_ramCellBase_add_offset
     (input : AddressOperation.Inputs (ZMod p))
-    (cols : Extracted.AddressOperation (ZMod p))
+    (cols : Circuits.Types.AddressOperation (ZMod p))
     (access : Trace.RamAccessView (ZMod p))
     (addressEq : access.address = AddressOperation.alignedValue input cols)
     (spec : AddressOperation.Spec input cols)
@@ -1925,8 +1925,8 @@ local macro "chipLoadAssumptionsEnv " r:ident : tactic => do
      rw [$(Lean.mkIdent `circuitRamAccessOf_eq_typed):ident] at $ram:ident
      unfold $assumptions:ident
      refine ⟨?_, ?_, ?_⟩
-     · simpa only [$opB:ident, $rv:ident, Extracted.ITypeReader.toAdapterView] using $base
-     · simpa only [$opC:ident, $rv:ident, Extracted.ITypeReader.toAdapterView] using $immediate
+     · simpa only [$opB:ident, $rv:ident, Circuits.Types.ITypeReader.toAdapterView] using $base
+     · simpa only [$opC:ident, $rv:ident, Circuits.Types.ITypeReader.toAdapterView] using $immediate
      · simpa only [$rav:ident] using $ram))
 
 /-- Peel a chip's exposed Memory interaction list down to `layout`'s message constructors. The
@@ -2292,7 +2292,7 @@ theorem LoadByteChip.itypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, readerInput, LoadByteChip.rowView, LoadByteChip.isReal,
-        Extracted.ITypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 /-- Opaque row-view spelling used at LoadByte's dependent decoder boundary. Keeping this value
 folded prevents descriptor rewriting from normalizing the completed chip output. -/
@@ -2322,10 +2322,10 @@ theorem loadByteAssumptions_env
   unfold LoadByteChip.Assumptions
   constructor
   · simpa only [LoadByteChip.Inputs.op_b_val, loadByteViewOf,
-      LoadByteChip.rowView, Extracted.ITypeReader.toAdapterView] using base
+      LoadByteChip.rowView, Circuits.Types.ITypeReader.toAdapterView] using base
   constructor
   · simpa only [LoadByteChip.Inputs.op_c_imm, loadByteViewOf,
-      LoadByteChip.rowView, Extracted.ITypeReader.toAdapterView] using immediate
+      LoadByteChip.rowView, Circuits.Types.ITypeReader.toAdapterView] using immediate
   · simpa only [loadByteRamAccessOf, LoadByteChip.ramAccessView] using ram
 
 omit [Fact (2 ^ 25 < p)] in
@@ -2704,7 +2704,7 @@ theorem loadByteChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     rtypeWriteMessage, LoadByteChip.rowView, LoadByteChip.ramAccessView,
     LoadByteChip.isReal, AddressOperation.alignedValue,
-    Extracted.ITypeReader.toAdapterView, LoadByteChip.circuit, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, LoadByteChip.circuit, circuit_norm]
 
 /-- Lift LoadByte's evaluated six-message list to the folded decoded-row boundary. -/
 theorem loadByteChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -3019,7 +3019,7 @@ theorem LoadHalfChip.itypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, readerInput, LoadHalfChip.rowView, LoadHalfChip.isReal,
-        Extracted.ITypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem loadHalfChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -3130,7 +3130,7 @@ theorem loadHalfChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     rtypeWriteMessage, LoadHalfChip.rowView, LoadHalfChip.ramAccessView,
     LoadHalfChip.isReal, AddressOperation.alignedValue,
-    Extracted.ITypeReader.toAdapterView, LoadHalfChip.circuit, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, LoadHalfChip.circuit, circuit_norm]
 
 /-- Lift LoadHalf's evaluated six-message list to the folded decoded-row boundary. -/
 theorem loadHalfChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -3442,7 +3442,7 @@ theorem LoadWordChip.itypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, readerInput, LoadWordChip.rowView, LoadWordChip.isReal,
-        Extracted.ITypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem loadWordChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -3553,7 +3553,7 @@ theorem loadWordChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     rtypeWriteMessage, LoadWordChip.rowView, LoadWordChip.ramAccessView,
     LoadWordChip.isReal, AddressOperation.alignedValue,
-    Extracted.ITypeReader.toAdapterView, LoadWordChip.circuit, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, LoadWordChip.circuit, circuit_norm]
 
 /-- Lift LoadWord's evaluated six-message list to the folded decoded-row boundary. -/
 theorem loadWordChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -3735,7 +3735,7 @@ theorem LoadDoubleChip.itypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, readerInput, LoadDoubleChip.rowView,
-        Extracted.ITypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem loadDoubleChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -3847,7 +3847,7 @@ theorem loadDoubleChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   chipMemoryValues loadDouble loadMemoryInteractions
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     rtypeWriteMessage, LoadDoubleChip.rowView, LoadDoubleChip.ramAccessView,
-    AddressOperation.alignedValue, Extracted.ITypeReader.toAdapterView,
+    AddressOperation.alignedValue, Circuits.Types.ITypeReader.toAdapterView,
     LoadDoubleChip.circuit, circuit_norm]
 
 /-- Lift LoadDouble's evaluated six-message list to the folded decoded-row boundary. -/
@@ -4501,7 +4501,7 @@ theorem LoadX0Chip.immutableItypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, isReal, readerInput, LoadX0Chip.rowView,
-        LoadX0Chip.isReal, LoadX0Chip.opcodeVal, Extracted.ITypeReader.toAdapterView,
+        LoadX0Chip.isReal, LoadX0Chip.opcodeVal, Circuits.Types.ITypeReader.toAdapterView,
         circuit_norm]
 
 theorem loadX0Chip_viewOf_decoded
@@ -4612,7 +4612,7 @@ theorem loadX0Chip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   chipMemoryValues loadX0 immutableRamMemoryInteractions
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     LoadX0Chip.rowView, LoadX0Chip.ramAccessView, LoadX0Chip.isReal,
-    AddressOperation.alignedValue, Extracted.ITypeReader.toAdapterView,
+    AddressOperation.alignedValue, Circuits.Types.ITypeReader.toAdapterView,
     LoadX0Chip.circuit, circuit_norm]
 
 /-- Lift LoadX0's evaluated six-message list to the folded decoded-row boundary. -/
@@ -4685,9 +4685,9 @@ theorem storeByteAssumptions_env
   unfold StoreByteChip.Assumptions
   refine ⟨?_, ?_, fun _ => storeValue⟩
   · simpa only [StoreByteChip.Inputs.op_b_val, StoreByteChip.rowView,
-      Extracted.ITypeReader.toAdapterView] using base
+      Circuits.Types.ITypeReader.toAdapterView] using base
   · simpa only [StoreByteChip.Inputs.op_c_imm, StoreByteChip.rowView,
-      Extracted.ITypeReader.toAdapterView] using immediate
+      Circuits.Types.ITypeReader.toAdapterView] using immediate
 
 theorem storeByteSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
@@ -5690,7 +5690,7 @@ theorem StoreByteChip.immutableItypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, readerInput, StoreByteChip.rowView,
-        Extracted.ITypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem storeByteChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -5801,7 +5801,7 @@ theorem storeByteChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   chipMemoryValues storeByte immutableRamMemoryInteractions
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     StoreByteChip.rowView, StoreByteChip.ramAccessView, AddressOperation.alignedValue,
-    Extracted.ITypeReader.toAdapterView, StoreByteChip.circuit, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, StoreByteChip.circuit, circuit_norm]
 
 /-- Lift StoreByte's evaluated six-message list to the folded decoded-row boundary. -/
 theorem storeByteChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -5873,9 +5873,9 @@ theorem storeHalfAssumptions_env
   unfold StoreHalfChip.Assumptions
   refine ⟨?_, ?_, fun _ => storeValue⟩
   · simpa only [StoreHalfChip.Inputs.op_b_val, StoreHalfChip.rowView,
-      Extracted.ITypeReader.toAdapterView] using base
+      Circuits.Types.ITypeReader.toAdapterView] using base
   · simpa only [StoreHalfChip.Inputs.op_c_imm, StoreHalfChip.rowView,
-      Extracted.ITypeReader.toAdapterView] using immediate
+      Circuits.Types.ITypeReader.toAdapterView] using immediate
 
 theorem storeHalfSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
@@ -6389,7 +6389,7 @@ theorem StoreHalfChip.immutableItypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, readerInput, StoreHalfChip.rowView,
-        Extracted.ITypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem storeHalfChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -6500,7 +6500,7 @@ theorem storeHalfChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   chipMemoryValues storeHalf immutableRamMemoryInteractions
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     StoreHalfChip.rowView, StoreHalfChip.ramAccessView, AddressOperation.alignedValue,
-    Extracted.ITypeReader.toAdapterView, StoreHalfChip.circuit, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, StoreHalfChip.circuit, circuit_norm]
 
 theorem storeHalfChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))
@@ -6571,9 +6571,9 @@ theorem storeWordAssumptions_env
   unfold StoreWordChip.Assumptions
   refine ⟨?_, ?_, fun _ => storeValue⟩
   · simpa only [StoreWordChip.Inputs.op_b_val, StoreWordChip.rowView,
-      Extracted.ITypeReader.toAdapterView] using base
+      Circuits.Types.ITypeReader.toAdapterView] using base
   · simpa only [StoreWordChip.Inputs.op_c_imm, StoreWordChip.rowView,
-      Extracted.ITypeReader.toAdapterView] using immediate
+      Circuits.Types.ITypeReader.toAdapterView] using immediate
 
 theorem storeWordSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
@@ -7021,7 +7021,7 @@ theorem StoreWordChip.immutableItypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, readerInput, StoreWordChip.rowView,
-        Extracted.ITypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem storeWordChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -7132,7 +7132,7 @@ theorem storeWordChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   chipMemoryValues storeWord immutableRamMemoryInteractions
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     StoreWordChip.rowView, StoreWordChip.ramAccessView, AddressOperation.alignedValue,
-    Extracted.ITypeReader.toAdapterView, StoreWordChip.circuit, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, StoreWordChip.circuit, circuit_norm]
 
 theorem storeWordChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))
@@ -7201,9 +7201,9 @@ theorem storeDoubleAssumptions_env
   unfold StoreDoubleChip.Assumptions
   constructor
   · simpa only [StoreDoubleChip.Inputs.op_b_val, StoreDoubleChip.rowView,
-      Extracted.ITypeReader.toAdapterView] using base
+      Circuits.Types.ITypeReader.toAdapterView] using base
   · simpa only [StoreDoubleChip.Inputs.op_c_imm, StoreDoubleChip.rowView,
-      Extracted.ITypeReader.toAdapterView] using immediate
+      Circuits.Types.ITypeReader.toAdapterView] using immediate
 
 theorem storeDoubleSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
@@ -7337,7 +7337,7 @@ theorem StoreDoubleChip.immutableItypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, readerInput, StoreDoubleChip.rowView,
-        Extracted.ITypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem storeDoubleChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -7448,7 +7448,7 @@ theorem storeDoubleChip_memoryInteractionValues_eq (env : Environment (ZMod p)) 
   chipMemoryValues storeDouble immutableRamMemoryInteractions
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     StoreDoubleChip.rowView, StoreDoubleChip.ramAccessView, AddressOperation.alignedValue,
-    Extracted.ITypeReader.toAdapterView, StoreDoubleChip.circuit, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, StoreDoubleChip.circuit, circuit_norm]
 
 theorem storeDoubleChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))

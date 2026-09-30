@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Extracted.MemoryAccess
+import SP1Clean.Circuits.Types.MemoryAccess
 
 /-! # One authenticated host RAM word access
 
@@ -13,7 +13,7 @@ namespace SP1Clean.HostRamAccessChip
 open Circuit Channels
 
 structure Inputs (F : Type) where
-  access : Extracted.MemoryAccessCols F
+  access : Circuits.Types.MemoryAccessCols F
   clk_high : F
   clk_0_16 : F
   clk_16_24 : F

@@ -56,6 +56,11 @@ The compiler supplies field-generic Lean. Python discovers struct ownership, req
 `--reuse-struct`, adds imports and embeds chip-private helper definitions. Canonical reader
 helpers are imported once. No Rust-generated executable Clean circuit is maintained.
 
+Shared columns are handwritten under `SP1Clean/Circuits/Types/`. Before reuse, the discovery pass
+checks names, field order, nesting and vector widths against Rust output. A full regeneration
+must encounter every shared native column type. The extractor never rewrites native types;
+an upstream layout change requires an explicit migration of those types and their consumers.
+
 Two reviewed printer adaptations matter: raw byte opcodes must remain field expressions
 (the old enum coercion collapsed unknown values), and the large Global table’s shared let chains
 are hoisted into private definitions to keep elaboration linear. Large `ProvableStruct` derives

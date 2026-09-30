@@ -172,8 +172,8 @@ private theorem ovbResCongr :
         simp only [circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3])
       (by intro i hi; interval_cases i <;>
         simp only [circuit_norm, -Witgen.u64Wrap])
-  have hsz : (10 : ℕ) < size Extracted.IsEqualWordOperation := by
-    have h : size Extracted.IsEqualWordOperation = 11 := rfl
+  have hsz : (10 : ℕ) < size Circuits.Types.IsEqualWordOperation := by
+    have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
     omega
   have hc1 := Witgen.getElem_eval_toElements { env := env }
       (IsEqualWordOperation.populateFE #v[.expr B[0], .expr B[1], 0, 0]
@@ -215,8 +215,8 @@ private theorem ovcResCongr :
         simp only [circuit_norm, -Witgen.u64Wrap, hC0, hC1, hC2, hC3])
       (by intro i hi; interval_cases i <;>
         simp only [circuit_norm, -Witgen.u64Wrap])
-  have hsz : (10 : ℕ) < size Extracted.IsEqualWordOperation := by
-    have h : size Extracted.IsEqualWordOperation = 11 := rfl
+  have hsz : (10 : ℕ) < size Circuits.Types.IsEqualWordOperation := by
+    have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
     omega
   have hc1 := Witgen.getElem_eval_toElements { env := env }
       (IsEqualWordOperation.populateFE #v[.expr C[0], .expr C[1], 0, 0]
@@ -667,9 +667,9 @@ include hB hir hhint in
 /-- Environment-locality of the flattened `is_overflow_b` struct site. -/
 theorem ovbCongr :
     (Witgen.WitgenIR.ofFExprs ((toElements (ovbFE ir B)).cast
-        (show size Extracted.IsEqualWordOperation = 11 from rfl))).eval env
+        (show size Circuits.Types.IsEqualWordOperation = 11 from rfl))).eval env
       = (Witgen.WitgenIR.ofFExprs ((toElements (ovbFE ir B)).cast
-        (show size Extracted.IsEqualWordOperation = 11 from rfl))).eval env' := by
+        (show size Circuits.Types.IsEqualWordOperation = 11 from rfl))).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hstruct : Witgen.eval { env := env } (ovbFE ir B)
@@ -688,8 +688,8 @@ theorem ovbCongr :
     (simp only [wSumF, flagF, hintF, circuit_norm, -Witgen.u64Wrap, hir, hhint]; all_goals exact decide_eq_decide.mpr Iff.rfl)
   apply Vector.ext
   intro i hi
-  have hsz : i < size Extracted.IsEqualWordOperation := by
-    have h : size Extracted.IsEqualWordOperation = 11 := rfl
+  have hsz : i < size Circuits.Types.IsEqualWordOperation := by
+    have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
     omega
   simp only [Witgen.WitgenIR.getElem_eval_ofFExprs, Vector.getElem_cast]
   exact (Witgen.getElem_eval_toElements _ _ i hsz).trans
@@ -701,9 +701,9 @@ include hC hir hhint in
 /-- Environment-locality of the flattened `is_overflow_c` struct site. -/
 theorem ovcCongr :
     (Witgen.WitgenIR.ofFExprs ((toElements (ovcFE ir C)).cast
-        (show size Extracted.IsEqualWordOperation = 11 from rfl))).eval env
+        (show size Circuits.Types.IsEqualWordOperation = 11 from rfl))).eval env
       = (Witgen.WitgenIR.ofFExprs ((toElements (ovcFE ir C)).cast
-        (show size Extracted.IsEqualWordOperation = 11 from rfl))).eval env' := by
+        (show size Circuits.Types.IsEqualWordOperation = 11 from rfl))).eval env' := by
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   have hstruct : Witgen.eval { env := env } (ovcFE ir C)
@@ -722,8 +722,8 @@ theorem ovcCongr :
     (simp only [wSumF, flagF, hintF, circuit_norm, -Witgen.u64Wrap, hir, hhint]; all_goals exact decide_eq_decide.mpr Iff.rfl)
   apply Vector.ext
   intro i hi
-  have hsz : i < size Extracted.IsEqualWordOperation := by
-    have h : size Extracted.IsEqualWordOperation = 11 := rfl
+  have hsz : i < size Circuits.Types.IsEqualWordOperation := by
+    have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
     omega
   simp only [Witgen.WitgenIR.getElem_eval_ofFExprs, Vector.getElem_cast]
   exact (Witgen.getElem_eval_toElements _ _ i hsz).trans

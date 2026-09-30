@@ -296,7 +296,7 @@ theorem jalrChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     jalrViewOf_state, jalrViewOf_adapter, jalrViewOf_isReal, jalrViewOf_rdWrite,
-    Extracted.ITypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 /-- Lift JALR's evaluated four-pack to the typed decoded-row boundary. -/
 theorem jalrChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -350,7 +350,7 @@ theorem JalrChip.itypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, jalrChipITypeInput, JalrChip.circuit,
-        JalrChip.rowView, Extracted.ITypeReader.toAdapterView, circuit_norm]
+        JalrChip.rowView, Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem jalrChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = jalrChipDescriptor (p := p))
@@ -887,7 +887,7 @@ theorem branchChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     TypedInteraction.pushedIfValue_raw, Channel.eval_pulledIf, Channel.eval_pushedIf,
     eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeReadBackMessage, branchViewOf_state,
-    branchViewOf_adapter, branchViewOf_isReal, Extracted.ITypeReader.toAdapterView,
+    branchViewOf_adapter, branchViewOf_isReal, Circuits.Types.ITypeReader.toAdapterView,
     circuit_norm]
 
 /-- Lift Branch's evaluated four-pack to the typed decoded-row boundary. -/
@@ -950,7 +950,7 @@ theorem BranchChip.immutableItypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, branchChipITypeInput, BranchChip.circuit,
-        BranchChip.rowView, BranchChip.branchOpcode, Extracted.ITypeReader.toAdapterView,
+        BranchChip.rowView, BranchChip.branchOpcode, Circuits.Types.ITypeReader.toAdapterView,
         circuit_norm]
 
 theorem branchChip_viewClockBounds (decoded : DecodedInstructionRow p)

@@ -78,7 +78,7 @@ with the upstream coefficients written as products so the expression matches lim
 
 /-- A register access's **read-prior** Memory pull, at the record's pulled timestamp. -/
 @[circuit_norm] def memPullMsg (input : Var Inputs (ZMod p))
-    (block : Extracted.RegisterAccessCols (Expression (ZMod p)))
+    (block : Circuits.Types.RegisterAccessCols (Expression (ZMod p)))
     (idx : Expression (ZMod p)) : MemoryMsg (Expression (ZMod p)) :=
   ⟨input.state.clk_high, block.access_timestamp.prev_low, idx, 0, 0, block.prev_value⟩
 

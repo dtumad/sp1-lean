@@ -10,7 +10,7 @@ and a chip should be understandable with its local correctness proofs.
 |---|---|---|
 | Semantics | `SP1Clean/Math/`, `SP1Clean/Model/` | Arithmetic, official Sail adapters, complete execution, snapshots, host effects and resources |
 | Contracts | `SP1Clean/FormalModel/` | Semantic Specs and checked relation/capstone targets |
-| Circuits | `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Native readers/gadgets/chips, witnesses and local soundness/completeness |
+| Circuits | `SP1Clean/Circuits/Types/`, `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Native columns/readers/gadgets/chips, witnesses and local soundness/completeness |
 | Machine | `SP1Clean/Soundness/`, `SP1Clean/Proofs/Completeness/`, `SP1Clean/Alignment/` | Registration, assembly, grounding, Sail bridges and physical compiler |
 | Legacy Rust alignment | `SP1Clean/Extracted/`, `SP1Clean/Faithful/`, `SP1Clean/Composition/` | Generated pinned oracles and exact-to-native comparison evidence |
 | Upstream additions | `ToClean/`, `ToPolyFun/`, `ToMathlib/` | Reusable missing APIs in upstream namespaces, independent of SP1 |
@@ -56,9 +56,11 @@ not supply it, so adopting VmTables is justified only when it removes the existi
 Generalize authentication, ordering or resource arguments when a real consumer demonstrates
 the abstraction.
 
-Native circuits still use some generated reader/operation carrier types. Those types must acquire
-native ownership, with their consumers migrated, before the Rust extractor is retired. Removing
-a generator import without replacing its type/proof responsibility is not a module boundary.
+Native readers and operations own their shared column types under `Circuits/Types`. These modules
+and the word foundation use Lean module mode. The import gate rejects any transitive dependency
+from native circuits back into `Extracted`. Legacy Rust oracles reuse the native types only after
+the generator checks their field layouts against independent Rust reflection output; the
+assertion and interaction definitions remain generated migration evidence.
 
 ## Upstream and generated boundaries
 

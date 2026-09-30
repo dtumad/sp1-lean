@@ -49,8 +49,8 @@ import SP1Clean.Proofs.Chips.SubwChip.Formal
 import SP1Clean.Proofs.Chips.SubwChip.Witgen
 import SP1Clean.Proofs.Chips.UTypeChip.Formal
 import SP1Clean.Proofs.Chips.UTypeChip.Witgen
-import SP1Clean.Extracted.CPUState
-import SP1Clean.Extracted.MemoryAccess
+import SP1Clean.Circuits.Types.CPUState
+import SP1Clean.Circuits.Types.MemoryAccess
 import SP1CleanTest.TraceGenTests.EventPopulate
 
 /-! # Real-row satisfiability anchors: every chip constraint system has an `is_real = 1` model
@@ -173,7 +173,7 @@ def u64Word (x : ℕ) : Word (ZMod SP1Prime) :=
 /-- One register-access column block from the record's value and previous/current access
 timestamps — the same formulas as `EventPopulate.registerAccessPopulate` (mirroring
 `RegisterAccessTimestamp::populate_timestamp`). -/
-def accessCols (value prevTs currTs : ℕ) : Extracted.RegisterAccessCols (ZMod SP1Prime) :=
+def accessCols (value prevTs currTs : ℕ) : Circuits.Types.RegisterAccessCols (ZMod SP1Prime) :=
   let prevLow : ℕ := if prevTs >>> 24 = currTs >>> 24 then prevTs % 16777216 else 0
   { prev_value := u64Word value
     access_timestamp :=
@@ -181,7 +181,7 @@ def accessCols (value prevTs currTs : ℕ) : Extracted.RegisterAccessCols (ZMod 
         diff_low_limb := (((currTs % 16777216 - prevLow - 1) % 65536 : ℕ) : ZMod SP1Prime) } }
 
 /-- The `CPUState` block from a canonical clk/pc (mirroring `CPUState::populate`). -/
-def cpuState (clk pc : ℕ) : Extracted.CPUState (ZMod SP1Prime) :=
+def cpuState (clk pc : ℕ) : Circuits.Types.CPUState (ZMod SP1Prime) :=
   { clk_high := ((clk >>> 24 : ℕ) : ZMod SP1Prime)
     clk_16_24 := (((clk >>> 16) % 256 : ℕ) : ZMod SP1Prime)
     clk_0_16 := ((clk % 65536 : ℕ) : ZMod SP1Prime)
@@ -353,7 +353,7 @@ RAM word `0x1111222233334444` at the 8-byte-aligned address; RAM previously touc
 
 /-- The RAM-access column block for the shared load/store row: previous value
 `0x1111222233334444`, previously accessed at `(0, 0)`, current access at `clk_low = 9`. -/
-def ramAccess : Extracted.MemoryAccessCols (ZMod SP1Prime) :=
+def ramAccess : Circuits.Types.MemoryAccessCols (ZMod SP1Prime) :=
   { prev_value := u64Word 0x1111222233334444
     access_timestamp :=
       { prev_high := 0, prev_low := 0, compare_low := 1, diff_low_limb := 9,

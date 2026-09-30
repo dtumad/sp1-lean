@@ -643,13 +643,13 @@ lemma val_3_zmod_p : (3 : ZMod p).val = 3 := by
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 /-- The read-prior pull message an R-type register slot consumes. -/
 def rtypePriorMessage (view : Trace.RowView (ZMod p)) (index : ZMod p)
-    (access : Extracted.RegisterAccessCols (ZMod p)) : MemoryMsg (ZMod p) :=
+    (access : Circuits.Types.RegisterAccessCols (ZMod p)) : MemoryMsg (ZMod p) :=
   ⟨view.state.clk_high, access.access_timestamp.prev_low, index, 0, 0, access.prev_value⟩
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 /-- The read-back push message an R-type register slot produces at effect offset `delta`. -/
 def rtypeReadBackMessage (view : Trace.RowView (ZMod p)) (index : ZMod p)
-    (access : Extracted.RegisterAccessCols (ZMod p)) (delta : ZMod p) : MemoryMsg (ZMod p) :=
+    (access : Circuits.Types.RegisterAccessCols (ZMod p)) (delta : ZMod p) : MemoryMsg (ZMod p) :=
   ⟨view.state.clk_high, view.state.clk_0_16 + view.state.clk_16_24 * 65536 + delta,
    index, 0, 0, access.prev_value⟩
 
@@ -664,13 +664,13 @@ omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 the message projection, so a decoded-row goal can be rewritten to the symbolic operand spelling before
 crossing to the reader `Spec` (avoiding the `.clk_low`-of-message whnf blowup on the decoded view). -/
 theorem clk_low_rtypePriorMessage (view : Trace.RowView (ZMod p)) (index : ZMod p)
-    (access : Extracted.RegisterAccessCols (ZMod p)) :
+    (access : Circuits.Types.RegisterAccessCols (ZMod p)) :
     (rtypePriorMessage view index access).clk_low = access.access_timestamp.prev_low := rfl
 
 omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 /-- A read-back push's low clock is the window start plus its effect offset — the symbolic spelling. -/
 theorem clk_low_rtypeReadBackMessage (view : Trace.RowView (ZMod p)) (index : ZMod p)
-    (access : Extracted.RegisterAccessCols (ZMod p)) (delta : ZMod p) :
+    (access : Circuits.Types.RegisterAccessCols (ZMod p)) (delta : ZMod p) :
     (rtypeReadBackMessage view index access delta).clk_low
       = view.state.clk_0_16 + view.state.clk_16_24 * 65536 + delta := rfl
 
@@ -684,7 +684,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- A read-back push's decoded time is the window start plus its effect offset. -/
 theorem timeNat_rtypeReadBackMessage {view : Trace.RowView (ZMod p)}
     (bounds : ViewClockBounds view) (index : ZMod p)
-    (access : Extracted.RegisterAccessCols (ZMod p)) {delta : ZMod p} {k : ℕ}
+    (access : Circuits.Types.RegisterAccessCols (ZMod p)) {delta : ZMod p} {k : ℕ}
     (hdelta : delta.val = k) (hk : k ≤ 8) :
     MemoryMsg.timeNat (rtypeReadBackMessage view index access delta) =
       StateMsg.timeNat (statePullOfView view) + k :=
@@ -715,14 +715,14 @@ private theorem registerIndexCast (x : ZMod p) (bound : x.val < 32) :
 omit [Fact (2 ^ 25 < p)] in
 /-- The Memory key of a read-prior pull is the canonical register location of its index. -/
 private theorem locOf_rtypePriorMessage (view : Trace.RowView (ZMod p)) (x : ZMod p)
-    (access : Extracted.RegisterAccessCols (ZMod p)) (bound : x.val < 32) :
+    (access : Circuits.Types.RegisterAccessCols (ZMod p)) (bound : x.val < 32) :
     MemoryMsg.locOf (rtypePriorMessage view x access) = MemLoc.reg (BitVec.ofNat 5 x.val) :=
   MemoryMsg.locOf_register _ _ (registerIndexCast x bound) rfl rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- The Memory key of a read-back push, at any effect offset. -/
 private theorem locOf_rtypeReadBackMessage (view : Trace.RowView (ZMod p)) (x : ZMod p)
-    (access : Extracted.RegisterAccessCols (ZMod p)) (delta : ZMod p) (bound : x.val < 32) :
+    (access : Circuits.Types.RegisterAccessCols (ZMod p)) (delta : ZMod p) (bound : x.val < 32) :
     MemoryMsg.locOf (rtypeReadBackMessage view x access delta) =
       MemLoc.reg (BitVec.ofNat 5 x.val) :=
   MemoryMsg.locOf_register _ _ (registerIndexCast x bound) rfl rfl
@@ -1562,7 +1562,7 @@ theorem addViewOf_rdWrite (env : Environment (ZMod p)) :
         (Vector.mapRange 4 fun i => (var { index := size AddChip.Inputs + i } : Expression (ZMod p))) := by
   simp only [addViewOf, AddChip.rowView, addChip_rowOutput_eq, addChip_circuit_output_eq,
     ProvableStruct.eval_eq_eval, AddChip.Columns.eval_add_operation,
-    AddOperation.Columns.eval_value]
+    Circuits.Types.AddOperation.eval_value]
 
 omit [Fact (2 ^ 25 < p)] in
 /-- **Add's evaluated Memory interaction list**, in the canonical R-type message shapes over the
@@ -1599,7 +1599,7 @@ theorem addChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   -- whole output row here produced a proof term the kernel took 11 s to check (measured 2026-09-22).
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     addViewOf_state, addViewOf_adapter, addViewOf_isReal_eval, addViewOf_rdWrite,
-    Extracted.RTypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift the raw evaluation to the proof-carrying typed decoder for any retained Add row. -/
 theorem addChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -1878,7 +1878,7 @@ theorem AddChip.rtypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, addChipRTypeInput, AddChip.circuit, AddChip.rowView,
-        Extracted.RTypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- An active Add row's three register timestamp decompositions come entirely from its finished
 Byte-channel guarantees.  This is the chip-level navigation from the retained R-type reader to the
@@ -2123,7 +2123,7 @@ theorem subChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   -- whole output row here produced a proof term the kernel took 11 s to check (measured 2026-09-22).
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     subViewOf_state, subViewOf_adapter, subViewOf_isReal_eval, subViewOf_rdWrite,
-    Extracted.RTypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Lift Sub's raw evaluated six-pack to the typed decoded-row adapter. -/
 theorem subChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -2166,7 +2166,7 @@ theorem SubChip.rtypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, subChipRTypeInput, SubChip.circuit, SubChip.rowView,
-        Extracted.RTypeReader.toAdapterView, circuit_norm]
+        Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
 
 /-- Finished Byte guarantees bound Sub's view clock limbs. -/
 theorem subChip_viewClockBounds (decoded : DecodedInstructionRow p)

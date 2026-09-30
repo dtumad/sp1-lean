@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
 import SP1Clean.Native.Operations.IsZeroWordOperation.RawSpec
-import SP1Clean.Extracted.IsEqualWordOperation
+import SP1Clean.Circuits.Types.IsEqualWordOperation
 
 /-! # `IsEqualWordOperation` — the arithmetic core (`RawSpec` + the equality lemma)
 
@@ -20,14 +20,14 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Literal meaning of SP1's `IsEqualWordOperation` constraint list at `is_real = 1`: the
 `IsZeroWordOperation.RawSpec` on the limb-wise difference `a - b`. -/
-def RawSpec (a b : Word (ZMod p)) (cols : Extracted.IsEqualWordOperation (ZMod p)) : Prop :=
+def RawSpec (a b : Word (ZMod p)) (cols : Circuits.Types.IsEqualWordOperation (ZMod p)) : Prop :=
   IsZeroWordOperation.RawSpec #v[a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]
     cols.is_diff_zero
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Soundness core: the `IsZeroWordOperation` zero-test on the limb-wise difference, plus
 `aᵢ - bᵢ = 0 ↔ aᵢ = bᵢ`, gives the equality indicator. -/
-theorem isEqualWord_of_raw {a b : Word (ZMod p)} {cols : Extracted.IsEqualWordOperation (ZMod p)}
+theorem isEqualWord_of_raw {a b : Word (ZMod p)} {cols : Circuits.Types.IsEqualWordOperation (ZMod p)}
     (h_raw : RawSpec a b cols) :
     cols.is_diff_zero.result =
       if (a[0] = b[0] ∧ a[1] = b[1] ∧ a[2] = b[2] ∧ a[3] = b[3]) then 1 else 0 := by

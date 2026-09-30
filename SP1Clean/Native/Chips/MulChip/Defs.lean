@@ -80,7 +80,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   -- (evaluating to `populate` — `MulOperation.populateFE_eval`; conformance-checked in
   -- `WitnessTests/MulOperationWitness.lean`), then composes `MulOperation.circuit` as a Clean
   -- `assertion`. `populate` takes `(b, c, is_mulh, is_mulhsu, is_mulw)`.
-  let cols ← witness (var := Var Extracted.MulOperation)
+  let cols ← witness (var := Var Circuits.Types.MulOperation)
     (MulOperation.populateFE input.op_b_val input.op_c_val is_mulh is_mulhsu is_mulw)
   -- Gate `MulOperation` by the flag-sum (`alu/mul/mod.rs:234`): `is_mulw = 1 → sum = 1`.
   assertion MulOperation.circuit
@@ -181,7 +181,7 @@ four-limb result word.  This is a symbolic normalization boundary for grounding 
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
         Vector.mapRange 4 fun i => var { index := offset + 50 + i },
-        varFromOffset Extracted.MulOperation (offset + 5),
+        varFromOffset Circuits.Types.MulOperation (offset + 5),
         var { index := offset }, var { index := offset + 1 },
         var { index := offset + 2 }, var { index := offset + 3 },
         var { index := offset + 4 }⟩ : Var Columns (ZMod p)) := rfl
@@ -197,7 +197,7 @@ set_option linter.unusedSectionVars false in
     (derivedElaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
         Vector.mapRange 4 fun i => var { index := offset + 50 + i },
-        varFromOffset Extracted.MulOperation (offset + 5),
+        varFromOffset Circuits.Types.MulOperation (offset + 5),
         var { index := offset }, var { index := offset + 1 },
         var { index := offset + 2 }, var { index := offset + 3 },
         var { index := offset + 4 }⟩ : Var Columns (ZMod p)) := rfl

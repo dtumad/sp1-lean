@@ -3,7 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Extracted.JTypeReader
+import SP1Clean.Circuits.Types.JTypeReader
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -40,13 +40,13 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 Consumers rewrite this instead of asking unification to unfold the derived `ProvableStruct`
 evaluator through the nested register-access block. -/
 @[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.JTypeReader (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.JTypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a,
          op_a_memory := Eval.eval env cols.op_a_memory,
          op_a_0 := Eval.eval env cols.op_a_0,
          op_b_imm := Eval.eval env cols.op_b_imm,
-         op_c_imm := Eval.eval env cols.op_c_imm } : Extracted.JTypeReader F) := by
+         op_c_imm := Eval.eval env cols.op_c_imm } : Circuits.Types.JTypeReader F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 

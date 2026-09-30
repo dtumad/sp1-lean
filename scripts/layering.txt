@@ -21,6 +21,7 @@
 # 1..3 — the substrate. Model/ is currently the one pillar that obeys the contract exactly.
 1   Math          SP1Clean/Math/
 2   Model         SP1Clean/Model/
+2   Circuits      SP1Clean/Circuits/Types/
 3   Extracted     SP1Clean/Extracted/
 
 # 4 — semantic contracts and the row view they are read through.

@@ -238,52 +238,52 @@ theorem syscallInstrsEnvironment_eval (cols : Extracted.SyscallInstrsCols (ZMod 
 uses, and are what turn one whole-row binding into sixty-five cell equations. -/
 
 theorem eval_syscallCPUState {F : Type} [FiniteField F]
-    (env : Environment F) (c : Extracted.CPUState (Expression F)) :
+    (env : Environment F) (c : Circuits.Types.CPUState (Expression F)) :
     Eval.eval env c =
       ({ clk_high := Eval.eval env c.clk_high
          clk_16_24 := Eval.eval env c.clk_16_24
          clk_0_16 := Eval.eval env c.clk_0_16
-         pc := Eval.eval env c.pc } : Extracted.CPUState F) := by
+         pc := Eval.eval env c.pc } : Circuits.Types.CPUState F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 theorem eval_syscallTimestamp {F : Type} [FiniteField F]
-    (env : Environment F) (t : Extracted.RegisterAccessTimestamp (Expression F)) :
+    (env : Environment F) (t : Circuits.Types.RegisterAccessTimestamp (Expression F)) :
     Eval.eval env t =
       ({ prev_low := Eval.eval env t.prev_low
          diff_low_limb := Eval.eval env t.diff_low_limb } :
-        Extracted.RegisterAccessTimestamp F) := by
+        Circuits.Types.RegisterAccessTimestamp F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 theorem eval_syscallAccess {F : Type} [FiniteField F]
-    (env : Environment F) (a : Extracted.RegisterAccessCols (Expression F)) :
+    (env : Environment F) (a : Circuits.Types.RegisterAccessCols (Expression F)) :
     Eval.eval env a =
       ({ prev_value := Eval.eval env a.prev_value
          access_timestamp := Eval.eval env a.access_timestamp } :
-        Extracted.RegisterAccessCols F) := by
+        Circuits.Types.RegisterAccessCols F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 theorem eval_syscallIsZero {F : Type} [FiniteField F]
-    (env : Environment F) (z : Extracted.IsZeroOperation (Expression F)) :
+    (env : Environment F) (z : Circuits.Types.IsZeroOperation (Expression F)) :
     Eval.eval env z =
       ({ inverse := Eval.eval env z.inverse
-         result := Eval.eval env z.result } : Extracted.IsZeroOperation F) := by
+         result := Eval.eval env z.result } : Circuits.Types.IsZeroOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 theorem eval_syscallU16toU8 {F : Type} [FiniteField F]
-    (env : Environment F) (u : Extracted.U16toU8Operation (Expression F)) :
+    (env : Environment F) (u : Circuits.Types.U16toU8Operation (Expression F)) :
     Eval.eval env u =
-      ({ low_bytes := Eval.eval env u.low_bytes } : Extracted.U16toU8Operation F) := by
+      ({ low_bytes := Eval.eval env u.low_bytes } : Circuits.Types.U16toU8Operation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 theorem eval_syscallU16Compare {F : Type} [FiniteField F]
-    (env : Environment F) (c : Extracted.U16CompareOperation (Expression F)) :
+    (env : Environment F) (c : Circuits.Types.U16CompareOperation (Expression F)) :
     Eval.eval env c =
-      ({ bit := Eval.eval env c.bit } : Extracted.U16CompareOperation F) := by
+      ({ bit := Eval.eval env c.bit } : Circuits.Types.U16CompareOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
@@ -607,7 +607,7 @@ theorem fieldBoundArmAssertions (env : Environment (ZMod p))
 "this handler has its own table" flag. These are exactly the native row's `syscallIdVar` and
 `tableByteVar`, which is what lets the two dispatch arms line up. -/
 theorem u16toU8SafeValue_head {F : Type} [Field F] [CoeHead F ℕ] (u : Vector F 4)
-    (c : Extracted.U16toU8Operation F) (g : F) :
+    (c : Circuits.Types.U16toU8Operation F) (g : F) :
     (Extracted.U16toU8OperationSafe.value u c g)[0] = c.low_bytes[0] ∧
       (Extracted.U16toU8OperationSafe.value u c g)[1] =
         (u[0] - c.low_bytes[0]) * (256 : F)⁻¹ := by
@@ -1447,29 +1447,29 @@ does not have to bridge each projection by hand. -/
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem structEvalCPUState (env : Environment (ZMod p))
-    (c : Var Extracted.CPUState (ZMod p)) :
+    (c : Var Circuits.Types.CPUState (ZMod p)) :
     ProvableStruct.eval env c =
       ({ clk_high := Expression.eval env c.clk_high,
          clk_16_24 := Expression.eval env c.clk_16_24,
          clk_0_16 := Expression.eval env c.clk_0_16,
-         pc := Eval.eval env c.pc } : Extracted.CPUState (ZMod p)) := by
+         pc := Eval.eval env c.pc } : Circuits.Types.CPUState (ZMod p)) := by
   rw [← ProvableStruct.eval_eq_eval, eval_syscallCPUState]
   simp only [ProvableType.eval_field]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem structEvalAccess (env : Environment (ZMod p))
-    (a : Var Extracted.RegisterAccessCols (ZMod p)) :
+    (a : Var Circuits.Types.RegisterAccessCols (ZMod p)) :
     ProvableStruct.eval env a =
       ({ prev_value := Eval.eval env a.prev_value
          access_timestamp := Eval.eval env a.access_timestamp } :
-        Extracted.RegisterAccessCols (ZMod p)) := by
+        Circuits.Types.RegisterAccessCols (ZMod p)) := by
   rw [← ProvableStruct.eval_eq_eval, eval_syscallAccess]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem structEvalU16toU8 (env : Environment (ZMod p))
-    (u : Var Extracted.U16toU8Operation (ZMod p)) :
+    (u : Var Circuits.Types.U16toU8Operation (ZMod p)) :
     ProvableStruct.eval env u =
-      ({ low_bytes := Eval.eval env u.low_bytes } : Extracted.U16toU8Operation (ZMod p)) := by
+      ({ low_bytes := Eval.eval env u.low_bytes } : Circuits.Types.U16toU8Operation (ZMod p)) := by
   rw [← ProvableStruct.eval_eq_eval, eval_syscallU16toU8]
 
 /-! ## Bus by bus, against the extracted oracle

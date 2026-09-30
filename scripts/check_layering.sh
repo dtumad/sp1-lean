@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Gate: the layering contract in docs/layering.md.
 #
-# Three checks over one stratum map (scripts/layering.txt):
+# Import, namespace and root-index checks over one stratum map (scripts/layering.txt):
 #
 #   1. DIRECTION — a module may import only from a strictly lower stratum, or its own. An upward
 #      import is a bug. This is the check that would have caught
@@ -21,6 +21,7 @@
 #
 # All fail closed: a module matching no stratum prefix is an error, so a new top-level directory
 # cannot silently escape the map.
+# Native circuits additionally have no transitive dependency on legacy Rust extraction.
 #
 # Exceptions live in scripts/layering_allowlist.txt with a stated reason. That is a prohibition with
 # a bar, not a ratchet — see AGENTS.md on scripts/option_escapes_allowlist.txt.
@@ -97,6 +98,7 @@ files.sort()
 
 fail = 0
 unmapped, upward, nsbad = [], [], []
+imports_by_file = {}
 
 # Root index modules import the whole world by design; they are the umbrella, not a layer.
 # `SP1Clean/Core.lean` is the sub-index of strata 0-6 (the `SP1Core` library root); check 3 below
@@ -128,6 +130,7 @@ for path in files:
             ns_root = m.group(1)
 
     # 1. direction
+    imports_by_file[path] = [module_to_path(mod) for mod in src_lines]
     for mod in src_lines:
         if not mod.startswith(("SP1Clean", "ToClean", "ToMathlib", "ToPolyFun")):
             continue          # Mathlib / Clean / Std / Sail are all below everything
@@ -142,10 +145,23 @@ for path in files:
             upward.append((path, level, target, tlevel))
 
     # 2. namespace agreement
-    PILLARS = {"Math", "Model", "Extracted", "FormalModel", "Native", "Proofs", "Faithful",
+    PILLARS = {"Math", "Model", "Circuits", "Extracted", "FormalModel", "Native", "Proofs", "Faithful",
                "Soundness", "Composition"}
     if pillar != "-" and ns_root in PILLARS and ns_root != pillar and path not in allowed_ns:
         nsbad.append((path, ns_root, pillar))
+
+native_roots = [p for p in files if p.startswith(("SP1Clean/Native/", "SP1Clean/Circuits/"))]
+pending = [(p, [p]) for p in native_roots]
+seen = set()
+for path, trail in pending:
+    if path in seen:
+        continue
+    seen.add(path)
+    if path.startswith("SP1Clean/Extracted/"):
+        fail = 1
+        print("FAIL: native circuits depend on legacy extraction: " + " -> ".join(trail))
+        continue
+    pending.extend((dep, trail + [dep]) for dep in imports_by_file.get(path, []))
 
 if unmapped:
     fail = 1

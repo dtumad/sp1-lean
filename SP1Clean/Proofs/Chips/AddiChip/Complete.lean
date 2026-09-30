@@ -5,7 +5,7 @@ import ToClean.Air.TableBuild
 /-! # `SP1Clean.AddiChip` — from trace events to a valid AIR table (the I-type template)
 
 The first chip of the **I-type** family through the trace-generation chain (see
-`AddChip/Complete.lean` for the programme note). `Addi` reads `Extracted.ITypeReader`: the `op_c`
+`AddChip/Complete.lean` for the programme note). `Addi` reads `Circuits.Types.ITypeReader`: the `op_c`
 slot is a decoded immediate word rather than a register read, so the row makes **two** register
 accesses instead of three.
 

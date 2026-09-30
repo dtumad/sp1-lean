@@ -73,7 +73,7 @@ omit [Fact (2 ^ 25 < p)] in
 /-- The existing address gadget and canonical limbs establish an aligned native RAM key. -/
 theorem ram_key (record : MemoryMsg (ZMod p))
     (bound : Word.isU64 (MemoryBoundary.address record))
-    (output : Extracted.AddressOperation (ZMod p))
+    (output : Circuits.Types.AddressOperation (ZMod p))
     (checked : AddressOperation.Spec (FinalRamProvider.addressInput record) output) : RamKey record := by
   have fits : Word.toNat (MemoryBoundary.address record) < 2 ^ 64 := by
     rw [← Word.toBitVec64_toNat bound]

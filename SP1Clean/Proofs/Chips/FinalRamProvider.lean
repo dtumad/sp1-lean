@@ -26,7 +26,7 @@ private theorem zero_u64 : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) := by
 
 omit [Fact (2 ^ 17 < p)] in
 theorem ram_canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryBoundary.address record))
-    (output : Extracted.AddressOperation (ZMod p))
+    (output : Circuits.Types.AddressOperation (ZMod p))
     (checked : AddressOperation.Spec (addressInput record) output) : MemoryBoundary.RamFinalSpec record := by
   have fits : Word.toNat (MemoryBoundary.address record) < 2 ^ 64 := by
     rw [← Word.toBitVec64_toNat bound]
@@ -48,7 +48,7 @@ theorem ram_canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryB
 omit [Fact (2 ^ 17 < p)] in
 /-- Existing generic Memory consumers retain the canonical-address projection. -/
 theorem canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryBoundary.address record))
-    (output : Extracted.AddressOperation (ZMod p))
+    (output : Circuits.Types.AddressOperation (ZMod p))
     (checked : AddressOperation.Spec (addressInput record) output) : MemoryBoundary.CanonicalSpec record :=
   (ram_canonical record bound output checked).1
 

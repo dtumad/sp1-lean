@@ -1,169 +1,63 @@
-# The layering contract
+# Import boundaries
 
-*Machine-checked by `scripts/check_layering.sh` (run by `scripts/run_audit.sh` and the CI `guards`
-job) against the stratum map in `scripts/layering.txt`. Exceptions live in
-`scripts/layering_allowlist.txt`, each with a reason.*
+[`scripts/layering.txt`](../scripts/layering.txt) assigns modules to ordered strata.
+[`scripts/check_layering.sh`](../scripts/check_layering.sh) enforces the map in CI and the
+release audit. Responsibilities and the migration direction are in [architecture](architecture.md).
 
-## Why this exists
+## Enforced rules
 
-`docs/architecture.md`'s layer table states **topical** responsibilities — "`Faithful/` — whole-chip
-comparisons against Rust". Topical rules cannot decide placement. `Interaction.toAccess` is topically
-about extracted interactions and structurally about bus vocabulary, and it spent months in
-`Faithful/` where the completeness layer could not reach it, *while declaring
-`namespace SP1Clean.Extracted` the whole time*.
+1. A module imports from its own stratum or a lower one. Every project module must have a
+   mapping; the longest matching path/glob wins.
+2. Pillar namespaces agree with their mapped responsibility, subject to the named exceptions.
+3. `SP1Clean/Core.lean` indexes all handwritten modules in strata 0–6. The separate root-index
+   check verifies complete library coverage and rejects dangling or duplicate imports.
+4. Native circuits under `Native/` and `Circuits/` have no transitive import of `Extracted/`.
+   Shared column types are native-owned; Rust comparison code sits above them.
 
-The same gap let a `Proofs → Faithful` import land in 2026-08 — the only one in the tree, against 30
-going the other way. It compiled, and every other gate passed. This document is the structural rule
-that topical responsibilities could not supply, and the gate is what makes it more than a convention.
+Exceptions live in [layering_allowlist.txt](../scripts/layering_allowlist.txt), with reasons.
+A recurring exception usually calls for a more precise stratum or an ownership move. Existing
+exceptions are migration work, not a requirement to preserve the current API or file placement.
 
-## The three laws
+## Current strata
 
-**1. Direction.** Strata are totally ordered. A module imports only from strictly lower strata, or
-within its own.
+| Stratum | Contents |
+|---|---|
+| 0 | To-Upstream additions, independent of SP1 |
+| 1 | Arithmetic and word foundations |
+| 2 | Execution/model vocabulary and native column types |
+| 3 | Legacy Rust oracles and their interaction adapters |
+| 4 | Semantic contracts and row views |
+| 5 | Readers, operation gadgets and their proofs |
+| 6 | Instruction chips, local proofs and event-to-row builders |
+| 7 | Rust faithfulness |
+| 8 | Registration, machine grounding and soundness |
+| 9 | Physical table construction and completeness assembly |
+| 10 | Completeness capstones |
+| 11 | Exact-Rust-to-native composed artifacts |
 
-**2. Placement.** *A public declaration belongs in the lowest stratum that can state it* — the join
-of the strata of the constants in its **type**, not its proof and not its first consumer.
-
-Why the type: it makes module altitude and audit altitude the same number. For a theorem `T`,
-everything in `Prf(T) \ Stmt(T)` is kernel-checked and cannot make `T` say something false, so the
-risk lives entirely in `Stmt(T)` (see `docs/assurance.md`). A declaration sitting above its
-statement vocabulary is exactly one whose audit surface is narrower than its position suggests — and,
-concretely, one that a legitimate consumer below it cannot reach.
-
-Private declarations are exempt: nothing below can cite them, so they cause no reachability harm.
-
-**Law 2 is advisory, and the reason is a measurement.** A placement linter (the `--placement`
-mode of the project-local lint driver retired on 2026-09-20 with the move to Batteries'
-`runLinter`; recover it from git history if a hoist hunt is wanted) implemented it; the shell gate
-covers laws 1 and 3. On the 2026-08 tree it reported
-**2392 declarations across 284 files** whose types could be stated in a lower stratum. That is a real standing hoist backlog — whole
-`Soundness/` files are pure Mathlib, `Composition/PreprocessedProviders.lean` alone accounts for 33 —
-but it is not a defect list: much of it is chip-local arithmetic that *could* live in `Math/` without
-anyone wanting it there. Ratcheting it would mean a 2392-entry hoist backlog in the lint residue
-with no one wanting most of it moved. So law 2 is the criterion you reach for when deciding where a
-*new* declaration goes; the measurement above is the standing backlog. Laws 1 and 3 are gates.
-
-**3. Namespace agreement.** A file's first `namespace SP1Clean.<Root>` must name the pillar its
-stratum expects. AGENTS.md's "namespaces are decoupled from directory paths" remains true for
-*sub*-namespaces; the pillar root is what must agree. This is nearly free and high-signal — it is the
-check that would have caught `toAccess` on the day it was written.
-
-Law 3 has a real exception class, and the allowlist distinguishes it: sometimes the namespace records
-*intended vocabulary* rather than placement. `Model/Opcode.lean` declares `SP1Clean.Soundness`
-deliberately (AGENTS.md sanctions it) because the soundness layer consumes it, while it structurally
-belongs to the substrate — and `Model/` is measurably clean, with zero imports into any higher pillar.
-When namespace and path disagree, one of them is wrong; deciding which requires reading the file.
+Some directories straddle strata: chip `Bridge`/`Contracts` files depend on machine grounding,
+and the converse capstones depend on table construction. The map describes those dependencies
+explicitly. Directory cleanup should preserve the ordering while improving the names.
 
 ## Representation ownership
 
-Layer direction is not enough if two strata independently model the same data. The following
-ownership rules complement the three import laws:
+Full Sail/host/clock execution and finite snapshots live in `Model/Core/`; the shard contract
+uses those same objects. Legacy event/exact-Core views lack the complete evolving host and need
+explicit compatibility results before replacement. PolyFun traces, access schedules and physical
+row inventories are derived views, not independent execution semantics.
 
-- `Model/Core/Execution{,Path,Replay,Snapshot}.lean` owns full Sail/host/clock execution and
-  finite boundaries. `FormalModel/Shard.lean` states the native contract over those same objects.
-  PolyFun prefixes and Sail chains are certified views, not parallel witness types.
-- `Model/Machine/EventExecution.lean` and `CoreShardSemanticWitness` retain the legacy
-  ordinary/exact-Core trace views. They lack the full evolving host; adapters must explicitly
-  establish compatibility before a consumer migrates. Do not claim full-state equivalence.
-- Field-free access schedules and State/Memory histories are derived compiler views, not
-  standalone execution witnesses. Reuse the existing transition/access plans and the shared
-  `ExecutionCarrier`/`CoreExecutionTrajectory` for physical occurrence transport and replay.
-  A remaining `NativeTraceReady` seam in the old compiler must not enter the final shard contract.
-- `Model/InstructionChipId.lean` owns instruction-table identity and order;
-  `Model/InstructionRouting.lean` owns pure routing. Higher registries realize those definitions.
-- typed interactions are the soundness primary and computable `LookupAccess` ledgers are the
-  completeness primary. `Interaction.toAccess` is the only semantic bridge between them; extracted
-  Rust sign orientation is an explicit projection above that bridge.
+Instruction identity/order and routing have one Model owner. Use the canonical Clean ledger and
+retain physical occurrences when projecting it: repeated keys, disabled interactions and count
+bounds are part of the contract. See [semantics](semantics.md).
 
-These rules are review invariants today. Repeated 25-arm literals, independent opcode lists, or a
-new trace/ledger carrier should be presumed duplication until its information content is shown to
-differ.
+Keep pure semantic contracts below circuit implementations. Colocate feature-specific arithmetic
+with its consumer when it has no broader use; move a declaration when a real lower-level consumer
+needs it. A theorem’s type alone does not determine the best file for its proof.
 
-## The strata
+## Limits of these checks
 
-Defined in `scripts/layering.txt`, keyed on module path with globs where a directory straddles. Every
-ordering below is supported by measured import counts, not by intent.
-
-| # | Stratum | Carries |
-|---|---|---|
-| 0 | upstream | `ToMathlib/`, `ToClean/`, `ToPolyFun/` — no SP1 concepts; destined for Mathlib/Clean/PolyFun (`ToClean` may import `ToPolyFun`); module-system files in their upstream's header idiom (AGENTS.md § Lake libraries) |
-| 1 | math | field-generic words, carries, bit operations |
-| 2 | model | the SP1 substrate: messages, channels, buses, ledgers, Sail, schedules |
-| 3 | extracted | generated Rust rows, assertion/interaction lists, manifest — plus the two hand-written modules that define the vocabulary those lists speak |
-| 4 | contracts | semantic specs, public witness relations, the row view |
-| 5 | operations | operation gadgets, readers, and their soundness |
-| 6 | chips | chip circuits, their proofs, event→row builders |
-| 7 | anchors | per-chip and list-level Rust faithfulness |
-| 8 | machine | registry, ensemble, grounding, soundness capstone |
-| 9 | assembly | trace record → built tables → `EnsembleWitness` |
-| 10 | machine completeness | the converse capstone |
-| 11 | composition | the composed exact→native artifact |
-
-**Directories are not strata.** Four of them straddle, and the map says so with narrower rules:
-
-- A chip's files span two strata. `Proofs/Chips/<X>/` (`Defs`/`Formal`/`Complete`/…) is chip-level;
-  the chip's `Bridge.lean` (needs `Soundness.ChipRow` and the Sail advance layer) and `Contracts.lean`
-  (needs `Soundness.TypedMemory`, whose closure reaches all 25 chips) live under
-  `Alignment/Chips/<X>/` at stratum 8 with their namespaces unchanged, so that the core build target
-  is expressible by module globs. `BranchChip/Contracts.lean` stays in `Proofs/Chips/` because its
-  closure reaches only `Soundness.RowView` (stratum 4); the host chips' bridges likewise.
-- `Soundness/` holds three. `RowView.lean` reaches nothing above stratum 3;
-  `AIRCompleteness.lean` and `NativeCompleteness.lean` sit above `Proofs/Completeness/`; the rest is
-  the machine.
-- `Faithful/` held two until 2026-08. The composition half — the exact→native artifact — is now its
-  own top-level pillar, `SP1Clean/Composition/`, so the directory names match the strata and the
-  Faithful ↔ Soundness mutual pair is gone. `Faithful/SupportedMachine.lean` stayed behind: its
-  content is stratum-7 faithfulness (it declares `ChipFaithfulnessAnchor` and
-  `supportedChipFaithfulness`, and renaming those into a higher pillar would make them worse), and it
-  reaches the machine for one thing only — `Soundness.supportedChips`, so the coverage certificate
-  cannot drift from the registry. That coupling is the file's purpose, so it is an allowlist entry
-  with a reason rather than a move.
-- `FormalModel/` holds two — `TraceGen/` belongs with the chips.
-
-Adding a narrower rule is always preferable to adding an allowlist entry. Mapping the per-chip
-`Bridge`/`Contracts` files to stratum 8 (now the `Alignment/` directory) removed 63 would-be
-exceptions at a stroke.
-
-**The gate is only ever as sharp as the strata.** Two modules in the same stratum may import each
-other freely, so a real ordering discovered *inside* a stratum should split it rather than be
-tolerated. That is why strata 8–10 are separate: `Proofs/Completeness/Providers.lean` imports
-`Soundness.SP1Ensemble`, and `Soundness/AIRCompleteness.lean` imports `Proofs.Completeness.Assembly`
-— collapsing them would make both edges "same-stratum" and blind the gate to a future reversal.
-
-## The seams
-
-- **1→2** word/bitvector lemmas. **2→3** only `Model.SP1Constraint`, the extraction DSL's target.
-- **2/3→4** messages, channels and generated column structures become `Spec`s and row views.
-- **4→5→6** contracts, then gadgets, then chips.
-- **6→7** a chip's `circuit` bundle meets its extracted oracle.
-- **6/7→8** chips register into the machine. **8→9→10** ensemble, assembly, converse capstone.
-- **10→11** the machine's relations are consumed by the composed artifact.
-
-Crossing upward is a bug. Crossing several strata at once is legal but worth a glance —
-`Soundness/RowView.lean` reaching `Extracted/` skips three.
-
-## What this does *not* check, and why that matters
-
-This contract is about **import direction and declaration placement**. It is not about whether every
-module is built, and it is not about whether a theorem depends on another theorem. Three different
-properties, three different gates, and conflating them is easy:
-
-| Property | Gate | Answers |
-|---|---|---|
-| Every module is compiled and indexed | `check_root_index.sh` | "is this file in the build?" |
-| Imports respect the order; declarations sit at their vocabulary | `check_layering.sh` | "is this file in the right place?" |
-| A capstone's proof actually reaches a given module | compiled constant-dependency inspection | "does the theorem depend on it?" |
-
-The third is what the external review's Finding 1 was about, and neither of the first two can detect
-it. Every `Faithful/` module was always compiled and always imported by `SP1Clean.lean`; what was
-missing was any *theorem* whose proof connected whole-chip faithfulness to the Sail capstone. The
-review measured "98 of 433 modules unreachable from `Soundness/AIR.lean`" as a proxy — and note it is
-only a proxy: module-import closure is necessary but not sufficient for proof dependency, since a
-module can be imported without the proof term touching it. The sharp version is the constant closure.
-
-So: a universal-import check (`lake exe mk_all`, or our `check_root_index.sh`) cannot catch Finding 1,
-and this layering gate cannot either. Holding that composition in place wants a gate that *requires*
-edges rather than forbidding them — asserting that named modules are in the closure of named capstone
-theorems. The trust policy checks permitted axioms, not required proof edges; the separate capstone
-contract checks statement/definition dependencies, not theorem bodies. Required proof composition
-still needs direct inspection and explicit composition theorems, not an axiom-count proxy.
+Import reachability does not establish theorem dependence or semantic agreement. A file can be
+compiled and imported without a capstone using any of its proofs. The compiled trust check audits
+permitted axioms; the capstone manifest audits statement/definition dependencies. Required proof
+composition still needs explicit composition theorems and review. These checks support the
+[assurance boundary](assurance.md); none substitutes for it.

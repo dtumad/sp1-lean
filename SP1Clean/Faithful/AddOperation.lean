@@ -28,6 +28,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -57,19 +58,10 @@ theorem add_interactions_faithful (a b value : Word (ZMod p)) :
 
 @[circuit_norm] theorem eval_addColumns
     {F : Type} [FiniteField F] (env : Environment F)
-    (cols : SP1Clean.AddOperation.Columns (Expression F)) :
+    (cols : SP1Clean.Circuits.Types.AddOperation (Expression F)) :
     Eval.eval env cols =
       ({ value := Eval.eval env cols.value } :
-        SP1Clean.AddOperation.Columns F) := by
-  rw [ProvableStruct.eval_eq_eval]
-  rfl
-
-@[circuit_norm] theorem eval_extractedAddColumns
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Extracted.AddOperation (Expression F)) :
-    Eval.eval env cols =
-      ({ value := Eval.eval env cols.value } :
-        Extracted.AddOperation F) := by
+        SP1Clean.Circuits.Types.AddOperation F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 

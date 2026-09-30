@@ -1,5 +1,5 @@
 import SP1Clean.Model.Core.MemoryTable
-import SP1Clean.Extracted.LtOperationUnsigned
+import SP1Clean.Circuits.Types.LtOperationUnsigned
 
 /-! # Native initial-memory byte lookup contract
 
@@ -15,8 +15,8 @@ open SP1Clean.Model.Core
 structure Inputs (F : Type) where
   address : Word F
   interval : MemoryIntervalRow F
-  lowerCompare : Extracted.LtOperationUnsigned F
-  upperCompare : Extracted.LtOperationUnsigned F
+  lowerCompare : Circuits.Types.LtOperationUnsigned F
+  upperCompare : Circuits.Types.LtOperationUnsigned F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 

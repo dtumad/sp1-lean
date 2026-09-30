@@ -694,7 +694,7 @@ theorem addiViewOf_adapter (env : Environment (ZMod p)) :
       (⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset AddiChip.Inputs 0 env
   simp only [addiViewOf, AddiChip.rowView]
-  exact congrArg Extracted.ITypeReader.toAdapterView
+  exact congrArg Circuits.Types.ITypeReader.toAdapterView
     ((AddiChip.inputOutputAdapter env).symm.trans
       (congrArg (fun input : AddiChip.Inputs (ZMod p) => input.adapter) inputEq.symm))
 
@@ -754,7 +754,7 @@ theorem addiChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     addiViewOf_state, addiViewOf_adapter, addiViewOf_isReal, addiViewOf_rdWrite,
-    Extracted.ITypeReader.toAdapterView, circuit_norm]
+    Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 /-- Lift Addi's evaluated four-pack to the typed decoded-row boundary. -/
 theorem addiChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -805,7 +805,7 @@ theorem AddiChip.itypeTimestampContract :
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, addiChipITypeInput, AddiChip.circuit,
-        AddiChip.rowView, Extracted.ITypeReader.toAdapterView, circuit_norm]
+        AddiChip.rowView, Circuits.Types.ITypeReader.toAdapterView, circuit_norm]
 
 theorem addiChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) (hchip : decoded.chip = addiChipDescriptor (p := p))

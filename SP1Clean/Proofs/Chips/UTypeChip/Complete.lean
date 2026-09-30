@@ -5,7 +5,7 @@ import ToClean.Air.TableBuild
 /-! # `SP1Clean.UTypeChip` — from trace events to a valid AIR table (the J-type template)
 
 The first chip of the **J-type** family through the trace-generation chain (see
-`AddChip/Complete.lean` for the programme note). `UType` reads `Extracted.JTypeReader`: both source
+`AddChip/Complete.lean` for the programme note). `UType` reads `Circuits.Types.JTypeReader`: both source
 operands are decoded immediates, so the row makes a **single** register access — the `op_a` write —
 and commits one extra selector column, `is_auipc`.
 

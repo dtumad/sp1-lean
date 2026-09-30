@@ -1,6 +1,7 @@
+import Mathlib.Tactic.IntervalCases
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.Word
-import SP1Clean.Extracted.AddrAddOperation
+import SP1Clean.Circuits.Types.AddrAddOperation
 import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `AddrAddOperation` — `populate` (the witness generator)

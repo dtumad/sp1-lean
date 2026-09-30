@@ -17,7 +17,7 @@ namespace SP1Clean.IsEqualWordOperation
 
 open Circuit
 open SP1Clean.Channels (byteChannel)
-open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

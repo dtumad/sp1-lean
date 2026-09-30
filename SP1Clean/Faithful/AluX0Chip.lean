@@ -24,6 +24,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -237,7 +238,7 @@ theorem aluX0Chip_constraints_faithful
     ⟨input.state,
       #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
       8, input.is_real⟩
-  let rustState : Extracted.CPUState (ZMod p) :=
+  let rustState : Circuits.Types.CPUState (ZMod p) :=
     { clk_high := stateValue.clk_high
       clk_16_24 := stateValue.clk_16_24
       clk_0_16 := stateValue.clk_0_16

@@ -138,8 +138,8 @@ set_option linter.unusedSectionVars false in
 /-- Column 0 of a flattened `LtOperationSigned` column struct is its compare `bit` (peeling the
 `ProvableStruct` `toComponents`/`cast`/`append` tower). Used by completeness to read the witnessed bit
 out of the `populate`-pinned witness cell `env.get (i₀ + 2)`. -/
-private lemma toElements_col0 {x : Extracted.LtOperationSigned (ZMod p)}
-    (hi : (0:ℕ) < size Extracted.LtOperationSigned) :
+private lemma toElements_col0 {x : Circuits.Types.LtOperationSigned (ZMod p)}
+    (hi : (0:ℕ) < size Circuits.Types.LtOperationSigned) :
     (toElements x)[0]'hi = x.result.u16_compare_operation.bit := by
   simp only [ProvableType.toElements, ProvableStruct.toComponents,
     ProvableStruct.componentsToElements, circuit_norm]
@@ -164,7 +164,7 @@ private lemma populate_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 
 /-- The witnessed `LtOperationSigned` block's flattened cell 0 (the compare `bit`) is binary on a real
 row — the form completeness uses after pinning the witness cell `env.get (i₀ + 2)` to `populate`. -/
 private lemma witness_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 1)
-    (hi : (0:ℕ) < size Extracted.LtOperationSigned) :
+    (hi : (0:ℕ) < size Circuits.Types.LtOperationSigned) :
     (toElements (LtOperationSigned.populate b cc s r))[0]'hi = 0 ∨
     (toElements (LtOperationSigned.populate b cc s r))[0]'hi = 1 := by
   rw [toElements_col0]; exact populate_bit_bool hr
@@ -253,18 +253,18 @@ theorem completeness :
       = env.get i₀ := by simp [circuit_norm]
   -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.
   replace h_env_cols := fun j : Fin 10 =>
-    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Extracted.LtOperationSigned) env.toEnvironment (i₀ + 2) _
+    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Circuits.Types.LtOperationSigned) env.toEnvironment (i₀ + 2) _
       (by simpa only [circuit_norm] using h_env_cols) j (by
-        have h : size Extracted.LtOperationSigned = 10 := rfl
+        have h : size Circuits.Types.LtOperationSigned = 10 := rfl
         have := j.isLt
         omega)).trans (Witgen.getElem_eval_toElements _ _ j (by
-      have h : size Extracted.LtOperationSigned = 10 := rfl
+      have h : size Circuits.Types.LtOperationSigned = 10 := rfl
       have := j.isLt
       omega)).symm
   have hcolsPop : ∀ j : Fin 10, env.get (i₀ + 2 + (j : ℕ))
       = (toElements (LtOperationSigned.populate input_adapter_op_b_memory_prev_value
           input_adapter_op_c_memory_prev_value (env.get i₀) input_is_real))[(j : ℕ)]'(by
-        have : size Extracted.LtOperationSigned = 10 := rfl
+        have : size Circuits.Types.LtOperationSigned = 10 := rfl
         have := j.isLt
         omega) := by
     intro j
@@ -323,7 +323,7 @@ theorem completeness :
     ha hb hf0' hbin hgate using 2
   -- 4.32: `convert … using 2` now leaves only the `cols` equality. The former `rfl` step closed a
   -- separate `circuit.Spec = Spec` goal that the congruence no longer emits (Clean `088a9287`).
-  refine (ProvableType.ext_iff (α := Extracted.LtOperationSigned) _ _).mpr (fun i hi => ?_)
+  refine (ProvableType.ext_iff (α := Circuits.Types.LtOperationSigned) _ _).mpr (fun i hi => ?_)
   -- Per cell: the varFromOffset read is the pinned witness cell (`hcolsPop`), already in the
   -- value-level `populate` form.
   refine Eq.trans ?_
@@ -338,7 +338,7 @@ theorem completeness :
   have hc0 : env.get (i₀ + 2)
       = (toElements (LtOperationSigned.populate input_adapter_op_b_memory_prev_value
           input_adapter_op_c_memory_prev_value (env.get i₀) input_is_real))[0]'(by
-            have : size Extracted.LtOperationSigned = 10 := rfl; omega) := hcolsPop 0
+            have : size Circuits.Types.LtOperationSigned = 10 := rfl; omega) := hcolsPop 0
   refine isU64_bitWord ?_
   rw [hc0]
   exact witness_bit_bool hr _

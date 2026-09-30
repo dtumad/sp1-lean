@@ -3,7 +3,7 @@ import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
 import SP1Clean.Model.ByteTable
 import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Extracted.CPUState
+import SP1Clean.Circuits.Types.CPUState
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -40,23 +40,23 @@ variable {p : ℕ} [Fact p.Prime]
 
 /-- Component-wise evaluation of the canonical CPU-state row. -/
 @[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.CPUState (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.CPUState (Expression F)) :
     Eval.eval env cols =
       ({ clk_high := Eval.eval env cols.clk_high,
          clk_16_24 := Eval.eval env cols.clk_16_24,
          clk_0_16 := Eval.eval env cols.clk_0_16,
-         pc := Eval.eval env cols.pc } : Extracted.CPUState F) := by
+         pc := Eval.eval env cols.pc } : Circuits.Types.CPUState F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
 @[circuit_norm] theorem eval_clk0 {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.CPUState (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.CPUState (Expression F)) :
     (Eval.eval env cols).clk_0_16 = Expression.eval env cols.clk_0_16 := by
   rw [eval_cols]
   simp only [circuit_norm]
 
 @[circuit_norm] theorem eval_clk1 {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Extracted.CPUState (Expression F)) :
+    (env : Environment F) (cols : Circuits.Types.CPUState (Expression F)) :
     (Eval.eval env cols).clk_16_24 = Expression.eval env cols.clk_16_24 := by
   rw [eval_cols]
   simp only [circuit_norm]

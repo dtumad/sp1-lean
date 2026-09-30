@@ -25,6 +25,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -33,7 +34,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- **Faithfulness anchor.** SP1's `IsEqualWordOperation` constraint list holds iff the native
 gadget's `RawSpec` holds. -/
 theorem isEqualWord_constraints_faithful (a b : Word (ZMod p))
-    (cols : Extracted.IsEqualWordOperation (ZMod p)) :
+    (cols : Circuits.Types.IsEqualWordOperation (ZMod p)) :
     (List.Forall (· = 0) (Extracted.IsEqualWordOperation.asserts a b cols 1) ∧
       List.Forall Interaction.toProp (Extracted.IsEqualWordOperation.interactions a b cols 1)) ↔
       SP1Clean.IsEqualWordOperation.RawSpec a b cols := by
@@ -48,10 +49,10 @@ theorem isEqualWord_constraints_faithful (a b : Word (ZMod p))
 omit [Fact (2 ^ 17 < p)] in
 @[circuit_norm] theorem eval_isEqualWordColumns
     (env : Environment (ZMod p))
-    (cols : Extracted.IsEqualWordOperation (Expression (ZMod p))) :
+    (cols : Circuits.Types.IsEqualWordOperation (Expression (ZMod p))) :
     Eval.eval env cols =
       ({ is_diff_zero := Eval.eval env cols.is_diff_zero } :
-        Extracted.IsEqualWordOperation (ZMod p)) := by
+        Circuits.Types.IsEqualWordOperation (ZMod p)) := by
   provable_struct_simp
 
 private def isEqualWordChild
@@ -135,7 +136,7 @@ omit [Fact (2 ^ 17 < p)] in
 byte interactions, matching SP1's empty extracted `interactions`. -/
 theorem isEqualWord_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var SP1Clean.IsEqualWordOperation.Inputs (ZMod p)) (offset : ℕ)
-    (a b : Word (ZMod p)) (is_real : ZMod p) (cols : Extracted.IsEqualWordOperation (ZMod p)) :
+    (a b : Word (ZMod p)) (is_real : ZMod p) (cols : Circuits.Types.IsEqualWordOperation (ZMod p)) :
     (Extracted.IsEqualWordOperation.interactions a b cols is_real).map Extracted.Interaction.toAccess
       = (((SP1Clean.IsEqualWordOperation.main input).operations offset).interactionsWith
           byteChannel.toRaw).map (AbstractInteraction.toAccess env) := by

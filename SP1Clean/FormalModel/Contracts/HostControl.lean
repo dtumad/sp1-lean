@@ -13,7 +13,7 @@ namespace SP1Clean.HostHaltChip
 
 structure Inputs (F : Type) where
   call : HostCallChip.Message F
-  comparison : Extracted.LtOperationUnsigned F
+  comparison : Circuits.Types.LtOperationUnsigned F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 

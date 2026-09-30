@@ -25,6 +25,7 @@ namespace SP1Clean.Faithful
 
 open SP1Clean
 open SP1Clean.Extracted
+open SP1Clean.Circuits.Types
 open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -32,7 +33,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- **Faithfulness anchor.** SP1's `U16toU8OperationSafe` constraint list (the four `U8Range`
 sends) holds iff the native gadget's `RawSpec` (each low/high byte `< 256`) holds. -/
 theorem u16tou8safe_constraints_faithful (u16_values : Vector (ZMod p) 4)
-    (cols : Extracted.U16toU8Operation (ZMod p)) :
+    (cols : Circuits.Types.U16toU8Operation (ZMod p)) :
     (List.Forall (· = 0) (Extracted.U16toU8OperationSafe.asserts u16_values cols 1) ∧
       List.Forall Interaction.toProp (Extracted.U16toU8OperationSafe.interactions u16_values cols 1)) ↔
       SP1Clean.U16toU8OperationSafe.RawSpec u16_values cols := by
@@ -58,7 +59,7 @@ The gate is the constant `1`, so this is stated at the
 oracle's `is_real = 1`. -/
 theorem u16tou8safe_interactions_faithful_syntactic
     (env : Environment (ZMod p)) (input : Var SP1Clean.U16toU8OperationSafe.Inputs (ZMod p))
-    (offset : ℕ) (u16_values : Vector (ZMod p) 4) (cols : Extracted.U16toU8Operation (ZMod p))
+    (offset : ℕ) (u16_values : Vector (ZMod p) 4) (cols : Circuits.Types.U16toU8Operation (ZMod p))
     (is_real : ZMod p)
     (h_ir : Expression.eval env input.is_real = is_real)
     (h_u0 : Expression.eval env input.u16_values[0] = u16_values[0])

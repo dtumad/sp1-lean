@@ -30,7 +30,7 @@ witnesses, and the two sign-extend selectors. The columns depend on the operands
 flags (`is_mulh`/`is_mulhsu`) only — `is_mul`/`is_mulhu`/`is_mulw` affect result *placement*, not the
 product columns. The composing chip calls this to fill `cols`; conformance anchors it to SP1's `populate`. -/
 def populate (b c : Word (ZMod p)) (is_mulh is_mulhsu is_mulw : ZMod p) :
-    Extracted.MulOperation (ZMod p) :=
+    Circuits.Types.MulOperation (ZMod p) :=
   let bsgn := (is_mulh.val + is_mulhsu.val) * (b[3].val / 32768 % 2)
   let csgn := is_mulh.val * (c[3].val / 32768 % 2)
   let carry : Vector (ZMod p) 16 := Vector.ofFn (fun k : Fin 16 =>
@@ -99,7 +99,7 @@ def productF (bS cS : ℕ → Witgen.U64Expr (ZMod p)) (k : ℕ) : Witgen.FExpr 
 /-- The witness-IR twin of `populate`, over the chip's input expressions (`is_mulh`/`is_mulhsu`/
 `is_mulw` are the chip's witnessed flag cells). -/
 def populateFE (b c : Word (Expression (ZMod p))) (is_mulh is_mulhsu is_mulw : Expression (ZMod p)) :
-    Extracted.MulOperation (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.MulOperation (Witgen.FExpr (ZMod p)) :=
   let bS := streamF b (bsgnF is_mulh is_mulhsu b[3])
   let cS := streamF c (csgnF is_mulh c[3])
   { carry := Vector.ofFn fun k : Fin 16 => carryF bS cS k.val,
@@ -387,9 +387,9 @@ the `combinedSize'` tower on a compound literal. Cell order: carry 0–15, produ
 
 set_option linter.unusedSectionVars false in
 /-- Cell `k` (`k < 16`) of a flattened `MulOperation` struct is the `k`-th carry. -/
-private lemma toElements_cell_carry {F : Type} (s : Extracted.MulOperation F)
+private lemma toElements_cell_carry {F : Type} (s : Circuits.Types.MulOperation F)
     (k : ℕ) (hk : k < 16) :
-    (toElements s)[k]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+    (toElements s)[k]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.carry[k] := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   interval_cases k <;>
@@ -399,9 +399,9 @@ private lemma toElements_cell_carry {F : Type} (s : Extracted.MulOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `16 + k` (`k < 16`) is the `k`-th product byte. -/
-private lemma toElements_cell_product {F : Type} (s : Extracted.MulOperation F)
+private lemma toElements_cell_product {F : Type} (s : Circuits.Types.MulOperation F)
     (k : ℕ) (hk : k < 16) :
-    (toElements s)[16 + k]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+    (toElements s)[16 + k]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.product[k] := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   interval_cases k <;>
@@ -411,9 +411,9 @@ private lemma toElements_cell_product {F : Type} (s : Extracted.MulOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `32 + k` (`k < 4`) is the `k`-th `b` low byte. -/
-private lemma toElements_cell_bLower {F : Type} (s : Extracted.MulOperation F)
+private lemma toElements_cell_bLower {F : Type} (s : Circuits.Types.MulOperation F)
     (k : ℕ) (hk : k < 4) :
-    (toElements s)[32 + k]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+    (toElements s)[32 + k]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.b_lower_byte.low_bytes[k] := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   interval_cases k <;>
@@ -426,9 +426,9 @@ private lemma toElements_cell_bLower {F : Type} (s : Extracted.MulOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `36 + k` (`k < 4`) is the `k`-th `c` low byte. -/
-private lemma toElements_cell_cLower {F : Type} (s : Extracted.MulOperation F)
+private lemma toElements_cell_cLower {F : Type} (s : Circuits.Types.MulOperation F)
     (k : ℕ) (hk : k < 4) :
-    (toElements s)[36 + k]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+    (toElements s)[36 + k]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.c_lower_byte.low_bytes[k] := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   interval_cases k <;>
@@ -442,8 +442,8 @@ private lemma toElements_cell_cLower {F : Type} (s : Extracted.MulOperation F)
 
 set_option linter.unusedSectionVars false in
 /-- Cell `40` is the `b` MSB. -/
-private lemma toElements_cell_bMsb {F : Type} (s : Extracted.MulOperation F) :
-    (toElements s)[40]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+private lemma toElements_cell_bMsb {F : Type} (s : Circuits.Types.MulOperation F) :
+    (toElements s)[40]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.b_msb := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -456,8 +456,8 @@ private lemma toElements_cell_bMsb {F : Type} (s : Extracted.MulOperation F) :
 
 set_option linter.unusedSectionVars false in
 /-- Cell `41` is the `c` MSB. -/
-private lemma toElements_cell_cMsb {F : Type} (s : Extracted.MulOperation F) :
-    (toElements s)[41]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+private lemma toElements_cell_cMsb {F : Type} (s : Circuits.Types.MulOperation F) :
+    (toElements s)[41]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.c_msb := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -471,8 +471,8 @@ private lemma toElements_cell_cMsb {F : Type} (s : Extracted.MulOperation F) :
 
 set_option linter.unusedSectionVars false in
 /-- Cell `42` is the gated product MSB. -/
-private lemma toElements_cell_productMsb {F : Type} (s : Extracted.MulOperation F) :
-    (toElements s)[42]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+private lemma toElements_cell_productMsb {F : Type} (s : Circuits.Types.MulOperation F) :
+    (toElements s)[42]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.product_msb.msb := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -488,8 +488,8 @@ private lemma toElements_cell_productMsb {F : Type} (s : Extracted.MulOperation 
 
 set_option linter.unusedSectionVars false in
 /-- Cell `43` is the `b` sign-extend selector. -/
-private lemma toElements_cell_bSignExtend {F : Type} (s : Extracted.MulOperation F) :
-    (toElements s)[43]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+private lemma toElements_cell_bSignExtend {F : Type} (s : Circuits.Types.MulOperation F) :
+    (toElements s)[43]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.b_sign_extend := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -505,8 +505,8 @@ private lemma toElements_cell_bSignExtend {F : Type} (s : Extracted.MulOperation
 
 set_option linter.unusedSectionVars false in
 /-- Cell `44` is the `c` sign-extend selector. -/
-private lemma toElements_cell_cSignExtend {F : Type} (s : Extracted.MulOperation F) :
-    (toElements s)[44]'(by have h45 : size Extracted.MulOperation = 45 := rfl; omega)
+private lemma toElements_cell_cSignExtend {F : Type} (s : Circuits.Types.MulOperation F) :
+    (toElements s)[44]'(by have h45 : size Circuits.Types.MulOperation = 45 := rfl; omega)
       = s.c_sign_extend := by
   obtain ⟨ca, pr, ⟨bl⟩, ⟨cl⟩, bm, cm, ⟨pm⟩, bs, cs⟩ := s
   simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
@@ -633,10 +633,10 @@ theorem populateFE_eval (env : ProverEnvironment (ZMod p))
   -- cell-by-cell assembly
   refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
   have hi45 : i < 45 := by
-    have hsz : size Extracted.MulOperation = 45 := rfl
+    have hsz : size Circuits.Types.MulOperation = 45 := rfl
     omega
   rw [show (Witgen.eval { env := env } (populateFE b c is_mulh is_mulhsu is_mulw) :
-          Extracted.MulOperation (ZMod p))
+          Circuits.Types.MulOperation (ZMod p))
         = fromElements ((toElements (populateFE b c is_mulh is_mulhsu is_mulw)).map
             (Witgen.FExpr.eval { env := env })) from rfl,
     ProvableType.toElements_fromElements, Vector.getElem_map]
@@ -825,19 +825,19 @@ theorem populateFE_eval_cell (env : ProverEnvironment (ZMod p))
     (hsum : vh.val + vhsu.val ≤ 1) (j : ℕ) (hj : j < 45) :
     Witgen.FExpr.eval { env := env }
         ((toElements (populateFE b c is_mulh is_mulhsu is_mulw))[j]'(by
-          have h45 : size Extracted.MulOperation = 45 := rfl
+          have h45 : size Circuits.Types.MulOperation = 45 := rfl
           omega))
       = (toElements (populate vb vc vh vhsu vw))[j]'(by
-          have h45 : size Extracted.MulOperation = 45 := rfl
+          have h45 : size Circuits.Types.MulOperation = 45 := rfl
           omega) := by
   have h := congrArg
-    (fun s : Extracted.MulOperation (ZMod p) => (toElements s)[j]'(by
-      have h45 : size Extracted.MulOperation = 45 := rfl
+    (fun s : Circuits.Types.MulOperation (ZMod p) => (toElements s)[j]'(by
+      have h45 : size Circuits.Types.MulOperation = 45 := rfl
       omega))
     (populateFE_eval env b c is_mulh is_mulhsu is_mulw vb vc vh vhsu vw
       hvb hvc hh hhsu hw hb hc hhb hhsub hsum)
   rw [show (Witgen.eval { env := env } (populateFE b c is_mulh is_mulhsu is_mulw) :
-          Extracted.MulOperation (ZMod p))
+          Circuits.Types.MulOperation (ZMod p))
         = fromElements ((toElements (populateFE b c is_mulh is_mulhsu is_mulw)).map
             (Witgen.FExpr.eval { env := env })) from rfl,
     ProvableType.toElements_fromElements] at h
@@ -855,10 +855,10 @@ bounds). One twin per shape, mirroring the eval ladder. -/
 /-- `ofFExprs`-of-`toElements` evaluation is the flattened struct evaluation (the raw payload
 form the `ComputableWitnesses` obligations quantify over). -/
 private lemma ofFExprs_eval_eq (env : ProverEnvironment (ZMod p))
-    (xs : Extracted.MulOperation (Witgen.FExpr (ZMod p))) :
+    (xs : Circuits.Types.MulOperation (Witgen.FExpr (ZMod p))) :
     (Witgen.WitgenIR.ofFExprs (toElements xs)).eval env
       = toElements (Witgen.eval { env := env } xs) := by
-  rw [show (Witgen.eval { env := env } xs : Extracted.MulOperation (ZMod p))
+  rw [show (Witgen.eval { env := env } xs : Circuits.Types.MulOperation (ZMod p))
         = fromElements ((toElements xs).map (Witgen.FExpr.eval { env := env })) from rfl,
     ProvableType.toElements_fromElements]
   apply Vector.ext
@@ -1013,14 +1013,14 @@ theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
   refine congrArg toElements ?_
   refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
   have hi45 : i < 45 := by
-    have hsz : size Extracted.MulOperation = 45 := rfl
+    have hsz : size Circuits.Types.MulOperation = 45 := rfl
     omega
   rw [show (Witgen.eval { env := env } (populateFE b c is_mulh is_mulhsu is_mulw) :
-          Extracted.MulOperation (ZMod p))
+          Circuits.Types.MulOperation (ZMod p))
         = fromElements ((toElements (populateFE b c is_mulh is_mulhsu is_mulw)).map
             (Witgen.FExpr.eval { env := env })) from rfl,
     show (Witgen.eval { env := env' } (populateFE b c is_mulh is_mulhsu is_mulw) :
-          Extracted.MulOperation (ZMod p))
+          Circuits.Types.MulOperation (ZMod p))
         = fromElements ((toElements (populateFE b c is_mulh is_mulhsu is_mulw)).map
             (Witgen.FExpr.eval { env := env' })) from rfl,
     ProvableType.toElements_fromElements, ProvableType.toElements_fromElements,
@@ -1157,7 +1157,7 @@ end CongrLemmas
 /-- The all-zero column struct — the witness on rows where the gadget is inactive and SP1 leaves
 the struct unpopulated (`DivRemChip`'s `c_times_quotient_upper` on word rows; padding rows).
 `spec_zero` (in `Formal`) discharges the composed assertion's obligation at this value. -/
-def zeroCols : Extracted.MulOperation (ZMod p) :=
+def zeroCols : Circuits.Types.MulOperation (ZMod p) :=
   { carry := .replicate 16 0, product := .replicate 16 0,
     b_lower_byte := ⟨.replicate 4 0⟩, c_lower_byte := ⟨.replicate 4 0⟩,
     b_msb := 0, c_msb := 0, product_msb := ⟨0⟩,
@@ -1194,7 +1194,7 @@ def csgnFW (is_mulh c3 : Witgen.FExpr (ZMod p)) : Witgen.U64Expr (ZMod p) :=
 /-- The witness-IR twin of `populate`, over the chip's input expressions (`is_mulh`/`is_mulhsu`/
 `is_mulw` are the chip's witnessed flag cells). -/
 def populateFEW (b c : Vector (Witgen.FExpr (ZMod p)) 4) (is_mulh is_mulhsu is_mulw : Witgen.FExpr (ZMod p)) :
-    Extracted.MulOperation (Witgen.FExpr (ZMod p)) :=
+    Circuits.Types.MulOperation (Witgen.FExpr (ZMod p)) :=
   let bS := streamFW b (bsgnFW is_mulh is_mulhsu b[3])
   let cS := streamFW c (csgnFW is_mulh c[3])
   { carry := Vector.ofFn fun k : Fin 16 => carryF bS cS k.val,
@@ -1417,10 +1417,10 @@ theorem populateFEWW_eval (env : ProverEnvironment (ZMod p))
   -- cell-by-cell assembly
   refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
   have hi45 : i < 45 := by
-    have hsz : size Extracted.MulOperation = 45 := rfl
+    have hsz : size Circuits.Types.MulOperation = 45 := rfl
     omega
   rw [show (Witgen.eval { env := env } (populateFEW b c is_mulh is_mulhsu is_mulw) :
-          Extracted.MulOperation (ZMod p))
+          Circuits.Types.MulOperation (ZMod p))
         = fromElements ((toElements (populateFEW b c is_mulh is_mulhsu is_mulw)).map
             (Witgen.FExpr.eval { env := env })) from rfl,
     ProvableType.toElements_fromElements, Vector.getElem_map]
@@ -1691,14 +1691,14 @@ theorem populateFEW_congr_flat (env env' : ProverEnvironment (ZMod p))
   refine congrArg toElements ?_
   refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
   have hi45 : i < 45 := by
-    have hsz : size Extracted.MulOperation = 45 := rfl
+    have hsz : size Circuits.Types.MulOperation = 45 := rfl
     omega
   rw [show (Witgen.eval { env := env } (populateFEW b c is_mulh is_mulhsu is_mulw) :
-          Extracted.MulOperation (ZMod p))
+          Circuits.Types.MulOperation (ZMod p))
         = fromElements ((toElements (populateFEW b c is_mulh is_mulhsu is_mulw)).map
             (Witgen.FExpr.eval { env := env })) from rfl,
     show (Witgen.eval { env := env' } (populateFEW b c is_mulh is_mulhsu is_mulw) :
-          Extracted.MulOperation (ZMod p))
+          Circuits.Types.MulOperation (ZMod p))
         = fromElements ((toElements (populateFEW b c is_mulh is_mulhsu is_mulw)).map
             (Witgen.FExpr.eval { env := env' })) from rfl,
     ProvableType.toElements_fromElements, ProvableType.toElements_fromElements,
@@ -1838,23 +1838,23 @@ section ZeroFlatten
 omit [Fact (2 ^ 24 < p)] in
 /-- Every flattened cell of `zeroCols` is zero (the gated-composition else-branch fact, via the
 navigator family above). -/
-lemma zc_cell (i : ℕ) (hi : i < size Extracted.MulOperation) :
-    (toElements (zeroCols : Extracted.MulOperation (ZMod p)))[i] = 0 := by
+lemma zc_cell (i : ℕ) (hi : i < size Circuits.Types.MulOperation) :
+    (toElements (zeroCols : Circuits.Types.MulOperation (ZMod p)))[i] = 0 := by
   have hi' : i < 45 := hi
   rcases Nat.lt_or_ge i 16 with h16 | h16
-  · rw [toElements_cell_carry (zeroCols : Extracted.MulOperation (ZMod p)) i h16]
+  · rw [toElements_cell_carry (zeroCols : Circuits.Types.MulOperation (ZMod p)) i h16]
     simp [zeroCols]
   rcases Nat.lt_or_ge i 32 with h32 | h32
   · obtain ⟨j, rfl⟩ : ∃ j, i = 16 + j := ⟨i - 16, by omega⟩
-    rw [toElements_cell_product (zeroCols : Extracted.MulOperation (ZMod p)) j (by omega)]
+    rw [toElements_cell_product (zeroCols : Circuits.Types.MulOperation (ZMod p)) j (by omega)]
     simp [zeroCols]
   rcases Nat.lt_or_ge i 36 with h36 | h36
   · obtain ⟨j, rfl⟩ : ∃ j, i = 32 + j := ⟨i - 32, by omega⟩
-    rw [toElements_cell_bLower (zeroCols : Extracted.MulOperation (ZMod p)) j (by omega)]
+    rw [toElements_cell_bLower (zeroCols : Circuits.Types.MulOperation (ZMod p)) j (by omega)]
     simp [zeroCols]
   rcases Nat.lt_or_ge i 40 with h40 | h40
   · obtain ⟨j, rfl⟩ : ∃ j, i = 36 + j := ⟨i - 36, by omega⟩
-    rw [toElements_cell_cLower (zeroCols : Extracted.MulOperation (ZMod p)) j (by omega)]
+    rw [toElements_cell_cLower (zeroCols : Circuits.Types.MulOperation (ZMod p)) j (by omega)]
     simp [zeroCols]
   interval_cases i
   · rw [toElements_cell_bMsb]; rfl
@@ -1867,8 +1867,8 @@ omit [Fact (2 ^ 24 < p)] in
 /-- The flattened zero struct, as a `fromElements` of zeros (the shape `Witgen.eval_gateFE`'s
 else branch produces). -/
 lemma fromElements_zero :
-    (fromElements (Vector.replicate (size Extracted.MulOperation) 0)
-      : Extracted.MulOperation (ZMod p)) = zeroCols := by
+    (fromElements (Vector.replicate (size Circuits.Types.MulOperation) 0)
+      : Circuits.Types.MulOperation (ZMod p)) = zeroCols := by
   rw [ProvableType.ext_iff]
   intro i hi
   rw [ProvableType.toElements_fromElements, Vector.getElem_replicate]
