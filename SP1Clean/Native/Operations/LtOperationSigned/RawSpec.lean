@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
 import SP1Clean.Circuits.Types.LtOperationSigned
-import SP1Clean.Native.Operations.LtOperationUnsigned.RawSpec
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Circuits.Gadgets.U16MSB
 import Mathlib.Tactic.LinearCombination
 

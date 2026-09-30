@@ -1,7 +1,8 @@
 import SP1Clean.Semantics.Specs.DivRem
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Semantics.Specs.IsEqualWord
-import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
+import SP1Clean.Semantics.Specs.LtUnsigned
+import Clean.Utils.Tactics.ProvableStructSimp
 
 /-! # DivRem comparison-cluster contract
 

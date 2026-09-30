@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
-import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 
 /-! # `DivRemChip` populate value bundles — divide-by-zero, absolute values, `max(|c|,1)`, range
 
@@ -984,8 +984,7 @@ private lemma comparison_bit_one {a b : Word (ZMod p)} (ha : a.isU64) (hb : b.is
     U16CompareOperation.populate_bit (LtOperationUnsigned.comparisonLimbsWitness a b)[0]
       (LtOperationUnsigned.comparisonLimbsWitness a b)[1] = 1 := by
   have hsem := (LtOperationUnsigned.result_semantic
-      (input := ⟨a, b, LtOperationUnsigned.populate a b, 1⟩) ha hb rfl
-      LtOperationUnsigned.spec_populate).1
+      (LtOperationUnsigned.spec_populate ha hb) rfl).1
   rw [if_pos h] at hsem
   exact hsem
 

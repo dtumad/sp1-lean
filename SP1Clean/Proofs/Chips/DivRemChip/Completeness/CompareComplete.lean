@@ -584,7 +584,8 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
       exact LtOperationUnsigned.spec_zero (populateAbsRem B C f) (populateMaxAbsCOr1 C f) rfl
     · rw [hg1, ltClWitness, if_pos hg1, ltFlagsWitness, if_pos hg1,
         ltNotEqInvWitness, if_pos hg1, ltBitWitness, if_pos hg1, ltClWitness, if_pos hg1]
-      exact LtOperationUnsigned.spec_populate
+      exact LtOperationUnsigned.spec_populate (populateAbsRem_isU64 B C f)
+        (populateMaxAbsCOr1_isU64 hcU f)
   · exact ⟨bMsbCell_bool hbU f, fun hg => by
       obtain ⟨_, hw0⟩ := hirnw_cases hg
       rw [bMsbCell, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]

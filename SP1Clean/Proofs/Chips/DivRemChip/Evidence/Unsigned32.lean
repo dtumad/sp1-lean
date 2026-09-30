@@ -368,12 +368,6 @@ theorem unsigned32Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {
       have hr2 : cols.remainder_comp[2] = cols.b[2] := by linear_combination e242
       have hr3 : cols.remainder_comp[3] = cols.b[3] := by linear_combination e244
       rw [Word.toNat_def, Word.toNat_def, hr0, hr1, hr2, hr3]
-  have habsCU : Word.isU64 cols.abs_c := Word.isU64_of_cases
-    (habsCRange 0 (by norm_num)) (habsCRange 1 (by norm_num))
-    (habsCRange 2 (by norm_num)) (habsCRange 3 (by norm_num))
-  have habsRU : Word.isU64 cols.abs_remainder := Word.isU64_of_cases
-    (habsRRange 0 (by norm_num)) (habsRRange 1 (by norm_num))
-    (habsRRange 2 (by norm_num)) (habsRRange 3 (by norm_num))
   have hlt : cols.c.toNat ≠ 0 → cols.remainder_comp.toNat < cols.c.toNat := by
     intro hcNe
     have hzeroResult := IsZeroWordOperation.result_semantic hisZero hir
@@ -395,8 +389,7 @@ theorem unsigned32Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {
       rw [hzeroResult] at e302; linear_combination e302
     have hmaxEq : cols.max_abs_c_or_1 = cols.abs_c := by
       apply Vector.ext; intro i hi; interval_cases i <;> assumption
-    have hmaxU : Word.isU64 cols.max_abs_c_or_1 := hmaxEq ▸ habsCU
-    have hbit := (LtOperationUnsigned.result_semantic habsRU hmaxU hrcm hltSpec).1
+    have hbit := (LtOperationUnsigned.result_semantic hltSpec hrcm).1
     have hbit1 : cols.remainder_lt_operation.u16_compare_operation.bit = 1 := by
       rw [hrcm] at e307; linear_combination -e307
     rw [hbit1] at hbit

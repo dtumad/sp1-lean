@@ -510,7 +510,7 @@ theorem signed64Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {ca
         apply hcZero
         rw [Word.toNat_def, z0, z1, z2, z3]
         simp
-      have hcmp := absRemainder_lt_absC hir hcnz habsRU habsCU hisZero hltSpec
+      have hcmp := absRemainder_lt_absC hir hcnz hisZero hltSpec
         e299 e300 e301 e302 e305 e307
       have hlt := hlt_signed_of_abs habsRU habsCU hrAbsPos hrAbsNeg hcAbsPos hcAbsNeg hcmp
       have hcBVNe : Word.toBitVec64 cols.c ≠ 0#64 := by

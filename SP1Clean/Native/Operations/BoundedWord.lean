@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Contracts.BoundedWord
 import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
+import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Model.Semantics.Decode
 
 /-! # A native unsigned constant-bound check
@@ -50,8 +50,8 @@ theorem soundness (bound : ℕ) (fits : bound < 2 ^ 64) :
   rw [eval_limit] at h_holds
   obtain ⟨valueBound, compare, one⟩ := h_holds
   have limitBound : Word.isU64 (limit (p := p) bound) := isU64_bitVecToWord _
-  have result := (LtOperationUnsigned.result_semantic valueBound limitBound rfl
-    (compare ⟨fun _ => ⟨valueBound, limitBound⟩, Or.inr rfl⟩)).1
+  have result := (LtOperationUnsigned.result_semantic
+    (compare ⟨fun _ => ⟨valueBound, limitBound⟩, Or.inr rfl⟩) rfl).1
   dsimp only at result
   rw [sub_eq_zero.mp one, limit_value bound fits] at result
   refine ⟨valueBound, ?_⟩
@@ -67,8 +67,8 @@ theorem completeness (bound : ℕ) (fits : bound < 2 ^ 64) :
   rw [eval_limit]
   obtain ⟨⟨valueBound, boundValue⟩, comparisonEq⟩ := h_assumptions
   have limitBound : Word.isU64 (limit (p := p) bound) := isU64_bitVecToWord _
-  have compare := LtOperationUnsigned.spec_populate (b := input_value) (cc := limit (p := p) bound)
-  have result := (LtOperationUnsigned.result_semantic valueBound limitBound rfl compare).1
+  have compare := LtOperationUnsigned.spec_populate (b := input_value) (cc := limit (p := p) bound) valueBound limitBound
+  have result := (LtOperationUnsigned.result_semantic compare rfl).1
   rw [← comparisonEq] at compare result
   refine ⟨valueBound, ⟨⟨fun _ => ⟨valueBound, limitBound⟩, Or.inr rfl⟩, compare⟩, ?_⟩
   dsimp only at result
