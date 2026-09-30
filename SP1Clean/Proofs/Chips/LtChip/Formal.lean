@@ -186,14 +186,14 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
   refine ⟨⟨h_adapter ⟨h_bin, h_bin, h_clk⟩,
     h_bin, fun hr => ⟨fun hslt => ?_, fun hsltu => ?_⟩⟩, ?_⟩
-  · -- `is_slt = 1` ⇒ `is_signed = 1`, so the gadget bit is the signed compare. The structural
+  · -- `is_slt = 1` ⇒ `is_signed = 1`, so the gadget bit is the signed compare. The semantic
     -- `Spec` exposes the semantic bit via `result_semantic`.
-    have h_lt_spec := (LtOperationSigned.result_semantic ha hb hr (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩)).1
+    have h_lt_spec := (LtOperationSigned.result_semantic (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩) hr).1
     rw [hslt] at h_lt_spec
     simp only [if_true] at h_lt_spec
     simp only [resultWord, rv64_slt_eq, toBitVec64_bitWord _ _ h_lt_spec]
   · -- `is_sltu = 1` with the sum-bound + booleans forces `is_slt = 0`
-    have h_lt_spec := (LtOperationSigned.result_semantic ha hb hr (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩)).1
+    have h_lt_spec := (LtOperationSigned.result_semantic (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩) hr).1
     have h_slt0 : env.get i₀ = 0 := by
       rcases h_slt_bool with h0 | h1
       · exact h0
@@ -213,8 +213,8 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
             | exact Or.inl rfl
             | exact Or.inr ⟨h_bin, h_bin, h_clk⟩
             | exact Or.inr ⟨h_bin, (fun hr => isU64_bitWord
-                (bool_of_eq_ite (LtOperationSigned.result_semantic ha hb hr
-                  (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩)).1)),
+                (bool_of_eq_ite (LtOperationSigned.result_semantic
+                  (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩) hr).1)),
                 h_clk.at_four⟩
 
 -- Whole-chip completeness normalizes the flag-hinted witness stream (SLT/SLTU flags + the

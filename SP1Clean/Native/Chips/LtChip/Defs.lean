@@ -1,6 +1,5 @@
 import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Proofs.Operations.LtOperationSigned.Formal
-import SP1Clean.Native.Operations.LtOperationSigned.Populate
+import SP1Clean.Circuits.Gadgets.LtSigned
 import SP1Clean.Native.Witgen.HintFlags
 import ToClean.Circuit.WitnessCombinator
 import SP1Clean.Native.Readers.CPUState

@@ -135,7 +135,7 @@ lemma branch_conditions_of_decision_eq {rs1 rs2 : Word (ZMod p)}
     (h_bit : bit = if (if b2 + b3 = 1
         then (Word.toBitVec64 rs1).toInt < (Word.toBitVec64 rs2).toInt
         else Word.toNat rs1 < Word.toNat rs2) then 1 else 0)
-    (h_eqf : b2 + b3 = 0 → (sum = 0 ↔ Word.toBitVec64 rs1 = Word.toBitVec64 rs2))
+    (h_eqf : sum = 0 ↔ Word.toBitVec64 rs1 = Word.toBitVec64 rs2)
     (hbrdec : br = branchDecision b0 b1 b2 b3 b4 b5 bit sum) :
     (b0 = 1 → (br = 1 ↔ Word.toBitVec64 rs1 = Word.toBitVec64 rs2))
       ∧ (b1 = 1 → (br = 1 ↔ Word.toBitVec64 rs1 ≠ Word.toBitVec64 rs2))
@@ -147,17 +147,15 @@ lemma branch_conditions_of_decision_eq {rs1 rs2 : Word (ZMod p)}
   refine ⟨fun hf => ?_, fun hf => ?_, fun hf => ?_, fun hf => ?_, fun hf => ?_, fun hf => ?_⟩
   · -- BEQ: other five flags zero; `br = 1 - sum`; `is_signed = 0`.
     obtain ⟨e1, e2, e3, e4, e5⟩ := rest_zero hf hb1 hb2 hb3 hb4 hb5 hone
-    have hsig0 : b2 + b3 = 0 := by rw [e2, e3]; simp
     rw [hf, e1, e2, e3, e4, e5] at hbrdec
-    refine Iff.trans ?_ (h_eqf hsig0)
+    refine Iff.trans ?_ h_eqf
     constructor
     · intro hib; linear_combination hbrdec - hib
     · intro hF; linear_combination hbrdec - hF
   · -- BNE: `br = sum-indicator`; binary; `br = 1 ↔ sum ≠ 0 ↔ rs1 ≠ rs2`.
     obtain ⟨e0, e2, e3, e4, e5⟩ := rest_zero hf hb0 hb2 hb3 hb4 hb5 (by linear_combination hone)
-    have hsig0 : b2 + b3 = 0 := by rw [e2, e3]; simp
     rw [hf, e0, e2, e3, e4, e5] at hbrdec
-    refine Iff.trans ?_ (not_congr (h_eqf hsig0))
+    refine Iff.trans ?_ (not_congr h_eqf)
     constructor
     · intro hib hF; exact zero_ne_one' (by linear_combination -hbrdec + hib - hF)
     · intro hF; rcases hbr with h0 | h1
@@ -208,8 +206,8 @@ lemma branch_decision_eq_of_conditions {rs1 rs2 : Word (ZMod p)}
     (h_bit : bit = if (if b2 + b3 = 1
         then (Word.toBitVec64 rs1).toInt < (Word.toBitVec64 rs2).toInt
         else Word.toNat rs1 < Word.toNat rs2) then 1 else 0)
-    (h_eqf : b2 + b3 = 0 → (sum = 0 ↔ Word.toBitVec64 rs1 = Word.toBitVec64 rs2))
-    (h_eqbin : b2 + b3 = 0 → (sum = 0 ∨ sum = 1))
+    (h_eqf : sum = 0 ↔ Word.toBitVec64 rs1 = Word.toBitVec64 rs2)
+    (h_eqbin : sum = 0 ∨ sum = 1)
     (hd0 : b0 = 1 → (br = 1 ↔ Word.toBitVec64 rs1 = Word.toBitVec64 rs2))
     (hd1 : b1 = 1 → (br = 1 ↔ Word.toBitVec64 rs1 ≠ Word.toBitVec64 rs2))
     (hd2 : b2 = 1 → (br = 1 ↔ (Word.toBitVec64 rs1).slt (Word.toBitVec64 rs2) = true))
@@ -222,14 +220,12 @@ lemma branch_decision_eq_of_conditions {rs1 rs2 : Word (ZMod p)}
     ⟨hf0, e1, e2, e3, e4, e5⟩ | ⟨hf1, e0, e2, e3, e4, e5⟩ | ⟨hf2, e0, e1, e3, e4, e5⟩ |
       ⟨hf3, e0, e1, e2, e4, e5⟩ | ⟨hf4, e0, e1, e2, e3, e5⟩ | ⟨hf5, e0, e1, e2, e3, e4⟩
   · -- BEQ (`b0 = 1`): `br = 1 - sum-indicator`, `is_signed = 0`.
-    have hsig0 : b2 + b3 = 0 := by rw [e2, e3]; simp
     rw [hf0, e1, e2, e3, e4, e5]
-    linear_combination bool_eq_one_sub hbr (h_eqbin hsig0) ((hd0 hf0).trans (h_eqf hsig0).symm)
+    linear_combination bool_eq_one_sub hbr h_eqbin ((hd0 hf0).trans h_eqf.symm)
   · -- BNE (`b1 = 1`): `br = sum-indicator`, `is_signed = 0`.
-    have hsig0 : b2 + b3 = 0 := by rw [e2, e3]; simp
     rw [e0, hf1, e2, e3, e4, e5]
-    linear_combination bool_eq_of_iff_ne hbr (h_eqbin hsig0)
-      ((hd1 hf1).trans (not_congr (h_eqf hsig0)).symm)
+    linear_combination bool_eq_of_iff_ne hbr h_eqbin
+      ((hd1 hf1).trans (not_congr h_eqf).symm)
   · -- BLT (`b2 = 1`): `br = bit`, `is_signed = 1`.
     have hsig1 : b2 + b3 = 1 := by rw [hf2, e3, add_zero]
     simp only [eq_true hsig1] at h_bit

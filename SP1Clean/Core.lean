@@ -2,6 +2,7 @@ import SP1Clean.Semantics.Specs.IsEqualWord
 import SP1Clean.Semantics.Specs.IsZeroWord
 import SP1Clean.Semantics.Specs.IsZero
 import SP1Clean.Semantics.Specs.LtUnsigned
+import SP1Clean.Semantics.Specs.LtSigned
 import SP1Clean.Semantics.Specs.U16Compare
 import SP1Clean.Semantics.Specs.U16MSB
 import SP1Clean.Circuits.Types.ALUTypeReader
@@ -317,9 +318,7 @@ import SP1Clean.Native.Operations.InitialMemoryRead
 import SP1Clean.Circuits.Gadgets.IsEqualWord
 import SP1Clean.Circuits.Gadgets.IsZero
 import SP1Clean.Circuits.Gadgets.IsZeroWord
-import SP1Clean.Native.Operations.LtOperationSigned.Defs
-import SP1Clean.Native.Operations.LtOperationSigned.Populate
-import SP1Clean.Native.Operations.LtOperationSigned.RawSpec
+import SP1Clean.Circuits.Gadgets.LtSigned
 import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Native.Operations.MulOperation
 import SP1Clean.Native.Operations.MulOperation.Defs
@@ -584,7 +583,6 @@ import SP1Clean.Proofs.Operations.HostBuffer32.Content
 import SP1Clean.Proofs.Operations.HostBuffer32.Ledger
 import SP1Clean.Proofs.Operations.HostBuffer32.Populate
 import SP1Clean.Proofs.Operations.HostRamBytes
-import SP1Clean.Proofs.Operations.LtOperationSigned.Formal
 import SP1Clean.Proofs.Operations.MulOperation.Formal
 import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
 import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
