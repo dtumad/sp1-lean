@@ -1,25 +1,23 @@
-import SP1Clean.Circuits.Types.AddOperation
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Circuits.Types.MulOperation
-import SP1Clean.Semantics.Specs.U16Compare
-import SP1Clean.Semantics.Specs.U16MSB
-import SP1Clean.Circuits.Types.U16toU8Operation
-import SP1Clean.Circuits.Types.AddrAddOperation
-import SP1Clean.Circuits.Types.AddressOperation
-import SP1Clean.Semantics.Specs.IsZero
-import SP1Clean.Semantics.Specs.IsZeroWord
-import SP1Clean.Semantics.Specs.IsEqualWord
-import SP1Clean.Semantics.Specs.LtUnsigned
-import SP1Clean.Semantics.Specs.LtSigned
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Circuits.Types.AddOperation
+public import SP1Clean.Circuits.Types.MulOperation
+public import SP1Clean.Circuits.Types.U16MSBOperation
+public import SP1Clean.Circuits.Types.U16toU8Operation
+public import SP1Clean.Circuits.Types.AddrAddOperation
+public import SP1Clean.Circuits.Types.AddressOperation
 import Mathlib.Data.Fin.VecNotation
 
 /-! # Consolidated specs — operation gadgets
 
 The `Inputs` structs, semantic `Spec`s, and the pure result helpers a `Spec` directly needs
-(`resultWord`, and Mul's `productVal`) for the witnessed operation gadgets. Second file in the
-`FormalModel/Contracts/` sequence (`Readers.lean → Operations.lean → Chips.lean`); the structural
-`RawSpec`s stay in the per-operation proof files. Depends only on
-`Math/` + `Model/` + `Circuits/Types/` (+ `Contracts/Readers.lean` for sequencing). -/
+(`resultWord`, and Mul's `productVal`) for the witnessed operation gadgets. These contracts depend
+only on word arithmetic and native column types. Reader contracts and feature specifications
+have separate owners; consumers import those modules directly. Structural `RawSpec`s stay with
+the operation implementations and proofs. -/
+
+@[expose] public section
 
 namespace SP1Clean.U16toU8OperationSafe
 
@@ -90,8 +88,8 @@ provable_struct_eval_lemmas Inputs
 is the low 48 bits of the integer sum `a + b`, each limb a genuine 16-bit value, and the
 64-bit-truncated sum contains no bits above that 48-bit result. The final fact is forced by the
 AIR's boolean high carry against zero; it is deliberately a conclusion rather than a soundness
-precondition. `Inputs` (the `eval` params verbatim — the result column struct nested as `cols`) is the generated
-`Operations.AddrAddOperation.Extracted`; the witnessed limbs `input.cols.value` are threaded in by the
+precondition. The native input contains the result column struct as `cols`; its witnessed limbs
+`input.cols.value` are threaded in by the
 composing operation (via `populate`). The limb ranges + the sum uniquely pin every limb
 (`value[i] = (addr / 2^16ⁱ) % 2^16`), which a composing `AddressOperation` needs to discharge its
 inverse gate / offset decomposition in completeness. -/
@@ -321,9 +319,7 @@ deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 /-- The reconstructed 64-bit result word: the two witnessed low limbs, with the two high limbs
-realised as the sign fill `msb * 0xFFFF`. (`Inputs`/`Spec`/`spec_populate` live in the op's
-`Formal.lean` — the composed circuit form imports `U16MSBOperation.Formal`, so its `Spec` cannot live
-here without an import cycle, mirroring the IsZero* chain above.) -/
+realised as the sign fill `msb * 0xFFFF`. -/
 def resultWord (cols : Columns (ZMod p)) : Word (ZMod p) :=
   #v[cols.value[0], cols.value[1], cols.msb.msb * 65535, cols.msb.msb * 65535]
 
@@ -353,9 +349,7 @@ deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 /-- The reconstructed 64-bit result word: the two witnessed low limbs, with the two high limbs
-realised as the sign fill `msb * 0xFFFF`. (`Inputs`/`Spec`/`spec_populate` live in the op's
-`Formal.lean` — the composed circuit form imports `U16MSBOperation.Formal`, so its `Spec` cannot live
-here without an import cycle, mirroring the IsZero* chain above.) -/
+realised as the sign fill `msb * 0xFFFF`. -/
 def resultWord (cols : Columns (ZMod p)) : Word (ZMod p) :=
   #v[cols.value[0], cols.value[1], cols.msb.msb * 65535, cols.msb.msb * 65535]
 
@@ -389,8 +383,7 @@ AND/OR/XOR of the operand bytes (as 8-bit values), **and the operand bytes are g
 byte table guarantees `a[i], b[i] < 256` for every fired send, so soundness exports those bounds and a
 composing operation (e.g. `BitwiseU16Operation`) can consume them without having to range-check the
 free byte columns itself. On padding (`is_real = 0`) it is vacuous — the gadget's gated byte-bus pulls
-impose nothing there. `Inputs` (the `eval` params verbatim — the result column struct nested as `cols`)
-is the generated `Operations.BitwiseOperation.Extracted`; the result bytes are `input.cols.result`,
+impose nothing there. The native input contains the result bytes as `input.cols.result`,
 threaded in by the composing operation. -/
 def Spec (input : Inputs (ZMod p)) : Prop :=
   input.is_real = 1 →
@@ -401,10 +394,7 @@ def Spec (input : Inputs (ZMod p)) : Prop :=
 
 end SP1Clean.BitwiseOperation
 
--- `BitwiseU16Operation`'s `Inputs`/`Spec`/`resultWord`/`decompBytes` live in
--- `Operations/BitwiseU16Operation.lean`: the composed `FormalAssertion` imports `BitwiseOperation.Formal`
--- for `.circuit`, and its `Spec` is literally the composed `BitwiseOperation.Spec` on the two `U16toU8`
--- byte decompositions (same reasoning as the IsZero* / Addw chains above).
+-- The composed BitwiseU16 contract remains in `Native/Operations/BitwiseU16Operation.lean`.
 
 namespace SP1Clean.MulOperation
 

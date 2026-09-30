@@ -1,14 +1,19 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Semantics.Specs.DivRem
-import SP1Clean.Circuits.Types.DivRem
-import SP1Clean.Semantics.ISA.RV64
-import Clean.Circuit.Subcircuit
+module
+
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Semantics.Specs.DivRem
+public import SP1Clean.Circuits.Types.DivRem
+public import SP1Clean.Circuits.Types.LtOperationSigned
+public import SP1Clean.Circuits.Types.U16MSBOperation
+public import SP1Clean.Semantics.ISA.RV64
+public import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Consolidated specs — chip rows, stated against the RV64 ISA functions
 
-The `Inputs` structs and semantic `Spec`s for the chip rows (`GeneralFormalCircuit`s). Final file in
-the `FormalModel/Contracts/` sequence (`Readers.lean → Operations.lean → Chips.lean`).
+The `Inputs` structs and semantic `Spec`s for the chip rows (`GeneralFormalCircuit`s), composed
+from independent reader and operation contracts and the native column types.
 
 Unlike the operation gadgets — whose `Spec`s are spelled out as `BitVec` equations — each **chip**
 states its headline meaning in terms of the corresponding **RV64 ISA functions** from
@@ -23,6 +28,8 @@ rs2`), so the chip soundness proofs carry over unchanged. For the W-instructions
 function truncates-then-sign-extends, related to the gadget's `setWidth 32`/`signExtend` form by the
 `rv64_addw_eq` / `rv64_subw_eq` lemmas below. -/
 
+
+@[expose] public section
 
 namespace SP1Clean.AddChip
 
@@ -332,8 +339,8 @@ constraints bind this word to the decoded `adapter.op_c` shift amount. -/
 
 /-- Native ShiftLeft-chip row (Rust field order — the chip has no separate `is_real` column; the
 real-row selector is `is_sll + is_sllw`). The reader blocks and the SLLW MSB block reuse the project
-substrate (`Circuits.Types.U16MSBOperation` is still a standalone generated module — the Branch/load
-chip families compose the same gadget). `Faithful.shiftLeftChipReconfigure` is the sole bridge to
+substrate (`Circuits.Types.U16MSBOperation` is a native column type shared with the other MSB
+consumers). `Faithful.shiftLeftChipReconfigure` is the sole bridge to
 Rust's separately generated whole-chip row. -/
 structure Columns (F : Type) where
   state : Circuits.Types.CPUState F
@@ -450,7 +457,7 @@ provable_struct_eval_lemmas Inputs
 
 /-- Native ShiftRight-chip row (Rust field order — the chip has no separate `is_real` column; the
 real-row selector is the four-flag sum). The reader blocks and the two MSB blocks reuse the project
-substrate (`Circuits.Types.U16MSBOperation` stays a standalone generated module).
+substrate, including the native `Circuits.Types.U16MSBOperation` column type.
 `Faithful.shiftRightChipReconfigure` is the sole bridge to Rust's separately generated whole-chip
 row. -/
 structure Columns (F : Type) where
@@ -669,7 +676,9 @@ private lemma high64_mul (b' c' : BitVec 129) (b'' c'' : BitVec 128)
     BitVec.extractLsb 127 64 (b' * c') = ((b'' * c'') >>> 64).setWidth 64 := by
   have hmul : b'' * c'' = BitVec.setWidth 128 (b' * c') := by
     rw [hb, hc]; exact (BitVec.setWidth_mul b' c' (by omega)).symm
-  rw [hmul]; generalize (b' * c') = P; bv_decide
+  rw [hmul, BitVec.setWidth_ushiftRight_eq_extractLsb,
+    BitVec.extractLsb'_setWidth_of_le (by decide)]
+  rfl
 
 /-- `RV64.mul rs2 rs1 = rs1 * rs2` (commuted into the gadget's `b * c` form). -/
 lemma rv64_mul_eq (x y : BitVec 64) : RV64.mul x y = y * x := by
@@ -678,21 +687,29 @@ lemma rv64_mul_eq (x y : BitVec 64) : RV64.mul x y = y * x := by
 /-- `RV64.mulh`'s high-64-bit signed×signed product equals the gadget's `>>>64 |>.setWidth 64` form. -/
 lemma rv64_mulh_eq (x y : BitVec 64) :
     RV64.mulh x y = ((y.signExtend 128 * x.signExtend 128) >>> 64).setWidth 64 := by
-  simp only [RV64.mulh]; exact high64_mul _ _ _ _ (by bv_decide) (by bv_decide)
+  simp only [RV64.mulh]
+  apply high64_mul
+  all_goals
+    ext i hi
+    simp [BitVec.getElem_signExtend, show i < 129 by omega]
 
 /-- `RV64.mulhu`'s high-64-bit unsigned×unsigned product (its inner `extractLsb' 0 128` is the
 identity on the 128-bit product) equals the gadget's `setWidth 128`-product `>>>64 |>.setWidth 64` form. -/
 lemma rv64_mulhu_eq (x y : BitVec 64) :
     RV64.mulhu x y = ((y.setWidth 128 * x.setWidth 128) >>> 64).setWidth 64 := by
-  simp only [RV64.mulhu]
-  generalize (BitVec.zeroExtend 128 y * BitVec.zeroExtend 128 x) = P
-  bv_decide
+  simp only [RV64.mulhu, BitVec.extractLsb'_eq_self,
+    BitVec.setWidth_ushiftRight_eq_extractLsb]
+  rfl
 
 /-- `RV64.mulhsu`'s high-64-bit signed(rs1)×unsigned(rs2) product equals the gadget's
 `signExtend 128 (rs1) * setWidth 128 (rs2)` `>>>64 |>.setWidth 64` form. -/
 lemma rv64_mulhsu_eq (x y : BitVec 64) :
     RV64.mulhsu x y = ((y.signExtend 128 * x.setWidth 128) >>> 64).setWidth 64 := by
-  simp only [RV64.mulhsu]; exact high64_mul _ _ _ _ (by bv_decide) (by bv_decide)
+  simp only [RV64.mulhsu]
+  apply high64_mul
+  · ext i hi
+    simp [BitVec.getElem_signExtend, show i < 129 by omega]
+  · exact (BitVec.setWidth_setWidth_of_le x (by decide)).symm
 
 /-- `RV64.mulw`'s low-32 product sign-extended to 64 equals the gadget's
 `((rs1 * rs2).setWidth 32).signExtend 64` form. -/
@@ -1007,7 +1024,7 @@ namespace SP1Clean.BranchChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native Branch-chip row (Rust field order). The reader blocks and the compare block reuse the
-project substrate (`Circuits.Types.LtOperationSigned` is still a standalone generated module — the Lt
+project substrate (`Circuits.Types.LtOperationSigned` is a native column type — the Lt
 chip composes the same gadget family). `Faithful.branchChipReconfigure` is the sole
 bridge to Rust's separately generated whole-chip row. -/
 structure Columns (F : Type) where

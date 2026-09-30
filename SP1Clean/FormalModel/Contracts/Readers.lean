@@ -1,22 +1,24 @@
-import SP1Clean.Math.Word
-import SP1Clean.Model.BusMessages
-import SP1Clean.Circuits.Types.CPUState
-import SP1Clean.Circuits.Types.RTypeReader
-import SP1Clean.Circuits.Types.ALUTypeReader
-import SP1Clean.Circuits.Types.ITypeReader
-import SP1Clean.Circuits.Types.JTypeReader
-import Clean.Circuit.Basic
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.BusMessages
+public import SP1Clean.Circuits.Types.CPUState
+public import SP1Clean.Circuits.Types.RTypeReader
+public import SP1Clean.Circuits.Types.ALUTypeReader
+public import SP1Clean.Circuits.Types.ITypeReader
+public import SP1Clean.Circuits.Types.JTypeReader
+public import Clean.Circuit.Basic
 import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Consolidated specs — reader circuits
 
 The `Inputs` structs and semantic `Spec`s for the nine register-adapter / state reader families
 (`CPUState`, `RegisterAccessTimestamp`, `RegisterAccessCols`, `RTypeReader`, `ALUTypeReader`,
-`ALUTypeReaderImmutable`, `ITypeReader`, `ITypeReaderImmutable`, `JTypeReader`). First file in the
-`FormalModel/Contracts/` sequence (`Readers.lean → Operations.lean → Chips.lean`); depends only on
-`Math/` + `Model/` + `Circuits/Types/`.
-Each declaration keeps its original namespace, so the reader proof files resolve them unchanged
-after `import SP1Clean.FormalModel.Contracts.Readers`. -/
+`ALUTypeReaderImmutable`, `ITypeReader`, `ITypeReaderImmutable`, `JTypeReader`). These contracts depend
+only on word arithmetic, bus messages and native column types. Chip contracts compose them with
+the independent operation contracts. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers
 

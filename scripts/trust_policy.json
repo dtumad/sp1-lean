@@ -87,8 +87,6 @@
   "bvDecide": {
     "reason": "Existing compiler-trusted bitvector proofs in SP1Clean and pinned Clean. Names are the scanner-normalized proof owners; only generated axiom counter suffixes are discarded. New proof owners require an explicit policy review.",
     "names": [
-      "SP1Clean.MulChip.rv64_mulh_eq._native.bv_decide",
-      "SP1Clean.MulChip.rv64_mulhsu_eq._native.bv_decide",
       "SP1Clean.ShiftLeftSail.execute_SHIFTIWOP_pure_slliw._native.bv_decide",
       "SP1Clean.ShiftRightSail.execute_SHIFTIWOP_pure_srliw._native.bv_decide",
       "_private.Clean.Gadgets.And.And8.0.Gadgets.And.And8.and_times_two_add_xor._native.bv_decide",
@@ -105,7 +103,6 @@
       "_private.SP1Clean.Alignment.Chips.StoreWordChip.Bridge.0.SP1Clean.StoreWordChip.store_byte1_32._native.bv_decide",
       "_private.SP1Clean.Alignment.Chips.StoreWordChip.Bridge.0.SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide",
       "_private.SP1Clean.Alignment.Chips.StoreWordChip.Bridge.0.SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide",
-      "_private.SP1Clean.FormalModel.Contracts.Chips.0.SP1Clean.MulChip.high64_mul._native.bv_decide",
       "jump_to_of_mod4_eq_zero._native.bv_decide"
     ]
   },

@@ -54,13 +54,16 @@ complete certificate domain.
 
 The bitwise arithmetic, bus message types, byte predicates and channel declarations also use
 module mode. They remain below the gadgets and contain no Sail or generated-oracle dependency.
+The shared reader, operation and chip contracts use module mode as well. Operation contracts
+depend only on word arithmetic and native column types; chip contracts explicitly compose the
+independent reader and operation contracts. Consumers import feature specifications directly.
 
 DivRem's public row contract lives in `Semantics/Specs/DivRem`, with the pure RV64 functions in
 `Semantics/ISA/RV64` and its native row in `Circuits/Types/DivRem`. Comparison and product-cluster
 contracts live under `Circuits/Gadgets/DivRem`: they describe implementation evidence, including
 the intermediate raw assertions, and are not dependencies of the public semantic contract.
-The comparison cluster uses the pure unsigned comparison contract. The remaining aggregate
-operation contracts and product gadget still need migration before these clusters can use module mode.
+The comparison cluster uses pure feature specifications. The product gadget remains a dependency
+to migrate before the product cluster can use module mode.
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,
