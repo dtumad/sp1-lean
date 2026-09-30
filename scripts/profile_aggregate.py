@@ -70,6 +70,20 @@ def parse_cumulative(log: Path) -> dict[str, float]:
     return categories
 
 
+def check_log(log: Path) -> None:
+    """Reject zero-exit diagnostics and runs that never reached the final module checks.
+
+    This checks the profiler's output contract, not kernel correctness; the strict full
+    Lake build remains the proof gate. Keep the check outside the timed Lean process.
+    """
+    text = log.read_text(errors="replace")
+    if re.search(r"\b(?:error|warning):|stack overflow|PANIC|uncaught exception", text):
+        raise ValueError(f"{log}: Lean emitted diagnostics")
+    categories = parse_cumulative(log)
+    if not {"import", "module linting"} <= categories.keys():
+        raise ValueError(f"{log}: incomplete cumulative profiler report")
+
+
 def stats(values: list[float]) -> dict[str, float]:
     if not values:
         return {"n": 0, "total": 0.0, "mean": 0.0, "median": 0.0, "p90": 0.0, "p95": 0.0, "max": 0.0}
@@ -129,7 +143,7 @@ def write_report(path_md: Path, path_json: Path, title: str, method: str, times:
              f"{summary['p90']:.2f} | {summary['p95']:.2f} | {summary['max']:.2f} |", ""]
     if exits:
         failures = sorted(m for m, code in exits.items() if code != 0)
-        lines.append(f"Nonzero exits: {len(failures)}" + (" — " + ", ".join(f"`{m}`" for m in failures) if failures else ""))
+        lines.append(f"Failed measurements: {len(failures)}" + (" — " + ", ".join(f"`{m}`" for m in failures) if failures else ""))
         lines.append("")
     lines += [f"## Top {min(top, len(ranked))} modules", ""] + ranking_table(ranked, top) + [""]
     lines += ["## Per pillar", ""] + pillar_table(times, categories) + [""]
@@ -225,13 +239,19 @@ def run_lake_logs(logs: list[Path], out: Path, top: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--profile-dir", type=Path, help="output directory of scripts/profile_compile.sh")
+    parser.add_argument("--check-log", type=Path, help="validate one completed Lean profiler log")
     parser.add_argument("--lake-log", type=Path, nargs="+", help="lake build log(s) to harvest")
     parser.add_argument("--out", type=Path, default=Path(".lake/profile/build-log"),
                         help="output path prefix for --lake-log (default .lake/profile/build-log)")
     parser.add_argument("--top", type=int, default=50, help="rows in ranking tables (default 50)")
     args = parser.parse_args()
-    if args.profile_dir is None and not args.lake_log:
-        parser.error("give --profile-dir or --lake-log")
+    if args.profile_dir is None and not args.lake_log and args.check_log is None:
+        parser.error("give --profile-dir, --lake-log or --check-log")
+    if args.check_log is not None:
+        try:
+            check_log(args.check_log)
+        except (OSError, ValueError) as error:
+            sys.exit(str(error))
     if args.profile_dir is not None:
         run_profile_dir(args.profile_dir, args.top)
     if args.lake_log:
