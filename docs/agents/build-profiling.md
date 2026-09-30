@@ -25,6 +25,10 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
 - Lean elaborates proof bodies on parallel threads: a module's **CPU can exceed its wall**, and the
   profiler's `blocked (unaccounted)` is the main thread waiting for those tasks. Read
   `simp`/`tactic execution`/`type checking` together with it.
+- The profiling runner warms the strict full library, never stops another process, and fails
+  if a measurement emits diagnostics or lacks the final cumulative report. Its `exit` field
+  includes output-validation failures. Keep the logs and finish a Lean change with the strict
+  full build; profiler output is not a proof gate.
 
 ## Whole build
 
@@ -42,7 +46,7 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
 
 | Question | Tool | Invocation | Output / gotcha |
 |---|---|---|---|
-| Solo cost and Lean's category split for a set of modules | `scripts/profile_compile.sh` | `SKIP_BUILD=1 OUTDIR=.lake/profile/<tag> scripts/profile_compile.sh SP1Clean/Proofs/Chips/AddChip/` (a path prefix; `TREES=… SKIP_BUILD=1` for a full sweep, ≈ 1 h, machine idle) | `summary.tsv` (`cpu wall exit module`, CPU first), `profile.md/json` (`import`, `elaboration`, `simp`, `tactic execution`, `type checking`, `typeclass inference`, `interpretation`, `blocked`, …). Requires warm oleans; run solo (no parallel `lake`/`lean`, LSP workers reaped: `pkill -f "lean --worker"`, never `lean --server`); 3 runs, median, for a claim. |
+| Solo cost and Lean's category split for a set of modules | `scripts/profile_compile.sh` | `SKIP_BUILD=1 OUTDIR=.lake/profile/<tag> scripts/profile_compile.sh SP1Clean/Proofs/Chips/AddChip/` (a path prefix; `TREES=… SKIP_BUILD=1` for a full sweep, ≈ 1 h, machine idle) | `summary.tsv` (`cpu wall exit module`, CPU first), `profile.md/json` (`import`, `elaboration`, `simp`, `tactic execution`, `type checking`, `typeclass inference`, `interpretation`, `blocked`, …). Requires warm oleans; run solo after other builds finish. Stop only identified stale LSP workers; never `lean --server` or `lake serve`. Use 3 runs and their median for a claim. |
 | The same by hand | `lean --profile` / `-Dprofiler=true` | `lean $(scripts/lean_flags.py --shell) -Dprofiler=true -Dprofiler.threshold=50 <file>` (after `eval "$(lake env)"` or with `LEAN_PATH` set) | per-declaration lines above the threshold (ms) + `cumulative profiling times:`; add `-Dtrace.profiler=true` for nested timings. Categories seen here: `import`, `parsing`, `elaboration`, `type checking`, `typeclass inference`, `tactic execution`, `simp`, `dsimp`, `interpretation`, `linting`, `compilation …`, `.olean serialization`, `blocked`, `do element elaborator`, `grind …`. |
 | Where inside a slow declaration is the time (a flame graph) | `trace.profiler.output` | `lean … -Dtrace.profiler=true -Dtrace.profiler.threshold=10 -Dtrace.profiler.output=prof.json <file>` then open `prof.json` at profiler.firefox.com (`-Dtrace.profiler.serve=true` serves it directly); `-Dtrace.profiler.output.pp=true` keeps full trace text, `-Dtrace.profiler.useHeartbeats=true` reports heartbeats instead of seconds | Firefox Profiler format; categories `Elab`, `Elab.async`, `Elab.block`, `Meta`, `Kernel`. This is the tool that attributes `interpretation` (which interpreted tactic/simproc) and `type checking` (which declaration hits the kernel cliff). |
 | Peak memory of one module | `/usr/bin/time` | `/usr/bin/time -l lean … <file>` (macOS: "maximum resident set size" in bytes) / `-v` on Linux (kB) | the import floor is ≈ 2.6–3 GB with the Mathlib + Clean + Sail-model closure; a module's own peak is what it adds. |
@@ -100,8 +104,8 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
 - **A measurement loop can put the machine into swap and void its own results.** Eight
   elaborations of a 5 900-line file back to back left `vm_stat` at 14 M swap-outs and turned a
   34 s file into 348–673 s; the per-declaration numbers from that loop were meaningless. Check
-  `sysctl vm.swapusage` / `vm_stat` before trusting a solo number, reap `lean --worker` processes
-  (`pkill -f "lean --worker"`, never `lean --server`), and re-run the two configurations you
+  `sysctl vm.swapusage` / `vm_stat` before trusting a solo number, stop only identified stale
+  `lean --worker` processes (never `lean --server` or `lake serve`), and re-run the two configurations you
   actually want to compare back to back.
 - **Do not attribute kernel time by replacing a proof with `sorry`.** `sorry` changes the
   elaboration path, not just the term: replacing one structure field of
