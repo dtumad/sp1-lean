@@ -22,6 +22,8 @@
 1   Math          SP1Clean/Math/
 2   Model         SP1Clean/Model/
 2   Circuits      SP1Clean/Circuits/Types/
+2   Semantics     SP1Clean/Semantics/
+2   Semantics     SP1Clean/Model/Semantics/
 3   Extracted     SP1Clean/Extracted/
 
 # 4 — semantic contracts and the row view they are read through.
@@ -29,6 +31,7 @@
 4   Soundness     SP1Clean/Soundness/RowView.lean
 
 # 5 — operation gadgets, readers, and their soundness; plus the shared proof-start tactic.
+5   Circuits      SP1Clean/Circuits/Gadgets/
 5   Native        SP1Clean/Native/Operations/
 5   Native        SP1Clean/Native/Readers/
 5   Native        SP1Clean/Native/Witgen/

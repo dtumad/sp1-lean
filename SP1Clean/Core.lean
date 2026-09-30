@@ -1,3 +1,4 @@
+import SP1Clean.Semantics.Specs.IsZero
 import SP1Clean.Circuits.Types.ALUTypeReader
 import SP1Clean.Circuits.Types.AddOperation
 import SP1Clean.Circuits.Types.AddrAddOperation
@@ -309,9 +310,7 @@ import SP1Clean.Native.Operations.InitialMemoryRead
 import SP1Clean.Native.Operations.IsEqualWordOperation.Defs
 import SP1Clean.Native.Operations.IsEqualWordOperation.Populate
 import SP1Clean.Native.Operations.IsEqualWordOperation.RawSpec
-import SP1Clean.Native.Operations.IsZeroOperation.Defs
-import SP1Clean.Native.Operations.IsZeroOperation.Populate
-import SP1Clean.Native.Operations.IsZeroOperation.RawSpec
+import SP1Clean.Circuits.Gadgets.IsZero
 import SP1Clean.Native.Operations.IsZeroWordOperation.Defs
 import SP1Clean.Native.Operations.IsZeroWordOperation.Populate
 import SP1Clean.Native.Operations.IsZeroWordOperation.RawSpec
@@ -589,7 +588,6 @@ import SP1Clean.Proofs.Operations.HostBuffer32.Ledger
 import SP1Clean.Proofs.Operations.HostBuffer32.Populate
 import SP1Clean.Proofs.Operations.HostRamBytes
 import SP1Clean.Proofs.Operations.IsEqualWordOperation.Formal
-import SP1Clean.Proofs.Operations.IsZeroOperation.Formal
 import SP1Clean.Proofs.Operations.IsZeroWordOperation.Formal
 import SP1Clean.Proofs.Operations.LtOperationSigned.Formal
 import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal

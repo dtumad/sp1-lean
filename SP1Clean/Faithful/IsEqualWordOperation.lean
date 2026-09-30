@@ -42,7 +42,7 @@ theorem isEqualWord_constraints_faithful (a b : Word (ZMod p))
     Extracted.IsZeroWordOperation.asserts, Extracted.IsZeroWordOperation.interactions,
     Extracted.IsZeroOperation.asserts, Extracted.IsZeroOperation.interactions, one_mul,
     List.cons_append, List.nil_append, List.Forall, bool_iff,
-    IsEqualWordOperation.RawSpec, IsZeroWordOperation.RawSpec, IsZeroOperation.RawSpec, and_assoc]
+    IsEqualWordOperation.RawSpec, IsZeroWordOperation.RawSpec, IsZeroOperation.AssertSpec, and_assoc]
   simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero, mul_eq_zero,
     List.getElem_cons_succ, sub_self, and_true, true_and]
 

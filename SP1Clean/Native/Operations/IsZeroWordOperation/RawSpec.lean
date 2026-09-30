@@ -1,11 +1,11 @@
 import SP1Clean.Math.Word
-import SP1Clean.Native.Operations.IsZeroOperation.RawSpec
+import SP1Clean.Circuits.Gadgets.IsZero
 import SP1Clean.Circuits.Types.IsZeroWordOperation
 
 /-! # `IsZeroWordOperation` — the arithmetic core (`RawSpec` + the AND-tree lemma)
 
 The literal `is_real = 1` meaning of SP1's `IsZeroWordOperation` `asserts` list (`RawSpec`, composing
-the four per-limb `IsZeroOperation.RawSpec`s plus the half-product gluings), the AND-tree collapse
+the four per-limb `IsZeroOperation.AssertSpec`s plus the half-product gluings), the AND-tree collapse
 lemma `result_collapse`, and the native soundness core `isZeroWord_of_raw` the gadget routes through.
 The hand-maintained native circuit (`Inputs`/`main`/`elaborated`) lives in `Defs`; the
 `populate` witness in `Populate`; the `FormalAssertion` contract (Spec/soundness/completeness/`circuit`)
@@ -20,12 +20,12 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Literal meaning of SP1's `IsZeroWordOperation` constraint list at `is_real = 1`: the four
-per-limb `IsZeroOperation.RawSpec`s, `result` boolean, and the half-product gluing equalities. -/
+per-limb `IsZeroOperation.AssertSpec`s, `result` boolean, and the half-product gluing equalities. -/
 def RawSpec (a : Word (ZMod p)) (cols : Circuits.Types.IsZeroWordOperation (ZMod p)) : Prop :=
-  IsZeroOperation.RawSpec a[0] cols.is_zero_limb_0 ∧
-  IsZeroOperation.RawSpec a[1] cols.is_zero_limb_1 ∧
-  IsZeroOperation.RawSpec a[2] cols.is_zero_limb_2 ∧
-  IsZeroOperation.RawSpec a[3] cols.is_zero_limb_3 ∧
+  IsZeroOperation.AssertSpec a[0] cols.is_zero_limb_0 ∧
+  IsZeroOperation.AssertSpec a[1] cols.is_zero_limb_1 ∧
+  IsZeroOperation.AssertSpec a[2] cols.is_zero_limb_2 ∧
+  IsZeroOperation.AssertSpec a[3] cols.is_zero_limb_3 ∧
   (cols.result = 0 ∨ cols.result = 1) ∧
   (cols.is_zero_first_half - cols.is_zero_limb_0.result * cols.is_zero_limb_1.result = 0) ∧
   (cols.is_zero_second_half - cols.is_zero_limb_2.result * cols.is_zero_limb_3.result = 0) ∧
@@ -46,14 +46,14 @@ theorem result_collapse {a0 a1 a2 a3 z0 z1 z2 z3 first second result : ZMod p}
     by_cases h3 : a3 = 0 <;> simp [h0, h1, h2, h3]
 
 omit [Fact (2 ^ 17 < p)] in
-/-- Soundness core: the per-limb `IsZeroOperation.RawSpec`s + AND-tree gluing force the word
+/-- Soundness core: the per-limb `IsZeroOperation.AssertSpec`s + AND-tree gluing force the word
 zero-indicator. -/
 theorem isZeroWord_of_raw {a : Word (ZMod p)} {cols : Circuits.Types.IsZeroWordOperation (ZMod p)}
     (h_raw : RawSpec a cols) :
     cols.result = if (a[0] = 0 ∧ a[1] = 0 ∧ a[2] = 0 ∧ a[3] = 0) then 1 else 0 := by
   obtain ⟨r0, r1, r2, r3, _, hf, hs, hr⟩ := h_raw
-  exact result_collapse (IsZeroOperation.isZero_of_raw r0) (IsZeroOperation.isZero_of_raw r1)
-    (IsZeroOperation.isZero_of_raw r2) (IsZeroOperation.isZero_of_raw r3)
+  exact result_collapse (IsZeroOperation.isZero_of_assert r0) (IsZeroOperation.isZero_of_assert r1)
+    (IsZeroOperation.isZero_of_assert r2) (IsZeroOperation.isZero_of_assert r3)
     (eq_of_sub_eq_zero hf) (eq_of_sub_eq_zero hs) (eq_of_sub_eq_zero hr)
 
 end SP1Clean.IsZeroWordOperation

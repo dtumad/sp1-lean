@@ -20,7 +20,7 @@ Anchors the native `IsZeroWordOperation` gadget's `RawSpec` to **SP1's `IsZeroWo
 constraint definition** (`Extracted/IsZeroWordOperation.lean`: four `IsZeroOperation` sub-lists plus
 the `is_real` gate, `result` boolean, and the two half-product + final gluing equalities). This is
 the first **compositional** anchor: the `++` of the four sub-lists splits under `List.Forall`, and
-each sub-list folds into `IsZeroOperation.RawSpec` (the `IsZero` anchor's RHS), which `RawSpec`
+each sub-list folds into `IsZeroOperation.AssertSpec` (the `IsZero` anchor's RHS), which `RawSpec`
 references directly. -/
 
 namespace SP1Clean.Faithful
@@ -41,7 +41,7 @@ theorem isZeroWord_constraints_faithful (a : Word (ZMod p))
       List.Forall Interaction.toProp (Extracted.IsZeroWordOperation.interactions a cols 1)) ↔
       SP1Clean.IsZeroWordOperation.RawSpec a cols := by
   -- Split the four `IsZeroOperation` sub-lists at each `++` and collapse each to its `RawSpec` via
-  -- the `IsZero` anchor (the design `RawSpec` references `IsZeroOperation.RawSpec` directly), leaving
+  -- the `IsZero` anchor (the design `RawSpec` references `IsZeroOperation.AssertSpec` directly), leaving
   -- only the small own-tail. This keeps the `result * a` products opaque (no `mul_eq_zero` blowup).
   simp only [Extracted.IsZeroWordOperation.asserts, Extracted.IsZeroWordOperation.interactions]
   rw [forall_append_pair, forall_append_pair, forall_append_pair,

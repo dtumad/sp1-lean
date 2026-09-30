@@ -1,4 +1,4 @@
-import SP1Clean.Proofs.Operations.IsZeroOperation.Formal
+import SP1Clean.Circuits.Gadgets.IsZero
 import SP1Clean.Proofs.Operations.IsZeroWordOperation.Formal
 import SP1Clean.Native.Operations.WordRangeCheck
 import Clean.Backends.Circom.Compile
