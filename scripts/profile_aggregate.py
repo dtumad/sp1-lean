@@ -31,7 +31,7 @@ from collections import defaultdict
 from pathlib import Path
 
 BUILT_RE = re.compile(r"Built ([A-Za-z0-9_.']+) \(([0-9.]+)(ms|s)\)")
-CATEGORY_RE = re.compile(r"^\s*(\S.*?) ([0-9.]+)(ms|s)\s*$")
+CATEGORY_RE = re.compile(r"^\s*(\S.*?) ([0-9.]+(?:[eE][+-]?[0-9]+)?)(ms|s)\s*$")
 HEADLINE_CATEGORIES = [
     "import", "elaboration", "simp", "tactic execution", "type checking",
     "typeclass inference", "instantiate metavars", "compilation", "linting", "interpretation",
