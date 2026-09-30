@@ -1,5 +1,7 @@
-import Mathlib.Data.ZMod.Basic
-import SP1Clean.Math.Bitwise
+module
+
+public import Mathlib.Data.ZMod.Basic
+public import SP1Clean.Math.Bitwise
 
 /-! # Shared SP1 opcode datatype (byte-interaction only)
 
@@ -22,6 +24,8 @@ backs the `ByteOpcode.ofNat opcode` coercion when the opcode is a dynamic field 
 Bitwise). The `CoeHead (ZMod p) ℕ` instance needed to apply such a def at `ZMod p` is provided
 below as a **scoped** instance (`open scoped SP1Clean.ConstraintCoe`) so it never leaks
 into the heavy arithmetic proofs in `Operations/`/`Chips/`. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

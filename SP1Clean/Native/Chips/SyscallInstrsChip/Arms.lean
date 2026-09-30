@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
-import SP1Clean.Proofs.Operations.U16CompareOperation.Formal
+import SP1Clean.Circuits.Gadgets.U16Compare
 import SP1Clean.Model.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit

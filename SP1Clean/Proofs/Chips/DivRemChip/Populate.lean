@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
-import SP1Clean.Native.Operations.U16MSBOperation.Populate
-import SP1Clean.Native.Operations.U16CompareOperation.Populate
+import SP1Clean.Circuits.Gadgets.U16MSB
+import SP1Clean.Circuits.Gadgets.U16Compare
 import SP1Clean.Native.Operations.MulOperation.Populate
 import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Circuits.Gadgets.IsEqualWord

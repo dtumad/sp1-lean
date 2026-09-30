@@ -1,8 +1,8 @@
 import SP1Clean.Circuits.Types.AddOperation
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Circuits.Types.MulOperation
-import SP1Clean.Circuits.Types.U16CompareOperation
-import SP1Clean.Circuits.Types.U16MSBOperation
+import SP1Clean.Semantics.Specs.U16Compare
+import SP1Clean.Semantics.Specs.U16MSB
 import SP1Clean.Circuits.Types.U16toU8Operation
 import SP1Clean.Circuits.Types.AddrAddOperation
 import SP1Clean.Circuits.Types.AddressOperation
@@ -20,54 +20,6 @@ The `Inputs` structs, semantic `Spec`s, and the pure result helpers a `Spec` dir
 `FormalModel/Contracts/` sequence (`Readers.lean → Operations.lean → Chips.lean`); the structural
 `RawSpec`s stay in the per-operation proof files. Depends only on
 `Math/` + `Model/` + `Circuits/Types/` (+ `Contracts/Readers.lean` for sequencing). -/
-
-namespace SP1Clean.U16MSBOperation
-
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
-
-/-- Proof-oriented inputs for the native MSB gadget. The native library owns both the
-column type and this semantic interface; Rust layout agreement is checked separately. -/
-structure Inputs (F : Type) where
-  a : F
-  cols : Circuits.Types.U16MSBOperation F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-/-- Semantic contract: `msb`'s booleanness holds **unconditionally** (SP1's `eval_msb` asserts it
-ungated, so it must hold on padding too), and on a real row (`is_real`-gated) the witnessed `msb` is
-the high bit of `a`. `Inputs` (the `eval` params verbatim — the result column struct nested as `cols`)
-is the generated `Operations.U16MSBOperation.Extracted`; the witnessed bit is `input.cols.msb`,
-threaded in by the composing operation (via `populate_msb`). -/
-def Spec (input : Inputs (ZMod p)) : Prop :=
-  (input.cols.msb = 0 ∨ input.cols.msb = 1) ∧
-  (input.is_real = 1 → input.cols.msb = if input.a.val ≥ 32768 then 1 else 0)
-
-end SP1Clean.U16MSBOperation
-
-namespace SP1Clean.U16CompareOperation
-
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
-
-/-- Proof-oriented inputs for the native 16-bit comparison gadget. -/
-structure Inputs (F : Type) where
-  a : F
-  b : F
-  cols : Circuits.Types.U16CompareOperation F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-/-- Semantic contract: `bit`'s booleanness holds **unconditionally** (SP1's `eval` asserts it ungated,
-so it must hold on padding too), and on a real row (`is_real`-gated) the witnessed `bit` is the strict
-less-than indicator of `a` vs `b`. `Inputs` (the `eval` params verbatim — the result column struct
-nested as `cols`) is the generated `Operations.U16CompareOperation.Extracted`; the witnessed bit is
-`input.cols.bit`, threaded in by the composing operation (via `populate_bit`). -/
-def Spec (input : Inputs (ZMod p)) : Prop :=
-  (input.cols.bit = 0 ∨ input.cols.bit = 1) ∧
-  (input.is_real = 1 → input.cols.bit = if input.a.val < input.b.val then 1 else 0)
-
-end SP1Clean.U16CompareOperation
 
 namespace SP1Clean.U16toU8OperationSafe
 

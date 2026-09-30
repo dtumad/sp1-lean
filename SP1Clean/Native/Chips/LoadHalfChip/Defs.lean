@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Proofs.Operations.U16MSBOperation.Formal
+import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.ITypeReader
 import SP1Clean.Native.Readers.MemoryAccess

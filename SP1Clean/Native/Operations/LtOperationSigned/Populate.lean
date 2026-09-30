@@ -1,6 +1,6 @@
 import Mathlib.Tactic.IntervalCases
 import SP1Clean.Native.Operations.LtOperationUnsigned.Populate
-import SP1Clean.Native.Operations.U16MSBOperation.Populate
+import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Circuits.Types.LtOperationSigned
 import ToClean.Circuit.IteDecide
 

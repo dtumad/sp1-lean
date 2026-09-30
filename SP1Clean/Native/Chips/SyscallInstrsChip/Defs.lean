@@ -2,7 +2,7 @@ import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.RegisterAccessCols
 import SP1Clean.Circuits.Gadgets.IsZero
-import SP1Clean.Proofs.Operations.U16CompareOperation.Formal
+import SP1Clean.Circuits.Gadgets.U16Compare
 import SP1Clean.Native.Operations.U16toU8OperationSafe
 import SP1Clean.Model.Channels
 import Clean.Circuit.Basic

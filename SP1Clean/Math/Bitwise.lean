@@ -1,7 +1,9 @@
-import SP1Clean.Math.Word
-import Clean.Utils.Bitwise
-import Clean.Utils.Field
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Math.Word
+public import Clean.Utils.Bitwise
+public import Clean.Utils.Field
+public import Mathlib.Tactic.IntervalCases
 
 /-! # Byte-level bitwise foundations
 
@@ -13,6 +15,8 @@ editing them does not re-elaborate the heavy `AddOperation` carry-chain proofs.
 eight per-byte equalities `r_k = byteOp op b_k c_k` to the 64-bit identity
 `toBitVec64 (reassembled r) = bitOp64 op (…b) (…c)` — the bitwise analog of
 `AddOperation`'s carry-chain reassembly. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

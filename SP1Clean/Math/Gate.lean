@@ -1,6 +1,8 @@
-import Mathlib.Data.ZMod.Basic
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Linarith
+module
+
+public import Mathlib.Data.ZMod.Basic
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.Linarith
 
 /-! # Binary-field gates and BitVec comparisons
 
@@ -9,6 +11,8 @@ Field-generic helper lemmas for **binary (boolean) field elements** (`x = 0 ∨ 
 signed/unsigned branch decision, Lt's flag selectors); collected here so any chip can reuse them
 rather than re-proving a private copy. Pure `ZMod p` / `BitVec` facts — no SP1-specific or circuit
 dependency. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

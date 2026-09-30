@@ -147,6 +147,7 @@ private lemma toElements_col0 {x : Circuits.Types.LtOperationSigned (ZMod p)}
     ((Vector.getElem_cast ?_).trans
       ((Vector.getElem_append_left ?_).trans (Vector.getElem_cast ?_)))) <;> decide
 
+omit [Fact (2 ^ 17 < p)] in
 /-- The witnessed compare `bit` of `LtOperationSigned.populate` (the `U16CompareOperation` strict-less-than
 indicator on a real row) is binary. -/
 private lemma populate_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 1) :
@@ -161,6 +162,7 @@ private lemma populate_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 
         = U16CompareOperation.populate_bit _ _ from rfl]
   exact U16CompareOperation.populate_bit_bool _ _
 
+omit [Fact (2 ^ 17 < p)] in
 /-- The witnessed `LtOperationSigned` block's flattened cell 0 (the compare `bit`) is binary on a real
 row — the form completeness uses after pinning the witness cell `env.get (i₀ + 2)` to `populate`. -/
 private lemma witness_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 1)
