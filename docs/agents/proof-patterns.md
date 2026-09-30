@@ -425,8 +425,11 @@ per-file ledger of the migration itself):
   literal. Unfold by lemma instead: `simp only [toElements, ProvableStruct.structToElements_eq,
   ProvableStruct.toComponents, Vector.toList_cast]` then `simp only [components,
   ProvableStruct.componentsToElements, …]` (the `*_toList` message lemmas), and in the cell
-  navigators `simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
-  ProvableStruct.componentsToElements]`. A wrapper lemma such as `toElements_mk` unfolds its
+  projections `simp only [circuit_norm, explicit_provable_type, ProvableStruct.toComponents,
+  ProvableStruct.componentsToElements]`. For a small fixed layout, one whole-vector lemma can
+  replace separate cell lemmas: apply `Vector.ext` before unfolding, split the finite index,
+  then use `Vector.getElem_append_left/right`. See `Circuits/Gadgets/IsZeroWord.lean`.
+  A wrapper lemma such as `toElements_mk` unfolds its
   LHS only (`change structToElements ⟨s⟩ = _; rw [structToElements_eq]`) — unfolding both sides
   and closing by `exact` is a whnf timeout. State an `ElaboratedCircuit.output` as the literal
   struct (`⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩`), not `varFromOffset S i0`.

@@ -1,5 +1,5 @@
 import SP1Clean.Circuits.Gadgets.IsZero
-import SP1Clean.Proofs.Operations.IsZeroWordOperation.Formal
+import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Native.Operations.WordRangeCheck
 import Clean.Backends.Circom.Compile
 import Clean.Backends.Circom.R1CS
