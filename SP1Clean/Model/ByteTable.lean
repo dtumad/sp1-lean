@@ -1,11 +1,13 @@
-import SP1Clean.Model.SP1Constraint
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Lookup
-import Clean.Circuit.Provable
-import Clean.Utils.Tactics
-import Clean.Utils.Tactics.ProvableStructDeriving
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Model.SP1Constraint
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Lookup
+public import Clean.Circuit.Provable
+public import Clean.Utils.Tactics
+public import Clean.Utils.Tactics.ProvableStructDeriving
+public import Mathlib.Tactic.IntervalCases
 
 /-! # The static byte-lookup table (SP1's preprocessed `ByteChip`, as a Clean `Table`)
 
@@ -28,6 +30,8 @@ semantics, `ByteOpcode.constrain` (`Model/SP1Constraint.lean`), keyed by the opc
 consuming circuit emits a lookup with `Circuit.lookup ByteTable ⟨opcode, a, b, c⟩` (the in-circuit half
 of `send_byte`); the matching Byte `Channel` (`Model/Channels.lean`) carries the multiplicity for
 the trace-level multiset balance against the `ByteChip` receiver. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

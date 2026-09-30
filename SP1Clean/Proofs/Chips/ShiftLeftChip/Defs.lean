@@ -2,7 +2,7 @@ import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
 import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
-import SP1Clean.Proofs.Operations.U16MSBOperation.Formal
+import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.ALUTypeReader
 import SP1Clean.Native.Readers.RegisterWrite

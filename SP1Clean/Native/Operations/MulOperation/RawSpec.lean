@@ -2,7 +2,7 @@ import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
 import SP1Clean.Math.MulCarryChain
-import SP1Clean.Proofs.Operations.U16MSBOperation.Formal
+import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Native.Operations.U16toU8OperationSafe
 import SP1Clean.Circuits.Types.MulOperation
 import Clean.Circuit.Basic

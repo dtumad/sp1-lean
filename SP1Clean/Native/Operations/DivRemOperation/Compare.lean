@@ -1,7 +1,7 @@
 import SP1Clean.Circuits.Gadgets.IsEqualWord
 import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Proofs.Operations.U16MSBOperation.Formal
+import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
 import SP1Clean.Semantics.Specs.DivRem
 import SP1Clean.Circuits.Gadgets.DivRem.CompareContract

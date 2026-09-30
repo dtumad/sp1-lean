@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
 import SP1Clean.Circuits.Types.LtOperationUnsigned
-import SP1Clean.Native.Operations.U16CompareOperation.Populate
+import SP1Clean.Circuits.Gadgets.U16Compare
 
 /-! # `LtOperationUnsigned` — native witness generation
 

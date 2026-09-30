@@ -1,6 +1,8 @@
 import SP1Clean.Semantics.Specs.IsEqualWord
 import SP1Clean.Semantics.Specs.IsZeroWord
 import SP1Clean.Semantics.Specs.IsZero
+import SP1Clean.Semantics.Specs.U16Compare
+import SP1Clean.Semantics.Specs.U16MSB
 import SP1Clean.Circuits.Types.ALUTypeReader
 import SP1Clean.Circuits.Types.AddOperation
 import SP1Clean.Circuits.Types.AddrAddOperation
@@ -341,12 +343,8 @@ import SP1Clean.Native.Operations.SubwOperation.Defs
 import SP1Clean.Native.Operations.SubwOperation.Populate
 import SP1Clean.Native.Operations.SubwOperation.RawSpec
 import SP1Clean.Native.Operations.SyscallCodeGuard
-import SP1Clean.Native.Operations.U16CompareOperation.Defs
-import SP1Clean.Native.Operations.U16CompareOperation.Populate
-import SP1Clean.Native.Operations.U16CompareOperation.RawSpec
-import SP1Clean.Native.Operations.U16MSBOperation.Defs
-import SP1Clean.Native.Operations.U16MSBOperation.Populate
-import SP1Clean.Native.Operations.U16MSBOperation.RawSpec
+import SP1Clean.Circuits.Gadgets.U16Compare
+import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Native.Operations.U16toU8OperationSafe
 import SP1Clean.Native.Operations.U16toU8OperationUnsafe
 import SP1Clean.Native.Operations.WordRangeCheck
@@ -594,8 +592,6 @@ import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
 import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
 import SP1Clean.Proofs.Operations.SubOperation.Formal
 import SP1Clean.Proofs.Operations.SubwOperation.Formal
-import SP1Clean.Proofs.Operations.U16CompareOperation.Formal
-import SP1Clean.Proofs.Operations.U16MSBOperation.Formal
 import SP1Clean.Soundness.RowView
 
 /-! # The core index

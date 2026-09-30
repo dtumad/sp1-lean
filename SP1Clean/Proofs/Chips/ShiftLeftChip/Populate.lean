@@ -2,7 +2,7 @@ import SP1Clean.Math.Word
 import ToMathlib.General
 import SP1Clean.Model.ByteTable
 import SP1Clean.Math.ShiftBounds
-import SP1Clean.Native.Operations.U16MSBOperation.Populate
+import SP1Clean.Circuits.Gadgets.U16MSB
 
 /-! # `ShiftLeftChip` — native witness generation (`populate`)
 

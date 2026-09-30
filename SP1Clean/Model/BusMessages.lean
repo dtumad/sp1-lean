@@ -1,6 +1,8 @@
-import SP1Clean.Math.Word
-import Clean.Circuit.Basic
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Math.Word
+public import Clean.Circuit.Basic
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Bus message types (the low layer below both the channels and the semantic predicates)
 
@@ -16,6 +18,8 @@ globally by the timed grounding engine, never carried as channel guarantees.
 Namespace is `SP1Clean.Channels` (unchanged), so every `Channels.StateMsg`/`.MemoryMsg.isU64`/… name
 resolves exactly as before — this is a pure relocation. The channel *definitions* stay in
 `Model/Channels.lean`; the byte bus's `ByteRow`/`ByteRowSpec` stay in `Model/ByteTable.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.Channels
 

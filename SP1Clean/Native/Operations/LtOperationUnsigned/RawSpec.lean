@@ -1,8 +1,7 @@
 import SP1Clean.Math.Word
 import SP1Clean.Math.Gate
 import SP1Clean.Circuits.Types.LtOperationUnsigned
-import SP1Clean.Native.Operations.U16CompareOperation.RawSpec
-import SP1Clean.Proofs.Operations.U16CompareOperation.Formal
+import SP1Clean.Circuits.Gadgets.U16Compare
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Mathlib.Tactic.LinearCombination

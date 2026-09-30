@@ -1,10 +1,12 @@
-import SP1Clean.Model.BusMessages
-import SP1Clean.Model.ByteTable
-import SP1Clean.Math.Word
-import SP1Clean.Math.Gate
-import Clean.Circuit.Basic
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Model.BusMessages
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Math.Word
+public import SP1Clean.Math.Gate
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Cross-chip interaction channels (the bus, as the circuit actually emits it)
 
@@ -26,6 +28,8 @@ of its own verifier). `docs/assurance.md` discloses that as a native-only bus.
 The last two are **declared but not yet ensemble members**. `kindOf` classifies both, so adding
 either to `sp1Ensemble` no longer risks folding it into State balance — but it does now owe
 `Soundness.EnsembleChannels.channel_eq_of_kindOf_eq` a case, which is where the obligation belongs. -/
+
+@[expose] public section
 
 namespace SP1Clean.Channels
 

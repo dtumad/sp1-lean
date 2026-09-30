@@ -1,7 +1,7 @@
 import SP1Clean.Math.Word
 import SP1Clean.Circuits.Types.LtOperationSigned
 import SP1Clean.Native.Operations.LtOperationUnsigned.RawSpec
-import SP1Clean.Native.Operations.U16MSBOperation.RawSpec
+import SP1Clean.Circuits.Gadgets.U16MSB
 import Mathlib.Tactic.LinearCombination
 
 /-! # `LtOperationSigned` — the arithmetic core (`RawSpec` + the sign-bias keystone)
