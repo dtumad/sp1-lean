@@ -7,8 +7,8 @@ import SP1Clean.Circuits.Types.U16toU8Operation
 import SP1Clean.Circuits.Types.AddrAddOperation
 import SP1Clean.Circuits.Types.AddressOperation
 import SP1Clean.Semantics.Specs.IsZero
-import SP1Clean.Circuits.Types.IsZeroWordOperation
-import SP1Clean.Circuits.Types.IsEqualWordOperation
+import SP1Clean.Semantics.Specs.IsZeroWord
+import SP1Clean.Semantics.Specs.IsEqualWord
 import SP1Clean.Circuits.Types.LtOperationUnsigned
 import SP1Clean.Circuits.Types.LtOperationSigned
 import Mathlib.Data.Fin.VecNotation
@@ -120,35 +120,6 @@ def Spec (input : Inputs (ZMod p)) : Prop :=
   input.u16_values[3] = input.cols.low_bytes[3] + (input.u16_values[3] - input.cols.low_bytes[3]) * 256⁻¹ * 256
 
 end SP1Clean.U16toU8OperationUnsafe
-
-
-namespace SP1Clean.IsZeroWordOperation
-
-/-- Inputs for the native word-zero test. -/
-structure Inputs (F : Type) where
-  a : Word F
-  cols : Circuits.Types.IsZeroWordOperation F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-end SP1Clean.IsZeroWordOperation
-
-namespace SP1Clean.IsEqualWordOperation
-
-/-- Inputs for the native word-equality test. -/
-structure Inputs (F : Type) where
-  a : Word F
-  b : Word F
-  cols : Circuits.Types.IsEqualWordOperation F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-end SP1Clean.IsEqualWordOperation
-
--- The IsZero composition chain keeps its focused semantic contracts beside its proofs; the stable
--- input interfaces live here so the native circuits no longer depend on generated circuit modules.
 
 namespace SP1Clean.AddrAddOperation
 

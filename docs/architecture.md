@@ -34,9 +34,10 @@ public entry points and private implementation details, with exposed definitions
 consumers need reduction. [#33](https://github.com/dtumad/sp1-lean/issues/33) owns that migration,
 including generated Sail prerequisites.
 
-The field zero test follows this boundary: `Semantics/Specs/IsZero` owns its input and semantic
-relation; `Circuits/Gadgets/IsZero` owns its witness generation, circuit and bundled proof.
-Legacy faithfulness imports the gadget and its structural assertion relation from above.
+The field/word zero tests and word equality follow this boundary: `Semantics/Specs/` owns their
+inputs, semantic relations and result interpretations; `Circuits/Gadgets/` owns their witness
+generation, circuits and bundled proofs. Legacy faithfulness imports the gadgets and their
+structural assertion relations from above. DivRem's semantic contract uses the pure specs.
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,

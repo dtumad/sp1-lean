@@ -1,5 +1,5 @@
-import SP1Clean.Proofs.Operations.IsEqualWordOperation.Formal
-import SP1Clean.Proofs.Operations.IsZeroWordOperation.Formal
+import SP1Clean.Circuits.Gadgets.IsEqualWord
+import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Proofs.Operations.AddOperation.Formal
 import SP1Clean.Proofs.Operations.U16MSBOperation.Formal
 import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal

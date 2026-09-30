@@ -15,7 +15,6 @@
 #    A future split must preserve the complete semantic contract while moving circuit-dependent
 #    helper statements/proofs above the pure contract. These edges remain until that migration.
 import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Native/Operations/DivRemOperation/OwnAsserts.lean
-import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Proofs/Operations/IsEqualWordOperation/Formal.lean
 import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Proofs/Operations/LtOperationUnsigned/Formal.lean
 import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Proofs/Operations/MulOperation/Formal.lean
 

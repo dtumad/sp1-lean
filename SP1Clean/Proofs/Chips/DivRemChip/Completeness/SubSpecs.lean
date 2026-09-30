@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Operations.MulOperation.Formal
-import SP1Clean.Proofs.Operations.IsEqualWordOperation.Formal
-import SP1Clean.Proofs.Operations.IsZeroWordOperation.Formal
+import SP1Clean.Circuits.Gadgets.IsEqualWord
+import SP1Clean.Circuits.Gadgets.IsZeroWord
 import Batteries.Data.Vector.Lemmas
 
 /-! # `DivRemChip` — sub-circuit `Spec` completeness helpers (factored for parallel compilation)

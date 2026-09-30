@@ -4,8 +4,7 @@ import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Tauto
 import Mathlib.Tactic.Linarith
 import Mathlib.Data.ZMod.Basic
-import SP1Clean.Native.Operations.IsEqualWordOperation.RawSpec
-import SP1Clean.Native.Operations.IsEqualWordOperation.Defs
+import SP1Clean.Circuits.Gadgets.IsEqualWord
 import SP1Clean.Model.SP1Constraint
 import SP1Clean.Model.InteractionProjection
 import ToClean.Circuit.InteractionRecovery
@@ -16,7 +15,7 @@ import SP1Clean.Faithful.ChipTactics
 
 /-! # Faithfulness anchor to the SP1 (Rust-extraction) constraints (IsEqualWord)
 
-Anchors the native `IsEqualWordOperation` gadget's `RawSpec` to **SP1's `IsEqualWordOperation`
+Anchors the native `IsEqualWordOperation` gadget's `AssertSpec` to **SP1's `IsEqualWordOperation`
 constraint definition** — a single `IsZeroWordOperation` sub-list on the difference plus the
 `is_real` gate. Verified and wired into the root index (the extracted `IsZeroWordOperation` column
 struct uses flattened `is_zero_limb_0..3` fields, so its `deriving ProvableStruct` succeeds). -/
@@ -32,17 +31,17 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- **Faithfulness anchor.** SP1's `IsEqualWordOperation` constraint list holds iff the native
-gadget's `RawSpec` holds. -/
+gadget's `AssertSpec` holds. -/
 theorem isEqualWord_constraints_faithful (a b : Word (ZMod p))
     (cols : Circuits.Types.IsEqualWordOperation (ZMod p)) :
     (List.Forall (· = 0) (Extracted.IsEqualWordOperation.asserts a b cols 1) ∧
       List.Forall Interaction.toProp (Extracted.IsEqualWordOperation.interactions a b cols 1)) ↔
-      SP1Clean.IsEqualWordOperation.RawSpec a b cols := by
+      SP1Clean.IsEqualWordOperation.AssertSpec a b cols := by
   simp only [Extracted.IsEqualWordOperation.asserts, Extracted.IsEqualWordOperation.interactions,
     Extracted.IsZeroWordOperation.asserts, Extracted.IsZeroWordOperation.interactions,
     Extracted.IsZeroOperation.asserts, Extracted.IsZeroOperation.interactions, one_mul,
     List.cons_append, List.nil_append, List.Forall, bool_iff,
-    IsEqualWordOperation.RawSpec, IsZeroWordOperation.RawSpec, IsZeroOperation.AssertSpec, and_assoc]
+    IsEqualWordOperation.AssertSpec, IsZeroWordOperation.AssertSpec, IsZeroOperation.AssertSpec, and_assoc]
   simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero, mul_eq_zero,
     List.getElem_cons_succ, sub_self, and_true, true_and]
 

@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.DivRemColumns
 import SP1Clean.Math.Word
 import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Proofs.Operations.IsEqualWordOperation.Formal
+import SP1Clean.Semantics.Specs.IsEqualWord
 import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
 import SP1Clean.Proofs.Operations.MulOperation.Formal
 import SP1Clean.Native.Operations.DivRemOperation.OwnAsserts

@@ -4,8 +4,7 @@ import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Tauto
 import Mathlib.Tactic.Linarith
 import Mathlib.Data.ZMod.Basic
-import SP1Clean.Native.Operations.IsZeroWordOperation.RawSpec
-import SP1Clean.Native.Operations.IsZeroWordOperation.Defs
+import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Model.SP1Constraint
 import SP1Clean.Model.InteractionProjection
 import ToClean.Circuit.InteractionRecovery
@@ -16,11 +15,11 @@ import SP1Clean.Faithful.ChipTactics
 
 /-! # Faithfulness anchor to the SP1 (Rust-extraction) constraints (IsZeroWord)
 
-Anchors the native `IsZeroWordOperation` gadget's `RawSpec` to **SP1's `IsZeroWordOperation`
+Anchors the native `IsZeroWordOperation` gadget's `AssertSpec` to **SP1's `IsZeroWordOperation`
 constraint definition** (`Extracted/IsZeroWordOperation.lean`: four `IsZeroOperation` sub-lists plus
 the `is_real` gate, `result` boolean, and the two half-product + final gluing equalities). This is
 the first **compositional** anchor: the `++` of the four sub-lists splits under `List.Forall`, and
-each sub-list folds into `IsZeroOperation.AssertSpec` (the `IsZero` anchor's RHS), which `RawSpec`
+each sub-list folds into `IsZeroOperation.AssertSpec` (the `IsZero` anchor's RHS), which `AssertSpec`
 references directly. -/
 
 namespace SP1Clean.Faithful
@@ -34,20 +33,20 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- **Faithfulness anchor.** SP1's `IsZeroWordOperation` constraint list holds iff the native
-gadget's `RawSpec` holds. (No range bounds, so `NeZero p` follows from primality.) -/
+gadget's `AssertSpec` holds. (No range bounds, so `NeZero p` follows from primality.) -/
 theorem isZeroWord_constraints_faithful (a : Word (ZMod p))
     (cols : Circuits.Types.IsZeroWordOperation (ZMod p)) :
     (List.Forall (· = 0) (Extracted.IsZeroWordOperation.asserts a cols 1) ∧
       List.Forall Interaction.toProp (Extracted.IsZeroWordOperation.interactions a cols 1)) ↔
-      SP1Clean.IsZeroWordOperation.RawSpec a cols := by
-  -- Split the four `IsZeroOperation` sub-lists at each `++` and collapse each to its `RawSpec` via
-  -- the `IsZero` anchor (the design `RawSpec` references `IsZeroOperation.AssertSpec` directly), leaving
+      SP1Clean.IsZeroWordOperation.AssertSpec a cols := by
+  -- Split the four `IsZeroOperation` sub-lists at each `++` and collapse each to its `AssertSpec` via
+  -- the `IsZero` anchor (the design `AssertSpec` references `IsZeroOperation.AssertSpec` directly), leaving
   -- only the small own-tail. This keeps the `result * a` products opaque (no `mul_eq_zero` blowup).
   simp only [Extracted.IsZeroWordOperation.asserts, Extracted.IsZeroWordOperation.interactions]
   rw [forall_append_pair, forall_append_pair, forall_append_pair,
     forall_append_pair, isZero_constraints_faithful, isZero_constraints_faithful,
     isZero_constraints_faithful, isZero_constraints_faithful]
-  simp only [List.Forall, IsZeroWordOperation.RawSpec, one_mul,
+  simp only [List.Forall, IsZeroWordOperation.AssertSpec, one_mul,
     bool_iff, sub_self, true_and, and_true, and_assoc]
 
 omit [Fact (2 ^ 17 < p)] in
