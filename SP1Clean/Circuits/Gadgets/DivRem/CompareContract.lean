@@ -1,7 +1,11 @@
-import SP1Clean.Semantics.Specs.DivRem
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Semantics.Specs.IsEqualWord
-import SP1Clean.Semantics.Specs.LtUnsigned
+module
+
+public import SP1Clean.Semantics.Specs.DivRem
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Semantics.Specs.IsEqualWord
+public import SP1Clean.Semantics.Specs.IsZeroWord
+public import SP1Clean.Semantics.Specs.LtUnsigned
+public import SP1Clean.Semantics.Specs.U16MSB
 import Clean.Utils.Tactics.ProvableStructSimp
 
 /-! # DivRem comparison-cluster contract
@@ -10,6 +14,8 @@ The compact input view avoids flattening the whole row during child-circuit proo
 composes the fifteen comparison and sign subcircuits; the public division semantics is independent
 of this decomposition. The bundled implementation is `DivRemCompare.circuit`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemCompare
 
