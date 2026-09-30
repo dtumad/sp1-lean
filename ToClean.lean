@@ -1,5 +1,6 @@
 module
 
+public import ToClean.Circuit.ProvableOptional
 public import ToClean.Circuit.StructEvalLemmas
 public import ToClean.Circuit.SubcircuitProjection
 public import ToClean.Circuit.Receipt
