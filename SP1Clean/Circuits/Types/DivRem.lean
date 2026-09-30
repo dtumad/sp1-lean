@@ -1,76 +1,120 @@
-import SP1Clean.Math.Word
-import SP1Clean.Circuits.Types.CPUState
-import SP1Clean.Circuits.Types.RTypeReader
-import SP1Clean.Circuits.Types.MulOperation
-import SP1Clean.Circuits.Types.AddOperation
-import SP1Clean.Circuits.Types.LtOperationUnsigned
-import SP1Clean.Circuits.Types.IsZeroWordOperation
-import SP1Clean.Circuits.Types.IsEqualWordOperation
-import SP1Clean.Circuits.Types.U16MSBOperation
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
 
-/-! # Native DIVREM-chip row
+public import SP1Clean.Math.Word
+public import SP1Clean.Circuits.Types.CPUState
+public import SP1Clean.Circuits.Types.RTypeReader
+public import SP1Clean.Circuits.Types.MulOperation
+public import SP1Clean.Circuits.Types.AddOperation
+public import SP1Clean.Circuits.Types.LtOperationUnsigned
+public import SP1Clean.Circuits.Types.IsZeroWordOperation
+public import SP1Clean.Circuits.Types.IsEqualWordOperation
+public import SP1Clean.Circuits.Types.U16MSBOperation
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
-The native `DivRemChip.Columns` struct: field-for-field the shape of SP1 Rust's 246-cell
-`DivRemCols` row, with every nested arithmetic block using shared native
-column types (`Circuits.Types.MulOperation`, `Circuits.Types.AddOperation`, ...) that other chips also
-compose. `Faithful.divRemChipReconfigure` is the sole bridge to Rust's separately generated
-whole-chip oracle row (`Extracted.DivRemOracle.DivRemCols`).
+/-! # Native division/remainder columns
 
-Lives below `Native/Operations/DivRemOperation/OwnAsserts.lean` in the import DAG (the chip's own
-assert tail is typed at this row), so it cannot sit in `Contracts/Chips.lean` like the smaller
-chips' rows. The `ProvableStruct` instance is spelled explicitly, mirroring the generated form,
-because `deriving` on a 45-field struct is elaboration-heavy. -/
+The 246-cell native row owns its shared arithmetic blocks independently of generated Rust types.
+`Faithful.divRemChipReconfigure` relates it to the legacy Rust oracle. The explicit ProvableStruct
+instance avoids the elaboration cost of deriving the 45-field layout.
+-/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 
 open SP1Clean.Circuits.Types
 
+/-- Committed columns for all eight division and remainder variants. -/
 structure Columns (F : Type) where
+  /-- Machine state before the instruction. -/
   state : (CPUState F)
+  /-- R-type register and memory accesses. -/
   adapter : (RTypeReader F)
+  /-- Result selected for the destination register. -/
   a : (Word F)
+  /-- Normalized dividend. -/
   b : (Word F)
+  /-- Normalized divisor. -/
   c : (Word F)
+  /-- Quotient used by the arithmetic identity. -/
   quotient : (Word F)
+  /-- Quotient extended for the product check. -/
   quotient_comp : (Word F)
+  /-- Remainder extended for the arithmetic identity. -/
   remainder_comp : (Word F)
+  /-- Remainder used by result selection. -/
   remainder : (Word F)
+  /-- Absolute value of the remainder. -/
   abs_remainder : (Word F)
+  /-- Absolute value of the divisor. -/
   abs_c : (Word F)
+  /-- Nonzero bound used to compare the remainder. -/
   max_abs_c_or_1 : (Word F)
+  /-- Full divisor-times-quotient product limbs. -/
   c_times_quotient : (Vector F 8)
+  /-- Lower product witness. -/
   c_times_quotient_lower : (MulOperation F)
+  /-- Upper product witness. -/
   c_times_quotient_upper : (MulOperation F)
+  /-- Witness for negating the divisor. -/
   c_neg_operation : (AddOperation F)
+  /-- Witness for negating the remainder. -/
   rem_neg_operation : (AddOperation F)
+  /-- Unsigned remainder-bound comparison. -/
   remainder_lt_operation : (LtOperationUnsigned F)
+  /-- Carries in the quotient/remainder identity. -/
   carry : (Vector F 8)
+  /-- Divisor zero-test witness. -/
   is_c_0 : (IsZeroWordOperation F)
+  /-- Selector for DIV. -/
   is_div : F
+  /-- Selector for DIVU. -/
   is_divu : F
+  /-- Selector for REM. -/
   is_rem : F
+  /-- Selector for REMU. -/
   is_remu : F
+  /-- Selector for DIVW. -/
   is_divw : F
+  /-- Selector for REMW. -/
   is_remw : F
+  /-- Selector for DIVUW. -/
   is_divuw : F
+  /-- Selector for REMUW. -/
   is_remuw : F
+  /-- Signed division overflow indicator. -/
   is_overflow : F
+  /-- Comparison of the dividend with the minimum signed value. -/
   is_overflow_b : (IsEqualWordOperation F)
+  /-- Comparison of the divisor with minus one. -/
   is_overflow_c : (IsEqualWordOperation F)
+  /-- Dividend sign-bit witness. -/
   b_msb : (U16MSBOperation F)
+  /-- Remainder sign-bit witness. -/
   rem_msb : (U16MSBOperation F)
+  /-- Divisor sign-bit witness. -/
   c_msb : (U16MSBOperation F)
+  /-- Quotient sign-bit witness. -/
   quot_msb : (U16MSBOperation F)
+  /-- Dividend negativity indicator. -/
   b_neg : F
+  /-- Negative dividend without signed overflow. -/
   b_neg_not_overflow : F
+  /-- Nonnegative dividend without signed overflow. -/
   b_not_neg_not_overflow : F
+  /-- Activity flag for a full-width instruction. -/
   is_real_not_word : F
+  /-- Remainder negativity indicator. -/
   rem_neg : F
+  /-- Divisor negativity indicator. -/
   c_neg : F
+  /-- Activity flag for divisor negation. -/
   abs_c_alu_event : F
+  /-- Activity flag for remainder negation. -/
   abs_rem_alu_event : F
+  /-- One for an active row, zero for padding. -/
   is_real : F
+  /-- Activity flag for the remainder-bound comparison. -/
   remainder_check_multiplicity : F
 
 instance : ProvableStruct Columns where

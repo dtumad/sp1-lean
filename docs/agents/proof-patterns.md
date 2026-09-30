@@ -1001,7 +1001,7 @@ always means a *local* regression against one of these.
   DivRem architecture proved nine `GeneralFormalCircuit.Soundness` theorems over the same enormous `main`
   and shared their requirements tail through a custom `SpecObligation` tactic. Lean 4.30/4.31 made even
   goal normalization dominate, and the whole stack was retired. The replacement has four layers:
-  (1) a stable contract (`FormalModel/Contracts/DivRem.lean`), (2) circuit-independent evidence types and
+  (1) a stable contract (`Semantics/Specs/DivRem.lean`), (2) circuit-independent evidence types and
   evidence→ISA proofs (`Proofs/Chips/DivRemChip/Cases.lean`), (3) reusable field/carry assembly lemmas, and
   (4) one generated-row→evidence theorem. Pair quotient/remainder cases so arithmetic is proved once;
   model exceptional branches as explicit constructors; keep final output routing separate. Use local

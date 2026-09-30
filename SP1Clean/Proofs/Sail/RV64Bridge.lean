@@ -1,12 +1,12 @@
 import SP1Clean.Model.SailPure
-import SP1Clean.Model.RV64Semantics
+import SP1Clean.Semantics.ISA.RV64
 import ToMathlib.BitVec
 /-!
 # Sail "M"-extension write values are the RV64 reference functions
 
 For each `execute_MUL`/`MULW`/`DIV`/`DIVW`/`REM`/`REMW` clause, the monad-free write value of
 `Model/SailPure.lean` (stated over `Int` with the model's truncations) equals the bit-vector
-reference function of `Model/RV64Semantics.lean` (stated with `BitVec.sdiv`/`srem`/`udiv`/`umod`
+reference function of `Semantics/ISA/RV64.lean` (stated with `BitVec.sdiv`/`srem`/`udiv`/`umod`
 and wide multiplications). Together with `SailRV64.execute_*_eq` these are the whole ISA-equivalence
 chain a chip's Sail bridge needs: `execute_X = skeleton_binary … (SailRV64.x)` by `rfl`, then
 `SailRV64.x = RV64.x` here.

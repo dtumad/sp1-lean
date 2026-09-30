@@ -8,7 +8,7 @@ and a chip should be understandable with its local correctness proofs.
 
 | Area | Current source | Responsibility |
 |---|---|---|
-| Semantics | `SP1Clean/Semantics/Specs/`, `SP1Clean/Math/`, `SP1Clean/Model/` | Pure contracts, arithmetic, official Sail adapters, complete execution, snapshots, host effects and resources |
+| Semantics | `SP1Clean/Semantics/`, `SP1Clean/Math/`, `SP1Clean/Model/` | Pure contracts, arithmetic, official Sail adapters, complete execution, snapshots, host effects and resources |
 | Contracts | `SP1Clean/FormalModel/` | Semantic Specs and checked relation/capstone targets |
 | Circuits | `SP1Clean/Circuits/`, `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Native columns/readers/gadgets/chips, witnesses and local soundness/completeness |
 | Machine | `SP1Clean/Soundness/`, `SP1Clean/Proofs/Completeness/`, `SP1Clean/Alignment/` | Registration, assembly, grounding, Sail bridges and physical compiler |
@@ -37,7 +37,14 @@ including generated Sail prerequisites.
 The field/word zero tests and word equality follow this boundary: `Semantics/Specs/` owns their
 inputs, semantic relations and result interpretations; `Circuits/Gadgets/` owns their witness
 generation, circuits and bundled proofs. Legacy faithfulness imports the gadgets and their
-structural assertion relations from above. DivRem's semantic contract uses the pure specs.
+structural assertion relations from above.
+
+DivRem's public row contract lives in `Semantics/Specs/DivRem`, with the pure RV64 functions in
+`Semantics/ISA/RV64` and its native row in `Circuits/Types/DivRem`. Comparison and product-cluster
+contracts live under `Circuits/Gadgets/DivRem`: they describe implementation evidence, including
+the intermediate raw assertions, and are not dependencies of the public semantic contract.
+Those implementation modules still use legacy Mul/Lt gadgets; converting them to module mode
+depends on migrating those gadgets' public interfaces.
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,

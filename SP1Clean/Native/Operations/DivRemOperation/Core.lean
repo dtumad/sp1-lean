@@ -1,7 +1,7 @@
 import SP1Clean.Native.Operations.MulOperation
 import SP1Clean.Native.Operations.DivRemOperation.OwnAsserts
 import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
-import SP1Clean.FormalModel.Contracts.DivRemColumns
+import SP1Clean.Circuits.Types.DivRem
 import SP1Clean.Model.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -31,7 +31,7 @@ constrains is a field of the input `cols` — so its `localLength` is `0`. It ca
 The emission order and every argument are verbatim from the corresponding emission blocks of
 `Proofs/Chips/DivRemChip/Defs.lean` `main`, with each witnessed local replaced by the corresponding `DivRemChip.Columns`
 field per the chip's cols assembly. The semantic contract is `DivRemCore.CoreSpec`
-(`FormalModel/Contracts/DivRem.lean`); the `FormalAssertion` bundle is
+(`Circuits/Gadgets/DivRem/CoreContract.lean`); the `FormalAssertion` bundle is
 `Proofs/Operations/DivRemOperation/Core.lean`. -/
 
 namespace SP1Clean.DivRemCore

@@ -86,6 +86,7 @@ omit [Fact (2 ^ 24 < p)] in
 /-- A padding row's empty hint reads back as all-zero flags — SP1's own padding convention. -/
 lemma hintFlags_empty : BitwiseChip.hintFlags (ProverHint.empty (ZMod p)) = #v[0, 0, 0] := rfl
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **The flags of a real `Bitwise` row are one-hot, and their sum is `1`.** Everything the chip's
 `ProverAssumptions` says about the hint, from the routing condition alone: whichever of the three
 opcodes the event carries sets exactly that selector. -/
@@ -156,6 +157,7 @@ theorem proverAssumptions_of_event {e : ALUTypeEvent} (h : e.WellFormed) (hop : 
   · exact fun _ => ⟨registerAccessCols_prevLow_val_lt _ _ _,
       registerAccessCols_prevLow_val_lt _ _ _, aluTypeOpCCols_prevLow_val_lt e⟩
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **A padding row satisfies the same contract**, at the empty hint. `is_real = 0` makes every
 gated conjunct vacuous, and the three flags read back as `0`, so the selector-sum conjunct is
 `0 = 0 + 0 + 0`. What survives besides is the two operand `isU64`s and the two zero flags. -/

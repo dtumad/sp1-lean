@@ -55,6 +55,7 @@ theorem proverAssumptions_of_event {e : RTypeEvent} (h : e.WellFormed)
   · exact fun _ => ⟨registerAccessCols_prevLow_val_lt _ _ _,
       registerAccessCols_prevLow_val_lt _ _ _, registerAccessCols_prevLow_val_lt _ _ _⟩
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **A padding row satisfies the same contract.** `is_real = 0` makes every gated conjunct
 vacuous; what survives is the two operand `isU64`s, which the zero word satisfies. -/
 theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :

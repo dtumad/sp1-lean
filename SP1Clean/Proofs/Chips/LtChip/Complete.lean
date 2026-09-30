@@ -65,6 +65,7 @@ omit [Fact (2 ^ 24 < p)] in
 /-- A padding row's empty hint reads back as all-zero flags — SP1's own padding convention. -/
 lemma ltHintFlags_empty : LtChip.hintFlags (ProverHint.empty (ZMod p)) = #v[0, 0] := rfl
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **The flags of a real `Lt` row are one-hot, and their sum is `1`** — everything the chip's
 `ProverAssumptions` says about the hint, from the routing condition alone. -/
 lemma ltFlags_spec {e : ALUTypeEvent} (hop : e.IsLt) :
@@ -128,6 +129,7 @@ theorem proverAssumptions_of_event {e : ALUTypeEvent} (h : e.WellFormed) (hop : 
   · exact fun _ => ⟨registerAccessCols_prevLow_val_lt _ _ _,
       registerAccessCols_prevLow_val_lt _ _ _, aluTypeOpCCols_prevLow_val_lt e⟩
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **A padding row satisfies the same contract**, at the empty hint: both flags read back as `0`,
 so the selector-sum conjunct is `0 = 0 + 0`, and every `is_real`-gated conjunct is vacuous. -/
 theorem proverAssumptions_padding (data : ProverData (ZMod p)) :

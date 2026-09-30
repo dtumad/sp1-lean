@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Model.RV64Semantics
+import SP1Clean.Semantics.ISA.RV64
 import Mathlib.Tactic.Linarith
 
 /-! # `DivRemChip` — native divide/remainder arithmetic
@@ -7,7 +7,7 @@ import Mathlib.Tactic.Linarith
 The mathematical core of the `DivRem` chip soundness (chip-specific math in `Chips/<Op>Chip/`,
 reusable gadgets in `Operations/`). Re-derives from first principles in `Word`/`toBitVec64` forms
 the bridge from SP1's constraint bundle to the RV64 divide/remainder ISA functions
-(`Model/RV64Semantics.lean`).
+(`Semantics/ISA/RV64.lean`).
 
 **Unsigned variants (`DIVU`/`REMU`):** `divu_remu_of_identity` takes the three hypotheses supplied
 by the chip soundness — the Euclidean identity `b = c·quotient + remainder` (from the two

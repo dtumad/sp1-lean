@@ -1,4 +1,5 @@
 import SP1Clean.FormalModel.TraceGen.Inputs
+import Mathlib.Tactic.IntervalCases
 
 /-! # Trace generation — the reader contracts of a built row
 

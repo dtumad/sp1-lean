@@ -74,6 +74,7 @@ theorem proverAssumptions_of_event {e : ALUTypeEvent} (h : e.WellFormed)
   · exact fun _ => ⟨registerAccessCols_prevLow_val_lt _ _ _,
       registerAccessCols_prevLow_val_lt _ _ _, aluTypeOpCCols_prevLow_val_lt e⟩
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **A padding row satisfies the same contract.** `is_real = 0` makes every gated conjunct
 vacuous — including the `op_c` reader gate, which on a zero row is `0 - 0`. What survives is the
 two operand `isU64`s and the two zero flags. -/
