@@ -69,6 +69,7 @@ theorem proverAssumptions_of_event {e : RTypeEvent} (h : e.WellFormed)
   · exact fun _ => ⟨registerAccessCols_prevLow_val_lt _ _ _,
       registerAccessCols_prevLow_val_lt _ _ _, registerAccessCols_prevLow_val_lt _ _ _⟩
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **A padding row satisfies the same contract.** SP1 pads a chip's trace to a power-of-two
 height with zero rows, and `is_real = 0` makes every gated conjunct vacuous; what survives is the
 two operand `isU64`s (ungated, since the prover needs them to witness the arithmetic on *any*

@@ -1,5 +1,6 @@
 import SP1Clean.Native.Operations.DivRemOperation.Core
-import SP1Clean.FormalModel.Contracts.DivRem
+import SP1Clean.Semantics.Specs.DivRem
+import SP1Clean.Circuits.Gadgets.DivRem.CoreContract
 import SP1Clean.Proofs.Chips.DivRemChip.Extract
 import SP1Clean.Proofs.CircuitProofStart
 

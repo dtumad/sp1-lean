@@ -61,7 +61,7 @@ LAYERS = [
     ("SP1Clean/Model/SailMemory.lean", "L1"),
     ("SP1Clean/Model/SailDecode.lean", "L1"),
     ("SP1Clean/Model/SailPure.lean", "L1"),
-    ("SP1Clean/Model/RV64Semantics.lean", "L1"),
+    ("SP1Clean/Semantics/ISA/", "L1"),
     ("SP1Clean/Model/Semantics/", "L1"),
     ("SP1Clean/Model/Core/", "L1"),
     ("SP1Clean/Model/Machine/", "L1"),

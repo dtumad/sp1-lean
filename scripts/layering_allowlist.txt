@@ -10,23 +10,14 @@
 #   namespace <path>
 
 # ---------------------------------------------------------------------------
-# 1. DivRem's rich contract. FormalModel/Contracts/DivRem.lean states the four semantic families
-#    against the operation circuits and their soundness, so it reaches stratum 5 from stratum 4.
-#    A future split must preserve the complete semantic contract while moving circuit-dependent
-#    helper statements/proofs above the pure contract. These edges remain until that migration.
-import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Native/Operations/DivRemOperation/OwnAsserts.lean
-import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Proofs/Operations/LtOperationUnsigned/Formal.lean
-import SP1Clean/FormalModel/Contracts/DivRem.lean SP1Clean/Proofs/Operations/MulOperation/Formal.lean
-
-# ---------------------------------------------------------------------------
-# 2. The two proof-decomposition exceptions. DivRem and the shifts keep `main` in Proofs/ because
+# 1. The two proof-decomposition exceptions. DivRem and the shifts keep `main` in Proofs/ because
 #    their mains are
 #    entangled with proof-layer decomposition; the cost is these two edges.
 import SP1Clean/Proofs/Operations/DivRemOperation/Core.lean SP1Clean/Proofs/Chips/DivRemChip/Extract.lean
 import SP1Clean/Proofs/Chips/BranchChip/Core.lean SP1Clean/Proofs/Chips/BranchChip/Contracts.lean
 
 # ---------------------------------------------------------------------------
-# 3. Namespace exceptions where the PATH is right and the namespace is a deliberate naming choice,
+# 2. Namespace exceptions where the PATH is right and the namespace is a deliberate naming choice,
 #    not a placement signal. These legacy namespace choices identify their first consumers;
 #    complete API migration may rename them. The declarations are consumed by the
 #    soundness layer and named for it, while structurally belonging to the substrate — and Model/ is
@@ -47,7 +38,7 @@ namespace SP1Clean/FormalModel/OpcodeTable.lean
 namespace SP1Clean/FormalModel/Trace/Witness.lean
 
 # ---------------------------------------------------------------------------
-# 4. The faithfulness coverage certificate deliberately pins itself to the machine's chip registry.
+# 3. The faithfulness coverage certificate deliberately pins itself to the machine's chip registry.
 #    Faithful/SupportedMachine.lean is stratum-7 content -- it declares ChipFaithfulnessAnchor and
 #    supportedChipFaithfulness, and renaming those into a higher pillar would make the names worse,
 #    not better. It reaches stratum 8 for exactly one thing: Soundness.supportedChips, so that (in

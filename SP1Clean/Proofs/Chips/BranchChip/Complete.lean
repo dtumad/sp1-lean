@@ -111,6 +111,7 @@ omit [Fact (2 ^ 24 < p)] in
 lemma branchHintBranching_empty :
     BranchChip.hintBranching (ProverHint.empty (ZMod p)) = 0 := rfl
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **The flags of a real `Branch` row are one-hot, and their sum is `1`.** -/
 lemma branchFlags_spec {e : ITypeEvent} (hop : e.IsBranch) :
     (∀ i (hi : i < 6), (branchFlags (p := p) e.opcode)[i] = 0

@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.DivRemColumns
+import SP1Clean.Circuits.Types.DivRem
 import Clean.Circuit.Basic
 
 /-! # `DivRemChip` — the chip's own assertZero constraints (the `[E13…E367, op_a_0]` list).

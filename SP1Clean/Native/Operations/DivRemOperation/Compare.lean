@@ -3,7 +3,8 @@ import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Proofs.Operations.AddOperation.Formal
 import SP1Clean.Proofs.Operations.U16MSBOperation.Formal
 import SP1Clean.Proofs.Operations.LtOperationUnsigned.Formal
-import SP1Clean.FormalModel.Contracts.DivRem
+import SP1Clean.Semantics.Specs.DivRem
+import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
 import SP1Clean.Model.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -32,7 +33,7 @@ The cluster witnesses nothing — every column it constrains is a field of the i
 The assertion arguments are verbatim from the corresponding assertion blocks of
 `Proofs/Chips/DivRemChip/Defs.lean` `main`, with each witnessed local replaced by the corresponding
 `DivRemChip.Columns` field per the chip's cols assembly. The semantic contract is
-`DivRemCompare.CompareSpec` (`FormalModel/Contracts/DivRem.lean`); the `FormalAssertion` bundle is
+`DivRemCompare.CompareSpec` (`Circuits/Gadgets/DivRem/CompareContract.lean`); the `FormalAssertion` bundle is
 `Proofs/Operations/DivRemOperation/Compare.lean`. -/
 
 namespace SP1Clean.DivRemCompare

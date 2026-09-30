@@ -11,7 +11,7 @@ import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.RTypeReader
 import SP1Clean.Native.Readers.RegisterWrite
 import SP1Clean.Model.Channels
-import SP1Clean.FormalModel.Contracts.DivRemColumns
+import SP1Clean.Circuits.Types.DivRem
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -30,7 +30,7 @@ whole-row `FormalAssertion` gadgets over the assembled `Columns`:
 `DivRemCore.circuit` (the two `c·quotient` `MulOperation` products, the eight product-glue asserts,
 the chip's own assertZero tail `ownAsserts`, and the 32-pull byte-range tail), followed by the op_a
 `RegisterWrite` push. The public contract and its isolated family-evidence layer are in
-`FormalModel/Contracts/DivRem.lean` and `Cases.lean`; the whole-chip evidence extraction and
+`Semantics/Specs/DivRem.lean` and `Cases.lean`; the whole-chip evidence extraction and
 completeness are **proved** — the heavy proofs are deliberately isolated in
 `Formal.lean` (`evidenceSoundness`) and `Completeness/Driver.lean` (`completeness`). -/
 

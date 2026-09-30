@@ -1,5 +1,6 @@
 import SP1Clean.FormalModel.Contracts.Chips
 import Clean.Circuit.Basic
+import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `ShiftRightCore` — the ShiftRight chip's inline assertion cluster

@@ -93,6 +93,7 @@ theorem proverAssumptions_of_event {e : ALUTypeEvent} (h : e.WellFormedX0)
     rw [ALUTypeEvent.toAluX0Inputs_opcode, ZMod.val_natCast_of_lt (by omega)]
     exact h.opcode_lt
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **A padding row satisfies the same contract.** `is_real = 0` makes every gated conjunct
 vacuous — including both `op_a_0` forcing gates, which on a zero row read `0 · (0 - 1)` and
 `(0 - 1) · 0`. Nothing survives ungated. -/

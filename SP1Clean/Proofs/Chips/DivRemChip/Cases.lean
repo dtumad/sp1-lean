@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.DivRem
+import SP1Clean.Semantics.Specs.DivRem
 import SP1Clean.Proofs.Chips.DivRemChip.Math
 
 /-! # `DivRemChip` — isolated arithmetic case proofs

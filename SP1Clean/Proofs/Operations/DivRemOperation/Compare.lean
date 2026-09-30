@@ -1,5 +1,6 @@
 import SP1Clean.Native.Operations.DivRemOperation.Compare
-import SP1Clean.FormalModel.Contracts.DivRem
+import SP1Clean.Semantics.Specs.DivRem
+import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
 import SP1Clean.Proofs.CircuitProofStart
 
 /-! # `DivRemCompare` — the `FormalAssertion` bundle (soundness / completeness / contract)

@@ -1,4 +1,6 @@
-import Mathlib.Data.BitVec
+module
+
+public import Mathlib.Data.BitVec
 /-!
 # RV64 reference semantics
 
@@ -17,6 +19,8 @@ in `Proofs/Sail/RV64Bridge.lean`.
 This module replaces the former `riscv-lean` dependency, whose only role here was to supply
 these definitions and the same bridge lemmas.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.RV64
 

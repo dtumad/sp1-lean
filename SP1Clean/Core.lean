@@ -29,8 +29,10 @@ import SP1Clean.FormalModel.Contracts.ClockOrder
 import SP1Clean.FormalModel.Contracts.OrdinaryObservation
 import SP1Clean.FormalModel.Contracts.CoreAIR
 import SP1Clean.FormalModel.Contracts.CoreSyscall
-import SP1Clean.FormalModel.Contracts.DivRem
-import SP1Clean.FormalModel.Contracts.DivRemColumns
+import SP1Clean.Semantics.Specs.DivRem
+import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
+import SP1Clean.Circuits.Gadgets.DivRem.CoreContract
+import SP1Clean.Circuits.Types.DivRem
 import SP1Clean.FormalModel.Contracts.FinalRam
 import SP1Clean.FormalModel.Contracts.FinalRamValue
 import SP1Clean.FormalModel.Contracts.FinalRamCheck
@@ -189,7 +191,7 @@ import SP1Clean.Model.MemoryClock
 import SP1Clean.Model.Opcode
 import SP1Clean.Model.ProgramChip
 import SP1Clean.Model.ProviderTableId
-import SP1Clean.Model.RV64Semantics
+import SP1Clean.Semantics.ISA.RV64
 import SP1Clean.Model.Register
 import SP1Clean.Model.SP1Constraint
 import SP1Clean.Model.SP1Field

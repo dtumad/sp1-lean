@@ -1,7 +1,7 @@
 import SP1Clean.Model.Semantics.SailControlExecute
 import SP1Clean.Model.Semantics.SailArithmeticExecute
 import SP1Clean.Soundness.RowEffectDefs
-import SP1Clean.Model.RV64Semantics
+import SP1Clean.Semantics.ISA.RV64
 import SP1Clean.Model.SailPure
 
 /-! # Phase 4 — the uniform per-chip `advance` (Sail-step obligation)

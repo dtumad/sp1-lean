@@ -64,6 +64,7 @@ omit [Fact (2 ^ 24 < p)] in
 lemma shiftRightHintFlags_empty :
     ShiftRightChip.hintFlags (ProverHint.empty (ZMod p)) = #v[0, 0, 0, 0] := rfl
 
+omit [Fact (2 ^ 24 < p)] in
 /-- **The flags of a real `ShiftRight` row are one-hot, and their sum is `1`.** -/
 lemma shiftRightFlags_spec {e : ALUTypeEvent} (hop : e.IsShiftRight) :
     ((shiftRightFlags (p := p) e.opcode)[0] = 0 ∨ (shiftRightFlags (p := p) e.opcode)[0] = 1) ∧
