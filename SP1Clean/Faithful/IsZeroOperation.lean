@@ -4,8 +4,7 @@ import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Tauto
 import Mathlib.Tactic.Linarith
 import Mathlib.Data.ZMod.Basic
-import SP1Clean.Native.Operations.IsZeroOperation.RawSpec
-import SP1Clean.Native.Operations.IsZeroOperation.Defs
+import SP1Clean.Circuits.Gadgets.IsZero
 import SP1Clean.Model.SP1Constraint
 import SP1Clean.Model.InteractionProjection
 import ToClean.Circuit.InteractionRecovery
@@ -16,11 +15,11 @@ import SP1Clean.Faithful.ChipOracle
 
 /-! # Faithfulness anchor to the SP1 (Rust-extraction) constraints (IsZero)
 
-Anchors the native `IsZeroOperation` gadget's `RawSpec` to **SP1's `IsZeroOperation` constraint
+Anchors the native `IsZeroOperation` gadget's `AssertSpec` to **SP1's `IsZeroOperation` constraint
 definition** (the generated operation fragment in `Extracted/IsZeroOperation.lean`: three
 `assertZero`s — `result = 1 - inverse*a`, `result` boolean, `result*a = 0`). The anchor
 `isZero_constraints_faithful` proves the SP1 constraint list's `allHold` is **exactly** the native
-gadget's `RawSpec`. No byte sends, so this is the purest `assertZero`-only anchor. -/
+gadget's `AssertSpec`. No byte sends, so this is the purest `assertZero`-only anchor. -/
 
 namespace SP1Clean.Faithful
 
@@ -40,23 +39,14 @@ theorem isZero_asserts_faithful (a : ZMod p) (cols : Circuits.Types.IsZeroOperat
   simp only [Extracted.IsZeroOperation.asserts, List.Forall,
     SP1Clean.IsZeroOperation.AssertSpec, one_mul, bool_iff]
 
-/-- **Faithfulness anchor — interaction half.** `IsZeroOperation` emits no bus interactions, so its
-(empty) `interactions` list trivially holds, matching the trivial `InteractSpec`. -/
-theorem isZero_interactions_faithful (a : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) :
-    List.Forall Interaction.toProp (Extracted.IsZeroOperation.interactions a cols 1) ↔
-      SP1Clean.IsZeroOperation.InteractSpec a cols := by
-  simp only [Extracted.IsZeroOperation.interactions, List.Forall,
-    SP1Clean.IsZeroOperation.InteractSpec]
-
-/-- Combined anchor (`asserts ∧ interactions ↔ RawSpec = AssertSpec`). Composed by
+/-- Combined anchor (`asserts ∧ interactions ↔ AssertSpec`). Composed by
 `IsZeroWord`/`IsEqualWord`. -/
 theorem isZero_constraints_faithful (a : ZMod p) (cols : Circuits.Types.IsZeroOperation (ZMod p)) :
     (List.Forall (· = 0) (Extracted.IsZeroOperation.asserts a cols 1) ∧
       List.Forall Interaction.toProp (Extracted.IsZeroOperation.interactions a cols 1)) ↔
-      SP1Clean.IsZeroOperation.RawSpec a cols := by
-  rw [isZero_asserts_faithful, isZero_interactions_faithful]
-  simp only [SP1Clean.IsZeroOperation.InteractSpec, SP1Clean.IsZeroOperation.AssertSpec,
-    SP1Clean.IsZeroOperation.RawSpec, and_true]
+      SP1Clean.IsZeroOperation.AssertSpec a cols := by
+  simp only [isZero_asserts_faithful, Extracted.IsZeroOperation.interactions,
+    List.Forall, and_true]
 
 @[circuit_norm] theorem eval_isZeroColumns
     (env : Environment (ZMod p))

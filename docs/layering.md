@@ -24,7 +24,7 @@ exceptions are migration work, not a requirement to preserve the current API or 
 |---|---|
 | 0 | To-Upstream additions, independent of SP1 |
 | 1 | Arithmetic and word foundations |
-| 2 | Execution/model vocabulary and native column types |
+| 2 | Pure semantic Specs, execution/model vocabulary and native column types |
 | 3 | Legacy Rust oracles and their interaction adapters |
 | 4 | Semantic contracts and row views |
 | 5 | Readers, operation gadgets and their proofs |

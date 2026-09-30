@@ -8,9 +8,9 @@ and a chip should be understandable with its local correctness proofs.
 
 | Area | Current source | Responsibility |
 |---|---|---|
-| Semantics | `SP1Clean/Math/`, `SP1Clean/Model/` | Arithmetic, official Sail adapters, complete execution, snapshots, host effects and resources |
+| Semantics | `SP1Clean/Semantics/Specs/`, `SP1Clean/Math/`, `SP1Clean/Model/` | Pure contracts, arithmetic, official Sail adapters, complete execution, snapshots, host effects and resources |
 | Contracts | `SP1Clean/FormalModel/` | Semantic Specs and checked relation/capstone targets |
-| Circuits | `SP1Clean/Circuits/Types/`, `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Native columns/readers/gadgets/chips, witnesses and local soundness/completeness |
+| Circuits | `SP1Clean/Circuits/`, `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Native columns/readers/gadgets/chips, witnesses and local soundness/completeness |
 | Machine | `SP1Clean/Soundness/`, `SP1Clean/Proofs/Completeness/`, `SP1Clean/Alignment/` | Registration, assembly, grounding, Sail bridges and physical compiler |
 | Legacy Rust alignment | `SP1Clean/Extracted/`, `SP1Clean/Faithful/`, `SP1Clean/Composition/` | Generated pinned oracles and exact-to-native comparison evidence |
 | Upstream additions | `ToClean/`, `ToPolyFun/`, `ToMathlib/` | Reusable missing APIs in upstream namespaces, independent of SP1 |
@@ -33,6 +33,10 @@ and local proofs; machine-specific grounding stays in Machine. Lean module visib
 public entry points and private implementation details, with exposed definitions only where
 consumers need reduction. [#33](https://github.com/dtumad/sp1-lean/issues/33) owns that migration,
 including generated Sail prerequisites.
+
+The field zero test follows this boundary: `Semantics/Specs/IsZero` owns its input and semantic
+relation; `Circuits/Gadgets/IsZero` owns its witness generation, circuit and bundled proof.
+Legacy faithfulness imports the gadget and its structural assertion relation from above.
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,

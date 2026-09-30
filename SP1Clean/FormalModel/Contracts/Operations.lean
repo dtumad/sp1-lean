@@ -6,7 +6,7 @@ import SP1Clean.Circuits.Types.U16MSBOperation
 import SP1Clean.Circuits.Types.U16toU8Operation
 import SP1Clean.Circuits.Types.AddrAddOperation
 import SP1Clean.Circuits.Types.AddressOperation
-import SP1Clean.Circuits.Types.IsZeroOperation
+import SP1Clean.Semantics.Specs.IsZero
 import SP1Clean.Circuits.Types.IsZeroWordOperation
 import SP1Clean.Circuits.Types.IsEqualWordOperation
 import SP1Clean.Circuits.Types.LtOperationUnsigned
@@ -121,17 +121,6 @@ def Spec (input : Inputs (ZMod p)) : Prop :=
 
 end SP1Clean.U16toU8OperationUnsafe
 
-namespace SP1Clean.IsZeroOperation
-
-/-- Inputs for the native field-zero test. -/
-structure Inputs (F : Type) where
-  a : F
-  cols : Circuits.Types.IsZeroOperation F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-end SP1Clean.IsZeroOperation
 
 namespace SP1Clean.IsZeroWordOperation
 

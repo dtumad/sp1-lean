@@ -1,13 +1,12 @@
 import Mathlib.Tactic.IntervalCases
 import SP1Clean.Math.Word
-import SP1Clean.Native.Operations.IsZeroOperation.Populate
+import SP1Clean.Circuits.Gadgets.IsZero
 import SP1Clean.Circuits.Types.IsZeroWordOperation
 
-/-! # `IsZeroWordOperation` — `populate` (the witness generator)
+/-! # Word zero-test witness generation
 
-SP1's `IsZeroWordOperation::populate` ported natively. `isZeroWordWitness` (vector form) is retained for
-the conformance check in `WitnessTests/IsZeroWordOperationWitness.lean`. `spec_populate` lives in
-`Formal` to avoid an import cycle. -/
+The typed witness and its Clean witness-IR form share the same per-limb zero test.
+The formal assertion and population contract are bundled in the word gadget's proof module. -/
 
 namespace SP1Clean.IsZeroWordOperation
 
@@ -29,21 +28,6 @@ the struct unpopulated (gated `IsZeroWord`/`IsEqualWord` composition on padding 
 (in `Formal`) discharges the composed assertion's obligation at this value. -/
 def zeroCols : Circuits.Types.IsZeroWordOperation (ZMod p) :=
   ⟨⟨0, 0⟩, ⟨0, 0⟩, ⟨0, 0⟩, ⟨0, 0⟩, 0, 0, 0⟩
-
-/-- Vector form of the witness, used only for the conformance check in
-`WitnessTests/IsZeroWordOperationWitness.lean`. Returns
-`(limb inverses, limb results, first_half, second_half, result)`. -/
-def isZeroWordWitness (a : Word (ZMod p)) :
-    Vector (ZMod p) 4 × Vector (ZMod p) 4 × ZMod p × ZMod p × ZMod p :=
-  let z0 := IsZeroOperation.isZeroWitness a[0]
-  let z1 := IsZeroOperation.isZeroWitness a[1]
-  let z2 := IsZeroOperation.isZeroWitness a[2]
-  let z3 := IsZeroOperation.isZeroWitness a[3]
-  let inv := #v[z0[0], z1[0], z2[0], z3[0]]
-  let res := #v[z0[1], z1[1], z2[1], z3[1]]
-  let fh := res[0] * res[1]
-  let sh := res[2] * res[3]
-  (inv, res, fh, sh, fh * sh)
 
 section FE
 
