@@ -230,6 +230,54 @@ theorem projectPrefix_data_of_same (index : Fin target.tables.length)
   exact (witness.projectPrefix target length widths fixed).data_eq_of_common_table witness
     member (List.getElem_mem _) arity
 
+/-- Equal-width components with the same names and input rows retain all keys outside the
+removed suffix, even when their constraints or channel interactions differ. -/
+theorem projectPrefix_data_of_layout
+    (sameWidth : ∀ index : Fin target.tables.length,
+      target.tables[index.val].width = (source.tables[index.val]'(by omega)).width)
+    (names : ∀ index : Fin target.tables.length,
+      target.tables[index.val].circuit.name = (source.tables[index.val]'(by omega)).circuit.name)
+    (entries : ∀ index : Fin target.tables.length, ∀ rows arity,
+      target.tables[index.val].proverRows rows arity =
+        (source.tables[index.val]'(by omega)).proverRows rows arity)
+    (name : String) (absent : ∀ component ∈ source.tables.drop target.tables.length,
+      component.circuit.name ≠ name) (arity : ℕ) :
+    (witness.projectPrefix target length widths fixed).data name arity = witness.data name arity := by
+  have prefixData : deriveProverData (witness.projectPrefix target length widths fixed).tables =
+      deriveProverData (witness.tables.take target.tables.length) := by
+    apply deriveProverData_congr
+    apply List.forall₂_of_length_eq_of_get
+    · simp only [← EnsembleWitness.same_length, List.length_take]
+      omega
+    · intro index projectedBound originalBound
+      have bound : index < target.tables.length := by
+        rwa [← EnsembleWitness.same_length] at projectedBound
+      simp only [List.get_eq_getElem, List.getElem_take,
+        projectPrefix_getElem witness length widths fixed ⟨index, bound⟩]
+      refine ⟨?_, fun arity => ?_⟩
+      · change (fun c : Component F => c.circuit.name)
+          ((witness.projectPrefix target length widths fixed).tables[index].component) =
+          (fun c : Component F => c.circuit.name)
+            ((witness.tables.take target.tables.length)[index].component)
+        rw [List.getElem_take, ← (witness.projectPrefix target length widths fixed).same_circuits,
+          ← witness.same_circuits]
+        exact names ⟨index, bound⟩
+      · change _ = (witness.tables[index]'(by rw [← witness.same_length]; omega)).component.proverRows _ _
+        rw [Table.proverRows, Table.projectPrefix_component, Table.projectPrefix_rows_of_width_eq]
+        · rw [← witness.same_circuits]
+          exact entries ⟨index, bound⟩ _ arity
+        · rw [← witness.same_circuits]
+          exact sameWidth ⟨index, bound⟩
+  change deriveProverData _ name arity = deriveProverData witness.tables name arity
+  rw [prefixData]
+  conv_rhs => rw [← List.take_append_drop target.tables.length witness.tables]
+  symm
+  apply deriveProverData_append_of_not_mem
+  intro table member
+  apply absent table.component
+  rw [← witness.tables_map_component, ← List.map_drop]
+  exact List.mem_map_of_mem member
+
 /-- Retaining an unchanged initial inventory preserves it as complete physical tables. -/
 theorem projectPrefix_take (count : ℕ) (bound : count ≤ target.tables.length)
     (same : ∀ index : Fin count,

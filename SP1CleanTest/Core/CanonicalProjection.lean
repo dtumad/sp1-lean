@@ -58,6 +58,53 @@ theorem retainedData (arity : ℕ) : projected.data "retained" arity = original.
 theorem removedData : projected.data "removed" 1 = #[] ∧ original.data "removed" 1 ≠ #[] := by
   decide
 
+private def checkedComponent : Component Fp where
+  Input := fields 1
+  Output := unit
+  circuit := {
+    name := "retained"
+    main (input : Var (fields 1) Fp) := do
+      assertZero input[0]
+      return ()
+    Spec input _ _ := input[0] = 0
+    ProverAssumptions input _ _ := input[0] = 0
+    soundness := by circuit_proof_start; simpa only [← h_input, circuit_norm] using h_holds
+    completeness := by circuit_proof_start; simpa only [← h_input, circuit_norm] using h_assumptions }
+
+private def checkedTarget : Ensemble Fp unit where
+  tables := [component "wide" 3, checkedComponent]
+  unique_names := by decide
+  channels := []
+
+private def checkedProjection : EnsembleWitness checkedTarget :=
+  original.projectPrefix checkedTarget (by decide)
+    (by intro index; fin_cases index <;> exact le_rfl)
+    (by intro index; fin_cases index <;> rfl)
+
+/-- Changing the row circuit preserves retained and absent data keys when the input layout is
+unchanged. This covers a component replacement, beyond the complete-table identity case. -/
+theorem changedCircuitData (name : String) (different : name ≠ "removed") (arity : ℕ) :
+    checkedProjection.data name arity = original.data name arity := by
+  apply original.projectPrefix_data_of_layout (target := checkedTarget) (by decide) _ _
+  · intro index; fin_cases index <;> rfl
+  · intro index; fin_cases index <;> rfl
+  · intro index; fin_cases index <;> intros <;> rfl
+  · intro candidate member
+    change candidate ∈ [component "removed" 1] at member
+    obtain rfl := List.mem_singleton.mp member
+    exact different.symm
+
+/-- Data agreement alone does not preserve constraints: the new zero check rejects the retained
+nonzero row. Constraint transport must remain a separate proof obligation. -/
+theorem changedCircuitRejectsRow : ¬ checkedProjection.Constraints := by
+  intro constraints
+  have checked := constraints checkedProjection.tables[1] (List.getElem_mem _) #[4] (by decide)
+  change checkedComponent.operations.ConstraintsHold
+    (Environment.fromArray #[4] checkedProjection.data) at checked
+  simp [Operations.ConstraintsHold, Component.constraints_eq, Component.lookups_eq,
+    Component.rowOperations, checkedComponent, circuit_norm] at checked
+  exact (by decide : (4 : Fp) ≠ 0) checked
+
 private def repeated : Table Fp where
   component := component "repeated" 1
   table := [#[1], #[0], #[1]]

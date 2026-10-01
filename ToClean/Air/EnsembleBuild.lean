@@ -8,8 +8,8 @@ Clean's ensemble witness uses indexed layout obligations. This constructor disch
 from one component-list equation, and derives prover data from the same physical rows through
 Clean's canonical `deriveProverData`. Callers cannot supply an unrelated data environment.
 
-The constructor belongs beside `EnsembleWitness` upstream. Delete this extension if upstream
-provides the list-level introduction rule.
+The constructor and named-data transport rules belong beside `EnsembleWitness` upstream. Remove
+these additions when upstream provides the corresponding list-level rules.
 -/
 
 @[expose] public section
@@ -17,6 +17,38 @@ provides the list-level introduction rule.
 namespace Air.Flat
 
 variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
+
+/-- Canonical data depends on names and input rows, not the rest of each component's circuit. -/
+theorem deriveProverData_congr {left right : List (Table F)}
+    (same : List.Forall₂ (fun a b => a.component.circuit.name = b.component.circuit.name ∧
+      ∀ arity, a.proverRows arity = b.proverRows arity) left right) :
+    deriveProverData left = deriveProverData right := by
+  induction same with
+  | nil => rfl
+  | cons head _ ih =>
+    funext name arity
+    simp only [deriveProverData, head.1, Table.proverRows] at *
+    split
+    · exact head.2 arity
+    · exact congrFun (congrFun ih name) arity
+
+/-- Dropping a suffix preserves every data key absent from that suffix. -/
+theorem deriveProverData_append_of_not_mem (left right : List (Table F)) (name : String)
+    (absent : ∀ table ∈ right, table.component.circuit.name ≠ name) (arity : ℕ) :
+    deriveProverData (left ++ right) name arity = deriveProverData left name arity := by
+  have empty : deriveProverData right name arity = #[] := by
+    induction right with
+    | nil => rfl
+    | cons table tail ih =>
+      simp only [deriveProverData, if_neg (absent table (by simp))]
+      exact ih (fun next member => absent next (List.mem_cons_of_mem _ member))
+  induction left with
+  | nil => exact empty
+  | cons table tail ih =>
+    simp only [List.cons_append, deriveProverData]
+    split
+    · rfl
+    · exact ih
 
 /-- Every arity of a named data entry is determined by its actual physical table. -/
 theorem EnsembleWitness.data_of_mem_table {ens : Ensemble F PublicIO}
