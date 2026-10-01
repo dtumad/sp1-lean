@@ -82,6 +82,12 @@ raw constraints, complete balance, authenticated boundaries and ranked chronolog
 smuggled into a channel payload. Keep occurrence lists through transformations: equal keys do
 not identify occurrences, and disabled interactions still affect characteristic bounds.
 
+A projected witness derives canonical data from its retained physical rows. Prove row-layout,
+lookup and channel-guarantee transport at the actual two data environments; dropping tables or
+truncating rows does not preserve the complete data function. Public-verifier guarantees are
+separate from physical-table constraints. Install public assertion checks after assembling the
+complete inventory so their fresh channels account for every extension's traffic.
+
 SP1 grounding needs an exhaustive ordered execution path. Clean verifier guarantees alone do
 not supply it, so adopting VmTables is justified only when it removes the existing obligation.
 Generalize authentication, ordering or resource arguments when a real consumer demonstrates

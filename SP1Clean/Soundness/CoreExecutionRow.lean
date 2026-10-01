@@ -52,6 +52,17 @@ def ExecutionRow.duration : ExecutionRow p → ℕ
 noncomputable def ExecutionRow.canonEdge (data : ProverData (ZMod p)) (row : ExecutionRow p) :=
   (canonState (row.edge data).1, canonState (row.edge data).2)
 
+/-- A decoded physical row fixes its State edge independently of the prover-data view. -/
+theorem ExecutionRow.edge_setData (row : ExecutionRow p) (data data' : ProverData (ZMod p)) :
+    row.edge data = row.edge data' := by
+  cases row <;> simp only [ExecutionRow.edge, decodedStateEdge,
+    DecodedInstructionRow.toChipRow_setData _ data data']
+
+/-- Canonical re-limbing preserves the same independence from prover data. -/
+theorem ExecutionRow.canonEdge_setData (row : ExecutionRow p) (data data' : ProverData (ZMod p)) :
+    row.canonEdge data = row.canonEdge data' := by
+  simp only [ExecutionRow.canonEdge, row.edge_setData data data']
+
 variable [Fact (2 ^ 25 < p)]
 
 omit [Fact (2 ^ 24 < p)] [Fact (2 ^ 25 < p)] in

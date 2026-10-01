@@ -32,7 +32,8 @@ theorem memoryInterior_raw {image : ProgramImage} {source : ExecutionSnapshot}
       (witness.tables.drop 6).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) := by
   simp only [memoryInterior, List.map_flatMap, typedTableInteractionsWith_raw]
 
-private theorem verifier_memory_silent (image : ProgramImage) (source : ExecutionSnapshot)
+/-- The actual public verifier emits no Memory traffic, including its source assertions. -/
+theorem verifier_memory_silent (image : ProgramImage) (source : ExecutionSnapshot)
     (env : Environment (ZMod p)) :
     (ensemble image source).verifierOperations.interactionValuesWith memoryChannel.toRaw env = [] := by
   rw [ensemble, PublicVerifier.install_verifier_interactions_of_mem _ _ _ _

@@ -34,6 +34,13 @@ def clock (message : Message (ZMod p)) : ZMod p × ZMod p := (message.clk_high, 
 def activeRows (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Environment (ZMod p)) :=
   (table.table.map (Environment.fromArray · data)).filter fun env => decide ((input env).instruction.is_real = 1)
 
+omit [Fact (2 ^ 25 < p)] in
+/-- Membership exposes semantic activity without leaking the filter's field-equality instance. -/
+theorem activeRows_is_real (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (env : Environment (ZMod p)) (member : env ∈ activeRows table data) :
+    (input env).instruction.is_real = 1 :=
+  of_decide_eq_true (List.mem_filter.mp member).2
+
 def calls (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Message (ZMod p)) := (activeRows table data).map call
 
 omit [Fact (2 ^ 25 < p)] in

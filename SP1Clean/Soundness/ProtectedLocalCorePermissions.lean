@@ -53,12 +53,9 @@ theorem verifier_permission_silent (image : ProgramImage) (source : ExecutionSna
   change ((LocalSourceBoundary.checker image source).install
     (LocalCore.baseEnsemble image source)).verifierOperations.interactionValuesWith _ env = []
   rw [PublicVerifier.install_verifier_interactions _ _ _ _ different]
-  simp [LocalCore.baseEnsemble, LocalCore.boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
-    Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions,
-    sp1StateVerifierMain, OrderedBoundaryVerifier.main, Operations.interactionValuesWith,
-    Operations.interactionsWith, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
-    OrderedFinalProvider.channelName, WritePermissionProvider.channel,
-    stateChannel, byteChannel, exitChannel, circuit_norm]
+  apply LocalCore.boundaryVerifier_silent image source
+  intro member
+  exact old_channel_ne_permission _ (List.mem_append_left _ member) rfl
 
 /-- Every active request in the actual 60-table ledger names a writable native byte address. -/
 theorem permission_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}

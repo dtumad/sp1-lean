@@ -16,6 +16,29 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
+/-- The actual public boundary verifier speaks only on registered base channels. -/
+theorem boundaryVerifier_channels_subset (image : ProgramImage) (source : ExecutionSnapshot) :
+    (boundaryVerifier (p := p)).circuitOperations.interactions.map (·.channel) ⊆
+      (baseEnsemble image source).channels := by
+  intro channel member
+  simp [boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
+    Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions,
+    sp1StateVerifierMain, OrderedBoundaryVerifier.main, baseEnsemble,
+    sp1Ensemble_channels, circuit_norm] at member ⊢
+  tauto
+
+/-- A channel outside the boundary registry has no public-verifier occurrences. -/
+theorem boundaryVerifier_silent (image : ProgramImage) (source : ExecutionSnapshot)
+    (channel : RawChannel (ZMod p)) (outside : channel ∉ (baseEnsemble image source).channels)
+    (env : Environment (ZMod p)) :
+    (boundaryVerifier (p := p)).circuitOperations.interactionValuesWith channel env = [] := by
+  have empty : (boundaryVerifier (p := p)).circuitOperations.interactionsWith channel = [] := by
+    apply List.filter_eq_nil_iff.mpr
+    intro interaction member
+    have registered := boundaryVerifier_channels_subset image source (List.mem_map_of_mem member)
+    simpa only [decide_eq_true_eq] using (show interaction.channel ≠ channel from fun same => outside (same ▸ registered))
+  simp only [Operations.interactionValuesWith, empty, List.map_nil]
+
 /-- The physical local component inventory is closed over its declared channels. -/
 theorem component_channels_subset (image : ProgramImage) (source : ExecutionSnapshot)
     (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables) :
