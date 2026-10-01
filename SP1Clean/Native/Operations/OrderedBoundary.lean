@@ -118,4 +118,11 @@ theorem interactionValues (name : String) (distinct : name ≠ "SP1Byte")
   simp only [Operations.interactionValuesWith, main_interactions name distinct,
     List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed]
 
+/-- Ordering is checked by assertions and channels, without additional lookup tables. -/
+@[circuit_norm] theorem main_lookups (name : String) (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main name input).operations offset).lookups = [] := by
+  simp [main, WordRangeCheck.circuit, LtOperationUnsigned.circuit,
+    LtOperationUnsigned.main, U16CompareOperation.circuit, U16CompareOperation.main,
+    Gadgets.Equality.main, circuit_norm]
+
 end SP1Clean.OrderedBoundary

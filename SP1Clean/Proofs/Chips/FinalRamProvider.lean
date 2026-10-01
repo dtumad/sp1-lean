@@ -137,4 +137,9 @@ theorem proverAssumptions_iff (record : MemoryMsg (ZMod p)) (data : ProverData (
     · exact fun _ => valid.2.1
     · exact valid.2.2.2.symm
 
+/-- RAM finalization adds no static lookup table. -/
+@[circuit_norm] theorem main_lookups (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups = [] := by
+  simp [main, WordRangeCheck.circuit, AddressOperation.circuit, circuit_norm]
+
 end SP1Clean.FinalRamProvider

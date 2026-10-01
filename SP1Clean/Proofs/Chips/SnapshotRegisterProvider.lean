@@ -1,3 +1,4 @@
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
 import SP1Clean.Model.Core.RegisterSnapshotTable
 import SP1Clean.Model.Channels
@@ -85,5 +86,14 @@ theorem populate_assumptions (snapshot : MemorySnapshot) (index : BitVec 5)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (circuit snapshot).ProverAssumptions (populate snapshot index) data hint :=
   (snapshot.registerTable_spec _).mpr ⟨index, rfl⟩
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Register initialization authenticates exactly one row of the finite source snapshot. -/
+@[circuit_norm] theorem main_lookupNames (snapshot : MemorySnapshot)
+    (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main snapshot input).operations offset).lookups.map (·.table.name) =
+      [(snapshot.registerTable (p := p)).name] := by
+  simp [main, circuit_norm]
+  rfl
 
 end SP1Clean.SnapshotRegisterProvider

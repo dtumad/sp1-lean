@@ -193,4 +193,13 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
 abbrev circuit (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 64) :=
   circuitNamed (p := p) memory limit limitBound "sp1.native.initial_memory"
 
+/-- An authenticated byte read has exactly its supplied interval-table lookup. -/
+@[circuit_norm] theorem main_lookupNames (memory : ByteMemory) (limit : ℕ)
+    (input : Var Inputs (ZMod p)) (name : String) (offset : ℕ) :
+    ((main memory limit input name).operations offset).lookups.map (·.table.name) = [name] := by
+  simp [main, WordRangeCheck.circuit, LtOperationUnsigned.circuit,
+    LtOperationUnsigned.main, U16CompareOperation.circuit, U16CompareOperation.main,
+    Gadgets.Equality.main, circuit_norm]
+  rfl
+
 end SP1Clean.InitialMemoryLookup

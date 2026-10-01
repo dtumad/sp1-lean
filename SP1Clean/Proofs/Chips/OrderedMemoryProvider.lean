@@ -183,4 +183,12 @@ theorem populate_assumptions (name : String) (recordSpec : MemoryMsg (ZMod p) â†
       Word.toBitVec64_toNat canonicalRecord.2.1, valid.2,
       show (1 : BitVec 64).toNat = 1 by decide, Nat.mod_eq_of_lt currentBound]
 
+/-- Ordering preserves every provider lookup occurrence, including repeated keys. -/
+@[circuit_norm] theorem main_lookups (name : String)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (input : Var (Inputs Payload) (ZMod p)) (offset : â„•) :
+    ((main name provider input).operations offset).lookups =
+      ((provider.main input.payload).operations offset).lookups := by
+  simp [main, OrderedBoundary.circuit, AddOperation.circuit, AddOperation.main, circuit_norm]
+
 end SP1Clean.OrderedMemoryProvider

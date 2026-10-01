@@ -57,23 +57,22 @@ theorem instructionRows_write_authorized
   let table := witness.tables[7 + index.val]'(by
     rw [← witness.same_length]; change 7 + index.val < (tables image source auxiliary).length
     rw [tables_length]; omega)
-  have tableMem : table ∈ witness.allTables := witness.mem_allTables_of_mem_tables (List.getElem_mem _)
-  have dataEq : table.data = (localWitness witness).data := witness.same_data table (List.getElem_mem _)
-  have envEq : decoded.environment (localWitness witness).data = table.environment decoded.physical := by
-    simp only [DecodedInstructionRow.environment, Table.environment, dataEq]
+  have tableMem : table ∈ witness.tables := List.getElem_mem _
   change (decoded.toChipRow (localWitness witness).data).view.is_real = 1 at active
-  rw [DecodedInstructionRow.toChipRow_view, envEq] at active ⊢
+  rw [DecodedInstructionRow.toChipRow_setData decoded (localWitness witness).data witness.data,
+    DecodedInstructionRow.toChipRow_view] at active ⊢
   rw [same] at active ⊢
   have descriptor : (supportedChips (p := p))[index.val]'(by
       rw [supportedChips_length]; exact index.isLt) =
       supportedChipFor (InstructionChipId.all[index.val]'index.isLt) := List.getElem_map _
   rw [descriptor] at active ⊢
   apply ProtectedLocalCore.supported_write_property (Target.RowWriteAuthorized image)
-    (fun row empty write same => by rw [empty] at same; contradiction) _ (table.environment decoded.physical) ?_ ?_ ?_ ?_ active
+    (fun row empty write same => by rw [empty] at same; contradiction) _ (Environment.fromArray decoded.physical witness.data) ?_ ?_ ?_ ?_ active
   · intro identity real
     have position : index.val = 18 := by
       exact (InstructionChipId.all_nodup.getElem_inj_iff (hi := index.isLt) (hj := by decide)).mp identity
-    apply ProtectedLocalCore.byte_write_authorized_of_row table decoded.physical
+    apply ProtectedLocalCore.byte_write_authorized_of_row table.component
+      (Environment.fromArray decoded.physical witness.data)
       (row_pull_permitted witness pulls constraints balanced table tableMem decoded.physical physicalMem) ?_ real
     dsimp only [table]
     rw [← witness.same_circuits _ (by
@@ -87,7 +86,8 @@ theorem instructionRows_write_authorized
   · intro identity real
     have position : index.val = 19 := by
       exact (InstructionChipId.all_nodup.getElem_inj_iff (hi := index.isLt) (hj := by decide)).mp identity
-    apply ProtectedLocalCore.half_write_authorized_of_row table decoded.physical
+    apply ProtectedLocalCore.half_write_authorized_of_row table.component
+      (Environment.fromArray decoded.physical witness.data)
       (row_pull_permitted witness pulls constraints balanced table tableMem decoded.physical physicalMem) ?_ real
     dsimp only [table]
     rw [← witness.same_circuits _ (by
@@ -101,7 +101,8 @@ theorem instructionRows_write_authorized
   · intro identity real
     have position : index.val = 20 := by
       exact (InstructionChipId.all_nodup.getElem_inj_iff (hi := index.isLt) (hj := by decide)).mp identity
-    apply ProtectedLocalCore.word_write_authorized_of_row table decoded.physical
+    apply ProtectedLocalCore.word_write_authorized_of_row table.component
+      (Environment.fromArray decoded.physical witness.data)
       (row_pull_permitted witness pulls constraints balanced table tableMem decoded.physical physicalMem) ?_ real
     dsimp only [table]
     rw [← witness.same_circuits _ (by
@@ -115,7 +116,8 @@ theorem instructionRows_write_authorized
   · intro identity real
     have position : index.val = 21 := by
       exact (InstructionChipId.all_nodup.getElem_inj_iff (hi := index.isLt) (hj := by decide)).mp identity
-    apply ProtectedLocalCore.double_write_authorized_of_row table decoded.physical
+    apply ProtectedLocalCore.double_write_authorized_of_row table.component
+      (Environment.fromArray decoded.physical witness.data)
       (row_pull_permitted witness pulls constraints balanced table tableMem decoded.physical physicalMem) ?_ real
     dsimp only [table]
     rw [← witness.same_circuits _ (by

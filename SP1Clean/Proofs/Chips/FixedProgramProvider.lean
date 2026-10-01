@@ -1,3 +1,4 @@
+import ToClean.Gadgets.LookupProjection
 import SP1Clean.Proofs.Chips.ProgramProviderChip
 import Clean.Air.FlatComponent
 
@@ -79,5 +80,13 @@ theorem program_interaction_payload (rom : StaticTable (ZMod p) ProgramMsg)
     interaction.msg = (toElements
       (({ circuit := circuit rom } : Air.Flat.Component (ZMod p)).rowInput env).toMessage).toArray :=
   payload_of_program_emission (circuit rom) (main_program_interactions rom) env interaction member
+
+/-- The fixed program provider authenticates exactly the supplied ROM table. -/
+@[circuit_norm] theorem main_lookupNames (rom : StaticTable (ZMod p) ProgramMsg)
+    (input : Var ProgramProviderChip.Inputs (ZMod p)) (offset : ℕ) :
+    (((circuit rom).main input).operations offset).lookups.map (·.table.name) = [rom.name] := by
+  simp [circuit, ProgramProviderChip.circuit, ProgramProviderChip.main,
+    Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+  rfl
 
 end SP1Clean.FixedProgramProvider

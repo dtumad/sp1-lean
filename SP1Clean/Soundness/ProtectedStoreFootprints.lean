@@ -35,17 +35,17 @@ private theorem byte_eval_real (env : Environment (ZMod p)) (input : Var StoreBy
 
 /-- Every committed byte is within native RAM and outside the fixed ROM. -/
 theorem byte_write_authorized_of_row {image : ProgramImage}
-    (table : Table (ZMod p)) (physical : Array (ZMod p))
+    (rowComponent : Component (ZMod p)) (env : Environment (ZMod p))
     (permission : ∀ gate address,
       (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
-        table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw →
-      Expression.eval (table.environment physical) gate = 1 →
-      WritePermissionProvider.Permitted image (eval (table.environment physical) address))
-    (component : table.component = ({ circuit := ProtectedStore.byte } : Component (ZMod p)))
-    (active : (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+        rowComponent.operations.interactionsWith WritePermissionProvider.channel.toRaw →
+      Expression.eval env gate = 1 →
+      WritePermissionProvider.Permitted image (eval env address))
+    (component : rowComponent = ({ circuit := ProtectedStore.byte } : Component (ZMod p)))
+    (active : (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1) :
     Target.RowWriteAuthorized image (StoreByteChip.rowView
-      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
+      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env)
+      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowOutput env)) := by
   intro write same
   change some _ = some write at same
   obtain rfl := Option.some.inj same
@@ -63,8 +63,8 @@ theorem byte_write_authorized_of_row {image : ProgramImage}
       exact List.mem_singleton_self _)
     (by
       rw [byte_eval_real]
-      have binding : eval (table.environment physical) input =
-          ({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (table.environment physical) :=
+      have binding : eval env input =
+          ({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env :=
         eval_varFromOffset_valueFromOffset StoreByteChip.Inputs 0 _
       rw [binding]
       exact active)
@@ -73,31 +73,31 @@ theorem byte_write_authorized_of_row {image : ProgramImage}
 
 /-- The full byte authorization implies ROM exclusion. -/
 theorem byte_write_permitted_of_row {image : ProgramImage}
-    (table : Table (ZMod p)) (physical : Array (ZMod p))
+    (rowComponent : Component (ZMod p)) (env : Environment (ZMod p))
     (permission : ∀ gate address,
       (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
-        table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw →
-      Expression.eval (table.environment physical) gate = 1 →
-      WritePermissionProvider.Permitted image (eval (table.environment physical) address))
-    (component : table.component = ({ circuit := ProtectedStore.byte } : Component (ZMod p)))
-    (active : (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+        rowComponent.operations.interactionsWith WritePermissionProvider.channel.toRaw →
+      Expression.eval env gate = 1 →
+      WritePermissionProvider.Permitted image (eval env address))
+    (component : rowComponent = ({ circuit := ProtectedStore.byte } : Component (ZMod p)))
+    (active : (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1) :
     Target.RowWritePermitted image (StoreByteChip.rowView
-      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
-  exact (byte_write_authorized_of_row table physical permission component active).permitted
+      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env)
+      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowOutput env)) := by
+  exact (byte_write_authorized_of_row rowComponent env permission component active).permitted
 
 /-- Every byte of this active store's committed write is outside the fixed ROM. -/
 theorem byte_write_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (table : Table (ZMod p)) (tableMem : table ∈ witness.allTables)
+    (table : Table (ZMod p)) (tableMem : table ∈ witness.tables)
     (physical : Array (ZMod p)) (physicalMem : physical ∈ table.table)
     (component : table.component = ({ circuit := ProtectedStore.byte } : Component (ZMod p)))
-    (active : (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+    (active : (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical witness.data)).is_real = 1) :
     Target.RowWritePermitted image (StoreByteChip.rowView
-      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
-  exact byte_write_permitted_of_row table physical
+      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical witness.data))
+      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowOutput (Environment.fromArray physical witness.data))) := by
+  exact byte_write_permitted_of_row table.component (Environment.fromArray physical witness.data)
     (row_pull_permitted witness constraints balanced table tableMem physical physicalMem) component active
 
 omit [Fact (2 ^ 24 < p)] in
@@ -114,17 +114,17 @@ private theorem half_eval_real (env : Environment (ZMod p)) (input : Var StoreHa
 
 /-- Every committed byte is within native RAM and outside the fixed ROM. -/
 theorem half_write_authorized_of_row {image : ProgramImage}
-    (table : Table (ZMod p)) (physical : Array (ZMod p))
+    (rowComponent : Component (ZMod p)) (env : Environment (ZMod p))
     (permission : ∀ gate address,
       (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
-        table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw →
-      Expression.eval (table.environment physical) gate = 1 →
-      WritePermissionProvider.Permitted image (eval (table.environment physical) address))
-    (component : table.component = ({ circuit := ProtectedStore.half } : Component (ZMod p)))
-    (active : (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+        rowComponent.operations.interactionsWith WritePermissionProvider.channel.toRaw →
+      Expression.eval env gate = 1 →
+      WritePermissionProvider.Permitted image (eval env address))
+    (component : rowComponent = ({ circuit := ProtectedStore.half } : Component (ZMod p)))
+    (active : (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1) :
     Target.RowWriteAuthorized image (StoreHalfChip.rowView
-      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
+      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env)
+      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowOutput env)) := by
   intro write same
   change some _ = some write at same
   obtain rfl := Option.some.inj same
@@ -140,8 +140,8 @@ theorem half_write_authorized_of_row {image : ProgramImage}
       exact List.mem_ofFn.mpr ⟨index, rfl⟩)
     (by
       rw [half_eval_real]
-      have binding : eval (table.environment physical) input =
-          ({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (table.environment physical) :=
+      have binding : eval env input =
+          ({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env :=
         eval_varFromOffset_valueFromOffset StoreHalfChip.Inputs 0 _
       rw [binding]
       exact active)
@@ -151,31 +151,31 @@ theorem half_write_authorized_of_row {image : ProgramImage}
 
 /-- The full byte authorization implies ROM exclusion. -/
 theorem half_write_permitted_of_row {image : ProgramImage}
-    (table : Table (ZMod p)) (physical : Array (ZMod p))
+    (rowComponent : Component (ZMod p)) (env : Environment (ZMod p))
     (permission : ∀ gate address,
       (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
-        table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw →
-      Expression.eval (table.environment physical) gate = 1 →
-      WritePermissionProvider.Permitted image (eval (table.environment physical) address))
-    (component : table.component = ({ circuit := ProtectedStore.half } : Component (ZMod p)))
-    (active : (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+        rowComponent.operations.interactionsWith WritePermissionProvider.channel.toRaw →
+      Expression.eval env gate = 1 →
+      WritePermissionProvider.Permitted image (eval env address))
+    (component : rowComponent = ({ circuit := ProtectedStore.half } : Component (ZMod p)))
+    (active : (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1) :
     Target.RowWritePermitted image (StoreHalfChip.rowView
-      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
-  exact (half_write_authorized_of_row table physical permission component active).permitted
+      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env)
+      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowOutput env)) := by
+  exact (half_write_authorized_of_row rowComponent env permission component active).permitted
 
 /-- Every byte of this active store's committed write is outside the fixed ROM. -/
 theorem half_write_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (table : Table (ZMod p)) (tableMem : table ∈ witness.allTables)
+    (table : Table (ZMod p)) (tableMem : table ∈ witness.tables)
     (physical : Array (ZMod p)) (physicalMem : physical ∈ table.table)
     (component : table.component = ({ circuit := ProtectedStore.half } : Component (ZMod p)))
-    (active : (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+    (active : (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical witness.data)).is_real = 1) :
     Target.RowWritePermitted image (StoreHalfChip.rowView
-      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
-  exact half_write_permitted_of_row table physical
+      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical witness.data))
+      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowOutput (Environment.fromArray physical witness.data))) := by
+  exact half_write_permitted_of_row table.component (Environment.fromArray physical witness.data)
     (row_pull_permitted witness constraints balanced table tableMem physical physicalMem) component active
 
 omit [Fact (2 ^ 24 < p)] in
@@ -192,17 +192,17 @@ private theorem word_eval_real (env : Environment (ZMod p)) (input : Var StoreWo
 
 /-- Every committed byte is within native RAM and outside the fixed ROM. -/
 theorem word_write_authorized_of_row {image : ProgramImage}
-    (table : Table (ZMod p)) (physical : Array (ZMod p))
+    (rowComponent : Component (ZMod p)) (env : Environment (ZMod p))
     (permission : ∀ gate address,
       (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
-        table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw →
-      Expression.eval (table.environment physical) gate = 1 →
-      WritePermissionProvider.Permitted image (eval (table.environment physical) address))
-    (component : table.component = ({ circuit := ProtectedStore.word } : Component (ZMod p)))
-    (active : (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+        rowComponent.operations.interactionsWith WritePermissionProvider.channel.toRaw →
+      Expression.eval env gate = 1 →
+      WritePermissionProvider.Permitted image (eval env address))
+    (component : rowComponent = ({ circuit := ProtectedStore.word } : Component (ZMod p)))
+    (active : (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1) :
     Target.RowWriteAuthorized image (StoreWordChip.rowView
-      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
+      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env)
+      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowOutput env)) := by
   intro write same
   change some _ = some write at same
   obtain rfl := Option.some.inj same
@@ -218,8 +218,8 @@ theorem word_write_authorized_of_row {image : ProgramImage}
       exact List.mem_ofFn.mpr ⟨index, rfl⟩)
     (by
       rw [word_eval_real]
-      have binding : eval (table.environment physical) input =
-          ({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (table.environment physical) :=
+      have binding : eval env input =
+          ({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env :=
         eval_varFromOffset_valueFromOffset StoreWordChip.Inputs 0 _
       rw [binding]
       exact active)
@@ -229,31 +229,31 @@ theorem word_write_authorized_of_row {image : ProgramImage}
 
 /-- The full byte authorization implies ROM exclusion. -/
 theorem word_write_permitted_of_row {image : ProgramImage}
-    (table : Table (ZMod p)) (physical : Array (ZMod p))
+    (rowComponent : Component (ZMod p)) (env : Environment (ZMod p))
     (permission : ∀ gate address,
       (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
-        table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw →
-      Expression.eval (table.environment physical) gate = 1 →
-      WritePermissionProvider.Permitted image (eval (table.environment physical) address))
-    (component : table.component = ({ circuit := ProtectedStore.word } : Component (ZMod p)))
-    (active : (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+        rowComponent.operations.interactionsWith WritePermissionProvider.channel.toRaw →
+      Expression.eval env gate = 1 →
+      WritePermissionProvider.Permitted image (eval env address))
+    (component : rowComponent = ({ circuit := ProtectedStore.word } : Component (ZMod p)))
+    (active : (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1) :
     Target.RowWritePermitted image (StoreWordChip.rowView
-      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
-  exact (word_write_authorized_of_row table physical permission component active).permitted
+      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env)
+      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowOutput env)) := by
+  exact (word_write_authorized_of_row rowComponent env permission component active).permitted
 
 /-- Every byte of this active store's committed write is outside the fixed ROM. -/
 theorem word_write_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (table : Table (ZMod p)) (tableMem : table ∈ witness.allTables)
+    (table : Table (ZMod p)) (tableMem : table ∈ witness.tables)
     (physical : Array (ZMod p)) (physicalMem : physical ∈ table.table)
     (component : table.component = ({ circuit := ProtectedStore.word } : Component (ZMod p)))
-    (active : (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+    (active : (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical witness.data)).is_real = 1) :
     Target.RowWritePermitted image (StoreWordChip.rowView
-      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
-  exact word_write_permitted_of_row table physical
+      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical witness.data))
+      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowOutput (Environment.fromArray physical witness.data))) := by
+  exact word_write_permitted_of_row table.component (Environment.fromArray physical witness.data)
     (row_pull_permitted witness constraints balanced table tableMem physical physicalMem) component active
 
 omit [Fact (2 ^ 24 < p)] in
@@ -270,17 +270,17 @@ private theorem double_eval_real (env : Environment (ZMod p)) (input : Var Store
 
 /-- Every committed byte is within native RAM and outside the fixed ROM. -/
 theorem double_write_authorized_of_row {image : ProgramImage}
-    (table : Table (ZMod p)) (physical : Array (ZMod p))
+    (rowComponent : Component (ZMod p)) (env : Environment (ZMod p))
     (permission : ∀ gate address,
       (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
-        table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw →
-      Expression.eval (table.environment physical) gate = 1 →
-      WritePermissionProvider.Permitted image (eval (table.environment physical) address))
-    (component : table.component = ({ circuit := ProtectedStore.double } : Component (ZMod p)))
-    (active : (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+        rowComponent.operations.interactionsWith WritePermissionProvider.channel.toRaw →
+      Expression.eval env gate = 1 →
+      WritePermissionProvider.Permitted image (eval env address))
+    (component : rowComponent = ({ circuit := ProtectedStore.double } : Component (ZMod p)))
+    (active : (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1) :
     Target.RowWriteAuthorized image (StoreDoubleChip.rowView
-      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
+      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env)
+      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowOutput env)) := by
   intro write same
   change some _ = some write at same
   obtain rfl := Option.some.inj same
@@ -296,8 +296,8 @@ theorem double_write_authorized_of_row {image : ProgramImage}
       exact List.mem_ofFn.mpr ⟨index, rfl⟩)
     (by
       rw [double_eval_real]
-      have binding : eval (table.environment physical) input =
-          ({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (table.environment physical) :=
+      have binding : eval env input =
+          ({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env :=
         eval_varFromOffset_valueFromOffset StoreDoubleChip.Inputs 0 _
       rw [binding]
       exact active)
@@ -307,31 +307,31 @@ theorem double_write_authorized_of_row {image : ProgramImage}
 
 /-- The full byte authorization implies ROM exclusion. -/
 theorem double_write_permitted_of_row {image : ProgramImage}
-    (table : Table (ZMod p)) (physical : Array (ZMod p))
+    (rowComponent : Component (ZMod p)) (env : Environment (ZMod p))
     (permission : ∀ gate address,
       (WritePermissionProvider.channel.pulledIf gate address).toRaw ∈
-        table.component.operations.interactionsWith WritePermissionProvider.channel.toRaw →
-      Expression.eval (table.environment physical) gate = 1 →
-      WritePermissionProvider.Permitted image (eval (table.environment physical) address))
-    (component : table.component = ({ circuit := ProtectedStore.double } : Component (ZMod p)))
-    (active : (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+        rowComponent.operations.interactionsWith WritePermissionProvider.channel.toRaw →
+      Expression.eval env gate = 1 →
+      WritePermissionProvider.Permitted image (eval env address))
+    (component : rowComponent = ({ circuit := ProtectedStore.double } : Component (ZMod p)))
+    (active : (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1) :
     Target.RowWritePermitted image (StoreDoubleChip.rowView
-      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
-  exact (double_write_authorized_of_row table physical permission component active).permitted
+      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env)
+      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowOutput env)) := by
+  exact (double_write_authorized_of_row rowComponent env permission component active).permitted
 
 /-- Every byte of this active store's committed write is outside the fixed ROM. -/
 theorem double_write_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (table : Table (ZMod p)) (tableMem : table ∈ witness.allTables)
+    (table : Table (ZMod p)) (tableMem : table ∈ witness.tables)
     (physical : Array (ZMod p)) (physicalMem : physical ∈ table.table)
     (component : table.component = ({ circuit := ProtectedStore.double } : Component (ZMod p)))
-    (active : (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (table.environment physical)).is_real = 1) :
+    (active : (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical witness.data)).is_real = 1) :
     Target.RowWritePermitted image (StoreDoubleChip.rowView
-      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (table.environment physical))
-      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowOutput (table.environment physical))) := by
-  exact double_write_permitted_of_row table physical
+      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical witness.data))
+      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowOutput (Environment.fromArray physical witness.data))) := by
+  exact double_write_permitted_of_row table.component (Environment.fromArray physical witness.data)
     (row_pull_permitted witness constraints balanced table tableMem physical physicalMem) component active
 
 end SP1Clean.Soundness.ProtectedLocalCore

@@ -1,3 +1,4 @@
+import ToClean.Gadgets.LookupProjection
 import SP1Clean.Model.Channels
 import SP1Clean.Model.ByteTable
 import Clean.Circuit.Basic
@@ -103,5 +104,12 @@ def allWidths : List Width := List.finRange 17
 /-- The native fixed-width provider selected by an SP1-supported width. -/
 def circuitFor (width : Width) : GeneralFormalCircuit (ZMod p) Inputs unit :=
   circuit width.val (two_pow_lt (Nat.le_of_lt_succ width.isLt))
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Every supported width uses bit constraints, with no static lookup dependency. -/
+@[circuit_norm] theorem main_lookups (n : ℕ) (bound : 2 ^ n < p)
+    (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main n bound input).operations offset).lookups = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 end SP1Clean.RangeChip

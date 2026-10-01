@@ -251,4 +251,11 @@ def circuitNamed (memory : ByteMemory) (tableName : String) : GeneralFormalCircu
 /-- Source-memory specialization of the named fixed word read. -/
 abbrev circuit (memory : ByteMemory) := circuitNamed (p := p) memory "sp1.native.initial_memory"
 
+/-- A word read retains all eight byte lookups, including their repeated table key. -/
+@[circuit_norm] theorem main_lookupNames (memory : ByteMemory)
+    (input : Var Inputs (ZMod p)) (name : String) (offset : ℕ) :
+    ((main memory input name).operations offset).lookups.map (·.table.name) = List.replicate 8 name := by
+  simp [main, InitialMemoryLookup.circuitNamed, AddOperation.circuit, AddOperation.main,
+    circuit_norm]
+
 end SP1Clean.InitialMemoryRead

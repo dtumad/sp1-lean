@@ -1,3 +1,4 @@
+import ToClean.Air.ComponentOutput
 import SP1Clean.Soundness.ChipRegistry
 import SP1Clean.Soundness.TypedInteractions
 import Clean.Air.FlatComponent
@@ -33,6 +34,14 @@ noncomputable def decodeRow (chip : SupportedChip p) (data : ProverData (ZMod p)
     { kind := chip.kind
       inputs := chip.table.rowInput env
       cols := chip.table.rowOutput env }
+
+/-- Changing canonical data does not change a row decoded from the same committed cells. -/
+theorem decodeRow_setData (chip : SupportedChip p) (data data' : ProverData (ZMod p))
+    (row : Array (ZMod p)) : chip.decodeRow data row = chip.decodeRow data' row := by
+  have output := Component.rowOutput_congr chip.table
+    (env := Environment.fromArray row data) (env' := Environment.fromArray row data') rfl
+  simp only [decodeRow, output]
+  rfl
 
 /-- Decode every physical row of one chip table. -/
 noncomputable def decodeTable (chip : SupportedChip p) (data : ProverData (ZMod p))
@@ -92,6 +101,11 @@ def environment (row : DecodedInstructionRow p) (data : ProverData (ZMod p)) :
 noncomputable def toChipRow (row : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) : ChipRow p :=
   row.chip.decodeRow data row.physical
+
+/-- The semantic row retains its input and output values across data environments. -/
+theorem toChipRow_setData (row : DecodedInstructionRow p) (data data' : ProverData (ZMod p)) :
+    row.toChipRow data = row.toChipRow data' :=
+  row.chip.decodeRow_setData data data' row.physical
 
 /-- The exact evaluated interactions of this physical row on a typed channel. -/
 noncomputable def interactionsWith {Message : TypeMap} [ProvableType Message]

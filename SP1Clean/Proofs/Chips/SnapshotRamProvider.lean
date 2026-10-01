@@ -208,4 +208,12 @@ theorem populate?_isSome_iff (snapshot : MemorySnapshot) (address : ℕ) :
     rintro ⟨lower, _, aligned⟩
     exact invalid ⟨lower, aligned⟩
 
+/-- RAM initialization authenticates each of its eight source bytes at the memory key. -/
+@[circuit_norm] theorem main_lookupNames (snapshot : MemorySnapshot)
+    (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main snapshot input).operations offset).lookups.map (·.table.name) =
+      List.replicate 8 "sp1.native.initial_memory" := by
+  simp [main, InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed,
+    AddressOperation.circuit, circuit_norm]
+
 end SP1Clean.SnapshotRamProvider

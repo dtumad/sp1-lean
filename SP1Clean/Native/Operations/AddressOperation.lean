@@ -1,3 +1,4 @@
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.EvalVec
 import SP1Clean.Math.Word
@@ -406,5 +407,10 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Circuits.Types.AddressOperati
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
     circuit.localLength x = 3 + 1 := rfl
+
+/-- Address arithmetic uses assertions and byte-channel checks, with no lookup tables. -/
+@[circuit_norm] theorem main_lookups (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups = [] := by
+  simp [main, AddrAddOperation.circuit, AddrAddOperation.main, Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.AddressOperation

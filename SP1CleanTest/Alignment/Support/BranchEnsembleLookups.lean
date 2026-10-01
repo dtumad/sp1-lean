@@ -1,3 +1,4 @@
+import ToClean.Gadgets.LookupProjection
 import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
 import ToClean.Air.EnsembleCheck
 import SP1CleanTest.Alignment.Support.BranchEnsembleVerifierLookups
@@ -47,10 +48,6 @@ def fixedFor (target : MemorySnapshot) (index : Fin 90) : List (RawTable Fp) :=
   (componentLookupIndices[index.val]'(by change index.val < 90; exact index.isLt)).map fun table =>
     ((fixed target)[table.val]'(by change table.val < 10; exact table.isLt)).table
 
-/-- Bit decompositions introduce assertions and witnesses, with no static lookup. -/
-private theorem bits_none (n offset : ℕ) (input : Expression Fp) :
-    ((Gadgets.ToBits.main n input).operations offset).lookups = [] := by
-  simp [Gadgets.ToBits.main, circuit_norm, Gadgets.Equality.main, Operations.lookups]
 attribute [local circuit_norm]
   Gadgets.And.And8.circuit
   Gadgets.And.And8.main
@@ -327,7 +324,7 @@ attribute [local circuit_norm] List.append_eq Component.rowOperations
   GeneralFormalCircuit.toSubcircuit_lookups FormalAssertion.toSubcircuit_toFlat
   GeneralFormalCircuit.WithHint.toSubcircuit_lookups FormalCircuit.toSubcircuit_lookups
   Operations.lookups_toFlat Operations.lookups Operations.toNested_toFlat FlatOperation.lookups
-  Gadgets.ToBits.rangeCheck Gadgets.ToBits.toBits bits_none
+  Gadgets.ToBits.rangeCheck Gadgets.ToBits.toBits
   fixedFor componentLookupIndices fixed xorFixed FiniteLookup.ofStatic
   InitialMemoryLookup.circuitNamed InitialMemoryRead.circuitNamed
   OrderedFinalProvider.registerCircuit OrderedFinalProvider.ramCircuit

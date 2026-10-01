@@ -329,6 +329,7 @@ import SP1Clean.Soundness.LocalCoreBoundaries
 import SP1Clean.Soundness.LocalCoreChannels
 import SP1Clean.Soundness.LocalCoreDecode
 import SP1Clean.Soundness.LocalCoreEnsemble
+import SP1Clean.Soundness.LocalCoreLookups
 import SP1Clean.Soundness.LocalCoreEventUniqueness
 import SP1Clean.Soundness.LocalCoreExit
 import SP1Clean.Soundness.LocalCoreFinalBoundary

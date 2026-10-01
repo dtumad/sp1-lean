@@ -1,3 +1,4 @@
+import ToClean.Gadgets.LookupProjection
 import SP1Clean.Model.Channels
 import SP1Clean.Math.Bitwise
 import Clean.Circuit.Basic
@@ -97,6 +98,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact h_assumptions
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 end U8Range
 
@@ -204,6 +210,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     · rw [h_env]; split <;> simp [IsBool]
     · rw [h_env]; exact byte_msb_range h_assumptions
 
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+
 end MSB
 
 /-! ## ops 0/1/2 — byte AND/OR/XOR: push `⟨op, r, b, c⟩`, `r` = the per-byte bitwise result
@@ -264,6 +275,12 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact ⟨h_assumptions.1, h_assumptions.2, h_assumptions⟩
 
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.And.And8.circuit, Gadgets.And.And8.main, circuit_norm]
+  rfl
+
 end AndByte
 
 namespace OrByte
@@ -313,6 +330,12 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact ⟨h_assumptions.1, h_assumptions.2, h_assumptions⟩
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.Or.Or8.circuit, Gadgets.Or.Or8.main, circuit_norm]
+  rfl
 
 end OrByte
 
@@ -364,6 +387,12 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     have hxlt : input_b.val ^^^ input_c.val < 256 := Nat.xor_lt_two_pow (n := 8) hb hc
     refine ⟨hb, hc, hb, hc, ?_⟩
     rw [h_env, ZMod.val_natCast_of_lt (by have := Fact.out (p := 2 ^ 17 < p); omega)]
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+  rfl
 
 end XorByte
 
@@ -478,6 +507,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     refine ⟨h_assumptions.1, h_assumptions.2, ?_, ?_⟩
     · rw [h_env]; split <;> simp [IsBool]
     · rw [h_env]; exact byte_ltu_range h_assumptions.1 h_assumptions.2
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 end Ltu
 

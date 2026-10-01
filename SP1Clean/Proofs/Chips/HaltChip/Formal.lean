@@ -1,3 +1,5 @@
+import ToClean.Circuit.SubcircuitProjection
+import Clean.Air.FlatComponent
 import SP1Clean.Native.Chips.HaltChip.Defs
 import Clean.Utils.Tactics
 
@@ -340,5 +342,13 @@ theorem interactionsWith_exit_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
       [ (exitChannel.pushedIf input.is_real (exitMsg input)).toRaw,
         (exitChannel.pushedIf (1 - input.is_real) (exitPaddingMsg (p := p))).toRaw ]⟩
     (by simp [circuit, expose])
+
+/-- Halt rows use channels for their cross-table checks, with no Clean lookup operations. -/
+theorem lookups_empty :
+    ({ circuit := circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk]
+  simp [circuit, main, Readers.CPUState.circuit, Readers.CPUState.main,
+    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main, circuit_norm]
 
 end SP1Clean.HaltChip

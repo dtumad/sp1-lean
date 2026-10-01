@@ -1,3 +1,4 @@
+import ToClean.Gadgets.LookupProjection
 import SP1Clean.Math.Word
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -85,5 +86,10 @@ def circuit : FormalAssertion (ZMod p) Word :=
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Word (ZMod p)) :
     circuit.localLength x = 64 := rfl
+
+/-- Limb bounds use bit decompositions and introduce no lookup keys. -/
+@[circuit_norm] theorem main_lookups (input : Var Word (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 end SP1Clean.WordRangeCheck

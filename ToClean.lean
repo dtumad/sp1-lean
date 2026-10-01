@@ -17,6 +17,7 @@ public import ToClean.Circuit.IteDecide
 public import ToClean.Circuit.WitgenShare
 public import ToClean.Circuit.InteractionRecovery
 public import ToClean.Circuit.EmittedInteraction
+public import ToClean.Gadgets.LookupProjection
 public import ToClean.Gadgets.ComputableWitnesses
 public import ToClean.Air.ChannelRegistry
 public import ToClean.Air.EnsembleBuild
