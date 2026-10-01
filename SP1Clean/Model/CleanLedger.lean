@@ -40,6 +40,25 @@ noncomputable def tableRustOrientedAccesses (table : Table (ZMod p)) (data : Pro
 def tablesCleanAccesses (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) : LookupAccessList :=
   tables.flatMap (tableCleanAccesses · data)
 
+/-- Literal interaction values read row cells alone; semantic channel predicates are separate. -/
+theorem tableCleanAccesses_setData (table : Table (ZMod p))
+    (data data' : ProverData (ZMod p)) :
+    tableCleanAccesses table data = tableCleanAccesses table data' := by
+  apply congrArg (List.map Interaction.toAccess)
+  unfold Table.interactions
+  apply List.flatMap_congr
+  intro row _
+  exact Operations.interactionValues_congr (env := Environment.fromArray row data)
+    (env' := Environment.fromArray row data') rfl
+
+/-- Changing evaluation data preserves every occurrence in a list of physical table ledgers. -/
+theorem tablesCleanAccesses_setData (tables : List (Table (ZMod p)))
+    (data data' : ProverData (ZMod p)) :
+    tablesCleanAccesses tables data = tablesCleanAccesses tables data' := by
+  apply List.flatMap_congr
+  intro table _
+  exact tableCleanAccesses_setData table data data'
+
 @[simp] theorem tablesCleanAccesses_append (left right : List (Table (ZMod p))) (data : ProverData (ZMod p)) :
     tablesCleanAccesses (left ++ right) data =
       tablesCleanAccesses left data ++ tablesCleanAccesses right data := by

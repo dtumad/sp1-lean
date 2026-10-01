@@ -2,55 +2,21 @@ import SP1Clean.Model.CleanLedger
 import SP1Clean.Proofs.Completeness.Assembly
 import SP1Clean.Proofs.Completeness.ProviderTables
 
-/-! # The provider closure: recounting Byte/Range/Program demand from the consumers
+/-! # Recounting Byte, Range and Program demand
 
-`SupportedCoreTraceWitness` takes its provider occurrence lists through the provider registry, and
-`Soundness/AIRCompleteness.lean`'s `Balanced` is a *hypothesis*: the assembled witness satisfies
-the ensemble's constraint system, but nothing derives that its channels cancel. Every use so far
-discharges balance by compiled evaluation on a fully concrete shard — which is only available in the
-test library, and is why `SP1CleanTest/Alignment/Audit/ActiveTraceNonVacuity.lean` spends roughly five hundred
-lines on ledger plumbing for a single `JAL x0, 0` row and does not generalise to a symbolic trace.
+The consumer ledger combines the actual public verifier with physical tables outside the
+preprocessed provider window. The 24 excluded tables are the six Byte providers, seventeen
+Range widths and Program. Recounting this ledger cannot depend on those providers' multiplicities.
 
-This module is the first half of closing that gap. It does not invent an algorithm: the exact→native
-transport already recounts provider multiplicities from a deliberately provider-free consumer ledger
-and proves the result balances (`Faithful/Transport/PreprocessedProviders.lean`). What it recounts
-over is `CoreAIR.Current.Row`, the extracted exact AIR. The same recount applies verbatim to a
-`Table.build`-over-events trace, and that is what is defined here.
+`LookupAccessList.providerRecount` supplies the shared recount algorithm. Ledger projection keeps
+all occurrences and uses Clean's interaction signs; the row lemmas below recover natural keys
+and integer multiplicities under explicit range/count bounds. Evaluation uses canonical data,
+while the table builders retain their separate generation inputs.
 
-## Why no per-chip interaction list is needed
-
-The obvious shape for "what do the consumers demand" is a symbolic per-chip list, and the tree has a
-partial one (`exposedByteInteractions` and friends). It is not what this needs, and it would be the
-expensive way to get it — for eight of the twenty-five chips those byte pulls descend from the
-`CPUState` reader and the arithmetic operation subcircuits, so exposing them means extending each
-chip's `exposedChannels_eq` lawfulness proof through those subcircuits.
-
-`Faithful/Transport/Table.lean`'s `tableCleanAccesses_build` needs none of it. It folds
-`component.operations.interactions` — every channel at once, and the *computable* `.interactions`
-rather than the `noncomputable` per-channel `.interactionsWith` projection — into a
-`LookupAccessList` whose entries already carry their `(kind, table, entry)` key. Demand is then a
-question about that list, not about any chip.
-
-## The acyclicity condition, and why the skeleton is defined by position
-
-A recount is only well-founded if the providers being recounted are absent from the ledger they
-recount against; otherwise a provider's multiplicity depends on itself. The twenty-four preprocessed
-providers (six Byte opcode tables, all seventeen fixed Range widths, and Program) occupy positions
-`25 .. 48` of `sp1Ensemble.tables`, so the skeleton is everything outside that window: the verifier
-row, the twenty-five instruction tables, MemoryInit/MemoryFinalize, and both bumps. That mirrors
-`Transport/CoreEnsemble.lean`'s `exactNativeSkeletonLedger` exactly.
-
-Taking the window positionally rather than re-listing the tables is deliberate — the skeleton and
-the assembled `tables` then cannot drift apart under a future reordering, and
-`skeletonTables_eq_split` below is the `rfl` that says so.
-
-**Scope.** This closes the *shape* of the demand side only. Byte (including Range) and Program are
-the channels a recount can close, because a provider supplies them unilaterally. State and Memory
-cannot be recounted: their balance is a clock telescope and a per-address touch chain respectively,
-and they remain explicit hypotheses — the same split the exact transport lives with
-(`ExactNativeGlobalContract.remainingIntegerBalance`).
+Only Byte and Program are closed by this recount. State, Memory, Exit and host-channel balance
+remain separate semantic obligations. This module establishes the demand/supply ledger equations,
+not a complete execution or the data-dependent program commitment.
 -/
-
 
 namespace SP1Clean.Soundness
 
@@ -62,40 +28,27 @@ namespace SupportedCoreTraceWitness
 
 variable (trace : SupportedCoreTraceWitness p)
 
-/-- The trace's own verifier row, as a built table. Definitionally the row Clean's ensemble
-verifier checks — `Assembly.lean`'s `witness_verifierTable` is the bridge. -/
-def skeletonVerifierTable : Table (ZMod p) :=
-  Table.build (verifierComponent (p := p)) [trace.publicValues] trace.data trace.hint
+/-- The actual public verifier's literal access ledger, including every assertion occurrence. -/
+def verifierLedger : LookupAccessList :=
+  ((sp1Ensemble (p := p)).verifierOperations.interactionValues
+    (Environment.fromInput trace.publicValues trace.data)).map Interaction.toAccess
 
-/-- Every table that *consumes* preprocessed provider keys, and no table that supplies them: the
-verifier row, the twenty-five instruction tables, and the four-table
-MemoryInit/MemoryFinalize/MemoryBump/StateBump tail. -/
+/-- The physical consumers outside the 24-table preprocessed provider window. The remaining
+provider tail includes MemoryInit/Finalize, both bumps, Halt and SyscallInstrs. -/
 def skeletonTables : List (Table (ZMod p)) :=
-  trace.skeletonVerifierTable ::
-    (trace.tables.take instructionTableCount ++
-      trace.tables.drop (instructionTableCount + preprocessedProviderTableCount))
+  trace.tables.take instructionTableCount ++
+    trace.tables.drop (instructionTableCount + preprocessedProviderTableCount)
 
-/-- The skeleton really is the assembled table list with the preprocessed provider window removed:
-the same `tables`, split at the same two positions. -/
-theorem skeletonTables_eq_split :
-    trace.skeletonTables =
-      trace.skeletonVerifierTable ::
-        (trace.tables.take instructionTableCount ++
-          trace.tables.drop (instructionTableCount + preprocessedProviderTableCount)) :=
-  rfl
-
-/-- The literal Clean access ledger of the consumer side. Preprocessed providers are absent by
-construction, so a multiplicity recounted against this cannot depend on itself. -/
+/-- Public verifier demand followed by physical consumer demand. Preprocessed providers are
+absent, so their recounted multiplicities cannot depend on their own ledger contributions. -/
 def skeletonLedger : LookupAccessList :=
-  tablesCleanAccesses trace.skeletonTables
+  trace.verifierLedger ++ tablesCleanAccesses trace.skeletonTables trace.data
 
 @[simp] theorem skeletonLedger_eq :
     trace.skeletonLedger =
-      tableCleanAccesses trace.skeletonVerifierTable ++
-        tablesCleanAccesses
-          (trace.tables.take instructionTableCount ++
-            trace.tables.drop (instructionTableCount + preprocessedProviderTableCount)) := by
-  simp only [skeletonLedger, skeletonTables, tablesCleanAccesses, List.flatMap_cons]
+      trace.verifierLedger ++ tablesCleanAccesses
+        (trace.tables.take instructionTableCount ++
+          trace.tables.drop (instructionTableCount + preprocessedProviderTableCount)) trace.data := rfl
 
 /-- How many times the shard's consumers ask for one provider key.
 
@@ -181,26 +134,26 @@ theorem preprocessedProviderTables_eq :
     trace.preprocessedProviderTables =
       [Table.build ByteChip.U8Range.component
           (ByteChip.U8Range.traceInputs (trace.providerOccurrences (.byte .u8Range)))
-            trace.data trace.hint,
+            trace.generationData trace.hint,
         Table.build ByteChip.MSB.component
           (ByteChip.MSB.traceInputs (trace.providerOccurrences (.byte .msb)))
-            trace.data trace.hint,
+            trace.generationData trace.hint,
         Table.build ByteChip.AndByte.component
           (ByteChip.AndByte.traceInputs (trace.providerOccurrences (.byte .andByte)))
-            trace.data trace.hint,
+            trace.generationData trace.hint,
         Table.build ByteChip.OrByte.component
           (ByteChip.OrByte.traceInputs (trace.providerOccurrences (.byte .orByte)))
-            trace.data trace.hint,
+            trace.generationData trace.hint,
         Table.build ByteChip.XorByte.component
           (ByteChip.XorByte.traceInputs (trace.providerOccurrences (.byte .xorByte)))
-            trace.data trace.hint,
+            trace.generationData trace.hint,
         Table.build ByteChip.Ltu.component
           (ByteChip.Ltu.traceInputs (trace.providerOccurrences (.byte .ltu)))
-            trace.data trace.hint] ++
+            trace.generationData trace.hint] ++
       trace.rangeTables ++
       [Table.build ProgramProviderChip.component
         (ProgramProviderChip.traceInputs (trace.providerOccurrences .program))
-          trace.data trace.hint] := rfl
+          trace.generationData trace.hint] := rfl
 
 /--
 **The capacity contract a trace generator owes the ledger.**
@@ -240,7 +193,8 @@ def providerLedger : LookupAccessList :=
 
 Every step is one of the eight Tier-2 lemmas; nothing here evaluates a row. -/
 theorem preprocessedProviderLedger_eq (hwf : trace.WellFormed) (hfit : trace.CountsFit) :
-    tablesCleanAccesses trace.preprocessedProviderTables = trace.providerLedger := by
+    tablesCleanAccesses trace.preprocessedProviderTables trace.data = trace.providerLedger := by
+  rw [tablesCleanAccesses_setData _ trace.data trace.generationData]
   rw [preprocessedProviderTables_eq]
   simp only [tablesCleanAccesses, List.flatMap_cons, List.flatMap_nil, List.flatMap_append,
     List.append_nil, rangeTables,

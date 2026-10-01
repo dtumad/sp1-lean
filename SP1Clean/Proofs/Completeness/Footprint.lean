@@ -44,15 +44,17 @@ def Fits (footprint : NativeTraceFootprint) (characteristic : ℕ) : Prop :=
 
 /-- Measure the five legacy channels of the actual generated native witness. -/
 noncomputable def ofTrace (trace : SupportedCoreTraceWitness p) : NativeTraceFootprint where
-  state := (trace.witness.allTablesWitness.interactionsWith stateChannel.toRaw).length
-  byte := (trace.witness.allTablesWitness.interactionsWith byteChannel.toRaw).length
-  program := (trace.witness.allTablesWitness.interactionsWith programChannel.toRaw).length
-  memory := (trace.witness.allTablesWitness.interactionsWith memoryChannel.toRaw).length
-  exit := (trace.witness.allTablesWitness.interactionsWith exitChannel.toRaw).length
+  state := (trace.witness.interactionsWith stateChannel.toRaw).length
+  byte := (trace.witness.interactionsWith byteChannel.toRaw).length
+  program := (trace.witness.interactionsWith programChannel.toRaw).length
+  memory := (trace.witness.interactionsWith memoryChannel.toRaw).length
+  exit := (trace.witness.interactionsWith exitChannel.toRaw).length
 
 /-- The generic all-channel capacity implies the retained five-channel compatibility view. -/
 theorem fits_of_channelCapacity (trace : SupportedCoreTraceWitness p)
     (capacity : trace.witness.ChannelCapacity p) : (ofTrace trace).Fits p := by
+  simp only [ofTrace, Fits]
+  generalize trace.witness = witness at capacity ⊢
   have bounds := (Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mp capacity
   exact ⟨bounds stateChannel.toRaw (by simp [sp1Ensemble_channels]),
     bounds byteChannel.toRaw (by simp [sp1Ensemble_channels]),

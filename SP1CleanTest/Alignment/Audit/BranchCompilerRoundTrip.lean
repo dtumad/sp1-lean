@@ -1,6 +1,8 @@
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Alignment.Chips.BranchChip.Bridge
-import SP1CleanTest.Core.NonVacuityReal
+import SP1Clean.Model.SP1Field
+import Clean.Air.WitnessGeneration
+import ToClean.Air.EnsembleBuild
 
 /-! # A decoded branch, its official Sail step, and its compiler-built local circuit
 
@@ -141,15 +143,20 @@ def table : Table (ZMod SP1Prime) :=
   Table.buildHinted BranchChip.component (BranchChip.traceInputs [event] 0) data
 
 /-- Completeness checks the real local table. It does not assert ensemble channel balance. -/
-theorem table_constraints : table.Constraints :=
+theorem table_constraints : table.Constraints data :=
   BranchChip.traceTable_constraints [event] 0 data (by simpa using event_valid)
 
 /-- The accepted table contains exactly the generated non-padding row. -/
 theorem table_one_real_row : table.table = [row] ∧
     (BranchChip.component.rowInput env).is_real = 1 := by native_decide
 
-/-- Executable check of every flattened assertion, also rejecting unchecked static lookups. -/
-def flatCheck : Bool := NonVacuityRealTests.constraintsCheck env BranchChip.component.operations
+/-- Clean's executable constraint checker on the single physical table. It evaluates canonical
+data and rejects unchecked legacy lookups; no channel-balance claim is made. -/
+def flatCheck : Bool :=
+  WitnessGeneration.constraintsHold <| EnsembleWitness.ofTables
+    ({ tables := [BranchChip.component], unique_names := by simp, channels := [] } :
+      Ensemble (ZMod SP1Prime) unit)
+    [table] () rfl
 
 /-- The independent executable whole-row constraint check accepts. -/
 theorem flat_check : flatCheck = true := by native_decide
@@ -207,7 +214,7 @@ theorem joined (policy : HostPolicy) :
     compileInstructionEvent? view AccessFrontier.initial 1 = some compiled ∧
     compiled.routed = ⟨.branch, event⟩ ∧ event.branchNextPc = 69628 ∧
     sndPcOf (SP1Clean.Soundness.stateAccess rowView) = 69628#64 ∧
-    table.Constraints ∧ table.table = [row] ∧
+    table.Constraints data ∧ table.table = [row] ∧
     (BranchChip.component.rowInput env).is_real = 1 ∧ flatCheck = true :=
   ⟨official_try_step, execution_step policy, target_pc, projected target, compiled_eq,
     compiled_routed, event_target.2.2, row_target, table_constraints, table_one_real_row.1,
