@@ -1,37 +1,21 @@
-import SP1Clean.Composition.Chips
-import SP1Clean.Soundness.SP1Ensemble
+import SP1Clean.Composition.Table
+import SP1Clean.Faithful.SupportedMachine
 
-/-! # Transported tables *are* the ensemble's instruction tables
+/-! # Instruction-table transport in canonical registry order
 
-The step that inverts the external PR #110 report's Finding 1 measurement. `Transport/Chips.lean`
-turns each chip's extracted table into a valid native `Table`; this file shows the twenty-five of
-them, in extraction order, are positionally the first twenty-five components of `sp1Ensemble` — the
-same list `Soundness/AIR.lean`'s capstone quantifies over.
+Each of the 25 retained whole-chip faithfulness proofs supplies constraints and active accesses for
+its transported physical table. The table list matches the native instruction registry in order.
+The generic transport theorems are used directly; there is no separate per-chip wrapper layer.
 
-That identity is one `rfl`: `transportTable` records the component it was handed, and
-`sp1Tables` is `supportedChips.map (·.table)`, which is the same `⟨circuit⟩` wrapper. So the
-faithfulness anchors and the soundness capstone are no longer two families that merely share an
-endpoint — a module importing both now proves something about both.
-
-## Scope: the instruction segment
-
-This module deliberately stops at the twenty-five instruction chips.  Six Byte tables, all
-seventeen fixed-width Range tables, Program ROM, two memory-boundary tables, and two W3 bump tables
-need redistribution rather than this row-for-row `ChipFaithful` transport;
-`ProviderSegment.lean` constructs that 28-table tail and `CoreEnsemble.lean` appends it here.  The
-active-access theorem below likewise names only this instruction segment. Native consumer recounting
-later derives Byte/Program balance; State/Memory balance and semantic boundary binding remain explicit
-in `CoreArtifact.lean`'s global contract. No declaration here claims a full exact-cluster ledger
-equality.
+These are migration proofs for the instruction segment. Provider redistribution and full
+State/Memory balance remain separate obligations; these theorems make no assertion about the
+complete exact Core cluster's ledger.
 -/
 
 set_option autoImplicit false
 
 namespace SP1Clean.Composition
 
--- The faithfulness vocabulary (`ChipOracle`, `ChipFaithful`, `ChipRowCodec`,
--- `nativeAccesses`) is at the stratum below; this namespace no longer encloses it since the
--- 2026-08 move out of `Faithful/Transport/`.
 open SP1Clean.Faithful
 
 open Circuit
@@ -322,34 +306,34 @@ proofs and nothing new.
 theorem transportedFor_constraints (valid : rows.Valid) (id : InstructionChipId) :
     (rows.transportedFor data id).Constraints := by
   cases id with
-  | add => exact addChip_transportTable_constraints _ data (valid.forId .add)
-  | addi => exact addiChip_transportTable_constraints _ data (valid.forId .addi)
-  | addw => exact addwChip_transportTable_constraints _ data (valid.forId .addw)
-  | sub => exact subChip_transportTable_constraints _ data (valid.forId .sub)
-  | subw => exact subwChip_transportTable_constraints _ data (valid.forId .subw)
-  | bitwise => exact bitwiseChip_transportTable_constraints _ data (valid.forId .bitwise)
-  | lt => exact ltChip_transportTable_constraints _ data (valid.forId .lt)
-  | shiftLeft => exact shiftLeftChip_transportTable_constraints _ data (valid.forId .shiftLeft)
+  | add => exact transportTable_constraints addChip_faithful _ data (valid.forId .add)
+  | addi => exact transportTable_constraints addiChip_faithful _ data (valid.forId .addi)
+  | addw => exact transportTable_constraints addwChip_faithful _ data (valid.forId .addw)
+  | sub => exact transportTable_constraints subChip_faithful _ data (valid.forId .sub)
+  | subw => exact transportTable_constraints subwChip_faithful _ data (valid.forId .subw)
+  | bitwise => exact transportTable_constraints bitwiseChip_faithful _ data (valid.forId .bitwise)
+  | lt => exact transportTable_constraints ltChip_faithful _ data (valid.forId .lt)
+  | shiftLeft => exact transportTable_constraints shiftLeftChip_faithful _ data (valid.forId .shiftLeft)
   | shiftRight =>
-      exact shiftRightChip_transportTable_constraints _ data (valid.forId .shiftRight)
-  | jal => exact jalChip_transportTable_constraints _ data (valid.forId .jal)
-  | jalr => exact jalrChip_transportTable_constraints _ data (valid.forId .jalr)
-  | branch => exact branchChip_transportTable_constraints _ data (valid.forId .branch)
-  | uType => exact uTypeChip_transportTable_constraints _ data (valid.forId .uType)
-  | loadByte => exact loadByteChip_transportTable_constraints _ data (valid.forId .loadByte)
-  | loadHalf => exact loadHalfChip_transportTable_constraints _ data (valid.forId .loadHalf)
-  | loadWord => exact loadWordChip_transportTable_constraints _ data (valid.forId .loadWord)
+      exact transportTable_constraints shiftRightChip_faithful _ data (valid.forId .shiftRight)
+  | jal => exact transportTable_constraints jalChip_faithful _ data (valid.forId .jal)
+  | jalr => exact transportTable_constraints jalrChip_faithful _ data (valid.forId .jalr)
+  | branch => exact transportTable_constraints branchChip_faithful _ data (valid.forId .branch)
+  | uType => exact transportTable_constraints uTypeChip_faithful _ data (valid.forId .uType)
+  | loadByte => exact transportTable_constraints loadByteChip_faithful _ data (valid.forId .loadByte)
+  | loadHalf => exact transportTable_constraints loadHalfChip_faithful _ data (valid.forId .loadHalf)
+  | loadWord => exact transportTable_constraints loadWordChip_faithful _ data (valid.forId .loadWord)
   | loadDouble =>
-      exact loadDoubleChip_transportTable_constraints _ data (valid.forId .loadDouble)
-  | loadX0 => exact loadX0Chip_transportTable_constraints _ data (valid.forId .loadX0)
-  | storeByte => exact storeByteChip_transportTable_constraints _ data (valid.forId .storeByte)
-  | storeHalf => exact storeHalfChip_transportTable_constraints _ data (valid.forId .storeHalf)
-  | storeWord => exact storeWordChip_transportTable_constraints _ data (valid.forId .storeWord)
+      exact transportTable_constraints loadDoubleChip_faithful _ data (valid.forId .loadDouble)
+  | loadX0 => exact transportTable_constraints loadX0Chip_faithful _ data (valid.forId .loadX0)
+  | storeByte => exact transportTable_constraints storeByteChip_faithful _ data (valid.forId .storeByte)
+  | storeHalf => exact transportTable_constraints storeHalfChip_faithful _ data (valid.forId .storeHalf)
+  | storeWord => exact transportTable_constraints storeWordChip_faithful _ data (valid.forId .storeWord)
   | storeDouble =>
-      exact storeDoubleChip_transportTable_constraints _ data (valid.forId .storeDouble)
-  | mul => exact mulChip_transportTable_constraints _ data (valid.forId .mul)
-  | divRem => exact divRemChip_transportTable_constraints _ data (valid.forId .divRem)
-  | aluX0 => exact aluX0Chip_transportTable_constraints _ data (valid.forId .aluX0)
+      exact transportTable_constraints storeDoubleChip_faithful _ data (valid.forId .storeDouble)
+  | mul => exact transportTable_constraints mulChip_faithful _ data (valid.forId .mul)
+  | divRem => exact transportTable_constraints divRemChip_faithful _ data (valid.forId .divRem)
+  | aluX0 => exact transportTable_constraints aluX0Chip_faithful _ data (valid.forId .aluX0)
 
 theorem transported_constraints (valid : rows.Valid) :
     ∀ table ∈ transported rows data, table.Constraints := by

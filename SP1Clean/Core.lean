@@ -493,7 +493,6 @@ import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
 import SP1Clean.Proofs.Chips.MemoryFinalizeChip
 import SP1Clean.Proofs.Chips.MemoryProvider
 import SP1Clean.Proofs.Chips.MemoryProviderChip
-import SP1Clean.Proofs.Chips.MemoryProviderEnsemble
 import SP1Clean.Proofs.Chips.MulChip.Complete
 import SP1Clean.Proofs.Chips.MulChip.Formal
 import SP1Clean.Proofs.Chips.MulChip.Structural
@@ -503,7 +502,6 @@ import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1Clean.Proofs.Chips.OrderedMemoryProvider
 import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Proofs.Chips.ProgramProviderChip
-import SP1Clean.Proofs.Chips.ProgramProviderEnsemble
 import SP1Clean.Proofs.Chips.ProtectedStore
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Complete
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
