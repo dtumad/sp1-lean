@@ -29,7 +29,7 @@ on:
         type: string
         default: ""
       restore:
-        description: "none = cold; main-lineage = the newest main entry (today's prefix fallback); key = restore_key exactly"
+        description: "none = cold; main-lineage = nearest cached main ancestor; key = restore_key exactly"
         type: choice
         options: [none, main-lineage, key]
         default: none
@@ -47,11 +47,18 @@ concurrency:
   group: exp-${{ github.run_id }}
 
 env:
-  SP1_CACHE_VERSION: v1
+  SP1_CACHE_VERSION: v2
   CACHE_PATHS: |
     .lake/build
     .lake/packages/*
     !.lake/packages/mathlib
+    !.lake/packages/batteries
+    !.lake/packages/aesop
+    !.lake/packages/Qq
+    !.lake/packages/proofwidgets
+    !.lake/packages/importGraph
+    !.lake/packages/LeanSearchClient
+    !.lake/packages/plausible
 
 jobs:
   experiment:
@@ -90,15 +97,24 @@ jobs:
           prefix="sp1-${SP1_CACHE_VERSION}-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}"
           echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
           echo "save=sp1-exp-${{ inputs.label }}-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
-      - name: Restore (main lineage — the production fallback order)
+      - name: Pick the main lineage entry
+        id: pick
+        if: inputs.restore == 'main-lineage'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git rev-list --first-parent -n 30 HEAD > lineage.txt
+          python3 scripts/ci/cache_pick.py --mode main --prefix "${{ steps.key.outputs.prefix }}" \
+            --lineage lineage.txt >> "$GITHUB_OUTPUT"
+      - name: Restore (main lineage — the production selection)
         if: inputs.restore == 'main-lineage'
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.CACHE_PATHS }}
-          key: ${{ steps.key.outputs.prefix }}-none
+          key: ${{ steps.pick.outputs.pick || format('{0}-none', steps.key.outputs.prefix) }}
           restore-keys: |
-            ${{ steps.key.outputs.prefix }}-align-
-            ${{ steps.key.outputs.prefix }}-
+            ${{ steps.pick.outputs.fallback1 }}
+            ${{ steps.pick.outputs.fallback2 }}
       - name: Restore (exact key)
         if: inputs.restore == 'key'
         uses: actions/cache/restore@v4

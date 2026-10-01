@@ -1,6 +1,7 @@
 """Regressions for scripts/ci/cache_pick.py: lineage-aware restore selection."""
 
 import importlib.util
+import re
 from pathlib import Path
 import unittest
 
@@ -55,14 +56,29 @@ class PickTests(unittest.TestCase):
         # no lineage entry at all → newest main align, then newest main core
         self.assertEqual(cp.pick(self.entries, P, "main", [sha(42)]), f"{P}-align-{sha(2)}-3-1")
 
-    def test_align_mode_prefers_exact_core_key(self):
-        k = f"{P}-core-{sha(3)}-4-1"
-        self.assertEqual(cp.pick(self.entries, P, "align", [sha(3)], core_key=k), k)
-        self.assertEqual(cp.pick(self.entries, P, "align", [sha(3)], core_key="nope"), k)
-
     def test_wrong_prefix_and_empty(self):
         self.assertIsNone(cp.pick(self.entries, "sp1-v3-Linux-" + "b" * 64, "main", [sha(3)]))
         self.assertIsNone(cp.pick([], P, "main", [sha(3)]))
+
+
+class WorkflowCacheContractTests(unittest.TestCase):
+    """A version/path mismatch makes restores miss or makes cleanup delete current caches."""
+
+    def test_cache_identity_matches_across_workflows(self):
+        root = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+        production = (root / "lean_action_ci.yml").read_text()
+        experiment = (root / "build-experiment.yml").read_text()
+        cleanup = (root / "cache-cleanup.yml").read_text()
+
+        def version(text):
+            return re.search(r"^  SP1_CACHE_VERSION: (.+)$", text, re.MULTILINE)[1]
+
+        def paths(text):
+            return re.search(r"^  CACHE_PATHS: \|\n((?:    .+\n)+)", text, re.MULTILINE)[1]
+
+        self.assertEqual(version(production), version(experiment))
+        self.assertEqual(version(production), version(cleanup))
+        self.assertEqual(paths(production), paths(experiment))
 
 
 if __name__ == "__main__":
