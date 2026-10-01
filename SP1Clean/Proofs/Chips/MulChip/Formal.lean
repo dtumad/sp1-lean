@@ -416,7 +416,7 @@ def exposedProgramInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
 semantic contract; output is the native `Columns` row. Soundness and completeness are both proved
 above (the former 4.31-migration completeness seam is closed). -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.mul", main, elaborated,
     -- `programChannel` dropped (W11 flip — now pulled via `RTypeReader`, a guarantee not a requirement).
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
     requirementsChannelsLawful := requirementsChannelsLawful_main,

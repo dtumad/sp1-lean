@@ -386,7 +386,7 @@ private theorem main_exposedChannelsLawful (input : Var Inputs (ZMod p)) (offset
 output is the native `Columns` row struct. Soundness is proved (assembled from the two per-op
 `Soundness/<Op>.lean` files); completeness is proved above (the former deferred seam is closed). -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.shift_left", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

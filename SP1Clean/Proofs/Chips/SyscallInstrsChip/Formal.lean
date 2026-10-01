@@ -421,6 +421,7 @@ private theorem requirementsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ
 whose guarantee the row *requires* rather than supplies: the three register accesses pull a prior
 value the memory argument owns. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.syscall_instrs"
   main
   elaborated
   Assumptions := fun _ _ => True

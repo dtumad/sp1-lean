@@ -133,6 +133,7 @@ theorem opCPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (off
 /-- The Add chip row as a `GeneralFormalCircuit`: semantic contract, composing the
 witnessed gadget; output is the native `Columns` row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns where
+  name := "sp1.native.add"
   main
   elaborated
   Assumptions := Assumptions

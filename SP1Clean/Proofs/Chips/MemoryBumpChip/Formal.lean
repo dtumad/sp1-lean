@@ -115,6 +115,7 @@ theorem completeness :
 `Assumptions := True` (everything is proved in-circuit or received from the byte/memory pulls);
 `ProverAssumptions := Spec` (an all-zero padding row satisfies it). -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.memory_bump"
   main
   elaborated
   Assumptions := fun _ _ => True

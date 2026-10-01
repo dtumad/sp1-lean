@@ -86,6 +86,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
 two byte bounds; soundness derives them from the `rangeCheck` subcircuits and discharges the push's
 `ByteRowSpec` requirement via `byteRowSpec_u8range_pair`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.byte.u8_range"
   main
   Spec input _ _ := input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8
   ProverAssumptions input _ _ := input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8
@@ -174,6 +175,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 `Spec` exposes that result even when the row multiplicity is zero; soundness also discharges the
 push's `ByteRowSpec` requirement via `byteRowSpec_msb`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.msb"
   main
   Spec input output _ :=
     input.b.val < 2 ^ 8 ∧ output = if 128 ≤ input.b.val then 1 else 0
@@ -241,6 +243,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 /-- The `AND` provider returns and pushes `r = b AND c`; exposing `r` in `Spec` preserves the
 semantic result for zero-multiplicity rows as well. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.and"
   main
   Spec input output _ :=
     (input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) ∧
@@ -289,6 +292,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 /-- The `OR` provider returns and pushes `r = b OR c`; the result remains specified independently
 of the interaction multiplicity. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.or"
   main
   Spec input output _ :=
     (input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) ∧
@@ -339,6 +343,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 /-- The `XOR` provider returns and pushes `r = b XOR c`; the result is part of the semantic `Spec`
 even when no lookup demand is assigned to the row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.xor"
   main
   Spec input output _ :=
     (input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) ∧
@@ -445,6 +450,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 /-- The `LTU` provider returns and pushes the in-circuit-derived comparison bit.  The output
 equation is part of `Spec`, so downstream faithful transports do not inspect witness internals. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.ltu"
   main
   Spec input output _ :=
     (input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) ∧

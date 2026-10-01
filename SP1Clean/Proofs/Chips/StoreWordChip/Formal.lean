@@ -257,7 +257,7 @@ theorem opBPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (off
 
 /-- The `StoreWord` chip row as a `GeneralFormalCircuit`; output is the extracted `Columns`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.store_word", main, elaborated,
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,

@@ -170,6 +170,7 @@ def exposedMemoryInteractions (input : Var Inputs (ZMod p)) :
 `Assumptions := True` (everything is proved in-circuit or received from the buses);
 `ProverAssumptions := Spec` (an all-zero padding row satisfies it). -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.halt"
   main
   elaborated
   Assumptions := fun _ _ => True

@@ -389,7 +389,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   -- `byteChannel` dropped (W11 Phase 0c): the two off-gate byte pulls (`is_real`-gated U8 pair +
   -- `is_lb`-gated MSB) are discharged by the inline `is_real`/`is_lb` boolean gates in `main`; the
   -- residual buses are the readers'.
-  { main, elaborated,
+  { name := "sp1.native.load_byte", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     channelsWithRequirements :=

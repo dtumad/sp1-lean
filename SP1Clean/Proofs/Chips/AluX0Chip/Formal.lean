@@ -225,7 +225,7 @@ and advances state (the result discarded); output is the native `Columns` row. -
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   -- `byteChannel` dropped (W11 Phase 0c): the off-gate LTU byte-pull `Requirements` is discharged by the
   -- inline `is_real` boolean gate in `main`; the residual buses (state/memory/program) are the readers'.
-  { main, elaborated,
+  { name := "sp1.native.alu_x0", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

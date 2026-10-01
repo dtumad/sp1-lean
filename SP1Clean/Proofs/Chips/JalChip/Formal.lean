@@ -358,7 +358,7 @@ two witnessed `AddOperation` gadgets and the J-type reader; output is the native
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   -- `byteChannel` dropped (W11 Phase 0c): the off-gate alignment byte-pull `Requirements` is discharged by
   -- the inline `is_real` boolean gate in `main`; the residual buses are the readers'/add-ops'.
-  { main, elaborated,
+  { name := "sp1.native.jal", main, elaborated,
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,

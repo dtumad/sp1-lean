@@ -79,6 +79,7 @@ def main (n : ℕ) (hn : 2 ^ n < p) (input : Var Inputs (ZMod p)) : Circuit (ZMo
 range-checked `a < 2^n`. `Spec` is `a.val < 2^n`; soundness derives it from the `rangeCheck` subcircuit
 and discharges the push's `ByteRowSpec` requirement via `byteRowSpec_range`. -/
 def circuit (n : ℕ) (hn : 2 ^ n < p) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := s!"sp1.native.range.{n}"
   main := main n hn
   Spec input _ _ := input.a.val < 2 ^ n
   ProverAssumptions input _ _ := input.a.val < 2 ^ n

@@ -292,7 +292,7 @@ def exposedProgramInteractions (input : Var Inputs (ZMod p)) :
 /-- The U-type chip row as a `GeneralFormalCircuit`: the flag-gated `RV64.lui`/`RV64.auipc` semantics,
 composing the witnessed `AddOperation` gadget and the J-type reader; output is the native `Columns` row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.u_type", main, elaborated,
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,

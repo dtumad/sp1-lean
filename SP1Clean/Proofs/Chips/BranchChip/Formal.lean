@@ -212,7 +212,7 @@ private theorem main_exposedChannelsLawful
 
 /-- The exact pinned-SP1 Branch `GeneralFormalCircuit`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.branch", main, elaborated,
     channelsWithRequirements := [memoryChannel.toRaw],
     Assumptions := Assumptions,
     Spec := Spec,

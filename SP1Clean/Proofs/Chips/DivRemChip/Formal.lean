@@ -568,7 +568,7 @@ theorem requirementsChannelsLawful (input : Var Inputs (ZMod p)) (offset : ℕ) 
 the public reader/selection/eight-case contract. The disclosed whole-chip seams are
 `evidenceSoundness`, `completeness`, and the requirements-channel law below. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.div_rem", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

@@ -484,7 +484,7 @@ deferred seam is closed).
 The former 4M ceiling was ~100× over: every field here is a reference to an already-elaborated theorem,
 so the bundle clears ≤40000 against the plain default. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.shift_right", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

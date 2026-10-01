@@ -477,7 +477,7 @@ def exposedProgramInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
 composing the witnessed signed-compare gadget and the immediate-capable register reader; output is the
 native `Columns` row. Soundness/completeness are proven and axiom-clean. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.lt", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
