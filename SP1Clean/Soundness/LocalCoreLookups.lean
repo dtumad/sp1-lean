@@ -1,11 +1,13 @@
 import SP1Clean.Soundness.LocalCoreEnsemble
+import SP1Clean.Soundness.EnsembleLookups
 
-/-! # Static lookup dependencies of the local execution assembly
+/-! # Fixed lookup constraints in the local execution assembly
 
-The physical inventory's only lookup keys authenticate the source registers, source memory,
-program ROM and Clean's byte XOR table. This follows from circuit-owned metadata and the typed
-instruction registry, without importing Rust oracles. Individual projections retain repeated
-lookups; the subset theorem below is only a dependency bound for canonical-data transport.
+Source register/RAM lookups and the decoded ROM are fixed by the supplied snapshot and image;
+native provider lookups use Clean's fixed byte-XOR table. Their predicates ignore prover data.
+Local constraints therefore survive canonical-data changes when physical row cells are retained.
+This proof uses the actual lookup predicates, preserving every repeated RAM lookup, and adds no
+metadata-agreement or provider-validity premise. Channel guarantees remain separate obligations.
 -/
 
 namespace SP1Clean.Soundness.LocalCore
@@ -27,16 +29,6 @@ attribute [local circuit_norm]
   ByteChip.OrByte.circuit ByteChip.XorByte.circuit ByteChip.Ltu.circuit
   RangeChip.circuitFor RangeChip.circuit DecodedProgramProvider.circuit
 
-private theorem source_lookupNames (source : ExecutionSnapshot) (component : Component (ZMod p))
-    (member : component ∈ (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component)) :
-    component.operations.lookups.map (·.table.name) ⊆
-      ["sp1.native.source_registers", "sp1.native.initial_memory"] := by
-  simp only [SnapshotMemoryEnsemble.views_eq, List.map_cons, List.map_nil,
-    List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl <;>
-    simp [Component.lookups_eq, Component.rowOperations, circuit_norm,
-      MemorySnapshot.registerTable, StaticTable.ofRows]
-
 private theorem final_lookups (component : Component (ZMod p))
     (member : component ∈ FinalMemoryEnsemble.inventory.views.map (·.component)) :
     component.operations.lookups = [] := by
@@ -47,43 +39,67 @@ private theorem final_lookups (component : Component (ZMod p))
   rcases member with rfl | rfl | rfl <;>
     simp [Component.lookups_eq, Component.rowOperations, circuit_norm]
 
-private theorem provider_lookupNames (component : Component (ZMod p))
-    (member : component ∈ sp1ProviderTables.take 23 ++ sp1ProviderTables.drop 26) :
-    component.operations.lookups.map (·.table.name) ⊆ ["ByteXor"] := by
-  change component ∈
-    [{ circuit := ByteChip.U8Range.circuit }, { circuit := ByteChip.MSB.circuit },
-     { circuit := ByteChip.AndByte.circuit }, { circuit := ByteChip.OrByte.circuit },
-     { circuit := ByteChip.XorByte.circuit }, { circuit := ByteChip.Ltu.circuit }] ++
-    sp1RangeProviderTables ++
-    [{ circuit := MemoryBumpChip.circuit }, { circuit := StateBumpChip.circuit },
-     { circuit := HaltChip.circuit }, { circuit := SyscallInstrsChip.circuit }] at member
-  rcases List.mem_append.mp member with byteRange | system
-  · rcases List.mem_append.mp byteRange with byte | range
-    · simp only [List.mem_cons, List.not_mem_nil, or_false] at byte
-      rcases byte with rfl | rfl | rfl | rfl | rfl | rfl <;>
-        simp [Component.lookups_eq, Component.rowOperations, circuit_norm, Gadgets.Xor.ByteXorTable]
-    · obtain ⟨width, _, rfl⟩ := List.mem_map.mp range
-      simp [Component.lookups_eq, Component.rowOperations, circuit_norm]
-  · simp only [List.mem_cons, List.not_mem_nil, or_false] at system
-    rcases system with rfl | rfl | rfl | rfl
-    all_goals simp only [MemoryBumpChip.lookups_empty, StateBumpChip.lookups_empty,
-      HaltChip.lookups_empty, SyscallInstrsChip.lookups_empty, List.map_nil, List.nil_subset]
+private theorem source_constraints_setData (source : ExecutionSnapshot) (component : Component (ZMod p))
+    (member : component ∈ (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component))
+    {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
+    (checked : component.operations.ConstraintsHold (Environment.fromArray row data)) :
+    component.operations.ConstraintsHold (Environment.fromArray row data') := by
+  have eval_eq : Expression.eval (Environment.fromArray row data) =
+      Expression.eval (Environment.fromArray row data') :=
+    funext fun expression => Expression.eval_congr
+      (env := Environment.fromArray row data) (env' := Environment.fromArray row data') rfl expression
+  simp only [SnapshotMemoryEnsemble.views_eq, List.map_cons, List.map_nil,
+    List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl
+  all_goals
+    apply Operations.constraintsHold_congr (env := Environment.fromArray row data)
+      (env' := Environment.fromArray row data') rfl ?_ checked
+    intro lookup used
+    simp [Component.lookups_eq, Component.rowOperations, circuit_norm,
+      SnapshotRegisterProvider.main, SnapshotRamProvider.main,
+      InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed,
+      InitialMemoryRead.main, InitialMemoryLookup.circuitNamed, InitialMemoryLookup.main_lookups,
+      AddOperation.circuit, AddOperation.main,
+      AddressOperation.circuit] at used
+  all_goals rcases used with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    simp only [Lookup.Contains, eval_eq, _root_.Table.toRaw]
+    exact fun h => h
 
-/-- Every local-core lookup reads one of the four authenticated static dependencies. -/
-theorem lookup_names_subset (image : ProgramImage) (source : ExecutionSnapshot)
-    (component : Component (ZMod p)) (member : component ∈ tables image source) :
-    component.operations.lookups.map (·.table.name) ⊆
-      ["sp1.native.source_registers", "sp1.native.initial_memory", "sp1.native.program", "ByteXor"] := by
+/-- Fixed source/ROM lookups and native providers depend on physical cells, not generation data.
+This transports local constraints across canonical projections without asserting data equality. -/
+theorem component_constraints_setData (image : ProgramImage) (source : ExecutionSnapshot)
+    (component : Component (ZMod p)) (member : component ∈ tables image source)
+    {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
+    (checked : component.operations.ConstraintsHold (Environment.fromArray row data)) :
+    component.operations.ConstraintsHold (Environment.fromArray row data') := by
   rcases List.mem_append.mp member with snapshot | rest
-  · exact List.Subset.trans (source_lookupNames source component snapshot) (by simp)
+  · exact source_constraints_setData source component snapshot checked
   rcases List.mem_append.mp rest with retained | provider
   · rcases List.mem_append.mp retained with boundary | instruction
     · rcases List.mem_append.mp boundary with final | rom
-      · simp [final_lookups component final]
+      · exact component.constraintsHold_setData (final_lookups component final) checked
       · obtain rfl := List.mem_singleton.mp rom
+        apply Operations.constraintsHold_congr (env := Environment.fromArray row data)
+          (env' := Environment.fromArray row data') rfl ?_ checked
+        intro lookup used
         simp [Component.lookups_eq, Component.rowOperations, circuit_norm,
-          ProgramImage.programTable, StaticTable.ofRows]
-    · simp [sp1Tables_lookups_empty component instruction]
-  · exact List.Subset.trans (provider_lookupNames component provider) (by simp)
+          FixedProgramProvider.circuit,
+          ProgramProviderChip.circuit, ProgramProviderChip.main,
+          Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits] at used
+        subst lookup
+        have eval_eq : Expression.eval (Environment.fromArray row data) =
+            Expression.eval (Environment.fromArray row data') :=
+          funext fun expression => Expression.eval_congr
+            (env := Environment.fromArray row data) (env' := Environment.fromArray row data') rfl expression
+        simp only [Lookup.Contains, eval_eq, _root_.Table.toRaw]
+        exact fun h => h
+    · exact component.constraintsHold_setData (sp1Tables_lookups_empty component instruction) checked
+  · apply sp1Table_constraints_setData component ?_ checked
+    rw [sp1Ensemble_tables]
+    apply List.mem_append_right
+    rcases List.mem_append.mp provider with before | after
+    · exact List.mem_of_mem_take before
+    · exact List.mem_of_mem_drop after
 
 end SP1Clean.Soundness.LocalCore

@@ -1,6 +1,7 @@
 import SP1Clean.Soundness.HostCallLedger
 import ToClean.Circuit.SubcircuitProjection
 import ToClean.Air.EnsembleProjection
+import ToClean.Air.ExpressionScope
 
 /-! # The host wrapper retains instruction constraints and State chronology
 
@@ -244,5 +245,94 @@ theorem state_interactions : (original (p := p)).operations.interactionsWith sta
   other_interactions stateChannel.toRaw (by simp [stateChannel, byteChannel, Channel.toRaw])
     (by simp [stateChannel, memoryChannel, Channel.toRaw])
     (by simp [stateChannel, HostCallChip.channel, Channel.toRaw])
+
+section Scope
+
+attribute [local circuit_norm]
+  original Component.constraints_eq Component.interactions_eq Component.rowOperations
+  SyscallInstrsChip.circuit SyscallInstrsChip.main Circuit.forEach.operations_eq
+  FlatOperation.constraints_append FlatOperation.interactions_append
+  GeneralFormalCircuit.toSubcircuit_toFlat FormalAssertion.toSubcircuit_toFlat
+  Readers.CPUState.circuit Readers.CPUState.main Readers.RegisterAccessCols.circuit
+  Readers.RegisterAccessCols.main Readers.RegisterAccessTimestamp.circuit
+  Readers.RegisterAccessTimestamp.main IsZeroOperation.circuit IsZeroOperation.main
+  Gadgets.Equality.circuit Gadgets.Equality.main
+  U16toU8OperationSafe.circuit U16toU8OperationSafe.main
+  SyscallInstrsChip.PcArm.circuit SyscallInstrsChip.PcArm.main
+  SyscallInstrsChip.WriteArm.circuit SyscallInstrsChip.WriteArm.main
+  SyscallInstrsChip.DispatchArm.circuit SyscallInstrsChip.DispatchArm.main
+  SyscallInstrsChip.CommitArm.circuit SyscallInstrsChip.CommitArm.main
+  SyscallInstrsChip.FieldBoundArm.circuit SyscallInstrsChip.FieldBoundArm.main
+  U16CompareOperation.circuit U16CompareOperation.main
+
+/-- Clean's scope checker bounds every original assertion, multiplicity and message by the
+instruction's own width, independent of the wider host wrapper. -/
+theorem original_scope :
+    Extraction.expressionsBadVariable (original (p := p)).width
+      (original (p := p)).operations.constraints = none ∧
+    Extraction.expressionsBadVariable (original (p := p)).width
+      ((original (p := p)).operations.interactions.flatMap fun interaction =>
+        interaction.mult :: interaction.msg.toList) = none := by
+  have width : (original (p := p)).width = 65 := rfl
+  rw [width]
+  constructor <;> simp only [circuit_norm] <;> cbv
+
+end Scope
+
+/-- Truncating an actual host row retains the original instruction constraints at canonical data. -/
+theorem constraints_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod p))
+    (checked : producer.operations.ConstraintsHold (Environment.fromArray row data)) :
+    original.operations.ConstraintsHold
+      (Environment.fromArray (row.extract 0 (original (p := p)).width) data') := by
+  apply Extraction.constraints_extract row data data' SyscallInstrsChip.lookups_empty ?_
+    (constraints_original _ checked)
+  exact (original_scope (p := p)).1
+
+/-- The original Byte checks survive truncation even when canonical data changes. -/
+theorem byte_guarantees_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod p))
+    (guarantees : producer.operations.ChannelGuarantees byteChannel.toRaw (Environment.fromArray row data)) :
+    original.operations.ChannelGuarantees byteChannel.toRaw
+      (Environment.fromArray (row.extract 0 (original (p := p)).width) data') := by
+  intro interaction member channel
+  have scope : Extraction.expressionsBadVariable (original (p := p)).width
+      (interaction.mult :: interaction.msg.toList) = none :=
+    List.findSome?_eq_none_iff.mpr fun expression used =>
+      List.findSome?_eq_none_iff.mp (original_scope (p := p)).2 expression
+        (List.mem_flatMap.mpr ⟨interaction, member, used⟩)
+  rw [← AbstractInteraction.eval_guarantees, Extraction.interaction_eval_extract row data data' _ scope]
+  have kept := byte_guarantees (Environment.fromArray row data) guarantees interaction member channel
+  rcases interaction with ⟨declared, mult, msg, assume⟩
+  cases channel
+  simpa only [Interaction.Guarantees, AbstractInteraction.eval, AbstractInteraction.Guarantees,
+    Interaction.msgVector, byteChannel, Channel.toRaw] using kept
+
+/-- Physical prefix decoding recovers the same original instruction from a host row. -/
+theorem input_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod p)) :
+    original.rowInput (Environment.fromArray (row.extract 0 (original (p := p)).width) data') =
+      (HostCallLedger.input (Environment.fromArray row data)).instruction := by
+  rw [input_original]
+  apply ProvableType.valueFromOffset_congr
+  intro index bound
+  have within : index < (original (p := p)).width := by
+    change index < 65 at bound ⊢
+    exact bound
+  by_cases inside : index < row.size <;> simp [within, inside]
+
+/-- Prefix projection retains every occurrence on channels unchanged by the host wrapper. -/
+theorem other_values_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod p))
+    (channel : RawChannel (ZMod p)) (byte : channel ≠ byteChannel.toRaw)
+    (memory : channel ≠ memoryChannel.toRaw) (host : channel ≠ HostCallChip.channel.toRaw) :
+    original.operations.interactionValuesWith channel
+        (Environment.fromArray (row.extract 0 (original (p := p)).width) data') =
+      producer.operations.interactionValuesWith channel (Environment.fromArray row data) := by
+  rw [Operations.interactionValuesWith, Operations.interactionValuesWith,
+    ← other_interactions channel byte memory host]
+  apply List.map_congr_left
+  intro interaction member
+  apply Extraction.interaction_eval_extract
+  apply List.findSome?_eq_none_iff.mpr
+  intro expression used
+  exact List.findSome?_eq_none_iff.mp (original_scope (p := p)).2 expression
+    (List.mem_flatMap.mpr ⟨interaction, (List.mem_filter.mp member).1, used⟩)
 
 end SP1Clean.Soundness.HostCallProjection

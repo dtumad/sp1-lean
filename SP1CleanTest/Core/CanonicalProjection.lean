@@ -1,5 +1,6 @@
 import ToClean.Air.EnsembleProjection
 import ToClean.Air.MessageFilter
+import ToClean.Air.ExpressionScope
 
 /-! # Canonical data under physical prefix projection
 
@@ -49,6 +50,13 @@ private def projected : EnsembleWitness target :=
 
 /-- The narrow view has exactly its declared width and retains the original prefix values. -/
 theorem narrowRow : projected.tables[0].table = [#[1]] := by decide
+
+/-- A read at the discarded boundary changes value, so scope checking is necessary for projection. -/
+theorem discardedCellIsRejected :
+    Extraction.expressionBadVariable 1 (Expression.var (F := Fp) ⟨1⟩) = some 1 ∧
+      Expression.eval (Environment.fromArray #[1, 2, 3] original.data) (.var ⟨1⟩) ≠
+        Expression.eval (Environment.fromArray #[1] projected.data) (.var ⟨1⟩) := by
+  decide
 
 /-- An unchanged physical table preserves its named data entry at every arity. -/
 theorem retainedData (arity : ℕ) : projected.data "retained" arity = original.data "retained" arity :=

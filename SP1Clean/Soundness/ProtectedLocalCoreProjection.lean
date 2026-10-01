@@ -6,7 +6,7 @@ import ToClean.Air.ComponentReplacement
 
 The first 59 physical tables are reinterpreted by their original components; the fixed permission
 provider is omitted. Assertions, lookups, public input, and every original channel's complete
-interaction list are preserved. Canonical data agrees at every key except the removed provider.
+interaction list are preserved. Fixed lookup predicates survive changes to canonical data.
 Thus all previously proved local ordering and grounding results apply to this projection without
 additional validity or balance premises.
 -/
@@ -62,29 +62,25 @@ theorem component_projection (image : ProgramImage) (source : ExecutionSnapshot)
     exact ⟨ProtectedStore.byte_constraints, ProtectedStore.byte_lookups, ProtectedStore.byte_interactions⟩
   simp [double, word, half, byte]
 
-/-- Permission interactions do not alter row layouts, data keys, or input encoding. -/
+/-- Permission interactions preserve physical widths and fixed-column contracts. -/
 theorem component_layout (image : ProgramImage) (source : ExecutionSnapshot) (index : Fin 59) :
     let original := (LocalCore.tables (p := p) image source)[index.val]'(by
       rw [LocalCore.tables_length]; exact index.isLt)
     let extended := (tables (p := p) image source)[index.val]'(by rw [tables_length]; omega)
-    original.width = extended.width ∧ original.fixedColumns = extended.fixedColumns ∧
-    original.circuit.name = extended.circuit.name ∧
-    ∀ rows arity, original.proverRows rows arity = extended.proverRows rows arity := by
+    original.width = extended.width ∧ original.fixedColumns = extended.fixedColumns := by
   -- Keep the predicate folded while rewriting the dependent component and its instances.
   let layout (original extended : Component (ZMod p)) : Prop :=
-    original.width = extended.width ∧ original.fixedColumns = extended.fixedColumns ∧
-      original.circuit.name = extended.circuit.name ∧
-        ∀ rows arity, original.proverRows rows arity = extended.proverRows rows arity
+    original.width = extended.width ∧ original.fixedColumns = extended.fixedColumns
   change layout _ _
   rw [tables_getElem image source index.val index.isLt]
   rcases index with ⟨index, bound⟩
   dsimp only
   split_ifs with double word half byte
-  · subst index; exact ⟨ProtectedStore.double_width.symm, rfl, rfl, fun _ _ => rfl⟩
-  · subst index; exact ⟨ProtectedStore.word_width.symm, rfl, rfl, fun _ _ => rfl⟩
-  · subst index; exact ⟨ProtectedStore.half_width.symm, rfl, rfl, fun _ _ => rfl⟩
-  · subst index; exact ⟨ProtectedStore.byte_width.symm, rfl, rfl, fun _ _ => rfl⟩
-  · exact ⟨rfl, rfl, rfl, fun _ _ => rfl⟩
+  · subst index; exact ⟨ProtectedStore.double_width.symm, rfl⟩
+  · subst index; exact ⟨ProtectedStore.word_width.symm, rfl⟩
+  · subst index; exact ⟨ProtectedStore.half_width.symm, rfl⟩
+  · subst index; exact ⟨ProtectedStore.byte_width.symm, rfl⟩
+  · exact ⟨rfl, rfl⟩
 
 private theorem projectionLength (image : ProgramImage) (source : ExecutionSnapshot) :
     (LocalCore.ensemble (p := p) image source).tables.length ≤ (ensemble (p := p) image source).tables.length := by
@@ -104,7 +100,7 @@ private theorem projectionFixed (image : ProgramImage) (source : ExecutionSnapsh
     (LocalCore.ensemble image source).tables[index.val].fixedColumns =
       ((ensemble image source).tables[index.val]'(by have := projectionLength (p := p) image source; omega)).fixedColumns :=
   (component_layout image source ⟨index.val, by
-    simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).2.1
+    simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).2
 
 /-- Project the same physical rows and public boundary; canonical data drops the permission key. -/
 def localWitness {image : ProgramImage} {source : ExecutionSnapshot}
@@ -125,7 +121,7 @@ theorem localWitness_table {image : ProgramImage} {source : ExecutionSnapshot}
         rw [tables_length]; omega)).withComponent
         ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt))
         (by rw [← witness.same_circuits]; exact (component_layout image source index).1)
-        (by rw [← witness.same_circuits]; exact (component_layout image source index).2.1) := by
+        (by rw [← witness.same_circuits]; exact (component_layout image source index).2) := by
   rw [localWitness, witness.projectPrefix_getElem (index := ⟨index.val, by
     change index.val < (LocalCore.tables (p := p) image source).length
     rw [LocalCore.tables_length]; exact index.isLt⟩)]
@@ -134,41 +130,6 @@ theorem localWitness_table {image : ProgramImage} {source : ExecutionSnapshot}
   apply Table.projectPrefix_rows_of_width_eq
   rw [← witness.same_circuits]
   exact (component_layout image source index).1
-
-/-- Retained table keys and absent keys have exactly the original canonical data. -/
-theorem localWitness_data {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source)) (name : String)
-    (different : name ≠ "sp1.native.write_permission") (arity : ℕ) :
-    (localWitness witness).data name arity = witness.data name arity := by
-  apply witness.projectPrefix_data_of_layout (projectionLength image source)
-    (fun index => (projectionWidth image source index).le) (projectionFixed image source)
-    (projectionWidth image source)
-  · intro index
-    exact (component_layout image source ⟨index.val, by
-      simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).2.2.1
-  · intro index
-    exact (component_layout image source ⟨index.val, by
-      simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).2.2.2
-  · intro component member
-    change component ∈ (tables image source).drop (LocalCore.tables image source).length at member
-    rw [LocalCore.tables_length] at member
-    have length : ((((LocalCore.tables (p := p) image source).set 25 { circuit := ProtectedStore.byte }).set 26
-        { circuit := ProtectedStore.half }).set 27 { circuit := ProtectedStore.word }
-        |>.set 28 { circuit := ProtectedStore.double }).length = 59 := by
-      simp only [List.length_set, LocalCore.tables_length]
-    rw [tables, List.drop_left' length] at member
-    obtain rfl := List.mem_singleton.mp member
-    exact different.symm
-
-private theorem lookup_ne_permission (image : ProgramImage) (source : ExecutionSnapshot)
-    (index : Fin 59) :
-    ∀ lookup ∈ ((LocalCore.tables (p := p) image source)[index.val]'(by
-      rw [LocalCore.tables_length]; exact index.isLt)).operations.lookups,
-      lookup.table.name ≠ "sp1.native.write_permission" := by
-  intro lookup member same
-  have key := LocalCore.lookup_names_subset image source _ (List.getElem_mem _) (List.mem_map_of_mem member)
-  rw [same] at key
-  simp at key
 
 theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
@@ -186,12 +147,7 @@ theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnaps
       rw [LocalCore.tables_length]; exact bound)).operations.ConstraintsHold
       (Environment.fromArray row witness.data) := by
     simpa only [Operations.ConstraintsHold, projection.1, projection.2.1] using checked
-  apply Operations.constraintsHold_congr_of_data_agree
-    (env := Environment.fromArray row witness.data)
-    (env' := Environment.fromArray row (localWitness witness).data) rfl ?_ original
-  intro lookup member
-  exact (localWitness_data witness lookup.table.name
-    (lookup_ne_permission image source ⟨index.val, bound⟩ lookup member) lookup.table.arity).symm
+  exact LocalCore.component_constraints_setData image source _ (List.getElem_mem _) original
 
 private theorem provider_suffix_silent {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
