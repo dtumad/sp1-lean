@@ -107,23 +107,23 @@ private theorem writes_of_walk {R V : Type*} (edge : R → V × V)
   rfl
 
 /-- Every physical row writes its exact node word at the corresponding consecutive address. -/
-theorem ordered_writes (tables : List (Table (ZMod p)))
+theorem ordered_writes (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (initial final : HintReadWordChip.State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables)
+    (valid : Steps tables data)
     (balanced : BalancedInteractions
       ([HintReadWordChip.stateChannel.pushedValue initial, HintReadWordChip.stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
+        tables.flatMap (·.interactionsWith data HintReadWordChip.stateChannel.toRaw)))
     (store : Store) (node : Node) (read : node? store (Address.toNat initial.pointer) = some node)
-    (bindings : ∀ row ∈ TransitionView.readIndexedRows variants tables, ((rowInput row).step row.1).word.Binds store)
+    (bindings : ∀ row ∈ TransitionView.readIndexedRows variants tables data, ((rowInput row).step row.1).word.Binds store)
     (zero : Address.toNat initial.index = 0) (count : Address.toNat final.index = wordCount node.bytes) :
-    ∃ path : List (Row (p := p)), path.Perm (TransitionView.readIndexedRows variants tables) ∧
+    ∃ path : List (Row (p := p)), path.Perm (TransitionView.readIndexedRows variants tables data) ∧
       Walk.IsWalk edge initial final path ∧
       path.map produced = wordWrites (Address.toNat initial.address) node.bytes ∧
       ∀ row ∈ path, context (rowInput row).previous = context initial ∧
         Address.toNat (rowInput row).address =
           Address.toNat initial.address + Address.toNat (rowInput row).index * 8 := by
-  obtain ⟨path, perm, walk, length, indices, _, same⟩ := ordered_cover tables initial final aligned valid balanced
+  obtain ⟨path, perm, walk, length, indices, _, same⟩ := ordered_cover tables data initial final aligned valid balanced
   rw [zero, Nat.zero_add, count] at length
   rw [zero, ← List.range_eq_range', ← length] at indices
   have written := writes_of_walk edge

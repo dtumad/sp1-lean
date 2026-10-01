@@ -1,16 +1,19 @@
 module
 
 public import ToClean.Air.EnsembleBuild
+public import ToClean.Air.TableBuild
 
-/-! # Physical witness projection between flat ensembles
+/-! # Physical prefix projection between flat ensembles
 
-Upstream Clean can split an ensemble's table list, but cannot replace components while retaining
-their physical rows. An extension that adds only interactions needs this transport: project a
-prefix to its original components, prove preservation of assertions and lookups, and compare each
-retained channel's exact ledger. Neither row validity nor channel balance is assumed by the
-constructor. The lemmas below expose the corresponding proof obligations over opaque components.
-Pointwise constraint and channel-guarantee transports also support extensions that add witness
-cells or requirements. Individual channels can be retained without projecting global balance.
+Clean's canonical data is derived from committed rows, so dropping a table or changing its input
+layout may change the data environment. This addition projects actual row prefixes with explicit
+width and fixed-column proofs. Constraints and channel guarantees require transport at the two
+actual data environments; no global data equality is assumed. Complete retained tables preserve
+their own named data entries through `EnsembleWitness.data_eq_of_common_table`.
+
+These are proof views of existing rows, not a witness scheduler or extraction path. Exact ledger
+transport retains repeated keys, zero multiplicities and occurrence counts. The missing upstream
+capability is physical projection with these layout and data obligations, beside FlatEnsemble.
 -/
 
 @[expose] public section
@@ -43,101 +46,196 @@ namespace Air.Flat
 
 variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
 
-/-- Replace only the component interpreting a table's unchanged physical rows. -/
-def Table.withComponent (table : Table F) (component : Component F) : Table F :=
-  { table with component := component }
+/-- View a narrower component through the exact prefix of each physical row. -/
+def Table.projectPrefix (table : Table F) (component : Component F)
+    (width : component.width ≤ table.component.width)
+    (fixed : component.fixedColumns = table.component.fixedColumns) : Table F where
+  component := component
+  table := table.table.map (·.extract 0 component.width)
+  uniform_width := by
+    intro row member
+    obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+    simp only [Array.size_extract, table.uniform_width original originalMember, Nat.sub_zero,
+      Nat.min_eq_left width]
+  fixed_rows_match := by
+    have original := table.fixed_rows_match
+    cases hcolumns : component.fixedColumns with
+    | none => simp [Component.fixedRowsMatch, hcolumns]
+    | some columns =>
+      have bound : columns.width ≤ component.width := by
+        have prefixBound := component.fixed_width_le_input
+        simp only [Component.width, GeneralFormalCircuit.size_eq]
+        simp only [hcolumns, Option.map_some, Option.getD_some] at prefixBound
+        omega
+      simpa only [Component.fixedRowsMatch, ← fixed, hcolumns, FixedColumns.RowsMatch,
+        List.map_map, Function.comp_def, Array.extract_extract, Nat.zero_add,
+        Nat.min_eq_left bound] using original
 
-theorem Table.withComponent_constraints (table : Table F) (component : Component F)
-    (assertions : component.operations.constraints = table.component.operations.constraints)
-    (lookups : component.operations.lookups = table.component.operations.lookups) :
-    (table.withComponent component).Constraints ↔ table.Constraints := by
-  simp only [Constraints, withComponent, environment, Operations.ConstraintsHold, assertions, lookups]
+namespace Table
 
-theorem Table.withComponent_interactions (table : Table F) (component : Component F)
-    (channel : RawChannel F)
-    (same : component.operations.interactionsWith channel =
-      table.component.operations.interactionsWith channel) :
-    (table.withComponent component).interactionsWith channel = table.interactionsWith channel := by
-  simp only [interactionsWith, withComponent, environment, Operations.interactionValuesWith, same]
+variable (table : Table F) (component : Component F)
+  (width : component.width ≤ table.component.width)
+  (fixed : component.fixedColumns = table.component.fixedColumns)
 
-/-- A stronger component can project constraints without equality of assertion lists. -/
-theorem Table.withComponent_constraints_of (table : Table F) (component : Component F)
-    (preserves : ∀ env, table.component.operations.ConstraintsHold env → component.operations.ConstraintsHold env)
-    (constraints : table.Constraints) : (table.withComponent component).Constraints :=
-  fun row member => preserves _ (constraints row member)
+@[simp] theorem projectPrefix_component : (table.projectPrefix component width fixed).component = component := rfl
 
-/-- Local channel guarantees transport independently of the table's multiplicities on that channel. -/
-theorem Table.withComponent_channelGuarantees_of (table : Table F) (component : Component F)
-    (channel : RawChannel F)
-    (preserves : ∀ env, table.component.operations.ChannelGuarantees channel env →
-      component.operations.ChannelGuarantees channel env)
-    (guarantees : table.ChannelGuarantees channel) : (table.withComponent component).ChannelGuarantees channel :=
-  fun row member => preserves _ (guarantees row member)
+@[simp] theorem projectPrefix_rows :
+    (table.projectPrefix component width fixed).table = table.table.map (·.extract 0 component.width) := rfl
+
+/-- Projection retains the number and order of physical rows. -/
+@[simp] theorem projectPrefix_length : (table.projectPrefix component width fixed).length = table.length :=
+  List.length_map ..
+
+/-- Equal-width interpretation preserves the literal rows, not just their values. -/
+theorem projectPrefix_rows_of_width_eq (same : component.width = table.component.width) :
+    (table.projectPrefix component width fixed).table = table.table := by
+  rw [projectPrefix_rows]
+  calc
+    _ = table.table.map (fun row => row) := by
+      apply List.map_congr_left
+      intro row member
+      rw [same, ← table.uniform_width row member, Array.extract_size]
+    _ = table.table := List.map_id' _
+
+/-- The component's own prefix is the identical physical table. -/
+@[simp] theorem projectPrefix_self : table.projectPrefix table.component le_rfl rfl = table := by
+  rw [ext_iff]
+  exact ⟨rfl, table.projectPrefix_rows_of_width_eq _ _ _ rfl⟩
+
+/-- Constraint transport must account for both the row prefix and the actual evaluation data. -/
+theorem projectPrefix_constraints_of (sourceData targetData : ProverData F)
+    (preserves : ∀ row ∈ table.table,
+      table.component.operations.ConstraintsHold (Environment.fromArray row sourceData) →
+        component.operations.ConstraintsHold (Environment.fromArray (row.extract 0 component.width) targetData))
+    (checked : table.Constraints sourceData) :
+    (table.projectPrefix component width fixed).Constraints targetData := by
+  intro row member
+  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  exact preserves original originalMember (checked original originalMember)
+
+/-- Channel guarantees transport at their data environments; they are not generally data-free. -/
+theorem projectPrefix_channelGuarantees_of (sourceData targetData : ProverData F) (channel : RawChannel F)
+    (preserves : ∀ row ∈ table.table,
+      table.component.operations.ChannelGuarantees channel (Environment.fromArray row sourceData) →
+        component.operations.ChannelGuarantees channel
+          (Environment.fromArray (row.extract 0 component.width) targetData))
+    (guarantees : table.ChannelGuarantees sourceData channel) :
+    (table.projectPrefix component width fixed).ChannelGuarantees targetData channel := by
+  intro row member
+  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  exact preserves original originalMember (guarantees original originalMember)
+
+/-- A row-level ledger equation preserves every occurrence and its original order. -/
+theorem projectPrefix_interactions (sourceData targetData : ProverData F) (channel : RawChannel F)
+    (preserves : ∀ row ∈ table.table,
+      component.operations.interactionValuesWith channel
+          (Environment.fromArray (row.extract 0 component.width) targetData) =
+        table.component.operations.interactionValuesWith channel (Environment.fromArray row sourceData)) :
+    (table.projectPrefix component width fixed).interactionsWith targetData channel =
+      table.interactionsWith sourceData channel := by
+  simp only [interactionsWith, projectPrefix_rows, projectPrefix_component, List.flatMap_map]
+  exact congrArg List.flatten (List.map_congr_left preserves)
+
+end Table
 
 namespace EnsembleWitness
 
 variable {source target : Ensemble F PublicIO}
 
-/-- Transfer channel guarantees along the actual evaluated ledger, with shared prover data.
-Unlike balance, this property survives dropping interactions and does not require equal public
-input types or matching table layouts. -/
+/-- Transfer guarantees along a ledger inclusion and the needed channel-specific data implication.
+The original and projected verifiers are included along with their physical tables. -/
 theorem channelGuarantees_of_interactions_subset
     {OtherIO : TypeMap} [ProvableType OtherIO] {other : Ensemble F OtherIO}
     (original : EnsembleWitness source) (projected : EnsembleWitness other)
-    (channel : RawChannel F) (data : projected.data = original.data)
+    (channel : RawChannel F)
+    (preservesData : ∀ interaction ∈ projected.interactionsWith channel,
+      interaction.Guarantees original.data → interaction.Guarantees projected.data)
     (subset : projected.interactionsWith channel ⊆ original.interactionsWith channel)
-    (guarantees : ∀ table ∈ original.allTables, table.ChannelGuarantees channel) :
-    ∀ table ∈ projected.allTables, table.ChannelGuarantees channel := by
-  intro table member
-  rw [Table.channelGuarantees_iff_forall, projected.data_eq_of_mem_allTables table member, data]
-  intro interaction present
-  obtain ⟨sourceTable, sourceMember, emitted⟩ := EnsembleWitness.mem_interactionsWith.mp
-    (subset (EnsembleWitness.mem_interactionsWith.mpr ⟨table, member, present⟩))
-  have valid := (sourceTable.channelGuarantees_iff_forall channel).mp
-    (guarantees sourceTable sourceMember) interaction emitted
-  rwa [original.data_eq_of_mem_allTables sourceTable sourceMember] at valid
+    (verifier : source.VerifierChannelGuarantees original.publicInput original.data channel)
+    (guarantees : ∀ table ∈ original.tables, table.ChannelGuarantees original.data channel) :
+    other.VerifierChannelGuarantees projected.publicInput projected.data channel ∧
+      ∀ table ∈ projected.tables, table.ChannelGuarantees projected.data channel := by
+  have all : ∀ interaction ∈ projected.interactionsWith channel, interaction.Guarantees projected.data := by
+    intro interaction member
+    apply preservesData interaction member
+    rcases EnsembleWitness.mem_interactionsWith.mp (subset member) with emitted | ⟨table, member, emitted⟩
+    · exact EnsembleWitness.verifierChannelGuarantees_iff_forall.mp verifier interaction emitted
+    · exact (table.channelGuarantees_iff_forall original.data channel).mp
+        (guarantees table member) interaction emitted
+  constructor
+  · rw [EnsembleWitness.verifierChannelGuarantees_iff_forall]
+    intro interaction member
+    exact all interaction (EnsembleWitness.mem_interactionsWith.mpr (Or.inl member))
+  · intro table member
+    rw [table.channelGuarantees_iff_forall projected.data channel]
+    intro interaction emitted
+    exact all interaction (EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, member, emitted⟩))
 
-/-- Retain a physical prefix and interpret it using the target's components. -/
-def project (witness : EnsembleWitness source) (target : Ensemble F PublicIO)
-    (length : target.tables.length ≤ source.tables.length) : EnsembleWitness target :=
-  ofTables target (List.ofFn fun index : Fin target.tables.length =>
-    (witness.tables[index.val]'(by rw [← witness.same_length]; omega)).withComponent
-      target.tables[index.val]) witness.data witness.publicInput
-    (by simp only [List.map_ofFn, Table.withComponent, Function.comp_def, List.ofFn_getElem])
-    (by
-      intro table member
-      obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
-      exact witness.same_data
-        (witness.tables[index.val]'(by rw [← witness.same_length]; omega)) (List.getElem_mem _))
-
-theorem project_getElem (witness : EnsembleWitness source)
-    (length : target.tables.length ≤ source.tables.length) (index : Fin target.tables.length) :
-    (witness.project target length).tables[index.val]'(by
-      rw [← (witness.project target length).same_length]; exact index.isLt) =
-      (witness.tables[index.val]'(by rw [← witness.same_length]; omega)).withComponent
-        target.tables[index.val] := by
-  simp only [project, ofTables_tables, List.getElem_ofFn]
-
-/-- Reinterpreting a physical prefix preserves its shared prover data. -/
-@[simp] theorem project_data (witness : EnsembleWitness source)
-    (length : target.tables.length ≤ source.tables.length) :
-    (witness.project target length).data = witness.data := by
-  simp only [project, ofTables_data]
-
-theorem project_verifierTable (witness : EnsembleWitness source)
+/-- Retain a physical table prefix, taking the declared target row width at each position.
+The target's data is derived from these rows, including any changed input layouts. -/
+def projectPrefix (witness : EnsembleWitness source) (target : Ensemble F PublicIO)
     (length : target.tables.length ≤ source.tables.length)
-    (verifier : target.verifier = source.verifier) :
-    (witness.project target length).verifierTable = witness.verifierTable :=
-  Ensemble.verifierTable_ext verifier rfl rfl
+    (widths : ∀ index : Fin target.tables.length,
+      target.tables[index.val].width ≤ (source.tables[index.val]'(by omega)).width)
+    (fixed : ∀ index : Fin target.tables.length,
+      target.tables[index.val].fixedColumns = (source.tables[index.val]'(by omega)).fixedColumns) :
+    EnsembleWitness target :=
+  ofTables target (List.ofFn fun index : Fin target.tables.length =>
+    (witness.tables[index.val]'(by rw [← witness.same_length]; omega)).projectPrefix
+      target.tables[index.val]
+      (by rw [← witness.same_circuits]; exact widths index)
+      (by rw [← witness.same_circuits]; exact fixed index)) witness.publicInput
+    (by simp only [List.map_ofFn, Table.projectPrefix_component, Function.comp_def, List.ofFn_getElem])
 
-/-- A projection preserves an unchanged initial inventory as complete physical tables. -/
-theorem project_take (witness : EnsembleWitness source)
-    (length : target.tables.length ≤ source.tables.length) (count : ℕ)
-    (bound : count ≤ target.tables.length)
+section Prefix
+variable (witness : EnsembleWitness source)
+  (length : target.tables.length ≤ source.tables.length)
+  (widths : ∀ index : Fin target.tables.length,
+    target.tables[index.val].width ≤ (source.tables[index.val]'(by omega)).width)
+  (fixed : ∀ index : Fin target.tables.length,
+    target.tables[index.val].fixedColumns = (source.tables[index.val]'(by omega)).fixedColumns)
+
+@[simp] theorem projectPrefix_publicInput :
+    (witness.projectPrefix target length widths fixed).publicInput = witness.publicInput := rfl
+
+/-- Read the original row prefix at the same physical table position. -/
+theorem projectPrefix_getElem (index : Fin target.tables.length) :
+    (witness.projectPrefix target length widths fixed).tables[index.val]'(by
+      rw [← (witness.projectPrefix target length widths fixed).same_length]; exact index.isLt) =
+      (witness.tables[index.val]'(by rw [← witness.same_length]; omega)).projectPrefix
+        target.tables[index.val]
+        (by rw [← witness.same_circuits]; exact widths index)
+        (by rw [← witness.same_circuits]; exact fixed index) := by
+  simp only [projectPrefix, ofTables_tables, List.getElem_ofFn]
+
+/-- An unchanged component retains its complete physical table. -/
+theorem projectPrefix_getElem_of_same (index : Fin target.tables.length)
+    (same : target.tables[index.val] = source.tables[index.val]'(by omega)) :
+    (witness.projectPrefix target length widths fixed).tables[index.val]'(by
+      rw [← (witness.projectPrefix target length widths fixed).same_length]; exact index.isLt) =
+      witness.tables[index.val]'(by rw [← witness.same_length]; omega) := by
+  simp only [projectPrefix_getElem, same, witness.same_circuits, Table.projectPrefix_self]
+
+/-- Canonical data agrees at an unchanged table's name, even when the projection drops other keys. -/
+theorem projectPrefix_data_of_same (index : Fin target.tables.length)
+    (same : target.tables[index.val] = source.tables[index.val]'(by omega)) (arity : ℕ) :
+    (witness.projectPrefix target length widths fixed).data target.tables[index.val].circuit.name arity =
+      witness.data target.tables[index.val].circuit.name arity := by
+  have common := projectPrefix_getElem_of_same witness length widths fixed index same
+  have member : witness.tables[index.val]'(by rw [← witness.same_length]; omega) ∈
+      (witness.projectPrefix target length widths fixed).tables := by
+    rw [← common]
+    exact List.getElem_mem _
+  rw [same, witness.same_circuits]
+  exact (witness.projectPrefix target length widths fixed).data_eq_of_common_table witness
+    member (List.getElem_mem _) arity
+
+/-- Retaining an unchanged initial inventory preserves it as complete physical tables. -/
+theorem projectPrefix_take (count : ℕ) (bound : count ≤ target.tables.length)
     (same : ∀ index : Fin count,
       target.tables[index.val]'(by omega) = source.tables[index.val]'(by omega)) :
-    (witness.project target length).tables.take count = witness.tables.take count := by
-  have projectedLength := (witness.project target length).same_length
+    (witness.projectPrefix target length widths fixed).tables.take count = witness.tables.take count := by
+  have projectedLength := (witness.projectPrefix target length widths fixed).same_length
   have sourceLength := witness.same_length
   apply List.ext_getElem
   · simp only [List.length_take, ← projectedLength, ← sourceLength]
@@ -145,80 +243,60 @@ theorem project_take (witness : EnsembleWitness source)
   · intro index hi hj
     have within : index < count := lt_of_lt_of_le hi (List.length_take_le ..)
     simp only [List.getElem_take]
-    rw [project_getElem witness length ⟨index, by omega⟩]
-    rw [same ⟨index, within⟩, witness.same_circuits]
-    rfl
+    exact projectPrefix_getElem_of_same witness length widths fixed ⟨index, by omega⟩ (same ⟨index, within⟩)
 
-theorem project_constraints (witness : EnsembleWitness source)
-    (length : target.tables.length ≤ source.tables.length)
-    (verifier : target.verifier = source.verifier)
-    (assertions : ∀ index : Fin target.tables.length,
-      target.tables[index.val].operations.constraints =
-        (source.tables[index.val]'(by omega)).operations.constraints)
-    (lookups : ∀ index : Fin target.tables.length,
-      target.tables[index.val].operations.lookups =
-        (source.tables[index.val]'(by omega)).operations.lookups)
-    (constraints : witness.Constraints) : (witness.project target length).Constraints := by
-  rw [Constraints, forall_mem_allTables_iff]
-  refine ⟨?_, ?_⟩
-  · rw [project_verifierTable witness length verifier]
-    exact constraints _ witness.mem_allTables_verifierTable
-  · intro table member
-    obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
-    apply (Table.withComponent_constraints _ _ ?_ ?_).mpr
-    · exact constraints _ (witness.mem_allTables_of_mem_tables (List.getElem_mem _))
-    · rw [← witness.same_circuits]
-      exact assertions index
-    · rw [← witness.same_circuits]
-      exact lookups index
+/-- Project constraints using each component's proved implication at the actual two data environments. -/
+theorem projectPrefix_constraints_of
+    (preserves : ∀ index : Fin target.tables.length, ∀ row,
+      row.size = (source.tables[index.val]'(by omega)).width →
+      (source.tables[index.val]'(by omega)).operations.ConstraintsHold
+          (Environment.fromArray row witness.data) →
+        target.tables[index.val].operations.ConstraintsHold
+          (Environment.fromArray (row.extract 0 target.tables[index.val].width)
+            (witness.projectPrefix target length widths fixed).data))
+    (checked : witness.Constraints) : (witness.projectPrefix target length widths fixed).Constraints := by
+  intro table member
+  obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
+  apply Table.projectPrefix_constraints_of
+  · intro row member constraints
+    rw [← witness.same_circuits index.val (by omega)] at constraints
+    exact preserves index row
+      (by rw [witness.same_circuits]; exact (witness.tables[index.val]'(by rw [← witness.same_length]; omega)).uniform_width row member) constraints
+  · exact checked _ (List.getElem_mem _)
 
-/-- Project a strengthened prefix using a static implication for each component's constraints. -/
-theorem project_constraints_of (witness : EnsembleWitness source)
-    (length : target.tables.length ≤ source.tables.length)
-    (verifier : target.verifier = source.verifier)
-    (preserves : ∀ index : Fin target.tables.length, ∀ env,
-      (source.tables[index.val]'(by omega)).operations.ConstraintsHold env →
-        target.tables[index.val].operations.ConstraintsHold env)
-    (constraints : witness.Constraints) : (witness.project target length).Constraints := by
-  rw [Constraints, forall_mem_allTables_iff]
-  refine ⟨?_, ?_⟩
-  · rw [project_verifierTable witness length verifier]
-    exact constraints _ witness.mem_allTables_verifierTable
-  · intro table member
-    obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
-    apply Table.withComponent_constraints_of
-    · rw [← witness.same_circuits]
-      exact preserves index
-    · exact constraints _ (witness.mem_allTables_of_mem_tables (List.getElem_mem _))
+/-- Channel guarantees have their own data transport obligation, independent of balance. -/
+theorem projectPrefix_channelGuarantees_of (channel : RawChannel F)
+    (preserves : ∀ index : Fin target.tables.length, ∀ row,
+      row.size = (source.tables[index.val]'(by omega)).width →
+      (source.tables[index.val]'(by omega)).operations.ChannelGuarantees channel
+          (Environment.fromArray row witness.data) →
+        target.tables[index.val].operations.ChannelGuarantees channel
+          (Environment.fromArray (row.extract 0 target.tables[index.val].width)
+            (witness.projectPrefix target length widths fixed).data))
+    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel) :
+    ∀ table ∈ (witness.projectPrefix target length widths fixed).tables,
+      table.ChannelGuarantees (witness.projectPrefix target length widths fixed).data channel := by
+  intro table member
+  obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
+  apply Table.projectPrefix_channelGuarantees_of
+  · intro row member guaranteed
+    rw [← witness.same_circuits index.val (by omega)] at guaranteed
+    exact preserves index row
+      (by rw [witness.same_circuits]; exact (witness.tables[index.val]'(by rw [← witness.same_length]; omega)).uniform_width row member) guaranteed
+  · exact guarantees _ (List.getElem_mem _)
 
-/-- Guarantees from the larger witness survive per-component projection without channel balance
-in the projected witness. This permits extra Byte lookups and Memory effects in an extension. -/
-theorem project_channelGuarantees_of (witness : EnsembleWitness source)
-    (length : target.tables.length ≤ source.tables.length)
-    (verifier : target.verifier = source.verifier) (channel : RawChannel F)
-    (preserves : ∀ index : Fin target.tables.length, ∀ env,
-      (source.tables[index.val]'(by omega)).operations.ChannelGuarantees channel env →
-        target.tables[index.val].operations.ChannelGuarantees channel env)
-    (guarantees : ∀ table ∈ witness.allTables, table.ChannelGuarantees channel) :
-    ∀ table ∈ (witness.project target length).allTables, table.ChannelGuarantees channel := by
-  rw [forall_mem_allTables_iff]
-  refine ⟨?_, ?_⟩
-  · rw [project_verifierTable witness length verifier]
-    exact guarantees _ witness.mem_allTables_verifierTable
-  · intro table member
-    obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
-    apply Table.withComponent_channelGuarantees_of
-    · rw [← witness.same_circuits]
-      exact preserves index
-    · exact guarantees _ (witness.mem_allTables_of_mem_tables (List.getElem_mem _))
-
-theorem project_tables_interactions (witness : EnsembleWitness source)
-    (length : target.tables.length ≤ source.tables.length) (channel : RawChannel F)
-    (same : ∀ index : Fin target.tables.length,
-      target.tables[index.val].operations.interactionsWith channel =
-        (source.tables[index.val]'(by omega)).operations.interactionsWith channel) :
-    (witness.project target length).tables.flatMap (·.interactionsWith channel) =
-      (witness.tables.take target.tables.length).flatMap (·.interactionsWith channel) := by
+/-- Per-row equalities preserve the projected physical ledger, with its full multiplicity and order. -/
+theorem projectPrefix_tables_interactions (channel : RawChannel F)
+    (preserves : ∀ index : Fin target.tables.length, ∀ row,
+      row.size = (source.tables[index.val]'(by omega)).width →
+      target.tables[index.val].operations.interactionValuesWith channel
+          (Environment.fromArray (row.extract 0 target.tables[index.val].width)
+            (witness.projectPrefix target length widths fixed).data) =
+        (source.tables[index.val]'(by omega)).operations.interactionValuesWith channel
+          (Environment.fromArray row witness.data)) :
+    (witness.projectPrefix target length widths fixed).tables.flatMap
+        (·.interactionsWith (witness.projectPrefix target length widths fixed).data channel) =
+      (witness.tables.take target.tables.length).flatMap (·.interactionsWith witness.data channel) := by
   have front : (List.ofFn fun index : Fin target.tables.length =>
       witness.tables[index.val]'(by rw [← witness.same_length]; omega)) =
       witness.tables.take target.tables.length := by
@@ -232,22 +310,32 @@ theorem project_tables_interactions (witness : EnsembleWitness source)
   simp only [List.flatMap, List.map_ofFn, Function.comp_def]
   congr 2
   funext index
-  apply Table.withComponent_interactions
+  apply Table.projectPrefix_interactions
+  intro row member
   rw [← witness.same_circuits]
-  exact same index
+  exact preserves index row
+    (by rw [witness.same_circuits]; exact (witness.tables[index.val]'(by rw [← witness.same_length]; omega)).uniform_width row member)
 
-theorem project_interactions (witness : EnsembleWitness source)
-    (length : target.tables.length ≤ source.tables.length)
-    (verifier : target.verifier = source.verifier) (channel : RawChannel F)
-    (same : ∀ index : Fin target.tables.length,
-      target.tables[index.val].operations.interactionsWith channel =
-        (source.tables[index.val]'(by omega)).operations.interactionsWith channel)
-    (silent : (witness.tables.drop target.tables.length).flatMap (·.interactionsWith channel) = []) :
-    (witness.project target length).interactionsWith channel = witness.interactionsWith channel := by
-  simp only [interactionsWith, allTables, List.flatMap_cons]
-  rw [project_verifierTable witness length verifier, project_tables_interactions witness length channel same]
+/-- An unchanged verifier and a silent removed suffix preserve the complete selected-channel ledger. -/
+theorem projectPrefix_interactions (verifier : target.verifier = source.verifier) (channel : RawChannel F)
+    (preserves : ∀ index : Fin target.tables.length, ∀ row,
+      row.size = (source.tables[index.val]'(by omega)).width →
+      target.tables[index.val].operations.interactionValuesWith channel
+          (Environment.fromArray (row.extract 0 target.tables[index.val].width)
+            (witness.projectPrefix target length widths fixed).data) =
+        (source.tables[index.val]'(by omega)).operations.interactionValuesWith channel
+          (Environment.fromArray row witness.data))
+    (silent : (witness.tables.drop target.tables.length).flatMap (·.interactionsWith witness.data channel) = []) :
+    (witness.projectPrefix target length widths fixed).interactionsWith channel = witness.interactionsWith channel := by
+  have verifierLedger : (witness.projectPrefix target length widths fixed).verifierInteractionsWith channel =
+      witness.verifierInteractionsWith channel := by
+    simp only [verifierInteractionsWith, Ensemble.verifierOperations, verifier, projectPrefix_publicInput]
+    exact Operations.interactionValuesWith_congr rfl
+  simp only [interactionsWith, verifierLedger, tableContext, TableContext.interactionsWith]
+  rw [projectPrefix_tables_interactions witness length widths fixed channel preserves]
   conv_rhs => rw [← List.take_append_drop target.tables.length witness.tables]
   rw [List.flatMap_append, silent, List.append_nil]
 
+end Prefix
 end EnsembleWitness
 end Air.Flat

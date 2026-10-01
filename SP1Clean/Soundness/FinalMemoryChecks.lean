@@ -232,14 +232,14 @@ theorem byte_guarantees (witness : EnsembleWitness (ensemble source target auxil
 def registerInputs (witness : EnsembleWitness (ensemble source target auxiliary channels)) :
     List (FinalRegisterCheck.Inputs (ZMod p)) :=
   (registerSlot.table witness).table.map fun row =>
-    (⟨FinalRegisterCheck.circuit target⟩ : Component (ZMod p)).rowInput
+    ({ circuit := FinalRegisterCheck.circuit target } : Component (ZMod p)).rowInput
       ((registerSlot.table witness).environment row)
 
 /-- Decode only the inputs of the actual registered RAM-check rows. -/
 def ramInputs (witness : EnsembleWitness (ensemble source target auxiliary channels)) :
     List (FinalRamCheck.Inputs (ZMod p)) :=
   (ramSlot.table witness).table.map fun row =>
-    (⟨FinalRamCheck.circuit target⟩ : Component (ZMod p)).rowInput
+    ({ circuit := FinalRamCheck.circuit target } : Component (ZMod p)).rowInput
       ((ramSlot.table witness).environment row)
 
 private theorem check_spec (component : Component (ZMod p)) (member : component ∈ checkTables target)

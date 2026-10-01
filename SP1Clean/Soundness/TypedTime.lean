@@ -39,7 +39,7 @@ structure CircuitStateTimeStep {Input Output : TypeMap}
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop where
   step : ∀ data physical,
-    let component : Component (ZMod p) := ⟨circuit⟩
+    let component : Component (ZMod p) := { circuit := circuit }
     let env := Environment.fromArray physical data
     let rowView := view (component.rowInput env) (component.rowOutput env)
     component.operations.ChannelGuarantees byteChannel.toRaw env →
@@ -786,7 +786,7 @@ theorem circuitStateTimeStep_of_cpuStateContract {Input Output : TypeMap}
   dsimp only at contract
   obtain ⟨cpuOffset, cpuInput, cpuMem, binding⟩ := contract
   intro data physical
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input

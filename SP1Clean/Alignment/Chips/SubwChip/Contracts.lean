@@ -36,15 +36,15 @@ private theorem subwInputOpA0_eq_zero_of_mainConstraints
 
 /-- SUBW passes its independent R-type adapter input through to the committed output row. -/
 theorem SubwChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter =
-      ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter := by
   have inputEq : Eval.eval env (varFromOffset SubwChip.Inputs 0) =
-      ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset SubwChip.Inputs 0 env
   have outputEq : Eval.eval env
       ((SubwChip.circuit (p := p)).output (varFromOffset SubwChip.Inputs 0)
         (size SubwChip.Inputs)) =
-      ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   simp only [SubwChip.circuit, circuit_norm]
@@ -53,8 +53,8 @@ theorem SubwChip.inputOutputAdapter (env : Environment (ZMod p)) :
 non-`x0` routing branch. -/
 theorem SubwChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
-    ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter.op_a_0 = 0 := by
+      ({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter.op_a_0 = 0 := by
   let input : Var SubwChip.Inputs (ZMod p) := varFromOffset SubwChip.Inputs 0
   let offset := size SubwChip.Inputs
   have rowConstraints : Operations.ConstraintsHold env ((SubwChip.main input).operations offset) :=
@@ -62,7 +62,7 @@ theorem SubwChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
   have flagConstraint :=
     subwInputOpA0_eq_zero_of_mainConstraints input offset env rowConstraints
   have inputEq : Eval.eval env input =
-      (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset SubwChip.Inputs 0 env
   rw [← inputEq, SubwChip.eval_inputs, Readers.RTypeReader.eval_opA0]
   exact flagConstraint
@@ -70,11 +70,11 @@ theorem SubwChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
 /-- Row-view form of SUBW's physical routing constraint. -/
 theorem SubwChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
+      ({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
     (SubwChip.rowView
-      ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-      ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
-  change ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
+      (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+      (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
+  change (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
   rw [← SubwChip.inputOutputAdapter env]
   exact SubwChip.inputOpA0_eq_zero_of_constraints env constraints
 

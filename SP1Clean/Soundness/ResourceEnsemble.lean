@@ -19,17 +19,18 @@ open Circuit Air.Flat Model.Core Machine Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 
-/-- Add the concrete resource circuit without changing the original table/channel inventories. -/
+/-- Add resource assertions on a fresh channel while retaining the original tables and ledgers. -/
 def install (limits : ResourceLimits) (source target : ExecutionSnapshot)
     (base : Ensemble (ZMod p) SP1PublicIO) : Ensemble (ZMod p) SP1PublicIO :=
   (ResourceBoundary.checker limits source target).install base
 
 /-- Raw acceptance changes by exactly the necessary endpoint checks, in both directions. -/
-theorem statement_iff (limits : ResourceLimits) (source target : ExecutionSnapshot)
+theorem statement_iff [Fact (2 ^ 25 < p)] (limits : ResourceLimits) (source target : ExecutionSnapshot)
     (base : Ensemble (ZMod p) SP1PublicIO) (input : SP1PublicIO (ZMod p)) :
     (install limits source target base).Statement input ↔
       base.Statement input ∧ ResourceBoundary.Spec limits source target input :=
   (ResourceBoundary.checker limits source target).statement_iff base
+    (ResourceBoundary.count_bound limits source target)
     (ResourceBoundary.Spec limits source target) (ResourceBoundary.checks_iff limits source target) input
 
 /-- Completeness can add the resource circuit using only the semantic domain and header encoding. -/
@@ -65,7 +66,7 @@ theorem baseWitness_constraints {limits : ResourceLimits} {image : ProgramImage}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
     (constraints : witness.Constraints) : (baseWitness witness).Constraints :=
-  ((ResourceBoundary.checker limits source target).project_constraints witness).mp constraints |>.1
+  ((ResourceBoundary.checker limits source target).project_constraints witness).mp constraints
 
 /-- Original balances retain exactly their physical occurrence counts. -/
 theorem baseWitness_balanced {limits : ResourceLimits} {image : ProgramImage}
@@ -73,16 +74,16 @@ theorem baseWitness_balanced {limits : ResourceLimits} {image : ProgramImage}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
     (balanced : witness.BalancedChannels) : (baseWitness witness).BalancedChannels :=
-  ((ResourceBoundary.checker limits source target).project_balanced witness).mpr balanced
+  (((ResourceBoundary.checker limits source target).project_balanced_iff witness).mp balanced).1
 
 /-- The actual added raw assertions establish the endpoint resource contract. -/
 theorem resource_spec {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
-    (constraints : witness.Constraints) : ResourceBoundary.Spec limits source target witness.publicInput :=
+    (balanced : witness.BalancedChannels) : ResourceBoundary.Spec limits source target witness.publicInput :=
   (ResourceBoundary.checks_iff ..).mp
-    (((ResourceBoundary.checker limits source target).project_constraints witness).mp constraints).2
+    (((ResourceBoundary.checker limits source target).project_balanced_iff witness).mp balanced).2.2
 
 /-- The proof view leaves the public input unchanged. -/
 @[simp] theorem baseWitness_publicInput {limits : ResourceLimits} {image : ProgramImage}
@@ -115,7 +116,7 @@ theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
       ∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded
           (baseWitness witness))) loc = some message →
         locContent actual.sail loc = some (Word.toBitVec64 message.value) := by
-  have spec := resource_spec witness constraints
+  have spec := resource_spec witness balanced
   obtain ⟨events, actual, path, permitted, inventory, clock, pc, memory⟩ :=
     HostHintReadCPU.source_execution valid (baseWitness witness)
       (baseWitness_constraints witness constraints) (baseWitness_balanced witness balanced)

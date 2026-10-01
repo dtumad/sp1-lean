@@ -72,7 +72,7 @@ theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHin
 /-- The Subw chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := ⟨circuit⟩
+def component : Air.Flat.Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a trace builds: one input row per event, then `padding` zero rows. -/
 def traceInputs (events : List RTypeEvent) (padding : ℕ) : List (Inputs (ZMod p)) :=
@@ -95,8 +95,8 @@ circuit evaluates to zero on every built row, and no static lookup is left unche
 theorem traceTable_constraints (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-      hint).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ computableWitnesses
+      hint).Constraints data :=
+  Air.Flat.Table.build_constraints _ _ _ _ _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
@@ -104,8 +104,8 @@ Memory, Program and Byte channels carries the payload its channel promises. -/
 theorem traceTable_guarantees (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-      hint).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ computableWitnesses
+      hint).Guarantees data :=
+  Air.Flat.Table.build_guarantees _ _ _ _ _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
@@ -113,10 +113,10 @@ concatenated in row order. -/
 theorem traceTable_interactionsWith (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-        hint).interactionsWith channel =
+        hint).interactionsWith data channel =
       (traceInputs (p := p) events padding).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ channel
+  Air.Flat.Table.build_interactions _ _ _ _ _ data channel
 
 end SP1Clean.SubwChip

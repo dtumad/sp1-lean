@@ -33,7 +33,7 @@ def CircuitProgramEmissionShape {Input Output : TypeMap}
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
   ∀ data physical,
-    let component : Component (ZMod p) := ⟨circuit⟩
+    let component : Component (ZMod p) := { circuit := circuit }
     let env := Environment.fromArray physical data
     let rowView := view (component.rowInput env) (component.rowOutput env)
     component.operations.ConstraintsHold env →
@@ -149,7 +149,7 @@ def CircuitProgramInteractionContract {Input Output : TypeMap}
       ((circuit.main input).operations offset).interactionsWith programChannel.toRaw =
         [(programChannel.pulledIf (gate input offset) (message input offset)).toRaw]) ∧
     (∀ env : Environment (ZMod p),
-      ((⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env) →
+      (({ circuit := circuit } : Component (ZMod p)).operations.ConstraintsHold env) →
         Eval.eval env (gate inputVar offset) =
           (view (Eval.eval env inputVar)
             (Eval.eval env (circuit.output inputVar offset))).is_real) ∧
@@ -168,7 +168,7 @@ theorem circuitProgramEmissionShape_of_contract {Input Output : TypeMap}
   obtain ⟨gate, message, interactions, gate_eval, message_eval⟩ := contract
   intro data physical
   dsimp only
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input
@@ -207,7 +207,7 @@ def CircuitProgramExposureContract {Input Output : TypeMap}
         [programChannel.pulledIf (gate input offset) (message input offset)].map
           ChannelInteraction.toRaw⟩ ∈ circuit.exposedChannels input offset) ∧
     (∀ env : Environment (ZMod p),
-      ((⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env) →
+      (({ circuit := circuit } : Component (ZMod p)).operations.ConstraintsHold env) →
         Eval.eval env (gate inputVar offset) =
           (view (Eval.eval env inputVar)
             (Eval.eval env (circuit.output inputVar offset))).is_real) ∧
@@ -229,7 +229,7 @@ theorem circuitProgramEmissionShape_of_exposure {Input Output : TypeMap}
   obtain ⟨gate, message, exposure, gate_eval, message_eval⟩ := contract
   intro data physical
   dsimp only
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input

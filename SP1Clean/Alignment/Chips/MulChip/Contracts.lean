@@ -146,12 +146,12 @@ theorem MulChip.selectorOneHot_of_shallowConstraints
 /-- The completed MUL columns at one physical component row. -/
 noncomputable def MulChip.physicalCols (env : Environment (ZMod p)) :
     MulChip.Columns (ZMod p) :=
-  (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env
+  ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowOutput env
 
 /-- The completed MUL row view at one physical component row. -/
 noncomputable def MulChip.physicalView (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   MulChip.rowView
-    ((⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
+    (({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
     (MulChip.physicalCols env)
 
 /-- Small-literal disequality against the `ECALL` discriminant `50`, via `ZMod.val` injectivity. -/
@@ -169,7 +169,7 @@ private theorem mulOpcodeLiteral_ne_ecall {k : ℕ} (hk : k < 2 ^ 17) (hne : k �
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem MulChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (MulChip.physicalView env).is_real = 1) :
     (MulChip.physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var MulChip.Inputs (ZMod p) := varFromOffset MulChip.Inputs 0
@@ -177,7 +177,7 @@ theorem MulChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
   have shallow := shallowConstraints_of_componentConstraints (MulChip.circuit (p := p)) env
     constraints
   have inputEq : Eval.eval env input =
-      (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset MulChip.Inputs 0 env
   have viewIsReal : (MulChip.physicalView env).is_real = (Eval.eval env input).is_real := by
     simpa only [MulChip.physicalView, MulChip.rowView] using

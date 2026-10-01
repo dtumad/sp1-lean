@@ -41,7 +41,7 @@ private theorem lookup_spec {Row : TypeMap} [ProvableType Row] (table : StaticTa
   rwa [ProvableType.fromElements_eval_toElements] at checked
 
 theorem source_node_checked (hints : List Bytes) (env : Environment (ZMod p))
-    (checked : (⟨HostHintQueue.source hints⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
+    (checked : ({ circuit := HostHintQueue.source hints } : Component (ZMod p)).operations.ConstraintsHold env) :
     (valueFromOffset NodeRecord 0 env).Valid ∧ (valueFromOffset NodeRecord 0 env).Binds (ofList hints).1 := by
   apply sourceTable_sound hints
   rw [← eval_varFromOffset_valueFromOffset NodeRecord 0 env]
@@ -50,7 +50,7 @@ theorem source_node_checked (hints : List Bytes) (env : Environment (ZMod p))
   simpa only [Component.rowOperations, HostHintQueue.source, sourceMain, circuit_norm] using checked
 
 theorem source_word_checked (hints : List Bytes) (env : Environment (ZMod p))
-    (checked : (⟨sourceWord hints⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
+    (checked : ({ circuit := sourceWord hints } : Component (ZMod p)).operations.ConstraintsHold env) :
     (valueFromOffset WordRecord 0 env).Valid ∧ (valueFromOffset WordRecord 0 env).Binds (ofList hints).1 := by
   apply sourceWordTable_sound hints
   rw [← eval_varFromOffset_valueFromOffset WordRecord 0 env]
@@ -59,7 +59,7 @@ theorem source_word_checked (hints : List Bytes) (env : Environment (ZMod p))
   simpa only [Component.rowOperations, sourceWord, sourceWordMain, circuit_norm] using checked
 
 theorem source_node_authenticates (hints : List Bytes) :
-    Authenticates (ofList hints).1 (⟨HostHintQueue.source (p := p) hints⟩ : Component (ZMod p)) := by
+    Authenticates (ofList hints).1 ({ circuit := HostHintQueue.source (p := p) hints } : Component (ZMod p)) := by
   constructor
   · intro env checked interaction member _ _
     rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
@@ -73,7 +73,7 @@ theorem source_node_authenticates (hints : List Bytes) :
     simp [nodeChannel, wordChannel, Channel.toRaw]
 
 theorem source_word_authenticates (hints : List Bytes) :
-    Authenticates (ofList hints).1 (⟨sourceWord (p := p) hints⟩ : Component (ZMod p)) := by
+    Authenticates (ofList hints).1 ({ circuit := sourceWord (p := p) hints } : Component (ZMod p)) := by
   constructor
   · apply Component.Authenticates.of_silent
     change nodeChannel.toRaw ∉ [wordChannel.toRaw]

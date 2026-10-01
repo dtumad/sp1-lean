@@ -27,7 +27,7 @@ open Air.Flat PFunctor PFunctor.DynSystem
 
 universe uA uB
 
-variable {F : Type} [FiniteField F] [DecidableEq F]
+variable {F : Type} [FiniteField F]
 variable {PublicIO : TypeMap} [ProvableType PublicIO]
 variable {p : PFunctor.{uA, uB}}
 

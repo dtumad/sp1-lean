@@ -43,7 +43,7 @@ theorem provider_output (id : InstructionChipId) :
 
 /-- Protection preserves every original assertion. -/
 theorem provider_constraints (id : InstructionChipId) :
-    (⟨provider (p := p) id⟩ : Component (ZMod p)).operations.constraints =
+    ({ circuit := provider (p := p) id } : Component (ZMod p)).operations.constraints =
       (supportedChipFor (p := p) id).table.operations.constraints := by
   cases id with
   | storeByte => exact ProtectedStore.byte_constraints
@@ -54,7 +54,7 @@ theorem provider_constraints (id : InstructionChipId) :
 
 /-- Protection preserves every fixed lookup. -/
 theorem provider_lookups (id : InstructionChipId) :
-    (⟨provider (p := p) id⟩ : Component (ZMod p)).operations.lookups =
+    ({ circuit := provider (p := p) id } : Component (ZMod p)).operations.lookups =
       (supportedChipFor (p := p) id).table.operations.lookups := by
   cases id with
   | storeByte => exact ProtectedStore.byte_lookups
@@ -66,7 +66,7 @@ theorem provider_lookups (id : InstructionChipId) :
 /-- Protection changes only its dedicated byte-permission ledger. -/
 theorem provider_interactions (id : InstructionChipId) (selected : RawChannel (ZMod p))
     (different : selected ≠ WritePermissionProvider.channel.toRaw) :
-    (⟨provider id⟩ : Component (ZMod p)).operations.interactionsWith selected =
+    ({ circuit := provider id } : Component (ZMod p)).operations.interactionsWith selected =
       (supportedChipFor (p := p) id).table.operations.interactionsWith selected := by
   cases id with
   | storeByte => exact ProtectedStore.byte_interactions selected different
@@ -77,7 +77,7 @@ theorem provider_interactions (id : InstructionChipId) (selected : RawChannel (Z
 
 /-- The protected circuit has no existing physical receipt occurrence. -/
 theorem provider_receipts (id : InstructionChipId) :
-    (⟨provider (p := p) id⟩ : Component (ZMod p)).operations.interactionsWith
+    ({ circuit := provider (p := p) id } : Component (ZMod p)).operations.interactionsWith
       InstructionReceipt.channel.toRaw = [] := by
   rw [provider_interactions id _ (by
     intro same
@@ -104,7 +104,7 @@ theorem row_receipt (id : InstructionChipId) (data : ProverData (ZMod p)) (physi
           ((supportedChipFor (p := p) id).decodeRow data physical).is_real
           (statePushMessage ((supportedChipFor (p := p) id).decodeRow data physical))] := by
   have ledger : (component id).operations.interactionsWith InstructionReceipt.channel.toRaw =
-      (⟨provider id⟩ : Component (ZMod p)).operations.interactionsWith InstructionReceipt.channel.toRaw ++
+      ({ circuit := provider id } : Component (ZMod p)).operations.interactionsWith InstructionReceipt.channel.toRaw ++
         [(InstructionReceipt.channel.pushedIf
           ((OrdinaryStateReceipt.projection id).gate (varFromOffset _ 0) (size (supportedChipFor (p := p) id).kind.Inputs))
           ((OrdinaryStateReceipt.projection id).message (varFromOffset _ 0) (size (supportedChipFor (p := p) id).kind.Inputs))).toRaw] := by
@@ -122,21 +122,21 @@ theorem row_receipt (id : InstructionChipId) (data : ProverData (ZMod p)) (physi
 
 /-- The complete protected assertion list survives receipt publication. -/
 theorem constraints (id : InstructionChipId) : (component (p := p) id).operations.constraints =
-    (⟨provider id⟩ : Component (ZMod p)).operations.constraints := Receipt.constraints _ _ _ _
+    ({ circuit := provider id } : Component (ZMod p)).operations.constraints := Receipt.constraints _ _ _ _
 
 /-- The complete protected lookup list survives receipt publication. -/
 theorem lookups (id : InstructionChipId) : (component (p := p) id).operations.lookups =
-    (⟨provider id⟩ : Component (ZMod p)).operations.lookups := Receipt.lookups _ _ _ _
+    ({ circuit := provider id } : Component (ZMod p)).operations.lookups := Receipt.lookups _ _ _ _
 
 /-- Receipt publication retains every protected row's exact width. -/
 theorem width (id : InstructionChipId) : (component (p := p) id).width =
-    (⟨provider id⟩ : Component (ZMod p)).width := Receipt.width _ _ _ _
+    ({ circuit := provider id } : Component (ZMod p)).width := Receipt.width _ _ _ _
 
 /-- In particular, every write-permission occurrence survives, including disabled requests. -/
 theorem interactions (id : InstructionChipId) (selected : RawChannel (ZMod p))
     (different : selected ≠ InstructionReceipt.channel.toRaw) :
     (component id).operations.interactionsWith selected =
-      (⟨provider id⟩ : Component (ZMod p)).operations.interactionsWith selected :=
+      ({ circuit := provider id } : Component (ZMod p)).operations.interactionsWith selected :=
   Receipt.interactions _ _ _ _ selected different
 
 /-- Reuse the protected table's original physical arrays and shared prover data. -/

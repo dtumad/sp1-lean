@@ -33,7 +33,7 @@ theorem register_pulls (witness : EnsembleWitness (ensemble source target auxili
   rw [single_interaction _ _ (registerSlot.table_component witness)
     (FinalMemoryValue.channel false).toRaw
     (fun env => (FinalMemoryValue.channel false).pulledValue
-      ((⟨FinalRegisterCheck.circuit target⟩ : Component (ZMod p)).rowInput env).record) ?_]
+      (({ circuit := FinalRegisterCheck.circuit target } : Component (ZMod p)).rowInput env).record) ?_]
   · simp only [registerInputs, List.map_map, Function.comp_def]
   · intro env
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
@@ -49,7 +49,7 @@ theorem ram_pulls (witness : EnsembleWitness (ensemble source target auxiliary c
   rw [single_interaction _ _ (ramSlot.table_component witness)
     (FinalMemoryValue.channel true).toRaw
     (fun env => (FinalMemoryValue.channel true).pulledValue
-      ((⟨FinalRamCheck.circuit target⟩ : Component (ZMod p)).rowInput env).value.record) ?_]
+      (({ circuit := FinalRamCheck.circuit target } : Component (ZMod p)).rowInput env).value.record) ?_]
   · simp only [ramInputs, List.map_map, Function.comp_def]
   · intro env
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
@@ -64,7 +64,7 @@ theorem register_changes (witness : EnsembleWitness (ensemble source target auxi
       (registerInputs witness).map (fun input => FinalMemoryChange.channel.pushedIfValue input.selected
         (FinalMemoryChange.key false input.record)) := by
   rw [single_interaction _ _ (registerSlot.table_component witness) FinalMemoryChange.channel.toRaw
-    (fun env => let input := (⟨FinalRegisterCheck.circuit target⟩ : Component (ZMod p)).rowInput env
+    (fun env => let input := ({ circuit := FinalRegisterCheck.circuit target } : Component (ZMod p)).rowInput env
       FinalMemoryChange.channel.pushedIfValue input.selected (FinalMemoryChange.key false input.record)) ?_]
   · simp only [registerInputs, List.map_map, Function.comp_def]
   · intro env
@@ -80,7 +80,7 @@ theorem ram_changes (witness : EnsembleWitness (ensemble source target auxiliary
       (ramInputs witness).map (fun input => FinalMemoryChange.channel.pushedIfValue input.selected
         (FinalMemoryChange.key true input.value.record)) := by
   rw [single_interaction _ _ (ramSlot.table_component witness) FinalMemoryChange.channel.toRaw
-    (fun env => let input := (⟨FinalRamCheck.circuit target⟩ : Component (ZMod p)).rowInput env
+    (fun env => let input := ({ circuit := FinalRamCheck.circuit target } : Component (ZMod p)).rowInput env
       FinalMemoryChange.channel.pushedIfValue input.selected (FinalMemoryChange.key true input.value.record)) ?_]
   · simp only [ramInputs, List.map_map, Function.comp_def]
   · intro env

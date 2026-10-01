@@ -211,7 +211,7 @@ def addwChipRowCodec : ChipRowCodec AddwChip.Inputs AddwChip.Columns
         (addwChipLocals cols) data).trans (addwChipColumnsOfInput_roundtrip cols) }
 
 theorem addwChip_lookups_empty :
-    (⟨AddwChip.circuit (p := p)⟩ :
+    ({ circuit := AddwChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
     AddwChip.circuit_main_eq]
@@ -934,26 +934,26 @@ theorem addwChip_constraints_constructive
     let assignment := addwChipRowCodec.assignment
       (addwChipOracle.deconfigure rustCols) data
     List.Forall (· = 0) (addwChipOracle.assertZeros rustCols) ↔
-      (⟨AddwChip.circuit (p := p)⟩ :
+      ({ circuit := AddwChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
   let cols := addwChipOracle.deconfigure rustCols
   let assignment := addwChipRowCodec.assignment cols data
   have hbind : BindsChipOutput AddwChip.main assignment.environment
-      (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowOffset cols := by
+      ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInputVar
+      ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [AddwChip.circuit_main_eq] at h
     exact h
   have hlegacy := addwChip_constraints_faithful (p := p) assignment.environment
-    (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowOffset cols hbind
+    ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInputVar
+    ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (addwChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            (⟨AddwChip.circuit (p := p)⟩ :
+            ({ circuit := AddwChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols, ChipOracle.nativeAssertZeros_deconfigure,
       Air.Flat.Component.rowOperations_mk, Air.Flat.Component.rowInputVar_mk,
@@ -1002,21 +1002,21 @@ theorem addwChip_interactions_constructive
       (addwChipOracle.deconfigure rustCols) data
     List.Perm
       (nativeAccesses assignment.environment
-        (⟨AddwChip.circuit (p := p)⟩ :
+        ({ circuit := AddwChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).operations)
       (addwChipOracle.rustAccesses rustCols) := by
   dsimp only
   let cols := addwChipOracle.deconfigure rustCols
   let assignment := addwChipRowCodec.assignment cols data
   have hbind : BindsChipOutput AddwChip.main assignment.environment
-      (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowOffset cols := by
+      ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInputVar
+      ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [AddwChip.circuit_main_eq] at h
     exact h
   have hlegacy := addwChip_interactions_faithful (p := p) assignment.environment
-    (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowOffset cols hbind
+    ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInputVar
+    ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations (AddwChip.circuit (p := p))
     assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,

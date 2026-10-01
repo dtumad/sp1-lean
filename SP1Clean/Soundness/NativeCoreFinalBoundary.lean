@@ -132,7 +132,7 @@ private theorem initialTables_final_silent {image : ProgramImage}
       byteChannel, Channel.toRaw]
 
 private theorem verifier_final_interactions (image : ProgramImage) (env : Environment (ZMod p)) :
-    (⟨verifier image⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := verifier image } : Component (ZMod p)).operations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw env =
       [(OrderedBoundary.channel OrderedFinalProvider.channelName).pushedValue OrderedMemoryEnsemble.startKey,
        (OrderedBoundary.channel OrderedFinalProvider.channelName).pulledValue OrderedMemoryEnsemble.endKey] := by
@@ -180,7 +180,7 @@ theorem finalWitness_interactions {image : ProgramImage}
     EnsembleWitness.verifierTable_environment, EnsembleWitness.verifierTable_component]
   change (FinalMemoryEnsemble.ensemble (p := p) (afterFinalTables image) []).verifierTable.operations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw _ =
-    (⟨verifier image⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := verifier image } : Component (ZMod p)).operations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw _
   rw [verifier_final_interactions]
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,

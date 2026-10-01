@@ -497,7 +497,7 @@ private theorem memoryFinalize_toAccess_eq_inputAccess
 private theorem memoryProvider_nativeAccesses_symbolic
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations =
       [LookupAccessList.negMult
         (AbstractInteraction.toAccess env
           (pushedIf (channel := Channels.memoryChannel)
@@ -524,7 +524,7 @@ omit [Fact (2 ^ 24 < p)] in
 private theorem memoryFinalize_nativeAccesses_symbolic
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations =
       [LookupAccessList.negMult
         (AbstractInteraction.toAccess env
           (pulledIf (channel := Channels.memoryChannel)
@@ -572,13 +572,13 @@ private theorem memoryGlobalInitRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).buildRow
             (memoryGlobalInitInput row) data hint) data)
-        (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations =
       [projectedMemoryGlobalInitAccess row] := by
   rw [memoryProvider_nativeAccesses_symbolic,
     memoryProvider_toAccess_eq_inputAccess]
-  let component := (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p))
   let env := Environment.fromArray
     (component.buildRow (memoryGlobalInitInput row) data hint) data
   have inputEq : Eval.eval env
@@ -593,13 +593,13 @@ private theorem memoryGlobalFinalizeRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).buildRow
             (memoryGlobalFinalizeInput row) data hint) data)
-        (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations =
       [projectedMemoryGlobalFinalizeAccess row] := by
   rw [memoryFinalize_nativeAccesses_symbolic,
     memoryFinalize_toAccess_eq_inputAccess]
-  let component := (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p))
   let env := Environment.fromArray
     (component.buildRow (memoryGlobalFinalizeInput row) data hint) data
   have inputEq : Eval.eval env
@@ -616,7 +616,7 @@ private theorem transportMemoryInitTable_accesses
       (activeMemoryGlobalInitRows witness).map projectedMemoryGlobalInitAccess := by
   simpa only [transportMemoryInitTable, MemoryProviderChip.component] using
     tableNativeAccesses_build_map_singleton
-      (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p))
+      ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p))
       (activeMemoryGlobalInitRows witness) memoryGlobalInitInput projectedMemoryGlobalInitAccess
       data hint (fun row _ => memoryGlobalInitRow_nativeAccesses row data hint)
 
@@ -627,7 +627,7 @@ private theorem transportMemoryFinalizeTable_accesses
       (activeMemoryGlobalFinalizeRows witness).map projectedMemoryGlobalFinalizeAccess := by
   simpa only [transportMemoryFinalizeTable, MemoryFinalizeChip.component] using
     tableNativeAccesses_build_map_singleton
-      (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p))
+      ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p))
       (activeMemoryGlobalFinalizeRows witness) memoryGlobalFinalizeInput
       projectedMemoryGlobalFinalizeAccess data hint
       (fun row _ => memoryGlobalFinalizeRow_nativeAccesses row data hint)

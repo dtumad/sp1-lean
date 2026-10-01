@@ -1389,7 +1389,7 @@ private theorem haltRow_spec_of_facts
   have hassump : (haltTable witness).component.Assumptions
       ((haltTable witness).environment row) := by
     rw [haltTable_component]
-    rw [show ∀ env, (⟨HaltChip.circuit⟩ : Component (ZMod p)).Assumptions env = True from
+    rw [show ∀ env, ({ circuit := HaltChip.circuit } : Component (ZMod p)).Assumptions env = True from
       fun _ => HaltChip.circuit_Assumptions_apply _ _]
     trivial
   have spec := ((haltTable witness).component.weakSoundness
@@ -1397,7 +1397,7 @@ private theorem haltRow_spec_of_facts
     hassump (tableConstraints row rowMem)
     (haltTable_fullGuarantees witness byteGuarantees programGuarantees memoryGuarantees rowMem)).1
   rw [haltTable_component,
-    show ∀ env, (⟨HaltChip.circuit⟩ : Component (ZMod p)).Spec env =
+    show ∀ env, ({ circuit := HaltChip.circuit } : Component (ZMod p)).Spec env =
         HaltChip.Spec (valueFromOffset HaltChip.Inputs 0 env) from
       fun _ => HaltChip.circuit_Spec_apply _ _ _] at spec
   exact spec
@@ -1500,7 +1500,7 @@ theorem syscallInstrsRow_spec_of_component
   have hassump : table.component.Assumptions
       (table.environment row) := by
     rw [component]
-    rw [show ∀ env, (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).Assumptions env = True from
+    rw [show ∀ env, ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).Assumptions env = True from
       fun _ => SyscallInstrsChip.circuit_Assumptions_apply _ _]
     trivial
   have spec := (table.component.weakSoundness
@@ -1509,7 +1509,7 @@ theorem syscallInstrsRow_spec_of_component
     (syscallInstrsTable_fullGuarantees table component byteGuarantees programGuarantees
       memoryGuarantees rowMem)).1
   rw [component,
-    show ∀ env, (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).Spec env =
+    show ∀ env, ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).Spec env =
         SyscallInstrsChip.Spec (valueFromOffset SyscallInstrsChip.Inputs 0 env) from
       fun _ => SyscallInstrsChip.circuit_Spec_apply _ _ _] at spec
   exact spec

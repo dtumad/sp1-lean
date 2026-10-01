@@ -133,7 +133,7 @@ theorem afterInitialTables_silent (image : ProgramImage) :
       rw [sp1Ensemble_tables]; exact List.mem_append_right _ providerMem))
 
 private theorem verifier_initial_interactions (image : ProgramImage) (env : Environment (ZMod p)) :
-    (⟨verifier image⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := verifier image } : Component (ZMod p)).operations.interactionValuesWith
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw env =
       [(OrderedBoundary.channel OrderedInitialProvider.channelName).pushedValue OrderedMemoryEnsemble.startKey,
        (OrderedBoundary.channel OrderedInitialProvider.channelName).pulledValue OrderedMemoryEnsemble.endKey] := by
@@ -174,7 +174,7 @@ theorem initialWitness_interactions {image : ProgramImage}
     EnsembleWitness.verifierTable_environment, EnsembleWitness.verifierTable_component]
   change (InitialMemoryEnsemble.ensemble (p := p) image (afterInitialTables image) []).verifierTable.operations.interactionValuesWith
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw _ =
-    (⟨verifier image⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := verifier image } : Component (ZMod p)).operations.interactionValuesWith
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw _
   rw [verifier_initial_interactions]
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
@@ -221,7 +221,7 @@ theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble 
     witness.publicInput.LimbBounds ∧ witness.publicInput.BootFor image := by
   have spec : witness.verifierTable.Spec := by
     intro row member
-    exact component_spec_of_byte (⟨verifier image⟩ : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
+    exact component_spec_of_byte ({ circuit := verifier image } : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
       (constraints _ witness.mem_allTables_verifierTable row member)
       ((finishedChannel_guarantees image witness constraints balanced _
         witness.mem_allTables_verifierTable).1 row member)
@@ -240,7 +240,7 @@ def programTable {image : ProgramImage} (witness : EnsembleWitness (ensemble (p 
 
 theorem programTable_component {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    (programTable witness).component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) :=
+    (programTable witness).component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) :=
   (witness.same_circuits 6 (by change 6 < (tables image).length; rw [tables_length]; decide)).symm
 
 /-- Every physical Program row is authenticated against this image's ROM and official Sail,
@@ -249,7 +249,7 @@ theorem program_row_committed {image : ProgramImage} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints)
     (row : Array (ZMod p)) (member : row ∈ (programTable witness).table) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg ((⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)).rowInput
+      (rowOfMsg (({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)).rowInput
         ((programTable witness).environment row)).toMessage) := by
   have checked := constraints (programTable witness) (witness.mem_allTables_of_mem_tables
     (List.getElem_mem (programIndex_bound witness))) row member

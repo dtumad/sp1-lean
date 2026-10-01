@@ -78,6 +78,16 @@ def inventory (snapshot : MemorySnapshot) :
 theorem views_eq (snapshot : MemorySnapshot) :
     (inventory (p := p) snapshot).views = [registerView snapshot, ramView snapshot, terminalView] := rfl
 
+/-- The snapshot's register, RAM and terminal tables have distinct canonical names. -/
+theorem inventory_unique_names (snapshot : MemorySnapshot) :
+    ((inventory (p := p) snapshot).views.map (·.component.circuit.name)).Nodup := by
+  rw [views_eq]
+  simp [registerView, ramView, terminalView,
+    OrderedMemoryEnsemble.providerView, OrderedMemoryEnsemble.terminalView,
+    OrderedMemoryProvider.circuit, OrderedBoundaryEnd.circuit,
+    SnapshotRegisterProvider.circuit, SnapshotRamProvider.circuit, channelName]
+  decide
+
 /-- Source rows use only Byte, Memory, and their own private ordering channel. -/
 theorem view_channels_subset (snapshot : MemorySnapshot) (id : TableId) :
     (viewFor (p := p) snapshot id).component.circuit.channels ⊆
@@ -109,7 +119,7 @@ theorem recordFor_interactions (snapshot : MemorySnapshot) (id : TableId) (env :
     simp only [SnapshotRegisterProvider.circuit]
     rw [SnapshotRegisterProvider.main_memory_interactions]
     simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Option.toList_some,
-      Component.rowOutput_mk, FormalCircuitBase.output_def, OrderedMemoryProvider.elaborated,
+      FormalCircuitBase.output_def, OrderedMemoryProvider.elaborated,
       SnapshotRegisterProvider.elaborated]
     rfl
   · change (ramView snapshot).component.operations.interactionValuesWith memoryChannel.toRaw env = _
@@ -120,7 +130,7 @@ theorem recordFor_interactions (snapshot : MemorySnapshot) (id : TableId) (env :
     simp only [SnapshotRamProvider.circuit]
     rw [SnapshotRamProvider.main_memory_interactions]
     simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Option.toList_some,
-      Component.rowOutput_mk, FormalCircuitBase.output_def, OrderedMemoryProvider.elaborated]
+      FormalCircuitBase.output_def, OrderedMemoryProvider.elaborated]
     rfl
   · exact OrderedMemoryEnsemble.terminalView_memory_interactions _ (by decide) env
 
@@ -130,7 +140,7 @@ theorem view_spec (snapshot : MemorySnapshot) (id : TableId) (env : Environment 
     (constraints : (viewFor snapshot id).component.operations.ConstraintsHold env)
     (byte : (viewFor snapshot id).component.operations.ChannelGuarantees byteChannel.toRaw env) :
     (viewFor snapshot id).component.Spec env := by
-  have assumptions : (viewFor snapshot id).component.Assumptions env := by cases id <;> trivial
+  have assumptions : (viewFor snapshot id).component.CircuitAssumptions env := by cases id <;> trivial
   have channels : (viewFor (p := p) snapshot id).component.circuit.channelsWithGuarantees ⊆
       [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] := by
     cases id

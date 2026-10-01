@@ -24,11 +24,11 @@ theorem main_other_interactions (target : RawChannel (ZMod p)) (notByte : target
     AddrAddOperation.circuit, Gadgets.Equality.circuit] using notByte
 
 theorem component_spec_of_byte (env : Environment (ZMod p))
-    (constraints : (⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env)
-    (bytes : (⟨circuit⟩ : Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw env) :
-    (⟨circuit⟩ : Component (ZMod p)).Spec env := by
+    (constraints : ({ circuit := circuit } : Component (ZMod p)).operations.ConstraintsHold env)
+    (bytes : ({ circuit := circuit } : Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw env) :
+    ({ circuit := circuit } : Component (ZMod p)).Spec env := by
   apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ ((⟨circuit⟩ : Component (ZMod p)).inChannelsOrGuarantees env)]
+  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit } : Component (ZMod p)).inChannelsOrGuarantees env)]
   intro selected member
   change selected ∈ [byteChannel.toRaw] at member
   obtain rfl := List.mem_singleton.mp member

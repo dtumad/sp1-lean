@@ -65,7 +65,7 @@ theorem source_records_authentic {image : ProgramImage} {source : ExecutionSnaps
 
 /-- The actual local verifier has exactly the fixed source-order endpoints on this channel. -/
 theorem verifier_source_interactions (image : ProgramImage) (source : ExecutionSnapshot) (env : Environment (ZMod p)) :
-    (⟨verifier image source⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := verifier image source } : Component (ZMod p)).operations.interactionValuesWith
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw env =
       [(OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).pushedValue OrderedMemoryEnsemble.startKey,
        (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).pulledValue OrderedMemoryEnsemble.endKey] := by
@@ -107,7 +107,7 @@ theorem sourceWitness_interactions {image : ProgramImage} {source : ExecutionSna
   change ((SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).ensemble
     (NativeCore.afterInitialTables image) []).verifierTable.operations.interactionValuesWith
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw _ =
-    (⟨verifier image source⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := verifier image source } : Component (ZMod p)).operations.interactionValuesWith
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw _
   rw [verifier_source_interactions]
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
@@ -144,7 +144,7 @@ theorem public_contract_of_byte {image : ProgramImage} {source : ExecutionSnapsh
       witness.publicInput.SourceFor source ∧ witness.publicInput.PreservesStoppedClock source := by
   have spec : witness.verifierTable.Spec := by
     intro row member
-    exact NativeCore.component_spec_of_byte (⟨verifier image source⟩ : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
+    exact NativeCore.component_spec_of_byte ({ circuit := verifier image source } : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
       (constraints _ witness.mem_allTables_verifierTable row member)
       (byte row member)
   exact EnsembleWitness.verifierSpec_iff_verifierTable_spec.mpr spec

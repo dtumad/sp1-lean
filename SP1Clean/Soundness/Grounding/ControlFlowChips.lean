@@ -43,7 +43,7 @@ local macro "ctrlViewProjection " inputs:term ", " circuit:term ", " viewOf:term
     let input : Var $inputs (ZMod p) := varFromOffset $inputs 0
     let offset := size $inputs
     have outputEq : Eval.eval $env (($circuit (p := p)).output input offset) =
-        (⟨$circuit (p := p)⟩ : Component (ZMod p)).rowOutput $env := by
+        ({ circuit := $circuit (p := p) } : Component (ZMod p)).rowOutput $env := by
       simp only [Component.rowOutput, input, offset, circuit_norm]
     simp only [$viewOf:term, $rowView:term]
     rw [← outputEq]
@@ -227,8 +227,8 @@ def jalrChipDescriptor : SupportedChip p :=
 omit [Fact (2 ^ 25 < p)] in
 noncomputable def jalrViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   JalrChip.rowView
-    ((⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+    (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 theorem jalrViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     ((jalrChipDescriptor (p := p)).decodeRow data physical).view =
@@ -237,7 +237,7 @@ theorem jalrViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMo
 omit [Fact (2 ^ 25 < p)] in
 theorem jalrChipDescriptor_table :
     (jalrChipDescriptor (p := p)).table =
-      (⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Folded descriptor projection for JALR's circuit assumptions. -/
@@ -246,7 +246,7 @@ theorem jalrChipDescriptor_assumptions_iff (data : ProverData (ZMod p))
     (jalrChipDescriptor (p := p)).table.Assumptions
         (Environment.fromArray physical data) ↔
       JalrChip.Assumptions
-        ((⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
+        (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput
           (Environment.fromArray physical data)) data := by
   rw [jalrChipDescriptor_table]; rfl
 
@@ -268,7 +268,7 @@ theorem jalrViewOf_isReal (env : Environment (ZMod p)) :
     (jalrViewOf env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) JalrChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset JalrChip.Inputs 0) =
-      (⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset JalrChip.Inputs 0 env
   simpa only [jalrViewOf, JalrChip.rowView] using
     congrArg (fun input : JalrChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -283,7 +283,7 @@ theorem jalrViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- JALR's exposed Memory list evaluates to the canonical I-type four-pack. -/
 theorem jalrChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨JalrChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (itypeMemoryInteractions (jalrViewOf env)).map TypedInteraction.raw := by
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
@@ -825,8 +825,8 @@ def branchChipDescriptor : SupportedChip p :=
 omit [Fact (2 ^ 25 < p)] in
 noncomputable def branchViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   BranchChip.rowView
-    ((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+    (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 theorem branchViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     ((branchChipDescriptor (p := p)).decodeRow data physical).view =
@@ -835,7 +835,7 @@ theorem branchViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (Z
 omit [Fact (2 ^ 25 < p)] in
 theorem branchChipDescriptor_table :
     (branchChipDescriptor (p := p)).table =
-      (⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Folded descriptor projection for Branch's circuit assumptions. -/
@@ -844,7 +844,7 @@ theorem branchChipDescriptor_assumptions_iff (data : ProverData (ZMod p))
     (branchChipDescriptor (p := p)).table.Assumptions
         (Environment.fromArray physical data) ↔
       BranchChip.Assumptions
-        ((⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
           (Environment.fromArray physical data)) data := by
   rw [branchChipDescriptor_table]; rfl
 
@@ -866,7 +866,7 @@ theorem branchViewOf_isReal (env : Environment (ZMod p)) :
     (branchViewOf env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) BranchChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset BranchChip.Inputs 0) =
-      (⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset BranchChip.Inputs 0 env
   simpa only [branchViewOf, BranchChip.rowView] using
     congrArg (fun input : BranchChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -874,7 +874,7 @@ theorem branchViewOf_isReal (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- Branch's exposed Memory list evaluates to the immutable I-type four-pack. -/
 theorem branchChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨BranchChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (immutableItypeMemoryInteractions (branchViewOf env)).map TypedInteraction.raw := by
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]

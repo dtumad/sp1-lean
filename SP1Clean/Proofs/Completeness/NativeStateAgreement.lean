@@ -387,24 +387,24 @@ private theorem stateBumpBuiltLinks_aux
   -- Worked at the unfolded component: at `StateBumpChip.component` the row lists are typed at
   -- `component.Input` and the rewrites below are refused at implicit transparency.
   unfold StateBumpChip.component
-  let table := Table.build (⟨StateBumpChip.circuit⟩ : Component (ZMod p)) tableInputs data hint
+  let table := Table.build ({ circuit := StateBumpChip.circuit } : Component (ZMod p)) tableInputs data hint
   have decoded (input : StateBumpChip.Inputs (ZMod p)) :
-      stateBumpRow table ((⟨StateBumpChip.circuit⟩ : Component (ZMod p)).buildRow input data hint)
+      stateBumpRow table (({ circuit := StateBumpChip.circuit } : Component (ZMod p)).buildRow input data hint)
         = input :=
     stateBumpRow_buildRow tableInputs input data hint
   have filtered :
       (inputs.map fun input =>
-          (⟨StateBumpChip.circuit⟩ : Component (ZMod p)).buildRow input data hint).filter
+          ({ circuit := StateBumpChip.circuit } : Component (ZMod p)).buildRow input data hint).filter
           (fun row => decide (signedVal (stateBumpRow table row).is_real = 1)) =
         inputs.map fun input =>
-          (⟨StateBumpChip.circuit⟩ : Component (ZMod p)).buildRow input data hint := by
+          ({ circuit := StateBumpChip.circuit } : Component (ZMod p)).buildRow input data hint := by
     apply List.filter_eq_self.mpr
     intro row rowMem
     obtain ⟨input, inputMem, rfl⟩ := List.mem_map.mp rowMem
     exact Bool.decide_true (by rw [decoded]; exact active input inputMem)
   change
     (((inputs.map fun input =>
-        (⟨StateBumpChip.circuit⟩ : Component (ZMod p)).buildRow input data hint).filter fun row =>
+        ({ circuit := StateBumpChip.circuit } : Component (ZMod p)).buildRow input data hint).filter fun row =>
       signedVal (stateBumpRow table row).is_real = 1).map fun row =>
         (msgToken stateChannel (StateBumpChip.pulledMessage (stateBumpRow table row)),
           msgToken stateChannel (StateBumpChip.pushedMessage (stateBumpRow table row)))) = _

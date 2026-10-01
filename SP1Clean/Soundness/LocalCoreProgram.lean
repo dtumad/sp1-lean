@@ -19,7 +19,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 /-- The fixed image is the only Program producer, including across both local boundaries. -/
 theorem component_program_source (image : ProgramImage) (source : ExecutionSnapshot)
     (component : Component (ZMod p)) (member : component ∈ (ensemble image source).allTables) :
-    component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) ∨ NativeCore.ProgramPulls component := by
+    component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ NativeCore.ProgramPulls component := by
   simp only [Ensemble.allTables, List.mem_cons] at member
   rcases member with rfl | member
   · right
@@ -95,7 +95,7 @@ def programTable {image : ProgramImage} {source : ExecutionSnapshot} (witness : 
 
 theorem programTable_component {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
-    (programTable witness).component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) :=
+    (programTable witness).component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) :=
   (witness.same_circuits 6 (by change 6 < (tables image source).length; rw [tables_length]; decide)).symm
 
 /-- Every physical Program row is authenticated against this image's ROM and official Sail,
@@ -104,7 +104,7 @@ theorem program_row_committed {image : ProgramImage} {source : ExecutionSnapshot
     (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
     (row : Array (ZMod p)) (member : row ∈ (programTable witness).table) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg ((⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)).rowInput
+      (rowOfMsg (({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)).rowInput
         ((programTable witness).environment row)).toMessage) := by
   have checked := constraints (programTable witness) (witness.mem_allTables_of_mem_tables
     (List.getElem_mem (programIndex_bound witness))) row member

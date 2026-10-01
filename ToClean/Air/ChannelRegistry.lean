@@ -23,8 +23,7 @@ def Ensemble.withChannels (ens : Ensemble F PublicIO) (channels : List (RawChann
 /-- Reuse the identical witness after replacing only the channel registry. -/
 def EnsembleWitness.withChannels {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
     (channels : List (RawChannel F)) : EnsembleWitness (ens.withChannels channels) :=
-  EnsembleWitness.ofTables _ witness.tables witness.data witness.publicInput
-    witness.tables_map_component witness.same_data
+  EnsembleWitness.ofTables _ witness.tables witness.publicInput witness.tables_map_component
 
 /-- Changing a registry preserves all raw assertions and fixed-table lookups. -/
 theorem EnsembleWitness.withChannels_constraints {ens : Ensemble F PublicIO}
@@ -32,7 +31,7 @@ theorem EnsembleWitness.withChannels_constraints {ens : Ensemble F PublicIO}
     (witness.withChannels channels).Constraints ↔ witness.Constraints := Iff.rfl
 
 /-- Full raw-channel membership equivalence transports every balance and capacity condition. -/
-theorem EnsembleWitness.withChannels_balanced [DecidableEq F] {ens : Ensemble F PublicIO}
+theorem EnsembleWitness.withChannels_balanced {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness ens) (channels : List (RawChannel F))
     (same : ∀ channel, channel ∈ channels ↔ channel ∈ ens.channels) :
     (witness.withChannels channels).BalancedChannels ↔ witness.BalancedChannels := by

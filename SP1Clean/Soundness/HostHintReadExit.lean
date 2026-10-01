@@ -29,7 +29,7 @@ private theorem source_exit_silent :
   have checked : ((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
       (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++
-        [(⟨(HostHintQueueBoundary.boundary source final bankFinal).circuit⟩ : Component (ZMod p))]))).all
+        [({ circuit := (HostHintQueueBoundary.boundary source final bankFinal).circuit } : Component (ZMod p))]))).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (exitChannel (p := p)).toRaw.name) = true := rfl
   intro component member used

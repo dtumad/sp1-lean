@@ -1,12 +1,13 @@
 import SP1Clean.Soundness.HostCommitEnsemble
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Model.SP1Field
-import ToClean.Air.EnsembleExport
+import Clean.Circuit.WitnessExport
 
 /-! # Physical commitment-bank boundary regressions
 
-Build the actual nine bank tables and the zero-witness verifier. Empty-bank checks cover every
-emitted channel. Active histories check all assertions and Byte meanings, then bank-channel
+Build the actual nine bank tables and separate public verifier. Evaluate their canonical ledger
+at the data derived from the committed rows, retaining zero-multiplicity occurrences. Empty-bank
+checks cover every emitted channel. Active histories check all assertions and Byte meanings, then bank-channel
 balance; authenticating their HostCall inputs remains the enclosing machine's responsibility.
 -/
 
@@ -27,10 +28,9 @@ private def byteValid (values : List Fp) : Bool :=
       opcode == (op.idx : Fp) && decide (op.constrain a b c)
   | _ => false
 
-private def checked (component : Component Fp) (row : Array Fp) : Bool × Ledger :=
-  let env := Environment.fromArray row (fun _ _ => #[])
-  let operations := component.rowOperations.toFlat
-  let valid := operations.all fun operation =>
+private def checked (component : Component Fp) (data : ProverData Fp) (row : Array Fp) : Bool :=
+  let env := Environment.fromArray row data
+  component.rowOperations.toFlat.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
     | .lookup _ => false
@@ -38,13 +38,15 @@ private def checked (component : Component Fp) (row : Array Fp) : Bool × Ledger
     | .interact interaction =>
       env interaction.mult == 0 || interaction.channel.name != "SP1Byte" ||
         byteValid (interaction.msg.map env).toList
-  (valid, (FlatOperation.interactions operations).filterMap fun interaction =>
-    if env interaction.mult == 0 then none else
-      some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
 
-private def tableChecked (table : Table Fp) : Bool × Ledger :=
-  let rows := table.table.map (checked table.component)
-  (rows.all (·.1), rows.flatMap (·.2))
+private def tableChecked (data : ProverData Fp) (table : Table Fp) : Bool :=
+  table.table.all (checked table.component data)
+
+private def evaluatedWitness {PublicIO : TypeMap} [ProvableType PublicIO]
+    {ensemble : Ensemble Fp PublicIO} (built : EnsembleWitness ensemble) : Bool × Ledger :=
+  (built.tables.all (tableChecked built.data),
+    built.interactions.map fun interaction =>
+      (interaction.channel.name, interaction.msg.toList, interaction.mult))
 
 private def balance (ledger : Ledger) : Bool :=
   ledger.length < SP1Prime && ledger.all fun key =>
@@ -63,23 +65,21 @@ private def lastState (deferred : Bool) (slot : Fin 8) : State Fp :=
 private def tableFor (deferred : Bool) (events : List (Fin 8 × Inputs Fp))
     (terminals : List (State Fp)) (index : HostCommitBank.Index) : Table Fp :=
   match index with
-  | some selected => Table.build ⟨HostCommitChip.circuit deferred selected⟩
+  | some selected => Table.build { circuit := HostCommitChip.circuit deferred selected }
       ((events.filter (fun event => event.1 == selected)).map (·.2)) (fun _ _ => #[]) (ProverHint.empty Fp)
-  | none => Table.build ⟨HostCommitBoundary.terminal deferred⟩ terminals
+  | none => Table.build { circuit := HostCommitBoundary.terminal deferred } terminals
       (fun _ _ => #[]) (ProverHint.empty Fp)
 
 private def witnessFor (deferred : Bool) (source : Model.Core.HostState) (events : List (Fin 8 × Inputs Fp))
     (terminals : List (State Fp)) (publicValues : Vector (Word Fp) 8) :
-    EnsembleWitness (HostCommitEnsemble.ensemble (p := SP1Prime) deferred source [] []) :=
+    EnsembleWitness (HostCommitEnsemble.ensemble (p := SP1Prime) deferred source [] []
+      (by simpa using HostCommitBank.components_unique_names (p := SP1Prime) deferred)) :=
   EnsembleWitness.ofTables _ (HostCommitBank.indices.map (tableFor deferred events terminals))
-    (fun _ _ => #[]) publicValues (by
+    publicValues (by
       simp only [List.map_map, HostCommitEnsemble.ensemble, HostCommitBank.components,
         HostCommitBank.views, List.append_nil, Function.comp_def]
       apply List.map_congr_left
       intro index _
-      cases index <;> rfl) (by
-      intro table member
-      obtain ⟨index, _, rfl⟩ := List.mem_map.mp member
       cases index <;> rfl)
 
 private def witness (deferred : Bool) (slot : Fin 8) (active : Bool)
@@ -88,8 +88,7 @@ private def witness (deferred : Bool) (slot : Fin 8) (active : Bool)
 
 private def evaluated (deferred : Bool) (slot : Fin 8) (active : Bool)
     (terminals : List (State Fp)) (publicValues : Vector (Word Fp) 8) : Bool × Ledger :=
-  let checks := (witness deferred slot active terminals publicValues).allTables.map tableChecked
-  (checks.all (·.1), checks.flatMap (·.2))
+  evaluatedWitness (witness deferred slot active terminals publicValues)
 
 /-- Empty banks have one genuine terminal row, nine tables, and a balanced complete ledger. -/
 theorem emptyBanks : [false, true].all (fun deferred =>
@@ -127,22 +126,22 @@ private def interleaved (deferred : Bool) : List (Fin 8 × Inputs Fp) × State F
 theorem interleavedBanks : [false, true].all (fun deferred =>
     let (events, last) := interleaved deferred
     let built := witnessFor deferred {} events [last] last.values
-    let checks := built.allTables.map tableChecked
-    checks.all (·.1) && balance ((checks.flatMap (·.2)).filter fun item =>
+    let checks := evaluatedWitness built
+    checks.1 && balance (checks.2.filter fun item =>
       item.1 == (stateChannel (p := SP1Prime) deferred).name) &&
       (built.tables.flatMap (fun table => table.table.map (fun row => row[1]!))) == [265, 1, 529, 529]) = true := by
   native_decide
 
 private def terminalChecked (deferred : Bool) (state : State Fp) : Bool :=
-  (tableChecked (Table.build ⟨HostCommitBoundary.terminal deferred⟩ [state]
-    (fun _ _ => #[]) (ProverHint.empty Fp))).1
+  tableChecked (fun _ _ => #[]) (Table.build { circuit := HostCommitBoundary.terminal deferred } [state]
+    (fun _ _ => #[]) (ProverHint.empty Fp))
 
 /-- The sentinel cannot be reused as an ordinary clock or as another terminal's predecessor. -/
 theorem terminalClocks : [false, true].all (fun deferred =>
     terminalChecked deferred ⟨2 ^ 24 - 1, 2 ^ 24 - 1, Vector.replicate 8 0⟩ &&
-    !(tableChecked (Table.build ⟨HostCommitChip.circuit deferred 0⟩
+    !(tableChecked (fun _ _ => #[]) (Table.build { circuit := HostCommitChip.circuit deferred 0 }
       [HostCommitChip.populate deferred ((calls deferred 0)[0]!).call
-        (HostCommitBoundary.final (Vector.replicate 8 0))] (fun _ _ => #[]) (ProverHint.empty Fp))).1 &&
+        (HostCommitBoundary.final (Vector.replicate 8 0))] (fun _ _ => #[]) (ProverHint.empty Fp))) &&
     [⟨2 ^ 24, 0, Vector.replicate 8 0⟩, ⟨0, 2 ^ 24, Vector.replicate 8 0⟩,
      ⟨-1, 0, Vector.replicate 8 0⟩, ⟨0, -1, Vector.replicate 8 0⟩].all
        (fun state => !terminalChecked deferred state)) = true := by native_decide
@@ -179,21 +178,21 @@ private def continuation (deferred : Bool) : List (Fin 8 × Inputs Fp) × State 
 
 private def bankChecked (deferred : Bool) (source : Model.Core.HostState)
     (events : List (Fin 8 × Inputs Fp)) (last : State Fp) (values : Vector (Word Fp) 8) : Bool :=
-  let checks := (witnessFor deferred source events [last] values).allTables.map tableChecked
-  checks.all (·.1) && balance ((checks.flatMap (·.2)).filter fun item =>
+  let checks := evaluatedWitness (witnessFor deferred source events [last] values)
+  checks.1 && balance (checks.2.filter fun item =>
     item.1 == (stateChannel (p := SP1Prime) deferred).name)
 
 /-- Nonzero banks survive empty segments and repeated interleaved writes. A cut seeds the second
 shard from the first result with a local clock-zero token, preserving all untouched host fields. -/
 theorem continuationBanks : [false, true].all (fun deferred =>
     let seed := HostCommitBoundary.start (HostCommitEnsemble.sourceValues (p := SP1Prime) deferred continuationSource)
-    let empty := (witnessFor deferred continuationSource [] [seed] seed.values).allTables.map tableChecked
+    let empty := evaluatedWitness (witnessFor deferred continuationSource [] [seed] seed.values)
     let (events, last) := continuation deferred
     let first := events[0]!.2.next 7
     let middle := first.apply deferred continuationSource
     let rest := events.drop 1
     let resumed := (rest[0]!.1, { rest[0]!.2 with previous := HostCommitBoundary.start first.values }) :: rest.drop 1
-    empty.all (·.1) && balance (empty.flatMap (·.2)) &&
+    empty.1 && balance empty.2 &&
       bankChecked deferred continuationSource events last last.values &&
       bankChecked deferred continuationSource (events.take 1) first first.values &&
       bankChecked deferred middle resumed last last.values &&

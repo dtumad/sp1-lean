@@ -159,16 +159,16 @@ theorem ShiftRightChip.selectorActive_of_mainConstraints
 
 /-- ShiftRight passes its independent state input through to the completed row. -/
 theorem ShiftRightChip.inputOutputState (env : Environment (ZMod p)) :
-    ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).state =
-      ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).state := by
+    (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state =
+      (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state := by
   let input : Var ShiftRightChip.Inputs (ZMod p) :=
     varFromOffset ShiftRightChip.Inputs 0
   let offset := size ShiftRightChip.Inputs
   have inputEq : Eval.eval env input =
-      ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset ShiftRightChip.Inputs 0 env
   have outputEq : Eval.eval env ((ShiftRightChip.circuit (p := p)).output input offset) =
-      ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).state =
@@ -178,16 +178,16 @@ theorem ShiftRightChip.inputOutputState (env : Environment (ZMod p)) :
 
 /-- ShiftRight passes its independent ALU adapter input through to the completed row. -/
 theorem ShiftRightChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter =
-      ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter := by
   let input : Var ShiftRightChip.Inputs (ZMod p) :=
     varFromOffset ShiftRightChip.Inputs 0
   let offset := size ShiftRightChip.Inputs
   have inputEq : Eval.eval env input =
-      ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset ShiftRightChip.Inputs 0 env
   have outputEq : Eval.eval env ((ShiftRightChip.circuit (p := p)).output input offset) =
-      ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).adapter =
@@ -198,13 +198,13 @@ theorem ShiftRightChip.inputOutputAdapter (env : Environment (ZMod p)) :
 /-- The completed ShiftRight columns at one physical component row. -/
 noncomputable def ShiftRightChip.physicalCols (env : Environment (ZMod p)) :
     ShiftRightChip.Columns (ZMod p) :=
-  (⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env
+  ({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowOutput env
 
 /-- The completed ShiftRight row view at one physical component row. -/
 noncomputable def ShiftRightChip.physicalView (env : Environment (ZMod p)) :
     Trace.RowView (ZMod p) :=
   ShiftRightChip.rowView
-    ((⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
+    (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
     (ShiftRightChip.physicalCols env)
 
 /-- The folded physical view's selector is exactly the evaluated typed input selector. -/
@@ -213,7 +213,7 @@ theorem ShiftRightChip.physicalView_isReal (env : Environment (ZMod p)) :
       (Eval.eval env
         (varFromOffset (F := ZMod p) ShiftRightChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset ShiftRightChip.Inputs 0) =
-      (⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset ShiftRightChip.Inputs 0 env
   simpa only [ShiftRightChip.physicalView, ShiftRightChip.rowView] using
     congrArg (fun input : ShiftRightChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -222,7 +222,7 @@ theorem ShiftRightChip.physicalView_isReal (env : Environment (ZMod p)) :
 theorem ShiftRightChip.rowViewOpA0_eq_zero_of_constraints
     (env : Environment (ZMod p))
     (constraints :
-      (⟨ShiftRightChip.circuit (p := p)⟩ :
+      ({ circuit := ShiftRightChip.circuit (p := p) } :
         Component (ZMod p)).operations.ConstraintsHold env) :
     (ShiftRightChip.physicalView env).adapter.op_a_0 = 0 := by
   let input : Var ShiftRightChip.Inputs (ZMod p) :=
@@ -233,9 +233,9 @@ theorem ShiftRightChip.rowViewOpA0_eq_zero_of_constraints
   have route :=
     (ShiftRightChip.controlFacts_of_mainConstraints input offset env mainConstraints).opA0Zero
   have inputEq : Eval.eval env input =
-      (⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset ShiftRightChip.Inputs 0 env
-  change ((⟨ShiftRightChip.circuit (p := p)⟩ :
+  change (({ circuit := ShiftRightChip.circuit (p := p) } :
     Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
   rw [← ShiftRightChip.inputOutputAdapter env, ← inputEq,
     ShiftRightChip.eval_inputAdapter, Readers.ALUTypeReader.eval_opA0]
@@ -245,7 +245,7 @@ theorem ShiftRightChip.rowViewOpA0_eq_zero_of_constraints
 theorem ShiftRightChip.rowViewSelectorActive_of_constraints
     (env : Environment (ZMod p))
     (constraints :
-      (⟨ShiftRightChip.circuit (p := p)⟩ :
+      ({ circuit := ShiftRightChip.circuit (p := p) } :
         Component (ZMod p)).operations.ConstraintsHold env)
     (real : (ShiftRightChip.physicalView env).is_real = 1) :
     ShiftRightChip.ActiveSelector (ShiftRightChip.physicalCols env) := by
@@ -276,7 +276,7 @@ theorem ShiftRightChip.rowViewSelectorActive_of_constraints
 theorem ShiftRightChip.rowViewOpCBinding_of_constraints
     (env : Environment (ZMod p))
     (constraints :
-      (⟨ShiftRightChip.circuit (p := p)⟩ :
+      ({ circuit := ShiftRightChip.circuit (p := p) } :
         Component (ZMod p)).operations.ConstraintsHold env)
     (immediate : (ShiftRightChip.physicalView env).adapter.imm_c = 1) :
     (ShiftRightChip.physicalView env).adapter.op_c_memory.prev_value =
@@ -292,20 +292,20 @@ theorem ShiftRightChip.rowViewOpCBinding_of_constraints
     readerInput (offset + 37)
     (ShiftRightChip.aluReader_mem_subcircuits input offset) mainConstraints
   have inputEq : Eval.eval env input =
-      (⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset ShiftRightChip.Inputs 0 env
   have immediateInput : Expression.eval env readerInput.cols.imm_c = 1 := by
     change Expression.eval env input.adapter.imm_c = 1
-    change ((⟨ShiftRightChip.circuit (p := p)⟩ :
+    change (({ circuit := ShiftRightChip.circuit (p := p) } :
       Component (ZMod p)).rowOutput env).adapter.imm_c = 1 at immediate
     rw [← ShiftRightChip.inputOutputAdapter env, ← inputEq,
       ShiftRightChip.eval_inputs, Readers.ALUTypeReader.eval_immC] at immediate
     exact immediate
   have binding := Readers.ALUTypeReader.eval_opCPrev_eq_opC_of_mainConstraints
     readerInput (offset + 37) env readerConstraints immediateInput
-  change ((⟨ShiftRightChip.circuit (p := p)⟩ :
+  change (({ circuit := ShiftRightChip.circuit (p := p) } :
     Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
-      ((⟨ShiftRightChip.circuit (p := p)⟩ :
+      (({ circuit := ShiftRightChip.circuit (p := p) } :
         Component (ZMod p)).rowOutput env).adapter.op_c
   rw [← ShiftRightChip.inputOutputAdapter env, ← inputEq,
     ShiftRightChip.eval_inputs, Readers.ALUTypeReader.eval_opCPrev,
@@ -348,7 +348,7 @@ private theorem ShiftRightChip.flagCombo_ne_ecall {x y z w : ZMod p}
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem ShiftRightChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      (⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (ShiftRightChip.physicalView env).is_real = 1) :
     (ShiftRightChip.physicalView env).opcode ≠ (50 : ZMod p) := by
   have active := ShiftRightChip.rowViewSelectorActive_of_constraints env constraints real

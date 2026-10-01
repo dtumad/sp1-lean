@@ -3,6 +3,8 @@ module
 public import ToClean.Circuit.ProvableOptional
 public import ToClean.Circuit.StructEvalLemmas
 public import ToClean.Circuit.SubcircuitProjection
+public import ToClean.Circuit.VerifierAssertions
+public import ToClean.Circuit.VerifierInteractions
 public import ToClean.Circuit.Receipt
 public import ToClean.Air.EnsembleProjection
 public import ToClean.Air.TableSlot
@@ -19,12 +21,14 @@ public import ToClean.Gadgets.ComputableWitnesses
 public import ToClean.Air.ChannelRegistry
 public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension
+public import ToClean.Air.VerifierChannel
 public import ToClean.Air.PublicVerifier
 public import ToClean.Air.Footprint
 public import ToClean.Air.ChannelClosure
 public import ToClean.Air.Authentication
 public import ToClean.Air.CompleteEnsemble
 public import ToClean.Air.ComponentOutput
+public import ToClean.Air.ComponentReplacement
 public import ToClean.Air.EnsembleExport
 public import ToClean.Air.EnsembleCheck
 public import ToClean.Circuit.StaticTable

@@ -38,13 +38,13 @@ theorem LoadWordChip.eval_inputOpA0_eq_zero_of_mainConstraints
 /-- The completed LoadWord columns at one physical component row. -/
 noncomputable def LoadWordChip.physicalCols (env : Environment (ZMod p)) :
     LoadWordChip.Columns (ZMod p) :=
-  (⟨LoadWordChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env
+  ({ circuit := LoadWordChip.circuit (p := p) } : Component (ZMod p)).rowOutput env
 
 /-- The completed LoadWord row view at one physical component row. -/
 noncomputable def LoadWordChip.physicalView (env : Environment (ZMod p)) :
     Trace.RowView (ZMod p) :=
   LoadWordChip.rowView
-    ((⟨LoadWordChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
+    (({ circuit := LoadWordChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
     (LoadWordChip.physicalCols env)
 
 private theorem LoadWordChip.isLwBinaryConstraint_mem
@@ -88,7 +88,7 @@ private theorem natCastSmall_inj {a b : ℕ} (ha : a < 2 ^ 17) (hb : b < 2 ^ 17)
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem LoadWordChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      (⟨LoadWordChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := LoadWordChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (LoadWordChip.physicalView env).is_real = 1) :
     (LoadWordChip.physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var LoadWordChip.Inputs (ZMod p) := varFromOffset LoadWordChip.Inputs 0
@@ -101,7 +101,7 @@ theorem LoadWordChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
   obtain ⟨a, ha, hea⟩ := flagNatValue (bool_of_mul_pred gLw)
   obtain ⟨b, hb, heb⟩ := flagNatValue (bool_of_mul_pred gLwu)
   have inputEq : Eval.eval env input =
-      (⟨LoadWordChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := LoadWordChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset LoadWordChip.Inputs 0 env
   have projLw : (Eval.eval env input).is_lw = Expression.eval env input.is_lw := by
     simpa only [CircuitType.eval_expr] using

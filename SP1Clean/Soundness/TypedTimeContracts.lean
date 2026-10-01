@@ -403,11 +403,11 @@ theorem haltRow_cpuState_bounds_of_component
   have cpuMem : (⟨size HaltChip.Inputs,
       (Readers.CPUState.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) cpuInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      ((⟨HaltChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations_mk, cpuInputDef, inputVarDef]
     exact halt_cpu_subcircuit_mem
   have cpuGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    (⟨HaltChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.CPUState.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) cpuInput) cpuMem
     rowGuarantees
   have crossing : (haltRow table row).is_real =
@@ -491,11 +491,11 @@ theorem syscallInstrsRow_cpuState_bounds_of_component
   have cpuMem : (⟨size SyscallInstrsChip.Inputs,
       (Readers.CPUState.circuit (p := p)).toSubcircuit (size SyscallInstrsChip.Inputs) cpuInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      ((⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations_mk, cpuInputDef, inputVarDef]
     exact syscall_cpu_subcircuit_mem
   have cpuGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.CPUState.circuit (p := p)).toSubcircuit (size SyscallInstrsChip.Inputs) cpuInput)
     cpuMem rowGuarantees
   have crossing : (syscallInstrsRow table row).is_real =
@@ -748,11 +748,11 @@ private theorem haltRow_x5_timestamp_bounds_of_component
   have raMem : (⟨size HaltChip.Inputs,
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      ((⟨HaltChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations_mk, raInputDef, inputVarDef]
     exact halt_x5_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    (⟨HaltChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
   have crossing : (haltRow table row).is_real =
@@ -836,11 +836,11 @@ private theorem haltRow_x10_timestamp_bounds_of_component
   have raMem : (⟨size HaltChip.Inputs,
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      ((⟨HaltChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations_mk, raInputDef, inputVarDef]
     exact halt_x10_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    (⟨HaltChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
   have crossing : (haltRow table row).is_real =
@@ -924,11 +924,11 @@ private theorem haltRow_x11_timestamp_bounds_of_component
   have raMem : (⟨size HaltChip.Inputs,
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      ((⟨HaltChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations_mk, raInputDef, inputVarDef]
     exact halt_x11_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    (⟨HaltChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
   have crossing : (haltRow table row).is_real =
@@ -1088,11 +1088,11 @@ private theorem syscallInstrsRow_opA_timestamp_bounds_of_component
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
         (size SyscallInstrsChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      ((⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations_mk, raInputDef, inputVarDef]
     exact syscall_opA_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees
@@ -1185,11 +1185,11 @@ private theorem syscallInstrsRow_opB_timestamp_bounds_of_component
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
         (size SyscallInstrsChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      ((⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations_mk, raInputDef, inputVarDef]
     exact syscall_opB_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees
@@ -1282,11 +1282,11 @@ private theorem syscallInstrsRow_opC_timestamp_bounds_of_component
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
         (size SyscallInstrsChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      ((⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations_mk, raInputDef, inputVarDef]
     exact syscall_opC_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)).rowOperations
+    ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees

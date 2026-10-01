@@ -56,6 +56,7 @@ theorem completeness (deferred : Bool) (slot : Fin 8) :
     · simpa only [eval_zero] using length
 
 def circuit (deferred : Bool) (slot : Fin 8) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := s!"sp1.native.{if deferred then "commit_deferred" else "commit"}.{slot.val}"
   main := main deferred slot
   elaborated := elaborated deferred slot
   Spec input _ _ := Spec deferred slot input

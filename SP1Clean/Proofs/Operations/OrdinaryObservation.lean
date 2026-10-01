@@ -77,7 +77,7 @@ private theorem eval_receipt (env : Environment (ZMod p)) (input : Var Inputs (Z
 
 /-- The exact receipt is read from the actual component input. -/
 theorem receipt_values (enabled : Bool) (env : Environment (ZMod p)) :
-    (⟨circuit enabled⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := circuit enabled } : Component (ZMod p)).operations.interactionValuesWith
       InstructionReceipt.channel.toRaw env =
         [InstructionReceipt.channel.pulledValue (valueFromOffset Inputs 0 env).receipt] := by
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
@@ -86,7 +86,7 @@ theorem receipt_values (enabled : Bool) (env : Environment (ZMod p)) :
 
 /-- The exact transition is read from the same physical input, without a copied witness. -/
 theorem state_values (enabled : Bool) (env : Environment (ZMod p)) :
-    (⟨circuit enabled⟩ : Component (ZMod p)).operations.interactionValuesWith stateChannel.toRaw env =
+    ({ circuit := circuit enabled } : Component (ZMod p)).operations.interactionValuesWith stateChannel.toRaw env =
       [stateChannel.pulledValue (valueFromOffset Inputs 0 env).previous,
         stateChannel.pushedValue (valueFromOffset Inputs 0 env).next] := by
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
@@ -95,7 +95,7 @@ theorem state_values (enabled : Bool) (env : Environment (ZMod p)) :
     eval_varFromOffset_valueFromOffset]
 
 /-- Eighteen supplied cells plus 186 generated cells give the exact physical row width. -/
-theorem width (enabled : Bool) : (⟨circuit (p := p) enabled⟩ : Component (ZMod p)).width = 204 := by
+theorem width (enabled : Bool) : ({ circuit := circuit (p := p) enabled } : Component (ZMod p)).width = 204 := by
   cases enabled <;> rfl
 
 end SP1Clean.OrdinaryObservation

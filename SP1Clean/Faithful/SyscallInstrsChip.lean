@@ -211,7 +211,7 @@ theorem syscallInstrsChip_size_eq :
 /-- The reconstructed row has exactly the flat component's width. -/
 theorem syscallInstrsPhysicalRow_size (cols : Extracted.SyscallInstrsCols (ZMod p)) :
     (syscallInstrsPhysicalRow (syscallInstrsDeconfigure cols)).size =
-      (⟨SyscallInstrsChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).width := by
+      ({ circuit := SyscallInstrsChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).width := by
   rw [syscallInstrsPhysicalRow, inputFirstRow_size, Air.Flat.Component.width,
     syscallInstrsChip_size_eq]
   simp
@@ -219,7 +219,7 @@ theorem syscallInstrsPhysicalRow_size (cols : Extracted.SyscallInstrsCols (ZMod 
 /-- The reconstructed row decodes back to the native row the codec started from. -/
 theorem syscallInstrsEnvironment_rowInput (cols : Extracted.SyscallInstrsCols (ZMod p))
     (data : ProverData (ZMod p)) :
-    (⟨SyscallInstrsChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInput
+    ({ circuit := SyscallInstrsChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInput
         (syscallInstrsEnvironment cols data) = syscallInstrsDeconfigure cols :=
   rowInput_inputFirstRow _ _ _ _
 
@@ -1835,7 +1835,7 @@ private theorem dispatchArmLookups (input : Var SyscallInstrsChip.DispatchArm.In
     Operations.lookups ((SyscallInstrsChip.DispatchArm.circuit.main input).operations n) = [] := rfl
 
 theorem syscallInstrsChip_lookups_empty :
-    (⟨SyscallInstrsChip.circuit (p := p)⟩ :
+    ({ circuit := SyscallInstrsChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
     syscallInstrsChip_main_eq]
@@ -1872,7 +1872,7 @@ theorem syscallInstrsChipConstraintsConstructive (preprocessed : Vector (ZMod p)
     (data : ProverData (ZMod p)) :
     List.Forall (· = 0)
         ((syscallInstrsChipOracle preprocessed publicValues).assertZeros rustCols) ↔
-      ((⟨SyscallInstrsChip.circuit (p := p)⟩ :
+      (({ circuit := SyscallInstrsChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).operations.ConstraintsHold
             (syscallInstrsEnvironment rustCols data) ∧
         PublicValueBinding rustCols publicValues) := by
@@ -1892,7 +1892,7 @@ theorem syscallInstrsChipInteractionsConstructive (preprocessed : Vector (ZMod p
     (data : ProverData (ZMod p)) :
     List.Perm
       (nativeAccesses (syscallInstrsEnvironment rustCols data)
-        (⟨SyscallInstrsChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations)
+        ({ circuit := SyscallInstrsChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations)
       ((syscallInstrsChipOracle preprocessed publicValues).rustAccesses rustCols ++
         syscallInstrsPublicValueAccesses (syscallInstrsEnvironment rustCols data)
           (varFromOffset SyscallInstrsChip.Inputs 0)) := by
@@ -1924,7 +1924,7 @@ theorem syscallInstrsChip_faithful (preprocessed : Vector (ZMod p) 0)
     (∀ (rustCols : Extracted.SyscallInstrsCols (ZMod p)) (data : ProverData (ZMod p)),
         List.Forall (· = 0)
             ((syscallInstrsChipOracle preprocessed publicValues).assertZeros rustCols) ↔
-          ((⟨SyscallInstrsChip.circuit (p := p)⟩ :
+          (({ circuit := SyscallInstrsChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).operations.ConstraintsHold
                 (syscallInstrsEnvironment rustCols data) ∧
             PublicValueBinding rustCols publicValues)) ∧
@@ -1934,7 +1934,7 @@ theorem syscallInstrsChip_faithful (preprocessed : Vector (ZMod p) 0)
           List.Perm
             (LookupAccessList.active
               (nativeAccesses (syscallInstrsEnvironment rustCols data)
-                (⟨SyscallInstrsChip.circuit (p := p)⟩ :
+                ({ circuit := SyscallInstrsChip.circuit (p := p) } :
                   Air.Flat.Component (ZMod p)).operations))
             (LookupAccessList.active
               ((syscallInstrsChipOracle preprocessed publicValues).rustAccesses rustCols ++

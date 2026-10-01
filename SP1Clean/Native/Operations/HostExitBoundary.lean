@@ -58,7 +58,18 @@ theorem values (source target : Option (BitVec 32)) (offset : ℕ) (env : Enviro
       circuit_norm, ChannelInteraction.toRaw, Ne.symm same, same]
 
 def closed (source target : Option (BitVec 32)) : ClosedVerifier (ZMod p) where
+  name := "host-exit"
   circuit := circuit source target
+  assumptions := by intros; trivial
+  lookups := by simp only [circuit, main, circuit_norm]
+  public_interactions := by
+    intro interaction member env
+    simp only [circuit, main, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
+    obtain rfl := member
+    simp only [circuit_norm, ChannelInteraction.toRaw, ↓reduceIte,
+      AbstractInteraction.Requirements, Channel.toRaw, Expression.eval]
+    split_ifs <;> simp
+
   length_zero := rfl
   constraints := by
     intros

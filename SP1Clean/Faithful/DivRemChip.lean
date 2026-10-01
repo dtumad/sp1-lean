@@ -1131,7 +1131,7 @@ def divRemChipRowCodec :
       exact eval_divRemChipDirectOutput (p := p) cols data }
 
 theorem divRemChip_lookups_empty :
-    (⟨DivRemChip.circuit (p := p)⟩ :
+    ({ circuit := DivRemChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq,
     Air.Flat.Component.rowOperations_mk,

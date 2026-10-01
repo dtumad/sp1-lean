@@ -99,11 +99,11 @@ theorem providerRow_interactions (input : Inputs (ZMod p)) (data : ProverData (Z
     simp only [circuit_norm]
   rw [roweval]
   simp only [ProvableType.eval_field]
-  rw [eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))
+  rw [eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))
       (selectedProviderInput input) data hint 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))
+    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))
       (selectedProviderInput input) data hint 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))
+    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))
       (selectedProviderInput input) data hint 2 (by change 2 < 3; omega)]
   simp only [selectedProviderInput, toElements, ProvableStruct.structToElements_eq,
     ProvableStruct.toComponents]

@@ -65,7 +65,5 @@ theorem finalRecords_eq_core
           omega
         simp only [List.length_take, List.length_drop]; omega), List.take_take]
     exact coreRows.symm
-  · rw [FinalMemoryReceipts.original_data, FinalMemoryChecks.receiptWitness_data,
-      boundaryWitness_data, LocalCore.finalWitness_data, coreWitness_data]
 
 end SP1Clean.Soundness.HostFinalMemory

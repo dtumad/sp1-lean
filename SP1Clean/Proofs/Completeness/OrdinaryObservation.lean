@@ -90,51 +90,51 @@ theorem computableWitnesses (enabled : Bool) :
 
 /-- The standard table builder preserves one row per supplied observation input. -/
 def construct (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) : Table (ZMod p) :=
-  Table.build ⟨circuit enabled⟩ inputs data (ProverHint.empty (ZMod p))
+  Table.build { circuit := circuit enabled } inputs data (ProverHint.empty (ZMod p))
 
 /-- Semantic observation inputs construct all physical constraints without an extra readiness premise. -/
 theorem construct_constraints (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (valid : ∀ input ∈ inputs, Spec enabled input) : (construct enabled inputs data).Constraints :=
-  Table.build_constraints _ _ _ _ (computableWitnesses enabled) valid
+    (valid : ∀ input ∈ inputs, Spec enabled input) : (construct enabled inputs data).Constraints data :=
+  Table.build_constraints _ _ _ _ _ (computableWitnesses enabled) valid
 
 /-- Generated rows also supply every local channel guarantee, including all counter Byte checks. -/
 theorem construct_guarantees (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (valid : ∀ input ∈ inputs, Spec enabled input) : (construct enabled inputs data).Guarantees :=
-  Table.build_guarantees _ _ _ _ (computableWitnesses enabled) valid
+    (valid : ∀ input ∈ inputs, Spec enabled input) : (construct enabled inputs data).Guarantees data :=
+  Table.build_guarantees _ _ _ _ _ (computableWitnesses enabled) valid
 
 /-- Physical height is exactly the supplied observation count. -/
 theorem construct_length (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) :
     (construct enabled inputs data).length = inputs.length := List.length_map ..
 
 /-- Reading the generated physical rows recovers the exact supplied observation inventory. -/
-theorem construct_inputs (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) :
+theorem construct_inputs (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data evaluationData : ProverData (ZMod p)) :
     (construct enabled inputs data).table.map (fun physical =>
-      valueFromOffset Inputs 0 ((construct enabled inputs data).environment physical)) = inputs := by
-  simp only [construct, Table.build_table, Table.build_environment, List.map_map]
+      valueFromOffset Inputs 0 (Environment.fromArray physical evaluationData)) = inputs := by
+  simp only [construct, Table.build, List.map_map]
   have decode (input : Inputs (ZMod p)) :=
-    Component.rowInput_buildRow (⟨circuit enabled⟩ : Component (ZMod p)) input data data (ProverHint.empty _)
-  change inputs.map (fun input => (⟨circuit enabled⟩ : Component (ZMod p)).rowInput
-    (Environment.fromArray ((⟨circuit enabled⟩ : Component (ZMod p)).buildRow input data (ProverHint.empty _)) data)) = inputs
+    Component.rowInput_buildRow ({ circuit := circuit enabled } : Component (ZMod p)) input data evaluationData (ProverHint.empty _)
+  change inputs.map (fun input => ({ circuit := circuit enabled } : Component (ZMod p)).rowInput
+    (Environment.fromArray (({ circuit := circuit enabled } : Component (ZMod p)).buildRow input data (ProverHint.empty _)) evaluationData)) = inputs
   simp only [decode, List.map_id']
 
 /-- Constructed consumers pull precisely the supplied receipt sequence. -/
-theorem construct_receipts (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) :
-    (construct enabled inputs data).interactionsWith InstructionReceipt.channel.toRaw =
+theorem construct_receipts (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data evaluationData : ProverData (ZMod p)) :
+    (construct enabled inputs data).interactionsWith evaluationData InstructionReceipt.channel.toRaw =
       inputs.map (fun input => InstructionReceipt.channel.pulledValue input.receipt) := by
   have decoded := congrArg (List.map fun input => InstructionReceipt.channel.pulledValue input.receipt)
-    (construct_inputs enabled inputs data)
-  simp only [Table.interactionsWith, construct, Table.build_component, receipt_values]
+    (construct_inputs enabled inputs data evaluationData)
+  simp only [Table.interactionsWith, construct, Table.build, receipt_values]
   rw [← List.map_eq_flatMap]
-  simpa only [List.map_map, Function.comp_def, construct] using decoded
+  simpa only [List.map_map, Function.comp_def, construct, Table.build] using decoded
 
 /-- Constructed observation links preserve each supplied previous/next pair literally. -/
-theorem construct_states (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) :
-    (construct enabled inputs data).interactionsWith stateChannel.toRaw = inputs.flatMap (fun input =>
+theorem construct_states (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data evaluationData : ProverData (ZMod p)) :
+    (construct enabled inputs data).interactionsWith evaluationData stateChannel.toRaw = inputs.flatMap (fun input =>
       [stateChannel.pulledValue input.previous, stateChannel.pushedValue input.next]) := by
   have decoded := congrArg (List.flatMap fun input =>
     [stateChannel.pulledValue input.previous, stateChannel.pushedValue input.next])
-    (construct_inputs enabled inputs data)
-  simpa only [Table.interactionsWith, construct, Table.build_component, state_values,
+    (construct_inputs enabled inputs data evaluationData)
+  simpa only [Table.interactionsWith, construct, Table.build, state_values,
     List.flatMap_map] using decoded
 
 end OrdinaryObservation

@@ -193,7 +193,7 @@ def ofEntry (e : TraceGen.ByteEntry) : Inputs (ZMod p) :=
 
 /-- The `U8Range` provider as a flat-AIR component. A plain `def`, deliberately not an `abbrev`
 (see the note on `AddChip.component`). -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a list of occurrences builds. -/
 def traceInputs (entries : List TraceGen.ByteEntry) : List (Inputs (ZMod p)) :=
@@ -242,7 +242,7 @@ def ofEntry (e : TraceGen.ByteEntry) : Inputs (ZMod p) :=
   ⟨(e.b : ZMod p), (e.multiplicity : ZMod p)⟩
 
 /-- The `MSB` provider as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a list of occurrences builds. -/
 def traceInputs (entries : List TraceGen.ByteEntry) : List (Inputs (ZMod p)) :=
@@ -289,7 +289,7 @@ def ofEntry (e : TraceGen.ByteEntry) : Inputs (ZMod p) :=
   ⟨(e.b : ZMod p), (e.c : ZMod p), (e.multiplicity : ZMod p)⟩
 
 /-- The `AND` provider as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a list of occurrences builds. -/
 def traceInputs (entries : List TraceGen.ByteEntry) : List (Inputs (ZMod p)) :=
@@ -336,7 +336,7 @@ def ofEntry (e : TraceGen.ByteEntry) : Inputs (ZMod p) :=
   ⟨(e.b : ZMod p), (e.c : ZMod p), (e.multiplicity : ZMod p)⟩
 
 /-- The `OR` provider as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a list of occurrences builds. -/
 def traceInputs (entries : List TraceGen.ByteEntry) : List (Inputs (ZMod p)) :=
@@ -383,7 +383,7 @@ def ofEntry (e : TraceGen.ByteEntry) : Inputs (ZMod p) :=
   ⟨(e.b : ZMod p), (e.c : ZMod p), (e.multiplicity : ZMod p)⟩
 
 /-- The `XOR` provider as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a list of occurrences builds. -/
 def traceInputs (entries : List TraceGen.ByteEntry) : List (Inputs (ZMod p)) :=
@@ -430,7 +430,7 @@ def ofEntry (e : TraceGen.ByteEntry) : Inputs (ZMod p) :=
   ⟨(e.b : ZMod p), (e.c : ZMod p), (e.multiplicity : ZMod p)⟩
 
 /-- The `LTU` provider as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a list of occurrences builds. -/
 def traceInputs (entries : List TraceGen.ByteEntry) : List (Inputs (ZMod p)) :=
@@ -486,10 +486,10 @@ def ofEntry (e : TraceGen.RangeEntry) : Inputs (ZMod p) :=
   ⟨(e.a : ZMod p), (e.multiplicity : ZMod p)⟩
 
 /-- The fixed-width range provider as a flat-AIR component. -/
-def component (n : ℕ) (hn : 2 ^ n < p) : Component (ZMod p) := ⟨circuit n hn⟩
+def component (n : ℕ) (hn : 2 ^ n < p) : Component (ZMod p) := { circuit := circuit n hn }
 
 /-- The flat-AIR component at one width in SP1's complete `0, …, 16` profile. -/
-def componentFor (width : Width) : Component (ZMod p) := ⟨circuitFor width⟩
+def componentFor (width : Width) : Component (ZMod p) := { circuit := circuitFor width }
 
 /-- The rows a list of occurrences builds. -/
 def traceInputs (entries : List TraceGen.RangeEntry) : List (Inputs (ZMod p)) :=
@@ -560,7 +560,7 @@ def ofEntry (e : TraceGen.RomEntry) : Inputs (ZMod p) where
   multiplicity := (e.multiplicity : ZMod p)
 
 /-- The Program-ROM provider as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a committed program builds: one per instruction. -/
 def traceInputs (entries : List TraceGen.RomEntry) : List (Inputs (ZMod p)) :=
@@ -650,7 +650,7 @@ def ofEntry (e : TraceGen.MemRecordEntry) : Inputs (ZMod p) :=
     multiplicity := e.multiplicityField }
 
 /-- The memory-init provider as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows the genesis boundary builds: one per initialized address. -/
 def traceInputs (entries : List TraceGen.MemRecordEntry) : List (Inputs (ZMod p)) :=
@@ -715,7 +715,7 @@ def ofEntry (e : TraceGen.MemRecordEntry) : Inputs (ZMod p) :=
     multiplicity := e.multiplicityField }
 
 /-- The memory-finalize table as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The rows the finalize boundary builds: one per address chain. -/
 def traceInputs (entries : List TraceGen.MemRecordEntry) : List (Inputs (ZMod p)) :=
@@ -774,7 +774,7 @@ namespace StateBumpChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 /-- The StateBump table as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The all-zero StateBump row: both selectors off, the pc cascade with zero borrows, the gated
 tail vacuous. This is the padding row a shard's StateBump table repeats. -/
@@ -825,7 +825,7 @@ namespace MemoryBumpChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 /-- The MemoryBump table as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The all-zero MemoryBump row: the selector off, so the whole gated contract is vacuous. This is
 the padding row a shard's MemoryBump table repeats. -/
@@ -930,7 +930,7 @@ theorem boundaryInputs_limbBounds (initClk initPc finalClk finalPc : ℕ) :
 
 /-- The boundary verifier as a flat-AIR component — the shape `EnsembleWitness.verifierTable`
 carries. -/
-def verifierComponent : Component (ZMod p) := ⟨sp1StateVerifier⟩
+def verifierComponent : Component (ZMod p) := { circuit := sp1StateVerifier }
 
 theorem verifierTable_constraints (pis : List (SP1PublicIO (ZMod p)))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (h : ∀ pi ∈ pis, pi.LimbBounds) :

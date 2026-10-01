@@ -502,7 +502,7 @@ theorem syscallInstrsProvider_channels_subset :
 /-- **Every boundary/provider table stays on the core five, except the `SyscallInstrs` table.** -/
 theorem sp1ProviderTables_channels_subset_core : ∀ c ∈ sp1ProviderTables (p := p),
     c.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
-      c = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) := by
+      c = ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)) := by
   intro c hc
   rw [sp1ProviderTables_explicit, List.mem_append, List.mem_append] at hc
   rcases hc with (hc | hc) | hc
@@ -600,7 +600,7 @@ balance still rests on while the syscall table's trace is empty. -/
 theorem sp1AllTables_channels_subset_core :
     ∀ component ∈ (sp1Ensemble (p := p)).allTables,
       component.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
-        component = (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) := by
+        component = ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)) := by
   intro component hc
   rw [Ensemble.allTables, List.mem_cons, sp1Ensemble_tables, List.mem_append] at hc
   rcases hc with rfl | hc | hc

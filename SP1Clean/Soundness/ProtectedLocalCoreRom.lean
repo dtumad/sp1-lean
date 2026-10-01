@@ -48,25 +48,25 @@ theorem supported_write_property (property : Trace.RowView (ZMod p) → Prop)
     (noWrite : ∀ row, row.commit.memWrite = none → property row) (id : InstructionChipId)
     (env : Environment (ZMod p))
     (byte : id = .storeByte →
-      ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1 →
       property (StoreByteChip.rowView
-        ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowInput env)
-        ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+        (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env)
+        (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowOutput env)))
     (half : id = .storeHalf →
-      ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1 →
       property (StoreHalfChip.rowView
-        ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowInput env)
-        ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+        (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env)
+        (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowOutput env)))
     (word : id = .storeWord →
-      ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1 →
       property (StoreWordChip.rowView
-        ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowInput env)
-        ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+        (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env)
+        (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowOutput env)))
     (double : id = .storeDouble →
-      ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1 →
       property (StoreDoubleChip.rowView
-        ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowInput env)
-        ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+        (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env)
+        (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowOutput env)))
     : let chip := (supportedChipFor (p := p) id)
       (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)).is_real = 1 →
       property (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)) := by
@@ -94,25 +94,25 @@ theorem supported_write_property (property : Trace.RowView (ZMod p) → Prop)
 theorem supported_write_permitted (image : ProgramImage) (id : InstructionChipId)
     (env : Environment (ZMod p))
     (byte : id = .storeByte →
-      ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1 →
       Target.RowWritePermitted image (StoreByteChip.rowView
-        ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowInput env)
-        ((⟨StoreByteChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+        (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowInput env)
+        (({ circuit := StoreByteChip.circuit } : Component (ZMod p)).rowOutput env)))
     (half : id = .storeHalf →
-      ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1 →
       Target.RowWritePermitted image (StoreHalfChip.rowView
-        ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowInput env)
-        ((⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+        (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowInput env)
+        (({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).rowOutput env)))
     (word : id = .storeWord →
-      ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1 →
       Target.RowWritePermitted image (StoreWordChip.rowView
-        ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowInput env)
-        ((⟨StoreWordChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+        (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowInput env)
+        (({ circuit := StoreWordChip.circuit } : Component (ZMod p)).rowOutput env)))
     (double : id = .storeDouble →
-      ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowInput env).is_real = 1 →
+      (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env).is_real = 1 →
       Target.RowWritePermitted image (StoreDoubleChip.rowView
-        ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowInput env)
-        ((⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).rowOutput env)))
+        (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowInput env)
+        (({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).rowOutput env)))
     : let chip := (supportedChipFor (p := p) id)
       (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)).is_real = 1 →
       Target.RowWritePermitted image (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)) := by

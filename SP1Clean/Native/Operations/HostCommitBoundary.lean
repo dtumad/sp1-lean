@@ -1,6 +1,7 @@
 import SP1Clean.FormalModel.Contracts.HostCommitBoundary
 import Clean.Gadgets.Bits
 import ToClean.Circuit.InteractionRecovery
+import ToClean.Circuit.VerifierInteractions
 
 /-! # Fixed endpoints for a mutable native bank
 
@@ -23,6 +24,7 @@ def terminalMain (deferred : Bool) (input : Var State (ZMod p)) : Circuit (ZMod 
   (stateChannel deferred).push (final input.values)
 
 def terminal (deferred : Bool) : GeneralFormalCircuit (ZMod p) State unit where
+  name := s!"sp1.native.{if deferred then "commit_deferred" else "commit"}.terminal"
   main := terminalMain deferred
   Spec input _ _ := TerminalSpec input
   ProverAssumptions input _ _ := TerminalSpec input
@@ -47,6 +49,18 @@ def verifier (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) :
   channelsWithRequirements := [(stateChannel deferred).toRaw]
   soundness := by circuit_proof_start [verifierMain, stateChannel]
   completeness := by circuit_proof_start [verifierMain, stateChannel]
+
+/-- The same endpoint traffic admitted into Clean's separate public verifier. The circuit bundle
+remains the composition boundary for the complete host-boundary circuit. -/
+def verifierProgram (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) :
+    Verifier.Program (ZMod p) (ProvableVector Word 8) where
+  main values := Verifier.ofInteractions ((verifierMain deferred initialValues values).operations 0).interactions
+    (by
+      intro interaction member env
+      simp only [verifierMain, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
+      rcases member with rfl | rfl <;>
+        simp [AbstractInteraction.Requirements, AbstractInteraction.Guarantees,
+          ChannelInteraction.toRaw, stateChannel, Channel.toRaw, circuit_norm])
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem range_empty (target : RawChannel (ZMod p)) (n : ℕ) (bound : 2 ^ n < p)

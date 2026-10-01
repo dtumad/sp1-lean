@@ -114,7 +114,7 @@ theorem afterInitialTables_finished_requirements (image : ProgramImage)
   · exact absent (fun required => outside (List.mem_cons_of_mem _
       (boundary_requirements image component (List.mem_append_right _ member) required)))
   · have required := (Component.weakSoundness_of_no_guarantees
-      (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) rfl (by trivial) constraints).2
+      ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) rfl (by trivial) constraints).2
     exact fun interaction emitted _ => required interaction emitted
   · exact old (Ensemble.mem_allTables_of_mem_tables (by
       rw [sp1Ensemble_tables]; exact List.mem_append_left _ member))

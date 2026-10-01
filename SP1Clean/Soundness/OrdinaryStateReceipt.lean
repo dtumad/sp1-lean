@@ -248,7 +248,7 @@ theorem row_meaning {Input Output : TypeMap} [ProvableType Input] [ProvableType 
     (observation : Receipt.Projection (ZMod p) Input StateMsg)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (agrees : AgreesWith provider observation view) (env : Environment (ZMod p)) :
-    let original : Component (ZMod p) := ⟨provider⟩
+    let original : Component (ZMod p) := { circuit := provider }
     Eval.eval env (observation.gate (varFromOffset Input 0) (size Input)) =
       (view (original.rowInput env) (original.rowOutput env)).is_real ∧
     Eval.eval env (observation.message (varFromOffset Input 0) (size Input)) =

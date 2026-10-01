@@ -144,7 +144,7 @@ theorem source_permission_pulls (source : ExecutionSnapshot) (final : HostHintQu
   rcases List.mem_append.mp member with handler | resource
   · exact available_permission_pulls component handler
   · have checked : (sourceResources (p := p) source.host.io.hints ++
-        [(⟨(HostHintQueueBoundary.boundary source final bankFinal).circuit⟩ : Component (ZMod p))]).all (fun component =>
+        [({ circuit := (HostHintQueueBoundary.boundary source final bankFinal).circuit } : Component (ZMod p))]).all (fun component =>
         !(component.circuit.channels.map RawChannel.name).contains (WritePermissionProvider.channel (p := p)).toRaw.name) = true := rfl
     apply WritePermission.pulls_of_silent
     intro used

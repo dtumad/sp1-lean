@@ -40,10 +40,10 @@ theorem source_word_other_interactions (hints : List Bytes)
 
 /-- The fixed lookup supplies word meaning without a caller-supplied channel or byte oracle. -/
 theorem source_word_spec_of_constraints (hints : List Bytes) (env : Environment (ZMod p))
-    (constraints : (⟨sourceWord hints⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
-    (⟨sourceWord hints⟩ : Component (ZMod p)).Spec env := by
+    (constraints : ({ circuit := sourceWord hints } : Component (ZMod p)).operations.ConstraintsHold env) :
+    ({ circuit := sourceWord hints } : Component (ZMod p)).Spec env := by
   apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ ((⟨sourceWord hints⟩ : Component (ZMod p)).inChannelsOrGuarantees env)]
+  rw [Operations.guarantees_iff _ _ _ (({ circuit := sourceWord hints } : Component (ZMod p)).inChannelsOrGuarantees env)]
   intro selected member
   change selected ∈ [] at member
   exact False.elim (List.not_mem_nil member)

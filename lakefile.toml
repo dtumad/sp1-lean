@@ -83,15 +83,15 @@ name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
 rev = "v4.33.1"
 
-# Clean, upstream `main` (`fba2a29f`, 2026-09-16, module-ified, `requiresModuleSystem`). The
-# 2026-08 fork is retired: what it modified (the `AgreesBelow` data/hint constraint, `WitgenIR.share`)
-# now lives as pure additions in `ToClean/`, so a pin bump is a rev change and nothing else.
-# History, the upstream PR queue, and the rule for what may go in a fork versus `ToClean/` are in
-# `docs/agents/clean-upstream.md`.
+# Clean's built-in Rust export (upstream PR #446), ported to the installed module/toolchain
+# line, plus the canonical backend fix for public-only channels. These change existing
+# Component/Ensemble/Verifier declarations and cannot be supplied by an additive layer.
+# Additive adapters remain in ToClean. Return to upstream when it contains these changes
+# on a compatible toolchain; see docs/agents/clean-upstream.md and export campaign #28.
 [[require]]
 name = "Clean"
-git = "https://github.com/Verified-zkEVM/clean"
-rev = "fba2a29f5e36420d797c1de118ac9f11f23b819e"
+git = "https://github.com/dtumad/clean"
+rev = "c4abcbb9728e8e2805ffc0a383eba96422602c27"
 
 # lean-sail runtime: upstream release tag `v5` (`07946313`, the revision the in-tree generated
 # model pairs with — a v4-generated model against v5 fails with `unknown namespace

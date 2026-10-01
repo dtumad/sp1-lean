@@ -68,6 +68,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
   channelsWithGuarantees := []
 
 def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
+  name := "sp1.native.memory.final.registers"
   main
   elaborated := elaborated
   Spec input output _ := MemoryBoundary.FinalAtSpec (Word.toNat (MemoryBoundary.address input)) output

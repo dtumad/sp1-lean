@@ -21,7 +21,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 /-- The actual circuit's pull/push pair supplies the common transition interface. -/
 def view (enabled : Bool) : TransitionView (stateChannel (p := p)) where
-  component := ⟨circuit enabled⟩
+  component := { circuit := circuit enabled }
   edge env :=
     let input := valueFromOffset Inputs 0 env
     (input.previous, input.next)

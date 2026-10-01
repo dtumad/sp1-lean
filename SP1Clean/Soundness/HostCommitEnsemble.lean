@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostCommitBank
 import ToClean.Air.EnsembleBuild
+import ToClean.Air.TableBuild
 
 /-! # A commitment bank bound by its actual Clean verifier
 
@@ -32,21 +33,28 @@ theorem source_apply (deferred : Bool) (source : HostState) :
     Vector.map_map, Function.comp_def, Target.toBitVec64_bitVecToWord]
 
 def ensemble (deferred : Bool) (source : HostState) (auxiliary : List (Component (ZMod p)))
-    (channels : List (RawChannel (ZMod p))) : Ensemble (ZMod p) (ProvableVector Word 8) where
+    (channels : List (RawChannel (ZMod p)))
+    (names : ((components (p := p) deferred ++ auxiliary).map (·.circuit.name)).Nodup) :
+    Ensemble (ZMod p) (ProvableVector Word 8) where
   tables := components deferred ++ auxiliary
+  unique_names := names
   channels := (stateChannel deferred).toRaw :: Channels.byteChannel.toRaw ::
     HostCallChip.channel.toRaw :: Channels.publicValuesChannel.toRaw :: channels
-  verifier := HostCommitBoundary.verifier deferred (sourceValues deferred source)
-  verifier_length_zero := by intros; rfl
+  verifier := HostCommitBoundary.verifierProgram deferred (sourceValues deferred source)
 
 variable {source : HostState} {deferred : Bool} {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 
-abbrev Witness := EnsembleWitness (ensemble deferred source auxiliary channels)
+variable {names : ((components (p := p) deferred ++ auxiliary).map (·.circuit.name)).Nodup}
 
-def bankTables (witness : Witness (p := p) (deferred := deferred) (source := source) (auxiliary := auxiliary) (channels := channels)) :=
+abbrev Witness := EnsembleWitness (ensemble deferred source auxiliary channels names)
+
+variable (witness : Witness (p := p) (deferred := deferred) (source := source)
+  (auxiliary := auxiliary) (channels := channels) (names := names))
+
+def bankTables :=
   witness.tables.take (components (p := p) deferred).length
 
-theorem tables_aligned (witness : Witness (p := p) (deferred := deferred) (source := source) (auxiliary := auxiliary) (channels := channels)) :
+theorem tables_aligned :
     List.Forall₂ (fun index table => (view deferred index).component = table.component) indices (bankTables witness) := by
   have viewsAligned : List.Forall₂ (fun view table => view.component = table.component)
       (views deferred) (bankTables witness) := by
@@ -55,10 +63,10 @@ theorem tables_aligned (witness : Witness (p := p) (deferred := deferred) (sourc
     simpa only [← List.map_take, ensemble, List.take_left', HostCommitBank.components, List.length_map, bankTables] using same.symm
   simpa only [views, List.forall₂_map_left_iff] using viewsAligned
 
-theorem auxiliary_silent (witness : Witness (p := p) (deferred := deferred) (source := source) (auxiliary := auxiliary) (channels := channels))
+theorem auxiliary_silent
     (privateChannel : ∀ component ∈ auxiliary, (stateChannel deferred).toRaw ∉ component.circuit.channels) :
     (witness.tables.drop (components (p := p) deferred).length).flatMap
-      (·.interactionsWith (stateChannel deferred).toRaw) = [] := by
+      (·.interactionsWith witness.data (stateChannel deferred).toRaw) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   have same := congrArg (List.drop (components (p := p) deferred).length) witness.tables_map_component
@@ -71,27 +79,24 @@ theorem auxiliary_silent (witness : Witness (p := p) (deferred := deferred) (sou
   intro interaction member equal
   have sameChannel : interaction.channel = (stateChannel deferred).toRaw := by simpa using equal
   exact privateChannel table.component componentMem
-    (sameChannel ▸ table.channel_mem_channels_of_mem_interactions interaction member)
+    (sameChannel ▸ table.channel_mem_channels_of_mem_interactions witness.data interaction member)
 
-/-- Public bank values are taken from the physical verifier row, without a boundary premise. -/
-theorem interactions_eq (witness : Witness (p := p) (deferred := deferred) (source := source) (auxiliary := auxiliary) (channels := channels))
+/-- The public verifier fixes the final bank words without a boundary premise. -/
+theorem interactions_eq
     (privateChannel : ∀ component ∈ auxiliary, (stateChannel deferred).toRaw ∉ component.circuit.channels) :
     witness.interactionsWith (stateChannel deferred).toRaw =
       [(stateChannel deferred).pushedValue (HostCommitBoundary.start (sourceValues deferred source)),
        (stateChannel deferred).pulledValue (HostCommitBoundary.final witness.publicInput)] ++
-        (bankTables witness).flatMap (·.interactionsWith (stateChannel deferred).toRaw) := by
-  rw [EnsembleWitness.interactionsWith, EnsembleWitness.allTables, List.flatMap_cons]
-  have verifier : witness.verifierTable.interactionsWith (stateChannel deferred).toRaw =
+        (bankTables witness).flatMap (·.interactionsWith witness.data (stateChannel deferred).toRaw) := by
+  have verifier : witness.verifierInteractionsWith (stateChannel deferred).toRaw =
       [(stateChannel deferred).pushedValue (HostCommitBoundary.start (sourceValues deferred source)),
        (stateChannel deferred).pulledValue (HostCommitBoundary.final witness.publicInput)] := by
-    simp only [Table.interactionsWith, EnsembleWitness.verifierTable_flatMap,
-      Operations.interactionValuesWith, EnsembleWitness.verifierTable_component,
-      Ensemble.verifierTable_interactionsWith]
-    change ((HostCommitBoundary.verifierMain deferred (sourceValues deferred source) (varFromOffset (ProvableVector Word 8) 0)).operations
-      (size (ProvableVector Word 8))).interactionValuesWith (stateChannel deferred).toRaw _ = _
-    rw [HostCommitBoundary.verifier_values, EnsembleWitness.verifierTable_environment,
+    simp only [EnsembleWitness.verifierInteractionsWith, Ensemble.verifierOperations, ensemble,
+      Verifier.Program.circuitOperations, Verifier.Program.operations, HostCommitBoundary.verifierProgram]
+    rw [Verifier.ofInteractions_values, HostCommitBoundary.verifier_values,
       ProvableType.eval_fromInput_varFromOffset_zero]
-  rw [verifier]
+  simp only [EnsembleWitness.interactionsWith, verifier, EnsembleWitness.tableContext,
+    TableContext.interactionsWith]
   have split := List.take_append_drop (components (p := p) deferred).length witness.tables
   rw [← split, List.flatMap_append, auxiliary_silent witness privateChannel, List.append_nil]
   rfl
@@ -107,27 +112,28 @@ private theorem bank_byte_requirements (index : Index) (env : Environment (ZMod 
       stateChannel, HostCallChip.channel, Channels.byteChannel, Channels.publicValuesChannel, circuit_norm]
 
 /-- The bank's Byte guarantees follow from actual ensemble balance and its auxiliary providers. -/
-theorem byte_guarantees (witness : Witness (p := p) (deferred := deferred) (source := source) (auxiliary := auxiliary) (channels := channels))
+theorem byte_guarantees
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (providers : ∀ component ∈ auxiliary, ∀ env, component.operations.ConstraintsHold env →
       component.operations.ChannelRequirements Channels.byteChannel.toRaw env) :
-    ∀ table ∈ witness.allTables, table.ChannelGuarantees Channels.byteChannel.toRaw := by
-  apply witness.channelGuarantees_of_component_requirements Channels.byteChannel.toRaw constraints
-    (balanced _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
-  intro component member env checked
-  simp only [Ensemble.allTables, ensemble, List.mem_cons, List.mem_append] at member
-  rcases member with rfl | bank | auxiliary
-  · apply Operations.requirements_of_not_mem _ _ _
-      ((ensemble deferred source auxiliary channels).verifierTable.inChannelsOrRequirements_of_constraints env checked)
-    simp [ensemble, Ensemble.verifierTable, HostCommitBoundary.verifier, stateChannel, Channels.byteChannel, circuit_norm]
-  · obtain ⟨bankView, member, rfl⟩ := List.mem_map.mp bank
-    obtain ⟨index, _, rfl⟩ := List.mem_map.mp member
-    exact bank_byte_requirements index env checked
-  · exact providers component auxiliary env checked
+    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data Channels.byteChannel.toRaw := by
+  apply (witness.channelGuarantees_of_component_requirements Channels.byteChannel.toRaw constraints
+    (balanced _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))) ?_ ?_).2
+  · intro input data
+    apply Ensemble.verifierChannelRequirements_of_not_mem
+    simp [ensemble, HostCommitBoundary.verifierProgram, Verifier.ofInteractions,
+      HostCommitBoundary.verifierMain, stateChannel, Channels.byteChannel, circuit_norm]
+  · intro component member env checked
+    change component ∈ components deferred ++ auxiliary at member
+    rcases List.mem_append.mp member with bank | auxiliary
+    · obtain ⟨bankView, viewMem, rfl⟩ := List.mem_map.mp bank
+      obtain ⟨index, _, rfl⟩ := List.mem_map.mp viewMem
+      exact bank_byte_requirements index env checked
+    · exact providers component auxiliary env checked
 
 /-- Constraints and balance authenticate the public bank as the result of all its physical calls.
 The auxiliary interface proofs can be discharged once when this subsystem is installed. -/
-theorem sound (witness : Witness (p := p) (deferred := deferred) (source := source) (auxiliary := auxiliary) (channels := channels))
+theorem sound
     (privateChannel : ∀ component ∈ auxiliary, (stateChannel deferred).toRaw ∉ component.circuit.channels)
     (providers : ∀ component ∈ auxiliary, ∀ env, component.operations.ConstraintsHold env →
       component.operations.ChannelRequirements Channels.byteChannel.toRaw env)
@@ -135,18 +141,18 @@ theorem sound (witness : Witness (p := p) (deferred := deferred) (source := sour
     (policy : HostPolicy) (characteristic : policy.characteristic = p)
     (context : HostReadContext) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (bankTables witness)) ∧
+      path.Perm (TransitionView.readIndexedRows indices (bankTables witness) witness.data) ∧
       Walk.IsWalk (edge deferred) (HostCommitBoundary.start (sourceValues deferred source)) (HostCommitBoundary.final witness.publicInput) path ∧
       path.foldlM (execute deferred policy context) source =
         some ((HostCommitBoundary.final witness.publicInput).apply deferred source) := by
-  have inAll (table : Table (ZMod p)) (member : table ∈ bankTables witness) : table ∈ witness.allTables :=
-    witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member)
+  have inTables (table : Table (ZMod p)) (member : table ∈ bankTables witness) : table ∈ witness.tables :=
+    List.mem_of_mem_take member
   have bank := balanced (stateChannel deferred).toRaw (List.mem_cons_self ..)
   change BalancedInteractions (witness.interactionsWith (stateChannel deferred).toRaw) at bank
   rw [interactions_eq witness privateChannel] at bank
-  have history := ordered_history deferred (bankTables witness) (sourceValues deferred source) witness.publicInput (tables_aligned witness)
-    (fun table member => constraints table (inAll table member))
-    (fun table member => byte_guarantees witness constraints balanced providers table (inAll table member))
+  have history := ordered_history deferred (bankTables witness) witness.data (sourceValues deferred source) witness.publicInput (tables_aligned witness)
+    (fun table member => constraints table (inTables table member))
+    (fun table member => byte_guarantees witness constraints balanced providers table (inTables table member))
     bank policy characteristic context source
   simpa only [source_apply] using history
 

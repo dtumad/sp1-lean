@@ -102,6 +102,7 @@ and whose access clock — both limbs — it pins to `0`. `Spec` is the memory c
 `clk_high = 0` boundary-time fact the timestamp-premise derivation consumes; soundness discharges the
 push's requirement from the `WordRangeCheck` assertion's `Spec` and the two clock gates. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.memory_init"
   main
   Spec input _ _ := MemoryMsg.isU64 input.toMessage ∧ MemoryMsg.ClkBound input.toMessage ∧
     input.clk_high = 0

@@ -1,14 +1,21 @@
 module
 
-public import ToClean.Air.EnsembleBuild
-public import ToClean.Circuit.SubcircuitProjection
+public import ToClean.Air.VerifierChannel
+public import ToClean.Circuit.VerifierAssertions
+public import Clean.Circuit.Foundations
 
-/-! # Silent public checks in an ensemble verifier
+/-! # Public assertions in an interaction-only verifier
 
-Clean has no adapter for adding a zero-witness public-input check while retaining the exact
-physical inventory and every channel ledger. This addition composes a real circuit invocation;
-it does not strengthen `Statement` by an external predicate. The native resource boundary is
-the concrete consumer. The raw constraint equivalence supports completeness as well as soundness.
+This adapter reuses the assertions and semantic specification of a proved zero-witness circuit.
+It installs those assertions through Clean's ordinary verifier interactions: each checked value is
+pulled on a dedicated channel and zero is pushed. Physical rows and their canonical derived data
+are preserved. The new ledger retains two occurrences per assertion, including repeated zeros.
+
+Installation derives a fresh channel name from the complete registered and actual interaction
+inventory. Only Clean's occurrence bound remains a static composition obligation; an execution
+caller supplies no extra freshness, readiness or validity hypothesis.
+The adapter belongs upstream beside `Verifier.Program` and should disappear when Clean provides
+an equivalent public-assertion interface.
 -/
 
 @[expose] public section
@@ -18,163 +25,202 @@ open Circuit
 
 variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
 
-/-- A public check requiring no witness cells and emitting no interactions. -/
+/-- A proved public assertion circuit with no private cells, lookups or channel traffic. -/
 structure PublicVerifier (F : Type) [FiniteField F] (PublicIO : TypeMap) [ProvableType PublicIO] where
-  /-- The actual verifier subcircuit. -/
+  /-- Human-readable prefix for the automatically separated check-channel name. -/
+  name : String
+  /-- The semantic proof boundary supplying the actual public assertions. -/
   circuit : GeneralFormalCircuit F PublicIO unit
-  /-- Public checks cannot allocate private cells. -/
+  /-- The checker requires no unverified soundness precondition. -/
+  assumptions : ∀ input data, circuit.Assumptions input data
+  /-- Public assertions allocate no private cells. -/
   length_zero : ∀ input, circuit.localLength input = 0
-  /-- Raw silence preserves every ledger, including unregistered channels. -/
-  interactions : ∀ input offset env channel,
-    ((circuit.main input).operations offset).interactionValuesWith channel env = []
+  /-- Every raw lookup obligation is absent. -/
+  lookups : ∀ input offset, ((circuit.main input).operations offset).lookups = []
+  /-- Channel traffic is supplied solely by the assertion adapter. -/
+  interactions : ∀ input offset, ((circuit.main input).operations offset).interactions = []
 
 namespace PublicVerifier
 variable (check : PublicVerifier F PublicIO)
 
-/-- Compose the original verifier with the public check. -/
-def verifierMain (ens : Ensemble F PublicIO) (input : Var PublicIO F) : Circuit F Unit := do
-  let _ ← ens.verifier input
-  let _ ← check.circuit input
+/-- The literal assertions of the existing proved circuit. -/
+def assertions (input : Var PublicIO F) : List (Expression F) :=
+  ((check.circuit.main input).operations (size PublicIO)).constraints
 
-/-- The composed circuit keeps both semantic specifications and prover contracts. -/
-def verifier (ens : Ensemble F PublicIO) : GeneralFormalCircuit F PublicIO unit where
-  main := check.verifierMain ens
-  Assumptions input data := ens.verifier.Assumptions input data ∧ check.circuit.Assumptions input data
-  Spec input _ data := ens.verifier.Spec input () data ∧ check.circuit.Spec input () data
-  ProverAssumptions input data hint :=
-    ens.verifier.ProverAssumptions input data hint ∧ check.circuit.ProverAssumptions input data hint
-  ProverSpec input _ hint := ens.verifier.ProverSpec input () hint ∧ check.circuit.ProverSpec input () hint
-  channelsWithRequirements := ens.verifier.channelsWithRequirements ++ check.circuit.channelsWithRequirements
-  soundness := by circuit_proof_all [verifierMain]
-  completeness := by circuit_proof_all [verifierMain]
+/-- Fresh name derived from the complete original interaction inventory. -/
+abbrev channelName (ens : Ensemble F PublicIO) : String :=
+  VerifierChannel.channelName check.name ens
 
-/-- Install a real public check, preserving table and channel inventories. -/
-def install (ens : Ensemble F PublicIO) : Ensemble F PublicIO where
-  tables := ens.tables
-  channels := ens.channels
-  verifier := check.verifier ens
-  verifier_length_zero := by
-    intro input
-    simp only [verifier, circuit_norm]
-    change ens.verifier.localLength input + check.circuit.localLength input = 0
-    rw [ens.verifier_length_zero, check.length_zero, Nat.add_zero]
+/-- Dedicated channel enforcing the public assertions. -/
+abbrev channel (ens : Ensemble F PublicIO) : RawChannel F :=
+  VerifierChannel.channel check.name ens
 
-/-- Raw checks of the added circuit in the canonical public-input environment. -/
+/-- Raw acceptance of the original public assertion circuit. -/
 def Checks (input : PublicIO F) (data : ProverData F) : Prop :=
   ((check.circuit.main (varFromOffset PublicIO 0)).operations (size PublicIO)).ConstraintsHold
     (Environment.fromInput input data)
 
-private theorem verifier_flat (ens : Ensemble F PublicIO) (input : Var PublicIO F) (offset : ℕ) :
-    ((check.verifierMain ens input).operations offset).toFlat =
-      ((ens.verifier.main input).operations offset).toFlat ++
-        ((check.circuit.main input).operations offset).toFlat := by
-  simp only [verifierMain, circuit_norm, GeneralFormalCircuit.toSubcircuit_toFlat,
-    ens.verifier_length_zero, Nat.add_zero, List.append_nil]
+/-- Exact count bound for the added pull/push pairs, including repeated zero checks. -/
+def CountBound : Prop :=
+  2 * (check.assertions (varFromOffset PublicIO 0)).length < ringChar F ∨ ringChar F = 0
 
-/-- Adding a check changes exactly the verifier's raw constraints. -/
-theorem verifier_constraints (ens : Ensemble F PublicIO) (input : PublicIO F) (data : ProverData F) :
-    (check.install ens).VerifierConstraints input data ↔
-      ens.VerifierConstraints input data ∧ check.Checks input data := by
-  change ((check.verifierMain ens (varFromOffset PublicIO 0)).operations (size PublicIO)).ConstraintsHold
-    (Environment.fromInput input data) ↔ _
-  rw [← Circuit.constraintsHold_toFlat_iff, verifier_flat, FlatOperation.constraintsHold_append,
-    Circuit.constraintsHold_toFlat_iff, Circuit.constraintsHold_toFlat_iff]
-  rfl
+/-- Clean's verifier program retains the circuit's semantic specification. -/
+def program (ens : Ensemble F PublicIO) : Verifier.Program F PublicIO where
+  main input := Verifier.checkZeros (check.channelName ens) (check.assertions input)
+  Spec input data := check.circuit.Spec input () data
+  soundness := by
+    intro env guarantees
+    have checked := (Verifier.checkZeros_guarantees (check.channelName ens)
+      (check.assertions (varFromOffset PublicIO 0)) env).mp guarantees
+    have constraints :
+        ((check.circuit.main (varFromOffset PublicIO 0)).operations (size PublicIO)).ConstraintsHold env := by
+      refine ⟨checked, ?_⟩
+      simp [check.lookups]
+    have silent :
+        ((check.circuit.main (varFromOffset PublicIO 0)).operations (size PublicIO)).FullGuarantees env := by
+      simp [Operations.FullGuarantees, check.interactions]
+    exact (check.circuit.original_full_soundness (size PublicIO) env
+      (varFromOffset PublicIO 0) (check.assumptions _ _) constraints silent).1
 
-/-- No channel gains even a zero-multiplicity occurrence. -/
-theorem verifier_interactions (ens : Ensemble F PublicIO) (input : PublicIO F) (data : ProverData F)
-    (channel : RawChannel F) :
-    (check.install ens).verifierOperations.interactionValuesWith channel (Environment.fromInput input data) =
-      ens.verifierOperations.interactionValuesWith channel (Environment.fromInput input data) := by
-  change ((check.verifierMain ens (varFromOffset PublicIO 0)).operations (size PublicIO)).interactionValuesWith
-    channel (Environment.fromInput input data) = _
-  simp only [Operations.interactionValuesWith, Operations.interactionsWith,
-    ← Operations.interactions_toFlat, verifier_flat, FlatOperation.interactions_append,
-    List.filter_append, List.map_append]
-  simp only [Operations.interactions_toFlat]
-  change _ ++ ((check.circuit.main _).operations _).interactionValuesWith channel _ = _
-  rw [check.interactions, List.append_nil]
+/-- Balance on the fresh channel enforces exactly the old raw assertions and the count bound. -/
+theorem program_balanced_iff (ens : Ensemble F PublicIO) (input : PublicIO F) (data : ProverData F) :
+    BalancedInteractions ((check.program ens).circuitOperations.interactionValuesWith (check.channel ens)
+      (Environment.fromInput input data)) ↔ check.CountBound ∧ check.Checks input data := by
+  change BalancedInteractions ((Verifier.checkZeros (check.channelName ens)
+    (check.assertions (varFromOffset PublicIO 0))).circuitOperations.interactionValuesWith
+      (Verifier.zeroChannel (check.channelName ens)).toRaw (Environment.fromInput input data)) ↔ _
+  rw [Verifier.checkZeros_balanced_iff]
+  simp [CountBound, Checks, assertions, Operations.ConstraintsHold, check.lookups]
 
-/-- Forget only the extra verifier check, retaining the literal witness tables. -/
-def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (check.install ens)) : EnsembleWitness ens :=
-  EnsembleWitness.ofTables ens witness.tables witness.data witness.publicInput
-    witness.tables_map_component witness.same_data
+/-- Append checks using the existing verifier monad and retain the physical inventory. -/
+def install (ens : Ensemble F PublicIO) : Ensemble F PublicIO where
+  tables := ens.tables
+  unique_names := ens.unique_names
+  channels := ens.channels ++ [check.channel ens]
+  verifier := ens.verifier.andThen (check.program ens)
 
-/-- Public input is preserved without reducing the concrete ensemble definition. -/
+private theorem fresh (ens : Ensemble F PublicIO) : VerifierChannel.Fresh check.name ens :=
+  VerifierChannel.fresh check.name ens
+
+/-- Automatic installation never reuses a registered channel. -/
+theorem channel_not_mem (ens : Ensemble F PublicIO) : check.channel ens ∉ ens.channels :=
+  (check.fresh ens).unregistered
+
+/-- Forget the additional public check, preserving the literal committed table list. -/
+def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (check.install ens)) :
+    EnsembleWitness ens :=
+  EnsembleWitness.ofTables ens witness.tables witness.publicInput witness.tables_map_component
+
+/-- Projection preserves public input. -/
 @[simp] theorem project_publicInput {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (check.install ens)) :
     (check.project witness).publicInput = witness.publicInput := rfl
 
-/-- Shared prover data is unchanged. -/
+/-- Projection preserves canonical committed data because it preserves the physical rows. -/
 @[simp] theorem project_data {ens : Ensemble F PublicIO}
-    (witness : EnsembleWitness (check.install ens)) : (check.project witness).data = witness.data := rfl
-
-/-- Projection retains the literal physical table list. -/
-@[simp] theorem project_tables {ens : Ensemble F PublicIO}
-    (witness : EnsembleWitness (check.install ens)) : (check.project witness).tables = witness.tables := rfl
-
-/-- The same physical witness is a candidate for the strengthened ensemble. -/
-def lift {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens) : EnsembleWitness (check.install ens) :=
-  EnsembleWitness.ofTables (check.install ens) witness.tables witness.data witness.publicInput
-    witness.tables_map_component witness.same_data
-
-/-- Both directions preserve all ordinary row constraints. -/
-theorem project_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitness (check.install ens)) :
-    witness.Constraints ↔ (check.project witness).Constraints ∧ check.Checks witness.publicInput witness.data := by
-  simp only [EnsembleWitness.Constraints, EnsembleWitness.forall_mem_allTables_iff,
-    ← EnsembleWitness.verifierConstraints_iff_verifierTable_constraints, verifier_constraints]
-  tauto
-
-private theorem verifier_table_interactions {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
-    (channel : RawChannel F) : witness.verifierTable.interactionsWith channel =
-      ens.verifierOperations.interactionValuesWith channel (Environment.fromInput witness.publicInput witness.data) := by
-  simp only [Table.interactionsWith, EnsembleWitness.verifierTable_flatMap,
-    Operations.interactionValuesWith, EnsembleWitness.verifierTable_component,
-    Ensemble.verifierTable_interactionsWith, EnsembleWitness.verifierTable_environment]
-
-/-- The full interaction list, with order and repetitions, is unchanged. -/
-theorem project_interactions {ens : Ensemble F PublicIO} (witness : EnsembleWitness (check.install ens))
-    (channel : RawChannel F) :
-    (check.project witness).interactionsWith channel = witness.interactionsWith channel := by
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.allTables, List.flatMap_cons,
-    verifier_table_interactions, verifier_interactions]
-  rfl
-
-/-- The original occurrence bound and integer balance are preserved together. -/
-theorem project_balanced [DecidableEq F] {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (check.install ens)) :
-    (check.project witness).BalancedChannels ↔ witness.BalancedChannels := by
-  unfold EnsembleWitness.BalancedChannels EnsembleWitness.BalancedChannel
-  simp only [EnsembleWitness.interactionsWith_allTablesWitness, project_interactions]
+    (check.project witness).data = witness.data := rfl
+
+/-- Projection preserves every physical table and row. -/
+@[simp] theorem project_tables {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (check.install ens)) :
+    (check.project witness).tables = witness.tables := rfl
+
+/-- Use the same committed rows as a candidate for the strengthened verifier. -/
+def lift {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens) :
+    EnsembleWitness (check.install ens) :=
+  EnsembleWitness.ofTables (check.install ens) witness.tables witness.publicInput
+    witness.tables_map_component
+
+/-- Physical constraints are identical; the public checks are enforced through balance. -/
+theorem project_constraints {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (check.install ens)) :
+    witness.Constraints ↔ (check.project witness).Constraints := Iff.rfl
+
+/-- Projection preserves the literal ledger of every other channel. -/
+theorem project_interactions {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (check.install ens)) (selected : RawChannel F)
+    (different : check.channel ens ≠ selected) :
+    (check.project witness).interactionsWith selected = witness.interactionsWith selected := by
+  have silent := Verifier.checkZeros_other_values (check.channelName ens)
+    (check.assertions (varFromOffset PublicIO 0))
+    (Environment.fromInput witness.publicInput witness.data) selected different
+  change _ = (ens.verifier.andThen (check.program ens)).circuitOperations.interactionValuesWith
+    selected (Environment.fromInput witness.publicInput witness.data) ++ _
+  rw [Verifier.Program.andThen_values]
+  change _ = (_ ++ (Verifier.checkZeros (check.channelName ens)
+    (check.assertions (varFromOffset PublicIO 0))).circuitOperations.interactionValuesWith
+      selected (Environment.fromInput witness.publicInput witness.data)) ++ _
+  rw [silent, List.append_nil]
   rfl
 
-/-- A checked original witness satisfies the installed constraints. -/
-theorem lift_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
-    (constraints : witness.Constraints) (checked : check.Checks witness.publicInput witness.data) :
-    (check.lift witness).Constraints := by
-  rw [check.project_constraints]
-  exact ⟨constraints, checked⟩
+/-- On the fresh channel, the installed ledger is exactly the public check program. -/
+theorem installed_check_interactions {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (check.install ens)) :
+    witness.interactionsWith (check.channel ens) =
+      (check.program ens).circuitOperations.interactionValuesWith (check.channel ens)
+        (Environment.fromInput witness.publicInput witness.data) := by
+  have fresh := check.fresh ens
+  have original := VerifierChannel.Fresh.empty_ledger check.name fresh (check.project witness)
+  have physical : witness.tableContext.interactionsWith (check.channel ens) = [] := by
+    simpa only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
+      fresh.verifier, List.nil_append, EnsembleWitness.tableContext,
+      TableContext.interactionsWith, project_tables, project_data] using original
+  change (ens.verifier.andThen (check.program ens)).circuitOperations.interactionValuesWith (check.channel ens)
+    (Environment.fromInput witness.publicInput witness.data) ++
+      witness.tableContext.interactionsWith (check.channel ens) = _
+  rw [Verifier.Program.andThen_values, fresh.verifier, List.nil_append, physical, List.append_nil]
 
-/-- Adding a silent check retains balance for a constructed witness. -/
-theorem lift_balanced [DecidableEq F] {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
-    (balanced : witness.BalancedChannels) : (check.lift witness).BalancedChannels :=
-  (check.project_balanced _).mp balanced
+/-- Installation preserves old balance and enforces the new assertions with their exact count bound. -/
+theorem project_balanced_iff {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (check.install ens)) :
+    witness.BalancedChannels ↔
+      (check.project witness).BalancedChannels ∧ check.CountBound ∧
+        check.Checks witness.publicInput witness.data := by
+  have fresh := check.fresh ens
+  constructor
+  · intro balanced
+    have own := balanced (check.channel ens) (by simp [install])
+    rw [EnsembleWitness.BalancedChannel, check.installed_check_interactions] at own
+    refine ⟨?_, (check.program_balanced_iff ens _ _).mp own⟩
+    intro selected member
+    have different : check.channel ens ≠ selected := by
+      intro equal
+      exact fresh.unregistered (show check.channel ens ∈ ens.channels from equal ▸ member)
+    change BalancedInteractions ((check.project witness).interactionsWith selected)
+    rw [check.project_interactions witness selected different]
+    exact balanced selected (List.mem_append_left _ member)
+  · rintro ⟨original, bound, checked⟩ selected member
+    change selected ∈ ens.channels ++ [check.channel ens] at member
+    rcases List.mem_append.mp member with member | member
+    · have different : check.channel ens ≠ selected := by
+        intro equal
+        exact fresh.unregistered (show check.channel ens ∈ ens.channels from equal ▸ member)
+      change BalancedInteractions (witness.interactionsWith selected)
+      rw [← check.project_interactions witness selected different]
+      exact original selected member
+    · have same : selected = check.channel ens := List.mem_singleton.mp member
+      subst selected
+      change BalancedInteractions (witness.interactionsWith (check.channel ens))
+      rw [check.installed_check_interactions]
+      exact (check.program_balanced_iff ens _ _).mpr ⟨bound, checked⟩
 
-/-- A data-independent public check strengthens the statement by exactly its proved meaning.
-Both directions retain the same witness arrays and prover data. -/
-theorem statement_iff [DecidableEq F] (ens : Ensemble F PublicIO) (meaning : PublicIO F → Prop)
+/-- The installed statement adds exactly the public semantic contract to the original statement. -/
+theorem statement_iff (ens : Ensemble F PublicIO)
+    (bound : check.CountBound) (meaning : PublicIO F → Prop)
     (checks : ∀ input data, check.Checks input data ↔ meaning input) (input : PublicIO F) :
     (check.install ens).Statement input ↔ ens.Statement input ∧ meaning input := by
   constructor
   · rintro ⟨witness, same, constraints, balanced⟩
-    obtain ⟨original, checked⟩ := (check.project_constraints witness).mp constraints
-    refine ⟨⟨check.project witness, same, original, (check.project_balanced witness).mpr balanced⟩, ?_⟩
+    obtain ⟨original, _, checked⟩ := (check.project_balanced_iff witness).mp balanced
+    refine ⟨⟨check.project witness, same,
+      (check.project_constraints witness).mp constraints, original⟩, ?_⟩
     rw [← same]
     exact (checks ..).mp checked
   · rintro ⟨⟨witness, same, constraints, balanced⟩, spec⟩
-    refine ⟨check.lift witness, same, check.lift_constraints witness constraints ?_,
-      check.lift_balanced witness balanced⟩
-    exact (checks ..).mpr (same ▸ spec)
+    refine ⟨check.lift witness, same, constraints, ?_⟩
+    apply (check.project_balanced_iff (check.lift witness)).mpr
+    exact ⟨balanced, bound, (checks ..).mpr (same ▸ spec)⟩
 
 end PublicVerifier
 end Air.Flat

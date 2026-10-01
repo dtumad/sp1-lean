@@ -48,7 +48,7 @@ def readView : TransitionView (stateChannel (p := p)) where
     rfl
 
 def lengthView (empty : Bool) : TransitionView (stateChannel (p := p)) where
-  component := ⟨HostHintLengthChip.circuit empty⟩
+  component := { circuit := HostHintLengthChip.circuit empty }
   edge env := let row := valueFromOffset HostHintLengthChip.Inputs 0 env; (row.previous, row.next)
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
@@ -86,44 +86,44 @@ theorem view_strict (index : Index) (env : Environment (ZMod p)) (valid : (view 
   | none => exact read_strict (HostHintReadCoverage.input env) valid
   | some empty => exact length_strict empty (valueFromOffset HostHintLengthChip.Inputs 0 env) valid
 
-theorem rows_spec (tables : List (Table (ZMod p)))
+theorem rows_spec (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun index table => (view index).component = table.component) indices tables)
-    (valid : ∀ table ∈ tables, table.Spec) :
-    ∀ row ∈ TransitionView.readIndexedRows indices tables, (view row.1).component.Spec row.2 := by
-  apply TransitionView.readIndexedRows_spec indices view tables _ valid
+    (valid : ∀ table ∈ tables, table.Spec data) :
+    ∀ row ∈ TransitionView.readIndexedRows indices tables data, (view row.1).component.Spec row.2 := by
+  apply TransitionView.readIndexedRows_spec indices view tables data _ valid
   simpa only [List.forall₂_map_left_iff] using aligned
 
 /-- Every occurrence of a physical queue row contributes exactly one complete token pair. -/
-theorem interactions (tables : List (Table (ZMod p)))
+theorem interactions (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun index table => (view index).component = table.component) indices tables) :
-    tables.flatMap (·.interactionsWith stateChannel.toRaw) =
-      (TransitionView.readIndexedRows indices tables).flatMap (fun row =>
+    tables.flatMap (·.interactionsWith data stateChannel.toRaw) =
+      (TransitionView.readIndexedRows indices tables data).flatMap (fun row =>
         [stateChannel.pulledValue (edge row).1, stateChannel.pushedValue (edge row).2]) := by
-  rw [TransitionView.readIndexedRows_interactions indices (fun index => (view index).component) _ _ aligned]
+  rw [TransitionView.readIndexedRows_interactions indices (fun index => (view index).component) tables data _ aligned]
   apply List.flatMap_congr
   intro row _
   exact (view row.1).interactions row.2
 
 /-- Actual token balance orders all queue rows, retaining head and allocation-frontier continuity.
 The enclosing verifier must supply and bind both endpoint messages. -/
-theorem ordered (tables : List (Table (ZMod p)))
+theorem ordered (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun index table => (view index).component = table.component) indices tables)
-    (valid : ∀ table ∈ tables, table.Spec) (initial final : State (ZMod p))
+    (valid : ∀ table ∈ tables, table.Spec data) (initial final : State (ZMod p))
     (balanced : BalancedInteractions ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-      tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
-    ∃ path : List (Row (p := p)), path.Perm (TransitionView.readIndexedRows indices tables) ∧
+      tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
+    ∃ path : List (Row (p := p)), path.Perm (TransitionView.readIndexedRows indices tables data) ∧
       Walk.IsWalk edge initial final path := by
   classical
-  rw [interactions tables aligned] at balanced
+  rw [interactions tables data aligned] at balanced
   change BalancedInteractions (stateChannel.transitionLedger initial final
-    (TransitionView.readIndexedRows indices tables) edge) at balanced
+    (TransitionView.readIndexedRows indices tables data) edge) at balanced
   have endpoints := (stateChannel.transitionLedger_balanced_iff _ _ _ _).mp balanced
-  have balance : EndpointBalanced (↑(TransitionView.readIndexedRows indices tables)) edge initial final := by
+  have balance : EndpointBalanced (↑(TransitionView.readIndexedRows indices tables data)) edge initial final := by
     simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints.2
   obtain ⟨path, walk, exhaustive⟩ := exists_exhaustiveTrail_of_endpointBalanced
-    (↑(TransitionView.readIndexedRows indices tables)) edge time initial final
+    (↑(TransitionView.readIndexedRows indices tables data)) edge time initial final
     balance (fun row member =>
-      view_strict row.1 row.2 (rows_spec tables aligned valid row (Multiset.mem_coe.mp member)))
+      view_strict row.1 row.2 (rows_spec tables data aligned valid row (Multiset.mem_coe.mp member)))
   exact ⟨path, Multiset.coe_eq_coe.mp exhaustive, walk⟩
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
@@ -142,17 +142,17 @@ private theorem nil_of_strict_balance {R V : Type*} (edge : R → V × V) (rank 
 
 /-- Omitting queue endpoints forbids every active HINT_LEN/HINT_READ row; record sources alone
 cannot establish non-vacuity of the complete ensemble relation. -/
-theorem rows_nil_of_balanced (tables : List (Table (ZMod p)))
+theorem rows_nil_of_balanced (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun index table => (view index).component = table.component) indices tables)
-    (valid : ∀ table ∈ tables, table.Spec)
-    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
-    TransitionView.readIndexedRows indices tables = [] := by
+    (valid : ∀ table ∈ tables, table.Spec data)
+    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
+    TransitionView.readIndexedRows indices tables data = [] := by
   classical
-  rw [interactions tables aligned] at balanced
+  rw [interactions tables data aligned] at balanced
   have closed := (stateChannel.pairedLedger_balanced_iff
-    (TransitionView.readIndexedRows indices tables) edge).mp balanced
+    (TransitionView.readIndexedRows indices tables data) edge).mp balanced
   exact nil_of_strict_balance edge time _ closed.2
-    (fun row member => view_strict row.1 row.2 (rows_spec tables aligned valid row member))
+    (fun row member => view_strict row.1 row.2 (rows_spec tables data aligned valid row member))
 
 /-- The present queue clock encoding cannot represent a queue handler at event time zero.
 This agrees with SP1's active 1-mod-8 profile; range-only source checks also admit identities at zero. -/

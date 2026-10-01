@@ -60,7 +60,7 @@ private theorem boundary_programPulls (image : ProgramImage) (component : Compon
 /-- The computed ROM is the only possible non-pull Program contributor in this assembly. -/
 theorem component_program_source (image : ProgramImage) (component : Component (ZMod p))
     (member : component ∈ (ensemble image).allTables) :
-    component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) ∨ ProgramPulls component := by
+    component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ ProgramPulls component := by
   simp only [Ensemble.allTables, List.mem_cons] at member
   rcases member with rfl | member
   · right

@@ -139,7 +139,7 @@ structure CircuitPushedPcBound {Input Output : TypeMap}
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop where
   bound : ∀ data physical,
-    let component : Component (ZMod p) := ⟨circuit⟩
+    let component : Component (ZMod p) := { circuit := circuit }
     let env := Environment.fromArray physical data
     let rowView := view (component.rowInput env) (component.rowOutput env)
     component.operations.ChannelGuarantees byteChannel.toRaw env →
@@ -157,7 +157,7 @@ theorem circuitPushedPcBound_of_jumpTargetContract {Input Output : TypeMap}
   constructor
   obtain ⟨addOffset, addInput, addMem, binding⟩ := contract
   intro data physical
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input
@@ -197,7 +197,7 @@ theorem circuitPushedPcBound_of_shallowNextPcContract {Input Output : TypeMap}
   constructor
   obtain ⟨gate, limb1, limb2, mem1, mem2, binding⟩ := contract
   intro data physical
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input

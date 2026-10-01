@@ -103,6 +103,7 @@ def circuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     (binds : ∀ input output data, provider.Spec input output data → recordSpec output)
     (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record) :
     GeneralFormalCircuit (ZMod p) (Inputs Payload) MemoryMsg where
+  name := s!"{provider.name}.{name}"
   main := main name provider
   elaborated := elaborated name provider
   Assumptions input data := provider.Assumptions input.payload data

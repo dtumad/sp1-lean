@@ -83,7 +83,7 @@ def CircuitStateEmissionShape {Input Output : TypeMap}
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
   ∀ data physical,
-    let component : Component (ZMod p) := ⟨circuit⟩
+    let component : Component (ZMod p) := { circuit := circuit }
     let env := Environment.fromArray physical data
     let rowView := view (component.rowInput env) (component.rowOutput env)
     component.operations.interactionValuesWith stateChannel.toRaw env =
@@ -153,7 +153,7 @@ theorem circuitStateEmissionShape_of_exposure {Input Output : TypeMap}
     CircuitStateEmissionShape circuit view := by
   obtain ⟨gate, pullMessage, pushMessage, exposure, gate_eval, pull_eval, push_eval⟩ := contract
   intro data physical
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input

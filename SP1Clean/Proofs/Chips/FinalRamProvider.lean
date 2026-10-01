@@ -82,6 +82,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
     simp only [main, circuit_norm, WordRangeCheck.circuit, AddressOperation.circuit]
 
 def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
+  name := "sp1.native.memory.final.ram"
   main
   elaborated := elaborated
   Spec input output _ := MemoryBoundary.RamFinalAtSpec (Word.toNat (MemoryBoundary.address input)) output

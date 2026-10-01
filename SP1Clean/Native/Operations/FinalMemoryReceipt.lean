@@ -20,6 +20,7 @@ attribute [local circuit_norm] List.subset_append_left
 
 def circuit (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
     GeneralFormalCircuit (ZMod p) Input MemoryMsg where
+  name := provider.name
   main input := do
     let record ← provider input
     (FinalMemoryValue.channel ram).push record
@@ -36,17 +37,17 @@ def circuit (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryM
     exact h_assumptions
 
 theorem width (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
-    (⟨circuit ram provider⟩ : Component (ZMod p)).width = (⟨provider⟩ : Component (ZMod p)).width := rfl
+    ({ circuit := circuit ram provider } : Component (ZMod p)).width = ({ circuit := provider } : Component (ZMod p)).width := rfl
 
 theorem constraints (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
-    (⟨circuit ram provider⟩ : Component (ZMod p)).operations.constraints =
-      (⟨provider⟩ : Component (ZMod p)).operations.constraints := by
+    ({ circuit := circuit ram provider } : Component (ZMod p)).operations.constraints =
+      ({ circuit := provider } : Component (ZMod p)).operations.constraints := by
   simp only [Component.constraints_eq, Component.rowOperations, circuit, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_constraints]
 
 theorem lookups (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
-    (⟨circuit ram provider⟩ : Component (ZMod p)).operations.lookups =
-      (⟨provider⟩ : Component (ZMod p)).operations.lookups := by
+    ({ circuit := circuit ram provider } : Component (ZMod p)).operations.lookups =
+      ({ circuit := provider } : Component (ZMod p)).operations.lookups := by
   simp only [Component.lookups_eq, Component.rowOperations, circuit, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_lookups]
 
@@ -61,8 +62,8 @@ theorem receipt_interactions (ram : Bool) (provider : GeneralFormalCircuit (ZMod
 
 theorem interactions (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg)
     (selected : RawChannel (ZMod p)) (different : selected ≠ (FinalMemoryValue.channel ram).toRaw) :
-    (⟨circuit ram provider⟩ : Component (ZMod p)).operations.interactionsWith selected =
-      (⟨provider⟩ : Component (ZMod p)).operations.interactionsWith selected := by
+    ({ circuit := circuit ram provider } : Component (ZMod p)).operations.interactionsWith selected =
+      ({ circuit := provider } : Component (ZMod p)).operations.interactionsWith selected := by
   simp only [Component.interactionsWith_eq, Component.rowOperations, circuit, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, Ne.symm different, ↓reduceIte, List.append_nil]
   rfl

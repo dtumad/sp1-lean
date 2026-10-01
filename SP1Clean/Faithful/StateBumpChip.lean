@@ -116,14 +116,14 @@ theorem stateBumpChip_size_eq :
 /-- The reconstructed row has exactly the flat component's width — 14 cells, no witness block. -/
 theorem stateBumpPhysicalRow_size (cols : Extracted.StateBumpCols (ZMod p)) :
     (stateBumpPhysicalRow (stateBumpDeconfigure cols)).size =
-      (⟨StateBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).width := by
+      ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).width := by
   rw [stateBumpPhysicalRow, inputFirstRow_size, Air.Flat.Component.width, stateBumpChip_size_eq]
   simp
 
 /-- The reconstructed row decodes back to the native row the codec started from. -/
 theorem stateBumpEnvironment_rowInput (cols : Extracted.StateBumpCols (ZMod p))
     (data : ProverData (ZMod p)) :
-    (⟨StateBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInput
+    ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInput
         (stateBumpEnvironment cols data) = stateBumpDeconfigure cols :=
   rowInput_inputFirstRow _ _ _ _
 
@@ -367,7 +367,7 @@ theorem stateBumpChip_main_eq : (StateBumpChip.circuit (p := p)).main = StateBum
 /-- The flat table emits no Clean `Lookup` operations — every SP1 byte check is a channel
 interaction, and is therefore compared by the interaction half. -/
 theorem stateBumpChip_lookups_empty :
-    (⟨StateBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+    ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk, stateBumpChip_main_eq]
   simp [StateBumpChip.main, circuit_norm]
 
@@ -379,7 +379,7 @@ theorem stateBumpChipConstraintsConstructive
     (rustCols : Extracted.StateBumpCols (ZMod p)) (data : ProverData (ZMod p)) :
     List.Forall (· = 0)
         ((stateBumpChipOracle preprocessed publicValues).assertZeros rustCols) ↔
-      (⟨StateBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+      ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
         (stateBumpEnvironment rustCols data) := by
   refine Iff.trans ?_
     (constraintsHold_iff_nativeAssertZeros (StateBumpChip.circuit (p := p))
@@ -396,7 +396,7 @@ theorem stateBumpChipInteractionsConstructive
     (preprocessed : Vector (ZMod p) 0) (publicValues : Vector (ZMod p) 160)
     (rustCols : Extracted.StateBumpCols (ZMod p)) (data : ProverData (ZMod p)) :
     nativeAccesses (stateBumpEnvironment rustCols data)
-        (⟨StateBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations =
+        ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations =
       (stateBumpChipOracle preprocessed publicValues).rustAccesses rustCols := by
   rw [nativeAccesses_component_eq_rowOperations (StateBumpChip.circuit (p := p)),
     Air.Flat.Component.rowOperations_mk, stateBumpChip_main_eq]
@@ -415,7 +415,7 @@ theorem stateBumpChip_faithful
     (∀ (rustCols : Extracted.StateBumpCols (ZMod p)) (data : ProverData (ZMod p)),
         List.Forall (· = 0)
             ((stateBumpChipOracle preprocessed publicValues).assertZeros rustCols) ↔
-          (⟨StateBumpChip.circuit (p := p)⟩ :
+          ({ circuit := StateBumpChip.circuit (p := p) } :
             Air.Flat.Component (ZMod p)).operations.ConstraintsHold
               (stateBumpEnvironment rustCols data)) ∧
       ∀ (rustCols : Extracted.StateBumpCols (ZMod p)) (data : ProverData (ZMod p)),
@@ -424,7 +424,7 @@ theorem stateBumpChip_faithful
           List.Perm
             (LookupAccessList.active
               (nativeAccesses (stateBumpEnvironment rustCols data)
-                (⟨StateBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations))
+                ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations))
             (LookupAccessList.active
               ((stateBumpChipOracle preprocessed publicValues).rustAccesses rustCols)) :=
   ⟨stateBumpChipConstraintsConstructive preprocessed publicValues,

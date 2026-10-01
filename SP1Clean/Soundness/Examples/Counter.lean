@@ -160,7 +160,7 @@ def decodeRow (row : Array F) : fieldPair F :=
   (row[0]?.getD 0, row[1]?.getD 0)
 
 private theorem transition_constraints (env : Environment F) :
-    (⟨transition⟩ : Component F).operations.ConstraintsHold env ↔
+    ({ circuit := transition } : Component F).operations.ConstraintsHold env ↔
       (env.get 0).val < 15 ∧ (env.get 1).val = (env.get 0).val + 1 := by
   rw [Component.constraintsHold_iff]
   simp only [Component.rowOperations, transition, transitionMain, circuit_norm,
@@ -179,7 +179,7 @@ private theorem transition_constraints (env : Environment F) :
     exact ⟨bound, sub_eq_zero.mpr (field_increment equation)⟩
 
 private theorem verifier_constraints (env : Environment F) :
-    (⟨verifier⟩ : Component F).operations.ConstraintsHold env ↔
+    ({ circuit := verifier } : Component F).operations.ConstraintsHold env ↔
       (env.get 0).val ≤ 15 ∧ (env.get 1).val ≤ 15 := by
   rw [Component.constraintsHold_iff]
   simp only [Component.rowOperations, verifier, verifierMain, circuit_norm,
@@ -194,14 +194,14 @@ private theorem verifier_constraints (env : Environment F) :
   omega
 
 private theorem transition_interactions (env : Environment F) :
-    (⟨transition⟩ : Component F).operations.interactionValuesWith state.toRaw env =
+    ({ circuit := transition } : Component F).operations.interactionValuesWith state.toRaw env =
       [state.pulledValue (env.get 0), state.pushedValue (env.get 1)] := by
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
     Component.rowOperations, transition, transitionMain, circuit_norm]
   simp only [AbstractInteraction.eval, ChannelInteraction.toRaw, circuit_norm, explicit_provable_type]
 
 private theorem verifier_interactions (env : Environment F) :
-    (⟨verifier⟩ : Component F).operations.interactionValuesWith state.toRaw env =
+    ({ circuit := verifier } : Component F).operations.interactionValuesWith state.toRaw env =
       [state.pushedValue (env.get 0), state.pulledValue (env.get 1)] := by
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
     Component.rowOperations, verifier, verifierMain, circuit_norm]
@@ -210,7 +210,7 @@ private theorem verifier_interactions (env : Environment F) :
 /-- A table witness from explicit transition pairs, useful also for adversarial regressions. -/
 def witnessOfRows (input : fieldPair F) (rows : List (fieldPair F)) : EnsembleWitness ensemble where
   tables := [{
-    component := ⟨transition⟩
+    component := { circuit := transition }
     width := 2
     table := rows.map (fun row => #[row.1, row.2])
     data := fun _ _ => #[]
@@ -245,7 +245,7 @@ private theorem witness_constraints (witness : EnsembleWitness ensemble) (table 
   · rintro ⟨publicConstraints, rows⟩
     constructor
     · have h := publicConstraints _ (List.mem_singleton_self _)
-      change (⟨verifier⟩ : Component F).operations.ConstraintsHold _ at h
+      change ({ circuit := verifier } : Component F).operations.ConstraintsHold _ at h
       rw [verifier_constraints] at h
       simpa [Table.environment, EnsembleWitness.verifierTable, Environment.fromArray,
         explicit_provable_type, circuit_norm] using h
@@ -257,7 +257,7 @@ private theorem witness_constraints (witness : EnsembleWitness ensemble) (table 
     constructor
     · intro row member
       obtain rfl := List.mem_singleton.mp member
-      change (⟨verifier⟩ : Component F).operations.ConstraintsHold _
+      change ({ circuit := verifier } : Component F).operations.ConstraintsHold _
       rw [verifier_constraints]
       simpa [Table.environment, EnsembleWitness.verifierTable, Environment.fromArray,
         explicit_provable_type, circuit_norm] using publicConstraints

@@ -1979,7 +1979,7 @@ theorem supported_core_witness_grounding
         refine channelGuarantees_of_consumedMessages _ Channels.memoryChannel _
           (by have := Fact.out (p := 2 ^ 25 < p); omega) ?_
         have rowConsumed : consumedMessages (typedInteractionValuesWith
-            (⟨HaltChip.circuit⟩ : Component (ZMod p)).operations Channels.memoryChannel
+            ({ circuit := HaltChip.circuit } : Component (ZMod p)).operations Channels.memoryChannel
             ((haltTable witness).environment halt)) =
             [HaltChip.memPulledMessage (haltRow (haltTable witness) halt) (haltRow (haltTable witness) halt).x5_memory 5,
              HaltChip.memPulledMessage (haltRow (haltTable witness) halt) (haltRow (haltTable witness) halt).x10_memory 10,
@@ -1988,7 +1988,7 @@ theorem supported_core_witness_grounding
           rw [haltRealEq] at tableConsumed
           rw [typedTableInteractionsWith, tableEq] at tableConsumed
           simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil] at tableConsumed
-          rw [show (haltTable witness).component = (⟨HaltChip.circuit⟩ : Component (ZMod p))
+          rw [show (haltTable witness).component = ({ circuit := HaltChip.circuit } : Component (ZMod p))
             from haltTable_component witness] at tableConsumed
           exact tableConsumed
         rw [rowConsumed]

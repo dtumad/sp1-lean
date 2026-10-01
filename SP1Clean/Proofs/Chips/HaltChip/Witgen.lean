@@ -23,7 +23,7 @@ open Air.Flat
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The Halt table as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The all-zero Halt row: the selector off, so every gated conjunct is vacuous. -/
 def paddingInputs : Inputs (ZMod p) where
@@ -70,20 +70,20 @@ theorem haltTraceInputs_spec (events : List Empty) :
 
 theorem traceTable_constraints (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r) :
-    (Table.build (component (p := p)) rows data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses fun r hr => h r hr
+    (Table.build (component (p := p)) rows data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ _ computableWitnesses fun r hr => h r hr
 
 theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r) :
-    (Table.build (component (p := p)) rows data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses fun r hr => h r hr
+    (Table.build (component (p := p)) rows data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ _ computableWitnesses fun r hr => h r hr
 
 theorem traceTable_interactionsWith (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) rows data hint).interactionsWith channel =
+    (Table.build (component (p := p)) rows data hint).interactionsWith data channel =
       rows.flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+  Table.build_interactions _ _ _ _ _ data channel
 
 end SP1Clean.HaltChip

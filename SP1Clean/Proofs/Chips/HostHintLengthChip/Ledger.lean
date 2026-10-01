@@ -94,11 +94,11 @@ theorem node_values (empty : Bool) (input : Var Inputs (ZMod p))
     Bool.false_eq_true, ↓reduceIte, List.map_cons, List.map_nil, Channel.eval_pulled]
 
 theorem component_spec_of_node (empty : Bool) (env : Environment (ZMod p))
-    (constraints : (⟨circuit empty⟩ : Component (ZMod p)).operations.ConstraintsHold env)
-    (node : (⟨circuit empty⟩ : Component (ZMod p)).operations.ChannelGuarantees nodeChannel.toRaw env) :
-    (⟨circuit empty⟩ : Component (ZMod p)).Spec env := by
+    (constraints : ({ circuit := circuit empty } : Component (ZMod p)).operations.ConstraintsHold env)
+    (node : ({ circuit := circuit empty } : Component (ZMod p)).operations.ChannelGuarantees nodeChannel.toRaw env) :
+    ({ circuit := circuit empty } : Component (ZMod p)).Spec env := by
   apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ ((⟨circuit empty⟩ : Component (ZMod p)).inChannelsOrGuarantees env)]
+  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit empty } : Component (ZMod p)).inChannelsOrGuarantees env)]
   intro selected member
   cases empty
   · change selected ∈ [nodeChannel.toRaw, HostCallChip.channel.toRaw, stateChannel.toRaw] at member
@@ -141,10 +141,10 @@ theorem source_other_interactions (hints : List Model.Core.Bytes)
 
 /-- Lookup constraints authenticate the actual source bytes without any node-channel premise. -/
 theorem source_spec_of_constraints (hints : List Model.Core.Bytes) (env : Environment (ZMod p))
-    (constraints : (⟨source hints⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
-    (⟨source hints⟩ : Component (ZMod p)).Spec env := by
+    (constraints : ({ circuit := source hints } : Component (ZMod p)).operations.ConstraintsHold env) :
+    ({ circuit := source hints } : Component (ZMod p)).Spec env := by
   apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ ((⟨source hints⟩ : Component (ZMod p)).inChannelsOrGuarantees env)]
+  rw [Operations.guarantees_iff _ _ _ (({ circuit := source hints } : Component (ZMod p)).inChannelsOrGuarantees env)]
   intro selected member
   change selected ∈ [] at member
   exact False.elim (List.not_mem_nil member)

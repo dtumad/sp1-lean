@@ -400,10 +400,10 @@ theorem memoryInitProvider_memoryInteractions
 explicit multiplicity input. -/
 theorem memoryInitProvider_typedMult (env : Environment (ZMod p))
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedInteractionValuesWith (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations
+    (hi : i ∈ typedInteractionValuesWith ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations
       memoryChannel env) :
     i.mult = env.get (size MemoryMsg) := by
-  have hint : (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations.interactionsWith
+  have hint : ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations.interactionsWith
       memoryChannel.toRaw =
       [(pushedIf (channel := memoryChannel)
         (varFromOffset MemoryProviderChip.Inputs 0).multiplicity
@@ -412,7 +412,7 @@ theorem memoryInitProvider_typedMult (env : Environment (ZMod p))
     exact memoryInitProvider_memoryInteractions (varFromOffset MemoryProviderChip.Inputs 0)
       (size MemoryProviderChip.Inputs)
   have hraw : i.raw ∈ (typedInteractionValuesWith
-      (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations memoryChannel env).map
+      ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations memoryChannel env).map
       TypedInteraction.raw := List.mem_map_of_mem hi
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map, hint] at hraw
   simp only [List.map_cons, List.map_nil, List.mem_singleton] at hraw
@@ -423,9 +423,9 @@ theorem memoryInitProvider_typedMult (env : Environment (ZMod p))
 /-- Every active init-provider Memory interaction has signed multiplicity in `{0, 1}` (a push at a
 boolean gate), never `-1`. -/
 theorem memoryInitProvider_signedVal (env : Environment (ZMod p))
-    (constraints : (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+    (constraints : ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations.ConstraintsHold env)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedInteractionValuesWith (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations
+    (hi : i ∈ typedInteractionValuesWith ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations
       memoryChannel env) :
     signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
@@ -508,10 +508,10 @@ omit [Fact (2 ^ 24 < p)] in
 negation of its explicit selector input. -/
 theorem memoryFinalizeProvider_typedMult (env : Environment (ZMod p))
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedInteractionValuesWith (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations
+    (hi : i ∈ typedInteractionValuesWith ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations
       memoryChannel env) :
     i.mult = -(env.get (size MemoryMsg)) := by
-  have hint : (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations.interactionsWith
+  have hint : ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations.interactionsWith
       memoryChannel.toRaw =
       [(pulledIf (channel := memoryChannel)
         (varFromOffset MemoryFinalizeChip.Inputs 0).multiplicity
@@ -520,7 +520,7 @@ theorem memoryFinalizeProvider_typedMult (env : Environment (ZMod p))
     exact memoryFinalizeProvider_memoryInteractions (varFromOffset MemoryFinalizeChip.Inputs 0)
       (size MemoryFinalizeChip.Inputs)
   have hraw : i.raw ∈ (typedInteractionValuesWith
-      (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations memoryChannel env).map
+      ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations memoryChannel env).map
       TypedInteraction.raw := List.mem_map_of_mem hi
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map, hint] at hraw
   simp only [List.map_cons, List.map_nil, List.mem_singleton] at hraw
@@ -531,9 +531,9 @@ theorem memoryFinalizeProvider_typedMult (env : Environment (ZMod p))
 /-- Every active finalize-provider Memory interaction has signed multiplicity in `{-1, 0}` (a pull at
 a boolean gate), never `1`. -/
 theorem memoryFinalizeProvider_signedVal (env : Environment (ZMod p))
-    (constraints : (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+    (constraints : ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations.ConstraintsHold env)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedInteractionValuesWith (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations
+    (hi : i ∈ typedInteractionValuesWith ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations
       memoryChannel env) :
     signedVal i.mult = 0 ∨ signedVal i.mult = -1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega

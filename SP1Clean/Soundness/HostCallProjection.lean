@@ -18,7 +18,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-def original : Component (ZMod p) := ⟨SyscallInstrsChip.circuit⟩
+def original : Component (ZMod p) := { circuit := SyscallInstrsChip.circuit }
 
 /-- WRITE's additional register read, using the constraint-determined full-word selector. -/
 def extraRead (env : Environment (ZMod p)) : Readers.RegisterRead.Inputs (ZMod p) :=
@@ -156,7 +156,7 @@ private theorem main_byte_subset (row : Var HostCallChip.Inputs (ZMod p)) (offse
 /-- The original Byte ledger is retained inside the larger physical wrapper. -/
 theorem byte_subset : (original (p := p)).operations.interactionsWith byteChannel.toRaw ⊆
     producer.operations.interactionsWith byteChannel.toRaw := by
-  simp only [original, producer, Component.interactionsWith_eq, Component.rowOperations_mk,
+  simp only [original, producer, Component.interactionsWith_eq, Component.rowOperations,
     HostCallChip.circuit, SyscallInstrsChip.circuit]
   have kept := main_byte_subset (varFromOffset HostCallChip.Inputs (F := ZMod p) 0) (size HostCallChip.Inputs)
   rw [instruction_var] at kept
@@ -222,7 +222,7 @@ theorem memory_values (env : Environment (ZMod p))
     (size HostCallChip.Inputs) env ((Component.constraintsHold_iff env).mp constraints)
   rw [instruction_var, eval_varFromOffset_valueFromOffset] at projected
   simp only [Operations.interactionValuesWith, original, producer, Component.interactionsWith_eq,
-    Component.rowOperations_mk, HostCallChip.circuit, SyscallInstrsChip.circuit]
+    Component.rowOperations, HostCallChip.circuit, SyscallInstrsChip.circuit]
   simpa only [Operations.interactionValuesWith, Operations.interactionsWith,
     ← Operations.interactions_toFlat, original_offset (b := 0), extraRead, HostCallLedger.input] using projected
 
@@ -233,7 +233,7 @@ theorem other_interactions (channel : RawChannel (ZMod p))
     (host : channel ≠ HostCallChip.channel.toRaw) :
     (original (p := p)).operations.interactionsWith channel =
       producer.operations.interactionsWith channel := by
-  simp only [original, producer, Component.interactionsWith_eq, Component.rowOperations_mk,
+  simp only [original, producer, Component.interactionsWith_eq, Component.rowOperations,
     HostCallChip.circuit, SyscallInstrsChip.circuit]
   rw [← main_other_interactions channel byte memory host, instruction_var]
   simp only [Operations.interactionsWith, ← Operations.interactions_toFlat, original_offset (b := 0)]

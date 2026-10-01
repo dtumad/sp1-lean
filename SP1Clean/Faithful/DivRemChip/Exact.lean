@@ -3691,31 +3691,31 @@ theorem divRemChip_constraints_constructive
     let assignment := divRemChipRowCodec.assignment
       (divRemChipOracle.deconfigure rustCols) data
     List.Forall (· = 0) (divRemChipOracle.assertZeros rustCols) ↔
-      (⟨DivRemChip.circuit (p := p)⟩ :
+      ({ circuit := DivRemChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
   let cols := divRemChipOracle.deconfigure rustCols
   let assignment := divRemChipRowCodec.assignment cols data
   have hbind : BindsChipOutput DivRemChip.main assignment.environment
-      (⟨DivRemChip.circuit (p := p)⟩ :
+      ({ circuit := DivRemChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨DivRemChip.circuit (p := p)⟩ :
+      ({ circuit := DivRemChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [DivRemChip.circuit_main_eq] at h
     exact h
   have hfaithful := divRemConstraintsFaithful
     assignment.environment
-    (⟨DivRemChip.circuit (p := p)⟩ :
+    ({ circuit := DivRemChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨DivRemChip.circuit (p := p)⟩ :
+    ({ circuit := DivRemChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (divRemChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            (⟨DivRemChip.circuit (p := p)⟩ :
+            ({ circuit := DivRemChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols, ChipOracle.nativeAssertZeros_deconfigure,
       Air.Flat.Component.rowOperations_mk,
@@ -3735,7 +3735,7 @@ theorem divRemChip_interactions_constructive
     List.Perm
       (LookupAccessList.active
         (nativeAccesses assignment.environment
-          (⟨DivRemChip.circuit (p := p)⟩ :
+          ({ circuit := DivRemChip.circuit (p := p) } :
             Air.Flat.Component (ZMod p)).operations))
       (LookupAccessList.active
         (divRemChipOracle.rustAccesses rustCols)) := by
@@ -3743,18 +3743,18 @@ theorem divRemChip_interactions_constructive
   let cols := divRemChipOracle.deconfigure rustCols
   let assignment := divRemChipRowCodec.assignment cols data
   have hbind : BindsChipOutput DivRemChip.main assignment.environment
-      (⟨DivRemChip.circuit (p := p)⟩ :
+      ({ circuit := DivRemChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨DivRemChip.circuit (p := p)⟩ :
+      ({ circuit := DivRemChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [DivRemChip.circuit_main_eq] at h
     exact h
   have hfaithful := divRemInteractionsFaithful
     assignment.environment
-    (⟨DivRemChip.circuit (p := p)⟩ :
+    ({ circuit := DivRemChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨DivRemChip.circuit (p := p)⟩ :
+    ({ circuit := DivRemChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations
     (DivRemChip.circuit (p := p)) assignment.environment]

@@ -42,7 +42,6 @@ import SP1Clean.Alignment.Chips.SubwChip.Bridge
 import SP1Clean.Alignment.Chips.SubwChip.Contracts
 import SP1Clean.Alignment.Chips.UTypeChip.Bridge
 import SP1Clean.Composition.Balance
-import SP1Clean.Composition.Chips
 import SP1Clean.Composition.CoreArtifact
 import SP1Clean.Composition.CoreEnsemble
 import SP1Clean.Composition.CoreSystemSemantics

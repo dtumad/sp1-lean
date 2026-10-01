@@ -296,7 +296,7 @@ def bitwiseChipRowCodec :
           (bitwiseChipColumnsOfInput_roundtrip cols) }
 
 theorem bitwiseChip_lookups_empty :
-    (⟨BitwiseChip.circuit (p := p)⟩ :
+    ({ circuit := BitwiseChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
     BitwiseChip.circuit_main_eq]
@@ -693,11 +693,11 @@ private theorem bitwiseChipRowCodec_inputReal
     (cols : BitwiseChip.Columns (ZMod p)) (data : ProverData (ZMod p)) :
     let assignment := bitwiseChipRowCodec.assignment cols data
     Expression.eval assignment.environment
-        (⟨BitwiseChip.circuit (p := p)⟩ :
+        ({ circuit := BitwiseChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowInputVar.is_real =
       Expression.eval assignment.environment
         (bitwise_chip_is_real
-          (⟨BitwiseChip.circuit (p := p)⟩ :
+          ({ circuit := BitwiseChip.circuit (p := p) } :
             Air.Flat.Component (ZMod p)).rowOffset) := by
   dsimp only
   let assignment := bitwiseChipRowCodec.assignment cols data
@@ -741,40 +741,40 @@ theorem bitwiseChip_constraints_constructive
     let assignment := bitwiseChipRowCodec.assignment
       (bitwiseChipOracle.deconfigure rustCols) data
     List.Forall (· = 0) (bitwiseChipOracle.assertZeros rustCols) ↔
-      (⟨BitwiseChip.circuit (p := p)⟩ :
+      ({ circuit := BitwiseChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
   let cols := bitwiseChipOracle.deconfigure rustCols
   let assignment := bitwiseChipRowCodec.assignment cols data
   have hbind : BindsChipOutput BitwiseChip.main assignment.environment
-      (⟨BitwiseChip.circuit (p := p)⟩ :
+      ({ circuit := BitwiseChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨BitwiseChip.circuit (p := p)⟩ :
+      ({ circuit := BitwiseChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [BitwiseChip.circuit_main_eq] at h
     exact h
   have hinputReal :
       Expression.eval assignment.environment
-          (⟨BitwiseChip.circuit (p := p)⟩ :
+          ({ circuit := BitwiseChip.circuit (p := p) } :
             Air.Flat.Component (ZMod p)).rowInputVar.is_real =
         Expression.eval assignment.environment
           (bitwise_chip_is_real
-            (⟨BitwiseChip.circuit (p := p)⟩ :
+            ({ circuit := BitwiseChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOffset) :=
     bitwiseChipRowCodec_inputReal (p := p) cols data
   have hlegacy := bitwiseChip_constraints_faithful (p := p)
     assignment.environment
-    (⟨BitwiseChip.circuit (p := p)⟩ :
+    ({ circuit := BitwiseChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨BitwiseChip.circuit (p := p)⟩ :
+    ({ circuit := BitwiseChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
   have hassertions :
       List.Forall (· = 0) (bitwiseChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            (⟨BitwiseChip.circuit (p := p)⟩ :
+            ({ circuit := BitwiseChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols, ChipOracle.nativeAssertZeros_deconfigure,
       Air.Flat.Component.rowOperations_mk, Air.Flat.Component.rowInputVar_mk,
@@ -1139,25 +1139,25 @@ theorem bitwiseChip_interactions_constructive
       (bitwiseChipOracle.deconfigure rustCols) data
     List.Perm
       (nativeAccesses assignment.environment
-        (⟨BitwiseChip.circuit (p := p)⟩ :
+        ({ circuit := BitwiseChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).operations)
       (bitwiseChipOracle.rustAccesses rustCols) := by
   dsimp only
   let cols := bitwiseChipOracle.deconfigure rustCols
   let assignment := bitwiseChipRowCodec.assignment cols data
   have hbind : BindsChipOutput BitwiseChip.main assignment.environment
-      (⟨BitwiseChip.circuit (p := p)⟩ :
+      ({ circuit := BitwiseChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨BitwiseChip.circuit (p := p)⟩ :
+      ({ circuit := BitwiseChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [BitwiseChip.circuit_main_eq] at h
     exact h
   have hlegacy := bitwiseChip_interactions_faithful (p := p)
     assignment.environment
-    (⟨BitwiseChip.circuit (p := p)⟩ :
+    ({ circuit := BitwiseChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨BitwiseChip.circuit (p := p)⟩ :
+    ({ circuit := BitwiseChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
     (bitwiseChipRowCodec_inputReal (p := p) cols data)
   rw [nativeAccesses_component_eq_rowOperations (BitwiseChip.circuit (p := p))

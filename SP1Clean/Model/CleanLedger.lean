@@ -1,23 +1,15 @@
 import SP1Clean.Model.InteractionProjection
 import ToClean.Air.TableBuild
 
-/-! # The literal Clean access ledger of a built table
+/-! # Literal Clean access ledgers
 
-The bridge from a Clean `Air.Flat.Table` to a `LookupAccessList`: take the table's own evaluated
-interactions and project each through `Interaction.toAccess` (`Model/InteractionProjection.lean`).
+Project each evaluated Clean interaction into the library's access vocabulary, preserving every
+physical occurrence. Data is supplied explicitly: table construction uses generation data, while
+ensemble evaluation uses data derived from the final committed rows. Ledger equations support
+either environment without asserting agreement of data-dependent semantic predicates.
 
-**Deliberately at the Model stratum.** Nothing here mentions a chip, an oracle, an extracted row, or
-faithfulness — the vocabulary is Clean's `Table`/`Component` plus this repository's bus types, and
-that is exactly the join `docs/layering.md`'s placement law computes. It lived in
-`Faithful/Transport/Table.lean` until 2026-08 because the exact-to-native transport was its first
-consumer, which put it out of reach of `Proofs/Completeness/` — the completeness layer needs the same
-ledger to recount provider demand, and reaching for it there was the repository's only
-`Proofs -> Faithful` import.
-
-Note the `toAccess` here is the **Clean-side** one, over Clean's `Interaction`. The extracted-oracle
-ADT has its own same-named projection in `Extracted/InteractionModel.lean`; the two agree on the
-`LookupAccess` tuple they produce, and that agreement is the syntactic faithfulness bridge. Do not
-conflate them: they sit at different strata, and only this one is stateable at Model.
+The Rust-facing projection additionally dualizes Memory and Program signs. Its agreement with
+the Rust → Lean migration oracle is proved in the alignment layers, not assumed here.
 -/
 
 set_option autoImplicit false
@@ -33,24 +25,24 @@ variable {p : ℕ} [Fact p.Prime]
 not dualize the Memory or Program signs to match the extracted Rust oracle: it is exactly
 `Table.interactions`, evaluated by Clean, followed by the common integer projection.  Native
 provider recounting and native channel balance must use this definition. -/
-def tableCleanAccesses (table : Table (ZMod p)) : LookupAccessList :=
-  table.interactions.map Interaction.toAccess
+def tableCleanAccesses (table : Table (ZMod p)) (data : ProverData (ZMod p)) : LookupAccessList :=
+  (table.interactions data).map Interaction.toAccess
 
 /-- The same literal evaluated Clean interactions in the Rust-facing orientation used by
 whole-chip faithfulness: Memory and Program are dualized, while State, Byte, and unexpected
 channels retain their Clean signs. `Composition.tableNativeAccesses` groups these interactions by
 channel; `tableNativeAccesses_perm_tableRustOrientedAccesses` proves that grouping changes only
 their order. -/
-noncomputable def tableRustOrientedAccesses (table : Table (ZMod p)) : LookupAccessList :=
-  table.interactions.map Interaction.toRustOrientedAccess
+noncomputable def tableRustOrientedAccesses (table : Table (ZMod p)) (data : ProverData (ZMod p)) : LookupAccessList :=
+  (table.interactions data).map Interaction.toRustOrientedAccess
 
 /-- Concatenate the literal Clean ledgers of a list of tables, preserving table and row order. -/
-def tablesCleanAccesses (tables : List (Table (ZMod p))) : LookupAccessList :=
-  tables.flatMap tableCleanAccesses
+def tablesCleanAccesses (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) : LookupAccessList :=
+  tables.flatMap (tableCleanAccesses · data)
 
-@[simp] theorem tablesCleanAccesses_append (left right : List (Table (ZMod p))) :
-    tablesCleanAccesses (left ++ right) =
-      tablesCleanAccesses left ++ tablesCleanAccesses right := by
+@[simp] theorem tablesCleanAccesses_append (left right : List (Table (ZMod p))) (data : ProverData (ZMod p)) :
+    tablesCleanAccesses (left ++ right) data =
+      tablesCleanAccesses left data ++ tablesCleanAccesses right data := by
   simp only [tablesCleanAccesses, List.flatMap_append]
 
 /-- Evaluating an abstract interaction and then applying the literal Clean projection is the same
@@ -64,19 +56,13 @@ theorem interactionToAccess_eval (env : Environment (ZMod p))
   simp only [Interaction.toAccess, AbstractInteraction.toAccess, AbstractInteraction.eval,
     Vector.toList]
 
-/-! ## List-level decomposition
-
-`tablesCleanAccesses` is a `flatMap`, so peeling it needs only the two structural equations. They
-were previously done by hand at each of the five sites that needed them (`Closure.lean`,
-`ClosureRealization.lean`, `Composition/CoreEnsemble.lean`), each unfolding to `List.flatMap` first;
-a per-chip decomposition peels twenty-five times, so they are worth naming. -/
-
-@[simp] theorem tablesCleanAccesses_nil : tablesCleanAccesses ([] : List (Table (ZMod p))) = [] :=
+@[simp] theorem tablesCleanAccesses_nil (data : ProverData (ZMod p)) : tablesCleanAccesses ([] : List (Table (ZMod p))) data = [] :=
   rfl
 
-theorem tablesCleanAccesses_cons (table : Table (ZMod p)) (tables : List (Table (ZMod p))) :
-    tablesCleanAccesses (table :: tables) =
-      tableCleanAccesses table ++ tablesCleanAccesses tables := by
+theorem tablesCleanAccesses_cons (table : Table (ZMod p)) (tables : List (Table (ZMod p)))
+    (data : ProverData (ZMod p)) :
+    tablesCleanAccesses (table :: tables) data =
+      tableCleanAccesses table data ++ tablesCleanAccesses tables data := by
   simp only [tablesCleanAccesses, List.flatMap_cons]
 
 /-- The `buildHinted` companion of `tableCleanAccesses_build`.
@@ -87,12 +73,14 @@ Bitwise/Lt/the shifts/Mul/DivRem, and Branch's comparison selector). Without thi
 unreachable from the ledger layer. -/
 theorem tableCleanAccesses_buildHinted (component : Component (ZMod p))
     (inputs : List (component.Input (ZMod p) × ProverHint (ZMod p)))
-    (data : ProverData (ZMod p)) :
-    tableCleanAccesses (Table.buildHinted component inputs data) =
+    (data : ProverData (ZMod p))
+    (fixed : component.fixedRowsMatch (inputs.map fun input => component.buildRow input.1 data input.2))
+    (evaluationData : ProverData (ZMod p)) :
+    tableCleanAccesses (Table.buildHinted component inputs data fixed) evaluationData =
       inputs.flatMap fun input =>
         component.operations.interactions.map
           (AbstractInteraction.toAccess
-            (Environment.fromArray (component.buildRow input.1 data input.2) data)) := by
+            (Environment.fromArray (component.buildRow input.1 data input.2) evaluationData)) := by
   simp only [tableCleanAccesses, Table.buildHinted_interactionValues,
     Operations.interactionValues, List.map_flatMap, List.map_map, Function.comp_def,
     interactionToAccess_eval]
@@ -131,11 +119,11 @@ ensemble.
 
 Unlike `multiplicitySum_interactionsWith_eq`, which compares the two at a single key, this is a
 **list** equality — which is what a permutation obligation needs. -/
-theorem tableCleanAccesses_filterKind (table : Table (ZMod p)) (channel : RawChannel (ZMod p))
+theorem tableCleanAccesses_filterKind (table : Table (ZMod p)) (data : ProverData (ZMod p)) (channel : RawChannel (ZMod p))
     (K : InteractionKind) (hkind : kindOf channel.name = K)
-    (honly : ∀ i ∈ table.interactions, kindOf i.channel.name = K → i.channel = channel) :
-    (tableCleanAccesses table).filter (fun a => a.1 = K) =
-      (table.interactionsWith channel).map Interaction.toAccess := by
+    (honly : ∀ i ∈ table.interactions data, kindOf i.channel.name = K → i.channel = channel) :
+    (tableCleanAccesses table data).filter (fun a => a.1 = K) =
+      (table.interactionsWith data channel).map Interaction.toAccess := by
   rw [tableCleanAccesses, filter_map_eq, Air.Flat.Table.interactionsWith_eq_filter]
   refine congrArg (List.map Interaction.toAccess) (List.filter_congr fun i hi => ?_)
   by_cases hc : i.channel = channel
@@ -144,13 +132,13 @@ theorem tableCleanAccesses_filterKind (table : Table (ZMod p)) (channel : RawCha
     simp only [Interaction.toAccess, hne, hc, decide_false]
 
 /-- **A table's ledger at a key is that key's own channel's ledger.** -/
-theorem multiplicitySum_interactionsWith_eq (table : Table (ZMod p))
+theorem multiplicitySum_interactionsWith_eq (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (channel : RawChannel (ZMod p)) {k : LookupAccessList.LookupKey}
-    (honly : ∀ i ∈ table.interactions,
+    (honly : ∀ i ∈ table.interactions data,
       LookupAccessList.keyOf (Interaction.toAccess i) = k → i.channel = channel) :
     LookupAccessList.multiplicitySum
-        ((table.interactionsWith channel).map Interaction.toAccess) k =
-      LookupAccessList.multiplicitySum (tableCleanAccesses table) k := by
+        ((table.interactionsWith data channel).map Interaction.toAccess) k =
+      LookupAccessList.multiplicitySum (tableCleanAccesses table data) k := by
   rw [Air.Flat.Table.interactionsWith_eq_filter, tableCleanAccesses]
   exact LookupAccessList.multiplicitySum_filter_map_eq _ _ _ _
     fun i hi hkey => by simpa using honly i hi hkey
@@ -167,12 +155,14 @@ theorem channel_name_of_keyOf_toAccess {i : Interaction (ZMod p)}
 /-- Closed form for the literal Clean access ledger of an honestly built table. -/
 theorem tableCleanAccesses_build (component : Component (ZMod p))
     (inputs : List (component.Input (ZMod p))) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (Table.build component inputs data hint) =
+    (hint : ProverHint (ZMod p))
+    (fixed : component.fixedRowsMatch (inputs.map (component.buildRow · data hint)))
+    (evaluationData : ProverData (ZMod p)) :
+    tableCleanAccesses (Table.build component inputs data hint fixed) evaluationData =
       inputs.flatMap fun input =>
         component.operations.interactions.map
           (AbstractInteraction.toAccess
-            (Environment.fromArray (component.buildRow input data hint) data)) := by
+            (Environment.fromArray (component.buildRow input data hint) evaluationData)) := by
   simp only [tableCleanAccesses, Table.build_interactionValues,
     Operations.interactionValues, List.map_flatMap, List.map_map, Function.comp_def,
     interactionToAccess_eval]
@@ -183,14 +173,17 @@ theorem tableCleanAccesses_build_map_singleton
     {Row : Type} (component : Component (ZMod p)) (rows : List Row)
     (decode : Row → component.Input (ZMod p)) (access : Row → LookupAccess)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (fixed : component.fixedRowsMatch ((rows.map decode).map (component.buildRow · data hint)))
+    (evaluationData : ProverData (ZMod p))
     (rowAccess : ∀ row ∈ rows,
       component.operations.interactions.map
           (AbstractInteraction.toAccess
-            (Environment.fromArray (component.buildRow (decode row) data hint) data)) =
+            (Environment.fromArray (component.buildRow (decode row) data hint) evaluationData)) =
         [access row]) :
-    tableCleanAccesses (Table.build component (rows.map decode) data hint) =
+    tableCleanAccesses (Table.build component (rows.map decode) data hint fixed) evaluationData =
       rows.map access := by
   rw [tableCleanAccesses_build]
+  clear fixed
   induction rows with
   | nil => rfl
   | cons row rest ih =>

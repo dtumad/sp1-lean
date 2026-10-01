@@ -16,7 +16,7 @@ counting lemmas. No existing Clean declaration is changed.
 @[expose] public section
 
 /-- Removing disabled interactions preserves balance and weakens its characteristic count bound. -/
-theorem BalancedInteractions.filter_nonzero {F : Type} [FiniteField F] [DecidableEq F]
+theorem BalancedInteractions.filter_nonzero {F : Type} [FiniteField F]
     {interactions : List (Interaction F)} (balanced : BalancedInteractions interactions) :
     BalancedInteractions (interactions.filter fun interaction => decide (interaction.mult ≠ 0)) := by
   refine ⟨balanced.1.imp (lt_of_le_of_lt (List.length_filter_le ..)) id, ?_⟩
@@ -29,7 +29,7 @@ theorem BalancedInteractions.filter_nonzero {F : Type} [FiniteField F] [Decidabl
 
 namespace Channel
 
-variable {F : Type} [FiniteField F] [DecidableEq F]
+variable {F : Type} [FiniteField F]
 variable {Message : TypeMap} [ProvableType Message]
 
 /-- The actual unit interactions of a boundary and a list of transitions. -/
@@ -64,7 +64,6 @@ private theorem balanceOf_pulls (channel : Channel F Message) (messages : List (
   congr 1
   simp only [List.countP_map, List.count_eq_countP, Function.comp_def, pulledValue, compare]
 
-omit [DecidableEq F] in
 /-- Collecting unit transition pairs preserves every interaction occurrence. -/
 theorem pairedLedger_perm {Row : Type*} (channel : Channel F Message)
     (rows : List Row) (edge : Row → Message F × Message F) :
@@ -79,7 +78,6 @@ theorem pairedLedger_perm {Row : Type*} (channel : Channel F Message)
     exact ((ih.cons _).cons _).trans
       ((List.Perm.swap _ _ _).trans (List.perm_middle.symm.cons _))
 
-omit [DecidableEq F] in
 /-- Collecting unit pushes and pulls changes only the order of the real interaction list. -/
 theorem transitionLedger_perm {Row : Type*} (channel : Channel F Message)
     (initial final : Message F) (rows : List Row) (edge : Row → Message F × Message F) :

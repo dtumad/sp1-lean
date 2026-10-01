@@ -6,7 +6,8 @@ import SP1Clean.Native.Operations.HostExitBoundary
 
 The boundary circuits run as true Clean subcircuits. Their fixed source and
 target values are statement parameters, while the bank terminals remain physical tables.
-The singleton adapter preserves every interaction and allocates no witness cells.
+Clean's public verifier preserves every boundary interaction and enforces the two raw assertions
+through a separate check channel. It allocates no physical rows or private witness cells.
 -/
 
 namespace SP1Clean.HostBoundary
@@ -58,7 +59,24 @@ theorem values (hints : List Bytes) (queueFinal : HostHintQueue.State (ZMod p))
 def closed (hints : List Bytes) (queueFinal : HostHintQueue.State (ZMod p))
     (source target : Bool → Vector (Word (ZMod p)) 8)
     (sourceExit targetExit : Option (BitVec 32)) : ClosedVerifier (ZMod p) where
+  name := "host-boundary"
   circuit := circuit hints queueFinal source target sourceExit targetExit
+  assumptions := by intros; trivial
+  lookups := by
+    simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_lookups,
+      HostHintQueueBoundary.circuit, HostHintQueueBoundary.main, HostCommitEndpoint.circuit,
+      HostCommitEndpoint.main, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain,
+      HostExitBoundary.circuit, HostExitBoundary.main]
+  public_interactions := by
+    intro interaction member env
+    simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions,
+      HostHintQueueBoundary.circuit, HostCommitEndpoint.circuit, HostExitBoundary.circuit,
+      List.mem_append] at member
+    rcases member with queue | firstBank | secondBank | terminal
+    · exact (HostHintQueueBoundary.closed hints queueFinal).public_interactions interaction queue env
+    · exact (HostCommitEndpoint.closed false (source false) (target false)).public_interactions interaction firstBank env
+    · exact (HostCommitEndpoint.closed true (source true) (target true)).public_interactions interaction secondBank env
+    · exact (HostExitBoundary.closed sourceExit targetExit).public_interactions interaction terminal env
   length_zero := rfl
   constraints := by
     intros

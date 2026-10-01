@@ -75,7 +75,7 @@ def SupportedChip.rdGuard (chip : SupportedChip p) : RdGuard :=
 def SupportedChip.table (chip : SupportedChip p) : Component (ZMod p) :=
   letI := chip.kind.provableInputs
   letI := chip.kind.provableCols
-  ⟨chip.circuit⟩
+  { circuit := chip.circuit }
 
 /-- Whether this descriptor claims an instruction dispatch key. -/
 def SupportedChip.claims (chip : SupportedChip p) (opcode : Opcode) (rdIsX0 : Bool) : Bool :=
@@ -136,6 +136,14 @@ theorem supportedChips_eq_map :
 /-- The supported-chip count is inherited from the neutral identity enumeration. -/
 theorem supportedChips_length : (supportedChips (p := p)).length = 25 := by
   simp [supportedChips]
+
+/-- The physical instruction components, in the neutral registry's stable order. -/
+def sp1Tables : List (Air.Flat.Component (ZMod p)) :=
+  (supportedChips (p := p)).map (·.table)
+
+/-- The table projection retains every registered instruction component. -/
+theorem sp1Tables_length : (sp1Tables (p := p)).length = 25 := by
+  simpa [sp1Tables] using supportedChips_length (p := p)
 
 /-- Circuit-bearing realization of the pure semantic route selected by `routeId`. -/
 def routeChip (opcode : Opcode) (rdIsX0 : Bool) : Option (SupportedChip p) :=

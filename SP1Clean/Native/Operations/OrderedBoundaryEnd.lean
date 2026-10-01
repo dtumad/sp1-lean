@@ -19,6 +19,7 @@ def main (name : String) (final : Word (ZMod p))
 
 def circuit (name : String) (final : Word (ZMod p)) :
     GeneralFormalCircuit (ZMod p) TerminalInputs unit where
+  name := s!"sp1.native.{name}.terminal"
   main := main name final
   Spec input _ _ := TerminalSpec final input
   ProverAssumptions input _ _ :=

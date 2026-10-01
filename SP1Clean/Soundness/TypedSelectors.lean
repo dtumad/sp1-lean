@@ -18,7 +18,7 @@ def CircuitSelectorBinary {Input Output : TypeMap}
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
   ∀ data physical,
-    let component : Component (ZMod p) := ⟨circuit⟩
+    let component : Component (ZMod p) := { circuit := circuit }
     let env := Environment.fromArray physical data
     component.operations.ConstraintsHold env →
       (view (component.rowInput env) (component.rowOutput env)).is_real = 0 ∨
@@ -50,7 +50,7 @@ theorem shallowConstraints_of_componentConstraints {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (env : Environment (ZMod p))
-    (constraints : (⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
+    (constraints : ({ circuit := circuit } : Component (ZMod p)).operations.ConstraintsHold env) :
     ConstraintsHold.Shallow env
       ((circuit.main (varFromOffset Input 0)).operations (size Input)) := by
   apply FlatOperation.shallowConstraints_of_constraintsHoldFlat
@@ -143,7 +143,7 @@ theorem circuitSelectorBinary_of_main {Input Output : TypeMap}
   let offset := size Input
   have shallow := shallowConstraints_of_componentConstraints circuit env constraints
   have binary := contract.binary input offset env shallow
-  have inputEq : Eval.eval env input = (⟨circuit⟩ : Component (ZMod p)).rowInput env := by
+  have inputEq : Eval.eval env input = ({ circuit := circuit } : Component (ZMod p)).rowInput env := by
     exact eval_varFromOffset_valueFromOffset Input 0 env
   rw [inputEq] at binary
   simpa only [selector_eq] using binary
@@ -429,7 +429,7 @@ theorem DivRemChip.circuitSelectorBinary :
       (DivRemChip.rowView i o).is_real = i.is_real := fun _ _ => rfl
   have inputEq : Eval.eval (Environment.fromArray physical data)
       (varFromOffset DivRemChip.Inputs 0 : Var DivRemChip.Inputs (ZMod p))
-      = (⟨DivRemChip.circuit⟩ : Component (ZMod p)).rowInput
+      = ({ circuit := DivRemChip.circuit } : Component (ZMod p)).rowInput
           (Environment.fromArray physical data) :=
     eval_varFromOffset_valueFromOffset DivRemChip.Inputs 0 _
   have evalReal : (Eval.eval (Environment.fromArray physical data)

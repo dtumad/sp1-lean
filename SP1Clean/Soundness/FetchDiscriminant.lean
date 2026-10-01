@@ -52,15 +52,15 @@ def CircuitFetchDiscriminant {Input Output : TypeMap}
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
   ∀ data physical,
-    (⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold
+    ({ circuit := circuit } : Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data) →
-      (⟨circuit⟩ : Component (ZMod p)).operations.ChannelGuarantees Channels.byteChannel.toRaw
+      ({ circuit := circuit } : Component (ZMod p)).operations.ChannelGuarantees Channels.byteChannel.toRaw
         (Environment.fromArray physical data) →
-        (view ((⟨circuit⟩ : Component (ZMod p)).rowInput (Environment.fromArray physical data))
-            ((⟨circuit⟩ : Component (ZMod p)).rowOutput
+        (view (({ circuit := circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical data))
+            (({ circuit := circuit } : Component (ZMod p)).rowOutput
               (Environment.fromArray physical data))).is_real = 1 →
-          (view ((⟨circuit⟩ : Component (ZMod p)).rowInput (Environment.fromArray physical data))
-              ((⟨circuit⟩ : Component (ZMod p)).rowOutput
+          (view (({ circuit := circuit } : Component (ZMod p)).rowInput (Environment.fromArray physical data))
+              (({ circuit := circuit } : Component (ZMod p)).rowOutput
                 (Environment.fromArray physical data))).opcode ≠ (50 : ZMod p)
 
 /-- The descriptor-level obligation collected by the registry rollout. -/

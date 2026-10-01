@@ -68,11 +68,11 @@ private theorem programPulls_of_gated {Input Output : TypeMap}
   simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
   simpa only [CircuitType.eval_expr] using bound
 
-private theorem halt_programPulls : ProgramPulls (⟨HaltChip.circuit⟩ : Component (ZMod p)) :=
+private theorem halt_programPulls : ProgramPulls ({ circuit := HaltChip.circuit } : Component (ZMod p)) :=
   programPulls_of_gated HaltChip.circuit (fun input => input.is_real) HaltChip.programMsg
     HaltChip.interactionsWith_program_eq HaltChip.selectorBinary_of_shallow
 
-private theorem syscall_programPulls : ProgramPulls (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) :=
+private theorem syscall_programPulls : ProgramPulls ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)) :=
   programPulls_of_gated SyscallInstrsChip.circuit (fun input => input.is_real) SyscallInstrsChip.programMsg
     Faithful.syscallInstrsInteractionsWith_program SyscallInstrsChip.selectorBinary_of_shallow
 
@@ -110,7 +110,7 @@ private theorem remainingProvider_programPulls (component : Component (ZMod p))
 /-- Only the computed ROM can produce Program messages in the shared execution suffix. -/
 theorem interior_program_source (image : ProgramImage) (component : Component (ZMod p))
     (member : component ∈ afterFinalTables image) :
-    component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) ∨ ProgramPulls component := by
+    component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ ProgramPulls component := by
   simp only [afterFinalTables, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with (rfl | instruction) | providers
   · exact Or.inl rfl
@@ -124,7 +124,7 @@ theorem program_pull_committed_of_sources {Public : TypeMap} [ProvableType Publi
     (witness : EnsembleWitness assembly) (constraints : witness.Constraints)
     (balance : BalancedInteractions (witness.interactionsWith programChannel.toRaw))
     (sources : ∀ component ∈ assembly.allTables,
-      component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) ∨ ProgramPulls component)
+      component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ ProgramPulls component)
     (message : ProgramMsg (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
     (active : interaction.mult = -1)
@@ -141,7 +141,7 @@ theorem program_pull_committed_of_sources {Public : TypeMap} [ProvableType Publi
     have committed := DecodedProgramProvider.constraints_committed valid (table.environment physical) checked
     have same := (DecodedProgramProvider.program_interaction_payload image _ source emitted).symm.trans
       (samePayload.trans payload)
-    have messageEq : ((⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)).rowInput
+    have messageEq : (({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)).rowInput
         (table.environment physical)).toMessage = message := by
       have vectorEq := Vector.toArray_inj.mp same
       have decoded := congrArg (fromElements (M := ProgramMsg)) vectorEq

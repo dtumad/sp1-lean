@@ -165,7 +165,7 @@ theorem source_memory_silent (source : ExecutionSnapshot) (final : HostHintQueue
   have checked : ((receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
       (sourceResources source.host.io.hints ++
-        [(⟨(HostHintQueueBoundary.boundary source final bankFinal).circuit⟩ : Component (ZMod p))])).all
+        [({ circuit := (HostHintQueueBoundary.boundary source final bankFinal).circuit } : Component (ZMod p))])).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (memoryChannel (p := p)).toRaw.name) = true := rfl
   intro component member used
@@ -195,7 +195,7 @@ theorem source_program_silent (source : ExecutionSnapshot) (final : HostHintQueu
   have checked : ((receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
       (wordResources ++ (sourceResources source.host.io.hints ++
-        [(⟨(HostHintQueueBoundary.boundary source final bankFinal).circuit⟩ : Component (ZMod p))]))).all
+        [({ circuit := (HostHintQueueBoundary.boundary source final bankFinal).circuit } : Component (ZMod p))]))).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (programChannel (p := p)).toRaw.name) = true := rfl
   intro component member used
@@ -212,7 +212,7 @@ theorem source_boundary_silent (source : ExecutionSnapshot) (final : HostHintQue
   have checked : ((receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
       (wordResources ++ (sourceResources source.host.io.hints ++
-        [(⟨(HostHintQueueBoundary.boundary source final bankFinal).circuit⟩ : Component (ZMod p))]))).all
+        [({ circuit := (HostHintQueueBoundary.boundary source final bankFinal).circuit } : Component (ZMod p))]))).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (OrderedBoundary.channel (p := p) name).toRaw.name) = true := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at boundary

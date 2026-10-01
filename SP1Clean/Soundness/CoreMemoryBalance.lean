@@ -63,7 +63,7 @@ private theorem memoryBinary_of_gated {Input Output : TypeMap}
   exact signedVal_binary_of_selector_gated _ _ bound
     (gated (varFromOffset Input 0) (size Input) _ source sourceMem)
 
-private theorem halt_memoryBinary : MemoryBinary (⟨HaltChip.circuit⟩ : Component (ZMod p)) := by
+private theorem halt_memoryBinary : MemoryBinary ({ circuit := HaltChip.circuit } : Component (ZMod p)) := by
   apply memoryBinary_of_gated HaltChip.circuit (fun input => input.is_real) ?_
     HaltChip.selectorBinary_of_shallow
   intro input offset env
@@ -74,7 +74,7 @@ private theorem halt_memoryBinary : MemoryBinary (⟨HaltChip.circuit⟩ : Compo
   simp [HaltChip.exposedMemoryInteractions, Channel.pulledIf, Channel.pushedIf,
     ChannelInteraction.toRaw, pulledIf_mult, pushedIf_mult, Expression.eval]
 
-private theorem syscall_memoryBinary : MemoryBinary (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) := by
+private theorem syscall_memoryBinary : MemoryBinary ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)) := by
   apply memoryBinary_of_gated SyscallInstrsChip.circuit (fun input => input.is_real) ?_
     SyscallInstrsChip.selectorBinary_of_shallow
   intro input offset env
@@ -84,7 +84,7 @@ private theorem syscall_memoryBinary : MemoryBinary (⟨SyscallInstrsChip.circui
   rw [Faithful.syscallInstrsInteractionsWith_memory]
   simp [ChannelInteraction.toRaw, Expression.eval]
 
-private theorem memoryBump_memoryBinary : MemoryBinary (⟨MemoryBumpChip.circuit⟩ : Component (ZMod p)) := by
+private theorem memoryBump_memoryBinary : MemoryBinary ({ circuit := MemoryBumpChip.circuit } : Component (ZMod p)) := by
   apply memoryBinary_of_gated MemoryBumpChip.circuit (fun input => input.is_real) ?_
     MemoryBumpChip.selectorBinary_of_shallow
   intro input offset env

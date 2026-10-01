@@ -27,7 +27,7 @@ open Air.Flat
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The `SyscallInstrs` table as a flat-AIR component. -/
-def component : Component (ZMod p) := ⟨circuit⟩
+def component : Component (ZMod p) := { circuit := circuit }
 
 /-- The table's row list from its (for now uninhabited) occurrence list: no rows. Stated as the
 literal empty list rather than `events.map Empty.elim`, so every fact below is a `rfl` away. -/
@@ -44,14 +44,14 @@ theorem traceTable_table (events : List Empty) (data : ProverData (ZMod p))
 
 theorem traceTable_constraints (events : List Empty) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) :
-    (Table.build (component (p := p)) (syscallInstrsTraceInputs events) data hint).Constraints := by
+    (Table.build (component (p := p)) (syscallInstrsTraceInputs events) data hint).Constraints data := by
   intro row hrow
   rw [traceTable_table] at hrow
   exact absurd hrow List.not_mem_nil
 
 theorem traceTable_guarantees (events : List Empty) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) :
-    (Table.build (component (p := p)) (syscallInstrsTraceInputs events) data hint).Guarantees := by
+    (Table.build (component (p := p)) (syscallInstrsTraceInputs events) data hint).Guarantees data := by
   intro row hrow
   rw [traceTable_table] at hrow
   exact absurd hrow List.not_mem_nil
@@ -60,9 +60,8 @@ theorem traceTable_guarantees (events : List Empty) (data : ProverData (ZMod p))
 speak on. -/
 theorem traceTable_interactionsWith (events : List Empty) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (syscallInstrsTraceInputs events) data hint).interactionsWith
+    (Table.build (component (p := p)) (syscallInstrsTraceInputs events) data hint).interactionsWith data
       channel = [] := by
-  rw [Table.build_interactions]
   rfl
 
 end SP1Clean.SyscallInstrsChip

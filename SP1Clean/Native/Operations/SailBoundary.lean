@@ -4,8 +4,8 @@ import ToClean.Air.PublicVerifier
 /-! # Native verifier checks for the supplied Sail frame and endpoints
 
 Snapshot data supplies a finite invariant-field check. Five field equations bind the real
-public endpoint to that same target. The circuit has no witness cells or interactions and
-therefore composes without changing any existing ledger or Rust whole-chip anchor.
+public endpoint to that same target. The circuit has no witness cells. Its verifier adapter adds
+twelve interactions on a fresh channel and preserves every existing channel ledger.
 -/
 
 namespace SP1Clean.SailBoundary
@@ -42,11 +42,23 @@ def circuit (source target : ExecutionSnapshot) : GeneralFormalCircuit (ZMod p) 
     exact ⟨by simp [checked], sub_eq_zero.mpr high, sub_eq_zero.mpr low,
       sub_eq_zero.mpr pc0, sub_eq_zero.mpr pc1, sub_eq_zero.mpr pc2⟩
 
-/-- Installable silent public check, retaining every existing physical occurrence. -/
+/-- Installable public assertions, retaining every existing physical occurrence. -/
 def checker (source target : ExecutionSnapshot) : PublicVerifier (ZMod p) SP1PublicIO where
+  name := "sail_boundary"
   circuit := circuit source target
+  assumptions := by intros; trivial
   length_zero := by intros; rfl
+  lookups := by intros; rfl
   interactions := by intros; rfl
+
+/-- The existing SP1 field bound covers all twelve public-check occurrences. -/
+theorem count_bound [Fact (2 ^ 25 < p)] (source target : ExecutionSnapshot) :
+    (checker (p := p) source target).CountBound := by
+  change 2 * 6 < ringChar (ZMod p) ∨ ringChar (ZMod p) = 0
+  rw [ZMod.ringChar_zmod_n]
+  left
+  have := Fact.out (p := 2 ^ 25 < p)
+  omega
 
 /-- Raw acceptance of the added assertions is exactly the stated frame/endpoint contract. -/
 theorem checks_iff (source target : ExecutionSnapshot) (input : SP1PublicIO (ZMod p)) (data : ProverData (ZMod p)) :

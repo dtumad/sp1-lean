@@ -295,11 +295,11 @@ theorem isAuipcBinary_of_mainConstraints (input : Var Inputs (ZMod p)) (offset :
 
 /-- The completed U-type columns at one physical component row. -/
 noncomputable def physicalCols (env : Environment (ZMod p)) : Columns (ZMod p) :=
-  (⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env
+  ({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput env
 
 /-- The completed U-type row view at one physical component row. -/
 noncomputable def physicalView (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
-  rowView ((⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) (physicalCols env)
+  rowView (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env) (physicalCols env)
 
 /-- Small-literal disequality against the `ECALL` discriminant `50`, via `ZMod.val` injectivity. -/
 private theorem utypeOpcodeLiteral_ne_ecall {k : ℕ} (hk : k < 2 ^ 17) (hne : k ≠ 50) :
@@ -316,7 +316,7 @@ private theorem utypeOpcodeLiteral_ne_ecall {k : ℕ} (hk : k < 2 ^ 17) (hne : k
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      (⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
     (_real : (physicalView env).is_real = 1) :
     (physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var Inputs (ZMod p) := varFromOffset Inputs 0
@@ -325,7 +325,7 @@ theorem physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (Component.constraintsHold_iff env).mp constraints
   have binary := isAuipcBinary_of_mainConstraints input offset env mainConstraints
   have inputEq : Eval.eval env input =
-      (⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset Inputs 0 env
   have viewOpcode : (physicalView env).opcode =
       (Eval.eval env input).is_auipc * 48 + (1 - (Eval.eval env input).is_auipc) * 49 := by

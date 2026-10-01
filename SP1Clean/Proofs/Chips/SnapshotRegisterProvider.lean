@@ -64,6 +64,7 @@ theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Inputs
   simp only [main, circuit_norm]
 
 def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs MemoryMsg where
+  name := "sp1.native.memory.snapshot.registers"
   main := main snapshot
   elaborated := elaborated snapshot
   Spec input output _ := MemoryBoundary.SnapshotAtSpec snapshot input.index.val output

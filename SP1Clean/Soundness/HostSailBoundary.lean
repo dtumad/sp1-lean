@@ -38,25 +38,26 @@ def baseWitness (witness : EnsembleWitness (ensemble image source target final o
 /-- The added circuit preserves all original local checks. -/
 theorem baseWitness_constraints (witness : EnsembleWitness (ensemble image source target final others resources channels))
     (checked : witness.Constraints) : (baseWitness witness).Constraints :=
-  ((SailBoundary.checker source target).project_constraints witness).mp checked |>.1
+  ((SailBoundary.checker source target).project_constraints witness).mp checked
 
-/-- Silence preserves complete balance, including every characteristic count bound. -/
+/-- The separate check channel preserves original balance and every original count bound. -/
 theorem baseWitness_balanced (witness : EnsembleWitness (ensemble image source target final others resources channels))
     (balanced : witness.BalancedChannels) : (baseWitness witness).BalancedChannels :=
-  ((SailBoundary.checker source target).project_balanced witness).mpr balanced
+  (((SailBoundary.checker source target).project_balanced_iff witness).mp balanced).1
 
 /-- The verifier's actual assertions establish the finite target frame and canonical endpoints. -/
 theorem target_spec (witness : EnsembleWitness (ensemble image source target final others resources channels))
-    (checked : witness.Constraints) : SailBoundary.Spec source target witness.publicInput :=
+    (balanced : witness.BalancedChannels) : SailBoundary.Spec source target witness.publicInput :=
   (SailBoundary.checks_iff ..).mp
-    (((SailBoundary.checker source target).project_constraints witness).mp checked).2
+    (((SailBoundary.checker source target).project_balanced_iff witness).mp balanced).2.2
 
 /-- The new checker contributes exactly its proved meaning to acceptance, in both directions. -/
 theorem statement_iff (input : SP1PublicIO (ZMod p)) :
     (ensemble image source target final others resources channels).Statement input ↔
       (HostFinalMemory.ensemble image source target.sail.memorySnapshot final target.host
         others resources channels).Statement input ∧ SailBoundary.Spec source target input :=
-  (SailBoundary.checker source target).statement_iff _ (SailBoundary.Spec source target)
+  (SailBoundary.checker source target).statement_iff _ (SailBoundary.count_bound source target)
+    (SailBoundary.Spec source target)
     (SailBoundary.checks_iff source target) input
 
 /-- Raw acceptance binds the complete Memory comparison and the actual target register presence.
@@ -70,7 +71,7 @@ theorem source_target_checks
         ((HostFinalMemory.finalRecords (baseWitness witness)).map
           fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true ∧
       target.sail.memorySnapshot.Realizes target.sail.realize := by
-  have spec := target_spec witness checked
+  have spec := target_spec witness balanced
   exact ⟨spec, HostFinalMemory.source_checkFinal (baseWitness witness)
     (baseWitness_constraints witness checked) (baseWitness_balanced witness balanced),
     spec.memorySnapshot_realizes⟩

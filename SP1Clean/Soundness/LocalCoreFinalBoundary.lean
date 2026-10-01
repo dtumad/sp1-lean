@@ -100,7 +100,7 @@ private theorem sourceTables_final_silent {image : ProgramImage} {source : Execu
 /-- The actual local verifier fixes both endpoints of the final inventory's ordering chain. -/
 theorem verifier_final_interactions (image : ProgramImage) (source : ExecutionSnapshot)
     (env : Environment (ZMod p)) :
-    (⟨verifier image source⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := verifier image source } : Component (ZMod p)).operations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw env =
       [(OrderedBoundary.channel OrderedFinalProvider.channelName).pushedValue OrderedMemoryEnsemble.startKey,
        (OrderedBoundary.channel OrderedFinalProvider.channelName).pulledValue OrderedMemoryEnsemble.endKey] := by
@@ -148,7 +148,7 @@ theorem finalWitness_interactions {image : ProgramImage} {source : ExecutionSnap
     EnsembleWitness.verifierTable_environment, EnsembleWitness.verifierTable_component]
   change (FinalMemoryEnsemble.ensemble (p := p) (NativeCore.afterFinalTables image) []).verifierTable.operations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw _ =
-    (⟨verifier image source⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := verifier image source } : Component (ZMod p)).operations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw _
   rw [verifier_final_interactions]
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,

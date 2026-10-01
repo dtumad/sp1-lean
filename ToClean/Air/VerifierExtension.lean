@@ -1,32 +1,39 @@
 module
 
-public import ToClean.Air.EnsembleProjection
-public import ToClean.Circuit.SubcircuitProjection
+public import ToClean.Air.VerifierChannel
+public import ToClean.Circuit.VerifierInteractions
+public import Clean.Circuit.Foundations
 
 /-! # Exactly-once closed circuits in an ensemble verifier
 
-Clean runs the verifier exactly once, but has no adapter that moves one of its closed subcircuits
-into a derived singleton table while preserving the complete AIR ledger. This addition lets
-ordinary table-level proofs consume verifier-owned boundary interactions without accepting a
-witness-selected number of boundary rows. It belongs beside `Clean/Air/FlatEnsemble.lean`.
+Clean's public verifier can run a closed circuit's certified interactions and enforce its raw
+assertions through a fresh zero-check channel. This adapter reuses the circuit's semantic proof
+and Clean's verifier operations. The physical table inventory and its canonical prover data stay
+unchanged. A singleton table is available only as a local proof representation, evaluated at
+explicit data; it is never appended to the committed inventory.
 
-Zero witness length alone does not establish independence from offsets or ambient row values.
-`ClosedVerifier` therefore requires exact static constraint and interaction transport laws.
-The derived singleton is a representation of the real verifier invocation, not an extra source.
+Zero witness length alone does not establish independence from ambient cells. The adapter also
+requires the circuit's static transport laws, absent lookups, and Clean's unconditional admission
+proof for each verifier interaction. These are construction obligations, not execution premises.
+Move this adapter upstream when Clean supplies equivalent circuit-to-verifier composition.
 -/
 
 @[expose] public section
 
 namespace Air.Flat
-
 open Circuit
 
 variable {F : Type} [FiniteField F]
 
-/-- A zero-input circuit whose raw checks and interactions depend only on the shared prover data. -/
+/-- A proved closed boundary admitted to Clean's public verifier. -/
 structure ClosedVerifier (F : Type) [FiniteField F] where
+  name : String
   circuit : GeneralFormalCircuit F unit unit
+  assumptions : ∀ data, circuit.Assumptions () data
   length_zero : circuit.localLength () = 0
+  lookups : ((circuit.main ()).operations 0).lookups = []
+  public_interactions : ∀ interaction ∈ ((circuit.main ()).operations 0).interactions, ∀ env,
+    if interaction.assumeGuarantees then interaction.Requirements env else interaction.Guarantees env
   constraints : ∀ offset env, ((circuit.main ()).operations offset).ConstraintsHold env ↔
     ((circuit.main ()).operations 0).ConstraintsHold (Environment.fromInput (Input := unit) () env.data)
   interactions : ∀ offset env channel,
@@ -35,256 +42,249 @@ structure ClosedVerifier (F : Type) [FiniteField F] where
         (Environment.fromInput (Input := unit) () env.data)
 
 namespace ClosedVerifier
-
 variable (closed : ClosedVerifier F)
 
-def singleton (data : ProverData F) : Table F where
-  component := ⟨closed.circuit⟩
-  width := 0
+/-- Literal raw operations of the proved circuit, at its closed input. -/
+abbrev operations : Operations F := (closed.circuit.main ()).operations 0
+
+/-- Acceptance of the source circuit at the ensemble's explicit data. -/
+def Checks (data : ProverData F) : Prop :=
+  closed.operations.ConstraintsHold (Environment.fromInput (Input := unit) () data)
+
+/-- The added check ledger spends two occurrences for every assertion. -/
+def CountBound : Prop :=
+  2 * closed.operations.constraints.length < ringChar F ∨ ringChar F = 0
+
+/-- A local proof representation; this row is not a committed ensemble table. -/
+def singleton : Table F where
+  component := { circuit := closed.circuit }
   table := [#[]]
-  data := data
-  uniform_width := by simp
+  uniform_width := by
+    intro row member
+    obtain rfl := List.mem_singleton.mp member
+    rw [Component.width, GeneralFormalCircuit.size_eq]
+    simpa only [Array.size_empty, show size unit = 0 from rfl, Nat.zero_add] using closed.length_zero.symm
 
 theorem singleton_constraints (data : ProverData F) :
-    (closed.singleton data).Constraints ↔
-      ((closed.circuit.main ()).operations 0).ConstraintsHold (Environment.fromInput (Input := unit) () data) := by
+    closed.singleton.Constraints data ↔ closed.Checks data := by
   simp only [Table.Constraints, singleton, List.mem_singleton, forall_eq]
   exact Component.constraintsHold_iff _
 
 theorem singleton_interactions (data : ProverData F) (channel : RawChannel F) :
-    (closed.singleton data).interactionsWith channel =
-      ((closed.circuit.main ()).operations 0).interactionValuesWith channel (Environment.fromInput (Input := unit) () data) := by
+    closed.singleton.interactionsWith data channel =
+      closed.operations.interactionValuesWith channel (Environment.fromInput (Input := unit) () data) := by
   simp only [Table.interactionsWith, singleton, List.flatMap_cons, List.flatMap_nil, List.append_nil,
     Operations.interactionValuesWith, Component.interactionsWith_eq]
   rfl
 
+/-- Every source interaction is admitted through Clean's own verifier operation constructor. -/
+def emit : Verifier F Unit :=
+  Verifier.ofInteractions closed.operations.interactions closed.public_interactions
+
+theorem emit_interactions : closed.emit.circuitOperations.interactions = closed.operations.interactions :=
+  Verifier.ofInteractions_interactions _ _
+
+theorem emit_values (env : Environment F) (channel : RawChannel F) :
+    closed.emit.circuitOperations.interactionValuesWith channel env =
+      closed.operations.interactionValuesWith channel (Environment.fromInput (Input := unit) () env.data) := by
+  rw [emit, Verifier.ofInteractions_values]
+  exact closed.interactions 0 env channel
+
 variable {PublicIO : TypeMap} [ProvableType PublicIO]
 
-def verifierMain (ens : Ensemble F PublicIO) (input : Var PublicIO F) : Circuit F Unit := do
-  let _ ← ens.verifier input
-  let _ ← closed.circuit ()
+/-- Interaction-only projection, used to choose a channel disjoint from all existing traffic. -/
+def interactionProgram : Verifier.Program F PublicIO where
+  main _ := closed.emit
 
-def verifier (ens : Ensemble F PublicIO) : GeneralFormalCircuit F PublicIO unit where
-  main := closed.verifierMain ens
-  Assumptions input data := ens.verifier.Assumptions input data ∧ closed.circuit.Assumptions () data
-  Spec input _ data := ens.verifier.Spec input () data ∧ closed.circuit.Spec () () data
-  ProverAssumptions input data hint :=
-    ens.verifier.ProverAssumptions input data hint ∧ closed.circuit.ProverAssumptions () data hint
-  ProverSpec input _ hint := ens.verifier.ProverSpec input () hint ∧ closed.circuit.ProverSpec () () hint
-  channelsWithRequirements := ens.verifier.channelsWithRequirements ++ closed.circuit.channelsWithRequirements
-  soundness := by circuit_proof_all [verifierMain]
-  completeness := by circuit_proof_all [verifierMain]
+/-- Retain the source interactions while forgetting only the added assertion checks. -/
+def withInteractions (ens : Ensemble F PublicIO) : Ensemble F PublicIO where
+  tables := ens.tables
+  unique_names := ens.unique_names
+  channels := ens.channels ++ closed.circuit.channels
+  verifier := ens.verifier.andThen closed.interactionProgram
 
-theorem verifier_length_zero (ens : Ensemble F PublicIO) (input : Var PublicIO F) :
-    (closed.verifier ens).localLength input = 0 := by
-  simp only [verifier, circuit_norm]
-  change ens.verifier.localLength input + closed.circuit.localLength () = 0
-  rw [ens.verifier_length_zero, closed.length_zero, Nat.add_zero]
+/-- Freshness includes the boundary's original interactions as well as the enclosing ensemble. -/
+abbrev channelName (ens : Ensemble F PublicIO) : String :=
+  VerifierChannel.channelName closed.name (closed.withInteractions ens)
 
-/-- Run the closed boundary once in the verifier, retaining every ordinary physical table. -/
+/-- Dedicated channel for the boundary's raw assertions. -/
+abbrev channel (ens : Ensemble F PublicIO) : RawChannel F :=
+  VerifierChannel.channel closed.name (closed.withInteractions ens)
+
+/-- Reuse the proved circuit's semantic specification in Clean's public verifier. -/
+def program (ens : Ensemble F PublicIO) : Verifier.Program F PublicIO where
+  main _ := do
+    closed.emit
+    Verifier.checkZeros (closed.channelName ens) closed.operations.constraints
+  Spec _ data := closed.circuit.Spec () () data
+  soundness := by
+    intro env guarantees
+    simp only [Verifier.operations_bind, Verifier.Operations.circuitOperations,
+      Verifier.Operations.interactions, List.map_append, Operations.FullGuarantees,
+      Operations.interactions_append, List.forall_mem_append] at guarantees
+    have original : closed.operations.FullGuarantees env := by
+      rw [Operations.FullGuarantees, ← closed.emit_interactions]
+      exact guarantees.1
+    have checks := (Verifier.checkZeros_guarantees (closed.channelName ens)
+      closed.operations.constraints env).mp guarantees.2
+    have checked : closed.operations.ConstraintsHold env := by
+      refine ⟨checks, ?_⟩
+      simp [operations, closed.lookups]
+    exact (closed.circuit.original_full_soundness 0 env () (closed.assumptions _)
+      checked original).1
+
+/-- Invoke the boundary once without adding a physical row or changing canonical prover data. -/
 def install (ens : Ensemble F PublicIO) : Ensemble F PublicIO where
   tables := ens.tables
-  channels := ens.channels ++ closed.circuit.channels
-  verifier := closed.verifier ens
-  verifier_length_zero := closed.verifier_length_zero ens
+  unique_names := ens.unique_names
+  channels := (closed.withInteractions ens).channels ++ [closed.channel ens]
+  verifier := ens.verifier.andThen (closed.program ens)
 
-/-- The table-oriented representation used only by the derived witness below. -/
-def asTable (ens : Ensemble F PublicIO) : Ensemble F PublicIO where
-  tables := ens.tables ++ [⟨closed.circuit⟩]
-  channels := ens.channels ++ closed.circuit.channels
-  verifier := ens.verifier
-  verifier_length_zero := ens.verifier_length_zero
+/-- Forget the boundary while retaining all committed rows. -/
+def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
+    EnsembleWitness ens :=
+  EnsembleWitness.ofTables ens witness.tables witness.publicInput witness.tables_map_component
 
-private theorem verifier_flat (ens : Ensemble F PublicIO) (input : Var PublicIO F) (offset : ℕ) :
-    ((closed.verifierMain ens input).operations offset).toFlat =
-      ((ens.verifier.main input).operations offset).toFlat ++
-        ((closed.circuit.main ()).operations offset).toFlat := by
-  simp only [verifierMain, circuit_norm, GeneralFormalCircuit.toSubcircuit_toFlat,
-    ens.verifier_length_zero, Nat.add_zero, List.append_nil]
-
-theorem verifier_constraints (ens : Ensemble F PublicIO) (input : PublicIO F) (data : ProverData F) :
-    (closed.install ens).VerifierConstraints input data ↔
-      ens.VerifierConstraints input data ∧ (closed.singleton data).Constraints := by
-  change ((closed.verifierMain ens (varFromOffset PublicIO 0)).operations (size PublicIO)).ConstraintsHold
-    (Environment.fromInput input data) ↔ _
-  rw [← Circuit.constraintsHold_toFlat_iff, verifier_flat, FlatOperation.constraintsHold_append,
-    Circuit.constraintsHold_toFlat_iff, Circuit.constraintsHold_toFlat_iff,
-    closed.constraints, ← singleton_constraints]
-  rfl
-
-theorem verifier_interactions (ens : Ensemble F PublicIO) (input : PublicIO F) (data : ProverData F)
-    (channel : RawChannel F) :
-    (closed.install ens).verifierOperations.interactionValuesWith channel (Environment.fromInput input data) =
-      ens.verifierOperations.interactionValuesWith channel (Environment.fromInput input data) ++
-        (closed.singleton data).interactionsWith channel := by
-  change ((closed.verifierMain ens (varFromOffset PublicIO 0)).operations (size PublicIO)).interactionValuesWith
-    channel (Environment.fromInput input data) = _
-  simp only [Operations.interactionValuesWith, Operations.interactionsWith,
-    ← Operations.interactions_toFlat, verifier_flat, FlatOperation.interactions_append,
-    List.filter_append, List.map_append]
-  simp only [Operations.interactions_toFlat]
-  change _ ++ ((closed.circuit.main ()).operations (size PublicIO)).interactionValuesWith
-    channel (Environment.fromInput input data) = _
-  rw [closed.interactions, singleton_interactions]
-
-/-- The single boundary row is derived from the verifier and cannot be omitted or duplicated. -/
-def expand {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
-    EnsembleWitness (closed.asTable ens) :=
-  EnsembleWitness.ofTables (closed.asTable ens) (witness.tables ++ [closed.singleton witness.data])
-    witness.data witness.publicInput
-    (by simp only [List.map_append, witness.tables_map_component, install,
-      List.map_cons, List.map_nil, singleton, asTable])
-    (by
-      intro table member
-      rcases List.mem_append.mp member with old | added
-      · exact witness.same_data table old
-      · obtain rfl := List.mem_singleton.mp added
-        rfl)
-
-@[simp] theorem expand_data {ens : Ensemble F PublicIO}
-    (witness : EnsembleWitness (closed.install ens)) :
-    (closed.expand witness).data = witness.data := rfl
-
-@[simp] theorem expand_publicInput {ens : Ensemble F PublicIO}
-    (witness : EnsembleWitness (closed.install ens)) :
-    (closed.expand witness).publicInput = witness.publicInput := rfl
-
-theorem expand_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
-    (constraints : witness.Constraints) : (closed.expand witness).Constraints := by
-  have checks := (closed.verifier_constraints ens witness.publicInput witness.data).mp
-    (EnsembleWitness.verifierConstraints_of_constraints constraints)
-  rw [EnsembleWitness.Constraints, EnsembleWitness.forall_mem_allTables_iff]
-  refine ⟨?_, ?_⟩
-  · rw [← EnsembleWitness.verifierConstraints_iff_verifierTable_constraints]
-    exact checks.1
-  · intro table member
-    rcases List.mem_append.mp member with old | added
-    · exact constraints table (witness.mem_allTables_of_mem_tables old)
-    · obtain rfl := List.mem_singleton.mp added
-      exact checks.2
-
-/-- The singleton representation preserves satisfiability in both directions. -/
-theorem expand_constraints_iff {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
-    (closed.expand witness).Constraints ↔ witness.Constraints := by
-  refine ⟨?_, closed.expand_constraints witness⟩
-  intro constraints
-  rw [EnsembleWitness.Constraints, EnsembleWitness.forall_mem_allTables_iff] at constraints ⊢
-  constructor
-  · rw [← EnsembleWitness.verifierConstraints_iff_verifierTable_constraints, verifier_constraints]
-    exact ⟨EnsembleWitness.verifierConstraints_iff_verifierTable_constraints.mpr constraints.1,
-      constraints.2 _ (List.mem_append_right _ (List.mem_singleton_self _))⟩
-  · intro table member
-    exact constraints.2 table (List.mem_append_left _ member)
-
-private theorem verifier_table_interactions {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
-    (channel : RawChannel F) : witness.verifierTable.interactionsWith channel =
-      ens.verifierOperations.interactionValuesWith channel (Environment.fromInput witness.publicInput witness.data) := by
-  simp only [Table.interactionsWith, EnsembleWitness.verifierTable_flatMap,
-    Operations.interactionValuesWith, EnsembleWitness.verifierTable_component,
-    Ensemble.verifierTable_interactionsWith, EnsembleWitness.verifierTable_environment]
-
-/-- All channels and all multiplicities are preserved, including the original count bound. -/
-theorem expand_interactions {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
-    (channel : RawChannel F) :
-    ((closed.expand witness).interactionsWith channel).Perm (witness.interactionsWith channel) := by
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.allTables, List.flatMap_cons,
-    verifier_table_interactions]
-  change (ens.verifierOperations.interactionValuesWith channel (Environment.fromInput witness.publicInput witness.data) ++
-    (witness.tables ++ [closed.singleton witness.data]).flatMap (·.interactionsWith channel)).Perm _
-  rw [verifier_interactions]
-  simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil, List.append_assoc]
-  exact (List.perm_append_comm ..).append_left _
-
-/-- Forget a closed verifier extension while keeping every physical row. This is a proof view;
-balance is not inherited on channels used by the omitted extension. -/
-def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) : EnsembleWitness ens :=
-  EnsembleWitness.ofTables ens witness.tables witness.data witness.publicInput
-    witness.tables_map_component witness.same_data
-
-/-- The projected table arrays are the literal original inventory. -/
 @[simp] theorem project_tables {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
     (closed.project witness).tables = witness.tables := rfl
 
-/-- The closed verifier proof view retains the same prover data. -/
 @[simp] theorem project_data {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
     (closed.project witness).data = witness.data := rfl
 
-/-- The closed verifier proof view retains the same public input. -/
 @[simp] theorem project_publicInput {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
     (closed.project witness).publicInput = witness.publicInput := rfl
 
-/-- The installed verifier contributes the old verifier ledger and the single closed invocation. -/
-theorem installed_verifier_interactions {ens : Ensemble F PublicIO}
-    (witness : EnsembleWitness (closed.install ens)) (channel : RawChannel F) :
-    witness.verifierTable.interactionsWith channel =
-      (closed.project witness).verifierTable.interactionsWith channel ++
-        (closed.singleton witness.data).interactionsWith channel := by
-  rw [verifier_table_interactions, verifier_table_interactions, project_publicInput, project_data]
-  exact closed.verifier_interactions ens witness.publicInput witness.data channel
+/-- Raw physical constraints are unchanged; verifier assertions are enforced by balance. -/
+theorem project_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
+    witness.Constraints ↔ (closed.project witness).Constraints := Iff.rfl
 
-/-- The original verifier and all original table checks are consequences of the extended checks. -/
-theorem project_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
-    (checked : witness.Constraints) : (closed.project witness).Constraints := by
-  rw [EnsembleWitness.Constraints, EnsembleWitness.forall_mem_allTables_iff]
-  constructor
-  · rw [← EnsembleWitness.verifierConstraints_iff_verifierTable_constraints]
-    exact (closed.verifier_constraints ens witness.publicInput witness.data).mp
-      (EnsembleWitness.verifierConstraints_of_constraints checked) |>.1
-  · intro table member
-    exact checked table (witness.mem_allTables_of_mem_tables member)
+/-- Forget only the assertion checks, keeping the exactly-once boundary interactions. -/
+def interactionView {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
+    EnsembleWitness (closed.withInteractions ens) :=
+  EnsembleWitness.ofTables _ witness.tables witness.publicInput witness.tables_map_component
 
-/-- The singleton representation accounts for exactly the interactions omitted by projection. -/
-theorem expand_interactions_eq {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
-    (channel : RawChannel F) :
-    (closed.expand witness).interactionsWith channel =
-      (closed.project witness).interactionsWith channel ++ (closed.singleton witness.data).interactionsWith channel := by
-  change _ ++ (witness.tables ++ [closed.singleton witness.data]).flatMap (·.interactionsWith channel) =
-    (_ ++ witness.tables.flatMap (·.interactionsWith channel)) ++ _
-  simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil, List.append_assoc]
+@[simp] theorem interactionView_data {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) :
+    (closed.interactionView witness).data = witness.data := rfl
+
+/-- Exact verifier ledger, including all old traffic and two occurrences per new assertion. -/
+theorem verifier_interactions (ens : Ensemble F PublicIO) (env : Environment F) (selected : RawChannel F) :
+    (closed.install ens).verifierOperations.interactionValuesWith selected env =
+      (closed.withInteractions ens).verifierOperations.interactionValuesWith selected env ++
+        (Verifier.checkZeros (closed.channelName ens) closed.operations.constraints).circuitOperations.interactionValuesWith
+          selected env := by
+  simp only [install, withInteractions, Ensemble.verifierOperations, Verifier.Program.andThen_values]
+  change _ ++ ((closed.emit >>= fun _ => Verifier.checkZeros (closed.channelName ens)
+    closed.operations.constraints).circuitOperations.interactionValuesWith selected env) = _
+  simp only [Verifier.circuitOperations, Verifier.operations_bind, Verifier.Operations.circuitOperations,
+    Verifier.Operations.interactions, List.map_append, Operations.interactionValuesWith,
+    Operations.interactionsWith, Operations.interactions_append, List.filter_append, List.map_append,
+    List.append_assoc]
   rfl
 
-/-- Local guarantees survive forgetting a closed extension, independently of its channel balance. -/
-theorem project_channelGuarantees {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
-    (channel : RawChannel F)
-    (guarantees : ∀ table ∈ witness.allTables, table.ChannelGuarantees channel) :
-    ∀ table ∈ (closed.project witness).allTables, table.ChannelGuarantees channel := by
-  apply witness.channelGuarantees_of_interactions_subset (closed.project witness) channel rfl ?_ guarantees
-  apply List.Subset.trans (l₂ := (closed.expand witness).interactionsWith channel)
-  · rw [closed.expand_interactions_eq]
-    exact List.subset_append_left _ _
-  · exact (closed.expand_interactions witness channel).subset
+/-- On every other channel, removing assertion checks preserves the complete literal ledger. -/
+theorem interactionView_interactions {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) (selected : RawChannel F)
+    (different : closed.channel ens ≠ selected) :
+    (closed.interactionView witness).interactionsWith selected = witness.interactionsWith selected := by
+  change _ = (closed.install ens).verifierOperations.interactionValuesWith selected
+    (Environment.fromInput witness.publicInput witness.data) ++ _
+  rw [closed.verifier_interactions,
+    Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil]
+  rfl
 
-/-- A channel unused by the omitted extension retains its exact ledger and count bound. -/
-theorem project_balancedChannel [DecidableEq F] {ens : Ensemble F PublicIO}
-    (witness : EnsembleWitness (closed.install ens)) (channel : RawChannel F)
-    (silent : channel ∉ closed.circuit.channels) (balanced : witness.BalancedChannel channel) :
-    (closed.project witness).BalancedChannel channel := by
-  have empty : (closed.singleton witness.data).interactionsWith channel = [] :=
-    (closed.singleton witness.data).interactionsWith_nil_of_channel_not_mem silent
-  have perm := closed.expand_interactions witness channel
-  rw [closed.expand_interactions_eq, empty, List.append_nil] at perm
-  exact balancedInteractions_of_perm balanced perm.symm
-
-theorem expand_balanced [DecidableEq F] {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
-    (balanced : witness.BalancedChannels) : (closed.expand witness).BalancedChannels := by
-  intro channel member
-  exact balancedInteractions_of_perm (balanced channel member) (closed.expand_interactions witness channel).symm
-
-/-- The singleton proof representation inherits already established local guarantees on every
-channel, including one whose balance was established in a larger enclosing assembly. -/
-theorem expand_channelGuarantees {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens))
-    (channel : RawChannel F)
-    (guarantees : ∀ table ∈ witness.allTables, table.ChannelGuarantees channel) :
-    ∀ table ∈ (closed.expand witness).allTables, table.ChannelGuarantees channel :=
-  witness.channelGuarantees_of_interactions_subset (closed.expand witness) channel rfl
-    (closed.expand_interactions witness channel).subset guarantees
-
-theorem expand_balanced_iff [DecidableEq F] {ens : Ensemble F PublicIO}
+/-- Only the added assertion program can emit on its fresh channel. -/
+theorem installed_check_interactions {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (closed.install ens)) :
-    (closed.expand witness).BalancedChannels ↔ witness.BalancedChannels := by
-  refine ⟨?_, closed.expand_balanced witness⟩
-  intro balanced channel member
-  exact balancedInteractions_of_perm (balanced channel member) (closed.expand_interactions witness channel)
+    witness.interactionsWith (closed.channel ens) =
+      (Verifier.checkZeros (closed.channelName ens) closed.operations.constraints).circuitOperations.interactionValuesWith
+        (closed.channel ens) (Environment.fromInput witness.publicInput witness.data) := by
+  have fresh := VerifierChannel.fresh closed.name (closed.withInteractions ens)
+  have physical : witness.tableContext.interactionsWith (closed.channel ens) = [] := by
+    apply List.flatMap_eq_nil_iff.mpr
+    intro table member
+    apply List.flatMap_eq_nil_iff.mpr
+    intro row _
+    exact fresh.tables table.component
+      (EnsembleWitness.mem_component_of_mem (witness := closed.interactionView witness) member) _
+  change (closed.install ens).verifierOperations.interactionValuesWith (closed.channel ens)
+    (Environment.fromInput witness.publicInput witness.data) ++ _ = _
+  rw [closed.verifier_interactions, fresh.verifier, List.nil_append, physical, List.append_nil]
+
+/-- Balance on the new channel enforces exactly the original closed checks and occurrence bound. -/
+theorem check_balanced_iff {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) :
+    witness.BalancedChannel (closed.channel ens) ↔ closed.CountBound ∧ closed.Checks witness.data := by
+  rw [EnsembleWitness.BalancedChannel, closed.installed_check_interactions]
+  change BalancedInteractions ((Verifier.checkZeros (closed.channelName ens) closed.operations.constraints).circuitOperations.interactionValuesWith
+    (Verifier.zeroChannel (closed.channelName ens)).toRaw (Environment.fromInput witness.publicInput witness.data)) ↔ _
+  rw [Verifier.checkZeros_balanced_iff]
+  have transport := closed.constraints 0 (Environment.fromInput witness.publicInput witness.data)
+  simpa [CountBound, Checks, Operations.ConstraintsHold, closed.lookups] using
+    and_congr (Iff.rfl (a := closed.CountBound)) transport
+
+/-- The assertion channel is separate from both the original registry and the boundary channels. -/
+theorem channel_not_mem (ens : Ensemble F PublicIO) :
+    closed.channel ens ∉ ens.channels ++ closed.circuit.channels :=
+  (VerifierChannel.fresh closed.name (closed.withInteractions ens)).unregistered
+
+/-- Removing only the new checks leaves the original ledger plus one boundary invocation.
+The permutation moves that invocation past the physical rows without dropping any occurrence. -/
+theorem interactionView_interactions_perm {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) (selected : RawChannel F) :
+    ((closed.interactionView witness).interactionsWith selected).Perm
+      ((closed.project witness).interactionsWith selected ++
+        closed.singleton.interactionsWith witness.data selected) := by
+  change ((ens.verifier.andThen closed.interactionProgram).circuitOperations.interactionValuesWith selected
+    (Environment.fromInput witness.publicInput witness.data) ++
+      witness.tables.flatMap (fun table => table.interactionsWith witness.data selected)).Perm _
+  rw [Verifier.Program.andThen_values]
+  change ((_ ++ closed.emit.circuitOperations.interactionValuesWith selected
+    (Environment.fromInput witness.publicInput witness.data)) ++ _).Perm _
+  rw [closed.emit_values, ← closed.singleton_interactions]
+  change ((_ ++ closed.singleton.interactionsWith witness.data selected) ++ _).Perm
+    ((_ ++ witness.tables.flatMap (fun table => table.interactionsWith witness.data selected)) ++ _)
+  simp only [List.append_assoc]
+  exact (List.perm_append_comm ..).append_left _
+
+/-- Channels unused by the boundary retain balance and the full original occurrence bound. -/
+theorem project_balancedChannel {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) (selected : RawChannel F)
+    (registered : selected ∈ ens.channels) (silent : selected ∉ closed.circuit.channels)
+    (balanced : witness.BalancedChannel selected) : (closed.project witness).BalancedChannel selected := by
+  have different : closed.channel ens ≠ selected := by
+    intro same
+    exact closed.channel_not_mem ens (show closed.channel ens ∈ ens.channels ++ closed.circuit.channels from
+      same ▸ List.mem_append_left _ registered)
+  have empty : closed.singleton.interactionsWith witness.data selected = [] :=
+    closed.singleton.interactionsWith_nil_of_channel_not_mem silent
+  have permutation := closed.interactionView_interactions_perm witness selected
+  rw [closed.interactionView_interactions witness selected different, empty, List.append_nil] at permutation
+  exact balancedInteractions_of_perm balanced permutation
+
+/-- Accepted boundaries retain the original interactions and enforce every assertion. -/
+theorem balanced_iff {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
+    witness.BalancedChannels ↔ (closed.interactionView witness).BalancedChannels ∧
+      closed.CountBound ∧ closed.Checks witness.data := by
+  have fresh := VerifierChannel.fresh closed.name (closed.withInteractions ens)
+  have different (selected : RawChannel F) (member : selected ∈ (closed.withInteractions ens).channels) :
+      closed.channel ens ≠ selected := by
+    intro same
+    exact fresh.unregistered (show closed.channel ens ∈ (closed.withInteractions ens).channels from same ▸ member)
+  constructor
+  · intro balanced
+    refine ⟨?_, (closed.check_balanced_iff witness).mp (balanced _ (by simp [install]))⟩
+    intro selected member
+    change BalancedInteractions ((closed.interactionView witness).interactionsWith selected)
+    rw [closed.interactionView_interactions witness selected (different selected member)]
+    exact balanced selected (List.mem_append_left _ member)
+  · rintro ⟨original, bound, checked⟩ selected member
+    rcases List.mem_append.mp member with member | member
+    · change BalancedInteractions (witness.interactionsWith selected)
+      rw [← closed.interactionView_interactions witness selected (different selected member)]
+      exact original selected member
+    · obtain rfl := List.mem_singleton.mp member
+      exact (closed.check_balanced_iff witness).mpr ⟨bound, checked⟩
 
 end ClosedVerifier
 end Air.Flat

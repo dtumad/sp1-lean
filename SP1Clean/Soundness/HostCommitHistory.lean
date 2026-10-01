@@ -36,7 +36,7 @@ private theorem eval_next (env : Environment (ZMod p)) (input : Var Inputs (ZMod
   simp only [Inputs.next, circuit_norm, eval_vector, Vector.map_set, ProvableType.eval_fields]
 
 def view (deferred : Bool) (slot : Fin 8) : TransitionView (stateChannel (p := p) deferred) where
-  component := ⟨HostCommitChip.circuit deferred slot⟩
+  component := { circuit := HostCommitChip.circuit deferred slot }
   edge env :=
     let input := valueFromOffset Inputs 0 env
     (input.previous, input.next slot)
@@ -83,30 +83,30 @@ private theorem fold_of_walk (deferred : Bool) (policy : HostPolicy)
     simp only [List.foldlM_cons, execute, step, Option.map_some]
     exact ih _ (fun other member => valid other (List.mem_cons_of_mem _ member)) tail
 
-private theorem rows_spec (deferred : Bool) (tables : List (Table (ZMod p)))
+private theorem rows_spec (deferred : Bool) (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun slot table => (view deferred slot).component = table.component)
-      (List.finRange 8) tables) (valid : ∀ table ∈ tables, table.Spec) :
-    ∀ row ∈ TransitionView.readIndexedRows (List.finRange 8) tables,
+      (List.finRange 8) tables) (valid : ∀ table ∈ tables, table.Spec data) :
+    ∀ row ∈ TransitionView.readIndexedRows (List.finRange 8) tables data,
       Spec deferred row.1 (rowInput row) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       ((List.finRange 8).map (view deferred)) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
-  exact TransitionView.readIndexedRows_spec (List.finRange 8) (view deferred) tables alignment valid
+  exact TransitionView.readIndexedRows_spec (List.finRange 8) (view deferred) tables data alignment valid
 
-private theorem rows_balanced (deferred : Bool) (tables : List (Table (ZMod p)))
+private theorem rows_balanced (deferred : Bool) (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun slot table => (view deferred slot).component = table.component)
       (List.finRange 8) tables)
     (balanced : BalancedInteractions
       ([(stateChannel deferred).pushedValue initial, (stateChannel deferred).pulledValue final] ++
-        tables.flatMap (·.interactionsWith (stateChannel deferred).toRaw))) :
-    EndpointBalanced (↑(TransitionView.readIndexedRows (List.finRange 8) tables)) edge initial final := by
-  let rows := TransitionView.readIndexedRows (List.finRange 8) tables
+        tables.flatMap (·.interactionsWith data (stateChannel deferred).toRaw))) :
+    EndpointBalanced (↑(TransitionView.readIndexedRows (List.finRange 8) tables data)) edge initial final := by
+  let rows := TransitionView.readIndexedRows (List.finRange 8) tables data
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       ((List.finRange 8).map (view deferred)) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
   have projected := TransitionView.readRows_interactions
-    ((List.finRange 8).map (view deferred)) tables alignment
+    ((List.finRange 8).map (view deferred)) tables data alignment
   rw [TransitionView.readRows_eq_indexed] at projected
   simp only [List.flatMap_map] at projected
   rw [projected] at balanced
@@ -143,22 +143,22 @@ private theorem history_of_balance (deferred : Bool) (rows : List (Row (p := p))
 
 /-- Balanced physical bank tables execute every row exactly once and produce their final bank.
 The endpoint and local-spec premises are explicit integration boundaries. -/
-theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
+theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun slot table => (view deferred slot).component = table.component)
       (List.finRange 8) tables)
-    (valid : ∀ table ∈ tables, table.Spec)
+    (valid : ∀ table ∈ tables, table.Spec data)
     (balanced : BalancedInteractions
       ([(stateChannel deferred).pushedValue initial, (stateChannel deferred).pulledValue final] ++
-        tables.flatMap (·.interactionsWith (stateChannel deferred).toRaw)))
+        tables.flatMap (·.interactionsWith data (stateChannel deferred).toRaw)))
     (policy : HostPolicy) (characteristic : policy.characteristic = p)
     (context : HostReadContext) (host : HostState) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows (List.finRange 8) tables) ∧
+      path.Perm (TransitionView.readIndexedRows (List.finRange 8) tables data) ∧
       Walk.IsWalk edge initial final path ∧
       path.foldlM (execute deferred policy context) (initial.apply deferred host) =
         some (final.apply deferred host) := by
-  exact history_of_balance deferred _ initial final (rows_spec deferred tables aligned valid)
-    (rows_balanced deferred tables initial final aligned balanced) policy characteristic context host
+  exact history_of_balance deferred _ initial final (rows_spec deferred tables data aligned valid)
+    (rows_balanced deferred tables data initial final aligned balanced) policy characteristic context host
 
 end SP1Clean.Soundness.HostCommitHistory

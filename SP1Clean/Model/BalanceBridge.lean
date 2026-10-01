@@ -75,6 +75,10 @@ section CleanTranslation
 
 variable {p : ℕ} [Fact p.Prime]
 
+-- Match the equality instance used by Clean's balance ledger; no transport between
+-- opaque decision procedures is needed when rewriting the filtered interaction list.
+local instance : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+
 /-- Casting an ℤ-list sum into `ZMod p` distributes over the list. -/
 private lemma intCast_list_sum (l : List ℤ) :
     ((l.sum : ℤ) : ZMod p) = (l.map (fun x : ℤ => (x : ZMod p))).sum := by

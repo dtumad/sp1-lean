@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.OrderedMemoryEnsemble
 import ToClean.Air.ChannelClosure
+import ToClean.Air.ComponentOutput
 import SP1Clean.Proofs.Chips.OrderedFinalProvider
 
 /-! # Native final-memory inventory
@@ -61,7 +62,7 @@ theorem view_spec (id : TableId) (env : Environment (ZMod p))
     (constraints : (viewFor id).component.operations.ConstraintsHold env)
     (byte : (viewFor id).component.operations.ChannelGuarantees byteChannel.toRaw env) :
     (viewFor id).component.Spec env := by
-  have assumptions : (viewFor (p := p) id).component.Assumptions env := by cases id <;> trivial
+  have assumptions : (viewFor (p := p) id).component.CircuitAssumptions env := by cases id <;> trivial
   have channels : (viewFor (p := p) id).component.circuit.channelsWithGuarantees ⊆
       [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] := by
     cases id
@@ -82,8 +83,8 @@ theorem view_spec (id : TableId) (env : Environment (ZMod p))
 
 def recordFor (id : TableId) (env : Environment (ZMod p)) : Option (MemoryMsg (ZMod p)) :=
   match id with
-  | .registers => some ((⟨registerCircuit⟩ : Component (ZMod p)).rowOutput env)
-  | .ram => some ((⟨ramCircuit⟩ : Component (ZMod p)).rowOutput env)
+  | .registers => some (({ circuit := registerCircuit } : Component (ZMod p)).rowOutput env)
+  | .ram => some (({ circuit := ramCircuit } : Component (ZMod p)).rowOutput env)
   | .terminal => none
 
 def inventory : OrderedMemoryEnsemble.Inventory channelName (MemoryBoundary.FinalSpec (p := p)) where
@@ -108,31 +109,41 @@ def inventory : OrderedMemoryEnsemble.Inventory channelName (MemoryBoundary.Fina
       exact ⟨valid.1.1, valid.2.2⟩
     | terminal => contradiction
 
-def ensemble (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p))) :=
-  inventory.ensemble auxiliary channels
+/-- The two finalizers and their ordering terminal have distinct canonical names. -/
+theorem inventory_unique_names :
+    ((inventory (p := p)).views.map (·.component.circuit.name)).Nodup := by
+  change [
+    (registerView (p := p)).component.circuit.name, ramView.component.circuit.name,
+    (OrderedMemoryEnsemble.terminalView channelName (by decide)).component.circuit.name].Nodup
+  simp [registerView, ramView,
+    OrderedMemoryEnsemble.providerView, OrderedMemoryEnsemble.terminalView,
+    OrderedMemoryProvider.circuit, OrderedBoundaryEnd.circuit,
+    FinalRegisterProvider.circuit, FinalRamProvider.circuit, channelName]
+  decide
+
+def ensemble (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
+    (names : (((inventory (p := p)).views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup) :=
+  inventory.ensemble auxiliary channels names
 
 variable {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+variable {names : (((inventory (p := p)).views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup}
 
-def records (witness : EnsembleWitness (ensemble auxiliary channels)) := inventory.records witness
+def records (witness : EnsembleWitness (ensemble auxiliary channels names)) := inventory.records witness
 
 /-- The shared decoder reads the original output of each physical register and RAM row;
 the ordering terminal contributes no Memory record. -/
-theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels)) :
+theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
     records witness =
       (witness.tables[0]'(by rw [← witness.same_length]; simp [ensemble,
         OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
         OrderedMemoryEnsemble.Inventory.views, inventory])).table.map
-          (fun row => (⟨registerCircuit⟩ : Component (ZMod p)).rowOutput
-            ((witness.tables[0]'(by rw [← witness.same_length]; simp [ensemble,
-              OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
-              OrderedMemoryEnsemble.Inventory.views, inventory])).environment row)) ++
+          (fun row => ({ circuit := registerCircuit } : Component (ZMod p)).rowOutput
+            (Environment.fromArray row witness.data)) ++
       (witness.tables[1]'(by rw [← witness.same_length]; simp [ensemble,
         OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
         OrderedMemoryEnsemble.Inventory.views, inventory])).table.map
-          (fun row => (⟨ramCircuit⟩ : Component (ZMod p)).rowOutput
-            ((witness.tables[1]'(by rw [← witness.same_length]; simp [ensemble,
-              OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
-              OrderedMemoryEnsemble.Inventory.views, inventory])).environment row)) := by
+          (fun row => ({ circuit := ramCircuit } : Component (ZMod p)).rowOutput
+            (Environment.fromArray row witness.data)) := by
   have length : 3 ≤ witness.tables.length := by
     rw [← witness.same_length]
     simp [ensemble, OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
@@ -143,18 +154,18 @@ theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels)) :
       List.take_succ_eq_append_getElem (by omega : 0 < witness.tables.length)]
     rfl
   change ((TransitionView.readIndexedRows [TableId.registers, .ram, .terminal]
-    (witness.tables.take 3)).filterMap fun row => recordFor row.1 row.2) = _
+    (witness.tables.take 3) witness.data).filterMap fun row => recordFor row.1 row.2) = _
   rw [front]
   simp only [TransitionView.readIndexedRows, List.zip_cons_cons, List.zip_nil_right,
     List.flatMap_cons, List.flatMap_nil, List.filterMap_append, List.filterMap_map,
     Function.comp_def, recordFor, List.filterMap_eq_map', List.filterMap_none,
     List.append_nil]
 
-theorem records_valid (witness : EnsembleWitness (ensemble auxiliary channels))
+theorem records_valid (witness : EnsembleWitness (ensemble auxiliary channels names))
     (valid : witness.Spec) : ∀ record ∈ records witness, MemoryBoundary.FinalSpec record :=
   inventory.records_valid witness valid
 
-theorem records_locations_nodup (witness : EnsembleWitness (ensemble auxiliary channels))
+theorem records_locations_nodup (witness : EnsembleWitness (ensemble auxiliary channels names))
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel channelName).toRaw ∉ component.circuit.channels)
     (valid : witness.Spec) (balanced : witness.BalancedChannels) :
@@ -174,7 +185,7 @@ theorem recordFor_interactions (id : TableId) (env : Environment (ZMod p)) :
     simp only [FinalRegisterProvider.circuit]
     rw [FinalRegisterProvider.main_memory_interactions]
     simp only [List.map_cons, List.map_nil, Channel.eval_emitted]
-    simp only [recordFor, Option.toList_some, List.map_cons, List.map_nil, Component.rowOutput,
+    simp only [recordFor, Option.toList_some, List.map_cons, List.map_nil, Component.rowOutput, Component.rowInputVar,
       OrderedFinalProvider.registerCircuit, OrderedMemoryProvider.circuit, FinalRegisterProvider.circuit,
       OrderedMemoryProvider.elaborated, FinalRegisterProvider.elaborated, circuit_norm]
   | ram =>
@@ -185,26 +196,27 @@ theorem recordFor_interactions (id : TableId) (env : Environment (ZMod p)) :
     simp only [FinalRamProvider.circuit]
     rw [FinalRamProvider.main_memory_interactions]
     simp only [List.map_cons, List.map_nil, Channel.eval_emitted]
-    simp only [recordFor, Option.toList_some, List.map_cons, List.map_nil, Component.rowOutput,
+    simp only [recordFor, Option.toList_some, List.map_cons, List.map_nil, Component.rowOutput, Component.rowInputVar,
       OrderedFinalProvider.ramCircuit, OrderedMemoryProvider.circuit, FinalRamProvider.circuit,
       OrderedMemoryProvider.elaborated, FinalRamProvider.elaborated, circuit_norm]
   | terminal =>
     exact OrderedMemoryEnsemble.terminalView_memory_interactions _ (by decide) env
 
 /-- The physical boundary tables emit precisely the decoded records, with unit multiplicity. -/
-theorem memory_interactions_eq (witness : EnsembleWitness (ensemble auxiliary channels)) :
-    (witness.tables.take (inventory (p := p)).views.length).flatMap (·.interactionsWith memoryChannel.toRaw) =
+theorem memory_interactions_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+    (witness.tables.take (inventory (p := p)).views.length).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
       (records witness).map (memoryChannel.emittedValue (-1)) := by
   exact inventory.memory_interactions_eq witness (memoryChannel.emittedValue (-1)) recordFor_interactions
 
-/-- The decoder depends only on the two finalizer row arrays and their shared prover data.
+/-- The decoder depends only on the two finalizer row arrays.
 Different physical proof views may retain different suffixes or verifier interfaces. -/
 theorem records_congr_rows {otherAuxiliary : List (Component (ZMod p))}
     {otherChannels : List (RawChannel (ZMod p))}
-    (first : EnsembleWitness (ensemble auxiliary channels))
-    (second : EnsembleWitness (ensemble otherAuxiliary otherChannels))
-    (rows : (first.tables.take 2).map (·.table) = (second.tables.take 2).map (·.table))
-    (data : first.data = second.data) : records first = records second := by
+    {otherNames : (((inventory (p := p)).views.map (·.component) ++ otherAuxiliary).map (·.circuit.name)).Nodup}
+    (first : EnsembleWitness (ensemble auxiliary channels names))
+    (second : EnsembleWitness (ensemble otherAuxiliary otherChannels otherNames))
+    (rows : (first.tables.take 2).map (·.table) = (second.tables.take 2).map (·.table)) :
+    records first = records second := by
   have firstBound : 2 ≤ first.tables.length := by
     rw [← first.same_length]
     simp [ensemble, OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
@@ -220,11 +232,8 @@ theorem records_congr_rows {otherAuxiliary : List (Component (ZMod p))}
       List.getElem?_eq_getElem (by omega : index.val < first.tables.length),
       List.getElem?_eq_getElem (by omega : index.val < second.tables.length),
       Option.map_some, Option.some.injEq] using same
-  have firstData (index : ℕ) (bound : index < first.tables.length) :
-      (first.tables[index]'bound).data = first.data := first.same_data _ (List.getElem_mem _)
-  have secondData (index : ℕ) (bound : index < second.tables.length) :
-      (second.tables[index]'bound).data = second.data := second.same_data _ (List.getElem_mem _)
-  simp only [records_eq, Table.environment, firstData, secondData, data,
-    arrays ⟨0, by decide⟩, arrays ⟨1, by decide⟩]
+  simp only [records_eq, arrays ⟨0, by decide⟩, arrays ⟨1, by decide⟩]
+  congr 1 <;> apply List.map_congr_left <;> intro row _ <;>
+    exact Component.rowOutput_congr _ rfl
 
 end SP1Clean.Soundness.FinalMemoryEnsemble

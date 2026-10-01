@@ -23,7 +23,7 @@ theorem component_permission_source (image : ProgramImage) (source : ExecutionSn
     (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
     (component : Component (ZMod p)) (member : component ∈ (ensemble image source auxiliary channels).allTables) :
-    component = (⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p)) ∨ WritePermission.Pulls component := by
+    component = ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)) ∨ WritePermission.Pulls component := by
   simp only [Ensemble.allTables, ensemble, List.mem_cons] at member
   rcases member with verifier | member
   · apply ProtectedLocalCore.component_permission_source image source component

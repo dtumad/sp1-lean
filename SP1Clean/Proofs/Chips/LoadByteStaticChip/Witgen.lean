@@ -56,13 +56,13 @@ theorem witgen_eq_original (input : Var Inputs (ZMod p)) (data : ProverData (ZMo
     FlatOperation.witgenStepWithData]
 
 /-- The alternative component is separate from the unchanged production registry. -/
-def component : Air.Flat.Component (ZMod p) := ⟨circuit⟩
+def component : Air.Flat.Component (ZMod p) := { circuit := circuit }
 
 /-- Every built cell is unchanged, for arbitrary inputs (including inactive rows). -/
 theorem buildRow_eq_original (input : Inputs (ZMod p)) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) :
     component.buildRow input data hint =
-      (Air.Flat.Component.mk LoadByteChip.circuit).buildRow input data hint :=
+      Air.Flat.Component.buildRow { circuit := LoadByteChip.circuit } input data hint :=
   witgen_eq_original _ _ _ _
 
 end SP1Clean.LoadByteStaticChip

@@ -200,15 +200,15 @@ theorem typedInteractionValuesWith_eq_nil_of_interactionsWith_eq_nil
   exact List.attach_map_val
 
 /-- Typed channel interactions emitted by every physical row of a Clean table. -/
-noncomputable def typedTableInteractionsWith (table : Table F) (channel : Channel F Message) :
+noncomputable def typedTableInteractionsWith (table : Table F) (data : ProverData F) (channel : Channel F Message) :
     List (TypedInteraction channel) :=
   table.table.flatMap fun row =>
-    typedInteractionValuesWith table.component.operations channel (table.environment row)
+    typedInteractionValuesWith table.component.operations channel (Environment.fromArray row data)
 
 /-- Erasing the typed table view recovers Clean's actual interaction list. -/
-@[simp] theorem typedTableInteractionsWith_raw (table : Table F) (channel : Channel F Message) :
-    (typedTableInteractionsWith table channel).map TypedInteraction.raw =
-      table.interactionsWith channel.toRaw := by
+@[simp] theorem typedTableInteractionsWith_raw (table : Table F) (data : ProverData F) (channel : Channel F Message) :
+    (typedTableInteractionsWith table data channel).map TypedInteraction.raw =
+      table.interactionsWith data channel.toRaw := by
   simp only [typedTableInteractionsWith, Table.interactionsWith, List.map_flatMap,
     typedInteractionValuesWith_raw]
 
@@ -216,7 +216,9 @@ noncomputable def typedTableInteractionsWith (table : Table F) (channel : Channe
 noncomputable def typedEnsembleInteractionsWith {PublicIO : TypeMap} [ProvableType PublicIO]
     {ensemble : Ensemble F PublicIO} (witness : EnsembleWitness ensemble)
     (channel : Channel F Message) : List (TypedInteraction channel) :=
-  witness.allTables.flatMap (typedTableInteractionsWith · channel)
+  typedInteractionValuesWith ensemble.verifierOperations channel
+      (.fromInput witness.publicInput witness.data) ++
+    witness.tables.flatMap (typedTableInteractionsWith · witness.data channel)
 
 /-- Erasure agrees exactly with Clean's ensemble-level channel interaction list. -/
 @[simp] theorem typedEnsembleInteractionsWith_raw {PublicIO : TypeMap} [ProvableType PublicIO]
@@ -225,13 +227,18 @@ noncomputable def typedEnsembleInteractionsWith {PublicIO : TypeMap} [ProvableTy
     (typedEnsembleInteractionsWith witness channel).map TypedInteraction.raw =
       witness.interactionsWith channel.toRaw := by
   simp only [typedEnsembleInteractionsWith, Air.Flat.EnsembleWitness.interactionsWith,
-    List.map_flatMap, typedTableInteractionsWith_raw]
+    List.map_append, List.map_flatMap, typedTableInteractionsWith_raw,
+    typedInteractionValuesWith_raw, EnsembleWitness.verifierInteractionsWith,
+    TableContext.interactionsWith, EnsembleWitness.tableContext]
 
 /-! ## Balance without an untyped lookup-key shadow -/
 
 section TypedBalance
 
 variable {p : ℕ} [Fact p.Prime]
+
+local instance : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+
 variable {Message : TypeMap} [ProvableType Message]
 variable {channel : Channel (ZMod p) Message}
 
@@ -413,22 +420,23 @@ theorem constraintsHold_assertionSubcircuit_of_mem {Input : TypeMap}
 
 /-- Clean requirements on a physical table prove the typed predicate of each exact active push. -/
 theorem guarantee_of_mem_producedTableMessages (table : Table (ZMod p))
+    (data : ProverData (ZMod p))
     (channel : Channel (ZMod p) Message) (hp : 2 < p)
-    (requirements : table.ChannelRequirements channel.toRaw) (msg : Message (ZMod p))
-    (member : msg ∈ producedMessages (typedTableInteractionsWith table channel)) :
-    channel.Guarantees msg table.data := by
+    (requirements : table.ChannelRequirements data channel.toRaw) (msg : Message (ZMod p))
+    (member : msg ∈ producedMessages (typedTableInteractionsWith table data channel)) :
+    channel.Guarantees msg data := by
   unfold producedMessages at member
   obtain ⟨interaction, interactionMem, messageEq⟩ := List.mem_map.mp member
   obtain ⟨typedMem, positive⟩ := List.mem_filter.mp interactionMem
   simp only [decide_eq_true_eq] at positive
-  have rawMem : interaction.raw ∈ table.interactionsWith channel.toRaw := by
+  have rawMem : interaction.raw ∈ table.interactionsWith data channel.toRaw := by
     rw [← typedTableInteractionsWith_raw]
     exact List.mem_map_of_mem typedMem
-  have rawRequirements : interaction.raw.Requirements table.data :=
-    (Table.channelRequirements_iff_forall table channel.toRaw).mp requirements
+  have rawRequirements : interaction.raw.Requirements data :=
+    (Table.channelRequirements_iff_forall table data channel.toRaw).mp requirements
       interaction.raw rawMem
   rw [← messageEq]
-  exact interaction.guarantee_of_requirements table.data hp rawRequirements positive
+  exact interaction.guarantee_of_requirements data hp rawRequirements positive
 
 /-- If every active typed pull message satisfies the typed channel predicate, then the original
 operation list has Clean's exact `ChannelGuarantees`.  This transports semantic grounding back to

@@ -387,7 +387,7 @@ def branchChipRowCodec :
       exact eval_branchChipDirectOutput (p := p) cols data }
 
 theorem branchChip_lookups_empty :
-    (⟨BranchChip.circuit (p := p)⟩ :
+    ({ circuit := BranchChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq,
     Air.Flat.Component.rowOperations_mk]
@@ -1134,11 +1134,11 @@ private theorem branchChipRowCodec_inputReal
     (data : ProverData (ZMod p)) :
     let assignment := branchChipRowCodec.assignment cols data
     Expression.eval assignment.environment
-        (⟨BranchChip.circuit (p := p)⟩ :
+        ({ circuit := BranchChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowInputVar.is_real =
       Expression.eval assignment.environment
         (branchSum
-          (⟨BranchChip.circuit (p := p)⟩ :
+          ({ circuit := BranchChip.circuit (p := p) } :
             Air.Flat.Component (ZMod p)).rowOffset) := by
   dsimp only
   let assignment := branchChipRowCodec.assignment cols data
@@ -1201,40 +1201,40 @@ theorem branchChip_constraints_constructive
     let assignment := branchChipRowCodec.assignment
       (branchChipOracle.deconfigure rustCols) data
     List.Forall (· = 0) (branchChipOracle.assertZeros rustCols) ↔
-      (⟨BranchChip.circuit (p := p)⟩ :
+      ({ circuit := BranchChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
   let cols := branchChipOracle.deconfigure rustCols
   let assignment := branchChipRowCodec.assignment cols data
   have hbind : BindsChipOutput BranchChip.main assignment.environment
-      (⟨BranchChip.circuit (p := p)⟩ :
+      ({ circuit := BranchChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨BranchChip.circuit (p := p)⟩ :
+      ({ circuit := BranchChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [BranchChip.circuit_main_eq] at h
     exact h
   have hinputReal :
       Expression.eval assignment.environment
-          (⟨BranchChip.circuit (p := p)⟩ :
+          ({ circuit := BranchChip.circuit (p := p) } :
             Air.Flat.Component (ZMod p)).rowInputVar.is_real =
         Expression.eval assignment.environment
           (branchSum
-            (⟨BranchChip.circuit (p := p)⟩ :
+            ({ circuit := BranchChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOffset) :=
     branchChipRowCodec_inputReal (p := p) cols data
   have hlegacy := branchChip_constraints_faithful (p := p)
     assignment.environment
-    (⟨BranchChip.circuit (p := p)⟩ :
+    ({ circuit := BranchChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨BranchChip.circuit (p := p)⟩ :
+    ({ circuit := BranchChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
   have hassertions :
       List.Forall (· = 0) (branchChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            (⟨BranchChip.circuit (p := p)⟩ :
+            ({ circuit := BranchChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols, ChipOracle.nativeAssertZeros_deconfigure,
       Air.Flat.Component.rowOperations_mk,
@@ -2316,25 +2316,25 @@ theorem branchChip_interactions_constructive
       (branchChipOracle.deconfigure rustCols) data
     List.Perm
       (nativeAccesses assignment.environment
-        (⟨BranchChip.circuit (p := p)⟩ :
+        ({ circuit := BranchChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).operations)
       (branchChipOracle.rustAccesses rustCols) := by
   dsimp only
   let cols := branchChipOracle.deconfigure rustCols
   let assignment := branchChipRowCodec.assignment cols data
   have hbind : BindsChipOutput BranchChip.main assignment.environment
-      (⟨BranchChip.circuit (p := p)⟩ :
+      ({ circuit := BranchChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨BranchChip.circuit (p := p)⟩ :
+      ({ circuit := BranchChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [BranchChip.circuit_main_eq] at h
     exact h
   have hlegacy := branchChip_interactions_faithful
     (p := p) assignment.environment
-    (⟨BranchChip.circuit (p := p)⟩ :
+    ({ circuit := BranchChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨BranchChip.circuit (p := p)⟩ :
+    ({ circuit := BranchChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
     (branchChipRowCodec_inputReal (p := p) cols data)
   rw [nativeAccesses_component_eq_rowOperations

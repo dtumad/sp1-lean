@@ -143,6 +143,7 @@ theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Inputs
   rfl
 
 def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs MemoryMsg where
+  name := "sp1.native.memory.snapshot.ram"
   main := main snapshot
   elaborated := elaborated snapshot
   Spec input output _ := MemoryBoundary.SnapshotAtSpec snapshot (Word.toNat input.bytes[0].address) output

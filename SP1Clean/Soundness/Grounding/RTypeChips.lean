@@ -62,8 +62,8 @@ def subwChipDescriptor : SupportedChip p :=
 omit [Fact (2 ^ 25 < p)] in
 /-- The SUBW semantic row view denoted by a physical circuit environment. -/
 noncomputable def subwViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
-  SubwChip.rowView ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+  SubwChip.rowView (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 theorem subwViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     ((subwChipDescriptor (p := p)).decodeRow data physical).view =
@@ -72,7 +72,7 @@ theorem subwViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMo
 omit [Fact (2 ^ 25 < p)] in
 theorem subwChipDescriptor_table :
     (subwChipDescriptor (p := p)).table =
-      (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- SUBW's explicit sign-extended output row, kept as a symbolic rewrite boundary. -/
@@ -86,7 +86,7 @@ omit [Fact (2 ^ 25 < p)] in
 /-- SUBW's completed output row is the evaluated symbolic output (definitional; the rewrite surface
 the view lemmas below use, kept folded as `circuit.output`). -/
 theorem subwChip_rowOutput_eq (env : Environment (ZMod p)) :
-    (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env =
+    ({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env =
       Eval.eval env ((SubwChip.circuit (p := p)).output (varFromOffset SubwChip.Inputs 0)
         (size SubwChip.Inputs)) := rfl
 
@@ -131,7 +131,7 @@ theorem subwViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- SUBW's public exposed Memory list evaluates to the canonical R-type six-pack. -/
 theorem subwChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨SubwChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := SubwChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (rtypeMemoryInteractions (subwViewOf env)).map TypedInteraction.raw := by
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
@@ -223,15 +223,15 @@ def mulChipDescriptor : SupportedChip p :=
   ⟨.mul, MulChip.kind, MulChip.circuit, rfl⟩
 
 noncomputable def mulViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
-  MulChip.rowView ((⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+  MulChip.rowView (({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 omit [Fact (2 ^ 17 < p)] in
 /-- MUL's semantic selector is the completed component's input selector.  Naming this projection
 prevents readiness consumers from normalizing the multiplication output just to recover `is_real`. -/
 theorem mulViewOf_isReal (env : Environment (ZMod p)) :
     (mulViewOf env).is_real =
-      ((⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).is_real := by
+      (({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real := by
   simp only [mulViewOf, MulChip.rowView]
 
 theorem mulViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -240,7 +240,7 @@ theorem mulViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod
 
 theorem mulChipDescriptor_table :
     (mulChipDescriptor (p := p)).table =
-      (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 17 < p)] in
 /-- MUL's explicit output row over its 54 local cells. -/
@@ -256,7 +256,7 @@ theorem mulChip_circuit_output_eq (input : Var MulChip.Inputs (ZMod p)) (offset 
 omit [Fact (2 ^ 17 < p)] in
 /-- MUL's completed output row is the evaluated symbolic output (definitional). -/
 theorem mulChip_rowOutput_eq (env : Environment (ZMod p)) :
-    (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env =
+    ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowOutput env =
       Eval.eval env ((MulChip.circuit (p := p)).output (varFromOffset MulChip.Inputs 0)
         (size MulChip.Inputs)) := rfl
 
@@ -296,7 +296,7 @@ theorem mulViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 17 < p)] in
 /-- MUL's exposed Memory list evaluates to the canonical R-type six-pack. -/
 theorem mulChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨MulChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (rtypeMemoryInteractions (mulViewOf env)).map TypedInteraction.raw := by
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
@@ -374,14 +374,14 @@ def divRemChipDescriptor : SupportedChip p :=
 
 noncomputable def divRemViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   DivRemChip.rowView
-    ((⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+    (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 omit [Fact (2 ^ 17 < p)] in
 /-- DivRem's semantic selector is the completed component's input selector. -/
 theorem divRemViewOf_isReal (env : Environment (ZMod p)) :
     (divRemViewOf env).is_real =
-      ((⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).is_real := by
+      (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real := by
   simp only [divRemViewOf, DivRemChip.rowView]
 
 theorem divRemViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
@@ -390,7 +390,7 @@ theorem divRemViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (Z
 
 theorem divRemChipDescriptor_table :
     (divRemChipDescriptor (p := p)).table =
-      (⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Scalar state projection of the completed DivRem view.  This theorem, rather than a whole-row
@@ -401,7 +401,7 @@ theorem divRemViewOf_state (env : Environment (ZMod p)) :
   let input : Var DivRemChip.Inputs (ZMod p) := varFromOffset DivRemChip.Inputs 0
   let offset := size DivRemChip.Inputs
   have outputEq : Eval.eval env ((DivRemChip.circuit (p := p)).output input offset) =
-      (⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env := by
+      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   simp only [divRemViewOf, DivRemChip.rowView]
   rw [← outputEq]
@@ -415,7 +415,7 @@ theorem divRemViewOf_adapter (env : Environment (ZMod p)) :
   let input : Var DivRemChip.Inputs (ZMod p) := varFromOffset DivRemChip.Inputs 0
   let offset := size DivRemChip.Inputs
   have outputEq : Eval.eval env ((DivRemChip.circuit (p := p)).output input offset) =
-      (⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env := by
+      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   simp only [divRemViewOf, DivRemChip.rowView]
   rw [← outputEq]
@@ -428,7 +428,7 @@ theorem divRemViewOf_isReal_eval (env : Environment (ZMod p)) :
     (divRemViewOf env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) DivRemChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset DivRemChip.Inputs 0) =
-      (⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset DivRemChip.Inputs 0 env
   rw [divRemViewOf_isReal, inputEq]
 
@@ -442,7 +442,7 @@ theorem divRemViewOf_rdWrite (env : Environment (ZMod p)) :
   let input : Var DivRemChip.Inputs (ZMod p) := varFromOffset DivRemChip.Inputs 0
   let offset := size DivRemChip.Inputs
   have outputEq : Eval.eval env ((DivRemChip.circuit (p := p)).output input offset) =
-      (⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env := by
+      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   simp only [divRemViewOf, DivRemChip.rowView]
   rw [← outputEq]
@@ -451,7 +451,7 @@ theorem divRemViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 17 < p)] in
 /-- DivRem's exposed Memory list evaluates to the canonical R-type six-pack. -/
 theorem divRemChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨DivRemChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (rtypeMemoryInteractions (divRemViewOf env)).map TypedInteraction.raw := by
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]

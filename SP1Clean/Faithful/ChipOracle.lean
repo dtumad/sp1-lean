@@ -823,13 +823,13 @@ structure NativeRowAssignment {F : Type} [FiniteField F] {Input Output : TypeMap
     (data : ProverData F) where
   row : Array F
   input : Input F
-  width_eq : row.size = (⟨circuit⟩ : Air.Flat.Component F).width
+  width_eq : row.size = ({ circuit := circuit } : Air.Flat.Component F).width
   rowInput_eq :
-    (⟨circuit⟩ : Air.Flat.Component F).rowInput (Environment.fromArray row data) = input
+    ({ circuit := circuit } : Air.Flat.Component F).rowInput (Environment.fromArray row data) = input
   rowOutput_eq :
     ProvableType.eval (Environment.fromArray row data)
-      ((circuit.main (⟨circuit⟩ : Air.Flat.Component F).rowInputVar).output
-        (⟨circuit⟩ : Air.Flat.Component F).rowOffset) = cols
+      ((circuit.main ({ circuit := circuit } : Air.Flat.Component F).rowInputVar).output
+        ({ circuit := circuit } : Air.Flat.Component F).rowOffset) = cols
 
 namespace NativeRowAssignment
 
@@ -882,7 +882,7 @@ theorem rowInput_inputFirstRow {F : Type} [FiniteField F]
     {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit F Input Output) (input : Input F)
     {n : ℕ} (locals : Vector F n) (data : ProverData F) :
-    (⟨circuit⟩ : Air.Flat.Component F).rowInput
+    ({ circuit := circuit } : Air.Flat.Component F).rowInput
         (Environment.fromArray (inputFirstRow input locals) data) = input := by
   simp only [Air.Flat.Component.rowInput, valueFromOffset]
   rw [ProvableType.fromElements_eq_iff]
@@ -966,8 +966,8 @@ variable {circuit : GeneralFormalCircuit F Input Output} {cols : Output F} {data
 /-- A reconstructed component row binds the circuit's canonical output to the decoded native row. -/
 theorem bindsOutput (assignment : NativeRowAssignment circuit cols data) :
     BindsChipOutput circuit.main assignment.environment
-      (⟨circuit⟩ : Air.Flat.Component F).rowInputVar
-      (⟨circuit⟩ : Air.Flat.Component F).rowOffset cols := by
+      ({ circuit := circuit } : Air.Flat.Component F).rowInputVar
+      ({ circuit := circuit } : Air.Flat.Component F).rowOffset cols := by
   unfold BindsChipOutput environment
   rw [← ProvableStruct.eval_eq_eval]
   rw [CircuitType.eval_expression]
@@ -981,10 +981,10 @@ remain covered by the interaction half of `ChipFaithful`. -/
 theorem constraintsHold_iff_nativeAssertZeros {F : Type} [FiniteField F]
     {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit F Input Output) (env : Environment F)
-    (lookupsEmpty : (⟨circuit⟩ : Air.Flat.Component F).operations.lookups = []) :
-    (⟨circuit⟩ : Air.Flat.Component F).operations.ConstraintsHold env ↔
+    (lookupsEmpty : ({ circuit := circuit } : Air.Flat.Component F).operations.lookups = []) :
+    ({ circuit := circuit } : Air.Flat.Component F).operations.ConstraintsHold env ↔
       List.Forall (· = 0)
-        (nativeAssertZeros env (⟨circuit⟩ : Air.Flat.Component F).rowOperations) := by
+        (nativeAssertZeros env ({ circuit := circuit } : Air.Flat.Component F).rowOperations) := by
   rw [Operations.ConstraintsHold, lookupsEmpty, Air.Flat.Component.constraints_eq]
   simp [nativeAssertZeros, List.forall_iff_forall_mem]
 
@@ -993,8 +993,8 @@ their evaluated whole-chip access multisets are identical. -/
 theorem nativeAccesses_component_eq_rowOperations {p : ℕ} [Fact p.Prime]
     {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output) (env : Environment (ZMod p)) :
-    nativeAccesses env (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations =
-      nativeAccesses env (⟨circuit⟩ : Air.Flat.Component (ZMod p)).rowOperations := by
+    nativeAccesses env ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations =
+      nativeAccesses env ({ circuit := circuit } : Air.Flat.Component (ZMod p)).rowOperations := by
   simp only [nativeAccesses, unexpectedInteractions, Operations.interactionsWith,
     Air.Flat.Component.interactions_eq]
 
@@ -1021,7 +1021,7 @@ structure ChipFaithful {p : ℕ} [Fact p.Prime]
   constraints : ∀ rustCols data,
     let assignment := codec.assignment (oracle.deconfigure rustCols) data
     List.Forall (· = 0) (oracle.assertZeros rustCols) ↔
-      (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+      ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
         assignment.environment
   interactions : ∀ rustCols data,
     List.Forall (· = 0) (oracle.assertZeros rustCols) →
@@ -1029,7 +1029,7 @@ structure ChipFaithful {p : ℕ} [Fact p.Prime]
     List.Perm
       (LookupAccessList.active
         (nativeAccesses assignment.environment
-          (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations))
+          ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations))
       (LookupAccessList.active (oracle.rustAccesses rustCols))
 
 namespace ChipFaithful
@@ -1047,13 +1047,13 @@ theorem interactions_of_nativeConstraints
     (faithful : ChipFaithful Input NativeCols RustCols circuit codec oracle)
     (rustCols : RustCols (ZMod p)) (data : ProverData (ZMod p))
     (hNative :
-      (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+      ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
         (codec.assignment (oracle.deconfigure rustCols) data).environment) :
     List.Perm
       (LookupAccessList.active
         (nativeAccesses
           (codec.assignment (oracle.deconfigure rustCols) data).environment
-          (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations))
+          ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations))
       (LookupAccessList.active (oracle.rustAccesses rustCols)) := by
   apply faithful.interactions rustCols data
   exact (faithful.constraints rustCols data).mpr hNative

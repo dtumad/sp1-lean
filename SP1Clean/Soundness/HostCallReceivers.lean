@@ -20,7 +20,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 def halt : ReceiverView (HostCallChip.channel (p := p)) where
-  component := ⟨HostHaltChip.circuit⟩
+  component := { circuit := HostHaltChip.circuit }
   message env := eval env (varFromOffset HostHaltChip.Inputs 0).call
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
@@ -29,7 +29,7 @@ def halt : ReceiverView (HostCallChip.channel (p := p)) where
     exact HostHaltChip.host_values _ _ env
 
 def enter : ReceiverView (HostCallChip.channel (p := p)) where
-  component := ⟨HostEnterChip.circuit⟩
+  component := { circuit := HostEnterChip.circuit }
   message env := eval env (varFromOffset HostEnterChip.Inputs 0)
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
@@ -38,7 +38,7 @@ def enter : ReceiverView (HostCallChip.channel (p := p)) where
     exact HostEnterChip.host_values _ _ env
 
 def commit (deferred : Bool) (slot : Fin 8) : ReceiverView (HostCallChip.channel (p := p)) where
-  component := ⟨HostCommitChip.circuit deferred slot⟩
+  component := { circuit := HostCommitChip.circuit deferred slot }
   message env := eval env (varFromOffset HostCommitChip.Inputs 0).call
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
@@ -47,7 +47,7 @@ def commit (deferred : Bool) (slot : Fin 8) : ReceiverView (HostCallChip.channel
     exact HostCommitChip.host_values deferred slot _ _ env
 
 def hintLength (empty : Bool) : ReceiverView (HostCallChip.channel (p := p)) where
-  component := ⟨HostHintLengthChip.circuit empty⟩
+  component := { circuit := HostHintLengthChip.circuit empty }
   message env := eval env (varFromOffset HostHintLengthChip.Inputs 0).call
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]

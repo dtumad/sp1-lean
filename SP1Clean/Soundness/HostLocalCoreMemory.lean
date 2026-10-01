@@ -185,7 +185,7 @@ private theorem interior_component_binary
   · by_cases last : 6 + index = 59
     · have equal : index = 53 := by omega
       subst index
-      change NativeCore.MemoryBinary (⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p))
+      change NativeCore.MemoryBinary ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p))
       apply NativeCore.memoryBinary_of_silent
       change memoryChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
       simp [memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
