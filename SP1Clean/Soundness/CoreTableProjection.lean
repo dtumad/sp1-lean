@@ -19,9 +19,9 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 
 omit [Fact (2 ^ 24 < p)] in
 theorem typedTableInteractions_nil {Message : TypeMap} [ProvableType Message]
-    (table : Table (ZMod p)) (channel : Channel (ZMod p) Message)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (channel : Channel (ZMod p) Message)
     (silent : channel.toRaw ∉ table.component.circuit.channels) :
-    typedTableInteractionsWith table channel = [] := by
+    typedTableInteractionsWith table data channel = [] := by
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedTableInteractionsWith_raw, List.map_nil]
   exact table.interactionsWith_nil_of_channel_not_mem silent
@@ -76,52 +76,20 @@ theorem pullsAt_flatMap (rows : List (RowFacts p)) (loc : MemLoc) :
   rw [filter_coe_flatMap]
   simp only [pullsAt, Multiset.filter_coe, rowPullsAt]
 
-omit [Fact (2 ^ 24 < p)] in
-/-- A verifier preserving the standard State interactions emits exactly the two public endpoints. -/
-theorem verifier_state_interactions_of_main {assembly : Ensemble (ZMod p) SP1PublicIO}
+/-- Preserving the evaluated State ledger preserves both public endpoints, occurrence for occurrence. -/
+theorem verifier_state_interactions_of_values {assembly : Ensemble (ZMod p) SP1PublicIO}
     (witness : EnsembleWitness assembly)
-    (main : ∀ input offset, ((assembly.verifier.main input).operations offset).interactionsWith stateChannel.toRaw =
-      ((sp1StateVerifierMain input).operations offset).interactionsWith stateChannel.toRaw) :
-    typedTableInteractionsWith witness.verifierTable stateChannel =
+    (same : assembly.verifierOperations.interactionValuesWith stateChannel.toRaw
+        (Environment.fromInput witness.publicInput witness.data) =
+      sp1StateVerifierProgram.circuitOperations.interactionValuesWith stateChannel.toRaw
+        (Environment.fromInput witness.publicInput witness.data)) :
+    typedInteractionValuesWith assembly.verifierOperations stateChannel
+        (Environment.fromInput witness.publicInput witness.data) =
       [TypedInteraction.pulledIfValue stateChannel 1 (finalBoundaryStateMessage witness.publicInput),
        TypedInteraction.pushedIfValue stateChannel 1 (initialBoundaryStateMessage witness.publicInput)] := by
-  have inputEval : Eval.eval (Environment.fromInput witness.publicInput witness.data)
-      (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)) = witness.publicInput :=
-    ProvableType.eval_fromInput_varFromOffset_zero witness.publicInput witness.data
-  have finalEval : Eval.eval (Environment.fromInput witness.publicInput witness.data)
-      (⟨(varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_clk_high,
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_clk_low,
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_pc0,
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_pc1,
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_pc2⟩ :
-        StateMsg (Expression (ZMod p))) =
-      (⟨witness.publicInput.final_clk_high, witness.publicInput.final_clk_low,
-        witness.publicInput.final_pc0, witness.publicInput.final_pc1,
-        witness.publicInput.final_pc2⟩ : StateMsg (ZMod p)) := by
-    rw [eval_finalBoundaryStateMessage, inputEval]
-  have initialEval : Eval.eval (Environment.fromInput witness.publicInput witness.data)
-      (⟨(varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_clk_high,
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_clk_low,
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_pc0,
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_pc1,
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_pc2⟩ :
-        StateMsg (Expression (ZMod p))) =
-      (⟨witness.publicInput.init_clk_high, witness.publicInput.init_clk_low,
-        witness.publicInput.init_pc0, witness.publicInput.init_pc1,
-        witness.publicInput.init_pc2⟩ : StateMsg (ZMod p)) := by
-    rw [eval_initialBoundaryStateMessage, inputEval]
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
-  rw [typedTableInteractionsWith_raw]
-  unfold Table.interactionsWith
-  rw [EnsembleWitness.verifierTable_flatMap]
-  rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
-  change List.map (AbstractInteraction.eval (Environment.fromInput witness.publicInput witness.data))
-      (((assembly.verifier.main
-        (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p))).operations
-          (size SP1PublicIO)).interactionsWith stateChannel.toRaw) = _
-  rw [main, sp1StateVerifierMain_stateInteractions]
-  simp only [List.map_cons, List.map_nil]
-  rw [Channel.eval_pulled, Channel.eval_pushed, finalEval, initialEval]
+  rw [typedInteractionValuesWith_raw, same, ← typedInteractionValuesWith_raw,
+    stateVerifier_stateInteractions]
   rfl
 
 end SP1Clean.Soundness.NativeCore

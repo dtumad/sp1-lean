@@ -56,18 +56,18 @@ variable [Fact (2 ^ 25 < p)]
 
 omit [Fact (2 ^ 24 < p)] [Fact (2 ^ 25 < p)] in
 theorem activeSystemRows_member {α : Type} (table : Table (ZMod p))
-    (decode : Table (ZMod p) → Array (ZMod p) → α) (gate : α → ZMod p)
+    (decode : Array (ZMod p) → α) (gate : α → ZMod p)
     {row : α} (member : row ∈ activeSystemRows table decode gate) :
-    ∃ physical ∈ table.table, decode table physical = row ∧ gate row = 1 := by
+    ∃ physical ∈ table.table, decode physical = row ∧ gate row = 1 := by
   obtain ⟨mapped, active⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   exact ⟨physical, physicalMem, rfl, of_decide_eq_true active⟩
 
 omit [Fact (2 ^ 25 < p)] in
-theorem syscall_halt_binary (table : Table (ZMod p))
-    (component : table.component = ⟨SyscallInstrsChip.circuit⟩) (constraints : table.Constraints)
+theorem syscall_halt_binary (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := SyscallInstrsChip.circuit }) (constraints : table.Constraints data)
     {physical : Array (ZMod p)} (member : physical ∈ table.table) :
-    (syscallInstrsRow table physical).is_halt = 0 ∨ (syscallInstrsRow table physical).is_halt = 1 := by
+    (syscallInstrsRow data physical).is_halt = 0 ∨ (syscallInstrsRow data physical).is_halt = 1 := by
   have checked := constraints physical member
   rw [component] at checked
   have binary := SyscallInstrsChip.haltSelectorBinary_of_shallow _ _ _

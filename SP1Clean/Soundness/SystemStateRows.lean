@@ -50,11 +50,11 @@ theorem statePairs_signedBinary {α : Type*} (rows : List α) (gate : α → ZMo
   exact statePair_signed_binary (gate row) (binary row rowMem) (edge row).1 (edge row).2 interaction member
 
 /-- A physical StateBump table's selector is binary from local constraints and Byte guarantees. -/
-theorem stateBumpRow_binary (table : Table (ZMod p))
-    (component : table.component = ⟨StateBumpChip.circuit⟩) (constraints : table.Constraints)
-    (byte : table.ChannelGuarantees byteChannel.toRaw) (physical : Array (ZMod p))
+theorem stateBumpRow_binary (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := StateBumpChip.circuit }) (constraints : table.Constraints data)
+    (byte : table.ChannelGuarantees data byteChannel.toRaw) (physical : Array (ZMod p))
     (member : physical ∈ table.table) :
-    (stateBumpRow table physical).is_real = 0 ∨ (stateBumpRow table physical).is_real = 1 :=
-  (stateBumpTable_spec_of_component table component constraints byte physical member).1
+    (stateBumpRow data physical).is_real = 0 ∨ (stateBumpRow data physical).is_real = 1 :=
+  (stateBumpTable_spec_of_component table data component constraints byte physical member).1
 
 end SP1Clean.Soundness

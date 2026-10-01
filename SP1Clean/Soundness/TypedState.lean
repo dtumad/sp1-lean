@@ -788,48 +788,47 @@ theorem eval_initialBoundaryStateMessage (env : Environment (ZMod p))
   simp only [circuit_norm]
 
 /-- The public verifier contributes exactly the public final pull followed by the public initial push. -/
-theorem witness_verifierStateInteractions_eq
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations stateChannel
-      (Environment.fromInput witness.publicInput witness.data) =
+theorem stateVerifier_stateInteractions
+    (input : SP1PublicIO (ZMod p)) (data : ProverData (ZMod p)) :
+    typedInteractionValuesWith (sp1StateVerifierProgram (p := p)).circuitOperations stateChannel
+      (Environment.fromInput input data) =
       [TypedInteraction.pulledIfValue stateChannel 1
-        ⟨witness.publicInput.final_clk_high, witness.publicInput.final_clk_low,
-          witness.publicInput.final_pc0, witness.publicInput.final_pc1,
-          witness.publicInput.final_pc2⟩,
+        ⟨input.final_clk_high, input.final_clk_low,
+          input.final_pc0, input.final_pc1,
+          input.final_pc2⟩,
        TypedInteraction.pushedIfValue stateChannel 1
-        ⟨witness.publicInput.init_clk_high, witness.publicInput.init_clk_low,
-          witness.publicInput.init_pc0, witness.publicInput.init_pc1,
-          witness.publicInput.init_pc2⟩] := by
-  have inputEval : Eval.eval (Environment.fromInput witness.publicInput witness.data)
-      (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)) = witness.publicInput :=
-    ProvableType.eval_fromInput_varFromOffset_zero witness.publicInput witness.data
-  have finalEval : Eval.eval (Environment.fromInput witness.publicInput witness.data)
+        ⟨input.init_clk_high, input.init_clk_low,
+          input.init_pc0, input.init_pc1,
+          input.init_pc2⟩] := by
+  have inputEval : Eval.eval (Environment.fromInput input data)
+      (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)) = input :=
+    ProvableType.eval_fromInput_varFromOffset_zero input data
+  have finalEval : Eval.eval (Environment.fromInput input data)
       (⟨(varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_clk_high,
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_clk_low,
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_pc0,
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_pc1,
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).final_pc2⟩ :
         StateMsg (Expression (ZMod p))) =
-      (⟨witness.publicInput.final_clk_high, witness.publicInput.final_clk_low,
-        witness.publicInput.final_pc0, witness.publicInput.final_pc1,
-        witness.publicInput.final_pc2⟩ : StateMsg (ZMod p)) := by
+      (⟨input.final_clk_high, input.final_clk_low,
+        input.final_pc0, input.final_pc1,
+        input.final_pc2⟩ : StateMsg (ZMod p)) := by
     rw [eval_finalBoundaryStateMessage, inputEval]
-  have initialEval : Eval.eval (Environment.fromInput witness.publicInput witness.data)
+  have initialEval : Eval.eval (Environment.fromInput input data)
       (⟨(varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_clk_high,
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_clk_low,
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_pc0,
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_pc1,
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p)).init_pc2⟩ :
         StateMsg (Expression (ZMod p))) =
-      (⟨witness.publicInput.init_clk_high, witness.publicInput.init_clk_low,
-        witness.publicInput.init_pc0, witness.publicInput.init_pc1,
-        witness.publicInput.init_pc2⟩ : StateMsg (ZMod p)) := by
+      (⟨input.init_clk_high, input.init_clk_low,
+        input.init_pc0, input.init_pc1,
+        input.init_pc2⟩ : StateMsg (ZMod p)) := by
     rw [eval_initialBoundaryStateMessage, inputEval]
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map]
-  simp only [Operations.interactionsWith, sp1Ensemble, Ensemble.verifierOperations,
-    sp1StateVerifierProgram]
-  change List.map (AbstractInteraction.eval (Environment.fromInput witness.publicInput witness.data))
+  simp only [Operations.interactionsWith, sp1StateVerifierProgram]
+  change List.map (AbstractInteraction.eval (Environment.fromInput input data))
       (((sp1StateVerifierMain
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p))).operations
           (size SP1PublicIO)).interactionsWith stateChannel.toRaw) = _
@@ -896,7 +895,10 @@ theorem typedEnsembleStateInteractions_eq
             (syscallInstrsRow witness.data row).is_real
             (SyscallInstrsChip.statePushedMessage
               (syscallInstrsRow witness.data row))]))) := by
-  rw [typedEnsembleInteractionsWith_partition, witness_verifierStateInteractions_eq,
+  have verifier := stateVerifier_stateInteractions witness.publicInput witness.data
+  change typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations stateChannel
+    (Environment.fromInput witness.publicInput witness.data) = _ at verifier
+  rw [typedEnsembleInteractionsWith_partition, verifier,
     decodedWitnessStateInteractions_eq]
   rw [show witness.tables.drop 25 =
       (witness.tables.drop 25).take 27 ++ witness.tables.drop 52 from by

@@ -19,7 +19,7 @@ decomposition threads them through verbatim — no per-chip `MemoryEmissionShape
 
 The chain mirrors, lemma for lemma:
 
-* `witness_verifierMemoryInteractions_eq_nil` ← `witness_verifierStateInteractions_eq` (here the
+* `witness_verifierMemoryInteractions_eq_nil` ← `stateVerifier_stateInteractions` (here the
   verifier is nil, not the boundary pair);
 * `witness_nonMemoryProviderTable_memoryInteractions_eq_nil` /
   `witness_providerMemoryInteractions_eq` ← `witness_providerStateInteractions_eq_nil` (here the

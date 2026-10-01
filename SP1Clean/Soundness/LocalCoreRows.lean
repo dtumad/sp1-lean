@@ -14,7 +14,7 @@ it does not assert an execution order or host semantics.
 namespace SP1Clean.Soundness.LocalCore
 
 open SP1Clean.Soundness.NativeCore (ExecutionRow typedTableInteractions_nil byteProvider_channel_silent
-  flatMap_split flatMap_filter_inactive pushesAt_flatMap pullsAt_flatMap verifier_state_interactions_of_main)
+  flatMap_split flatMap_filter_inactive pushesAt_flatMap pullsAt_flatMap verifier_state_interactions_of_values)
 open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
 open TimedGrounding
 
@@ -35,8 +35,8 @@ def systemTable {image : ProgramImage} {source : ExecutionSnapshot} (witness : E
 theorem systemTable_component {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 4) :
     (systemTable witness index).component =
-      ([⟨MemoryBumpChip.circuit⟩, ⟨StateBumpChip.circuit⟩, ⟨HaltChip.circuit⟩,
-        ⟨SyscallInstrsChip.circuit⟩] : List (Component (ZMod p)))[index.val] := by
+      ([{ circuit := MemoryBumpChip.circuit }, { circuit := StateBumpChip.circuit }, { circuit := HaltChip.circuit },
+        { circuit := SyscallInstrsChip.circuit }] : List (Component (ZMod p)))[index.val] := by
   have same := witness.same_circuits (55 + index.val)
     (by change 55 + index.val < (tables image source).length; rw [tables_length]; omega)
   apply same.symm.trans
@@ -44,12 +44,12 @@ theorem systemTable_component {image : ProgramImage} {source : ExecutionSnapshot
 
 theorem systemTable_mem {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 4) :
-    systemTable witness index ∈ witness.allTables :=
-  witness.mem_allTables_of_mem_tables (List.getElem_mem _)
+    systemTable witness index ∈ witness.tables :=
+  List.getElem_mem _
 
 theorem systemTable_constraints {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
-    (index : Fin 4) : (systemTable witness index).Constraints :=
+    (index : Fin 4) : (systemTable witness index).Constraints witness.data :=
   constraints _ (systemTable_mem witness index)
 
 private theorem systemTables_eq {image : ProgramImage} {source : ExecutionSnapshot}
@@ -64,7 +64,7 @@ private theorem systemTables_eq {image : ProgramImage} {source : ExecutionSnapsh
 
 private theorem byteTables_memory_silent {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
-    ((witness.tables.drop 32).take 23).flatMap (typedTableInteractionsWith · memoryChannel) = [] := by
+    ((witness.tables.drop 32).take 23).flatMap (typedTableInteractionsWith · witness.data memoryChannel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply typedTableInteractions_nil
@@ -79,16 +79,16 @@ tables. Fixed Program, Byte/Range, and StateBump are proved Memory-silent. -/
 theorem memoryInterior_split {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     memoryInterior witness =
-      (instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel) ++
-      typedTableInteractionsWith (systemTable witness 0) memoryChannel ++
-      typedTableInteractionsWith (systemTable witness 2) memoryChannel ++
-      typedTableInteractionsWith (systemTable witness 3) memoryChannel := by
-  have programSilent : typedTableInteractionsWith (programTable witness) memoryChannel = [] := by
+      (instructionTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel) ++
+      typedTableInteractionsWith (systemTable witness 0) witness.data memoryChannel ++
+      typedTableInteractionsWith (systemTable witness 2) witness.data memoryChannel ++
+      typedTableInteractionsWith (systemTable witness 3) witness.data memoryChannel := by
+  have programSilent : typedTableInteractionsWith (programTable witness) witness.data memoryChannel = [] := by
     apply typedTableInteractions_nil
     rw [programTable_component]
     change memoryChannel.toRaw ∉ [programChannel.toRaw]
     simp [memoryChannel_eq_programChannel_false]
-  have stateSilent : typedTableInteractionsWith (systemTable witness 1) memoryChannel = [] := by
+  have stateSilent : typedTableInteractionsWith (systemTable witness 1) witness.data memoryChannel = [] := by
     apply typedTableInteractions_nil
     rw [systemTable_component]
     change memoryChannel.toRaw ∉ [byteChannel.toRaw, stateChannel.toRaw]
@@ -111,23 +111,23 @@ noncomputable def activeInstructionRows {image : ProgramImage} {source : Executi
 noncomputable def executionRows {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) : List (ExecutionRow p) :=
   (activeInstructionRows witness).map .instruction ++
-    (activeSystemRows (systemTable witness 2) haltRow (·.is_real)).map .halt ++
-    (activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)).map .syscall
+    (activeSystemRows (systemTable witness 2) (haltRow witness.data) (·.is_real)).map .halt ++
+    (activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)).map .syscall
 
 /-- Actual active refresh pairs, kept separate from instruction execution. -/
 noncomputable def memoryRefreshes {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     List (MemoryMsg (ZMod p) × MemoryMsg (ZMod p)) :=
-  (activeSystemRows (systemTable witness 0) memoryBumpRow (·.is_real)).flatMap MemoryBumpChip.memoryPairs
+  (activeSystemRows (systemTable witness 0) (memoryBumpRow witness.data) (·.is_real)).flatMap MemoryBumpChip.memoryPairs
 
 /-- Selecting active ordinary rows preserves both complete Memory message lists. -/
 theorem activeInstructionRows_memory {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints) :
-    producedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel)) =
+    producedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel)) =
         (activeInstructionRows witness).flatMap (·.producedMemoryMessages witness.data) ∧
-    consumedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel)) =
+    consumedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel)) =
         (activeInstructionRows witness).flatMap (·.consumedMemoryMessages witness.data) := by
-  have ledger : (instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel) =
+  have ledger : (instructionTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel) =
       (instructionRows witness).flatMap (·.interactionsWith witness.data memoryChannel) :=
     (decodedInstructionInteractionsWith_eq_tables witness.data memoryChannel
       (instructionTables_aligned witness)).symm
@@ -159,11 +159,11 @@ theorem executionRows_memory_projection {image : ProgramImage} {source : Executi
       Multiset.filter (fun message => MemoryMsg.locOf message = loc)
         (↑(consumedMessages (memoryInterior witness)) : Multiset _) := by
   have ordinary := activeInstructionRows_memory witness constraints
-  have refresh := memoryBumpRows_projection (systemTable witness 0) (systemTable_component witness 0)
+  have refresh := memoryBumpRows_projection (systemTable witness 0) witness.data (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
-  have halt := haltRows_projection (systemTable witness 2) (systemTable_component witness 2)
+  have halt := haltRows_projection (systemTable witness 2) witness.data (systemTable_component witness 2)
     (systemTable_constraints witness constraints 2)
-  have syscall := syscallRows_projection (systemTable witness 3) (systemTable_component witness 3)
+  have syscall := syscallRows_projection (systemTable witness 3) witness.data (systemTable_component witness 3)
     (systemTable_constraints witness constraints 3)
   rw [pushesAt_flatMap, pullsAt_flatMap, memoryInterior_split]
   simp only [producedMessages_append, consumedMessages_append, ordinary.1, ordinary.2,
