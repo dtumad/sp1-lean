@@ -17,7 +17,6 @@ Modes (`--mode`):
          `main` core. Own-PR first: a deep PR's own entry holds its rebuilt closure, main's does not.
   main   for each sha of `--lineage` (HEAD first, so a re-run hits the previous attempt): `align`
          then `core` → newest main align → newest main core.
-  align  the exact `--core-key` (the core entry the same workflow run just saved), else as `main`.
 
 Only entries a job can actually restore are considered: those on refs/heads/main and, for a PR,
 on its own merge ref. Keys outside the layout are ignored. With no listing (API failure) the
@@ -26,7 +25,6 @@ exact key is empty and the fallbacks alone drive the restore.
 Usage:
   scripts/ci/cache_pick.py --mode pr --prefix <prefix> --pr 12 --lineage <file of shas> [--input list.json]
   scripts/ci/cache_pick.py --mode main --prefix <prefix> --lineage <file of shas>
-  scripts/ci/cache_pick.py --mode align --prefix <prefix> --core-key <key> --lineage <file of shas>
 """
 from __future__ import annotations
 
@@ -57,11 +55,8 @@ def _newest(entries: list[dict]) -> dict | None:
     return max(entries, key=lambda e: e["createdAt"]) if entries else None
 
 
-def pick(entries: list[dict], prefix: str, mode: str, lineage: list[str], pr: str | None = None,
-         core_key: str | None = None) -> str | None:
+def pick(entries: list[dict], prefix: str, mode: str, lineage: list[str], pr: str | None = None) -> str | None:
     """The exact key to restore, or None. Pure: no I/O."""
-    if mode == "align" and core_key and any(e["key"] == core_key for e in entries):
-        return core_key
     usable = []
     for e in entries:
         p = parse_key(e["key"])
@@ -105,17 +100,16 @@ def fetch(repo: str) -> list[dict]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--mode", choices=["pr", "main", "align"], required=True)
+    ap.add_argument("--mode", choices=["pr", "main"], required=True)
     ap.add_argument("--prefix", required=True)
     ap.add_argument("--lineage", required=True, help="file: first-parent shas, newest first (`git rev-list --first-parent -n 30 …`)")
     ap.add_argument("--pr", help="pull request number (mode pr)")
-    ap.add_argument("--core-key", help="exact core key to prefer (mode align)")
     ap.add_argument("--repo", default="dtumad/sp1-lean")
     ap.add_argument("--input", help="JSON listing instead of `gh cache list`")
     args = ap.parse_args()
     lineage = [line.strip() for line in open(args.lineage) if line.strip()]
     entries = json.load(open(args.input)) if args.input else fetch(args.repo)
-    key = pick(entries, args.prefix, args.mode, lineage, args.pr, args.core_key) or ""
+    key = pick(entries, args.prefix, args.mode, lineage, args.pr) or ""
     head = lineage[0] if lineage else ""
     print(f"pick={key}")
     print(f"fallback1={args.prefix}-align-{head}-")
