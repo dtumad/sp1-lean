@@ -170,7 +170,6 @@ import SP1Clean.Proofs.Completeness.ConsumerClosure
 import SP1Clean.Proofs.Completeness.EventBuckets
 import SP1Clean.Proofs.Completeness.ExecutionCompiler
 import SP1Clean.Proofs.Completeness.FieldClosure
-import SP1Clean.Proofs.Completeness.Footprint
 import SP1Clean.Proofs.Completeness.InstructionEvent
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Completeness.PhysicalFootprint

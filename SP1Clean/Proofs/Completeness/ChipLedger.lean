@@ -2,149 +2,49 @@ import SP1Clean.Model.CleanLedger
 import SP1Clean.Soundness.EnsembleChannels
 import SP1Clean.Soundness.TypedState
 import SP1Clean.Soundness.TypedMemoryBalance
-import SP1Clean.Soundness.TypedState
 import SP1Clean.Proofs.Completeness.ClosureRealization
 
-/-!
-# A built instruction table's State ledger
+/-! # State and Memory ledgers of generated traces
 
-The instruction-chip counterpart of `ProviderTables.lean`. A provider table's ledger is one access
-per row; an instruction table's is eight to twelve, spread across up to four buses — so the two need
-different machinery, and this is the State half of it.
+Filter the canonical witness's complete interaction list to obtain each bus's literal access
+ledger. The typed State and Memory emission theorems supply its row decomposition; no parallel
+per-table ledger representation is needed. State hand-off chains and per-location Memory chains
+then discharge the existing balance contracts, retaining the public boundary and count bounds.
 
-**Almost nothing here is per-chip, and that was the surprise.** Three facts already proved for all
-twenty-five chips do the work:
-
-* `<Chip>.traceTable_interactionsWith` (25/25) opens a built table into a `flatMap` over its rows;
-* `Soundness/TypedState.lean`'s `supportedChip_stateEmissionShape` (25/25) says a row's State
-  interactions are exactly the pull/push pair its `RowView` denotes — for *any* physical row array,
-  which is what lets it apply to a row the trace layer built;
-* `Model/CleanLedger.lean`'s `tableCleanAccesses_filterKind` restricts the whole-table ledger to one
-  bus, its side condition discharged once by `EnsembleChannels.interactions_channel_eq_of_kindOf`.
-
-So the State ledger of a built table is a theorem about an arbitrary `SupportedChip`, with no case
-split over the registry. The Memory half will not be so lucky: its emission shapes are family-typed
-by design, so that one really is an assembly of ten families.
+The current compiler emits no active HALT or syscall rows. Their padding/silence proofs below
+are properties of this compiler, not restrictions on the chip semantics or the full mixed target.
 -/
 
 namespace SP1Clean.Soundness
 
 open SP1Clean
-open Air.Flat (Component Table)
 open SP1Clean.Channels (stateChannel)
 open LookupAccessList
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-/-- The two State accesses one built row contributes: the pull at its current state, the push at its
-successor, both gated by the row's own selector. -/
-noncomputable def rowStateAccesses (chip : SupportedChip p) (data : ProverData (ZMod p))
-    (physical : Array (ZMod p)) : LookupAccessList :=
-  let row := chip.decodeRow data physical
-  [Interaction.toAccess (stateChannel.pulledIfValue row.is_real (statePullMessage row)),
-    Interaction.toAccess (stateChannel.pushedIfValue row.is_real (statePushMessage row))]
-
-/-- A registered chip's component is one of the ensemble's tables. -/
-theorem supportedChip_table_mem_allTables (chip : SupportedChip p)
-    (hmem : chip ∈ supportedChips (p := p)) :
-    chip.table ∈ (sp1Ensemble (p := p)).allTables := by
-  rw [Air.Flat.Ensemble.allTables, List.mem_cons, sp1Ensemble_tables, List.mem_append]
-  exact Or.inr (Or.inl (List.mem_map_of_mem hmem))
-
-/-! ## Decomposing the trace's State ledger
-
-`stateLedger` is `fullLedger.filter (kind = State)`, and `fullLedger` is the verifier row's accesses
-appended to a `flatMap` over the fifty-three tables. `List.filter` distributes over both, so the
-bus's ledger is the per-table State halves — which is what turns the whole-trace obligation into
-per-table content. -/
-
-/-- One table's State half. -/
-def tableStateLedger (table : Table (ZMod p)) : LookupAccessList :=
-  (tableCleanAccesses table).filter fun a => a.1 = InteractionKind.State
-
-/-- **A table that never names the State channel contributes nothing to it.** Twenty-six of the
-twenty-eight provider tables are in this case — besides the instruction chips, only `StateBump` and
-the verifier row touch the State bus at all. -/
-theorem tableStateLedger_eq_nil (table : Table (ZMod p))
-    (hcomponent : table.component ∈ (sp1Ensemble (p := p)).allTables)
-    (hnot : (stateChannel (p := p)).toRaw ∉ table.component.circuit.channels) :
-    tableStateLedger table = [] := by
-  rw [tableStateLedger, tableCleanAccesses_filterKind _ (stateChannel (p := p)).toRaw
-      InteractionKind.State rfl
-      (interactions_channel_eq_of_kindOf _ hcomponent (stateChannel (p := p)).toRaw
-        (by simp [sp1Ensemble_channels])),
-    Air.Flat.Table.interactionsWith_nil_of_channel_not_mem hnot, List.map_nil]
-
-/-- **Any table of a registered chip has that chip's pull/push pair per physical row** — however it
-was built.
-
-Stated over the table's own `table` rows rather than over a builder's inputs, which is strictly
-better: it needs no `Table.build`/`Table.buildHinted` split (the seven hint-reading chips are
-covered by the same statement), and it says the thing that is actually true — the State ledger is a
-function of the *rows*, not of how they were produced.
-
-Both side conditions are discharged from registry membership. -/
-theorem tableStateLedger_eq_of_component (table : Table (ZMod p)) (chip : SupportedChip p)
-    (hmem : chip ∈ supportedChips (p := p)) (hcomp : table.component = chip.table) :
-    tableStateLedger table =
-      table.table.flatMap fun row => rowStateAccesses chip table.data row := by
-  have hcomponent : table.component ∈ (sp1Ensemble (p := p)).allTables :=
-    hcomp ▸ supportedChip_table_mem_allTables chip hmem
-  rw [tableStateLedger, tableCleanAccesses_filterKind _ (stateChannel (p := p)).toRaw
-      InteractionKind.State rfl
-      (interactions_channel_eq_of_kindOf _ hcomponent (stateChannel (p := p)).toRaw
-        (by simp [sp1Ensemble_channels])),
-    Air.Flat.Table.interactionsWith, List.map_flatMap]
-  refine congrArg (List.flatMap · table.table) (funext fun row => ?_)
-  rw [Air.Flat.Table.environment, hcomp,
-    supportedChip_stateEmissionShape chip hmem table.data row]
-  rfl
-
-
 section Trace
 
 variable [Fact (2 ^ 25 < p)]
 
-omit [Fact (2 ^ 24 < p)] in
-/-- **The trace's State ledger is its tables' State halves**, verifier row first. -/
-theorem stateLedger_eq_flatMap (trace : SupportedCoreTraceWitness p) :
-    trace.stateLedger =
-      tableStateLedger trace.skeletonVerifierTable ++
-        trace.tables.flatMap tableStateLedger := by
-  simp only [SupportedCoreTraceWitness.stateLedger, SupportedCoreTraceWitness.fullLedger,
-    List.filter_append, tablesCleanAccesses, List.filter_flatMap]
-  rfl
-
-
-
-
-
-/-- **A bus's half of the trace's ledger IS that channel's evaluated interaction list.**
-
-The bridge that makes the soundness layer's ensemble assemblies reusable here.
-`Soundness/TypedState.lean` and `Soundness/TypedMemoryBalance.lean` already decompose
-`typedEnsembleInteractionsWith witness channel` — State into the boundary pair plus the decoded
-rows' and StateBump rows' pull/push pairs, Memory into the decoded rows' interactions plus the
-init/finalize/bump tables'. Both are exactly the chain shape
-`LookupAccessList.chainLedger_perm_handoff` consumes.
-
-What was missing was only the change of orientation: those layers work in Clean `Interaction`s on
-one channel, this one in `LookupAccess`es filtered from the whole computable ledger. Both sides are
-`allTables.flatMap`, and per table the two agree by `tableCleanAccesses_filterKind`.
-
-Stated for an arbitrary channel because the State and Memory halves need the identical fact —
-writing it twice would have been the same proof with two names. -/
+/-- Filtering by a declared bus's kind retains exactly that channel's evaluated occurrences. -/
 theorem busLedger_eq_channelLedger (trace : SupportedCoreTraceWitness p)
     (channel : RawChannel (ZMod p)) (hchannel : channel ∈ (sp1Ensemble (p := p)).channels)
     (K : InteractionKind) (hkind : kindOf channel.name = K) :
     trace.fullLedger.filter (fun a => a.1 = K) =
       (trace.witness.interactionsWith channel).map Interaction.toAccess := by
-  rw [← trace.tablesCleanAccesses_allTables, tablesCleanAccesses, List.filter_flatMap,
-    Air.Flat.EnsembleWitness.interactionsWith, List.map_flatMap]
-  refine List.flatMap_congr fun table htable => ?_
-  refine tableCleanAccesses_filterKind table channel K hkind fun i hi hk => ?_
-  exact interactions_channel_eq_of_kindOf _ (trace.allTables_component_mem table htable)
-    channel hchannel i hi (by rw [hk, hkind])
+  classical
+  rw [trace.fullLedger_eq_witness_interactions, List.filter_map,
+    Air.Flat.EnsembleWitness.interactionsWith_eq_filter]
+  apply congrArg (List.map Interaction.toAccess)
+  apply List.filter_congr
+  intro interaction member
+  by_cases same : interaction.channel = channel
+  · simp only [Function.comp_def, Interaction.toAccess, same, hkind, decide_true]
+  · have different : kindOf interaction.channel.name ≠ K := fun kind =>
+      same (channel_eq_of_kindOf_eq (witness_interaction_channel_mem trace.witness member)
+        hchannel (kind.trans hkind.symm))
+    simp only [Function.comp_def, Interaction.toAccess, different, same, decide_false]
 
 /-- The State instance. -/
 theorem stateLedger_eq_channelLedger (trace : SupportedCoreTraceWitness p) :
@@ -152,7 +52,7 @@ theorem stateLedger_eq_channelLedger (trace : SupportedCoreTraceWitness p) :
       (trace.witness.interactionsWith (stateChannel (p := p)).toRaw).map Interaction.toAccess :=
   busLedger_eq_channelLedger trace _ (by simp [sp1Ensemble_channels]) InteractionKind.State rfl
 
-set_option linter.unusedSectionVars false in
+omit [Fact (2 ^ 24 < p)] in
 /-- The stable halt position of an assembled witness is its generated Halt table. -/
 theorem SupportedCoreTraceWitness.haltTable_witness
     (trace : SupportedCoreTraceWitness p) :
@@ -164,16 +64,12 @@ theorem SupportedCoreTraceWitness.haltTable_witness
     ByteProviderId.all]
 
 omit [Fact (2 ^ 25 < p)] in
+/-- HALT decoding reads the input prefix independently of the evaluation data. -/
 @[simp] theorem haltRow_buildRow
-    (inputs : List (HaltChip.Inputs (ZMod p)))
-    (input : HaltChip.Inputs (ZMod p)) (data : ProverData (ZMod p))
+    (input : HaltChip.Inputs (ZMod p)) (generationData evaluationData : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) :
-    haltRow (Table.build HaltChip.component inputs data hint)
-        (HaltChip.component.buildRow input data hint) = input := by
-  unfold haltRow
-  change HaltChip.component.rowInput
-      (Environment.fromArray (HaltChip.component.buildRow input data hint) data) = input
-  exact HaltChip.component.rowInput_buildRow input data data hint
+    haltRow evaluationData (HaltChip.component.buildRow input generationData hint) = input :=
+  HaltChip.component.rowInput_buildRow input generationData evaluationData hint
 
 /-- **The compiled trace's Halt table is exactly the padding row.**  The deterministic compiler
 emits no halt event yet (`Occurrence .halt := Empty`), so its Halt table is the one all-zero
@@ -183,9 +79,9 @@ theorem SupportedCoreTraceWitness.haltTablePadding
     (trace : SupportedCoreTraceWitness p) :
     (haltTable trace.witness).table.length = 1 ∧
       ∀ row ∈ (haltTable trace.witness).table,
-        (haltRow (haltTable trace.witness) row).is_real = 0 := by
+        (haltRow trace.witness.data row).is_real = 0 := by
   have htab : (haltTable trace.witness).table =
-      [HaltChip.component.buildRow (HaltChip.paddingInputs (p := p)) trace.data trace.hint] := by
+      [HaltChip.component.buildRow (HaltChip.paddingInputs (p := p)) trace.generationData trace.hint] := by
     have hocc : trace.providerOccurrences ProviderTableId.halt = [] := by
       cases h : trace.providerOccurrences ProviderTableId.halt with
       | nil => rfl
@@ -197,11 +93,6 @@ theorem SupportedCoreTraceWitness.haltTablePadding
   intro row rowMem
   rw [htab, List.mem_singleton] at rowMem
   subst rowMem
-  rw [trace.haltTable_witness]
-  change (haltRow (Table.build HaltChip.component
-    (HaltChip.haltTraceInputs (trace.providerOccurrences .halt)) trace.data trace.hint)
-      (HaltChip.component.buildRow (HaltChip.paddingInputs (p := p)) trace.data trace.hint)
-        ).is_real = 0
   rw [haltRow_buildRow]
   rfl
 
@@ -214,8 +105,7 @@ theorem SupportedCoreTraceWitness.realHaltRows_nil (trace : SupportedCoreTraceWi
   simp only [decide_eq_true_eq, hpad row rowMem]
   exact zero_ne_one
 
-/-- The Memory instance — the same fact, and the reason the Memory half of the sweep is not the
-ten-family assembly it looked like. -/
+/-- The Memory projection retains the channel's complete evaluated occurrence list. -/
 theorem memoryLedger_eq_channelLedger (trace : SupportedCoreTraceWitness p) :
     trace.memoryLedger =
       (trace.witness.interactionsWith (Channels.memoryChannel (p := p)).toRaw).map
@@ -255,11 +145,11 @@ noncomputable def stateInstrLinks (trace : SupportedCoreTraceWitness p) :
 noncomputable def stateBumpLinks (trace : SupportedCoreTraceWitness p) :
     List (LookupKey × LookupKey) :=
   ((stateBumpTable trace.witness).table.filter fun row =>
-      signedVal (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1).map fun row =>
+      signedVal (stateBumpRow trace.witness.data row).is_real = 1).map fun row =>
     (msgToken stateChannel
-        (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable trace.witness) row)),
+        (StateBumpChip.pulledMessage (stateBumpRow trace.witness.data row)),
       msgToken stateChannel
-        (StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable trace.witness) row)))
+        (StateBumpChip.pushedMessage (stateBumpRow trace.witness.data row)))
 
 omit [Fact (2 ^ 24 < p)] in
 /-- The syscall table's row list, in the form `BumpDecode`'s accessor spells it. -/
@@ -273,7 +163,7 @@ ledger's `hsyscall` premise asks for, and it is a property of *this compiler's t
 the chip: `syscallInstrsTraceInputs` is `[]` by construction. -/
 theorem witness_syscallRows_padding (trace : SupportedCoreTraceWitness p) :
     ∀ row ∈ (syscallInstrsTable trace.witness).table,
-      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0 := by
+      (syscallInstrsRow trace.witness.data row).is_real = 0 := by
   intro row hrow
   rw [syscallInstrsTable_nil trace] at hrow
   exact absurd hrow List.not_mem_nil
@@ -283,12 +173,12 @@ theorem active_stateLedger_eq (trace : SupportedCoreTraceWitness p)
       (d.toChipRow trace.witness.data).is_real = 0 ∨
         (d.toChipRow trace.witness.data).is_real = 1)
     (hbump : ∀ row ∈ (stateBumpTable trace.witness).table,
-      (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
+      (stateBumpRow trace.witness.data row).is_real = 0 ∨
+        (stateBumpRow trace.witness.data row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0)
+      (haltRow trace.witness.data row).is_real = 0)
     (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
-      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0) :
+      (syscallInstrsRow trace.witness.data row).is_real = 0) :
     active trace.stateLedger =
       ([accessAt (stateFinalToken trace) (-1), accessAt (stateInitToken trace) 1] ++
         (stateInstrLinks trace).flatMap fun l => linkAccesses l.1 l.2) ++
@@ -317,32 +207,32 @@ theorem active_stateLedger_eq (trace : SupportedCoreTraceWitness p)
     · exact Or.inl h0
     · exact Or.inr h1
   have hgateBump : ∀ row ∈ (stateBumpTable trace.witness).table,
-      signedVal (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
-        signedVal (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1 := by
+      signedVal (stateBumpRow trace.witness.data row).is_real = 0 ∨
+        signedVal (stateBumpRow trace.witness.data row).is_real = 1 := by
     intro row hrow
     rcases hbump row hrow with h | h <;> rw [h]
     · exact Or.inl h0
     · exact Or.inr h1
   have hgateHalt : ∀ row ∈ (haltTable trace.witness).table,
-      signedVal (haltRow (haltTable trace.witness) row).is_real = 0 ∨
-        signedVal (haltRow (haltTable trace.witness) row).is_real = 1 := by
+      signedVal (haltRow trace.witness.data row).is_real = 0 ∨
+        signedVal (haltRow trace.witness.data row).is_real = 1 := by
     intro row hrow
     rw [hhalt row hrow]
     exact Or.inl h0
   have hfilterHalt : ((haltTable trace.witness).table.filter fun row =>
-      signedVal (haltRow (haltTable trace.witness) row).is_real = 1) = [] := by
+      signedVal (haltRow trace.witness.data row).is_real = 1) = [] := by
     rw [List.filter_eq_nil_iff]
     intro row hrow
     rw [hhalt row hrow, h0]
     decide
   have hgateSyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
-      signedVal (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0 ∨
-        signedVal (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 1 := by
+      signedVal (syscallInstrsRow trace.witness.data row).is_real = 0 ∨
+        signedVal (syscallInstrsRow trace.witness.data row).is_real = 1 := by
     intro row hrow
     rw [hsyscall row hrow]
     exact Or.inl h0
   have hfilterSyscall : ((syscallInstrsTable trace.witness).table.filter fun row =>
-      signedVal (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 1) = [] := by
+      signedVal (syscallInstrsRow trace.witness.data row).is_real = 1) = [] := by
     rw [List.filter_eq_nil_iff]
     intro row hrow
     rw [hsyscall row hrow, h0]
@@ -371,12 +261,12 @@ theorem stateLedger_perm_handoff (trace : SupportedCoreTraceWitness p)
       (d.toChipRow trace.witness.data).is_real = 0 ∨
         (d.toChipRow trace.witness.data).is_real = 1)
     (hbump : ∀ row ∈ (stateBumpTable trace.witness).table,
-      (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
+      (stateBumpRow trace.witness.data row).is_real = 0 ∨
+        (stateBumpRow trace.witness.data row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0)
+      (haltRow trace.witness.data row).is_real = 0)
     (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
-      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0)
+      (syscallInstrsRow trace.witness.data row).is_real = 0)
     (hchain : IsHandoffChain (stateInitToken trace)
       (stateInstrLinks trace ++ stateBumpLinks trace) (stateFinalToken trace)) :
     (active trace.stateLedger).Perm
@@ -419,15 +309,15 @@ theorem memoryLedger_eq (trace : SupportedCoreTraceWitness p) :
       ((decodedInstructionRows (p := p) trace.witness.tables).flatMap fun decoded =>
         (decoded.interactionsWith trace.witness.data (Channels.memoryChannel (p := p))).map
           fun i => Interaction.toAccess i.raw) ++
-      (((typedTableInteractionsWith (memoryInitProviderTable trace.witness)
+      (((typedTableInteractionsWith (memoryInitProviderTable trace.witness) trace.witness.data
             (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-        (((typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness)
+        (((typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness) trace.witness.data
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-          (((typedTableInteractionsWith (memoryBumpTable trace.witness)
+          (((typedTableInteractionsWith (memoryBumpTable trace.witness) trace.witness.data
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-            (((typedTableInteractionsWith (haltTable trace.witness)
+            (((typedTableInteractionsWith (haltTable trace.witness) trace.witness.data
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-              ((typedTableInteractionsWith (syscallInstrsTable trace.witness)
+              ((typedTableInteractionsWith (syscallInstrsTable trace.witness) trace.witness.data
                 (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw))))) := by
   rw [memoryLedger_eq_channelLedger, ← typedEnsembleInteractionsWith_raw,
     typedEnsembleMemoryInteractions_eq]
@@ -468,12 +358,12 @@ theorem stateLedger_perm_handoff_singleChain (trace : SupportedCoreTraceWitness 
       (d.toChipRow trace.witness.data).is_real = 0 ∨
         (d.toChipRow trace.witness.data).is_real = 1)
     (hbump : ∀ row ∈ (stateBumpTable trace.witness).table,
-      (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
+      (stateBumpRow trace.witness.data row).is_real = 0 ∨
+        (stateBumpRow trace.witness.data row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0)
+      (haltRow trace.witness.data row).is_real = 0)
     (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
-      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0)
+      (syscallInstrsRow trace.witness.data row).is_real = 0)
     (hchain : IsHandoffChain (stateInitToken trace)
       (stateInstrLinks trace ++ stateBumpLinks trace) (stateFinalToken trace)) :
     (active trace.stateLedger).Perm
@@ -496,12 +386,12 @@ theorem stateLedger_perm_handoff_chronological (trace : SupportedCoreTraceWitnes
       (d.toChipRow trace.witness.data).is_real = 0 ∨
         (d.toChipRow trace.witness.data).is_real = 1)
     (hbump : ∀ row ∈ (stateBumpTable trace.witness).table,
-      (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
+      (stateBumpRow trace.witness.data row).is_real = 0 ∨
+        (stateBumpRow trace.witness.data row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0)
+      (haltRow trace.witness.data row).is_real = 0)
     (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
-      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0)
+      (syscallInstrsRow trace.witness.data row).is_real = 0)
     (links : List (LookupKey × LookupKey))
     (hregroup : (stateInstrLinks trace ++ stateBumpLinks trace).Perm links)
     (hchain : IsHandoffChain (stateInitToken trace) links (stateFinalToken trace)) :

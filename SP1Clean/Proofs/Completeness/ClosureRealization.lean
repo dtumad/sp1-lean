@@ -702,14 +702,7 @@ theorem fullLedger_multiplicitySum_channel (channel : RawChannel (ZMod p))
     multiplicitySum ((trace.witness.interactionsWith channel).map Interaction.toAccess) k =
       multiplicitySum trace.fullLedger k := by
   classical
-  have filtered : trace.witness.interactionsWith channel =
-      trace.witness.interactions.filter (fun i => i.channel = channel) := by
-    simp only [Air.Flat.EnsembleWitness.interactionsWith,
-      Air.Flat.EnsembleWitness.verifierInteractionsWith,
-      Air.Flat.EnsembleWitness.tableContext, Air.Flat.TableContext.interactionsWith,
-      Operations.interactionValuesWith_eq_filter, Air.Flat.Table.interactionsWith_eq_filter,
-      Air.Flat.EnsembleWitness.interactions, List.filter_append, List.filter_flatMap]
-  rw [filtered, fullLedger_eq_witness_interactions]
+  rw [Air.Flat.EnsembleWitness.interactionsWith_eq_filter, fullLedger_eq_witness_interactions]
   refine LookupAccessList.multiplicitySum_filter_map_eq _ _ _ _ fun i hi hkey => ?_
   have same := channel_eq_of_name_eq (witness_interaction_channel_mem trace.witness hi)
     hchannel ((channel_name_of_keyOf_toAccess hkey).trans hname)

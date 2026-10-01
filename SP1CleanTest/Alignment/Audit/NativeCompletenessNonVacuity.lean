@@ -440,13 +440,8 @@ private theorem witness_interactionsWith_length_le
     {ensemble : Ensemble F PublicIO} (witness : EnsembleWitness ensemble)
     (channel : RawChannel F) :
     (witness.interactionsWith channel).length ≤ witness.interactions.length := by
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.interactions]
-  induction witness.allTables with
-  | nil => simp
-  | cons table tables ih =>
-      simp only [List.flatMap_cons, List.length_append]
-      rw [Table.interactionsWith_eq_filter]
-      exact Nat.add_le_add (List.length_filter_le _ _) ih
+  rw [EnsembleWitness.interactionsWith_eq_filter]
+  exact List.length_filter_le _ _
 
 /-- Actual Clean occurrence capacity for every registered channel of the boundary-only shard. -/
 theorem anchorExecution_channelCapacity :
@@ -457,11 +452,6 @@ theorem anchorExecution_channelCapacity :
     rw [← anchorExecution_nativeTrace_interactions_length]
     exact witness_interactionsWith_length_le _ _
   exact lt_of_le_of_lt bound (by native_decide)
-
-/-- The old projection remains available through its proved compatibility adapter. -/
-theorem anchorExecution_footprintFits :
-    (NativeTraceFootprint.ofTrace (nativeTrace stmt anchorExecution)).Fits SP1Prime :=
-  NativeTraceFootprint.fits_of_channelCapacity _ anchorExecution_channelCapacity
 
 /-- Exact event/provider demand agrees with the full constructed ledger at the active consumer. -/
 theorem anchorExecution_demandFits :

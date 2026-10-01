@@ -93,8 +93,8 @@ it prevents an endpoint-only check from being mistaken for complete resource enf
 
 ## Exact physical accounting
 
-`ToClean/Air/Footprint.lean` measures the actual Clean witness, with its singleton verifier and
-every physical table. For each raw channel, `channelOccurrences` is the sum of each table's
+`ToClean/Air/Footprint.lean` measures the public verifier's operations and every physical table.
+For each raw channel, `channelOccurrences` adds the verifier's occurrence count to each table's
 height times its circuit's syntactic interaction width. `channelOccurrences_eq_length` proves
 this is exactly the evaluated ledger length. Repeated keys, zero multiplicities, refreshes and
 inactive padding all spend capacity. No deduplication or multiplicity filter is involved.
@@ -105,7 +105,7 @@ The retained ordinary compiler consumes `ChannelCapacity` in `NativeTraceAdmissi
 functional completeness proof. `Proofs/Completeness/PhysicalFootprint.lean` proves its exact
 height and demand formulas from the existing event buckets and provider occurrence lists:
 one row per instruction event or provider occurrence, one mandatory Halt padding row, an empty
-ordinary SyscallInstrs table, and one verifier row. Provider closure and refresh occurrences are
+ordinary SyscallInstrs table, and the separate public verifier ledger. Provider closure and refresh occurrences are
 already in those lists. The resulting `physicalFits_iff` and `channelCapacity_iff` are exact
 arithmetic equivalences; they do not replace the accepted language with an upper estimate.
 
@@ -150,7 +150,6 @@ actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by
 |---|---|
 | `EventExecutionTrace`, `CoreShardSemanticWitness` | Retain for ordinary/exact-Core consumers; migrate the mixed compiler to the complete path in A6. Delete only after retained exact/export consumers have adapters. |
 | `InstructionPlanReady`, `NativeCompilerReady`, `NativeTraceReady` | Prove their applicable fields from semantics for retained APIs; no occurrence in the new domain. Remove wrappers once all relevant consumers use the derived results. The legacy `syscallFree` field cannot describe mixed execution. |
-| `NativeTraceFootprint` | The active ordinary compiler now consumes shared `ChannelCapacity`. Retain the five-field record and old theorem signatures only as proved compatibility views; their equivalence uses this constructor's two silent host channels. Delete after external callers migrate. Never reuse that equivalence for mixed host traces. |
 | Explicit numeric range checks in older chip/Sail lemmas | Retain encoding-specific statements, derive their range facts from `NativeLayout`; factor more generally only with a migrated consumer. |
 
 `ExecutionMemory` proves presence and outside-domain framing along the existing Sail/host path,

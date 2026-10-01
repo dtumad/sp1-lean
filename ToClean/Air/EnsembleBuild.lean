@@ -8,8 +8,9 @@ Clean's ensemble witness uses indexed layout obligations. This constructor disch
 from one component-list equation, and derives prover data from the same physical rows through
 Clean's canonical `deriveProverData`. Callers cannot supply an unrelated data environment.
 
-The constructor and named-data transport rules belong beside `EnsembleWitness` upstream. Remove
-these additions when upstream provides the corresponding list-level rules.
+The constructor, named-data transport and complete-ledger filtering rules belong beside
+`EnsembleWitness` upstream. Remove these additions when upstream provides the corresponding
+list-level rules.
 -/
 
 @[expose] public section
@@ -96,5 +97,14 @@ def EnsembleWitness.ofTables (ens : Ensemble F PublicIO) (tables : List (Table F
     (tables : List (Table F)) (publicInput : PublicIO F)
     (hmap : tables.map (·.component) = ens.tables) :
     (EnsembleWitness.ofTables ens tables publicInput hmap).publicInput = publicInput := rfl
+
+open Classical in
+/-- Channel selection filters the complete ledger, including the public verifier's occurrences. -/
+theorem EnsembleWitness.interactionsWith_eq_filter {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness ens) (channel : RawChannel F) :
+    witness.interactionsWith channel = witness.interactions.filter (·.channel = channel) := by
+  simp only [interactionsWith, verifierInteractionsWith, tableContext,
+    TableContext.interactionsWith, Operations.interactionValuesWith_eq_filter,
+    Table.interactionsWith_eq_filter, interactions, List.filter_append, List.filter_flatMap]
 
 end Air.Flat
