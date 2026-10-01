@@ -21,16 +21,16 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 def sourceWitness {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     EnsembleWitness ((SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).ensemble
-      (NativeCore.afterInitialTables image) []) :=
-  EnsembleWitness.ofTables _ witness.tables witness.data () witness.tables_map_component witness.same_data
+      (NativeCore.afterInitialTables image) [] (baseEnsemble image source).unique_names) :=
+  EnsembleWitness.ofTables _ witness.tables () witness.tables_map_component
 
 /-- Source records are checked using Byte guarantees alone, independently of Memory balance. -/
 theorem sourceTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw) :
     ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
-      table.Spec := by
+      table.Spec witness.data := by
   intro table member row rowMem
   have componentMem : table.component ∈ (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.map (·.component) := by
     have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -38,8 +38,7 @@ theorem sourceTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnap
     simpa only [OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
       List.take_left', List.length_map] using mapped
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
-  have tableMem : table ∈ witness.allTables :=
-    witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member)
+  have tableMem : table ∈ witness.tables := List.mem_of_mem_take member
   have byte := bytes table tableMem row rowMem
   have checked := constraints table tableMem row rowMem
   rw [← same] at byte checked ⊢
@@ -50,9 +49,9 @@ theorem sourceTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
-      table.Spec :=
+      table.Spec witness.data :=
   sourceTables_spec_of_byte witness constraints
-    (fun table member => (finishedChannel_guarantees image source witness constraints balanced table member).1)
+    (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
 
 /-- Every physical source record authenticates its complete value against the fixed source. -/
 theorem source_records_authentic {image : ProgramImage} {source : ExecutionSnapshot}
@@ -63,56 +62,46 @@ theorem source_records_authentic {image : ProgramImage} {source : ExecutionSnaps
   (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_valid_of_tables (sourceWitness witness)
     (sourceTables_spec witness constraints balanced)
 
-/-- The actual local verifier has exactly the fixed source-order endpoints on this channel. -/
-theorem verifier_source_interactions (image : ProgramImage) (source : ExecutionSnapshot) (env : Environment (ZMod p)) :
-    ({ circuit := verifier image source } : Component (ZMod p)).operations.interactionValuesWith
+/-- The interaction-only boundary program has exactly the fixed source-order endpoints. -/
+theorem verifier_source_interactions (env : Environment (ZMod p)) :
+    (boundaryVerifier (p := p)).circuitOperations.interactionValuesWith
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw env =
       [(OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).pushedValue OrderedMemoryEnsemble.startKey,
        (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).pulledValue OrderedMemoryEnsemble.endKey] := by
-  have stateEmpty (input : Var SP1PublicIO (ZMod p)) (offset : ℕ) :=
-    InteractionRecovery.interactionsWith_main_eq_nil sp1StateVerifier.base
-      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw input offset (by
-        simp [sp1StateVerifier, circuit_norm,
-          OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
-          stateChannel, byteChannel, exitChannel])
-  have finalEmpty (offset : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
-    (OrderedBoundaryVerifier.circuit (p := p) OrderedFinalProvider.channelName
-      OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey).base
-    (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw () offset (by
-      change (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉
-        [(OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-      simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, Channel.toRaw])
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
-    Component.rowOperations, verifier, verifierMain, circuit_norm]
-  simp only [Operations.interactionsWith, OrderedBoundaryVerifier.circuit] at finalEmpty
-  simp only [Operations.interactionsWith] at stateEmpty
-  simp only [GeneralFormalCircuit.toSubcircuit_interactions, stateEmpty, finalEmpty,
-    List.nil_append, List.append_nil, OrderedBoundaryVerifier.circuit]
-  have source (offset : ℕ) := OrderedBoundaryVerifier.main_interactions (p := p) SnapshotMemoryEnsemble.channelName
-    OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey () offset
-  simp only [Operations.interactionsWith] at source
-  rw [source]
+  have original : (boundaryVerifier (p := p)).circuitOperations.interactionsWith
+      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw =
+      [((OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).pushed
+        (const (OrderedMemoryEnsemble.startKey (p := p)))).toRaw,
+       ((OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).pulled
+        (const (OrderedMemoryEnsemble.endKey (p := p)))).toRaw] := by
+    simp [boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
+      Verifier.ofInteractions, sp1StateVerifierMain, OrderedBoundaryVerifier.main,
+      Operations.interactionsWith, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
+      OrderedFinalProvider.channelName, stateChannel, byteChannel, exitChannel, circuit_norm]
+  rw [Operations.interactionValuesWith, original]
   simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Channel.eval_pulled, ProvableType.eval_const]
-  rfl
 
 theorem sourceWitness_interactions {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     (sourceWitness witness).interactionsWith (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw =
       witness.interactionsWith (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw := by
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.allTables, List.flatMap_cons]
-  apply congrArg (fun front => front ++ witness.tables.flatMap
-    (·.interactionsWith (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw))
-  simp only [Table.interactionsWith, EnsembleWitness.verifierTable_flatMap,
-    EnsembleWitness.verifierTable_environment, EnsembleWitness.verifierTable_component]
-  change ((SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).ensemble
-    (NativeCore.afterInitialTables image) []).verifierTable.operations.interactionValuesWith
-      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw _ =
-    ({ circuit := verifier image source } : Component (ZMod p)).operations.interactionValuesWith
-      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw _
+  have different : (LocalSourceBoundary.checker image source).channel (baseEnsemble (p := p) image source) ≠
+      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw := by
+    intro equal
+    apply (LocalSourceBoundary.checker image source).channel_not_mem (baseEnsemble (p := p) image source)
+    rw [equal]
+    exact List.mem_cons_self ..
+  have projected := (LocalSourceBoundary.checker image source).project_interactions
+    (ens := baseEnsemble image source) witness _ different
+  apply Eq.trans ?_ projected
+  change _ = boundaryVerifier.circuitOperations.interactionValuesWith _
+    (Environment.fromInput witness.publicInput witness.data) ++ witness.tableContext.interactionsWith _
   rw [verifier_source_interactions]
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-    Ensemble.verifierTable, OrderedMemoryEnsemble.Inventory.ensemble,
-    OrderedBoundaryEnsemble.ensemble, OrderedBoundaryVerifier.circuit]
+  apply congrArg (fun front => front ++ witness.tableContext.interactionsWith
+    (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw)
+  change (OrderedBoundaryVerifier.verifierProgram _ _ _).circuitOperations.interactionValuesWith _ _ = _
+  simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
+    Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
 
 /-- Distinct source locations follow from the combined AIR, including across register/RAM tables. -/
@@ -124,13 +113,13 @@ theorem source_records_locations_nodup {image : ProgramImage} {source : Executio
     (sourceWitness witness) (NativeCore.afterInitialTables_silent image) (sourceTables_spec witness constraints balanced)
   change BalancedInteractions ((sourceWitness witness).interactionsWith _)
   rw [sourceWitness_interactions]
-  exact balanced _ (List.mem_cons_self ..)
+  exact balanced _ (List.mem_append_left _ (List.mem_cons_self ..))
 
 /-- The source tables emit exactly the decoded records, preserving every physical occurrence. -/
 theorem source_memory_interactions {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     (witness.tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length).flatMap
-        (·.interactionsWith memoryChannel.toRaw) =
+        (·.interactionsWith witness.data memoryChannel.toRaw) =
       ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records (sourceWitness witness)).map memoryChannel.pushedValue :=
   (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).memory_interactions_eq (sourceWitness witness)
     memoryChannel.pushedValue (SnapshotMemoryEnsemble.recordFor_interactions source.sail.memorySnapshot)
@@ -139,15 +128,14 @@ theorem source_memory_interactions {image : ProgramImage} {source : ExecutionSna
 program, platform, initialization, ROM, and range checks pass without caller-supplied truth. -/
 theorem public_contract_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (byte : witness.verifierTable.ChannelGuarantees byteChannel.toRaw) :
+    (sourceChecks : witness.BalancedChannel (sourceChannel image source))
+    (byte : (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw) :
     witness.publicInput.LimbBounds ∧ ExecutionSourceValid image source ∧
       witness.publicInput.SourceFor source ∧ witness.publicInput.PreservesStoppedClock source := by
-  have spec : witness.verifierTable.Spec := by
-    intro row member
-    exact NativeCore.component_spec_of_byte ({ circuit := verifier image source } : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
-      (constraints _ witness.mem_allTables_verifierTable row member)
-      (byte row member)
-  exact EnsembleWitness.verifierSpec_iff_verifierTable_spec.mpr spec
+  have boundaryByte := (Verifier.Program.andThen_channelGuarantees boundaryVerifier
+    ((LocalSourceBoundary.checker image source).program (baseEnsemble image source))
+    byteChannel.toRaw (Environment.fromInput witness.publicInput witness.data)).mp byte
+  exact ⟨boundaryVerifier_limbBounds _ _ boundaryByte.1, (source_balanced_iff witness).mp sourceChecks⟩
 
 /-- The complete witness supplies the verifier's Byte guarantees. -/
 theorem public_contract {image : ProgramImage} {source : ExecutionSnapshot}
@@ -155,8 +143,9 @@ theorem public_contract {image : ProgramImage} {source : ExecutionSnapshot}
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     witness.publicInput.LimbBounds ∧ ExecutionSourceValid image source ∧
       witness.publicInput.SourceFor source ∧ witness.publicInput.PreservesStoppedClock source :=
-  public_contract_of_byte witness constraints
-    ((finishedChannel_guarantees image source witness constraints balanced _ witness.mem_allTables_verifierTable).1)
+  public_contract_of_byte witness
+    (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
+    (finishedChannel_guarantees image source witness constraints balanced).1.1
 
 /-- Canonical public endpoints, complete source validity, and incoming-state binding. -/
 theorem public_boundary {image : ProgramImage} {source : ExecutionSnapshot}

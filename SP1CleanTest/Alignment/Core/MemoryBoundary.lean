@@ -3,6 +3,7 @@ import SP1CleanTest.Core.InitialMemoryLookup
 import SP1Clean.Soundness.InitialMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
 import SP1Clean.Soundness.NativeCoreBoundaries
+import SP1Clean.Soundness.LocalCoreBoundaries
 
 /-! # Initial/final records and ordered-key AIR regressions
 
@@ -275,17 +276,20 @@ private def nativeVerifierLedger (pi : SP1PublicIO Fp) :=
   (Soundness.NativeCore.ensemble image).verifierOperations.interactions.map
     (AbstractInteraction.eval env)
 
-private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :
+private def checkedVerifierRow (ledger : List (Interaction Fp)) (checkName name : String) :
     Bool × List (List Fp × Fp) :=
-  let ledger := nativeVerifierLedger pi
   let bytes := ledger.all fun interaction =>
     interaction.channel.name != "SP1Byte" || byteValid interaction.msg.toList
-  let checks := ledger.filter fun interaction =>
-    interaction.channel.name == (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name
+  let checks := ledger.filter fun interaction => interaction.channel.name == checkName
   let checked := decide (checks.length < SP1Prime) && checks.all fun interaction =>
     ((checks.filter (fun other => other.msg == interaction.msg)).map (·.mult)).sum == 0
   (bytes && checked, (ledger.filter (fun interaction => interaction.channel.name == name)).map
     (fun interaction => (interaction.msg.toList, interaction.mult)))
+
+private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :
+    Bool × List (List Fp × Fp) :=
+  checkedVerifierRow (nativeVerifierLedger pi)
+    (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name name
 
 /-- The installed verifier retains all 19 source occurrences and all ten boot-check occurrences,
 including zero-valued checks. It adds no committed table. -/
@@ -329,5 +333,55 @@ theorem nativeBoundaryInventories :
      controlValid [final, finalRegisterRow 0 0],
      controlValid [initial, initRegisterRow 0 0, initRegisterRow 0 0, terminalRow 1]] =
       [true, true, false, false, false] := by native_decide
+
+private def source : ExecutionSnapshot where
+  sail := { registers := (configuredState 65536).regs, memory := image.initialMemory }
+  host := {}
+  clock := 17
+
+private def localPublic : SP1PublicIO Fp :=
+  { bootPublic with init_clk_0_16 := 17, final_clk_0_16 := 25 }
+
+private def localVerifierLedger (snapshot : ExecutionSnapshot) (pi : SP1PublicIO Fp) :=
+  let env := Environment.fromInput pi (fun _ _ => #[])
+  (Soundness.LocalCore.ensemble image snapshot).verifierOperations.interactions.map
+    (AbstractInteraction.eval env)
+
+private def localVerifierRow (snapshot : ExecutionSnapshot) (pi : SP1PublicIO Fp) :
+    Bool × List (List Fp × Fp) :=
+  checkedVerifierRow (localVerifierLedger snapshot pi)
+    (Soundness.LocalCore.sourceChannel (p := SP1Prime) image snapshot).name
+    Soundness.SnapshotMemoryEnsemble.channelName
+
+/-- All eight checks survive installation, including zero-valued checks; the 59 committed
+tables and the original 19 verifier occurrences remain intact. -/
+theorem localVerifierInventory :
+    (Soundness.LocalCore.ensemble (p := SP1Prime) image source).tables.length = 59 ∧
+    (localVerifierLedger source localPublic).length = 35 ∧
+    ((localVerifierLedger source localPublic).filter fun interaction => interaction.channel.name ==
+      (Soundness.LocalCore.sourceChannel (p := SP1Prime) image source).name).length = 16 := by
+  native_decide
+
+/-- Nonzero-clock continuations and stopped identity segments pass the installed public checks.
+A stopped source cannot advance the final clock. -/
+theorem localVerifierStoppedClock :
+    [(localVerifierRow source localPublic).1,
+     (localVerifierRow { source with host.exitCode := some 0 }
+       { localPublic with final_clk_0_16 := 17 }).1,
+     (localVerifierRow { source with host.exitCode := some 0 } localPublic).1] =
+      [true, true, false] := by native_decide
+
+/-- Wrong PC/time, noncanonical clock limbs, unsupported platform mode, and corrupt source ROM
+are rejected by the actual installed verifier, independently of the touched Memory inventory. -/
+theorem localVerifierRejectsForgedSource :
+    [(localVerifierRow source { localPublic with init_clk_0_16 := 18 }).1,
+     (localVerifierRow source { localPublic with init_clk_24_32 := 1 }).1,
+     (localVerifierRow source { localPublic with init_pc0 := 4 }).1,
+     (localVerifierRow source { localPublic with init_pc1 := 0 }).1,
+     (localVerifierRow source { localPublic with init_clk_0_16 := 65553, init_clk_16_24 := -1 }).1,
+     (localVerifierRow { source with sail.registers := source.sail.registers.insert .misa 4100 }
+       localPublic).1,
+     (localVerifierRow { source with sail.memory := source.sail.memory.write 65536 0 } localPublic).1] =
+      [false, false, false, false, false, false, false] := by native_decide
 
 end SP1CleanTest.Core.MemoryBoundary

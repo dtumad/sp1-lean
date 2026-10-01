@@ -93,7 +93,7 @@ theorem executionRows_good_of_orderingChannels {image : ProgramImage} {source : 
     (constraints : witness.Constraints) (channels : OrderingChannels witness)
     {row : ExecutionRow p} (member : row ∈ executionRows witness) :
     StateChronology.Good (row.edge witness.data).1 ∧ StateChronology.Good (row.edge witness.data).2 := by
-  have bounds := (public_contract_of_byte witness constraints (channels.byte _ witness.mem_allTables_verifierTable)).1
+  have bounds := (public_contract_of_byte witness channels.sourceChecks channels.verifierByte).1
   have initial := initialBoundaryStateMessage_bounds witness.publicInput bounds
   have final := finalBoundaryStateMessage_bounds witness.publicInput bounds
   exact (StateChronology.good_and_bumps_cancel _ _ _ _ _ (state_endpointBalanced_of_orderingChannels witness constraints channels)
@@ -109,7 +109,7 @@ theorem executionRows_ordered_of_orderingChannels {image : ProgramImage} {source
     ∃ ordered : List (ExecutionRow p), ordered.Perm (executionRows witness) ∧
       Walk.IsWalk (ExecutionRow.canonEdge witness.data)
         (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered := by
-  have bounds := (public_contract_of_byte witness constraints (channels.byte _ witness.mem_allTables_verifierTable)).1
+  have bounds := (public_contract_of_byte witness channels.sourceChecks channels.verifierByte).1
   have initial := initialBoundaryStateMessage_bounds witness.publicInput bounds
   have final := finalBoundaryStateMessage_bounds witness.publicInput bounds
   obtain ⟨ordered, walk, exhaustive⟩ := StateChronology.exhaustiveTrail _ _ _ _ _

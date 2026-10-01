@@ -182,6 +182,25 @@ def Program.andThen {PublicIO : TypeMap} [ProvableType PublicIO]
       _root_.Operations.interactions_append, List.forall_mem_append] at guarantees
     exact ⟨first.soundness env guarantees.1, second.soundness env guarantees.2⟩
 
+/-- Composition retains both programs' full outgoing requirements. -/
+theorem Program.andThen_requirements {PublicIO : TypeMap} [ProvableType PublicIO]
+    (first second : Program F PublicIO) (env : Environment F) :
+    (first.andThen second).circuitOperations.FullRequirements env ↔
+      first.circuitOperations.FullRequirements env ∧ second.circuitOperations.FullRequirements env := by
+  simp only [andThen, Program.circuitOperations, Program.operations, operations_bind,
+    Operations.circuitOperations, Operations.interactions, List.map_append,
+    _root_.Operations.FullRequirements, _root_.Operations.interactions_append, List.forall_mem_append]
+
+/-- A channel guarantee for a composition holds for both of its constituent programs. -/
+theorem Program.andThen_channelGuarantees {PublicIO : TypeMap} [ProvableType PublicIO]
+    (first second : Program F PublicIO) (channel : RawChannel F) (env : Environment F) :
+    (first.andThen second).circuitOperations.ChannelGuarantees channel env ↔
+      first.circuitOperations.ChannelGuarantees channel env ∧
+        second.circuitOperations.ChannelGuarantees channel env := by
+  simp only [andThen, Program.circuitOperations, Program.operations, operations_bind,
+    Operations.circuitOperations, Operations.interactions, List.map_append,
+    _root_.Operations.ChannelGuarantees, _root_.Operations.interactions_append, List.forall_mem_append]
+
 /-- Composition appends each channel's literal evaluated ledger. -/
 theorem Program.andThen_values {PublicIO : TypeMap} [ProvableType PublicIO]
     (first second : Program F PublicIO) (channel : RawChannel F) (env : Environment F) :

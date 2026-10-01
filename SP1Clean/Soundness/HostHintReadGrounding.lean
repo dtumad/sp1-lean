@@ -212,13 +212,14 @@ theorem GroundingCarrier.ground_of_steps (valid : image.Valid)
           (StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput)) message.value) := by
   have checked := HostLocalCore.localWitness_constraints _
     (HostHintQueueBoundary.expanded_constraints witness constraints)
-  have bytes := (source_ordering witness constraints balanced).byte
-  have encoding := LocalCore.source_state_encoding_of_byte _ checked bytes
+  have ordering := source_ordering witness constraints balanced
+  have encoding := LocalCore.source_state_encoding_of_checks _ ordering.sourceChecks
   rw [source_public] at encoding
-  have initialState := LocalCore.initialStateTruth_of_byte valid _ checked bytes trajectory carrier.timeline initial
+  have initialState := LocalCore.initialStateTruth_of_checks valid _ ordering.sourceChecks trajectory carrier.timeline initial
     (carrier.timeline_start.trans encoding.1)
   rw [source_public] at initialState
-  have genesis := LocalCore.memoryInitialFrontier_liveOK_of_byte _ checked bytes trajectory carrier.timeline initial
+  have genesis := LocalCore.memoryInitialFrontier_liveOK_of_byte _ checked ordering.sourceChecks ordering.byte
+    trajectory carrier.timeline initial
   rw [carrier.timeline_start] at genesis
   have grounded := NativeCore.ExecutionCarrier.ground carrier (image.toGuestProgram valid) trajectory source.sail.realize
     initialState genesis steps

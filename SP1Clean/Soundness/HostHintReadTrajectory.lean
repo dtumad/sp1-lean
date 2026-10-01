@@ -52,7 +52,7 @@ theorem GroundingCarrier.timeline_events
     carrier.timeline = eventTimeline carrier.events source.clock := by
   have checked := HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.expanded_constraints witness constraints)
   have ordering := source_ordering witness constraints balanced
-  have encoding := LocalCore.source_state_encoding_of_byte _ checked ordering.byte
+  have encoding := LocalCore.source_state_encoding_of_checks _ ordering.sourceChecks
   rw [source_public] at encoding
   apply ExecutionCarrier.timeline_eq_events carrier source.clock encoding.1
   intro event member

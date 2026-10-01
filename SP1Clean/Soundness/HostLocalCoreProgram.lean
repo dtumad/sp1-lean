@@ -99,10 +99,9 @@ private theorem local_executionRow_time
   have clock := statePullTime_of_stateWalk_durations _ NativeCore.ExecutionRow.duration walk steps prior event rest split
   have member : event ∈ cpu := by rw [split]; exact List.mem_append_right _ List.mem_cons_self
   have good := LocalCore.executionRows_good_of_orderingChannels witness constraints ordering (exhaustive.mem_iff.mp member)
-  have checked := LocalCore.public_contract_of_byte witness constraints (ordering.byte _ witness.mem_allTables_verifierTable)
   dsimp only [NativeCore.ExecutionRow.canonEdge] at clock
   have sourceTime : StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput) = source.clock :=
-    checked.2.2.1.clock checked.2.1.2.2.1
+    (LocalCore.source_state_encoding_of_checks witness ordering.sourceChecks).1
   exact (timeNat_canonState good.1.1).symm.trans
     (clock.trans (congrArg (fun time => time + (prior.map NativeCore.ExecutionRow.duration).sum) sourceTime))
 

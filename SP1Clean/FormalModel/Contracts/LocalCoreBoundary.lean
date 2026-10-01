@@ -58,3 +58,15 @@ theorem SourceFor.pc [Fact (2 ^ 17 < p)] {source : ExecutionSnapshot}
   simpa only [SP1Clean.Semantics.pcBits, binding.2.2.1, binding.2.2.2.1, binding.2.2.2.2] using full
 
 end SP1Clean.SP1PublicIO
+
+namespace SP1Clean.LocalSourceBoundary
+
+open Model.Core
+
+/-- The complete source is valid and bound to the incoming public token; a stopped source
+cannot advance the public clock. Public limb bounds are supplied by the State verifier. -/
+def Spec {p : ℕ} [Fact p.Prime] (image : ProgramImage) (source : ExecutionSnapshot)
+    (input : SP1PublicIO (ZMod p)) : Prop :=
+  ExecutionSourceValid image source ∧ input.SourceFor source ∧ input.PreservesStoppedClock source
+
+end SP1Clean.LocalSourceBoundary
