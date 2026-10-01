@@ -746,13 +746,13 @@ theorem DecodedInstructionRow.stateInteractions_eq_of_mem
 
 /-- The 27 state-silent provider/boundary tables — the 26 non-bump providers plus the
 MemoryBump table at position 51 — contribute no State interactions.  This follows from their
-declared circuit channels, so it is independent of their physical row contents.  The StateBump
-table at position 52 is deliberately excluded: it is the sole provider-segment State contributor,
-and its per-row pull/push pairs join the typed State decomposition explicitly (W3). -/
+declared circuit channels, so it is independent of their physical row contents. The StateBump,
+Halt and syscall tables at positions 52–54 are excluded: their per-row
+pull/push pairs join the typed State decomposition explicitly. -/
 theorem witness_providerStateInteractions_eq_nil
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     ((witness.tables.drop instructionTableCount).take stateSilentProviderTableCount).flatMap
-        (typedTableInteractionsWith · stateChannel) = [] := by
+        (typedTableInteractionsWith · witness.data stateChannel) = [] := by
   rw [List.flatMap_eq_nil_iff]
   intro table tableMem
   apply List.map_eq_nil_iff.mp
@@ -787,10 +787,11 @@ theorem eval_initialBoundaryStateMessage (env : Environment (ZMod p))
         (Eval.eval env input).init_pc2⟩ := by
   simp only [circuit_norm]
 
-/-- The verifier table contributes exactly the public final pull followed by the public initial push. -/
+/-- The public verifier contributes exactly the public final pull followed by the public initial push. -/
 theorem witness_verifierStateInteractions_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedTableInteractionsWith witness.verifierTable stateChannel =
+    typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations stateChannel
+      (Environment.fromInput witness.publicInput witness.data) =
       [TypedInteraction.pulledIfValue stateChannel 1
         ⟨witness.publicInput.final_clk_high, witness.publicInput.final_clk_low,
           witness.publicInput.final_pc0, witness.publicInput.final_pc1,
@@ -825,10 +826,9 @@ theorem witness_verifierStateInteractions_eq
         witness.publicInput.init_pc2⟩ : StateMsg (ZMod p)) := by
     rw [eval_initialBoundaryStateMessage, inputEval]
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
-  rw [typedTableInteractionsWith_raw]
-  unfold Table.interactionsWith
-  rw [EnsembleWitness.verifierTable_flatMap]
-  rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
+  rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map]
+  simp only [Operations.interactionsWith, sp1Ensemble, Ensemble.verifierOperations,
+    sp1StateVerifierProgram]
   change List.map (AbstractInteraction.eval (Environment.fromInput witness.publicInput witness.data))
       (((sp1StateVerifierMain
         (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p))).operations
@@ -853,8 +853,8 @@ theorem decodedWitnessStateInteractions_eq
   exact decoded.stateInteractions_eq_of_mem data tables decodedMem
 
 /-- Exact State-channel decomposition of the whole ensemble witness: public boundary pair, the
-deterministic decoder's per-instruction pairs, — W3 — the StateBump table's per-row
-canonicalization pairs, and the Halt table's per-row halt-transition pairs. -/
+deterministic decoder's instruction pairs, StateBump canonicalization pairs, and the
+HALT and syscall transition pairs. -/
 theorem typedEnsembleStateInteractions_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     typedEnsembleInteractionsWith witness stateChannel =
@@ -875,27 +875,27 @@ theorem typedEnsembleStateInteractions_eq
             (statePushMessage (decoded.toChipRow witness.data))]) ++
         (((stateBumpTable witness).table.flatMap fun row =>
           [TypedInteraction.pulledIfValue stateChannel
-            (stateBumpRow (stateBumpTable witness) row).is_real
-            (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row)),
+            (stateBumpRow witness.data row).is_real
+            (StateBumpChip.pulledMessage (stateBumpRow witness.data row)),
            TypedInteraction.pushedIfValue stateChannel
-            (stateBumpRow (stateBumpTable witness) row).is_real
-            (StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row))]) ++
+            (stateBumpRow witness.data row).is_real
+            (StateBumpChip.pushedMessage (stateBumpRow witness.data row))]) ++
         (((haltTable witness).table.flatMap fun row =>
           [TypedInteraction.pulledIfValue stateChannel
-            (haltRow (haltTable witness) row).is_real
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) row)),
+            (haltRow witness.data row).is_real
+            (HaltChip.statePulledMessage (haltRow witness.data row)),
            TypedInteraction.pushedIfValue stateChannel
-            (haltRow (haltTable witness) row).is_real
-            (HaltChip.statePushedMessage (haltRow (haltTable witness) row))]) ++
+            (haltRow witness.data row).is_real
+            (HaltChip.statePushedMessage (haltRow witness.data row))]) ++
         ((syscallInstrsTable witness).table.flatMap fun row =>
           [TypedInteraction.pulledIfValue stateChannel
-            (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+            (syscallInstrsRow witness.data row).is_real
             (SyscallInstrsChip.statePulledMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row)),
+              (syscallInstrsRow witness.data row)),
            TypedInteraction.pushedIfValue stateChannel
-            (syscallInstrsRow (syscallInstrsTable witness) row).is_real
+            (syscallInstrsRow witness.data row).is_real
             (SyscallInstrsChip.statePushedMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row))]))) := by
+              (syscallInstrsRow witness.data row))]))) := by
   rw [typedEnsembleInteractionsWith_partition, witness_verifierStateInteractions_eq,
     decodedWitnessStateInteractions_eq]
   rw [show witness.tables.drop 25 =
@@ -903,7 +903,7 @@ theorem typedEnsembleStateInteractions_eq
     simpa [instructionTableCount, stateSilentProviderTableCount, stateBumpIndex] using
       tables_drop25_split witness]
   have providerNil : ((witness.tables.drop 25).take 27).flatMap
-      (typedTableInteractionsWith · stateChannel) = [] := by
+      (typedTableInteractionsWith · witness.data stateChannel) = [] := by
     simpa [instructionTableCount, stateSilentProviderTableCount] using
       witness_providerStateInteractions_eq_nil witness
   have stateTail : witness.tables.drop 52 =
@@ -917,22 +917,22 @@ theorem typedEnsembleStateInteractions_eq
 /-- Produced messages of flattened StateBump pairs are precisely the canonically re-limbed pushed
 messages of the active rows. -/
 theorem producedMessages_stateBumpTablePairs
-    (t : Table (ZMod p)) (rows : List (Array (ZMod p)))
-    (binary : ∀ row ∈ rows, (stateBumpRow t row).is_real = 0 ∨
-      (stateBumpRow t row).is_real = 1) :
+    (data : ProverData (ZMod p)) (rows : List (Array (ZMod p)))
+    (binary : ∀ row ∈ rows, (stateBumpRow data row).is_real = 0 ∨
+      (stateBumpRow data row).is_real = 1) :
     producedMessages (rows.flatMap fun row =>
-      [TypedInteraction.pulledIfValue stateChannel (stateBumpRow t row).is_real
-        (StateBumpChip.pulledMessage (stateBumpRow t row)),
-       TypedInteraction.pushedIfValue stateChannel (stateBumpRow t row).is_real
-        (StateBumpChip.pushedMessage (stateBumpRow t row))]) =
-      (rows.filter fun row => (stateBumpRow t row).is_real = 1).map
-        fun row => StateBumpChip.pushedMessage (stateBumpRow t row) := by
+      [TypedInteraction.pulledIfValue stateChannel (stateBumpRow data row).is_real
+        (StateBumpChip.pulledMessage (stateBumpRow data row)),
+       TypedInteraction.pushedIfValue stateChannel (stateBumpRow data row).is_real
+        (StateBumpChip.pushedMessage (stateBumpRow data row))]) =
+      (rows.filter fun row => (stateBumpRow data row).is_real = 1).map
+        fun row => StateBumpChip.pushedMessage (stateBumpRow data row) := by
   induction rows with
   | nil => rfl
   | cons row rows ih =>
       have headBinary := binary row List.mem_cons_self
-      have tailBinary : ∀ r ∈ rows, (stateBumpRow t r).is_real = 0 ∨
-          (stateBumpRow t r).is_real = 1 :=
+      have tailBinary : ∀ r ∈ rows, (stateBumpRow data r).is_real = 0 ∨
+          (stateBumpRow data r).is_real = 1 :=
         fun r rMem => binary r (List.mem_cons_of_mem row rMem)
       simp only [List.flatMap_cons, producedMessages_append]
       rw [ih tailBinary]
@@ -945,22 +945,22 @@ theorem producedMessages_stateBumpTablePairs
 /-- Consumed messages of flattened StateBump pairs are precisely the possibly-non-canonical pulled
 messages of the active rows. -/
 theorem consumedMessages_stateBumpTablePairs
-    (t : Table (ZMod p)) (rows : List (Array (ZMod p)))
-    (binary : ∀ row ∈ rows, (stateBumpRow t row).is_real = 0 ∨
-      (stateBumpRow t row).is_real = 1) :
+    (data : ProverData (ZMod p)) (rows : List (Array (ZMod p)))
+    (binary : ∀ row ∈ rows, (stateBumpRow data row).is_real = 0 ∨
+      (stateBumpRow data row).is_real = 1) :
     consumedMessages (rows.flatMap fun row =>
-      [TypedInteraction.pulledIfValue stateChannel (stateBumpRow t row).is_real
-        (StateBumpChip.pulledMessage (stateBumpRow t row)),
-       TypedInteraction.pushedIfValue stateChannel (stateBumpRow t row).is_real
-        (StateBumpChip.pushedMessage (stateBumpRow t row))]) =
-      (rows.filter fun row => (stateBumpRow t row).is_real = 1).map
-        fun row => StateBumpChip.pulledMessage (stateBumpRow t row) := by
+      [TypedInteraction.pulledIfValue stateChannel (stateBumpRow data row).is_real
+        (StateBumpChip.pulledMessage (stateBumpRow data row)),
+       TypedInteraction.pushedIfValue stateChannel (stateBumpRow data row).is_real
+        (StateBumpChip.pushedMessage (stateBumpRow data row))]) =
+      (rows.filter fun row => (stateBumpRow data row).is_real = 1).map
+        fun row => StateBumpChip.pulledMessage (stateBumpRow data row) := by
   induction rows with
   | nil => rfl
   | cons row rows ih =>
       have headBinary := binary row List.mem_cons_self
-      have tailBinary : ∀ r ∈ rows, (stateBumpRow t r).is_real = 0 ∨
-          (stateBumpRow t r).is_real = 1 :=
+      have tailBinary : ∀ r ∈ rows, (stateBumpRow data r).is_real = 0 ∨
+          (stateBumpRow data r).is_real = 1 :=
         fun r rMem => binary r (List.mem_cons_of_mem row rMem)
       simp only [List.flatMap_cons, consumedMessages_append]
       rw [ih tailBinary]
@@ -975,17 +975,17 @@ decomposition rewrites against. -/
 theorem producedMessages_stateBumpPairs
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (bumpBinary : ∀ row ∈ (stateBumpTable witness).table,
-      (stateBumpRow (stateBumpTable witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable witness) row).is_real = 1) :
+      (stateBumpRow witness.data row).is_real = 0 ∨
+        (stateBumpRow witness.data row).is_real = 1) :
     producedMessages ((stateBumpTable witness).table.flatMap fun row =>
       [TypedInteraction.pulledIfValue stateChannel
-        (stateBumpRow (stateBumpTable witness) row).is_real
-        (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row)),
+        (stateBumpRow witness.data row).is_real
+        (StateBumpChip.pulledMessage (stateBumpRow witness.data row)),
        TypedInteraction.pushedIfValue stateChannel
-        (stateBumpRow (stateBumpTable witness) row).is_real
-        (StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row))]) =
+        (stateBumpRow witness.data row).is_real
+        (StateBumpChip.pushedMessage (stateBumpRow witness.data row))]) =
       (realStateBumpRows witness).map
-        fun row => StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row) :=
+        fun row => StateBumpChip.pushedMessage (stateBumpRow witness.data row) :=
   producedMessages_stateBumpTablePairs _ _ bumpBinary
 
 /-- The StateBump block's consumed State messages, in the witness-level form the ensemble
@@ -993,17 +993,17 @@ decomposition rewrites against. -/
 theorem consumedMessages_stateBumpPairs
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (bumpBinary : ∀ row ∈ (stateBumpTable witness).table,
-      (stateBumpRow (stateBumpTable witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable witness) row).is_real = 1) :
+      (stateBumpRow witness.data row).is_real = 0 ∨
+        (stateBumpRow witness.data row).is_real = 1) :
     consumedMessages ((stateBumpTable witness).table.flatMap fun row =>
       [TypedInteraction.pulledIfValue stateChannel
-        (stateBumpRow (stateBumpTable witness) row).is_real
-        (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row)),
+        (stateBumpRow witness.data row).is_real
+        (StateBumpChip.pulledMessage (stateBumpRow witness.data row)),
        TypedInteraction.pushedIfValue stateChannel
-        (stateBumpRow (stateBumpTable witness) row).is_real
-        (StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row))]) =
+        (stateBumpRow witness.data row).is_real
+        (StateBumpChip.pushedMessage (stateBumpRow witness.data row))]) =
       (realStateBumpRows witness).map
-        fun row => StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row) :=
+        fun row => StateBumpChip.pulledMessage (stateBumpRow witness.data row) :=
   consumedMessages_stateBumpTablePairs _ _ bumpBinary
 
 /-- Halt rows' selector booleanity from witness constraints alone (the shallow inline gate; the
@@ -1012,22 +1012,22 @@ theorem witness_haltRows_selectorBinary
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
     ∀ row ∈ (haltTable witness).table,
-      (haltRow (haltTable witness) row).is_real = 0 ∨
-        (haltRow (haltTable witness) row).is_real = 1 := by
+      (haltRow witness.data row).is_real = 0 ∨
+        (haltRow witness.data row).is_real = 1 := by
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : haltTable witness ∈ witness.tables :=
     List.getElem_mem (haltIndex_lt_tablesLength witness)
-  have tableConstraints : (haltTable witness).Constraints :=
-    constraints _ (witness.mem_allTables_of_mem_tables tableMem)
+  have tableConstraints : (haltTable witness).Constraints witness.data :=
+    constraints _ tableMem
   intro row rowMem
   have rowConstraints := tableConstraints row rowMem
   rw [haltTable_component] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints (HaltChip.circuit (p := p))
-    ((haltTable witness).environment row) rowConstraints
+    (Environment.fromArray row witness.data) rowConstraints
   have binary := HaltChip.selectorBinary_of_shallow (varFromOffset HaltChip.Inputs 0)
     (size HaltChip.Inputs) _ shallow
-  have crossing : (haltRow (haltTable witness) row).is_real =
-      Expression.eval ((haltTable witness).environment row)
+  have crossing : (haltRow witness.data row).is_real =
+      Expression.eval (Environment.fromArray row witness.data)
         (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p)).is_real := by
     rw [haltRow_eq]
     simp only [circuit_norm]
@@ -1039,22 +1039,22 @@ theorem witness_syscallInstrsRows_selectorBinary
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
     ∀ row ∈ (syscallInstrsTable witness).table,
-      (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 0 ∨
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1 := by
+      (syscallInstrsRow witness.data row).is_real = 0 ∨
+        (syscallInstrsRow witness.data row).is_real = 1 := by
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : syscallInstrsTable witness ∈ witness.tables :=
     List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
-  have tableConstraints : (syscallInstrsTable witness).Constraints :=
-    constraints _ (witness.mem_allTables_of_mem_tables tableMem)
+  have tableConstraints : (syscallInstrsTable witness).Constraints witness.data :=
+    constraints _ tableMem
   intro row rowMem
   have rowConstraints := tableConstraints row rowMem
   rw [syscallInstrsTable_component] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints (SyscallInstrsChip.circuit (p := p))
-    ((syscallInstrsTable witness).environment row) rowConstraints
+    (Environment.fromArray row witness.data) rowConstraints
   have binary := SyscallInstrsChip.selectorBinary_of_shallow
     (varFromOffset SyscallInstrsChip.Inputs 0) (size SyscallInstrsChip.Inputs) _ shallow
-  have crossing : (syscallInstrsRow (syscallInstrsTable witness) row).is_real =
-      Expression.eval ((syscallInstrsTable witness).environment row)
+  have crossing : (syscallInstrsRow witness.data row).is_real =
+      Expression.eval (Environment.fromArray row witness.data)
         (varFromOffset SyscallInstrsChip.Inputs 0 :
           Var SyscallInstrsChip.Inputs (ZMod p)).is_real := by
     rw [syscallInstrsRow_eq]
@@ -1067,22 +1067,22 @@ theorem witness_syscallInstrsRows_haltSelectorBinary
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
     ∀ row ∈ (syscallInstrsTable witness).table,
-      (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 0 ∨
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 1 := by
+      (syscallInstrsRow witness.data row).is_halt = 0 ∨
+        (syscallInstrsRow witness.data row).is_halt = 1 := by
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : syscallInstrsTable witness ∈ witness.tables :=
     List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
-  have tableConstraints : (syscallInstrsTable witness).Constraints :=
-    constraints _ (witness.mem_allTables_of_mem_tables tableMem)
+  have tableConstraints : (syscallInstrsTable witness).Constraints witness.data :=
+    constraints _ tableMem
   intro row rowMem
   have rowConstraints := tableConstraints row rowMem
   rw [syscallInstrsTable_component] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints (SyscallInstrsChip.circuit (p := p))
-    ((syscallInstrsTable witness).environment row) rowConstraints
+    (Environment.fromArray row witness.data) rowConstraints
   have binary := SyscallInstrsChip.haltSelectorBinary_of_shallow
     (varFromOffset SyscallInstrsChip.Inputs 0) (size SyscallInstrsChip.Inputs) _ shallow
-  have crossing : (syscallInstrsRow (syscallInstrsTable witness) row).is_halt =
-      Expression.eval ((syscallInstrsTable witness).environment row)
+  have crossing : (syscallInstrsRow witness.data row).is_halt =
+      Expression.eval (Environment.fromArray row witness.data)
         (varFromOffset SyscallInstrsChip.Inputs 0 :
           Var SyscallInstrsChip.Inputs (ZMod p)).is_halt := by
     rw [syscallInstrsRow_eq]
@@ -1092,20 +1092,20 @@ theorem witness_syscallInstrsRows_haltSelectorBinary
 
 /-- Produced messages of flattened Halt pairs are the halted pushes of the active rows. -/
 theorem producedMessages_haltTablePairs
-    (t : Table (ZMod p)) (rows : List (Array (ZMod p)))
-    (binary : ∀ row ∈ rows, (haltRow t row).is_real = 0 ∨ (haltRow t row).is_real = 1) :
+    (data : ProverData (ZMod p)) (rows : List (Array (ZMod p)))
+    (binary : ∀ row ∈ rows, (haltRow data row).is_real = 0 ∨ (haltRow data row).is_real = 1) :
     producedMessages (rows.flatMap fun row =>
-      [TypedInteraction.pulledIfValue stateChannel (haltRow t row).is_real
-        (HaltChip.statePulledMessage (haltRow t row)),
-       TypedInteraction.pushedIfValue stateChannel (haltRow t row).is_real
-        (HaltChip.statePushedMessage (haltRow t row))]) =
-      (rows.filter fun row => (haltRow t row).is_real = 1).map
-        fun row => HaltChip.statePushedMessage (haltRow t row) := by
+      [TypedInteraction.pulledIfValue stateChannel (haltRow data row).is_real
+        (HaltChip.statePulledMessage (haltRow data row)),
+       TypedInteraction.pushedIfValue stateChannel (haltRow data row).is_real
+        (HaltChip.statePushedMessage (haltRow data row))]) =
+      (rows.filter fun row => (haltRow data row).is_real = 1).map
+        fun row => HaltChip.statePushedMessage (haltRow data row) := by
   induction rows with
   | nil => rfl
   | cons row rows ih =>
       have headBinary := binary row List.mem_cons_self
-      have tailBinary : ∀ r ∈ rows, (haltRow t r).is_real = 0 ∨ (haltRow t r).is_real = 1 :=
+      have tailBinary : ∀ r ∈ rows, (haltRow data r).is_real = 0 ∨ (haltRow data r).is_real = 1 :=
         fun r rMem => binary r (List.mem_cons_of_mem row rMem)
       simp only [List.flatMap_cons, producedMessages_append]
       rw [ih tailBinary]
@@ -1118,22 +1118,22 @@ theorem producedMessages_haltTablePairs
 /-- Produced messages of flattened syscall pairs are the `(clk + 264, next_pc)` pushes of the
 active rows. Same induction as the Halt table's; the two differ only in the pushed pc. -/
 theorem producedMessages_syscallInstrsTablePairs
-    (t : Table (ZMod p)) (rows : List (Array (ZMod p)))
-    (binary : ∀ row ∈ rows, (syscallInstrsRow t row).is_real = 0 ∨
-      (syscallInstrsRow t row).is_real = 1) :
+    (data : ProverData (ZMod p)) (rows : List (Array (ZMod p)))
+    (binary : ∀ row ∈ rows, (syscallInstrsRow data row).is_real = 0 ∨
+      (syscallInstrsRow data row).is_real = 1) :
     producedMessages (rows.flatMap fun row =>
-      [TypedInteraction.pulledIfValue stateChannel (syscallInstrsRow t row).is_real
-        (SyscallInstrsChip.statePulledMessage (syscallInstrsRow t row)),
-       TypedInteraction.pushedIfValue stateChannel (syscallInstrsRow t row).is_real
-        (SyscallInstrsChip.statePushedMessage (syscallInstrsRow t row))]) =
-      (rows.filter fun row => (syscallInstrsRow t row).is_real = 1).map
-        fun row => SyscallInstrsChip.statePushedMessage (syscallInstrsRow t row) := by
+      [TypedInteraction.pulledIfValue stateChannel (syscallInstrsRow data row).is_real
+        (SyscallInstrsChip.statePulledMessage (syscallInstrsRow data row)),
+       TypedInteraction.pushedIfValue stateChannel (syscallInstrsRow data row).is_real
+        (SyscallInstrsChip.statePushedMessage (syscallInstrsRow data row))]) =
+      (rows.filter fun row => (syscallInstrsRow data row).is_real = 1).map
+        fun row => SyscallInstrsChip.statePushedMessage (syscallInstrsRow data row) := by
   induction rows with
   | nil => rfl
   | cons row rows ih =>
       have headBinary := binary row List.mem_cons_self
-      have tailBinary : ∀ r ∈ rows, (syscallInstrsRow t r).is_real = 0 ∨
-          (syscallInstrsRow t r).is_real = 1 :=
+      have tailBinary : ∀ r ∈ rows, (syscallInstrsRow data r).is_real = 0 ∨
+          (syscallInstrsRow data r).is_real = 1 :=
         fun r rMem => binary r (List.mem_cons_of_mem row rMem)
       simp only [List.flatMap_cons, producedMessages_append]
       rw [ih tailBinary]
@@ -1145,22 +1145,22 @@ theorem producedMessages_syscallInstrsTablePairs
 
 /-- Consumed messages of flattened syscall pairs are the pre-syscall pulls of the active rows. -/
 theorem consumedMessages_syscallInstrsTablePairs
-    (t : Table (ZMod p)) (rows : List (Array (ZMod p)))
-    (binary : ∀ row ∈ rows, (syscallInstrsRow t row).is_real = 0 ∨
-      (syscallInstrsRow t row).is_real = 1) :
+    (data : ProverData (ZMod p)) (rows : List (Array (ZMod p)))
+    (binary : ∀ row ∈ rows, (syscallInstrsRow data row).is_real = 0 ∨
+      (syscallInstrsRow data row).is_real = 1) :
     consumedMessages (rows.flatMap fun row =>
-      [TypedInteraction.pulledIfValue stateChannel (syscallInstrsRow t row).is_real
-        (SyscallInstrsChip.statePulledMessage (syscallInstrsRow t row)),
-       TypedInteraction.pushedIfValue stateChannel (syscallInstrsRow t row).is_real
-        (SyscallInstrsChip.statePushedMessage (syscallInstrsRow t row))]) =
-      (rows.filter fun row => (syscallInstrsRow t row).is_real = 1).map
-        fun row => SyscallInstrsChip.statePulledMessage (syscallInstrsRow t row) := by
+      [TypedInteraction.pulledIfValue stateChannel (syscallInstrsRow data row).is_real
+        (SyscallInstrsChip.statePulledMessage (syscallInstrsRow data row)),
+       TypedInteraction.pushedIfValue stateChannel (syscallInstrsRow data row).is_real
+        (SyscallInstrsChip.statePushedMessage (syscallInstrsRow data row))]) =
+      (rows.filter fun row => (syscallInstrsRow data row).is_real = 1).map
+        fun row => SyscallInstrsChip.statePulledMessage (syscallInstrsRow data row) := by
   induction rows with
   | nil => rfl
   | cons row rows ih =>
       have headBinary := binary row List.mem_cons_self
-      have tailBinary : ∀ r ∈ rows, (syscallInstrsRow t r).is_real = 0 ∨
-          (syscallInstrsRow t r).is_real = 1 :=
+      have tailBinary : ∀ r ∈ rows, (syscallInstrsRow data r).is_real = 0 ∨
+          (syscallInstrsRow data r).is_real = 1 :=
         fun r rMem => binary r (List.mem_cons_of_mem row rMem)
       simp only [List.flatMap_cons, consumedMessages_append]
       rw [ih tailBinary]
@@ -1172,20 +1172,20 @@ theorem consumedMessages_syscallInstrsTablePairs
 
 /-- Consumed messages of flattened Halt pairs are the pre-syscall pulls of the active rows. -/
 theorem consumedMessages_haltTablePairs
-    (t : Table (ZMod p)) (rows : List (Array (ZMod p)))
-    (binary : ∀ row ∈ rows, (haltRow t row).is_real = 0 ∨ (haltRow t row).is_real = 1) :
+    (data : ProverData (ZMod p)) (rows : List (Array (ZMod p)))
+    (binary : ∀ row ∈ rows, (haltRow data row).is_real = 0 ∨ (haltRow data row).is_real = 1) :
     consumedMessages (rows.flatMap fun row =>
-      [TypedInteraction.pulledIfValue stateChannel (haltRow t row).is_real
-        (HaltChip.statePulledMessage (haltRow t row)),
-       TypedInteraction.pushedIfValue stateChannel (haltRow t row).is_real
-        (HaltChip.statePushedMessage (haltRow t row))]) =
-      (rows.filter fun row => (haltRow t row).is_real = 1).map
-        fun row => HaltChip.statePulledMessage (haltRow t row) := by
+      [TypedInteraction.pulledIfValue stateChannel (haltRow data row).is_real
+        (HaltChip.statePulledMessage (haltRow data row)),
+       TypedInteraction.pushedIfValue stateChannel (haltRow data row).is_real
+        (HaltChip.statePushedMessage (haltRow data row))]) =
+      (rows.filter fun row => (haltRow data row).is_real = 1).map
+        fun row => HaltChip.statePulledMessage (haltRow data row) := by
   induction rows with
   | nil => rfl
   | cons row rows ih =>
       have headBinary := binary row List.mem_cons_self
-      have tailBinary : ∀ r ∈ rows, (haltRow t r).is_real = 0 ∨ (haltRow t r).is_real = 1 :=
+      have tailBinary : ∀ r ∈ rows, (haltRow data r).is_real = 0 ∨ (haltRow data r).is_real = 1 :=
         fun r rMem => binary r (List.mem_cons_of_mem row rMem)
       simp only [List.flatMap_cons, consumedMessages_append]
       rw [ih tailBinary]
@@ -1204,25 +1204,25 @@ theorem producedMessages_typedEnsembleState_eq
       (decoded.toChipRow witness.data).is_real = 0 ∨
         (decoded.toChipRow witness.data).is_real = 1)
     (bumpBinary : ∀ row ∈ (stateBumpTable witness).table,
-      (stateBumpRow (stateBumpTable witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable witness) row).is_real = 1)
+      (stateBumpRow witness.data row).is_real = 0 ∨
+        (stateBumpRow witness.data row).is_real = 1)
     (haltBinary : ∀ row ∈ (haltTable witness).table,
-      (haltRow (haltTable witness) row).is_real = 0 ∨
-        (haltRow (haltTable witness) row).is_real = 1)
+      (haltRow witness.data row).is_real = 0 ∨
+        (haltRow witness.data row).is_real = 1)
     (syscallBinary : ∀ row ∈ (syscallInstrsTable witness).table,
-      (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 0 ∨
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1) :
+      (syscallInstrsRow witness.data row).is_real = 0 ∨
+        (syscallInstrsRow witness.data row).is_real = 1) :
     producedMessages (typedEnsembleInteractionsWith witness stateChannel) =
       initialBoundaryStateMessage witness.publicInput ::
         ((realDecodedInstructionRows witness.data witness.tables).map
           (fun decoded => statePushMessage (decoded.toChipRow witness.data)) ++
          ((realStateBumpRows witness).map
-          (fun row => StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)) ++
+          (fun row => StateBumpChip.pushedMessage (stateBumpRow witness.data row)) ++
           ((realHaltRows witness).map
-          (fun row => HaltChip.statePushedMessage (haltRow (haltTable witness) row)) ++
+          (fun row => HaltChip.statePushedMessage (haltRow witness.data row)) ++
           (realSyscallInstrsRows witness).map
           (fun row => SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row))))) := by
+            (syscallInstrsRow witness.data row))))) := by
   rw [typedEnsembleStateInteractions_eq, producedMessages_append, producedMessages_append,
     producedMessages_append, producedMessages_append, producedMessages_statePair_one,
     producedMessages_decodedStatePairs witness.data _ binary,
@@ -1240,25 +1240,25 @@ theorem consumedMessages_typedEnsembleState_eq
       (decoded.toChipRow witness.data).is_real = 0 ∨
         (decoded.toChipRow witness.data).is_real = 1)
     (bumpBinary : ∀ row ∈ (stateBumpTable witness).table,
-      (stateBumpRow (stateBumpTable witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable witness) row).is_real = 1)
+      (stateBumpRow witness.data row).is_real = 0 ∨
+        (stateBumpRow witness.data row).is_real = 1)
     (haltBinary : ∀ row ∈ (haltTable witness).table,
-      (haltRow (haltTable witness) row).is_real = 0 ∨
-        (haltRow (haltTable witness) row).is_real = 1)
+      (haltRow witness.data row).is_real = 0 ∨
+        (haltRow witness.data row).is_real = 1)
     (syscallBinary : ∀ row ∈ (syscallInstrsTable witness).table,
-      (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 0 ∨
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1) :
+      (syscallInstrsRow witness.data row).is_real = 0 ∨
+        (syscallInstrsRow witness.data row).is_real = 1) :
     consumedMessages (typedEnsembleInteractionsWith witness stateChannel) =
       finalBoundaryStateMessage witness.publicInput ::
         ((realDecodedInstructionRows witness.data witness.tables).map
           (fun decoded => statePullMessage (decoded.toChipRow witness.data)) ++
          ((realStateBumpRows witness).map
-          (fun row => StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row)) ++
+          (fun row => StateBumpChip.pulledMessage (stateBumpRow witness.data row)) ++
           ((realHaltRows witness).map
-          (fun row => HaltChip.statePulledMessage (haltRow (haltTable witness) row)) ++
+          (fun row => HaltChip.statePulledMessage (haltRow witness.data row)) ++
           (realSyscallInstrsRows witness).map
           (fun row => SyscallInstrsChip.statePulledMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row))))) := by
+            (syscallInstrsRow witness.data row))))) := by
   rw [typedEnsembleStateInteractions_eq, consumedMessages_append, consumedMessages_append,
     consumedMessages_append, consumedMessages_append, consumedMessages_statePair_one,
     consumedMessages_decodedStatePairs witness.data _ binary,
@@ -1276,14 +1276,14 @@ theorem typedEnsembleStateInteractions_signed_binary
       (decoded.toChipRow witness.data).is_real = 0 ∨
         (decoded.toChipRow witness.data).is_real = 1)
     (bumpBinary : ∀ row ∈ (stateBumpTable witness).table,
-      (stateBumpRow (stateBumpTable witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable witness) row).is_real = 1)
+      (stateBumpRow witness.data row).is_real = 0 ∨
+        (stateBumpRow witness.data row).is_real = 1)
     (haltBinary : ∀ row ∈ (haltTable witness).table,
-      (haltRow (haltTable witness) row).is_real = 0 ∨
-        (haltRow (haltTable witness) row).is_real = 1)
+      (haltRow witness.data row).is_real = 0 ∨
+        (haltRow witness.data row).is_real = 1)
     (syscallBinary : ∀ row ∈ (syscallInstrsTable witness).table,
-      (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 0 ∨
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1) :
+      (syscallInstrsRow witness.data row).is_real = 0 ∨
+        (syscallInstrsRow witness.data row).is_real = 1) :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
         signedVal interaction.mult = 1 := by
@@ -1313,34 +1313,34 @@ theorem realDecodedStateMessages_perm
       (decoded.toChipRow witness.data).is_real = 0 ∨
         (decoded.toChipRow witness.data).is_real = 1)
     (bumpBinary : ∀ row ∈ (stateBumpTable witness).table,
-      (stateBumpRow (stateBumpTable witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable witness) row).is_real = 1)
+      (stateBumpRow witness.data row).is_real = 0 ∨
+        (stateBumpRow witness.data row).is_real = 1)
     (haltBinary : ∀ row ∈ (haltTable witness).table,
-      (haltRow (haltTable witness) row).is_real = 0 ∨
-        (haltRow (haltTable witness) row).is_real = 1)
+      (haltRow witness.data row).is_real = 0 ∨
+        (haltRow witness.data row).is_real = 1)
     (syscallBinary : ∀ row ∈ (syscallInstrsTable witness).table,
-      (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 0 ∨
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1) :
+      (syscallInstrsRow witness.data row).is_real = 0 ∨
+        (syscallInstrsRow witness.data row).is_real = 1) :
     (initialBoundaryStateMessage witness.publicInput ::
       ((realDecodedInstructionRows witness.data witness.tables).map
         (fun decoded => statePushMessage (decoded.toChipRow witness.data)) ++
        ((realStateBumpRows witness).map
-        (fun row => StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)) ++
+        (fun row => StateBumpChip.pushedMessage (stateBumpRow witness.data row)) ++
         ((realHaltRows witness).map
-        (fun row => HaltChip.statePushedMessage (haltRow (haltTable witness) row)) ++
+        (fun row => HaltChip.statePushedMessage (haltRow witness.data row)) ++
         (realSyscallInstrsRows witness).map
         (fun row => SyscallInstrsChip.statePushedMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)))))).Perm
+          (syscallInstrsRow witness.data row)))))).Perm
     (finalBoundaryStateMessage witness.publicInput ::
       ((realDecodedInstructionRows witness.data witness.tables).map
         (fun decoded => statePullMessage (decoded.toChipRow witness.data)) ++
        ((realStateBumpRows witness).map
-        (fun row => StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row)) ++
+        (fun row => StateBumpChip.pulledMessage (stateBumpRow witness.data row)) ++
         ((realHaltRows witness).map
-        (fun row => HaltChip.statePulledMessage (haltRow (haltTable witness) row)) ++
+        (fun row => HaltChip.statePulledMessage (haltRow witness.data row)) ++
         (realSyscallInstrsRows witness).map
         (fun row => SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)))))) := by
+          (syscallInstrsRow witness.data row)))))) := by
   classical
   have channelBalanced := typedInteractions_balanced witness balanced stateChannel
     (by simp [sp1Ensemble_channels])
@@ -1369,31 +1369,31 @@ theorem realState_endpointBalanced_withBump
       (decoded.toChipRow witness.data).is_real = 0 ∨
         (decoded.toChipRow witness.data).is_real = 1)
     (bumpBinary : ∀ row ∈ (stateBumpTable witness).table,
-      (stateBumpRow (stateBumpTable witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable witness) row).is_real = 1)
+      (stateBumpRow witness.data row).is_real = 0 ∨
+        (stateBumpRow witness.data row).is_real = 1)
     (haltBinary : ∀ row ∈ (haltTable witness).table,
-      (haltRow (haltTable witness) row).is_real = 0 ∨
-        (haltRow (haltTable witness) row).is_real = 1)
+      (haltRow witness.data row).is_real = 0 ∨
+        (haltRow witness.data row).is_real = 1)
     (syscallBinary : ∀ row ∈ (syscallInstrsTable witness).table,
-      (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 0 ∨
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1) :
+      (syscallInstrsRow witness.data row).is_real = 0 ∨
+        (syscallInstrsRow witness.data row).is_real = 1) :
     RankedGrounding.EndpointBalanced
       ((↑((realDecodedInstructionRows witness.data witness.tables).map
           (decodedStateEdge witness.data)) +
         (↑((realStateBumpRows witness).map
           (fun row =>
-            (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
-             StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)))) +
+            (StateBumpChip.pulledMessage (stateBumpRow witness.data row),
+             StateBumpChip.pushedMessage (stateBumpRow witness.data row)))) +
          (↑((realHaltRows witness).map
           (fun row =>
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row)))) +
+            (HaltChip.statePulledMessage (haltRow witness.data row),
+             HaltChip.statePushedMessage (haltRow witness.data row)))) +
           ↑((realSyscallInstrsRows witness).map
           (fun row =>
             (SyscallInstrsChip.statePulledMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row),
+              (syscallInstrsRow witness.data row),
              SyscallInstrsChip.statePushedMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row))))))) :
+              (syscallInstrsRow witness.data row))))))) :
         Multiset (StateMsg (ZMod p) × StateMsg (ZMod p)))
       (fun e => e)
       (initialBoundaryStateMessage witness.publicInput)
@@ -1404,36 +1404,36 @@ theorem realState_endpointBalanced_withBump
           (decodedStateEdge witness.data) ++
         ((realStateBumpRows witness).map
           (fun row =>
-            (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
-             StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row))) ++
+            (StateBumpChip.pulledMessage (stateBumpRow witness.data row),
+             StateBumpChip.pushedMessage (stateBumpRow witness.data row))) ++
          ((realHaltRows witness).map
           (fun row =>
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row))) ++
+            (HaltChip.statePulledMessage (haltRow witness.data row),
+             HaltChip.statePushedMessage (haltRow witness.data row))) ++
           (realSyscallInstrsRows witness).map
           (fun row =>
             (SyscallInstrsChip.statePulledMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row),
+              (syscallInstrsRow witness.data row),
              SyscallInstrsChip.statePushedMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row)))))).map
+              (syscallInstrsRow witness.data row)))))).map
         (fun edge => edge.2)) : Multiset (StateMsg (ZMod p))) =
     ↑(finalBoundaryStateMessage witness.publicInput ::
       ((realDecodedInstructionRows witness.data witness.tables).map
           (decodedStateEdge witness.data) ++
         ((realStateBumpRows witness).map
           (fun row =>
-            (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
-             StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row))) ++
+            (StateBumpChip.pulledMessage (stateBumpRow witness.data row),
+             StateBumpChip.pushedMessage (stateBumpRow witness.data row))) ++
          ((realHaltRows witness).map
           (fun row =>
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row))) ++
+            (HaltChip.statePulledMessage (haltRow witness.data row),
+             HaltChip.statePushedMessage (haltRow witness.data row))) ++
           (realSyscallInstrsRows witness).map
           (fun row =>
             (SyscallInstrsChip.statePulledMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row),
+              (syscallInstrsRow witness.data row),
              SyscallInstrsChip.statePushedMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row)))))).map
+              (syscallInstrsRow witness.data row)))))).map
         (fun edge => edge.1))
   refine Multiset.coe_eq_coe.mpr ?_
   simp only [List.map_append, List.map_map]
@@ -1452,18 +1452,18 @@ theorem realState_endpointBalanced_withBump_of_constraints
           (decodedStateEdge witness.data)) +
         (↑((realStateBumpRows witness).map
           (fun row =>
-            (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
-             StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)))) +
+            (StateBumpChip.pulledMessage (stateBumpRow witness.data row),
+             StateBumpChip.pushedMessage (stateBumpRow witness.data row)))) +
          (↑((realHaltRows witness).map
           (fun row =>
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row)))) +
+            (HaltChip.statePulledMessage (haltRow witness.data row),
+             HaltChip.statePushedMessage (haltRow witness.data row)))) +
           ↑((realSyscallInstrsRows witness).map
           (fun row =>
             (SyscallInstrsChip.statePulledMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row),
+              (syscallInstrsRow witness.data row),
              SyscallInstrsChip.statePushedMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row))))))) :
+              (syscallInstrsRow witness.data row))))))) :
         Multiset (StateMsg (ZMod p) × StateMsg (ZMod p)))
       (fun e => e)
       (initialBoundaryStateMessage witness.publicInput)

@@ -907,8 +907,8 @@ theorem transportU8RangeTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportU8RangeTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.U8Range.computableWitnesses
+    (transportU8RangeTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.U8Range.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteU8RangeRows inventory)
     (fun row => byteU8RangeInput row
@@ -921,8 +921,8 @@ theorem transportMsbTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportMsbTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.MSB.computableWitnesses
+    (transportMsbTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.MSB.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteMsbRows inventory)
     (fun row => byteMsbInput row
@@ -935,8 +935,8 @@ theorem transportAndTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportAndTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.AndByte.computableWitnesses
+    (transportAndTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.AndByte.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteAndRows inventory)
     (fun row => byteAndInput row
@@ -949,8 +949,8 @@ theorem transportOrTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportOrTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.OrByte.computableWitnesses
+    (transportOrTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.OrByte.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteOrRows inventory)
     (fun row => byteOrInput row
@@ -964,8 +964,8 @@ theorem transportXorTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportXorTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.XorByte.computableWitnesses
+    (transportXorTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.XorByte.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteXorRows inventory)
     (fun row => byteXorInput row
@@ -979,8 +979,8 @@ theorem transportLtuTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportLtuTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.Ltu.computableWitnesses
+    (transportLtuTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.Ltu.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteLtuRows inventory)
     (fun row => byteLtuInput row
@@ -994,8 +994,8 @@ theorem transportRangeTable_constraints (width : RangeChip.Width)
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportRangeTable width witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ (RangeChip.computableWitnessesFor width)
+    (transportRangeTable width witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) (RangeChip.computableWitnessesFor width)
   intro input hinput
   obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hinput
   exact contract.rangeAt (canonicalRangeRows_mem_source width witness inventory row hrow)
@@ -1005,8 +1005,8 @@ theorem transportProgramTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportProgramTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ProgramProviderChip.computableWitnesses
+    (transportProgramTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ProgramProviderChip.computableWitnesses
   intro input hinput
   obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hinput
   change ProgramMsg.RowSpec
@@ -1047,32 +1047,6 @@ theorem extractedPreprocessedProviderTables_components
     List.map_map]
   rfl
 
-/-- Every constructed provider table uses the same committed data. -/
-theorem extractedPreprocessedProviderTables_data
-    (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory witness)
-    (skeleton : LookupAccessList)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ∀ table ∈ extractedPreprocessedProviderTables witness inventory skeleton data hint,
-      table.data = data := by
-  intro table hmem
-  simp only [extractedPreprocessedProviderTables, List.mem_append, List.mem_cons,
-    List.not_mem_nil, or_false, List.mem_map] at hmem
-  rcases hmem with preProgram | programMem
-  · rcases preProgram with byteMem | rangeMem
-    · rcases byteMem with h | h | h | h | h | h
-      · subst table; rfl
-      · subst table; rfl
-      · subst table; rfl
-      · subst table; rfl
-      · subst table; rfl
-      · subst table; rfl
-    · obtain ⟨width, -, h⟩ := rangeMem
-      subst table
-      rfl
-  · subst table
-    rfl
-
 /-- **Constructed provider-prefix validity.** Local source-row semantics discharges every
 native constraint.  Multiplicity recount obligations are irrelevant to these local polynomial
 constraints and are used only by the ledger theorem below. -/
@@ -1082,7 +1056,7 @@ theorem extractedPreprocessedProviderTables_constraints
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ∀ table ∈ extractedPreprocessedProviderTables witness inventory skeleton data hint,
-      table.Constraints := by
+      table.Constraints data := by
   intro table hmem
   simp only [extractedPreprocessedProviderTables, List.mem_append, List.mem_cons,
     List.not_mem_nil, or_false, List.mem_map] at hmem
@@ -2247,7 +2221,7 @@ private theorem transportU8RangeTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportU8RangeTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportU8RangeTable witness inventory skeleton data hint) data =
       (canonicalByteU8RangeRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteU8RangeKey row) := by
@@ -2257,7 +2231,7 @@ private theorem transportU8RangeTable_cleanAccesses
     (fun row => byteU8RangeInput row
       (providerRecount skeleton (sourceByteU8RangeKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteU8RangeKey row)) data hint
+      (sourceByteU8RangeKey row)) data hint (by trivial) data
   intro row _
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.U8Range.circuit]
   · exact u8RangeRow_nativeAccesses row skeleton data hint
@@ -2272,7 +2246,7 @@ private theorem transportMsbTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportMsbTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportMsbTable witness inventory skeleton data hint) data =
       (canonicalByteMsbRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteMsbKey row) := by
@@ -2282,7 +2256,7 @@ private theorem transportMsbTable_cleanAccesses
     (fun row => byteMsbInput row
       (providerRecount skeleton (sourceByteMsbKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteMsbKey row)) data hint
+      (sourceByteMsbKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.MSB.circuit]
   · exact msbRow_nativeAccesses contract row
@@ -2299,7 +2273,7 @@ private theorem transportAndTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportAndTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportAndTable witness inventory skeleton data hint) data =
       (canonicalByteAndRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteAndKey row) := by
@@ -2309,7 +2283,7 @@ private theorem transportAndTable_cleanAccesses
     (fun row => byteAndInput row
       (providerRecount skeleton (sourceByteAndKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteAndKey row)) data hint
+      (sourceByteAndKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.AndByte.circuit]
   · exact andRow_nativeAccesses contract row
@@ -2326,7 +2300,7 @@ private theorem transportOrTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportOrTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportOrTable witness inventory skeleton data hint) data =
       (canonicalByteOrRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteOrKey row) := by
@@ -2336,7 +2310,7 @@ private theorem transportOrTable_cleanAccesses
     (fun row => byteOrInput row
       (providerRecount skeleton (sourceByteOrKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteOrKey row)) data hint
+      (sourceByteOrKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.OrByte.circuit]
   · exact orRow_nativeAccesses contract row
@@ -2354,7 +2328,7 @@ private theorem transportXorTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportXorTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportXorTable witness inventory skeleton data hint) data =
       (canonicalByteXorRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteXorKey row) := by
@@ -2364,7 +2338,7 @@ private theorem transportXorTable_cleanAccesses
     (fun row => byteXorInput row
       (providerRecount skeleton (sourceByteXorKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteXorKey row)) data hint
+      (sourceByteXorKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.XorByte.circuit]
   · exact xorRow_nativeAccesses contract row
@@ -2382,7 +2356,7 @@ private theorem transportLtuTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportLtuTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportLtuTable witness inventory skeleton data hint) data =
       (canonicalByteLtuRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteLtuKey row) := by
@@ -2392,7 +2366,7 @@ private theorem transportLtuTable_cleanAccesses
     (fun row => byteLtuInput row
       (providerRecount skeleton (sourceByteLtuKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteLtuKey row)) data hint
+      (sourceByteLtuKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.Ltu.circuit]
   · exact ltuRow_nativeAccesses contract row
@@ -2410,7 +2384,7 @@ private theorem transportRangeTable_cleanAccesses (width : RangeChip.Width)
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportRangeTable width witness inventory skeleton data hint) =
+    tableCleanAccesses (transportRangeTable width witness inventory skeleton data hint) data =
       (canonicalRangeRows width inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceRangeKey row) := by
@@ -2420,7 +2394,7 @@ private theorem transportRangeTable_cleanAccesses (width : RangeChip.Width)
     (fun row => rangeProviderInput row
       (providerRecount skeleton (sourceRangeKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceRangeKey row)) data hint
+      (sourceRangeKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly (RangeChip.circuitFor width)]
   · exact rangeRow_nativeAccesses width row
@@ -2440,7 +2414,7 @@ private theorem transportProgramTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportProgramTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportProgramTable witness inventory skeleton data hint) data =
       (canonicalProgramRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceProgramKey row) := by
@@ -2450,7 +2424,7 @@ private theorem transportProgramTable_cleanAccesses
     (fun row => programProviderInput row
       (providerRecount skeleton (sourceProgramKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceProgramKey row)) data hint
+      (sourceProgramKey row)) data hint (by trivial) data
   intro row _
   rw [cleanAccesses_eq_nativeAccesses_programOnly ProgramProviderChip.circuit]
   · rw [programRow_nativeAccesses row skeleton data hint]
@@ -2470,13 +2444,13 @@ private theorem extractedPreprocessedProviderTables_fieldAccesses
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     tablesCleanAccesses
-        (extractedPreprocessedProviderTables witness inventory skeleton data hint) =
+        (extractedPreprocessedProviderTables witness inventory skeleton data hint) data =
       (inventoryPreprocessedKeys inventory).map
         (recountedProviderFieldAccess (p := p) skeleton) := by
   have rangeTables :
       ((RangeChip.allWidths.map fun width =>
           transportRangeTable width witness inventory skeleton data hint).flatMap
-        tableCleanAccesses) =
+        (tableCleanAccesses · data)) =
       RangeChip.allWidths.flatMap fun width =>
         (canonicalRangeRows width inventory).map fun row =>
           recountedProviderFieldAccess (p := p) skeleton
@@ -2501,7 +2475,7 @@ theorem extractedPreprocessedProviderTables_cleanAccesses
     (contract : PreprocessedProviderRecountContract witness inventory skeleton)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     tablesCleanAccesses
-        (extractedPreprocessedProviderTables witness inventory skeleton data hint) =
+        (extractedPreprocessedProviderTables witness inventory skeleton data hint) data =
       recountedPreprocessedProviderAccesses inventory skeleton := by
   rw [extractedPreprocessedProviderTables_fieldAccesses contract.localSemantics inventory]
   unfold recountedPreprocessedProviderAccesses

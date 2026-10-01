@@ -212,8 +212,8 @@ variable {witness : CoreAIR.Witness (CoreAIR.Current.Row p)}
 theorem transportMemoryInitTable_constraints
     (contract : MemoryBoundaryProviderContract witness)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportMemoryInitTable witness data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ MemoryProviderChip.computableWitnesses
+    (transportMemoryInitTable witness data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) MemoryProviderChip.computableWitnesses
   intro input hinput
   obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hinput
   have decoded := contract.init row hrow
@@ -223,8 +223,8 @@ omit [Fact (2 ^ 24 < p)] in
 theorem transportMemoryFinalizeTable_constraints
     (contract : MemoryBoundaryProviderContract witness)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportMemoryFinalizeTable witness data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ MemoryFinalizeChip.computableWitnesses
+    (transportMemoryFinalizeTable witness data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) MemoryFinalizeChip.computableWitnesses
   intro input hinput
   obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hinput
   have decoded := contract.finalize row hrow
@@ -245,20 +245,11 @@ theorem extractedMemoryBoundaryTables_components
       ((Soundness.sp1ProviderTables (p := p)).drop
         Soundness.preprocessedProviderTableCount).take 2 := rfl
 
-/-- Both constructed boundary tables use the same committed data. -/
-theorem extractedMemoryBoundaryTables_data
-    (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ∀ table ∈ extractedMemoryBoundaryTables witness data hint, table.data = data := by
-  intro table hmem
-  simp only [extractedMemoryBoundaryTables, List.mem_cons, List.not_mem_nil, or_false] at hmem
-  rcases hmem with rfl | rfl <;> rfl
-
 /-- Both constructed native boundary tables satisfy their complete constraints. -/
 theorem extractedMemoryBoundaryTables_constraints
     (contract : MemoryBoundaryProviderContract witness)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ∀ table ∈ extractedMemoryBoundaryTables witness data hint, table.Constraints := by
+    ∀ table ∈ extractedMemoryBoundaryTables witness data hint, table.Constraints data := by
   intro table hmem
   simp only [extractedMemoryBoundaryTables, List.mem_cons, List.not_mem_nil, or_false] at hmem
   rcases hmem with rfl | rfl
@@ -612,24 +603,24 @@ private theorem memoryGlobalFinalizeRow_nativeAccesses
 private theorem transportMemoryInitTable_accesses
     (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableNativeAccesses (transportMemoryInitTable witness data hint) =
+    tableNativeAccesses (transportMemoryInitTable witness data hint) data =
       (activeMemoryGlobalInitRows witness).map projectedMemoryGlobalInitAccess := by
   simpa only [transportMemoryInitTable, MemoryProviderChip.component] using
     tableNativeAccesses_build_map_singleton
       ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p))
       (activeMemoryGlobalInitRows witness) memoryGlobalInitInput projectedMemoryGlobalInitAccess
-      data hint (fun row _ => memoryGlobalInitRow_nativeAccesses row data hint)
+      data hint (by trivial) data (fun row _ => memoryGlobalInitRow_nativeAccesses row data hint)
 
 private theorem transportMemoryFinalizeTable_accesses
     (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableNativeAccesses (transportMemoryFinalizeTable witness data hint) =
+    tableNativeAccesses (transportMemoryFinalizeTable witness data hint) data =
       (activeMemoryGlobalFinalizeRows witness).map projectedMemoryGlobalFinalizeAccess := by
   simpa only [transportMemoryFinalizeTable, MemoryFinalizeChip.component] using
     tableNativeAccesses_build_map_singleton
       ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p))
       (activeMemoryGlobalFinalizeRows witness) memoryGlobalFinalizeInput
-      projectedMemoryGlobalFinalizeAccess data hint
+      projectedMemoryGlobalFinalizeAccess data hint (by trivial) data
       (fun row _ => memoryGlobalFinalizeRow_nativeAccesses row data hint)
 
 private theorem active_projectedMemoryGlobalInitAccess_map
@@ -677,7 +668,7 @@ theorem extractedMemoryBoundaryTables_activeAccesses
     (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     LookupAccessList.active
-        ((extractedMemoryBoundaryTables witness data hint).flatMap tableNativeAccesses) =
+        ((extractedMemoryBoundaryTables witness data hint).flatMap (tableNativeAccesses · data)) =
       LookupAccessList.active (projectedMemoryBoundaryProviderAccesses witness) := by
   simp only [extractedMemoryBoundaryTables, List.flatMap_cons, List.flatMap_nil,
     List.append_nil, transportMemoryInitTable_accesses,

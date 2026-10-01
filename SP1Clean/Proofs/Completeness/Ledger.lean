@@ -333,8 +333,10 @@ nothing to every other bus, so three of the four channel ledgers are discharged 
 row. -/
 theorem builtTable_interactionsWith_eq_nil_of_ne (c : Component (ZMod p))
     (inputs : List (c.Input (ZMod p))) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (fixed : c.fixedRowsMatch (inputs.map (c.buildRow · data hint)))
+    (evaluationData : ProverData (ZMod p))
     {channel ch0 : RawChannel (ZMod p)} (hsub : OnlyChannel c ch0) (hne : channel ≠ ch0) :
-    (Table.build c inputs data hint).interactionsWith channel = [] :=
+    (Table.build c inputs data hint fixed).interactionsWith evaluationData channel = [] :=
   Table.interactionsWith_nil_of_channel_not_mem (by
     simp only [Table.build_component]
     exact fun hmem => hne (hsub channel hmem))

@@ -33,12 +33,8 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
-/-- **The five buses the current tables actually speak on.** The ensemble declares two more —
-`syscallChannel` and `publicValuesChannel`, the `SyscallInstrs` row's buses — but until that table
-joins (S4b) no registered table touches them, and this list is what makes that a *uniform* theorem:
-every per-table subset fact below lands here, so silence on any channel outside this list follows
-for all tables at once (`sp1AllTables_channel_not_mem_of_not_core`) instead of costing a per-table
-sweep per new channel, the way the Exit wave did. -/
+/-- The five core buses. `SyscallInstrs` additionally uses the syscall and public-values buses;
+all other physical tables and the public verifier stay within this list. -/
 def sp1CoreChannels : List (RawChannel (ZMod p)) :=
   [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
    Channels.programChannel.toRaw, Channels.memoryChannel.toRaw,
@@ -473,14 +469,12 @@ private theorem haltProvider_channels_subset :
   simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
-private theorem verifier_channels_subset :
-    (sp1StateVerifier (p := p)).channels ⊆ sp1CoreChannels (p := p) := by
-  intro ch h
-  rw [GeneralFormalCircuit.channels, List.mem_append,
-    show (sp1StateVerifier (p := p)).channelsWithGuarantees
-      = [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw] from rfl,
-    show (sp1StateVerifier (p := p)).channelsWithRequirements = [] from rfl] at h
-  simp only [List.not_mem_nil, List.mem_cons, or_false] at h
+/-- The public verifier's operations use only the core buses. -/
+theorem sp1Ensemble_verifier_channels_subset_core :
+    (sp1Ensemble (p := p)).verifierOperations.channels ⊆ sp1CoreChannels (p := p) := by
+  intro channel member
+  simp [sp1Ensemble, Air.Flat.Ensemble.verifierOperations, sp1StateVerifierProgram,
+    Verifier.ofInteractions, sp1StateVerifierMain, Operations.channels, circuit_norm] at member
   simp only [sp1CoreChannels_eq, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
@@ -590,21 +584,14 @@ theorem sp1Ensemble_tables_channels_subset_core_of_ne (i : ℕ)
     exact providerTableFor_channels_subset_core_of_ne (p := p) _
       (providerTableId_all_ne_syscall ⟨i - 25, hj⟩ hne29)
 
-/-- **Every registered table stays on the five core buses, with exactly one exception.**
-
-The `SyscallInstrs` table is that exception, and naming it here is the honest form: it is the only
-table that speaks on the syscall and public-values buses, so a blanket "everything is core-only"
-claim would now be false. Stating the carve-out as a disjunction rather than deleting the theorem
-keeps the *other* fifty-four tables' silence a one-line consequence, which is what the two buses'
-balance still rests on while the syscall table's trace is empty. -/
-theorem sp1AllTables_channels_subset_core :
-    ∀ component ∈ (sp1Ensemble (p := p)).allTables,
+/-- Every physical table uses only the core buses, except `SyscallInstrs`. -/
+theorem sp1Ensemble_tables_channels_subset_core :
+    ∀ component ∈ (sp1Ensemble (p := p)).tables,
       component.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
         component = ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)) := by
   intro component hc
-  rw [Ensemble.allTables, List.mem_cons, sp1Ensemble_tables, List.mem_append] at hc
-  rcases hc with rfl | hc | hc
-  · exact Or.inl verifier_channels_subset
+  rw [sp1Ensemble_tables, List.mem_append] at hc
+  rcases hc with hc | hc
   · exact Or.inl (sp1Tables_channels_subset _ hc)
   · exact sp1ProviderTables_channels_subset_core _ hc
 
@@ -616,33 +603,21 @@ theorem sp1CoreChannels_subset :
   simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
   tauto
 
-/-- **The ensemble's tables speak only on the ensemble's channels** — verifier row included.
-
-Clean's `Ensemble` does not impose this, so it is a fact about `sp1Ensemble` specifically. -/
-theorem sp1Ensemble_allTables_channels_subset :
-    ∀ component ∈ (sp1Ensemble (p := p)).allTables,
+/-- Every physical table uses only channels declared by the ensemble. -/
+theorem sp1Ensemble_tables_channels_subset :
+    ∀ component ∈ (sp1Ensemble (p := p)).tables,
       component.circuit.channels ⊆ (sp1Ensemble (p := p)).channels := by
   intro component hc
-  rcases sp1AllTables_channels_subset_core component hc with hcore | rfl
+  rcases sp1Ensemble_tables_channels_subset_core component hc with hcore | rfl
   · exact List.Subset.trans hcore sp1CoreChannels_subset
   · exact syscallInstrsProvider_channels_subset
 
-/-- Membership of a witness table's component in the ensemble's component list. -/
-theorem witness_table_component_mem (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    {table : Air.Flat.Table (ZMod p)} (htable : table ∈ witness.allTables) :
-    table.component ∈ (sp1Ensemble (p := p)).allTables := by
-  rw [Air.Flat.EnsembleWitness.allTables, List.mem_cons] at htable
-  rw [Air.Flat.Ensemble.allTables, List.mem_cons]
-  rcases htable with rfl | htable
-  · exact Or.inl rfl
-  · refine Or.inr ?_
-    obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp htable
-    have hlen : i < (sp1Ensemble (p := p)).tables.length := by
-      rw [witness.same_length]; exact hi
-    rw [← witness.same_circuits i hlen]
-    exact List.getElem_mem hlen
+/-- The public verifier also uses only declared channels. -/
+theorem sp1Ensemble_verifier_channels_subset :
+    (sp1Ensemble (p := p)).verifierOperations.channels ⊆ (sp1Ensemble (p := p)).channels :=
+  List.Subset.trans sp1Ensemble_verifier_channels_subset_core sp1CoreChannels_subset
 
-/-- **A witness is silent on a non-core channel exactly when its syscall table has no rows.**
+/-- A witness is silent on non-core channels when its syscall table has no rows.
 
 Two reasons compose, one per table: fifty-four of the fifty-five tables never name the channel, and
 the fifty-fifth names it but has nothing to say. The hypothesis is what the deterministic compiler
@@ -654,24 +629,26 @@ theorem witness_interactionsWith_eq_nil_of_not_core
     (hEmpty : ∀ t, witness.tables[syscallTablePosition]? = some t → t.table = [])
     {ch : RawChannel (ZMod p)} (hch : ch ∉ sp1CoreChannels (p := p)) :
     witness.interactionsWith ch = [] := by
-  rw [Air.Flat.EnsembleWitness.interactionsWith, List.flatMap_eq_nil_iff]
+  have verifierSilent : witness.verifierInteractionsWith ch = [] := by
+    simp only [EnsembleWitness.verifierInteractionsWith, Operations.interactionValuesWith,
+      Operations.interactionsWith, List.map_eq_nil_iff, List.filter_eq_nil_iff, decide_eq_true_eq]
+    intro interaction member same
+    apply hch
+    apply sp1Ensemble_verifier_channels_subset_core
+    exact same ▸ List.mem_map_of_mem member
+  rw [EnsembleWitness.interactionsWith, verifierSilent, List.nil_append,
+    TableContext.interactionsWith, List.flatMap_eq_nil_iff]
   intro table htable
-  rw [Air.Flat.EnsembleWitness.allTables, List.mem_cons] at htable
-  rcases htable with rfl | htable
+  obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp htable
+  have hlen : i < (sp1Ensemble (p := p)).tables.length := by rw [witness.same_length]; exact hi
+  by_cases hidx : i = syscallTablePosition
+  · subst hidx
+    rw [Air.Flat.Table.interactionsWith, hEmpty _ (List.getElem?_eq_getElem hi)]
+    rfl
   · refine Air.Flat.Table.interactionsWith_nil_of_channel_not_mem fun hmem => hch ?_
-    rw [Air.Flat.EnsembleWitness.verifierTable_component] at hmem
-    exact verifier_channels_subset hmem
-  · obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp htable
-    have hlen : i < (sp1Ensemble (p := p)).tables.length := by rw [witness.same_length]; exact hi
-    by_cases hidx : i = syscallTablePosition
-    · subst hidx
-      rw [Air.Flat.Table.interactionsWith_eq_filter, Air.Flat.Table.interactions,
-        hEmpty _ (List.getElem?_eq_getElem hi)]
-      rfl
-    · refine Air.Flat.Table.interactionsWith_nil_of_channel_not_mem fun hmem => hch ?_
-      have hchan := congrArg (fun c : Component (ZMod p) => c.circuit.channels)
-        (witness.same_circuits i hlen)
-      exact sp1Ensemble_tables_channels_subset_core_of_ne i hlen hidx (hchan ▸ hmem)
+    have hchan := congrArg (fun c : Component (ZMod p) => c.circuit.channels)
+      (witness.same_circuits i hlen)
+    exact sp1Ensemble_tables_channels_subset_core_of_ne i hlen hidx (hchan ▸ hmem)
 
 /-- SP1's syscall bus carries nothing while the syscall table has no rows. -/
 theorem witness_syscallChannel_silent (witness : EnsembleWitness (sp1Ensemble (p := p)))
@@ -746,16 +723,17 @@ theorem channel_eq_of_kindOf_eq {c₁ c₂ : RawChannel (ZMod p)}
 /-- **The side condition `Model/CleanLedger.lean`'s kind-filter asks of a table**, discharged for
 every table of this ensemble: an interaction whose kind matches a declared channel's *is* on that
 channel. Both halves are already proved — the table emits only on the ensemble's channels, and those
-five have five distinct kinds. -/
+seven have seven distinct kinds. -/
 theorem interactions_channel_eq_of_kindOf (table : Table (ZMod p))
-    (hcomponent : table.component ∈ (sp1Ensemble (p := p)).allTables)
+    (data : ProverData (ZMod p))
+    (hcomponent : table.component ∈ (sp1Ensemble (p := p)).tables)
     (channel : RawChannel (ZMod p)) (hchannel : channel ∈ (sp1Ensemble (p := p)).channels) :
-    ∀ i ∈ table.interactions, kindOf i.channel.name = kindOf channel.name →
+    ∀ i ∈ table.interactions data, kindOf i.channel.name = kindOf channel.name →
       i.channel = channel := by
   intro i hi hkind
   exact channel_eq_of_kindOf_eq
-    (sp1Ensemble_allTables_channels_subset _ hcomponent
-      (Air.Flat.Table.channel_mem_channels_of_mem_interactions table i hi))
+    (sp1Ensemble_tables_channels_subset _ hcomponent
+      (Air.Flat.Table.channel_mem_channels_of_mem_interactions table data i hi))
     hchannel hkind
 
 /-! ## Exit-channel silence of the non-halt tables

@@ -6,10 +6,11 @@ import ToClean.Air.TableBuild
 /-! # From provider occurrences to valid AIR tables
 
 The provider-segment counterpart of the twenty-five `Proofs/Chips/<Chip>/Complete.lean` files: for
-each entry of `sp1ProviderTables` (`Soundness/SP1Ensemble.lean`) and for the ensemble verifier row,
-a semantic input type, a total builder into the component's `Inputs`, the honest-prover contract on
-a built row, and the three `Air.Flat.Table.build` theorems (`Constraints`, `Guarantees`, and the
-closed form of the per-channel interaction list).
+the provider families in `sp1ProviderTables` (`Soundness/SP1Ensemble.lean`) have semantic inputs,
+row builders, honest-prover contracts and table constraint/guarantee proofs. Ledger equations
+evaluate the physical rows at explicit ensemble data, independently of the generation data.
+The boundary-input builder and a circuit view of the verifier remain for the source-trace
+constructors until those consumers use the public-verifier API.
 
 ## Where the builders live
 
@@ -214,23 +215,24 @@ theorem proverAssumptions_of_mem_traceInputs {entries : List TraceGen.ByteEntry}
 
 theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end U8Range
 
@@ -262,23 +264,24 @@ theorem proverAssumptions_of_mem_traceInputs {entries : List TraceGen.ByteEntry}
 
 theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end MSB
 
@@ -309,23 +312,24 @@ theorem proverAssumptions_of_mem_traceInputs {entries : List TraceGen.ByteEntry}
 
 theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end AndByte
 
@@ -356,23 +360,24 @@ theorem proverAssumptions_of_mem_traceInputs {entries : List TraceGen.ByteEntry}
 
 theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end OrByte
 
@@ -403,23 +408,24 @@ theorem proverAssumptions_of_mem_traceInputs {entries : List TraceGen.ByteEntry}
 
 theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end XorByte
 
@@ -450,23 +456,24 @@ theorem proverAssumptions_of_mem_traceInputs {entries : List TraceGen.ByteEntry}
 
 theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end Ltu
 
@@ -513,26 +520,26 @@ theorem proverAssumptions_of_mem_traceInputs {n : ℕ} (hn : 2 ^ n < p) (hle : n
 theorem traceTable_constraints {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
     (entries : List TraceGen.RangeEntry) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (h : ∀ e ∈ entries, e.WellFormed n) :
-    (Table.build (component (p := p) n hn) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ (computableWitnesses n hn)
+    (Table.build (component (p := p) n hn) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) (computableWitnesses n hn)
     (proverAssumptions_of_mem_traceInputs hn hle h data hint)
 
 theorem traceTable_guarantees {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
     (entries : List TraceGen.RangeEntry) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (h : ∀ e ∈ entries, e.WellFormed n) :
-    (Table.build (component (p := p) n hn) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ (computableWitnesses n hn)
+    (Table.build (component (p := p) n hn) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) (computableWitnesses n hn)
     (proverAssumptions_of_mem_traceInputs hn hle h data hint)
 
 theorem traceTable_interactionsWith {n : ℕ} (hn : 2 ^ n < p)
     (entries : List TraceGen.RangeEntry) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (channel : RawChannel (ZMod p)) :
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
     (Table.build (component (p := p) n hn) (traceInputs entries) data
-        hint).interactionsWith channel =
+        hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p) n hn).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p) n hn).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p) n hn).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end RangeChip
 
@@ -584,23 +591,24 @@ theorem proverAssumptions_of_mem_traceInputs {entries : List TraceGen.RomEntry}
 
 theorem traceTable_constraints (entries : List TraceGen.RomEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.RomEntry) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ entries, e.WellFormed) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.RomEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end ProgramProviderChip
 
@@ -678,24 +686,25 @@ theorem proverAssumptions_of_mem_traceInputs {entries : List TraceGen.MemRecordE
 theorem traceTable_constraints (entries : List TraceGen.MemRecordEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (h : ∀ e ∈ entries, e.WellFormedInit) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.MemRecordEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (h : ∀ e ∈ entries, e.WellFormedInit) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.MemRecordEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end MemoryProviderChip
 
@@ -742,24 +751,25 @@ theorem proverAssumptions_of_mem_traceInputs (entries : List TraceGen.MemRecordE
 
 theorem traceTable_constraints (entries : List TraceGen.MemRecordEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs entries data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.MemRecordEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses
+    (Table.build (component (p := p)) (traceInputs entries) data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses
     (proverAssumptions_of_mem_traceInputs entries data hint)
 
 set_option linter.unusedSectionVars false in
 theorem traceTable_interactionsWith (entries : List TraceGen.MemRecordEntry)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith channel =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) (traceInputs entries) data hint).interactionsWith evaluationData channel =
       (traceInputs (p := p) entries).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end MemoryFinalizeChip
 
@@ -802,21 +812,22 @@ theorem spec_paddingInputs : Spec (paddingInputs (p := p)) := by
 
 theorem traceTable_constraints (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r) :
-    (Table.build (component (p := p)) rows data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses fun r hr => h r hr
+    (Table.build (component (p := p)) rows data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses fun r hr => h r hr
 
 theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r) :
-    (Table.build (component (p := p)) rows data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses fun r hr => h r hr
+    (Table.build (component (p := p)) rows data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses fun r hr => h r hr
 
 theorem traceTable_interactionsWith (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) rows data hint).interactionsWith channel =
+    (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) rows data hint).interactionsWith evaluationData channel =
       rows.flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end StateBumpChip
 
@@ -849,21 +860,22 @@ theorem spec_paddingInputs : Spec (paddingInputs (p := p)) := by
 
 theorem traceTable_constraints (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r) :
-    (Table.build (component (p := p)) rows data hint).Constraints :=
-  Table.build_constraints _ _ _ _ computableWitnesses fun r hr => h r hr
+    (Table.build (component (p := p)) rows data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) computableWitnesses fun r hr => h r hr
 
 theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r) :
-    (Table.build (component (p := p)) rows data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ computableWitnesses fun r hr => h r hr
+    (Table.build (component (p := p)) rows data hint).Guarantees data :=
+  Table.build_guarantees _ _ _ _ (by trivial) computableWitnesses fun r hr => h r hr
 
 theorem traceTable_interactionsWith (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) rows data hint).interactionsWith channel =
+    (hint : ProverHint (ZMod p))
+    (evaluationData : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (Table.build (component (p := p)) rows data hint).interactionsWith evaluationData channel =
       rows.flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+          (Environment.fromArray ((component (p := p)).buildRow input data hint) evaluationData) :=
+  Table.build_interactions _ _ _ _ (by trivial) evaluationData channel
 
 end MemoryBumpChip
 
@@ -928,27 +940,14 @@ theorem boundaryInputs_limbBounds (initClk initPc finalClk finalPc : ℕ) :
     val_natCast_lt (Nat.mod_lt _ (by norm_num)) (by norm_num),
     val_natCast_lt (Nat.mod_lt _ (by norm_num)) (by norm_num)⟩
 
-/-- The boundary verifier as a flat-AIR component — the shape `EnsembleWitness.verifierTable`
-carries. -/
+/-- Circuit view retained for the source-trace constructors during their migration to the
+public-verifier API. This component is not installed in `sp1Ensemble`. -/
 def verifierComponent : Component (ZMod p) := { circuit := sp1StateVerifier }
 
 theorem verifierTable_constraints (pis : List (SP1PublicIO (ZMod p)))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (h : ∀ pi ∈ pis, pi.LimbBounds) :
-    (Table.build (verifierComponent (p := p)) pis data hint).Constraints :=
-  Table.build_constraints _ _ _ _ sp1StateVerifier_computableWitnesses fun pi hpi => h pi hpi
-
-theorem verifierTable_guarantees (pis : List (SP1PublicIO (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (h : ∀ pi ∈ pis, pi.LimbBounds) :
-    (Table.build (verifierComponent (p := p)) pis data hint).Guarantees :=
-  Table.build_guarantees _ _ _ _ sp1StateVerifier_computableWitnesses fun pi hpi => h pi hpi
-
-theorem verifierTable_interactionsWith (pis : List (SP1PublicIO (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (verifierComponent (p := p)) pis data hint).interactionsWith channel =
-      pis.flatMap fun input =>
-        (verifierComponent (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((verifierComponent (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ channel
+    (Table.build (verifierComponent (p := p)) pis data hint).Constraints data :=
+  Table.build_constraints _ _ _ _ (by trivial) sp1StateVerifier_computableWitnesses fun pi hpi => h pi hpi
 
 end Soundness
 
