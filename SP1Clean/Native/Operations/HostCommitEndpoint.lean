@@ -62,7 +62,7 @@ def closed (deferred : Bool) (source target : Vector (Word (ZMod p)) 8) : Closed
   name := "host-commit"
   circuit := circuit deferred source target
   assumptions := by intros; trivial
-  lookups := by simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_lookups, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain]
+  lookups := by simp only [circuit, main, circuit_norm, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain]
   public_interactions := by
     intro interaction member env
     simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain, List.mem_cons, List.not_mem_nil, or_false] at member
@@ -73,8 +73,7 @@ def closed (deferred : Bool) (source target : Vector (Word (ZMod p)) 8) : Closed
   length_zero := rfl
   constraints := by
     intros
-    simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_constraints,
-      GeneralFormalCircuit.toSubcircuit_lookups, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain]
+    simp only [circuit, main, circuit_norm, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain]
   interactions := by
     intro offset env channel
     exact (values deferred source target offset env channel).trans (values deferred source target 0 _ channel).symm

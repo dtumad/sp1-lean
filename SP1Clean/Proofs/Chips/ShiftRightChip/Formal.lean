@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Proofs.Chips.ShiftRightChip.Defs
 import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srl
 import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sra
@@ -520,5 +522,24 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
   exact main_exposedChannelsLawful input offset
     ⟨memoryChannel.toRaw, (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw⟩
     (by simp [stateExposure, Readers.CPUState.exposedState, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := ShiftRightChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq,
+    Air.Flat.Component.rowOperations_mk,
+    ShiftRightChip.circuit_main_eq]
+  simp [ShiftRightChip.main, Readers.CPUState.circuit,
+    Readers.CPUState.main, Readers.ALUTypeReader.circuit,
+    Readers.ALUTypeReader.main, Readers.RegisterWrite.circuit,
+    Readers.RegisterWrite.main,
+    Readers.RegisterAccessCols.circuit,
+    Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit,
+    Readers.RegisterAccessTimestamp.main,
+    U16MSBOperation.circuit,
+    U16MSBOperation.main, ShiftRightCore.circuit,
+    ShiftRightCore.main, Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.ShiftRightChip

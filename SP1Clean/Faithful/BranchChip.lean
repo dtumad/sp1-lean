@@ -386,27 +386,6 @@ def branchChipRowCodec :
         Air.Flat.Component.rowOffset_mk]
       exact eval_branchChipDirectOutput (p := p) cols data }
 
-theorem branchChip_lookups_empty :
-    ({ circuit := BranchChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations_mk]
-  change ((BranchChip.main
-    (varFromOffset BranchChip.Inputs 0)).operations
-      (size BranchChip.Inputs)).lookups = []
-  simp [BranchChip.main, LtOperationSigned.circuit,
-    LtOperationSigned.main, U16MSBOperation.circuit,
-    U16MSBOperation.main, LtOperationUnsigned.circuit,
-    LtOperationUnsigned.main, U16CompareOperation.circuit,
-    U16CompareOperation.main, Readers.CPUState.circuit,
-    Readers.CPUState.main, Readers.ITypeReaderImmutable.circuit,
-    Readers.ITypeReaderImmutable.main,
-    Readers.RegisterAccessCols.circuit,
-    Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit,
-    Readers.RegisterAccessTimestamp.main,
-    Gadgets.Equality.main, circuit_norm]
-
 private def branchFlag (offset i : ℕ) : Expression (ZMod p) :=
   var { index := offset + i }
 
@@ -553,8 +532,8 @@ private theorem branchNativeAssertionsDecompose
   simp only [Operations.constraints_append,
     Operations.constraints_witness,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_generalFormalCircuit,
-    constraints_toSubcircuit_formalAssertion,
+    GeneralFormalCircuit.toSubcircuit_constraints,
+    FormalAssertion.toSubcircuit_constraints,
     GeneralFormalCircuit.toSubcircuit_localLength,
     FormalAssertion.toSubcircuit_localLength,
     LtOperationSigned.circuit_localLength,
@@ -1244,7 +1223,7 @@ theorem branchChip_constraints_constructive
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
       (BranchChip.circuit (p := p))
-      assignment.environment branchChip_lookups_empty).symm
+      assignment.environment BranchChip.lookups_empty).symm
 
 open SP1Clean.Channels
   (stateChannel byteChannel memoryChannel programChannel)

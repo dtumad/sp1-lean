@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.StoreByteChip.Defs
 import Clean.Air.Circuit
 
@@ -479,5 +481,20 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
   exact circuit.interactionsWith_eq_of_mem_exposedChannels input offset
     ⟨memoryChannel.toRaw, (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw⟩
     (by simp [circuit, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := StoreByteChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    StoreByteChip.circuit_main_eq]
+  simp [StoreByteChip.main, Readers.CPUState.circuit,
+    Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,
+    AddrAddOperation.circuit, AddrAddOperation.main,
+    Readers.MemoryAccess.circuit, Readers.MemoryAccess.main,
+    Readers.ITypeReaderImmutable.circuit, Readers.ITypeReaderImmutable.main,
+    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit,
+    Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.StoreByteChip

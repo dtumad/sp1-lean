@@ -903,22 +903,6 @@ def ltChipRowCodec :
         (ltChipLocals cols) data).trans
           (ltChipColumnsOfInput_roundtrip cols) }
 
-theorem ltChip_lookups_empty :
-    ({ circuit := LtChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    LtChip.circuit_main_eq]
-  simp [LtChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
-    LtOperationSigned.circuit, LtOperationSigned.main,
-    LtOperationUnsigned.circuit, LtOperationUnsigned.main,
-    U16MSBOperation.circuit, U16MSBOperation.main,
-    U16CompareOperation.circuit, U16CompareOperation.main,
-    Gadgets.Equality.main, circuit_norm]
-
 private def lt_chip_is_slt (offset : ℕ) : Expression (ZMod p) :=
   var { index := offset }
 
@@ -1382,7 +1366,7 @@ theorem ltChip_constraints_constructive
       Air.Flat.Component.rowOffset_mk, LtChip.circuit_main_eq] using hlegacy
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros (LtChip.circuit (p := p))
-      assignment.environment ltChip_lookups_empty).symm
+      assignment.environment LtChip.lookups_empty).symm
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem ltCols_interactions_decompose

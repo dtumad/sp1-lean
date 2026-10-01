@@ -461,24 +461,6 @@ def shiftRightChipRowCodec :
         (shiftRightChipInput cols) (shiftRightChipLocals cols) data).trans
           (shiftRightChipColumnsOfInput_roundtrip cols) }
 
-theorem shiftRightChip_lookups_empty :
-    ({ circuit := ShiftRightChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations_mk,
-    ShiftRightChip.circuit_main_eq]
-  simp [ShiftRightChip.main, Readers.CPUState.circuit,
-    Readers.CPUState.main, Readers.ALUTypeReader.circuit,
-    Readers.ALUTypeReader.main, Readers.RegisterWrite.circuit,
-    Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit,
-    Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit,
-    Readers.RegisterAccessTimestamp.main,
-    U16MSBOperation.circuit,
-    U16MSBOperation.main, ShiftRightCore.circuit,
-    ShiftRightCore.main, Gadgets.Equality.main, circuit_norm]
-
 private def srA (offset : ℕ) : Word (Expression (ZMod p)) :=
   Vector.mapRange 4 fun i => var { index := offset + i }
 
@@ -1552,7 +1534,7 @@ theorem shiftRightChip_constraints_constructive
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
       (ShiftRightChip.circuit (p := p))
-      assignment.environment shiftRightChip_lookups_empty).symm
+      assignment.environment ShiftRightChip.lookups_empty).symm
 
 open SP1Clean.Channels
   (stateChannel byteChannel memoryChannel programChannel)

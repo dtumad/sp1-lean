@@ -234,8 +234,7 @@ theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble 
     · have checks := (verifierChecks_iff image (Environment.fromInput witness.publicInput witness.data)).mpr
         (by simpa only [ProvableType.eval_fromInput_varFromOffset_zero] using boot)
       simpa only [verifierMain_constraints] using checks
-    · simp [Component.rowOperations, verifier, verifierMain, GeneralFormalCircuit.toSubcircuit_lookups,
-        sp1StateVerifier, sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
+    · simp [Component.rowOperations, verifier, verifierMain, sp1StateVerifier, sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
         circuit_norm]
   have spec := component_spec_of_byte ({ circuit := verifier image } : Component (ZMod p))
     (List.Subset.refl _) _ (by trivial) checked sourceByte

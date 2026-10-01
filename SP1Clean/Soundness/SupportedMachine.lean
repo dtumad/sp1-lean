@@ -116,6 +116,36 @@ def supportedChipFor : InstructionChipId → SupportedChip p
   | .divRem =>     ⟨.divRem,     DivRemChip.kind,     DivRemChip.circuit,     rfl⟩
   | .aluX0 =>      ⟨.aluX0,      AluX0Chip.kind,      AluX0Chip.circuit,      rfl⟩
 
+/-- Native instruction rows use channels for cross-table checks and contain no Clean lookups. -/
+theorem supportedChipFor_lookups_empty (id : InstructionChipId) :
+    (supportedChipFor (p := p) id).table.operations.lookups = [] := by
+  cases id with
+  | add => exact AddChip.lookups_empty
+  | addi => exact AddiChip.lookups_empty
+  | addw => exact AddwChip.lookups_empty
+  | sub => exact SubChip.lookups_empty
+  | subw => exact SubwChip.lookups_empty
+  | bitwise => exact BitwiseChip.lookups_empty
+  | lt => exact LtChip.lookups_empty
+  | shiftLeft => exact ShiftLeftChip.lookups_empty
+  | shiftRight => exact ShiftRightChip.lookups_empty
+  | jal => exact JalChip.lookups_empty
+  | jalr => exact JalrChip.lookups_empty
+  | branch => exact BranchChip.lookups_empty
+  | uType => exact UTypeChip.lookups_empty
+  | loadByte => exact LoadByteChip.lookups_empty
+  | loadHalf => exact LoadHalfChip.lookups_empty
+  | loadWord => exact LoadWordChip.lookups_empty
+  | loadDouble => exact LoadDoubleChip.lookups_empty
+  | loadX0 => exact LoadX0Chip.lookups_empty
+  | storeByte => exact StoreByteChip.lookups_empty
+  | storeHalf => exact StoreHalfChip.lookups_empty
+  | storeWord => exact StoreWordChip.lookups_empty
+  | storeDouble => exact StoreDoubleChip.lookups_empty
+  | mul => exact MulChip.lookups_empty
+  | divRem => exact DivRemChip.lookups_empty
+  | aluX0 => exact AluX0Chip.lookups_empty
+
 /-- The supported native instruction machine. The neutral identity enumeration fixes its order;
 changing that order is a public witness-format change, not a cosmetic reordering. -/
 def supportedChips : List (SupportedChip p) :=
@@ -140,6 +170,13 @@ theorem supportedChips_length : (supportedChips (p := p)).length = 25 := by
 /-- The physical instruction components, in the neutral registry's stable order. -/
 def sp1Tables : List (Air.Flat.Component (ZMod p)) :=
   (supportedChips (p := p)).map (·.table)
+
+/-- The instruction inventory inherits its lookup metadata from each native circuit. -/
+theorem sp1Tables_lookups_empty (component : Component (ZMod p))
+    (member : component ∈ sp1Tables) : component.operations.lookups = [] := by
+  obtain ⟨chip, chipMember, rfl⟩ := List.mem_map.mp member
+  obtain ⟨id, _, rfl⟩ := List.mem_map.mp chipMember
+  exact supportedChipFor_lookups_empty id
 
 /-- The table projection retains every registered instruction component. -/
 theorem sp1Tables_length : (sp1Tables (p := p)).length = 25 := by

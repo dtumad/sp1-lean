@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.AluX0Chip.Defs
 import Clean.Air.Circuit
 
@@ -320,5 +322,17 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
   exact circuit.interactionsWith_eq_of_mem_exposedChannels input offset
     ⟨programChannel.toRaw, (exposedProgramInteractions input).map ChannelInteraction.toRaw⟩
     (by simp [circuit, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := AluX0Chip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    AluX0Chip.circuit_main_eq]
+  simp [AluX0Chip.main, Readers.CPUState.circuit, Readers.CPUState.main,
+    Readers.ALUTypeReaderImmutable.circuit, Readers.ALUTypeReaderImmutable.main,
+    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
+    Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.AluX0Chip

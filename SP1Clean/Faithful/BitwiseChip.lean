@@ -295,20 +295,6 @@ def bitwiseChipRowCodec :
         (bitwiseChipLocals cols) data).trans
           (bitwiseChipColumnsOfInput_roundtrip cols) }
 
-theorem bitwiseChip_lookups_empty :
-    ({ circuit := BitwiseChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    BitwiseChip.circuit_main_eq]
-  simp [BitwiseChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
-    BitwiseU16Operation.circuit, BitwiseU16Operation.main,
-    BitwiseOperation.circuit, BitwiseOperation.main,
-    Gadgets.Equality.main, circuit_norm]
-
 private def bitwise_chip_is_xor (offset : ℕ) : Expression (ZMod p) :=
   var { index := offset }
 
@@ -781,7 +767,7 @@ theorem bitwiseChip_constraints_constructive
       Air.Flat.Component.rowOffset_mk, BitwiseChip.circuit_main_eq] using hlegacy
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros (BitwiseChip.circuit (p := p))
-      assignment.environment bitwiseChip_lookups_empty).symm
+      assignment.environment BitwiseChip.lookups_empty).symm
 
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 

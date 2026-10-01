@@ -52,8 +52,7 @@ private theorem main_constraints (input : Var HaltChip.Inputs (ZMod p)) (offset 
     ((main input).operations offset).ConstraintsHold env ↔
       ((HaltChip.main input).operations offset).ConstraintsHold env ∧
         Expression.eval env input.is_real = 0 := by
-  simp only [main, circuit_norm, GeneralFormalCircuit.toSubcircuit_constraints,
-    GeneralFormalCircuit.toSubcircuit_lookups, HaltChip.circuit,
+  simp only [main, circuit_norm, HaltChip.circuit,
     or_imp, forall_and, forall_eq]
   tauto
 

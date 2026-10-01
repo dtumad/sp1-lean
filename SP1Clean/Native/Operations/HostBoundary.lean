@@ -63,8 +63,7 @@ def closed (hints : List Bytes) (queueFinal : HostHintQueue.State (ZMod p))
   circuit := circuit hints queueFinal source target sourceExit targetExit
   assumptions := by intros; trivial
   lookups := by
-    simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_lookups,
-      HostHintQueueBoundary.circuit, HostHintQueueBoundary.main, HostCommitEndpoint.circuit,
+    simp only [circuit, main, circuit_norm, HostHintQueueBoundary.circuit, HostHintQueueBoundary.main, HostCommitEndpoint.circuit,
       HostCommitEndpoint.main, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain,
       HostExitBoundary.circuit, HostExitBoundary.main]
   public_interactions := by
@@ -80,8 +79,7 @@ def closed (hints : List Bytes) (queueFinal : HostHintQueue.State (ZMod p))
   length_zero := rfl
   constraints := by
     intros
-    simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_constraints,
-      GeneralFormalCircuit.toSubcircuit_lookups, HostHintQueueBoundary.circuit,
+    simp only [circuit, main, circuit_norm, HostHintQueueBoundary.circuit,
       HostHintQueueBoundary.main, HostCommitEndpoint.circuit, HostCommitEndpoint.main,
       HostCommitBoundary.verifier, HostCommitBoundary.verifierMain, HostExitBoundary.circuit,
       HostExitBoundary.main, forall_eq_or_imp, Expression.eval]
@@ -111,8 +109,7 @@ theorem constraints_spec (hints : List Bytes) (queueFinal : HostHintQueue.State 
     (sourceExit targetExit : Option (BitVec 32)) (offset : ℕ) (env : Environment (ZMod p))
     (constraints : ((main hints queueFinal source target sourceExit targetExit ()).operations offset).ConstraintsHold env) :
     hints.length < 2 ^ 48 ∧ (sourceExit = none ∨ sourceExit = targetExit) := by
-  simpa only [main, circuit_norm, GeneralFormalCircuit.toSubcircuit_constraints,
-    GeneralFormalCircuit.toSubcircuit_lookups, HostHintQueueBoundary.circuit,
+  simpa only [main, circuit_norm, HostHintQueueBoundary.circuit,
     HostHintQueueBoundary.main, HostCommitEndpoint.circuit, HostCommitEndpoint.main,
     HostCommitBoundary.verifier, HostCommitBoundary.verifierMain, HostExitBoundary.circuit,
     HostExitBoundary.main, forall_eq_or_imp, Expression.eval, ite_eq_left_iff,

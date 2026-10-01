@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.MemoryBumpChip.Defs
 import Clean.Utils.Tactics
 
@@ -161,5 +163,17 @@ set_option linter.unusedSectionVars false in
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithRequirements_eq :
     (circuit (p := p)).channelsWithRequirements = [memoryChannel.toRaw] := rfl
+
+@[circuit_norm] theorem circuit_main_eq :
+    (MemoryBumpChip.circuit (p := p)).main = MemoryBumpChip.main := rfl
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk, MemoryBumpChip.circuit_main_eq]
+  change Operations.lookups
+    ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
+      .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p)) = _
+  simp [circuit_norm]
 
 end SP1Clean.MemoryBumpChip

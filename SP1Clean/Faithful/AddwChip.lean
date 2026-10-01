@@ -210,19 +210,6 @@ def addwChipRowCodec : ChipRowCodec AddwChip.Inputs AddwChip.Columns
       exact (eval_addwChipDirectOutput (p := p) (addwChipInput cols)
         (addwChipLocals cols) data).trans (addwChipColumnsOfInput_roundtrip cols) }
 
-theorem addwChip_lookups_empty :
-    ({ circuit := AddwChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    AddwChip.circuit_main_eq]
-  simp [AddwChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
-    AddwOperation.circuit, AddwOperation.main, U16MSBOperation.circuit,
-    U16MSBOperation.main, Gadgets.Equality.main, circuit_norm]
-
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel StateMsg)
 open InteractionRecovery
 
@@ -960,7 +947,7 @@ theorem addwChip_constraints_constructive
       Air.Flat.Component.rowOffset_mk, AddwChip.circuit_main_eq] using hlegacy
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros (AddwChip.circuit (p := p))
-      assignment.environment addwChip_lookups_empty).symm
+      assignment.environment AddwChip.lookups_empty).symm
 
 theorem addwChip_interactions_faithful
     (env : Environment (ZMod p)) (input : Var AddwChip.Inputs (ZMod p)) (offset : ℕ)

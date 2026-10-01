@@ -311,21 +311,6 @@ def loadDoubleChipRowCodec :
         (loadDoubleChipInput cols) (loadDoubleChipLocals cols) data).trans
           (loadDoubleChipColumnsOfInput_roundtrip cols) }
 
-theorem loadDoubleChipLookupsEmpty :
-    ({ circuit := LoadDoubleChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    LoadDoubleChip.circuit_main_eq]
-  simp [LoadDoubleChip.main, Readers.CPUState.circuit,
-    Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,
-    AddrAddOperation.circuit, AddrAddOperation.main,
-    Readers.MemoryAccess.circuit, Readers.MemoryAccess.main,
-    Readers.ITypeReader.circuit, Readers.ITypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit,
-    Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
-
 private def loadDoubleAddressCols (offset : ℕ) :
     Circuits.Types.AddressOperation (Expression (ZMod p)) :=
   ⟨⟨Vector.mapRange 3 fun i => var { index := offset + i }⟩,
@@ -978,7 +963,7 @@ theorem loadDoubleChipConstraintsConstructive
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
       (LoadDoubleChip.circuit (p := p))
-      assignment.environment loadDoubleChipLookupsEmpty).symm
+      assignment.environment LoadDoubleChip.lookups_empty).symm
 
 open SP1Clean.Channels
   (stateChannel byteChannel memoryChannel programChannel)

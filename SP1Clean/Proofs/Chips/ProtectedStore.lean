@@ -104,15 +104,13 @@ theorem byte_width :
 theorem byte_constraints :
     ({ circuit := byte (p := p) } : Air.Flat.Component (ZMod p)).operations.constraints =
       ({ circuit := StoreByteChip.circuit } : Air.Flat.Component (ZMod p)).operations.constraints := by
-  simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, byte, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_constraints]
+  simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, byte, circuit_norm]
 
 /-- The extension introduces no additional fixed lookup. -/
 theorem byte_lookups :
     ({ circuit := byte (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups =
       ({ circuit := StoreByteChip.circuit } : Air.Flat.Component (ZMod p)).operations.lookups := by
-  simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, byte, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_lookups]
+  simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, byte, circuit_norm]
 
 /-- Every pre-existing interaction ledger is preserved by the store extension. -/
 theorem byte_interactions (selected : RawChannel (ZMod p))
@@ -134,7 +132,7 @@ theorem half_constraints :
     ({ circuit := half (p := p) } : Air.Flat.Component (ZMod p)).operations.constraints =
       ({ circuit := StoreHalfChip.circuit } : Air.Flat.Component (ZMod p)).operations.constraints := by
   simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, half, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_constraints, Circuit.forEach.operations_eq,
+    Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- The extension introduces no additional fixed lookup. -/
@@ -142,7 +140,7 @@ theorem half_lookups :
     ({ circuit := half (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups =
       ({ circuit := StoreHalfChip.circuit } : Air.Flat.Component (ZMod p)).operations.lookups := by
   simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, half, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_lookups, Circuit.forEach.operations_eq,
+    Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- Every pre-existing interaction ledger is preserved by the store extension. -/
@@ -166,7 +164,7 @@ theorem word_constraints :
     ({ circuit := word (p := p) } : Air.Flat.Component (ZMod p)).operations.constraints =
       ({ circuit := StoreWordChip.circuit } : Air.Flat.Component (ZMod p)).operations.constraints := by
   simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, word, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_constraints, Circuit.forEach.operations_eq,
+    Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- The extension introduces no additional fixed lookup. -/
@@ -174,7 +172,7 @@ theorem word_lookups :
     ({ circuit := word (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups =
       ({ circuit := StoreWordChip.circuit } : Air.Flat.Component (ZMod p)).operations.lookups := by
   simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, word, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_lookups, Circuit.forEach.operations_eq,
+    Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- Every pre-existing interaction ledger is preserved by the store extension. -/
@@ -198,7 +196,7 @@ theorem double_constraints :
     ({ circuit := double (p := p) } : Air.Flat.Component (ZMod p)).operations.constraints =
       ({ circuit := StoreDoubleChip.circuit } : Air.Flat.Component (ZMod p)).operations.constraints := by
   simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, double, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_constraints, Circuit.forEach.operations_eq,
+    Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- The extension introduces no additional fixed lookup. -/
@@ -206,7 +204,7 @@ theorem double_lookups :
     ({ circuit := double (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups =
       ({ circuit := StoreDoubleChip.circuit } : Air.Flat.Component (ZMod p)).operations.lookups := by
   simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, double, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_lookups, Circuit.forEach.operations_eq,
+    Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- Every pre-existing interaction ledger is preserved by the store extension. -/

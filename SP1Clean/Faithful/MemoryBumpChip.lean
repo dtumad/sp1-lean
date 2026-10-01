@@ -429,20 +429,6 @@ theorem memoryBumpChipInteractionsFaithful
 
 /-! ## The constructive whole-chip boundary -/
 
-/-- The bundled circuit's `main` is the chip's `main`. -/
-theorem memoryBumpChip_main_eq :
-    (MemoryBumpChip.circuit (p := p)).main = MemoryBumpChip.main := rfl
-
-/-- The flat table emits no Clean `Lookup` operations — every SP1 byte check is a channel
-interaction, and is therefore compared by the interaction half. -/
-theorem memoryBumpChip_lookups_empty :
-    ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk, memoryBumpChip_main_eq]
-  change Operations.lookups
-    ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
-      .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p)) = _
-  simp [circuit_norm]
-
 /-- **Constructive assertion agreement.** For every Rust row and prover data, the extracted
 whole-table assertion list holds exactly when Clean's full constraint predicate holds on the
 reconstructed physical row. -/
@@ -455,8 +441,8 @@ theorem memoryBumpChipConstraintsConstructive
         (memoryBumpEnvironment rustCols data) := by
   refine Iff.trans ?_
     (constraintsHold_iff_nativeAssertZeros (MemoryBumpChip.circuit (p := p))
-      (memoryBumpEnvironment rustCols data) memoryBumpChip_lookups_empty).symm
-  rw [Air.Flat.Component.rowOperations_mk, memoryBumpChip_main_eq]
+      (memoryBumpEnvironment rustCols data) MemoryBumpChip.lookups_empty).symm
+  rw [Air.Flat.Component.rowOperations_mk, MemoryBumpChip.circuit_main_eq]
   exact memoryBumpChipConstraintsFaithful preprocessed publicValues
     (memoryBumpEnvironment rustCols data)
     (varFromOffset MemoryBumpChip.Inputs 0) (size MemoryBumpChip.Inputs) rustCols
@@ -471,7 +457,7 @@ theorem memoryBumpChipInteractionsConstructive
         ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations =
       (memoryBumpChipOracle preprocessed publicValues).rustAccesses rustCols := by
   rw [nativeAccesses_component_eq_rowOperations (MemoryBumpChip.circuit (p := p)),
-    Air.Flat.Component.rowOperations_mk, memoryBumpChip_main_eq]
+    Air.Flat.Component.rowOperations_mk, MemoryBumpChip.circuit_main_eq]
   exact memoryBumpChipInteractionsFaithful preprocessed publicValues
     (memoryBumpEnvironment rustCols data)
     (varFromOffset MemoryBumpChip.Inputs 0) (size MemoryBumpChip.Inputs) rustCols

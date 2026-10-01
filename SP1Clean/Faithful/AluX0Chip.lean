@@ -168,17 +168,6 @@ def aluX0ChipRowCodec : ChipRowCodec AluX0Chip.Inputs AluX0Chip.Columns
       exact (eval_aluX0ChipDirectOutput (p := p) (aluX0ChipInput cols) data).trans
         (aluX0ChipColumnsOfInput_roundtrip cols) }
 
-theorem aluX0Chip_lookups_empty :
-    ({ circuit := AluX0Chip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    AluX0Chip.circuit_main_eq]
-  simp [AluX0Chip.main, Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.ALUTypeReaderImmutable.circuit, Readers.ALUTypeReaderImmutable.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
-    Gadgets.Equality.main, circuit_norm]
-
 private theorem aluX0_chip_constraints_decompose
     (env : Environment (ZMod p)) (input : Var AluX0Chip.Inputs (ZMod p))
     (offset : ℕ) :
@@ -343,7 +332,7 @@ theorem aluX0Chip_constraints_constructive
       Air.Flat.Component.rowOffset_mk, AluX0Chip.circuit_main_eq] using hlegacy
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros (AluX0Chip.circuit (p := p))
-      assignment.environment aluX0Chip_lookups_empty).symm
+      assignment.environment AluX0Chip.lookups_empty).symm
 
 theorem aluX0Chip_interactions_faithful
     (env : Environment (ZMod p)) (input : Var AluX0Chip.Inputs (ZMod p))

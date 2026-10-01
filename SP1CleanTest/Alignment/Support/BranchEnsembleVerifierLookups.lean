@@ -22,18 +22,16 @@ theorem verifier_lookups (target : MemorySnapshot) :
     (assembly target).verifierTable.rowOperations.lookups = [] := by
   simp only [assembly, HostFinalMemory.ensemble, ClosedVerifier.install,
     Ensemble.verifierTable, Component.rowOperations, ClosedVerifier.verifier,
-    ClosedVerifier.verifierMain, circuit_norm, GeneralFormalCircuit.toSubcircuit_lookups,
-    FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit, change_lookups]
+    ClosedVerifier.verifierMain, circuit_norm, FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit, change_lookups]
   simp only [HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
     FinalReceiptEnsemble.install, HostFinalMemory.base, HostHintQueueBoundary.ensemble,
     HaltPadding.install, ClosedVerifier.install, HostHintReadLocal.ensemble,
     HostLocalHandoff.ensemble, HostLocalCore.ensemble, ClosedVerifier.verifier,
-    ClosedVerifier.verifierMain, circuit_norm, GeneralFormalCircuit.toSubcircuit_lookups]
+    ClosedVerifier.verifierMain, circuit_norm]
   simp only [LocalCore.verifier, LocalCore.verifierMain, sp1StateVerifier,
     OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main, HostBoundary.main,
     HostHintQueueBoundary.circuit, HostHintQueueBoundary.main, HostCommitEndpoint.circuit,
     HostCommitEndpoint.main, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain,
-    HostExitBoundary.circuit, HostExitBoundary.main, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_lookups]
+    HostExitBoundary.circuit, HostExitBoundary.main, circuit_norm]
 
 end SP1Clean.Audit.BranchEnsemble

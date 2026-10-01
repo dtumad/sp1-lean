@@ -94,8 +94,8 @@ private theorem divRemNativeDecompose
     subcircuitWithAssertion, assertion,
     Operations.localLength, Operations.constraints_append,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_generalFormalCircuit,
-    constraints_toSubcircuit_formalAssertion,
+    GeneralFormalCircuit.toSubcircuit_constraints,
+    FormalAssertion.toSubcircuit_constraints,
     GeneralFormalCircuit.toSubcircuit_localLength,
     FormalAssertion.toSubcircuit_localLength,
     Operations.constraints_nil, List.map_append, List.append_nil]
@@ -312,7 +312,7 @@ private theorem divRemCompareNativeDecompose
     Circuit.operations, Circuit.bind_def, assertion,
     Operations.localLength, Operations.constraints_append,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_formalAssertion,
+    FormalAssertion.toSubcircuit_constraints,
     FormalAssertion.toSubcircuit_localLength,
     Operations.constraints_nil,
     List.map_append, List.append_nil]
@@ -1289,7 +1289,7 @@ private theorem divRemCoreNativeDecompose
     Channel.pullIf,
     Operations.localLength, Operations.constraints_append,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_formalAssertion,
+    FormalAssertion.toSubcircuit_constraints,
     FormalAssertion.toSubcircuit_localLength,
     Operations.constraints_interact, Operations.constraints_nil,
     List.map_append, List.map_nil,
@@ -3725,7 +3725,7 @@ theorem divRemChip_constraints_constructive
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
       (DivRemChip.circuit (p := p))
-      assignment.environment divRemChip_lookups_empty).symm
+      assignment.environment DivRemChip.lookups_empty).symm
 
 theorem divRemChip_interactions_constructive
     (rustCols : Extracted.DivRemOracle.DivRemCols (ZMod p))

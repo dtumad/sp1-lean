@@ -147,18 +147,6 @@ def addChipRowCodec : ChipRowCodec AddChip.Inputs AddChip.Columns
       exact (eval_addChipDirectOutput (p := p) (addChipInput cols)
         cols.add_operation.value data).trans (addChipColumnsOfInput_roundtrip cols) }
 
-/-- Add uses SP1 bus interactions for byte/range checks and contains no separate Clean lookup. -/
-theorem addChip_lookups_empty :
-    ({ circuit := AddChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    AddChip.circuit_main_eq]
-  simp [AddChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.RTypeReader.circuit, Readers.RTypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
-    AddOperation.circuit, AddOperation.main, Gadgets.Equality.main, circuit_norm]
-
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel StateMsg)
 open InteractionRecovery
 
@@ -797,7 +785,7 @@ theorem addChip_constraints_constructive
       Air.Flat.Component.rowOffset_mk, AddChip.circuit_main_eq] using hlegacy
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros (AddChip.circuit (p := p)) assignment.environment
-      addChip_lookups_empty).symm
+      AddChip.lookups_empty).symm
 
 /-- Constructive interaction half of Add faithfulness, evaluated on the same reconstructed row. -/
 theorem addChip_interactions_constructive

@@ -93,14 +93,12 @@ theorem width : ({ circuit := circuit provider channel trivial projection } : Co
 /-- The complete original assertion list is retained literally. -/
 theorem constraints : ({ circuit := circuit provider channel trivial projection } : Component F).operations.constraints =
     ({ circuit := provider } : Component F).operations.constraints := by
-  simp only [Component.constraints_eq, Component.rowOperations, circuit, main, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_constraints]
+  simp only [Component.constraints_eq, Component.rowOperations, circuit, main, circuit_norm]
 
 /-- Every original lookup is retained literally. -/
 theorem lookups : ({ circuit := circuit provider channel trivial projection } : Component F).operations.lookups =
     ({ circuit := provider } : Component F).operations.lookups := by
-  simp only [Component.lookups_eq, Component.rowOperations, circuit, main, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_lookups]
+  simp only [Component.lookups_eq, Component.rowOperations, circuit, main, circuit_norm]
 
 /-- The only added interaction is the gated observation of the original cells. -/
 theorem receipt_interactions (input : Var Input F) (offset : ℕ) :

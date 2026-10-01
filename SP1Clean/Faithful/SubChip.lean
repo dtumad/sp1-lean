@@ -146,18 +146,6 @@ def subChipRowCodec : ChipRowCodec SubChip.Inputs SubChip.Columns
       exact (eval_subChipDirectOutput (p := p) (subChipInput cols)
         cols.sub_operation.value data).trans (subChipColumnsOfInput_roundtrip cols) }
 
-/-- Sub uses SP1 bus interactions for byte/range checks and contains no separate Clean lookup. -/
-theorem subChip_lookups_empty :
-    ({ circuit := SubChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    SubChip.circuit_main_eq]
-  simp [SubChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.RTypeReader.circuit, Readers.RTypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
-    SubOperation.circuit, SubOperation.main, Gadgets.Equality.main, circuit_norm]
-
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel StateMsg)
 open InteractionRecovery
 
@@ -794,7 +782,7 @@ theorem subChip_constraints_constructive
       Air.Flat.Component.rowOffset_mk, SubChip.circuit_main_eq] using hlegacy
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros (SubChip.circuit (p := p)) assignment.environment
-      subChip_lookups_empty).symm
+      SubChip.lookups_empty).symm
 
 /-- Constructive interaction half of Sub faithfulness, evaluated on the same reconstructed row. -/
 theorem subChip_interactions_constructive

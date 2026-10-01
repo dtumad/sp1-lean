@@ -82,7 +82,7 @@ private theorem isEqualWord_nativeAssertions
     HasAssertEq.assert_eq, Expression.assertEquals,
     Operations.localLength, Operations.constraints_append,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_formalAssertion,
+    FormalAssertion.toSubcircuit_constraints,
     FormalAssertion.toSubcircuit_localLength,
     Operations.constraints_nil, List.map_append, List.map_nil]
   simp only [Nat.add_zero]

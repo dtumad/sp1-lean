@@ -201,20 +201,6 @@ def jalrChipRowCodec :
         (jalrChipLocals cols) data).trans
           (jalrChipColumnsOfInput_roundtrip cols) }
 
-theorem jalrChip_lookups_empty :
-    ({ circuit := JalrChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    JalrChip.circuit_main_eq]
-  simp [JalrChip.main, Readers.CPUState.circuit,
-    Readers.CPUState.main, Readers.ITypeReader.circuit,
-    Readers.ITypeReader.main, Readers.RegisterWrite.circuit,
-    Readers.RegisterWrite.main, Readers.RegisterAccessCols.circuit,
-    Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit,
-    Readers.RegisterAccessTimestamp.main, AddOperation.circuit,
-    AddOperation.main, Gadgets.Equality.main, circuit_norm]
-
 private def pcWord (input : Var JalrChip.Inputs (ZMod p)) :
     Word (Expression (ZMod p)) :=
   #v[input.state.pc[0], input.state.pc[1], input.state.pc[2], 0]
@@ -396,8 +382,8 @@ private theorem nativeConstraintsDecompose
   simp only [Operations.constraints_append,
     Operations.constraints_witness,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_generalFormalCircuit,
-    constraints_toSubcircuit_formalAssertion,
+    GeneralFormalCircuit.toSubcircuit_constraints,
+    FormalAssertion.toSubcircuit_constraints,
     GeneralFormalCircuit.toSubcircuit_localLength,
     FormalAssertion.toSubcircuit_localLength,
     cpuCircuitLocalLength, AddOperation.circuit_localLength,
@@ -875,7 +861,7 @@ theorem jalrChipConstraintsConstructive
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
       (JalrChip.circuit (p := p))
-      assignment.environment jalrChip_lookups_empty).symm
+      assignment.environment JalrChip.lookups_empty).symm
 
 open SP1Clean.Channels
   (stateChannel byteChannel memoryChannel programChannel)

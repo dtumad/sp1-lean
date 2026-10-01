@@ -72,7 +72,7 @@ theorem verifierMain_constraints (image : ProgramImage) (input : Var SP1PublicIO
         input.init_pc0 - .const (bitVecToWord image.entry)[0],
         input.init_pc1 - .const (bitVecToWord image.entry)[1],
         input.init_pc2 - .const (bitVecToWord image.entry)[2]] := by
-  simp [verifierMain, GeneralFormalCircuit.toSubcircuit_constraints, sp1StateVerifier,
+  simp [verifierMain, sp1StateVerifier,
     sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main, circuit_norm]
 
 private theorem verifierInteractions_admitted (image : ProgramImage) (input : Var SP1PublicIO (ZMod p)) :
@@ -116,7 +116,7 @@ def verifierProgram (image : ProgramImage) (checkName : String) :
     have checks := (Verifier.checkZeros_guarantees checkName _ env).mp guarantees.2
     have checked : ((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).ConstraintsHold env := by
       refine ⟨checks, ?_⟩
-      simp [verifierMain, GeneralFormalCircuit.toSubcircuit_lookups, sp1StateVerifier,
+      simp [verifierMain, sp1StateVerifier,
         sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main, circuit_norm]
     exact ((verifier image).original_full_soundness 0 env (varFromOffset SP1PublicIO 0)
       trivial checked original).1

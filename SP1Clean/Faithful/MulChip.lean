@@ -285,22 +285,6 @@ def mulChipRowCodec :
         (mulChipLocals cols) data).trans
           (mulChipColumnsOfInput_roundtrip cols) }
 
-theorem mulChip_lookups_empty :
-    ({ circuit := MulChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations_mk, MulChip.circuit_main_eq]
-  simp [MulChip.main, Readers.CPUState.circuit,
-    Readers.CPUState.main, Readers.RTypeReader.circuit,
-    Readers.RTypeReader.main, Readers.RegisterWrite.circuit,
-    Readers.RegisterWrite.main, Readers.RegisterAccessCols.circuit,
-    Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit,
-    Readers.RegisterAccessTimestamp.main, MulOperation.circuit,
-    MulOperation.main, U16toU8OperationSafe.circuit,
-    U16toU8OperationSafe.main, U16MSBOperation.circuit,
-    U16MSBOperation.main, Gadgets.Equality.main, circuit_norm]
-
 private def mul_chip_flag (offset i : ℕ) : Expression (ZMod p) :=
   var { index := offset + i }
 
@@ -437,8 +421,8 @@ private theorem mul_chip_constraints_decompose
   simp only [Operations.constraints_append,
     Operations.constraints_witness,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_generalFormalCircuit,
-    constraints_toSubcircuit_formalAssertion,
+    GeneralFormalCircuit.toSubcircuit_constraints,
+    FormalAssertion.toSubcircuit_constraints,
     GeneralFormalCircuit.toSubcircuit_localLength,
     FormalAssertion.toSubcircuit_localLength,
     Readers.CPUState.circuit_localLength,
@@ -1141,7 +1125,7 @@ theorem mulOperation_assertions_forward
       Operations.localLength]
     simp only [Operations.constraints_append,
       Operations.constraints_subcircuit,
-      constraints_toSubcircuit_formalAssertion,
+      FormalAssertion.toSubcircuit_constraints,
       FormalAssertion.toSubcircuit_localLength,
       Operations.constraints_assert, Operations.constraints_nil,
       List.map_append, List.map_cons, List.map_nil]
@@ -1567,7 +1551,7 @@ theorem mulOperation_assertions_backward
     Operations.localLength] at hNative
   simp only [Operations.constraints_append,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_formalAssertion,
+    FormalAssertion.toSubcircuit_constraints,
     FormalAssertion.toSubcircuit_localLength,
     Operations.constraints_assert, Operations.constraints_nil,
     List.map_append, List.map_cons, List.map_nil] at hNative
@@ -2300,7 +2284,7 @@ theorem mulChip_constraints_constructive
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
       (MulChip.circuit (p := p))
-      assignment.environment mulChip_lookups_empty).symm
+      assignment.environment MulChip.lookups_empty).symm
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem mulCols_interactions_decompose

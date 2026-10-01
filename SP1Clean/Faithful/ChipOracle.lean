@@ -20,6 +20,7 @@ import Clean.Circuit.Loops
 import Clean.Circuit.Provable
 import Clean.Gadgets.Equality
 import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 
 /-! # Chip-level Rust oracle boundary
 
@@ -180,104 +181,6 @@ proofs reuse the generated row types without reconstructing parallel reader stru
          clk_0_16 := Eval.eval env x.clk_0_16
          pc := Eval.eval env x.pc } : Circuits.Types.CPUState F) := by
   rw [ProvableStruct.eval_eq_eval]
-  rfl
-
-/- Clean currently exposes the corresponding interaction-normalization lemmas, but not the constraint
-variants. Keep these two tiny flattening facts at the chip-oracle boundary so faithfulness proofs can
-descend one true subcircuit at a time without unfolding `Subcircuit` soundness packages. They are good
-candidates to upstream to Clean alongside `FormalAssertion.toSubcircuit_interactions`. -/
-@[circuit_norm] theorem constraints_toSubcircuit_formalAssertion
-    {F : Type} [FiniteField F] {Input : TypeMap} [ProvableType Input]
-    (circuit : FormalAssertion F Input) (n : ℕ) (input : Var Input F) :
-    FlatOperation.constraints (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).constraints := by
-  simp only [FormalAssertion.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.constraints_toFlat]
-
-@[circuit_norm] theorem constraints_toSubcircuit_formalCircuit
-    {F : Type} [FiniteField F] {Input Output : TypeMap}
-    [ProvableType Input] [ProvableType Output]
-    (circuit : FormalCircuit F Input Output) (n : ℕ) (input : Var Input F) :
-    FlatOperation.constraints (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).constraints := by
-  simp only [FormalCircuit.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.constraints_toFlat]
-
-@[circuit_norm] theorem constraints_toSubcircuit_generalFormalCircuit
-    {F : Type} [FiniteField F] {Input Output : TypeMap}
-    [ProvableType Input] [ProvableType Output]
-    (circuit : GeneralFormalCircuit F Input Output) (n : ℕ) (input : Var Input F) :
-    FlatOperation.constraints (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).constraints := by
-  simp only [GeneralFormalCircuit.toSubcircuit, GeneralFormalCircuit.toWithHint,
-    GeneralFormalCircuit.WithHint.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.constraints_toFlat]
-
-@[circuit_norm] theorem lookups_toSubcircuit_formalAssertion
-    {F : Type} [FiniteField F] {Input : TypeMap} [ProvableType Input]
-    (circuit : FormalAssertion F Input) (n : ℕ) (input : Var Input F) :
-    FlatOperation.lookups (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).lookups := by
-  simp only [FormalAssertion.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.lookups_toFlat]
-
-@[circuit_norm] theorem lookups_toSubcircuit_formalCircuit
-    {F : Type} [FiniteField F] {Input Output : TypeMap}
-    [ProvableType Input] [ProvableType Output]
-    (circuit : FormalCircuit F Input Output) (n : ℕ) (input : Var Input F) :
-    FlatOperation.lookups (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).lookups := by
-  simp only [FormalCircuit.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.lookups_toFlat]
-
-@[circuit_norm] theorem lookups_toSubcircuit_generalFormalCircuit
-    {F : Type} [FiniteField F] {Input Output : TypeMap}
-    [ProvableType Input] [ProvableType Output]
-    (circuit : GeneralFormalCircuit F Input Output) (n : ℕ) (input : Var Input F) :
-    FlatOperation.lookups (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).lookups := by
-  simp only [GeneralFormalCircuit.toSubcircuit, GeneralFormalCircuit.toWithHint,
-    GeneralFormalCircuit.WithHint.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.lookups_toFlat]
-
-@[circuit_norm] theorem constraints_flatten_operations
-    {F : Type} [FiniteField F] (opss : List (Operations F)) :
-    Operations.constraints opss.flatten = (opss.map Operations.constraints).flatten := by
-  induction opss with
-  | nil => rfl
-  | cons ops opss ih =>
-      simp only [List.flatten_cons, Operations.constraints_append, List.map_cons,
-        List.flatten_cons, ih]
-
-@[circuit_norm] theorem lookups_flatten_operations
-    {F : Type} [FiniteField F] (opss : List (Operations F)) :
-    Operations.lookups opss.flatten = (opss.map Operations.lookups).flatten := by
-  induction opss with
-  | nil => rfl
-  | cons ops opss ih =>
-      simp only [List.flatten_cons, Operations.lookups_append, List.map_cons,
-        List.flatten_cons, ih]
-
-@[circuit_norm] theorem constraints_forEach
-    {F : Type} [FiniteField F] {α : Type} {m : ℕ} [Inhabited α]
-    (xs : Vector α m) (body : α → Circuit F Unit) (constant : Circuit.ConstantLength body)
-    (offset : ℕ) :
-    ((Circuit.forEach xs body constant).operations offset).constraints =
-      (List.ofFn fun (i : Fin m) =>
-        ((body xs[i]).operations
-          (offset + i * (body default).localLength)).constraints).flatten := by
-  rw [Circuit.forEach.operations_eq, constraints_flatten_operations, List.map_ofFn]
-  rfl
-
-@[circuit_norm] theorem lookups_forEach
-    {F : Type} [FiniteField F] {α : Type} {m : ℕ} [Inhabited α]
-    (xs : Vector α m) (body : α → Circuit F Unit) (constant : Circuit.ConstantLength body)
-    (offset : ℕ) :
-    ((Circuit.forEach xs body constant).operations offset).lookups =
-      (List.ofFn fun (i : Fin m) =>
-        ((body xs[i]).operations
-          (offset + i * (body default).localLength)).lookups).flatten := by
-  rw [Circuit.forEach.operations_eq, lookups_flatten_operations, List.map_ofFn]
   rfl
 
 /- These are normalization facts for the two canonical generated reader fragments shared by Rust chip

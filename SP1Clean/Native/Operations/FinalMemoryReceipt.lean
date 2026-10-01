@@ -42,14 +42,12 @@ theorem width (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input Memor
 theorem constraints (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
     ({ circuit := circuit ram provider } : Component (ZMod p)).operations.constraints =
       ({ circuit := provider } : Component (ZMod p)).operations.constraints := by
-  simp only [Component.constraints_eq, Component.rowOperations, circuit, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_constraints]
+  simp only [Component.constraints_eq, Component.rowOperations, circuit, circuit_norm]
 
 theorem lookups (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
     ({ circuit := circuit ram provider } : Component (ZMod p)).operations.lookups =
       ({ circuit := provider } : Component (ZMod p)).operations.lookups := by
-  simp only [Component.lookups_eq, Component.rowOperations, circuit, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_lookups]
+  simp only [Component.lookups_eq, Component.rowOperations, circuit, circuit_norm]
 
 /-- Exactly one new receipt is appended, at the original provider's full output record. -/
 theorem receipt_interactions (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg)

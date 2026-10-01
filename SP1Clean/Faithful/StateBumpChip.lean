@@ -361,16 +361,6 @@ theorem stateBumpChipInteractionsFaithful
 
 /-! ## The constructive whole-chip boundary -/
 
-/-- The bundled circuit's `main` is the chip's `main`. -/
-theorem stateBumpChip_main_eq : (StateBumpChip.circuit (p := p)).main = StateBumpChip.main := rfl
-
-/-- The flat table emits no Clean `Lookup` operations — every SP1 byte check is a channel
-interaction, and is therefore compared by the interaction half. -/
-theorem stateBumpChip_lookups_empty :
-    ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk, stateBumpChip_main_eq]
-  simp [StateBumpChip.main, circuit_norm]
-
 /-- **Constructive assertion agreement.** For every Rust row and prover data, the extracted
 whole-table assertion list holds exactly when Clean's full constraint predicate holds on the
 reconstructed physical row. -/
@@ -383,8 +373,8 @@ theorem stateBumpChipConstraintsConstructive
         (stateBumpEnvironment rustCols data) := by
   refine Iff.trans ?_
     (constraintsHold_iff_nativeAssertZeros (StateBumpChip.circuit (p := p))
-      (stateBumpEnvironment rustCols data) stateBumpChip_lookups_empty).symm
-  rw [Air.Flat.Component.rowOperations_mk, stateBumpChip_main_eq]
+      (stateBumpEnvironment rustCols data) StateBumpChip.lookups_empty).symm
+  rw [Air.Flat.Component.rowOperations_mk, StateBumpChip.circuit_main_eq]
   exact stateBumpChipConstraintsFaithful preprocessed publicValues
     (stateBumpEnvironment rustCols data)
     (varFromOffset StateBumpChip.Inputs 0) (size StateBumpChip.Inputs) rustCols
@@ -399,7 +389,7 @@ theorem stateBumpChipInteractionsConstructive
         ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations =
       (stateBumpChipOracle preprocessed publicValues).rustAccesses rustCols := by
   rw [nativeAccesses_component_eq_rowOperations (StateBumpChip.circuit (p := p)),
-    Air.Flat.Component.rowOperations_mk, stateBumpChip_main_eq]
+    Air.Flat.Component.rowOperations_mk, StateBumpChip.circuit_main_eq]
   exact stateBumpChipInteractionsFaithful preprocessed publicValues
     (stateBumpEnvironment rustCols data)
     (varFromOffset StateBumpChip.Inputs 0) (size StateBumpChip.Inputs) rustCols

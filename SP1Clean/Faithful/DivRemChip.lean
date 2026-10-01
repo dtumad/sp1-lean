@@ -1130,33 +1130,6 @@ def divRemChipRowCodec :
         Air.Flat.Component.rowOffset_mk]
       exact eval_divRemChipDirectOutput (p := p) cols data }
 
-theorem divRemChip_lookups_empty :
-    ({ circuit := DivRemChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations_mk,
-    DivRemChip.circuit_main_eq]
-  simp [DivRemChip.main, DivRemChip.populateRow,
-    DivRemChip.constrainRow,
-    Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.RTypeReader.circuit, Readers.RTypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit,
-    Readers.RegisterAccessTimestamp.main,
-    DivRemCompare.circuit, DivRemCompare.main,
-    DivRemCore.circuit, DivRemCore.main,
-    IsEqualWordOperation.circuit, IsEqualWordOperation.main,
-    IsZeroWordOperation.circuit, IsZeroWordOperation.main,
-    IsZeroOperation.circuit, IsZeroOperation.main,
-    AddOperation.circuit, AddOperation.main,
-    LtOperationUnsigned.circuit, LtOperationUnsigned.main,
-    U16CompareOperation.circuit, U16CompareOperation.main,
-    U16MSBOperation.circuit, U16MSBOperation.main,
-    MulOperation.circuit, MulOperation.main,
-    U16toU8OperationSafe.circuit, U16toU8OperationSafe.main,
-    DivRemChip.assertZeros, Gadgets.Equality.main, circuit_norm]
-
 omit [Fact (2 ^ 24 < p)] in
 /-- Evaluate the large Rust-shaped own-assert tail without unfolding it at the chip boundary.
 `DivRemCore.ownAsserts_map_eval` is the expensive carrier-generic theorem; this wrapper supplies
