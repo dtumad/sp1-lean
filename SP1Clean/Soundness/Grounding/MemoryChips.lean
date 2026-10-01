@@ -1789,7 +1789,7 @@ local macro "chipAssumptionsIff " r:ident : tactic => do
   let tbl := Lean.mkIdent (.mkSimple (r.getId.toString ++ "ChipDescriptor_table"))
   `(tactic|
     (rw [$tbl:ident]
-     unfold Component.Assumptions
+     unfold Component.CircuitAssumptions
      rw [$(Lean.mkIdent `circuitRowInputOf_eq_component):ident]
      rfl))
 
@@ -2136,7 +2136,7 @@ theorem advanceReady_of_literalDescriptor
 omit [Fact (2 ^ 25 < p)] in
 theorem loadByteChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (loadByteChipDescriptor (p := p)).table.Assumptions env ↔
+    (loadByteChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadByteChip.Assumptions
         (circuitRowInputOf LoadByteChip.circuit env) env.data := by
   chipAssumptionsIff loadByte
@@ -2755,7 +2755,7 @@ theorem loadHalfChipDescriptor_ramAccess (input : LoadHalfChip.Inputs (ZMod p))
 omit [Fact (2 ^ 25 < p)] in
 theorem loadHalfChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (loadHalfChipDescriptor (p := p)).table.Assumptions env ↔
+    (loadHalfChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadHalfChip.Assumptions
         (circuitRowInputOf LoadHalfChip.circuit env) env.data := by
   chipAssumptionsIff loadHalf
@@ -3181,7 +3181,7 @@ theorem loadWordChipDescriptor_ramAccess (input : LoadWordChip.Inputs (ZMod p))
 omit [Fact (2 ^ 25 < p)] in
 theorem loadWordChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (loadWordChipDescriptor (p := p)).table.Assumptions env ↔
+    (loadWordChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadWordChip.Assumptions
         (circuitRowInputOf LoadWordChip.circuit env) env.data := by
   chipAssumptionsIff loadWord
@@ -3604,7 +3604,7 @@ theorem loadDoubleChipDescriptor_ramAccess (input : LoadDoubleChip.Inputs (ZMod 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadDoubleChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (loadDoubleChipDescriptor (p := p)).table.Assumptions env ↔
+    (loadDoubleChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadDoubleChip.Assumptions
         (circuitRowInputOf LoadDoubleChip.circuit env) env.data := by
   chipAssumptionsIff loadDouble
@@ -3899,7 +3899,7 @@ theorem loadX0ChipDescriptor_ramAccess (input : LoadX0Chip.Inputs (ZMod p))
 omit [Fact (2 ^ 25 < p)] in
 theorem loadX0ChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (loadX0ChipDescriptor (p := p)).table.Assumptions env ↔
+    (loadX0ChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadX0Chip.Assumptions
         (circuitRowInputOf LoadX0Chip.circuit env) env.data := by
   chipAssumptionsIff loadX0
@@ -4664,7 +4664,7 @@ theorem storeByteChipDescriptor_rdGuard :
 omit [Fact (2 ^ 25 < p)] in
 theorem storeByteChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (storeByteChipDescriptor (p := p)).table.Assumptions env ↔
+    (storeByteChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       StoreByteChip.Assumptions
         (circuitRowInputOf StoreByteChip.circuit env) env.data := by
   chipAssumptionsIff storeByte
@@ -5852,7 +5852,7 @@ theorem storeHalfChipDescriptor_rdGuard :
 omit [Fact (2 ^ 25 < p)] in
 theorem storeHalfChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (storeHalfChipDescriptor (p := p)).table.Assumptions env ↔
+    (storeHalfChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       StoreHalfChip.Assumptions
         (circuitRowInputOf StoreHalfChip.circuit env) env.data := by
   chipAssumptionsIff storeHalf
@@ -6550,7 +6550,7 @@ theorem storeWordChipDescriptor_rdGuard :
 omit [Fact (2 ^ 25 < p)] in
 theorem storeWordChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (storeWordChipDescriptor (p := p)).table.Assumptions env ↔
+    (storeWordChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       StoreWordChip.Assumptions
         (circuitRowInputOf StoreWordChip.circuit env) env.data := by
   chipAssumptionsIff storeWord
@@ -7182,7 +7182,7 @@ theorem storeDoubleChipDescriptor_rdGuard :
 omit [Fact (2 ^ 25 < p)] in
 theorem storeDoubleChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
-    (storeDoubleChipDescriptor (p := p)).table.Assumptions env ↔
+    (storeDoubleChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       StoreDoubleChip.Assumptions
         (circuitRowInputOf StoreDoubleChip.circuit env) env.data := by
   chipAssumptionsIff storeDouble

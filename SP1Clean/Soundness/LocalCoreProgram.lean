@@ -18,43 +18,46 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 
 /-- The fixed image is the only Program producer, including across both local boundaries. -/
 theorem component_program_source (image : ProgramImage) (source : ExecutionSnapshot)
-    (component : Component (ZMod p)) (member : component ∈ (ensemble image source).allTables) :
+    (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables) :
     component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ NativeCore.ProgramPulls component := by
-  simp only [Ensemble.allTables, List.mem_cons] at member
-  rcases member with rfl | member
+  change component ∈ tables image source at member
+  have split : tables (p := p) image source =
+      (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++
+        FinalMemoryEnsemble.inventory.views.map (·.component) ++ NativeCore.afterFinalTables image := by
+    simp only [tables, NativeCore.afterInitialTables, NativeCore.afterFinalTables, List.append_assoc]
+  rw [split, List.mem_append, List.mem_append] at member
+  rcases member with (initial | final) | interior
   · right
     apply NativeCore.programPulls_of_silent
-    change programChannel.toRaw ∉ [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw,
-      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
-      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-    simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-      stateChannel, programChannel, byteChannel, exitChannel, Channel.toRaw]
-  · change component ∈ tables image source at member
-    have split : tables (p := p) image source =
-        (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++
-          FinalMemoryEnsemble.inventory.views.map (·.component) ++ NativeCore.afterFinalTables image := by
-      simp only [tables, NativeCore.afterInitialTables, NativeCore.afterFinalTables, List.append_assoc]
-    rw [split, List.mem_append, List.mem_append] at member
-    rcases member with (initial | final) | interior
-    · right
-      apply NativeCore.programPulls_of_silent
-      obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp initial
-      obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
-      intro used
-      have subset := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id used
-      simp only [List.mem_cons, List.not_mem_nil, or_false, programChannel_eq_byteChannel_false,
-        programChannel_eq_memoryChannel_false, false_or] at subset
-      exact (by decide : "SP1Program" ≠ SnapshotMemoryEnsemble.channelName) (congrArg RawChannel.name subset)
-    · right
-      apply NativeCore.programPulls_of_silent
-      obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp final
-      obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
-      intro used
-      have subset := FinalMemoryEnsemble.view_channels_subset (p := p) id used
-      simp only [List.mem_cons, List.not_mem_nil, or_false, programChannel_eq_byteChannel_false,
-        programChannel_eq_memoryChannel_false, false_or] at subset
-      exact (by decide : "SP1Program" ≠ OrderedFinalProvider.channelName) (congrArg RawChannel.name subset)
-    · exact NativeCore.interior_program_source image component interior
+    obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp initial
+    obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
+    intro used
+    have subset := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id used
+    simp only [List.mem_cons, List.not_mem_nil, or_false, programChannel_eq_byteChannel_false,
+      programChannel_eq_memoryChannel_false, false_or] at subset
+    exact (by decide : "SP1Program" ≠ SnapshotMemoryEnsemble.channelName) (congrArg RawChannel.name subset)
+  · right
+    apply NativeCore.programPulls_of_silent
+    obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp final
+    obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
+    intro used
+    have subset := FinalMemoryEnsemble.view_channels_subset (p := p) id used
+    simp only [List.mem_cons, List.not_mem_nil, or_false, programChannel_eq_byteChannel_false,
+      programChannel_eq_memoryChannel_false, false_or] at subset
+    exact (by decide : "SP1Program" ≠ OrderedFinalProvider.channelName) (congrArg RawChannel.name subset)
+  · exact NativeCore.interior_program_source image component interior
+
+/-- Source assertions retain their fresh channel and cannot manufacture Program fetches. -/
+theorem verifier_program_silent (image : ProgramImage) (source : ExecutionSnapshot)
+    (env : Environment (ZMod p)) :
+    (ensemble image source).verifierOperations.interactionValuesWith programChannel.toRaw env = [] := by
+  rw [ensemble, PublicVerifier.install_verifier_interactions_of_mem _ _ _ _
+    (by simp [baseEnsemble, sp1Ensemble_channels])]
+  simp [baseEnsemble, boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
+    Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions,
+    sp1StateVerifierMain, OrderedBoundaryVerifier.main, Operations.interactionValuesWith,
+    Operations.interactionsWith, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
+    OrderedFinalProvider.channelName, stateChannel, programChannel, byteChannel, exitChannel, circuit_norm]
 
 /-- Program authentication uses only this channel's balance, independently of Memory effects. -/
 theorem program_pull_committed_of_balance {image : ProgramImage} (valid : image.Valid) {source : ExecutionSnapshot}
@@ -67,6 +70,9 @@ theorem program_pull_committed_of_balance {image : ProgramImage} (valid : image.
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) :=
   NativeCore.program_pull_committed_of_sources valid witness constraints
     balanced
+    (by intro input data emitted member
+        rw [verifier_program_silent] at member
+        exact (List.not_mem_nil member).elim)
     (component_program_source image source) message interaction member active payload
 
 /-- Every active local Program pull names an instruction in the checked image and Sail decoder.
@@ -80,7 +86,7 @@ theorem program_pull_committed {image : ProgramImage} (valid : image.Valid) {sou
     (payload : interaction.msg = (toElements message).toArray) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) :=
   program_pull_committed_of_balance valid witness constraints
-    (balanced _ (by simp [ensemble, sp1Ensemble_channels])) message interaction member active payload
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, sp1Ensemble_channels])) message interaction member active payload
 
 private theorem programIndex_bound {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) : 6 < witness.tables.length := by
@@ -105,9 +111,8 @@ theorem program_row_committed {image : ProgramImage} {source : ExecutionSnapshot
     (row : Array (ZMod p)) (member : row ∈ (programTable witness).table) :
     Target.committedInROM (image.toGuestProgram valid)
       (rowOfMsg (({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)).rowInput
-        ((programTable witness).environment row)).toMessage) := by
-  have checked := constraints (programTable witness) (witness.mem_allTables_of_mem_tables
-    (List.getElem_mem (programIndex_bound witness))) row member
+        (Environment.fromArray row witness.data)).toMessage) := by
+  have checked := constraints (programTable witness) (List.getElem_mem (programIndex_bound witness)) row member
   rw [programTable_component witness] at checked
   exact DecodedProgramProvider.constraints_committed valid _ checked
 

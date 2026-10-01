@@ -19,8 +19,8 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 
 /-- Decode exactly the active physical rows, retaining order and duplicate occurrences. -/
 noncomputable def activeSystemRows {α : Type} (table : Table (ZMod p))
-    (decode : Table (ZMod p) → Array (ZMod p) → α) (gate : α → ZMod p) : List α :=
-  (table.table.map (decode table)).filter (fun row => gate row = 1)
+    (decode : Array (ZMod p) → α) (gate : α → ZMod p) : List α :=
+  (table.table.map decode).filter (fun row => gate row = 1)
 
 /-- The complete gated ledger of a list of paired prior/new Memory records. -/
 def memoryPairInteractions (gate : ZMod p)
@@ -57,25 +57,25 @@ private theorem flatMap_filter_ite {α β : Type*} (items : List α) (keep : α 
   | cons item items ih =>
     by_cases active : keep item <;> simp [active, ih]
 
-private theorem activeSystemRows_projection {α : Type} (table : Table (ZMod p))
-    (decode : Table (ZMod p) → Array (ZMod p) → α) (gate : α → ZMod p)
+private theorem activeSystemRows_projection {α : Type} (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (decode : Array (ZMod p) → α) (gate : α → ZMod p)
     (pairs : α → List (MemoryMsg (ZMod p) × MemoryMsg (ZMod p)))
-    (ledger : typedTableInteractionsWith table memoryChannel =
-      table.table.flatMap fun physical => memoryPairInteractions (gate (decode table physical))
-        (pairs (decode table physical)))
-    (binary : ∀ physical ∈ table.table, gate (decode table physical) = 0 ∨ gate (decode table physical) = 1) :
-    producedMessages (typedTableInteractionsWith table memoryChannel) =
+    (ledger : typedTableInteractionsWith table data memoryChannel =
+      table.table.flatMap fun physical => memoryPairInteractions (gate (decode physical))
+        (pairs (decode physical)))
+    (binary : ∀ physical ∈ table.table, gate (decode physical) = 0 ∨ gate (decode physical) = 1) :
+    producedMessages (typedTableInteractionsWith table data memoryChannel) =
         (activeSystemRows table decode gate).flatMap (fun row => (pairs row).map Prod.snd) ∧
-    consumedMessages (typedTableInteractionsWith table memoryChannel) =
+    consumedMessages (typedTableInteractionsWith table data memoryChannel) =
         (activeSystemRows table decode gate).flatMap (fun row => (pairs row).map Prod.fst) := by
   rw [ledger, producedMessages_flatMap, consumedMessages_flatMap]
   have pushes : ∀ physical ∈ table.table,
-      producedMessages (memoryPairInteractions (gate (decode table physical)) (pairs (decode table physical))) =
-        if gate (decode table physical) = 1 then (pairs (decode table physical)).map Prod.snd else [] :=
+      producedMessages (memoryPairInteractions (gate (decode physical)) (pairs (decode physical))) =
+        if gate (decode physical) = 1 then (pairs (decode physical)).map Prod.snd else [] :=
     fun physical member => (memoryPairInteractions_active _ (binary physical member) _).1
   have pulls : ∀ physical ∈ table.table,
-      consumedMessages (memoryPairInteractions (gate (decode table physical)) (pairs (decode table physical))) =
-        if gate (decode table physical) = 1 then (pairs (decode table physical)).map Prod.fst else [] :=
+      consumedMessages (memoryPairInteractions (gate (decode physical)) (pairs (decode physical))) =
+        if gate (decode physical) = 1 then (pairs (decode physical)).map Prod.fst else [] :=
     fun physical member => (memoryPairInteractions_active _ (binary physical member) _).2
   constructor
   · rw [List.flatMap_congr pushes]
@@ -108,10 +108,10 @@ def SyscallInstrsChip.memoryPairs (row : SyscallInstrsChip.Inputs (ZMod p)) :
       SyscallInstrsChip.memPushedMessage row row.op_c 2 row.op_c_memory.prev_value)]
 
 /-- MemoryBump's physical constraints force its decoded selector binary. -/
-theorem memoryBumpRow_binary (table : Table (ZMod p))
-    (component : table.component = ⟨MemoryBumpChip.circuit⟩) (constraints : table.Constraints)
+theorem memoryBumpRow_binary (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := MemoryBumpChip.circuit }) (constraints : table.Constraints data)
     (physical : Array (ZMod p)) (member : physical ∈ table.table) :
-    (memoryBumpRow table physical).is_real = 0 ∨ (memoryBumpRow table physical).is_real = 1 := by
+    (memoryBumpRow data physical).is_real = 0 ∨ (memoryBumpRow data physical).is_real = 1 := by
   have checked := constraints physical member
   rw [component] at checked
   have binary := MemoryBumpChip.selectorBinary_of_shallow _ _ _
@@ -119,10 +119,10 @@ theorem memoryBumpRow_binary (table : Table (ZMod p))
   simpa only [memoryBumpRow_eq, circuit_norm] using binary
 
 /-- HALT's decoded selector is binary before any semantic Memory guarantee is available. -/
-theorem haltRow_binary (table : Table (ZMod p))
-    (component : table.component = ⟨HaltChip.circuit⟩) (constraints : table.Constraints)
+theorem haltRow_binary (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := HaltChip.circuit }) (constraints : table.Constraints data)
     (physical : Array (ZMod p)) (member : physical ∈ table.table) :
-    (haltRow table physical).is_real = 0 ∨ (haltRow table physical).is_real = 1 := by
+    (haltRow data physical).is_real = 0 ∨ (haltRow data physical).is_real = 1 := by
   have checked := constraints physical member
   rw [component] at checked
   have binary := HaltChip.selectorBinary_of_shallow _ _ _
@@ -130,10 +130,10 @@ theorem haltRow_binary (table : Table (ZMod p))
   simpa only [haltRow_eq, circuit_norm] using binary
 
 /-- The syscall's decoded selector is binary independently of host behavior. -/
-theorem syscallRow_binary (table : Table (ZMod p))
-    (component : table.component = ⟨SyscallInstrsChip.circuit⟩) (constraints : table.Constraints)
+theorem syscallRow_binary (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := SyscallInstrsChip.circuit }) (constraints : table.Constraints data)
     (physical : Array (ZMod p)) (member : physical ∈ table.table) :
-    (syscallInstrsRow table physical).is_real = 0 ∨ (syscallInstrsRow table physical).is_real = 1 := by
+    (syscallInstrsRow data physical).is_real = 0 ∨ (syscallInstrsRow data physical).is_real = 1 := by
   have checked := constraints physical member
   rw [component] at checked
   have binary := SyscallInstrsChip.selectorBinary_of_shallow _ _ _
@@ -141,43 +141,43 @@ theorem syscallRow_binary (table : Table (ZMod p))
   simpa only [syscallInstrsRow_eq, circuit_norm] using binary
 
 /-- Removing disabled refresh rows preserves the complete active Memory ledger. -/
-theorem memoryBumpRows_projection (table : Table (ZMod p))
-    (component : table.component = ⟨MemoryBumpChip.circuit⟩) (constraints : table.Constraints) :
-    producedMessages (typedTableInteractionsWith table memoryChannel) =
-        (activeSystemRows table memoryBumpRow (·.is_real)).flatMap
+theorem memoryBumpRows_projection (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := MemoryBumpChip.circuit }) (constraints : table.Constraints data) :
+    producedMessages (typedTableInteractionsWith table data memoryChannel) =
+        (activeSystemRows table (memoryBumpRow data) (·.is_real)).flatMap
           (fun row => (MemoryBumpChip.memoryPairs row).map Prod.snd) ∧
-    consumedMessages (typedTableInteractionsWith table memoryChannel) =
-        (activeSystemRows table memoryBumpRow (·.is_real)).flatMap
+    consumedMessages (typedTableInteractionsWith table data memoryChannel) =
+        (activeSystemRows table (memoryBumpRow data) (·.is_real)).flatMap
           (fun row => (MemoryBumpChip.memoryPairs row).map Prod.fst) :=
-  activeSystemRows_projection table memoryBumpRow (·.is_real) MemoryBumpChip.memoryPairs
-    (memoryBumpTable_typedMemory_of_component table component)
-    (memoryBumpRow_binary table component constraints)
+  activeSystemRows_projection table data (memoryBumpRow data) (·.is_real) MemoryBumpChip.memoryPairs
+    (memoryBumpTable_typedMemory_of_component table data component)
+    (memoryBumpRow_binary table data component constraints)
 
 /-- Removing disabled HALT rows preserves all three register pairs of every active occurrence. -/
-theorem haltRows_projection (table : Table (ZMod p))
-    (component : table.component = ⟨HaltChip.circuit⟩) (constraints : table.Constraints) :
-    producedMessages (typedTableInteractionsWith table memoryChannel) =
-        (activeSystemRows table haltRow (·.is_real)).flatMap
+theorem haltRows_projection (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := HaltChip.circuit }) (constraints : table.Constraints data) :
+    producedMessages (typedTableInteractionsWith table data memoryChannel) =
+        (activeSystemRows table (haltRow data) (·.is_real)).flatMap
           (fun row => (HaltChip.memoryPairs row).map Prod.snd) ∧
-    consumedMessages (typedTableInteractionsWith table memoryChannel) =
-        (activeSystemRows table haltRow (·.is_real)).flatMap
+    consumedMessages (typedTableInteractionsWith table data memoryChannel) =
+        (activeSystemRows table (haltRow data) (·.is_real)).flatMap
           (fun row => (HaltChip.memoryPairs row).map Prod.fst) :=
-  activeSystemRows_projection table haltRow (·.is_real) HaltChip.memoryPairs
-    (haltTable_typedMemory_of_component table component)
-    (haltRow_binary table component constraints)
+  activeSystemRows_projection table data (haltRow data) (·.is_real) HaltChip.memoryPairs
+    (haltTable_typedMemory_of_component table data component)
+    (haltRow_binary table data component constraints)
 
 /-- Removing disabled syscall rows preserves all three pairs, including the register write. -/
-theorem syscallRows_projection (table : Table (ZMod p))
-    (component : table.component = ⟨SyscallInstrsChip.circuit⟩) (constraints : table.Constraints) :
-    producedMessages (typedTableInteractionsWith table memoryChannel) =
-        (activeSystemRows table syscallInstrsRow (·.is_real)).flatMap
+theorem syscallRows_projection (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := SyscallInstrsChip.circuit }) (constraints : table.Constraints data) :
+    producedMessages (typedTableInteractionsWith table data memoryChannel) =
+        (activeSystemRows table (syscallInstrsRow data) (·.is_real)).flatMap
           (fun row => (SyscallInstrsChip.memoryPairs row).map Prod.snd) ∧
-    consumedMessages (typedTableInteractionsWith table memoryChannel) =
-        (activeSystemRows table syscallInstrsRow (·.is_real)).flatMap
+    consumedMessages (typedTableInteractionsWith table data memoryChannel) =
+        (activeSystemRows table (syscallInstrsRow data) (·.is_real)).flatMap
           (fun row => (SyscallInstrsChip.memoryPairs row).map Prod.fst) := by
-  apply activeSystemRows_projection table syscallInstrsRow (·.is_real) SyscallInstrsChip.memoryPairs
-    ?_ (syscallRow_binary table component constraints)
-  exact List.flatMap_congr (fun physical _ => syscallInstrsRow_typedMemory_of_component table component physical)
+  apply activeSystemRows_projection table data (syscallInstrsRow data) (·.is_real) SyscallInstrsChip.memoryPairs
+    ?_ (syscallRow_binary table data component constraints)
+  exact List.flatMap_congr (fun physical _ => syscallInstrsRow_typedMemory_of_component table data component physical)
 
 /-- HALT as a timed row. Its three unchanged registers are read at the row's pre-state time;
 the read-back records retain their actual access timestamps. -/

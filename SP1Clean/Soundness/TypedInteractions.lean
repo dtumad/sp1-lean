@@ -237,7 +237,8 @@ section TypedBalance
 
 variable {p : ℕ} [Fact p.Prime]
 
-local instance : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+/-- Use Clean's finite-field equality for the literal typed and untyped balance ledgers. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 variable {Message : TypeMap} [ProvableType Message]
 variable {channel : Channel (ZMod p) Message}

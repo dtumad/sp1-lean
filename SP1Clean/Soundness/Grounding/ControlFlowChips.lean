@@ -243,7 +243,7 @@ omit [Fact (2 ^ 25 < p)] in
 /-- Folded descriptor projection for JALR's circuit assumptions. -/
 theorem jalrChipDescriptor_assumptions_iff (data : ProverData (ZMod p))
     (physical : Array (ZMod p)) :
-    (jalrChipDescriptor (p := p)).table.Assumptions
+    (jalrChipDescriptor (p := p)).table.CircuitAssumptions
         (Environment.fromArray physical data) ↔
       JalrChip.Assumptions
         (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput
@@ -841,7 +841,7 @@ omit [Fact (2 ^ 25 < p)] in
 /-- Folded descriptor projection for Branch's circuit assumptions. -/
 theorem branchChipDescriptor_assumptions_iff (data : ProverData (ZMod p))
     (physical : Array (ZMod p)) :
-    (branchChipDescriptor (p := p)).table.Assumptions
+    (branchChipDescriptor (p := p)).table.CircuitAssumptions
         (Environment.fromArray physical data) ↔
       BranchChip.Assumptions
         (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput

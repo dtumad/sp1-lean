@@ -353,8 +353,8 @@ theorem decodedInstructionRow_byteGuarantees
   apply channelGuarantees_of_mem_decodeInstructionTables witness.data Channels.byteChannel.toRaw
     (witness_instructionTables_aligned witness)
   · intro table tableMem
-    exact (sp1_finishedChannel_guarantees witness constraints balanced table
-      (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take tableMem))).1
+    exact ((sp1_finishedChannel_guarantees witness constraints balanced).2 table
+      (List.mem_of_mem_take tableMem)).1
   · exact decodedMem
 
 /-- Every active canonical instruction row advances its decoded State time by exactly eight. -/
@@ -385,13 +385,13 @@ private theorem halt_cpu_subcircuit_mem :
 the finished Byte channel (split from `witness_realHaltRows_timeStep` for the declaration
 elaboration budget). -/
 theorem haltRow_cpuState_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨HaltChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (haltRow table row).is_real = 1) :
-    (((haltRow table row).state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
-      (haltRow table row).state.clk_16_24.val < 2 ^ 8 := by
-  set env := table.environment row with envDef
+    (real : (haltRow data row).is_real = 1) :
+    (((haltRow data row).state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
+      (haltRow data row).state.clk_16_24.val < 2 ^ 8 := by
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := byteGuarantees row rowMem
   rw [component] at opsGuarantees
@@ -410,7 +410,7 @@ theorem haltRow_cpuState_bounds_of_component
     ({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.CPUState.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) cpuInput) cpuMem
     rowGuarantees
-  have crossing : (haltRow table row).is_real =
+  have crossing : (haltRow data row).is_real =
       Expression.eval env cpuInput.is_real := by
     rw [cpuInputDef]
     rw [haltRow_eq, inputVarDef]
@@ -420,12 +420,12 @@ theorem haltRow_cpuState_bounds_of_component
   obtain ⟨clk0B, clk1B⟩ := Readers.CPUState.bounds_of_byteGuarantees cpuInput
     (size HaltChip.Inputs) env cpuGuarantees realEval
   have e0 : Expression.eval env cpuInput.cols.clk_0_16 =
-      (haltRow table row).state.clk_0_16 := by
+      (haltRow data row).state.clk_0_16 := by
     rw [haltRow_eq, show cpuInput.cols = inputVar.state from rfl, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have e1 : Expression.eval env cpuInput.cols.clk_16_24 =
-      (haltRow table row).state.clk_16_24 := by
+      (haltRow data row).state.clk_16_24 := by
     rw [haltRow_eq, show cpuInput.cols = inputVar.state from rfl, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -438,12 +438,12 @@ private theorem haltRow_cpuState_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realHaltRows witness) :
-    (((haltRow (haltTable witness) row).state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
-      (haltRow (haltTable witness) row).state.clk_16_24.val < 2 ^ 8 := by
+    (((haltRow witness.data row).state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
+      (haltRow witness.data row).state.clk_16_24.val < 2 ^ 8 := by
   obtain ⟨member, real⟩ := mem_realHaltRows witness rowMem
-  exact haltRow_cpuState_bounds_of_component (haltTable witness) (haltTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables (List.getElem_mem (haltIndex_lt_tablesLength witness)))).1
+  exact haltRow_cpuState_bounds_of_component (haltTable witness) witness.data (haltTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (haltIndex_lt_tablesLength witness))).1
     member real
 
 private theorem syscall_cpu_subcircuit_mem :
@@ -471,14 +471,14 @@ whole difference between standing in for one arm and dispatching thirteen.
 Public because the walk feed's row contract consumes it outside this file; the halt row's twin below
 stays private because its only consumer is here. -/
 theorem syscallInstrsRow_cpuState_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (syscallInstrsRow table row).is_real = 1) :
-    (((syscallInstrsRow table row).state.clk_0_16 - 1)
+    (real : (syscallInstrsRow data row).is_real = 1) :
+    (((syscallInstrsRow data row).state.clk_0_16 - 1)
         * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
-      (syscallInstrsRow table row).state.clk_16_24.val < 2 ^ 8 := by
-  set env := table.environment row with envDef
+      (syscallInstrsRow data row).state.clk_16_24.val < 2 ^ 8 := by
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := byteGuarantees row rowMem
   rw [component] at opsGuarantees
@@ -498,7 +498,7 @@ theorem syscallInstrsRow_cpuState_bounds_of_component
     ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.CPUState.circuit (p := p)).toSubcircuit (size SyscallInstrsChip.Inputs) cpuInput)
     cpuMem rowGuarantees
-  have crossing : (syscallInstrsRow table row).is_real =
+  have crossing : (syscallInstrsRow data row).is_real =
       Expression.eval env cpuInput.is_real := by
     rw [cpuInputDef]
     rw [syscallInstrsRow_eq, inputVarDef]
@@ -508,12 +508,12 @@ theorem syscallInstrsRow_cpuState_bounds_of_component
   obtain ⟨clk0B, clk1B⟩ := Readers.CPUState.bounds_of_byteGuarantees cpuInput
     (size SyscallInstrsChip.Inputs) env cpuGuarantees realEval
   have e0 : Expression.eval env cpuInput.cols.clk_0_16 =
-      (syscallInstrsRow table row).state.clk_0_16 := by
+      (syscallInstrsRow data row).state.clk_0_16 := by
     rw [syscallInstrsRow_eq, show cpuInput.cols = inputVar.state from rfl, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have e1 : Expression.eval env cpuInput.cols.clk_16_24 =
-      (syscallInstrsRow table row).state.clk_16_24 := by
+      (syscallInstrsRow data row).state.clk_16_24 := by
     rw [syscallInstrsRow_eq, show cpuInput.cols = inputVar.state from rfl, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -526,13 +526,13 @@ theorem syscallInstrsRow_cpuState_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    (((syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 - 1)
+    (((syscallInstrsRow witness.data row).state.clk_0_16 - 1)
         * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
-      (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24.val < 2 ^ 8 := by
+      (syscallInstrsRow witness.data row).state.clk_16_24.val < 2 ^ 8 := by
   obtain ⟨member, real⟩ := mem_realSyscallInstrsRows witness rowMem
-  exact syscallInstrsRow_cpuState_bounds_of_component (syscallInstrsTable witness) (syscallInstrsTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).1
+  exact syscallInstrsRow_cpuState_bounds_of_component (syscallInstrsTable witness) witness.data (syscallInstrsTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))).1
     member real
 
 /-- The syscall row's `PcArm` slice as a variable, named once so the crossing lemma below can be
@@ -583,22 +583,22 @@ omit [Fact (2 ^ 25 < p)] in
 Written with the environment *inline*: a `set`- or `let`-bound environment is one simp `zeta` step
 away from being unfolded against a sixty-five-column row, which is what exceeds the depth budget.
 `witness_syscallInstrsRows_selectorBinary` crosses `is_real` exactly this way for the same reason. -/
-private theorem syscallInstrsRow_cross (table : Table (ZMod p))
+private theorem syscallInstrsRow_cross (data : ProverData (ZMod p))
     (row : Array (ZMod p)) :
-    ((syscallInstrsRow table row).is_real =
-        Expression.eval (table.environment row)
+    ((syscallInstrsRow data row).is_real =
+        Expression.eval (Environment.fromArray row data)
           (varFromOffset SyscallInstrsChip.Inputs 0 :
             Var SyscallInstrsChip.Inputs (ZMod p)).is_real) ∧
-      ((syscallInstrsRow table row).is_halt =
-        Expression.eval (table.environment row)
+      ((syscallInstrsRow data row).is_halt =
+        Expression.eval (Environment.fromArray row data)
           (varFromOffset SyscallInstrsChip.Inputs 0 :
             Var SyscallInstrsChip.Inputs (ZMod p)).is_halt) ∧
-      (∀ i : Fin 3, (syscallInstrsRow table row).next_pc[i] =
-        Expression.eval (table.environment row)
+      (∀ i : Fin 3, (syscallInstrsRow data row).next_pc[i] =
+        Expression.eval (Environment.fromArray row data)
           ((varFromOffset SyscallInstrsChip.Inputs 0 :
             Var SyscallInstrsChip.Inputs (ZMod p)).next_pc[i])) ∧
-      (∀ i : Fin 3, (syscallInstrsRow table row).state.pc[i] =
-        Expression.eval (table.environment row)
+      (∀ i : Fin 3, (syscallInstrsRow data row).state.pc[i] =
+        Expression.eval (Environment.fromArray row data)
           ((varFromOffset SyscallInstrsChip.Inputs 0 :
             Var SyscallInstrsChip.Inputs (ZMod p)).state.pc[i])) := by
   refine ⟨?_, ?_, fun i => ?_, fun i => ?_⟩ <;>
@@ -611,25 +611,25 @@ layer, where the chip's full `Spec` is not: `PcArm` is a pure `assertZero` block
 `channelsWithGuarantees` is `[]`, so its `FullGuarantees` obligation is vacuous, and its
 `Assumptions` are just the two selector booleanities the row asserts ungated. -/
 theorem syscallInstrsRow_pcArm_spec_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (constraints : table.Constraints)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (constraints : table.Constraints data)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table) :
-    ((syscallInstrsRow table row).is_halt = 1 →
-        (syscallInstrsRow table row).next_pc[0] = 1 ∧
-          (syscallInstrsRow table row).next_pc[1] = 0 ∧
-          (syscallInstrsRow table row).next_pc[2] = 0) ∧
-      ((syscallInstrsRow table row).is_real = 1 →
-        (syscallInstrsRow table row).is_halt = 0 →
-        (syscallInstrsRow table row).next_pc[0] =
-            (syscallInstrsRow table row).state.pc[0] + 4 ∧
-          (syscallInstrsRow table row).next_pc[1] =
-            (syscallInstrsRow table row).state.pc[1] ∧
-          (syscallInstrsRow table row).next_pc[2] =
-            (syscallInstrsRow table row).state.pc[2]) := by
+    ((syscallInstrsRow data row).is_halt = 1 →
+        (syscallInstrsRow data row).next_pc[0] = 1 ∧
+          (syscallInstrsRow data row).next_pc[1] = 0 ∧
+          (syscallInstrsRow data row).next_pc[2] = 0) ∧
+      ((syscallInstrsRow data row).is_real = 1 →
+        (syscallInstrsRow data row).is_halt = 0 →
+        (syscallInstrsRow data row).next_pc[0] =
+            (syscallInstrsRow data row).state.pc[0] + 4 ∧
+          (syscallInstrsRow data row).next_pc[1] =
+            (syscallInstrsRow data row).state.pc[1] ∧
+          (syscallInstrsRow data row).next_pc[2] =
+            (syscallInstrsRow data row).state.pc[2]) := by
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have rowConstraints := constraints row rowMem
   rw [component] at rowConstraints
-  let env := table.environment row
+  let env := Environment.fromArray row data
   let input : Var SyscallInstrsChip.Inputs (ZMod p) := varFromOffset SyscallInstrsChip.Inputs 0
   have opsConstraints : ((SyscallInstrsChip.circuit.main input).operations
       (size SyscallInstrsChip.Inputs)).ConstraintsHold env :=
@@ -663,27 +663,27 @@ theorem syscallInstrsRow_pcArm_spec_of_component
     ⟨by rw [cReal]; exact hreal, by rw [cHalt]; exact hhalt⟩
     (Circuit.can_replace_soundness armConstraints armGuarantees)
   -- from the row's variable to the decoded row: the cheap crossing the selector lemmas already use
-  obtain ⟨vReal, vHalt, vNext, vPc⟩ := syscallInstrsRow_cross table row
+  obtain ⟨vReal, vHalt, vNext, vPc⟩ := syscallInstrsRow_cross data row
   have rHalt := cHalt.trans vHalt.symm
   have rReal := cReal.trans vReal.symm
   have rN : ∀ i : Fin 3, (Eval.eval env (syscallPcVar (p := p))).next_pc[i] =
-      (syscallInstrsRow table row).next_pc[i] :=
+      (syscallInstrsRow data row).next_pc[i] :=
     fun i => (cNext i).trans (vNext i).symm
   have rP : ∀ i : Fin 3, (Eval.eval env (syscallPcVar (p := p))).pc[i] =
-      (syscallInstrsRow table row).state.pc[i] :=
+      (syscallInstrsRow data row).state.pc[i] :=
     fun i => (cPc i).trans (vPc i).symm
   have rN0 : (Eval.eval env (syscallPcVar (p := p))).next_pc[0] =
-    (syscallInstrsRow table row).next_pc[0] := rN 0
+    (syscallInstrsRow data row).next_pc[0] := rN 0
   have rN1 : (Eval.eval env (syscallPcVar (p := p))).next_pc[1] =
-    (syscallInstrsRow table row).next_pc[1] := rN 1
+    (syscallInstrsRow data row).next_pc[1] := rN 1
   have rN2 : (Eval.eval env (syscallPcVar (p := p))).next_pc[2] =
-    (syscallInstrsRow table row).next_pc[2] := rN 2
+    (syscallInstrsRow data row).next_pc[2] := rN 2
   have rP0 : (Eval.eval env (syscallPcVar (p := p))).pc[0] =
-    (syscallInstrsRow table row).state.pc[0] := rP 0
+    (syscallInstrsRow data row).state.pc[0] := rP 0
   have rP1 : (Eval.eval env (syscallPcVar (p := p))).pc[1] =
-    (syscallInstrsRow table row).state.pc[1] := rP 1
+    (syscallInstrsRow data row).state.pc[1] := rP 1
   have rP2 : (Eval.eval env (syscallPcVar (p := p))).pc[2] =
-    (syscallInstrsRow table row).state.pc[2] := rP 2
+    (syscallInstrsRow data row).state.pc[2] := rP 2
   refine ⟨fun hh => ?_, fun hr hh => ?_⟩
   · obtain ⟨a0, a1, a2⟩ := arm.1.1 (rHalt.trans hh)
     exact ⟨rN0.symm.trans a0, rN1.symm.trans a1, rN2.symm.trans a2⟩
@@ -696,21 +696,20 @@ private theorem syscallInstrsRow_pcArm_spec
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints)
     {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table) :
-    ((syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 1 →
-        (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[0] = 1 ∧
-          (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[1] = 0 ∧
-          (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[2] = 0) ∧
-      ((syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1 →
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_halt = 0 →
-        (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[0] =
-            (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[0] + 4 ∧
-          (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[1] =
-            (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[1] ∧
-          (syscallInstrsRow (syscallInstrsTable witness) row).next_pc[2] =
-            (syscallInstrsRow (syscallInstrsTable witness) row).state.pc[2]) :=
-  syscallInstrsRow_pcArm_spec_of_component (syscallInstrsTable witness) (syscallInstrsTable_component witness)
-    (constraints _ (witness.mem_allTables_of_mem_tables
-      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))) rowMem
+    ((syscallInstrsRow witness.data row).is_halt = 1 →
+        (syscallInstrsRow witness.data row).next_pc[0] = 1 ∧
+          (syscallInstrsRow witness.data row).next_pc[1] = 0 ∧
+          (syscallInstrsRow witness.data row).next_pc[2] = 0) ∧
+      ((syscallInstrsRow witness.data row).is_real = 1 →
+        (syscallInstrsRow witness.data row).is_halt = 0 →
+        (syscallInstrsRow witness.data row).next_pc[0] =
+            (syscallInstrsRow witness.data row).state.pc[0] + 4 ∧
+          (syscallInstrsRow witness.data row).next_pc[1] =
+            (syscallInstrsRow witness.data row).state.pc[1] ∧
+          (syscallInstrsRow witness.data row).next_pc[2] =
+            (syscallInstrsRow witness.data row).state.pc[2]) :=
+  syscallInstrsRow_pcArm_spec_of_component (syscallInstrsTable witness) witness.data (syscallInstrsTable_component witness)
+    (constraints _ (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))) rowMem
 
 private theorem halt_x5_subcircuit_mem :
     (⟨size HaltChip.Inputs, (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
@@ -726,17 +725,17 @@ private theorem halt_x5_subcircuit_mem :
 /-- The `x5` register access's two timestamp byte bounds at one active halt row, from the
 finished Byte channel alone. -/
 private theorem haltRow_x5_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨HaltChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (haltRow table row).is_real = 1) :
-    ((haltRow table row).x5_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow table row).state.clk_0_16 +
-          (haltRow table row).state.clk_16_24 * 65536 + 4 -
-        (haltRow table row).x5_memory.access_timestamp.prev_low - 1 -
-        (haltRow table row).x5_memory.access_timestamp.diff_low_limb) *
+    (real : (haltRow data row).is_real = 1) :
+    ((haltRow data row).x5_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow data row).state.clk_0_16 +
+          (haltRow data row).state.clk_16_24 * 65536 + 4 -
+        (haltRow data row).x5_memory.access_timestamp.prev_low - 1 -
+        (haltRow data row).x5_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
-  set env := table.environment row with envDef
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := byteGuarantees row rowMem
   rw [component] at opsGuarantees
@@ -755,7 +754,7 @@ private theorem haltRow_x5_timestamp_bounds_of_component
     ({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
-  have crossing : (haltRow table row).is_real =
+  have crossing : (haltRow data row).is_real =
       Expression.eval env raInput.is_real := by
     rw [raInputDef]
     rw [haltRow_eq, inputVarDef]
@@ -765,18 +764,18 @@ private theorem haltRow_x5_timestamp_bounds_of_component
   obtain ⟨diffB, scaledB⟩ := Readers.RegisterAccessCols.bounds_of_byteGuarantees raInput
     (size HaltChip.Inputs) env raGuarantees realEval
   have ediff : Expression.eval env raInput.cols.access_timestamp.diff_low_limb =
-      (haltRow table row).x5_memory.access_timestamp.diff_low_limb := by
+      (haltRow data row).x5_memory.access_timestamp.diff_low_limb := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eprev : Expression.eval env raInput.cols.access_timestamp.prev_low =
-      (haltRow table row).x5_memory.access_timestamp.prev_low := by
+      (haltRow data row).x5_memory.access_timestamp.prev_low := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eclk : Expression.eval env raInput.clk_target =
-      (haltRow table row).state.clk_0_16 +
-        (haltRow table row).state.clk_16_24 * 65536 + 4 := by
+      (haltRow data row).state.clk_0_16 +
+        (haltRow data row).state.clk_16_24 * 65536 + 4 := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm, HaltChip.clkLow]
     rw [envDef]
@@ -788,16 +787,16 @@ private theorem haltRow_x5_timestamp_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realHaltRows witness) :
-    ((haltRow (haltTable witness) row).x5_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow (haltTable witness) row).state.clk_0_16 +
-          (haltRow (haltTable witness) row).state.clk_16_24 * 65536 + 4 -
-        (haltRow (haltTable witness) row).x5_memory.access_timestamp.prev_low - 1 -
-        (haltRow (haltTable witness) row).x5_memory.access_timestamp.diff_low_limb) *
+    ((haltRow witness.data row).x5_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow witness.data row).state.clk_0_16 +
+          (haltRow witness.data row).state.clk_16_24 * 65536 + 4 -
+        (haltRow witness.data row).x5_memory.access_timestamp.prev_low - 1 -
+        (haltRow witness.data row).x5_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
   obtain ⟨member, real⟩ := mem_realHaltRows witness rowMem
-  exact haltRow_x5_timestamp_bounds_of_component (haltTable witness) (haltTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables (List.getElem_mem (haltIndex_lt_tablesLength witness)))).1
+  exact haltRow_x5_timestamp_bounds_of_component (haltTable witness) witness.data (haltTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (haltIndex_lt_tablesLength witness))).1
     member real
 
 private theorem halt_x10_subcircuit_mem :
@@ -814,17 +813,17 @@ private theorem halt_x10_subcircuit_mem :
 /-- The `x10` register access's two timestamp byte bounds at one active halt row, from the
 finished Byte channel alone. -/
 private theorem haltRow_x10_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨HaltChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (haltRow table row).is_real = 1) :
-    ((haltRow table row).x10_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow table row).state.clk_0_16 +
-          (haltRow table row).state.clk_16_24 * 65536 + 3 -
-        (haltRow table row).x10_memory.access_timestamp.prev_low - 1 -
-        (haltRow table row).x10_memory.access_timestamp.diff_low_limb) *
+    (real : (haltRow data row).is_real = 1) :
+    ((haltRow data row).x10_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow data row).state.clk_0_16 +
+          (haltRow data row).state.clk_16_24 * 65536 + 3 -
+        (haltRow data row).x10_memory.access_timestamp.prev_low - 1 -
+        (haltRow data row).x10_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
-  set env := table.environment row with envDef
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := byteGuarantees row rowMem
   rw [component] at opsGuarantees
@@ -843,7 +842,7 @@ private theorem haltRow_x10_timestamp_bounds_of_component
     ({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
-  have crossing : (haltRow table row).is_real =
+  have crossing : (haltRow data row).is_real =
       Expression.eval env raInput.is_real := by
     rw [raInputDef]
     rw [haltRow_eq, inputVarDef]
@@ -853,18 +852,18 @@ private theorem haltRow_x10_timestamp_bounds_of_component
   obtain ⟨diffB, scaledB⟩ := Readers.RegisterAccessCols.bounds_of_byteGuarantees raInput
     (size HaltChip.Inputs) env raGuarantees realEval
   have ediff : Expression.eval env raInput.cols.access_timestamp.diff_low_limb =
-      (haltRow table row).x10_memory.access_timestamp.diff_low_limb := by
+      (haltRow data row).x10_memory.access_timestamp.diff_low_limb := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eprev : Expression.eval env raInput.cols.access_timestamp.prev_low =
-      (haltRow table row).x10_memory.access_timestamp.prev_low := by
+      (haltRow data row).x10_memory.access_timestamp.prev_low := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eclk : Expression.eval env raInput.clk_target =
-      (haltRow table row).state.clk_0_16 +
-        (haltRow table row).state.clk_16_24 * 65536 + 3 := by
+      (haltRow data row).state.clk_0_16 +
+        (haltRow data row).state.clk_16_24 * 65536 + 3 := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm, HaltChip.clkLow]
     rw [envDef]
@@ -876,16 +875,16 @@ private theorem haltRow_x10_timestamp_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realHaltRows witness) :
-    ((haltRow (haltTable witness) row).x10_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow (haltTable witness) row).state.clk_0_16 +
-          (haltRow (haltTable witness) row).state.clk_16_24 * 65536 + 3 -
-        (haltRow (haltTable witness) row).x10_memory.access_timestamp.prev_low - 1 -
-        (haltRow (haltTable witness) row).x10_memory.access_timestamp.diff_low_limb) *
+    ((haltRow witness.data row).x10_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow witness.data row).state.clk_0_16 +
+          (haltRow witness.data row).state.clk_16_24 * 65536 + 3 -
+        (haltRow witness.data row).x10_memory.access_timestamp.prev_low - 1 -
+        (haltRow witness.data row).x10_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
   obtain ⟨member, real⟩ := mem_realHaltRows witness rowMem
-  exact haltRow_x10_timestamp_bounds_of_component (haltTable witness) (haltTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables (List.getElem_mem (haltIndex_lt_tablesLength witness)))).1
+  exact haltRow_x10_timestamp_bounds_of_component (haltTable witness) witness.data (haltTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (haltIndex_lt_tablesLength witness))).1
     member real
 
 private theorem halt_x11_subcircuit_mem :
@@ -902,17 +901,17 @@ private theorem halt_x11_subcircuit_mem :
 /-- The `x11` register access's two timestamp byte bounds at one active halt row, from the
 finished Byte channel alone. -/
 private theorem haltRow_x11_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨HaltChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (haltRow table row).is_real = 1) :
-    ((haltRow table row).x11_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow table row).state.clk_0_16 +
-          (haltRow table row).state.clk_16_24 * 65536 + 2 -
-        (haltRow table row).x11_memory.access_timestamp.prev_low - 1 -
-        (haltRow table row).x11_memory.access_timestamp.diff_low_limb) *
+    (real : (haltRow data row).is_real = 1) :
+    ((haltRow data row).x11_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow data row).state.clk_0_16 +
+          (haltRow data row).state.clk_16_24 * 65536 + 2 -
+        (haltRow data row).x11_memory.access_timestamp.prev_low - 1 -
+        (haltRow data row).x11_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
-  set env := table.environment row with envDef
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := byteGuarantees row rowMem
   rw [component] at opsGuarantees
@@ -931,7 +930,7 @@ private theorem haltRow_x11_timestamp_bounds_of_component
     ({ circuit := HaltChip.circuit } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
-  have crossing : (haltRow table row).is_real =
+  have crossing : (haltRow data row).is_real =
       Expression.eval env raInput.is_real := by
     rw [raInputDef]
     rw [haltRow_eq, inputVarDef]
@@ -941,18 +940,18 @@ private theorem haltRow_x11_timestamp_bounds_of_component
   obtain ⟨diffB, scaledB⟩ := Readers.RegisterAccessCols.bounds_of_byteGuarantees raInput
     (size HaltChip.Inputs) env raGuarantees realEval
   have ediff : Expression.eval env raInput.cols.access_timestamp.diff_low_limb =
-      (haltRow table row).x11_memory.access_timestamp.diff_low_limb := by
+      (haltRow data row).x11_memory.access_timestamp.diff_low_limb := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eprev : Expression.eval env raInput.cols.access_timestamp.prev_low =
-      (haltRow table row).x11_memory.access_timestamp.prev_low := by
+      (haltRow data row).x11_memory.access_timestamp.prev_low := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eclk : Expression.eval env raInput.clk_target =
-      (haltRow table row).state.clk_0_16 +
-        (haltRow table row).state.clk_16_24 * 65536 + 2 := by
+      (haltRow data row).state.clk_0_16 +
+        (haltRow data row).state.clk_16_24 * 65536 + 2 := by
     rw [raInputDef, haltRow_eq, inputVarDef]
     simp only [circuit_norm, HaltChip.clkLow]
     rw [envDef]
@@ -964,16 +963,16 @@ private theorem haltRow_x11_timestamp_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realHaltRows witness) :
-    ((haltRow (haltTable witness) row).x11_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow (haltTable witness) row).state.clk_0_16 +
-          (haltRow (haltTable witness) row).state.clk_16_24 * 65536 + 2 -
-        (haltRow (haltTable witness) row).x11_memory.access_timestamp.prev_low - 1 -
-        (haltRow (haltTable witness) row).x11_memory.access_timestamp.diff_low_limb) *
+    ((haltRow witness.data row).x11_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow witness.data row).state.clk_0_16 +
+          (haltRow witness.data row).state.clk_16_24 * 65536 + 2 -
+        (haltRow witness.data row).x11_memory.access_timestamp.prev_low - 1 -
+        (haltRow witness.data row).x11_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
   obtain ⟨member, real⟩ := mem_realHaltRows witness rowMem
-  exact haltRow_x11_timestamp_bounds_of_component (haltTable witness) (haltTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables (List.getElem_mem (haltIndex_lt_tablesLength witness)))).1
+  exact haltRow_x11_timestamp_bounds_of_component (haltTable witness) witness.data (haltTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (haltIndex_lt_tablesLength witness))).1
     member real
 
 /-- The halt row's two composed `CPUState` clock byte bounds, exposed for the capstone's
@@ -982,8 +981,8 @@ theorem witness_realHaltRows_clkBounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (row : Array (ZMod p)) (rowMem : row ∈ realHaltRows witness) :
-    (((haltRow (haltTable witness) row).state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
-      (haltRow (haltTable witness) row).state.clk_16_24.val < 2 ^ 8 :=
+    (((haltRow witness.data row).state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
+      (haltRow witness.data row).state.clk_16_24.val < 2 ^ 8 :=
   haltRow_cpuState_bounds witness constraints balanced rowMem
 
 /-- **The halt row's three register-access timestamp disciplines**, from the finished Byte channel
@@ -991,54 +990,54 @@ alone: for each of `x5/x10/x11` (access clocks `clk + 4/3/2`), the 16-bit `diff_
 the scaled-high byte bound — exactly the shape `TimeExtraction.prevLow_val_lt_of_accessTimestamp`
 consumes to place each pulled prior strictly before its read-back. -/
 theorem haltRow_accessTimestamp_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨HaltChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (haltRow table row).is_real = 1) :
-    (((haltRow table row).x5_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow table row).state.clk_0_16 +
-          (haltRow table row).state.clk_16_24 * 65536 + 4 -
-        (haltRow table row).x5_memory.access_timestamp.prev_low - 1 -
-        (haltRow table row).x5_memory.access_timestamp.diff_low_limb) *
+    (real : (haltRow data row).is_real = 1) :
+    (((haltRow data row).x5_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow data row).state.clk_0_16 +
+          (haltRow data row).state.clk_16_24 * 65536 + 4 -
+        (haltRow data row).x5_memory.access_timestamp.prev_low - 1 -
+        (haltRow data row).x5_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) ∧
-    (((haltRow table row).x10_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow table row).state.clk_0_16 +
-          (haltRow table row).state.clk_16_24 * 65536 + 3 -
-        (haltRow table row).x10_memory.access_timestamp.prev_low - 1 -
-        (haltRow table row).x10_memory.access_timestamp.diff_low_limb) *
+    (((haltRow data row).x10_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow data row).state.clk_0_16 +
+          (haltRow data row).state.clk_16_24 * 65536 + 3 -
+        (haltRow data row).x10_memory.access_timestamp.prev_low - 1 -
+        (haltRow data row).x10_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) ∧
-    (((haltRow table row).x11_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow table row).state.clk_0_16 +
-          (haltRow table row).state.clk_16_24 * 65536 + 2 -
-        (haltRow table row).x11_memory.access_timestamp.prev_low - 1 -
-        (haltRow table row).x11_memory.access_timestamp.diff_low_limb) *
+    (((haltRow data row).x11_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow data row).state.clk_0_16 +
+          (haltRow data row).state.clk_16_24 * 65536 + 2 -
+        (haltRow data row).x11_memory.access_timestamp.prev_low - 1 -
+        (haltRow data row).x11_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) :=
-  ⟨haltRow_x5_timestamp_bounds_of_component table component byteGuarantees rowMem real,
-   haltRow_x10_timestamp_bounds_of_component table component byteGuarantees rowMem real,
-   haltRow_x11_timestamp_bounds_of_component table component byteGuarantees rowMem real⟩
+  ⟨haltRow_x5_timestamp_bounds_of_component table data component byteGuarantees rowMem real,
+   haltRow_x10_timestamp_bounds_of_component table data component byteGuarantees rowMem real,
+   haltRow_x11_timestamp_bounds_of_component table data component byteGuarantees rowMem real⟩
 
 /-- Specialize the table-local timestamp bounds to the legacy assembly. -/
 theorem haltRow_accessTimestamp_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realHaltRows witness) :
-    (((haltRow (haltTable witness) row).x5_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow (haltTable witness) row).state.clk_0_16 +
-          (haltRow (haltTable witness) row).state.clk_16_24 * 65536 + 4 -
-        (haltRow (haltTable witness) row).x5_memory.access_timestamp.prev_low - 1 -
-        (haltRow (haltTable witness) row).x5_memory.access_timestamp.diff_low_limb) *
+    (((haltRow witness.data row).x5_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow witness.data row).state.clk_0_16 +
+          (haltRow witness.data row).state.clk_16_24 * 65536 + 4 -
+        (haltRow witness.data row).x5_memory.access_timestamp.prev_low - 1 -
+        (haltRow witness.data row).x5_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) ∧
-    (((haltRow (haltTable witness) row).x10_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow (haltTable witness) row).state.clk_0_16 +
-          (haltRow (haltTable witness) row).state.clk_16_24 * 65536 + 3 -
-        (haltRow (haltTable witness) row).x10_memory.access_timestamp.prev_low - 1 -
-        (haltRow (haltTable witness) row).x10_memory.access_timestamp.diff_low_limb) *
+    (((haltRow witness.data row).x10_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow witness.data row).state.clk_0_16 +
+          (haltRow witness.data row).state.clk_16_24 * 65536 + 3 -
+        (haltRow witness.data row).x10_memory.access_timestamp.prev_low - 1 -
+        (haltRow witness.data row).x10_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) ∧
-    (((haltRow (haltTable witness) row).x11_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((haltRow (haltTable witness) row).state.clk_0_16 +
-          (haltRow (haltTable witness) row).state.clk_16_24 * 65536 + 2 -
-        (haltRow (haltTable witness) row).x11_memory.access_timestamp.prev_low - 1 -
-        (haltRow (haltTable witness) row).x11_memory.access_timestamp.diff_low_limb) *
+    (((haltRow witness.data row).x11_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((haltRow witness.data row).state.clk_0_16 +
+          (haltRow witness.data row).state.clk_16_24 * 65536 + 2 -
+        (haltRow witness.data row).x11_memory.access_timestamp.prev_low - 1 -
+        (haltRow witness.data row).x11_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) :=
   ⟨haltRow_x5_timestamp_bounds witness constraints balanced rowMem,
    haltRow_x10_timestamp_bounds witness constraints balanced rowMem,
@@ -1064,17 +1063,17 @@ private theorem syscall_opA_subcircuit_mem :
 /-- The `op_a_memory` access's two timestamp byte bounds at one active syscall row, from the finished
 Byte channel alone. -/
 private theorem syscallInstrsRow_opA_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (syscallInstrsRow table row).is_real = 1) :
-    ((syscallInstrsRow table row).op_a_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow table row).state.clk_0_16 +
-          (syscallInstrsRow table row).state.clk_16_24 * 65536 + 4 -
-        (syscallInstrsRow table row).op_a_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow table row).op_a_memory.access_timestamp.diff_low_limb) *
+    (real : (syscallInstrsRow data row).is_real = 1) :
+    ((syscallInstrsRow data row).op_a_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow data row).state.clk_0_16 +
+          (syscallInstrsRow data row).state.clk_16_24 * 65536 + 4 -
+        (syscallInstrsRow data row).op_a_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow data row).op_a_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
-  set env := table.environment row with envDef
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := byteGuarantees row rowMem
   rw [component] at opsGuarantees
@@ -1096,7 +1095,7 @@ private theorem syscallInstrsRow_opA_timestamp_bounds_of_component
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees
-  have crossing : (syscallInstrsRow table row).is_real =
+  have crossing : (syscallInstrsRow data row).is_real =
       Expression.eval env raInput.is_real := by
     rw [raInputDef]
     rw [syscallInstrsRow_eq, inputVarDef]
@@ -1106,18 +1105,18 @@ private theorem syscallInstrsRow_opA_timestamp_bounds_of_component
   obtain ⟨diffB, scaledB⟩ := Readers.RegisterAccessCols.bounds_of_byteGuarantees raInput
     (size SyscallInstrsChip.Inputs) env raGuarantees realEval
   have ediff : Expression.eval env raInput.cols.access_timestamp.diff_low_limb =
-      (syscallInstrsRow table row).op_a_memory.access_timestamp.diff_low_limb := by
+      (syscallInstrsRow data row).op_a_memory.access_timestamp.diff_low_limb := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eprev : Expression.eval env raInput.cols.access_timestamp.prev_low =
-      (syscallInstrsRow table row).op_a_memory.access_timestamp.prev_low := by
+      (syscallInstrsRow data row).op_a_memory.access_timestamp.prev_low := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eclk : Expression.eval env raInput.clk_target =
-      (syscallInstrsRow table row).state.clk_0_16 +
-        (syscallInstrsRow table row).state.clk_16_24 * 65536 + 4 := by
+      (syscallInstrsRow data row).state.clk_0_16 +
+        (syscallInstrsRow data row).state.clk_16_24 * 65536 + 4 := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm, SyscallInstrsChip.clkLowVar]
     rw [envDef]
@@ -1129,16 +1128,16 @@ private theorem syscallInstrsRow_opA_timestamp_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    ((syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 +
-          (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 * 65536 + 4 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory.access_timestamp.diff_low_limb) *
+    ((syscallInstrsRow witness.data row).op_a_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow witness.data row).state.clk_0_16 +
+          (syscallInstrsRow witness.data row).state.clk_16_24 * 65536 + 4 -
+        (syscallInstrsRow witness.data row).op_a_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow witness.data row).op_a_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
   obtain ⟨member, real⟩ := mem_realSyscallInstrsRows witness rowMem
-  exact syscallInstrsRow_opA_timestamp_bounds_of_component (syscallInstrsTable witness) (syscallInstrsTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).1
+  exact syscallInstrsRow_opA_timestamp_bounds_of_component (syscallInstrsTable witness) witness.data (syscallInstrsTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))).1
     member real
 
 private theorem syscall_opB_subcircuit_mem :
@@ -1161,17 +1160,17 @@ private theorem syscall_opB_subcircuit_mem :
 /-- The `op_b_memory` access's two timestamp byte bounds at one active syscall row, from the finished
 Byte channel alone. -/
 private theorem syscallInstrsRow_opB_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (syscallInstrsRow table row).is_real = 1) :
-    ((syscallInstrsRow table row).op_b_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow table row).state.clk_0_16 +
-          (syscallInstrsRow table row).state.clk_16_24 * 65536 + 3 -
-        (syscallInstrsRow table row).op_b_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow table row).op_b_memory.access_timestamp.diff_low_limb) *
+    (real : (syscallInstrsRow data row).is_real = 1) :
+    ((syscallInstrsRow data row).op_b_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow data row).state.clk_0_16 +
+          (syscallInstrsRow data row).state.clk_16_24 * 65536 + 3 -
+        (syscallInstrsRow data row).op_b_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow data row).op_b_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
-  set env := table.environment row with envDef
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := byteGuarantees row rowMem
   rw [component] at opsGuarantees
@@ -1193,7 +1192,7 @@ private theorem syscallInstrsRow_opB_timestamp_bounds_of_component
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees
-  have crossing : (syscallInstrsRow table row).is_real =
+  have crossing : (syscallInstrsRow data row).is_real =
       Expression.eval env raInput.is_real := by
     rw [raInputDef]
     rw [syscallInstrsRow_eq, inputVarDef]
@@ -1203,18 +1202,18 @@ private theorem syscallInstrsRow_opB_timestamp_bounds_of_component
   obtain ⟨diffB, scaledB⟩ := Readers.RegisterAccessCols.bounds_of_byteGuarantees raInput
     (size SyscallInstrsChip.Inputs) env raGuarantees realEval
   have ediff : Expression.eval env raInput.cols.access_timestamp.diff_low_limb =
-      (syscallInstrsRow table row).op_b_memory.access_timestamp.diff_low_limb := by
+      (syscallInstrsRow data row).op_b_memory.access_timestamp.diff_low_limb := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eprev : Expression.eval env raInput.cols.access_timestamp.prev_low =
-      (syscallInstrsRow table row).op_b_memory.access_timestamp.prev_low := by
+      (syscallInstrsRow data row).op_b_memory.access_timestamp.prev_low := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eclk : Expression.eval env raInput.clk_target =
-      (syscallInstrsRow table row).state.clk_0_16 +
-        (syscallInstrsRow table row).state.clk_16_24 * 65536 + 3 := by
+      (syscallInstrsRow data row).state.clk_0_16 +
+        (syscallInstrsRow data row).state.clk_16_24 * 65536 + 3 := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm, SyscallInstrsChip.clkLowVar]
     rw [envDef]
@@ -1226,16 +1225,16 @@ private theorem syscallInstrsRow_opB_timestamp_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    ((syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 +
-          (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 * 65536 + 3 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.access_timestamp.diff_low_limb) *
+    ((syscallInstrsRow witness.data row).op_b_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow witness.data row).state.clk_0_16 +
+          (syscallInstrsRow witness.data row).state.clk_16_24 * 65536 + 3 -
+        (syscallInstrsRow witness.data row).op_b_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow witness.data row).op_b_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
   obtain ⟨member, real⟩ := mem_realSyscallInstrsRows witness rowMem
-  exact syscallInstrsRow_opB_timestamp_bounds_of_component (syscallInstrsTable witness) (syscallInstrsTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).1
+  exact syscallInstrsRow_opB_timestamp_bounds_of_component (syscallInstrsTable witness) witness.data (syscallInstrsTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))).1
     member real
 
 private theorem syscall_opC_subcircuit_mem :
@@ -1258,17 +1257,17 @@ private theorem syscall_opC_subcircuit_mem :
 /-- The `op_c_memory` access's two timestamp byte bounds at one active syscall row, from the finished
 Byte channel alone. -/
 private theorem syscallInstrsRow_opC_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (syscallInstrsRow table row).is_real = 1) :
-    ((syscallInstrsRow table row).op_c_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow table row).state.clk_0_16 +
-          (syscallInstrsRow table row).state.clk_16_24 * 65536 + 2 -
-        (syscallInstrsRow table row).op_c_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow table row).op_c_memory.access_timestamp.diff_low_limb) *
+    (real : (syscallInstrsRow data row).is_real = 1) :
+    ((syscallInstrsRow data row).op_c_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow data row).state.clk_0_16 +
+          (syscallInstrsRow data row).state.clk_16_24 * 65536 + 2 -
+        (syscallInstrsRow data row).op_c_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow data row).op_c_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
-  set env := table.environment row with envDef
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := byteGuarantees row rowMem
   rw [component] at opsGuarantees
@@ -1290,7 +1289,7 @@ private theorem syscallInstrsRow_opC_timestamp_bounds_of_component
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees
-  have crossing : (syscallInstrsRow table row).is_real =
+  have crossing : (syscallInstrsRow data row).is_real =
       Expression.eval env raInput.is_real := by
     rw [raInputDef]
     rw [syscallInstrsRow_eq, inputVarDef]
@@ -1300,18 +1299,18 @@ private theorem syscallInstrsRow_opC_timestamp_bounds_of_component
   obtain ⟨diffB, scaledB⟩ := Readers.RegisterAccessCols.bounds_of_byteGuarantees raInput
     (size SyscallInstrsChip.Inputs) env raGuarantees realEval
   have ediff : Expression.eval env raInput.cols.access_timestamp.diff_low_limb =
-      (syscallInstrsRow table row).op_c_memory.access_timestamp.diff_low_limb := by
+      (syscallInstrsRow data row).op_c_memory.access_timestamp.diff_low_limb := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eprev : Expression.eval env raInput.cols.access_timestamp.prev_low =
-      (syscallInstrsRow table row).op_c_memory.access_timestamp.prev_low := by
+      (syscallInstrsRow data row).op_c_memory.access_timestamp.prev_low := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
   have eclk : Expression.eval env raInput.clk_target =
-      (syscallInstrsRow table row).state.clk_0_16 +
-        (syscallInstrsRow table row).state.clk_16_24 * 65536 + 2 := by
+      (syscallInstrsRow data row).state.clk_0_16 +
+        (syscallInstrsRow data row).state.clk_16_24 * 65536 + 2 := by
     rw [raInputDef, syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm, SyscallInstrsChip.clkLowVar]
     rw [envDef]
@@ -1323,70 +1322,70 @@ private theorem syscallInstrsRow_opC_timestamp_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    ((syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 +
-          (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 * 65536 + 2 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.access_timestamp.diff_low_limb) *
+    ((syscallInstrsRow witness.data row).op_c_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow witness.data row).state.clk_0_16 +
+          (syscallInstrsRow witness.data row).state.clk_16_24 * 65536 + 2 -
+        (syscallInstrsRow witness.data row).op_c_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow witness.data row).op_c_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8 := by
   obtain ⟨member, real⟩ := mem_realSyscallInstrsRows witness rowMem
-  exact syscallInstrsRow_opC_timestamp_bounds_of_component (syscallInstrsTable witness) (syscallInstrsTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).1
+  exact syscallInstrsRow_opC_timestamp_bounds_of_component (syscallInstrsTable witness) witness.data (syscallInstrsTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))).1
     member real
 
 /-- **A syscall row's three register-access timestamp disciplines**, from the finished Byte channel
 alone — the Halt twin is `haltRow_accessTimestamp_bounds`, and the access clocks are the same
 `clk + 4/3/2` because both tables model the same upstream `R`-type register adapter. -/
 theorem syscallInstrsRow_accessTimestamp_bounds_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (byteGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (syscallInstrsRow table row).is_real = 1) :
-    (((syscallInstrsRow table row).op_a_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow table row).state.clk_0_16 +
-          (syscallInstrsRow table row).state.clk_16_24 * 65536 + 4 -
-        (syscallInstrsRow table row).op_a_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow table row).op_a_memory.access_timestamp.diff_low_limb) *
+    (real : (syscallInstrsRow data row).is_real = 1) :
+    (((syscallInstrsRow data row).op_a_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow data row).state.clk_0_16 +
+          (syscallInstrsRow data row).state.clk_16_24 * 65536 + 4 -
+        (syscallInstrsRow data row).op_a_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow data row).op_a_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) ∧
-    (((syscallInstrsRow table row).op_b_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow table row).state.clk_0_16 +
-          (syscallInstrsRow table row).state.clk_16_24 * 65536 + 3 -
-        (syscallInstrsRow table row).op_b_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow table row).op_b_memory.access_timestamp.diff_low_limb) *
+    (((syscallInstrsRow data row).op_b_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow data row).state.clk_0_16 +
+          (syscallInstrsRow data row).state.clk_16_24 * 65536 + 3 -
+        (syscallInstrsRow data row).op_b_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow data row).op_b_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) ∧
-    (((syscallInstrsRow table row).op_c_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow table row).state.clk_0_16 +
-          (syscallInstrsRow table row).state.clk_16_24 * 65536 + 2 -
-        (syscallInstrsRow table row).op_c_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow table row).op_c_memory.access_timestamp.diff_low_limb) *
+    (((syscallInstrsRow data row).op_c_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow data row).state.clk_0_16 +
+          (syscallInstrsRow data row).state.clk_16_24 * 65536 + 2 -
+        (syscallInstrsRow data row).op_c_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow data row).op_c_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) :=
-  ⟨syscallInstrsRow_opA_timestamp_bounds_of_component table component byteGuarantees rowMem real,
-   syscallInstrsRow_opB_timestamp_bounds_of_component table component byteGuarantees rowMem real,
-   syscallInstrsRow_opC_timestamp_bounds_of_component table component byteGuarantees rowMem real⟩
+  ⟨syscallInstrsRow_opA_timestamp_bounds_of_component table data component byteGuarantees rowMem real,
+   syscallInstrsRow_opB_timestamp_bounds_of_component table data component byteGuarantees rowMem real,
+   syscallInstrsRow_opC_timestamp_bounds_of_component table data component byteGuarantees rowMem real⟩
 
 /-- Specialize the table-local timestamp bounds to the legacy assembly. -/
 theorem syscallInstrsRow_accessTimestamp_bounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    (((syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 +
-          (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 * 65536 + 4 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory.access_timestamp.diff_low_limb) *
+    (((syscallInstrsRow witness.data row).op_a_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow witness.data row).state.clk_0_16 +
+          (syscallInstrsRow witness.data row).state.clk_16_24 * 65536 + 4 -
+        (syscallInstrsRow witness.data row).op_a_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow witness.data row).op_a_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) ∧
-    (((syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 +
-          (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 * 65536 + 3 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.access_timestamp.diff_low_limb) *
+    (((syscallInstrsRow witness.data row).op_b_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow witness.data row).state.clk_0_16 +
+          (syscallInstrsRow witness.data row).state.clk_16_24 * 65536 + 3 -
+        (syscallInstrsRow witness.data row).op_b_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow witness.data row).op_b_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) ∧
-    (((syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
-      (((syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16 +
-          (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 * 65536 + 2 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.access_timestamp.prev_low - 1 -
-        (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.access_timestamp.diff_low_limb) *
+    (((syscallInstrsRow witness.data row).op_c_memory.access_timestamp.diff_low_limb).val < 2 ^ 16 ∧
+      (((syscallInstrsRow witness.data row).state.clk_0_16 +
+          (syscallInstrsRow witness.data row).state.clk_16_24 * 65536 + 2 -
+        (syscallInstrsRow witness.data row).op_c_memory.access_timestamp.prev_low - 1 -
+        (syscallInstrsRow witness.data row).op_c_memory.access_timestamp.diff_low_limb) *
         (65536 : ZMod p)⁻¹).val < 2 ^ 8) :=
   ⟨syscallInstrsRow_opA_timestamp_bounds witness constraints balanced rowMem,
    syscallInstrsRow_opB_timestamp_bounds witness constraints balanced rowMem,
@@ -1399,12 +1398,12 @@ come from the chip's `Spec` — the `HINT_LEN` arm deliberately leaves the resul
 constrains it. It comes from the chip's own four `Range 16` byte pulls, which is exactly where
 upstream puts it (`air.rs` range-checks the written `op_a` limbs). -/
 theorem syscallInstrsRow_opAValue_isU64_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (tableGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (tableGuarantees : table.ChannelGuarantees data Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
-    (real : (syscallInstrsRow table row).is_real = 1) :
-    Word.isU64 (syscallInstrsRow table row).op_a_value := by
-  set env := table.environment row with envDef
+    (real : (syscallInstrsRow data row).is_real = 1) :
+    Word.isU64 (syscallInstrsRow data row).op_a_value := by
+  set env := Environment.fromArray row data with envDef
   have opsGuarantees : table.component.operations.ChannelGuarantees
       Channels.byteChannel.toRaw env := tableGuarantees row tableMem
   rw [component] at opsGuarantees
@@ -1427,7 +1426,7 @@ theorem syscallInstrsRow_opAValue_isU64_of_component
     val_lt_of_byteRangePull_guarantee inputVar.is_real inputVar.op_a_value[0] env
       (listG _ (List.getElem_mem (n := 14) (by norm_num))) realEval
   have cross0 : Expression.eval env inputVar.op_a_value[0] =
-      (syscallInstrsRow table row).op_a_value[0] := by
+      (syscallInstrsRow data row).op_a_value[0] := by
     rw [syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -1435,7 +1434,7 @@ theorem syscallInstrsRow_opAValue_isU64_of_component
     val_lt_of_byteRangePull_guarantee inputVar.is_real inputVar.op_a_value[1] env
       (listG _ (List.getElem_mem (n := 15) (by norm_num))) realEval
   have cross1 : Expression.eval env inputVar.op_a_value[1] =
-      (syscallInstrsRow table row).op_a_value[1] := by
+      (syscallInstrsRow data row).op_a_value[1] := by
     rw [syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -1443,7 +1442,7 @@ theorem syscallInstrsRow_opAValue_isU64_of_component
     val_lt_of_byteRangePull_guarantee inputVar.is_real inputVar.op_a_value[2] env
       (listG _ (List.getElem_mem (n := 16) (by norm_num))) realEval
   have cross2 : Expression.eval env inputVar.op_a_value[2] =
-      (syscallInstrsRow table row).op_a_value[2] := by
+      (syscallInstrsRow data row).op_a_value[2] := by
     rw [syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -1451,7 +1450,7 @@ theorem syscallInstrsRow_opAValue_isU64_of_component
     val_lt_of_byteRangePull_guarantee inputVar.is_real inputVar.op_a_value[3] env
       (listG _ (List.getElem_mem (n := 17) (by norm_num))) realEval
   have cross3 : Expression.eval env inputVar.op_a_value[3] =
-      (syscallInstrsRow table row).op_a_value[3] := by
+      (syscallInstrsRow data row).op_a_value[3] := by
     rw [syscallInstrsRow_eq, inputVarDef]
     simp only [circuit_norm]
     rw [envDef]
@@ -1462,12 +1461,11 @@ theorem syscallInstrsRow_opAValue_isU64
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    Word.isU64 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value := by
+    Word.isU64 (syscallInstrsRow witness.data row).op_a_value := by
   obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
-  exact syscallInstrsRow_opAValue_isU64_of_component _ (syscallInstrsTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced
-      _ (witness.mem_allTables_of_mem_tables
-        (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).1 tableMem real
+  exact syscallInstrsRow_opAValue_isU64_of_component _ witness.data (syscallInstrsTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2
+      _ (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))).1 tableMem real
 
 /-- Every active halt row advances its decoded State time by exactly the syscall width `264`
 (halt-table wave): the composed `CPUState` reader's two byte checks bound the pulled low clock,
@@ -1478,17 +1476,17 @@ theorem witness_realHaltRows_timeStep
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ row ∈ realHaltRows witness,
       Semantics.StateMsg.timeNat
-          (HaltChip.statePushedMessage (haltRow (haltTable witness) row)) =
+          (HaltChip.statePushedMessage (haltRow witness.data row)) =
         Semantics.StateMsg.timeNat
-          (HaltChip.statePulledMessage (haltRow (haltTable witness) row)) + 264 := by
+          (HaltChip.statePulledMessage (haltRow witness.data row)) + 264 := by
   intro row rowMem
   obtain ⟨clk0B, clk1B⟩ := haltRow_cpuState_bounds witness constraints balanced rowMem
   simp only [Semantics.StateMsg.timeNat, HaltChip.statePushedMessage,
     HaltChip.statePulledMessage]
   exact TimeExtraction.clkNat_add_syscall_of_cpuState_bounds
-    (haltRow (haltTable witness) row).state.clk_high
-    (haltRow (haltTable witness) row).state.clk_0_16
-    (haltRow (haltTable witness) row).state.clk_16_24 clk0B clk1B
+    (haltRow witness.data row).state.clk_high
+    (haltRow witness.data row).state.clk_0_16
+    (haltRow witness.data row).state.clk_16_24 clk0B clk1B
 
 /-- Consequently every active halt State edge is strictly increasing in natural-number time. -/
 theorem witness_realHaltRows_time_increases
@@ -1496,9 +1494,9 @@ theorem witness_realHaltRows_time_increases
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ row ∈ realHaltRows witness,
       Semantics.StateMsg.timeNat
-          (HaltChip.statePulledMessage (haltRow (haltTable witness) row)) <
+          (HaltChip.statePulledMessage (haltRow witness.data row)) <
         Semantics.StateMsg.timeNat
-          (HaltChip.statePushedMessage (haltRow (haltTable witness) row)) := by
+          (HaltChip.statePushedMessage (haltRow witness.data row)) := by
   intro row rowMem
   rw [witness_realHaltRows_timeStep witness constraints balanced row rowMem]
   omega
@@ -1512,17 +1510,17 @@ theorem witness_realSyscallInstrsRows_pcClass
     (constraints : witness.Constraints) :
     ∀ row ∈ realSyscallInstrsRows witness,
       ((SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1 =
+            (syscallInstrsRow witness.data row)).pc1 =
           (SyscallInstrsChip.statePulledMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1 ∧
+            (syscallInstrsRow witness.data row)).pc1 ∧
         (SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2 =
+            (syscallInstrsRow witness.data row)).pc2 =
           (SyscallInstrsChip.statePulledMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2) ∨
+            (syscallInstrsRow witness.data row)).pc2) ∨
       ((SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1.val < 2 ^ 16 ∧
+            (syscallInstrsRow witness.data row)).pc1.val < 2 ^ 16 ∧
         (SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2.val < 2 ^ 16) := by
+            (syscallInstrsRow witness.data row)).pc2.val < 2 ^ 16) := by
   intro row rowMem
   obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
   have arm := syscallInstrsRow_pcArm_spec witness constraints tableMem
@@ -1532,9 +1530,9 @@ theorem witness_realSyscallInstrsRows_pcClass
     exact Or.inl ⟨h1, h2⟩
   · obtain ⟨-, h1, h2⟩ := arm.1 hh
     refine Or.inr ⟨?_, ?_⟩
-    · show ((syscallInstrsRow (syscallInstrsTable witness) row).next_pc[1]).val < 2 ^ 16
+    · show ((syscallInstrsRow witness.data row).next_pc[1]).val < 2 ^ 16
       rw [h1, ZMod.val_zero]; norm_num
-    · show ((syscallInstrsRow (syscallInstrsTable witness) row).next_pc[2]).val < 2 ^ 16
+    · show ((syscallInstrsRow witness.data row).next_pc[2]).val < 2 ^ 16
       rw [h2, ZMod.val_zero]; norm_num
 
 /-- Every active syscall row advances its decoded State time by exactly the syscall width `264`.
@@ -1548,17 +1546,17 @@ theorem witness_realSyscallInstrsRows_timeStep
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ row ∈ realSyscallInstrsRows witness,
       Semantics.StateMsg.timeNat (SyscallInstrsChip.statePushedMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)) =
+          (syscallInstrsRow witness.data row)) =
         Semantics.StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)) + 264 := by
+          (syscallInstrsRow witness.data row)) + 264 := by
   intro row rowMem
   obtain ⟨clk0B, clk1B⟩ := syscallInstrsRow_cpuState_bounds witness constraints balanced rowMem
   simp only [Semantics.StateMsg.timeNat, SyscallInstrsChip.statePushedMessage,
     SyscallInstrsChip.statePulledMessage]
   exact TimeExtraction.clkNat_add_syscall_of_cpuState_bounds
-    (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_high
-    (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_0_16
-    (syscallInstrsRow (syscallInstrsTable witness) row).state.clk_16_24 clk0B clk1B
+    (syscallInstrsRow witness.data row).state.clk_high
+    (syscallInstrsRow witness.data row).state.clk_0_16
+    (syscallInstrsRow witness.data row).state.clk_16_24 clk0B clk1B
 
 /-- Consequently every active syscall State edge is strictly increasing in natural-number time. -/
 theorem witness_realSyscallInstrsRows_time_increases
@@ -1566,9 +1564,9 @@ theorem witness_realSyscallInstrsRows_time_increases
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ row ∈ realSyscallInstrsRows witness,
       Semantics.StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)) <
+          (syscallInstrsRow witness.data row)) <
         Semantics.StateMsg.timeNat (SyscallInstrsChip.statePushedMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+          (syscallInstrsRow witness.data row)) := by
   intro row rowMem
   rw [witness_realSyscallInstrsRows_timeStep witness constraints balanced row rowMem]
   omega
@@ -1603,52 +1601,28 @@ built over the **canonicalized** edges:
    verbatim (`canonState_eq_self`), and the strictly-ranked instruction residue feeds the unchanged
    `RankedGrounding` engine through `timeNat_canonState`. -/
 
-/-- The witness's boundary-verifier table carries the `sp1StateVerifier` circuit. -/
-theorem witness_verifierTable_component (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    witness.verifierTable.component = ⟨sp1StateVerifier (p := p)⟩ := rfl
-
-/-- Every committed public-boundary limb is in range: the boundary verifier's `Spec` is
-`SP1StateBoundary.LimbBounds`, extracted through `Component.weakSoundness` from the verifier row's
-constraints, its finished-channel byte pulls, and the State channel's trivial guarantee. -/
+/-- The public verifier's own soundness contract bounds every committed boundary limb.
+Its Byte guarantees come from the finished channel; State and Exit guarantees are trivial. -/
 theorem witness_publicInput_limbBounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     SP1StateBoundary.LimbBounds witness.publicInput := by
-  have tableConstraints : witness.verifierTable.Constraints :=
-    constraints _ witness.mem_allTables_verifierTable
-  have byteGuarantees := (sp1_finishedChannel_guarantees witness constraints balanced
-    _ witness.mem_allTables_verifierTable).1
-  have rowMem : (toElements witness.publicInput).toArray ∈ witness.verifierTable.table := by
-    rw [EnsembleWitness.verifierTable_table]
-    exact List.mem_singleton_self _
-  have hlist : witness.verifierTable.component.circuit.channelsWithGuarantees =
-      [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
-       Channels.exitChannel.toRaw] := rfl
-  have guarantees : witness.verifierTable.component.operations.FullGuarantees
-      (witness.verifierTable.environment (toElements witness.publicInput).toArray) := by
-    simp only [Component.guarantees_iff, Component.rowOperations]
-    rw [GeneralFormalCircuit.guarantees_iff]
-    intro channel channelMem
-    show witness.verifierTable.component.rowOperations.ChannelGuarantees channel
-      (witness.verifierTable.environment (toElements witness.publicInput).toArray)
-    rw [← Component.channelGuarantees_iff]
-    rw [hlist] at channelMem
-    rcases List.mem_cons.mp channelMem with rfl | channelMem
-    · intro i hi hmult
-      exact stateChannel_interaction_guarantees _ hmult
-    rcases List.mem_cons.mp channelMem with rfl | channelMem
-    · exact byteGuarantees _ rowMem
-    · rw [List.mem_singleton.mp channelMem]
-      intro i hi hmult
-      exact exitChannel_interaction_guarantees _ hmult
-  have spec := (witness.verifierTable.component.weakSoundness
-    (env := witness.verifierTable.environment (toElements witness.publicInput).toArray)
-    (by rw [witness_verifierTable_component]; trivial) (tableConstraints _ rowMem) guarantees).1
-  rw [witness_verifierTable_component] at spec
-  have spec' : SP1StateBoundary.LimbBounds
-      (valueFromOffset SP1PublicIO 0
-        (Environment.fromInput witness.publicInput witness.data)) := spec
-  rwa [ProvableType.valueFromOffset_zero_fromInput_eq] at spec'
+  apply (sp1Ensemble (p := p)).verifierSoundness witness.publicInput witness.data
+  have byte := (sp1_finishedChannel_guarantees witness constraints balanced).1.1
+  intro interaction member
+  have channels : interaction.channel ∈
+      [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.exitChannel.toRaw] := by
+    change interaction ∈ ((sp1StateVerifierProgram (p := p)).main
+      (varFromOffset SP1PublicIO 0)).circuitOperations.interactions at member
+    rw [sp1StateVerifierProgram, Verifier.ofInteractions_interactions] at member
+    simp only [sp1StateVerifierMain, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      simp [ChannelInteraction.toRaw]
+  rcases List.mem_cons.mp channels with state | rest
+  · exact stateChannel_interaction_guarantees _ state
+  rcases List.mem_cons.mp rest with selected | rest
+  · exact byte interaction member selected
+  · exact exitChannel_interaction_guarantees _ (List.mem_singleton.mp rest)
 
 /-- The public initial State message's limbs, in the recombined form the State bus carries: the
 boundary `LimbBounds` recombine to a genuine 24-bit clock split and 16-bit pc limbs. -/
@@ -1706,7 +1680,7 @@ selector. -/
 theorem mem_realStateBumpRows (witness : EnsembleWitness (sp1Ensemble (p := p)))
     {row : Array (ZMod p)} (rowMem : row ∈ realStateBumpRows witness) :
     row ∈ (stateBumpTable witness).table ∧
-      (stateBumpRow (stateBumpTable witness) row).is_real = 1 := by
+      (stateBumpRow witness.data row).is_real = 1 := by
   rw [realStateBumpRows, List.mem_filter] at rowMem
   simpa only [decide_eq_true_eq] using rowMem
 
@@ -1733,26 +1707,26 @@ theorem witness_stateEdges_goodness
       ((decodedStateEdge witness.data decoded).2.pc1.val < 2 ^ 16 ∧
         (decodedStateEdge witness.data decoded).2.pc2.val < 2 ^ 16)) ∧
     (∀ row ∈ realStateBumpRows witness,
-      canonState (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row)) =
-        canonState (StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row))) ∧
+      canonState (StateBumpChip.pulledMessage (stateBumpRow witness.data row)) =
+        canonState (StateBumpChip.pushedMessage (stateBumpRow witness.data row))) ∧
     (∀ row ∈ realHaltRows witness,
-      ((HaltChip.statePulledMessage (haltRow (haltTable witness) row)).clk_high.val < 2 ^ 24 ∧
-        (HaltChip.statePushedMessage (haltRow (haltTable witness) row)).clk_high.val < 2 ^ 24) ∧
-      ((HaltChip.statePulledMessage (haltRow (haltTable witness) row)).pc1.val < 2 ^ 16 ∧
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) row)).pc2.val < 2 ^ 16)) ∧
+      ((HaltChip.statePulledMessage (haltRow witness.data row)).clk_high.val < 2 ^ 24 ∧
+        (HaltChip.statePushedMessage (haltRow witness.data row)).clk_high.val < 2 ^ 24) ∧
+      ((HaltChip.statePulledMessage (haltRow witness.data row)).pc1.val < 2 ^ 16 ∧
+        (HaltChip.statePulledMessage (haltRow witness.data row)).pc2.val < 2 ^ 16)) ∧
     ∀ row ∈ realSyscallInstrsRows witness,
       ((SyscallInstrsChip.statePulledMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).clk_high.val < 2 ^ 24 ∧
+            (syscallInstrsRow witness.data row)).clk_high.val < 2 ^ 24 ∧
         (SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).clk_high.val < 2 ^ 24) ∧
+            (syscallInstrsRow witness.data row)).clk_high.val < 2 ^ 24) ∧
       ((SyscallInstrsChip.statePulledMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1.val < 2 ^ 16 ∧
+            (syscallInstrsRow witness.data row)).pc1.val < 2 ^ 16 ∧
         (SyscallInstrsChip.statePulledMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2.val < 2 ^ 16) ∧
+            (syscallInstrsRow witness.data row)).pc2.val < 2 ^ 16) ∧
       ((SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1.val < 2 ^ 16 ∧
+            (syscallInstrsRow witness.data row)).pc1.val < 2 ^ 16 ∧
         (SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2.val < 2 ^ 16) := by
+            (syscallInstrsRow witness.data row)).pc2.val < 2 ^ 16) := by
   classical
   obtain ⟨ih, -, -, ip1, ip2⟩ := initialBoundaryStateMessage_bounds witness.publicInput
     (witness_publicInput_limbBounds witness constraints balanced)
@@ -1765,19 +1739,19 @@ theorem witness_stateEdges_goodness
   set bumpM : Multiset (StateMsg (ZMod p) × StateMsg (ZMod p)) :=
     ↑((realStateBumpRows witness).map
       (fun row =>
-        (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
-         StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)))) with bumpMDef
+        (StateBumpChip.pulledMessage (stateBumpRow witness.data row),
+         StateBumpChip.pushedMessage (stateBumpRow witness.data row)))) with bumpMDef
   set haltM : Multiset (StateMsg (ZMod p) × StateMsg (ZMod p)) :=
     ↑((realHaltRows witness).map
       (fun row =>
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-         HaltChip.statePushedMessage (haltRow (haltTable witness) row)))) with haltMDef
+        (HaltChip.statePulledMessage (haltRow witness.data row),
+         HaltChip.statePushedMessage (haltRow witness.data row)))) with haltMDef
   set syscallM : Multiset (StateMsg (ZMod p) × StateMsg (ZMod p)) :=
     ↑((realSyscallInstrsRows witness).map
       (fun row =>
-        (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
+        (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row),
          SyscallInstrsChip.statePushedMessage
-           (syscallInstrsRow (syscallInstrsTable witness) row)))) with syscallMDef
+           (syscallInstrsRow witness.data row)))) with syscallMDef
   have reassoc : instrM + (bumpM + (haltM + syscallM))
       = ((instrM + haltM) + syscallM) + bumpM := by abel
   rw [reassoc] at balanced0
@@ -1885,8 +1859,8 @@ theorem witness_stateEdges_goodness
         (Multiset.mem_coe.mpr (List.mem_map_of_mem rowMem))))))))
     exact stateBump_canon_eq_of_pulled_good
       (stateBumpTable_spec witness constraints balanced row tableMem) real h1 h2.1 h2.2
-  · have hmemP : (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-        HaltChip.statePushedMessage (haltRow (haltTable witness) row)) ∈ haltM :=
+  · have hmemP : (HaltChip.statePulledMessage (haltRow witness.data row),
+        HaltChip.statePushedMessage (haltRow witness.data row)) ∈ haltM :=
       Multiset.mem_coe.mpr (List.mem_map_of_mem rowMem)
     have h1 := pass1.1 _ (Multiset.mem_add.mpr (Or.inl (Multiset.mem_add.mpr (Or.inr hmemP))))
     have h2 := pass2.2 _ (Multiset.mem_add.mpr (Or.inr (Multiset.mem_add.mpr (Or.inr
@@ -1894,24 +1868,24 @@ theorem witness_stateEdges_goodness
     exact ⟨h1, h2⟩
   · -- syscall rows: same shape as the instruction rows, since the pc arm gives the same dichotomy
     have emem : (SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row),
+          (syscallInstrsRow witness.data row),
         SyscallInstrsChip.statePushedMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)) ∈ syscallM :=
+          (syscallInstrsRow witness.data row)) ∈ syscallM :=
       Multiset.mem_coe.mpr (List.mem_map_of_mem rowMem)
-    refine ⟨pass1.1 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
-        SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)) (Multiset.mem_add.mpr (Or.inr emem)), ?_⟩
+    refine ⟨pass1.1 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row),
+        SyscallInstrsChip.statePushedMessage (syscallInstrsRow witness.data row)) (Multiset.mem_add.mpr (Or.inr emem)), ?_⟩
     by_cases hq : ((SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1 =
+            (syscallInstrsRow witness.data row)).pc1 =
           (SyscallInstrsChip.statePulledMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc1 ∧
+            (syscallInstrsRow witness.data row)).pc1 ∧
         (SyscallInstrsChip.statePushedMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2 =
+            (syscallInstrsRow witness.data row)).pc2 =
           (SyscallInstrsChip.statePulledMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)).pc2)
-    · exact pass2.1 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
-        SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)) (Multiset.mem_add.mpr (Or.inr (Multiset.mem_filter.mpr ⟨emem, hq⟩)))
-    · refine ⟨pass2.2 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
-        SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)) (Multiset.mem_add.mpr (Or.inr (Multiset.mem_add.mpr (Or.inl
+            (syscallInstrsRow witness.data row)).pc2)
+    · exact pass2.1 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row),
+        SyscallInstrsChip.statePushedMessage (syscallInstrsRow witness.data row)) (Multiset.mem_add.mpr (Or.inr (Multiset.mem_filter.mpr ⟨emem, hq⟩)))
+    · refine ⟨pass2.2 (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row),
+        SyscallInstrsChip.statePushedMessage (syscallInstrsRow witness.data row)) (Multiset.mem_add.mpr (Or.inr (Multiset.mem_add.mpr (Or.inl
         (Multiset.mem_filter.mpr ⟨emem, hq⟩))))), ?_⟩
       rcases witness_realSyscallInstrsRows_pcClass witness constraints row rowMem
         with hkeep | hbound
@@ -1933,13 +1907,13 @@ noncomputable def trailCanonEdge (witness : EnsembleWitness (sp1Ensemble (p := p
       (canonState (decodedStateEdge witness.data decoded).1,
        canonState (decodedStateEdge witness.data decoded).2)
   | .inr (.inl row) =>
-      (canonState (HaltChip.statePulledMessage (haltRow (haltTable witness) row)),
-       canonState (HaltChip.statePushedMessage (haltRow (haltTable witness) row)))
+      (canonState (HaltChip.statePulledMessage (haltRow witness.data row)),
+       canonState (HaltChip.statePushedMessage (haltRow witness.data row)))
   | .inr (.inr row) =>
       (canonState (SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)),
+          (syscallInstrsRow witness.data row)),
        canonState (SyscallInstrsChip.statePushedMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)))
+          (syscallInstrsRow witness.data row)))
 
 /-- Physical constraints plus five-bus balance construct an exhaustive, clock-ordered trail of all
 active decoded instruction rows **and the active halt row** over their canonicalized State edges.
@@ -1976,35 +1950,35 @@ theorem witness_realDecodedState_canonExhaustiveTrail
           (decodedStateEdge witness.data)) +
         (↑((realStateBumpRows witness).map
           (fun row =>
-            (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
-             StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)))) +
+            (StateBumpChip.pulledMessage (stateBumpRow witness.data row),
+             StateBumpChip.pushedMessage (stateBumpRow witness.data row)))) +
          (↑((realHaltRows witness).map
           (fun row =>
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row))) : Multiset _) +
+            (HaltChip.statePulledMessage (haltRow witness.data row),
+             HaltChip.statePushedMessage (haltRow witness.data row))) : Multiset _) +
         ↑((realSyscallInstrsRows witness).map
           (fun row =>
             (SyscallInstrsChip.statePulledMessage
-                (syscallInstrsRow (syscallInstrsTable witness) row),
+                (syscallInstrsRow witness.data row),
              SyscallInstrsChip.statePushedMessage
-                (syscallInstrsRow (syscallInstrsTable witness) row)))))) :
+                (syscallInstrsRow witness.data row)))))) :
         Multiset (StateMsg (ZMod p) × StateMsg (ZMod p))) =
       (↑((realDecodedInstructionRows witness.data witness.tables).map
           (decodedStateEdge witness.data)) +
         (↑((realHaltRows witness).map
           (fun row =>
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row))) : Multiset _) +
+            (HaltChip.statePulledMessage (haltRow witness.data row),
+             HaltChip.statePushedMessage (haltRow witness.data row))) : Multiset _) +
         ↑((realSyscallInstrsRows witness).map
           (fun row =>
             (SyscallInstrsChip.statePulledMessage
-                (syscallInstrsRow (syscallInstrsTable witness) row),
+                (syscallInstrsRow witness.data row),
              SyscallInstrsChip.statePushedMessage
-                (syscallInstrsRow (syscallInstrsTable witness) row)))))) +
+                (syscallInstrsRow witness.data row)))))) +
         ↑((realStateBumpRows witness).map
           (fun row =>
-            (StateBumpChip.pulledMessage (stateBumpRow (stateBumpTable witness) row),
-             StateBumpChip.pushedMessage (stateBumpRow (stateBumpTable witness) row)))) := by
+            (StateBumpChip.pulledMessage (stateBumpRow witness.data row),
+             StateBumpChip.pushedMessage (stateBumpRow witness.data row)))) := by
     abel
   rw [reassoc] at balanced0
   have cancelled := GoodnessFilter.endpointBalanced_of_cancel_loops _ _ _ _ _ ?loops
@@ -2025,23 +1999,23 @@ theorem witness_realDecodedState_canonExhaustiveTrail
               match e with
               | .inl decoded => decodedStateEdge witness.data decoded
               | .inr (.inl row) =>
-                  (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))
+                  (HaltChip.statePulledMessage (haltRow witness.data row),
+                   HaltChip.statePushedMessage (haltRow witness.data row))
                 | .inr (.inr row) =>
-                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
-                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row))) =
+                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row),
+                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow witness.data row))) =
           ↑((realDecodedInstructionRows witness.data witness.tables).map
             (decodedStateEdge witness.data)) +
           (↑((realHaltRows witness).map
             (fun row =>
-              (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-               HaltChip.statePushedMessage (haltRow (haltTable witness) row))) : Multiset _) +
+              (HaltChip.statePulledMessage (haltRow witness.data row),
+               HaltChip.statePushedMessage (haltRow witness.data row))) : Multiset _) +
           ↑((realSyscallInstrsRows witness).map
             (fun row =>
               (SyscallInstrsChip.statePulledMessage
-                  (syscallInstrsRow (syscallInstrsTable witness) row),
+                  (syscallInstrsRow witness.data row),
                SyscallInstrsChip.statePushedMessage
-                  (syscallInstrsRow (syscallInstrsTable witness) row))))) := by
+                  (syscallInstrsRow witness.data row))))) := by
       rw [Multiset.map_add, Multiset.map_add]
       congr 1
       · rw [Multiset.map_coe, List.map_map]; rfl
@@ -2051,11 +2025,11 @@ theorem witness_realDecodedState_canonExhaustiveTrail
         match e with
         | .inl decoded => decodedStateEdge witness.data decoded
         | .inr (.inl row) =>
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-             HaltChip.statePushedMessage (haltRow (haltTable witness) row))
+            (HaltChip.statePulledMessage (haltRow witness.data row),
+             HaltChip.statePushedMessage (haltRow witness.data row))
           | .inr (.inr row) =>
-            (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
-             SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)))
+            (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row),
+             SyscallInstrsChip.statePushedMessage (syscallInstrsRow witness.data row)))
       ((↑((realDecodedInstructionRows witness.data witness.tables).map (Sum.inl : DecodedInstructionRow p → TrailRow p)) +
         (↑((realHaltRows witness).map (((fun row => Sum.inr (Sum.inl row)) : Array (ZMod p) → TrailRow p))) +
           ↑((realSyscallInstrsRows witness).map
@@ -2070,21 +2044,21 @@ theorem witness_realDecodedState_canonExhaustiveTrail
               match e with
               | .inl decoded => decodedStateEdge witness.data decoded
               | .inr (.inl row) =>
-                  (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))
+                  (HaltChip.statePulledMessage (haltRow witness.data row),
+                   HaltChip.statePushedMessage (haltRow witness.data row))
                 | .inr (.inr row) =>
-                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
-                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row))) e).1,
+                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row),
+                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow witness.data row))) e).1,
           canonState
             ((fun e : TrailRow p =>
               match e with
               | .inl decoded => decodedStateEdge witness.data decoded
               | .inr (.inl row) =>
-                  (HaltChip.statePulledMessage (haltRow (haltTable witness) row),
-                   HaltChip.statePushedMessage (haltRow (haltTable witness) row))
+                  (HaltChip.statePulledMessage (haltRow witness.data row),
+                   HaltChip.statePushedMessage (haltRow witness.data row))
                 | .inr (.inr row) =>
-                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row),
-                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow (syscallInstrsTable witness) row))) e).2)) e =
+                  (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row),
+                   SyscallInstrsChip.statePushedMessage (syscallInstrsRow witness.data row))) e).2)) e =
           trailCanonEdge witness e := by
       intro e
       rcases e with _ | (_ | _) <;> rfl
@@ -2103,17 +2077,17 @@ theorem witness_realDecodedState_canonExhaustiveTrail
       · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
         obtain ⟨⟨hclkPull, hclkPush⟩, -⟩ := haltGood row rowMem
         show Semantics.StateMsg.timeNat
-            (canonState (HaltChip.statePulledMessage (haltRow (haltTable witness) row))) <
+            (canonState (HaltChip.statePulledMessage (haltRow witness.data row))) <
           Semantics.StateMsg.timeNat
-            (canonState (HaltChip.statePushedMessage (haltRow (haltTable witness) row)))
+            (canonState (HaltChip.statePushedMessage (haltRow witness.data row)))
         rw [timeNat_canonState hclkPull, timeNat_canonState hclkPush]
         exact witness_realHaltRows_time_increases witness constraints balanced row rowMem
       · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp he)
         obtain ⟨⟨hclkPull, hclkPush⟩, -, -⟩ := syscallGood row rowMem
         show Semantics.StateMsg.timeNat (canonState (SyscallInstrsChip.statePulledMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row))) <
+              (syscallInstrsRow witness.data row))) <
           Semantics.StateMsg.timeNat (canonState (SyscallInstrsChip.statePushedMessage
-              (syscallInstrsRow (syscallInstrsTable witness) row)))
+              (syscallInstrsRow witness.data row)))
         rw [timeNat_canonState hclkPull, timeNat_canonState hclkPush]
         exact witness_realSyscallInstrsRows_time_increases witness constraints balanced row rowMem
 

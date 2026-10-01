@@ -178,6 +178,20 @@ def ensemble (image : ProgramImage) : Ensemble (ZMod p) SP1PublicIO where
   channels := (baseEnsemble image).channels ++ [bootChannel image]
   verifier := verifierProgram image (VerifierChannel.channelName "sp1.native.boot" (baseEnsemble (p := p) image))
 
+/-- Boot assertions preserve the complete verifier ledger on every registered base channel. -/
+theorem verifier_values_of_registered (image : ProgramImage) (env : Environment (ZMod p))
+    (channel : RawChannel (ZMod p)) (registered : channel ∈ (baseEnsemble image).channels) :
+    (ensemble image).verifierOperations.interactionValuesWith channel env =
+      (baseEnsemble image).verifierOperations.interactionValuesWith channel env := by
+  have different : bootChannel (p := p) image ≠ channel := by
+    intro same
+    apply (VerifierChannel.fresh "sp1.native.boot" (baseEnsemble (p := p) image)).unregistered
+    change bootChannel image ∈ (baseEnsemble image).channels
+    rwa [same]
+  change (verifierProgram image _).circuitOperations.interactionValuesWith channel env = _
+  rw [verifierProgram_values, Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil]
+  rfl
+
 /-- No old verifier or physical row can contribute to the fresh boot channel. -/
 theorem boot_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :

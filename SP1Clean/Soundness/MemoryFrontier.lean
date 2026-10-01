@@ -1,42 +1,17 @@
 import SP1Clean.Soundness.TypedMemoryBalance
 
-/-! # The genesis/final Memory frontier and the walk's frontier balance (B5)
+/-! # Memory frontiers for the timed grounding walk
 
-`TypedMemoryBalance.realDecodedMemory_perlocBalance` (B4) landed the per-`MemLoc` Memory balance in the
-**symmetric** form: both boundary provider tables' produced *and* consumed messages appear on both
-sides, over *all* decoded rows (`decodedInstructionRows`), with binary multiplicities carried as the
-`memBinary` premise.  This module collapses that symmetric balance to the exact shape the timed
-grounding walk (`TimedGrounding.walk`) consumes,
+This adapter turns the complete typed Memory ledger into the per-location equation used by
+`TimedGrounding.walk`. Optional initial and final records come from unique boundary messages;
+active ordinary rows and all refresh, HALT and syscall messages retain their multiplicities.
+Every physical table is evaluated with the ensemble's canonical prover data.
 
-  `∀ loc, optMS (live loc) + pushesAt rows loc = optMS (finM loc) + pullsAt rows loc`,
-
-and constructs the per-`MemLoc` genesis frontier `live` (`memoryInitFrontier`) and final frontier
-`finM` (`memoryFinalizeFrontier`) as `Option`s.
-
-The collapse rests on four facts, threaded as honest premises where their discharge belongs to a
-different workstream (all flagged in the theorem doc-strings):
-
-* **Provider purity** — the init provider only pushes (`consumedMessages init = []`) and the finalize
-  provider only pulls (`producedMessages finalize = []`).  Structurally each provider row emits one
-  boolean-gated `pushIf`/`pullIf` (`MemoryProviderChip.main`/`MemoryFinalizeChip.main`), so purity
-  follows from the `assertZero (m*(m-1))` gate; deriving it needs the provider-table interaction
-  reduction plus the boolean gate from `witness.Constraints`, so it is taken here as
-  `initPure`/`finPure`.
-* **Genesis uniqueness** (`MemoryInitProviderUnique`, `ProviderBindings.lean`) — at most one active
-  init push per location.  **This is where the init `Option` (`memoryInitFrontier`) becomes
-  well-defined, and where P0.1 is consumed** (`optMS_memoryInitFrontier`).
-* **Final uniqueness** (`MemoryFinalizeProviderUnique`) — the finalize analogue.  It now lives in
-  `Soundness/ProviderBindings.lean` and, like the init uniqueness, is a field of
-  `InitialBoundaryFacts` (joined 2026-07-20); its eventual discharge routes through the
-  extracted-AIR layer exactly as the init uniqueness does.
-* **Padding rows emit no active Memory** (`paddingEmpty`) — a non-active row (`is_real ≠ 1`) contributes
-  nil produced/consumed Memory messages, reconciling B4's `decodedInstructionRows` (all rows) with the
-  walk's `realDecodedInstructionRows` (active rows).  This is the per-chip Memory emission fact the
-  workstream defers; under selector binarity it is exactly "`is_real = 0` ⇒ no active Memory".
-
-The `LiveOK` invariant is proved outright from the genesis provider bound (`MemoryInitProviderBound`,
-via `localMemTruth_of_mem_produced`) and `MemoryInitMessageBound`. -/
-
+Provider purity, boundary uniqueness and inactive-row silence are explicit premises of this
+legacy SP1-assembly adapter. The authenticated native and local assemblies derive their boundary
+facts separately; this algebraic transport does not discharge those semantic obligations.
+The initial provider's value and clock contract establish the walk's `LiveOK` invariant.
+-/
 namespace SP1Clean.Soundness
 
 open Air.Flat Circuit
@@ -118,18 +93,15 @@ location is `loc`, packaged as an `Option`.  Well-definedness — that the filte
 is `MemoryInitProviderUnique`. -/
 noncomputable def memoryInitFrontier (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (loc : MemLoc) : Option (MemoryMsg (ZMod p)) :=
-  ((producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+  ((producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
     memoryChannel)).filter (fun m => decide (Semantics.MemoryMsg.locOf m = loc))).head?
 
 /-- The final (finalize-provider) frontier record at a location: the unique active finalize pull
 whose location is `loc`. -/
 noncomputable def memoryFinalizeFrontier (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (loc : MemLoc) : Option (MemoryMsg (ZMod p)) :=
-  ((consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+  ((consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
     memoryChannel)).filter (fun m => decide (Semantics.MemoryMsg.locOf m = loc))).head?
-
--- `MemoryFinalizeProviderUnique` now lives in `Soundness/ProviderBindings.lean` (next to
--- `MemoryInitProviderUnique`), so it can be a field of `InitialBoundaryFacts` (added 2026-07-20).
 
 /-! ## The frontier ↔ filtered-multiset bridges -/
 
@@ -137,7 +109,7 @@ noncomputable def memoryFinalizeFrontier (witness : EnsembleWitness (sp1Ensemble
 lemma memoryInitProducedMessages_pairwise
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (huniq : MemoryInitProviderUnique witness) :
-    (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+    (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
         memoryChannel)).Pairwise
       (fun a b => Semantics.MemoryMsg.locOf a ≠ Semantics.MemoryMsg.locOf b) := by
   unfold producedMessages
@@ -152,7 +124,7 @@ lemma memoryInitProducedMessages_pairwise
 lemma memoryFinalizeConsumedMessages_pairwise
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (huniq : MemoryFinalizeProviderUnique witness) :
-    (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+    (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
         memoryChannel)).Pairwise
       (fun a b => Semantics.MemoryMsg.locOf a ≠ Semantics.MemoryMsg.locOf b) := by
   unfold consumedMessages
@@ -170,7 +142,7 @@ lemma optMS_memoryInitFrontier (witness : EnsembleWitness (sp1Ensemble (p := p))
     (huniq : MemoryInitProviderUnique witness) (loc : MemLoc) :
     optMS (memoryInitFrontier witness loc) =
       Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-        (↑(producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+        (↑(producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
           memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
   rw [memoryInitFrontier, optMS_head?_eq_coe _
     (pairwise_distinct_filter_length_le_one Semantics.MemoryMsg.locOf _ loc
@@ -182,7 +154,7 @@ lemma optMS_memoryFinalizeFrontier (witness : EnsembleWitness (sp1Ensemble (p :=
     (huniq : MemoryFinalizeProviderUnique witness) (loc : MemLoc) :
     optMS (memoryFinalizeFrontier witness loc) =
       Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-        (↑(consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+        (↑(consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
           memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
   rw [memoryFinalizeFrontier, optMS_head?_eq_coe _
     (pairwise_distinct_filter_length_le_one Semantics.MemoryMsg.locOf _ loc
@@ -308,9 +280,9 @@ theorem memoryFrontierBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
         signedVal interaction.mult = 1)
-    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       memoryChannel) = [])
-    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
       memoryChannel) = [])
     (initUnique : MemoryInitProviderUnique witness)
     (finalizeUnique : MemoryFinalizeProviderUnique witness)
@@ -321,23 +293,23 @@ theorem memoryFrontierBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (loc : MemLoc) :
     optMS (memoryInitFrontier witness loc) + pushesAt (memoryFrontierRows witness) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
             memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
             memoryChannel))) =
       optMS (memoryFinalizeFrontier witness loc) + pullsAt (memoryFrontierRows witness) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
             memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
             memoryChannel))) := by
   have hbal := realDecodedMemory_perlocBalance witness balanced memBinary loc
   simp only [filter_coe_append, initPure, finPure, Multiset.coe_nil, Multiset.filter_zero,
@@ -363,7 +335,7 @@ theorem memoryInitMessageBound_of_mem_produced
     (initial : SailState) (initialClock : ℕ)
     (bound : MemoryInitProviderBound witness initial initialClock)
     (message : MemoryMsg (ZMod p))
-    (member : message ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+    (member : message ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       memoryChannel)) :
     MemoryInitMessageBound initial initialClock message := by
   unfold producedMessages at member
@@ -371,7 +343,7 @@ theorem memoryInitMessageBound_of_mem_produced
   obtain ⟨typedMem, positive⟩ := List.mem_filter.mp interactionMem
   simp only [decide_eq_true_eq] at positive
   have rawMem : interaction.raw ∈
-      (memoryInitProviderTable witness).interactionsWith memoryChannel.toRaw := by
+      (memoryInitProviderTable witness).interactionsWith witness.data memoryChannel.toRaw := by
     rw [← typedTableInteractionsWith_raw]
     exact List.mem_map_of_mem typedMem
   have multNonzero : interaction.raw.mult ≠ 0 := by
@@ -400,12 +372,12 @@ theorem memoryInit_liveOK
     LiveOK initial (Commit.initClkNat witness.data) (Commit.initClkNat witness.data)
       (memoryInitFrontier witness) := by
   intro loc m hm
-  have hmem : m ∈ (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+  have hmem : m ∈ (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       memoryChannel)).filter (fun m => decide (Semantics.MemoryMsg.locOf m = loc)) := by
     rw [memoryInitFrontier] at hm
     exact List.mem_of_mem_head? hm
   have hloc : Semantics.MemoryMsg.locOf m = loc := by simpa using (List.mem_filter.mp hmem).2
-  have hprod : m ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+  have hprod : m ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       memoryChannel) := (List.mem_filter.mp hmem).1
   have memTruth := MemoryInitProviderBound.localMemTruth_of_mem_produced witness constraints
     initial (Commit.initClkNat witness.data) boundary.memoryProvider m hprod

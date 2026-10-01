@@ -59,26 +59,30 @@ private theorem boundary_programPulls (image : ProgramImage) (component : Compon
 
 /-- The computed ROM is the only possible non-pull Program contributor in this assembly. -/
 theorem component_program_source (image : ProgramImage) (component : Component (ZMod p))
-    (member : component ∈ (ensemble image).allTables) :
+    (member : component ∈ (ensemble image).tables) :
     component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ ProgramPulls component := by
-  simp only [Ensemble.allTables, List.mem_cons] at member
-  rcases member with rfl | member
-  · right
-    apply programPulls_of_silent
-    change programChannel.toRaw ∉ [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw,
-      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
-      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-    simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
-      stateChannel, programChannel, byteChannel, exitChannel, Channel.toRaw]
-  · change component ∈ tables image at member
-    have split : tables (p := p) image =
-        ((InitialMemoryEnsemble.views image).map (·.component) ++
-          FinalMemoryEnsemble.inventory.views.map (·.component)) ++ afterFinalTables image := by
-      simp only [tables, afterInitialTables, afterFinalTables, List.append_assoc]
-    rw [split, List.mem_append] at member
-    rcases member with boundary | interior
-    · exact Or.inr (boundary_programPulls image component boundary)
-    · exact interior_program_source image component interior
+  change component ∈ tables image at member
+  have split : tables (p := p) image =
+      ((InitialMemoryEnsemble.views image).map (·.component) ++
+        FinalMemoryEnsemble.inventory.views.map (·.component)) ++ afterFinalTables image := by
+    simp only [tables, afterInitialTables, afterFinalTables, List.append_assoc]
+  rw [split, List.mem_append] at member
+  rcases member with boundary | interior
+  · exact Or.inr (boundary_programPulls image component boundary)
+  · exact interior_program_source image component interior
+
+/-- Boot checks and boundary traffic emit no Program interactions in the actual verifier. -/
+theorem verifier_program_silent (image : ProgramImage) (env : Environment (ZMod p)) :
+    (ensemble image).verifierOperations.interactionValuesWith programChannel.toRaw env = [] := by
+  rw [verifier_values_of_registered image env programChannel.toRaw
+    (by simp [baseEnsemble, sp1Ensemble_channels])]
+  change (verifierInteractions image).circuitOperations.interactionValuesWith programChannel.toRaw env = []
+  simp only [Verifier.Program.circuitOperations, Verifier.Program.operations,
+    Operations.interactionValuesWith, Operations.interactionsWith, verifierInteractions_interactions]
+  simp [verifierMain, GeneralFormalCircuit.toSubcircuit_interactions, sp1StateVerifier,
+    sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
+    OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
+    stateChannel, programChannel, byteChannel, exitChannel, circuit_norm]
 
 /-- Every active Program pull in the combined AIR names a decoded instruction in the checked
 image. No Program-truth premise, execution ordering, or semantic memory binding is required. -/
@@ -91,7 +95,10 @@ theorem program_pull_committed {image : ProgramImage} (valid : image.Valid)
     (payload : interaction.msg = (toElements message).toArray) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) :=
   program_pull_committed_of_sources valid witness constraints
-    (balanced programChannel.toRaw (by simp [ensemble, sp1Ensemble_channels]))
+    (balanced programChannel.toRaw (by simp [ensemble, baseEnsemble, sp1Ensemble_channels]))
+    (by intro input data emitted member
+        rw [verifier_program_silent] at member
+        exact (List.not_mem_nil member).elim)
     (component_program_source image) message interaction member active payload
 
 end SP1Clean.Soundness.NativeCore

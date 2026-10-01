@@ -137,21 +137,34 @@ theorem project_constraints {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (check.install ens)) :
     witness.Constraints ↔ (check.project witness).Constraints := Iff.rfl
 
+/-- Installing public assertions preserves the verifier's complete ledger on every other channel. -/
+theorem install_verifier_interactions (ens : Ensemble F PublicIO) (env : Environment F)
+    (selected : RawChannel F) (different : check.channel ens ≠ selected) :
+    (check.install ens).verifierOperations.interactionValuesWith selected env =
+      ens.verifierOperations.interactionValuesWith selected env := by
+  change (ens.verifier.andThen (check.program ens)).circuitOperations.interactionValuesWith selected env = _
+  rw [Verifier.Program.andThen_values]
+  change _ ++ (Verifier.checkZeros (check.channelName ens)
+    (check.assertions (varFromOffset PublicIO 0))).circuitOperations.interactionValuesWith selected env = _
+  rw [Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil]
+
+/-- Public assertions leave every previously registered verifier channel unchanged. -/
+theorem install_verifier_interactions_of_mem (ens : Ensemble F PublicIO) (env : Environment F)
+    (selected : RawChannel F) (registered : selected ∈ ens.channels) :
+    (check.install ens).verifierOperations.interactionValuesWith selected env =
+      ens.verifierOperations.interactionValuesWith selected env := by
+  apply check.install_verifier_interactions
+  intro same
+  exact check.channel_not_mem ens (same ▸ registered)
+
 /-- Projection preserves the literal ledger of every other channel. -/
 theorem project_interactions {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (check.install ens)) (selected : RawChannel F)
     (different : check.channel ens ≠ selected) :
     (check.project witness).interactionsWith selected = witness.interactionsWith selected := by
-  have silent := Verifier.checkZeros_other_values (check.channelName ens)
-    (check.assertions (varFromOffset PublicIO 0))
-    (Environment.fromInput witness.publicInput witness.data) selected different
-  change _ = (ens.verifier.andThen (check.program ens)).circuitOperations.interactionValuesWith
+  change _ = (check.install ens).verifierOperations.interactionValuesWith
     selected (Environment.fromInput witness.publicInput witness.data) ++ _
-  rw [Verifier.Program.andThen_values]
-  change _ = (_ ++ (Verifier.checkZeros (check.channelName ens)
-    (check.assertions (varFromOffset PublicIO 0))).circuitOperations.interactionValuesWith
-      selected (Environment.fromInput witness.publicInput witness.data)) ++ _
-  rw [silent, List.append_nil]
+  rw [check.install_verifier_interactions ens _ selected different]
   rfl
 
 /-- On the fresh channel, the installed ledger is exactly the public check program. -/

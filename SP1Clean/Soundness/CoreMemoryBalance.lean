@@ -54,7 +54,7 @@ private theorem memoryBinary_of_gated {Input Output : TypeMap}
           env interaction.mult = env (gate input))
     (binary : ∀ input offset env,
       ConstraintsHold.Shallow env ((circuit.main input).operations offset) →
-        env (gate input) = 0 ∨ env (gate input) = 1) : MemoryBinary ⟨circuit⟩ := by
+        env (gate input) = 0 ∨ env (gate input) = 1) : MemoryBinary { circuit } := by
   intro data physical constraints interaction member
   have bound := binary (varFromOffset Input 0) (size Input) (Environment.fromArray physical data)
     (shallowConstraints_of_componentConstraints circuit _ constraints)

@@ -50,16 +50,10 @@ theorem verifier_permission_silent (image : ProgramImage) (source : ExecutionSna
       WritePermissionProvider.channel.toRaw env = [] := by
   have different := old_channel_ne_permission (p := p) (LocalCore.sourceChannel image source)
     (List.mem_append_right _ (List.mem_singleton_self _))
-  have checks := Verifier.checkZeros_other_values
-    ((LocalSourceBoundary.checker image source).channelName (LocalCore.baseEnsemble image source))
-    ((LocalSourceBoundary.checker image source).assertions (varFromOffset SP1PublicIO 0))
-    env WritePermissionProvider.channel.toRaw different
-  change (LocalCore.boundaryVerifier.andThen ((LocalSourceBoundary.checker image source).program
-    (LocalCore.baseEnsemble image source))).circuitOperations.interactionValuesWith _ env = []
-  rw [Verifier.Program.andThen_values]
-  change _ ++ (Verifier.checkZeros _ _).circuitOperations.interactionValuesWith _ env = []
-  rw [checks, List.append_nil]
-  simp [LocalCore.boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
+  change ((LocalSourceBoundary.checker image source).install
+    (LocalCore.baseEnsemble image source)).verifierOperations.interactionValuesWith _ env = []
+  rw [PublicVerifier.install_verifier_interactions _ _ _ _ different]
+  simp [LocalCore.baseEnsemble, LocalCore.boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
     Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions,
     sp1StateVerifierMain, OrderedBoundaryVerifier.main, Operations.interactionValuesWith,
     Operations.interactionsWith, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,

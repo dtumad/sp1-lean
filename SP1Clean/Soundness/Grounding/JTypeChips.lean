@@ -520,7 +520,7 @@ omit [Fact (2 ^ 25 < p)] in
 small theorem instead of asking unification to normalize the complete circuit-bearing descriptor. -/
 theorem jalChipDescriptor_assumptions_iff (data : ProverData (ZMod p))
     (physical : Array (ZMod p)) :
-    (jalChipDescriptor (p := p)).table.Assumptions
+    (jalChipDescriptor (p := p)).table.CircuitAssumptions
         (Environment.fromArray physical data) ↔
       JalChip.Assumptions
         (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput
@@ -721,7 +721,7 @@ omit [Fact (2 ^ 25 < p)] in
 /-- Folded descriptor projection for U-type's circuit assumptions. -/
 theorem uTypeChipDescriptor_assumptions_iff (data : ProverData (ZMod p))
     (physical : Array (ZMod p)) :
-    (uTypeChipDescriptor (p := p)).table.Assumptions
+    (uTypeChipDescriptor (p := p)).table.CircuitAssumptions
         (Environment.fromArray physical data) ↔
       UTypeChip.Assumptions
         (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput

@@ -64,7 +64,7 @@ theorem locContent_final_of_microValue {initial final : SailState} {c0 n : ℕ}
 /-- The committed finalize pulls — the finite list behind `memoryFinalizeFrontier`. -/
 noncomputable def memoryFinalizeRecords (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     List (MemoryMsg (ZMod p)) :=
-  consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+  consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
     memoryChannel)
 
 /-- Under per-location uniqueness, each committed finalize record is its location's frontier. -/
@@ -185,7 +185,7 @@ theorem exists_populated_memoryBoundary
       have hfront : memoryInitFrontier witness (MemoryMsg.locOf m) = some g :=
         (Option.some_get (selectedFacts m hm).2.2).symm
       set flt := (producedMessages (typedTableInteractionsWith
-          (memoryInitProviderTable witness) memoryChannel)).filter
+          (memoryInitProviderTable witness) witness.data memoryChannel)).filter
             (fun x => decide (MemoryMsg.locOf x = MemoryMsg.locOf m)) with hflt
       have hhead : flt.head? = some g := hfront
       have hginfo : g ∈ flt := by
@@ -219,7 +219,7 @@ theorem BootBoundaryFacts.memoryInit_image_bound
     {statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p))}
     {witness : EnsembleWitness (sp1Ensemble (p := p))} {initial : SailState}
     (boot : BootBoundaryFacts statement witness initial) :
-    ∀ m ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+    ∀ m ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       memoryChannel), ∀ v,
       statement.program.imageContent? (MemoryMsg.locOf m) = some v →
       Word.toBitVec64 m.value = v := by

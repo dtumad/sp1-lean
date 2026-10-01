@@ -33,8 +33,8 @@ theorem program_pull_committed (valid : image.Valid)
     (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
     (active : interaction.mult = -1) (payload : interaction.msg = (toElements message).toArray) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) := by
-  apply NativeCore.program_pull_committed_of_sources valid (localWitness witness)
-    (localWitness_constraints witness constraints) ?_ (LocalCore.component_program_source image source)
+  apply LocalCore.program_pull_committed_of_balance valid (localWitness witness)
+    (localWitness_constraints witness constraints) ?_
     message interaction ?_ active payload
   · rw [localWitness_program witness silent]
     exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])

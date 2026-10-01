@@ -1795,14 +1795,16 @@ theorem aluX0ViewOf_state (env : Environment (ZMod p)) :
     (aluX0ViewOf env).state =
       (Eval.eval env
         (varFromOffset (F := ZMod p) AluX0Chip.Inputs 0)).state := by
-  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView, circuit_norm]
+  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView,
+    Component.rowInputVar, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 theorem aluX0ViewOf_adapter (env : Environment (ZMod p)) :
     (aluX0ViewOf env).adapter =
       (Eval.eval env
         (varFromOffset (F := ZMod p) AluX0Chip.Inputs 0)).adapter.toAdapterView := by
-  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView, circuit_norm]
+  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView,
+    Component.rowInputVar, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 /-- AluX0's view opcode is the threaded input opcode.  Naming this cheap projection keeps
@@ -1812,7 +1814,8 @@ theorem aluX0ViewOf_opcode (env : Environment (ZMod p)) :
     (aluX0ViewOf env).opcode =
       (Eval.eval env
         (varFromOffset (F := ZMod p) AluX0Chip.Inputs 0)).opcode := by
-  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView, circuit_norm]
+  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView,
+    Component.rowInputVar, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 theorem aluX0ViewOf_isReal (env : Environment (ZMod p)) :
