@@ -617,6 +617,20 @@ theorem sp1Ensemble_verifier_channels_subset :
     (sp1Ensemble (p := p)).verifierOperations.channels ⊆ (sp1Ensemble (p := p)).channels :=
   List.Subset.trans sp1Ensemble_verifier_channels_subset_core sp1CoreChannels_subset
 
+/-- Every evaluated occurrence, public verifier or physical row, uses a declared channel. -/
+theorem witness_interaction_channel_mem (witness : Air.Flat.EnsembleWitness (sp1Ensemble (p := p)))
+    {interaction : Interaction (ZMod p)} (member : interaction ∈ witness.interactions) :
+    interaction.channel ∈ (sp1Ensemble (p := p)).channels := by
+  rw [Air.Flat.EnsembleWitness.interactions, List.mem_append] at member
+  rcases member with verifier | physical
+  · obtain ⟨abstract, emitted, rfl⟩ := List.mem_map.mp verifier
+    apply sp1Ensemble_verifier_channels_subset
+    exact List.mem_map.mpr ⟨abstract, emitted, rfl⟩
+  · obtain ⟨table, tableMem, emitted⟩ := List.mem_flatMap.mp physical
+    exact sp1Ensemble_tables_channels_subset _
+      (Air.Flat.EnsembleWitness.mem_component_of_mem tableMem)
+      (Air.Flat.Table.channel_mem_channels_of_mem_interactions table witness.data _ emitted)
+
 /-- A witness is silent on non-core channels when its syscall table has no rows.
 
 Two reasons compose, one per table: fifty-four of the fifty-five tables never name the channel, and

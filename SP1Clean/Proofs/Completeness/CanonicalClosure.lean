@@ -13,6 +13,10 @@ The crucial fixed-point fact is `canonicalClosure_skeletonLedger`: the provider 
 from the skeleton by construction, so replacing that window cannot change the demand being
 recounted.  Consequently the transformed trace realizes its *own* closure, rather than merely the
 closure of the input trace.
+
+Generation inputs remain fixed, but canonical prover data is derived again from the rebuilt
+physical rows. Only the literal interaction ledger is invariant; data-dependent semantic
+predicates require their own authenticated-table or named-key agreement proofs.
 -/
 
 namespace SP1Clean.Soundness
@@ -149,10 +153,10 @@ theorem u8Range_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.U8Range.component (p := p))
-        (ByteChip.U8Range.traceInputs entries) data hint) =
+        (ByteChip.U8Range.traceInputs entries) data hint (by trivial)) data =
       entries.map fun e => actualProviderAccess (p := p) (u8RangeAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.U8Range.component (p := p)) entries
-    ByteChip.U8Range.ofEntry _ data hint (fun e he => ?_)
+    ByteChip.U8Range.ofEntry _ data hint (by trivial) data (fun e he => ?_)
   rw [u8Range_buildRow_cleanAccesses]
   have hb := (hwf e he).1
   have hc := (hwf e he).2
@@ -166,10 +170,10 @@ theorem msb_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.MSB.component (p := p))
-        (ByteChip.MSB.traceInputs entries) data hint) =
+        (ByteChip.MSB.traceInputs entries) data hint (by trivial)) data =
       entries.map fun e => actualProviderAccess (p := p) (msbAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.MSB.component (p := p)) entries
-    ByteChip.MSB.ofEntry _ data hint (fun e he => ?_)
+    ByteChip.MSB.ofEntry _ data hint (by trivial) data (fun e he => ?_)
   rw [msb_buildRow_cleanAccesses _ _ _ (val_natCast_lt (hwf e he).1 (by norm_num))]
   simp only [actualProviderAccess, withFieldMultiplicity, msbAccess, ByteChip.MSB.ofEntry,
     val_ofNat_small (p := p) (n := 5) (by norm_num), val_ite_bit, val_zero_zmod,
@@ -179,10 +183,10 @@ theorem and_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.AndByte.component (p := p))
-        (ByteChip.AndByte.traceInputs entries) data hint) =
+        (ByteChip.AndByte.traceInputs entries) data hint (by trivial)) data =
       entries.map fun e => actualProviderAccess (p := p) (andAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.AndByte.component (p := p)) entries
-    ByteChip.AndByte.ofEntry _ data hint (fun e he => ?_)
+    ByteChip.AndByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
   rw [and_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, andAccess, ByteChip.AndByte.ofEntry,
@@ -194,10 +198,10 @@ theorem or_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.OrByte.component (p := p))
-        (ByteChip.OrByte.traceInputs entries) data hint) =
+        (ByteChip.OrByte.traceInputs entries) data hint (by trivial)) data =
       entries.map fun e => actualProviderAccess (p := p) (orAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.OrByte.component (p := p)) entries
-    ByteChip.OrByte.ofEntry _ data hint (fun e he => ?_)
+    ByteChip.OrByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
   rw [or_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, orAccess, ByteChip.OrByte.ofEntry,
@@ -209,10 +213,10 @@ theorem xor_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.XorByte.component (p := p))
-        (ByteChip.XorByte.traceInputs entries) data hint) =
+        (ByteChip.XorByte.traceInputs entries) data hint (by trivial)) data =
       entries.map fun e => actualProviderAccess (p := p) (xorAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.XorByte.component (p := p)) entries
-    ByteChip.XorByte.ofEntry _ data hint (fun e he => ?_)
+    ByteChip.XorByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
   rw [xor_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, xorAccess, ByteChip.XorByte.ofEntry,
@@ -224,10 +228,10 @@ theorem ltu_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.Ltu.component (p := p))
-        (ByteChip.Ltu.traceInputs entries) data hint) =
+        (ByteChip.Ltu.traceInputs entries) data hint (by trivial)) data =
       entries.map fun e => actualProviderAccess (p := p) (ltuAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.Ltu.component (p := p)) entries
-    ByteChip.Ltu.ofEntry _ data hint (fun e he => ?_)
+    ByteChip.Ltu.ofEntry _ data hint (by trivial) data (fun e he => ?_)
   rw [ltu_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, ltuAccess, ByteChip.Ltu.ofEntry,
@@ -240,11 +244,11 @@ theorem range_traceTable_actualAccesses (width : RangeChip.Width)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed width.val) :
     tableCleanAccesses (Table.build (RangeChip.componentFor (p := p) width)
-        (RangeChip.traceInputs entries) data hint) =
+        (RangeChip.traceInputs entries) data hint (by trivial)) data =
       entries.map fun e =>
         actualProviderAccess (p := p) (rangeAccess width e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (RangeChip.componentFor (p := p) width) entries
-    RangeChip.ofEntry _ data hint (fun e he => ?_)
+    RangeChip.ofEntry _ data hint (by trivial) data (fun e he => ?_)
   rw [range_buildRow_cleanAccesses]
   have ha : e.a < 2 ^ 24 := by
     have hlt : e.a < 2 ^ width.val := hwf e he
@@ -258,11 +262,11 @@ theorem program_traceTable_actualAccesses (entries : List TraceGen.RomEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hfit : ∀ e ∈ entries, RomKeyFits e) :
     tableCleanAccesses (Table.build (ProgramProviderChip.component (p := p))
-        (ProgramProviderChip.traceInputs entries) data hint) =
+        (ProgramProviderChip.traceInputs entries) data hint (by trivial)) data =
       entries.map fun e =>
         actualProviderAccess (p := p) (programEntryAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ProgramProviderChip.component (p := p)) entries
-    ProgramProviderChip.ofEntry _ data hint (fun e he => ?_)
+    ProgramProviderChip.ofEntry _ data hint (by trivial) data (fun e he => ?_)
   rw [program_buildRow_cleanAccesses]
   obtain ⟨hop, hopa, hopa0, himmb, himmc⟩ := hfit e he
   simp only [actualProviderAccess, withFieldMultiplicity, programRowAccess, programEntryAccess,
@@ -314,8 +318,9 @@ def actualProviderLedger : LookupAccessList :=
 `preprocessedProviderLedger_eq`, this needs no multiplicity-capacity premise. -/
 theorem preprocessedProviderActualLedger_eq (hwf : trace.WellFormed)
     (hromKeys : ∀ e ∈ trace.providerOccurrences .program, RomKeyFits e) :
-    tablesCleanAccesses trace.preprocessedProviderTables = trace.actualProviderLedger := by
-  rw [preprocessedProviderTables_eq]
+    tablesCleanAccesses trace.preprocessedProviderTables trace.data = trace.actualProviderLedger := by
+  rw [tablesCleanAccesses_setData _ trace.data trace.generationData,
+    preprocessedProviderTables_eq]
   simp only [tablesCleanAccesses, List.flatMap_cons, List.flatMap_nil, List.flatMap_append,
     List.append_nil, rangeTables,
     u8Range_traceTable_actualAccesses _ _ _ (hwf.provider (.byte .u8Range)),
@@ -380,7 +385,7 @@ def canonicalProviderOccurrences : (id : ProviderTableId) → List id.Occurrence
 def canonicalClosure : SupportedCoreTraceWitness p where
   instructionEvents := trace.instructionEvents
   providerOccurrences := trace.canonicalProviderOccurrences
-  data := trace.data
+  generationData := trace.generationData
   hint := trace.hint
   boundary := trace.boundary
 
@@ -390,7 +395,8 @@ def canonicalClosure : SupportedCoreTraceWitness p where
 @[simp] theorem canonicalClosure_instructionEvents (id : InstructionChipId) :
     trace.canonicalClosure.instructionEvents id = trace.instructionEvents id := rfl
 
-@[simp] theorem canonicalClosure_data : trace.canonicalClosure.data = trace.data := rfl
+@[simp] theorem canonicalClosure_generationData :
+    trace.canonicalClosure.generationData = trace.generationData := rfl
 @[simp] theorem canonicalClosure_hint : trace.canonicalClosure.hint = trace.hint := rfl
 @[simp] theorem canonicalClosure_boundary : trace.canonicalClosure.boundary = trace.boundary := rfl
 @[simp] theorem canonicalClosure_publicValues :
@@ -421,16 +427,21 @@ theorem canonicalClosure_instructionTables :
   rw [instructionTables, instructionTables]
   exact List.map_congr_left fun id _ => trace.canonicalClosure_instructionTableFor id
 
-@[simp] theorem canonicalClosure_skeletonVerifierTable :
-    trace.canonicalClosure.skeletonVerifierTable = trace.skeletonVerifierTable := rfl
+/-- Public input cells determine the verifier ledger; rebuilding provider rows may change data. -/
+theorem canonicalClosure_verifierLedger :
+    trace.canonicalClosure.verifierLedger = trace.verifierLedger := by
+  unfold verifierLedger
+  apply congrArg (List.map Interaction.toAccess)
+  exact Operations.interactionValues_congr
+    (env := Environment.fromInput trace.canonicalClosure.publicValues trace.canonicalClosure.data)
+    (env' := Environment.fromInput trace.publicValues trace.data) rfl
 
 /-- The prefix selected by `skeletonTables` is exactly the instruction segment. -/
 theorem tables_take_instructionTables (t : SupportedCoreTraceWitness p) :
     t.tables.take instructionTableCount = t.instructionTables := by
   simp [tables, instructionTableCount, instructionTables]
 
-/-- Dropping the instruction segment and the 24-table preprocessed window leaves exactly the four
-Memory/State boundary-and-bump tables. -/
+/-- Dropping the instruction segment and preprocessed window selects the six-table provider tail. -/
 theorem tables_drop_preprocessed (t : SupportedCoreTraceWitness p) :
     t.tables.drop (instructionTableCount + preprocessedProviderTableCount) =
       t.providerTables.drop preprocessedProviderTableCount := by
@@ -462,14 +473,15 @@ theorem canonicalClosure_skeletonTables :
     trace.canonicalClosure.skeletonTables = trace.skeletonTables := by
   rw [skeletonTables, skeletonTables, tables_take_instructionTables,
     tables_take_instructionTables, tables_drop_preprocessed, tables_drop_preprocessed,
-    canonicalClosure_instructionTables, canonicalClosure_providerTables_drop,
-    canonicalClosure_skeletonVerifierTable]
+    canonicalClosure_instructionTables, canonicalClosure_providerTables_drop]
 
 /-- Therefore canonical closure does not change the Clean ledger against which provider demand is
 computed. -/
 theorem canonicalClosure_skeletonLedger :
     trace.canonicalClosure.skeletonLedger = trace.skeletonLedger := by
-  exact congrArg tablesCleanAccesses trace.canonicalClosure_skeletonTables
+  rw [skeletonLedger, skeletonLedger, canonicalClosure_verifierLedger,
+    canonicalClosure_skeletonTables,
+    tablesCleanAccesses_setData _ trace.canonicalClosure.data trace.data]
 
 @[simp] theorem canonicalClosure_closingKeyList :
     trace.canonicalClosure.closingKeyList = trace.closingKeyList := by
@@ -513,14 +525,30 @@ theorem canonicalClosure_skeletonLedger :
 
 /-- The rebuilt trace realizes its own closure.  Idempotence is supplied by skeleton invariance. -/
 theorem canonicalClosure_closureRealized : trace.canonicalClosure.ClosureRealized where
-  u8Range := by rw [trace.canonicalClosure_closureU8RangeEntries]; rfl
-  msb := by rw [trace.canonicalClosure_closureMsbEntries]; rfl
-  andByte := by rw [trace.canonicalClosure_closureAndByteEntries]; rfl
-  orByte := by rw [trace.canonicalClosure_closureOrByteEntries]; rfl
-  xorByte := by rw [trace.canonicalClosure_closureXorByteEntries]; rfl
-  ltu := by rw [trace.canonicalClosure_closureLtuEntries]; rfl
-  range width := by rw [trace.canonicalClosure_closureRangeEntries width]; rfl
-  rom := by rw [trace.canonicalClosure_closureRomEntries]; rfl
+  u8Range := by
+    simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
+      canonicalClosure_closureU8RangeEntries]
+  msb := by
+    simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
+      canonicalClosure_closureMsbEntries]
+  andByte := by
+    simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
+      canonicalClosure_closureAndByteEntries]
+  orByte := by
+    simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
+      canonicalClosure_closureOrByteEntries]
+  xorByte := by
+    simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
+      canonicalClosure_closureXorByteEntries]
+  ltu := by
+    simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
+      canonicalClosure_closureLtuEntries]
+  range width := by
+    simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
+      canonicalClosure_closureRangeEntries]
+  rom := by
+    simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
+      canonicalClosure_closureRomEntries]
 
 /-- Servability depends only on the provider-free skeleton, so it is preserved by canonical
 closure. -/
@@ -544,7 +572,7 @@ theorem closureRomEntries_romKeyFits (hserv : trace.DemandServable) :
 theorem canonicalClosure_romKeyFits (hserv : trace.DemandServable) :
     ∀ entry ∈ trace.canonicalClosure.providerOccurrences .program, RomKeyFits entry := by
   intro entry hentry
-  change entry ∈ trace.closureRomEntries at hentry
+  simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences] at hentry
   exact trace.closureRomEntries_romKeyFits hserv entry hentry
 
 /-! ## Modular cancellation of the actual provider window -/
@@ -626,6 +654,7 @@ theorem canonicalClosure_balancedInteractions
     (hlen : (trace.canonicalClosure.witness.interactionsWith channel).length < p) :
     BalancedInteractions (trace.canonicalClosure.witness.interactionsWith channel) := by
   let closed := trace.canonicalClosure
+  change BalancedInteractions (closed.witness.interactionsWith channel)
   have hservClosed : closed.DemandServable := hserv.canonicalClosure
   have hreal : closed.ClosureRealized := by
     change trace.canonicalClosure.ClosureRealized
@@ -658,14 +687,9 @@ theorem canonicalClosure_balancedInteractions
       have hch := Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith hinteraction
       simp only [preprocessedKey, Interaction.toAccess, hch]
       rcases hkind with hkind | hkind <;> rw [hkind]
-    · have hfilter :
-          (closed.witness.interactionsWith channel).filter (fun i => i.msg = message) = [] :=
-        List.filter_eq_nil_iff.mpr fun interaction hmem hmessage =>
-          hexists ⟨interaction, hmem, by simpa using hmessage⟩
-      change List.sum (List.map (fun i => i.mult)
-        ((closed.witness.interactionsWith channel).filter (fun i => i.msg = message))) = 0
-      rw [hfilter]
-      rfl
+    · rw [balanceOf_eq_of_const_mult (mult := 0)
+        (fun interaction emitted same => False.elim (hexists ⟨interaction, emitted, same⟩)),
+        zero_mul]
 
 /-- Byte-channel specialization of `canonicalClosure_balancedInteractions`. -/
 theorem canonicalClosure_byte_balancedInteractions

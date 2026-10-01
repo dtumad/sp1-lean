@@ -1,37 +1,17 @@
 import SP1Clean.Proofs.Completeness.Closure
 import SP1Clean.Soundness.EnsembleChannels
 
-/-!
-# Realizing the closure: the provider entry lists a shard's demand determines
+/-! # Realizing preprocessed-provider demand
 
-`Closure.lean` has both halves of the ledger — the demand side (`closingAccesses`, a recount
-against a provider-free skeleton) and the supply side (`providerLedger`, what the twenty-four
-preprocessed provider tables emit). What it does not have is any reason for the two to agree: the
-eight occurrence lists are free fields of `SupportedCoreTraceWitness`, so a trace may populate them
-with anything.
+Derive the eight provider entry families by filtering the consumer skeleton's closing keys and
+recounting each key's demand. A realized trace supplies exactly those per-key multiplicities.
+The whole ledger is the canonical witness's public verifier followed by its physical tables;
+projection preserves every occurrence, including repeated keys and zero multiplicities.
 
-This module closes that. It **derives** the eight lists from the demand: each is the closing key
-list, filtered to the keys that family serves, with each key's own recount as its multiplicity.
-`providerLedger_eq_closingAccesses` is then a theorem rather than a hypothesis, and Byte/Program
-balance follows for any trace whose entry fields are the derived ones.
-
-## What "servable" means, and why it is a real premise
-
-A provider does not merely *carry* a key — it *computes* part of it. The `AND` table's second cell
-is `b &&& c`, derived in-circuit from the two operand cells; the `MSB` table's is the high bit of
-its single operand. So a key like `(Byte, "SP1Byte", [0, 5, 3, 3])` — a consumer claiming
-`3 AND 3 = 5` — is one **no honest provider row can supply**, and no closure can rescue it. The
-same holds for a Range demand outside its width and for a Program key whose limbs exceed 16 bits.
-
-`Servable` names exactly that condition, per key. It is a genuine completeness premise, not a
-technicality: a shard whose chips pull an arithmetically wrong byte key is not completable, and
-this is where that shows up. Every satisfying trace meets it, because a satisfied consumer row's
-byte pull is computed by the same arithmetic the provider recomputes.
-
-The second premise, `DemandFits`, is the capacity contract already familiar from `CountsFit`: a
-recount is carried in one field element and read back through the centered ledger, so it must stay
-under half the field. Here it is stated on the demand rather than on supplied entries, because the
-entries are no longer supplied.
+`DemandServable` requires correct arithmetic and key shape: for example, an AND provider cannot
+supply a key claiming `3 AND 3 = 5`. `CountsFit` bounds centered recovery of field multiplicities.
+These local contracts support Byte/Program cancellation. State, Memory, Exit, host calls and
+program-commitment authentication remain separate obligations.
 -/
 
 namespace SP1Clean.Soundness
@@ -589,6 +569,7 @@ theorem providerLedger_multiplicitySum (hreal : trace.ClosureRealized)
     closureAndByte_contribution trace hserv, closureOrByte_contribution trace hserv,
     closureXorByte_contribution trace hserv, closureLtu_contribution trace hserv,
     closureRange_contribution trace hserv, closureRom_contribution trace hserv]
+  generalize trace.providerDemand k = demand
   by_cases hk : k ∈ trace.closingKeyList
   · rw [if_pos hk]
     rcases trace.kind_of_mem_closingKeyList hk with hkind | hkind
@@ -613,9 +594,9 @@ theorem providerLedger_multiplicitySum (hreal : trace.ClosureRealized)
 
 /-! ## The payoff: Byte and Program balance without evaluating a shard -/
 
-/-- The trace's whole Clean ledger: the verifier row plus all 53 tables. -/
+/-- The public verifier's accesses followed by all 55 physical table ledgers. -/
 def fullLedger : LookupAccessList :=
-  tableCleanAccesses trace.skeletonVerifierTable ++ tablesCleanAccesses trace.tables
+  trace.verifierLedger ++ tablesCleanAccesses trace.tables trace.data
 
 /-- The assembled table list really is the skeleton's two pieces with the provider window between
 them. -/
@@ -700,36 +681,19 @@ theorem byteProgram_balanced (hwf : trace.WellFormed) (hfit : trace.CountsFit)
       LookupAccessList.multiplicitySum_closingAccesses_of_not_mem _ hk', add_zero] at hbal
     exact hbal
 
-/-! ## From the whole ledger to one channel's
+/-! ## Channel projection
 
-`byteProgram_balanced` is about `fullLedger` — every table's accesses at once.
-`AIRCompleteness.lean`'s `BalancedOn` is about one channel's evaluated interactions. Both are
-`multiplicitySum` over a `LookupAccessList`, and `tableCleanAccesses` projects through the very same
-`Interaction.toAccess`, so what separates them is orientation, not vocabulary.
-
-The bridge is that a key already names its channel: `Interaction.toAccess` puts the emitting
-channel's `name` in the key's table slot. Given that the ensemble's tables speak only on the
-ensemble's channels (`sp1Ensemble_allTables_channels_subset`) and that those four names are
-distinct (`channel_eq_of_name_eq`), an access landing on a key with `channel.name` can only have
-come from `channel` — so filtering to that channel drops nothing the key could see.
+Each access key names its channel. The public verifier and physical tables emit only on the
+ensemble's seven declared channels, whose names are distinct, so channel filtering preserves
+the multiplicity sum at every key that channel can produce.
 -/
 
-/-- The assembled witness's tables are the ensemble's components — verifier row included. -/
-theorem allTables_component_mem (table : Table (ZMod p)) (h : table ∈ trace.witness.allTables) :
-    table.component ∈ (sp1Ensemble (p := p)).allTables := by
-  rw [Air.Flat.EnsembleWitness.allTables, List.mem_cons] at h
-  rw [Air.Flat.Ensemble.allTables, List.mem_cons]
-  rcases h with rfl | h
-  · exact Or.inl rfl
-  · refine Or.inr ?_
-    rw [← trace.tables_map_component]
-    exact List.mem_map_of_mem (by rwa [witness_tables] at h)
-
-/-- The whole ledger is every table's ledger, verifier row included. -/
-theorem tablesCleanAccesses_allTables :
-    tablesCleanAccesses trace.witness.allTables = trace.fullLedger := by
-  rw [Air.Flat.EnsembleWitness.allTables, tablesCleanAccesses, List.flatMap_cons,
-    witness_verifierTable, witness_tables, fullLedger, skeletonVerifierTable, tablesCleanAccesses]
+/-- The whole ledger preserves the canonical witness's literal occurrences and their order. -/
+theorem fullLedger_eq_witness_interactions :
+    trace.fullLedger = trace.witness.interactions.map Interaction.toAccess := by
+  simp only [Air.Flat.EnsembleWitness.interactions, List.map_append, List.map_flatMap,
+    witness_tables, witness_data, witness_publicInput, fullLedger, verifierLedger,
+    tablesCleanAccesses, tableCleanAccesses]
 
 /-- **One channel's ledger and the whole ledger agree at every key that channel could produce.** -/
 theorem fullLedger_multiplicitySum_channel (channel : RawChannel (ZMod p))
@@ -737,19 +701,19 @@ theorem fullLedger_multiplicitySum_channel (channel : RawChannel (ZMod p))
     {k : LookupKey} (hname : k.2.1 = channel.name) :
     multiplicitySum ((trace.witness.interactionsWith channel).map Interaction.toAccess) k =
       multiplicitySum trace.fullLedger k := by
-  have hlhs : (trace.witness.interactionsWith channel).map Interaction.toAccess =
-      trace.witness.allTables.flatMap
-        fun table => (table.interactionsWith channel).map Interaction.toAccess := by
-    rw [Air.Flat.EnsembleWitness.interactionsWith, List.map_flatMap]
-  rw [hlhs, ← trace.tablesCleanAccesses_allTables, tablesCleanAccesses,
-    LookupAccessList.multiplicitySum_flatMap, LookupAccessList.multiplicitySum_flatMap]
-  refine congrArg List.sum (List.map_congr_left fun table htable => ?_)
-  refine multiplicitySum_interactionsWith_eq table channel fun i hi hkey => ?_
-  refine channel_eq_of_name_eq ?_ hchannel ?_
-  · exact sp1Ensemble_allTables_channels_subset _
-      (trace.allTables_component_mem table htable)
-      (Air.Flat.Table.channel_mem_channels_of_mem_interactions table i hi)
-  · rw [channel_name_of_keyOf_toAccess hkey, hname]
+  classical
+  have filtered : trace.witness.interactionsWith channel =
+      trace.witness.interactions.filter (fun i => i.channel = channel) := by
+    simp only [Air.Flat.EnsembleWitness.interactionsWith,
+      Air.Flat.EnsembleWitness.verifierInteractionsWith,
+      Air.Flat.EnsembleWitness.tableContext, Air.Flat.TableContext.interactionsWith,
+      Operations.interactionValuesWith_eq_filter, Air.Flat.Table.interactionsWith_eq_filter,
+      Air.Flat.EnsembleWitness.interactions, List.filter_append, List.filter_flatMap]
+  rw [filtered, fullLedger_eq_witness_interactions]
+  refine LookupAccessList.multiplicitySum_filter_map_eq _ _ _ _ fun i hi hkey => ?_
+  have same := channel_eq_of_name_eq (witness_interaction_channel_mem trace.witness hi)
+    hchannel ((channel_name_of_keyOf_toAccess hkey).trans hname)
+  simp only [same, decide_true]
 
 
 /-- Every access in one channel's ledger carries that channel's kind and name — because
