@@ -7,8 +7,8 @@ public import ToClean.Circuit.InteractionRecovery
 /-! # Gated receipts from an existing circuit row
 
 Clean has no wrapper publishing an additional typed observation of a circuit's existing cells.
-This addition composes the original formal circuit and retains its contract, witness generation,
-assertions and lookups. The receipt channel has trivial local meaning: its global consumer must
+This addition composes the original formal circuit and retains its name, contract, witness
+generation, assertions and lookups. The receipt channel has trivial local meaning: its global consumer must
 authenticate the observation through the proved exact ledger. SP1's ordinary State receipts use
 this to retain the original instruction decoder and whole-chip proof boundary.
 -/
@@ -68,6 +68,7 @@ instance elaborated (provider : GeneralFormalCircuit F Input Output) (channel : 
 def circuit (provider : GeneralFormalCircuit F Input Output) (channel : Channel F Message)
     (trivial : ∀ message data, channel.Guarantees message data)
     (projection : Projection F Input Message) : GeneralFormalCircuit F Input Output where
+  name := provider.name
   main := main provider channel projection
   elaborated := elaborated provider channel projection
   Assumptions := provider.Assumptions

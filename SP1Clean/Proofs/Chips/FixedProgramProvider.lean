@@ -22,6 +22,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- The existing range-checked provider, strengthened with complete fixed-program membership. -/
 def circuit (rom : StaticTable (ZMod p) ProgramMsg) :
     GeneralFormalCircuit (ZMod p) ProgramProviderChip.Inputs unit where
+  name := "sp1.native.program.fixed"
   main input := do
     let _ ← ProgramProviderChip.circuit input
     lookup rom.toTable input.toMessage

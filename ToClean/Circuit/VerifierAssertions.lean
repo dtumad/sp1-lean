@@ -149,6 +149,18 @@ theorem checkZeros_guarantees (name : String) (values : List (Expression F))
     rw [ih]
     simp [checkZero, circuit_norm, zeroChannel]
 
+/-- Every zero check supplies its own outgoing requirement, independently of the checked value. -/
+theorem checkZeros_requirements (name : String) (values : List (Expression F))
+    (env : Environment F) : (checkZeros name values).circuitOperations.FullRequirements env := by
+  simp only [circuitOperations, checkZeros_operations, Operations.circuitOperations,
+    Operations.interactions, List.map_flatMap]
+  induction values with
+  | nil => simp [circuit_norm]
+  | cons value values ih =>
+    simp only [List.flatMap_cons, _root_.Operations.FullRequirements,
+      _root_.Operations.interactions_append, List.forall_mem_append] at ih ⊢
+    exact ⟨by simp [checkZero, circuit_norm, zeroChannel], ih⟩
+
 /-- A bundled verifier for a public vector whose semantic meaning is that every value is zero. -/
 def zerosProgram (name : String) (n : ℕ) : Program F (fields n) where
   main input := checkZeros name input.toList
