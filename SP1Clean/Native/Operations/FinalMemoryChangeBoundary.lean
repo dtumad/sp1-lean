@@ -46,6 +46,14 @@ theorem raw_interactions (keys : List (Key (ZMod p))) (offset : ℕ) :
   | nil => rfl
   | cons key rest ih => simpa only [List.map_cons, Operations.interactions] using congrArg (List.cons _) ih
 
+/-- Fixed demand contains only interactions, so it adds no assertion-channel occurrences. -/
+theorem raw_constraints (keys : List (Key (ZMod p))) (offset : ℕ) :
+    ((main keys ()).operations offset).constraints = [] := by
+  rw [operations]
+  induction keys with
+  | nil => rfl
+  | cons key rest ih => simpa only [List.map_cons, Operations.constraints] using ih
+
 theorem values (keys : List (Key (ZMod p))) (offset : ℕ) (env : Environment (ZMod p))
     (selected : RawChannel (ZMod p)) :
     ((main keys ()).operations offset).interactionValuesWith selected env =

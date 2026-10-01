@@ -24,6 +24,7 @@ instance elaborated (target : MemorySnapshot) :
 
 /-- Validate every RAM receipt, preserving its target-read Byte demand. -/
 def circuit (target : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.memory.check.ram.changes"
   main := main target
   elaborated := elaborated target
   Spec input _ _ := Spec target input
