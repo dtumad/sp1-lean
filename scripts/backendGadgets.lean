@@ -227,9 +227,20 @@ def rejectionTests : IO Json := do
 
 end BackendGadgets
 
+/-- Record the resolved build input without maintaining another dependency pin in this driver. -/
+private def cleanRevision : IO String := do
+  let manifest ← BackendGadgets.liftResult (Lean.Json.parse (← IO.FS.readFile "lake-manifest.json"))
+  let packages ← BackendGadgets.liftResult (manifest.getObjValAs? (Array Lean.Json) "packages")
+  for package in packages do
+    let name ← BackendGadgets.liftResult (package.getObjValAs? String "name")
+    if name == "Clean" then
+      return ← BackendGadgets.liftResult (package.getObjValAs? String "rev")
+  throw (IO.userError "lake-manifest.json has no resolved Clean dependency")
+
 def main (args : List String) : IO UInt32 := do
   match args with
   | [output] =>
+    let revision ← cleanRevision
     let directory := System.FilePath.mk output
     IO.FS.createDirAll directory
     let rejected ← BackendGadgets.rejectionTests
@@ -238,7 +249,7 @@ def main (args : List String) : IO UInt32 := do
       costs := costs ++ [← BackendGadgets.exportGadget directory gadget]
     BackendGadgets.writeJson (directory / "manifest.json") (Lean.Json.mkObj [
       ("field", Lean.toJson "BN254 scalar field"), ("prime", BackendGadgets.jsonNat BackendGadgets.prime),
-      ("cleanRevision", Lean.toJson "fba2a29f5e36420d797c1de118ac9f11f23b819e"),
+      ("cleanRevision", Lean.toJson revision),
       ("snarkjs", Lean.toJson "0.7.6"), ("numWords", Lean.toJson (4 : Nat)),
       ("claim", Lean.toJson "standalone backend conformance; not a verified backend or ensemble export"),
       ("gadgets", Lean.toJson costs), ("rejected", rejected)])
