@@ -6,8 +6,9 @@ import SP1Clean.Model.SP1Field
 /-! # Physical finalizer receipt installation
 
 The fixture builds the original ordered finalizers and real target-check consumers, then
-installs receipts on the same arrays. Only the two receipt balances are claimed here;
-execution Memory balance and target-check Byte closure belong to the enclosing machine.
+installs receipts on the same arrays and reads Clean's canonical interaction ledger. Only the
+two receipt balances are claimed here; execution Memory balance and target-check Byte closure
+belong to the enclosing machine.
 -/
 
 namespace SP1CleanTest.Alignment.Core.FinalMemoryReceipts
@@ -23,36 +24,35 @@ private def record (address clock : ℕ) : Channels.MemoryMsg Fp :=
   ⟨0, clock, word[0], word[1], word[2], Target.bitVecToWord 0⟩
 
 private def consumers : List (Component Fp) :=
-  [⟨FinalRegisterValue.circuit target⟩, ⟨FinalRamValue.circuit target⟩]
+  [{ circuit := FinalRegisterValue.circuit target }, { circuit := FinalRamValue.circuit target }]
+
+private theorem names :
+    (((FinalMemoryEnsemble.inventory (p := SP1Prime)).views.map (·.component) ++ consumers).map
+      (·.circuit.name)).Nodup := by decide
 
 private def original (registers ram : List (Channels.MemoryMsg Fp))
     (checkedRegisters checkedRam : List (Channels.MemoryMsg Fp)) :
-    EnsembleWitness (FinalMemoryEnsemble.ensemble consumers []) :=
+    EnsembleWitness (FinalMemoryEnsemble.ensemble consumers [] names) :=
   EnsembleWitness.ofTables _
-    [Table.build ⟨OrderedFinalProvider.registerCircuit⟩
+    [Table.build { circuit := OrderedFinalProvider.registerCircuit }
       (registers.map fun item => OrderedMemoryProvider.populate item 0
         (Word.toNat (MemoryBoundary.address item))) (fun _ _ => #[]) (ProverHint.empty Fp),
-     Table.build ⟨OrderedFinalProvider.ramCircuit⟩
+     Table.build { circuit := OrderedFinalProvider.ramCircuit }
       (ram.map fun item => OrderedMemoryProvider.populate item 2
         (Word.toNat (MemoryBoundary.address item))) (fun _ _ => #[]) (ProverHint.empty Fp),
      Table.build (FinalMemoryEnsemble.viewFor .terminal).component []
       (fun _ _ => #[]) (ProverHint.empty Fp),
-     Table.build ⟨FinalRegisterValue.circuit target⟩ checkedRegisters
+     Table.build { circuit := FinalRegisterValue.circuit target } checkedRegisters
       (fun _ _ => #[]) (ProverHint.empty Fp),
-     Table.build ⟨FinalRamValue.circuit target⟩
+     Table.build { circuit := FinalRamValue.circuit target }
       (checkedRam.map fun item => ⟨item, InitialMemoryRead.populate target.memory
         (Word.toNat (MemoryBoundary.address item))⟩) (fun _ _ => #[]) (ProverHint.empty Fp)]
-    (fun _ _ => #[]) () (by rfl) (by
-      intro physical member
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl | rfl | rfl | rfl <;> rfl)
+    () (by rfl)
 
 private def ledger {ens : Ensemble Fp unit} (witness : EnsembleWitness ens)
     (name : String) : List (Array Fp × Fp) :=
-  witness.allTables.flatMap fun table => table.table.flatMap fun row =>
-    let env := table.environment row
-    (table.component.operations.interactions.filter fun interaction => interaction.channel.name == name).map
-      fun interaction => ((interaction.msg.map env).toArray, env interaction.mult)
+  (witness.interactions.filter fun interaction => interaction.channel.name == name).map
+    fun interaction => (interaction.msg, interaction.mult)
 
 private def balanced (interactions : List (Array Fp × Fp)) : Bool :=
   interactions.length < SP1Prime && interactions.all fun interaction =>
