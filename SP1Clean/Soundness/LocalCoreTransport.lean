@@ -24,7 +24,7 @@ private theorem syscallRows_readsInWindow {image : ProgramImage} {source : Execu
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     {row : SyscallInstrsChip.Inputs (ZMod p)}
-    (member : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
+    (member : row ∈ activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
     ReadsInWindow (syscallRowFacts row) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
@@ -55,7 +55,7 @@ theorem executionRows_readsInWindow {image : ProgramImage} {source : ExecutionSn
     {event : ExecutionRow p} (member : event ∈ executionRows witness) :
     ReadsInWindow (event.facts witness.data) :=
   executionRows_readsInWindow_of_program valid witness constraints
-    (balanced _ (by simp [ensemble, sp1Ensemble_channels])) member
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, sp1Ensemble_channels])) member
 
 private theorem canonical_times {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))

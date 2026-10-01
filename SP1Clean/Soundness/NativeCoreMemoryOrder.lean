@@ -55,9 +55,9 @@ theorem memoryRefreshes_push_bounds {image : ProgramImage}
   obtain rfl := List.mem_singleton.mp pairMem
   obtain ⟨mapped, real⟩ := List.mem_filter.mp rowMem
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  exact memoryBump_pushedMessage_clkFacts_of_component _ (systemTable_component witness 0)
+  exact memoryBump_pushedMessage_clkFacts_of_component _ witness.data (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 0)).1
+    ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 0)).1
     physicalMem (of_decide_eq_true real)
 
 private theorem aligned_push_bounds {image : ProgramImage}
@@ -115,14 +115,14 @@ private theorem active_refresh_order {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : MemoryBumpChip.Inputs (ZMod p)}
-    (member : row ∈ activeSystemRows (systemTable witness 0) memoryBumpRow (·.is_real)) :
+    (member : row ∈ activeSystemRows (systemTable witness 0) (memoryBumpRow witness.data) (·.is_real)) :
     MemoryClockBounds (MemoryBumpChip.pulledMessage row) →
       MemoryMsg.timeNat (MemoryBumpChip.pulledMessage row) < MemoryMsg.timeNat (MemoryBumpChip.pushedMessage row) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  exact memoryBump_row_order _ (systemTable_component witness 0)
+  exact memoryBump_row_order _ witness.data (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 0)).1
+    ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 0)).1
     physicalMem (of_decide_eq_true real)
 
 private theorem refresh_order_of_bounds {image : ProgramImage}

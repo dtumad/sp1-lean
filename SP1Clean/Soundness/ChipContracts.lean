@@ -8,6 +8,7 @@ import SP1Clean.Soundness.Grounding.ControlFlowChips
 import SP1Clean.Soundness.Grounding.MemoryChips
 import SP1Clean.Soundness.Decode
 import SP1Clean.Soundness.MemoryFrontier
+import SP1Clean.Soundness.SystemMemoryRows
 import SP1Clean.Alignment.Chips.LoadByteChip.Contracts
 import SP1Clean.Alignment.Chips.LoadHalfChip.Contracts
 import SP1Clean.Alignment.Chips.LoadWordChip.Contracts
@@ -16,53 +17,26 @@ import SP1Clean.Alignment.Chips.LoadX0Chip.Contracts
 import SP1Clean.Alignment.Chips.SubChip.Contracts
 import SP1Clean.Alignment.Chips.MulChip.Contracts
 
-/-! # Per-chip grounding contracts — the `ChipGroundingContracts` bundle
+/-! # Chip grounding contracts
 
-The registry-wide per-chip obligation surface for the capstone seam
-`supportedCore_orderedRows_dynamic` (`Soundness/AIR.lean`).  One `ChipGroundingContracts chip`
-bundle collects everything the timed grounding assembly needs from one `SupportedChip` descriptor,
-so the 25-chip rollout is a list of bundle instances rather than 25 bespoke capstone arguments.
+`ChipGroundingContracts` bundles wiring, circuit assumptions, routing, readiness and Memory-touch
+alignment for each registered instruction chip. Its component-local fields consume physical row
+constraints, finished Byte/Program guarantees and authenticated decoding. The resulting step/frame
+facts and dynamic grounded rows feed the timed execution argument.
 
-The bundle serves the two seam consumers:
+Memory input guarantees come from the actual pull-currency evidence. Register routing is derived
+from constraints and Program decoding; it is not an additional assembly premise. State-clock
+alignment, execution order and Program authentication belong to the enclosing assembly.
 
-* **the engine feed** — `TimedGrounding.walk` consumes per row a `LocalStepFact`, a `FrameFact`
-  (both produced by `GroundingAdapter` from the `wiring` field and the chip's registered
-  `advance` payload; see `ChipGroundingContracts.engineFacts`), and a `RowOK` record;
-* **the dynamic-row assembly** — `DecodedInstructionRow.dynamicGrounded_of_timedInputs`
-  consumes the chip `Assumptions`, the walk's `Grounded` output, `advanceReady`, and the
-  register-operand pull shape (see `DecodedInstructionRow.dynamicGrounded_of_contracts`).
+Touch alignment preserves every produced/consumed Memory occurrence while retaining its read
+time. Refresh lemmas combine local pushed-record bounds with explicit prior-record bounds; the
+assembly derives the latter from balance before eliminating refresh rows. Neither local witness
+generation nor a received Memory guarantee supplies this chronology.
 
-**What is deliberately per-position, not per-chip.**  `RowOK.align8` (every state pull ≡ the public
-initial clock mod 8) is a state-trail fact; `decodedInROM` is Program-bus grounding
-(`supportedCore_orderedRows_programDecoded`); the row's clock position (`rowTime`) comes from
-`statePullTime_of_decodedStateWalk`.  The `op_a = x0` dispatch bit is different: each chip's
-`routing` field derives its declared `RdGuardFact` from that chip's physical constraints plus the
-grounded Program decode.  It is never an independent assembly hypothesis.
-
-`RowOK.touches`/`RowOK.chain_mono` are not duplicated as a second contract surface here:
-
-* the positional pull/push pairing of `DecodedInstructionRow.ordinaryRowFacts` (pulls in
-  consumed order, all read micro-times at the window start) is not the touch-aligned pairing
-  `TouchOK` expects — e.g. Add's pulls `[op_a, op_b, op_c]` zip against pushes
-  `[rb_b@+3, rb_c@+2, write@+4]`, so `loc_eq` fails positionally and the read-back `push_kind`
-  disjunct needs per-access micro-times (`+3`/`+2`), not the uniform window start.  Choosing the
-  aligned `RowFacts` carrier (and transporting `Grounded` across it) is arc-B assembly work; the
-  `TypedMemory` module doc already anticipates replacing the ordinary carrier.
-* the SP1 `prev_clk < access_clk` bound (formerly the `TouchOK.pull_lt_push` field; now the
-  walk-rederived slot order) is **not a purely local
-  fact**: the in-circuit `RegisterAccessTimestamp` diff decomposition proves it only given a
-  range bound on the pulled record's own time, which is supplied by the balance chain forcing
-  (the matched frontier push was range-checked by its writer), not by this row's constraints.
-
-The bundle is component-local: `wiringLocal`, `assumptionsLocal`, `routingLocal`,
-`readinessLocal`, and `rowAlignedLocal` consume physical row evidence independently of any
-ensemble. The original witness-facing names are proved specializations, including the family
-bundles. Alignment supplies the touches, `TouchOK`, and per-location `IsChain` facts used by
-`rowOK_alignedOf`.  The generic `RowWiring.push_window` lemma
-remains available for local reasoning, but no unused weaker duplicate is retained in the bundle.
-
-Add is the validation anchor: `addChip_groundingContracts` discharges the whole bundle from the
-existing `GroundingAdapter`/`AddChip.Contracts` lemmas. -/
+The legacy `sp1Ensemble` capstone still consumes witness-specialized contracts and ledger views.
+Those adapters can disappear when its consumers use the component-local interfaces shared by the
+native boot and local assemblies.
+-/
 
 open LeanRV64D.Defs
 
@@ -192,7 +166,7 @@ def ChipAssumptionsContract (chip : SupportedChip p) : Prop :=
       decodedInROM program (programAccess (decoded.toChipRow witness.data).view).toRow →
       decoded.chip.table.operations.ChannelGuarantees Channels.memoryChannel.toRaw
         (decoded.environment witness.data) →
-      decoded.chip.table.Assumptions (decoded.environment witness.data)
+      decoded.chip.table.CircuitAssumptions (decoded.environment witness.data)
 
 /-- The state-dependent readiness boundary shared by every chip-family constructor.  It is asked
 only after the row's open circuit inputs and all three live register-source bindings have been
@@ -225,7 +199,7 @@ def ChipAssumptionsLocalContract (chip : SupportedChip p) : Prop :=
       decodedInROM program (programAccess (decoded.toChipRow proverData).view).toRow →
       decoded.chip.table.operations.ChannelGuarantees Channels.memoryChannel.toRaw
         (decoded.environment proverData) →
-      decoded.chip.table.Assumptions (decoded.environment proverData)
+      decoded.chip.table.CircuitAssumptions (decoded.environment proverData)
 
 /-- **The per-chip grounding-contract bundle.**  Everything the dynamic capstone seam needs from
 one registered chip, quantified over the physical row evidence supplied by any assembly:
@@ -518,9 +492,9 @@ theorem memoryBalance_of_alignsWith [Fact (2 ^ 24 < p)]
     (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness Channels.memoryChannel,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
         signedVal interaction.mult = 1)
-    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       Channels.memoryChannel) = [])
-    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
       Channels.memoryChannel) = [])
     (initUnique : MemoryInitProviderUnique witness)
     (finalizeUnique : MemoryFinalizeProviderUnique witness)
@@ -535,23 +509,23 @@ theorem memoryBalance_of_alignsWith [Fact (2 ^ 24 < p)]
     (loc : MemLoc) :
     optMS (memoryInitFrontier witness loc) + pushesAt (orderedRows.map g) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
             Channels.memoryChannel))) =
       optMS (memoryFinalizeFrontier witness loc) + pullsAt (orderedRows.map g) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
             Channels.memoryChannel))) := by
   have hordinary : memoryFrontierRows witness =
       (realDecodedInstructionRows witness.data witness.tables).map
@@ -4967,453 +4941,103 @@ variable [Fact (2 ^ 25 < p)]
 
 open SP1Clean.Channels (byteChannel memoryChannel MemoryMsg)
 
-omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
-/-- The MemoryBump circuit's inline boolean gate, extracted from the shallow constraint list
-(private mirror of the `TypedMemoryBalance` helper; re-derived here because that one is private). -/
-private theorem bump_gate_binary
-    (r : Var MemoryBumpChip.Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
-    (constraints : ConstraintsHold.Shallow env ((MemoryBumpChip.main r).operations offset)) :
-    (ProvableStruct.eval env r).is_real = 0 ∨ (ProvableStruct.eval env r).is_real = 1 := by
-  have allShallow := (constraintsHold_shallow_iff_forall_mem.mp constraints).1
-  have gate := allShallow (r.is_real * (r.is_real - 1)) (by
-    change (r.is_real * (r.is_real - 1)) ∈ Operations.shallowConstraints
-      ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
-        .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
-    simp only [circuit_norm, Operations.shallowConstraints, List.mem_cons, true_or])
-  simp only [circuit_norm] at gate ⊢
-  exact bool_of_mul_pred gate
-
 omit [Fact (2 ^ 17 < p)] in
-/-- Every MemoryBump row's selector is boolean, from its table constraints alone. -/
-theorem memoryBumpRows_selectorBinary
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    ∀ row ∈ (memoryBumpTable witness).table,
-      (memoryBumpRow (memoryBumpTable witness) row).is_real = 0 ∨
-        (memoryBumpRow (memoryBumpTable witness) row).is_real = 1 := by
-  intro row rowMem
-  have tableConstraints : (memoryBumpTable witness).Constraints :=
-    constraints _ (witness.mem_allTables_of_mem_tables
-      (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness)))
-  have rowConstraints := tableConstraints row rowMem
-  rw [memoryBumpTable_component witness] at rowConstraints
-  have shallow := shallowConstraints_of_componentConstraints MemoryBumpChip.circuit
-    ((memoryBumpTable witness).environment row) rowConstraints
-  have hbool := bump_gate_binary (varFromOffset MemoryBumpChip.Inputs 0)
-    (size MemoryBumpChip.Inputs) ((memoryBumpTable witness).environment row) shallow
-  rw [show (memoryBumpRow (memoryBumpTable witness) row).is_real =
-      (ProvableStruct.eval ((memoryBumpTable witness).environment row)
-        (varFromOffset MemoryBumpChip.Inputs 0 :
-          Var MemoryBumpChip.Inputs (ZMod p))).is_real from by
-    rw [memoryBumpRow_eq, ProvableStruct.eval_eq_eval]]
-  exact hbool
-
-private lemma flatMap_pair_eq_filter_map {α β : Type} (l : List α) (P : α → Prop)
-    [DecidablePred P] (f : α → List β) (g : α → β)
-    (h : ∀ a ∈ l, f a = if P a then [g a] else []) :
-    l.flatMap f = (l.filter fun a => P a).map g := by
-  induction l with
-  | nil => rfl
-  | cons a l ih =>
-      rw [List.flatMap_cons, h a List.mem_cons_self,
-        ih fun a ha => h a (List.mem_cons_of_mem _ ha)]
-      by_cases hP : P a
-      · rw [if_pos hP, List.filter_cons_of_pos (by simpa using hP), List.map_cons]
-        rfl
-      · rw [if_neg hP, List.filter_cons_of_neg (by simpa using hP)]
-        rfl
-
-omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
-/-- The produced messages of one boolean-gated pull/push pair: the pushed message on an active
-gate, nothing on a padding row.  Stated over an **abstract** gate so that instantiating it at a
-decoded table row never asks the unifier to normalise the row decoder
-(`docs/agents/proof-patterns.md` — the decoded-row normalisation landmine). -/
-private lemma producedMessages_gatedPair {Message : TypeMap} [ProvableType Message]
-    {channel : Channel (ZMod p) Message} {gate : ZMod p} {pulled pushed : Message (ZMod p)}
-    (hp : 2 < p) (hbool : gate = 0 ∨ gate = 1) :
-    producedMessages [TypedInteraction.pulledIfValue channel gate pulled,
-        TypedInteraction.pushedIfValue channel gate pushed] =
-      if gate = 1 then [pushed] else [] := by
-  have : Fact (1 < p) := ⟨by omega⟩
-  have hpullVal : signedVal (-gate) = -(gate.val : ℤ) := signedVal_neg_is_real hp hbool
-  have hpushVal : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
-  unfold producedMessages
-  rcases hbool with h0 | h1
-  · have hval : gate.val = 0 := by rw [h0, ZMod.val_zero]
-    rw [if_neg (by rw [h0]; exact zero_ne_one),
-      List.filter_cons_of_neg (by simp [hpullVal, hval]),
-      List.filter_cons_of_neg (by simp [hpushVal, hval]),
-      List.filter_nil, List.map_nil]
-  · have hval : gate.val = 1 := by rw [h1, ZMod.val_one]
-    rw [if_pos h1,
-      List.filter_cons_of_neg (by simp [hpullVal, hval]),
-      List.filter_cons_of_pos (by simp [hpushVal, hval]),
-      List.filter_nil, List.map_cons, List.map_nil,
-      TypedInteraction.pushedIfValue_message]
-
-omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
-/-- The consumed twin of `producedMessages_gatedPair`: an active gate consumes the pulled
-message. -/
-private lemma consumedMessages_gatedPair {Message : TypeMap} [ProvableType Message]
-    {channel : Channel (ZMod p) Message} {gate : ZMod p} {pulled pushed : Message (ZMod p)}
-    (hp : 2 < p) (hbool : gate = 0 ∨ gate = 1) :
-    consumedMessages [TypedInteraction.pulledIfValue channel gate pulled,
-        TypedInteraction.pushedIfValue channel gate pushed] =
-      if gate = 1 then [pulled] else [] := by
-  have : Fact (1 < p) := ⟨by omega⟩
-  have hpullVal : signedVal (-gate) = -(gate.val : ℤ) := signedVal_neg_is_real hp hbool
-  have hpushVal : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
-  unfold consumedMessages
-  rcases hbool with h0 | h1
-  · have hval : gate.val = 0 := by rw [h0, ZMod.val_zero]
-    rw [if_neg (by rw [h0]; exact zero_ne_one),
-      List.filter_cons_of_neg (by simp [hpullVal, hval]),
-      List.filter_cons_of_neg (by simp [hpushVal, hval]),
-      List.filter_nil, List.map_nil]
-  · have hval : gate.val = 1 := by rw [h1, ZMod.val_one]
-    rw [if_pos h1,
-      List.filter_cons_of_pos (by simp [hpullVal, hval]),
-      List.filter_cons_of_neg (by simp [hpushVal, hval]),
-      List.filter_nil, List.map_cons, List.map_nil,
-      TypedInteraction.pulledIfValue_message]
-
-omit [Fact (2 ^ 17 < p)] in
-/-- The MemoryBump table's produced Memory messages are exactly its active rows' refreshed
-pushes. -/
+/-- The MemoryBump table's produced Memory ledger retains every active occurrence. -/
 theorem memoryBump_producedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    producedMessages (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel) =
+    producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data memoryChannel) =
       (realMemoryBumpRows witness).map
-        (fun row => MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row)) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  rw [memoryBumpTable_typedMemory, producedMessages_flatMap, realMemoryBumpRows]
-  refine flatMap_pair_eq_filter_map _ _ _ _ fun row rowMem => ?_
-  exact producedMessages_gatedPair hp
-    (memoryBumpRows_selectorBinary witness constraints row rowMem)
+        (fun row => MemoryBumpChip.pushedMessage (memoryBumpRow witness.data row)) := by
+  have projection := memoryBumpRows_projection (memoryBumpTable witness) witness.data
+    (memoryBumpTable_component witness)
+    (constraints _ (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness)))
+  simpa only [activeSystemRows, realMemoryBumpRows, MemoryBumpChip.memoryPairs, List.filter_map,
+    List.flatMap_map, List.map_cons, List.map_nil, Function.comp_def, ← List.map_eq_flatMap] using projection.1
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The MemoryBump table's consumed Memory messages are exactly its active rows' old-record
-pulls. -/
+/-- The MemoryBump table's consumed Memory ledger retains every active occurrence. -/
 theorem memoryBump_consumedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel) =
+    consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data memoryChannel) =
       (realMemoryBumpRows witness).map
-        (fun row => MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row)) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  rw [memoryBumpTable_typedMemory, consumedMessages_flatMap, realMemoryBumpRows]
-  refine flatMap_pair_eq_filter_map _ _ _ _ fun row rowMem => ?_
-  exact consumedMessages_gatedPair hp
-    (memoryBumpRows_selectorBinary witness constraints row rowMem)
-
-private lemma flatMap_triple_eq_filter_flatMap {α β : Type} (l : List α) (P : α → Prop)
-    [DecidablePred P] (f : α → List β) (g : α → List β)
-    (h : ∀ a ∈ l, f a = if P a then g a else []) :
-    l.flatMap f = (l.filter fun a => P a).flatMap g := by
-  induction l with
-  | nil => rfl
-  | cons a l ih =>
-      rw [List.flatMap_cons, h a List.mem_cons_self,
-        ih fun a ha => h a (List.mem_cons_of_mem _ ha)]
-      by_cases hP : P a
-      · rw [if_pos hP, List.filter_cons_of_pos (by simpa using hP), List.flatMap_cons]
-      · rw [if_neg hP, List.filter_cons_of_neg (by simpa using hP), List.nil_append]
+        (fun row => MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row)) := by
+  have projection := memoryBumpRows_projection (memoryBumpTable witness) witness.data
+    (memoryBumpTable_component witness)
+    (constraints _ (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness)))
+  simpa only [activeSystemRows, realMemoryBumpRows, MemoryBumpChip.memoryPairs, List.filter_map,
+    List.flatMap_map, List.map_cons, List.map_nil, Function.comp_def, ← List.map_eq_flatMap] using projection.2
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The Halt table's produced Memory messages are exactly its active rows' three register
-read-backs (`x5`/`x10`/`x11`, at access clocks `clk + 4/3/2`). -/
+/-- The Halt table's produced Memory ledger retains every active occurrence. -/
 theorem halt_producedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    producedMessages (typedTableInteractionsWith (haltTable witness) memoryChannel) =
+    producedMessages (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) =
       (realHaltRows witness).flatMap (fun row =>
-        [HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-           (haltRow (haltTable witness) row).x5_memory 5 4,
-         HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-           (haltRow (haltTable witness) row).x10_memory 10 3,
-         HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-           (haltRow (haltTable witness) row).x11_memory 11 2]) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  rw [haltTable_typedMemory, producedMessages_flatMap, realHaltRows]
-  refine flatMap_triple_eq_filter_flatMap _ _ _ _ fun row rowMem => ?_
-  have hbool := witness_haltRows_selectorBinary witness constraints row rowMem
-  rw [show [TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x5_memory 5),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x5_memory 5 4),
-      TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x10_memory 10),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x10_memory 10 3),
-      TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x11_memory 11),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x11_memory 11 2)] =
-      [TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x5_memory 5),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x5_memory 5 4)] ++
-      ([TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x10_memory 10),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x10_memory 10 3)] ++
-      [TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x11_memory 11),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x11_memory 11 2)]) from rfl,
-    producedMessages_append, producedMessages_append,
-    producedMessages_gatedPair hp hbool, producedMessages_gatedPair hp hbool,
-    producedMessages_gatedPair hp hbool]
-  by_cases hreal : (haltRow (haltTable witness) row).is_real = 1
-  · simp only [if_pos hreal]
-    rfl
-  · simp only [if_neg hreal]
-    rfl
+        [HaltChip.memPushedMessage (haltRow witness.data row)
+           (haltRow witness.data row).x5_memory 5 4,
+         HaltChip.memPushedMessage (haltRow witness.data row)
+           (haltRow witness.data row).x10_memory 10 3,
+         HaltChip.memPushedMessage (haltRow witness.data row)
+           (haltRow witness.data row).x11_memory 11 2]) := by
+  have projection := haltRows_projection (haltTable witness) witness.data
+    (haltTable_component witness)
+    (constraints _ (List.getElem_mem (haltIndex_lt_tablesLength witness)))
+  simpa only [activeSystemRows, realHaltRows, HaltChip.memoryPairs, List.filter_map,
+    List.flatMap_map, List.map_cons, List.map_nil, Function.comp_def] using projection.1
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The Halt table's consumed Memory messages are exactly its active rows' three pulled register
-priors. -/
+/-- The Halt table's consumed Memory ledger retains every active occurrence. -/
 theorem halt_consumedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    consumedMessages (typedTableInteractionsWith (haltTable witness) memoryChannel) =
+    consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) =
       (realHaltRows witness).flatMap (fun row =>
-        [HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-           (haltRow (haltTable witness) row).x5_memory 5,
-         HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-           (haltRow (haltTable witness) row).x10_memory 10,
-         HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-           (haltRow (haltTable witness) row).x11_memory 11]) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  rw [haltTable_typedMemory, consumedMessages_flatMap, realHaltRows]
-  refine flatMap_triple_eq_filter_flatMap _ _ _ _ fun row rowMem => ?_
-  have hbool := witness_haltRows_selectorBinary witness constraints row rowMem
-  rw [show [TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x5_memory 5),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x5_memory 5 4),
-      TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x10_memory 10),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x10_memory 10 3),
-      TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x11_memory 11),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x11_memory 11 2)] =
-      [TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x5_memory 5),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x5_memory 5 4)] ++
-      ([TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x10_memory 10),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x10_memory 10 3)] ++
-      [TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPulledMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x11_memory 11),
-      TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real
-        (HaltChip.memPushedMessage (haltRow (haltTable witness) row)
-          (haltRow (haltTable witness) row).x11_memory 11 2)]) from rfl,
-    consumedMessages_append, consumedMessages_append,
-    consumedMessages_gatedPair hp hbool, consumedMessages_gatedPair hp hbool,
-    consumedMessages_gatedPair hp hbool]
-  by_cases hreal : (haltRow (haltTable witness) row).is_real = 1
-  · simp only [if_pos hreal]
-    rfl
-  · simp only [if_neg hreal]
-    rfl
+        [HaltChip.memPulledMessage (haltRow witness.data row)
+           (haltRow witness.data row).x5_memory 5,
+         HaltChip.memPulledMessage (haltRow witness.data row)
+           (haltRow witness.data row).x10_memory 10,
+         HaltChip.memPulledMessage (haltRow witness.data row)
+           (haltRow witness.data row).x11_memory 11]) := by
+  have projection := haltRows_projection (haltTable witness) witness.data
+    (haltTable_component witness)
+    (constraints _ (List.getElem_mem (haltIndex_lt_tablesLength witness)))
+  simpa only [activeSystemRows, realHaltRows, HaltChip.memoryPairs, List.filter_map,
+    List.flatMap_map, List.map_cons, List.map_nil, Function.comp_def] using projection.2
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The `SyscallInstrs` table's produced Memory messages are exactly its active rows' three
-register read-backs — `op_a` at `clk + 4` carrying the *written* word, `op_b`/`op_c` at `clk + 3`
-and `clk + 2` carrying their unchanged priors. The Halt twin of this lemma is
-`halt_producedMessages_eq`; the only structural difference is which word the first push carries. -/
+/-- The SyscallInstrs table's produced Memory ledger retains every active occurrence. -/
 theorem syscallInstrs_producedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel) =
+    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel) =
       (realSyscallInstrsRows witness).flatMap (fun row =>
-        [SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-           (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value,
-         SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-           (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value,
-         SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-           (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value]) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  rw [syscallInstrsTable_typedMemory, producedMessages_flatMap, realSyscallInstrsRows]
-  refine flatMap_triple_eq_filter_flatMap _ _ _ _ fun row rowMem => ?_
-  have hbool := witness_syscallInstrsRows_selectorBinary witness constraints row rowMem
-  rw [show [TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value),
-      TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value),
-      TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] =
-      [TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value)] ++
-      ([TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value)] ++
-      [TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)]) from rfl,
-    producedMessages_append, producedMessages_append,
-    producedMessages_gatedPair hp hbool, producedMessages_gatedPair hp hbool,
-    producedMessages_gatedPair hp hbool]
-  by_cases hreal : (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1
-  · simp only [if_pos hreal]
-    rfl
-  · simp only [if_neg hreal]
-    rfl
+        [SyscallInstrsChip.memPushedMessage (syscallInstrsRow witness.data row)
+           (syscallInstrsRow witness.data row).op_a 4 (syscallInstrsRow witness.data row).op_a_value,
+         SyscallInstrsChip.memPushedMessage (syscallInstrsRow witness.data row)
+           (syscallInstrsRow witness.data row).op_b 3 (syscallInstrsRow witness.data row).op_b_memory.prev_value,
+         SyscallInstrsChip.memPushedMessage (syscallInstrsRow witness.data row)
+           (syscallInstrsRow witness.data row).op_c 2 (syscallInstrsRow witness.data row).op_c_memory.prev_value]) := by
+  have projection := syscallRows_projection (syscallInstrsTable witness) witness.data
+    (syscallInstrsTable_component witness)
+    (constraints _ (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))
+  simpa only [activeSystemRows, realSyscallInstrsRows, SyscallInstrsChip.memoryPairs, List.filter_map,
+    List.flatMap_map, List.map_cons, List.map_nil, Function.comp_def] using projection.1
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The `SyscallInstrs` table's consumed Memory messages are exactly its active rows' three pulled
-register priors. -/
+/-- The SyscallInstrs table's consumed Memory ledger retains every active occurrence. -/
 theorem syscallInstrs_consumedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel) =
+    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel) =
       (realSyscallInstrsRows witness).flatMap (fun row =>
-        [SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-           (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a,
-         SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-           (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b,
-         SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-           (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c]) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  rw [syscallInstrsTable_typedMemory, consumedMessages_flatMap, realSyscallInstrsRows]
-  refine flatMap_triple_eq_filter_flatMap _ _ _ _ fun row rowMem => ?_
-  have hbool := witness_syscallInstrsRows_selectorBinary witness constraints row rowMem
-  rw [show [TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value),
-      TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value),
-      TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)] =
-      [TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_a 4 (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value)] ++
-      ([TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_b 3 (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value)] ++
-      [TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c),
-      TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-        (SyscallInstrsChip.memPushedMessage (syscallInstrsRow (syscallInstrsTable witness) row)
-          (syscallInstrsRow (syscallInstrsTable witness) row).op_c 2 (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value)]) from rfl,
-    consumedMessages_append, consumedMessages_append,
-    consumedMessages_gatedPair hp hbool, consumedMessages_gatedPair hp hbool,
-    consumedMessages_gatedPair hp hbool]
-  by_cases hreal : (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1
-  · simp only [if_pos hreal]
-    rfl
-  · simp only [if_neg hreal]
-    rfl
+        [SyscallInstrsChip.memPulledMessage (syscallInstrsRow witness.data row)
+           (syscallInstrsRow witness.data row).op_a_memory (syscallInstrsRow witness.data row).op_a,
+         SyscallInstrsChip.memPulledMessage (syscallInstrsRow witness.data row)
+           (syscallInstrsRow witness.data row).op_b_memory (syscallInstrsRow witness.data row).op_b,
+         SyscallInstrsChip.memPulledMessage (syscallInstrsRow witness.data row)
+           (syscallInstrsRow witness.data row).op_c_memory (syscallInstrsRow witness.data row).op_c]) := by
+  have projection := syscallRows_projection (syscallInstrsTable witness) witness.data
+    (syscallInstrsTable_component witness)
+    (constraints _ (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))
+  simpa only [activeSystemRows, realSyscallInstrsRows, SyscallInstrsChip.memoryPairs, List.filter_map,
+    List.flatMap_map, List.map_cons, List.map_nil, Function.comp_def] using projection.2
 
 omit [Fact (2 ^ 17 < p)] in
 /-- On a shard with no active syscall row the `SyscallInstrs` table produces no Memory message —
@@ -5421,7 +5045,7 @@ the fact that let `SyscallTableInactive`'s two Memory-silence fields be deleted.
 theorem syscallInstrs_producedMessages_nil_of_inactive
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (inactive : realSyscallInstrsRows witness = []) :
-    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)
+    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel)
       = [] := by
   rw [syscallInstrs_producedMessages_eq witness constraints, inactive, List.flatMap_nil]
 
@@ -5430,7 +5054,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem syscallInstrs_consumedMessages_nil_of_inactive
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (inactive : realSyscallInstrsRows witness = []) :
-    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)
+    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel)
       = [] := by
   rw [syscallInstrs_consumedMessages_eq witness constraints, inactive, List.flatMap_nil]
 
@@ -5439,7 +5063,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem halt_producedMessages_nil_of_haltFree
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (haltFree : realHaltRows witness = []) :
-    producedMessages (typedTableInteractionsWith (haltTable witness) memoryChannel) = [] := by
+    producedMessages (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) = [] := by
   rw [halt_producedMessages_eq witness constraints, haltFree, List.flatMap_nil]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -5447,7 +5071,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem halt_consumedMessages_nil_of_haltFree
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (haltFree : realHaltRows witness = []) :
-    consumedMessages (typedTableInteractionsWith (haltTable witness) memoryChannel) = [] := by
+    consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) = [] := by
   rw [halt_consumedMessages_eq witness constraints, haltFree, List.flatMap_nil]
 
 omit [Fact (2 ^ 25 < p)] in
@@ -5609,52 +5233,53 @@ table-level form of `memoryBump_evidence_of_env`, crossing every cell through th
 closed form `memoryBumpRow_closedForm` of `Soundness/BumpDecode.lean` — a rewrite, never a
 unification, so the decoded row's `valueFromOffset` body is never normalised. -/
 theorem memoryBump_evidence_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨MemoryBumpChip.circuit⟩)
-    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := MemoryBumpChip.circuit })
+    (constraints : table.Constraints data) (byte : table.ChannelGuarantees data byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
-    (real : (memoryBumpRow table row).is_real = 1) :
-    (memoryBumpRow table row).clk_0_16.val < 2 ^ 16 ∧
-    (memoryBumpRow table row).clk_32_48.val < 2 ^ 16 ∧
-    (memoryBumpRow table row).clk_16_24.val < 2 ^ 8 ∧
-    (memoryBumpRow table row).clk_24_32.val < 2 ^ 8 ∧
-    ((memoryBumpRow table row).access.access_timestamp.compare_low = 0 ∨
-      (memoryBumpRow table row).access.access_timestamp.compare_low = 1) ∧
-    (memoryBumpRow table row).access.access_timestamp.compare_low *
-      ((memoryBumpRow table row).clk_24_32 +
-        (memoryBumpRow table row).clk_32_48 * 256 -
-        (memoryBumpRow table row).access.access_timestamp.prev_high) = 0 ∧
-    (memoryBumpRow table row).access.access_timestamp.compare_low *
-        ((memoryBumpRow table row).clk_0_16 +
-          (memoryBumpRow table row).clk_16_24 * 65536)
-      + (1 - (memoryBumpRow table row).access.access_timestamp.compare_low) *
-        ((memoryBumpRow table row).clk_24_32 +
-          (memoryBumpRow table row).clk_32_48 * 256)
-      - ((memoryBumpRow table row).access.access_timestamp.compare_low *
-          (memoryBumpRow table row).access.access_timestamp.prev_low
+    (real : (memoryBumpRow data row).is_real = 1) :
+    (memoryBumpRow data row).clk_0_16.val < 2 ^ 16 ∧
+    (memoryBumpRow data row).clk_32_48.val < 2 ^ 16 ∧
+    (memoryBumpRow data row).clk_16_24.val < 2 ^ 8 ∧
+    (memoryBumpRow data row).clk_24_32.val < 2 ^ 8 ∧
+    ((memoryBumpRow data row).access.access_timestamp.compare_low = 0 ∨
+      (memoryBumpRow data row).access.access_timestamp.compare_low = 1) ∧
+    (memoryBumpRow data row).access.access_timestamp.compare_low *
+      ((memoryBumpRow data row).clk_24_32 +
+        (memoryBumpRow data row).clk_32_48 * 256 -
+        (memoryBumpRow data row).access.access_timestamp.prev_high) = 0 ∧
+    (memoryBumpRow data row).access.access_timestamp.compare_low *
+        ((memoryBumpRow data row).clk_0_16 +
+          (memoryBumpRow data row).clk_16_24 * 65536)
+      + (1 - (memoryBumpRow data row).access.access_timestamp.compare_low) *
+        ((memoryBumpRow data row).clk_24_32 +
+          (memoryBumpRow data row).clk_32_48 * 256)
+      - ((memoryBumpRow data row).access.access_timestamp.compare_low *
+          (memoryBumpRow data row).access.access_timestamp.prev_low
         + (1 -
-            (memoryBumpRow table row).access.access_timestamp.compare_low) *
-          (memoryBumpRow table row).access.access_timestamp.prev_high)
+            (memoryBumpRow data row).access.access_timestamp.compare_low) *
+          (memoryBumpRow data row).access.access_timestamp.prev_high)
       - 1
-      = (memoryBumpRow table row).access.access_timestamp.diff_low_limb
-        + (memoryBumpRow table row).access.access_timestamp.diff_high_limb
+      = (memoryBumpRow data row).access.access_timestamp.diff_low_limb
+        + (memoryBumpRow data row).access.access_timestamp.diff_high_limb
           * 65536 ∧
-    (memoryBumpRow table row).access.access_timestamp.diff_low_limb.val
+    (memoryBumpRow data row).access.access_timestamp.diff_low_limb.val
       < 2 ^ 16 ∧
-    (memoryBumpRow table row).access.access_timestamp.diff_high_limb.val
+    (memoryBumpRow data row).access.access_timestamp.diff_high_limb.val
       < 2 ^ 8 := by
   have rowConstraints := constraints row tableMem
   rw [component] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints MemoryBumpChip.circuit
-    (table.environment row) rowConstraints
+    (Environment.fromArray row data) rowConstraints
   have byteG : ((MemoryBumpChip.main (varFromOffset MemoryBumpChip.Inputs 0 :
       Var MemoryBumpChip.Inputs (ZMod p))).operations
         (size MemoryBumpChip.Inputs)).ChannelGuarantees byteChannel.toRaw
-        (table.environment row) := by
+        (Environment.fromArray row data) := by
     have h := byte row tableMem
     rw [Component.channelGuarantees_iff, component,
       Component.rowOperations_mk] at h
     exact h
-  have realEnv : Expression.eval (table.environment row)
+  have realEnv : Expression.eval (Environment.fromArray row data)
       ((varFromOffset MemoryBumpChip.Inputs 0 : Var MemoryBumpChip.Inputs (ZMod p)).is_real)
       = 1 := by
     -- `simp only` (not `rwa`): the closing `assumption` of `rwa` would unify the rewritten
@@ -5662,54 +5287,52 @@ theorem memoryBump_evidence_of_component
     simp only [memoryBumpRow_closedForm] at real
     exact real
   have core := memoryBump_evidence_of_env (varFromOffset MemoryBumpChip.Inputs 0)
-    (size MemoryBumpChip.Inputs) (table.environment row) shallow byteG realEnv
+    (size MemoryBumpChip.Inputs) (Environment.fromArray row data) shallow byteG realEnv
   -- `simp only` (not `rw`): it iota-reduces the rewritten structure literal's projections on the
   -- spot, so `exact core` matches syntactically.  A bare `rw` leaves `(⟨…⟩ : Inputs _).clk_0_16`
   -- standing and hands the reduction to unification, which blows the budget.
   simp only [memoryBumpRow_closedForm]
   exact core
 
--- Preserve the released theorem's section-instance binders.
-set_option linter.unusedSectionVars false in
+omit [Fact (2 ^ 17 < p)] in
 /-- The legacy ensemble specialization of the table-local refresh evidence. -/
 theorem memoryBump_evidence
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (tableMem : row ∈ (memoryBumpTable witness).table)
-    (real : (memoryBumpRow (memoryBumpTable witness) row).is_real = 1) :
-    (memoryBumpRow (memoryBumpTable witness) row).clk_0_16.val < 2 ^ 16 ∧
-    (memoryBumpRow (memoryBumpTable witness) row).clk_32_48.val < 2 ^ 16 ∧
-    (memoryBumpRow (memoryBumpTable witness) row).clk_16_24.val < 2 ^ 8 ∧
-    (memoryBumpRow (memoryBumpTable witness) row).clk_24_32.val < 2 ^ 8 ∧
-    ((memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.compare_low = 0 ∨
-      (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.compare_low = 1) ∧
-    (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.compare_low *
-      ((memoryBumpRow (memoryBumpTable witness) row).clk_24_32 +
-        (memoryBumpRow (memoryBumpTable witness) row).clk_32_48 * 256 -
-        (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.prev_high) = 0 ∧
-    (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.compare_low *
-        ((memoryBumpRow (memoryBumpTable witness) row).clk_0_16 +
-          (memoryBumpRow (memoryBumpTable witness) row).clk_16_24 * 65536)
-      + (1 - (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.compare_low) *
-        ((memoryBumpRow (memoryBumpTable witness) row).clk_24_32 +
-          (memoryBumpRow (memoryBumpTable witness) row).clk_32_48 * 256)
-      - ((memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.compare_low *
-          (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.prev_low
+    (real : (memoryBumpRow witness.data row).is_real = 1) :
+    (memoryBumpRow witness.data row).clk_0_16.val < 2 ^ 16 ∧
+    (memoryBumpRow witness.data row).clk_32_48.val < 2 ^ 16 ∧
+    (memoryBumpRow witness.data row).clk_16_24.val < 2 ^ 8 ∧
+    (memoryBumpRow witness.data row).clk_24_32.val < 2 ^ 8 ∧
+    ((memoryBumpRow witness.data row).access.access_timestamp.compare_low = 0 ∨
+      (memoryBumpRow witness.data row).access.access_timestamp.compare_low = 1) ∧
+    (memoryBumpRow witness.data row).access.access_timestamp.compare_low *
+      ((memoryBumpRow witness.data row).clk_24_32 +
+        (memoryBumpRow witness.data row).clk_32_48 * 256 -
+        (memoryBumpRow witness.data row).access.access_timestamp.prev_high) = 0 ∧
+    (memoryBumpRow witness.data row).access.access_timestamp.compare_low *
+        ((memoryBumpRow witness.data row).clk_0_16 +
+          (memoryBumpRow witness.data row).clk_16_24 * 65536)
+      + (1 - (memoryBumpRow witness.data row).access.access_timestamp.compare_low) *
+        ((memoryBumpRow witness.data row).clk_24_32 +
+          (memoryBumpRow witness.data row).clk_32_48 * 256)
+      - ((memoryBumpRow witness.data row).access.access_timestamp.compare_low *
+          (memoryBumpRow witness.data row).access.access_timestamp.prev_low
         + (1 -
-            (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.compare_low) *
-          (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.prev_high)
+            (memoryBumpRow witness.data row).access.access_timestamp.compare_low) *
+          (memoryBumpRow witness.data row).access.access_timestamp.prev_high)
       - 1
-      = (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.diff_low_limb
-        + (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.diff_high_limb
+      = (memoryBumpRow witness.data row).access.access_timestamp.diff_low_limb
+        + (memoryBumpRow witness.data row).access.access_timestamp.diff_high_limb
           * 65536 ∧
-    (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.diff_low_limb.val
+    (memoryBumpRow witness.data row).access.access_timestamp.diff_low_limb.val
       < 2 ^ 16 ∧
-    (memoryBumpRow (memoryBumpTable witness) row).access.access_timestamp.diff_high_limb.val
+    (memoryBumpRow witness.data row).access.access_timestamp.diff_high_limb.val
       < 2 ^ 8 := by
-  have member := witness.mem_allTables_of_mem_tables
-    (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness))
-  exact memoryBump_evidence_of_component _ (memoryBumpTable_component witness)
-    (constraints _ member) (sp1_finishedChannel_guarantees witness constraints balanced _ member).1 tableMem real
+  have member := List.getElem_mem (memoryBumpIndex_lt_tablesLength witness)
+  exact memoryBump_evidence_of_component _ witness.data (memoryBumpTable_component witness)
+    (constraints _ member) ((sp1_finishedChannel_guarantees witness constraints balanced).2 _ member).1 tableMem real
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The `2^8` limb scale round-trips through `ZMod.val`.  Extracted from the two refresh consumers
@@ -5730,46 +5353,45 @@ private lemma bump_val65536 : ((65536 : ZMod p)).val = 65536 := by
 /-- The refreshed push of an active MemoryBump row carries canonical clock limbs: both the
 recombined low clock (`ClkBound`) and the recombined high clock are genuine 24-bit values. -/
 theorem memoryBump_pushedMessage_clkFacts_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨MemoryBumpChip.circuit⟩)
-    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := MemoryBumpChip.circuit })
+    (constraints : table.Constraints data) (byte : table.ChannelGuarantees data byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
-    (real : (memoryBumpRow table row).is_real = 1) :
+    (real : (memoryBumpRow data row).is_real = 1) :
       SP1Clean.Channels.MemoryMsg.ClkBound
-        (MemoryBumpChip.pushedMessage (memoryBumpRow table row)) ∧
+        (MemoryBumpChip.pushedMessage (memoryBumpRow data row)) ∧
       (MemoryBumpChip.pushedMessage
-        (memoryBumpRow table row)).clk_high.val < 2 ^ 24 := by
+        (memoryBumpRow data row)).clk_high.val < 2 ^ 24 := by
   obtain ⟨h016, h3248, h1624, h2432, -, -, -, -, -⟩ :=
-    memoryBump_evidence_of_component table component constraints byte tableMem real
+    memoryBump_evidence_of_component table data component constraints byte tableMem real
   have hp := Fact.out (p := 2 ^ 25 < p)
   have v256 : ((256 : ZMod p)).val = 256 := bump_val256
   have v65536 : ((65536 : ZMod p)).val = 65536 := bump_val65536
   constructor
-  · show ((memoryBumpRow table row).clk_0_16 +
-      (memoryBumpRow table row).clk_16_24 * 65536).val < 2 ^ 24
+  · show ((memoryBumpRow data row).clk_0_16 +
+      (memoryBumpRow data row).clk_16_24 * 65536).val < 2 ^ 24
     rw [val_recombine v65536 (by omega)]
     omega
-  · show ((memoryBumpRow table row).clk_24_32 +
-      (memoryBumpRow table row).clk_32_48 * 256).val < 2 ^ 24
+  · show ((memoryBumpRow data row).clk_24_32 +
+      (memoryBumpRow data row).clk_32_48 * 256).val < 2 ^ 24
     rw [val_recombine v256 (by omega)]
     omega
 
--- Preserve the released theorem's section-instance binders.
-set_option linter.unusedSectionVars false in
+omit [Fact (2 ^ 17 < p)] in
 /-- The legacy ensemble specialization of the table-local refresh theorem. -/
 theorem memoryBump_pushedMessage_clkFacts
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ row ∈ realMemoryBumpRows witness,
       SP1Clean.Channels.MemoryMsg.ClkBound
-        (MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row)) ∧
+        (MemoryBumpChip.pushedMessage (memoryBumpRow witness.data row)) ∧
       (MemoryBumpChip.pushedMessage
-        (memoryBumpRow (memoryBumpTable witness) row)).clk_high.val < 2 ^ 24 := by
+        (memoryBumpRow witness.data row)).clk_high.val < 2 ^ 24 := by
   intro row rowMem
   obtain ⟨tableMem, real⟩ := mem_realMemoryBumpRows witness rowMem
-  have member := witness.mem_allTables_of_mem_tables
-    (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness))
-  exact memoryBump_pushedMessage_clkFacts_of_component _ (memoryBumpTable_component witness)
-    (constraints _ member) (sp1_finishedChannel_guarantees witness constraints balanced _ member).1 tableMem real
+  have member := List.getElem_mem (memoryBumpIndex_lt_tablesLength witness)
+  exact memoryBump_pushedMessage_clkFacts_of_component _ witness.data (memoryBumpTable_component witness)
+    (constraints _ member) ((sp1_finishedChannel_guarantees witness constraints balanced).2 _ member).1 tableMem real
 
 omit [Fact (2 ^ 17 < p)] in
 /-- **The pure-arithmetic core of the refresh's strict time increase**, over abstract field
@@ -5830,25 +5452,26 @@ produced side of the widened memory balance — the row's pulled and pushed reco
 `IsRefresh`: same location and value, and a strict ℕ-time increase from the in-circuit
 `compare_low`-selected difference evidence (`bump_clkNat_lt`). -/
 theorem memoryBump_isRefresh_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨MemoryBumpChip.circuit⟩)
-    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := MemoryBumpChip.circuit })
+    (constraints : table.Constraints data) (byte : table.ChannelGuarantees data byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
-    (real : (memoryBumpRow table row).is_real = 1) :
+    (real : (memoryBumpRow data row).is_real = 1) :
       SP1Clean.Channels.MemoryMsg.ClkBound
-        (MemoryBumpChip.pulledMessage (memoryBumpRow table row)) →
+        (MemoryBumpChip.pulledMessage (memoryBumpRow data row)) →
       (MemoryBumpChip.pulledMessage
-        (memoryBumpRow table row)).clk_high.val < 2 ^ 24 →
+        (memoryBumpRow data row)).clk_high.val < 2 ^ 24 →
       RefreshElimination.IsRefresh
         (fun m : MemoryMsg (ZMod p) => (Semantics.MemoryMsg.locOf m, m.value))
         Semantics.MemoryMsg.timeNat
-        (MemoryBumpChip.pulledMessage (memoryBumpRow table row),
-         MemoryBumpChip.pushedMessage (memoryBumpRow table row)) := by
+        (MemoryBumpChip.pulledMessage (memoryBumpRow data row),
+         MemoryBumpChip.pushedMessage (memoryBumpRow data row)) := by
   intro hClk hHigh
   obtain ⟨h016, h3248, h1624, h2432, hcl, hhieq, hdiff, hdlow, hdhigh⟩ :=
-    memoryBump_evidence_of_component table component constraints byte tableMem real
+    memoryBump_evidence_of_component table data component constraints byte tableMem real
   -- Make the decoded row opaque before the definitional crossings below (the `set`-free form of
   -- `docs/agents/proof-patterns.md`'s opacity device).
-  obtain ⟨r, hr⟩ : ∃ r, memoryBumpRow table row = r := ⟨_, rfl⟩
+  obtain ⟨r, hr⟩ : ∃ r, memoryBumpRow data row = r := ⟨_, rfl⟩
   rw [hr] at h016 h3248 h1624 h2432 hcl hhieq hdiff hdlow hdhigh hClk hHigh ⊢
   clear hr
   refine ⟨rfl, ?_⟩
@@ -5860,28 +5483,26 @@ theorem memoryBump_isRefresh_of_component
     Semantics.clkNat (r.clk_24_32 + r.clk_32_48 * 256) (r.clk_0_16 + r.clk_16_24 * 65536)
   exact bump_clkNat_lt h016 h3248 h1624 h2432 hcl hhieq hdiff hdlow hdhigh hClk hHigh
 
--- Preserve the released theorem's section-instance binders.
-set_option linter.unusedSectionVars false in
+omit [Fact (2 ^ 17 < p)] in
 /-- The legacy ensemble specialization of the table-local refresh theorem. -/
 theorem memoryBump_isRefresh
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ row ∈ realMemoryBumpRows witness,
       SP1Clean.Channels.MemoryMsg.ClkBound
-        (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row)) →
+        (MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row)) →
       (MemoryBumpChip.pulledMessage
-        (memoryBumpRow (memoryBumpTable witness) row)).clk_high.val < 2 ^ 24 →
+        (memoryBumpRow witness.data row)).clk_high.val < 2 ^ 24 →
       RefreshElimination.IsRefresh
         (fun m : MemoryMsg (ZMod p) => (Semantics.MemoryMsg.locOf m, m.value))
         Semantics.MemoryMsg.timeNat
-        (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row),
-         MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row)) := by
+        (MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row),
+         MemoryBumpChip.pushedMessage (memoryBumpRow witness.data row)) := by
   intro row rowMem
   obtain ⟨tableMem, real⟩ := mem_realMemoryBumpRows witness rowMem
-  have member := witness.mem_allTables_of_mem_tables
-    (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness))
-  exact memoryBump_isRefresh_of_component _ (memoryBumpTable_component witness)
-    (constraints _ member) (sp1_finishedChannel_guarantees witness constraints balanced _ member).1 tableMem real
+  have member := List.getElem_mem (memoryBumpIndex_lt_tablesLength witness)
+  exact memoryBump_isRefresh_of_component _ witness.data (memoryBumpTable_component witness)
+    (constraints _ member) ((sp1_finishedChannel_guarantees witness constraints balanced).2 _ member).1 tableMem real
 
 end BumpRefresh
 
