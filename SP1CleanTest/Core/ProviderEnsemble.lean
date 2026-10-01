@@ -46,6 +46,10 @@ theorem memoryFinished (PublicIO : TypeMap) [ProvableType PublicIO] :
     (memoryChannel (p := p)).toRaw ∈ (boundary (p := p) PublicIO).finished := by
   simp [boundary, memory, circuit_norm]
 
+theorem boundaryComponents (PublicIO : TypeMap) [ProvableType PublicIO] :
+    (boundary (p := p) PublicIO).tables =
+      [{ circuit := MemoryFinalizeChip.circuit }, { circuit := MemoryProviderChip.circuit }] := rfl
+
 theorem boundaryNames (PublicIO : TypeMap) [ProvableType PublicIO] :
     ((boundary (p := p) PublicIO).tables.map (·.circuit.name)) =
       ["sp1.native.memory_finalize", "sp1.native.memory_init"] := rfl
