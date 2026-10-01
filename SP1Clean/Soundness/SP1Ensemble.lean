@@ -243,11 +243,6 @@ theorem sp1StateVerifierMain_exitInteractions (pi : Var SP1PublicIO (ZMod p)) (o
 
 /-! ## The SP1 machine as a plain Clean `Ensemble` -/
 
-/-- The Clean-table projection of the 25-entry `supportedChips` descriptor. Every chip's verified
-`circuit` is wrapped as a Clean AIR `Component` (`⟨chip.circuit⟩`). -/
-def sp1Tables : List (Component (ZMod p)) :=
-  (supportedChips (p := p)).map (·.table)
-
 /-- Stable cardinalities used by positional decoder and provider-partition proofs. The two complete
 counts come from the role-specific neutral inventories; the intermediate constants name semantic
 prefixes within the provider segment. -/
@@ -259,11 +254,6 @@ def nonBumpProviderTableCount : ℕ := 26
 def stateSilentProviderTableCount : ℕ := 27
 def providerTableCount : ℕ := ProviderTableId.count
 def ensembleTableCount : ℕ := NativeTableId.all.length
-
-/-- Regression guard for the descriptor's Clean-table projection.  `sp1Tables` and `allChipKinds` now
-come from the same entries, so semantic and circuit wiring cannot drift as independent lists. -/
-theorem sp1Tables_length : (sp1Tables (p := p)).length = 25 := by
-  simpa [sp1Tables] using supportedChips_length (p := p)
 
 /-- The complete fixed-width realization of SP1's preprocessed Range table, ordered by width
 `0, …, 16`. -/

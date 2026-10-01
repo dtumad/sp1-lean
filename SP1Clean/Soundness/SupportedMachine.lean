@@ -137,6 +137,14 @@ theorem supportedChips_eq_map :
 theorem supportedChips_length : (supportedChips (p := p)).length = 25 := by
   simp [supportedChips]
 
+/-- The physical instruction components, in the neutral registry's stable order. -/
+def sp1Tables : List (Air.Flat.Component (ZMod p)) :=
+  (supportedChips (p := p)).map (·.table)
+
+/-- The table projection retains every registered instruction component. -/
+theorem sp1Tables_length : (sp1Tables (p := p)).length = 25 := by
+  simpa [sp1Tables] using supportedChips_length (p := p)
+
 /-- Circuit-bearing realization of the pure semantic route selected by `routeId`. -/
 def routeChip (opcode : Opcode) (rdIsX0 : Bool) : Option (SupportedChip p) :=
   (routeId opcode rdIsX0).map (supportedChipFor (p := p))
