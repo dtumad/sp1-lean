@@ -27,10 +27,9 @@ variable {F : Type} [FiniteField F]
 
 /-! ## Environment congruence
 
-`Expression.eval` reads only `env.get`. This is the granular fact behind "the committed `ProverData`
-is a free choice": every part of a component's per-row statement that is phrased in evaluated
-expressions transports across a change of `data`, and only the parts phrased in `env.data` — lookup
-containment and channel guarantees/requirements — do not. -/
+`Expression.eval` reads only `env.get`, so evaluated expressions transport across a change of
+evaluation data. Lookup containment and channel guarantees/requirements can read `env.data` and
+need separate transport proofs. The complete witness's canonical data still comes from its rows. -/
 
 theorem Expression.eval_congr {env env' : Environment F} (h : env.get = env'.get)
     (e : Expression F) : Expression.eval env e = Expression.eval env' e := by
@@ -53,9 +52,8 @@ theorem constraintsHold_congr {ops : Operations F} {env env' : Environment F}
   ⟨fun e he => (Expression.eval_congr h_get e).symm.trans (h.1 e he),
     fun l hl => h_lookups l hl (h.2 l hl)⟩
 
-/-- The usable form: `ConstraintsHold` transports across a change of committed `ProverData` that
-agrees on the tables the operations actually look up. This is the exact extent to which the data is
-a free choice — `Lookup.Contains` reads `env.data` at one key per lookup and nowhere else. -/
+/-- `ConstraintsHold` transports across a change of evaluation data that agrees on the tables
+the operations actually look up. `Lookup.Contains` reads one data key per lookup. -/
 theorem constraintsHold_congr_of_data_agree {ops : Operations F} {env env' : Environment F}
     (h_get : env.get = env'.get)
     (h_data : ∀ l ∈ ops.lookups,
@@ -68,8 +66,7 @@ theorem constraintsHold_congr_of_data_agree {ops : Operations F} {env env' : Env
     simp only [Vector.getElem_map, Expression.eval_congr h_get]
   simpa only [Lookup.Contains, ← h_data l hl, ← h_entry] using h_contains
 
-/-- A lookup-free operation list's constraints depend on the environment's cells alone: the
-committed `ProverData` is a free choice outright. -/
+/-- A lookup-free operation list's constraints depend on the environment's cells alone. -/
 theorem constraintsHold_congr_of_lookups_nil {ops : Operations F} {env env' : Environment F}
     (h_get : env.get = env'.get) (h_lookups : ops.lookups = [])
     (h : ops.ConstraintsHold env) : ops.ConstraintsHold env' :=
@@ -84,9 +81,8 @@ theorem AbstractInteraction.eval_congr {i : AbstractInteraction F} {env env' : E
 
 namespace Operations
 
-/-- The concrete interaction values a row emits depend on the environment's cells alone: the
-committed `ProverData` is a free choice. (The *predicates* `Interaction.Guarantees`/`Requirements`
-do take the data — but as an explicit argument, not through the environment.) -/
+/-- Concrete interaction values depend on the environment's cells alone. The predicates
+`Interaction.Guarantees`/`Requirements` still take data as an explicit argument. -/
 theorem interactionValues_congr {ops : Operations F} {env env' : Environment F}
     (h_get : env.get = env'.get) : ops.interactionValues env = ops.interactionValues env' := by
   simp only [interactionValues]
@@ -248,9 +244,8 @@ theorem buildRow_spec_requirements (c : Component F) (input : c.Input F)
   · exact built.1
   · exact built.2
 
-/-- Constraints of a built row survive a change of the environment's committed data, for a
-lookup-free component. Together with `buildRow_constraintsHold` this is what makes a table's shared
-`ProverData` a free choice: the rows do not have to be rebuilt for it. -/
+/-- A lookup-free component's constraints survive a change of evaluation data without
+rebuilding its rows. -/
 theorem constraintsHold_setData (c : Component F) {row : Array F} {data data' : ProverData F}
     (h_lookups : c.operations.lookups = [])
     (h : c.operations.ConstraintsHold (Environment.fromArray row data)) :
@@ -297,6 +292,14 @@ end Component
 /-! ## Assembling a whole table -/
 
 namespace Table
+
+/-- A physical table's literal ledger depends only on its committed cells. Semantic channel
+predicates and lookup constraints still require their own data-transport arguments. -/
+theorem interactionsWith_setData (table : Table F) (data data' : ProverData F)
+    (channel : RawChannel F) :
+    table.interactionsWith data channel = table.interactionsWith data' channel := by
+  apply congrArg List.flatten
+  exact List.map_congr_left fun _ _ => table.component.interactionValuesWith_setData channel
 
 /-- Build physical rows from semantic inputs and their row-local hints. Fixed columns retain
 Clean's exact row-indexed invariant. The data argument is used for generation, not stored. -/

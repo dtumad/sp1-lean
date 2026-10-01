@@ -19,17 +19,30 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 /-- The four store positions in the shared instruction inventory, after the seven boundary rows. -/
 def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
   let stores := LocalCore.tables image source
-    |>.set 25 ⟨ProtectedStore.byte⟩
-    |>.set 26 ⟨ProtectedStore.half⟩
-    |>.set 27 ⟨ProtectedStore.word⟩
-    |>.set 28 ⟨ProtectedStore.double⟩
-  stores ++ [⟨WritePermissionProvider.circuit image⟩]
+    |>.set 25 { circuit := ProtectedStore.byte }
+    |>.set 26 { circuit := ProtectedStore.half }
+    |>.set 27 { circuit := ProtectedStore.word }
+    |>.set 28 { circuit := ProtectedStore.double }
+  stores ++ [{ circuit := WritePermissionProvider.circuit image }]
+
+/-- Permission wrappers keep the original stores' canonical data keys. -/
+theorem tables_names (image : ProgramImage) (source : ExecutionSnapshot) :
+    (tables (p := p) image source).map (·.circuit.name) =
+      (LocalCore.tables (p := p) image source).map (·.circuit.name) ++ ["sp1.native.write_permission"] := by
+  rfl
+
+/-- The provider adds one new name to the unchanged local inventory. -/
+theorem tables_unique_names (image : ProgramImage) (source : ExecutionSnapshot) :
+    ((tables (p := p) image source).map (·.circuit.name)).Nodup := by
+  rw [tables_names, List.nodup_append]
+  refine ⟨(LocalCore.baseEnsemble image source).unique_names, by simp, ?_⟩
+  exact of_decide_eq_true rfl
 
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO where
   tables := tables image source
+  unique_names := tables_unique_names image source
   channels := WritePermissionProvider.channel.toRaw :: (LocalCore.ensemble image source).channels
-  verifier := LocalCore.verifier image source
-  verifier_length_zero := by intros; rfl
+  verifier := (LocalCore.ensemble image source).verifier
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) :
     (tables (p := p) image source).length = 60 := by

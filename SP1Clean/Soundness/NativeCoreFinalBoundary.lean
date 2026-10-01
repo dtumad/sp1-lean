@@ -17,7 +17,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 
 /-- Components following the final inventory in the physical native assembly. -/
 def afterFinalTables (image : ProgramImage) : List (Component (ZMod p)) :=
-  [⟨DecodedProgramProvider.circuit image⟩] ++ sp1Tables ++
+  [{ circuit := DecodedProgramProvider.circuit image }] ++ sp1Tables ++
     (sp1ProviderTables.take 23 ++ sp1ProviderTables.drop 26)
 
 theorem afterInitialTables_eq (image : ProgramImage) :
@@ -25,25 +25,31 @@ theorem afterInitialTables_eq (image : ProgramImage) :
       FinalMemoryEnsemble.inventory.views.map (·.component) ++ afterFinalTables image := by
   simp only [afterInitialTables, afterFinalTables, List.append_assoc]
 
-/-- A view of the unchanged physical suffix, with the final inventory's fixed verifier.
+/-- The final proof inventory inherits distinct names from the complete physical assembly. -/
+theorem final_unique_names (image : ProgramImage) :
+    ((afterInitialTables (p := p) image).map (·.circuit.name)).Nodup := by
+  have names := (baseEnsemble (p := p) image).unique_names
+  simp only [baseEnsemble, tables, List.map_append, List.nodup_append] at names
+  exact names.2.1
+
+/-- The unchanged physical suffix, with its own canonical data and fixed ordering verifier.
 The omitted initialization tables are silent on the final ordering channel. -/
 def finalWitness {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image)) :
-    EnsembleWitness (FinalMemoryEnsemble.ensemble (p := p) (afterFinalTables image) []) :=
-  EnsembleWitness.ofTables _ (witness.tables.drop 3) witness.data () (by
+    EnsembleWitness (FinalMemoryEnsemble.ensemble (p := p) (afterFinalTables image) []
+      (by simpa only [afterInitialTables_eq] using final_unique_names (p := p) image)) :=
+  EnsembleWitness.ofTables _ (witness.tables.drop 3) () (by
     rw [List.map_drop, witness.tables_map_component]
-    change (tables image).drop 3 = _
+    change (tables image).drop 3 =
+      FinalMemoryEnsemble.inventory.views.map (·.component) ++ afterFinalTables image
     rw [tables]
     have length : ((InitialMemoryEnsemble.views (p := p) image).map (·.component)).length = 3 := rfl
-    rw [List.drop_left' length, afterInitialTables_eq]
-    rfl) (by
-      intro table member
-      exact witness.same_data table (List.mem_of_mem_drop member))
+    rw [List.drop_left' length, afterInitialTables_eq])
 
 /-- Finalizer contracts follow before any Memory guarantees or execution facts are available. -/
 theorem finalTables_spec {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ table ∈ (finalWitness witness).tables.take (FinalMemoryEnsemble.inventory (p := p)).views.length,
-      table.Spec := by
+      table.Spec (finalWitness witness).data := by
   intro table member row rowMem
   have componentMem : table.component ∈ (FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) := by
     have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -51,13 +57,13 @@ theorem finalTables_spec {image : ProgramImage} (witness : EnsembleWitness (ense
     simpa only [FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
       OrderedBoundaryEnsemble.ensemble, List.take_left', List.length_map] using mapped
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
-  have tableMem : table ∈ witness.allTables :=
-    witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop (List.mem_of_mem_take member))
-  have byte := (finishedChannel_guarantees image witness constraints balanced table tableMem).1 row rowMem
+  have tableMem : table ∈ witness.tables := List.mem_of_mem_drop (List.mem_of_mem_take member)
+  have byte := ((finishedChannel_guarantees image witness constraints balanced).2 table tableMem).1 row rowMem
   have checked := constraints table tableMem row rowMem
   rw [← same] at byte checked ⊢
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
-  exact FinalMemoryEnsemble.view_spec id _ checked byte
+  exact FinalMemoryEnsemble.view_spec_setData id row witness.data (finalWitness witness).data
+    (FinalMemoryEnsemble.view_spec id _ checked byte)
 
 /-- Every consumed final record has a canonical location, independently of its value and clock. -/
 theorem final_records_canonical {image : ProgramImage}
@@ -80,26 +86,24 @@ theorem afterFinalTables_silent (image : ProgramImage) :
     ∀ component ∈ afterFinalTables (p := p) image,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels := by
   intro component member
-  have old (member : component ∈ (sp1Ensemble (p := p)).allTables) :
+  have old (member : component ∈ (sp1Ensemble (p := p)).tables) :
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels :=
-    fun used => finalChannel_not_old (sp1Ensemble_allTables_channels_subset component member used)
+    fun used => finalChannel_not_old (sp1Ensemble_tables_channels_subset component member used)
   simp only [afterFinalTables, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with (rfl | member) | member
   · change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ [programChannel.toRaw]
     simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, programChannel, Channel.toRaw]
-  · exact old (Ensemble.mem_allTables_of_mem_tables (by
-      rw [sp1Ensemble_tables]; exact List.mem_append_left _ member))
+  · exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_left _ member)
   · have providerMem : component ∈ sp1ProviderTables (p := p) := by
       rcases member with member | member
       · exact List.mem_of_mem_take member
       · exact List.mem_of_mem_drop member
-    exact old (Ensemble.mem_allTables_of_mem_tables (by
-      rw [sp1Ensemble_tables]; exact List.mem_append_right _ providerMem))
+    exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_right _ providerMem)
 
 private theorem initialTables_final_silent {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     (witness.tables.take 3).flatMap
-      (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) = [] := by
+      (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply table.interactionsWith_nil_of_channel_not_mem
@@ -132,60 +136,58 @@ private theorem initialTables_final_silent {image : ProgramImage}
       byteChannel, Channel.toRaw]
 
 private theorem verifier_final_interactions (image : ProgramImage) (env : Environment (ZMod p)) :
-    ({ circuit := verifier image } : Component (ZMod p)).operations.interactionValuesWith
+    (verifierInteractions image).circuitOperations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw env =
       [(OrderedBoundary.channel OrderedFinalProvider.channelName).pushedValue OrderedMemoryEnsemble.startKey,
        (OrderedBoundary.channel OrderedFinalProvider.channelName).pulledValue OrderedMemoryEnsemble.endKey] := by
-  have stateEmpty (input : Var SP1PublicIO (ZMod p)) (offset : ℕ) :=
-    InteractionRecovery.interactionsWith_main_eq_nil sp1StateVerifier.base
-      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw input offset (by
-        exact fun used => finalChannel_not_old
-          (sp1Ensemble_allTables_channels_subset _ Ensemble.mem_allTables_verifierTable used))
-  have initialEmpty (offset : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
-    (OrderedBoundaryVerifier.circuit (p := p) OrderedInitialProvider.channelName
-      OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey).base
-    (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw () offset (by
-      change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
-        [(OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw]
-      simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, OrderedInitialProvider.channelName, Channel.toRaw])
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
-    Component.rowOperations, verifier, verifierMain, circuit_norm]
-  simp only [Operations.interactionsWith, OrderedBoundaryVerifier.circuit] at initialEmpty
-  simp only [Operations.interactionsWith] at stateEmpty
-  simp only [GeneralFormalCircuit.toSubcircuit_interactions, stateEmpty, initialEmpty,
-    List.nil_append, OrderedBoundaryVerifier.circuit]
-  have final (offset : ℕ) := OrderedBoundaryVerifier.main_interactions (p := p) OrderedFinalProvider.channelName
-    OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey () offset
-  simp only [Operations.interactionsWith] at final
-  rw [final]
+  have original : ((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).interactionsWith
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw =
+      [((OrderedBoundary.channel OrderedFinalProvider.channelName).pushed (const (OrderedMemoryEnsemble.startKey (p := p)))).toRaw,
+       ((OrderedBoundary.channel OrderedFinalProvider.channelName).pulled (const (OrderedMemoryEnsemble.endKey (p := p)))).toRaw] := by
+    simp [Operations.interactionsWith, verifierMain, GeneralFormalCircuit.toSubcircuit_interactions,
+      sp1StateVerifier, sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
+      OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
+      stateChannel, byteChannel, exitChannel, circuit_norm]
+  simp only [Verifier.Program.circuitOperations, Verifier.Program.operations,
+    Operations.interactionValuesWith, Operations.interactionsWith, verifierInteractions_interactions]
+  change (((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).interactionsWith _).map _ = _
+  rw [original]
   simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Channel.eval_pulled, ProvableType.eval_const]
-  rfl
 
-/-- The final proof view preserves the actual private-channel ledger, including its verifier. -/
+/-- The final proof view preserves the actual private-channel ledger, including its verifier.
+Interaction values depend only on the retained cells, even though canonical data changes. -/
 theorem finalWitness_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     (finalWitness witness).interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw =
       witness.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw := by
   have suffix : witness.tables.flatMap
-      (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) =
+      (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) =
       (witness.tables.drop 3).flatMap
-        (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) := by
+        (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) := by
     conv_lhs => rw [← List.take_append_drop 3 witness.tables]
     rw [List.flatMap_append, initialTables_final_silent, List.nil_append]
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.allTables, List.flatMap_cons]
-  rw [suffix]
+  have cells : (witness.tables.drop 3).flatMap
+      (·.interactionsWith (finalWitness witness).data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) =
+      (witness.tables.drop 3).flatMap
+        (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) :=
+    congrArg List.flatten (List.map_congr_left fun table _ => table.interactionsWith_setData _ _ _)
+  have different : bootChannel (p := p) image ≠
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw := by
+    intro equal
+    exact (VerifierChannel.fresh "sp1.native.boot" (baseEnsemble (p := p) image)).unregistered
+      (show bootChannel image ∈ (baseEnsemble image).channels from
+        equal.symm ▸ List.mem_cons_of_mem _ (List.mem_cons_self ..))
+  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
+    EnsembleWitness.tableContext, TableContext.interactionsWith]
+  rw [show (finalWitness witness).tables = witness.tables.drop 3 from rfl, suffix, cells]
+  dsimp only [Ensemble.verifierOperations, ensemble]
+  rw [verifierProgram_values,
+    Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil, verifier_final_interactions]
   apply congrArg (fun front => front ++ (witness.tables.drop 3).flatMap
-    (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw))
-  simp only [Table.interactionsWith, EnsembleWitness.verifierTable_flatMap,
-    EnsembleWitness.verifierTable_environment, EnsembleWitness.verifierTable_component]
-  change (FinalMemoryEnsemble.ensemble (p := p) (afterFinalTables image) []).verifierTable.operations.interactionValuesWith
-      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw _ =
-    ({ circuit := verifier image } : Component (ZMod p)).operations.interactionValuesWith
-      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw _
-  rw [verifier_final_interactions]
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-    Ensemble.verifierTable, FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
-    OrderedBoundaryEnsemble.ensemble, OrderedBoundaryVerifier.circuit]
+    (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw))
+  change (OrderedBoundaryVerifier.verifierProgram _ _ _).circuitOperations.interactionValuesWith _ _ = _
+  simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
+    Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
 
 /-- The final inventory has one record per decoded location before any value is grounded.
@@ -198,13 +200,17 @@ theorem final_records_locations_nodup {image : ProgramImage}
     (finalWitness witness) (afterFinalTables_silent image) (finalTables_spec witness constraints balanced)
   change BalancedInteractions ((finalWitness witness).interactionsWith _)
   rw [finalWitness_interactions]
-  exact balanced _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
+  exact balanced _ (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
 
 /-- The final inventory is precisely the negative Memory ledger of its three physical tables. -/
 theorem final_memory_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
+    ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
       (FinalMemoryEnsemble.records (finalWitness witness)).map (memoryChannel.emittedValue (-1)) :=
-  FinalMemoryEnsemble.memory_interactions_eq (finalWitness witness)
+by
+  have cells : ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
+      ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith (finalWitness witness).data memoryChannel.toRaw) :=
+    congrArg List.flatten (List.map_congr_left fun table _ => table.interactionsWith_setData _ _ _)
+  exact cells.trans (FinalMemoryEnsemble.memory_interactions_eq (finalWitness witness))
 
 end SP1Clean.Soundness.NativeCore

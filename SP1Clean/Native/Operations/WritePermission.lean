@@ -68,6 +68,7 @@ instance elaborated (image : ProgramImage) :
     ElaboratedCircuit (ZMod p) Inputs unit (main image) := by elaborate_circuit
 
 def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.write_permission"
   main := main image
   elaborated := elaborated image
   channelsWithRequirements := [channel.toRaw]

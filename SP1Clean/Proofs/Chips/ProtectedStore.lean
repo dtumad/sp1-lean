@@ -22,6 +22,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 def byte : GeneralFormalCircuit (ZMod p) StoreByteChip.Inputs StoreByteChip.Columns where
+  name := (StoreByteChip.circuit (p := p)).name
   main input := do
     let output ← StoreByteChip.circuit input
     WritePermissionProvider.channel.pullIf input.is_real output.address_operation.addr_operation.value
@@ -38,6 +39,7 @@ def byte : GeneralFormalCircuit (ZMod p) StoreByteChip.Inputs StoreByteChip.Colu
     exact h_assumptions
 
 def half : GeneralFormalCircuit (ZMod p) StoreHalfChip.Inputs StoreHalfChip.Columns where
+  name := (StoreHalfChip.circuit (p := p)).name
   main input := do
     let output ← StoreHalfChip.circuit input
     Circuit.forEach (Vector.range 2) fun index => do
@@ -56,6 +58,7 @@ def half : GeneralFormalCircuit (ZMod p) StoreHalfChip.Inputs StoreHalfChip.Colu
     exact h_assumptions
 
 def word : GeneralFormalCircuit (ZMod p) StoreWordChip.Inputs StoreWordChip.Columns where
+  name := (StoreWordChip.circuit (p := p)).name
   main input := do
     let output ← StoreWordChip.circuit input
     Circuit.forEach (Vector.range 4) fun index => do
@@ -74,6 +77,7 @@ def word : GeneralFormalCircuit (ZMod p) StoreWordChip.Inputs StoreWordChip.Colu
     exact h_assumptions
 
 def double : GeneralFormalCircuit (ZMod p) StoreDoubleChip.Inputs StoreDoubleChip.Columns where
+  name := (StoreDoubleChip.circuit (p := p)).name
   main input := do
     let output ← StoreDoubleChip.circuit input
     Circuit.forEach (Vector.range 8) fun index => do

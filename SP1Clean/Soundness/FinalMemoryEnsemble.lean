@@ -87,6 +87,22 @@ def recordFor (id : TableId) (env : Environment (ZMod p)) : Option (MemoryMsg (Z
   | .ram => some (({ circuit := ramCircuit } : Component (ZMod p)).rowOutput env)
   | .terminal => none
 
+/-- Finalizer contracts read only committed cells. Dropping unrelated tables changes canonical
+data, but does not change the meaning of these three components' decoded rows. -/
+theorem view_spec_setData (id : TableId) (row : Array (ZMod p))
+    (data data' : ProverData (ZMod p))
+    (valid : (viewFor id).component.Spec (Environment.fromArray row data)) :
+    (viewFor id).component.Spec (Environment.fromArray row data') := by
+  have input : (viewFor id).component.rowInput (Environment.fromArray row data') =
+      (viewFor id).component.rowInput (Environment.fromArray row data) :=
+    ProvableType.valueFromOffset_congr _ 0 (fun _ _ => rfl)
+  have output : (viewFor id).component.rowOutput (Environment.fromArray row data') =
+      (viewFor id).component.rowOutput (Environment.fromArray row data) :=
+    Component.rowOutput_congr _ rfl
+  unfold Component.Spec at valid ⊢
+  rw [input, output]
+  cases id <;> exact valid
+
 def inventory : OrderedMemoryEnsemble.Inventory channelName (MemoryBoundary.FinalSpec (p := p)) where
   Index := TableId
   tableIds := [.registers, .ram, .terminal]
