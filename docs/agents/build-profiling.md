@@ -124,14 +124,14 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
 - The `path:` list is part of an entry's version hash: editing it invalidates every entry, so it
   ships with a `SP1_CACHE_VERSION` bump and one cold transition.
 - A PR's entries live on `refs/pull/N/merge` and are invisible to `main`, so every merge used to
-  redo the PR's build. After all checks pass, `build-full` passes the completed core, alignment
-  and test build to `main` as an artifact. Lake still checks the merged tree's content hashes.
+  redo the PR's build. After all full checks pass, the build runner passes the completed core,
+  alignment and test build to `main` as an artifact. Lake still checks the merged tree's content hashes.
 - Mathlib's downloaded cache includes generated C but omits native objects. A separate cache,
   keyed by toolchain and dependency pins, retains those objects and their traces for the
-  backend exporter. Only the full job saves it; downloaded oleans are not duplicated there.
+  backend exporter. Only full runs save it; downloaded oleans are not duplicated there.
 - Weekly runs and the manual `clean_build` input discard project outputs while reusing pinned
-  dependencies. The full job then restores only that run's fresh core, or starts cold if it is
-  unavailable. This catches stale project oleans, including imports of deleted modules.
+  dependencies. The full phase uses the same runner and fresh build directory as the core phase.
+  This catches stale project oleans, including imports of deleted modules.
 - Never save the cache from a cancelled job (a truncated `.olean` behind a written trace poisons
   every later restore); `main` runs queue instead of cancelling.
 - The 4-vCPU runner does not swap; the 5–11× CI-vs-solo inflation of big modules was **CPU
@@ -139,9 +139,15 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
   also defaults to all cores. 16 threads on 4 vCPU cost a third of the CPU-seconds; 3 jobs × 2
   threads (`LEAN_NUM_THREADS=3` + `-j2` in `moreLeanArgs`) is −17 % wall on a cold build.
 - GitHub serves a job's log only after it completes; `gh run view --log` is empty in progress.
-- Full-tree `lake lint`, export/conformance gates and both compiled trust scopes run in
-  `build-full` on every PR. It restores the exact core cache produced by `build`, so the
-  additional job builds the affected alignment closure. No label controls proof coverage.
+- The `build` runner performs core and full builds on every PR, then full-tree `lake lint`,
+  export/conformance gates and both compiled trust scopes. Setup and cache restore/save happen
+  once, and full lint covers the core. `build-full` retains the full-check status name and fails
+  if that runner fails, is cancelled or does not select full validation; it performs no build.
+  Core-only dispatches and `ci-testing` pushes still run core lint. No label controls PR coverage.
+- Production, cache cleanup and build experiments must agree on the cache version; production
+  and experiments also need identical path lists, since paths participate in the cache identity.
+  Tooling regressions check this contract. Changing only the producer can make cleanup delete
+  valid entries or make a purported warm experiment miss its cache.
 
 ## Measurement protocol for a build-time PR
 

@@ -36,7 +36,7 @@ permissions:
   pull-requests: read
 
 env:
-  SP1_CACHE_VERSION: v1
+  SP1_CACHE_VERSION: v2
   GH_TOKEN: ${{ github.token }}
 
 jobs:
