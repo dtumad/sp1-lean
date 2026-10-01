@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.SP1Ensemble
 import ToClean.Air.TableBuild
+import ToClean.Air.EnsembleBuild
 
 /-!
 # Every table speaks only on the ensemble's channels
@@ -733,6 +734,26 @@ theorem channel_eq_of_kindOf_eq {c₁ c₂ : RawChannel (ZMod p)}
          revert hkind
          simp [Channel.toRaw_name, stateChannel, byteChannel, programChannel, memoryChannel,
            exitChannel, Channels.syscallChannel, Channels.publicValuesChannel, kindOf])
+
+/-- Filtering the complete witness ledger by a registered kind keeps exactly that channel's
+ordered occurrences, including verifier emissions and zero multiplicities. -/
+theorem witness_channelLedger_eq_filter_kind
+    (witness : Air.Flat.EnsembleWitness (sp1Ensemble (p := p)))
+    (channel : RawChannel (ZMod p)) (registered : channel ∈ (sp1Ensemble (p := p)).channels)
+    (kind : InteractionKind) (channelKind : kindOf channel.name = kind) :
+    (witness.interactionsWith channel).map Interaction.toAccess =
+      (witness.interactions.map Interaction.toAccess).filter (fun access => access.1 = kind) := by
+  classical
+  rw [Air.Flat.EnsembleWitness.interactionsWith_eq_filter, List.filter_map]
+  apply congrArg (List.map Interaction.toAccess)
+  apply List.filter_congr
+  intro interaction member
+  by_cases same : interaction.channel = channel
+  · simp only [Function.comp_def, Interaction.toAccess, same, channelKind, decide_true]
+  · have different : kindOf interaction.channel.name ≠ kind := fun selected =>
+      same (channel_eq_of_kindOf_eq (witness_interaction_channel_mem witness member)
+        registered (selected.trans channelKind.symm))
+    simp only [Function.comp_def, Interaction.toAccess, different, same, decide_false]
 
 /-- **The side condition `Model/CleanLedger.lean`'s kind-filter asks of a table**, discharged for
 every table of this ensemble: an interaction whose kind matches a declared channel's *is* on that

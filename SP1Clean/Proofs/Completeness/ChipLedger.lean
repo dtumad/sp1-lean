@@ -33,18 +33,8 @@ theorem busLedger_eq_channelLedger (trace : SupportedCoreTraceWitness p)
     (K : InteractionKind) (hkind : kindOf channel.name = K) :
     trace.fullLedger.filter (fun a => a.1 = K) =
       (trace.witness.interactionsWith channel).map Interaction.toAccess := by
-  classical
-  rw [trace.fullLedger_eq_witness_interactions, List.filter_map,
-    Air.Flat.EnsembleWitness.interactionsWith_eq_filter]
-  apply congrArg (List.map Interaction.toAccess)
-  apply List.filter_congr
-  intro interaction member
-  by_cases same : interaction.channel = channel
-  · simp only [Function.comp_def, Interaction.toAccess, same, hkind, decide_true]
-  · have different : kindOf interaction.channel.name ≠ K := fun kind =>
-      same (channel_eq_of_kindOf_eq (witness_interaction_channel_mem trace.witness member)
-        hchannel (kind.trans hkind.symm))
-    simp only [Function.comp_def, Interaction.toAccess, different, same, decide_false]
+  rw [trace.fullLedger_eq_witness_interactions]
+  exact (witness_channelLedger_eq_filter_kind trace.witness channel hchannel K hkind).symm
 
 /-- The State instance. -/
 theorem stateLedger_eq_channelLedger (trace : SupportedCoreTraceWitness p) :

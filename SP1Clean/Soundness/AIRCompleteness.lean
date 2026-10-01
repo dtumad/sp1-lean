@@ -11,7 +11,7 @@ import SP1Clean.Soundness.AIR
 A well-formed generated trace with balanced Clean interactions, matching public values and
 semantic boundary binding yields the same native relation consumed by `Soundness/AIR.lean`.
 The witness map is `trace.witness`: 55 physical tables with canonical derived data and a separate
-public verifier. Circuit completeness proves their constraints; channel balance and boundary
+public verifier. Circuit completeness proves physical constraints; channel balance and boundary
 binding are explicit obligations of `SupportedCoreGeneratedTraceRelation`.
 
 Byte/Program providers close demand, State/Memory use token chains, and Exit uses the ordinary
@@ -402,8 +402,8 @@ theorem SupportedCoreTraceWitness.syscallTableInactive (trace : SupportedCoreTra
     simp at hlen
 
 /-- Assemble a native witness from a well-formed, balanced, boundary-bound generated trace.
-Circuit completeness derives the public verifier and physical-table constraints. Balance and
-semantic boundary binding come from the relation; public input matches by construction. -/
+Circuit completeness derives physical-table constraints. Balance includes the public verifier;
+semantic boundary binding comes from the relation, and public input matches by construction. -/
 def supported_core_generated_trace_functionalCompleteness :
     WitnessRelation.FunctionalCompleteness (SupportedCoreNativeRelation (p := p))
       (SupportedCoreGeneratedTraceRelation (p := p)) where
