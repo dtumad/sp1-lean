@@ -149,7 +149,7 @@ theorem supported_core_native_sound :
     obtain ⟨memBoundary, memWF, memContent⟩ :=
       exists_populated_memoryBoundary witness initial
         (Semantics.StateMsg.timeNat
-          (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
+          (HaltChip.statePulledMessage (haltRow witness.data halt)))
         boundary.memoryFinalizeProviderUnique boundary.memoryProvider hg.memoryFinalizeTruth
     have clocks : statement.finalClkNat =
         statement.initClkNat + 8 * rows.length + 264 := by
@@ -162,7 +162,7 @@ theorem supported_core_native_sound :
           statement.publicValues.init_clk_low + 8 * rows.length + 264
       omega
     have pullLe : Semantics.StateMsg.timeNat
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) ≤
+        (HaltChip.statePulledMessage (haltRow witness.data halt)) ≤
         Semantics.clkNat statement.publicValues.final_clk_high
           statement.publicValues.final_clk_low := by
       have h1 := hg.finalClock
@@ -357,7 +357,7 @@ theorem supported_core_native_shard_execution_halted
   obtain ⟨memBoundary, memWF, memContent⟩ :=
     exists_populated_memoryBoundary witness initial
       (Semantics.StateMsg.timeNat
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) halt')))
+        (HaltChip.statePulledMessage (haltRow witness.data halt')))
       boundary.memoryFinalizeProviderUnique boundary.memoryProvider hg.memoryFinalizeTruth
   let semanticWitness := Machine.CoreShardSemanticWitness.ofOrdinaryTrace
     statement.program memBoundary execution
@@ -367,7 +367,7 @@ theorem supported_core_native_shard_execution_halted
   have evaluated := Machine.CoreShardSemanticWitness.trace?_ofTrace
     (supportedCoreShardModel (p := p)) statement.program memBoundary execution execValid
   have clocksLe : Semantics.StateMsg.timeNat
-      (HaltChip.statePulledMessage (haltRow (haltTable witness) halt')) ≤
+      (HaltChip.statePulledMessage (haltRow witness.data halt')) ≤
       Semantics.clkNat statement.publicValues.final_clk_high
         statement.publicValues.final_clk_low := by
     have := hg.finalClock

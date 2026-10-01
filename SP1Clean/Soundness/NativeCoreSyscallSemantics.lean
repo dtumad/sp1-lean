@@ -28,8 +28,8 @@ private theorem syscall_member {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : ExecutionRow.syscall row ∈ executionRows witness) :
     ∃ physical ∈ (systemTable witness 3).table,
-      syscallInstrsRow (systemTable witness 3) physical = row ∧ row.is_real = 1 := by
-  have active : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real) := by
+      syscallInstrsRow witness.data physical = row ∧ row.is_real = 1 := by
+  have active : row ∈ activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real) := by
     simpa [executionRows] using member
   obtain ⟨mapped, real⟩ := List.mem_filter.mp active
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
@@ -44,8 +44,8 @@ theorem syscallRows_contract {image : ProgramImage}
     (currency : ∀ mp ∈ (syscallRowFacts row).memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
     SyscallInstrsChip.Spec row ∧ SyscallInstrsChip.PulledFacts row := by
   obtain ⟨physical, physicalMem, rfl, _⟩ := syscall_member member
-  have finished := finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 3)
-  exact syscallInstrsRow_contract_of_component _ (systemTable_component witness 3)
+  have finished := (finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 3)
+  exact syscallInstrsRow_contract_of_component _ witness.data (systemTable_component witness 3)
     (systemTable_constraints witness constraints 3) finished.1 finished.2 physicalMem currency
 
 /-- Row-local AIR semantics for every active syscall, including a PC increment across a 16-bit
@@ -102,8 +102,8 @@ private theorem syscall_returnCoordinates {image : ProgramImage} (valid : image.
         StateMsg.timeNat (syscallRowFacts row).statePull + 4 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := syscall_member member
   have committed := syscall_program_committed valid witness constraints balanced physicalMem real
-  have clock := syscallInstrsRow_cpuState_bounds_of_component _ (systemTable_component witness 3)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 3)).1 physicalMem real
+  have clock := syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
+    ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 3)).1 physicalMem real
   exact syscall_returnCoordinates_of_facts _ _ committed clock
 
 /-- Incoming currency and the host step fact yield an actual syscall transition on the constructed

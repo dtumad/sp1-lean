@@ -23,10 +23,10 @@ It neither assumes handler uniqueness nor changes the local shard's arbitrary en
 theorem hostCalls_clocks_nodup_of_orderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (channels : OrderingChannels witness)
-    (table : Table (ZMod p))
-    (projected : ((HostCallLedger.activeRows table).map fun env => (HostCallLedger.input env).instruction) =
-      activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
-    ((HostCallLedger.calls table).map HostCallLedger.clock).Nodup := by
+    (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (projected : ((HostCallLedger.activeRows table data).map fun env => (HostCallLedger.input env).instruction) =
+      activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
+    ((HostCallLedger.calls table data).map HostCallLedger.clock).Nodup := by
   have unique := executionRows_clocks_nodup_of_orderingChannels witness constraints channels
   simp only [executionRows, List.map_append, List.map_map, Function.comp_def] at unique
   have syscalls := (List.nodup_append.mp unique).2.1
@@ -39,11 +39,11 @@ theorem hostCalls_clocks_nodup_of_orderingChannels {image : ProgramImage} {sourc
 theorem hostCalls_clocks_nodup {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (table : Table (ZMod p))
-    (projected : ((HostCallLedger.activeRows table).map fun env => (HostCallLedger.input env).instruction) =
-      activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
-    ((HostCallLedger.calls table).map HostCallLedger.clock).Nodup :=
+    (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (projected : ((HostCallLedger.activeRows table data).map fun env => (HostCallLedger.input env).instruction) =
+      activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
+    ((HostCallLedger.calls table data).map HostCallLedger.clock).Nodup :=
   hostCalls_clocks_nodup_of_orderingChannels witness constraints
-    (orderingChannels_of_balanced witness constraints balanced) table projected
+    (orderingChannels_of_balanced witness constraints balanced) table data projected
 
 end SP1Clean.Soundness.LocalCore

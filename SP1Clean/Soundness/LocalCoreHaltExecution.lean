@@ -23,8 +23,8 @@ private theorem halt_member {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈ executionRows witness) :
     ∃ physical ∈ (systemTable witness 2).table,
-      haltRow (systemTable witness 2) physical = row ∧ row.is_real = 1 := by
-  have active : row ∈ activeSystemRows (systemTable witness 2) haltRow (·.is_real) := by
+      haltRow witness.data physical = row ∧ row.is_real = 1 := by
+  have active : row ∈ activeSystemRows (systemTable witness 2) (haltRow witness.data) (·.is_real) := by
     simpa [executionRows] using member
   exact NativeCore.activeSystemRows_member _ _ _ active
 
@@ -35,14 +35,14 @@ theorem halt_program_committed_of_balance {image : ProgramImage} {source : Execu
     {row : HaltChip.Inputs (ZMod p)} (member : ExecutionRow.halt row ∈ executionRows witness) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg (HaltChip.programMessage row)) := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := halt_member member
-  let row := haltRow (systemTable witness 2) physical
+  let row := haltRow witness.data physical
   let message := HaltChip.programMessage row
   let interaction := programChannel.pulledIfValue row.is_real message
   have emitted : interaction ∈ witness.interactionsWith programChannel.toRaw := by
     apply EnsembleWitness.mem_interactionsWith.mpr
-    refine ⟨systemTable witness 2, systemTable_mem witness 2, List.mem_flatMap.mpr ⟨physical, physicalMem, ?_⟩⟩
+    refine Or.inr ⟨systemTable witness 2, systemTable_mem witness 2, List.mem_flatMap.mpr ⟨physical, physicalMem, ?_⟩⟩
     rw [← typedInteractionValuesWith_raw,
-      haltRow_typedProgram_of_component _ (systemTable_component witness 2)]
+      haltRow_typedProgram_of_component _ witness.data (systemTable_component witness 2)]
     exact List.mem_cons_self
   exact program_pull_committed_of_balance valid witness constraints balanced message interaction emitted
     (by change -row.is_real = -1; rw [real]) rfl
@@ -54,12 +54,12 @@ theorem halt_program_committed {image : ProgramImage} {source : ExecutionSnapsho
     {row : HaltChip.Inputs (ZMod p)} (member : ExecutionRow.halt row ∈ executionRows witness) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg (HaltChip.programMessage row)) := by
   exact halt_program_committed_of_balance valid witness constraints
-    (balanced _ (by simp [ensemble, sp1Ensemble_channels])) member
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, sp1Ensemble_channels])) member
 
 /-- HALT's own assertions fix the zero code and three zero exit limbs; Byte fixes the clock. -/
 theorem haltRows_staticFacts_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (constraints : witness.Constraints) (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     {row : HaltChip.Inputs (ZMod p)} (member : ExecutionRow.halt row ∈ executionRows witness) :
     Word.toBitVec64 row.x5_memory.prev_value = 0 ∧
       (row.x10_memory.prev_value[1] = 0 ∧ row.x10_memory.prev_value[2] = 0 ∧ row.x10_memory.prev_value[3] = 0) ∧
@@ -67,13 +67,13 @@ theorem haltRows_staticFacts_of_byte {image : ProgramImage} {source : ExecutionS
   obtain ⟨physical, physicalMem, rfl, real⟩ := halt_member member
   have checked := systemTable_constraints witness constraints 2 physical physicalMem
   rw [systemTable_component witness 2] at checked
-  have realEval : Expression.eval ((systemTable witness 2).environment physical)
+  have realEval : Expression.eval (Environment.fromArray physical witness.data)
       (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p)).is_real = 1 := by
     simpa only [haltRow_eq, circuit_norm] using real
   have shallow := shallowConstraints_of_componentConstraints HaltChip.circuit _ checked
   have zero := HaltChip.codeZero_of_shallow _ _ _ shallow realEval
   have high := HaltChip.exitHighZero_of_shallow _ _ _ shallow realEval
-  refine ⟨?_, ?_, haltRow_cpuState_bounds_of_component _ (systemTable_component witness 2)
+  refine ⟨?_, ?_, haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
     (bytes _ (systemTable_mem witness 2))
     physicalMem real⟩
   · simpa only [haltRow_eq] using zero
@@ -88,7 +88,7 @@ theorem haltRows_staticFacts {image : ProgramImage} {source : ExecutionSnapshot}
       (row.x10_memory.prev_value[1] = 0 ∧ row.x10_memory.prev_value[2] = 0 ∧ row.x10_memory.prev_value[3] = 0) ∧
       (((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧ row.state.clk_16_24.val < 2 ^ 8) := by
   exact haltRows_staticFacts_of_byte witness constraints
-    (fun table present => (finishedChannel_guarantees image source witness constraints balanced table present).1) member
+    (fun table present => ((finishedChannel_guarantees image source witness constraints balanced).2 table present).1) member
 
 /-- A physical HALT row, at a grounded prefix, executes on the actual current host and records
 its exit. The complete successor preserves the rest of the host and Sail state literally. -/

@@ -27,9 +27,9 @@ theorem instruction_engineFacts {image : ProgramImage} {source : ExecutionSnapsh
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈ LocalCore.executionRows (localWitness witness)) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid policy) source.sail.realize carrier.timeline
-        (row.ordinaryRowFacts witness.data) ∧
+        (row.ordinaryRowFacts (localWitness witness).data) ∧
       FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid policy) source.sail.realize carrier.timeline
-        (row.ordinaryRowFacts witness.data) := by
+        (row.ordinaryRowFacts (localWitness witness).data) := by
   have originalConstraints := localWitness_constraints witness constraints
   have originalBalance := localWitness_balanced witness balanced
   have active : row ∈ LocalCore.instructionRows (localWitness witness) ∧
@@ -39,7 +39,7 @@ theorem instruction_engineFacts {image : ProgramImage} {source : ExecutionSnapsh
     originalConstraints originalBalance active.1
   have contracts := supportedChip_groundingContracts row.chip inputs.registered
   have permission := instructionRows_write_permitted witness constraints balanced active.1 active.2
-  apply contracts.engineFactsLocalG_of_rowEffect witness.data row rfl inputs active.2 _
+  apply contracts.engineFactsLocalG_of_rowEffect (localWitness witness).data row rfl inputs active.2 _
     (LocalCore.instructionRows_decoded valid (localWitness witness) originalConstraints originalBalance member)
     (carrier.trajectory valid policy) source.sail.realize carrier.timeline
     (fun _ effect loaded => effect.romLoaded_of_writePermission valid permission loaded)
@@ -47,9 +47,9 @@ theorem instruction_engineFacts {image : ProgramImage} {source : ExecutionSnapsh
     have successor := carrier.originalTimeStep member n time
     have duration := (LocalCore.executionRows_advancing (localWitness witness)
       originalConstraints originalBalance member).2
-    change StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePush =
-      StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePull + 8 at duration
-    change StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePush = carrier.timeline.start (n + 1) at successor
+    change StateMsg.timeNat (row.ordinaryRowFacts (localWitness witness).data).statePush =
+      StateMsg.timeNat (row.ordinaryRowFacts (localWitness witness).data).statePull + 8 at duration
+    change StateMsg.timeNat (row.ordinaryRowFacts (localWitness witness).data).statePush = carrier.timeline.start (n + 1) at successor
     exact successor.symm.trans (duration.trans (congrArg (fun clock => clock + 8) time))
   · exact carrier.trajectory_ordinary valid policy originalConstraints originalBalance member
 

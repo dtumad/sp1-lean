@@ -16,7 +16,8 @@ open Circuit Air.Flat HostCallChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-local instance : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+/-- Match the field equality used by Clean's gated balance filters. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
