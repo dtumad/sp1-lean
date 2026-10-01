@@ -12,8 +12,8 @@ import ToClean.Circuit.SubcircuitProjection
 This assembly replaces the legacy Program and memory-boundary providers with the fixed decoded
 ROM and the ordered register/RAM inventories. The verifier fixes boot PC/time and both private
 ordering boundaries. Its five public boot assertions use a fresh check channel, with exactly
-ten occurrences and no additional physical table. Byte/Program closure uses the combined ledger. Connecting this
-assembly to mixed-row timed grounding and the complete host environment remains separate work;
+ten occurrences and no additional physical table. Byte/Program closure uses the combined ledger.
+Connecting this assembly to mixed-row timed grounding and the complete host environment remains separate work;
 this module does not claim an execution theorem for the assembly.
 -/
 
@@ -153,7 +153,8 @@ theorem verifierProgram_values (image : ProgramImage) (checkName : String)
     List.map_append, Operations.interactionValuesWith, Operations.interactionsWith,
     Operations.interactions_append, List.filter_append]
 
-private theorem verifierChecks_iff (image : ProgramImage) (env : Environment (ZMod p)) :
+/-- The source circuit's literal assertions are exactly the public boot contract. -/
+theorem verifierChecks_iff (image : ProgramImage) (env : Environment (ZMod p)) :
     (∀ expression ∈ ((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).constraints,
       Expression.eval env expression = 0) ↔
       (Eval.eval env (varFromOffset SP1PublicIO 0 : Var SP1PublicIO (ZMod p))).BootFor image := by

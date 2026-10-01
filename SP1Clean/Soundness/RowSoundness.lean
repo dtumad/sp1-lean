@@ -161,14 +161,12 @@ theorem witness_decodedRow_finishedChannelGuarantees
   · apply channelGuarantees_of_mem_decodeInstructionTables witness.data byteChannel.toRaw
       (witness_instructionTables_aligned witness)
     · intro table tableMem
-      exact (finished table
-        (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take tableMem))).1
+      exact (finished.2 table (List.mem_of_mem_take tableMem)).1
     · exact decodedMem
   · apply channelGuarantees_of_mem_decodeInstructionTables witness.data programChannel.toRaw
       (witness_instructionTables_aligned witness)
     · intro table tableMem
-      exact (finished table
-        (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take tableMem))).2
+      exact (finished.2 table (List.mem_of_mem_take tableMem)).2
     · exact decodedMem
 
 /-- Physical row evidence independent of any enclosing ensemble. The Memory channel is deliberately
@@ -241,14 +239,14 @@ capstone these are assembled dynamically: Memory truth supplies the remaining gu
 discharge the chip-specific assumptions at the row's execution position. -/
 structure DecodedRowSoundnessInputs (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) : Prop where
-  assumptions : decoded.chip.table.Assumptions (decoded.environment data)
+  assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment data)
   guarantees : decoded.chip.table.operations.FullGuarantees (decoded.environment data)
 
 /-- What remains open after the finished Byte/Program theorem and the vacuous State channel.  This is
 the precise dynamic contract the timed Memory/readiness layer must establish per execution row. -/
 structure DecodedRowOpenSoundnessInputs (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p)) : Prop where
-  assumptions : decoded.chip.table.Assumptions (decoded.environment data)
+  assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment data)
   memory : decoded.chip.table.operations.ChannelGuarantees memoryChannel.toRaw
     (decoded.environment data)
 
@@ -268,7 +266,7 @@ address-validity, and immediate facts that do not all come from Memory currency.
 theorem DecodedInstructionRow.openSoundnessInputs_of_grounded
     (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p))
     (program : Target.GuestProgram) (initial : SailState) (initialClock : ℕ)
-    (assumptions : decoded.chip.table.Assumptions (decoded.environment data))
+    (assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment data))
     (grounded : TimedGrounding.Grounded program initial initialClock
       (decoded.ordinaryRowFacts data)) :
     DecodedRowOpenSoundnessInputs decoded data :=
@@ -281,7 +279,7 @@ the chip assumptions and readiness bundle, and the live-state operand relation. 
 theorem DecodedInstructionRow.dynamicInputs_of_grounded
     (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p))
     (program : Target.GuestProgram) (initial state : SailState) (initialClock : ℕ)
-    (assumptions : decoded.chip.table.Assumptions (decoded.environment data))
+    (assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment data))
     (grounded : TimedGrounding.Grounded program initial initialClock
       (decoded.ordinaryRowFacts data))
     (ready : (decoded.toChipRow data).kind.advanceReady
@@ -359,7 +357,7 @@ theorem DecodedInstructionRow.dynamicGrounded_of_grounded
     (decoded : DecodedInstructionRow p)
     (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
     (program : Target.GuestProgram) (initial state : SailState) (initialClock : ℕ)
-    (assumptions : decoded.chip.table.Assumptions (decoded.environment witness.data))
+    (assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment witness.data))
     (grounded : TimedGrounding.Grounded program initial initialClock
       (decoded.ordinaryRowFacts witness.data))
     (ready : (decoded.toChipRow witness.data).kind.advanceReady
@@ -379,7 +377,7 @@ theorem DecodedInstructionRow.dynamicGrounded_of_timedInputs
     (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
     (program : Target.GuestProgram) (initial state : SailState)
     (initialClock steps : ℕ)
-    (assumptions : decoded.chip.table.Assumptions (decoded.environment witness.data))
+    (assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment witness.data))
     (grounded : TimedGrounding.Grounded program initial initialClock
       (decoded.ordinaryRowFacts witness.data))
     (ready : (decoded.toChipRow witness.data).kind.advanceReady

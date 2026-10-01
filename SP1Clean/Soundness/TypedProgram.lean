@@ -791,14 +791,13 @@ theorem DecodedInstructionRow.programInteractions_eq_of_mem
 /-- The public State-boundary verifier does not participate in the Program channel. -/
 theorem witness_verifierProgramInteractions_eq_nil
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedTableInteractionsWith witness.verifierTable programChannel = [] := by
+    typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations programChannel
+      (Environment.fromInput witness.publicInput witness.data) = [] := by
   apply List.map_eq_nil_iff.mp
-  rw [typedTableInteractionsWith_raw]
-  apply Table.interactionsWith_nil_of_channel_not_mem
-  change programChannel.toRaw ∉
-    [stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.exitChannel.toRaw]
-  simp [Channels.programChannel_eq_stateChannel_false, Channels.programChannel_eq_byteChannel_false,
-    Channels.programChannel_eq_exitChannel_false]
+  rw [typedInteractionValuesWith_raw]
+  simp only [sp1Ensemble, Ensemble.verifierOperations, sp1StateVerifierProgram,
+    Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions_values]
+  simp [Operations.interactionValuesWith, sp1StateVerifierMain, circuit_norm]
 
 /-- Every provider-table position except the committed Program provider has no Program-channel
 interactions.  This is positional on purpose: it connects the stable witness index used by
@@ -809,7 +808,7 @@ theorem witness_nonProgramProviderTable_programInteractions_eq_nil
     (witnessBound : i < witness.tables.length)
     (notProgram : i ≠ programProviderIndex) (notHalt : i ≠ haltIndex)
     (notSyscall : i ≠ syscallInstrsIndex) :
-    typedTableInteractionsWith witness.tables[i] programChannel = [] := by
+    typedTableInteractionsWith witness.tables[i] witness.data programChannel = [] := by
   change 25 ≤ i at lower
   change i < 55 at upper
   change i ≠ 53 at notHalt
@@ -859,10 +858,10 @@ theorem witness_providerProgramInteractions_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (table : Table (ZMod p))
     (tableAt : witness.tables[programProviderIndex]? = some table) :
     (witness.tables.drop 25).flatMap
-        (typedTableInteractionsWith · programChannel) =
-      typedTableInteractionsWith table programChannel ++
-        (typedTableInteractionsWith (haltTable witness) programChannel ++
-          typedTableInteractionsWith (syscallInstrsTable witness) programChannel) := by
+        (typedTableInteractionsWith · witness.data programChannel) =
+      typedTableInteractionsWith table witness.data programChannel ++
+        (typedTableInteractionsWith (haltTable witness) witness.data programChannel ++
+          typedTableInteractionsWith (syscallInstrsTable witness) witness.data programChannel) := by
   have tablesLength : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
@@ -871,7 +870,7 @@ theorem witness_providerProgramInteractions_eq
   -- Stated over numerals so `simp` can discharge the side conditions on each literal index.
   have interactionsAtOther (i : ℕ) (bound : i < witness.tables.length)
       (h : 25 ≤ i ∧ i < 55 ∧ i ≠ 48 ∧ i ≠ 53 ∧ i ≠ 54) :
-      typedTableInteractionsWith witness.tables[i] programChannel = [] :=
+      typedTableInteractionsWith witness.tables[i] witness.data programChannel = [] :=
     witness_nonProgramProviderTable_programInteractions_eq_nil witness i h.1 h.2.1 bound
       h.2.2.1 h.2.2.2.1 h.2.2.2.2
   repeat rw [List.drop_eq_getElem_cons (by omega)]
@@ -962,8 +961,8 @@ theorem DecodedInstructionRow.programTruth_of_active
   -- (halt-table wave): its pulls carry `mult ∈ {0, -1}` exactly like the instruction fetches.
   -- Both gated ECALL-fetch tables join the consumer side: the Halt table's pulls and the
   -- `SyscallInstrs` table's, each carrying `mult ∈ {0, -1}` by its own selector binarity.
-  let haltPulls := typedTableInteractionsWith (haltTable witness) programChannel ++
-    typedTableInteractionsWith (syscallInstrsTable witness) programChannel
+  let haltPulls := typedTableInteractionsWith (haltTable witness) witness.data programChannel ++
+    typedTableInteractionsWith (syscallInstrsTable witness) witness.data programChannel
   have consumerShape : ∀ interaction ∈ consumers ++ haltPulls,
       interaction.mult = 0 ∨ interaction.mult = -1 := by
     intro interaction interactionMem
@@ -990,7 +989,7 @@ theorem DecodedInstructionRow.programTruth_of_active
   let table := programProviderTable witness
   have tableAt := programProviderTable_getElem? witness
   have ensembleShape : typedEnsembleInteractionsWith witness programChannel =
-      consumers ++ (typedTableInteractionsWith table programChannel ++ haltPulls) := by
+      consumers ++ (typedTableInteractionsWith table witness.data programChannel ++ haltPulls) := by
     rw [typedEnsembleInteractionsWith_partition,
       witness_verifierProgramInteractions_eq_nil,
       witness_providerProgramInteractions_eq witness table tableAt]
@@ -998,7 +997,7 @@ theorem DecodedInstructionRow.programTruth_of_active
   rw [ensembleShape] at channelBalanced
   have channelBalanced' :
       BalancedInteractions
-        (((consumers ++ haltPulls) ++ typedTableInteractionsWith table programChannel).map
+        (((consumers ++ haltPulls) ++ typedTableInteractionsWith table witness.data programChannel).map
           TypedInteraction.raw) :=
     balancedInteractions_of_perm channelBalanced
       (List.Perm.map _
@@ -1006,10 +1005,10 @@ theorem DecodedInstructionRow.programTruth_of_active
           (List.Perm.of_eq (List.append_assoc consumers haltPulls _).symm)))
   obtain ⟨provider, providerMem, messageEq, providerNonzero⟩ :=
     provider_matches_active_pull (consumers ++ haltPulls)
-      (typedTableInteractionsWith table programChannel)
+      (typedTableInteractionsWith table witness.data programChannel)
       channelBalanced' consumerShape target
       (List.mem_append.mpr (Or.inl targetMem)) targetPull
-  have rawMem : provider.raw ∈ table.interactionsWith programChannel.toRaw := by
+  have rawMem : provider.raw ∈ table.interactionsWith witness.data programChannel.toRaw := by
     rw [← typedTableInteractionsWith_raw]
     exact List.mem_map_of_mem providerMem
   let rebound : TypedInteraction programChannel :=
@@ -1038,21 +1037,21 @@ theorem witness_haltRow_ecallTruth
     {row : Array (ZMod p)} (rowMem : row ∈ realHaltRows witness) :
     (Commit.progOf witness.data).fetchWord
         (Target.pcBitsOfRow (rowOfMsg
-          (HaltChip.programMessage (haltRow (haltTable witness) row)))) =
+          (HaltChip.programMessage (haltRow witness.data row)))) =
         some Target.ECALL_ENC ∧
-      rowOfMsg (HaltChip.programMessage (haltRow (haltTable witness) row)) =
+      rowOfMsg (HaltChip.programMessage (haltRow witness.data row)) =
         Target.ecallProgramRow (Target.rowPcVec (rowOfMsg
-          (HaltChip.programMessage (haltRow (haltTable witness) row)))) := by
+          (HaltChip.programMessage (haltRow witness.data row)))) := by
   obtain ⟨rowTableMem, active⟩ := mem_realHaltRows witness rowMem
   let consumers :=
     decodedWitnessInstructionInteractionsWith witness.data witness.tables programChannel
   -- Both gated ECALL-fetch tables join the consumer side: the Halt table's pulls and the
   -- `SyscallInstrs` table's, each carrying `mult ∈ {0, -1}` by its own selector binarity.
-  let haltPulls := typedTableInteractionsWith (haltTable witness) programChannel ++
-    typedTableInteractionsWith (syscallInstrsTable witness) programChannel
+  let haltPulls := typedTableInteractionsWith (haltTable witness) witness.data programChannel ++
+    typedTableInteractionsWith (syscallInstrsTable witness) witness.data programChannel
   let target := TypedInteraction.pulledIfValue programChannel
-    (haltRow (haltTable witness) row).is_real
-    (HaltChip.programMessage (haltRow (haltTable witness) row))
+    (haltRow witness.data row).is_real
+    (HaltChip.programMessage (haltRow witness.data row))
   have targetMem : target ∈ haltPulls := by
     dsimp only [haltPulls]
     refine List.mem_append.mpr (Or.inl ?_)
@@ -1087,7 +1086,7 @@ theorem witness_haltRow_ecallTruth
   let table := programProviderTable witness
   have tableAt := programProviderTable_getElem? witness
   have ensembleShape : typedEnsembleInteractionsWith witness programChannel =
-      consumers ++ (typedTableInteractionsWith table programChannel ++ haltPulls) := by
+      consumers ++ (typedTableInteractionsWith table witness.data programChannel ++ haltPulls) := by
     rw [typedEnsembleInteractionsWith_partition,
       witness_verifierProgramInteractions_eq_nil,
       witness_providerProgramInteractions_eq witness table tableAt]
@@ -1095,7 +1094,7 @@ theorem witness_haltRow_ecallTruth
   rw [ensembleShape] at channelBalanced
   have channelBalanced' :
       BalancedInteractions
-        (((consumers ++ haltPulls) ++ typedTableInteractionsWith table programChannel).map
+        (((consumers ++ haltPulls) ++ typedTableInteractionsWith table witness.data programChannel).map
           TypedInteraction.raw) :=
     balancedInteractions_of_perm channelBalanced
       (List.Perm.map _
@@ -1103,10 +1102,10 @@ theorem witness_haltRow_ecallTruth
           (List.Perm.of_eq (List.append_assoc consumers haltPulls _).symm)))
   obtain ⟨provider, providerMem, messageEq, providerNonzero⟩ :=
     provider_matches_active_pull (consumers ++ haltPulls)
-      (typedTableInteractionsWith table programChannel)
+      (typedTableInteractionsWith table witness.data programChannel)
       channelBalanced' consumerShape target
       (List.mem_append.mpr (Or.inr targetMem)) targetPull
-  have rawMem : provider.raw ∈ table.interactionsWith programChannel.toRaw := by
+  have rawMem : provider.raw ∈ table.interactionsWith witness.data programChannel.toRaw := by
     rw [← typedTableInteractionsWith_raw]
     exact List.mem_map_of_mem providerMem
   let rebound : TypedInteraction programChannel :=
@@ -1119,7 +1118,7 @@ theorem witness_haltRow_ecallTruth
   rw [reboundEq] at truth
   rw [messageEq] at truth
   have committed : Semantics.CommittedProgTruth
-      (HaltChip.programMessage (haltRow (haltTable witness) row)) witness.data := by
+      (HaltChip.programMessage (haltRow witness.data row)) witness.data := by
     simpa only [target, TypedInteraction.pulledIfValue_message] using truth
   exact committed.2.ecall_of_opcode rfl
 
@@ -1139,22 +1138,22 @@ theorem witness_syscallRow_ecallTruth
     (Commit.progOf witness.data).fetchWord
         (Target.pcBitsOfRow (rowOfMsg
           (SyscallInstrsChip.programMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)))) =
+            (syscallInstrsRow witness.data row)))) =
         some Target.ECALL_ENC ∧
       rowOfMsg (SyscallInstrsChip.programMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row)) =
+          (syscallInstrsRow witness.data row)) =
         Target.ecallProgramRow (Target.rowPcVec (rowOfMsg
           (SyscallInstrsChip.programMessage
-            (syscallInstrsRow (syscallInstrsTable witness) row)))) := by
+            (syscallInstrsRow witness.data row)))) := by
   obtain ⟨rowTableMem, active⟩ := mem_realSyscallInstrsRows witness rowMem
   let consumers :=
     decodedWitnessInstructionInteractionsWith witness.data witness.tables programChannel
   -- The same two gated ECALL-fetch tables as the Halt route; only the target moves to the second.
-  let haltPulls := typedTableInteractionsWith (haltTable witness) programChannel ++
-    typedTableInteractionsWith (syscallInstrsTable witness) programChannel
+  let haltPulls := typedTableInteractionsWith (haltTable witness) witness.data programChannel ++
+    typedTableInteractionsWith (syscallInstrsTable witness) witness.data programChannel
   let target := TypedInteraction.pulledIfValue programChannel
-    (syscallInstrsRow (syscallInstrsTable witness) row).is_real
-    (SyscallInstrsChip.programMessage (syscallInstrsRow (syscallInstrsTable witness) row))
+    (syscallInstrsRow witness.data row).is_real
+    (SyscallInstrsChip.programMessage (syscallInstrsRow witness.data row))
   have targetMem : target ∈ haltPulls := by
     dsimp only [haltPulls]
     refine List.mem_append.mpr (Or.inr ?_)
@@ -1189,7 +1188,7 @@ theorem witness_syscallRow_ecallTruth
   let table := programProviderTable witness
   have tableAt := programProviderTable_getElem? witness
   have ensembleShape : typedEnsembleInteractionsWith witness programChannel =
-      consumers ++ (typedTableInteractionsWith table programChannel ++ haltPulls) := by
+      consumers ++ (typedTableInteractionsWith table witness.data programChannel ++ haltPulls) := by
     rw [typedEnsembleInteractionsWith_partition,
       witness_verifierProgramInteractions_eq_nil,
       witness_providerProgramInteractions_eq witness table tableAt]
@@ -1197,7 +1196,7 @@ theorem witness_syscallRow_ecallTruth
   rw [ensembleShape] at channelBalanced
   have channelBalanced' :
       BalancedInteractions
-        (((consumers ++ haltPulls) ++ typedTableInteractionsWith table programChannel).map
+        (((consumers ++ haltPulls) ++ typedTableInteractionsWith table witness.data programChannel).map
           TypedInteraction.raw) :=
     balancedInteractions_of_perm channelBalanced
       (List.Perm.map _
@@ -1205,10 +1204,10 @@ theorem witness_syscallRow_ecallTruth
           (List.Perm.of_eq (List.append_assoc consumers haltPulls _).symm)))
   obtain ⟨provider, providerMem, messageEq, providerNonzero⟩ :=
     provider_matches_active_pull (consumers ++ haltPulls)
-      (typedTableInteractionsWith table programChannel)
+      (typedTableInteractionsWith table witness.data programChannel)
       channelBalanced' consumerShape target
       (List.mem_append.mpr (Or.inr targetMem)) targetPull
-  have rawMem : provider.raw ∈ table.interactionsWith programChannel.toRaw := by
+  have rawMem : provider.raw ∈ table.interactionsWith witness.data programChannel.toRaw := by
     rw [← typedTableInteractionsWith_raw]
     exact List.mem_map_of_mem providerMem
   let rebound : TypedInteraction programChannel :=
@@ -1221,7 +1220,7 @@ theorem witness_syscallRow_ecallTruth
   rw [reboundEq] at truth
   rw [messageEq] at truth
   have committed : Semantics.CommittedProgTruth
-      (SyscallInstrsChip.programMessage (syscallInstrsRow (syscallInstrsTable witness) row))
+      (SyscallInstrsChip.programMessage (syscallInstrsRow witness.data row))
       witness.data := by
     simpa only [target, TypedInteraction.pulledIfValue_message] using truth
   exact committed.2.ecall_of_opcode rfl

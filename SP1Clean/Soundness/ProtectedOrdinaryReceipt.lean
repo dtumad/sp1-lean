@@ -34,7 +34,7 @@ def provider (id : InstructionChipId) : GeneralFormalCircuit (ZMod p)
 
 /-- Add the ordinary successor receipt after all original checks and write-permission requests. -/
 def component (id : InstructionChipId) : Component (ZMod p) :=
-  ⟨InstructionReceipt.circuit (provider id) (OrdinaryStateReceipt.projection id)⟩
+  { circuit := InstructionReceipt.circuit (provider id) (OrdinaryStateReceipt.projection id) }
 
 /-- Permission requests do not change the original output cells. -/
 theorem provider_output (id : InstructionChipId) :
@@ -139,29 +139,35 @@ theorem interactions (id : InstructionChipId) (selected : RawChannel (ZMod p))
       ({ circuit := provider id } : Component (ZMod p)).operations.interactionsWith selected :=
   Receipt.interactions _ _ _ _ selected different
 
-/-- Reuse the protected table's original physical arrays and shared prover data. -/
-def construct (id : InstructionChipId) (original : Table (ZMod p)) : Table (ZMod p) :=
-  original.withComponent (component id)
+/-- Publish receipts on the protected table's existing rows, preserving their layout. -/
+def construct (id : InstructionChipId) (original : Table (ZMod p))
+    (registered : original.component = { circuit := provider id }) : Table (ZMod p) :=
+  original.withComponent (component id) (by rw [registered]; exact width id)
+    (by rw [registered]; rfl)
 
-/-- Construction preserves all protected local checks, in both directions. -/
+/-- Construction preserves all protected local checks at the same ensemble data. -/
 theorem construct_constraints (id : InstructionChipId) (original : Table (ZMod p))
-    (registered : original.component = ⟨provider id⟩) :
-    (construct id original).Constraints ↔ original.Constraints :=
-  Table.withComponent_constraints _ _ (by rw [registered, constraints])
-    (by rw [registered, lookups])
+    (registered : original.component = { circuit := provider id }) (data : ProverData (ZMod p)) :
+    (construct id original registered).Constraints data ↔ original.Constraints data := by
+  apply Table.withComponent_constraints
+  · rw [registered, constraints]
+  · rw [registered, lookups]
 
 /-- The new ledger is decoded from the existing physical rows, including padding. -/
-theorem construct_receipts (id : InstructionChipId) (original : Table (ZMod p)) :
-    (construct id original).interactionsWith InstructionReceipt.channel.toRaw =
+theorem construct_receipts (id : InstructionChipId) (original : Table (ZMod p))
+    (registered : original.component = { circuit := provider id }) (data : ProverData (ZMod p)) :
+    (construct id original registered).interactionsWith data InstructionReceipt.channel.toRaw =
       original.table.map (fun physical =>
-        let row := (supportedChipFor (p := p) id).decodeRow original.data physical
+        let row := (supportedChipFor (p := p) id).decodeRow data physical
         InstructionReceipt.channel.pushedIfValue row.is_real (statePushMessage row)) := by
-  simp only [construct, Table.interactionsWith, Table.withComponent, Table.environment, row_receipt]
+  simp only [construct, Table.interactionsWith, Table.withComponent, row_receipt]
   exact List.map_eq_flatMap.symm
 
 /-- Exact cost counts one receipt per physical row, including zero multiplicity padding. -/
-theorem construct_receipt_count (id : InstructionChipId) (original : Table (ZMod p)) :
-    ((construct id original).interactionsWith InstructionReceipt.channel.toRaw).length = original.length := by
+theorem construct_receipt_count (id : InstructionChipId) (original : Table (ZMod p))
+    (registered : original.component = { circuit := provider id }) (data : ProverData (ZMod p)) :
+    ((construct id original registered).interactionsWith data InstructionReceipt.channel.toRaw).length =
+      original.length := by
   rw [construct_receipts, List.length_map]
 
 end SP1Clean.Soundness.ProtectedOrdinaryReceipt

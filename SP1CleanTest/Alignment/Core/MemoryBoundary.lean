@@ -2,7 +2,7 @@ import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1CleanTest.Core.InitialMemoryLookup
 import SP1Clean.Soundness.InitialMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Soundness.NativeCoreProgram
+import SP1Clean.Soundness.NativeCoreBoundaries
 
 /-! # Initial/final records and ordered-key AIR regressions
 
@@ -270,22 +270,45 @@ private def bootPublic : SP1PublicIO Fp where
   is_execution_shard := 1
   committed_value_digest := Vector.replicate 32 0
 
-private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :=
-  controlRow (Soundness.NativeCore.verifier image).main pi name
+private def nativeVerifierLedger (pi : SP1PublicIO Fp) :=
+  let env := Environment.fromInput pi (fun _ _ => #[])
+  (Soundness.NativeCore.ensemble image).verifierOperations.interactions.map
+    (AbstractInteraction.eval env)
+
+private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :
+    Bool × List (List Fp × Fp) :=
+  let ledger := nativeVerifierLedger pi
+  let bytes := ledger.all fun interaction =>
+    interaction.channel.name != "SP1Byte" || byteValid interaction.msg.toList
+  let checks := ledger.filter fun interaction =>
+    interaction.channel.name == (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name
+  let checked := decide (checks.length < SP1Prime) && checks.all fun interaction =>
+    ((checks.filter (fun other => other.msg == interaction.msg)).map (·.mult)).sum == 0
+  (bytes && checked, (ledger.filter (fun interaction => interaction.channel.name == name)).map
+    (fun interaction => (interaction.msg.toList, interaction.mult)))
+
+/-- The installed verifier retains all 19 source occurrences and all ten boot-check occurrences,
+including zero-valued checks. It adds no committed table. -/
+theorem nativeVerifierInventory :
+    (Soundness.NativeCore.ensemble (p := SP1Prime) image).tables.length = 59 ∧
+    (nativeVerifierLedger bootPublic).length = 29 ∧
+    ((nativeVerifierLedger bootPublic).filter fun interaction =>
+      interaction.channel.name == (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name).length = 10 := by
+  native_decide
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
 #assert_exportable (Soundness.NativeCore.verifier (p := SP1Prime) image)
 
-/-- The composed verifier emits both fixed control boundaries while validating the public boot
-fields. This checks the actual circuit, including the offsets after the State verifier. -/
+/-- The installed public verifier emits both fixed control boundaries while enforcing the boot
+fields through its assertion channel and retaining the original Byte requirements. -/
 theorem nativeVerifierEndpoints :
     nativeVerifierRow bootPublic OrderedInitialProvider.channelName = verifierRow ∧
     nativeVerifierRow bootPublic OrderedFinalProvider.channelName = finalVerifierRow := by
   native_decide
 
 /-- Wrong boot PC/time and a field-wrapping alternative clock encoding are rejected by the
-combined verifier and its Byte requirements. A matching folded clock alone is insufficient. -/
+installed public verifier and its Byte requirements. A matching folded clock alone is insufficient. -/
 theorem rejectsForgedBoot :
     [nativeVerifierRow { bootPublic with init_clk_0_16 := 0 } OrderedInitialProvider.channelName,
      nativeVerifierRow { bootPublic with init_clk_24_32 := 1 } OrderedInitialProvider.channelName,
