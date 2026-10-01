@@ -15,6 +15,7 @@ open Circuit Air.Flat Model.Core Soundness
 
 variable {p : ℕ} [Fact p.Prime]
 
+/-- Check source validity, incoming PC and clock, and clock preservation after stopping. -/
 def main (image : ProgramImage) (source : ExecutionSnapshot)
     (input : Var SP1PublicIO (ZMod p)) : Circuit (ZMod p) Unit := do
   assertZero (.const (if checkExecutionSource image source then 0 else 1))
@@ -27,6 +28,7 @@ def main (image : ProgramImage) (source : ExecutionSnapshot)
   assertZero (stopped * (input.final_clk_high - input.init_clk_high))
   assertZero (stopped * (input.final_clk_low - input.init_clk_low))
 
+/-- Proved source assertions with no private cells, lookups or channel traffic. -/
 def circuit (image : ProgramImage) (source : ExecutionSnapshot) :
     GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
   main := main image source
