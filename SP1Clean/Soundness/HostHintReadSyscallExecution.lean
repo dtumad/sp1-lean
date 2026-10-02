@@ -5,8 +5,8 @@ import SP1Clean.Soundness.HostHintReadMemoryEffect
 The physical wrapper inventory and full HostCall balance select either an installed queue row or
 a control call. Queue dispatch uses the authenticated current hint history; control dispatch uses
 the actual host at that prefix. Both feed the same timed step/frame assembly, so no handler case
-or per-call semantic premise escapes the final SyscallInstrs statement. WRITE and VERIFY handlers,
-complete outgoing snapshot authentication, and the legacy HALT table remain separate obligations.
+or per-call semantic premise escapes the final SyscallInstrs statement. WRITE and VERIFY handlers
+and complete outgoing snapshot authentication remain separate obligations.
 -/
 
 namespace SP1Clean.Soundness.HostHintReadCPU
@@ -66,13 +66,14 @@ private theorem event_of_run (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZM
   · exact result
 
 private theorem syscall_physical {auxiliary : List (Component (ZMod p))}
-    (witness : EnsembleWitness (HostLocalCore.ensemble image source auxiliary channels))
+    {names : ((HostLocalCore.tables image source auxiliary).map (·.circuit.name)).Nodup}
+    (witness : EnsembleWitness (HostLocalCore.ensemble image source auxiliary channels names))
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : ExecutionRow.syscall row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness)) :
-    ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness),
+    ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
       row = (HostCallLedger.input env).instruction := by
   have active : row ∈ activeSystemRows (LocalCore.systemTable (HostLocalCore.localWitness witness) 3)
-      syscallInstrsRow (·.is_real) := by simpa [LocalCore.executionRows] using member
+      (syscallInstrsRow (HostLocalCore.localWitness witness).data) (·.is_real) := by simpa [LocalCore.executionRows] using member
   rw [← HostLocalCore.hostCallTable_projection witness] at active
   obtain ⟨env, active, same⟩ := List.mem_map.mp active
   exact ⟨env, active, same.symm⟩
@@ -88,12 +89,13 @@ private theorem control_not_read (event : ExecutionRow p) (wrapper : HostCallChi
 
 private theorem control_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
-    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+    (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (physical : Environment (ZMod p))
-    (active : physical ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable (HostHintQueueBoundary.expanded witness)))
+    (active : physical ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable (HostHintQueueBoundary.projected witness)) witness.data)
     (sameEvent : event = .syscall (HostCallLedger.input physical).instruction)
     (notRead : Word.toBitVec64 (HostCallLedger.call physical).code ≠ SyscallKind.hintRead.code)
     (dispatch : ∀ (host : HostState), host.exitCode = none → ∀ (context : HostReadContext),
@@ -105,7 +107,7 @@ private theorem control_step (valid : image.Valid)
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.expanded witness))) event).memPulls,
+        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current next, carrier.ordered[n]? = some event ∧
@@ -113,7 +115,7 @@ private theorem control_step (valid : image.Valid)
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
       (∀ cell : RamCell, locContent next.sail (.ram cell) = locContent current.sail (.ram cell)) ∧
       wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.expanded witness))) event = [] := by
+        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event = [] := by
   obtain ⟨n, state, present, time, atPc, rom, _⟩ := pull
   change (carrier.pairedTrajectory valid n).map ExecutionState.sail = some state at present
   obtain ⟨current, paired, sail⟩ := Option.map_eq_some_iff.mp present
@@ -123,10 +125,11 @@ private theorem control_step (valid : image.Valid)
   have atIndex := ExecutionCarrier.ordered_at carrier member time
   have before : carrier.trajectory valid n = some current.sail := by
     simp only [GroundingCarrier.trajectory, paired, Option.map_some]
-  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
-  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
-    (source_interface (p := p) source.host.io.hints)
+  have checks := HostHintQueueBoundary.projected_constraints witness constraints
+  have interface := source_interface (p := p) source.host.io.hints
+  have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced programChannel.toRaw
+    (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
+  have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
@@ -137,11 +140,15 @@ private theorem control_step (valid : image.Valid)
   have instructionTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
       (HostCallLedger.input physical).instruction) = carrier.timeline.start n := by
     simpa only [sameEvent, ExecutionRow.facts, syscallRowFacts_statePull] using time
-  have registers := HostLocalCore.hostCall_registers valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final bankFinal) checks balance physical active _ source.sail.realize current.sail _ n
+  have registers := HostLocalCore.hostCall_registers valid (HostHintQueueBoundary.projected witness)
+    (source_program_silent source) checks program
+  simp only [HostHintQueueBoundary.projected_data] at registers
+  have registers := registers physical active _ source.sail.realize current.sail _ n
     before instructionTime (fun mp present => (original mp present).2.2)
-  have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.expanded witness)
-    (source_program_silent source final bankFinal) checks balance physical active
+  have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.projected witness)
+    (source_program_silent source) checks program
+  simp only [HostHintQueueBoundary.projected_data] at committed
+  have committed := committed physical active
   have fetched := (committed.ecall_of_opcode rfl).1
   change (image.toGuestProgram valid).fetchWord
     (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) =
@@ -154,8 +161,10 @@ private theorem control_step (valid : image.Valid)
     rwa [sourcePc] at atPc
   have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member paired atInstructionPc fetched
   obtain ⟨execution, ran, result, noWrite⟩ := dispatch current.host running (.ofSail current.sail) registers
-  have law := HostLocalCore.hostCall_eventLaw (HostHintQueueBoundary.expanded witness)
-    (auxiliaryInterface interface) (source_program_silent source final bankFinal) checks balance physical active
+  have law := HostLocalCore.hostCall_eventLaw (HostHintQueueBoundary.projected witness)
+    (auxiliaryInterface interface) (source_program_silent source) checks program byteBalance
+  simp only [HostHintQueueBoundary.projected_data] at law
+  have law := law physical active
     (fun mp present => ⟨(original mp present).1, (original mp present).2.1⟩)
   have covered : n ≤ carrier.events.length := by
     have bound := (List.getElem?_eq_some_iff.mp atIndex).1
@@ -192,26 +201,30 @@ Full-call balance selects and discharges control and hint cases internally, incl
 host returns and RAM effects; no handler or successful-dispatch premise is supplied. -/
 theorem GroundingCarrier.syscall_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : ExecutionRow.syscall row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))) :
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.expanded witness))) (.syscall row)) ∧
+          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.syscall row)) ∧
       FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.expanded witness))) (.syscall row)) := by
-  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
-  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
-    (source_interface (p := p) source.host.io.hints)
-  obtain ⟨physical, active, same⟩ := syscall_physical (HostHintQueueBoundary.expanded witness) member
-  have callMem := (HostLocalHandoff.calls_perm (HostHintQueueBoundary.expanded witness)
-    (resources_hostCall_silent interface) checks balance).mem_iff.mp (List.mem_map_of_mem (f := HostCallLedger.call) active)
-  rcases HostQueueCallProjection.calls_run_or_queue (HostHintQueueBoundary.expanded witness)
-    interface checks balance _ callMem with queue | control
+          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.syscall row)) := by
+  have checks := HostHintQueueBoundary.projected_constraints witness constraints
+  have interface := source_interface (p := p) source.host.io.hints
+  have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
+  have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
+  obtain ⟨physical, active, same⟩ := syscall_physical (HostHintQueueBoundary.projected witness) member
+  have ledger := HostLocalHandoff.calls_perm_of_balancedChannel (HostHintQueueBoundary.projected witness)
+    (resources_hostCall_silent interface) checks calls
+  have callMem := ledger.mem_iff.mp (List.mem_map_of_mem (f := HostCallLedger.call) active)
+  have dispatch := HostQueueCallProjection.calls_run_or_queue (HostHintQueueBoundary.projected witness)
+    interface checks byteBalance _ callMem
+  simp only [HostHintQueueBoundary.projected_data] at active dispatch
+  rcases dispatch with queue | control
   · obtain ⟨queueRow, queueMem, sameCall⟩ := queue
     apply carrier.queue_engineFacts valid constraints balanced (.syscall row) member queueRow queueMem
     rw [same]
