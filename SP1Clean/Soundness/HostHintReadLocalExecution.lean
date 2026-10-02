@@ -99,15 +99,19 @@ private theorem consumer_pull_mem (witness : EnsembleWitness (ensemble image sou
 
 /-- Every actual consumer's word is bound to the authenticated store, before RAM grounding. -/
 theorem consumer_word_binding (witness : EnsembleWitness (ensemble image source others resources channels names))
-    (store : Store) (authenticated : RecordAuthentication witness store) (balanced : witness.BalancedChannels)
+    (store : Store) (authenticated : RecordAuthentication witness store)
+    (balanced : witness.BalancedChannel wordChannel.toRaw)
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) :
     ((HintReadCoverage.rowInput row).step row.1).word.Binds store :=
-  (word_authenticated witness store authenticated (RecordChannels.of_balanced witness balanced).word _ (consumer_pull_mem witness row member)).2
+  (word_authenticated witness store authenticated balanced _ (consumer_pull_mem witness row member)).2
 
 private theorem consumer_pointer (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannels) (wordSpecs : HintReadCoverage.Steps (wordTables witness) witness.data)
+    (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
+    (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
+    (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness) witness.data)
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
     (row : HintReadCoverage.Row (p := p))
@@ -115,7 +119,7 @@ private theorem consumer_pointer (witness : EnsembleWitness (ensemble image sour
     (clock : HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous =
       HostHintReadPartition.callClock env) :
     ((HintReadCoverage.rowInput row).step row.1).word.pointer = (input env).node.pointer := by
-  have selected := balanced_for witness interface constraints balanced env member
+  have selected := balanced_for_of_channels witness interface constraints ordering calls cursor env member
   rw [handler_cursor] at selected
   have fixed := HintReadCoverage.selection_fixed (wordTables witness) witness.data
     (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) (wordTables_aligned witness)
@@ -137,7 +141,11 @@ private theorem consumer_pointer (witness : EnsembleWitness (ensemble image sour
 current frontier. The cursor enforces that all selected words refer to this same queue node. -/
 theorem current_records (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannels) (handlerSpecs : (handlerTable witness).Spec witness.data)
+    (records : RecordChannels witness)
+    (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
+    (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
+    (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
+    (handlerSpecs : (handlerTable witness).Spec witness.data)
     (wordSpecs : HintReadCoverage.Steps (wordTables witness) witness.data)
     (store finalStore : Store) (extension : Extends store finalStore)
     (authenticated : RecordAuthentication witness finalStore)
@@ -156,14 +164,14 @@ theorem current_records (witness : EnsembleWitness (ensemble image source others
     have head : (input env).previous.head = (input env).node.pointer := valid.2.2.2.2.2.2.1
     rw [← head]
     exact current.2.2.2.bound
-  have node := (node_authenticated witness finalStore authenticated (RecordChannels.of_balanced witness balanced).node (input env).node
+  have node := (node_authenticated witness finalStore authenticated records.node (input env).node
     (handler_pull_mem witness env member _ _ (by rw [(handler_records env).1]; exact List.mem_cons_self ..))).2
-  have ending := (word_authenticated witness finalStore authenticated (RecordChannels.of_balanced witness balanced).word (input env).endStep.word
+  have ending := (word_authenticated witness finalStore authenticated records.word (input env).endStep.word
     (handler_pull_mem witness env member _ _ (by rw [(handler_records env).2]; exact List.mem_cons_self ..))).2
   refine ⟨node.restrict extension bound, ending.restrict extension bound, ?_⟩
   intro row rowMem clock
-  apply (consumer_word_binding witness finalStore authenticated balanced row rowMem).restrict extension
-  rw [consumer_pointer witness interface constraints balanced wordSpecs env member row rowMem clock]
+  apply (consumer_word_binding witness finalStore authenticated records.word row rowMem).restrict extension
+  rw [consumer_pointer witness interface constraints ordering calls cursor wordSpecs env member row rowMem clock]
   exact bound
 
 /-- Actual AIR constraints and balance give successful HINT_READ dispatch and the complete padded
@@ -172,7 +180,11 @@ no local specifications or per-record binding premises are supplied by the calle
 theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources)
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (records : RecordChannels witness)
+    (permissions : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
+    (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
+    (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
+    (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (finalStore : Store) (authenticated : RecordAuthentication witness finalStore)
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
@@ -188,11 +200,11 @@ theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image 
         (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) witness.data
           (wordTables_aligned witness)) witness.data).map
         HintReadWrites.produced).Perm (wordWrites (Address.toNat (input env).span.start) bytes) := by
-  have handlerSpecs := handler_spec witness interface finalStore authenticated constraints (RecordChannels.of_balanced witness balanced)
-  have wordSpecs := word_steps witness interface finalStore authenticated constraints (RecordChannels.of_balanced witness balanced)
-  obtain ⟨header, ending, words⟩ := current_records witness interface constraints balanced handlerSpecs wordSpecs
+  have handlerSpecs := handler_spec witness interface finalStore authenticated constraints records
+  have wordSpecs := word_steps witness interface finalStore authenticated constraints records
+  obtain ⟨header, ending, words⟩ := current_records witness interface constraints records ordering calls cursor handlerSpecs wordSpecs
     store finalStore extension authenticated env member host.io.hints current
-  exact run_of_witness witness interface pulls constraints balanced handlerSpecs wordSpecs env member
+  exact run_of_witness witness interface pulls constraints permissions ordering calls cursor handlerSpecs wordSpecs env member
     host store current header ending words running context code arg1 arg2
 
 end SP1Clean.Soundness.HostHintReadLocal

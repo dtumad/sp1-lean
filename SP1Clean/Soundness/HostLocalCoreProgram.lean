@@ -29,7 +29,7 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 theorem program_pull_committed (valid : image.Valid)
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (message : ProgramMsg (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
     (active : interaction.mult = -1) (payload : interaction.msg = (toElements message).toArray) :
@@ -39,7 +39,7 @@ theorem program_pull_committed (valid : image.Valid)
     message interaction ?_ active payload
   · change BalancedInteractions ((localWitness witness).interactionsWith programChannel.toRaw)
     rw [localWitness_program witness silent]
-    exact balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels])
+    exact balanced
   · rwa [localWitness_program witness silent]
 
 private theorem wrapper_program_values (witness : EnsembleWitness (ensemble image source auxiliary channels names))
@@ -65,7 +65,7 @@ private theorem wrapper_program_values (witness : EnsembleWitness (ensemble imag
 theorem hostCall_program_committed (valid : image.Valid)
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data) :
     Target.committedInROM (image.toGuestProgram valid)
       (rowOfMsg (SyscallInstrsChip.programMessage (HostCallLedger.input env).instruction)) := by
@@ -114,8 +114,7 @@ private theorem local_executionRow_time
 This uses only State/Byte ordering; Memory remains in the extended ledger. -/
 theorem executionRow_time
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
-    (interface : AuxiliaryInterface auxiliary)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (ordering : LocalCore.OrderingChannels (localWitness witness))
     {cpu : List (NativeCore.ExecutionRow p)}
     (exhaustive : cpu.Perm (LocalCore.executionRows (localWitness witness)))
     (walk : Walk.IsWalk (NativeCore.ExecutionRow.canonEdge witness.data)
@@ -125,7 +124,7 @@ theorem executionRow_time
     StateMsg.timeNat (event.edge witness.data).1 = source.clock + (prior.map NativeCore.ExecutionRow.duration).sum := by
   rw [← event.edge_setData (localWitness witness).data witness.data]
   apply local_executionRow_time (localWitness witness) (localWitness_constraints witness constraints)
-    (orderingChannels witness interface constraints balanced) exhaustive ?_ prior rest event split
+    ordering exhaustive ?_ prior rest event split
   have edges : NativeCore.ExecutionRow.canonEdge (localWitness witness).data =
       NativeCore.ExecutionRow.canonEdge witness.data := funext fun row => row.canonEdge_setData _ _
   simpa only [edges, localWitness_publicInput] using walk
@@ -156,7 +155,7 @@ No caller selects register indices or separately authenticates the instruction f
 theorem hostCall_registers (valid : image.Valid)
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data)
     (trajectory : Trajectory) (initial current : SailState) (timeline : Timeline) (n : ℕ)
     (atState : trajectory n = some current)
@@ -176,7 +175,8 @@ theorem hostCall_contract
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (interface : AuxiliaryInterface auxiliary)
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
+    (bytes : witness.BalancedChannel byteChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data)
     (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
@@ -188,33 +188,34 @@ theorem hostCall_contract
     exact List.mem_map_of_mem member
   obtain ⟨physical, physicalMem, same, _⟩ := NativeCore.activeSystemRows_member _ _ _ active
   have checked := localWitness_constraints witness constraints
-  have ordering := orderingChannels witness interface constraints balanced
+  have byte := localWitness_byte witness interface constraints bytes
   have balance : (localWitness witness).BalancedChannel programChannel.toRaw := by
     change BalancedInteractions ((localWitness witness).interactionsWith programChannel.toRaw)
     rw [localWitness_program witness silent]
-    exact balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels])
+    exact balanced
   have program := LocalCore.program_guarantees_of_balance image source (localWitness witness) checked balance
   have contract := syscallInstrsRow_contract_of_component _ (localWitness witness).data (LocalCore.systemTable_component (localWitness witness) 3)
     (LocalCore.systemTable_constraints (localWitness witness) checked 3)
-    (ordering.byte _ (LocalCore.systemTable_mem (localWitness witness) 3))
+    (byte _ (LocalCore.systemTable_mem (localWitness witness) 3))
     (program.2 _ (LocalCore.systemTable_mem (localWitness witness) 3)) physicalMem (by rwa [same])
   rw [same] at contract
   exact contract
 
 /-- The actual host wrapper inherits its instruction row law and semantic clock, using
-incoming operand bounds and only the preserved Program balance. -/
+incoming operand bounds and the preserved Program and Byte balances. -/
 theorem hostCall_eventLaw
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (interface : AuxiliaryInterface auxiliary)
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
+    (bytes : witness.BalancedChannel byteChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data)
     (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
     (syscallEventOfRow (HostCallLedger.input env).instruction).RowLaw ∧
       (syscallEventOfRow (HostCallLedger.input env).instruction).clock =
         StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (HostCallLedger.input env).instruction) := by
-  have contract := hostCall_contract witness interface silent constraints balanced env member currency
+  have contract := hostCall_contract witness interface silent constraints balanced bytes env member currency
   have real := HostCallLedger.activeRows_is_real _ _ _ member
   exact ⟨rowLaw_of_spec_and_pulledFacts _ contract.1 contract.1.selectorsValid contract.2 real,
     syscallEvent_startsAt _ (Fact.out (p := 2 ^ 24 < p)) contract.1 real⟩

@@ -56,13 +56,13 @@ theorem permission_pull_permitted {image : ProgramImage} {source : ExecutionSnap
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
     (address : fields 3 (ZMod p))
     (member : WritePermissionProvider.channel.pulledValue address ∈
       witness.interactionsWith WritePermissionProvider.channel.toRaw) :
     WritePermissionProvider.Permitted image address := by
   apply WritePermission.pull_permitted_of_sources image witness constraints
-    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble]))
+    balanced
     (by intro input data emitted used
         rw [verifier_permission_silent] at used
         exact (List.not_mem_nil used).elim)
@@ -75,7 +75,7 @@ theorem row_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
     (table : Table (ZMod p)) (tableMem : table ∈ witness.tables)
     (physical : Array (ZMod p)) (physicalMem : physical ∈ table.table)
     (gate : Expression (ZMod p)) (address : Var (fields 3) (ZMod p))

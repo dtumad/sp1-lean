@@ -95,7 +95,7 @@ private theorem instruction_write_authorized (index : Fin 25)
 theorem instructionRows_write_authorized
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
     {decoded : DecodedInstructionRow p}
     (member : decoded ∈ LocalCore.instructionRows (localWitness witness))
     (active : (decoded.toChipRow (localWitness witness).data).is_real = 1) :
@@ -126,7 +126,7 @@ theorem instructionRows_write_authorized
 theorem instructionRows_write_permitted
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
     {decoded : DecodedInstructionRow p}
     (member : decoded ∈ LocalCore.instructionRows (localWitness witness))
     (active : (decoded.toChipRow (localWitness witness).data).is_real = 1) :

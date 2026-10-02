@@ -141,6 +141,20 @@ theorem projected_hostCall_balancedChannel
       (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [HostCallChip.channel, HostExitBoundary.channel, Channel.toRaw])
 
+/-- Per-call word cursors have no traffic in the queue, bank or terminal boundary. -/
+theorem projected_cursor_balancedChannel
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names))
+    (balanced : witness.BalancedChannels) :
+    (projected witness).BalancedChannel HintReadWordChip.stateChannel.toRaw := by
+  apply projected_balancedChannel witness balanced
+  · simp [HostHintReadLocal.ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble,
+      PublicVerifier.install, HostLocalCore.baseEnsemble]
+  · exact boundary_silent _
+      (by simp [HintReadWordChip.stateChannel, stateChannel, Channel.toRaw])
+      (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HintReadWordChip.stateChannel, HostExitBoundary.channel, Channel.toRaw])
+
 private theorem boundary_core_silent (channel : RawChannel (ZMod p))
     (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
     channel ∉ (boundary source final bankFinal).circuit.channels := by
