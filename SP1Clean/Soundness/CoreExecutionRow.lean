@@ -32,6 +32,21 @@ noncomputable def ExecutionRow.facts (data : ProverData (ZMod p)) : ExecutionRow
   | .halt row => haltRowFacts row
   | .syscall row => syscallRowFacts row
 
+/-- A physical row fixes its semantic facts and exact Memory occurrences in every data view. -/
+theorem ExecutionRow.facts_setData (row : ExecutionRow p) (data data' : ProverData (ZMod p)) :
+    row.facts data = row.facts data' := by
+  cases row with
+  | instruction row =>
+      have interactions : row.interactionsWith data memoryChannel = row.interactionsWith data' memoryChannel := by
+        apply List.map_injective_iff.mpr TypedInteraction.raw_injective
+        simp only [DecodedInstructionRow.interactionsWith_raw]
+        exact Operations.interactionValuesWith_congr rfl
+      simp only [ExecutionRow.facts, DecodedInstructionRow.ordinaryRowFacts,
+        DecodedInstructionRow.toChipRow_setData row data data',
+        DecodedInstructionRow.consumedMemoryMessages, DecodedInstructionRow.producedMemoryMessages,
+        interactions]
+  | halt _ | syscall _ => rfl
+
 /-- The complete State edge, before canonical re-limbing. -/
 noncomputable def ExecutionRow.edge (data : ProverData (ZMod p)) :
     ExecutionRow p → StateMsg (ZMod p) × StateMsg (ZMod p)
