@@ -23,16 +23,11 @@ local instance instructionLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
-private theorem source_data
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)) :
-    (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data = witness.data := rfl
-
 private theorem instruction_staticInputs
     (witness : EnsembleWitness (LocalCore.ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
-    (program : ∀ table ∈ witness.allTables, table.ChannelGuarantees programChannel.toRaw)
+    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (program : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data programChannel.toRaw)
     {row : DecodedInstructionRow p} (member : row ∈ LocalCore.instructionRows witness) :
     DecodedRowStaticInputs row witness.data :=
   ⟨mem_chip_of_mem_decodeInstructionTables member,
@@ -44,30 +39,31 @@ private theorem instruction_staticInputs
 
 private theorem instruction_inputs (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels))
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))) :
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     DecodedRowStaticInputs row witness.data ∧
       Target.decodedInROM (image.toGuestProgram valid) (programAccess (row.toChipRow witness.data).view).toRow := by
-  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
-  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
+  have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have checked := HostLocalCore.localWitness_constraints _ checks
-  have ordering := HostLocalCore.orderingChannels _
-    (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints))) checks balance
-  have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
-      (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data).is_real = 1 := by
+  have ordering := HostHintQueueBoundary.projected_orderingChannels witness
+    (source_interface source.host.io.hints) constraints balanced
+  have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) ∧
+      (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data).is_real = 1 := by
     simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
-  have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).BalancedChannel
+  have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel
       programChannel.toRaw := by
-    change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).interactionsWith _)
-    rw [HostLocalCore.localWitness_program _ (source_program_silent source final bankFinal)]
-    exact balance _ (by simp [HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
+    change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith _)
+    rw [HostLocalCore.localWitness_program _ (source_program_silent source)]
+    exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
+      (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
   have program := LocalCore.program_guarantees_of_balance image source _ checked programBalance
-  have inputs := instruction_staticInputs _ checked ordering.byte program active.1
+  have inputs := (instruction_staticInputs _ checked ordering.byte program.2 active.1).setData witness.data
   have committed := LocalCore.instructionRows_program_committed_of_balance valid _ checked programBalance active.1 active.2
-  rw [source_data] at inputs committed active
+  rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at committed active
   refine ⟨inputs, ?_⟩
   exact committed.decoded_of_opcode_ne
     (supportedChip_fetchDiscriminantShape row.chip inputs.registered witness.data row.physical
@@ -75,11 +71,12 @@ private theorem instruction_inputs (valid : image.Valid)
 
 private theorem trajectory_ordinary (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (decoded : Target.decodedInROM (image.toGuestProgram valid) (programAccess (row.toChipRow witness.data).view).toRow)
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (row.ordinaryRowFacts witness.data).statePull)
@@ -109,17 +106,18 @@ private theorem trajectory_ordinary (valid : image.Valid)
 as the hint handlers. ROM preservation and absence of added hint accesses follow from the AIR. -/
 theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))) :
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.expanded witness))) (.instruction row)) ∧
+          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.instruction row)) ∧
       FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.expanded witness))) (.instruction row)) := by
+          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.instruction row)) := by
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced (.instruction row) member
     (fun _ impossible => by cases impossible)
   simp only [eventFacts, noWords, List.map_nil, List.append_nil]
@@ -127,24 +125,26 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     FrameFactG _ _ _ _ (row.ordinaryRowFacts witness.data)
   have checked := instruction_inputs valid witness constraints balanced member
   have contracts := supportedChip_groundingContracts row.chip checked.1.registered
-  have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
-      (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data).is_real = 1 := by
+  have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) ∧
+      (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data).is_real = 1 := by
     simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
-  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
-  have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-  have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.expanded witness)
-    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source final bankFinal)) checks balance active.1 active.2
-  rw [source_data] at permission active
+  have checks := HostHintQueueBoundary.projected_constraints witness constraints
+  have permissions := HostHintQueueBoundary.projected_permission_balancedChannel witness balanced
+  have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.projected witness)
+    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source)) checks permissions active.1 active.2
+  rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at permission active
   apply contracts.engineFactsLocalG_of_rowEffect witness.data row rfl checked.1 active.2 _ checked.2
     (carrier.trajectory valid) source.sail.realize carrier.timeline
     (fun _ effect loaded => effect.romLoaded_of_writePermission valid permission loaded)
   · intro n time
     have successor := ExecutionCarrier.originalTimeStep carrier member n time
-    have ordering := HostLocalCore.orderingChannels _
-      (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints))) checks balance
+    have ordering := HostHintQueueBoundary.projected_orderingChannels witness
+      (source_interface source.host.io.hints) constraints balanced
     have duration := (LocalCore.executionRows_advancing_of_orderingChannels _
       (HostLocalCore.localWitness_constraints _ checks) ordering member).2
-    rw [source_data, ExecutionRow.edge_eq_facts] at duration
+    rw [ExecutionRow.edge_setData (.instruction row)
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data,
+      ExecutionRow.edge_eq_facts] at duration
     change StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePush =
       StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePull + 8 at duration
     change StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePush = carrier.timeline.start (n + 1) at successor
@@ -156,11 +156,12 @@ state, with write permission from the installed AIR. Instruction dispatch and re
 inside the registered chip contracts. -/
 theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (row.ordinaryRowFacts witness.data).statePull)
     (currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
@@ -176,10 +177,14 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
       InstructionWrite.PermittedAt image.readOnly (image.toGuestProgram valid) current.sail := by
   have checked := instruction_inputs valid witness constraints balanced member
   have contracts := supportedChip_groundingContracts row.chip checked.1.registered
-  have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) ∧
-      (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).data).is_real = 1 := by
+  have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) ∧
+      (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data).is_real = 1 := by
     simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
-  rw [source_data] at active
+  have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.projected witness)
+    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source))
+    (HostHintQueueBoundary.projected_constraints witness constraints)
+    (HostHintQueueBoundary.projected_permission_balancedChannel witness balanced) active.1 active.2
+  rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at permission active
   have guard := contracts.routingLocal witness.data row rfl checked.1.constraints active.2 _ checked.2
   have migrated : (row.toChipRow witness.data).kind.advance.isSome = true := contracts.migrated
   have memory := row.memoryChannelGuarantees_of_pullCurrency witness.data
@@ -204,11 +209,6 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
       some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) := by
     rw [program_pc_eq_statePull]
     exact pc
-  have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.expanded witness)
-    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source final bankFinal))
-    (HostHintQueueBoundary.expanded_constraints witness constraints)
-    (HostHintQueueBoundary.expanded_balanced witness balanced) active.1 active.2
-  rw [source_data] at permission
   have operands := wiring.valueOperandsBound_of_pullCurrencyG
     (fun mp hmp => (currency mp hmp).2.2) before time
   have sourceA := wiring.sourceAValueBound_of_pullCurrencyG
@@ -227,11 +227,12 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
 /-- Projection to normal retirement keeps the original instruction-step interface. -/
 theorem GroundingCarrier.instruction_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (row.ordinaryRowFacts witness.data).statePull)
     (currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,

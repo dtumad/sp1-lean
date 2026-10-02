@@ -155,6 +155,20 @@ theorem projected_cursor_balancedChannel
       (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [HintReadWordChip.stateChannel, HostExitBoundary.channel, Channel.toRaw])
 
+/-- Write permissions are untouched by queue, bank and terminal endpoint traffic. -/
+theorem projected_permission_balancedChannel
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names))
+    (balanced : witness.BalancedChannels) :
+    (projected witness).BalancedChannel WritePermissionProvider.channel.toRaw := by
+  apply projected_balancedChannel witness balanced
+  · simp [HostHintReadLocal.ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble,
+      PublicVerifier.install, HostLocalCore.baseEnsemble]
+  · exact boundary_silent _
+      (by simp [WritePermissionProvider.channel, stateChannel, Channel.toRaw])
+      (by simp [WritePermissionProvider.channel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [WritePermissionProvider.channel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [WritePermissionProvider.channel, HostExitBoundary.channel, Channel.toRaw])
+
 private theorem boundary_core_silent (channel : RawChannel (ZMod p))
     (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
     channel ∉ (boundary source final bankFinal).circuit.channels := by

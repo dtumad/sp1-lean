@@ -178,6 +178,31 @@ structure DecodedRowStaticInputs (decoded : DecodedInstructionRow p)
   byte : decoded.chip.table.operations.ChannelGuarantees byteChannel.toRaw (decoded.environment data)
   program : decoded.chip.table.operations.ChannelGuarantees programChannel.toRaw (decoded.environment data)
 
+/-- Registered instruction constraints and the Byte/Program contracts depend only on row cells.
+Memory guarantees and the circuit's data-dependent semantic assumptions remain separate. -/
+theorem DecodedRowStaticInputs.setData {decoded : DecodedInstructionRow p}
+    {data : ProverData (ZMod p)} (inputs : DecodedRowStaticInputs decoded data)
+    (data' : ProverData (ZMod p)) : DecodedRowStaticInputs decoded data' := by
+  have transfer (channel : RawChannel (ZMod p))
+      (static : channel = byteChannel.toRaw ∨ channel = programChannel.toRaw)
+      (checked : decoded.chip.table.operations.ChannelGuarantees channel (decoded.environment data)) :
+      decoded.chip.table.operations.ChannelGuarantees channel (decoded.environment data') := by
+    rcases static with rfl | rfl
+    all_goals
+      intro interaction member same
+      have kept := checked interaction member same
+      rw [← AbstractInteraction.eval_guarantees,
+        AbstractInteraction.eval_congr (env := decoded.environment data')
+          (env' := decoded.environment data) (i := interaction) rfl]
+      rcases interaction with ⟨declared, mult, msg, assume⟩
+      cases same
+      simpa only [Interaction.Guarantees, AbstractInteraction.eval, AbstractInteraction.Guarantees,
+        Interaction.msgVector, byteChannel, programChannel, Channel.toRaw] using kept
+  refine ⟨inputs.registered, ?_, transfer _ (Or.inl rfl) inputs.byte,
+    transfer _ (Or.inr rfl) inputs.program⟩
+  exact decoded.chip.table.constraintsHold_setData
+    (sp1Tables_lookups_empty _ (List.mem_map_of_mem inputs.registered)) inputs.constraints
+
 /-- The legacy ensemble supplies the same component-local evidence used by other assemblies. -/
 theorem decodedRowStaticInputs_of_witness
     (witness : EnsembleWitness (sp1Ensemble (p := p)))

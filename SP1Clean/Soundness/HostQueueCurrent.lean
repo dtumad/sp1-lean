@@ -278,15 +278,7 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced Channels.programChannel.toRaw
     (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
-  have permissions : (HostHintQueueBoundary.projected witness).BalancedChannel WritePermissionProvider.channel.toRaw := by
-    apply HostHintQueueBoundary.projected_balancedChannel witness balanced
-    · simp [HostHintReadLocal.ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble,
-        PublicVerifier.install, HostLocalCore.baseEnsemble]
-    · exact HostHintQueueBoundary.boundary_silent _
-        (by simp [WritePermissionProvider.channel, HostHintQueue.stateChannel, Channel.toRaw])
-        (by simp [WritePermissionProvider.channel, HostCommitChip.stateChannel, Channel.toRaw])
-        (by simp [WritePermissionProvider.channel, HostCommitChip.stateChannel, Channel.toRaw])
-        (by simp [WritePermissionProvider.channel, HostExitBoundary.channel, Channel.toRaw])
+  have permissions := HostHintQueueBoundary.projected_permission_balancedChannel witness balanced
   have registers := registers_of_prefix valid (HostHintQueueBoundary.projected witness) interface
     (source_program_silent source) checks calls program ordering (cpu := cpu)
   simp only [HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] at registers
