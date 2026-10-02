@@ -42,14 +42,15 @@ theorem checks_of_admissible {limits : ResourceLimits} {image : ProgramImage}
   (ResourceBoundary.checks_iff ..).mpr ⟨execution.boundaryBounds, clock⟩
 
 variable [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance resourceClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- The current six-call assembly with actual endpoint-resource enforcement. -/
 def ensemble (limits : ResourceLimits) (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (channels : List (RawChannel (ZMod p))) :
     Ensemble (ZMod p) SP1PublicIO :=
   install limits source target (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) channels)
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels
+      (HostHintReadLocal.source_unique_names image source source.host.io.hints))
 
 /-- A derived proof view retains every table of the original installed assembly. -/
 def baseWitness {limits : ResourceLimits} {image : ProgramImage}
@@ -57,7 +58,8 @@ def baseWitness {limits : ResourceLimits} {image : ProgramImage}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels)) :
     EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (HostHintReadLocal.sourceResources source.host.io.hints) channels) :=
+      (HostHintReadLocal.sourceResources source.host.io.hints) channels
+      (HostHintReadLocal.source_unique_names image source source.host.io.hints)) :=
   (ResourceBoundary.checker limits source target).project witness
 
 /-- Original constraints remain available without unfolding the resource verifier at consumers. -/
@@ -109,11 +111,11 @@ theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
         source.realize events) .ticks ≤ limits.ticks ∧
       8 * events.length ≤ target.clock - source.clock ∧
       ResourceBoundary.Spec limits source target witness.publicInput ∧
-      events.Perm ((LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded
+      events.Perm ((LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected
         (baseWitness witness)))).map NativeCore.ExecutionRow.event) ∧
       actual.sail.regs.get? LeanRV64D.Defs.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
-      ∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded
+      ∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected
           (baseWitness witness))) loc = some message →
         locContent actual.sail loc = some (Word.toBitVec64 message.value) := by
   have spec := resource_spec witness balanced

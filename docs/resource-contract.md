@@ -70,8 +70,9 @@ actual elapsed-work bounds from raw constraints and balance. Every event consume
 eight ticks; this proves the native preset's event ceiling, including 264-tick host calls.
 It does **not** enforce an arbitrarily tighter independent `events` ceiling.
 
-`ToClean/Air/PublicVerifier.lean` preserves the literal tables and all-channel interaction lists,
-including order, repetitions and zero-multiplicity occurrences. The installed statement is proved
+`ToClean/Air/PublicVerifier.lean` preserves the literal tables and every existing channel ledger,
+including order, repetitions and zero-multiplicity occurrences. Its fresh assertion channel
+accounts for the endpoint checks. The installed statement is proved
 equivalent to the original raw statement plus the exact endpoint checks. The semantic domain
 proves these checks for completeness; no conservative expansion estimate is imposed here.
 Stopped identities retain their original clock and need no active-event phase.
@@ -113,8 +114,10 @@ arithmetic equivalences; they do not replace the accepted language with an upper
 Raw balance gives the native `p-1` occurrence ceiling on **every registered channel**, including
 host/boundary channels. Any table with a positive syntactic interaction width on a registered
 channel inherits its native height bound. A silent table needs separate evidence. Installing
-the endpoint checker preserves both physical budgets exactly in both directions and adds no
-rows or interactions.
+the endpoint checker preserves every physical row and existing channel ledger. Its three
+assertions add exactly six occurrences on a fresh channel. Thus the installed witness fits
+exactly when the base witness fits and the channel ceiling is at least six. The lifting theorem
+keeps this equivalence explicit for arbitrary budgets; the native field bound covers this cost.
 
 This is not yet a proof that the fixed semantic limits imply full mixed construction capacity.
 Independent ceilings of `p-1` do not imply that the sum of provider, boundary, host and padding

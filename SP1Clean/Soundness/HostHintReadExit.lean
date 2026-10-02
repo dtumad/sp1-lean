@@ -22,14 +22,12 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 private theorem source_exit_silent :
-    ∀ component ∈ (HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
-      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++
-        [⟨(HostHintQueueBoundary.boundary source final bankFinal).circuit⟩])),
+    ∀ component ∈ (HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ sourceResources source.host.io.hints),
       exitChannel.toRaw ∉ component.circuit.channels := by
   have checked : ((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
-      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++
-        [({ circuit := (HostHintQueueBoundary.boundary source final bankFinal).circuit } : Component (ZMod p))]))).all
+      (HostHintReadHandoff.wordResources ++ sourceResources source.host.io.hints)).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (exitChannel (p := p)).toRaw.name) = true := rfl
   intro component member used
@@ -42,16 +40,16 @@ theorem source_exit_balance
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels))
     (balanced : witness.BalancedChannels) :
-    (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).BalancedChannel exitChannel.toRaw := by
-  change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).interactionsWith _)
+    (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel exitChannel.toRaw := by
+  change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith _)
   rw [HostLocalCore.localWitness_other _ exitChannel.toRaw
+    (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
     (by simp [exitChannel, byteChannel, Channel.toRaw])
     (by simp [exitChannel, memoryChannel, Channel.toRaw])
     (by simp [exitChannel, HostCallChip.channel, Channel.toRaw])
     (by simp [exitChannel, WritePermissionProvider.channel, Channel.toRaw]) source_exit_silent]
-  apply HostHintQueueBoundary.expanded_balanced witness balanced
-  simp [HostHintReadLocal.ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble,
-    ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels]
+  exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
+    (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem word_reduction (word : Word (ZMod p)) (small : Word.isU64 word) :
@@ -88,7 +86,7 @@ private theorem GroundingCarrier.halt_field (valid : image.Valid)
     intro mp present
     have current := incoming.2 mp (List.mem_append_left _ present)
     exact ⟨current.1, current.2.1⟩
-  have checks := HostHintQueueBoundary.expanded_constraints witness constraints
+  have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have checked := HostLocalCore.localWitness_constraints _ checks
   have exitBalance := source_exit_balance witness balanced
   cases event with
@@ -96,42 +94,43 @@ private theorem GroundingCarrier.halt_field (valid : image.Valid)
   | halt row =>
     cases Machine.ExecutionEvent.syscall.inj same
     have active : row ∈ activeSystemRows
-        (LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) 2)
-        haltRow (·.is_real) := by simpa [LocalCore.executionRows] using actual
+        (LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) 2)
+        (haltRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data) (·.is_real) := by simpa [LocalCore.executionRows] using actual
     have small : Word.isU64 row.x10_memory.prev_value := (original (HaltChip.memPulledMessage row row.x10_memory 10,
       StateMsg.timeNat (HaltChip.statePulledMessage row))
       (by simp [ExecutionRow.facts, haltRowFacts, HaltChip.memoryPairs])).1
     have emitted := LocalCore.halt_exit_code _ checked exitBalance active
     rw [HaltChip.exitMessage, word_reduction _ small] at emitted
+    rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput] at emitted
     exact emitted
   | syscall row =>
     cases Machine.ExecutionEvent.syscall.inj same
     have active : row ∈ activeSystemRows
-        (LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) 3)
-        syscallInstrsRow (·.is_real) := by simpa [LocalCore.executionRows] using actual
+        (LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) 3)
+        (syscallInstrsRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data) (·.is_real) := by simpa [LocalCore.executionRows] using actual
     obtain ⟨physical, physicalMem, rowEq, real⟩ := activeSystemRows_member _ _ _ active
-    have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final) (bankFinal := bankFinal)
-      (source_interface (p := p) source.host.io.hints)
-    have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-    have ordering := HostLocalCore.orderingChannels _ (auxiliaryInterface interface) checks balance
-    have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).BalancedChannel
+    have interface := source_interface (p := p) source.host.io.hints
+    have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
+    have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel
         programChannel.toRaw := by
       change BalancedInteractions
-        ((HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).interactionsWith programChannel.toRaw)
-      rw [HostLocalCore.localWitness_program _ (source_program_silent source final bankFinal)]
-      exact balance _ (by simp [HostHintReadLocal.ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble,
-        ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
+        ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith programChannel.toRaw)
+      rw [HostLocalCore.localWitness_program _ (source_program_silent source)]
+      exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
+        (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
     have program := LocalCore.program_guarantees_of_balance image source _ checked programBalance
-    have contract := syscallInstrsRow_contract_of_component _ (LocalCore.systemTable_component _ 3)
+    have contract := syscallInstrsRow_contract_of_component _
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data (LocalCore.systemTable_component _ 3)
       (LocalCore.systemTable_constraints _ checked 3)
       (ordering.byte _ (LocalCore.systemTable_mem _ 3))
-      (program _ (LocalCore.systemTable_mem _ 3)) physicalMem (by rwa [rowEq])
+      (program.2 _ (LocalCore.systemTable_mem _ 3)) physicalMem (by rwa [rowEq])
     rw [rowEq] at contract
     have selected := halt_selector row contract.1 real zero
     have small : Word.isU64 row.op_b_memory.prev_value :=
       (syscallRowFacts_currency_split row original).2.1.1
     have emitted := LocalCore.syscall_exit_code _ checked exitBalance active selected
     rw [SyscallInstrsChip.exitMessage, word_reduction _ small] at emitted
+    rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput] at emitted
     exact emitted
 
 private theorem halt_bounds {policy : HostPolicy} {program : Target.GuestProgram}

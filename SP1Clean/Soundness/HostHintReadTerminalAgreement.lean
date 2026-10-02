@@ -15,7 +15,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Model.Core NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance terminalAgreementLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 private theorem wrapper_receipt (input : HostCallChip.Inputs (ZMod p)) (flag : ZMod p) :
     hostExitAfter none (ExecutionRow.syscall input.instruction).event =
@@ -55,24 +55,26 @@ theorem GroundingCarrier.terminal_receipts
       (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     (carrier.events.filterMap (hostExitAfter none)).Perm
-      (((HostLocalHandoff.calls (HostHintQueueBoundary.expanded witness)).filterMap
+      (((HostLocalHandoff.calls (HostHintQueueBoundary.projected witness)).filterMap
         HostTerminalLedger.receipt?).map (fun word => (Word.toBitVec64 word).setWidth 32)) := by
   have inventory : ((LocalCore.executionRows
-      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).filterMap
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).filterMap
         (fun row => hostExitAfter none row.event)) =
-      ((HostCallLedger.calls (HostLocalCore.hostCallTable (HostHintQueueBoundary.expanded witness))).filterMap
+      ((HostCallLedger.calls (HostLocalCore.hostCallTable (HostHintQueueBoundary.projected witness)) witness.data).filterMap
         HostTerminalLedger.receipt?).map (fun word => (Word.toBitVec64 word).setWidth 32) := by
+    have wrappers := HostLocalCore.hostCallTable_projection (HostHintQueueBoundary.projected witness)
+    simp only [HostHintQueueBoundary.projected_data] at wrappers
     rw [LocalCore.executionRows, HostHintReadTerminal.legacy_rows_nil witness constraints,
-      List.map_nil, List.append_nil, ← HostLocalCore.hostCallTable_projection, List.map_map]
+      List.map_nil, List.append_nil, ← wrappers, List.map_map]
     exact inventory_receipts _ _
   have physical := (carrier.exhaustive.map ExecutionRow.event).filterMap (hostExitAfter none)
   simp only [List.filterMap_map, Function.comp_def] at physical
   rw [inventory] at physical
-  have interface := HostHintQueueBoundary.expanded_interface (source := source) (final := final)
-    (bankFinal := bankFinal) (source_interface (p := p) source.host.io.hints)
-  have handoff := HostLocalHandoff.calls_perm (HostHintQueueBoundary.expanded witness)
-    (resources_hostCall_silent interface) (HostHintQueueBoundary.expanded_constraints witness constraints)
-    (HostHintQueueBoundary.expanded_balanced witness balanced)
+  have interface := source_interface (p := p) source.host.io.hints
+  have handoff := HostLocalHandoff.calls_perm_of_balancedChannel (HostHintQueueBoundary.projected witness)
+    (resources_hostCall_silent interface) (HostHintQueueBoundary.projected_constraints witness constraints)
+    (HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced)
+  simp only [HostHintQueueBoundary.projected_data] at handoff
   simpa only [ExecutionCarrier.events, List.filterMap_map, Function.comp_def] using
     physical.trans ((handoff.filterMap HostTerminalLedger.receipt?).map
       (fun word => (Word.toBitVec64 word).setWidth 32))
@@ -112,7 +114,7 @@ theorem GroundingCarrier.final_terminal (valid : image.Valid)
     have agrees := (carrier.terminal_receipts constraints balanced).trans ledger
     rw [semantic] at agrees
     exact option_eq_of_perm _ _ agrees
-  · have status := (HostTerminalLedger.source_status witness constraints).resolve_left running
+  · have status := (HostTerminalLedger.source_status witness balanced).resolve_left running
     have unchanged := (path.of_halted running).2
     rw [unchanged]
     exact status
