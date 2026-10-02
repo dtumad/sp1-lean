@@ -15,7 +15,7 @@ open Circuit Air.Flat Model.Core HostHintReadLocal HostHintReadHandoff HostCommi
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance registryLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- Existing receiver and source-resource blocks, in their physical registration order. -/
 def auxiliary (hints : List Bytes) : List (Component (ZMod p)) :=
@@ -57,10 +57,10 @@ def installedBankSlot (image : ProgramImage) (source : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (channels : List (RawChannel (ZMod p))) (deferred : Bool) (index : Index) :
     TableSlot (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels).tables (view deferred index).component :=
+      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)).tables (view deferred index).component :=
   ((bankSlot source.host.io.hints deferred index).appendRight
     ((ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer)).setOther 57
-    ⟨HaltPaddingChip.circuit⟩ (by
+    HaltPaddingChip.component (by
       change 57 ≠ ((ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer).length +
         bankPosition deferred index
       rw [List.length_set, ProtectedLocalCore.tables_length]

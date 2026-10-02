@@ -206,7 +206,7 @@ theorem memoryInterior_signedBinary (witness : EnsembleWitness (ensemble image s
 /-- Full Memory balance gives exact equality of the two record inventories, retaining every
 host access. No projected Memory balance, semantic truth, or instruction inactivity is assumed. -/
 theorem memory_records_perm (witness : EnsembleWitness (ensemble image source auxiliary channels names))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel memoryChannel.toRaw)
     (binary : ∀ component ∈ auxiliary, NativeCore.MemoryBinary component) :
     ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
       (LocalCore.sourceWitness (localWitness witness)) ++ producedMessages (memoryInterior witness)).Perm
@@ -214,7 +214,7 @@ theorem memory_records_perm (witness : EnsembleWitness (ensemble image source au
       consumedMessages (memoryInterior witness)) := by
   apply NativeCore.memoryBoundary_records_perm _ _ _ (memoryInterior_signedBinary witness constraints binary)
   rw [← memory_interactions, typedEnsembleInteractionsWith_raw]
-  exact balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels])
+  exact balanced
 
 /-- Canonical, distinct final locations follow from Byte and private ordering balance; the
 extended Memory ledger need not project to the original ensemble. -/
@@ -222,13 +222,13 @@ theorem final_records_canonical_nodup (witness : EnsembleWitness (ensemble image
     (interface : AuxiliaryInterface auxiliary)
     (finalSilent : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (byteBalanced : witness.BalancedChannel byteChannel.toRaw)
+    (finalBalanced : witness.BalancedChannel (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) :
     (∀ record ∈ FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness)),
       MemoryBoundary.CanonicalSpec record) ∧
     ((FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness))).map MemoryMsg.locOf).Nodup := by
   have checked := localWitness_constraints witness constraints
-  have bytes := localWitness_byte witness interface constraints
-    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels]))
+  have bytes := localWitness_byte witness interface constraints byteBalanced
   have specs := LocalCore.finalTables_spec_of_byte _ checked bytes
   refine ⟨FinalMemoryEnsemble.inventory.records_valid_of_tables _ specs, ?_⟩
   apply FinalMemoryEnsemble.inventory.records_locations_nodup_of_tables
@@ -240,7 +240,7 @@ theorem final_records_canonical_nodup (witness : EnsembleWitness (ensemble image
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, memoryChannel, Channel.toRaw])
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, HostCallChip.channel, Channel.toRaw])
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, WritePermissionProvider.channel, Channel.toRaw]) finalSilent]
-  exact balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble])
+  exact finalBalanced
 
 /-- The complete host ledger has unique authentic source and canonical final frontiers.
 Only the unchanged private ordering channels are projected; every host Memory access is retained. -/
@@ -250,7 +250,10 @@ theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image sourc
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉ component.circuit.channels)
     (finalSilent : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (byteBalanced : witness.BalancedChannel byteChannel.toRaw)
+    (memoryBalanced : witness.BalancedChannel memoryChannel.toRaw)
+    (sourceBalanced : witness.BalancedChannel (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw)
+    (finalBalanced : witness.BalancedChannel (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw)
     (binary : ∀ component ∈ auxiliary, NativeCore.MemoryBinary component) (loc : MemLoc) :
     TimedGrounding.optMS (LocalCore.memoryInitialFrontier (localWitness witness) loc) +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
@@ -259,10 +262,9 @@ theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image sourc
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑(consumedMessages (memoryInterior witness)) : Multiset _) := by
   have checked := localWitness_constraints witness constraints
-  have bytes := localWitness_byte witness interface constraints
-    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels]))
+  have bytes := localWitness_byte witness interface constraints byteBalanced
   apply NativeCore.memoryBoundary_frontier_balance _ _ _ _ ?_ ?_
-    (memory_records_perm witness constraints balanced binary) loc
+    (memory_records_perm witness constraints memoryBalanced binary) loc
   · apply (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_locations_nodup_of_tables
       (LocalCore.sourceWitness (localWitness witness)) (NativeCore.afterInitialTables_silent image)
       (LocalCore.sourceTables_spec_of_byte _ checked bytes)
@@ -273,7 +275,7 @@ theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image sourc
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, memoryChannel, Channel.toRaw])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, HostCallChip.channel, Channel.toRaw])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, WritePermissionProvider.channel, Channel.toRaw]) sourceSilent]
-    exact balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble])
-  · exact (final_records_canonical_nodup witness interface finalSilent constraints balanced).2
+    exact sourceBalanced
+  · exact (final_records_canonical_nodup witness interface finalSilent constraints byteBalanced finalBalanced).2
 
 end SP1Clean.Soundness.HostLocalCore

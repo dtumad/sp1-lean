@@ -128,6 +128,27 @@ theorem boundary_silent (channel : RawChannel (ZMod p)) (different : channel ≠
   simp only [boundary, HostBoundary.closed, HostBoundary.circuit, circuit_norm,
     List.mem_cons, List.not_mem_nil, different, commit, deferred, terminal, or_self, not_false_eq_true]
 
+private theorem boundary_core_silent (channel : RawChannel (ZMod p))
+    (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
+    channel ∉ (boundary source final bankFinal).circuit.channels := by
+  have checked : (LocalCore.baseEnsemble (p := p) image source).channels.all
+      (fun core => !((boundary source final bankFinal).circuit.channels.map RawChannel.name).contains core.name) = true := rfl
+  intro used
+  have absent := List.all_eq_true.mp checked channel registered
+  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at absent
+  exact Bool.noConfusion absent
+
+/-- Core channels, including Memory and its private ordering ledgers, have no host-boundary traffic. -/
+theorem projected_core_balancedChannel
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names))
+    (balanced : witness.BalancedChannels) (channel : RawChannel (ZMod p))
+    (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
+    (projected witness).BalancedChannel channel := by
+  apply projected_balancedChannel witness balanced channel
+  · exact List.mem_append_left _ (List.mem_cons_of_mem _
+      (List.mem_cons_of_mem _ (List.mem_append_left _ registered)))
+  · exact boundary_core_silent channel registered
+
 /-- Authentication uses only the byte, node and word ledgers, all untouched by the boundary. -/
 theorem record_channels
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names))
@@ -154,6 +175,34 @@ theorem record_channels
       (by simp [wordChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [wordChannel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [wordChannel, HostExitBoundary.channel, Channel.toRaw])
+
+omit [Fact (2 ^ 25 < p)] in
+private theorem boundary_checker_silent (base : Ensemble (ZMod p) SP1PublicIO) :
+    (LocalSourceBoundary.checker image source).channel base ∉
+      (boundary source final bankFinal).circuit.channels := by
+  apply boundary_silent
+  all_goals
+    intro same
+    have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
+    dsimp only [PublicVerifier.channel, VerifierChannel.channel, Verifier.zeroChannel,
+      Channel.toRaw, VerifierChannel.channelName] at heads
+    rw [String.toList_append] at heads
+    simp [LocalSourceBoundary.checker, stateChannel, HostCommitChip.stateChannel, HostExitBoundary.channel] at heads
+
+/-- Source authentication and CPU chronology survive removal of the host-only endpoints. -/
+theorem projected_orderingChannels
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names))
+    (interface : ExtensionInterface others resources)
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    LocalCore.OrderingChannels (HostLocalCore.localWitness (projected witness)) := by
+  have byte := HostLocalCore.byte_guarantees (projected witness) (auxiliaryInterface interface)
+    (projected_constraints witness constraints) (record_channels witness balanced).byte
+  apply HostLocalCore.orderingChannels_of_guarantees (projected witness) (auxiliaryInterface interface) byte.1 byte.2
+  · apply projected_balancedChannel witness balanced
+    · exact List.mem_append_right _ (List.mem_singleton_self _)
+    · exact boundary_checker_silent _
+  · exact projected_core_balancedChannel witness balanced _
+      (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
 
 /-- Separate actual verifier emissions from the physical projection, preserving every occurrence.
 The singleton is only a local ledger representation evaluated at the original canonical data. -/
