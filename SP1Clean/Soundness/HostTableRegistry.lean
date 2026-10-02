@@ -22,6 +22,20 @@ def auxiliary (hints : List Bytes) : List (Component (ZMod p)) :=
   (receiver :: HostCallReceivers.available).map (·.component) ++
     (wordResources ++ sourceResources hints)
 
+/-- The installed physical suffix has exactly the registered host components, in order. -/
+theorem auxiliary_components {image : ProgramImage} {source : ExecutionSnapshot}
+    {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
+    {channels : List (RawChannel (ZMod p))}
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal
+      HostCallReceivers.available (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))) :
+    (witness.tables.drop 60).map (·.component) = auxiliary source.host.io.hints := by
+  have components := HostLocalCore.auxiliaryTables_components (HostHintQueueBoundary.projected witness)
+  change ((HostHintQueueBoundary.projected witness).tables.drop 60).map (·.component) =
+    auxiliary source.host.io.hints at components
+  rw [HostHintQueueBoundary.projected_drop witness 60 (by decide)] at components
+  exact components
+
 /-- Number of source-backed host components before any further resource extension. -/
 theorem auxiliary_length (hints : List Bytes) : (auxiliary (p := p) hints).length = 27 := rfl
 

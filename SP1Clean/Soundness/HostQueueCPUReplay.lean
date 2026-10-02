@@ -17,7 +17,7 @@ open NativeCore Semantics HostQueueCallProjection
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance replayLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 noncomputable def stampedCPU (data : ProverData (ZMod p)) (row : ExecutionRow p) :
     Option (ℕ × HintQueue.Event) :=
@@ -50,12 +50,12 @@ private theorem syscall_safe (env : Environment (ZMod p)) :
 theorem halt_code {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (LocalCore.ensemble (p := p) image source)) (constraints : witness.Constraints)
     (row : HaltChip.Inputs (ZMod p))
-    (member : row ∈ activeSystemRows (LocalCore.systemTable witness 2) haltRow (·.is_real)) :
+    (member : row ∈ activeSystemRows (LocalCore.systemTable witness 2) (haltRow witness.data) (·.is_real)) :
     Word.toBitVec64 row.x5_memory.prev_value = 0 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   have checked := LocalCore.systemTable_constraints witness constraints 2 physical physicalMem
   rw [LocalCore.systemTable_component witness 2] at checked
-  have realEval : Expression.eval ((LocalCore.systemTable witness 2).environment physical)
+  have realEval : Expression.eval (Environment.fromArray physical witness.data)
       (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p)).is_real = 1 := by
     simpa only [haltRow_eq, circuit_norm] using real
   have zero := HaltChip.codeZero_of_shallow _ _ _
@@ -64,6 +64,9 @@ theorem halt_code {image : ProgramImage} {source : ExecutionSnapshot}
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+  {names : ((HostLocalCore.tables image source
+    ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
 
 /-- Erase silent instruction families while retaining every wrapper occurrence. -/
 theorem filterMap_inventory {Instruction Halt Wrapper Row Message Label : Type*}
@@ -103,10 +106,10 @@ private theorem inventory_projection (data : ProverData (ZMod p))
   · exact syscall_projection data
 
 private theorem cpu_inventory
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (constraints : witness.Constraints) :
     ((LocalCore.executionRows (HostLocalCore.localWitness witness)).filterMap (stampedCPU witness.data)) =
-      (HostCallLedger.calls (HostLocalCore.hostCallTable witness)).filterMap stamped := by
+      (HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data).filterMap stamped := by
   rw [LocalCore.executionRows, ← HostLocalCore.hostCallTable_projection, List.map_map]
   exact inventory_projection witness.data _ _ _ (fun row member => halt_code (HostLocalCore.localWitness witness)
     (HostLocalCore.localWitness_constraints witness constraints) row member)
@@ -114,26 +117,30 @@ private theorem cpu_inventory
 /-- Every actual CPU event in the installed registry is safe for nonallocating queue replay.
 The absence of WRITE follows from the complete physical handoff, not a caller restriction. -/
 theorem cpu_safe
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (interface : ExtensionInterface HostCallReceivers.available resources)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (specs : ∀ table ∈ queueTables witness, table.Spec) :
+    (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
+    (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
+    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data) :
     ∀ row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness), QueueProjectionSafe row.event := by
-  have safeCalls := (calls_projection witness interface constraints balanced specs).1
-  have handoff := HostLocalHandoff.calls_perm witness (resources_hostCall_silent interface) constraints balanced
+  have safeCalls := (calls_projection witness interface constraints bytes specs).1
+  have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface)
+    constraints calls
   intro row member
   cases row with
   | instruction row => trivial
   | halt row =>
     have active : row ∈ activeSystemRows (LocalCore.systemTable (HostLocalCore.localWitness witness) 2)
-        haltRow (·.is_real) := by simpa [LocalCore.executionRows] using member
+        (haltRow (HostLocalCore.localWitness witness).data) (·.is_real) := by
+      simpa [LocalCore.executionRows] using member
     have zero := halt_code (HostLocalCore.localWitness witness)
       (HostLocalCore.localWitness_constraints witness constraints) row active
     simpa only [ExecutionRow.event, QueueProjectionSafe, haltEventOfRow, zero, SyscallKind.code] using
       (by decide : (0 : BitVec 64) ≠ 2)
   | syscall row =>
     have active : row ∈ activeSystemRows (LocalCore.systemTable (HostLocalCore.localWitness witness) 3)
-        syscallInstrsRow (·.is_real) := by simpa [LocalCore.executionRows] using member
+        (syscallInstrsRow (HostLocalCore.localWitness witness).data) (·.is_real) := by
+      simpa [LocalCore.executionRows] using member
     rw [← HostLocalCore.hostCallTable_projection] at active
     obtain ⟨env, envMem, rfl⟩ := List.mem_map.mp active
     exact (syscall_safe env).mpr (safeCalls _ (handoff.mem_iff.mp (List.mem_map_of_mem envMem)))
@@ -162,28 +169,35 @@ private theorem ordered_projection (data : ProverData (ZMod p))
 /-- The ordered CPU tape projects to exactly the ordered queue actions, including their labels.
 Ordinary instructions and queue-preserving host calls are erased only after their accounting proof. -/
 theorem cpu_projection
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (interface : ExtensionInterface HostCallReceivers.available resources)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (specs : ∀ table ∈ queueTables witness, table.Spec)
+    (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
+    (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
+    (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
+    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness)))
     (cpuWalk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     {path : List (Row (p := p))} {initial final : HostHintQueue.State (ZMod p)}
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness)))
+    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness) witness.data))
     (queueWalk : Walk.IsWalk edge initial final path) :
     cpu.filterMap (stampedCPU witness.data) = path.map fun row => (eventTime row, HostQueueHistory.event row) := by
-  have handoff := HostLocalHandoff.calls_perm witness (resources_hostCall_silent interface) constraints balanced
+  have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface)
+    constraints calls
   have projected := (cpuExhaustive.filterMap (stampedCPU witness.data)).trans
     ((List.Perm.of_eq (cpu_inventory witness constraints)).trans
-      ((handoff.filterMap stamped).trans ((calls_projection witness interface constraints balanced specs).2.trans
+      ((handoff.filterMap stamped).trans ((calls_projection witness interface constraints bytes specs).2.trans
         (queueExhaustive.map (fun row => (eventTime row, HostQueueHistory.event row))).symm)))
-  exact ordered_projection witness.data cpu path projected
-    (LocalCore.ordered_times_pairwise (HostLocalCore.localWitness witness)
-      (HostLocalCore.localWitness_constraints witness constraints)
-      (HostLocalCore.orderingChannels witness (auxiliaryInterface interface) constraints balanced) cpuExhaustive cpuWalk)
-    (times_pairwise queueWalk (fun row member => rows_spec _ (queueTables_aligned witness) specs row
+  have edgeData : ExecutionRow.canonEdge (HostLocalCore.localWitness witness).data =
+      ExecutionRow.canonEdge witness.data := funext fun row => row.canonEdge_setData _ _
+  have publicInput : (HostLocalCore.localWitness witness).publicInput = witness.publicInput := rfl
+  have cpuSorted := LocalCore.ordered_times_pairwise (HostLocalCore.localWitness witness)
+    (HostLocalCore.localWitness_constraints witness constraints) ordering cpuExhaustive
+    (by simpa only [edgeData, publicInput] using cpuWalk)
+  simp_rw [ExecutionRow.edge_setData _ (HostLocalCore.localWitness witness).data witness.data] at cpuSorted
+  exact ordered_projection witness.data cpu path projected cpuSorted
+    (times_pairwise queueWalk (fun row member => rows_spec _ witness.data (queueTables_aligned witness) specs row
       (queueExhaustive.mem_iff.mp member)))
 
 end SP1Clean.Soundness.HostQueueCPUReplay

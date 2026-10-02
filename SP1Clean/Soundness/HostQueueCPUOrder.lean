@@ -286,14 +286,7 @@ theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
   have checks : retained.Constraints := by exact HostHintQueueBoundary.projected_constraints witness constraints
   have interface := source_interface (p := p) source.host.io.hints
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
-  have callBalance : retained.BalancedChannel HostCallChip.channel.toRaw := by
-    apply HostHintQueueBoundary.projected_balancedChannel witness balanced
-    · exact List.mem_append_left _ (List.mem_cons_self ..)
-    · exact HostHintQueueBoundary.boundary_silent _
-        (by simp [HostCallChip.channel, stateChannel, Channel.toRaw])
-        (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
-        (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
-        (by simp [HostCallChip.channel, HostExitBoundary.channel, Channel.toRaw])
+  have callBalance := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   obtain ⟨cpu, cpuExhaustive, cpuWalk⟩ := HostLocalCore.executionRows_ordered_of_orderingChannels retained checks ordering
   obtain ⟨path, exhaustive, walk, history⟩ := HostHintQueueHistory.source_history witness constraints balanced
   refine ⟨cpu, path, cpuExhaustive, ?_, exhaustive, walk, history, ?_⟩

@@ -128,6 +128,19 @@ theorem boundary_silent (channel : RawChannel (ZMod p)) (different : channel ≠
   simp only [boundary, HostBoundary.closed, HostBoundary.circuit, circuit_norm,
     List.mem_cons, List.not_mem_nil, different, commit, deferred, terminal, or_self, not_false_eq_true]
 
+/-- The complete HostCall handoff is unchanged by the queue, bank and exit endpoints. -/
+theorem projected_hostCall_balancedChannel
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names))
+    (balanced : witness.BalancedChannels) :
+    (projected witness).BalancedChannel HostCallChip.channel.toRaw := by
+  apply projected_balancedChannel witness balanced
+  · exact List.mem_append_left _ (List.mem_cons_self ..)
+  · exact boundary_silent _
+      (by simp [HostCallChip.channel, stateChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, HostCommitChip.stateChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, HostExitBoundary.channel, Channel.toRaw])
+
 private theorem boundary_core_silent (channel : RawChannel (ZMod p))
     (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
     channel ∉ (boundary source final bankFinal).circuit.channels := by
