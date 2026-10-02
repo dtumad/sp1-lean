@@ -26,6 +26,13 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 def checkTables (target : MemorySnapshot) : List (Component (ZMod p)) :=
   [{ circuit := FinalRegisterCheck.circuit target }, { circuit := FinalRamCheck.circuit target }]
 
+/-- The five fixed boundary components have distinct names for every target snapshot. -/
+theorem empty_unique_names (target : MemorySnapshot) :
+    (((FinalMemoryEnsemble.inventory (p := p)).views.map TransitionView.component ++
+      (checkTables (p := p) target ++ [])).map
+        (fun component : Component (ZMod p) => component.circuit.name)).Nodup :=
+  of_decide_eq_true rfl
+
 /-- Receipt-bearing finalizers with both target-check tables installed. -/
 @[reducible] def base (target : MemorySnapshot) (auxiliary : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
