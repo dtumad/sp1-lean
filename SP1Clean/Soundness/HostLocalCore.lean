@@ -24,6 +24,14 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 def tables (image : ProgramImage) (source : ExecutionSnapshot) (auxiliary : List (Component (ZMod p))) :=
   (ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer ++ auxiliary
 
+/-- The host wrapper replaces the syscall key; appended resources retain their own keys. -/
+theorem tables_names (image : ProgramImage) (source : ExecutionSnapshot)
+    (auxiliary : List (Component (ZMod p))) :
+    (tables image source auxiliary).map (·.circuit.name) =
+      ((ProtectedLocalCore.tables (p := p) image source).map (·.circuit.name)).set 58
+        (HostCallLedger.producer (p := p)).circuit.name ++ auxiliary.map (·.circuit.name) := by
+  simp only [tables, List.map_append, List.map_set]
+
 /-- Install the complete physical inventory before choosing the source-check channel. -/
 def baseEnsemble (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))

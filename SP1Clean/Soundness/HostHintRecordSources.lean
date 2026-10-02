@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.HostHintReadLocalPermissions
+import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Proofs.Operations.HintQueueWordSource
 import ToClean.Air.Authentication
 

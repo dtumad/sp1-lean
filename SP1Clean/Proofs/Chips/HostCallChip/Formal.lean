@@ -69,6 +69,7 @@ theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod 
     And.intro (And.intro h_assumptions.1 h_assumptions.2.1) h_assumptions.2.2
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.host_call"
   main
   elaborated
   Spec input _ _ := Spec input

@@ -25,6 +25,7 @@ private theorem eval_step (env : Environment (ZMod p)) (last : Bool) (input : Va
   cases last <;> simp only [Inputs.step, Inputs.address, circuit_norm]
 
 def circuit (last : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := if last then "sp1.native.hint_read_word.last" else "sp1.native.hint_read_word.next"
   main := main last
   elaborated := elaborated last
   Spec input _ _ := Spec last input
