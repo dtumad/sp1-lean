@@ -107,50 +107,63 @@ theorem record_authentication_of_components
   exact ⟨Table.Authenticates.of_component table witness.data _ _ source.node checked,
     Table.Authenticates.of_component table witness.data _ _ source.word checked⟩
 
+/-- The three closed ledgers needed to authenticate local record consumers.
+Queue and commitment endpoints remain in the enclosing verifier's ledger. -/
+structure RecordChannels (witness : EnsembleWitness (ensemble image source others resources channels names)) : Prop where
+  byte : witness.BalancedChannel Channels.byteChannel.toRaw
+  node : witness.BalancedChannel nodeChannel.toRaw
+  word : witness.BalancedChannel wordChannel.toRaw
+
+/-- Whole-ensemble balance supplies the local authentication channels when no boundary is removed. -/
+theorem RecordChannels.of_balanced
+    (witness : EnsembleWitness (ensemble image source others resources channels names))
+    (balanced : witness.BalancedChannels) : RecordChannels witness := by
+  refine ⟨balanced _ ?_, balanced _ ?_, balanced _ ?_⟩
+  · simp [ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install,
+      HostLocalCore.baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels]
+  all_goals
+    apply auxiliary_channel_registered image source others resources channels HostHintReadCoverage.handler
+      (by simp [receiver])
+    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
+
 theorem node_authenticated (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)
-    (balanced : witness.BalancedChannels) (record : NodeRecord (ZMod p))
+    (balanced : witness.BalancedChannel nodeChannel.toRaw) (record : NodeRecord (ZMod p))
     (member : nodeChannel.pulledValue record ∈ witness.interactionsWith nodeChannel.toRaw) :
     record.Valid ∧ record.Binds store := by
   apply HostLocalCore.authenticated_auxiliary_pull witness nodeChannel ?_ node_fresh
     (by simp [nodeChannel, WritePermissionProvider.channel, Channel.toRaw]) wrapper_node_silent
     (fun record => record.Valid ∧ record.Binds store)
-    (fun table member => (authenticated table member).1) (balanced _ ?_) record member
+    (fun table member => (authenticated table member).1) balanced record member
   · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
       (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
         ⟨HostHintReadCoverage.handler, by simp [receiver], by
           simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩)))))
-  · apply auxiliary_channel_registered image source others resources channels HostHintReadCoverage.handler
-      (by simp [receiver]) nodeChannel.toRaw
-    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
 
 theorem word_authenticated (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)
-    (balanced : witness.BalancedChannels) (record : WordRecord (ZMod p))
+    (balanced : witness.BalancedChannel wordChannel.toRaw) (record : WordRecord (ZMod p))
     (member : wordChannel.pulledValue record ∈ witness.interactionsWith wordChannel.toRaw) :
     record.Valid ∧ record.Binds store := by
   apply HostLocalCore.authenticated_auxiliary_pull witness wordChannel ?_ word_fresh
     (by simp [wordChannel, WritePermissionProvider.channel, Channel.toRaw]) wrapper_word_silent
     (fun record => record.Valid ∧ record.Binds store)
-    (fun table member => (authenticated table member).2) (balanced _ ?_) record member
+    (fun table member => (authenticated table member).2) balanced record member
   · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
       (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
         ⟨HostHintReadCoverage.handler, by simp [receiver], by
           simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩)))))
-  · apply auxiliary_channel_registered image source others resources channels HostHintReadCoverage.handler
-      (by simp [receiver]) wordChannel.toRaw
-    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]
 
 theorem node_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)
-    (balanced : witness.BalancedChannels) :
+    (balanced : witness.BalancedChannel nodeChannel.toRaw) :
     ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data nodeChannel.toRaw :=
   (witness.channelGuarantees_of_authenticated_pulls nodeChannel
     (fun record member => (node_authenticated witness store authenticated balanced record member).1)).2
 
 theorem word_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)
-    (balanced : witness.BalancedChannels) :
+    (balanced : witness.BalancedChannel wordChannel.toRaw) :
     ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data wordChannel.toRaw :=
   (witness.channelGuarantees_of_authenticated_pulls wordChannel
     (fun record member => (word_authenticated witness store authenticated balanced record member).1)).2
@@ -182,22 +195,20 @@ theorem handlerTable_mem (witness : EnsembleWitness (ensemble image source other
 
 theorem byte_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannels) :
+    (balanced : witness.BalancedChannel Channels.byteChannel.toRaw) :
     ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data Channels.byteChannel.toRaw :=
-  (HostLocalCore.byte_guarantees witness (auxiliaryInterface interface) constraints
-    (balanced _ (by simp [ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble,
-      PublicVerifier.install, HostLocalCore.baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels]))).2
+  (HostLocalCore.byte_guarantees witness (auxiliaryInterface interface) constraints balanced).2
 
 /-- Handler row specifications follow from the installed AIR and its authenticated sources. -/
 theorem handler_spec (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (store : Store)
     (authenticated : RecordAuthentication witness store)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (balanced : RecordChannels witness) :
     (handlerTable witness).Spec witness.data := by
   have member := handlerTable_mem witness
-  have bytes := byte_guarantees witness interface constraints balanced _ member
-  have nodes := node_guarantees witness store authenticated balanced _ member
-  have words := word_guarantees witness store authenticated balanced _ member
+  have bytes := byte_guarantees witness interface constraints balanced.byte _ member
+  have nodes := node_guarantees witness store authenticated balanced.node _ member
+  have words := word_guarantees witness store authenticated balanced.word _ member
   intro physical present
   have checked := constraints _ member physical present
   have byte := bytes physical present
@@ -246,7 +257,7 @@ balance and the bundled step circuit. No prior RAM representation guarantee is r
 theorem word_steps (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (store : Store)
     (authenticated : RecordAuthentication witness store)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (balanced : RecordChannels witness) :
     HintReadCoverage.Steps (wordTables witness) witness.data := by
   intro row member
   obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
@@ -254,8 +265,8 @@ theorem word_steps (witness : EnsembleWitness (ensemble image source others reso
   have component := List.forall₂_zip (wordTables_aligned witness) paired
   have present := wordTables_mem witness table (List.of_mem_zip paired).2
   have checked := constraints table present physical physicalMem
-  have bytes := byte_guarantees witness interface constraints balanced table present physical physicalMem
-  have words := word_guarantees witness store authenticated balanced table present physical physicalMem
+  have bytes := byte_guarantees witness interface constraints balanced.byte table present physical physicalMem
+  have words := word_guarantees witness store authenticated balanced.word table present physical physicalMem
   rw [← component] at checked bytes words
   rw [Component.constraintsHold_iff] at checked
   rw [Component.channelGuarantees_iff] at bytes words
@@ -298,13 +309,13 @@ Immutable words and Byte guarantees are derived from the installed sources and b
 theorem word_spec (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (store : Store)
     (authenticated : RecordAuthentication witness store)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (balanced : RecordChannels witness)
     (memory : ∀ table ∈ wordTables witness, table.ChannelGuarantees witness.data Channels.memoryChannel.toRaw) :
     ∀ table ∈ wordTables witness, table.Spec witness.data := by
   intro table member
   have present := wordTables_mem witness table member
-  have byte := byte_guarantees witness interface constraints balanced table present
-  have word := word_guarantees witness store authenticated balanced table present
+  have byte := byte_guarantees witness interface constraints balanced.byte table present
+  have word := word_guarantees witness store authenticated balanced.word table present
   have component := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   rw [wordTables_components] at component
   simp only [wordResources, List.mem_cons, List.not_mem_nil, or_false] at component

@@ -44,42 +44,46 @@ theorem History.current {hints atHints : List Bytes} {final : State (ZMod p)} {u
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : State (ZMod p)} {bankFinal : HostState}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+  {names : ((HostLocalCore.tables image source
+    ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
 
 /-- Every path prefix supplies its current queue from the AIR; callers supply no per-call head truth.
 The current handler registry requires extra resources without additional queue-state edges. -/
 theorem of_witness
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal
-      HostCallReceivers.available resources channels))
+      HostCallReceivers.available resources channels names))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (upper : Store) (extension : Extends (ofList source.host.io.hints).1 upper)
-    (authenticated : RecordAuthentication (expanded witness) upper)
+    (authenticated : RecordAuthentication (projected witness) upper)
     (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (queueTables (expanded witness))) ∧
+      path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness)) witness.data) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       History source.host.io.hints final upper path := by
   obtain ⟨path, exhaustive, walk⟩ := queue_ordered witness interface upper authenticated silent constraints balanced
-  have checks := expanded_constraints witness constraints
-  have balance := expanded_balanced witness balanced
-  have specs := queue_specs (expanded witness) (expanded_interface interface) upper authenticated checks balance
+  have checks := projected_constraints witness constraints
+  have records := record_channels witness balanced
+  have specs := queue_specs (projected witness) interface upper authenticated checks records
   refine ⟨path, exhaustive, walk, ?_⟩
   apply HintQueueHistory.of_walk edge HostQueueHistory.event path _ final _ upper _ walk
-    (source_binding witness constraints) extension
+    (source_binding witness balanced) extension
   intro row member
   have physical := exhaustive.mem_iff.mp member
+  rw [← projected_data witness] at physical
   exact HostQueueHistory.advance row upper
-    (rows_spec _ (queueTables_aligned (expanded witness)) specs row physical)
-    (HostQueueHistory.records_of_witness (expanded witness) upper authenticated balance row physical)
+    (rows_spec _ (projected witness).data (queueTables_aligned (projected witness)) specs row physical)
+    (HostQueueHistory.records_of_witness (projected witness) upper authenticated records row physical)
 
 /-- Source bytes and the installed AIR alone determine every observed length, queue pop, and final
 reachable queue. This theorem does not require current-head or record-authentication premises. -/
 theorem source_history
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels))
+      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (queueTables (expanded witness))) ∧
+      path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness)) witness.data) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       History source.host.io.hints final (ofList source.host.io.hints).1 path := by
   apply of_witness witness (source_interface source.host.io.hints) _ (.refl _)
@@ -87,6 +91,6 @@ theorem source_history
   intro component member used
   have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
   simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl <;> change false = true at present <;> contradiction
+  rcases member with rfl | rfl | rfl | rfl <;> change false = true at present <;> exact Bool.noConfusion present
 
 end SP1Clean.Soundness.HostHintQueueHistory

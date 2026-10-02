@@ -157,7 +157,7 @@ theorem queue_specs
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (interface : ExtensionInterface HostCallReceivers.available resources) (store : HintQueue.Store)
     (authenticated : RecordAuthentication witness store)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (balanced : RecordChannels witness) :
     ∀ table ∈ queueTables witness, table.Spec witness.data := by
   intro table member
   have present := queueTables_mem witness table member
@@ -167,7 +167,7 @@ theorem queue_specs
   simp only [List.map_drop, HostLocalHandoff.receiverTables_components] at mapped
   change table.component ∈ [{ circuit := HostHintLengthChip.circuit false }, { circuit := HostHintLengthChip.circuit true }] at mapped
   simp only [List.mem_cons, List.not_mem_nil, or_false] at mapped
-  have nodes := node_guarantees witness store authenticated balanced table present
+  have nodes := node_guarantees witness store authenticated balanced.node table present
   have checked := constraints table present
   rcases mapped with component | component
   all_goals
@@ -196,7 +196,7 @@ theorem queue_ordered_of_endpoints
   change BalancedInteractions (witness.interactionsWith stateChannel.toRaw) at ledger
   rw [queue_interactions, endpoints] at ledger
   exact HostQueueOrder.ordered _ witness.data (queueTables_aligned witness)
-    (queue_specs witness interface store authenticated constraints balanced) initial final
+    (queue_specs witness interface store authenticated constraints (RecordChannels.of_balanced witness balanced)) initial final
     (balancedInteractions_of_perm ledger (List.perm_append_comm ..))
 
 /-- If all extra resources are queue-silent, complete AIR balance forces every queue-handler
@@ -221,7 +221,7 @@ theorem queue_rows_nil_of_silent_resources
   change BalancedInteractions (witness.interactionsWith stateChannel.toRaw) at ledger
   rw [queue_interactions, extra, List.append_nil] at ledger
   exact HostQueueOrder.rows_nil_of_balanced _ witness.data (queueTables_aligned witness)
-    (queue_specs witness interface store authenticated constraints balanced) ledger
+    (queue_specs witness interface store authenticated constraints (RecordChannels.of_balanced witness balanced)) ledger
 
 /-- The fixed source registration lacks queue boundaries: all its queue handlers are necessarily
 inactive under the full AIR relation, even though record-only regressions can contain active rows. -/

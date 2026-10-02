@@ -103,7 +103,7 @@ theorem consumer_word_binding (witness : EnsembleWitness (ensemble image source 
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) :
     ((HintReadCoverage.rowInput row).step row.1).word.Binds store :=
-  (word_authenticated witness store authenticated balanced _ (consumer_pull_mem witness row member)).2
+  (word_authenticated witness store authenticated (RecordChannels.of_balanced witness balanced).word _ (consumer_pull_mem witness row member)).2
 
 private theorem consumer_pointer (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
@@ -156,9 +156,9 @@ theorem current_records (witness : EnsembleWitness (ensemble image source others
     have head : (input env).previous.head = (input env).node.pointer := valid.2.2.2.2.2.2.1
     rw [← head]
     exact current.2.2.2.bound
-  have node := (node_authenticated witness finalStore authenticated balanced (input env).node
+  have node := (node_authenticated witness finalStore authenticated (RecordChannels.of_balanced witness balanced).node (input env).node
     (handler_pull_mem witness env member _ _ (by rw [(handler_records env).1]; exact List.mem_cons_self ..))).2
-  have ending := (word_authenticated witness finalStore authenticated balanced (input env).endStep.word
+  have ending := (word_authenticated witness finalStore authenticated (RecordChannels.of_balanced witness balanced).word (input env).endStep.word
     (handler_pull_mem witness env member _ _ (by rw [(handler_records env).2]; exact List.mem_cons_self ..))).2
   refine ⟨node.restrict extension bound, ending.restrict extension bound, ?_⟩
   intro row rowMem clock
@@ -188,8 +188,8 @@ theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image 
         (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) witness.data
           (wordTables_aligned witness)) witness.data).map
         HintReadWrites.produced).Perm (wordWrites (Address.toNat (input env).span.start) bytes) := by
-  have handlerSpecs := handler_spec witness interface finalStore authenticated constraints balanced
-  have wordSpecs := word_steps witness interface finalStore authenticated constraints balanced
+  have handlerSpecs := handler_spec witness interface finalStore authenticated constraints (RecordChannels.of_balanced witness balanced)
+  have wordSpecs := word_steps witness interface finalStore authenticated constraints (RecordChannels.of_balanced witness balanced)
   obtain ⟨header, ending, words⟩ := current_records witness interface constraints balanced handlerSpecs wordSpecs
     store finalStore extension authenticated env member host.io.hints current
   exact run_of_witness witness interface pulls constraints balanced handlerSpecs wordSpecs env member
