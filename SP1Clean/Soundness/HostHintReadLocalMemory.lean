@@ -270,8 +270,6 @@ theorem source_memory_push_bound (valid : image.Valid)
     (source_interface (p := p) source.host.io.hints)
   have bytes := byte_guarantees expanded interface checked balance
   apply HostLocalCore.memoryInterior_push_bound valid expanded checked bytes
-    (HostLocalCore.localWitness_byte expanded (auxiliaryInterface interface) checked
-      (balance _ (by simp [HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])))
   · change BalancedInteractions ((HostLocalCore.localWitness expanded).interactionsWith programChannel.toRaw)
     rw [HostLocalCore.localWitness_program expanded (source_program_silent source final bankFinal)]
     exact balance _ (by simp [HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])

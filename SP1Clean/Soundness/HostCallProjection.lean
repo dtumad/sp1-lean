@@ -318,15 +318,13 @@ theorem input_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod p)) :
     exact bound
   by_cases inside : index < row.size <;> simp [within, inside]
 
-/-- Prefix projection retains every occurrence on channels unchanged by the host wrapper. -/
-theorem other_values_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod p))
-    (channel : RawChannel (ZMod p)) (byte : channel ≠ byteChannel.toRaw)
-    (memory : channel ≠ memoryChannel.toRaw) (host : channel ≠ HostCallChip.channel.toRaw) :
+/-- The original instruction's complete ledger depends only on its physical prefix. -/
+theorem original_values_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod p))
+    (channel : RawChannel (ZMod p)) :
     original.operations.interactionValuesWith channel
         (Environment.fromArray (row.extract 0 (original (p := p)).width) data') =
-      producer.operations.interactionValuesWith channel (Environment.fromArray row data) := by
-  rw [Operations.interactionValuesWith, Operations.interactionValuesWith,
-    ← other_interactions channel byte memory host]
+      original.operations.interactionValuesWith channel (Environment.fromArray row data) := by
+  simp only [Operations.interactionValuesWith]
   apply List.map_congr_left
   intro interaction member
   apply Extraction.interaction_eval_extract
@@ -334,5 +332,15 @@ theorem other_values_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMo
   intro expression used
   exact List.findSome?_eq_none_iff.mp (original_scope (p := p)).2 expression
     (List.mem_flatMap.mpr ⟨interaction, (List.mem_filter.mp member).1, used⟩)
+
+/-- Prefix projection retains every occurrence on channels unchanged by the host wrapper. -/
+theorem other_values_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod p))
+    (channel : RawChannel (ZMod p)) (byte : channel ≠ byteChannel.toRaw)
+    (memory : channel ≠ memoryChannel.toRaw) (host : channel ≠ HostCallChip.channel.toRaw) :
+    original.operations.interactionValuesWith channel
+        (Environment.fromArray (row.extract 0 (original (p := p)).width) data') =
+      producer.operations.interactionValuesWith channel (Environment.fromArray row data) := by
+  rw [original_values_prefix, Operations.interactionValuesWith, Operations.interactionValuesWith,
+    other_interactions channel byte memory host]
 
 end SP1Clean.Soundness.HostCallProjection
