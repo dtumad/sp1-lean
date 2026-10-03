@@ -5,7 +5,7 @@ import SP1Clean.Soundness.TypedSelectors
 
 The Program bus is structural in the Clean circuit: instruction rows pull one decoded fetch and the
 preprocessed Program table pushes matching rows.  This module keeps that exact typed interaction and
-grounds it against the program committed in `ProverData`; no `LookupAccess` projection is introduced.
+grounds it against the program named by the statement; no `LookupAccess` projection is introduced.
 -/
 
 namespace SP1Clean.Soundness
@@ -933,19 +933,19 @@ theorem decodedWitnessProgramInteractions_pullShape
     rw [TypedInteraction.pulledIfValue_mult, active]
 
 /-- Every active deterministically decoded instruction fetch is a genuine decode of the guest
-program committed in `ProverData`.  This is the Program-channel grounding theorem: row constraints
+program named by the statement.  This is the Program-channel grounding theorem: row constraints
 identify the exact pull, Clean balance finds a matching nonzero provider contribution, and the
 boundary binding supplies committed-ROM truth for that contribution. -/
-theorem DecodedInstructionRow.programTruth_of_active
+theorem DecodedInstructionRow.programTruth_of_active {program : Target.GuestProgram}
     (decoded : DecodedInstructionRow p)
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness)
+    (providerBound : ProgramProviderBound program witness)
     (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
     (active : (decoded.toChipRow witness.data).is_real = 1)
     (opcodeNe : (programAccess (decoded.toChipRow witness.data).view).toRow.opcode ≠
       ((Opcode.ECALL).toNat : ZMod p)) :
-    ProgTruth (programMessageOfView (decoded.toChipRow witness.data).view) witness.data := by
+    ProgTruth (programMessageOfView (decoded.toChipRow witness.data).view) program := by
   let consumers :=
     decodedWitnessInstructionInteractionsWith witness.data witness.tables programChannel
   let target := TypedInteraction.pulledIfValue programChannel
@@ -1017,11 +1017,11 @@ theorem DecodedInstructionRow.programTruth_of_active
   have truth := providerBound provider.raw rawMem (by
     simpa only [TypedInteraction.mult] using providerNonzero)
   have reboundEq : rebound = provider := TypedInteraction.raw_injective rfl
-  change Semantics.CommittedProgTruth rebound.message witness.data at truth
+  change Semantics.CommittedProgTruth rebound.message program at truth
   rw [reboundEq] at truth
   rw [messageEq] at truth
   have committed : Semantics.CommittedProgTruth
-      (programMessageOfView (decoded.toChipRow witness.data).view) witness.data := by
+      (programMessageOfView (decoded.toChipRow witness.data).view) program := by
     simpa only [target, TypedInteraction.pulledIfValue_message] using truth
   exact committed.progTruth_of_opcode_ne
     (by simpa only [rowOfMsg_programMessageOfView] using opcodeNe)
@@ -1030,12 +1030,12 @@ theorem DecodedInstructionRow.programTruth_of_active
 by an active committed-provider push, and the received row's opcode is the pinned `ECALL`
 discriminant, so the committed guest program holds the literal `ECALL` word at the halt pc and the
 pulled row is the transpiled `ECALL` shape (`committedInROM.ecall_of_opcode`). -/
-theorem witness_haltRow_ecallTruth
+theorem witness_haltRow_ecallTruth {program : Target.GuestProgram}
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness)
+    (providerBound : ProgramProviderBound program witness)
     {row : Array (ZMod p)} (rowMem : row ∈ realHaltRows witness) :
-    (Commit.progOf witness.data).fetchWord
+    program.fetchWord
         (Target.pcBitsOfRow (rowOfMsg
           (HaltChip.programMessage (haltRow witness.data row)))) =
         some Target.ECALL_ENC ∧
@@ -1114,11 +1114,11 @@ theorem witness_haltRow_ecallTruth
   have truth := providerBound provider.raw rawMem (by
     simpa only [TypedInteraction.mult] using providerNonzero)
   have reboundEq : rebound = provider := TypedInteraction.raw_injective rfl
-  change Semantics.CommittedProgTruth rebound.message witness.data at truth
+  change Semantics.CommittedProgTruth rebound.message program at truth
   rw [reboundEq] at truth
   rw [messageEq] at truth
   have committed : Semantics.CommittedProgTruth
-      (HaltChip.programMessage (haltRow witness.data row)) witness.data := by
+      (HaltChip.programMessage (haltRow witness.data row)) program := by
     simpa only [target, TypedInteraction.pulledIfValue_message] using truth
   exact committed.2.ecall_of_opcode rfl
 
@@ -1130,12 +1130,12 @@ row pins them. This is where they get pinned — the Program bus's committed `EC
 what lets `MemoryMsg.locOf` decode each register touch to `.reg` rather than falling through to
 `.ram`, where `readWindow = 0` and `writeOffset = 1` would break `TouchOK`'s `read_hi` and
 `push_kind`. -/
-theorem witness_syscallRow_ecallTruth
+theorem witness_syscallRow_ecallTruth {program : Target.GuestProgram}
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness)
+    (providerBound : ProgramProviderBound program witness)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    (Commit.progOf witness.data).fetchWord
+    program.fetchWord
         (Target.pcBitsOfRow (rowOfMsg
           (SyscallInstrsChip.programMessage
             (syscallInstrsRow witness.data row)))) =
@@ -1216,12 +1216,12 @@ theorem witness_syscallRow_ecallTruth
   have truth := providerBound provider.raw rawMem (by
     simpa only [TypedInteraction.mult] using providerNonzero)
   have reboundEq : rebound = provider := TypedInteraction.raw_injective rfl
-  change Semantics.CommittedProgTruth rebound.message witness.data at truth
+  change Semantics.CommittedProgTruth rebound.message program at truth
   rw [reboundEq] at truth
   rw [messageEq] at truth
   have committed : Semantics.CommittedProgTruth
       (SyscallInstrsChip.programMessage (syscallInstrsRow witness.data row))
-      witness.data := by
+      program := by
     simpa only [target, TypedInteraction.pulledIfValue_message] using truth
   exact committed.2.ecall_of_opcode rfl
 

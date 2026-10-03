@@ -1084,7 +1084,7 @@ theorem activeProgramMessage_jalView :
     Semantics.rowOfMsg activeProgramMessage = (programAccess jalView).toRow := by
   rfl
 
-theorem activeTrace_programProviderBound : ProgramProviderBound activeTrace.witness := by
+theorem activeTrace_programProviderBound : ProgramProviderBound anchorProgram activeTrace.witness := by
   intro interaction member _
   have member' := member
   rw [activeTrace_programProviderInteractions, List.mem_singleton] at member'
@@ -1093,7 +1093,7 @@ theorem activeTrace_programProviderBound : ProgramProviderBound activeTrace.witn
     { raw := programChannel.pushedIfValue 1 activeProgramMessage
       channel_eq :=
         (programProviderTable activeTrace.witness).channel_eq_of_mem_interactionsWith member }
-  change Semantics.CommittedProgTruth typed.message anchorData
+  change Semantics.CommittedProgTruth typed.message anchorProgram
   have message_eq : typed.message = activeProgramMessage := by
     rw [TypedInteraction.message_eq_iff]
     rfl
@@ -1111,7 +1111,7 @@ theorem activeInitMessage_content :
   simp [SailState.get_reg?]
 
 theorem activeTrace_memoryInitProviderBound :
-    MemoryInitProviderBound activeTrace.witness anchorState (Commit.initClkNat anchorData) := by
+    MemoryInitProviderBound activeTrace.witness anchorState activeStatement.initClkNat := by
   intro interaction member _
   have member' := member
   rw [activeTrace_memoryInitProviderInteractions, List.mem_singleton] at member'
@@ -1120,7 +1120,7 @@ theorem activeTrace_memoryInitProviderBound :
     { raw := memoryChannel.pushedIfValue 1 activeInitMessage
       channel_eq :=
         (memoryInitProviderTable activeTrace.witness).channel_eq_of_mem_interactionsWith member }
-  change MemoryInitMessageBound anchorState (Commit.initClkNat anchorData) typed.message
+  change MemoryInitMessageBound anchorState activeStatement.initClkNat typed.message
   have message_eq : typed.message = activeInitMessage := by
     rw [TypedInteraction.message_eq_iff]
     rfl
@@ -1148,9 +1148,8 @@ theorem activeTrace_memoryFinalizeProviderUnique :
 theorem activeTrace_boundaryFacts :
     InitialBoundaryFacts activeStatement activeTrace.witness anchorState where
   programWellFormed := anchorProgram_wellFormed
-  programCommitted := ⟨anchorData_canonicalEncoding, rfl⟩
+  programEncodable := anchorBoundaryFacts.programEncodable
   initialPc := anchorBoundaryFacts.initialPc
-  initialClock := anchorBoundaryFacts.initialClock
   romLoaded := anchorState_romLoaded
   configured := anchorState_configured
   codeMemoryCompatible := anchor_codeMemoryCompatible

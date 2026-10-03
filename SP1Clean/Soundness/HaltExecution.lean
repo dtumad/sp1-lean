@@ -41,7 +41,7 @@ private theorem locContent_of_pullMicro
     (hg : SupportedCoreHaltGrounding statement witness initial rows halt)
     (chain : Target.SailChain rows.length initial finalState)
     {loc : Semantics.MemLoc} {bv : BitVec 64}
-    (current : Semantics.microValue initial (Commit.initClkNat witness.data) loc
+    (current : Semantics.microValue initial statement.initClkNat loc
       (Semantics.StateMsg.timeNat
         (HaltChip.statePulledMessage (haltRow witness.data halt))) = some bv) :
     Semantics.locContent finalState loc = some bv := by
@@ -133,7 +133,7 @@ theorem haltedSail_of_haltGrounding
       Target.SailRetireChain rows.length initial preHalt ∧
       Target.SP1Halted statement.program statement.publicValues.exitCodeBits preHalt ∧
       (∀ (loc : Semantics.MemLoc) (bv : BitVec 64),
-        Semantics.microValue initial (Commit.initClkNat witness.data) loc
+        Semantics.microValue initial statement.initClkNat loc
           (Semantics.StateMsg.timeNat
             (HaltChip.statePulledMessage (haltRow witness.data halt))) = some bv →
         Semantics.locContent preHalt loc = some bv) := by
@@ -179,7 +179,7 @@ theorem haltedExecution_of_haltGrounding
         SupportedSP1Transition statement.program located) ∧
       execution.transitions.dropLast.length = rows.length ∧
       (∀ (loc : Semantics.MemLoc) (bv : BitVec 64),
-        Semantics.microValue initial (Commit.initClkNat witness.data) loc
+        Semantics.microValue initial statement.initClkNat loc
           (Semantics.StateMsg.timeNat
             (HaltChip.statePulledMessage (haltRow witness.data halt))) = some bv →
         Semantics.locContent execution.finalState loc = some bv) := by
@@ -312,10 +312,7 @@ theorem haltedExecution_of_haltGrounding
     rw [List.map_append, Machine.clockAfterEvents_append, prefixClock]
     simp only [List.map_cons, List.map_nil, Machine.clockAfterEvents, List.foldl_cons,
       List.foldl_nil, Machine.ExecutionEvent.duration_syscall]
-    have hfin := hg.finalClock
-    have hpull := hg.pullClock
-    have hinit := boundary.initialClock
-    omega
+    simpa only [hg.pullClock] using hg.finalClock.symm
   · -- final pc: the halt park at the committed final boundary
     rw [finalStateEq, targetPc, hg.finalPc]
   · -- the terminal halt condition

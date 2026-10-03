@@ -25,7 +25,6 @@ namespace SP1Clean.Semantics
 open Sail LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target
 open SP1Clean.Channels (StateMsg MemoryMsg ProgramMsg)
-open SP1Clean.Commit (progOf initClkNat)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -33,14 +32,14 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 currently unconsumed — the capstone layer grounds through `LocalStateTruth` below; this
 model-parameterized form is reserved for the generalized (non-ordinary-schedule) grounding. -/
 noncomputable def ExecutionStateTruth (model : SP1Clean.Machine.SP1MachineModel)
-    (m : StateMsg (ZMod p)) (data : ProverData (ZMod p)) : Prop :=
-  ∃ ctx : SP1Clean.Machine.ExecutionCtx model, ctx.program = progOf data ∧
+    (program : GuestProgram) (initialClock : ℕ) (m : StateMsg (ZMod p)) : Prop :=
+  ∃ ctx : SP1Clean.Machine.ExecutionCtx model, ctx.program = program ∧
     ∃ (step : ℕ) (state : SailState),
       SP1Clean.Machine.trajectory ctx.initial step = some state ∧
       StateMsg.timeNat m =
-        SP1Clean.Machine.executionClock ctx (initClkNat data) step ∧
+        SP1Clean.Machine.executionClock ctx initialClock step ∧
       state.regs.get? Register.PC = some (pcBits m.pc0 m.pc1 m.pc2) ∧
-      RomLoaded (progOf data) state ∧
+      RomLoaded program state ∧
       SailConfigured state
 
 /-- **Shard-local ordinary-window state grounding.** Starting from the exact state selected by the
@@ -267,13 +266,13 @@ def rowOfMsg (m : ProgramMsg (ZMod p)) : SP1Clean.ProgramChip.ProgramRow (ZMod p
 
 /-- **Committed-program truth** — the fetch-decode correspondence: the message's decode
 bounds (`RowSpec`) **plus** that the fetched row is the decode of the committed program's ROM at its pc
-(`decodedInROM`, over `Commit.progOf data`). So the `is_real`-gated opcode a chip pins in its fetch is a
+(`decodedInROM`, over the statement's program). So the `is_real`-gated opcode a chip pins in its fetch is a
 real decode of the committed guest program — the foundation of opcode-based Sail dispatch. Structural
 `RowSpec` is established locally and by the structural Program channel; the `decodedInROM` half is
 derived from balance against the ROM provider plus the program-commitment binding. -/
-def ProgTruth (m : ProgramMsg (ZMod p)) (data : ProverData (ZMod p)) : Prop :=
+def ProgTruth (m : ProgramMsg (ZMod p)) (program : GuestProgram) : Prop :=
   SP1Clean.Channels.ProgramMsg.RowSpec m ∧
-    SP1Clean.Soundness.Target.decodedInROM (Commit.progOf data) (rowOfMsg m)
+    SP1Clean.Soundness.Target.decodedInROM program (rowOfMsg m)
 
 /-- **Committed-fragment truth** — `ProgTruth` re-based on the whole committed fragment (the
 halt-table wave): the message decodes structurally (`RowSpec`), and its row is committed — either
@@ -281,23 +280,23 @@ the hoisted decode of a routed instruction or the transpiled `ECALL` site (`comm
 Program provider certifies this weaker predicate; each instruction chip recovers `ProgTruth`
 through `committedInROM.decoded_of_opcode_ne` with its pinned non-`ECALL` opcode, and the halt
 table takes `committedInROM.ecall_of_opcode`. -/
-def CommittedProgTruth (m : ProgramMsg (ZMod p)) (data : ProverData (ZMod p)) : Prop :=
+def CommittedProgTruth (m : ProgramMsg (ZMod p)) (program : GuestProgram) : Prop :=
   SP1Clean.Channels.ProgramMsg.RowSpec m ∧
-    SP1Clean.Soundness.Target.committedInROM (Commit.progOf data) (rowOfMsg m)
+    SP1Clean.Soundness.Target.committedInROM program (rowOfMsg m)
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The instruction-chip fragment embeds. -/
-theorem ProgTruth.committed {m : ProgramMsg (ZMod p)} {data : ProverData (ZMod p)}
-    (h : ProgTruth m data) : CommittedProgTruth m data :=
+theorem ProgTruth.committed {m : ProgramMsg (ZMod p)} {program : GuestProgram}
+    (h : ProgTruth m program) : CommittedProgTruth m program :=
   ⟨h.1, h.2.committed⟩
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The per-chip strengthening step: a committed fetch whose pinned opcode is not `ECALL`'s is a
 genuine decoded fetch. -/
 theorem CommittedProgTruth.progTruth_of_opcode_ne {m : ProgramMsg (ZMod p)}
-    {data : ProverData (ZMod p)} (h : CommittedProgTruth m data)
+    {program : GuestProgram} (h : CommittedProgTruth m program)
     (hne : (rowOfMsg m).opcode ≠ ((SP1Clean.Soundness.Opcode.ECALL).toNat : ZMod p)) :
-    ProgTruth m data :=
+    ProgTruth m program :=
   ⟨h.1, h.2.decoded_of_opcode_ne hne⟩
 
 set_option linter.unusedSectionVars false in
@@ -305,9 +304,9 @@ set_option linter.unusedSectionVars false in
 LeanRV64D `ext_decode` instruction whose `instrToProgramRow` is the message's row — the callable RV64
 surface the Phase-4 per-chip `advance` consumes (its opcode-based Sail dispatch). A thin re-export of the
 `decodedInROM.decodes` accessor through the `ProgTruth` conjunction. -/
-theorem ProgTruth.decodes {m : ProgramMsg (ZMod p)} {data : ProverData (ZMod p)}
-    (h : ProgTruth m data) (s : SailState) (hs : SailConfigured s) :
-    ∃ w i, (Commit.progOf data).fetchWord (pcBitsOfRow (rowOfMsg m)) = some w ∧
+theorem ProgTruth.decodes {m : ProgramMsg (ZMod p)} {program : GuestProgram}
+    (h : ProgTruth m program) (s : SailState) (hs : SailConfigured s) :
+    ∃ w i, program.fetchWord (pcBitsOfRow (rowOfMsg m)) = some w ∧
       (ext_decode w).run s = .ok i s ∧
       instrToProgramRow (rowPcVec (rowOfMsg m)) i = some (rowOfMsg m) :=
   h.2.decodes s hs

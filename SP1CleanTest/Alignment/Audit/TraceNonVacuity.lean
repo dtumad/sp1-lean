@@ -467,7 +467,7 @@ theorem anchorTrace_memoryFinalizeProviderTable_nil :
     (memoryFinalizeProviderTable (p := SP1Prime) anchorTrace.witness).table = [] := rfl
 
 theorem anchorTrace_programProviderBound :
-    ProgramProviderBound (p := SP1Prime) anchorTrace.witness := by
+    ProgramProviderBound (p := SP1Prime) anchorProgram anchorTrace.witness := by
   intro interaction member _
   exfalso
   simp only [Table.interactionsWith, anchorTrace_programProviderTable_nil,
@@ -476,7 +476,7 @@ theorem anchorTrace_programProviderBound :
 
 theorem anchorTrace_memoryInitProviderBound :
     MemoryInitProviderBound (p := SP1Prime) anchorTrace.witness anchorState
-      (Commit.initClkNat anchorData) := by
+      stmt.initClkNat := by
   intro interaction member _
   exfalso
   simp only [Table.interactionsWith, anchorTrace_memoryInitProviderTable_nil,
@@ -501,9 +501,8 @@ theorem anchorTrace_memoryFinalizeProviderUnique :
 soundness-side anchor. -/
 theorem anchorTrace_boundaryFacts : InitialBoundaryFacts stmt anchorTrace.witness anchorState where
   programWellFormed := anchorProgram_wellFormed
-  programCommitted := ⟨anchorData_canonicalEncoding, rfl⟩
+  programEncodable := anchorBoundaryFacts.programEncodable
   initialPc := anchorBoundaryFacts.initialPc
-  initialClock := anchorBoundaryFacts.initialClock
   romLoaded := anchorState_romLoaded
   configured := anchorState_configured
   codeMemoryCompatible := anchor_codeMemoryCompatible

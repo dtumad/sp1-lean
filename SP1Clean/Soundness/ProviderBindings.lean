@@ -150,14 +150,11 @@ theorem memoryFinalizeProviderTable_requirements
   rw [Table.channelsWithRequirements, memoryFinalizeProviderTable_component witness]
   simp [MemoryFinalizeChip.circuit]
 
-/-- Every active Program-provider contribution is a **committed** row of the program committed in
-shared prover data: the hoisted decode of a routed instruction, or the transpiled `ECALL` site
-(`Semantics.CommittedProgTruth`).  Zero-multiplicity padding rows impose no semantic condition.
-The halt-table wave weakened the conclusion from `ProgTruth` (decode-only) so a halting guest
-program — whose ROM contains the literal `ECALL` word — still has a satisfiable provider binding;
-each instruction chip recovers the decoded form through its pinned non-`ECALL` opcode
-(`Soundness/FetchDiscriminant.lean`). -/
-noncomputable def ProgramProviderBound
+/-- Every active Program-provider contribution belongs to the statement's authenticated program:
+a decoded instruction or a transpiled ECALL site. Zero-multiplicity padding imposes no semantic
+condition. Authentication is an external verifying-key contract; canonical physical table data
+only supplies the circuit evaluation environment. -/
+noncomputable def ProgramProviderBound (program : GuestProgram)
     (witness : EnsembleWitness (sp1Ensemble (p := p))) : Prop :=
   ∀ interaction,
     ∀ member : interaction ∈
@@ -166,7 +163,7 @@ noncomputable def ProgramProviderBound
       Semantics.CommittedProgTruth (TypedInteraction.message
         { raw := interaction
           channel_eq := (programProviderTable witness).channel_eq_of_mem_interactionsWith member })
-        witness.data
+        program
 
 /-- One active memory-init contribution names the true initial content of its register or aligned
 64-bit RAM cell, at a timestamp no later than the shard's initial State boundary. -/
@@ -267,10 +264,10 @@ them through the verifying key's preprocessed commitment and its boundary mechan
 else in the boundary premise is a commitment or start-state fact derivable from a configured,
 committed state; the audit rule (F2) is that these four fields stay visible in the final theorem
 type rather than being folded into derived structure. -/
-structure ProviderBindingContracts
+structure ProviderBindingContracts (program : GuestProgram)
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (initial : SailState) (initialClock : ℕ) : Prop where
-  programProvider : ProgramProviderBound witness
+  programProvider : ProgramProviderBound program witness
   memoryProvider : MemoryInitProviderBound witness initial initialClock
   memoryInitUnique : MemoryInitProviderUnique witness
   memoryFinalizeUnique : MemoryFinalizeProviderUnique witness
@@ -283,20 +280,18 @@ structure InitialBoundaryFacts
     (statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p)))
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (initial : SailState) : Prop where
   programWellFormed : statement.program.WellFormed
-  programCommitted : Commit.StatementFor witness.data statement.program
+  programEncodable : Commit.Encodable statement.program
   initialPc : initial.regs.get? Register.PC = some
     (supportedPcBits statement.publicValues.init_pc0
       statement.publicValues.init_pc1 statement.publicValues.init_pc2)
-  initialClock : Commit.initClkNat witness.data =
-    Semantics.clkNat statement.publicValues.init_clk_high statement.publicValues.init_clk_low
   romLoaded : RomLoaded statement.program initial
   configured : SailConfigured initial
   /-- Program-level compatibility needed only for the final refinement to an unmodified Sail chain.
   SP1's trusted Program fetch is immutable and separate from mutable data Memory; see
   `SailCodeMemoryCompatible`. -/
   codeMemoryCompatible : SailCodeMemoryCompatible statement.program initial
-  programProvider : ProgramProviderBound witness
-  memoryProvider : MemoryInitProviderBound witness initial (Commit.initClkNat witness.data)
+  programProvider : ProgramProviderBound statement.program witness
+  memoryProvider : MemoryInitProviderBound witness initial statement.initClkNat
   memoryProviderUnique : MemoryInitProviderUnique witness
   memoryFinalizeProviderUnique : MemoryFinalizeProviderUnique witness
 
@@ -306,31 +301,28 @@ theorem InitialBoundaryFacts.localStateTruth
     {statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p))}
     {witness : EnsembleWitness (sp1Ensemble (p := p))} {initial : SailState}
     (boundary : InitialBoundaryFacts statement witness initial) :
-    LocalStateTruth statement.program initial (Commit.initClkNat witness.data)
+    LocalStateTruth statement.program initial statement.initClkNat
       (initialBoundaryStateMessage statement.publicValues) := by
   apply Semantics.localStateTruth_initial
-  · simpa [initialBoundaryStateMessage, Semantics.StateMsg.timeNat] using
-      boundary.initialClock.symm
+  · rfl
   · simpa [initialBoundaryStateMessage, Semantics.StateMsg.pcBits,
       Semantics.pcBits, supportedPcBits] using boundary.initialPc
   · exact boundary.romLoaded
   · exact boundary.configured
 
-/-- The non-execution companion relation required by supported-core AIR soundness, regrouped for
-reading: three commitment facts (program well-formedness, program commitment, committed initial
-clock), the shard start state, the code/data-separation contract, and the four-field external
-provider bundle.  It fixes the committed program, chooses the concrete state represented by the
-initial public boundary, and binds the Program/Memory provider tables to those semantic objects. -/
+/-- The non-execution companion relation required by supported-core AIR soundness: a well-formed,
+representable program, a shard start state, code/data compatibility, and the four external provider
+contracts. The statement supplies the program and initial clock; raw ensemble validity separately
+binds the witness's public input to this statement. -/
 def SemanticBoundaryBinding
     (statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p)))
     (witness : EnsembleWitness (sp1Ensemble (p := p))) : Prop :=
   ∃ initial,
     statement.program.WellFormed ∧
-    Commit.StatementFor witness.data statement.program ∧
-    Commit.initClkNat witness.data = statement.initClkNat ∧
+    Commit.Encodable statement.program ∧
     ShardStartState statement initial ∧
     SailCodeMemoryCompatible statement.program initial ∧
-    ProviderBindingContracts witness initial (Commit.initClkNat witness.data)
+    ProviderBindingContracts statement.program witness initial statement.initClkNat
 
 /-- Repackage the flat proof-layer record as the regrouped public binding. -/
 theorem InitialBoundaryFacts.binding
@@ -338,7 +330,7 @@ theorem InitialBoundaryFacts.binding
     {witness : EnsembleWitness (sp1Ensemble (p := p))} {initial : SailState}
     (boundary : InitialBoundaryFacts statement witness initial) :
     SemanticBoundaryBinding statement witness :=
-  ⟨initial, boundary.programWellFormed, boundary.programCommitted, boundary.initialClock,
+  ⟨initial, boundary.programWellFormed, boundary.programEncodable,
     ⟨boundary.initialPc, boundary.romLoaded, boundary.configured⟩,
     boundary.codeMemoryCompatible,
     ⟨boundary.programProvider, boundary.memoryProvider, boundary.memoryProviderUnique,
@@ -350,12 +342,11 @@ theorem SemanticBoundaryBinding.boundaryFacts
     {witness : EnsembleWitness (sp1Ensemble (p := p))}
     (binding : SemanticBoundaryBinding statement witness) :
     ∃ initial, InitialBoundaryFacts statement witness initial := by
-  obtain ⟨initial, wellFormed, committed, clockEq, start, codeMem, contracts⟩ := binding
+  obtain ⟨initial, wellFormed, encodable, start, codeMem, contracts⟩ := binding
   exact ⟨initial,
     { programWellFormed := wellFormed
-      programCommitted := committed
+      programEncodable := encodable
       initialPc := start.pc
-      initialClock := clockEq
       romLoaded := start.romLoaded
       configured := start.configured
       codeMemoryCompatible := codeMem
@@ -364,10 +355,7 @@ theorem SemanticBoundaryBinding.boundaryFacts
       memoryProviderUnique := contracts.memoryInitUnique
       memoryFinalizeProviderUnique := contracts.memoryFinalizeUnique }⟩
 
-/-- The recorded equivalence: the regrouped public binding says exactly what the flat record
-says.  The "seven of eleven fields are derivable" observation of earlier audits is this theorem's
-grouping — the derivable fields are the commitment/start-state conjuncts, the assumed core is
-`ProviderBindingContracts`. -/
+/-- The public binding and the flat proof-layer record carry exactly the same facts. -/
 theorem semanticBoundaryBinding_iff
     (statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p)))
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
@@ -398,7 +386,7 @@ structure BootBoundaryFacts
   base : InitialBoundaryFacts statement witness initial
   isInitial : IsInitialState statement.program initial
   registersZero : Machine.RegistersZero initial
-  clockOne : Commit.initClkNat witness.data = 1
+  clockOne : statement.initClkNat = 1
   entryPc : statement.initPcBits = statement.program.pc_start
 
 /-- The boot state is in particular a valid shard start state. -/

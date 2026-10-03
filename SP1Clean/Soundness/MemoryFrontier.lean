@@ -369,7 +369,7 @@ theorem memoryInit_liveOK
     {witness : EnsembleWitness (sp1Ensemble (p := p))} {initial : SailState}
     (constraints : witness.Constraints)
     (boundary : InitialBoundaryFacts statement witness initial) :
-    LiveOK initial (Commit.initClkNat witness.data) (Commit.initClkNat witness.data)
+    LiveOK initial statement.initClkNat statement.initClkNat
       (memoryInitFrontier witness) := by
   intro loc m hm
   have hmem : m ∈ (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
@@ -380,9 +380,9 @@ theorem memoryInit_liveOK
   have hprod : m ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       memoryChannel) := (List.mem_filter.mp hmem).1
   have memTruth := MemoryInitProviderBound.localMemTruth_of_mem_produced witness constraints
-    initial (Commit.initClkNat witness.data) boundary.memoryProvider m hprod
+    initial statement.initClkNat boundary.memoryProvider m hprod
   have hbound := memoryInitMessageBound_of_mem_produced witness initial
-    (Commit.initClkNat witness.data) boundary.memoryProvider m hprod
+    statement.initClkNat boundary.memoryProvider m hprod
   refine ⟨hloc, memTruth, ?_, hbound.2⟩
   rw [← hloc]
   exact localValueAt_of_initial hbound.1 (le_refl _)

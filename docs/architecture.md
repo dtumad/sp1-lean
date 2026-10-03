@@ -88,6 +88,12 @@ truncating rows does not preserve the complete data function. Public-verifier gu
 separate from physical-table constraints. Install public assertion checks after assembling the
 complete inventory so their fresh channels account for every extension's traffic.
 
+Semantic grounding takes its program and initial clock from the statement. Raw ensemble validity
+binds the public input to that statement; the external Program-provider contract binds active rows
+to its program. Canonical table data supplies the physical evaluation environment and does not
+implicitly authenticate ROM, entry-point or clock metadata. The legacy program encoder remains
+for generation inputs and fixtures until those consumers use semantic objects directly.
+
 SP1 grounding needs an exhaustive ordered execution path. Clean verifier guarantees alone do
 not supply it, so adopting VmTables is justified only when it removes the existing obligation.
 Generalize authentication, ordering or resource arguments when a real consumer demonstrates

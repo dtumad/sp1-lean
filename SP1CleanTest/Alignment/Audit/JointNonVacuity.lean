@@ -985,7 +985,7 @@ theorem memoryFinalizeProviderTable_table_nil :
     (by omega)
 
 theorem jointWitness_programProviderBound :
-    ProgramProviderBound (p := SP1Prime) jointWitness := by
+    ProgramProviderBound (p := SP1Prime) anchorProgram jointWitness := by
   intro interaction member _
   exfalso
   simp only [Table.interactionsWith, programProviderTable_table_nil, List.flatMap_nil] at member
@@ -993,7 +993,7 @@ theorem jointWitness_programProviderBound :
 
 theorem jointWitness_memoryInitProviderBound :
     MemoryInitProviderBound (p := SP1Prime) jointWitness anchorState
-      (Commit.initClkNat anchorData) := by
+      stmt.initClkNat := by
   intro interaction member _
   exfalso
   simp only [Table.interactionsWith, memoryInitProviderTable_table_nil,
@@ -1140,14 +1140,12 @@ theorem anchor_codeMemoryCompatible : SailCodeMemoryCompatible anchorProgram anc
 /-- The full boundary bundle at the concrete initial state. -/
 theorem anchorBoundaryFacts : InitialBoundaryFacts stmt jointWitness anchorState where
   programWellFormed := anchorProgram_wellFormed
-  programCommitted := ⟨anchorData_canonicalEncoding, rfl⟩
+  programEncodable := Commit.CanonicalEncoding.encodable_progOf anchorData
+    anchorData_canonicalEncoding
   initialPc := by
     show anchorState.regs.get? Register.PC = some (supportedPcBits (0 : ZMod SP1Prime) 1 0)
     rw [supportedPcBits_anchor]
     exact anchorState_pc
-  initialClock := by
-    show Commit.initClkNat anchorData = Semantics.clkNat pv.init_clk_high pv.init_clk_low
-    native_decide
   romLoaded := anchorState_romLoaded
   configured := anchorState_configured
   codeMemoryCompatible := anchor_codeMemoryCompatible

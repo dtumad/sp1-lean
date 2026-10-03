@@ -271,9 +271,9 @@ the `+264` step.
 The one that stays a hypothesis is `align8`, and it stays for a reason worth naming: it relates the
 row's pull to the **shard's** initial clock, which no single row can see.  Only the walk establishes
 it, inductively, which is why it cannot be discharged here however many witness facts are in hand. -/
-theorem syscallRowOKCore_of_witness (witness : EnsembleWitness (sp1Ensemble (p := p)))
+theorem syscallRowOKCore_of_witness {program : GuestProgram} (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness) (initialClock : ℕ)
+    (providerBound : ProgramProviderBound program witness) (initialClock : ℕ)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
     (currency : ∀ mp ∈
         (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
@@ -310,7 +310,7 @@ theorem syscallStepFact_of_witness (handler : ExecutableSyscallHandler) (prog : 
     (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness)
+    (providerBound : ProgramProviderBound prog witness)
     (canonicalCodes : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
     (payload : SyscallAdvancePayload (p := p) handler)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
@@ -355,7 +355,7 @@ theorem syscallFrameFact_of_witness (handler : ExecutableSyscallHandler) (prog :
     (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness)
+    (providerBound : ProgramProviderBound prog witness)
     (canonicalCodes : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
     (payload : SyscallAdvancePayload (p := p) handler)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)

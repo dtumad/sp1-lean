@@ -107,9 +107,9 @@ passes its own columns where `HaltChip` hardcodes the constants — so it is rea
 
 Stated in the `((n : ℕ) : ZMod p) = column` direction because that is the form
 `Semantics.MemoryMsg.locOf_register` consumes. -/
-theorem syscallInstrsRow_operands
+theorem syscallInstrsRow_operands {program : Target.GuestProgram}
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound witness)
+    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound program witness)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
     ((5 : ℕ) : ZMod p) = (syscallInstrsRow witness.data row).op_a ∧
       ((10 : ℕ) : ZMod p) = (syscallInstrsRow witness.data row).op_b ∧
@@ -536,9 +536,9 @@ about the *same* state, and that is the content of the `+0`/`+3`/`+2` read times
 `ecall` then follows from `pcValue` and the committed `ECALL` fetch, which is where
 `witness_syscallRow_ecallTruth` is spent a second time — once for the operand indices, once for the
 fetch itself. -/
-theorem syscallRowContext_of_currency
+theorem syscallRowContext_of_currency {program : Target.GuestProgram}
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound witness)
+    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound program witness)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
     (pcCarry : ((syscallInstrsRow witness.data row).state.pc[0]).val + 4 < 2 ^ 16)
     {traj : Semantics.Trajectory} {initial source : SailState} {tl : Semantics.Timeline}
@@ -552,7 +552,7 @@ theorem syscallRowContext_of_currency
     (hcurr : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
       Semantics.LocalValueAtG traj initial tl
         (Semantics.MemoryMsg.locOf (mp : MemoryMsg (ZMod p) × ℕ).1) mp.2 mp.1.value) :
-    SyscallRowContext (syscallInstrsRow witness.data row) (Commit.progOf witness.data) source := by
+    SyscallRowContext (syscallInstrsRow witness.data row) program source := by
   obtain ⟨opA, opB, opC⟩ :=
     syscallInstrsRow_operands witness constraints balanced providerBound rowMem
   obtain ⟨locPullA, -⟩ := syscallRow_locOf_reg (syscallInstrsRow witness.data row) (i := 5#5) opA
