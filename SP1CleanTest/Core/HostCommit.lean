@@ -1,10 +1,10 @@
 import SP1CleanTest.Core.HostChecks
+import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Model.SP1Field
-import ToClean.Air.EnsembleExport
 
 /-! # Executed mutable commitment regressions
 

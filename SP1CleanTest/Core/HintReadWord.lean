@@ -1,3 +1,4 @@
+import Clean.Circuit.WitnessExport
 import SP1CleanTest.Core.HintReadFixtures
 /-! # Executed physical hint word coverage
 

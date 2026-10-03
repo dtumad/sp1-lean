@@ -1,9 +1,9 @@
 import SP1CleanTest.Core.HostChecks
+import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Chips.HostControlLedger
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
 import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
 import SP1Clean.Proofs.Chips.HostControlPopulate
-import ToClean.Air.EnsembleExport
 
 /-! # Native control handlers against instructions and host dispatch
 

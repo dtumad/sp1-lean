@@ -1,4 +1,5 @@
 import SP1CleanTest.Core.HostChecks
+import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Operations.HintReadSpanPopulate
 import SP1Clean.Proofs.Operations.HintReadSpanLedger
 import SP1Clean.Native.Operations.HintQueueWordSource
