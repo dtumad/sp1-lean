@@ -27,6 +27,30 @@ abbrev UniqueNames (image : ProgramImage) (source : ExecutionSnapshot) (target :
       (HostHintReadHandoff.wordResources ++ (resources ++ FinalMemoryChecks.checkTables target)))).map
       (·.circuit.name)).Nodup
 
+/-- The concrete host registry and both target validators have distinct canonical names. -/
+theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot) :
+    UniqueNames (p := p) image source target HostCallReceivers.available
+      (HostHintReadLocal.sourceResources source.host.io.hints) := by
+  let original := HostLocalCore.tables (p := p) image source
+    ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources source.host.io.hints))
+  have split : ((HostLocalCore.tables (p := p) image source
+      ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+        (HostHintReadHandoff.wordResources ++ (HostHintReadLocal.sourceResources source.host.io.hints ++
+          FinalMemoryChecks.checkTables target)))).map (·.circuit.name)) =
+      original.map (·.circuit.name) ++ (FinalMemoryChecks.checkTables (p := p) target).map (·.circuit.name) := by
+    simp only [original, HostLocalCore.tables_names, List.map_append, List.append_assoc]
+  rw [UniqueNames, split, List.nodup_append]
+  refine ⟨HostHintReadLocal.source_unique_names image source source.host.io.hints,
+    of_decide_eq_true rfl, ?_⟩
+  have fresh : (original.map (·.circuit.name)).all
+      (fun name => !((FinalMemoryChecks.checkTables (p := p) target).map (·.circuit.name)).contains name) = true := by
+    rfl
+  intro a old b added same
+  have absent := List.all_eq_true.mp fresh a old
+  rw [List.contains_iff_mem.mpr (same.symm ▸ added)] at absent
+  exact Bool.noConfusion absent
+
 /-- Install the existing target consumers in the host resource block. Their channels are
 registered by the same host assembly as every other resource. -/
 @[reducible] def base (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)

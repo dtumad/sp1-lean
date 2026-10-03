@@ -473,7 +473,8 @@ theorem localWitness_verifier_byte
   cases channel
   exact kept
 
-private theorem verifier_requirements (env : Environment (ZMod p)) :
+/-- Public boundary emissions supply their own requirements, independently of witness acceptance. -/
+theorem verifier_requirements (env : Environment (ZMod p)) :
     (ensemble image source auxiliary channels names).verifierOperations.FullRequirements env := by
   change (LocalCore.boundaryVerifier.andThen ((LocalSourceBoundary.checker image source).program
     (baseEnsemble image source auxiliary channels names))).circuitOperations.FullRequirements env

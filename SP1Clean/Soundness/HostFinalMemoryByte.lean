@@ -12,8 +12,8 @@ namespace SP1Clean.Soundness.HostFinalMemory
 open Circuit Air.Flat Channels Model.Core
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalByteLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalByteClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem not_required (component : Component (ZMod p))
@@ -54,48 +54,80 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
+  {names : UniqueNames image source target others resources}
 
 /-- Every Byte provider proves its own requirement in the complete installed component inventory. -/
 theorem component_byte_requirements (interface : HostHintReadLocal.ExtensionInterface others resources)
     (component : Component (ZMod p))
-    (member : component ∈ (ensemble image source target final bankFinal others resources channels).allTables)
+    (member : component ∈ (ensemble image source target final bankFinal others resources channels names).tables)
     (env : Environment (ZMod p)) (checked : component.operations.ConstraintsHold env) :
     component.operations.ChannelRequirements byteChannel.toRaw env := by
-  rcases List.mem_cons.mp member with rfl | table
-  · exact not_required _ (by rfl) env checked
-  · simp only [ensemble, ClosedVerifier.install, withReceipts, withRegisters, FinalReceiptEnsemble.install,
-      base, HostHintQueueBoundary.ensemble, HaltPadding.install] at table
-    rcases List.mem_or_eq_of_mem_set table with table | rfl
-    · rcases List.mem_or_eq_of_mem_set table with table | rfl
-      · rcases List.mem_or_eq_of_mem_set table with table | rfl
-        · exact HostLocalCore.component_byte_requirements image source _ []
-            (HostHintReadLocal.auxiliaryInterface (targetInterface target interface)) component
-            (List.mem_cons_of_mem _ table) env checked
-        · exact not_required _ (by rfl) env checked
+  simp only [ensemble, ClosedVerifier.install, withReceipts, withRegisters,
+    FinalReceiptEnsemble.install, Ensemble.replaceComponent, base, HostHintQueueBoundary.ensemble,
+    HaltPadding.install] at member
+  rcases List.mem_or_eq_of_mem_set member with member | rfl
+  · rcases List.mem_or_eq_of_mem_set member with member | rfl
+    · rcases List.mem_or_eq_of_mem_set member with member | rfl
+      · exact HostLocalCore.component_byte_requirements image source _
+          (HostHintReadLocal.auxiliaryInterface (targetInterface target interface)) component
+          member env checked
       · exact not_required _ (by rfl) env checked
     · exact not_required _ (by rfl) env checked
+  · exact not_required _ (by rfl) env checked
+
+private theorem verifier_requirements (env : Environment (ZMod p)) :
+    (ensemble image source target final bankFinal others resources channels names).verifierOperations.FullRequirements env := by
+  change ((withReceipts image source target final bankFinal others resources channels names).verifier.andThen
+    ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).program
+      (withReceipts image source target final bankFinal others resources channels names))).circuitOperations.FullRequirements env
+  rw [Verifier.Program.andThen_requirements]
+  constructor
+  · change ((HostHintReadLocal.ensemble image source others
+      (resources ++ FinalMemoryChecks.checkTables target) channels names).verifier.andThen
+        ((HostHintQueueBoundary.boundary source final bankFinal).program _)).circuitOperations.FullRequirements env
+    rw [Verifier.Program.andThen_requirements]
+    constructor
+    · exact HostLocalCore.verifier_requirements env
+    · apply ClosedVerifier.program_requirements
+      simp only [ClosedVerifier.operations, HostHintQueueBoundary.boundary, HostBoundary.closed,
+        HostBoundary.circuit, HostBoundary.main, circuit_norm,
+        GeneralFormalCircuit.toSubcircuit_interactions]
+      simp [HostHintQueueBoundary.circuit,
+        HostHintQueueBoundary.main, HostCommitEndpoint.circuit, HostCommitEndpoint.main,
+        HostCommitBoundary.verifier, HostCommitBoundary.verifierMain,
+        HostExitBoundary.circuit, HostExitBoundary.main, HostHintQueue.stateChannel,
+        HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw,
+        GeneralFormalCircuit.toSubcircuit_interactions, AbstractInteraction.Requirements,
+        ChannelInteraction.toRaw, or_imp, forall_and, circuit_norm]
+  · apply ClosedVerifier.program_requirements
+    simp [ClosedVerifier.operations, FinalMemoryChangeBoundary.closed,
+      FinalMemoryChangeBoundary.circuit, FinalMemoryChangeBoundary.raw_interactions,
+      Operations.FullRequirements, FinalMemoryChange.channel, circuit_norm]
 
 /-- Actual full-assembly Byte balance supplies guarantees for every physical table, including
-the newly installed target RAM consumer and the combined public verifier. -/
+the newly installed target RAM consumer. The verifier supplies its own outgoing requirements. -/
 theorem byte_guarantees
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : HostHintReadLocal.ExtensionInterface others resources)
     (checked : witness.Constraints) (balanced : witness.BalancedChannel byteChannel.toRaw) :
-    ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw :=
-  witness.channelGuarantees_of_component_requirements byteChannel.toRaw checked balanced
-    (component_byte_requirements interface)
+    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw := by
+  apply (witness.channelGuarantees_of_component_requirements byteChannel.toRaw checked balanced
+    ?_ (component_byte_requirements interface)).2
+  intro input data interaction emitted _
+  exact verifier_requirements _ interaction emitted
 
 /-- Raw acceptance supplies the existing host proof view with authentic Byte facts.
 No Byte consumer or provider is discarded in obtaining this result. -/
 theorem baseWitness_byte_of_accepted
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : HostHintReadLocal.ExtensionInterface others resources)
     (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
-    ∀ table ∈ (baseWitness witness).allTables, table.ChannelGuarantees byteChannel.toRaw := by
+    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees (baseWitness witness).data byteChannel.toRaw := by
   apply baseWitness_byte witness (byte_guarantees witness interface checked (balanced _ ?_))
-  simp [ensemble, ClosedVerifier.install, withReceipts, withRegisters, FinalReceiptEnsemble.install,
+  simp [ensemble, ClosedVerifier.install, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
     base, HostHintQueueBoundary.ensemble, HaltPadding.install, HostHintReadLocal.ensemble,
-    HostLocalHandoff.ensemble, HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble,
+    HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install,
+    HostLocalCore.baseEnsemble, ClosedVerifier.withInteractions, LocalCore.baseEnsemble,
     sp1Ensemble_channels]
 
 end SP1Clean.Soundness.HostFinalMemory

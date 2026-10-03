@@ -39,11 +39,10 @@ theorem boundaryVerifier_silent (image : ProgramImage) (source : ExecutionSnapsh
     simpa only [decide_eq_true_eq] using (show interaction.channel ≠ channel from fun same => outside (same ▸ registered))
   simp only [Operations.interactionValuesWith, empty, List.map_nil]
 
-/-- The physical local component inventory is closed over its declared channels. -/
+/-- Physical components use the base channels, never the verifier-only assertion channel. -/
 theorem component_channels_subset (image : ProgramImage) (source : ExecutionSnapshot)
     (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables) :
-    component.circuit.channels ⊆ (ensemble image source).channels := by
-  apply List.Subset.trans ?_ (List.subset_append_left ..)
+    component.circuit.channels ⊆ (baseEnsemble image source).channels := by
   have core : sp1CoreChannels (p := p) ⊆ (baseEnsemble image source).channels := by
     intro channel used
     simp only [sp1CoreChannels, List.mem_cons, List.not_mem_nil, or_false] at used

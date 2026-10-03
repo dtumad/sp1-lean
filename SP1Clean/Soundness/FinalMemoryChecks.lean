@@ -4,6 +4,7 @@ import SP1Clean.Native.Operations.FinalRegisterCheck
 import SP1Clean.Native.Operations.FinalRamCheck
 import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
 import ToClean.Air.TableSlot
+import ToClean.Circuit.SubcircuitProjection
 
 /-! # Physical assembly of complete target Memory checks
 
@@ -70,6 +71,40 @@ variable {source target : MemorySnapshot} {auxiliary : List (Component (ZMod p))
 variable {names : (((FinalMemoryEnsemble.inventory (p := p)).views.map TransitionView.component ++
       (checkTables (p := p) target ++ auxiliary)).map
         (fun component : Component (ZMod p) => component.circuit.name)).Nodup}
+
+/-- The boundary's lookups use the fixed target snapshot; retaining its rows preserves
+constraints even when selecting these five tables changes canonical prover data. -/
+theorem component_constraints_setData (component : Component (ZMod p))
+    (member : component ∈ (ensemble source target [] [] (empty_unique_names target)).tables)
+    {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
+    (checked : component.operations.ConstraintsHold (Environment.fromArray row data)) :
+    component.operations.ConstraintsHold (Environment.fromArray row data') := by
+  have eval_eq : Expression.eval (Environment.fromArray row data) =
+      Expression.eval (Environment.fromArray row data') :=
+    funext fun expression => Expression.eval_congr
+      (env := Environment.fromArray row data) (env' := Environment.fromArray row data') rfl expression
+  rw [tables_eq] at member
+  simp only [List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl
+  all_goals
+    apply Operations.constraintsHold_congr (env := Environment.fromArray row data)
+      (env' := Environment.fromArray row data') rfl ?_ checked
+    intro lookup used
+    try rw [FinalMemoryReceipt.lookups] at used
+    simp [Component.lookups_eq, Component.rowOperations, circuit_norm,
+      OrderedFinalProvider.registerCircuit, OrderedFinalProvider.ramCircuit,
+      OrderedMemoryProvider.circuit, FinalRegisterProvider.circuit, FinalRamProvider.circuit,
+      FinalMemoryEnsemble.viewFor, OrderedMemoryEnsemble.terminalView, OrderedBoundaryEnd.circuit,
+      FinalRegisterCheck.circuit, FinalRegisterCheck.main, FinalRegisterValue.circuit, FinalRegisterValue.main,
+      FinalRamCheck.circuit, FinalRamCheck.main, FinalRamValue.circuit, FinalRamValue.main,
+      FinalMemoryChange.circuit, FinalMemoryChange.main, assertBool,
+      InitialMemoryRead.circuitNamed, InitialMemoryRead.main,
+      InitialMemoryLookup.circuitNamed, InitialMemoryLookup.main_lookups,
+      AddOperation.circuit, AddOperation.main, Gadgets.Equality.main] at used
+  all_goals rcases used with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    simp only [Lookup.Contains, eval_eq, _root_.Table.toRaw]
+    exact fun h => h
 
 /-- Receipt-bearing register finalizer at its preserved position. -/
 def registerFinalSlot : TableSlot (ensemble source target auxiliary channels names).tables

@@ -21,7 +21,7 @@ private theorem old_component_silent (image : ProgramImage) (source : ExecutionS
     WritePermissionProvider.channel.toRaw ∉ component.circuit.channels := by
   intro used
   exact old_channel_ne_permission _
-    (LocalCore.component_channels_subset image source component member used) rfl
+    (List.mem_append_left _ (LocalCore.component_channels_subset image source component member used)) rfl
 
 /-- The fixed provider is the only possible positive contributor to permission balance. -/
 theorem component_permission_source (image : ProgramImage) (source : ExecutionSnapshot)

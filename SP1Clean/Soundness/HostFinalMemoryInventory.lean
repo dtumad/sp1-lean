@@ -4,8 +4,9 @@ import SP1Clean.Soundness.HostLocalCoreMemory
 /-! # One final inventory for target checks and execution grounding
 
 The boundary consumer and existing local-core grounding path read the same physical finalizer
-rows and shared data. Their equality is proved through `FinalMemoryEnsemble.records`; neither
-path supplies a second semantic inventory or an independently trusted decoder.
+rows, even though their selected inventories derive different data maps. Their equality is proved
+through `FinalMemoryEnsemble.records`; neither path supplies a second semantic inventory or an
+independently trusted decoder.
 -/
 
 namespace SP1Clean.Soundness.HostFinalMemory
@@ -13,43 +14,33 @@ namespace SP1Clean.Soundness.HostFinalMemory
 open Circuit Air.Flat Channels Model.Core
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalInventoryLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalInventoryClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
+  {names : UniqueNames image source target others resources}
 
 /-- The existing grounding projection, retaining the complete source and original row arrays. -/
 def coreWitness
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels)) :=
-  HostLocalCore.localWitness (HostHintQueueBoundary.expanded (baseWitness witness))
-
-private theorem base_length
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels)) :
-    6 ≤ (baseWitness witness).tables.length := by
-  rw [← (baseWitness witness).same_length, base_tables_length]
-  omega
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :=
+  HostLocalCore.localWitness (HostHintQueueBoundary.projected (baseWitness witness))
 
 /-- Source and finalizer arrays are shared with the established grounding projection. -/
 theorem coreWitness_boundary_rows
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
     ((coreWitness witness).tables.take 6).map (·.table) = (witness.tables.take 6).map (·.table) := by
-  rw [coreWitness, HostLocalCore.boundary_tables, HostHintQueueBoundary.expanded_tables,
-    List.take_append_of_le_length (by rw [List.length_set]; exact base_length witness),
-    List.take_set_of_le (by decide : 6 ≤ 57), List.map_take, baseWitness_rows, ← List.map_take]
-
-/-- Grounding and target checking use the same fixed-lookup environment. -/
-theorem coreWitness_data
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels)) :
-    (coreWitness witness).data = witness.data := by
-  rw [coreWitness, HostLocalCore.localWitness, EnsembleWitness.project_data,
-    HostHintQueueBoundary.expanded_data, baseWitness_data]
+  have retained : (HostHintQueueBoundary.projected (baseWitness witness)).tables.take 6 =
+      (baseWitness witness).tables.take 6 :=
+    List.take_set_of_le (by decide : 6 ≤ 57)
+  rw [coreWitness, HostLocalCore.boundary_tables, retained,
+    List.map_take, baseWitness_rows, ← List.map_take]
 
 /-- The physical final inventory is identical in the installed checker and existing grounding path. -/
 theorem finalRecords_eq_core
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
     finalRecords witness = FinalMemoryEnsemble.records (LocalCore.finalWitness (coreWitness witness)) := by
   apply FinalMemoryEnsemble.records_congr_rows
   · have coreRows := congrArg (fun rows => (rows.drop 3).take 2) (coreWitness_boundary_rows witness)

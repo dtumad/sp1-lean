@@ -27,6 +27,7 @@ variable {F : Type} [FiniteField F]
 
 /-- A proved closed boundary admitted to Clean's public verifier. -/
 structure ClosedVerifier (F : Type) [FiniteField F] where
+  /-- Stable stem used when allocating this boundary's fresh assertion channel. -/
   name : String
   circuit : GeneralFormalCircuit F unit unit
   assumptions : ∀ data, circuit.Assumptions () data
@@ -140,6 +141,22 @@ def install (ens : Ensemble F PublicIO) : Ensemble F PublicIO where
   channels := (closed.withInteractions ens).channels ++ [closed.channel ens]
   verifier := ens.verifier.andThen (closed.program ens)
 
+/-- The assertion adapter supplies its own requirements; the source interactions retain theirs. -/
+theorem program_requirements (ens : Ensemble F PublicIO) (env : Environment F)
+    (requirements : closed.operations.FullRequirements env) :
+    (closed.program ens).circuitOperations.FullRequirements env := by
+  change (closed.emit >>= fun _ =>
+    Verifier.checkZeros (closed.channelName ens) closed.operations.constraints).circuitOperations.FullRequirements env
+  simp only [Verifier.circuitOperations, Verifier.operations_bind, Verifier.Operations.circuitOperations,
+    Verifier.Operations.interactions, List.map_append, Operations.FullRequirements,
+    Operations.interactions_append, List.forall_mem_append]
+  constructor
+  · change closed.emit.circuitOperations.FullRequirements env
+    unfold Operations.FullRequirements
+    rw [closed.emit_interactions]
+    exact requirements
+  · exact Verifier.checkZeros_requirements _ _ _
+
 /-- Forget the boundary while retaining all committed rows. -/
 def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
     EnsembleWitness ens :=
@@ -227,6 +244,29 @@ theorem check_balanced_iff {ens : Ensemble F PublicIO}
 theorem channel_not_mem (ens : Ensemble F PublicIO) :
     closed.channel ens ∉ ens.channels ++ closed.circuit.channels :=
   (VerifierChannel.fresh closed.name (closed.withInteractions ens)).unregistered
+
+/-- On a registered channel, installation adds exactly the source circuit's literal emissions.
+The fresh assertion channel contributes no occurrence, including zero multiplicities. -/
+theorem install_verifier_interactions_of_mem (ens : Ensemble F PublicIO) (env : Environment F)
+    (selected : RawChannel F) (registered : selected ∈ ens.channels) :
+    (closed.install ens).verifierOperations.interactionValuesWith selected env =
+      ens.verifierOperations.interactionValuesWith selected env ++
+        closed.operations.interactionValuesWith selected
+          (Environment.fromInput (Input := unit) () env.data) := by
+  have different : closed.channel ens ≠ selected := by
+    intro same
+    exact closed.channel_not_mem ens (same ▸ List.mem_append_left _ registered)
+  change (ens.verifier.andThen (closed.program ens)).circuitOperations.interactionValuesWith selected env = _
+  rw [Verifier.Program.andThen_values]
+  have append : (closed.program ens).circuitOperations.interactionValuesWith selected env =
+      closed.emit.circuitOperations.interactionValuesWith selected env ++
+        (Verifier.checkZeros (closed.channelName ens) closed.operations.constraints).circuitOperations.interactionValuesWith
+          selected env := by
+    simp only [Verifier.Program.circuitOperations, Verifier.Program.operations, program,
+      Verifier.circuitOperations, Verifier.operations_bind, Verifier.Operations.circuitOperations,
+      Verifier.Operations.interactions, List.map_append, Operations.interactionValuesWith,
+      Operations.interactionsWith, Operations.interactions_append, List.filter_append]
+  rw [append, Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil, closed.emit_values]
 
 /-- Removing only the new checks leaves the original ledger plus one boundary invocation.
 The permutation moves that invocation past the physical rows without dropping any occurrence. -/

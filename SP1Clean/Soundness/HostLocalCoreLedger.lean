@@ -60,7 +60,8 @@ private theorem prefixTable_silent (witness : EnsembleWitness (ensemble image so
     have silent := Table.interactionsWith_nil_of_channel_not_mem
       (table := (witness.tables[index.val]'(by have := prefix_length witness; omega)).withComponent original width fixed)
       (data := witness.data) (channel := channel) (fun used => fresh
-        (LocalCore.component_channels_subset image source original (List.getElem_mem _) used))
+        (List.mem_append_left _
+          (LocalCore.component_channels_subset image source original (List.getElem_mem _) used)))
     rw [Table.withComponent_interactions _ original width fixed witness.data channel (by
       rw [component]
       exact ((ProtectedLocalCore.component_projection (p := p) image source ⟨index.val, old⟩).2.2 channel permission).symm)] at silent
