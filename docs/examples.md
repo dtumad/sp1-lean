@@ -30,9 +30,10 @@ terminal reject. These cases exercise complete change coverage, not just locally
 an official Sail step to canonical projection, event compilation and raw acceptance of the
 actual HostFinalMemory assembly. BEQ x1,x2,+4092 has PC 65536→69628 and clock 1→9.
 
-The fixture retains 89 installed tables: 57 physical rows in 14 nonempty tables, plus the verifier.
-Its 257 channel registrations represent 22 distinct channels. Full RawChannel membership
-equivalence permits deduplicating that registry without changing physical occurrences.
+The fixture retains 89 installed tables with 57 physical rows in 14 nonempty tables. The separate
+public verifier contributes 46 interactions. Its 260 channel registrations represent 25 distinct
+channels, including the source, host and final-memory assertion checks. Full RawChannel membership
+equivalence permits deduplicating the registry while retaining every interaction occurrence.
 
 Original/empty witnesses accept. Wrong next PC, missing/duplicate authentication, a changed
 untouched target register and malformed seed indices/lengths reject. The runner computes the
@@ -45,7 +46,10 @@ noncomputable full Sail state. This closes one concrete construction, not genera
 paired U8Range request with two upstream fixed ByteTable lookups. Gating the lookup inputs
 preserves inactive-row freedom. Semantic assumptions, arithmetic assertions and generated witness
 cells agree with the original circuit. The proof retains arbitrary residual providers, including
-reader demand with the same key as the removed occurrence.
+reader demand with the same key as the removed occurrence. Generation and evaluation data are
+independent. The constraint transport fixes one evaluation environment; applying it after changing
+canonical inventory still requires residual-lookup agreement. The executable cases check both
+assemblies at their own derived data.
 
 The 69 cases cover LB/LBU, every byte offset, boundary byte values, inactive byte 300, repeated
 keys and three malformed rows. On the 64-active-plus-one-inactive workload:

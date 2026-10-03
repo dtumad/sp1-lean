@@ -10,7 +10,7 @@ open SP1Clean.Audit.BranchEnsemble
 
 /-- Count the actual installed component operations for its physical rows. -/
 private def rowStats (position : Nat) (table : Table Fp) : Json :=
-  let operations := table.component.rowOperations
+  let operations := table.component.operations
   Json.mkObj [
     ("position", toJson position),
     ("rows", toJson table.table.length),
@@ -34,6 +34,9 @@ private def runBranchEnsembleExample : IO Unit := do
     16777216 * header.final_clk_24_32.val + 4294967296 * header.final_clk_32_48.val
   let event := SP1Clean.Audit.BranchCompilerRoundTrip.event
   let tableStats := activeWitness.tables.zipIdx.map fun (table, position) => rowStats position table
+  let physicalLedger := activeWitness.tables.flatMap (·.interactions activeWitness.data)
+  let verifierLedger := (assembly target).verifierOperations.interactionValues
+    (Environment.fromInput header activeWitness.data)
   let report := Json.mkObj [
     ("revision", toJson revision.get!), ("dirty", toJson (status == some "dirty")),
     ("assembly", toJson "SP1Clean.Soundness.HostFinalMemory.ensemble"),
@@ -45,9 +48,11 @@ private def runBranchEnsembleExample : IO Unit := do
     ("sourceClock", toJson sourceClock), ("targetClock", toJson targetClock),
     ("tableCount", toJson activeWitness.tables.length),
     ("tableRows", toJson (activeWitness.tables.map (·.table.length)).sum),
-    ("rowsIncludingVerifier", toJson (activeWitness.allTables.map (·.table.length)).sum),
+    ("physicalInteractions", toJson physicalLedger.length),
+    ("verifierInteractions", toJson verifierLedger.length),
+    ("interactions", toJson activeWitness.interactions.length),
     ("registeredChannelOccurrences", toJson (assembly target).channels.length),
-    ("uniqueChannels", toJson channels.length),
+    ("uniqueChannels", toJson (channels target).length),
     ("tables", toJson tableStats),
     ("cases", toJson (cases.map fun (name, expected, actual) => Json.mkObj [
       ("id", toJson name), ("expected", toJson expected), ("actual", toJson actual)]))]
