@@ -229,7 +229,7 @@ what makes its table the single all-zero padding row (`haltTablePadding`). -/
 def concreteBaseTrace : SupportedCoreTraceWitness SP1Prime where
   instructionEvents := fun _ => []
   providerOccurrences := fun _ => []
-  data := anchorData
+  generationData := anchorData
   hint := ProverHint.empty _
   boundary := pv
 
@@ -258,7 +258,17 @@ theorem anchorExecution_nativeBaseTrace_eq :
 
 theorem concreteBaseTrace_skeletonLedger :
     concreteBaseTrace.skeletonLedger = anchorTrace.skeletonLedger := by
-  rfl
+  unfold SupportedCoreTraceWitness.skeletonLedger
+  apply congrArg₂ List.append
+  · unfold SupportedCoreTraceWitness.verifierLedger
+    apply congrArg (List.map Interaction.toAccess)
+    apply Operations.interactionValues_congr
+      (env := Environment.fromInput concreteBaseTrace.publicValues concreteBaseTrace.data)
+      (env' := Environment.fromInput anchorTrace.publicValues anchorTrace.data)
+    rw [anchorTrace_publicValues]
+    rfl
+  · rw [tablesCleanAccesses_setData _ concreteBaseTrace.data anchorTrace.data]
+    rfl
 
 /-- The three keys the boundary-only shard actually demands.  The padding Halt row's own Byte,
 Program and Memory accesses are all gated to multiplicity zero, so `closingKeys` (which recounts
@@ -480,7 +490,12 @@ theorem anchorExecution_haltPaddingHeight :
 theorem anchorExecution_zeroRows_rejected (occurrences : ℕ) :
     ¬ (nativeTrace stmt anchorExecution).witness.PhysicalFits 0 occurrences := by
   intro fits
-  have bound := fits.1 1 (by simp only [EnsembleWitness.tableHeights_eq, List.mem_cons, true_or])
+  have member : (nativeTrace stmt anchorExecution).providerTableFor .halt ∈
+      (nativeTrace stmt anchorExecution).witness.tables := by
+    rw [SupportedCoreTraceWitness.witness_tables, SupportedCoreTraceWitness.tables]
+    exact List.mem_append_right _ (List.mem_map.mpr ⟨.halt, by decide, rfl⟩)
+  have bound := ((EnsembleWitness.physicalFits_iff _ _ _).mp fits).1 _ member
+  rw [anchorExecution_haltPaddingHeight] at bound
   omega
 
 /-! ## Joint admissibility and capstone consequences -/

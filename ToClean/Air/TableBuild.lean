@@ -305,7 +305,9 @@ theorem interactionsWith_setData (table : Table F) (data data' : ProverData F)
 Clean's exact row-indexed invariant. The data argument is used for generation, not stored. -/
 def buildHinted (c : Component F) (inputs : List (c.Input F × ProverHint F))
     (data : ProverData F)
-    (fixed : c.fixedRowsMatch (inputs.map fun input => c.buildRow input.1 data input.2) := by trivial) : Table F where
+    (fixed : c.fixedRowsMatch (inputs.map fun input => c.buildRow input.1 data input.2) := by
+      preserve_tactic_target
+      trivial) : Table F where
   component := c
   table := inputs.map fun input => c.buildRow input.1 data input.2
   uniform_width := by
@@ -361,7 +363,9 @@ end Hinted
 /-- Build physical rows with one hint shared by all inputs. -/
 def build (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
     (hint : ProverHint F)
-    (fixed : c.fixedRowsMatch (inputs.map (c.buildRow · data hint)) := by trivial) : Table F where
+    (fixed : c.fixedRowsMatch (inputs.map (c.buildRow · data hint)) := by
+      preserve_tactic_target
+      trivial) : Table F where
   component := c
   table := inputs.map (c.buildRow · data hint)
   uniform_width := by

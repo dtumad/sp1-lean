@@ -44,14 +44,14 @@ def bytePaddingTable : Table (ZMod SP1Prime) :=
 def byteAggregateTable : Table (ZMod SP1Prime) :=
   Table.build ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [byteAggregate]) data hint
 
-theorem bytePaddingTable_constraints : bytePaddingTable.Constraints := by
+theorem bytePaddingTable_constraints : bytePaddingTable.Constraints data := by
   apply ByteChip.U8Range.traceTable_constraints [bytePadding] data hint
   intro e he
   simp only [List.mem_singleton] at he
   subst e
   norm_num [bytePadding, TraceGen.ByteEntry.WellFormed]
 
-theorem byteAggregateTable_constraints : byteAggregateTable.Constraints := by
+theorem byteAggregateTable_constraints : byteAggregateTable.Constraints data := by
   apply ByteChip.U8Range.traceTable_constraints [byteAggregate] data hint
   intro e he
   simp only [List.mem_singleton] at he
@@ -61,12 +61,12 @@ theorem byteAggregateTable_constraints : byteAggregateTable.Constraints := by
 /-- `Table.build` retains a zero-multiplicity padding row and evaluates its sole bus interaction
 to multiplicity zero, so it is bus-neutral without disappearing from the table. -/
 theorem bytePaddingTable_busNeutral :
-    bytePaddingTable.table.length = 1 ∧ bytePaddingTable.interactions.map (fun i => i.mult) = [0] := by
+    bytePaddingTable.table.length = 1 ∧ (bytePaddingTable.interactions data).map (fun i => i.mult) = [0] := by
   native_decide
 
 /-- An aggregate Byte count is not replaced by the historical hard-coded multiplicity one. -/
 theorem byteAggregateTable_preservesMultiplicity :
-    byteAggregateTable.interactions.map (fun i => i.mult) = [7] := by
+    (byteAggregateTable.interactions data).map (fun i => i.mult) = [7] := by
   native_decide
 
 /-! ### Aggregate count through the machine balance dialect -/
@@ -78,14 +78,14 @@ def byteAggregateMessage : ByteRow (ZMod SP1Prime) := ⟨3, 0, 17, 34⟩
 is the one produced by `Table.build`, so this tests the integration seam rather than a parallel
 hand-written positive access. -/
 def byteAggregateLedger : List (Interaction (ZMod SP1Prime)) :=
-  byteAggregateTable.interactions ++
+  (byteAggregateTable.interactions data) ++
     List.replicate 7 (Channels.byteChannel.pulledIfValue 1 byteAggregateMessage)
 
 /-- The aggregate provider row evaluates to the expected native Byte access, including its key and
 centered multiplicity.  The access projection is decidable even though a raw channel carries a
 predicate and therefore has no `DecidableEq`. -/
 theorem byteAggregateTable_accesses :
-    byteAggregateTable.interactions.map Interaction.toAccess =
+    (byteAggregateTable.interactions data).map Interaction.toAccess =
       [(.Byte, "SP1Byte", [3, 0, 17, 34], 7)] := by
   native_decide
 
@@ -139,7 +139,7 @@ theorem byteAggregateLedger_balancedInteractions :
   · intro interaction interactionMem
     simp only [byteAggregateLedger, List.mem_append] at interactionMem
     rcases interactionMem with interactionMem | interactionMem
-    · apply byteAggregateTable.channel_eq_of_mem_interactionsWith
+    · apply byteAggregateTable.channel_eq_of_mem_interactionsWith (data := data)
       rw [SP1Clean.Audit.JointNonVacuity.table_interactionsWith_eq_interactions
         byteAggregateTable_channels]
       exact interactionMem
@@ -159,7 +159,7 @@ def rangeAggregateTable : Table (ZMod SP1Prime) :=
   Table.build (RangeChip.componentFor rangeWidth8)
     (RangeChip.traceInputs [rangeAggregate]) data hint
 
-theorem rangeAggregateTable_constraints : rangeAggregateTable.Constraints := by
+theorem rangeAggregateTable_constraints : rangeAggregateTable.Constraints data := by
   apply RangeChip.traceTable_constraints
     (RangeChip.two_pow_lt (Nat.le_of_lt_succ rangeWidth8.isLt))
     (Nat.le_of_lt_succ rangeWidth8.isLt) [rangeAggregate] data hint
@@ -170,7 +170,7 @@ theorem rangeAggregateTable_constraints : rangeAggregateTable.Constraints := by
 
 /-- An aggregate Range count survives both bit-witness generation and table assembly. -/
 theorem rangeAggregateTable_preservesMultiplicity :
-    rangeAggregateTable.interactions.map (fun i => i.mult) = [9] := by
+    (rangeAggregateTable.interactions data).map (fun i => i.mult) = [9] := by
   native_decide
 
 def programAggregate : TraceGen.RomEntry :=
@@ -180,7 +180,7 @@ def programAggregateTable : Table (ZMod SP1Prime) :=
   Table.build ProgramProviderChip.component
     (ProgramProviderChip.traceInputs [programAggregate]) data hint
 
-theorem programAggregateTable_constraints : programAggregateTable.Constraints := by
+theorem programAggregateTable_constraints : programAggregateTable.Constraints data := by
   apply ProgramProviderChip.traceTable_constraints [programAggregate] data hint
   intro e he
   simp only [List.mem_singleton] at he
@@ -189,7 +189,7 @@ theorem programAggregateTable_constraints : programAggregateTable.Constraints :=
 
 /-- An aggregate Program fetch count survives the complete ROM-provider builder. -/
 theorem programAggregateTable_preservesMultiplicity :
-    programAggregateTable.interactions.map (fun i => i.mult) = [11] := by
+    (programAggregateTable.interactions data).map (fun i => i.mult) = [11] := by
   native_decide
 
 /-! ## Memory's two boolean branches -/
@@ -205,25 +205,25 @@ def memoryFinalizeTable : Table (ZMod SP1Prime) :=
   Table.build MemoryFinalizeChip.component
     (MemoryFinalizeChip.traceInputs [memoryInactive, memoryActive]) data hint
 
-theorem memoryInitTable_constraints : memoryInitTable.Constraints := by
+theorem memoryInitTable_constraints : memoryInitTable.Constraints data := by
   apply MemoryProviderChip.traceTable_constraints [memoryInactive, memoryActive] data hint
   intro e he
   simp only [List.mem_cons, List.not_mem_nil, or_false] at he
   rcases he with rfl | rfl <;>
     rfl
 
-theorem memoryFinalizeTable_constraints : memoryFinalizeTable.Constraints :=
+theorem memoryFinalizeTable_constraints : memoryFinalizeTable.Constraints data :=
   MemoryFinalizeChip.traceTable_constraints [memoryInactive, memoryActive] data hint
 
 /-- Memory init reaches both allowed selectors, and its push interaction preserves `0`/`1`. -/
 theorem memoryInitTable_booleanBranches :
-    memoryInitTable.interactions.map (fun i => i.mult) = [0, 1] := by
+    (memoryInitTable.interactions data).map (fun i => i.mult) = [0, 1] := by
   native_decide
 
 /-- Memory finalize reaches both allowed selectors; its pull interaction evaluates them as
 `-0 = 0` and `-1`, respectively. -/
 theorem memoryFinalizeTable_booleanBranches :
-    memoryFinalizeTable.interactions.map (fun i => i.mult) = [0, -1] := by
+    (memoryFinalizeTable.interactions data).map (fun i => i.mult) = [0, -1] := by
   native_decide
 
 end SP1Clean.Audit.ProviderMultiplicity
