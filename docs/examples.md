@@ -67,13 +67,16 @@ own full balance premises.
 
 [Counter](../SP1Clean/Soundness/Examples/Counter.lean) proves both directions for an actual Clean
 ensemble over ZMod 97: natural endpoints in 0..15 and at most 15 increments. The transition
-checks its predecessor in 0..14 and successor = predecessor + 1; the verifier authenticates
-endpoints. Ranked ledger recovery orders all rows. Its data-only compiler is proved sound and
-complete without readiness premises.
+checks its predecessor in 0..14 and successor = predecessor + 1. The separate verifier enforces
+each endpoint's 0..15 range through polynomial assertions and supplies the State endpoints.
+Only transition rows enter the physical inventory and derived prover data. Ranked ledger recovery
+orders all rows. Its data-only compiler is proved sound and complete without readiness premises.
 
 [Counter tests](../SP1CleanTest/Alignment/Examples/Counter.lean) cover empty/maximal traces,
 shuffled rows, missing/duplicate rows, bad endpoints/event counts and field wraparound:
-(96,0) satisfies field addition but fails the actual fixed lookup.
+(96,0) satisfies field addition but fails the actual fixed lookup. State balance alone accepts
+an empty 16-to-16 trace; the verifier's public checks reject it. A trace of `n` increments has
+`2*n + 2` State occurrences and four additional public-check occurrences, including for `n = 0`.
 
 ```sh
 lake build --wfail --iofail SP1CleanTest.Alignment.Examples.Counter
