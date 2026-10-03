@@ -1,6 +1,8 @@
 import ToClean.Air.EnsembleCheck
-import ToClean.Air.EnsembleBuild
-import SP1CleanTest.Core.EnsembleExport
+import ToClean.Air.TableBuild
+import SP1Clean.Model.SP1Field
+import ToClean.Air.PublicVerifier
+import Clean.Utils.Tactics
 
 /-! # Regression checks for finite ensemble acceptance
 
@@ -12,7 +14,65 @@ consume capacity. These computations use the test library's existing compiler tr
 namespace SP1CleanTest.Core.EnsembleCheck
 
 open Air.Flat Circuit
-open SP1CleanTest.Core.EnsembleExport
+abbrev Fp := ZMod SP1Clean.SP1Prime
+
+def values : Channel Fp field where
+  name := "values"
+  Guarantees _ _ := True
+
+def allowed : StaticTable Fp field where
+  name := "allowed"
+  length := 2
+  row index := if index.val = 0 then 7 else 9
+  index value := if value = 7 then 0 else 1
+  Spec value := value = 7 ∨ value = 9
+  contains_iff := by
+    intro value
+    constructor
+    · rintro ⟨index, rfl⟩
+      split <;> simp
+    · rintro (rfl | rfl)
+      · exact ⟨0, rfl⟩
+      · exact ⟨1, rfl⟩
+
+def provider : GeneralFormalCircuit Fp field unit where
+  main value := do
+    lookup allowed.toTable value
+    values.push value
+  Spec value _ _ := value = 7 ∨ value = 9
+  ProverAssumptions value _ _ := value = 7 ∨ value = 9
+  channelsWithRequirements := [values.toRaw]
+  soundness := by
+    circuit_proof_start [allowed, values]
+    simp_all
+  completeness := by
+    circuit_proof_start [allowed, values]
+    simp_all
+
+def verifier : Verifier.Program Fp field where
+  main value := Verifier.pull values value
+  Spec _ _ := True
+  soundness := by intro _ _; trivial
+
+def ensemble : Ensemble Fp field where
+  tables := [{ circuit := provider }]
+  unique_names := by simp
+  channels := [values.toRaw]
+  verifier := verifier
+
+/-- Finite meanings for the physical lookup and both sides of the public channel. -/
+def description : Air.Flat.EnsembleCheck ensemble where
+  lookups := [FiniteLookup.ofStatic allowed]
+  lookups_unique := by simp
+  lookups_complete := by
+    simp [ensemble, Component.lookups_eq, Component.rowOperations, provider, circuit_norm]
+    rfl
+  channels_unique := by simp [ensemble]
+  channels_complete := by
+    simp [ensemble, Component.interactions_eq, Component.rowOperations, provider, circuit_norm]
+  verifier_channels_complete := by
+    simp [ensemble, Ensemble.verifierOperations, verifier, Verifier.Program.circuitOperations,
+      circuit_norm]
 
 /-- Static lookups need no prover-supplied data. -/
 def data : ProverData Fp := fun _ _ => #[]
@@ -20,10 +80,7 @@ def data : ProverData Fp := fun _ _ => #[]
 /-- Physical provider rows with the exact public input retained in the verifier. -/
 def witness (publicInput : Fp) (rows : List Fp) : EnsembleWitness ensemble :=
   EnsembleWitness.ofTables ensemble
-    [Table.build ⟨provider⟩ rows data (ProverHint.empty Fp)] data publicInput rfl (by
-      intro table member
-      obtain rfl := List.mem_singleton.mp member
-      rfl)
+    [Table.build { circuit := provider } rows data (ProverHint.empty Fp)] publicInput rfl
 
 /-- Both allowed values accept; malformed membership and boundary inventories reject. -/
 def outcomes : List (String × Bool × Bool) :=
@@ -64,7 +121,7 @@ theorem disabled_capacity_is_raw : ¬ BalancedInteractions [disabled, disabled, 
   rw [← checkInteractionBalance_iff 3]
   exact Bool.false_ne_true ∘ (at_capacity.symm.trans ·)
 
-/-- A verifier assertion is checked even when the physical table inventory is empty. -/
+/-- The public assertion keeps its original semantic proof boundary. -/
 def assertedVerifier : GeneralFormalCircuit Fp field unit where
   main value := assertZero (value - 7)
   Spec value _ _ := value = 7
@@ -76,35 +133,35 @@ def assertedVerifier : GeneralFormalCircuit Fp field unit where
     circuit_proof_start
     simp_all
 
-/-- The public verifier alone is a legitimate ensemble. -/
-def boundaryEnsemble : Ensemble Fp field where
-  tables := []
-  channels := []
-  verifier := assertedVerifier
-  verifier_length_zero := by intro value; rfl
+/-- The existing semantic assertion is installed through ordinary verifier interactions. -/
+def publicCheck : PublicVerifier Fp field where
+  name := "boundary"
+  circuit := assertedVerifier
+  assumptions := by intros; trivial
+  length_zero := by intro value; rfl
+  lookups := by intros; rfl
+  interactions := by intros; rfl
 
-/-- The empty lookup/channel inventories are complete for this assertion-only verifier. -/
-def boundaryDescription : Air.Flat.EnsembleExport boundaryEnsemble where
-  componentNames := []
-  names_length := rfl
-  verifierName := "boundary"
-  names_unique := by simp
-  names_nonempty := by simp
-  channels_unique := by simp [boundaryEnsemble]
-  channels_nonempty := by simp [boundaryEnsemble]
+/-- Public checks need no physical prover table. -/
+def boundaryEnsemble : Ensemble Fp field := publicCheck.install (.empty Fp field)
+
+/-- The generated check channel is the only channel in this table-free ensemble. -/
+def boundaryDescription : Air.Flat.EnsembleCheck boundaryEnsemble where
   lookups := []
   lookups_unique := by simp
-  lookups_nonempty := by simp
-  lookups_complete := by
-    simp [boundaryEnsemble, Ensemble.allTables, Ensemble.verifierTable, assertedVerifier,
-      Component.rowOperations, circuit_norm]
-  channels_complete := by
-    simp [boundaryEnsemble, Ensemble.allTables, Ensemble.verifierTable, assertedVerifier,
-      Component.rowOperations, circuit_norm]
+  lookups_complete := by simp [boundaryEnsemble, PublicVerifier.install, Ensemble.empty]
+  channels_unique := by simp [boundaryEnsemble, PublicVerifier.install, Ensemble.empty]
+  channels_complete := by simp [boundaryEnsemble, PublicVerifier.install, Ensemble.empty]
+  verifier_channels_complete := by
+    simp [boundaryEnsemble, PublicVerifier.install, Ensemble.verifierOperations,
+      PublicVerifier.program, PublicVerifier.assertions, publicCheck, assertedVerifier,
+      Ensemble.empty, Verifier.Program.circuitOperations, Verifier.Program.andThen,
+      Verifier.Program.empty, Verifier.checkZeros, Verifier.checkZero, circuit_norm]
+    rfl
 
 /-- Public input is retained even with no prover tables. -/
 def boundaryWitness (value : Fp) : EnsembleWitness boundaryEnsemble :=
-  EnsembleWitness.ofTables boundaryEnsemble [] data value rfl (by simp)
+  EnsembleWitness.ofTables boundaryEnsemble [] value rfl
 
 /-- The satisfying public assertion accepts. -/
 theorem verifier_accepts :

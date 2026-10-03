@@ -1,5 +1,5 @@
 import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
-import ToClean.Air.EnsembleExport
+import ToClean.Air.FiniteLookup
 
 /-! # Authentication of the upstream fixed byte table
 

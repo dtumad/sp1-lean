@@ -1,8 +1,9 @@
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
 import SP1Clean.Model.SP1Field
-import ToClean.Air.EnsembleExport
+import ToClean.Air.FiniteLookup
+import Clean.Circuit.WitnessExport
 
-/-! # Native syscall profile and fixed-lookup export regressions
+/-! # Native syscall profile and finite-lookup regressions
 
 Run the guard's actual flattened assertions and its canonical finite lookup realization.
 The whole-chip lookup is checked separately to catch wiring mistakes in the composition.
