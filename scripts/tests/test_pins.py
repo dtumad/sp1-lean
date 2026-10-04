@@ -19,6 +19,7 @@ class PinTests(unittest.TestCase):
         for name in ("lakefile.toml", "lake-manifest.json", "lean-toolchain",
                      "scripts/provenance.json", "scripts/sail-config/sp1_rv64d_cfg.json",
                      "SP1Clean/FormalModel/CoreProfile.lean", "export/sp1dump/index.json",
+                     "rust/sp1-comparison/Cargo.toml", "rust/sp1-comparison/Cargo.lock",
                      "LeanRV64D.lean"):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,6 +64,21 @@ class PinTests(unittest.TestCase):
         path.write_text(path.read_text().replace(
             'roots = ["LeanRV64D.RvfiDii"]', 'roots = ["LeanRV64D.RvfiDii", "LeanRV64D.Step"]'))
         self.assertTrue(any("confined" in e for e in check_pins.check(self.root)))
+
+    def test_rust_backend_pin_drift(self):
+        path = self.root / "rust/sp1-comparison/Cargo.toml"
+        text = path.read_text()
+        clean = next(p for p in json.loads((self.root / "lake-manifest.json").read_text())["packages"]
+                     if p["name"] == "Clean")
+        path.write_text(text.replace(clean["rev"], "0" * 40))
+        self.assertTrue(any("backend must match" in e for e in check_pins.check(self.root)))
+
+    def test_rust_backend_lock_drift(self):
+        path = self.root / "rust/sp1-comparison/Cargo.lock"
+        clean = next(p for p in json.loads((self.root / "lake-manifest.json").read_text())["packages"]
+                     if p["name"] == "Clean")
+        path.write_text(path.read_text().replace("#" + clean["rev"], "#" + "0" * 40))
+        self.assertTrue(any("locked Clean Rust backend" in e for e in check_pins.check(self.root)))
 
 
 if __name__ == "__main__":

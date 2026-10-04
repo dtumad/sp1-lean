@@ -248,7 +248,12 @@ jobs:
       - name: Environment linters (core-only runs)
         if: env.FULL_BUILD != 'true'
         run: lake exe runLinter --no-build SP1Clean.Core ToClean ToMathlib ToPolyFun
-      - name: Whole-ensemble export identity
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/sp1-comparison
+          key: clean-export
+      - name: Built-in ensemble export and Rust backend comparison
         run: bash scripts/check_ensemble_export.sh
       # The committed export/witgen goldens must match a fresh regeneration byte-for-byte; the
       # exporter maps native rows through the `Faithful` reconfigure maps, so it needs the full

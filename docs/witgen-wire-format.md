@@ -264,7 +264,7 @@ the **shared** operation list — the same programs the wire carries
 
 ## Whole-ensemble instances
 
-`ToClean/Air/EnsembleExport.lean` additionally emits a version-1 ensemble envelope. It has
+The retained legacy fixtures use a version-1 ensemble envelope. It has
 `version`, `modulus`, `components`, `verifier`, `channels`, and `fixedTables` fields. Each component
 has `name`, `inputWidth`, and `program` (the witness format above). A channel has `name` and `width`;
 a fixed table has `name`, `width`, and canonical field-element `rows`. The verifier is a component
@@ -290,10 +290,11 @@ inputs and then checks the complete ensemble. Event routing and provider constru
 separate compiler work. This executable AIR checker is not a cryptographic verifier; relying on
 its acceptance trusts the instance's provenance, serialization, and Rust implementation.
 
-`scripts/ensembleExportFixture.lean` is the sole writer of `export/ensemble/`.
-`bash scripts/check_ensemble_export.sh` regenerates into an ignored workspace directory and
-compares every fixture. Cargo tests accept its valid trace and reject a trace with balanced
-channels but forged fixed-lookup contents.
+The legacy ensemble serializer has been removed. The committed `export/ensemble/` files remain
+historical inputs to the JSON interpreter's parser and acceptance regressions.
+`scripts/ensembleExportFixture.lean` now uses Clean's built-in Rust emitter and writes only ignored
+build artifacts. `bash scripts/check_ensemble_export.sh` compiles that fresh Rust, compares its
+witnesses with Lean and exercises Clean's proof backend; see [export](export.md).
 
 ## SP1-specific facts a consumer may rely on
 

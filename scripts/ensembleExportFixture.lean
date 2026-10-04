@@ -1,23 +1,35 @@
 import SP1CleanTest.Core.EnsembleExport
 
-/-! # Whole-ensemble export regression fixture
+/-! # Clean's built-in whole-ensemble Rust export fixture
 
-Sole writer of `export/ensemble/`. The optional `ENSEMBLE_EXPORT_OUT` selects a scratch directory
-for the byte-identity check. Requires built test oleans; invoked by `check_ensemble_export.sh`.
+Generated sources and Lean reference rows stay under the ignored build tree. The comparison
+script selects a fresh directory through ENSEMBLE_EXPORT_OUT and checks the completion marker.
 -/
 
+open Lean SP1CleanTest.Core.EnsembleExport
+
 private def exportEnsembleFixture : IO Unit := do
-  let out := System.FilePath.mk ((← IO.getEnv "ENSEMBLE_EXPORT_OUT").getD "export/ensemble")
+  let out := System.FilePath.mk
+    ((← IO.getEnv "ENSEMBLE_EXPORT_OUT").getD ".lake/build/ensemble-export")
   IO.FS.createDirAll out
-  let exported ← match SP1CleanTest.Core.EnsembleExport.instanceJson with
+  let exported ← match rust with
     | .ok value => pure value
     | .error message => throw (IO.userError message)
-  IO.FS.writeFile (out / "lookup.instance.json") (exported.compress ++ "\n")
-  let trace (value : ℕ) := Lean.Json.mkObj [
-    ("version", Lean.toJson (1 : ℕ)),
-    ("publicInput", Lean.toJson [value]),
-    ("tables", Lean.toJson [[[value]]])]
-  IO.FS.writeFile (out / "lookup.valid.json") ((trace 7).compress ++ "\n")
-  IO.FS.writeFile (out / "lookup.forged.json") ((trace 8).compress ++ "\n")
+  IO.FS.writeFile (out / "fixed_membership.rs") exported
+  let cases ← ([7, 9, 8] : List Nat).mapM fun (value : Nat) => do
+    let result ← match generate (Nat.cast value) with
+      | .error message => pure <| Json.mkObj [
+          ("publicInput", toJson value), ("accepted", toJson false), ("error", toJson message)]
+      | .ok witness => do
+          let accepted := description.checkWitness SP1Clean.SP1Prime witness
+          unless accepted do throw (IO.userError "generated witness failed raw acceptance")
+          pure <| Json.mkObj [
+            ("publicInput", toJson value), ("accepted", toJson accepted),
+            ("tables", toJson (witness.tables.map fun table =>
+              table.table.map fun row => row.map (·.val))),
+            ("interactionCount", toJson witness.interactions.length)]
+    pure result
+  IO.FS.writeFile (out / "fixed_membership.reference.json") ((toJson cases).compress ++ "\n")
+  IO.println "EXPORTED ensemble Rust and Lean reference cases"
 
 #eval exportEnsembleFixture

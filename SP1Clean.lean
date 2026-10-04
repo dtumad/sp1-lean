@@ -424,7 +424,6 @@ import SP1Clean.Soundness.WalkTimeline
 import SP1Clean.Soundness.WitnessDecode
 import SP1Clean.Soundness.WritePermissionBalance
 import ToClean.Air.CompleteEnsemble
-import ToClean.Air.EnsembleExport
 import ToClean.Air.ChannelRegistry
 import ToClean.Air.EnsembleCheck
 

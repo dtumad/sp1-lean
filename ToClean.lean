@@ -31,7 +31,6 @@ public import ToClean.Air.Authentication
 public import ToClean.Air.CompleteEnsemble
 public import ToClean.Air.ComponentOutput
 public import ToClean.Air.ComponentReplacement
-public import ToClean.Air.EnsembleExport
 public import ToClean.Air.FiniteLookup
 public import ToClean.Air.EnsembleCheck
 public import ToClean.Circuit.StaticTable

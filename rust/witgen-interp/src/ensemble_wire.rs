@@ -1,4 +1,4 @@
-//! Parsing the complete instance emitted by `ToClean.Air.EnsembleExport`.
+//! Parsing the historical complete-instance JSON fixtures retained during export migration.
 //! Unknown metadata fields are rejected so future semantics require a version change.
 
 use crate::ensemble::{Channel, Component, FixedTable, Instance, Trace};

@@ -16,7 +16,7 @@ duplicate implementations or compatibility wrappers after consumers migrate.
 | AgreesBelowWithData / WitnessGenerationData | Data/hint-preserving witness construction; agreement of cells alone does not justify dataGet/hintGet |
 | WitgenShare | Proved expression sharing that prevents very large serialized witness programs |
 | TableBuild / EnsembleBuild | Typed row/table/ensemble construction with actual ledger and verifier proofs |
-| EnsembleExport / EnsembleCheck | Authenticated finite lookup inventory and executable raw-witness acceptance |
+| EnsembleCheck / FiniteLookup | Authenticated finite lookup inventory and executable raw-witness acceptance |
 | Realizes / CompleteEnsemble / EnsembleCompiler | Machine interpretation and constructive equivalence interfaces |
 | Receipt / PublicVerifier / projection helpers | Preserve original circuit/ledger behavior across actual composed consumers |
 
