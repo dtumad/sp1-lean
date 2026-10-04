@@ -210,7 +210,7 @@ theorem evidenceSoundness :
       ((populateRow input_var >>= constrainRow input_var).operations i₀)
     simp only [Operations.Requirements, Circuit.bind_forAllNoOffset]
     refine ⟨?_, ?_⟩
-    · simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, Witnessable.witness_provable, witnessIR, Circuit.pure_def, Circuit.operations,
+    · simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, witnessIR, Circuit.pure_def, Circuit.operations,
         Operations.forAllNoOffset, and_true]
     · simp only [constrainRow, Circuit.bind_forAllNoOffset, subcircuitWithAssertion,
         assertion, Circuit.pure_def, Circuit.operations, Operations.forAllNoOffset,
@@ -251,7 +251,7 @@ private theorem populateRow_interactionsWith_eq_nil (channel : RawChannel (ZMod 
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Operations.interactionsWith channel ((populateRow input).operations offset) = [] := by
   simp only [populateRow, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, Witnessable.witness_provable, witnessIR, Operations.localLength,
+    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, witnessIR, Operations.localLength,
     Operations.interactionsWith_append, Operations.interactionsWith_witness,
     Operations.interactionsWith_nil, List.nil_append]
 
@@ -482,7 +482,7 @@ private theorem populateRow_subcircuitRequirements_eq_nil (input : Var Inputs (Z
     (offset : ℕ) :
     Operations.subcircuitChannelsWithRequirements ((populateRow input).operations offset) = [] := by
   simp only [populateRow, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, Witnessable.witness_provable, witnessIR, Operations.localLength,
+    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, witnessIR, Operations.localLength,
     Operations.subcircuitChannelsWithRequirements_append,
     Operations.subcircuitChannelsWithRequirements_witness,
     Operations.subcircuitChannelsWithRequirements_nil, List.nil_append]
@@ -509,7 +509,7 @@ omit [Fact (2 ^ 24 < p)] in
 private theorem populateRow_shallowChannels_eq_nil (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Operations.shallowChannels ((populateRow input).operations offset) = [] := by
   simp only [populateRow, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, Witnessable.witness_provable, witnessIR, Operations.localLength,
+    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, witnessIR, Operations.localLength,
     Operations.shallowChannels_append, Operations.shallowChannels_witness,
     Operations.shallowChannels_nil, List.nil_append]
 
@@ -524,7 +524,7 @@ omit [Fact (2 ^ 24 < p)] in
 private theorem populateRow_shallowInteractions_eq_nil (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Operations.shallowInteractions ((populateRow input).operations offset) = [] := by
   simp only [populateRow, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, Witnessable.witness_provable, witnessIR, Operations.localLength,
+    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, witnessIR, Operations.localLength,
     Operations.shallowInteractions_append, Operations.shallowInteractions_witness,
     Operations.shallowInteractions_nil, List.nil_append]
 

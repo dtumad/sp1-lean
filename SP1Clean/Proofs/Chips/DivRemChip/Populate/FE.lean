@@ -926,19 +926,70 @@ end LtSites
 
 section MulSites
 
-/-- The `c_times_quotient_lower` struct payload (real rows only). -/
-def mulLowerFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Circuits.Types.MulOperation (Witgen.FExpr (ZMod p)) :=
-  Witgen.gateFE ((Witgen.FExpr.expr ir) =? (1 : ZMod p))
-    (MulOperation.populateFEW (quotCompFE B C) (compF C) 0 0 0)
+/-- The two gated multiplication blocks use Clean's shared witness programs. The computational
+quotient is evaluated once, and the divisor limbs are bound before the schoolbook product reuses
+them. `upper` selects the existing 64-bit/signed gate without changing the 45-cell layout. -/
+def mulProgram (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p)))
+    (upper : Bool) : Witgen.M (ZMod p) (Circuits.Types.MulOperation (Witgen.FExpr (ZMod p))) := do
+  let q ← quotCompBitsU (wordU B) (wordU C)
+  let c0 ← (compF C)[0]
+  let c1 ← (compF C)[1]
+  let c2 ← (compF C)[2]
+  let c3 ← (compF C)[3]
+  let gate := if upper then
+    ((Witgen.FExpr.expr ir) =? (1 : ZMod p)).and ((longSumF (p := p)) =? (1 : ZMod p))
+    else (Witgen.FExpr.expr ir) =? (1 : ZMod p)
+  return Witgen.gateFE gate
+    (MulOperation.populateFEW (wordFOfU64 q) #v[c0, c1, c2, c3]
+      (if upper then flagF 0 + flagF 2 else 0) 0 0)
 
-/-- The `c_times_quotient_upper` struct payload (64-bit variants of real rows only; the signed
-pair runs the `is_mulh` stream). -/
-def mulUpperFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Circuits.Types.MulOperation (Witgen.FExpr (ZMod p)) :=
-  Witgen.gateFE (((Witgen.FExpr.expr ir) =? (1 : ZMod p)).and
-      ((longSumF (p := p)) =? (1 : ZMod p)))
-    (MulOperation.populateFEW (quotCompFE B C) (compF C) (flagF 0 + flagF 2) 0 0)
+omit [Fact (2 ^ 24 < p)] in
+/-- Computational operand cells read only the environment, independently of local IR steps. -/
+private theorem compF_eval_ctx (ctx : Witgen.Ctx (ZMod p))
+    (C : Word (Expression (ZMod p))) (i : ℕ) (hi : i < 4) :
+    (compF C)[i].eval ctx = (compF C)[i].eval { env := ctx.env } := by
+  interval_cases i <;>
+    simp only [compF, flagF, hintF, U16MSBOperation.populate_msbF,
+      circuit_norm, -Witgen.u64Wrap]
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Explicit sharing preserves the original payload for every environment, including dishonest
+hints. This is an authoring proof over Clean's evaluator, not an additional IR transformation. -/
+theorem mulProgram_eval (env : ProverEnvironment (ZMod p))
+    (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) (upper : Bool) :
+    (mulProgram ir B C upper).eval env =
+      Witgen.eval { env := env }
+        (Witgen.gateFE
+          (if upper then ((Witgen.FExpr.expr ir) =? (1 : ZMod p)).and
+            ((longSumF (p := p)) =? (1 : ZMod p)) else (Witgen.FExpr.expr ir) =? (1 : ZMod p))
+          (MulOperation.populateFEW (quotCompFE B C) (compF C)
+            (if upper then flagF 0 + flagF 2 else 0) 0 0)) := by
+  simp only [mulProgram, Witgen.M.eval, Witgen.M.bind_def, Witgen.M.pure_def,
+    Witgen.letU_def, Witgen.letF_def, Array.size_push, Array.size_empty,
+    Array.toList_push, List.cons_append, List.nil_append, Witgen.evalSteps, compF_eval_ctx]
+  rw [Witgen.eval_gateFE, Witgen.eval_gateFE]
+  have hgate (ctx : Witgen.Ctx (ZMod p)) :
+      (if upper then ((Witgen.FExpr.expr ir) =? (1 : ZMod p)).and
+        ((longSumF (p := p)) =? (1 : ZMod p)) else (Witgen.FExpr.expr ir) =? (1 : ZMod p)).eval ctx
+      = (if upper then ((Witgen.FExpr.expr ir) =? (1 : ZMod p)).and
+        ((longSumF (p := p)) =? (1 : ZMod p)) else (Witgen.FExpr.expr ir) =? (1 : ZMod p)).eval
+          { env := ctx.env } := by
+    cases upper <;> simp only [Bool.false_eq_true,
+      longSumF, flagF, hintF, circuit_norm, -Witgen.u64Wrap]
+    · exact decide_eq_decide.mpr Iff.rfl
+    · congr 1
+  rw [hgate]
+  refine if_congr Iff.rfl ?_ rfl
+  apply MulOperation.populateFEW_congr
+  · intro i hi
+    interval_cases i <;>
+      simp [wordFOfU64, quotCompFE, circuit_norm, -Witgen.u64Wrap]
+  · intro i hi
+    interval_cases i <;> simp [circuit_norm, -Witgen.u64Wrap]
+  · cases upper <;> simp only [Bool.false_eq_true, flagF, hintF, circuit_norm, -Witgen.u64Wrap]
+  · rfl
+  · rfl
+
 
 variable (env : ProverEnvironment (ZMod p))
 variable (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p))
@@ -975,17 +1026,17 @@ private theorem mulOperandEvals :
 
 include hWB hWC hUB hUC in
 /-- Evaluating the lower product payload is `populateMulLower`. -/
-theorem mulLowerFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
+theorem mulLowerProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) :
-    Witgen.eval { env := env } (mulLowerFE ir B C)
+    (mulProgram ir B C false).eval env
       = populateMulLower vir vB vC (hintFlags env.hint) := by
   obtain ⟨hqw, hcw⟩ := mulOperandEvals env B C vB vC hWB hWC hUB hUC
   have hinner := MulOperation.populateFEWW_eval env (quotCompFE B C) (compF C) 0 0 0
     (populateQuotComp vB vC (hintFlags env.hint)) (cComp vC (hintFlags env.hint)) 0 0 0
     hqw hcw rfl rfl rfl (populateQuotComp_isU64 vB vC _) (cComp_isU64 hUC _)
     (Or.inl rfl) (Or.inl rfl) (by simp)
-  rw [mulLowerFE, Witgen.eval_gateFE]
-  simp only [populateMulLower]
+  rw [mulProgram_eval]
+  simp only [Bool.false_eq_true, ↓reduceIte, Witgen.eval_gateFE, populateMulLower]
   by_cases h1 : vir = 1
   · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1, hinner]
   · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1, MulOperation.fromElements_zero]
@@ -993,11 +1044,11 @@ theorem mulLowerFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
 include hWB hWC hUB hUC in
 /-- Evaluating the upper product payload is `populateMulUpper` (under the flag binarities the
 contract provides — the signed selector `f[0] + f[2]` must be binary). -/
-theorem mulUpperFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
+theorem mulUpperProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir)
     (hf02 : (hintFlags env.hint)[0] + (hintFlags env.hint)[2] = 0
       ∨ (hintFlags env.hint)[0] + (hintFlags env.hint)[2] = 1) :
-    Witgen.eval { env := env } (mulUpperFE ir B C)
+    (mulProgram ir B C true).eval env
       = populateMulUpper vir vB vC (hintFlags env.hint) := by
   obtain ⟨hqw, hcw⟩ := mulOperandEvals env B C vB vC hWB hWC hUB hUC
   have hh : Witgen.FExpr.eval { env := env }
@@ -1018,8 +1069,8 @@ theorem mulUpperFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
       ((longSumF (p := p)) =? (1 : ZMod p))).eval { env := env })
       = ((((Witgen.FExpr.expr ir) =? (1 : ZMod p)).eval { env := env })
         && (((longSumF (p := p)) =? (1 : ZMod p)).eval { env := env })) := rfl
-  rw [mulUpperFE, Witgen.eval_gateFE]
-  simp only [populateMulUpper]
+  rw [mulProgram_eval]
+  simp only [↓reduceIte, Witgen.eval_gateFE, populateMulUpper]
   by_cases h1 : vir = 1
   · by_cases h2 : (hintFlags env.hint)[0] + (hintFlags env.hint)[1]
         + (hintFlags env.hint)[2] + (hintFlags env.hint)[3] = 1

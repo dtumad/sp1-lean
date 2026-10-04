@@ -238,10 +238,10 @@ theorem completeness :
       ∨ (hintFlags env.hint)[0] + (hintFlags env.hint)[2] = 1 := by
     rw [← hFdef]
     exact (flagSums_bool hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum).2.2.2.1
-  have eMULLO := mulLowerFE_eval (env := env) (vB := B) (vC := C)
+  have eMULLO := mulLowerProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eMULHI := mulUpperFE_eval (env := env) (vB := B) (vC := C)
+  have eMULHI := mulUpperProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir) (hf02 := hf02)
   -- flag pins
@@ -431,9 +431,9 @@ theorem completeness :
     have h := h_env_mullo i
     dsimp only [] at h
     refine h.trans ?_
-    exact ((Witgen.WitgenIR.getElem_eval_ofFExprs _ env ↑i hsz).trans
-      ((Witgen.getElem_eval_toElements { env := env } _ ↑i hsz).trans
-        (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz) (eMULLO.trans (by rw [hFlags]))))).trans
+    rw [Witgen.M.eval_toIRLiteral]
+    exact (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz)
+      (eMULLO.trans (by rw [hFlags]))).trans
       (SubSpecs.mulWitnessElements_get (populateMulLower input_is_real B C F) i).symm
   have hMULHI : ∀ i : Fin 45, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + ↑i)
       = (SubSpecs.mulWitnessElements (populateMulUpper input_is_real B C F)).get i := by
@@ -444,9 +444,9 @@ theorem completeness :
     have h := h_env_mulhi i
     dsimp only [] at h
     refine h.trans ?_
-    exact ((Witgen.WitgenIR.getElem_eval_ofFExprs _ env ↑i hsz).trans
-      ((Witgen.getElem_eval_toElements { env := env } _ ↑i hsz).trans
-        (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz) (eMULHI.trans (by rw [hFlags]))))).trans
+    rw [Witgen.M.eval_toIRLiteral]
+    exact (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz)
+      (eMULHI.trans (by rw [hFlags]))).trans
       (SubSpecs.mulWitnessElements_get (populateMulUpper input_is_real B C F) i).symm
   have hOVB : ∀ i : Fin 11, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + ↑i)
       = (SubSpecs.eqWordWitnessElements (ovbWitness input_is_real B F)).get i := by
@@ -580,7 +580,7 @@ theorem completeness :
   -- This is definitional factoring only: the flat operation order remains the Rust row order.
   simp only [main, ConstraintsHold.Completeness, Circuit.bind_forAllNoOffset]
   refine ⟨by
-    simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, Witnessable.witness_provable, witnessIR, Circuit.pure_def, Circuit.operations,
+    simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, witnessIR, Circuit.pure_def, Circuit.operations,
       Operations.forAllNoOffset, and_true], ?_⟩
   -- Expose the five folded constraint boundaries after the witness-only prefix.
   rw [populateRow_output_eq]

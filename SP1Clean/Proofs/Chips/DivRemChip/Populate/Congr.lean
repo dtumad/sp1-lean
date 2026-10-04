@@ -634,33 +634,25 @@ theorem quotMsbCongr :
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in
-/-- Environment-locality of the `c_times_quotient_lower` struct site (compositional: the gate
-condition plus the flat `MulOperation` battery, transported through the A7c bridges). -/
-theorem mulLowerCongr :
-    (Witgen.WitgenIR.ofFExprs (toElements (mulLowerFE ir B C))).eval env
-      = (Witgen.WitgenIR.ofFExprs (toElements (mulLowerFE ir B C))).eval env' := by
+/-- Both shared multiplication programs depend only on the input operands, gate and hints. -/
+theorem mulProgramCongr (upper : Bool) :
+    (mulProgram ir B C upper).toIRLiteral.eval env
+      = (mulProgram ir B C upper).toIRLiteral.eval env' := by
+  rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
+  apply congrArg toElements
+  rw [mulProgram_eval, mulProgram_eval]
   have hq := Witgen.cell_congr_of_ofFExprs_congr
     (quotCompCongr env env' B C ir hB hC hir hhint)
   have hc := Witgen.cell_congr_of_ofFExprs_congr (cCongr env env' B C ir hB hC hir hhint)
-  refine Witgen.ofFExprs_congr_of_structEval_congr
-    (Witgen.gateFE_congr _ _ _ _ ?_ (Witgen.structEval_congr_of_ofFExprs_congr
-      (MulOperation.populateFEW_congr_flat env env' _ _ _ _ _ hq hc ?_ ?_ ?_))) <;>
-  (simp only [circuit_norm, -Witgen.u64Wrap, hir]; all_goals exact decide_eq_decide.mpr Iff.rfl)
-
-omit [Fact (2 ^ 24 < p)] in
-include hB hC hir hhint in
-/-- Environment-locality of the `c_times_quotient_upper` struct site. -/
-theorem mulUpperCongr :
-    (Witgen.WitgenIR.ofFExprs (toElements (mulUpperFE ir B C))).eval env
-      = (Witgen.WitgenIR.ofFExprs (toElements (mulUpperFE ir B C))).eval env' := by
-  have hq := Witgen.cell_congr_of_ofFExprs_congr
-    (quotCompCongr env env' B C ir hB hC hir hhint)
-  have hc := Witgen.cell_congr_of_ofFExprs_congr (cCongr env env' B C ir hB hC hir hhint)
-  refine Witgen.ofFExprs_congr_of_structEval_congr
-    (Witgen.gateFE_congr _ _ _ _ ?_ (Witgen.structEval_congr_of_ofFExprs_congr
-      (MulOperation.populateFEW_congr_flat env env' _ _ _ _ _ hq hc ?_ ?_ ?_))) <;>
-  (simp only [longSumF, flagF, hintF, circuit_norm, -Witgen.u64Wrap, hir, hhint]
-   all_goals (congr 1; exact decide_eq_decide.mpr Iff.rfl))
+  refine Witgen.gateFE_congr _ _ _ _ ?_
+    (MulOperation.populateFEW_congr { env := env } { env := env' }
+      _ _ _ _ _ hq hc ?_ rfl rfl)
+  · cases upper <;>
+      simp only [longSumF, flagF, hintF, circuit_norm, -Witgen.u64Wrap, hir, hhint]
+    · exact decide_eq_decide.mpr Iff.rfl
+    · congr 1
+      exact decide_eq_decide.mpr Iff.rfl
+  · cases upper <;> simp only [flagF, hintF, circuit_norm, -Witgen.u64Wrap, hhint]
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hir hhint in

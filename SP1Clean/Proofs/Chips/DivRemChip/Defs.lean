@@ -137,10 +137,10 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   -- SP1's word rows and padding leave them all-zero). Their `MulOperation` product constraints
   -- (and the limb glue tying them to `c_times_quotient`) are asserted by `DivRemCore.circuit`
   -- over the assembled row below.
-  let mul_lower ← witness (var := Var Circuits.Types.MulOperation)
-    (mulLowerFE input.is_real bpv cpv)
-  let mul_upper ← witness (var := Var Circuits.Types.MulOperation)
-    (mulUpperFE input.is_real bpv cpv)
+  let mul_lower ← witnessProgram (var := Var Circuits.Types.MulOperation)
+    (mulProgram input.is_real bpv cpv false)
+  let mul_upper ← witnessProgram (var := Var Circuits.Types.MulOperation)
+    (mulProgram input.is_real bpv cpv true)
   -- Witnessed scalar sign/gate columns + the `c_times_quotient`/`carry` u16-limb vectors, all
   -- honestly populated (`populateScal`/`populateCtq`/`populateCarry`); the own-asserts
   -- `E13/E15/…` and the carry chain `E121…E151` pin them.

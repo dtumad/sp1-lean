@@ -162,6 +162,23 @@ not own a second spelling of the production characteristic. -/
 #guard_msgs in
 #assert_exportable (DivRemChip.circuit (p := SP1Prime))
 
+-- Exportability alone cannot detect duplicated expression trees. These two product blocks
+-- previously expanded to hundreds of megabytes each without the custom sharing pass. Exercise
+-- the actual circuit payloads with Clean's serializer and keep each below a generous 2 MiB cap.
+#eval show IO Unit from do
+  let input := ProvableType.varFromOffset (F := ZMod SP1Prime) DivRemChip.Inputs 0
+  let ops := ((DivRemChip.populateRow input).operations (ProvableType.size DivRemChip.Inputs)).toFlat
+  let mut products := 0
+  for op in ops do
+    match op with
+    | .witness 45 _ =>
+      let .ok json := op.witgenJson? | throw (IO.userError "DivRem product is not serializable")
+      unless json.compress.toUTF8.size < 2 * 1024 * 1024 do
+        throw (IO.userError "DivRem product lost its authored witness sharing")
+      products := products + 1
+    | _ => pure ()
+  unless products == 2 do throw (IO.userError "DivRem product size check did not cover both blocks")
+
 /-! ## Chips that witness nothing at all -/
 
 /-- info: exportable ✓ (0 witness cells) -/

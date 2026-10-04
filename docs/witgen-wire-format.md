@@ -159,18 +159,19 @@ their canonical value (`0 ≤ v < p`). The required operations: `+`, `·`, inver
 (for `ofU64`; on a prime field this is just `n mod p`). `p < 2³¹`, so products fit in
 `u64` — no Montgomery form is needed for a reference interpreter.
 
-## Sharing (`steps`) and the size guarantee
+## Sharing (`steps`)
 
-Authored witness programs are deeply shared terms, and the serializer would otherwise
-expand every shared subterm into a fresh copy — SP1's DivRem chip serializes to
-**1.22 GB** that way. The committed payloads are therefore produced through
-`Operations.witgenJsonShared?`, which rebuilds each witness program with every distinct
-non-trivial scalar subterm interned as a `let`-step (`WitgenIR.share`). The
-transformation is **proven evaluation-preserving** (`WitgenIR.eval_share`, axiom-clean),
-so consumers may treat shared and unshared payloads as the same program; the committed
-DivRem payload is 1.04 MB and the whole 25-chip export ~2.3 MB. An interpreter gets the
-same win at evaluation time: cost is proportional to distinct subterms, provided each
-step is evaluated once into the locals array (the loop above does exactly that).
+Author reused calculations with Clean's `witnessProgram` / `Witgen.M`: a monadic bind
+creates an IR step, while a plain Lean `let` can expand into repeated expression trees.
+DivRem's multiplication programs share the quotient and divisor limbs this way, with
+kernel-checked evaluation preservation and serialized-size checks in the existing
+exportability test. Interpreters evaluate each step once into the locals array.
+
+The stored migration payloads were produced through the legacy
+`Operations.witgenJsonShared?` transformation: the earlier DivRem program expanded to
+1.22 GB without it. The remaining chip payloads still depend on that pass. Its exit is
+authored sharing through Clean's built-in API and replacement comparison coverage;
+the stored JSON interpreter is migration evidence, not the intended Rust backend.
 
 ## Determinism and byte stability
 

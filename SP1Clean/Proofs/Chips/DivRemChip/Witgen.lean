@@ -102,9 +102,9 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
   · obtain ⟨hB, hC, hir⟩ := inputFacts h_input
     exact cCongr env env' _ _ _ hB hC hir h_agree.hint_eq
   · obtain ⟨hB, hC, hir⟩ := inputFacts h_input
-    exact mulLowerCongr env env' _ _ _ hB hC hir h_agree.hint_eq
+    exact mulProgramCongr env env' _ _ _ hB hC hir h_agree.hint_eq false
   · obtain ⟨hB, hC, hir⟩ := inputFacts h_input
-    exact mulUpperCongr env env' _ _ _ hB hC hir h_agree.hint_eq
+    exact mulProgramCongr env env' _ _ _ hB hC hir h_agree.hint_eq true
   · obtain ⟨hB, hC, hir⟩ := inputFacts h_input
     exact scalCongr env env' _ _ _ hB hC hir h_agree.hint_eq
   · obtain ⟨hB, hC, hir⟩ := inputFacts h_input
