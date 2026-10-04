@@ -275,7 +275,16 @@ jobs:
           retention-days: 30
       - name: Fresh deterministic witnesses and Rust comparison
         if: env.FULL_BUILD == 'true'
+        id: witgen
         run: python3 scripts/check_witgen_export.py
+      - name: Upload witness export evidence
+        if: always() && env.FULL_BUILD == 'true' && steps.witgen.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: witgen-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lake/witgen-export/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Pinned Node for backend conformance
         if: env.FULL_BUILD == 'true'
         uses: actions/setup-node@v4
