@@ -189,9 +189,9 @@ theorem completeness :
   have eSCAL := scalFE_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eCTQ := ctqFE_eval (env := env) (vB := B) (vC := C)
+  have eCTQ := ctqProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eCARRY := carryFE_eval (env := env) (vB := B) (vC := C)
+  have eCARRY := carryProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU) (hf := hfALL)
   have eOVB := ovbFE_eval (env := env) (vB := B) (hWB := hbpvE)
     (vir := input_is_real) (hir := hir)
@@ -557,7 +557,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_ctq ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eCTQ i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eCTQ i hi, hFlags] at h; exact h
   have hCARRYvecW : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 8 fun i => var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i })
         : Vector (ZMod p) 8)
@@ -565,7 +566,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_carry ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eCARRY i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eCARRY i hi, hFlags] at h; exact h
   -- a signed-class row is real (the divu-padding template `F = #v[0,1,0,…]` has signed sum `0`)
   have hsr : F[0] + F[2] + F[4] + F[5] = 1 → input_is_real = 1 := by
     intro hsig'
@@ -580,7 +582,7 @@ theorem completeness :
   -- This is definitional factoring only: the flat operation order remains the Rust row order.
   simp only [main, ConstraintsHold.Completeness, Circuit.bind_forAllNoOffset]
   refine ⟨by
-    simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, witnessIR, Circuit.pure_def, Circuit.operations,
+    simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Circuit.pure_def, Circuit.operations,
       Operations.forAllNoOffset, and_true], ?_⟩
   -- Expose the five folded constraint boundaries after the witness-only prefix.
   rw [populateRow_output_eq]

@@ -47,6 +47,19 @@ def ctqLimbU (q c : Witgen.U64Expr (ZMod p)) (k : ℕ) : Witgen.U64Expr (ZMod p)
   if k < 4 then (q * c) >>> (16 * k) % 65536
   else ctqHiU q c >>> (16 * (k - 4)) % 65536
 
+omit [Fact (2 ^ 24 < p)] in
+/-- Product limbs depend on the evaluated operands and flag hints, including when the operands
+name shared local steps in different witness contexts. -/
+theorem ctqLimbU_congr (ctx ctx' : Witgen.Ctx (ZMod p))
+    (q c q' c' : Witgen.U64Expr (ZMod p))
+    (hq : q.eval ctx = q'.eval ctx') (hc : c.eval ctx = c'.eval ctx')
+    (hhint : ctx.env.hint = ctx'.env.hint) (k : ℕ) :
+    (ctqLimbU q c k).eval ctx = (ctqLimbU q' c' k).eval ctx' := by
+  unfold ctqLimbU
+  split_ifs <;>
+    simp only [ctqHiU, umulhU, negU, flagF, hintF,
+      circuit_norm, -Witgen.u64Wrap, hq, hc, hhint]
+
 end CtqIR
 
 section CtqNat

@@ -162,22 +162,23 @@ not own a second spelling of the production characteristic. -/
 #guard_msgs in
 #assert_exportable (DivRemChip.circuit (p := SP1Prime))
 
--- Exportability alone cannot detect duplicated expression trees. These two product blocks
--- previously expanded to hundreds of megabytes each without the custom sharing pass. Exercise
--- the actual circuit payloads with Clean's serializer and keep each below a generous 2 MiB cap.
+-- Exportability alone cannot detect duplicated expression trees. The multiplication, product-limb
+-- and carry blocks use authored sharing; exercise their actual payloads with Clean's serializer.
+-- The eight-cell flags block shares the size check, giving five covered blocks in total.
 #eval show IO Unit from do
   let input := ProvableType.varFromOffset (F := ZMod SP1Prime) DivRemChip.Inputs 0
   let ops := ((DivRemChip.populateRow input).operations (ProvableType.size DivRemChip.Inputs)).toFlat
-  let mut products := 0
+  let mut blocks := 0
   for op in ops do
     match op with
-    | .witness 45 _ =>
-      let .ok json := op.witgenJson? | throw (IO.userError "DivRem product is not serializable")
-      unless json.compress.toUTF8.size < 2 * 1024 * 1024 do
-        throw (IO.userError "DivRem product lost its authored witness sharing")
-      products := products + 1
+    | .witness cells _ =>
+      if cells == 45 || cells == 8 then
+        let .ok json := op.witgenJson? | throw (IO.userError "DivRem block is not serializable")
+        unless json.compress.toUTF8.size < 2 * 1024 * 1024 do
+          throw (IO.userError "DivRem block lost its authored witness sharing")
+        blocks := blocks + 1
     | _ => pure ()
-  unless products == 2 do throw (IO.userError "DivRem product size check did not cover both blocks")
+  unless blocks == 5 do throw (IO.userError "DivRem size check did not cover all five blocks")
 
 /-! ## Chips that witness nothing at all -/
 

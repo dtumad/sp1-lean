@@ -163,8 +163,8 @@ their canonical value (`0 ≤ v < p`). The required operations: `+`, `·`, inver
 
 Author reused calculations with Clean's `witnessProgram` / `Witgen.M`: a monadic bind
 creates an IR step, while a plain Lean `let` can expand into repeated expression trees.
-DivRem's multiplication programs share the quotient and divisor limbs this way, with
-kernel-checked evaluation preservation and serialized-size checks in the existing
+DivRem's multiplication, product-limb and carry programs share their computational
+operands this way, with kernel-checked evaluation preservation and serialized-size checks in the existing
 exportability test. Interpreters evaluate each step once into the locals array.
 
 The stored migration payloads were produced through the legacy

@@ -109,8 +109,8 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     exact scalCongr env env' _ _ _ hB hC hir h_agree.hint_eq
   · obtain ⟨hB, hC, hir⟩ := inputFacts h_input
     exact ctqCongr env env' _ _ _ hB hC hir h_agree.hint_eq
-  · obtain ⟨hB, hC, -⟩ := inputFacts h_input
-    exact carryCongr env env' _ _ hB hC h_agree.hint_eq
+  · obtain ⟨hB, hC, hir⟩ := inputFacts h_input
+    exact carryCongr env env' _ _ _ hB hC hir h_agree.hint_eq
   · obtain ⟨hB, -, hir⟩ := inputFacts h_input
     exact ovbCongr env env' _ _ hB hir h_agree.hint_eq
   · obtain ⟨-, hC, hir⟩ := inputFacts h_input

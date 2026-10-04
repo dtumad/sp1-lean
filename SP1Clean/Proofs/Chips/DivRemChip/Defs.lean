@@ -148,8 +148,8 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   let is_overflow := scal[0]; let b_neg := scal[1]; let b_neg_not_overflow := scal[2]
   let b_not_neg_not_overflow := scal[3]; let is_real_not_word := scal[4]
   let rem_neg := scal[5]; let c_neg := scal[6]
-  let c_times_quotient ← witnessVectorIR 8 (.ofFExprs (ctqFE bpv cpv))
-  let carry ← witnessVectorIR 8 (.ofFExprs (carryFE bpv cpv))
+  let c_times_quotient ← witnessProgram (var := Var (fields 8)) (ctqProgram bpv cpv)
+  let carry ← witnessProgram (var := Var (fields 8)) (carryProgram bpv cpv)
   -- The `IsEqualWordOperation`/`IsZeroWordOperation` nested cols, witnessed flat via
   -- `fromElements (F := …)`; their overflow/divide-by-zero assertions live in
   -- `DivRemCompare.circuit` below.

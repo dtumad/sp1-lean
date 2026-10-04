@@ -642,10 +642,30 @@ end ScalEval
 
 section CtqSite
 
-/-- The eight committed product limbs. -/
-def ctqFE (B C : Word (Expression (ZMod p))) : Vector (Witgen.FExpr (ZMod p)) 8 :=
-  Vector.ofFn fun k =>
-    ctqLimbF (quotCompBitsU (wordU B) (wordU C)) (compU (wordU C)) k.val
+/-- The eight committed product limbs share their computational quotient and divisor. -/
+def ctqProgram (B C : Word (Expression (ZMod p))) :
+    Witgen.M (ZMod p) (Vector (Witgen.FExpr (ZMod p)) 8) := do
+  let q ← quotCompBitsU (wordU B) (wordU C)
+  let c ← compU (wordU C)
+  return Vector.ofFn fun k => ctqLimbF q c k.val
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Shared product limbs preserve the expression semantics for arbitrary operand values and hints. -/
+theorem ctqProgram_eval_limb (env : ProverEnvironment (ZMod p))
+    (B C : Word (Expression (ZMod p))) (k : ℕ) (hk : k < 8) :
+    ((ctqProgram B C).eval (value := fields 8) env)[k] =
+      (ctqLimbF (quotCompBitsU (wordU B) (wordU C)) (compU (wordU C)) k).eval
+        { env := env } := by
+  simp only [ctqProgram, Witgen.M.eval, Witgen.M.bind_def, Witgen.M.pure_def,
+    Witgen.letU_def, Array.size_empty,
+    List.cons_append, List.nil_append, Witgen.evalSteps,
+    Witgen.eval, explicit_provable_type, circuit_norm, Vector.getElem_ofFn, ctqLimbF]
+  apply congrArg (fun u : UInt64 => (u.toNat : ZMod p))
+  apply ctqLimbU_congr
+  · simp [circuit_norm, -Witgen.u64Wrap]
+  · simp [compU, low32U, sext32U, wordU, flagF, hintF,
+      circuit_norm, -Witgen.u64Wrap]
+  · rfl
 
 variable (env : ProverEnvironment (ZMod p))
 variable (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p))
@@ -655,8 +675,8 @@ variable (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p))
 
 include hWB hWC hUB hUC in
 /-- Evaluating a product limb is the corresponding `populateCtq` cell. -/
-theorem ctqFE_eval (k : ℕ) (hk : k < 8) :
-    ((ctqFE B C)[k]).eval { env := env } = (populateCtq vB vC (hintFlags env.hint))[k] := by
+theorem ctqProgram_eval (k : ℕ) (hk : k < 8) :
+    ((ctqProgram B C).eval (value := fields 8) env)[k] = (populateCtq vB vC (hintFlags env.hint))[k] := by
   have hq : ((Witgen.U64Expr.eval { env := env }
       (quotCompBitsU (wordU B) (wordU C))).toNat)
       = (Word.toBitVec64 (populateQuotComp vB vC (hintFlags env.hint))).toNat := by
@@ -665,8 +685,8 @@ theorem ctqFE_eval (k : ℕ) (hk : k < 8) :
   have hc : ((Witgen.U64Expr.eval { env := env } (compU (wordU C))).toNat)
       = (Word.toBitVec64 (cComp vC (hintFlags env.hint))).toNat :=
     compU_toNat env (wordU C) (wordU_toNat env C vC hWC hUC) hUC
-  simpa only [ctqFE, Vector.getElem_ofFn] using
-    ctqLimbF_eval env _ _ vB vC hq hc k hk
+  rw [ctqProgram_eval_limb]
+  exact ctqLimbF_eval env _ _ vB vC hq hc k hk
 
 end CtqSite
 
@@ -1190,23 +1210,70 @@ end OvSites
 
 section CarrySite
 
-/-- Addend limb `k` of `remainder` in the carry chain (`remAddendNat`'s IR twin: the committed
-`remainder_comp` limb below the word, the sign fill above). -/
-def remAddendU (B C : Word (Expression (ZMod p))) (k : ℕ) : Witgen.U64Expr (ZMod p) :=
-  if h : k < 4 then Witgen.U64Expr.val ((remCompFE B C)[k]'h)
-  else Witgen.U64Expr.val (remNegFE B C) * 65535
+/-- Remainder addend: the committed limb below the word, the sign fill above it. -/
+def remAddendU (r : Word (Witgen.FExpr (ZMod p))) (sign : Witgen.FExpr (ZMod p))
+    (k : ℕ) : Witgen.U64Expr (ZMod p) :=
+  if h : k < 4 then Witgen.U64Expr.val (r[k]'h)
+  else Witgen.U64Expr.val sign * 65535
 
-/-- The carry recursion of `c_times_quotient + remainder` (`carryNat`'s IR twin; authoring-time
-recursion producing a closed term at each concrete limb). -/
-def carryChainU (B C : Word (Expression (ZMod p))) : ℕ → Witgen.U64Expr (ZMod p)
-  | 0 => (ctqLimbU (quotCompBitsU (wordU B) (wordU C)) (compU (wordU C)) 0
-      + remAddendU B C 0) / 65536
-  | n + 1 => (ctqLimbU (quotCompBitsU (wordU B) (wordU C)) (compU (wordU C)) (n + 1)
-      + remAddendU B C (n + 1) + carryChainU B C n) / 65536
+/-- Carry recursion for the product plus remainder. Its expression operands may name shared steps. -/
+def carryChainU (q c : Witgen.U64Expr (ZMod p))
+    (r : Word (Witgen.FExpr (ZMod p))) (sign : Witgen.FExpr (ZMod p)) :
+    ℕ → Witgen.U64Expr (ZMod p)
+  | 0 => (ctqLimbU q c 0 + remAddendU r sign 0) / 65536
+  | n + 1 => (ctqLimbU q c (n + 1) + remAddendU r sign (n + 1)
+      + carryChainU q c r sign n) / 65536
 
-/-- The committed `carry` block (8 boolean carries). -/
-def carryFE (B C : Word (Expression (ZMod p))) : Vector (Witgen.FExpr (ZMod p)) 8 :=
-  Vector.ofFn fun k => (carryChainU B C k.val).toField
+omit [Fact (2 ^ 24 < p)] in
+/-- Carry evaluation depends only on operand values and flag hints, without range assumptions. -/
+theorem carryChainU_congr (ctx ctx' : Witgen.Ctx (ZMod p))
+    (q c q' c' : Witgen.U64Expr (ZMod p))
+    (r r' : Word (Witgen.FExpr (ZMod p))) (sign sign' : Witgen.FExpr (ZMod p))
+    (hq : q.eval ctx = q'.eval ctx') (hc : c.eval ctx = c'.eval ctx')
+    (hr : ∀ (i : ℕ) (_ : i < 4), r[i].eval ctx = r'[i].eval ctx')
+    (hs : sign.eval ctx = sign'.eval ctx') (hhint : ctx.env.hint = ctx'.env.hint) :
+    ∀ n, (carryChainU q c r sign n).eval ctx = (carryChainU q' c' r' sign' n).eval ctx' := by
+  have hlimb := ctqLimbU_congr ctx ctx' q c q' c' hq hc hhint
+  have haddend (k : ℕ) : (remAddendU r sign k).eval ctx
+      = (remAddendU r' sign' k).eval ctx' := by
+    unfold remAddendU
+    split_ifs with h <;> simp only [circuit_norm, -Witgen.u64Wrap, hr, hs]
+  intro n
+  induction n with
+  | zero => simp only [carryChainU, circuit_norm, -Witgen.u64Wrap, hlimb 0, haddend 0]
+  | succ n ih =>
+    simp only [carryChainU, circuit_norm, -Witgen.u64Wrap, hlimb (n + 1), haddend (n + 1), ih]
+
+/-- The eight carries share the quotient, divisor, remainder and sign calculation. -/
+def carryProgram (B C : Word (Expression (ZMod p))) :
+    Witgen.M (ZMod p) (Vector (Witgen.FExpr (ZMod p)) 8) := do
+  let q ← quotCompBitsU (wordU B) (wordU C)
+  let c ← compU (wordU C)
+  let r ← remCompBitsU (wordU B) (wordU C)
+  let sign ← remNegFE B C
+  return Vector.ofFn fun k => (carryChainU q c (wordFOfU64 r) sign k.val).toField
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Authored sharing preserves each carry for every environment, including dishonest hints. -/
+theorem carryProgram_eval_limb (env : ProverEnvironment (ZMod p))
+    (B C : Word (Expression (ZMod p))) (k : ℕ) (hk : k < 8) :
+    ((carryProgram B C).eval (value := fields 8) env)[k] =
+      ((carryChainU (quotCompBitsU (wordU B) (wordU C)) (compU (wordU C))
+        (remCompFE B C) (remNegFE B C) k).eval { env := env }).toNat := by
+  simp only [carryProgram, Witgen.M.eval, Witgen.M.bind_def, Witgen.M.pure_def,
+    Witgen.letU_def, Witgen.letF_def, Array.size_empty,
+    List.cons_append, List.nil_append, Witgen.evalSteps,
+    Witgen.eval, explicit_provable_type, circuit_norm, Vector.getElem_ofFn]
+  apply congrArg (fun u : UInt64 => (u.toNat : ZMod p))
+  apply carryChainU_congr
+  · simp [circuit_norm, -Witgen.u64Wrap]
+  · simp only [circuit_norm, -Witgen.u64Wrap]
+    rfl
+  · intro i hi
+    interval_cases i <;> simp only [remCompFE, wordFOfU64, circuit_norm, -Witgen.u64Wrap] <;> rfl
+  · simp only [circuit_norm, -Witgen.u64Wrap]
+    rfl
+  · rfl
 
 variable (env : ProverEnvironment (ZMod p))
 variable (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p))
@@ -1221,7 +1288,7 @@ truncation), with the ≤ `2^18` bound for the chain's wrap-freeness. -/
 private theorem remAddendU_toNat
     (hf : ∀ (k : ℕ) (_ : k < 8), (hintFlags env.hint)[k] = 0 ∨ (hintFlags env.hint)[k] = 1)
     (k : ℕ) (hk : k < 8) :
-    ((remAddendU B C k).eval { env := env }).toNat
+    ((remAddendU (remCompFE B C) (remNegFE B C) k).eval { env := env }).toNat
       = remAddendNat vB vC (hintFlags env.hint) k
       ∧ remAddendNat vB vC (hintFlags env.hint) k < 2 ^ 18 := by
   have hrn := remNegFE_eval env B C vB vC hWB hWC hUB hUC
@@ -1274,7 +1341,8 @@ include hWB hWC hUB hUC in
 the u64 wrap never trips (each step is `(< 2^16) + (< 2^18) + (≤ 5)` over `2^16`). -/
 private theorem carryChainU_toNat
     (hf : ∀ (k : ℕ) (_ : k < 8), (hintFlags env.hint)[k] = 0 ∨ (hintFlags env.hint)[k] = 1) :
-    ∀ n, n < 8 → (((carryChainU B C n).eval { env := env }).toNat
+    ∀ n, n < 8 → (((carryChainU (quotCompBitsU (wordU B) (wordU C)) (compU (wordU C))
+        (remCompFE B C) (remNegFE B C) n).eval { env := env }).toNat
         = carryNat vB vC (hintFlags env.hint) n
       ∧ carryNat vB vC (hintFlags env.hint) n ≤ 5) := by
   have hq : ((Witgen.U64Expr.eval { env := env }
@@ -1313,14 +1381,14 @@ private theorem carryChainU_toNat
 
 include hWB hWC hUB hUC in
 /-- Evaluating a carry cell is the corresponding `populateCarry` cell. -/
-theorem carryFE_eval
+theorem carryProgram_eval
     (hf : ∀ (k : ℕ) (_ : k < 8), (hintFlags env.hint)[k] = 0 ∨ (hintFlags env.hint)[k] = 1)
     (k : ℕ) (hk : k < 8) :
-    ((carryFE B C)[k]).eval { env := env }
+    ((carryProgram B C).eval (value := fields 8) env)[k]
       = (populateCarry vB vC (hintFlags env.hint))[k] := by
   have h := (carryChainU_toNat env B C vB vC hWB hWC hUB hUC hf k hk).1
-  simp only [carryFE, populateCarry, circuit_norm, Vector.getElem_ofFn,
-    FiniteField.fromNat, h]
+  rw [carryProgram_eval_limb]
+  simp only [populateCarry, Vector.getElem_ofFn, h]
 
 end CarrySite
 

@@ -259,21 +259,36 @@ theorem scalCongr :
       circuit_norm, -Witgen.u64Wrap, hovb, hovc, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hhint]
 
 omit [Fact (2 ^ 24 < p)] in
-include hB hC hir hhint in
-/-- Environment-locality of the `c_times_quotient` site. -/
-theorem ctqCongr :
-    (Witgen.WitgenIR.ofFExprs (ctqFE B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (ctqFE B C)).eval env' := by
+include hB hC hhint in
+/-- Environment-locality of the committed-operand product arguments (the product and carry programs' two
+`u64` inputs, congruence-instantiated once). -/
+private theorem productArgsCongr :
+    (quotCompBitsU (wordU B) (wordU C)).eval { env := env }
+        = (quotCompBitsU (wordU B) (wordU C)).eval { env := env' }
+      ∧ (compU (wordU C)).eval { env := env } = (compU (wordU C)).eval { env := env' } := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
+  constructor <;>
+  simp only [quotCompBitsU, quotBitsU, allOnesU, compU, negU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, hintF,
+      circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hhint]
+
+omit [Fact (2 ^ 24 < p)] in
+include hB hC hir hhint in
+/-- Environment-locality of the shared product-limb program. -/
+theorem ctqCongr :
+    ((ctqProgram B C).toIRLiteral (value := fields 8)).eval env
+      = ((ctqProgram B C).toIRLiteral (value := fields 8)).eval env' := by
+  have hargs := productArgsCongr env env' B C hB hC hhint
+  rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
+  apply congrArg (toElements (M := fields 8))
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  interval_cases i <;>
-  simp only  [reduceIte, reduceDIte, Nat.reduceLT, Nat.reduceSub, Nat.reduceMul, ctqFE, ctqLimbF, ctqLimbU, ctqHiU, umulhU, quotCompBitsU, quotBitsU, allOnesU, compU, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, hintF,
-      circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hhint]
+  rw [ctqProgram_eval_limb, ctqProgram_eval_limb]
+  simp only [ctqLimbF, circuit_norm, -Witgen.u64Wrap]
+  exact congrArg (fun u : UInt64 => (u.toNat : ZMod p))
+    (ctqLimbU_congr { env := env } { env := env' } _ _ _ _ hargs.1 hargs.2 hhint i)
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in
@@ -723,79 +738,26 @@ theorem ovcCongr :
       (Witgen.getElem_eval_toElements _ _ i hsz).symm)
 
 omit [Fact (2 ^ 24 < p)] in
-include hB hC hhint in
-/-- Environment-locality of the committed-operand product arguments (the `carry` chain's two
-`u64` inputs, congruence-instantiated once). -/
-private theorem carryArgsCongr :
-    (quotCompBitsU (wordU B) (wordU C)).eval { env := env }
-        = (quotCompBitsU (wordU B) (wordU C)).eval { env := env' }
-      ∧ (compU (wordU C)).eval { env := env } = (compU (wordU C)).eval { env := env' } := by
-  have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
-  have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
-  have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
-  have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
-  constructor <;>
-  simp only [quotCompBitsU, quotBitsU, allOnesU, compU, negU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, hintF,
-      circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hhint]
-
-omit [Fact (2 ^ 24 < p)] in
-include hhint in
-/-- Environment-locality of a product limb over abstract argument congruences. -/
-private theorem ctqLimbCongr (q c : Witgen.U64Expr (ZMod p))
-    (hq : q.eval { env := env } = q.eval { env := env' })
-    (hc : c.eval { env := env } = c.eval { env := env' }) :
-    ∀ k, (ctqLimbU q c k).eval { env := env } = (ctqLimbU q c k).eval { env := env' } := by
-  intro k
-  unfold ctqLimbU
-  split_ifs <;>
-  simp only [ctqHiU, umulhU, negU, flagF, hintF,
-    circuit_norm, -Witgen.u64Wrap, hq, hc, hhint]
-
-omit [Fact (2 ^ 24 < p)] in
-include hB hC hhint in
-/-- Environment-locality of the remainder addend at every limb (the `k < 4` dispatch splits;
-each branch is one same-tree simp). -/
-private theorem remAddendCongr :
-    ∀ k, (remAddendU B C k).eval { env := env } = (remAddendU B C k).eval { env := env' } := by
-  have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
-  have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
-  have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
-  have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
-  intro k
-  by_cases h : k < 4
-  · interval_cases k <;>
-    simp only [remAddendU, reduceDIte, Nat.reduceLT, remCompFE, wordFOfU64, remCompBitsU, remBitsU, negU, sremU, srem32U, neg32U, low32U, sext32U, wordU, flagF, hintF,
-        circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hhint]
-  · simp only [remAddendU, dif_neg h, remNegFE, remMsbFE, remFE, wordFOfU64, remBitsU, wSumF, signedSumF, negU, sremU, srem32U, neg32U, low32U, sext32U, wordU, flagF, hintF, U16MSBOperation.populate_msbF,
-        circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hhint]
-
-omit [Fact (2 ^ 24 < p)] in
-include hB hC hhint in
-/-- Environment-locality of the carry recursion, by induction with the addend and limb
-congruences folded (unfolding the whole eight-deep chain at once is over budget). -/
-private theorem carryChainU_congr :
-    ∀ n, (carryChainU B C n).eval { env := env } = (carryChainU B C n).eval { env := env' } := by
-  have hargs := carryArgsCongr env env' B C hB hC hhint
-  have hlimb := ctqLimbCongr env env' hhint _ _ hargs.1 hargs.2
-  have haddend := remAddendCongr env env' B C hB hC hhint
-  intro n
-  induction n with
-  | zero =>
-    simp only [carryChainU, circuit_norm, -Witgen.u64Wrap, hlimb 0, haddend 0]
-  | succ n ih =>
-    simp only [carryChainU, circuit_norm, -Witgen.u64Wrap, hlimb (n + 1), haddend (n + 1), ih]
-
-omit [Fact (2 ^ 24 < p)] in
-include hB hC hhint in
-/-- Environment-locality of the `carry` site. -/
+include hB hC hir hhint in
+/-- Environment-locality of the shared carry program. -/
 theorem carryCongr :
-    (Witgen.WitgenIR.ofFExprs (carryFE B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (carryFE B C)).eval env' := by
-  have hch := carryChainU_congr env env' B C hB hC hhint
+    ((carryProgram B C).toIRLiteral (value := fields 8)).eval env
+      = ((carryProgram B C).toIRLiteral (value := fields 8)).eval env' := by
+  have hargs := productArgsCongr env env' B C hB hC hhint
+  have hr := Witgen.cell_congr_of_ofFExprs_congr
+    (remCompCongr env env' B C ir hB hC hir hhint)
+  have hmsb : (remMsbFE B C).eval { env := env } = (remMsbFE B C).eval { env := env' } :=
+    Witgen.cell_congr_of_ofFExprs_congr
+      (remMsbCongr env env' B C ir hB hC hir hhint) 0 (by decide)
+  have hs : (remNegFE B C).eval { env := env } = (remNegFE B C).eval { env := env' } := by
+    simp only [remNegFE, signedSumF, flagF, hintF, circuit_norm, -Witgen.u64Wrap, hmsb, hhint]
+  have hch := carryChainU_congr { env := env } { env := env' } _ _ _ _ _ _ _ _
+    hargs.1 hargs.2 hr hs hhint
+  rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
+  apply congrArg (toElements (M := fields 8))
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs, carryFE, Vector.getElem_ofFn,
-    circuit_norm, hch]
+  rw [carryProgram_eval_limb, carryProgram_eval_limb, hch]
 
 end SiteCongr
 
