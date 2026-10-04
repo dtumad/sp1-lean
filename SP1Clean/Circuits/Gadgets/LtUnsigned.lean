@@ -426,23 +426,22 @@ theorem scanF_eval (ctx : Witgen.Ctx (ZMod p)) (b cc : Vector (Witgen.FExpr (ZMo
       hscan 0, hscan 1]
 
 omit [Fact (2 ^ 17 < p)] in
-/-- Environment-locality of the scan twins (the `ComputableWitnesses` counterpart of
-`scanF_eval` — both sides are the same `ite` tree, so rewriting the limb evaluations closes
-every family without a case split). -/
+/-- Comparison witnesses depend only on their operand values, including across local IR contexts. -/
 theorem scanF_congr (ctx ctx' : Witgen.Ctx (ZMod p)) (b cc : Vector (Witgen.FExpr (ZMod p)) 4)
-    (hb : ∀ (i : ℕ) (_ : i < 4), (b[i]).eval ctx = (b[i]).eval ctx')
-    (hcc : ∀ (i : ℕ) (_ : i < 4), (cc[i]).eval ctx = (cc[i]).eval ctx') :
+    {b' cc' : Vector (Witgen.FExpr (ZMod p)) 4}
+    (hb : ∀ (i : ℕ) (_ : i < 4), (b[i]).eval ctx = (b'[i]).eval ctx')
+    (hcc : ∀ (i : ℕ) (_ : i < 4), (cc[i]).eval ctx = (cc'[i]).eval ctx') :
     (∀ k : Fin 2,
-      (comparisonLimbsF b cc k).eval ctx = (comparisonLimbsF b cc k).eval ctx') ∧
-    (∀ k : Fin 4, (flagsF b cc k).eval ctx = (flagsF b cc k).eval ctx') ∧
-    (notEqInvF b cc).eval ctx = (notEqInvF b cc).eval ctx' ∧
-    (compareBitF b cc).eval ctx = (compareBitF b cc).eval ctx' := by
+      (comparisonLimbsF b cc k).eval ctx = (comparisonLimbsF b' cc' k).eval ctx') ∧
+    (∀ k : Fin 4, (flagsF b cc k).eval ctx = (flagsF b' cc' k).eval ctx') ∧
+    (notEqInvF b cc).eval ctx = (notEqInvF b' cc').eval ctx' ∧
+    (compareBitF b cc).eval ctx = (compareBitF b' cc').eval ctx' := by
   have hb0 := hb 0 (by omega); have hb1 := hb 1 (by omega)
   have hb2 := hb 2 (by omega); have hb3 := hb 3 (by omega)
   have hc0 := hcc 0 (by omega); have hc1 := hcc 1 (by omega)
   have hc2 := hcc 2 (by omega); have hc3 := hcc 3 (by omega)
   have hscan : ∀ k : Fin 2,
-      (comparisonLimbsF b cc k).eval ctx = (comparisonLimbsF b cc k).eval ctx' := by
+      (comparisonLimbsF b cc k).eval ctx = (comparisonLimbsF b' cc' k).eval ctx' := by
     intro k
     fin_cases k <;>
     · simp only [comparisonLimbsF, circuit_norm, -Witgen.u64Wrap,

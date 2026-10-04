@@ -400,23 +400,6 @@ theorem wCnegCongr :
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in
-/-- Environment-locality of the `rem_neg_operation` site. -/
-theorem wRnegCongr :
-    (Witgen.WitgenIR.ofFExprs (wRnegFE ir B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (wRnegFE ir B C)).eval env' := by
-  have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
-  have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
-  have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
-  have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
-  apply Vector.ext
-  intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  interval_cases i <;>
-  simp only [wRnegFE, remNegFE, remMsbFE, remFE, absRemFE, remCompFE, wordFOfU64, remCompBitsU, remBitsU, wSumF, signedSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, hintF, U16MSBOperation.populate_msbF, AddOperation.populateFW,
-      circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hhint]
-
-omit [Fact (2 ^ 24 < p)] in
-include hB hC hir hhint in
 /-- Environment-locality of the `misc` site. -/
 theorem miscCongr :
     (Witgen.WitgenIR.ofFExprs (miscFE ir B C)).eval env
@@ -475,75 +458,71 @@ private theorem ltGateCongr :
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in
-/-- Environment-locality of the comparison-limb site (compositional: the gate cell plus
-`LtOperationUnsigned.scanF_congr` over the folded operand payloads). -/
+/-- Environment-locality of the shared `clProgram` witness site. -/
 theorem clCongr :
-    (Witgen.WitgenIR.ofFExprs (clFE ir B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (clFE ir B C)).eval env' := by
+    ((clProgram ir B C).toIRLiteral (value := fields 2)).eval env
+      = ((clProgram ir B C).toIRLiteral (value := fields 2)).eval env' := by
   have hgate := ltGateCongr env env' C ir hC hir hhint
   have hscan := LtOperationUnsigned.scanF_congr { env := env } { env := env' }
-      (absRemFE B C) (maxAbsFE C)
-      (absRemCellCongr env env' B C hB hC hhint)
-      (maxAbsCellCongr env env' C hC hhint)
+    (absRemFE B C) (maxAbsFE C)
+    (absRemCellCongr env env' B C hB hC hhint)
+    (maxAbsCellCongr env env' C hC hhint)
+  rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
+  apply congrArg (toElements (M := fields 2))
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  interval_cases i <;>
-  simp only [clFE, circuit_norm, -Witgen.u64Wrap, hgate,
-    hscan.1 ⟨0, by omega⟩, hscan.1 ⟨1, by omega⟩]
+  rw [clProgram_eval_limb, clProgram_eval_limb, hgate, hscan.1 ⟨i, hi⟩]
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in
-/-- Environment-locality of the `u16_flags` site (compositional, like `clCongr`). -/
+/-- Environment-locality of the shared `ltfProgram` witness site. -/
 theorem ltfCongr :
-    (Witgen.WitgenIR.ofFExprs (ltfFE ir B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (ltfFE ir B C)).eval env' := by
+    ((ltfProgram ir B C).toIRLiteral (value := fields 4)).eval env
+      = ((ltfProgram ir B C).toIRLiteral (value := fields 4)).eval env' := by
   have hgate := ltGateCongr env env' C ir hC hir hhint
   have hscan := LtOperationUnsigned.scanF_congr { env := env } { env := env' }
-      (absRemFE B C) (maxAbsFE C)
-      (absRemCellCongr env env' B C hB hC hhint)
-      (maxAbsCellCongr env env' C hC hhint)
+    (absRemFE B C) (maxAbsFE C)
+    (absRemCellCongr env env' B C hB hC hhint)
+    (maxAbsCellCongr env env' C hC hhint)
+  rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
+  apply congrArg (toElements (M := fields 4))
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  interval_cases i <;>
-  simp only [ltfFE, circuit_norm, -Witgen.u64Wrap, hgate,
-    hscan.2.1 ⟨0, by omega⟩, hscan.2.1 ⟨1, by omega⟩,
-    hscan.2.1 ⟨2, by omega⟩, hscan.2.1 ⟨3, by omega⟩]
+  rw [ltfProgram_eval_limb, ltfProgram_eval_limb, hgate, hscan.2.1 ⟨i, hi⟩]
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in
-/-- Environment-locality of the `not_eq_inv` site. -/
+/-- Environment-locality of the shared `neiProgram` witness site. -/
 theorem neiCongr :
-    (Witgen.WitgenIR.ofFExprs (neiFE ir B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (neiFE ir B C)).eval env' := by
-  have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
-  have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
-  have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
-  have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
+    ((neiProgram ir B C).toIRLiteral (value := fields 1)).eval env
+      = ((neiProgram ir B C).toIRLiteral (value := fields 1)).eval env' := by
+  have hgate := ltGateCongr env env' C ir hC hir hhint
+  have hscan := LtOperationUnsigned.scanF_congr { env := env } { env := env' }
+    (absRemFE B C) (maxAbsFE C)
+    (absRemCellCongr env env' B C hB hC hhint)
+    (maxAbsCellCongr env env' C hC hhint)
+  rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
+  apply congrArg (toElements (M := fields 1))
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  obtain rfl : i = 0 := by omega
-  simp only [neiFE, ltGateFE, absRemFE, maxAbsFE, absCU, absCFE, remCompFE, compU, compF, wordFOfU64, remCompBitsU, remBitsU, wSumF, signedSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, hintF, U16MSBOperation.populate_msbF, IsZeroWordOperation.populateFE, IsZeroOperation.populateFE, LtOperationUnsigned.comparisonLimbsF, LtOperationUnsigned.flagsF, LtOperationUnsigned.notEqInvF, LtOperationUnsigned.compareBitF,
-      circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hhint]
+  rw [neiProgram_eval_limb, neiProgram_eval_limb, hgate, hscan.2.2.1]
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in
-/-- Environment-locality of the compare-bit site. -/
+/-- Environment-locality of the shared `bitProgram` witness site. -/
 theorem bitCongr :
-    (Witgen.WitgenIR.ofFExprs (bitFE ir B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (bitFE ir B C)).eval env' := by
-  have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
-  have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
-  have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
-  have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
+    ((bitProgram ir B C).toIRLiteral (value := fields 1)).eval env
+      = ((bitProgram ir B C).toIRLiteral (value := fields 1)).eval env' := by
+  have hgate := ltGateCongr env env' C ir hC hir hhint
+  have hscan := LtOperationUnsigned.scanF_congr { env := env } { env := env' }
+    (absRemFE B C) (maxAbsFE C)
+    (absRemCellCongr env env' B C hB hC hhint)
+    (maxAbsCellCongr env env' C hC hhint)
+  rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
+  apply congrArg (toElements (M := fields 1))
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  obtain rfl : i = 0 := by omega
-  simp only [bitFE, ltGateFE, absRemFE, maxAbsFE, absCU, absCFE, remCompFE, compU, compF, wordFOfU64, remCompBitsU, remBitsU, wSumF, signedSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, hintF, U16MSBOperation.populate_msbF, IsZeroWordOperation.populateFE, IsZeroOperation.populateFE, LtOperationUnsigned.comparisonLimbsF, LtOperationUnsigned.flagsF, LtOperationUnsigned.notEqInvF, LtOperationUnsigned.compareBitF,
-      circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hhint]
+  rw [bitProgram_eval_limb, bitProgram_eval_limb, hgate, hscan.2.2.2]
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in
@@ -561,6 +540,27 @@ theorem remCongr :
   interval_cases i <;>
   simp only [remFE, wordFOfU64, remBitsU, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, hintF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hhint]
+
+omit [Fact (2 ^ 24 < p)] in
+include hB hC hir hhint in
+/-- The shared negation word reads only its input operands, gate and hints. -/
+theorem wRnegCongr :
+    ((wRnegProgram ir B C).toIRLiteral (value := fields 4)).eval env
+      = ((wRnegProgram ir B C).toIRLiteral (value := fields 4)).eval env' := by
+  have hgate : (remNegFE B C).eval { env := env } * ir.eval env.toEnvironment =
+      (remNegFE B C).eval { env := env' } * ir.eval env'.toEnvironment := by
+    have h := Witgen.cell_congr_of_ofFExprs_congr
+      (miscCongr env env' B C ir hB hC hir hhint) 1 (by omega)
+    simpa only [miscFE, circuit_norm] using h
+  rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
+  apply congrArg (toElements (M := fields 4))
+  apply Vector.ext
+  intro i hi
+  have hadd := AddOperation.populateFW_congr { env := env } { env := env' }
+    (remFE B C) (absRemFE B C)
+    (Witgen.cell_congr_of_ofFExprs_congr (remCongr env env' B C ir hB hC hir hhint))
+    (absRemCellCongr env env' B C hB hC hhint) i hi
+  rw [wRnegProgram_eval_limb, wRnegProgram_eval_limb, hgate, hadd]
 
 omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hhint in

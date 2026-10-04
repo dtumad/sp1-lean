@@ -750,12 +750,60 @@ def wCnegFE (ir : Expression (ZMod p)) (C : Word (Expression (ZMod p))) :
     .ite ((cNegFE C * Witgen.FExpr.expr ir) =? (1 : ZMod p))
       ((AddOperation.populateFW (compF C) (absCFE C))[i.val]) 0
 
-/-- The `rem_neg_operation` value-word site (gated on `rem_neg · is_real = 1`). -/
-def wRnegFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Vector (Witgen.FExpr (ZMod p)) 4 :=
-  Vector.ofFn fun i =>
-    .ite ((remNegFE B C * Witgen.FExpr.expr ir) =? (1 : ZMod p))
-      ((AddOperation.populateFW (remFE B C) (absRemFE B C))[i.val]) 0
+omit [Fact (2 ^ 24 < p)] in
+/-- Absolute-remainder cells do not read the witness program's local values. -/
+private theorem absRemFE_eval_ctx (ctx : Witgen.Ctx (ZMod p))
+    (B C : Word (Expression (ZMod p))) (i : ℕ) (hi : i < 4) :
+    (absRemFE B C)[i].eval ctx = (absRemFE B C)[i].eval { env := ctx.env } := by
+  interval_cases i <;> rfl
+
+/-- The remainder-negation word shares the raw remainder and absolute-value limbs. -/
+def wRnegProgram (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
+    Witgen.M (ZMod p) (Vector (Witgen.FExpr (ZMod p)) 4) := do
+  let r ← remBitsU (wordU B) (wordU C)
+  let a0 ← (absRemFE B C)[0]
+  let a1 ← (absRemFE B C)[1]
+  let a2 ← (absRemFE B C)[2]
+  let a3 ← (absRemFE B C)[3]
+  return Witgen.gateFE (M := fields 4)
+    ((remNegFE B C * Witgen.FExpr.expr ir) =? (1 : ZMod p))
+    (AddOperation.populateFW (wordFOfU64 r) #v[a0, a1, a2, a3])
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Sharing preserves the negation word without range or honest-hint assumptions. -/
+theorem wRnegProgram_eval_value (env : ProverEnvironment (ZMod p))
+    (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
+    (wRnegProgram ir B C).eval (value := fields 4) env =
+      if (remNegFE B C).eval { env := env } * ir.eval env.toEnvironment = 1 then
+        Witgen.eval (M := fields 4) { env := env } (AddOperation.populateFW (remFE B C) (absRemFE B C))
+      else Vector.replicate 4 0 := by
+  simp only [wRnegProgram, Witgen.M.eval, Witgen.M.bind_def, Witgen.M.pure_def,
+    Witgen.letU_def, Witgen.letF_def, Array.size_empty, Array.size_push, Array.toList_push,
+    List.cons_append, List.nil_append, Witgen.evalSteps, absRemFE_eval_ctx]
+  rw [Witgen.eval_gateFE]
+  have hgate (ctx : Witgen.Ctx (ZMod p)) :
+      (remNegFE B C).eval ctx = (remNegFE B C).eval { env := ctx.env } := by rfl
+  simp only [circuit_norm, hgate]
+  refine if_congr Iff.rfl ?_ rfl
+  apply Vector.ext
+  intro i hi
+  simp only [Witgen.eval_fields', Vector.getElem_map]
+  apply AddOperation.populateFW_congr
+  · intro j hj
+    interval_cases j <;> simp only [remFE, wordFOfU64, circuit_norm, -Witgen.u64Wrap] <;> rfl
+  · intro j hj
+    interval_cases j <;> simp only [circuit_norm, -Witgen.u64Wrap] <;> rfl
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Cellwise reading of the shared negation program. -/
+theorem wRnegProgram_eval_limb (env : ProverEnvironment (ZMod p))
+    (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) (i : ℕ) (hi : i < 4) :
+    ((wRnegProgram ir B C).eval (value := fields 4) env)[i] =
+      if (remNegFE B C).eval { env := env } * ir.eval env.toEnvironment = 1 then
+        ((AddOperation.populateFW (remFE B C) (absRemFE B C))[i]).eval { env := env }
+      else 0 := by
+  rw [wRnegProgram_eval_value]
+  split_ifs <;> simp only [Witgen.eval_fields', Vector.getElem_map, Vector.getElem_replicate]
 
 /-- The three event/multiplicity cells. -/
 def miscFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
@@ -788,20 +836,19 @@ theorem wCnegFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
 
 include hWB hWC hUB hUC in
 /-- Evaluating a `rem_neg_operation` cell is the corresponding `wRnegWitness` cell. -/
-theorem wRnegFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
+theorem wRnegProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 4) :
-    ((wRnegFE ir B C)[i]).eval { env := env }
+    ((wRnegProgram ir B C).eval (value := fields 4) env)[i]
       = (wRnegWitness vir vB vC (hintFlags env.hint))[i] := by
   have hrn := remNegFE_eval env B C vB vC hWB hWC hUB hUC
   have hadd := AddOperation.populateFW_eval env (remFE B C) (absRemFE B C)
     (populateRemainder vB vC (hintFlags env.hint)) (populateAbsRem vB vC (hintFlags env.hint))
     (remFE_eval env B C vB vC hWB hWC hUB hUC) (absRemFE_eval env B C vB vC hWB hWC hUB hUC)
     (populateRemainder_isU64 vB vC _) (populateAbsRem_isU64 vB vC _) i hi
-  simp only [wRnegFE, wRnegWitness, circuit_norm, Vector.getElem_ofFn, hrn, hir]
+  rw [wRnegProgram_eval_limb]
+  simp only [wRnegWitness, hrn, hir]
   split_ifs
-  · exact (Witgen.FExpr.eval_getElem { env := env } _ i hi).symm.trans hadd
-  · contradiction
-  · contradiction
+  · exact hadd
   · interval_cases i <;> simp
 
 include hWB hWC hUB hUC in
@@ -823,31 +870,131 @@ end NegWordSites
 
 section LtSites
 
+/-- The comparison families share their eight operand limbs before selecting output cells.
+The output function is ordinary witness authoring; Clean owns the program and its lowering. -/
+private def comparisonProgram {n : ℕ} (ir : Expression (ZMod p))
+    (B C : Word (Expression (ZMod p)))
+    (cell : Word (Witgen.FExpr (ZMod p)) → Word (Witgen.FExpr (ZMod p)) → Fin n → Witgen.FExpr (ZMod p)) :
+    Witgen.M (ZMod p) (Vector (Witgen.FExpr (ZMod p)) n) := do
+  let a0 ← (absRemFE B C)[0]
+  let a1 ← (absRemFE B C)[1]
+  let a2 ← (absRemFE B C)[2]
+  let a3 ← (absRemFE B C)[3]
+  let c0 ← (maxAbsFE C)[0]
+  let c1 ← (maxAbsFE C)[1]
+  let c2 ← (maxAbsFE C)[2]
+  let c3 ← (maxAbsFE C)[3]
+  return Witgen.gateFE (M := fields n) ((ltGateFE ir C) =? (1 : ZMod p))
+    (Vector.ofFn (cell #v[a0, a1, a2, a3] #v[c0, c1, c2, c3]))
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Maximum-divisor limbs do not read local witness-program values. -/
+private theorem maxAbsFE_eval_ctx (ctx : Witgen.Ctx (ZMod p))
+    (C : Word (Expression (ZMod p))) (i : ℕ) (hi : i < 4) :
+    (maxAbsFE C)[i].eval ctx = (maxAbsFE C)[i].eval { env := ctx.env } := by
+  interval_cases i <;> rfl
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Operand sharing preserves any comparison cell that depends only on its operand values. -/
+private theorem comparisonProgram_eval_limb {n : ℕ} (env : ProverEnvironment (ZMod p))
+    (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p)))
+    (cell : Word (Witgen.FExpr (ZMod p)) → Word (Witgen.FExpr (ZMod p)) → Fin n → Witgen.FExpr (ZMod p))
+    (hcell : ∀ (ctx ctx' : Witgen.Ctx (ZMod p)) (a c a' c' : Word (Witgen.FExpr (ZMod p))),
+      (∀ (j : ℕ) (_ : j < 4), a[j].eval ctx = a'[j].eval ctx') →
+      (∀ (j : ℕ) (_ : j < 4), c[j].eval ctx = c'[j].eval ctx') →
+      ∀ k, (cell a c k).eval ctx = (cell a' c' k).eval ctx')
+    (i : ℕ) (hi : i < n) :
+    ((comparisonProgram ir B C cell).eval (value := fields n) env)[i] =
+      if (ltGateFE ir C).eval { env := env } = 1 then
+        (cell (absRemFE B C) (maxAbsFE C) ⟨i, hi⟩).eval { env := env } else 0 := by
+  have heval : (comparisonProgram ir B C cell).eval (value := fields n) env =
+      if (ltGateFE ir C).eval { env := env } = 1 then
+        Witgen.eval (M := fields n) { env := env } (Vector.ofFn (cell (absRemFE B C) (maxAbsFE C)))
+      else Vector.replicate n 0 := by
+    simp only [comparisonProgram, Witgen.M.eval, Witgen.M.bind_def, Witgen.M.pure_def,
+      Witgen.letF_def, Array.size_empty, Array.size_push, Array.toList_push,
+      List.cons_append, List.nil_append, Witgen.evalSteps, absRemFE_eval_ctx, maxAbsFE_eval_ctx]
+    rw [Witgen.eval_gateFE]
+    have hgate (ctx : Witgen.Ctx (ZMod p)) :
+        (ltGateFE ir C).eval ctx = (ltGateFE ir C).eval { env := ctx.env } := by rfl
+    simp only [circuit_norm, hgate]
+    refine if_congr Iff.rfl ?_ rfl
+    apply Vector.ext
+    intro k hk
+    simp only [Witgen.eval_fields', Vector.getElem_map, Vector.getElem_ofFn]
+    apply hcell
+    · intro j hj
+      interval_cases j <;> simp only [circuit_norm, -Witgen.u64Wrap] <;> rfl
+    · intro j hj
+      interval_cases j <;> simp only [circuit_norm, -Witgen.u64Wrap] <;> rfl
+  rw [heval]
+  split_ifs <;> simp only [Witgen.eval_fields', Vector.getElem_map,
+    Vector.getElem_ofFn, Vector.getElem_replicate]
+
 /-- The gated comparison-limb site. -/
-def clFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Vector (Witgen.FExpr (ZMod p)) 2 :=
-  Vector.ofFn fun k =>
-    .ite ((ltGateFE ir C) =? (1 : ZMod p))
-      (LtOperationUnsigned.comparisonLimbsF (absRemFE B C) (maxAbsFE C) k) 0
+def clProgram (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
+    Witgen.M (ZMod p) (Vector (Witgen.FExpr (ZMod p)) 2) :=
+  comparisonProgram ir B C LtOperationUnsigned.comparisonLimbsF
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Shared operands preserve this comparison cell for arbitrary inputs and hints. -/
+theorem clProgram_eval_limb (env : ProverEnvironment (ZMod p))
+    (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) (i : ℕ) (hi : i < 2) :
+    ((clProgram ir B C).eval (value := fields 2) env)[i] =
+      if (ltGateFE ir C).eval { env := env } = 1 then
+        (LtOperationUnsigned.comparisonLimbsF (absRemFE B C) (maxAbsFE C) ⟨i, hi⟩).eval { env := env } else 0 := by
+  apply comparisonProgram_eval_limb
+  intro ctx ctx' a c a' c' ha hc k
+  exact (LtOperationUnsigned.scanF_congr ctx ctx' a c ha hc).1 k
 
 /-- The gated `u16_flags` site. -/
-def ltfFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Vector (Witgen.FExpr (ZMod p)) 4 :=
-  Vector.ofFn fun k =>
-    .ite ((ltGateFE ir C) =? (1 : ZMod p))
-      (LtOperationUnsigned.flagsF (absRemFE B C) (maxAbsFE C) k) 0
+def ltfProgram (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
+    Witgen.M (ZMod p) (Vector (Witgen.FExpr (ZMod p)) 4) :=
+  comparisonProgram ir B C LtOperationUnsigned.flagsF
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Shared operands preserve this comparison cell for arbitrary inputs and hints. -/
+theorem ltfProgram_eval_limb (env : ProverEnvironment (ZMod p))
+    (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) (i : ℕ) (hi : i < 4) :
+    ((ltfProgram ir B C).eval (value := fields 4) env)[i] =
+      if (ltGateFE ir C).eval { env := env } = 1 then
+        (LtOperationUnsigned.flagsF (absRemFE B C) (maxAbsFE C) ⟨i, hi⟩).eval { env := env } else 0 := by
+  apply comparisonProgram_eval_limb
+  intro ctx ctx' a c a' c' ha hc k
+  exact (LtOperationUnsigned.scanF_congr ctx ctx' a c ha hc).2.1 k
 
 /-- The gated `not_eq_inv` site. -/
-def neiFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Vector (Witgen.FExpr (ZMod p)) 1 :=
-  #v[.ite ((ltGateFE ir C) =? (1 : ZMod p))
-      (LtOperationUnsigned.notEqInvF (absRemFE B C) (maxAbsFE C)) 0]
+def neiProgram (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
+    Witgen.M (ZMod p) (Vector (Witgen.FExpr (ZMod p)) 1) :=
+  comparisonProgram ir B C (fun a c _ => LtOperationUnsigned.notEqInvF a c)
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Shared operands preserve this comparison cell for arbitrary inputs and hints. -/
+theorem neiProgram_eval_limb (env : ProverEnvironment (ZMod p))
+    (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) (i : ℕ) (hi : i < 1) :
+    ((neiProgram ir B C).eval (value := fields 1) env)[i] =
+      if (ltGateFE ir C).eval { env := env } = 1 then
+        (LtOperationUnsigned.notEqInvF (absRemFE B C) (maxAbsFE C)).eval { env := env } else 0 := by
+  apply comparisonProgram_eval_limb
+  intro ctx ctx' a c a' c' ha hc k
+  exact (LtOperationUnsigned.scanF_congr ctx ctx' a c ha hc).2.2.1
 
 /-- The gated compare-bit site. -/
-def bitFE (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
-    Vector (Witgen.FExpr (ZMod p)) 1 :=
-  #v[.ite ((ltGateFE ir C) =? (1 : ZMod p))
-      (LtOperationUnsigned.compareBitF (absRemFE B C) (maxAbsFE C)) 0]
+def bitProgram (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) :
+    Witgen.M (ZMod p) (Vector (Witgen.FExpr (ZMod p)) 1) :=
+  comparisonProgram ir B C (fun a c _ => LtOperationUnsigned.compareBitF a c)
+
+omit [Fact (2 ^ 24 < p)] in
+/-- Shared operands preserve this comparison cell for arbitrary inputs and hints. -/
+theorem bitProgram_eval_limb (env : ProverEnvironment (ZMod p))
+    (ir : Expression (ZMod p)) (B C : Word (Expression (ZMod p))) (i : ℕ) (hi : i < 1) :
+    ((bitProgram ir B C).eval (value := fields 1) env)[i] =
+      if (ltGateFE ir C).eval { env := env } = 1 then
+        (LtOperationUnsigned.compareBitF (absRemFE B C) (maxAbsFE C)).eval { env := env } else 0 := by
+  apply comparisonProgram_eval_limb
+  intro ctx ctx' a c a' c' ha hc k
+  exact (LtOperationUnsigned.scanF_congr ctx ctx' a c ha hc).2.2.2
+
 
 variable (env : ProverEnvironment (ZMod p))
 variable (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p))
@@ -885,56 +1032,58 @@ private theorem ltScan :
 
 include hWB hWC hUB hUC in
 /-- Evaluating a comparison-limb cell is the corresponding `ltClWitness` cell. -/
-theorem clFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
+theorem clProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 2) :
-    ((clFE ir B C)[i]).eval { env := env }
+    ((clProgram ir B C).eval (value := fields 2) env)[i]
       = (ltClWitness vir vB vC (hintFlags env.hint))[i] := by
   have hlg := ltGateFE_eval env C vC hWC hUC ir vir hir
   have hscan := (ltScan env B C vB vC hWB hWC hUB hUC).1 ⟨i, hi⟩
-  simp only [clFE, ltClWitness, circuit_norm, Vector.getElem_ofFn, hlg]
+  rw [clProgram_eval_limb]
+  simp only [ltClWitness, circuit_norm, hlg]
   split_ifs
   · exact hscan
   · interval_cases i <;> rfl
 
 include hWB hWC hUB hUC in
 /-- Evaluating a `u16_flags` cell is the corresponding `ltFlagsWitness` cell. -/
-theorem ltfFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
+theorem ltfProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 4) :
-    ((ltfFE ir B C)[i]).eval { env := env }
+    ((ltfProgram ir B C).eval (value := fields 4) env)[i]
       = (ltFlagsWitness vir vB vC (hintFlags env.hint))[i] := by
   have hlg := ltGateFE_eval env C vC hWC hUC ir vir hir
   have hscan := (ltScan env B C vB vC hWB hWC hUB hUC).2.1 ⟨i, hi⟩
-  simp only [ltfFE, ltFlagsWitness, circuit_norm, Vector.getElem_ofFn, hlg]
+  rw [ltfProgram_eval_limb]
+  simp only [ltFlagsWitness, circuit_norm, hlg]
   split_ifs
   · exact hscan
   · interval_cases i <;> rfl
 
 include hWB hWC hUB hUC in
 /-- Evaluating the `not_eq_inv` cell is the `ltNotEqInvWitness` cell. -/
-theorem neiFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
+theorem neiProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 1) :
-    ((neiFE ir B C)[i]).eval { env := env }
+    ((neiProgram ir B C).eval (value := fields 1) env)[i]
       = (ltNotEqInvWitness vir vB vC (hintFlags env.hint))[i] := by
   have hlg := ltGateFE_eval env C vC hWC hUC ir vir hir
   have hscan := (ltScan env B C vB vC hWB hWC hUB hUC).2.2.1
   interval_cases i
-  simp only [neiFE, ltNotEqInvWitness, circuit_norm, Vector.getElem_mk, List.getElem_toArray,
-    List.getElem_cons_zero, hlg]
+  rw [neiProgram_eval_limb]
+  simp only [ltNotEqInvWitness, circuit_norm, hlg]
   split_ifs
   · exact hscan
   · rfl
 
 include hWB hWC hUB hUC in
 /-- Evaluating the compare-bit cell is the `ltBitWitness` cell. -/
-theorem bitFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
+theorem bitProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 1) :
-    ((bitFE ir B C)[i]).eval { env := env }
+    ((bitProgram ir B C).eval (value := fields 1) env)[i]
       = (ltBitWitness vir vB vC (hintFlags env.hint))[i] := by
   have hlg := ltGateFE_eval env C vC hWC hUC ir vir hir
   have hscan := (ltScan env B C vB vC hWB hWC hUB hUC).2.2.2
   interval_cases i
-  simp only [bitFE, ltBitWitness, ltClWitness, circuit_norm, Vector.getElem_mk,
-    List.getElem_toArray, List.getElem_cons_zero, hlg]
+  rw [bitProgram_eval_limb]
+  simp only [ltBitWitness, ltClWitness, circuit_norm, hlg]
   split_ifs with h
   · rw [hscan]
     congr 1

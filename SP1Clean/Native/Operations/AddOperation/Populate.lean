@@ -230,15 +230,16 @@ theorem populateFW_eval (env : ProverEnvironment (ZMod p))
       Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ]
 
 omit [Fact (2 ^ 17 < p)] in
-/-- Environment-locality of the sum limbs. -/
-theorem populateFW_congr (env env' : ProverEnvironment (ZMod p))
+/-- Sum limbs depend only on the evaluated operands, including across local IR contexts. -/
+theorem populateFW_congr (ctx ctx' : Witgen.Ctx (ZMod p))
     (a b : Vector (Witgen.FExpr (ZMod p)) 4)
+    {a' b' : Vector (Witgen.FExpr (ZMod p)) 4}
     (hA : ∀ (i : ℕ) (_ : i < 4),
-      Witgen.FExpr.eval { env := env } a[i] = Witgen.FExpr.eval { env := env' } a[i])
+      Witgen.FExpr.eval ctx a[i] = Witgen.FExpr.eval ctx' a'[i])
     (hB : ∀ (i : ℕ) (_ : i < 4),
-      Witgen.FExpr.eval { env := env } b[i] = Witgen.FExpr.eval { env := env' } b[i])
+      Witgen.FExpr.eval ctx b[i] = Witgen.FExpr.eval ctx' b'[i])
     (i : ℕ) (hi : i < 4) :
-    ((populateFW a b)[i]).eval { env := env } = ((populateFW a b)[i]).eval { env := env' } := by
+    ((populateFW a b)[i]).eval ctx = ((populateFW a' b')[i]).eval ctx' := by
   interval_cases i <;>
     simp only [populateFW, circuit_norm, -Witgen.u64Wrap,
       hA 0 (by omega), hA 1 (by omega), hA 2 (by omega), hA 3 (by omega),

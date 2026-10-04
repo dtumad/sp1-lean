@@ -163,9 +163,10 @@ their canonical value (`0 ≤ v < p`). The required operations: `+`, `·`, inver
 
 Author reused calculations with Clean's `witnessProgram` / `Witgen.M`: a monadic bind
 creates an IR step, while a plain Lean `let` can expand into repeated expression trees.
-DivRem's multiplication, product-limb and carry programs share their computational
-operands this way, with kernel-checked evaluation preservation and serialized-size checks in the existing
-exportability test. Interpreters evaluate each step once into the locals array.
+DivRem's multiplication, product-limb, carry, remainder-negation and comparison programs
+share their computational operands this way, with kernel-checked evaluation preservation.
+The existing exportability test checks the serialized size of every DivRem witness payload.
+Interpreters evaluate each step once into the locals array.
 
 The stored migration payloads were produced through the legacy
 `Operations.witgenJsonShared?` transformation: the earlier DivRem program expanded to

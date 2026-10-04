@@ -206,22 +206,22 @@ theorem completeness :
   have eMAX := maxAbsFE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
   have eWCNEG := wCnegFE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eWRNEG := wRnegFE_eval (env := env) (vB := B) (vC := C)
+  have eWRNEG := wRnegProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
   have eMISC := miscFE_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eCL := clFE_eval (env := env) (vB := B) (vC := C)
+  have eCL := clProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eLTF := ltfFE_eval (env := env) (vB := B) (vC := C)
+  have eLTF := ltfProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eNEI := neiFE_eval (env := env) (vB := B) (vC := C)
+  have eNEI := neiProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eBIT := bitFE_eval (env := env) (vB := B) (vC := C)
+  have eBIT := bitProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
   have eREM := remFE_eval (env := env) (vB := B) (vC := C)
@@ -301,13 +301,15 @@ theorem completeness :
   have hNEI : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4)
       = (ltNotEqInvWitness input_is_real B C F)[0] := by
-    have h := h_env_nei ⟨0, by omega⟩
-    simp only [circuit_norm, Nat.add_zero, eNEI 0 (by omega), hFlags] at h; exact h
+    have h := h_env_nei ⟨0, by decide⟩
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eNEI 0 (by omega), hFlags, Nat.add_zero] at h; exact h
   have hBIT : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1)
       = (ltBitWitness input_is_real B C F)[0] := by
-    have h := h_env_bit ⟨0, by omega⟩
-    simp only [circuit_norm, Nat.add_zero, eBIT 0 (by omega), hFlags] at h; exact h
+    have h := h_env_bit ⟨0, by decide⟩
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eBIT 0 (by omega), hFlags, Nat.add_zero] at h; exact h
   have hBM : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4)
       = bMsbCell B F := by
@@ -396,7 +398,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_wrneg ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eWRNEG i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eWRNEG i hi, hFlags] at h; exact h
   have hLTCLvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 2 fun i =>
           var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
@@ -405,7 +408,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_cl ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eCL i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eCL i hi, hFlags] at h; exact h
   have hLTFvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
           var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
@@ -414,7 +418,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_f ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eLTF i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eLTF i hi, hFlags] at h; exact h
   -- the two Mul struct blocks, as quantified toElements pins + fromElements struct pins
   -- `hMULLO`/`hMULHI`: never simp the big hypothesis — dsimp the projections, then trans/exact
   -- — `exact h` after folding needs the *expensive* `combinedSize'`-based isDefEq against
