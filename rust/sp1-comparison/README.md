@@ -14,25 +14,37 @@ order and repeated entries. A pin or layout change fails the snapshot test and n
 Regenerate explicitly with `cargo run --locked --manifest-path rust/sp1-comparison/Cargo.toml`,
 adding `--features mprotect` for that configuration.
 
-These checks establish inventory drift only. The optional `clean-export` feature tests freshly
-generated Clean Rust with the backend pinned to the same revision as the Lean emitter:
+The inventory checks establish layout drift only. Fresh Clean Rust is compiled against the backend
+pinned to the same revision as the Lean emitter and compared with SP1:
 
 ```sh
 bash scripts/check_ensemble_export.sh
 ```
 
-The runner builds the Lean fixture and writes Rust plus Lean reference rows to a fresh ignored
-directory. Cargo compiles that exact output, compares generated cells, proves both allowed values,
-and rejects forged membership, altered public values, row contents and table shapes. The fixture
-uses verifier-fixed columns and Clean's witness scheduler; it does not yet compare instruction AIR
-against SP1. Test FRI parameters exercise the API and are not deployment security parameters.
+The runner checks two byte-identical generations under `.lake/ensemble-export/`. Cargo compiles
+that output and exercises two boundaries:
 
-The default `inventory` feature retains the existing SP1 checks. The export runner uses
-`--no-default-features --features clean-export` so the backend fixture need not compile SP1's
-executor. Future instruction comparisons can enable both features in this crate.
+- The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
+  match Lean; backend proofs accept both allowed values and reject forged membership, changed public
+  values, rows and table shapes. Test FRI parameters are not deployment security parameters.
+- The production ADD component's generated witnesses match all 81 event and 15 padding rows from
+  SP1's live trace generator. Direct field evaluation compares local constraint satisfaction and
+  complete interaction multisets, also across 396 column mutations. Repeated messages and zero
+  multiplicities are retained. Both Cargo configurations, with and without `mprotect`, run this
+  **supervisor-mode** comparison with trusted-program public values.
+
+The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
+to construct the local row without scheduling those buses; the unadapted program is checked to
+reject an active row without providers. This is not a full-ensemble acceptance or completeness test.
+The layout adapter moves ADD's selector from the last to the first column. Channel adaptation
+reverses Byte, Memory and Program signs to match Clean's provider-to-consumer guarantee direction.
+
+The default `inventory` feature retains the independent inventory checks. `clean-export` enables
+the backend fixture alone; `instruction-export` also enables the live SP1 instruction comparison.
 
 The Lean semantic profile and existing migration evidence remain on their separately recorded
 revision until instruction comparisons and the semantic review pass.
 Neither inventory coverage nor a statically optional carrier establishes mprotect correctness.
 
-Track the migration in [#112](https://github.com/dtumad/sp1-lean/issues/112).
+Track remaining instruction and provider coverage in [#28](https://github.com/dtumad/sp1-lean/issues/28)
+and [#29](https://github.com/dtumad/sp1-lean/issues/29).

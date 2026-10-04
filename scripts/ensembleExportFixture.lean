@@ -1,21 +1,26 @@
 import SP1CleanTest.Core.EnsembleExport
+import SP1CleanTest.Core.InstructionExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
-Generated sources and Lean reference rows stay under the ignored build tree. The comparison
-script selects a fresh directory through ENSEMBLE_EXPORT_OUT and checks the completion marker.
+Generated sources and Lean reference rows stay under the ignored .lake/ensemble-export tree.
+The comparison script regenerates twice, checks the completion marker and compiles the output.
 -/
 
 open Lean SP1CleanTest.Core.EnsembleExport
 
 private def exportEnsembleFixture : IO Unit := do
   let out := System.FilePath.mk
-    ((← IO.getEnv "ENSEMBLE_EXPORT_OUT").getD ".lake/build/ensemble-export")
+    ((← IO.getEnv "ENSEMBLE_EXPORT_OUT").getD ".lake/ensemble-export/manual")
   IO.FS.createDirAll out
   let exported ← match rust with
     | .ok value => pure value
     | .error message => throw (IO.userError message)
   IO.FS.writeFile (out / "fixed_membership.rs") exported
+  let instruction ← match SP1CleanTest.Core.InstructionExport.rust with
+    | .ok value => pure value
+    | .error message => throw (IO.userError message)
+  IO.FS.writeFile (out / "add_instruction.rs") instruction
   let cases ← ([7, 9, 8] : List Nat).mapM fun (value : Nat) => do
     let result ← match generate (Nat.cast value) with
       | .error message => pure <| Json.mkObj [

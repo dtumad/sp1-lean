@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Compile freshly generated Rust with Clean's backend and compare against Lean and semantic cases.
+# Compile fresh Clean Rust and compare backend cases and instruction AIR against released SP1.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 python3 scripts/check_pins.py
-mkdir -p .lake/build/ensemble-export
-scratch=$(mktemp -d "$PWD/.lake/build/ensemble-export/run.XXXXXX")
+mkdir -p .lake/ensemble-export
+scratch=$(mktemp -d "$PWD/.lake/ensemble-export/run.XXXXXX")
 LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-2} lake build --wfail --iofail SP1CleanTest.Core.EnsembleExport \
+  SP1CleanTest.Core.InstructionExport \
   2>&1 | tee "$scratch/build.log"
 python3 - "$scratch" <<'PY'
 import hashlib
@@ -31,12 +32,17 @@ if revision != clean["rev"] or dirty:
     raise SystemExit("Clean checkout differs from the pinned emitter/backend")
 command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
            "scripts/ensembleExportFixture.lean"]
-result = subprocess.run(command, env=dict(os.environ, ENSEMBLE_EXPORT_OUT=str(out)),
-                        text=True, capture_output=True)
-(out / "lean.log").write_text(result.stdout + result.stderr)
-if result.returncode or result.stderr or result.stdout != "EXPORTED ensemble Rust and Lean reference cases\n":
-    raise SystemExit(f"Incomplete Lean export; see {out}/lean.log")
-files = ["fixed_membership.rs", "fixed_membership.reference.json"]
+files = ["fixed_membership.rs", "fixed_membership.reference.json", "add_instruction.rs"]
+for directory in [out, out / "repeat"]:
+    directory.mkdir(exist_ok=True)
+    result = subprocess.run(command, env=dict(os.environ, ENSEMBLE_EXPORT_OUT=str(directory)),
+                            text=True, capture_output=True)
+    (directory / "lean.log").write_text(result.stdout + result.stderr)
+    if result.returncode or result.stderr or result.stdout != "EXPORTED ensemble Rust and Lean reference cases\n":
+        raise SystemExit(f"Incomplete Lean export; see {directory}/lean.log")
+for name in files:
+    if (out / name).read_bytes() != (out / "repeat" / name).read_bytes():
+        raise SystemExit(f"Nondeterministic ensemble export: {name}")
 hashes = {name: hashlib.sha256((out / name).read_bytes()).hexdigest() for name in files}
 (out / "provenance.json").write_text(json.dumps({
     "cleanRevision": revision,
@@ -47,12 +53,19 @@ print(f"Fresh ensemble artifacts: {out}")
 PY
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
-    --no-default-features --features clean-export --test clean_export 2>&1 | tee "$scratch/rust.log"
-python3 - "$scratch/rust.log" <<'PY'
+    --no-default-features --features instruction-export --test clean_export \
+    --test instruction_export 2>&1 | tee "$scratch/rust.log"
+CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
+  cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
+    --no-default-features --features instruction-export,mprotect \
+    --test instruction_export 2>&1 | tee "$scratch/rust-mprotect.log"
+python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
 import sys
-log = Path(sys.argv[1]).read_text()
-if "test result: ok. 3 passed; 0 failed;" not in log or "warning:" in log:
-    raise SystemExit("Rust export comparison did not complete cleanly")
+assert len(sys.argv) == 3
+for path, suites in zip(sys.argv[1:], [2, 1]):
+    log = Path(path).read_text()
+    if log.count("test result: ok. 3 passed; 0 failed;") != suites or "warning:" in log:
+        raise SystemExit(f"Rust export comparison did not complete cleanly: {path}")
 PY
-echo "PASS: built-in ensemble export matches Lean and passes Rust backend regressions"
+echo "PASS: deterministic Clean export, Rust backend regressions and released SP1 ADD comparisons"
