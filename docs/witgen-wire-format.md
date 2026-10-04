@@ -1,9 +1,10 @@
 # The witgen wire format (`version: 1`)
 
 This describes the transitional JSON export consumed by `rust/witgen-interp/`.
-The intended replacement is [Clean's direct Rust export](export.md). The committed
-artifacts under `export/witgen/` are instances of this format; `scripts/witgenExport.lean`
-is their only writer, and `scripts/check_witgen_export.sh` gates them.
+The intended replacement is [Clean's direct Rust export](export.md). Generated
+artifacts under `.lake/witgen-export/run.*/witgen/` are instances of this format;
+`scripts/witgenExport.lean` is their only writer. Paths below are relative to a fresh
+output directory, and `scripts/check_witgen_export.py` gates them.
 
 **Normative source.** This document is descriptive. The format is defined by the Clean
 pin's serializer — `Clean/Circuit/WitnessExport.lean` and `Clean/Circuit/Json.lean` at
@@ -14,7 +15,7 @@ code wins and this file gets fixed.
 
 ## The envelope
 
-One payload per chip, `export/witgen/<Chip>.witgen.json`:
+One payload per chip, `witgen/<Chip>.witgen.json`:
 
 ```json
 {"version": 1, "localLength": N, "operations": [ ... ]}
@@ -40,7 +41,7 @@ interactions included) for consumers that want them.
 ## What the payload does *not* carry — the manifest
 
 The wire format records neither the field, the input width, the chip name, nor the hint
-schema. `export/witgen/<Chip>.manifest.json` fills the gap:
+schema. `witgen/<Chip>.manifest.json` fills the gap:
 
 ```json
 {
@@ -59,7 +60,7 @@ schema. `export/witgen/<Chip>.manifest.json` fills the gap:
 ```
 
 The hint/data schemas are *derived* from the serialized payload (a walk for
-`hintGet`/`dataGet` nodes), never hand-maintained. `export/witgen/index.json` lists all
+`hintGet`/`dataGet` nodes), never hand-maintained. `witgen/index.json` lists all
 chips with their `inputWidth`/`localLength`, in the registry order of
 `SP1Clean/Soundness/SupportedMachine.lean` (a public witness-format matter).
 
@@ -168,26 +169,25 @@ share their computational operands this way, with kernel-checked evaluation pres
 The existing exportability test checks the serialized size of every DivRem witness payload.
 Interpreters evaluate each step once into the locals array.
 
-The stored migration payloads were produced through the legacy
-`Operations.witgenJsonShared?` transformation: the earlier DivRem program expanded to
-1.22 GB without it. The remaining chip payloads still depend on that pass. Its exit is
-authored sharing through Clean's built-in API and replacement comparison coverage;
-the stored JSON interpreter is migration evidence, not the intended Rust backend.
+The exporter serializes the authored operations directly through Clean's
+`Operations.witgenJson?`. There is no downstream sharing transformation. The JSON
+interpreter remains migration evidence until Clean's Rust backend covers these chips.
 
 ## Determinism and byte stability
 
-JSON object key order is code-determined (descending by key name) and the exporter
-embeds no timestamps or revisions, so regeneration is byte-stable: the CI `test` job
-diffs a fresh export against the committed tree (`check_witgen_export.sh --regen`)
-on every run, which also catches wire-format drift on a Clean pin bump. To refresh
-deliberately after an intended change:
+The exporter embeds no timestamps or revisions. `python3 scripts/check_witgen_export.py`
+builds the full dependency closure, exports twice into a fresh ignored directory, checks
+both outputs against the independent SP1 dumps, and requires byte-identical native files.
+It then runs locked Rust tests on those files. A partial or zero-exit failed Lean run
+cannot pass: the driver checks complete per-chip output, inventory and fixture coverage.
 
-```
-lake build SP1CleanTest.Core.Exportable
-scripts/check_witgen_export.sh --regen --update   # inspect and commit the delta
-```
+Only `export/sp1dump/` stays committed as independent source evidence. Native outputs,
+logs and source/artifact fingerprints live under `.lake/witgen-export/run.*/`.
+Source fingerprints include uncommitted changes; a reused run must match the current
+sources and its recorded artifact hashes. Changing a pin requires fresh generation and
+comparison, not relabelling old files.
 
-## Row maps (`export/witgen/<Chip>.rowmap.json`)
+## Row maps (`witgen/<Chip>.rowmap.json`)
 
 The payload generates witness *cells*; a full trace **row** is the circuit's output
 struct pushed through the audited native→Rust layout map (`ChipFaithful`'s
@@ -207,7 +207,7 @@ and `interact` operations (bus multiplicities/messages, evaluable per row for
 dependency accounting), the three artifacts together contain everything needed to
 generate and self-check complete SP1 trace rows.
 
-## Differential fixtures (`export/testdata/<Chip>.trace.json`)
+## Differential fixtures (`testdata/<Chip>.trace.json`)
 
 The same writer's `--testdata` mode produces per-chip differential fixtures for external
 interpreters:
@@ -246,7 +246,7 @@ Row provenance is honest:
   from the operand values, mirroring SP1's own populate). `expectedRow` is the dumped
   SP1 `generate_trace` row verbatim. **The generation-time gate**: before anything is
   written, the exporter recomputes every event row — `FlatOperation.witgen` over the
-  shared operations, then the symbolic row map evaluated at the resulting cells — and
+  authored operations, then the symbolic row map evaluated at the resulting cells — and
   requires cell-for-cell equality with the dump, plus a value-level
   `circuitTraceRowMapped` spot check on event row 0. Present for **all 25 chips**.
 - `"padding"` — the empty-hint row, inputs recovered from the dumped padding row.
@@ -261,8 +261,7 @@ Row provenance is honest:
   declared tables. All 25 chips carry these.
 
 `expectedWitness` is always the Lean reference evaluation (`FlatOperation.witgen`) over
-the **shared** operation list — the same programs the wire carries
-(`WitgenIR.eval_share`).
+the authored operation list — the same programs Clean serializes.
 
 ## Whole-ensemble instances
 

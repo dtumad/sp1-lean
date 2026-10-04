@@ -102,8 +102,8 @@ jobs:
         run: scripts/check_option_escapes.sh
       - name: Witness-generation escape hatches (enforced — the witgen cutover is complete)
         run: scripts/check_no_witness_native.sh --enforce
-      - name: Committed witgen export is structurally clean
-        run: scripts/check_witgen_export.sh
+      - name: Independent SP1 witness inputs are structurally clean
+        run: python3 scripts/check_witgen_export.py --source-only
       - name: Recorded pins match the build graph
         run: scripts/check_pins.py
       - name: Trust policy is well-formed
@@ -251,13 +251,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: rust/sp1-comparison
+          workspaces: |
+            rust/sp1-comparison
+            rust/witgen-interp
           key: clean-export
       - name: Built-in ensemble export and Rust backend comparison
         run: bash scripts/check_ensemble_export.sh
-      # The committed export/witgen goldens must match a fresh regeneration byte-for-byte; the
-      # exporter maps native rows through the `Faithful` reconfigure maps, so it needs the full
-      # library built above even though the exportability battery itself is core.
+      # Native witness artifacts are generated under .lake, checked against independent SP1
+      # dumps and regenerated for determinism. Their Rust comparison uses the same runner.
       - name: Library examples and adversarial witnesses
         if: env.FULL_BUILD == 'true'
         id: examples
@@ -272,9 +273,9 @@ jobs:
           path: .lake/build/examples/
           if-no-files-found: error
           retention-days: 30
-      - name: Witgen export matches a fresh regeneration
+      - name: Fresh deterministic witnesses and Rust comparison
         if: env.FULL_BUILD == 'true'
-        run: scripts/check_witgen_export.sh --regen
+        run: python3 scripts/check_witgen_export.py
       - name: Pinned Node for backend conformance
         if: env.FULL_BUILD == 'true'
         uses: actions/setup-node@v4

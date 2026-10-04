@@ -19,7 +19,8 @@ open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-local instance : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+/-- Match the field equality used by Clean's gated balance filters. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 /-- The actual circuit's pull/push pair supplies the common transition interface. -/
 def view (enabled : Bool) : TransitionView (stateChannel (p := p)) where

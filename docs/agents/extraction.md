@@ -13,9 +13,9 @@ Use a clean checkout of the extraction revision in [provenance.json](../../scrip
 SP1_DIR=/path/to/extraction-checkout python3 update_extracted.py
 SP1_DIR=/path/to/extraction-checkout scripts/update_sp1_dumps.sh --check
 lake build --wfail --iofail SP1Clean SP1CleanTest
-scripts/check_witgen_export.sh --regen
-scripts/run_interp_diff.sh
-SP1_DIR=/path/to/extraction-checkout scripts/run_sp1_conformance.sh
+python3 scripts/check_witgen_export.py
+python3 scripts/run_sp1_conformance.py --sp1-dir /path/to/extraction-checkout \
+  --export-dir .lake/witgen-export/run.EXAMPLE
 ```
 
 `EXTRACT_ONLY=Add,AddOperation,CPUState,RTypeReader` can narrow AIR regeneration to a closed
@@ -39,7 +39,7 @@ Never relabel old generated files with a new semantic revision.
 | `SP1Clean/Extracted/OpcodeTable.lean` | Executor opcode names/discriminants read at the semantic revision, checked against the Lean alphabet |
 | `SP1Clean/Extracted/Provenance.lean` | Semantic and extractor revisions verified before generation |
 | `export/sp1dump/` | Deterministic events and full padded SP1 `generate_trace` matrices; written separately by `scripts/update_sp1_dumps.sh` |
-| `export/witgen/`, `export/testdata/` | Native witness programs, symbolic row maps and checked trace fixtures; written by `scripts/witgenExport.lean` |
+| `.lake/witgen-export/run.*/` | Fresh native witness programs, symbolic row maps and checked fixtures; written by `scripts/witgenExport.lean`, validated by `scripts/check_witgen_export.py` |
 
 `Faithful` maps native rows to exact Rust rows and proves assertion-list equality and projected
 interaction agreement. System/provider transport can require additional named premises; see
@@ -47,8 +47,10 @@ interaction agreement. System/provider transport can require additional named pr
 
 The fixture writer recovers native input cells from SP1 rows, derives event hints, executes the
 native witness programs and refuses to write mismatching reconstructed rows. The Rust interpreter
-repeats that comparison from serialized bytes. The SP1-side opt-in conformance package uses
-vendored artifacts; its driver checks their byte agreement before running.
+repeats that comparison from serialized bytes. The driver prints the fresh output directory;
+substitute it for `run.EXAMPLE` above. The opt-in SP1 driver verifies its source/artifact hashes
+and stages the pinned checker with those exports under `.lake`. Its source and lockfile remain
+unchanged; only Cargo dependency paths are relocated.
 
 ## Emission boundaries and limitations
 

@@ -15,7 +15,6 @@ public import ToClean.Circuit.WitgenEval
 public import ToClean.Circuit.WitnessGenerationData
 public import ToClean.Circuit.AgreesBelowWithData
 public import ToClean.Circuit.IteDecide
-public import ToClean.Circuit.WitgenShare
 public import ToClean.Circuit.InteractionRecovery
 public import ToClean.Circuit.EmittedInteraction
 public import ToClean.Gadgets.LookupProjection

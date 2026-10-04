@@ -12,8 +12,8 @@ interpreter or scheduler.
 
 ## Current facilities
 
-- Circuit witnesses use exportable Clean IR, with a proved sharing pass in ToClean to avoid
-  duplicating large expressions.
+- Circuit witnesses use Clean IR and its built-in serializer. Large expressions share operands
+  through Clean's `Witgen.M` authoring API.
 - ToClean's finite checker authenticates fixed lookup inventories and
   connects executable checks to raw Clean assertions and channel balance, including the public
   verifier and occurrence capacity.
@@ -29,9 +29,8 @@ interpreter or scheduler.
 Reproduce current export checks after the full build:
 
 ```sh
-scripts/check_witgen_export.sh --regen
+python3 scripts/check_witgen_export.py
 scripts/check_ensemble_export.sh
-scripts/run_interp_diff.sh
 scripts/check_backend_gadgets.sh
 ```
 
@@ -42,8 +41,10 @@ The transitional [JSON format](witgen-wire-format.md) has three artifacts per ch
 programs/constraints/interactions, a symbolic native-to-Rust row map, and a field/input/hint
 manifest. The fixture exporter reconstructs actual SP1 trace rows before writing test data;
 the [Rust interpreter](../rust/README.md) independently re-executes the serialized programs.
-`scripts/run_sp1_conformance.sh` runs the comparison inside the pinned SP1 extraction checkout,
-after checking its vendored artifacts against this repository. That opt-in check remains useful
+Native outputs live under `.lake/witgen-export/`; the driver checks two fresh exports for
+byte agreement and runs locked Rust tests. Committed `export/sp1dump/` files remain independent
+source inputs. `scripts/run_sp1_conformance.py` stages the pinned SP1 checker with fresh artifacts
+under `.lake`, without modifying the extraction checkout. That opt-in check remains useful
 migration evidence; it is not the intended long-term interpreter or dependency arrangement.
 
 ## Rust migration
@@ -62,8 +63,8 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixture establishes this backend boundary only. The complete native
 inventory still contains legacy lookups, which built-in lowering rejects. Migrate those providers
-and the remaining witness-sharing consumers before retiring chip JSON comparison. The new Rust
-tests use test FRI parameters and do not establish cryptographic security or a formal lowering theorem.
+before retiring chip JSON comparison. The new Rust tests use test FRI parameters and do not
+establish cryptographic security or a formal lowering theorem.
 
 The reviewed upgrade target is [SP1 v6.8.1](https://github.com/succinctlabs/sp1/releases/tag/v6.8.1).
 The active legacy evidence remains on the version in provenance.json until migration passes.
