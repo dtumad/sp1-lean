@@ -32,7 +32,8 @@ if revision != clean["rev"] or dirty:
     raise SystemExit("Clean checkout differs from the pinned emitter/backend")
 command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
            "scripts/ensembleExportFixture.lean"]
-files = ["fixed_membership.rs", "fixed_membership.reference.json", "add_instruction.rs"]
+files = ["fixed_membership.rs", "fixed_membership.reference.json",
+         "add_instruction.rs", "load_byte_instruction.rs"]
 for directory in [out, out / "repeat"]:
     directory.mkdir(exist_ok=True)
     result = subprocess.run(command, env=dict(os.environ, ENSEMBLE_EXPORT_OUT=str(directory)),
@@ -63,9 +64,11 @@ python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
 import sys
 assert len(sys.argv) == 3
-for path, suites in zip(sys.argv[1:], [2, 1]):
+for path, counts in zip(sys.argv[1:], [[3, 5], [5]]):
     log = Path(path).read_text()
-    if log.count("test result: ok. 3 passed; 0 failed;") != suites or "warning:" in log:
+    if (log.count("test result: ok.") != len(counts)
+            or any(log.count(f"test result: ok. {count} passed; 0 failed;") != 1
+                   for count in counts) or "warning:" in log):
         raise SystemExit(f"Rust export comparison did not complete cleanly: {path}")
 PY
-echo "PASS: deterministic Clean export, Rust backend regressions and released SP1 ADD comparisons"
+echo "PASS: deterministic Clean export, Rust backend regressions and released SP1 instruction comparisons"

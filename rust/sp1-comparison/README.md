@@ -27,16 +27,23 @@ that output and exercises two boundaries:
 - The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
   match Lean; backend proofs accept both allowed values and reject forged membership, changed public
   values, rows and table shapes. Test FRI parameters are not deployment security parameters.
-- The production ADD component's generated witnesses match all 81 event and 15 padding rows from
-  SP1's live trace generator. Direct field evaluation compares local constraint satisfaction and
-  complete interaction multisets, also across 396 column mutations. Repeated messages and zero
-  multiplicities are retained. Both Cargo configurations, with and without `mprotect`, run this
-  **supervisor-mode** comparison with trusted-program public values.
+- Production ADD and LoadByte components use the same comparison harness:
+
+  | Component | SP1 event / padding rows | Column mutations | Cases |
+  | --- | --- | --- | --- |
+  | ADD | 81 / 15 | 396 | Carries, wraparound, operand boundaries |
+  | LoadByte | 258 / 30 | 987 | LB/LBU, all eight offsets, sign extension, address boundaries, negative immediates, cross-window memory timestamps |
+
+  Generated witnesses match SP1's live trace generator. Direct field evaluation compares local
+  constraint satisfaction and complete interaction multisets, including mutations. Repeated messages
+  and zero multiplicities are retained. Both Cargo configurations, with and without `mprotect`, run
+  these **supervisor-mode** comparisons with trusted-program public values.
 
 The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
 to construct the local row without scheduling those buses; the unadapted program is checked to
 reject an active row without providers. This is not a full-ensemble acceptance or completeness test.
-The layout adapter moves ADD's selector from the last to the first column. Channel adaptation
+The layout adapters move selectors first and witnessed cells last; LoadByte's offsets come from
+SP1's actual column structure. Channel adaptation
 reverses Byte, Memory and Program signs to match Clean's provider-to-consumer guarantee direction.
 
 The default `inventory` feature retains the independent inventory checks. `clean-export` enables

@@ -13,25 +13,42 @@ use slop_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir};
 use slop_algebra::{AbstractField, PrimeField64 as Sp1PrimeField64};
 use slop_matrix::{dense::RowMajorMatrix, Matrix};
 use sp1_core_executor::{
-    events::{AluEvent, MemoryReadRecord, MemoryRecordEnum, MemoryWriteRecord},
-    ExecutionRecord, Opcode, RTypeRecord,
+    events::{AluEvent, MemInstrEvent, MemoryReadRecord, MemoryRecordEnum, MemoryWriteRecord},
+    ExecutionRecord, ITypeRecord, Opcode, RTypeRecord,
 };
-use sp1_core_machine::{air::TrivialOperationBuilder, alu::add_sub::add::AddChip, SupervisorMode};
+use sp1_core_machine::{
+    air::TrivialOperationBuilder,
+    alu::add_sub::add::AddChip,
+    memory::load::load_byte::{LoadByteChip, LoadByteColumns},
+    SupervisorMode,
+};
 use sp1_hypercube::{
     air::{AirInteraction, InteractionScope, MachineAir, MessageBuilder, SP1_PROOF_NUM_PV_ELTS},
     InteractionKind,
 };
 use sp1_primitives::SP1Field;
+use std::marker::PhantomData;
+use std::mem::offset_of;
 
 // Clean emits a shared helper set; this instruction does not need every helper.
 #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated {
+mod generated_add {
     include!(concat!(
         env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
         "/add_instruction.rs"
     ));
 }
-use generated::{AddInstruction, AddInstructionAirSpec};
+use generated_add::{AddInstruction, AddInstructionAirSpec};
+
+// The same upstream helper set is emitted for each standalone component.
+#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+mod generated_load_byte {
+    include!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/load_byte_instruction.rs"
+    ));
+}
+use generated_load_byte::{LoadByteInstruction, LoadByteInstructionAirSpec};
 
 type Ledger = Vec<(String, u64, Vec<u64>)>;
 
@@ -87,7 +104,7 @@ impl Sp1Evaluation {
             InteractionKind::Byte => ("SP1Byte", true),
             InteractionKind::Memory => ("SP1Memory", true),
             InteractionKind::Program => ("SP1Program", true),
-            other => panic!("unmapped SP1 ADD interaction: {other:?}"),
+            other => panic!("unmapped SP1 instruction interaction: {other:?}"),
         };
         let mult = if receiving ^ reverse {
             -interaction.multiplicity
@@ -148,33 +165,32 @@ impl p3_air::AirBuilderWithPublicValues for NativeEvaluation {
 /// Only this test adapter suppresses scheduling interactions. The generated interactions
 /// are checked separately against SP1, including repeated and zero-multiplicity entries.
 /// The unadapted generated program must still reject an active row with no providers.
-struct RowWitness;
-impl Program<NativeField> for RowWitness {
-    const FUEL: usize = <AddInstruction as Program<NativeField>>::FUEL;
-    const COMPONENTS: usize = <AddInstruction as Program<NativeField>>::COMPONENTS;
-    const PUBLIC_INPUTS: usize = <AddInstruction as Program<NativeField>>::PUBLIC_INPUTS;
-    const PROVER_INPUTS: usize = <AddInstruction as Program<NativeField>>::PROVER_INPUTS;
-    const FIXED_WIDTHS: &'static [usize] = <AddInstruction as Program<NativeField>>::FIXED_WIDTHS;
-    const COMPONENT_NAMES: &'static [&'static str] =
-        <AddInstruction as Program<NativeField>>::COMPONENT_NAMES;
+struct RowWitness<P>(PhantomData<P>);
+impl<P: Program<NativeField>> Program<NativeField> for RowWitness<P> {
+    const FUEL: usize = <P as Program<NativeField>>::FUEL;
+    const COMPONENTS: usize = <P as Program<NativeField>>::COMPONENTS;
+    const PUBLIC_INPUTS: usize = <P as Program<NativeField>>::PUBLIC_INPUTS;
+    const PROVER_INPUTS: usize = <P as Program<NativeField>>::PROVER_INPUTS;
+    const FIXED_WIDTHS: &'static [usize] = <P as Program<NativeField>>::FIXED_WIDTHS;
+    const COMPONENT_NAMES: &'static [&'static str] = <P as Program<NativeField>>::COMPONENT_NAMES;
     fn modes() -> Vec<Mode<NativeField>> {
-        AddInstruction::modes()
+        P::modes()
     }
     fn padding() -> Vec<Padding<NativeField>> {
-        AddInstruction::padding()
+        P::padding()
     }
     fn initial_rows(
         component: usize,
         input: &[NativeField],
     ) -> Result<Vec<Vec<NativeField>>, String> {
-        AddInstruction::initial_rows(component, input)
+        P::initial_rows(component, input)
     }
     fn complete_row(
         component: usize,
         input: &[NativeField],
         data: &WitnessData<NativeField>,
     ) -> Result<Vec<NativeField>, String> {
-        AddInstruction::complete_row(component, input, data)
+        P::complete_row(component, input, data)
     }
     fn interactions(_: usize, _: &[NativeField]) -> Vec<Interaction<NativeField>> {
         vec![]
@@ -184,7 +200,7 @@ impl Program<NativeField> for RowWitness {
     }
 }
 
-fn trace() -> RowMajorMatrix<SP1Field> {
+fn add_trace() -> RowMajorMatrix<SP1Field> {
     let values = [
         0,
         1,
@@ -240,7 +256,7 @@ fn trace() -> RowMajorMatrix<SP1Field> {
     trace
 }
 
-fn native_row(sp1: &[SP1Field]) -> Vec<NativeField> {
+fn add_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     // SP1: state, adapter, result limbs, is_real. Clean: is_real, state, adapter, result limbs.
     assert_eq!(sp1.len(), AddInstructionAirSpec::WIDTHS[0]);
     std::iter::once(sp1.last().unwrap())
@@ -249,16 +265,19 @@ fn native_row(sp1: &[SP1Field]) -> Vec<NativeField> {
         .collect()
 }
 
-fn compare(sp1: &[SP1Field]) -> bool {
-    let row = native_row(sp1);
+fn compare<P: Program<NativeField>, S: GeneratedAirSpec>(
+    sp1: &[SP1Field],
+    row: &[NativeField],
+    chip: &impl Air<Sp1Evaluation>,
+) -> bool {
     let mut expected = Sp1Evaluation {
         row: sp1.to_vec(),
         constraints: vec![],
         ledger: vec![],
         public: vec![SP1Field::zero(); SP1_PROOF_NUM_PV_ELTS],
     };
-    AddChip::<SupervisorMode>::default().eval(&mut expected);
-    let constraints = AddInstructionAirSpec::constraints::<NativeEvaluation>(0, &[], &row);
+    chip.eval(&mut expected);
+    let constraints = S::constraints::<NativeEvaluation>(0, &[], row);
     assert!(!constraints.is_empty() && !expected.constraints.is_empty());
     let valid = constraints.iter().all(|value| *value == NativeField::ZERO);
     assert_eq!(
@@ -269,7 +288,7 @@ fn compare(sp1: &[SP1Field]) -> bool {
             .all(|value| *value == SP1Field::zero()),
         "local constraint satisfaction differs"
     );
-    let mut ledger: Ledger = AddInstruction::interactions(0, &row)
+    let mut ledger: Ledger = P::interactions(0, row)
         .into_iter()
         .map(|value| {
             (
@@ -293,36 +312,47 @@ fn compare(sp1: &[SP1Field]) -> bool {
     valid
 }
 
-#[test]
-fn generated_add_witness_and_air_match_released_sp1() {
-    let trace = trace();
+fn check_trace<P: Program<NativeField>, S: GeneratedAirSpec>(
+    trace: &RowMajorMatrix<SP1Field>,
+    map_row: fn(&[SP1Field]) -> Vec<NativeField>,
+    chip: &impl Air<Sp1Evaluation>,
+) {
     assert_eq!(
         <NativeField as PrimeField64>::ORDER_U64,
         <SP1Field as Sp1PrimeField64>::ORDER_U64
     );
-    assert_eq!(AddInstructionAirSpec::WIDTHS.len(), 1);
-    assert_eq!(AddInstructionAirSpec::FIXED_WIDTHS, &[0]);
-    for sp1 in trace.values.chunks(trace.width()) {
-        let row = native_row(sp1);
-        let input = &row[..RowWitness::PROVER_INPUTS];
-        let witness = generate::<NativeField, RowWitness>(&[], input).unwrap();
-        assert_eq!(witness.tables, vec![vec![row]]);
-        assert!(compare(sp1), "SP1's generated row must satisfy both AIRs");
+    assert_eq!(S::WIDTHS, &[trace.width()]);
+    assert_eq!(S::FIXED_WIDTHS, &[0]);
+    for (index, sp1) in trace.values.chunks(trace.width()).enumerate() {
+        let row = map_row(sp1);
+        let input = &row[..P::PROVER_INPUTS];
+        let witness = generate::<NativeField, RowWitness<P>>(&[], input).unwrap();
+        assert_eq!(
+            witness.tables,
+            vec![vec![row.clone()]],
+            "witness row {index}"
+        );
+        assert!(
+            compare::<P, S>(sp1, &row, chip),
+            "SP1 row {index} must satisfy both AIRs"
+        );
     }
 }
 
-#[test]
-fn all_add_columns_preserve_constraints_and_interactions_under_mutation() {
-    let trace = trace();
+fn check_mutations<P: Program<NativeField>, S: GeneratedAirSpec>(
+    trace: &RowMajorMatrix<SP1Field>,
+    indices: &[usize],
+    map_row: fn(&[SP1Field]) -> Vec<NativeField>,
+    chip: &impl Air<Sp1Evaluation>,
+) {
     let mut rejected = 0;
-    for index in [0, 40, 80, 81] {
-        // Carries, wraparound and inactive padding.
+    for &index in indices {
         let original = trace.row_slice(index);
         for column in 0..trace.width() {
             for delta in [1, 65536, <SP1Field as Sp1PrimeField64>::ORDER_U64 - 1] {
                 let mut row = original.to_vec();
                 row[column] += SP1Field::from_canonical_u64(delta);
-                rejected += usize::from(!compare(&row));
+                rejected += usize::from(!compare::<P, S>(&row, &map_row(&row), chip));
             }
         }
     }
@@ -333,14 +363,183 @@ fn all_add_columns_preserve_constraints_and_interactions_under_mutation() {
 }
 
 #[test]
-fn instruction_fixture_does_not_claim_provider_balance() {
-    let trace = trace();
-    let row = native_row(&trace.row_slice(0));
-    let input = &row[..RowWitness::PROVER_INPUTS];
-    let error = generate::<NativeField, AddInstruction>(&[], input).unwrap_err();
+fn generated_add_witness_and_air_match_released_sp1() {
+    check_trace::<AddInstruction, AddInstructionAirSpec>(
+        &add_trace(),
+        add_row,
+        &AddChip::<SupervisorMode>::default(),
+    );
+}
+
+#[test]
+fn all_add_columns_preserve_constraints_and_interactions_under_mutation() {
+    // Carries, wraparound and inactive padding: 396 mutations.
+    check_mutations::<AddInstruction, AddInstructionAirSpec>(
+        &add_trace(),
+        &[0, 40, 80, 81],
+        add_row,
+        &AddChip::<SupervisorMode>::default(),
+    );
+}
+
+fn check_open_buses<P: Program<NativeField>>(row: &[NativeField]) {
+    let input = &row[..P::PROVER_INPUTS];
+    let error = generate::<NativeField, P>(&[], input).unwrap_err();
     assert!(matches!(error, WitnessGenerationError::Runtime(_)));
     assert!(matches!(
-        generate::<NativeField, RowWitness>(&[], &input[..input.len() - 1]),
+        generate::<NativeField, RowWitness<P>>(&[], &input[..input.len() - 1]),
         Err(WitnessGenerationError::ProverInputWidth { .. })
     ));
+}
+
+#[test]
+fn instruction_fixtures_do_not_claim_provider_balance() {
+    check_open_buses::<AddInstruction>(&add_row(&add_trace().row_slice(0)));
+    check_open_buses::<LoadByteInstruction>(&load_byte_row(&load_byte_trace().row_slice(0)));
+}
+
+fn load_byte_event(
+    index: usize,
+    opcode: Opcode,
+    base: u64,
+    offset: u64,
+    word: u64,
+    negative_immediate: bool,
+    previous_window: bool,
+) -> (MemInstrEvent, ITypeRecord) {
+    let clk = if previous_window {
+        (1 << 24) + 9
+    } else {
+        9 + 8 * index as u64
+    };
+    let c = if negative_immediate {
+        offset.wrapping_sub(8)
+    } else {
+        offset + 8
+    };
+    let b = (base + offset).wrapping_sub(c);
+    let byte = word.to_le_bytes()[offset as usize];
+    let a = if opcode == Opcode::LB {
+        byte as i8 as i64 as u64
+    } else {
+        byte as u64
+    };
+    let read = |value, timestamp, prev_timestamp| {
+        MemoryRecordEnum::Read(MemoryReadRecord {
+            value,
+            timestamp,
+            prev_timestamp,
+            prev_page_prot_record: None,
+        })
+    };
+    (
+        MemInstrEvent {
+            clk,
+            pc: 4096 + 4 * index as u64,
+            opcode,
+            a,
+            b,
+            c,
+            op_a_0: false,
+            mem_access: read(word, clk + 1, if previous_window { 5 } else { clk - 8 }),
+        },
+        ITypeRecord {
+            op_a: 5,
+            op_b: 6,
+            op_c: c,
+            is_untrusted: false,
+            a: MemoryRecordEnum::Write(MemoryWriteRecord {
+                prev_timestamp: clk - 8,
+                prev_page_prot_record: None,
+                prev_value: word.rotate_left(13),
+                timestamp: clk + 4,
+                value: a,
+            }),
+            b: read(b, clk + 3, clk - 8),
+        },
+    )
+}
+
+fn load_byte_trace() -> RowMajorMatrix<SP1Field> {
+    let mut record = ExecutionRecord::default();
+    for opcode in [Opcode::LB, Opcode::LBU] {
+        for base in [1 << 16, (1 << 48) - 8] {
+            for word in [0, u64::MAX, 0x807f_ff00_0180_fe7f, 0x0102_0304_0506_0708] {
+                for negative_immediate in [false, true] {
+                    for offset in 0..8 {
+                        let index = record.memory_load_byte_events.len();
+                        record.memory_load_byte_events.push(load_byte_event(
+                            index,
+                            opcode,
+                            base,
+                            offset,
+                            word,
+                            negative_immediate,
+                            false,
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    // Exercise MemoryAccess's timestamp-high branch independently of register accesses.
+    for opcode in [Opcode::LB, Opcode::LBU] {
+        let index = record.memory_load_byte_events.len();
+        record.memory_load_byte_events.push(load_byte_event(
+            index,
+            opcode,
+            1 << 32,
+            7,
+            0x80ff_7f00_1234_5678,
+            true,
+            true,
+        ));
+    }
+    assert_eq!(record.memory_load_byte_events.len(), 258);
+    let chip = LoadByteChip::<SupervisorMode>::default();
+    let trace = chip.generate_trace(&record, &mut ExecutionRecord::default());
+    assert_eq!(
+        trace.width(),
+        <LoadByteChip<SupervisorMode> as BaseAir<SP1Field>>::width(&chip)
+    );
+    assert_eq!(trace.height(), 288); // 258 events and 30 SP1-generated padding rows.
+    trace
+}
+
+fn load_byte_row(sp1: &[SP1Field]) -> Vec<NativeField> {
+    type Columns = LoadByteColumns<u8, SupervisorMode>;
+    let address = offset_of!(Columns, address_operation);
+    let memory = offset_of!(Columns, memory_access);
+    let selectors = offset_of!(Columns, is_lb);
+    assert_eq!(sp1.len(), LoadByteInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(selectors + 2, sp1.len());
+    assert_eq!(memory - address, 4);
+    // Clean places selectors first and the four witnessed address cells last.
+    sp1[selectors..]
+        .iter()
+        .chain(&sp1[..address])
+        .chain(&sp1[memory..selectors])
+        .chain(&sp1[address..memory])
+        .map(|value| NativeField::from_u64(value.as_canonical_u64()))
+        .collect()
+}
+
+#[test]
+fn generated_load_byte_witness_and_air_match_released_sp1() {
+    check_trace::<LoadByteInstruction, LoadByteInstructionAirSpec>(
+        &load_byte_trace(),
+        load_byte_row,
+        &LoadByteChip::<SupervisorMode>::default(),
+    );
+}
+
+#[test]
+fn all_load_byte_columns_preserve_constraints_and_interactions_under_mutation() {
+    // Both selectors, both address bounds, cross-window memory reads and padding.
+    check_mutations::<LoadByteInstruction, LoadByteInstructionAirSpec>(
+        &load_byte_trace(),
+        &[0, 64, 128, 192, 256, 257, 258],
+        load_byte_row,
+        &LoadByteChip::<SupervisorMode>::default(),
+    );
 }

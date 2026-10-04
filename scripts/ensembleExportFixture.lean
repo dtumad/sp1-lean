@@ -17,10 +17,13 @@ private def exportEnsembleFixture : IO Unit := do
     | .ok value => pure value
     | .error message => throw (IO.userError message)
   IO.FS.writeFile (out / "fixed_membership.rs") exported
-  let instruction ← match SP1CleanTest.Core.InstructionExport.rust with
-    | .ok value => pure value
-    | .error message => throw (IO.userError message)
-  IO.FS.writeFile (out / "add_instruction.rs") instruction
+  for (name, result) in [
+      ("add_instruction.rs", SP1CleanTest.Core.InstructionExport.addRust),
+      ("load_byte_instruction.rs", SP1CleanTest.Core.InstructionExport.loadByteRust)] do
+    let instruction ← match result with
+      | .ok value => pure value
+      | .error message => throw (IO.userError message)
+    IO.FS.writeFile (out / name) instruction
   let cases ← ([7, 9, 8] : List Nat).mapM fun (value : Nat) => do
     let result ← match generate (Nat.cast value) with
       | .error message => pure <| Json.mkObj [

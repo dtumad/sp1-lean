@@ -1,11 +1,12 @@
 import Clean.Air.Extraction.Rust
 import SP1Clean.Proofs.Chips.AddChip.Formal
+import SP1Clean.Proofs.Chips.LoadByteChip.Formal
 import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
 
-Export the actual ADD component through Clean's built-in lowering and Rust emitter.
-The surrounding singleton has no providers: its channels remain open, so it is a row-level
+Export production instruction components through Clean's built-in lowering and Rust emitter.
+Each surrounding singleton has no providers: its channels remain open, so it is a row-level
 comparison fixture, not an executable SP1 ensemble or a proof of global balance.
 -/
 
@@ -15,27 +16,36 @@ open Air.Flat SP1Clean
 
 abbrev Fp := ZMod SP1Prime
 
-/-- The production ADD circuit with its original constraints and channel interactions. -/
-def ensemble : Ensemble Fp unit where
-  tables := [{ circuit := AddChip.circuit }]
+/-- An instruction component with its original constraints and channel interactions. -/
+def ensemble (component : Component Fp) : Ensemble Fp unit where
+  tables := [component]
   unique_names := by simp
   channels := [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
     Channels.memoryChannel.toRaw, Channels.programChannel.toRaw]
 
 /-- A single independent instruction input, supplied as prover construction data. -/
-def config : WitnessGeneration.Config Fp AddChip.Inputs where
+def config (Inputs : Type → Type) [ProvableType Inputs] : WitnessGeneration.Config Fp Inputs where
   modes := [.preallocated {
     rows := 1
-    input := .ofFExprs (Vector.ofFn fun i : Fin (size AddChip.Inputs) =>
-      .proverInputGet (.const i.val.toUInt64))
+    input := {
+      width := size Inputs
+      steps := []
+      output := .mapRange (size Inputs) (.proverInputGet .idx)
+    }
     input_valid := by rfl
     handlers := []
   }]
-  padding := [{ input := Array.replicate (size AddChip.Inputs) 0 }]
+  padding := [{ input := Array.replicate (size Inputs) 0 }]
   fuel := 1
 
 /-- Both AIR and witness functions come from Clean; no local expression renderer is involved. -/
-def rust : Except String String :=
-  Extraction.Rust.ensembleToRust "AddInstruction" ensemble config
+def addRust : Except String String :=
+  Extraction.Rust.ensembleToRust "AddInstruction"
+    (ensemble { circuit := AddChip.circuit }) (config AddChip.Inputs)
+
+/-- Export LB/LBU, including its witnessed address and RAM interactions. -/
+def loadByteRust : Except String String :=
+  Extraction.Rust.ensembleToRust "LoadByteInstruction"
+    (ensemble { circuit := LoadByteChip.circuit }) (config LoadByteChip.Inputs)
 
 end SP1CleanTest.Core.InstructionExport
