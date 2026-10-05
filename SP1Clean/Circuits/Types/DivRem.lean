@@ -11,7 +11,7 @@ public import SP1Clean.Circuits.Types.IsEqualWordOperation
 public import SP1Clean.Circuits.Types.U16MSBOperation
 public import Clean.Utils.Tactics.ProvableStructDeriving
 
-/-! # Native division/remainder columns
+/-! # Native division/remainder inputs and columns
 
 The 246-cell native row owns its shared arithmetic blocks independently of generated Rust types.
 `Faithful.divRemChipReconfigure` relates it to the legacy Rust oracle. The explicit ProvableStruct
@@ -23,6 +23,38 @@ instance avoids the elaboration cost of deriving the 45-field layout.
 namespace SP1Clean.DivRemChip
 
 open SP1Clean.Circuits.Types
+
+/-- Division/remainder inputs: row activity, reader columns and seven opcode selectors.
+The selectors are ordered DIV, REM, REMU, DIVW, REMW, DIVUW, REMUW. DIVU is derived
+as one minus their sum, so seven zero selectors choose DIVU, including padding.
+The normalized arithmetic operands remain separate committed output columns. -/
+structure Inputs (F : Type) where
+  /-- One for an active row, zero for padding. -/
+  is_real : F
+  /-- Machine state before the instruction. -/
+  state : CPUState F
+  /-- R-type register and memory accesses. -/
+  adapter : RTypeReader F
+  /-- Supplied variant selectors, with DIVU omitted. -/
+  selectors : Vector F 7
+deriving ProvableStruct
+provable_struct_eval_lemmas Inputs
+
+/-- Component-wise verifier evaluation of the DivRem chip input. -/
+@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+    (env : Environment F) (input : Inputs (Expression F)) :
+    Eval.eval env input =
+      ({ is_real := Eval.eval env input.is_real,
+         state := Eval.eval env input.state,
+         adapter := Eval.eval env input.adapter,
+         selectors := Eval.eval env input.selectors } : Inputs F) := by
+  rw [ProvableStruct.eval_eq_eval]; rfl
+
+/-- Raw dividend register read. W-variant semantics truncate it to the low 32 bits. -/
+@[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
+
+/-- Raw divisor register read. W-variant semantics truncate it to the low 32 bits. -/
+@[reducible] def Inputs.op_c_val {F} (i : Inputs F) : Word F := i.adapter.op_c_memory.prev_value
 
 /-- Committed columns for all eight division and remainder variants. -/
 structure Columns (F : Type) where

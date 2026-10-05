@@ -206,7 +206,7 @@ def publicValues : SP1PublicIO (ZMod p) := trace.boundary
 `sp1Tables`, then the 28 entries of `sp1ProviderTables`.
 
 Seven of them go through `Table.buildHinted` rather than `Table.build` — the chips whose witness
-generation reads a per-row prover hint (the flag one-hots of Bitwise/Lt/the shifts/Mul/DivRem, the
+generation reads a per-row prover hint (the flag one-hots of Bitwise/Lt/the shifts/Mul, the
 comparison selector of Branch). Their builders pair each event with the hint that event's own row
 is witnessed at; everything else shares the trace's single `hint`.
 -/
@@ -265,8 +265,9 @@ def instructionTableFor : InstructionChipId → Table (ZMod p)
       (StoreDoubleChip.traceInputs (trace.instructionEvents .storeDouble)) trace.generationData trace.hint
   | .mul => Table.buildHinted MulChip.component
       (MulChip.traceInputs (trace.instructionEvents .mul) 0) trace.generationData
-  | .divRem => Table.buildHinted DivRemChip.component
+  | .divRem => Table.build DivRemChip.component
       (DivRemChip.traceInputs (trace.instructionEvents .divRem) 0) trace.generationData
+      (ProverHint.empty _)
   | .aluX0 => Table.build AluX0Chip.component
       (AluX0Chip.traceInputs (trace.instructionEvents .aluX0) 0) trace.generationData trace.hint
 

@@ -33,7 +33,7 @@ if revision != clean["rev"] or dirty:
 command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
            "scripts/ensembleExportFixture.lean"]
 files = ["fixed_membership.rs", "fixed_membership.reference.json",
-         "add_instruction.rs", "load_byte_instruction.rs"]
+         "add_instruction.rs", "load_byte_instruction.rs", "div_rem_instruction.rs"]
 for directory in [out, out / "repeat"]:
     directory.mkdir(exist_ok=True)
     result = subprocess.run(command, env=dict(os.environ, ENSEMBLE_EXPORT_OUT=str(directory)),
@@ -64,7 +64,7 @@ python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
 import sys
 assert len(sys.argv) == 3
-for path, counts in zip(sys.argv[1:], [[3, 5], [5]]):
+for path, counts in zip(sys.argv[1:], [[3, 7], [7]]):
     log = Path(path).read_text()
     if (log.count("test result: ok.") != len(counts)
             or any(log.count(f"test result: ok. {count} passed; 0 failed;") != 1

@@ -15,7 +15,7 @@ row-level oracle for pinned SP1 v6.4.0.
 
 The native circuit uses an input-first physical row, whereas Rust's `DivRemCols` follows the
 `#[repr(C)]` column order.  The four folded local chunks and explicit readback proof below give
-the complete, auditable permutation between those 246 cells.  They avoid unfolding the 217-bind
+the complete, auditable permutation between those 246 cells.  They avoid unfolding the
 populate routine in every downstream proof and make the row codec independent of honest witness
 generation.
 -/
@@ -33,7 +33,7 @@ private theorem divRemCols_size :
     size DivRemChip.Columns = 246 := rfl
 
 private theorem divRemInputs_size :
-    size DivRemChip.Inputs = 29 := rfl
+    size DivRemChip.Inputs = 36 := rfl
 
 private theorem divRemMulOperation_size :
     size Circuits.Types.MulOperation = 45 := rfl
@@ -285,19 +285,20 @@ def divRemChipInput {F : Type}
     (cols : DivRemChip.Columns F) : DivRemChip.Inputs F :=
   { is_real := cols.is_real
     state := cols.state
-    adapter := cols.adapter }
+    adapter := cols.adapter
+    selectors := #v[cols.is_div, cols.is_rem, cols.is_remu, cols.is_divw,
+      cols.is_remw, cols.is_divuw, cols.is_remuw] }
 
-/-- Selector, operand, and multiplication witness prefix (native local offsets `0..113`). -/
+/-- Selector, operand, and multiplication witness prefix (native local offsets `0..106`). -/
 def divRemHeaderLocals {F : Type}
-    (cols : DivRemChip.Columns F) : Vector F 114 :=
+    (cols : DivRemChip.Columns F) : Vector F 107 :=
   Vector.cast (by rfl)
-    (#v[cols.is_div, cols.is_divu, cols.is_rem, cols.is_remu,
-        cols.is_divw, cols.is_remw, cols.is_divuw, cols.is_remuw] ++
+    (#v[cols.is_divu] ++
       cols.quotient_comp ++ cols.a ++ cols.b ++ cols.c ++
       toElements cols.c_times_quotient_lower ++
       toElements cols.c_times_quotient_upper)
 
-/-- Sign, product, and zero/equality witness block (native local offsets `114..169`). -/
+/-- Sign, product, and zero/equality witness block (native local offsets `107..162`). -/
 def divRemComparisonLocals {F : Type}
     (cols : DivRemChip.Columns F) : Vector F 56 :=
   Vector.cast (by rfl)
@@ -310,7 +311,7 @@ def divRemComparisonLocals {F : Type}
       toElements cols.is_overflow_c ++
       toElements cols.is_c_0)
 
-/-- Arithmetic/comparison tail (native local offsets `170..204`). -/
+/-- Arithmetic/comparison tail (native local offsets `163..197`). -/
 def divRemArithmeticLocals {F : Type}
     (cols : DivRemChip.Columns F) : Vector F 35 :=
   Vector.cast (by rfl)
@@ -325,7 +326,7 @@ def divRemArithmeticLocals {F : Type}
       #v[cols.remainder_lt_operation.not_eq_inv,
         cols.remainder_lt_operation.u16_compare_operation.bit])
 
-/-- Result words and sign bits (native local offsets `205..216`). -/
+/-- Result words and sign bits (native local offsets `198..209`). -/
 def divRemResultLocals {F : Type}
     (cols : DivRemChip.Columns F) : Vector F 12 :=
   Vector.cast (by rfl)
@@ -333,14 +334,14 @@ def divRemResultLocals {F : Type}
       #v[cols.b_msb.msb, cols.c_msb.msb,
         cols.rem_msb.msb, cols.quot_msb.msb])
 
-/-- The 217 local cells in the exact order witnessed by `DivRemChip.populateRow`.
+/-- The 210 local cells in the exact order witnessed by `DivRemChip.populateRow`.
 
 This is deliberately written from Rust row fields rather than by evaluating the native witness
 generator.  It therefore works for every adversarial row and exposes the complete layout at the
 whole-chip boundary.  The four opaque chunks keep projection proofs below Clean's kernel-size
 cliff without changing a single physical cell. -/
 def divRemChipLocals {F : Type}
-    (cols : DivRemChip.Columns F) : Vector F 217 :=
+    (cols : DivRemChip.Columns F) : Vector F 210 :=
   Vector.cast (by rfl)
     (divRemHeaderLocals cols ++ divRemComparisonLocals cols ++
       divRemArithmeticLocals cols ++ divRemResultLocals cols)
@@ -351,71 +352,71 @@ def divRemChipPhysicalRow {F : Type}
 
 /-- Decode one typed block from the native local-witness suffix. -/
 def divRemLocalBlock {F : Type} (M : TypeMap) [ProvableType M]
-    (locals : Vector F 217) (offset : ℕ)
-    (hbound : offset + size M ≤ 217) : M F :=
+    (locals : Vector F 210) (offset : ℕ)
+    (hbound : offset + size M ≤ 210) : M F :=
   fromElements (Vector.ofFn fun i =>
     locals[offset + i.val]'(by omega))
 
 /-- The row returned by the native circuit, reconstructed from an arbitrary local suffix. -/
 def divRemColumnsOfInput {F : Type}
-    (input : DivRemChip.Inputs F) (locals : Vector F 217) :
+    (input : DivRemChip.Inputs F) (locals : Vector F 210) :
     DivRemChip.Columns F :=
-  let flags := divRemLocalBlock (fields 8) locals 0 (by decide)
-  let scalars := divRemLocalBlock (fields 7) locals 114 (by decide)
-  let misc := divRemLocalBlock (fields 3) locals 194 (by decide)
+  let divu := divRemLocalBlock (fields 1) locals 0 (by decide)
+  let scalars := divRemLocalBlock (fields 7) locals 107 (by decide)
+  let misc := divRemLocalBlock (fields 3) locals 187 (by decide)
   { state := input.state
     adapter := input.adapter
-    a := divRemLocalBlock Word locals 12 (by decide)
-    b := divRemLocalBlock Word locals 16 (by decide)
-    c := divRemLocalBlock Word locals 20 (by decide)
-    quotient := divRemLocalBlock Word locals 209 (by decide)
-    quotient_comp := divRemLocalBlock Word locals 8 (by decide)
-    remainder_comp := divRemLocalBlock Word locals 178 (by decide)
-    remainder := divRemLocalBlock Word locals 205 (by decide)
-    abs_remainder := divRemLocalBlock Word locals 174 (by decide)
-    abs_c := divRemLocalBlock Word locals 170 (by decide)
-    max_abs_c_or_1 := divRemLocalBlock Word locals 182 (by decide)
+    a := divRemLocalBlock Word locals 5 (by decide)
+    b := divRemLocalBlock Word locals 9 (by decide)
+    c := divRemLocalBlock Word locals 13 (by decide)
+    quotient := divRemLocalBlock Word locals 202 (by decide)
+    quotient_comp := divRemLocalBlock Word locals 1 (by decide)
+    remainder_comp := divRemLocalBlock Word locals 171 (by decide)
+    remainder := divRemLocalBlock Word locals 198 (by decide)
+    abs_remainder := divRemLocalBlock Word locals 167 (by decide)
+    abs_c := divRemLocalBlock Word locals 163 (by decide)
+    max_abs_c_or_1 := divRemLocalBlock Word locals 175 (by decide)
     c_times_quotient :=
-      divRemLocalBlock (fields 8) locals 121 (by decide)
+      divRemLocalBlock (fields 8) locals 114 (by decide)
     c_times_quotient_lower :=
-      divRemLocalBlock Circuits.Types.MulOperation locals 24 (by decide)
+      divRemLocalBlock Circuits.Types.MulOperation locals 17 (by decide)
     c_times_quotient_upper :=
-      divRemLocalBlock Circuits.Types.MulOperation locals 69 (by decide)
+      divRemLocalBlock Circuits.Types.MulOperation locals 62 (by decide)
     c_neg_operation :=
-      divRemLocalBlock Circuits.Types.AddOperation locals 186 (by decide)
+      divRemLocalBlock Circuits.Types.AddOperation locals 179 (by decide)
     rem_neg_operation :=
-      divRemLocalBlock Circuits.Types.AddOperation locals 190 (by decide)
+      divRemLocalBlock Circuits.Types.AddOperation locals 183 (by decide)
     remainder_lt_operation :=
       { u16_compare_operation :=
-          ⟨divRemLocalBlock field locals 204 (by decide)⟩
-        u16_flags := divRemLocalBlock (fields 4) locals 199 (by decide)
-        not_eq_inv := divRemLocalBlock field locals 203 (by decide)
+          ⟨divRemLocalBlock field locals 197 (by decide)⟩
+        u16_flags := divRemLocalBlock (fields 4) locals 192 (by decide)
+        not_eq_inv := divRemLocalBlock field locals 196 (by decide)
         comparison_limbs :=
-          divRemLocalBlock (fields 2) locals 197 (by decide) }
-    carry := divRemLocalBlock (fields 8) locals 129 (by decide)
+          divRemLocalBlock (fields 2) locals 190 (by decide) }
+    carry := divRemLocalBlock (fields 8) locals 122 (by decide)
     is_c_0 :=
-      divRemLocalBlock Circuits.Types.IsZeroWordOperation locals 159 (by decide)
-    is_div := flags[0]
-    is_divu := flags[1]
-    is_rem := flags[2]
-    is_remu := flags[3]
-    is_divw := flags[4]
-    is_remw := flags[5]
-    is_divuw := flags[6]
-    is_remuw := flags[7]
+      divRemLocalBlock Circuits.Types.IsZeroWordOperation locals 152 (by decide)
+    is_div := input.selectors[0]
+    is_divu := divu[0]
+    is_rem := input.selectors[1]
+    is_remu := input.selectors[2]
+    is_divw := input.selectors[3]
+    is_remw := input.selectors[4]
+    is_divuw := input.selectors[5]
+    is_remuw := input.selectors[6]
     is_overflow := scalars[0]
     is_overflow_b :=
-      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 137 (by decide)
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 130 (by decide)
     is_overflow_c :=
-      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 148 (by decide)
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 141 (by decide)
     b_msb :=
-      divRemLocalBlock Circuits.Types.U16MSBOperation locals 213 (by decide)
+      divRemLocalBlock Circuits.Types.U16MSBOperation locals 206 (by decide)
     rem_msb :=
-      divRemLocalBlock Circuits.Types.U16MSBOperation locals 215 (by decide)
+      divRemLocalBlock Circuits.Types.U16MSBOperation locals 208 (by decide)
     c_msb :=
-      divRemLocalBlock Circuits.Types.U16MSBOperation locals 214 (by decide)
+      divRemLocalBlock Circuits.Types.U16MSBOperation locals 207 (by decide)
     quot_msb :=
-      divRemLocalBlock Circuits.Types.U16MSBOperation locals 216 (by decide)
+      divRemLocalBlock Circuits.Types.U16MSBOperation locals 209 (by decide)
     b_neg := scalars[1]
     b_neg_not_overflow := scalars[2]
     b_not_neg_not_overflow := scalars[3]
@@ -428,8 +429,8 @@ def divRemColumnsOfInput {F : Type}
     remainder_check_multiplicity := misc[2] }
 
 private theorem divRemLocalBlock_eq_of_get {F : Type}
-    (M : TypeMap) [ProvableType M] (locals : Vector F 217)
-    (offset : ℕ) (hbound : offset + size M ≤ 217) (value : M F)
+    (M : TypeMap) [ProvableType M] (locals : Vector F 210)
+    (offset : ℕ) (hbound : offset + size M ≤ 210) (value : M F)
     (hget : ∀ i (hi : i < size M),
       locals[offset + i] = (toElements value)[i]) :
     divRemLocalBlock M locals offset hbound = value := by
@@ -449,22 +450,21 @@ private theorem vector_getElem_congr_idx {α : Type} {n : ℕ} (v : Vector α n)
 set_option linter.unusedSimpArgs false in
 private theorem divRemHeaderBlocks_roundtrip {F : Type}
     (cols : DivRemChip.Columns F) :
-    divRemLocalBlock (fields 8) (divRemChipLocals cols) 0 (by decide) =
-        #v[cols.is_div, cols.is_divu, cols.is_rem, cols.is_remu,
-          cols.is_divw, cols.is_remw, cols.is_divuw, cols.is_remuw] ∧
-      divRemLocalBlock Word (divRemChipLocals cols) 8 (by decide) =
+    divRemLocalBlock (fields 1) (divRemChipLocals cols) 0 (by decide) =
+        #v[cols.is_divu] ∧
+      divRemLocalBlock Word (divRemChipLocals cols) 1 (by decide) =
         cols.quotient_comp ∧
-      divRemLocalBlock Word (divRemChipLocals cols) 12 (by decide) =
+      divRemLocalBlock Word (divRemChipLocals cols) 5 (by decide) =
         cols.a ∧
-      divRemLocalBlock Word (divRemChipLocals cols) 16 (by decide) =
+      divRemLocalBlock Word (divRemChipLocals cols) 9 (by decide) =
         cols.b ∧
-      divRemLocalBlock Word (divRemChipLocals cols) 20 (by decide) =
+      divRemLocalBlock Word (divRemChipLocals cols) 13 (by decide) =
         cols.c ∧
       divRemLocalBlock Circuits.Types.MulOperation
-          (divRemChipLocals cols) 24 (by decide) =
+          (divRemChipLocals cols) 17 (by decide) =
         cols.c_times_quotient_lower ∧
       divRemLocalBlock Circuits.Types.MulOperation
-          (divRemChipLocals cols) 69 (by decide) =
+          (divRemChipLocals cols) 62 (by decide) =
         cols.c_times_quotient_upper := by
   repeat' apply And.intro
   all_goals
@@ -482,6 +482,7 @@ private theorem divRemHeaderBlocks_roundtrip {F : Type}
     have hSeven := divRemFieldsSeven_size
     have hThree := divRemFieldsThree_size
     have hField := divRemField_size
+    have hOne : size (fields 1) = 1 := rfl
     have hAdd := divRemAddOperation_size
     have hMsb := divRemU16MSBOperation_size
     repeat
@@ -496,22 +497,22 @@ private theorem divRemHeaderBlocks_roundtrip {F : Type}
 set_option linter.unusedSimpArgs false in
 private theorem divRemComparisonBlocks_roundtrip {F : Type}
     (cols : DivRemChip.Columns F) :
-    divRemLocalBlock (fields 7) (divRemChipLocals cols) 114 (by decide) =
+    divRemLocalBlock (fields 7) (divRemChipLocals cols) 107 (by decide) =
         #v[cols.is_overflow, cols.b_neg, cols.b_neg_not_overflow,
           cols.b_not_neg_not_overflow, cols.is_real_not_word,
           cols.rem_neg, cols.c_neg] ∧
-      divRemLocalBlock (fields 8) (divRemChipLocals cols) 121 (by decide) =
+      divRemLocalBlock (fields 8) (divRemChipLocals cols) 114 (by decide) =
         cols.c_times_quotient ∧
-      divRemLocalBlock (fields 8) (divRemChipLocals cols) 129 (by decide) =
+      divRemLocalBlock (fields 8) (divRemChipLocals cols) 122 (by decide) =
         cols.carry ∧
       divRemLocalBlock Circuits.Types.IsEqualWordOperation
-          (divRemChipLocals cols) 137 (by decide) =
+          (divRemChipLocals cols) 130 (by decide) =
         cols.is_overflow_b ∧
       divRemLocalBlock Circuits.Types.IsEqualWordOperation
-          (divRemChipLocals cols) 148 (by decide) =
+          (divRemChipLocals cols) 141 (by decide) =
         cols.is_overflow_c ∧
       divRemLocalBlock Circuits.Types.IsZeroWordOperation
-          (divRemChipLocals cols) 159 (by decide) =
+          (divRemChipLocals cols) 152 (by decide) =
         cols.is_c_0 := by
   repeat' apply And.intro
   all_goals
@@ -543,30 +544,30 @@ private theorem divRemComparisonBlocks_roundtrip {F : Type}
 set_option linter.unusedSimpArgs false in
 private theorem divRemArithmeticBlocks_roundtrip {F : Type}
     (cols : DivRemChip.Columns F) :
-    divRemLocalBlock Word (divRemChipLocals cols) 170 (by decide) =
+    divRemLocalBlock Word (divRemChipLocals cols) 163 (by decide) =
         cols.abs_c ∧
-      divRemLocalBlock Word (divRemChipLocals cols) 174 (by decide) =
+      divRemLocalBlock Word (divRemChipLocals cols) 167 (by decide) =
         cols.abs_remainder ∧
-      divRemLocalBlock Word (divRemChipLocals cols) 178 (by decide) =
+      divRemLocalBlock Word (divRemChipLocals cols) 171 (by decide) =
         cols.remainder_comp ∧
-      divRemLocalBlock Word (divRemChipLocals cols) 182 (by decide) =
+      divRemLocalBlock Word (divRemChipLocals cols) 175 (by decide) =
         cols.max_abs_c_or_1 ∧
       divRemLocalBlock Circuits.Types.AddOperation
-          (divRemChipLocals cols) 186 (by decide) =
+          (divRemChipLocals cols) 179 (by decide) =
         cols.c_neg_operation ∧
       divRemLocalBlock Circuits.Types.AddOperation
-          (divRemChipLocals cols) 190 (by decide) =
+          (divRemChipLocals cols) 183 (by decide) =
         cols.rem_neg_operation ∧
-      divRemLocalBlock (fields 3) (divRemChipLocals cols) 194 (by decide) =
+      divRemLocalBlock (fields 3) (divRemChipLocals cols) 187 (by decide) =
         #v[cols.abs_c_alu_event, cols.abs_rem_alu_event,
           cols.remainder_check_multiplicity] ∧
-      divRemLocalBlock (fields 2) (divRemChipLocals cols) 197 (by decide) =
+      divRemLocalBlock (fields 2) (divRemChipLocals cols) 190 (by decide) =
         cols.remainder_lt_operation.comparison_limbs ∧
-      divRemLocalBlock (fields 4) (divRemChipLocals cols) 199 (by decide) =
+      divRemLocalBlock (fields 4) (divRemChipLocals cols) 192 (by decide) =
         cols.remainder_lt_operation.u16_flags ∧
-      divRemLocalBlock field (divRemChipLocals cols) 203 (by decide) =
+      divRemLocalBlock field (divRemChipLocals cols) 196 (by decide) =
         cols.remainder_lt_operation.not_eq_inv ∧
-      divRemLocalBlock field (divRemChipLocals cols) 204 (by decide) =
+      divRemLocalBlock field (divRemChipLocals cols) 197 (by decide) =
         cols.remainder_lt_operation.u16_compare_operation.bit := by
   repeat' apply And.intro
   all_goals
@@ -604,21 +605,21 @@ private theorem divRemArithmeticBlocks_roundtrip {F : Type}
 set_option linter.unusedSimpArgs false in
 private theorem divRemResultBlocks_roundtrip {F : Type}
     (cols : DivRemChip.Columns F) :
-    divRemLocalBlock Word (divRemChipLocals cols) 205 (by decide) =
+    divRemLocalBlock Word (divRemChipLocals cols) 198 (by decide) =
         cols.remainder ∧
-      divRemLocalBlock Word (divRemChipLocals cols) 209 (by decide) =
+      divRemLocalBlock Word (divRemChipLocals cols) 202 (by decide) =
         cols.quotient ∧
       divRemLocalBlock Circuits.Types.U16MSBOperation
-          (divRemChipLocals cols) 213 (by decide) =
+          (divRemChipLocals cols) 206 (by decide) =
         cols.b_msb ∧
       divRemLocalBlock Circuits.Types.U16MSBOperation
-          (divRemChipLocals cols) 214 (by decide) =
+          (divRemChipLocals cols) 207 (by decide) =
         cols.c_msb ∧
       divRemLocalBlock Circuits.Types.U16MSBOperation
-          (divRemChipLocals cols) 215 (by decide) =
+          (divRemChipLocals cols) 208 (by decide) =
         cols.rem_msb ∧
       divRemLocalBlock Circuits.Types.U16MSBOperation
-          (divRemChipLocals cols) 216 (by decide) =
+          (divRemChipLocals cols) 209 (by decide) =
         cols.quot_msb := by
   repeat' apply And.intro
   all_goals
@@ -676,9 +677,9 @@ private theorem divRemColumnsOfInput_roundtrip {F : Type}
 omit [Fact (2 ^ 24 < p)] in
 private theorem eval_divRemLocalBlock
     (input : DivRemChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p))
+    (locals : Vector (ZMod p) 210) (data : ProverData (ZMod p))
     (M : TypeMap) [ProvableType M] (offset : ℕ)
-    (hbound : offset + size M ≤ 217) :
+    (hbound : offset + size M ≤ 210) :
     Eval.eval
         (Environment.fromArray (inputFirstRow input locals) data)
         (varFromOffset M (size DivRemChip.Inputs + offset) :
@@ -696,13 +697,13 @@ private theorem eval_divRemLocalBlock
 
 private theorem eval_divRemIsC0OfLocals
     (input : DivRemChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p))
-    (hbound : 159 + size Circuits.Types.IsZeroWordOperation ≤ 217) :
+    (locals : Vector (ZMod p) 210) (data : ProverData (ZMod p))
+    (hbound : 152 + size Circuits.Types.IsZeroWordOperation ≤ 210) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (DivRemChip.populatedRowAt
           (varFromOffset (F := ZMod p) DivRemChip.Inputs 0)
           (size DivRemChip.Inputs)).is_c_0 =
-      divRemLocalBlock Circuits.Types.IsZeroWordOperation locals 159 hbound := by
+      divRemLocalBlock Circuits.Types.IsZeroWordOperation locals 152 hbound := by
   rw [DivRemChip.populatedRowAt_isC0_eq,
     ProvableType.eval_fromElements]
   unfold divRemLocalBlock
@@ -712,33 +713,33 @@ private theorem eval_divRemIsC0OfLocals
         (Expression.eval
           (Environment.fromArray (inputFirstRow input locals) data))
         (Vector.mapRange 11 fun i =>
-          var { index := size DivRemChip.Inputs + 8 + 4 + 4 + 4 + 4 +
+          var { index := size DivRemChip.Inputs + 1 + 4 + 4 + 4 + 4 +
             45 + 45 + 7 + 8 + 8 + 11 + 11 + i }) =
       Vector.ofFn (fun i : Fin 11 =>
-        locals[159 + i.val]'(by
+        locals[152 + i.val]'(by
           have hsize := divRemIsZeroWordOperation_size
           omega))
   ext i hi
   rw [Vector.getElem_map, Vector.getElem_mapRange, Vector.getElem_ofFn]
-  have hlocal := eval_local_inputFirstRow input locals data (159 + i) (by
+  have hlocal := eval_local_inputFirstRow input locals data (152 + i) (by
     have hsize := divRemIsZeroWordOperation_size
     omega)
   have hindex :
-      size DivRemChip.Inputs + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 +
+      size DivRemChip.Inputs + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 +
           8 + 8 + 11 + 11 + i =
-        size DivRemChip.Inputs + (159 + i) := by omega
+        size DivRemChip.Inputs + (152 + i) := by omega
   rw [hindex]
   exact hlocal
 
 private theorem eval_divRemIsOverflowBOfLocals
     (input : DivRemChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p))
-    (hbound : 137 + size Circuits.Types.IsEqualWordOperation ≤ 217) :
+    (locals : Vector (ZMod p) 210) (data : ProverData (ZMod p))
+    (hbound : 130 + size Circuits.Types.IsEqualWordOperation ≤ 210) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (DivRemChip.populatedRowAt
           (varFromOffset (F := ZMod p) DivRemChip.Inputs 0)
           (size DivRemChip.Inputs)).is_overflow_b =
-      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 137 hbound := by
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 130 hbound := by
   rw [DivRemChip.populatedRowAt_isOverflowB_eq,
     ProvableType.eval_fromElements]
   unfold divRemLocalBlock
@@ -748,33 +749,33 @@ private theorem eval_divRemIsOverflowBOfLocals
         (Expression.eval
           (Environment.fromArray (inputFirstRow input locals) data))
         (Vector.mapRange 11 fun i =>
-          var { index := size DivRemChip.Inputs + 8 + 4 + 4 + 4 + 4 +
+          var { index := size DivRemChip.Inputs + 1 + 4 + 4 + 4 + 4 +
             45 + 45 + 7 + 8 + 8 + i }) =
       Vector.ofFn (fun i : Fin 11 =>
-        locals[137 + i.val]'(by
+        locals[130 + i.val]'(by
           have hsize := divRemIsEqualWordOperation_size
           omega))
   ext i hi
   rw [Vector.getElem_map, Vector.getElem_mapRange, Vector.getElem_ofFn]
-  have hlocal := eval_local_inputFirstRow input locals data (137 + i) (by
+  have hlocal := eval_local_inputFirstRow input locals data (130 + i) (by
     have hsize := divRemIsEqualWordOperation_size
     omega)
   have hindex :
-      size DivRemChip.Inputs + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 +
+      size DivRemChip.Inputs + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 +
           8 + 8 + i =
-        size DivRemChip.Inputs + (137 + i) := by omega
+        size DivRemChip.Inputs + (130 + i) := by omega
   rw [hindex]
   exact hlocal
 
 private theorem eval_divRemIsOverflowCOfLocals
     (input : DivRemChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p))
-    (hbound : 148 + size Circuits.Types.IsEqualWordOperation ≤ 217) :
+    (locals : Vector (ZMod p) 210) (data : ProverData (ZMod p))
+    (hbound : 141 + size Circuits.Types.IsEqualWordOperation ≤ 210) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (DivRemChip.populatedRowAt
           (varFromOffset (F := ZMod p) DivRemChip.Inputs 0)
           (size DivRemChip.Inputs)).is_overflow_c =
-      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 148 hbound := by
+      divRemLocalBlock Circuits.Types.IsEqualWordOperation locals 141 hbound := by
   rw [DivRemChip.populatedRowAt_isOverflowC_eq,
     ProvableType.eval_fromElements]
   unfold divRemLocalBlock
@@ -784,29 +785,29 @@ private theorem eval_divRemIsOverflowCOfLocals
         (Expression.eval
           (Environment.fromArray (inputFirstRow input locals) data))
         (Vector.mapRange 11 fun i =>
-          var { index := size DivRemChip.Inputs + 8 + 4 + 4 + 4 + 4 +
+          var { index := size DivRemChip.Inputs + 1 + 4 + 4 + 4 + 4 +
             45 + 45 + 7 + 8 + 8 + 11 + i }) =
       Vector.ofFn (fun i : Fin 11 =>
-        locals[148 + i.val]'(by
+        locals[141 + i.val]'(by
           have hsize := divRemIsEqualWordOperation_size
           omega))
   ext i hi
   rw [Vector.getElem_map, Vector.getElem_mapRange, Vector.getElem_ofFn]
-  have hlocal := eval_local_inputFirstRow input locals data (148 + i) (by
+  have hlocal := eval_local_inputFirstRow input locals data (141 + i) (by
     have hsize := divRemIsEqualWordOperation_size
     omega)
   have hindex :
-      size DivRemChip.Inputs + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 +
+      size DivRemChip.Inputs + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 +
           8 + 8 + 11 + i =
-        size DivRemChip.Inputs + (148 + i) := by omega
+        size DivRemChip.Inputs + (141 + i) := by omega
   rw [hindex]
   exact hlocal
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem eval_divRemLocalFieldsGet
     (input : DivRemChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p))
-    (n offset i : ℕ) (hbound : offset + n ≤ 217) (hi : i < n) :
+    (locals : Vector (ZMod p) 210) (data : ProverData (ZMod p))
+    (n offset i : ℕ) (hbound : offset + n ≤ 210) (hi : i < n) :
     Expression.eval
         (Environment.fromArray (inputFirstRow input locals) data)
         (var { index := size DivRemChip.Inputs + offset + i }) =
@@ -840,17 +841,17 @@ private theorem eval_divRemU16Compare {F : Type} [FiniteField F]
 
 private theorem eval_divRemLtOfLocals
     (input : DivRemChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 217) (data : ProverData (ZMod p)) :
+    (locals : Vector (ZMod p) 210) (data : ProverData (ZMod p)) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (DivRemChip.populatedRowAt
           (varFromOffset (F := ZMod p) DivRemChip.Inputs 0)
           (size DivRemChip.Inputs)).remainder_lt_operation =
       ({ u16_compare_operation :=
-           ⟨divRemLocalBlock field locals 204 (by decide)⟩
-         u16_flags := divRemLocalBlock (fields 4) locals 199 (by decide)
-         not_eq_inv := divRemLocalBlock field locals 203 (by decide)
+           ⟨divRemLocalBlock field locals 197 (by decide)⟩
+         u16_flags := divRemLocalBlock (fields 4) locals 192 (by decide)
+         not_eq_inv := divRemLocalBlock field locals 196 (by decide)
          comparison_limbs :=
-           divRemLocalBlock (fields 2) locals 197 (by decide) } :
+           divRemLocalBlock (fields 2) locals 190 (by decide) } :
         Circuits.Types.LtOperationUnsigned (ZMod p)) := by
   rw [eval_divRemLtUnsigned,
     Circuits.Types.LtOperationUnsigned.mk.injEq]
@@ -858,15 +859,15 @@ private theorem eval_divRemLtOfLocals
   · rw [eval_divRemU16Compare,
       Circuits.Types.U16CompareOperation.mk.injEq]
     rw [DivRemChip.populatedRowAt_ltBit_eq]
-    exact eval_divRemLocalBlock input locals data field 204 (by decide)
+    exact eval_divRemLocalBlock input locals data field 197 (by decide)
   constructor
   · rw [DivRemChip.populatedRowAt_ltU16Flags_eq]
-    exact eval_divRemLocalBlock input locals data (fields 4) 199 (by decide)
+    exact eval_divRemLocalBlock input locals data (fields 4) 192 (by decide)
   constructor
   · rw [DivRemChip.populatedRowAt_ltNotEqInv_eq]
-    exact eval_divRemLocalBlock input locals data field 203 (by decide)
+    exact eval_divRemLocalBlock input locals data field 196 (by decide)
   · rw [DivRemChip.populatedRowAt_ltComparisonLimbs_eq]
-    exact eval_divRemLocalBlock input locals data (fields 2) 197 (by decide)
+    exact eval_divRemLocalBlock input locals data (fields 2) 190 (by decide)
 
 theorem eval_divRemChipDirectOutput
     (cols : DivRemChip.Columns (ZMod p))
@@ -906,56 +907,56 @@ theorem eval_divRemChipDirectOutput
     simpa only [input, divRemChipInput] using hinputEval.2.1
   constructor
   · rw [DivRemChip.populatedRowAt_adapter_eq]
-    simpa only [input, divRemChipInput] using hinputEval.2.2
+    simpa only [input, divRemChipInput] using hinputEval.2.2.1
   constructor
   · rw [DivRemChip.populatedRowAt_a_eq]
-    exact (eval_divRemLocalBlock input locals data Word 12 (by decide)).trans ha
+    exact (eval_divRemLocalBlock input locals data Word 5 (by decide)).trans ha
   constructor
   · rw [DivRemChip.populatedRowAt_b_eq]
-    exact (eval_divRemLocalBlock input locals data Word 16 (by decide)).trans hb
+    exact (eval_divRemLocalBlock input locals data Word 9 (by decide)).trans hb
   constructor
   · rw [DivRemChip.populatedRowAt_c_eq]
-    exact (eval_divRemLocalBlock input locals data Word 20 (by decide)).trans hc
+    exact (eval_divRemLocalBlock input locals data Word 13 (by decide)).trans hc
   constructor
   · rw [DivRemChip.populatedRowAt_quotient_eq]
-    exact (eval_divRemLocalBlock input locals data Word 209 (by decide)).trans hquot
+    exact (eval_divRemLocalBlock input locals data Word 202 (by decide)).trans hquot
   constructor
   · rw [DivRemChip.populatedRowAt_quotientComp_eq]
-    exact (eval_divRemLocalBlock input locals data Word 8 (by decide)).trans hqc
+    exact (eval_divRemLocalBlock input locals data Word 1 (by decide)).trans hqc
   constructor
   · rw [DivRemChip.populatedRowAt_remainderComp_eq]
-    exact (eval_divRemLocalBlock input locals data Word 178 (by decide)).trans hremc
+    exact (eval_divRemLocalBlock input locals data Word 171 (by decide)).trans hremc
   constructor
   · rw [DivRemChip.populatedRowAt_remainder_eq]
-    exact (eval_divRemLocalBlock input locals data Word 205 (by decide)).trans hrem
+    exact (eval_divRemLocalBlock input locals data Word 198 (by decide)).trans hrem
   constructor
   · rw [DivRemChip.populatedRowAt_absRemainder_eq]
-    exact (eval_divRemLocalBlock input locals data Word 174 (by decide)).trans habsr
+    exact (eval_divRemLocalBlock input locals data Word 167 (by decide)).trans habsr
   constructor
   · rw [DivRemChip.populatedRowAt_absC_eq]
-    exact (eval_divRemLocalBlock input locals data Word 170 (by decide)).trans habsc
+    exact (eval_divRemLocalBlock input locals data Word 163 (by decide)).trans habsc
   constructor
   · rw [DivRemChip.populatedRowAt_maxAbsCOr1_eq]
-    exact (eval_divRemLocalBlock input locals data Word 182 (by decide)).trans hmax
+    exact (eval_divRemLocalBlock input locals data Word 175 (by decide)).trans hmax
   constructor
   · rw [DivRemChip.populatedRowAt_ctq_eq]
-    exact (eval_divRemLocalBlock input locals data (fields 8) 121 (by decide)).trans hctq
+    exact (eval_divRemLocalBlock input locals data (fields 8) 114 (by decide)).trans hctq
   constructor
   · rw [DivRemChip.populatedRowAt_mulLower_eq]
     exact (eval_divRemLocalBlock input locals data
-      Circuits.Types.MulOperation 24 (by decide)).trans hlo
+      Circuits.Types.MulOperation 17 (by decide)).trans hlo
   constructor
   · rw [DivRemChip.populatedRowAt_mulUpper_eq]
     exact (eval_divRemLocalBlock input locals data
-      Circuits.Types.MulOperation 69 (by decide)).trans hup
+      Circuits.Types.MulOperation 62 (by decide)).trans hup
   constructor
   · rw [DivRemChip.populatedRowAt_cNegOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Circuits.Types.AddOperation 186 (by decide)).trans hcneg
+      Circuits.Types.AddOperation 179 (by decide)).trans hcneg
   constructor
   · rw [DivRemChip.populatedRowAt_remNegOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Circuits.Types.AddOperation 190 (by decide)).trans hrneg
+      Circuits.Types.AddOperation 183 (by decide)).trans hrneg
   constructor
   · refine (eval_divRemLtOfLocals input locals data).trans ?_
     rw [Circuits.Types.LtOperationUnsigned.mk.injEq,
@@ -964,142 +965,127 @@ theorem eval_divRemChipDirectOutput
   constructor
   · rw [DivRemChip.populatedRowAt_carry_eq]
     exact (eval_divRemLocalBlock input locals data
-      (fields 8) 129 (by decide)).trans hcarry
+      (fields 8) 122 (by decide)).trans hcarry
   constructor
-  · let h159 : 159 + size Circuits.Types.IsZeroWordOperation ≤ 217 := by decide
+  · let h159 : 152 + size Circuits.Types.IsZeroWordOperation ≤ 210 := by decide
     have hisc0' := hisc0
     change divRemLocalBlock Circuits.Types.IsZeroWordOperation
-      locals 159 h159 = cols.is_c_0 at hisc0'
+      locals 152 h159 = cols.is_c_0 at hisc0'
     exact (eval_divRemIsC0OfLocals input locals data h159).trans hisc0'
   constructor
-  · rw [DivRemChip.populatedRowAt_isDiv_eq,
-      CircuitType.eval_expr]
+  · rw [DivRemChip.populatedRowAt_isDiv_eq, CircuitType.eval_expr,
+      ProvableType.getElem_eval_fields]
+    exact congrArg (fun value => value[0]) hinputEval.2.2.2
+  constructor
+  · rw [DivRemChip.populatedRowAt_isDivu_eq, CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      8 0 0 (by decide) (by decide)).trans
+      1 0 0 (by decide) (by decide)).trans
         (congrArg (fun value => value[0]) hflags)
   constructor
-  · rw [DivRemChip.populatedRowAt_isDivu_eq,
-      CircuitType.eval_expr]
-    simpa using (eval_divRemLocalFieldsGet input locals data
-      8 0 1 (by decide) (by decide)).trans
-        (congrArg (fun value => value[1]) hflags)
+  · rw [DivRemChip.populatedRowAt_isRem_eq, CircuitType.eval_expr,
+      ProvableType.getElem_eval_fields]
+    exact congrArg (fun value => value[1]) hinputEval.2.2.2
   constructor
-  · rw [DivRemChip.populatedRowAt_isRem_eq,
-      CircuitType.eval_expr]
-    simpa using (eval_divRemLocalFieldsGet input locals data
-      8 0 2 (by decide) (by decide)).trans
-        (congrArg (fun value => value[2]) hflags)
+  · rw [DivRemChip.populatedRowAt_isRemu_eq, CircuitType.eval_expr,
+      ProvableType.getElem_eval_fields]
+    exact congrArg (fun value => value[2]) hinputEval.2.2.2
   constructor
-  · rw [DivRemChip.populatedRowAt_isRemu_eq,
-      CircuitType.eval_expr]
-    simpa using (eval_divRemLocalFieldsGet input locals data
-      8 0 3 (by decide) (by decide)).trans
-        (congrArg (fun value => value[3]) hflags)
+  · rw [DivRemChip.populatedRowAt_isDivw_eq, CircuitType.eval_expr,
+      ProvableType.getElem_eval_fields]
+    exact congrArg (fun value => value[3]) hinputEval.2.2.2
   constructor
-  · rw [DivRemChip.populatedRowAt_isDivw_eq,
-      CircuitType.eval_expr]
-    simpa using (eval_divRemLocalFieldsGet input locals data
-      8 0 4 (by decide) (by decide)).trans
-        (congrArg (fun value => value[4]) hflags)
+  · rw [DivRemChip.populatedRowAt_isRemw_eq, CircuitType.eval_expr,
+      ProvableType.getElem_eval_fields]
+    exact congrArg (fun value => value[4]) hinputEval.2.2.2
   constructor
-  · rw [DivRemChip.populatedRowAt_isRemw_eq,
-      CircuitType.eval_expr]
-    simpa using (eval_divRemLocalFieldsGet input locals data
-      8 0 5 (by decide) (by decide)).trans
-        (congrArg (fun value => value[5]) hflags)
+  · rw [DivRemChip.populatedRowAt_isDivuw_eq, CircuitType.eval_expr,
+      ProvableType.getElem_eval_fields]
+    exact congrArg (fun value => value[5]) hinputEval.2.2.2
   constructor
-  · rw [DivRemChip.populatedRowAt_isDivuw_eq,
-      CircuitType.eval_expr]
-    simpa using (eval_divRemLocalFieldsGet input locals data
-      8 0 6 (by decide) (by decide)).trans
-        (congrArg (fun value => value[6]) hflags)
-  constructor
-  · rw [DivRemChip.populatedRowAt_isRemuw_eq,
-      CircuitType.eval_expr]
-    simpa using (eval_divRemLocalFieldsGet input locals data
-      8 0 7 (by decide) (by decide)).trans
-        (congrArg (fun value => value[7]) hflags)
+  · rw [DivRemChip.populatedRowAt_isRemuw_eq, CircuitType.eval_expr,
+      ProvableType.getElem_eval_fields]
+    exact congrArg (fun value => value[6]) hinputEval.2.2.2
   constructor
   · rw [DivRemChip.populatedRowAt_isOverflow_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      7 114 0 (by decide) (by decide)).trans
+      7 107 0 (by decide) (by decide)).trans
         (congrArg (fun value => value[0]) hscalars)
   constructor
-  · let h137 : 137 + size Circuits.Types.IsEqualWordOperation ≤ 217 := by decide
+  · let h137 : 130 + size Circuits.Types.IsEqualWordOperation ≤ 210 := by decide
     have hovb' := hovb
     change divRemLocalBlock Circuits.Types.IsEqualWordOperation
-      locals 137 h137 = cols.is_overflow_b at hovb'
+      locals 130 h137 = cols.is_overflow_b at hovb'
     exact (eval_divRemIsOverflowBOfLocals input locals data h137).trans hovb'
   constructor
-  · let h148 : 148 + size Circuits.Types.IsEqualWordOperation ≤ 217 := by decide
+  · let h148 : 141 + size Circuits.Types.IsEqualWordOperation ≤ 210 := by decide
     have hovc' := hovc
     change divRemLocalBlock Circuits.Types.IsEqualWordOperation
-      locals 148 h148 = cols.is_overflow_c at hovc'
+      locals 141 h148 = cols.is_overflow_c at hovc'
     exact (eval_divRemIsOverflowCOfLocals input locals data h148).trans hovc'
   constructor
   · rw [DivRemChip.populatedRowAt_bMsbOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Circuits.Types.U16MSBOperation 213 (by decide)).trans hbmsb
+      Circuits.Types.U16MSBOperation 206 (by decide)).trans hbmsb
   constructor
   · rw [DivRemChip.populatedRowAt_remMsbOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Circuits.Types.U16MSBOperation 215 (by decide)).trans hrmsb
+      Circuits.Types.U16MSBOperation 208 (by decide)).trans hrmsb
   constructor
   · rw [DivRemChip.populatedRowAt_cMsbOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Circuits.Types.U16MSBOperation 214 (by decide)).trans hcmsb
+      Circuits.Types.U16MSBOperation 207 (by decide)).trans hcmsb
   constructor
   · rw [DivRemChip.populatedRowAt_quotMsbOperation_eq]
     exact (eval_divRemLocalBlock input locals data
-      Circuits.Types.U16MSBOperation 216 (by decide)).trans hqmsb
+      Circuits.Types.U16MSBOperation 209 (by decide)).trans hqmsb
   constructor
   · rw [DivRemChip.populatedRowAt_bNeg_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      7 114 1 (by decide) (by decide)).trans
+      7 107 1 (by decide) (by decide)).trans
         (congrArg (fun value => value[1]) hscalars)
   constructor
   · rw [DivRemChip.populatedRowAt_bNegNotOverflow_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      7 114 2 (by decide) (by decide)).trans
+      7 107 2 (by decide) (by decide)).trans
         (congrArg (fun value => value[2]) hscalars)
   constructor
   · rw [DivRemChip.populatedRowAt_bNotNegNotOverflow_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      7 114 3 (by decide) (by decide)).trans
+      7 107 3 (by decide) (by decide)).trans
         (congrArg (fun value => value[3]) hscalars)
   constructor
   · rw [DivRemChip.populatedRowAt_isRealNotWord_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      7 114 4 (by decide) (by decide)).trans
+      7 107 4 (by decide) (by decide)).trans
         (congrArg (fun value => value[4]) hscalars)
   constructor
   · rw [DivRemChip.populatedRowAt_remNeg_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      7 114 5 (by decide) (by decide)).trans
+      7 107 5 (by decide) (by decide)).trans
         (congrArg (fun value => value[5]) hscalars)
   constructor
   · rw [DivRemChip.populatedRowAt_cNeg_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      7 114 6 (by decide) (by decide)).trans
+      7 107 6 (by decide) (by decide)).trans
         (congrArg (fun value => value[6]) hscalars)
   constructor
   · rw [DivRemChip.populatedRowAt_absCEvent_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      3 194 0 (by decide) (by decide)).trans
+      3 187 0 (by decide) (by decide)).trans
         (congrArg (fun value => value[0]) hmisc)
   constructor
   · rw [DivRemChip.populatedRowAt_absRemEvent_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      3 194 1 (by decide) (by decide)).trans
+      3 187 1 (by decide) (by decide)).trans
         (congrArg (fun value => value[1]) hmisc)
   constructor
   · rw [DivRemChip.populatedRowAt_isReal_eq]
@@ -1107,7 +1093,7 @@ theorem eval_divRemChipDirectOutput
   · rw [DivRemChip.populatedRowAt_remainderCheckMultiplicity_eq,
       CircuitType.eval_expr]
     simpa using (eval_divRemLocalFieldsGet input locals data
-      3 194 2 (by decide) (by decide)).trans
+      3 187 2 (by decide) (by decide)).trans
         (congrArg (fun value => value[2]) hmisc)
 
 def divRemChipRowCodec :

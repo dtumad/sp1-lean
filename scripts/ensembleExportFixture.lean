@@ -19,7 +19,8 @@ private def exportEnsembleFixture : IO Unit := do
   IO.FS.writeFile (out / "fixed_membership.rs") exported
   for (name, result) in [
       ("add_instruction.rs", SP1CleanTest.Core.InstructionExport.addRust),
-      ("load_byte_instruction.rs", SP1CleanTest.Core.InstructionExport.loadByteRust)] do
+      ("load_byte_instruction.rs", SP1CleanTest.Core.InstructionExport.loadByteRust),
+      ("div_rem_instruction.rs", SP1CleanTest.Core.InstructionExport.divRemRust)] do
     let instruction ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)

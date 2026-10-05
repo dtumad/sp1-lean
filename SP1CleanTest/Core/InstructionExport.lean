@@ -1,6 +1,7 @@
 import Clean.Air.Extraction.Rust
 import SP1Clean.Proofs.Chips.AddChip.Formal
 import SP1Clean.Proofs.Chips.LoadByteChip.Formal
+import SP1Clean.Proofs.Chips.DivRemChip.Complete
 import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
@@ -47,5 +48,13 @@ def addRust : Except String String :=
 def loadByteRust : Except String String :=
   Extraction.Rust.ensembleToRust "LoadByteInstruction"
     (ensemble { circuit := LoadByteChip.circuit }) (config LoadByteChip.Inputs)
+
+/-- Export all eight division/remainder variants using explicit selectors and DIVU padding. -/
+def divRemRust : Except String String :=
+  Extraction.Rust.ensembleToRust "DivRemInstruction"
+    (ensemble { circuit := DivRemChip.circuit })
+    ({ config DivRemChip.Inputs with
+      padding := [{ input := (toElements (TraceGen.divRemPaddingInputs (p := SP1Prime))).toArray }] } :
+      WitnessGeneration.Config Fp DivRemChip.Inputs)
 
 end SP1CleanTest.Core.InstructionExport

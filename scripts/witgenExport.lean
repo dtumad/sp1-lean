@@ -459,10 +459,6 @@ def hintFor (chip : String) (ev : DumpEvent) : ProverHint Fp := fun key n =>
   | "Mul", "mul_flags", 5 =>
     #[#v[if op = 11 then 1 else 0, if op = 12 then 1 else 0, if op = 13 then 1 else 0,
          if op = 14 then 1 else 0, if op = 24 then 1 else 0]]
-  | "DivRem", "div_rem_flags", 7 =>
-    #[#v[if op = 15 then 1 else 0, if op = 17 then 1 else 0,
-         if op = 18 then 1 else 0, if op = 25 then 1 else 0, if op = 27 then 1 else 0,
-         if op = 26 then 1 else 0, if op = 28 then 1 else 0]]
   | "Bitwise", "bitwise_flags", 3 =>
     #[#v[if op = 3 then 1 else 0, if op = 4 then 1 else 0, if op = 5 then 1 else 0]]
   | "Lt", "lt_flags", 2 => #[#v[if op = 9 then 1 else 0, if op = 10 then 1 else 0]]

@@ -678,30 +678,16 @@ theorem DivRemChip.programEmissionShape :
   apply circuitProgramEmissionShape_of_contract
   unfold CircuitProgramInteractionContract
   dsimp only
-  refine ⟨fun input _ => input.is_real, fun input offset =>
-    ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2],
-      var { index := offset + 1 } * 16 + var { index := offset + 3 } * 18 +
-        var { index := offset } * 15 + var { index := offset + 2 } * 17 +
-        var { index := offset + 4 } * 25 + var { index := offset + 5 } * 27 +
-        var { index := offset + 6 } * 26 + var { index := offset + 7 } * 28,
-      input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0],
-      #v[input.adapter.op_c, 0, 0, 0], input.adapter.op_a_0, 0, 0⟩,
-    ?_, ?_, ?_⟩
+  refine ⟨fun input _ => input.is_real, DivRemChip.exposedProgramMessage, ?_, ?_, ?_⟩
   · intro input offset
-    change circuitInteractionsWith programChannel.toRaw (DivRemChip.main input) offset = _
-    simp only [circuitInteractionsWith, DivRemChip.interactionsWith_program_eq,
-      DivRemChip.exposedProgramMessage,
-      DivRemChip.populatedRowAt_isDiv_eq, DivRemChip.populatedRowAt_isDivu_eq,
-      DivRemChip.populatedRowAt_isRem_eq, DivRemChip.populatedRowAt_isRemu_eq,
-      DivRemChip.populatedRowAt_isDivw_eq, DivRemChip.populatedRowAt_isRemw_eq,
-      DivRemChip.populatedRowAt_isDivuw_eq, DivRemChip.populatedRowAt_isRemuw_eq]
+    exact DivRemChip.interactionsWith_program_eq input offset
   · intro env _
-    -- Reduce the view's projections before anything touches the 217-cell output.
+    -- Reduce the view's projections before anything touches the 210-cell output.
     simp only [DivRemChip.rowView]
     simp [circuit_norm]
   · intro env
     simp only [DivRemChip.rowView]
-    simp [DivRemChip.circuit, ↓ DivRemChip.output_eq_populatedRowAt,
+    simp [DivRemChip.circuit, DivRemChip.exposedProgramMessage, ↓ DivRemChip.output_eq_populatedRowAt,
       DivRemChip.populatedRowAt_state_eq, DivRemChip.populatedRowAt_adapter_eq,
       DivRemChip.populatedRowAt_isDiv_eq, DivRemChip.populatedRowAt_isDivu_eq,
       DivRemChip.populatedRowAt_isRem_eq, DivRemChip.populatedRowAt_isRemu_eq,

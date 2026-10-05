@@ -49,10 +49,10 @@ schema. `witgen/<Chip>.manifest.json` fills the gap:
   "witgenFile": "DivRem.witgen.json",
   "name": "DivRem",
   "lean": "SP1Clean.DivRemChip.circuit",
-  "localLength": 217,
-  "inputWidth": 29,
+  "localLength": 210,
+  "inputWidth": 36,
   "operationCounts": {"witness": 30, "assert": 321, "lookup": 0, "interact": 135},
-  "hints": [{"table": "div_rem_flags", "width": 7, "rowsRead": [0], "colsRead": [0,1,2,3,4,5,6]}],
+  "hints": [],
   "hintPolicy": "a missing table, wrong width, or out-of-range row reads as the all-zero vector; padding rows rely on this default",
   "data": [],
   "field": {"name": "KoalaBear", "modulus": 2130706433}
@@ -215,15 +215,15 @@ interpreters:
 ```json
 {
   "wireVersion": 1, "chip": "DivRem", "field": {...},
-  "inputWidth": 29, "localLength": 217,
+  "inputWidth": 36, "localLength": 210,
   "provenance": {"events": "...names the SP1 dump and the generation-time gate...",
                  "synthetic": "..."},
   "rows": [
-    {"kind": "event", "anchored": true, "inputs": [...29 values...],
-     "hints": {"div_rem_flags": {"width": 7, "rows": [[1,0,0,0,0,0,0]]}},
-     "expectedWitness": [...217 values...], "expectedRow": [...246 values...]},
+    {"kind": "event", "anchored": true, "inputs": [...36 values...],
+     "hints": {},
+     "expectedWitness": [...210 values...], "expectedRow": [...246 values...]},
     {"kind": "padding", "anchored": true, "inputs": [...],
-     "hints": {"div_rem_flags": {"width": 7, "rows": []}},
+     "hints": {},
      "expectedWitness": [...], "expectedRow": [...]},
     {"kind": "synthetic", "anchored": false, "seed": 1010, "inputs": [...],
      "hints": {...}, "expectedWitness": [...]}
@@ -299,11 +299,10 @@ witnesses with Lean and exercises Clean's proof backend; see [export](export.md)
 
 ## SP1-specific facts a consumer may rely on
 
-- All 25 chips use `hintGet` only — `data` schemas are empty (`dataGet` support in an
-  interpreter is still recommended; the node is part of the format).
-- Every hint read is at constant row `0`; the eight hint tables and widths are in the
-  manifests (`lt_flags` 2, `bitwise_flags` 3, `branch_flags` 6, `branch_branching` 1,
-  `mul_flags` 5, `shift_left_flags` 2, `shift_right_flags` 4, `div_rem_flags` 7).
-- The zero-default of a missing hint table **is** the padding-row semantics: chips
-  derive their SP1 padding template from the absent key (DivRem's `is_divu = 1`
-  template is the worked example).
+- The 25 instruction chips have empty `data` schemas. Some use `hintGet`; DivRem
+  supplies its seven variant selectors in the input row and reads no external hints.
+- Every hint read is at constant row `0`. The seven remaining hint tables and widths are
+  in the manifests (`lt_flags` 2, `bitwise_flags` 3, `branch_flags` 6, `branch_branching` 1,
+  `mul_flags` 5, `shift_left_flags` 2, `shift_right_flags` 4).
+- Missing hints read as zero vectors. DivRem's DIVU padding instead uses seven zero
+  selector inputs and a divisor read of one; its derived DIVU witness is one.

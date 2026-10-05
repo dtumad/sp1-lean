@@ -24,6 +24,11 @@ interpreter or scheduler.
   local constraint satisfaction and complete interaction multisets with SP1 v6.8.1's supervisor
   AIR, including padding and column mutations. This runs with and without Cargo's `mprotect`
   feature; it does not cover user-mode or mprotect semantics.
+- DivRem also exports with seven explicit opcode selectors and derived DIVU. Its Rust pilot
+  currently detects a multiplication-message mismatch: the native gadget substitutes a product
+  limb for SP1's caller-supplied result limb, changing a disabled range-check occurrence.
+  The multiplication boundary must preserve that input before claiming complete interaction
+  agreement; zero-multiplicity occurrences remain part of the comparison (#28/#29).
 - Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They are
   transitional evidence until instruction coverage moves to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,

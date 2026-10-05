@@ -488,26 +488,16 @@ def divRemDivuEvent : AluEventRec :=
   { clk := 9, pc := 4096, a := 14, b := 100, c := 7, opA := 7, opB := 5, opC := 6,
     tsA := 13, prevTsA := 0, prevA := 0, tsB := 12, prevTsB := 0, tsC := 11, prevTsC := 0 }
 
-/-- The honest `"div_rem_flags"` one-hot prover hint, from the executor opcode.
-
-Seven slots, order `[div, rem, remu, divw, remw, divuw, remuw]`: `is_divu` is *derived* by
-`Populate.hintFlags` as `1 - Σ(these)`, so a missing key reads as SP1's `is_divu = 1` padding
-template with no special case. -/
-def divRemFlagsHint (op : ℕ) : ProverHint (ZMod SP1Prime) := fun key n =>
-  match key, n with
-  | "div_rem_flags", 7 =>
-    #[#v[if op = 15 then 1 else 0, if op = 17 then 1 else 0,
-         if op = 18 then 1 else 0, if op = 25 then 1 else 0, if op = 27 then 1 else 0,
-         if op = 26 then 1 else 0, if op = 28 then 1 else 0]]
-  | _, _ => #[]
+/-- DIVU is selected by seven zero selector inputs. -/
+def divRemDivuInputs : List (ZMod SP1Prime) :=
+  rTypeEventInputs divRemDivuEvent ++ [0, 0, 0, 0, 0, 0, 0]
 
 /-- **`DivRemChip` is satisfiable on a real DIVU row**: the full constraint system holds on
 `divu x7, x5, x6` with `x5 = 100`, `x6 = 7` (quotient `14`, remainder `2`). -/
 theorem divrem_divu_real_row_satisfiable :
     (chipOperations DivRemChip.Inputs DivRemChip.main
-      (rTypeEventInputs divRemDivuEvent)).ConstraintsHold
-      (chipEnvironment DivRemChip.Inputs DivRemChip.main (rTypeEventInputs divRemDivuEvent)
-        (divRemFlagsHint 16)) :=
+      divRemDivuInputs).ConstraintsHold
+      (chipEnvironment DivRemChip.Inputs DivRemChip.main divRemDivuInputs) :=
   constraintsHold_of_check (by native_decide)
 
 /-! ## ShiftLeft / ShiftRight -/
@@ -804,7 +794,7 @@ theorem constraint_systems_nonempty :
       chipOperations LoadDoubleChip.Inputs LoadDoubleChip.main (inputColumns loadDoubleInputs),
       chipOperations LoadX0Chip.Inputs LoadX0Chip.main (inputColumns loadX0Inputs),
       chipOperations AddiChip.Inputs AddiChip.main (inputColumns addiInputs),
-      chipOperations DivRemChip.Inputs DivRemChip.main (rTypeEventInputs divRemDivuEvent),
+      chipOperations DivRemChip.Inputs DivRemChip.main divRemDivuInputs,
       chipOperations ShiftLeftChip.Inputs ShiftLeftChip.main (aluTypeEventInputs shiftLeftEvent),
       chipOperations ShiftRightChip.Inputs ShiftRightChip.main
         (aluTypeEventInputs shiftRightEvent),

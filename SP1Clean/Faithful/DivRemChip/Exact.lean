@@ -61,31 +61,31 @@ private theorem divRemNativeDecompose
         ((DivRemChip.main input).operations offset) =
       nativeAssertZeros env
           ((Readers.CPUState.main (divRemCpuInput input)).operations
-            (offset + 217)) ++
+            (offset + 210)) ++
         nativeAssertZeros env
           ((Readers.RTypeReader.main
-            (divRemReaderInput input cols)).operations (offset + 217)) ++
+            (divRemReaderInput input cols)).operations (offset + 210)) ++
         nativeAssertZeros env
           ((DivRemCompare.main
             (DivRemCompare.Inputs.ofCols cols)).operations
-              (offset + 217)) ++
+              (offset + 210)) ++
         nativeAssertZeros env
-          ((DivRemCore.main cols).operations (offset + 217)) ++
+          ((DivRemCore.main cols).operations (offset + 210)) ++
         nativeAssertZeros env
           ((Readers.RegisterWrite.main
-            (divRemWriteInput input cols)).operations (offset + 217)) := by
+            (divRemWriteInput input cols)).operations (offset + 210)) := by
   dsimp only
   simp only [nativeAssertZeros, DivRemChip.main,
     Circuit.operations, Circuit.bind_def,
     Operations.constraints_append, List.map_append,
     DivRemChip.populateRow_output_eq]
   have hpopulateLength :
-      Operations.localLength (DivRemChip.populateRow input offset).2 = 217 :=
+      Operations.localLength (DivRemChip.populateRow input offset).2 = 210 :=
     DivRemChip.populateRow_localLength_eq input offset
   rw [hpopulateLength]
   simp only [DivRemChip.populateRow,
     Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR,
+    witnessField, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR,
     Operations.localLength, Operations.constraints_append,
     Operations.constraints_witness, Operations.constraints_nil,
     List.map_nil, List.nil_append]
@@ -2073,13 +2073,13 @@ private theorem divRemCpuAssertionsExact
       List.Forall (· = 0)
         (nativeAssertZeros env
           ((Readers.CPUState.main
-            (divRemCpuInput input)).operations (offset + 217))) := by
+            (divRemCpuInput input)).operations (offset + 210))) := by
   let state := Eval.eval env input.state
   let nextPc : Vector (ZMod p) 3 :=
     #v[state.pc[0] + 4, state.pc[1], state.pc[2]]
   let isReal := Expression.eval env input.is_real
   have h := CanonicalReader.cpuStateAssertions (p := p) env
-    (divRemCpuInput input) (offset + 217) state nextPc 8 isReal (by
+    (divRemCpuInput input) (offset + 210) state nextPc 8 isReal (by
       simp only [divRemCpuInput, isReal,
         ProvableStruct.structEvalLiteralProc])
   rw [divRemEvalPopulatedState env input offset,
@@ -2119,7 +2119,7 @@ private theorem divRemReaderAssertionsExact
           (nativeAssertZeros env
             ((Readers.RTypeReader.main
               (divRemReaderInput input cols)).operations
-                (offset + 217))) ∧
+                (offset + 210))) ∧
         (Eval.eval env cols).adapter.op_a_0 = 0) := by
   dsimp only
   let cols := DivRemChip.populatedRowAt input offset
@@ -2133,7 +2133,7 @@ private theorem divRemReaderAssertionsExact
     simp only [adapter, eval_rTypeReader,
       eval_registerAccessCols, ProvableType.eval_field]
   have h := CanonicalReader.rTypeAssertions (p := p) env
-    (divRemReaderInput input cols) (offset + 217)
+    (divRemReaderInput input cols) (offset + 210)
     state.clk_high (state.clk_0_16 + state.clk_16_24 * 65536)
     opcode isReal isReal state.pc a adapter
     (by simp only [divRemReaderInput, isReal,
@@ -2213,11 +2213,11 @@ private theorem divRemWholeAssertionsExact
     obtain ⟨hLower, hUpper, hCompare, hCpu, hReader, hOwn⟩ := hsplit
     have hopA0 := divRemOpA0OfOwn env cols hOwn
     have hCore :=
-      (divRemCoreAssertionsExact env cols (offset + 217)).mp (by
+      (divRemCoreAssertionsExact env cols (offset + 210)).mp (by
         simpa only [List.forall_append, and_assoc] using And.intro hLower
           (And.intro hUpper hOwn))
     have hCompareNative :=
-      (divRemCompareAssertionsExact env cols (offset + 217)).mp hCompare
+      (divRemCompareAssertionsExact env cols (offset + 210)).mp hCompare
     have hCpuNative :=
       (divRemCpuAssertionsExact env input offset).mp hCpu
     have hReaderNative :=
@@ -2225,7 +2225,7 @@ private theorem divRemWholeAssertionsExact
         ⟨hReader, hopA0⟩).1
     have hWriteNative :=
       (CanonicalReader.registerWriteAssertions env
-        (divRemWriteInput input cols) (offset + 217)).mpr trivial
+        (divRemWriteInput input cols) (offset + 210)).mpr trivial
     simpa only [cols, List.forall_append, and_assoc] using And.intro hCpuNative
       (And.intro hReaderNative
         (And.intro hCompareNative
@@ -2235,29 +2235,29 @@ private theorem divRemWholeAssertionsExact
         List.Forall (· = 0)
             (nativeAssertZeros env
               ((Readers.CPUState.main
-                (divRemCpuInput input)).operations (offset + 217))) ∧
+                (divRemCpuInput input)).operations (offset + 210))) ∧
           List.Forall (· = 0)
             (nativeAssertZeros env
               ((Readers.RTypeReader.main
                 (divRemReaderInput input cols)).operations
-                  (offset + 217))) ∧
+                  (offset + 210))) ∧
           List.Forall (· = 0)
             (nativeAssertZeros env
               ((DivRemCompare.main
                 (DivRemCompare.Inputs.ofCols cols)).operations
-                  (offset + 217))) ∧
+                  (offset + 210))) ∧
           List.Forall (· = 0)
             (nativeAssertZeros env
-              ((DivRemCore.main cols).operations (offset + 217))) ∧
+              ((DivRemCore.main cols).operations (offset + 210))) ∧
           List.Forall (· = 0)
             (nativeAssertZeros env
               ((Readers.RegisterWrite.main
                 (divRemWriteInput input cols)).operations
-                  (offset + 217))) := by
+                  (offset + 210))) := by
       simpa only [cols, List.forall_append, and_assoc] using hNative
     obtain ⟨hCpu, hReader, hCompare, hCore, _hWrite⟩ := hsplit
     have hCoreRust :=
-      (divRemCoreAssertionsExact env cols (offset + 217)).mpr hCore
+      (divRemCoreAssertionsExact env cols (offset + 210)).mpr hCore
     have hCoreSplit :
         List.Forall (· = 0)
             (divRemLowerMulAssertions (Eval.eval env cols)) ∧
@@ -2272,7 +2272,7 @@ private theorem divRemWholeAssertionsExact
       ((divRemReaderAssertionsExact env input offset).mpr
         ⟨hReader, hopA0⟩).1
     have hCompareRust :=
-      (divRemCompareAssertionsExact env cols (offset + 217)).mpr hCompare
+      (divRemCompareAssertionsExact env cols (offset + 210)).mpr hCompare
     have hCpuRust :=
       (divRemCpuAssertionsExact env input offset).mpr hCpu
     simpa only [cols, List.forall_append, and_assoc] using And.intro hLower
@@ -2555,26 +2555,26 @@ private theorem divRemNativeByteDecompose
         byteChannel.toRaw =
       ((Readers.CPUState.main
         (divRemCpuInput input)).operations
-          (offset + 217)).interactionsWith byteChannel.toRaw ++
+          (offset + 210)).interactionsWith byteChannel.toRaw ++
         ((Readers.RTypeReader.main
           (divRemReaderInput input cols)).operations
-            (offset + 217)).interactionsWith byteChannel.toRaw ++
+            (offset + 210)).interactionsWith byteChannel.toRaw ++
         ((DivRemCompare.main
           (DivRemCompare.Inputs.ofCols cols)).operations
-            (offset + 217)).interactionsWith byteChannel.toRaw ++
+            (offset + 210)).interactionsWith byteChannel.toRaw ++
         ((DivRemCore.main cols).operations
-            (offset + 217)).interactionsWith byteChannel.toRaw := by
+            (offset + 210)).interactionsWith byteChannel.toRaw := by
   dsimp only
   simp only [DivRemChip.main, Circuit.operations, Circuit.bind_def,
     Operations.interactionsWith_append,
     DivRemChip.populateRow_output_eq]
   have hpopulateLength :
-      Operations.localLength (DivRemChip.populateRow input offset).2 = 217 :=
+      Operations.localLength (DivRemChip.populateRow input offset).2 = 210 :=
     DivRemChip.populateRow_localLength_eq input offset
   rw [hpopulateLength]
   simp only [DivRemChip.populateRow,
     Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR,
+    witnessField, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR,
     Operations.localLength, Operations.interactionsWith_append,
     Operations.interactionsWith_witness,
     Operations.interactionsWith_nil, List.nil_append]
@@ -2605,7 +2605,7 @@ private theorem divRemNativeByteDecompose
           op_a := input.adapter.op_a
           value := (DivRemChip.populatedRowAt input offset).a
           is_real := input.is_real }).operations
-            (offset + 217)).interactionsWith byteChannel.toRaw = [] := by
+            (offset + 210)).interactionsWith byteChannel.toRaw = [] := by
     simp [Readers.RegisterWrite.main, Operations.interactionsWith,
       circuit_norm]
   rw [hwrite]
@@ -2750,7 +2750,7 @@ private theorem divRemCpuByteInteractionsExact
     let cols := DivRemChip.populatedRowAt input offset
     (((Readers.CPUState.main
       (divRemCpuInput input)).operations
-        (offset + 217)).interactionsWith byteChannel.toRaw).map
+        (offset + 210)).interactionsWith byteChannel.toRaw).map
           (AbstractInteraction.toAccess env) =
       ((divRemCpuInteractions
         (Eval.eval env cols).state
@@ -2764,7 +2764,7 @@ private theorem divRemCpuByteInteractionsExact
     #v[state.pc[0] + 4, state.pc[1], state.pc[2]]
   let isReal := Expression.eval env input.is_real
   have h := cpustate_byte_interactions_faithful_syntactic env
-    (divRemCpuInput input) (offset + 217)
+    (divRemCpuInput input) (offset + 210)
     state nextPc 8 isReal
     (by simp only [divRemCpuInput, isReal])
     (by
@@ -2783,7 +2783,7 @@ private theorem divRemReaderByteInteractionsExact
     let cols := DivRemChip.populatedRowAt input offset
     (((Readers.RTypeReader.main
       (divRemReaderInput input cols)).operations
-        (offset + 217)).interactionsWith byteChannel.toRaw).map
+        (offset + 210)).interactionsWith byteChannel.toRaw).map
           (AbstractInteraction.toAccess env) =
       ((divRemReaderInteractions
         (Eval.eval env cols).state
@@ -2801,7 +2801,7 @@ private theorem divRemReaderByteInteractionsExact
   let opcode := Expression.eval env (divRemOpcode cols)
   let isReal := Expression.eval env input.is_real
   have h := rtypereader_byte_interactions_faithful_syntactic env
-    (divRemReaderInput input cols) (offset + 217)
+    (divRemReaderInput input cols) (offset + 210)
     state.clk_high (state.clk_0_16 + state.clk_16_24 * 65536)
     state.pc opcode a adapter isReal isReal
     (by simp only [divRemReaderInput, isReal])
@@ -3231,14 +3231,14 @@ private theorem divRemByteInteractionsFaithful
     (List.map (AbstractInteraction.toAccess env))
     (divRemNativeByteDecompose input offset)
   simp only [List.map_append] at hNative
-  rw [divRemCoreByteDecompose env cols (offset + 217)] at hNative
+  rw [divRemCoreByteDecompose env cols (offset + 210)] at hNative
   have hCpu := divRemCpuByteInteractionsExact env input offset
   have hReader := divRemReaderByteInteractionsExact env input offset
   have hCompare := divRemCompareInteractionsExact env
-    (DivRemCompare.Inputs.ofCols cols) (offset + 217)
+    (DivRemCompare.Inputs.ofCols cols) (offset + 210)
   rw [divRemEvalCompareOfCols env cols] at hCompare
-  have hLower := divRemLowerMulInteractionsActive env cols (offset + 217)
-  have hUpper := divRemUpperMulInteractionsActive env cols (offset + 217)
+  have hLower := divRemLowerMulInteractionsActive env cols (offset + 210)
+  have hUpper := divRemUpperMulInteractionsActive env cols (offset + 210)
   rw [hNative, divRemRustByteDecompose]
   rw [hCpu, hReader, ← hCompare]
   simp only [LookupAccessList.active, List.filter_append] at hLower hUpper ⊢
@@ -3422,7 +3422,7 @@ private theorem divRemProgramInteractionsExact
   let opcode := Expression.eval env (divRemOpcode cols)
   let isReal := Expression.eval env input.is_real
   have hReader := rtypereader_program_interactions_faithful_syntactic
-    env (divRemReaderInput input cols) (offset + 217)
+    env (divRemReaderInput input cols) (offset + 210)
     state.clk_high (state.clk_0_16 + state.clk_16_24 * 65536)
     state.pc opcode a adapter isReal isReal
     (by simp only [divRemReaderInput, isReal])
@@ -3453,10 +3453,10 @@ private theorem divRemProgramInteractionsExact
           programChannel.toRaw =
         ((Readers.RTypeReader.main
           (divRemReaderInput input cols)).operations
-            (offset + 217)).interactionsWith programChannel.toRaw := by
+            (offset + 210)).interactionsWith programChannel.toRaw := by
     rw [DivRemChip.interactionsWith_program_eq]
     have h := Soundness.rTypeReader_programInteractions
-      (divRemReaderInput input cols) (offset + 217)
+      (divRemReaderInput input cols) (offset + 210)
     simp only [Readers.RTypeReader.circuit] at h
     rw [h]
     rfl

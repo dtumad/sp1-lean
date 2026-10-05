@@ -761,38 +761,6 @@ namespace SP1Clean.DivRemChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- The `is_real` selector and the **threaded reader column blocks** `state`/`adapter` (as `MulChip`;
-`DIV`/`REM`/… are R-type register-register ops, so the adapter is the register `RTypeReader`). The
-`rs1`/`rs2` register reads are projected from the adapter (`op_b_val`/`op_c_val` below). The arithmetic
-**operands** `b`/`c` are *separate committed columns* of `DivRemChip.Columns`, tied to these reads by the chip's
-own-asserts E20–E47 — equal to the read for the 64-bit variants, the sign/zero-extension of the low 32 bits
-for the W-variants. The eight variant selectors are likewise *committed columns* of `DivRemChip.Columns` (gated on in
-the `Spec` via `cols.is_div` etc.), not inputs. -/
-structure Inputs (F : Type) where
-  is_real : F
-  state : Circuits.Types.CPUState F
-  adapter : Circuits.Types.RTypeReader F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-/-- Component-wise verifier evaluation of the DivRem chip input. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    Eval.eval env input =
-      ({ is_real := Eval.eval env input.is_real,
-         state := Eval.eval env input.state,
-         adapter := Eval.eval env input.adapter } : Inputs F) := by
-  rw [ProvableStruct.eval_eq_eval]; rfl
-
-/-- The `rs1` source = the register read on the `op_b` memory slot (`op_b_memory.prev_value`, the value the
-Memory bus pins). The `Spec` and Sail bridge state the RV64 identity on this **raw read**; this is correct even
-for the W-variants because `RV64.divw`/`divuw`/`remw`/`remuw` truncate their inputs to the low 32 bits. The
-flag-dependent arithmetic operand (read for 64-bit ops, sign/zero-extension for W-ops) lives in the committed
-`DivRemChip.Columns.b` column, not here. `@[reducible]` so proofs that manipulate the adapter slot see through it. -/
-@[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
-/-- The `rs2` source = the register read on the `op_c` memory slot (`op_c_memory.prev_value`). -/
-@[reducible] def Inputs.op_c_val {F} (i : Inputs F) : Word F := i.adapter.op_c_memory.prev_value
-
 /-- Public chip contract: reader/bus-facing row plumbing plus the stable semantic `DivRemContract.RowSpec`.
 The latter gives names to the binary real-row gate, unique committed case, and eight independently
 verifiable RV64 results. Division by zero and signed overflow are specified by the RV64 functions

@@ -12,11 +12,9 @@ import SP1Clean.Native.Operations.AddOperation.Populate
 SP1's `DivRemChip::generate_trace_into` (`alu/divrem/mod.rs:231-570`) ported to Lean: the honest
 witness assignments for every committed column block, each a **pure function of the raw register
 reads** `B`/`C` (`adapter.op_b/c_memory.prev_value`) and the eight variant flags `f` (plus the
-`is_real` input `ir` where SP1 gates the populate on a real event). The flags are **not** computable
-from the row inputs — the prover supplies them via the `"div_rem_flags"` `ProverHint` key, one-hot
-`[div, divu, rem, remu, divw, remw, divuw, remuw]` on real rows; the key's **absence defaults to the
-padding template** `is_divu = 1` (SP1's padded rows are "0 divided by 1": `is_divu = 1`,
-`op_c read = Word(1)`, everything live derived from that — `mod.rs:549-569`).
+`is_real` input `ir` where SP1 gates the populate on a real event). Seven selectors are explicit circuit inputs. `selectorFlags` inserts the derived DIVU
+selector as their complement; zero selector inputs choose DIVU. Padding uses SP1's
+"0 divided by 1" template: DIVU selected and the `op_c` read equal to `Word(1)`.
 
 The division core `quotBits`/`remBits` is the `BitVec` port of the executor's
 `get_quotient_and_remainder` (`executor/src/utils.rs:73-93`): divisor-zero branched **first**
@@ -40,47 +38,26 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : NeZero p := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
-/-- The eight honest variant flags `[div, divu, rem, remu, divw, remw, divuw, remuw]`.
-
-**`is_divu` is derived, not hinted.** The `"div_rem_flags"` key carries the *other seven*
-(`[div, rem, remu, divw, remw, divuw, remuw]`) and `is_divu` is whatever is left over:
-`1 - Σ(the seven)`. The flags are one-hot with sum `1` unconditionally, so this loses nothing —
-there is no all-zero state to represent.
-
-What it buys is that **the absent key now reads as the padding template rather than needing a
-special case**. SP1's padded `DivRem` rows are `0 / 1` `DIVU` rows, not all-zero (the trace filler
-sets `is_divu = 1`, `op_c = Word(1)`, `abs_c[0] = c[0] = max_abs_c_or_1[0] = 1` — unchanged from
-v6.4.0 through v6.4.0), and with this encoding an absent key gives seven zeros, hence
-`is_divu = 1 - 0 = 1`: exactly that template, for free. Under the old eight-slot encoding the
-template had to be spelled as a non-zero `getD` default, which is the one thing Clean's witness IR
-cannot reproduce — its `hintGet` reads a missing row as *zeros*. So this is what lets the chip move
-off the escape hatch without weakening `hintFlags` into "an all-zero row means padding".
-
-The hint schema is ours, not SP1's: the Rust prover has no hint concept here, and these vectors are
-built by our own harness from the dumped executor opcode. Two consequences are now *theorems*
-rather than prover assumptions — see `hintFlags_sum_eq_one` and `hintFlags_absent`. -/
-def hintFlags (h : ProverHint (ZMod p)) : Vector (ZMod p) 8 :=
-  let g := ((h "div_rem_flags" 7)[0]?).getD #v[0, 0, 0, 0, 0, 0, 0]
+/-- The eight variant selectors, deriving DIVU as the complement of the other seven.
+Zero selector inputs encode DIVU, including SP1's padding template. -/
+def selectorFlags (g : Vector (ZMod p) 7) : Vector (ZMod p) 8 :=
   #v[g[0], 1 - (g[0] + g[1] + g[2] + g[3] + g[4] + g[5] + g[6]),
      g[1], g[2], g[3], g[4], g[5], g[6]]
 
 omit [Fact (2 ^ 24 < p)] in
-/-- The variant flags sum to `1` **by construction** — for every hint, honest or not, including a
-missing key. Under the old encoding this was a prover assumption; the derived `is_divu` slot makes
-it an identity. -/
-@[simp] theorem hintFlags_sum_eq_one (h : ProverHint (ZMod p)) :
-    (hintFlags h)[0] + (hintFlags h)[1] + (hintFlags h)[2] + (hintFlags h)[3] +
-      (hintFlags h)[4] + (hintFlags h)[5] + (hintFlags h)[6] + (hintFlags h)[7] = 1 := by
-  simp only [hintFlags, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
+/-- The selector sum is one for arbitrary inputs, including malformed selectors. -/
+@[simp] theorem selectorFlags_sum_eq_one (g : Vector (ZMod p) 7) :
+    (selectorFlags g)[0] + (selectorFlags g)[1] + (selectorFlags g)[2] + (selectorFlags g)[3] +
+      (selectorFlags g)[4] + (selectorFlags g)[5] + (selectorFlags g)[6] + (selectorFlags g)[7] = 1 := by
+  simp only [selectorFlags, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
     List.getElem_cons_succ]
   ring
 
 omit [Fact (2 ^ 24 < p)] in
-/-- A missing hint key yields SP1's padding template `is_divu = 1` exactly, with no special case:
-seven absent flags are zero, so the derived slot is `1`. -/
-theorem hintFlags_absent (h : ProverHint (ZMod p)) (habs : h "div_rem_flags" 7 = #[]) :
-    hintFlags h = #v[0, 1, 0, 0, 0, 0, 0, 0] := by
-  simp [hintFlags, habs]
+/-- Zero selector inputs select DIVU. -/
+theorem selectorFlags_zero :
+    selectorFlags (p := p) #v[0, 0, 0, 0, 0, 0, 0] = #v[0, 1, 0, 0, 0, 0, 0, 0] := by
+  simp [selectorFlags]
 
 /-- The four base-2^16 limbs of a `ℕ` (the u64 bit pattern → committed word). -/
 def wordOfNat (n : ℕ) : Word (ZMod p) :=

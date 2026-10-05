@@ -228,11 +228,11 @@ theorem DivRemChip.cpuStateTimeContract :
   dsimp only
   let input : Var DivRemChip.Inputs (ZMod p) := varFromOffset DivRemChip.Inputs 0
   let offset := size DivRemChip.Inputs
-  refine ⟨offset + 217,
+  refine ⟨offset + 210,
     ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]], 8,
       input.is_real⟩, ?_, ?_⟩
   · -- The CPU reader is the first composed subcircuit of the rewired `main` (the whole witness
-    -- stream precedes it, hence the `offset + 217`).
+    -- stream precedes it, hence the `offset + 210`).
     simp only [input, offset, DivRemChip.circuit, DivRemChip.main, circuit_norm]
     right
     simp only [DivRemChip.constrainRow, circuit_norm]

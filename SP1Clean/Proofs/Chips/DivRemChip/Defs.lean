@@ -20,9 +20,9 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 /-! # The `DivRem` chip row as a `GeneralFormalCircuit`
 
 `DIV`/`DIVU`/`REM`/`REMU`/`DIVW`/`REMW`/`DIVUW`/`REMUW`: flag-gated `Spec` (RV64 div/rem identities on
-`cols.a`) in `FormalModel/Contracts/Chips.lean`; output is the extracted `Columns` (246 columns).
+`cols.a`) in `FormalModel/Contracts/Chips.lean`; output is the native `Columns` (246 cells).
 
-`main` witnesses the full row (unchanged witness stream, `localLength = 217`), composes the
+`main` derives DIVU and witnesses the arithmetic columns (`localLength = 210`), composes the
 `CPUState`/`RTypeReader` readers, then asserts the complete constraint set through the two
 whole-row `FormalAssertion` gadgets over the assembled `Columns`:
 `DivRemCompare.circuit` (`IsEqualWordOperation`×4 overflow, `IsZeroWordOperation` divide-by-zero,
@@ -52,7 +52,7 @@ def Assumptions (input : Inputs (ZMod p)) (_ : ProverData (ZMod p)) : Prop :=
   Word.isU64 input.op_b_val ∧ Word.isU64 input.op_c_val
 
 /-- Prover-side row well-formedness: the register-read `isU64`s, the `is_real` binary selector, the
-honest `"div_rem_flags"` hint (each flag binary, the sum `= 1` **unconditionally** — E367 is ungated,
+seven supplied opcode selectors (each flag binary, the sum `= 1` **unconditionally** — E367 is ungated,
 and SP1's padding rows carry `is_divu = 1`), the **padding pin** (an `is_real = 0` row is exactly
 SP1's "0 divided by 1" template: zero `b` read, `c` read `= Word(1)`, the `is_divu` flag — this is
 what makes the ungated lower glue and the flag-gated shape asserts dischargeable off-gate),
@@ -60,8 +60,8 @@ what makes the ungated lower glue and the flag-gated shape asserts dischargeable
 `MulChip.ProverAssumptions` — R-type, no immediate machinery). Lives in `Defs` (not `Formal`) so the
 `Completeness/` split files can import it without a cycle. -/
 def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) : Prop :=
-  let f := hintFlags hint
+    (_hint : ProverHint (ZMod p)) : Prop :=
+  let f := selectorFlags input.selectors
   Word.isU64 input.op_b_val ∧ Word.isU64 input.op_c_val ∧
   -- (W11 memory flip) the op_a (`rd`) read-prior pull's `prev_value` is `isU64` on real rows — the
   -- `RTypeReader`'s completeness needs the memory trio (op_a/op_b/op_c reads `isU64`) to emit its pulls;
@@ -71,7 +71,7 @@ def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
   (f[0] = 0 ∨ f[0] = 1) ∧ (f[1] = 0 ∨ f[1] = 1) ∧ (f[2] = 0 ∨ f[2] = 1) ∧ (f[3] = 0 ∨ f[3] = 1) ∧
   (f[4] = 0 ∨ f[4] = 1) ∧ (f[5] = 0 ∨ f[5] = 1) ∧ (f[6] = 0 ∨ f[6] = 1) ∧ (f[7] = 0 ∨ f[7] = 1) ∧
   -- (the one-hot sum `Σ f = 1` used to be assumed here; since `is_divu` became a derived slot it is
-  -- an identity, `Populate.hintFlags_sum_eq_one`, so assuming it would only weaken this contract)
+  -- an identity, `selectorFlags_sum_eq_one`, so assuming it would only weaken this contract)
   (input.is_real = 0 →
     input.op_b_val = #v[0, 0, 0, 0] ∧ input.op_c_val = #v[1, 0, 0, 0] ∧
     f = #v[0, 1, 0, 0, 0, 0, 0, 0]) ∧
@@ -111,78 +111,78 @@ def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
 -- own-assert tail without importing this chip skeleton.
 
 /-- The witness-only prefix of `main`, factored as a plain circuit definition so completeness can
-reason about the 217-cell populate stream separately from the semantic proof boundaries. This is
+reason about the 210-cell populate stream separately from the semantic proof boundaries. This is
 not a new subcircuit: inlining it preserves the exact witness order and the resulting flat AIR.
 Carried no measured cost: the former 4M ceiling here was ~100× over; floor ≤ 40000. -/
 def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p)) := do
   let bpv := input.adapter.op_b_memory.prev_value
   let cpv := input.adapter.op_c_memory.prev_value
-  -- The honest variant flags from the `"div_rem_flags"` `ProverHint` (one-hot on real rows;
-  -- the key's absence defaults to the `is_divu = 1` padding template — `Populate.hintFlags`).
-  let flags ← witnessVectorIR 8 (.ofFExprs flagsFE)
-  let is_div := flags[0]; let is_divu := flags[1]; let is_rem := flags[2]; let is_remu := flags[3]
-  let is_divw := flags[4]; let is_remw := flags[5]; let is_divuw := flags[6]; let is_remuw := flags[7]
-  let quotient_comp ← witnessVectorIR 4 (.ofFExprs (quotCompFE bpv cpv))
-  let a ← witnessVectorIR 4 (.ofFExprs (aFE bpv cpv))
+  let is_divu ← witnessField (flagF input.selectors 1)
+  let is_div := input.selectors[0]; let is_rem := input.selectors[1]
+  let is_remu := input.selectors[2]; let is_divw := input.selectors[3]
+  let is_remw := input.selectors[4]; let is_divuw := input.selectors[5]
+  let is_remuw := input.selectors[6]
+  let quotient_comp ← witnessVectorIR 4 (.ofFExprs (quotCompFE input.selectors bpv cpv))
+  let a ← witnessVectorIR 4 (.ofFExprs (aFE input.selectors bpv cpv))
   -- The arithmetic **operands** `b`/`c` — committed columns distinct from the raw register reads
   -- (`adapter.op_b/c_memory.prev_value`). The chip's own-asserts E20–E47 tie them to the reads: equal to the
   -- read for the 64-bit variants, the sign/zero-extension of the low 32 bits for the W-variants (`b[i] =
   -- read[i]·(1-isword) + b_neg·isword·0xFFFF`). Witnessed here (before the `MulOperation`s, which multiply by
   -- `c`); populated honestly (`bComp`/`cComp` compute the flag-dependent extension). Soundness does not
   -- depend on the populate value (E20–E47 pin the columns).
-  let b ← witnessVectorIR 4 (.ofFExprs (compF bpv))
-  let c ← witnessVectorIR 4 (.ofFExprs (compF cpv))
+  let b ← witnessVectorIR 4 (.ofFExprs (compF input.selectors bpv))
+  let c ← witnessVectorIR 4 (.ofFExprs (compF input.selectors cpv))
   -- (1,2) The two `c_times_quotient` product structs of `quotient_comp × c`, witnessed via the
   -- gated populates (`mul_lower` on real rows only; `mul_upper` only on the 64-bit variants —
   -- SP1's word rows and padding leave them all-zero). Their `MulOperation` product constraints
   -- (and the limb glue tying them to `c_times_quotient`) are asserted by `DivRemCore.circuit`
   -- over the assembled row below.
   let mul_lower ← witnessProgram (var := Var Circuits.Types.MulOperation)
-    (mulProgram input.is_real bpv cpv false)
+    (mulProgram input.selectors input.is_real bpv cpv false)
   let mul_upper ← witnessProgram (var := Var Circuits.Types.MulOperation)
-    (mulProgram input.is_real bpv cpv true)
+    (mulProgram input.selectors input.is_real bpv cpv true)
   -- Witnessed scalar sign/gate columns + the `c_times_quotient`/`carry` u16-limb vectors, all
   -- honestly populated (`populateScal`/`populateCtq`/`populateCarry`); the own-asserts
   -- `E13/E15/…` and the carry chain `E121…E151` pin them.
-  let scal ← witnessVectorIR 7 (.ofFExprs (scalFE input.is_real bpv cpv))
+  let scal ← witnessVectorIR 7 (.ofFExprs (scalFE input.selectors input.is_real bpv cpv))
   let is_overflow := scal[0]; let b_neg := scal[1]; let b_neg_not_overflow := scal[2]
   let b_not_neg_not_overflow := scal[3]; let is_real_not_word := scal[4]
   let rem_neg := scal[5]; let c_neg := scal[6]
-  let c_times_quotient ← witnessProgram (var := Var (fields 8)) (ctqProgram bpv cpv)
-  let carry ← witnessProgram (var := Var (fields 8)) (carryProgram bpv cpv)
+  let c_times_quotient ← witnessProgram (var := Var (fields 8)) (ctqProgram input.selectors bpv cpv)
+  let carry ← witnessProgram (var := Var (fields 8)) (carryProgram input.selectors bpv cpv)
   -- The `IsEqualWordOperation`/`IsZeroWordOperation` nested cols, witnessed flat via
   -- `fromElements (F := …)`; their overflow/divide-by-zero assertions live in
   -- `DivRemCompare.circuit` below.
-  let w_ovb ← witnessVectorIR 11 (.ofFExprs ((toElements (ovbFE input.is_real bpv)).cast
+  let w_ovb ← witnessVectorIR 11 (.ofFExprs ((toElements (ovbFE input.selectors input.is_real bpv)).cast
     (show size Circuits.Types.IsEqualWordOperation = 11 from rfl)))
-  let w_ovc ← witnessVectorIR 11 (.ofFExprs ((toElements (ovcFE input.is_real cpv)).cast
+  let w_ovc ← witnessVectorIR 11 (.ofFExprs ((toElements (ovcFE input.selectors input.is_real cpv)).cast
     (show size Circuits.Types.IsEqualWordOperation = 11 from rfl)))
-  let w_is_c_0 ← witnessVectorIR 11 (.ofFExprs (isC0FE cpv))
+  let w_is_c_0 ← witnessVectorIR 11 (.ofFExprs (isC0FE input.selectors cpv))
   -- The negation/comparison witness columns (`|c|`, `|remainder|`, `max(|c|,1)`, the two
   -- `AddOperation` nested cols, the `LtOperationUnsigned` comparison columns) via `populate_*`;
   -- the `AddOperation`×2 / `LtOperationUnsigned` assertions live in `DivRemCompare.circuit` below.
-  let abs_c ← witnessVectorIR 4 (.ofFExprs (absCFE cpv))
-  let abs_remainder ← witnessVectorIR 4 (.ofFExprs (absRemFE bpv cpv))
-  let remainder_comp ← witnessVectorIR 4 (.ofFExprs (remCompFE bpv cpv))
-  let max_abs_c_or_1 ← witnessVectorIR 4 (.ofFExprs (maxAbsFE cpv))
-  let w_cneg ← witnessVectorIR 4 (.ofFExprs (wCnegFE input.is_real cpv))
-  let w_rneg ← witnessProgram (var := Var (fields 4)) (wRnegProgram input.is_real bpv cpv)
-  let misc ← witnessVectorIR 3 (.ofFExprs (miscFE input.is_real bpv cpv))
+  let abs_c ← witnessVectorIR 4 (.ofFExprs (absCFE input.selectors cpv))
+  let abs_remainder ← witnessVectorIR 4 (.ofFExprs (absRemFE input.selectors bpv cpv))
+  let remainder_comp ← witnessVectorIR 4 (.ofFExprs (remCompFE input.selectors bpv cpv))
+  let max_abs_c_or_1 ← witnessVectorIR 4 (.ofFExprs (maxAbsFE input.selectors cpv))
+  let w_cneg ← witnessVectorIR 4 (.ofFExprs (wCnegFE input.selectors input.is_real cpv))
+  let w_rneg ← witnessProgram (var := Var (fields 4)) (wRnegProgram input.selectors input.is_real bpv cpv)
+  let misc ← witnessVectorIR 3 (.ofFExprs (miscFE input.selectors input.is_real bpv cpv))
   let abs_c_alu_event := misc[0]; let abs_rem_alu_event := misc[1]
   let remainder_check_multiplicity := misc[2]
-  let cl ← witnessProgram (var := Var (fields 2)) (clProgram input.is_real bpv cpv)
-  let f ← witnessProgram (var := Var (fields 4)) (ltfProgram input.is_real bpv cpv)
-  let not_eq_inv ← witnessProgram (var := Var (fields 1)) (neiProgram input.is_real bpv cpv)
-  let bit ← witnessProgram (var := Var (fields 1)) (bitProgram input.is_real bpv cpv)
+  let cl ← witnessProgram (var := Var (fields 2)) (clProgram input.selectors input.is_real bpv cpv)
+  let f ← witnessProgram (var := Var (fields 4)) (ltfProgram input.selectors input.is_real bpv cpv)
+  let not_eq_inv ← witnessProgram (var := Var (fields 1)) (neiProgram input.selectors input.is_real bpv cpv)
+  let bit ← witnessProgram (var := Var (fields 1)) (bitProgram input.selectors input.is_real bpv cpv)
   let lt_out : Var Circuits.Types.LtOperationUnsigned (ZMod p) := ⟨⟨bit[0]⟩, f, not_eq_inv[0], cl⟩
   -- The remainder/quotient result words and the four `U16MSBOperation` sign-bit cells; the seven
   -- MSB assertions live in `DivRemCompare.circuit` below.
-  let remainder ← witnessVectorIR 4 (.ofFExprs (remFE bpv cpv))
-  let quotient ← witnessVectorIR 4 (.ofFExprs (quotFE bpv cpv))
-  let w_bmsb ← witnessVectorIR 1 (.ofFExprs #v[bMsbFE bpv])
-  let w_cmsb ← witnessVectorIR 1 (.ofFExprs #v[cMsbFE cpv])
-  let w_remmsb ← witnessVectorIR 1 (.ofFExprs #v[remMsbFE bpv cpv])
-  let w_quotmsb ← witnessVectorIR 1 (.ofFExprs #v[quotMsbFE bpv cpv])
+  let remainder ← witnessVectorIR 4 (.ofFExprs (remFE input.selectors bpv cpv))
+  let quotient ← witnessVectorIR 4 (.ofFExprs (quotFE input.selectors bpv cpv))
+  let w_bmsb ← witnessVectorIR 1 (.ofFExprs #v[bMsbFE input.selectors bpv])
+  let w_cmsb ← witnessVectorIR 1 (.ofFExprs #v[cMsbFE input.selectors cpv])
+  let w_remmsb ← witnessVectorIR 1 (.ofFExprs #v[remMsbFE input.selectors bpv cpv])
+  let w_quotmsb ← witnessVectorIR 1 (.ofFExprs #v[quotMsbFE input.selectors bpv cpv])
   return ⟨input.state, input.adapter, a, b, c,
     quotient, quotient_comp, remainder_comp, remainder, abs_remainder, abs_c,
     max_abs_c_or_1, c_times_quotient, mul_lower, mul_upper, ⟨w_cneg⟩, ⟨w_rneg⟩, lt_out,
@@ -199,8 +199,9 @@ layout prevents downstream proofs from repeatedly reducing the full 30-bind popu
 to discover the same column indices. It is checked against `populateRow` by
 `populateRow_output_eq`; it is not an independent witness generator. -/
 def populatedRowAt (input : Var Inputs (ZMod p)) (offset : ℕ) : Var Columns (ZMod p) :=
-  let flags := varFromOffset (F := ZMod p) (fields 8) offset
-  let oQc := offset + 8
+  let flags := #v[input.selectors[0], var { index := offset }, input.selectors[1],
+    input.selectors[2], input.selectors[3], input.selectors[4], input.selectors[5], input.selectors[6]]
+  let oQc := offset + 1
   let quotientComp := varFromOffset (F := ZMod p) (fields 4) oQc
   let oA := oQc + 4
   let a := varFromOffset (F := ZMod p) (fields 4) oA
@@ -278,29 +279,29 @@ set_option linter.unusedSectionVars false
 theorem populatedRowAt_mulLower_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_times_quotient_lower =
       ProvableType.varFromOffset (F := ZMod p) Circuits.Types.MulOperation
-        (offset + 8 + 4 + 4 + 4 + 4) := rfl
+        (offset + 1 + 4 + 4 + 4 + 4) := rfl
 
 /-- Folded projection of the upper Mul witness block from the explicit row layout. -/
 theorem populatedRowAt_mulUpper_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_times_quotient_upper =
       ProvableType.varFromOffset (F := ZMod p) Circuits.Types.MulOperation
-        (offset + 8 + 4 + 4 + 4 + 4 + 45) := rfl
+        (offset + 1 + 4 + 4 + 4 + 4 + 45) := rfl
 
 /-- Folded projection of the quotient-complement witness vector. -/
 theorem populatedRowAt_quotientComp_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).quotient_comp =
-      varFromOffset (F := ZMod p) (fields 4) (offset + 8) := rfl
+      varFromOffset (F := ZMod p) (fields 4) (offset + 1) := rfl
 
 /-- Folded projection of the normalized divisor witness vector. -/
 theorem populatedRowAt_c_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c =
-      varFromOffset (F := ZMod p) (fields 4) (offset + 8 + 4 + 4 + 4) := rfl
+      varFromOffset (F := ZMod p) (fields 4) (offset + 1 + 4 + 4 + 4) := rfl
 
 /-- Folded projection of the eight `c_times_quotient` limbs. -/
 theorem populatedRowAt_ctq_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_times_quotient =
       varFromOffset (F := ZMod p) (fields 8)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7) := rfl
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7) := rfl
 
 /-! The following projection lemmas are intentionally repetitive.  They make the explicit witness
 layout an opaque API: completeness proofs rewrite one named field without weak-head-normalizing the
@@ -313,219 +314,219 @@ theorem populatedRowAt_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).state = input.state := rfl
 
 theorem populatedRowAt_isDiv_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populatedRowAt input offset).is_div = var { index := offset } := rfl
+    (populatedRowAt input offset).is_div = input.selectors[0] := rfl
 
 theorem populatedRowAt_isDivu_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populatedRowAt input offset).is_divu = var { index := offset + 1 } := rfl
+    (populatedRowAt input offset).is_divu = var { index := offset } := rfl
 
 theorem populatedRowAt_isRem_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populatedRowAt input offset).is_rem = var { index := offset + 2 } := rfl
+    (populatedRowAt input offset).is_rem = input.selectors[1] := rfl
 
 theorem populatedRowAt_isRemu_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populatedRowAt input offset).is_remu = var { index := offset + 3 } := rfl
+    (populatedRowAt input offset).is_remu = input.selectors[2] := rfl
 
 theorem populatedRowAt_isDivw_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populatedRowAt input offset).is_divw = var { index := offset + 4 } := rfl
+    (populatedRowAt input offset).is_divw = input.selectors[3] := rfl
 
 theorem populatedRowAt_isRemw_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populatedRowAt input offset).is_remw = var { index := offset + 5 } := rfl
+    (populatedRowAt input offset).is_remw = input.selectors[4] := rfl
 
 theorem populatedRowAt_isDivuw_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populatedRowAt input offset).is_divuw = var { index := offset + 6 } := rfl
+    (populatedRowAt input offset).is_divuw = input.selectors[5] := rfl
 
 theorem populatedRowAt_isRemuw_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populatedRowAt input offset).is_remuw = var { index := offset + 7 } := rfl
+    (populatedRowAt input offset).is_remuw = input.selectors[6] := rfl
 
 theorem populatedRowAt_isReal_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).is_real = input.is_real := rfl
 
 theorem populatedRowAt_a_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).a =
-      varFromOffset (F := ZMod p) (fields 4) (offset + 8 + 4) := rfl
+      varFromOffset (F := ZMod p) (fields 4) (offset + 1 + 4) := rfl
 
 theorem populatedRowAt_b_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).b =
-      varFromOffset (F := ZMod p) (fields 4) (offset + 8 + 4 + 4) := rfl
+      varFromOffset (F := ZMod p) (fields 4) (offset + 1 + 4 + 4) := rfl
 
 theorem populatedRowAt_remainderComp_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder_comp =
       varFromOffset (F := ZMod p) (fields 4)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4) := rfl
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4) := rfl
 
 theorem populatedRowAt_absC_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).abs_c =
       varFromOffset (F := ZMod p) (fields 4)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11) := rfl
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11) := rfl
 
 theorem populatedRowAt_absRemainder_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).abs_remainder =
       varFromOffset (F := ZMod p) (fields 4)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4) := rfl
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4) := rfl
 
 theorem populatedRowAt_maxAbsCOr1_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).max_abs_c_or_1 =
       varFromOffset (F := ZMod p) (fields 4)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4) := rfl
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4) := rfl
 
 theorem populatedRowAt_cNegValue_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_neg_operation.value =
       varFromOffset (F := ZMod p) (fields 4)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
           + 4 + 4 + 4 + 4) := rfl
 
 theorem populatedRowAt_remNegValue_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_neg_operation.value =
       varFromOffset (F := ZMod p) (fields 4)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
           + 4 + 4 + 4 + 4 + 4) := rfl
 
 /-- Folded projection of the complete divisor-negation operation. -/
 theorem populatedRowAt_cNegOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_neg_operation =
-      varFromOffset (F := ZMod p) Circuits.Types.AddOperation (offset + 186) := by
+      varFromOffset (F := ZMod p) Circuits.Types.AddOperation (offset + 179) := by
   rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 /-- Folded projection of the complete remainder-negation operation. -/
 theorem populatedRowAt_remNegOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_neg_operation =
-      varFromOffset (F := ZMod p) Circuits.Types.AddOperation (offset + 190) := by
+      varFromOffset (F := ZMod p) Circuits.Types.AddOperation (offset + 183) := by
   rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 /-- Folded projections of the reordered unsigned-less-than witness. -/
 theorem populatedRowAt_ltComparisonLimbs_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder_lt_operation.comparison_limbs =
-      varFromOffset (F := ZMod p) (fields 2) (offset + 197) := rfl
+      varFromOffset (F := ZMod p) (fields 2) (offset + 190) := rfl
 
 theorem populatedRowAt_ltU16Flags_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder_lt_operation.u16_flags =
-      varFromOffset (F := ZMod p) (fields 4) (offset + 199) := rfl
+      varFromOffset (F := ZMod p) (fields 4) (offset + 192) := rfl
 
 theorem populatedRowAt_ltNotEqInv_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder_lt_operation.not_eq_inv =
-      var { index := offset + 203 } := rfl
+      var { index := offset + 196 } := rfl
 
 theorem populatedRowAt_carry_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).carry =
       varFromOffset (F := ZMod p) (fields 8)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8) := rfl
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8) := rfl
 
 theorem populatedRowAt_remainder_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder =
       varFromOffset (F := ZMod p) (fields 4)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
           + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1) := rfl
 
 theorem populatedRowAt_quotient_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).quotient =
       varFromOffset (F := ZMod p) (fields 4)
-        (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+        (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
           + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4) := rfl
 
 theorem populatedRowAt_isOverflow_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).is_overflow =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 } := rfl
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 } := rfl
 
 theorem populatedRowAt_bNeg_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).b_neg =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 1 } := rfl
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 1 } := rfl
 
 theorem populatedRowAt_bNegNotOverflow_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).b_neg_not_overflow =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 2 } := rfl
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 2 } := rfl
 
 theorem populatedRowAt_bNotNegNotOverflow_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).b_not_neg_not_overflow =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 3 } := rfl
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 3 } := rfl
 
 theorem populatedRowAt_isRealNotWord_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).is_real_not_word =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4 } := rfl
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4 } := rfl
 
 theorem populatedRowAt_remNeg_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_neg =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 5 } := rfl
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 5 } := rfl
 
 theorem populatedRowAt_cNeg_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_neg =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 6 } := rfl
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 6 } := rfl
 
 theorem populatedRowAt_absCEvent_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).abs_c_alu_event =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 } := rfl
 
 theorem populatedRowAt_absRemEvent_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).abs_rem_alu_event =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 1 } := rfl
 
 theorem populatedRowAt_remainderCheckMultiplicity_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder_check_multiplicity =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 2 } := rfl
 
 theorem populatedRowAt_isOverflowB_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).is_overflow_b =
       ProvableType.fromElements (M := Circuits.Types.IsEqualWordOperation)
         (varFromOffset (F := ZMod p) (fields 11)
-          (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8)) := rfl
+          (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8)) := rfl
 
 theorem populatedRowAt_isOverflowC_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).is_overflow_c =
       ProvableType.fromElements (M := Circuits.Types.IsEqualWordOperation)
         (varFromOffset (F := ZMod p) (fields 11)
-          (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11)) := rfl
+          (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11)) := rfl
 
 theorem populatedRowAt_isC0_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).is_c_0 =
       ProvableType.fromElements (M := Circuits.Types.IsZeroWordOperation)
         (varFromOffset (F := ZMod p) (fields 11)
-          (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11)) := rfl
+          (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11)) := rfl
 
 theorem populatedRowAt_bMsb_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).b_msb.msb =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 } := rfl
 
 theorem populatedRowAt_cMsb_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_msb.msb =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 } := rfl
 
 theorem populatedRowAt_remMsb_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_msb.msb =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1 } := rfl
 
 theorem populatedRowAt_quotMsb_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).quot_msb.msb =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1 + 1 } := rfl
 
 /-- Folded projections of the four one-cell sign-bit operations. -/
 theorem populatedRowAt_bMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).b_msb =
-      varFromOffset (F := ZMod p) Circuits.Types.U16MSBOperation (offset + 213) := by
+      varFromOffset (F := ZMod p) Circuits.Types.U16MSBOperation (offset + 206) := by
   rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_cMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).c_msb =
-      varFromOffset (F := ZMod p) Circuits.Types.U16MSBOperation (offset + 214) := by
+      varFromOffset (F := ZMod p) Circuits.Types.U16MSBOperation (offset + 207) := by
   rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_remMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).rem_msb =
-      varFromOffset (F := ZMod p) Circuits.Types.U16MSBOperation (offset + 215) := by
+      varFromOffset (F := ZMod p) Circuits.Types.U16MSBOperation (offset + 208) := by
   rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_quotMsbOperation_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).quot_msb =
-      varFromOffset (F := ZMod p) Circuits.Types.U16MSBOperation (offset + 216) := by
+      varFromOffset (F := ZMod p) Circuits.Types.U16MSBOperation (offset + 209) := by
   rw [ProvableStruct.varFromOffset_eq_varFromOffset]; rfl
 
 theorem populatedRowAt_ltBit_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (populatedRowAt input offset).remainder_lt_operation.u16_compare_operation.bit =
-      var { index := offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+      var { index := offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 } := rfl
 
 end
@@ -929,63 +930,63 @@ set_option linter.unusedSectionVars false
 theorem eval_populatedRowAt_mulLower (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (Eval.eval env (populatedRowAt input offset)).c_times_quotient_lower =
-      evaluatedMulBlock env.toEnvironment (offset + 8 + 4 + 4 + 4 + 4) := by
+      evaluatedMulBlock env.toEnvironment (offset + 1 + 4 + 4 + 4 + 4) := by
   rw [eval_divRemCols_mulLower, populatedRowAt_mulLower_eq, evaluatedMulBlock]
 
 /-- Folded evaluator for the upper Mul block of `populatedRowAt`. -/
 theorem eval_populatedRowAt_mulUpper (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (Eval.eval env (populatedRowAt input offset)).c_times_quotient_upper =
-      evaluatedMulBlock env.toEnvironment (offset + 8 + 4 + 4 + 4 + 4 + 45) := by
+      evaluatedMulBlock env.toEnvironment (offset + 1 + 4 + 4 + 4 + 4 + 45) := by
   rw [eval_divRemCols_mulUpper, populatedRowAt_mulUpper_eq, evaluatedMulBlock]
 
 /-- Evaluated opcode-flag projections of the explicit row layout.  Keeping these exact readback
 lemmas avoids reducing `Vector.getElem` proof arguments in large parent goals. -/
 theorem eval_populatedRowAt_isDiv (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (Eval.eval env (populatedRowAt input offset)).is_div = env.get offset := by
+    (Eval.eval env (populatedRowAt input offset)).is_div = Expression.eval env.toEnvironment input.selectors[0] := by
   rw [eval_divRemCols_isDiv]
   simp +instances only [populatedRowAt, circuit_norm]
 
 theorem eval_populatedRowAt_isDivu (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (Eval.eval env (populatedRowAt input offset)).is_divu = env.get (offset + 1) := by
+    (Eval.eval env (populatedRowAt input offset)).is_divu = env.get offset := by
   rw [eval_divRemCols_isDivu]
   simp +instances only [populatedRowAt, circuit_norm]
 
 theorem eval_populatedRowAt_isRem (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (Eval.eval env (populatedRowAt input offset)).is_rem = env.get (offset + 2) := by
+    (Eval.eval env (populatedRowAt input offset)).is_rem = Expression.eval env.toEnvironment input.selectors[1] := by
   rw [eval_divRemCols_isRem]
   simp +instances only [populatedRowAt, circuit_norm]
 
 theorem eval_populatedRowAt_isRemu (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (Eval.eval env (populatedRowAt input offset)).is_remu = env.get (offset + 3) := by
+    (Eval.eval env (populatedRowAt input offset)).is_remu = Expression.eval env.toEnvironment input.selectors[2] := by
   rw [eval_divRemCols_isRemu]
   simp +instances only [populatedRowAt, circuit_norm]
 
 theorem eval_populatedRowAt_isDivw (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (Eval.eval env (populatedRowAt input offset)).is_divw = env.get (offset + 4) := by
+    (Eval.eval env (populatedRowAt input offset)).is_divw = Expression.eval env.toEnvironment input.selectors[3] := by
   rw [eval_divRemCols_isDivw]
   simp +instances only [populatedRowAt, circuit_norm]
 
 theorem eval_populatedRowAt_isRemw (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (Eval.eval env (populatedRowAt input offset)).is_remw = env.get (offset + 5) := by
+    (Eval.eval env (populatedRowAt input offset)).is_remw = Expression.eval env.toEnvironment input.selectors[4] := by
   rw [eval_divRemCols_isRemw]
   simp +instances only [populatedRowAt, circuit_norm]
 
 theorem eval_populatedRowAt_isDivuw (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (Eval.eval env (populatedRowAt input offset)).is_divuw = env.get (offset + 6) := by
+    (Eval.eval env (populatedRowAt input offset)).is_divuw = Expression.eval env.toEnvironment input.selectors[5] := by
   rw [eval_divRemCols_isDivuw]
   simp +instances only [populatedRowAt, circuit_norm]
 
 theorem eval_populatedRowAt_isRemuw (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (Eval.eval env (populatedRowAt input offset)).is_remuw = env.get (offset + 7) := by
+    (Eval.eval env (populatedRowAt input offset)).is_remuw = Expression.eval env.toEnvironment input.selectors[6] := by
   rw [eval_divRemCols_isRemuw]
   simp +instances only [populatedRowAt, circuit_norm]
 
@@ -999,14 +1000,14 @@ theorem eval_populatedRowAt_isReal (env : ProverEnvironment (ZMod p))
 theorem eval_populatedRowAt_isRealNotWord (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (Eval.eval env (populatedRowAt input offset)).is_real_not_word =
-      env.get (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4) := by
+      env.get (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) := by
   rw [eval_divRemCols_isRealNotWord]
   simp +instances only [populatedRowAt, circuit_norm]
 
 theorem eval_populatedRowAt_remNeg (env : ProverEnvironment (ZMod p))
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (Eval.eval env (populatedRowAt input offset)).rem_neg =
-      env.get (offset + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 5) := by
+      env.get (offset + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 5) := by
   rw [eval_divRemCols_remNeg]
   simp +instances only [populatedRowAt, circuit_norm]
 
@@ -1036,7 +1037,7 @@ def constrainRow (input : Var Inputs (ZMod p)) (cols : Var Columns (ZMod p)) :
      cols.a[0], cols.a[1], cols.a[2], cols.a[3]⟩
   -- Assert the entire non-reader constraint set through the two whole-row `FormalAssertion`
   -- gadgets (each `localLength = 0`, so the witness prefix is
-  -- the complete 217-cell row): `DivRemCompare.circuit` (IsEqualWord ×4 / IsZeroWord / Add ×2 /
+  -- the complete 210-cell row): `DivRemCompare.circuit` (IsEqualWord ×4 / IsZeroWord / Add ×2 /
   -- LtU / U16MSB ×7) and `DivRemCore.circuit` (MulOperation ×2 + the 8 product-glue asserts +
   -- `assertZeros (ownAsserts cols)` — `E13…E367`, `op_a_0`, incl. the binary gates like
   -- `is_real·(is_real-1)` = E355 — + the 32 gated byte-range pulls).
@@ -1093,15 +1094,15 @@ private theorem constrainRow_localLength_eq (input : Var Inputs (ZMod p))
 -- unfold `elaborated`; exposing projections of `derivedElaborated` there makes reducibility unfold
 -- the whole chip again during metavariable instantiation.
 private theorem derivedLocalLengthEq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (main input).localLength offset = 217 := by
+    (main input).localLength offset = 210 := by
   rw [derivedElaborated.localLength_eq]
   rfl
 
-/-- The folded witness prefix occupies exactly the 217 Rust-layout auxiliary columns.  This is
+/-- The folded witness prefix occupies exactly the 210 Rust-layout auxiliary columns.  This is
 derived from the already-elaborated whole-chip length and the zero-length constraint suffix, so the
-kernel never has to unfold the 217 nested witness binds merely to recover the offset. -/
+kernel never has to unfold the populate program merely to recover the offset. -/
 @[circuit_norm] theorem populateRow_localLength_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (populateRow input).localLength offset = 217 := by
+    (populateRow input).localLength offset = 210 := by
   have wholeLength := derivedLocalLengthEq input offset
   rw [main_localLength_decompose, constrainRow_localLength_eq, Nat.add_zero] at wholeLength
   exact wholeLength
@@ -1123,7 +1124,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   output_eq := derivedElaborated.output_eq
   -- Keep the constant visible at the proof boundary: exposing the derived length makes
   -- `circuit_proof_start` normalize the entire 246-column circuit whenever it unfolds this record.
-  localLength _ := 217
+  localLength _ := 210
   localLength_eq := derivedLocalLengthEq
   subcircuitsConsistent := derivedSubcircuitsConsistent
   channelsWithGuarantees :=
@@ -1140,14 +1141,14 @@ set_option linter.unusedSectionVars false in
 -- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
 -- post-order lemma can see it; a pre-order lemma fires on the public form first.
 @[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
-    (elaborated (p := p)).localLength x = 217 := rfl
+    (elaborated (p := p)).localLength x = 210 := rfl
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
-    (derivedElaborated (p := p)).localLength x = 217 := rfl
+    (derivedElaborated (p := p)).localLength x = 210 := rfl
 
 /-- The shared CPU-state block in DivRem's output is an alias of the input block.  Exposing this
-small projection prevents whole-machine proofs from normalizing the complete 217-cell output just
+small projection prevents whole-machine proofs from normalizing the complete 210-cell output just
 to identify the State-bus payload. -/
 @[circuit_norm ↓] lemma output_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((elaborated (p := p)).output input offset).state = input.state := rfl

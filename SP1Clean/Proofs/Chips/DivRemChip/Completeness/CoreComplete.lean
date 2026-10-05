@@ -165,21 +165,21 @@ from explicit row offsets to semantic Mul/glue facts. -/
 theorem evaluatedProductSpec (env : ProverEnvironment (ZMod p)) (input : Var Inputs (ZMod p))
     (off : ℕ) (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
     (hQC : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + i }) = populateQuotComp B C f)
+      (Vector.mapRange 4 fun i => var { index := off + 1 + i }) = populateQuotComp B C f)
     (hC : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + i }) = cComp C f)
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + i }) = cComp C f)
     (hCtq : Vector.map (Expression.eval env.toEnvironment)
       (Vector.mapRange 8 fun i =>
-        var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) = populateCtq B C f)
-    (hMulLo : ∀ i : Fin 45, env.get (off + 8 + 4 + 4 + 4 + 4 + ↑i) =
+        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) = populateCtq B C f)
+    (hMulLo : ∀ i : Fin 45, env.get (off + 1 + 4 + 4 + 4 + 4 + ↑i) =
       (SubSpecs.mulWitnessElements (populateMulLower ir B C f)).get i)
-    (hMulUp : ∀ i : Fin 45, env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + ↑i) =
+    (hMulUp : ∀ i : Fin 45, env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + ↑i) =
       (SubSpecs.mulWitnessElements (populateMulUpper ir B C f)).get i)
     (hIR : Expression.eval env.toEnvironment input.is_real = ir)
-    (hIRNW : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4) =
+    (hIRNW : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) =
       ir * (1 - (f[4] + f[5] + f[6] + f[7])))
-    (hF0 : env.get off = f[0]) (hF1 : env.get (off + 1) = f[1])
-    (hF2 : env.get (off + 2) = f[2]) (hF3 : env.get (off + 3) = f[3])
+    (hF0 : Expression.eval env.toEnvironment input.selectors[0] = f[0]) (hF1 : env.get off = f[1])
+    (hF2 : Expression.eval env.toEnvironment input.selectors[1] = f[2]) (hF3 : Expression.eval env.toEnvironment input.selectors[2] = f[3])
     (hcU : C.isU64) (hbin : ir = 0 ∨ ir = 1)
     (hf0 : f[0] = 0 ∨ f[0] = 1) (hf1 : f[1] = 0 ∨ f[1] = 1)
     (hf2 : f[2] = 0 ∨ f[2] = 1) (hf3 : f[3] = 0 ∨ f[3] = 1)
@@ -204,12 +204,12 @@ theorem evaluatedProductSpec (env : ProverEnvironment (ZMod p)) (input : Var Inp
       populateMulLower ir B C f :=
     (eval_populatedRowAt_mulLower env input off).trans
       (evaluatedMulBlock_eq_of_pins env.toEnvironment
-        (off + 8 + 4 + 4 + 4 + 4) (populateMulLower ir B C f) hMulLo)
+        (off + 1 + 4 + 4 + 4 + 4) (populateMulLower ir B C f) hMulLo)
   have eUp : (Eval.eval env (populatedRowAt input off)).c_times_quotient_upper =
       populateMulUpper ir B C f :=
     (eval_populatedRowAt_mulUpper env input off).trans
       (evaluatedMulBlock_eq_of_pins env.toEnvironment
-        (off + 8 + 4 + 4 + 4 + 4 + 45) (populateMulUpper ir B C f) hMulUp)
+        (off + 1 + 4 + 4 + 4 + 4 + 45) (populateMulUpper ir B C f) hMulUp)
   have eIR : (Eval.eval env (populatedRowAt input off)).is_real = ir :=
     (eval_populatedRowAt_isReal env input off).trans hIR
   have eIRNW : (Eval.eval env (populatedRowAt input off)).is_real_not_word =
@@ -490,92 +490,92 @@ theorem evaluatedPopulatedOwnAssertsComplete
     (hf6 : f[6] = 0 ∨ f[6] = 1) (hf7 : f[7] = 0 ∨ f[7] = 1)
     (hsum : f[0] + f[1] + f[2] + f[3] + f[4] + f[5] + f[6] + f[7] = 1)
     (hsr : f[0] + f[2] + f[4] + f[5] = 1 → ir = 1)
-    (hF0 : env.get off = f[0]) (hF1 : env.get (off + 1) = f[1])
-    (hF2 : env.get (off + 2) = f[2]) (hF3 : env.get (off + 3) = f[3])
-    (hF4 : env.get (off + 4) = f[4]) (hF5 : env.get (off + 5) = f[5])
-    (hF6 : env.get (off + 6) = f[6]) (hF7 : env.get (off + 7) = f[7])
+    (hF0 : Expression.eval env.toEnvironment input.selectors[0] = f[0]) (hF1 : env.get off = f[1])
+    (hF2 : Expression.eval env.toEnvironment input.selectors[1] = f[2]) (hF3 : Expression.eval env.toEnvironment input.selectors[2] = f[3])
+    (hF4 : Expression.eval env.toEnvironment input.selectors[3] = f[4]) (hF5 : Expression.eval env.toEnvironment input.selectors[4] = f[5])
+    (hF6 : Expression.eval env.toEnvironment input.selectors[5] = f[6]) (hF7 : Expression.eval env.toEnvironment input.selectors[6] = f[7])
     (hIR : Expression.eval env.toEnvironment input.is_real = ir)
-    (hIRNW : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4) =
+    (hIRNW : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) =
       ir * (1 - (f[4] + f[5] + f[6] + f[7])))
-    (hOV : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45) =
+    (hOV : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45) =
       populateIsOverflow ir B C f)
-    (hBN : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 1) = populateBNeg B f)
-    (hBNNO : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 2) =
+    (hBN : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 1) = populateBNeg B f)
+    (hBNNO : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 2) =
       populateBNeg B f * (1 - populateIsOverflow ir B C f))
-    (hBNNNO : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 3) =
+    (hBNNNO : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 3) =
       (1 - populateBNeg B f) * (1 - populateIsOverflow ir B C f))
-    (hRN : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 5) = populateRemNeg B C f)
-    (hCN : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 6) = populateCNeg C f)
-    (hACE : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+    (hRN : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 5) = populateRemNeg B C f)
+    (hCN : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 6) = populateCNeg C f)
+    (hACE : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4) = populateCNeg C f * ir)
-    (hARE : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+    (hARE : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 1) = populateRemNeg B C f * ir)
-    (hRCM : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+    (hRCM : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 2) = ltGate ir C f)
-    (hBM : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+    (hBM : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4) = bMsbCell B f)
-    (hCM : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+    (hCM : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1) = cMsbCell C f)
-    (hRM : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+    (hRM : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1) =
       remMsbCell B C f)
-    (hQM : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+    (hQM : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1 + 1) =
       quotMsbCell B C f)
     (hBvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + i }) = bComp B f)
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + i }) = bComp B f)
     (hCvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + i }) = cComp C f)
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + i }) = cComp C f)
     (hQvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i }) =
       populateQuotient B C f)
     (hQCvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + i }) = populateQuotComp B C f)
+      (Vector.mapRange 4 fun i => var { index := off + 1 + i }) = populateQuotComp B C f)
     (hRvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i }) =
       populateRemainder B C f)
     (hRCvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + i }) = populateRemComp B C f)
     (hAvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + i }) = populateA B C f)
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + i }) = populateA B C f)
     (hABSCvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + i }) = populateAbsC C f)
     (hABSRvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i }) = populateAbsRem B C f)
     (hMAXvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + i }) = populateMaxAbsCOr1 C f)
     (hCTQvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 8 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) =
+      (Vector.mapRange 8 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) =
       populateCtq B C f)
     (hCARRYvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 8 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i }) =
+      (Vector.mapRange 8 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i }) =
       populateCarry B C f)
     (hCNEGVvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + i }) = wCnegWitness ir C f)
     (hRNEGVvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + i }) = wRnegWitness ir B C f)
     (hBPVvec : Vector.map (Expression.eval env.toEnvironment)
       input.adapter.op_b_memory.prev_value = B)
     (hCPVvec : Vector.map (Expression.eval env.toEnvironment)
       input.adapter.op_c_memory.prev_value = C)
     (hOVB : ∀ i : Fin 11,
-      env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + ↑i) =
+      env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + ↑i) =
         (SubSpecs.eqWordWitnessElements (ovbWitness ir B f)).get i)
     (hOVC : ∀ i : Fin 11,
-      env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + ↑i) =
+      env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + ↑i) =
         (SubSpecs.eqWordWitnessElements (ovcWitness ir C f)).get i)
     (hISC0 : ∀ i : Fin 11,
-      env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + ↑i) =
+      env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + ↑i) =
         (SubSpecs.isZeroWitnessElements (p := p) (isC0Witness C f)).get i)
-    (hLTBIT : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+    (hLTBIT : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1) = (ltBitWitness ir B C f)[0])
     (hOPA0 : Expression.eval env.toEnvironment input.adapter.op_a_0 = 0) :
     DivRemCore.OwnAssertsHold (Eval.eval env (populatedRowAt input off)) := by
@@ -623,7 +623,7 @@ theorem evaluatedPopulatedOwnAssertsComplete
   · rw [populatedRowAt_isOverflowB_eq]
     have hS : (ProvableType.fromElements (M := Circuits.Types.IsEqualWordOperation)
           (Vector.mapRange 11 fun j =>
-            env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + j))) =
+            env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + j))) =
         ovbWitness ir B f := by
       refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
       rw [ProvableType.toElements_fromElements]
@@ -633,7 +633,7 @@ theorem evaluatedPopulatedOwnAssertsComplete
   · rw [populatedRowAt_isOverflowC_eq]
     have hS : (ProvableType.fromElements (M := Circuits.Types.IsEqualWordOperation)
           (Vector.mapRange 11 fun j =>
-            env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + j))) =
+            env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + j))) =
         ovcWitness ir C f := by
       refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
       rw [ProvableType.toElements_fromElements]
@@ -644,10 +644,10 @@ theorem evaluatedPopulatedOwnAssertsComplete
     have hS : (ProvableType.fromElements (M := Circuits.Types.IsZeroWordOperation)
           (Vector.map (fun x => Expression.eval env.toEnvironment x)
             (Vector.mapRange 11 fun j => var { index :=
-              off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + j }))) =
+              off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + j }))) =
         isC0Witness C f := by
       exact SubSpecs.eval_isZeroBlock_eq env.toEnvironment
-        (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11)
+        (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11)
         (isC0Witness C f) hISC0
     rw [← hS]
     simp only [iszeroword_result_proj, circuit_norm]
@@ -659,12 +659,12 @@ theorem evaluatedSelectionEvidenceSpec
     (env : ProverEnvironment (ZMod p)) (input : Var Inputs (ZMod p)) (off : ℕ)
     (ir : ZMod p) (f : Vector (ZMod p) 8)
     (hIR : Expression.eval env.toEnvironment input.is_real = ir)
-    (hIRNW : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4) =
+    (hIRNW : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) =
       ir * (1 - (f[4] + f[5] + f[6] + f[7])))
-    (hF0 : env.get off = f[0]) (hF1 : env.get (off + 1) = f[1])
-    (hF2 : env.get (off + 2) = f[2]) (hF3 : env.get (off + 3) = f[3])
-    (hF4 : env.get (off + 4) = f[4]) (hF5 : env.get (off + 5) = f[5])
-    (hF6 : env.get (off + 6) = f[6]) (hF7 : env.get (off + 7) = f[7])
+    (hF0 : Expression.eval env.toEnvironment input.selectors[0] = f[0]) (hF1 : env.get off = f[1])
+    (hF2 : Expression.eval env.toEnvironment input.selectors[1] = f[2]) (hF3 : Expression.eval env.toEnvironment input.selectors[2] = f[3])
+    (hF4 : Expression.eval env.toEnvironment input.selectors[3] = f[4]) (hF5 : Expression.eval env.toEnvironment input.selectors[4] = f[5])
+    (hF6 : Expression.eval env.toEnvironment input.selectors[5] = f[6]) (hF7 : Expression.eval env.toEnvironment input.selectors[6] = f[7])
     (hbin : ir = 0 ∨ ir = 1)
     (hirnwbin : ir * (1 - (f[4] + f[5] + f[6] + f[7])) = 0 ∨
       ir * (1 - (f[4] + f[5] + f[6] + f[7])) = 1)
@@ -717,30 +717,30 @@ theorem evaluatedRangeSpec
     (env : ProverEnvironment (ZMod p)) (input : Var Inputs (ZMod p)) (off : ℕ)
     (B C : Word (ZMod p)) (f : Vector (ZMod p) 8) (hcU : C.isU64)
     (hCTQ : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 8 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) =
+      (Vector.mapRange 8 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) =
       populateCtq B C f)
     (hCarry : Vector.map (Expression.eval env.toEnvironment)
       (Vector.mapRange 8 fun i =>
-        var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i }) =
+        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i }) =
       populateCarry B C f)
     (hRC : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + i }) = populateRemComp B C f)
     (hAC : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + i }) = populateAbsC C f)
     (hAR : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i }) = populateAbsRem B C f)
     (hQ : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i }) =
       populateQuotient B C f)
     (hR : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 8 + 4 + 4 + 4 + 4 + 45 + 45
+      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
         + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i }) =
       populateRemainder B C f)
-    (hRN : env.get (off + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 5) = populateRemNeg B C f) :
+    (hRN : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 5) = populateRemNeg B C f) :
     DivRemCore.RangeSpec (Eval.eval env (populatedRowAt input off)) := by
   let cols := Eval.eval env (populatedRowAt input off)
   have eCTQ : cols.c_times_quotient = populateCtq B C f := by

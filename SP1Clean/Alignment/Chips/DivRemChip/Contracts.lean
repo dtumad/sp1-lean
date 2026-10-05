@@ -3,7 +3,7 @@ import SP1Clean.Soundness.TypedMemory
 
 /-! # DivRem — circuit-grounding contracts
 
-Folded structural facts crossing the completed DivRem circuit boundary.  The 217-cell witness row
+Folded structural facts crossing the completed DivRem circuit boundary.  The 210-cell witness row
 and its arithmetic evidence stay opaque: this module exposes only the retained R-type reader,
 adapter passthrough, and the physical `op_a_0 = 0` routing assertion needed by whole-machine
 grounding.
@@ -15,7 +15,7 @@ open Air.Flat Circuit
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-/-- The exact R-type reader input retained after DivRem's 217-cell witness prefix. -/
+/-- The exact R-type reader input retained after DivRem's 210-cell witness prefix. -/
 def DivRemChip.rTypeReaderInput (input : Var DivRemChip.Inputs (ZMod p)) (offset : ℕ) :
     Var Readers.RTypeReader.Inputs (ZMod p) :=
   let cols := DivRemChip.populatedRowAt input offset
@@ -27,7 +27,7 @@ def DivRemChip.rTypeReaderInput (input : Var DivRemChip.Inputs (ZMod p)) (offset
 
 /-- The retained R-type reader occurs immediately after the folded witness prefix. -/
 theorem DivRemChip.rTypeReader_mem (input : Var DivRemChip.Inputs (ZMod p)) (offset : ℕ) :
-    ⟨offset + 217, Readers.RTypeReader.circuit.toSubcircuit (offset + 217)
+    ⟨offset + 210, Readers.RTypeReader.circuit.toSubcircuit (offset + 210)
       (DivRemChip.rTypeReaderInput input offset)⟩ ∈
       ((DivRemChip.main input).operations offset).subcircuits := by
   simp only [DivRemChip.main, DivRemChip.rTypeReaderInput, circuit_norm]
@@ -39,7 +39,7 @@ theorem DivRemChip.rTypeReader_mem (input : Var DivRemChip.Inputs (ZMod p)) (off
 /-- The DivRem arithmetic-core assertion boundary is retained at the same post-witness offset. -/
 private theorem DivRemChip.divRemCore_mem
     (input : Var DivRemChip.Inputs (ZMod p)) (offset : ℕ) :
-    ⟨offset + 217, DivRemCore.circuit.toSubcircuit (offset + 217)
+    ⟨offset + 210, DivRemCore.circuit.toSubcircuit (offset + 210)
       (DivRemChip.populatedRowAt input offset)⟩ ∈
       ((DivRemChip.main input).operations offset).subcircuits := by
   simp only [DivRemChip.main, circuit_norm]
@@ -126,15 +126,15 @@ theorem DivRemChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (Component.constraintsHold_iff env).mp constraints
   have coreFlat := constraintsHoldFlat_subcircuit_of_mem env
     ((DivRemChip.main input).operations offset)
-    (DivRemCore.circuit.toSubcircuit (offset + 217) cols)
+    (DivRemCore.circuit.toSubcircuit (offset + 210) cols)
     (DivRemChip.divRemCore_mem input offset) rowConstraints
   have coreShallow : ConstraintsHold.Shallow env
-      ((DivRemCore.main cols).operations (offset + 217)) := by
+      ((DivRemCore.main cols).operations (offset + 210)) := by
     apply FlatOperation.shallowConstraints_of_constraintsHoldFlat
     simpa only [DivRemCore.circuit, FormalAssertion.toSubcircuit,
       Operations.toNested_toFlat] using coreFlat
   have flagZero := DivRemChip.opA0_eq_zero_of_coreShallowConstraints env cols
-    (offset + 217) coreShallow
+    (offset + 210) coreShallow
   have inputEq : Eval.eval env input =
       ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset DivRemChip.Inputs 0 env
@@ -216,7 +216,7 @@ private theorem DivRemChip.selectionFacts_of_coreShallowConstraints
     bool_of_mul_pred g6, bool_of_mul_pred g7⟩
 
 /-- The eight one-hot selectors weight to an R-type discriminant that is never the `ECALL` value
-`50`.  Stating the arithmetic over opaque field elements keeps the folded 217-cell witness row out of
+`50`.  Stating the arithmetic over opaque field elements keeps the folded 210-cell witness row out of
 the `push_cast`/`ring` atom normalisation, where projecting it is ruinously expensive. -/
 private theorem DivRemChip.encodedOpcode_ne_ecall {f0 f1 f2 f3 f4 f5 f6 f7 : ZMod p}
     (b0 : f0 = 0 ∨ f0 = 1) (b1 : f1 = 0 ∨ f1 = 1) (b2 : f2 = 0 ∨ f2 = 1) (b3 : f3 = 0 ∨ f3 = 1)
@@ -254,15 +254,15 @@ theorem DivRemChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (Component.constraintsHold_iff env).mp constraints
   have coreFlat := constraintsHoldFlat_subcircuit_of_mem env
     ((DivRemChip.main input).operations offset)
-    (DivRemCore.circuit.toSubcircuit (offset + 217) cols)
+    (DivRemCore.circuit.toSubcircuit (offset + 210) cols)
     (DivRemChip.divRemCore_mem input offset) rowConstraints
   have coreShallow : ConstraintsHold.Shallow env
-      ((DivRemCore.main cols).operations (offset + 217)) := by
+      ((DivRemCore.main cols).operations (offset + 210)) := by
     apply FlatOperation.shallowConstraints_of_constraintsHoldFlat
     simpa only [DivRemCore.circuit, FormalAssertion.toSubcircuit,
       Operations.toNested_toFlat] using coreFlat
   obtain ⟨hsum, b0, b1, b2, b3, b4, b5, b6, b7⟩ :=
-    DivRemChip.selectionFacts_of_coreShallowConstraints env cols (offset + 217) coreShallow
+    DivRemChip.selectionFacts_of_coreShallowConstraints env cols (offset + 210) coreShallow
   have outputEq : Eval.eval env ((DivRemChip.circuit (p := p)).output input offset) =
       DivRemChip.physicalCols env := by
     simp only [input, offset, DivRemChip.physicalCols, Component.rowOutput, circuit_norm]

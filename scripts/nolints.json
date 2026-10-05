@@ -3602,7 +3602,6 @@
  ["unusedArguments", "SP1Clean.DivRemChip.eval_populatedRowAt_isRemuw"],
  ["unusedArguments", "SP1Clean.DivRemChip.eval_populatedRowAt_isRemw"],
  ["unusedArguments", "SP1Clean.DivRemChip.eval_populatedRowAt_remNeg"],
- ["unusedArguments", "SP1Clean.DivRemChip.flagsCongr"],
  ["unusedArguments", "SP1Clean.DivRemChip.forAllNoOffset_map_assert"],
  ["unusedArguments", "SP1Clean.DivRemChip.forAll_map_assert"],
  ["unusedArguments", "SP1Clean.DivRemChip.interactionsWith_map_assert"],

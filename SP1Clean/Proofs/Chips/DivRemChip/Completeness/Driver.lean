@@ -14,8 +14,7 @@ import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
 
 /-! # `DivRemChip` — completeness driver (relocated from `Formal.lean`)
 
-The `completeness` proof: `main`'s honest `Populate` witness closures (flags from the
-`"div_rem_flags"` hint) satisfy every constraint under `ProverAssumptions`. Relocated here (as
+The `completeness` proof: `main`'s honest `Populate` witnesses from explicit selector inputs satisfy every constraint under `ProverAssumptions`. Relocated here (as
 `completeness`, reused by `Formal.circuit`) so `Formal.lean` stays a thin contract file; the
 preamble runs after `circuit_proof_start` (where the witness-agreement `h_env` is cheap), then a
 five-case `refine` discharges the folded CPU/RType/Compare/Core/RegisterWrite boundaries, each
@@ -50,8 +49,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 attribute [local circuit_norm ↓ 100000] ProvableType.eval_fromElements
 
 
-/-- Completeness: `main`'s honest `Populate` witness closures (flags from the `"div_rem_flags"`
-hint) satisfy every constraint under `ProverAssumptions`. -/
+/-- Completeness: `main`'s honest `Populate` witnesses from explicit selector inputs satisfy every constraint under `ProverAssumptions`. -/
 theorem completeness :
     GeneralFormalCircuit.Completeness (ZMod p) main ProverAssumptions (fun _ _ _ => True) := by
   circuit_proof_start_core
@@ -76,7 +74,7 @@ theorem completeness :
   have hf6 := h_assumptions.2.2.2.2.2.2.2.2.2.2.1
   have hf7 := h_assumptions.2.2.2.2.2.2.2.2.2.2.2.1
   -- the one-hot sum is now an identity (derived `is_divu` slot), not an assumption
-  have hsum := hintFlags_sum_eq_one (p := p) env.hint
+  have hsum := selectorFlags_sum_eq_one input_selectors
   have hpad := h_assumptions.2.2.2.2.2.2.2.2.2.2.2.2.1
   have hop_a_0 := h_assumptions.2.2.2.2.2.2.2.2.2.2.2.2.2.1
   have h_cpu := h_assumptions.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
@@ -125,28 +123,29 @@ theorem completeness :
   have hbpv : Vector.map (Expression.eval env.toEnvironment)
       input_var_adapter_op_b_memory_prev_value = input_adapter_op_b_memory_prev_value := by
     rw [← CircuitType.eval_var_fields]
-    exact h_input.2.2.2.2.2.2.1.1
+    exact h_input.2.2.1.2.2.2.2.1.1
   have hapv : Vector.map (Expression.eval env.toEnvironment)
       input_var_adapter_op_a_memory_prev_value = input_adapter_op_a_memory_prev_value := by
     rw [← CircuitType.eval_var_fields]
-    exact h_input.2.2.2.1.1
+    exact h_input.2.2.1.2.1.1
   have hcpv : Vector.map (Expression.eval env.toEnvironment)
       input_var_adapter_op_c_memory_prev_value = input_adapter_op_c_memory_prev_value := by
     rw [← CircuitType.eval_var_fields]
-    exact h_input.2.2.2.2.2.2.2.2.1
+    exact h_input.2.2.1.2.2.2.2.2.2.1
   have hir : Expression.eval env.toEnvironment input_var_is_real = input_is_real := h_input.1
   have : Fact (1 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   -- reduce the reducible operand projections, then abbreviate the operands and flags
   simp only [Inputs.op_b_val, Inputs.op_c_val] at hbU hcU
   set B := input_adapter_op_b_memory_prev_value with hBdef
   set C := input_adapter_op_c_memory_prev_value with hCdef
-  -- `set F := hintFlags env.hint` `kabstract`s the 30× `hintFlags env.hint` occurrences buried in the
-  -- heavy `h_env_*` pins (it is 0× in the goal) and stalls for minutes. `F` is consumed only via defeq
-  -- (the pins close by `exact`/`simpa`), so introduce it as a defeq `let` and abstract it just in the
-  -- small flag hypotheses the `rw`-based `have`s actually need.
-  let F := hintFlags env.hint
-  have hFdef : F = hintFlags env.hint := rfl
-  have hFlags : hintFlags env.hint = F := hFdef.symm
+  have hselectors : input_var_selectors.map (Expression.eval env.toEnvironment) =
+      input_selectors := by
+    rw [← CircuitType.eval_var_fields]
+    exact h_input.2.2.2
+  -- Keep the derived flags folded in the large witness-pin hypotheses.
+  let F := selectorFlags (input_var_selectors.map (Expression.eval env.toEnvironment))
+  have hFdef : F = selectorFlags input_selectors := congrArg selectorFlags hselectors
+  have hFlags : selectorFlags (input_var_selectors.map (Expression.eval env.toEnvironment)) = F := rfl
   rw [← hFdef] at hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum
   -- per-element eval facts for input vectors
   have epc0 : Expression.eval env.toEnvironment input_var_state_pc[0] = input_state_pc[0] := by
@@ -174,172 +173,164 @@ theorem completeness :
       input_var_adapter_op_c_memory_prev_value[i] = C[i] := by
     intro i hi; rw [← hcpv, Vector.getElem_map]
   have hfALL : ∀ (k : ℕ) (_ : k < 8),
-      (hintFlags env.hint)[k] = 0 ∨ (hintFlags env.hint)[k] = 1 := by
+      (selectorFlags (input_var_selectors.map (Expression.eval env.toEnvironment)))[k] = 0 ∨ (selectorFlags (input_var_selectors.map (Expression.eval env.toEnvironment)))[k] = 1 := by
     intro k hk
-    rw [← hFdef]
+    change F[k] = 0 ∨ F[k] = 1
     interval_cases k
     exacts [hf0, hf1, hf2, hf3, hf4, hf5, hf6, hf7]
-  have eFLAGS := flagsFE_eval (p := p) env
-  have eQC := quotCompFE_eval (env := env) (vB := B) (vC := C)
+  have eDIVU := flagF_eval input_var_selectors env 1 (by decide)
+  have eQC := quotCompFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eA := aFE_eval (env := env) (vB := B) (vC := C)
+  have eA := aFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eBc := compF_eval (env := env) (vC := B) (hWC := hbpvE) (hUC := hbU)
-  have eCc := compF_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
-  have eSCAL := scalFE_eval (env := env) (vB := B) (vC := C)
+  have eBc := compF_eval (selectors := input_var_selectors) (env := env) (vC := B) (hWC := hbpvE) (hUC := hbU)
+  have eCc := compF_eval (selectors := input_var_selectors) (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
+  have eSCAL := scalFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eCTQ := ctqProgram_eval (env := env) (vB := B) (vC := C)
+  have eCTQ := ctqProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eCARRY := carryProgram_eval (env := env) (vB := B) (vC := C)
+  have eCARRY := carryProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU) (hf := hfALL)
-  have eOVB := ovbFE_eval (env := env) (vB := B) (hWB := hbpvE)
+  have eOVB := ovbFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (hWB := hbpvE)
     (vir := input_is_real) (hir := hir)
-  have eOVC := ovcFE_eval (env := env) (vC := C) (hWC := hcpvE)
+  have eOVC := ovcFE_eval (selectors := input_var_selectors) (env := env) (vC := C) (hWC := hcpvE)
     (vir := input_is_real) (hir := hir)
-  have eISC0 := isC0FE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
-  have eABSC := absCFE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
-  have eABSR := absRemFE_eval (env := env) (vB := B) (vC := C)
+  have eISC0 := isC0FE_eval (selectors := input_var_selectors) (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
+  have eABSC := absCFE_eval (selectors := input_var_selectors) (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
+  have eABSR := absRemFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eRC := remCompFE_eval (env := env) (vB := B) (vC := C)
+  have eRC := remCompFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eMAX := maxAbsFE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
-  have eWCNEG := wCnegFE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
+  have eMAX := maxAbsFE_eval (selectors := input_var_selectors) (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
+  have eWCNEG := wCnegFE_eval (selectors := input_var_selectors) (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eWRNEG := wRnegProgram_eval (env := env) (vB := B) (vC := C)
-    (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-    (vir := input_is_real) (hir := hir)
-  have eMISC := miscFE_eval (env := env) (vB := B) (vC := C)
+  have eWRNEG := wRnegProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eCL := clProgram_eval (env := env) (vB := B) (vC := C)
+  have eMISC := miscFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eLTF := ltfProgram_eval (env := env) (vB := B) (vC := C)
+  have eCL := clProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eNEI := neiProgram_eval (env := env) (vB := B) (vC := C)
+  have eLTF := ltfProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eBIT := bitProgram_eval (env := env) (vB := B) (vC := C)
+  have eNEI := neiProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eREM := remFE_eval (env := env) (vB := B) (vC := C)
+  have eBIT := bitProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eQUOT := quotFE_eval (env := env) (vB := B) (vC := C)
+    (vir := input_is_real) (hir := hir)
+  have eREM := remFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eBM := bMsbFE_eval (env := env) (vB := B) (hWB := hbpvE) (hUB := hbU)
-  have eCM := cMsbFE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
-  have eRM := remMsbFE_eval (env := env) (vB := B) (vC := C)
+  have eQUOT := quotFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eQM := quotMsbFE_eval (env := env) (vB := B) (vC := C)
+  have eBM := bMsbFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (hWB := hbpvE) (hUB := hbU)
+  have eCM := cMsbFE_eval (selectors := input_var_selectors) (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
+  have eRM := remMsbFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have hf02 : (hintFlags env.hint)[0] + (hintFlags env.hint)[2] = 0
-      ∨ (hintFlags env.hint)[0] + (hintFlags env.hint)[2] = 1 := by
-    rw [← hFdef]
+  have eQM := quotMsbFE_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
+    (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
+  have hf02 : (selectorFlags (input_var_selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (input_var_selectors.map (Expression.eval env.toEnvironment)))[2] = 0
+      ∨ (selectorFlags (input_var_selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (input_var_selectors.map (Expression.eval env.toEnvironment)))[2] = 1 := by
+    change F[0] + F[2] = 0 ∨ F[0] + F[2] = 1
     exact (flagSums_bool hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum).2.2.2.1
-  have eMULLO := mulLowerProgram_eval (env := env) (vB := B) (vC := C)
+  have eMULLO := mulLowerProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eMULHI := mulUpperProgram_eval (env := env) (vB := B) (vC := C)
+  have eMULHI := mulUpperProgram_eval (selectors := input_var_selectors) (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir) (hf02 := hf02)
-  -- flag pins
-  have hfl0 : env.get i₀ = F[0] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 0 (by omega), hFlags]
-      using h_env_flags ⟨0, by omega⟩
-  have hfl1 : env.get (i₀ + 1) = F[1] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 1 (by omega), hFlags]
-      using h_env_flags ⟨1, by omega⟩
-  have hfl2 : env.get (i₀ + 2) = F[2] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 2 (by omega), hFlags]
-      using h_env_flags ⟨2, by omega⟩
-  have hfl3 : env.get (i₀ + 3) = F[3] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 3 (by omega), hFlags]
-      using h_env_flags ⟨3, by omega⟩
-  have hfl4 : env.get (i₀ + 4) = F[4] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 4 (by omega), hFlags]
-      using h_env_flags ⟨4, by omega⟩
-  have hfl5 : env.get (i₀ + 5) = F[5] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 5 (by omega), hFlags]
-      using h_env_flags ⟨5, by omega⟩
-  have hfl6 : env.get (i₀ + 6) = F[6] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 6 (by omega), hFlags]
-      using h_env_flags ⟨6, by omega⟩
-  have hfl7 : env.get (i₀ + 7) = F[7] := by
-    simpa only [circuit_norm, Fin.val_mk, Nat.add_zero, show size Circuits.Types.MulOperation = 45 from rfl, eFLAGS 7 (by omega), hFlags]
-      using h_env_flags ⟨7, by omega⟩
+  -- Seven flags read the input; DIVU is the single derived selector witness.
+  have hfl0 : Expression.eval env.toEnvironment input_var_selectors[0] = F[0] := by
+    simp only [F, selectorFlags, circuit_norm, Vector.getElem_map]
+  have hfl1 : env.get i₀ = F[1] := by
+    simpa only [circuit_norm, Nat.add_zero, eDIVU, hFlags] using h_env_flags
+  have hfl2 : Expression.eval env.toEnvironment input_var_selectors[1] = F[2] := by
+    simp only [F, selectorFlags, circuit_norm, Vector.getElem_map]
+  have hfl3 : Expression.eval env.toEnvironment input_var_selectors[2] = F[3] := by
+    simp only [F, selectorFlags, circuit_norm, Vector.getElem_map]
+  have hfl4 : Expression.eval env.toEnvironment input_var_selectors[3] = F[4] := by
+    simp only [F, selectorFlags, circuit_norm, Vector.getElem_map]
+  have hfl5 : Expression.eval env.toEnvironment input_var_selectors[4] = F[5] := by
+    simp only [F, selectorFlags, circuit_norm, Vector.getElem_map]
+  have hfl6 : Expression.eval env.toEnvironment input_var_selectors[5] = F[6] := by
+    simp only [F, selectorFlags, circuit_norm, Vector.getElem_map]
+  have hfl7 : Expression.eval env.toEnvironment input_var_selectors[6] = F[7] := by
+    simp only [F, selectorFlags, circuit_norm, Vector.getElem_map]
   -- scalar witness pins (each `env.get` atom in goal form = its populate value)
-  have hSC4 : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4)
+  have hSC4 : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4)
       = input_is_real * (1 - (F[4] + F[5] + F[6] + F[7])) := by
     have h := h_env_scal ⟨4, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eSCAL 4 (by omega), hFlags] at h
     simpa [populateScal_4] using h
   -- `rem_neg` scalar pin (scal slot 5) for the high-half chain rows
-  have hREMNEG : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 5) = populateRemNeg B C F := by
+  have hREMNEG : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 5) = populateRemNeg B C F := by
     have h := h_env_scal ⟨5, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eSCAL 5 (by omega), hFlags] at h
     simpa [populateScal_5] using h
-  have hMISC0 : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hMISC0 : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4)
       = populateCNeg C F * input_is_real := by
     have h := h_env_misc ⟨0, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eMISC 0 (by omega), hFlags] at h
     simpa [populateMisc_0] using h
-  have hMISC1 : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hMISC1 : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 1)
       = populateRemNeg B C F * input_is_real := by
     have h := h_env_misc ⟨1, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eMISC 1 (by omega), hFlags] at h
     simpa [populateMisc_1] using h
-  have hMISC2 : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hMISC2 : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 2)
       = ltGate input_is_real C F := by
     have h := h_env_misc ⟨2, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eMISC 2 (by omega), hFlags] at h
     simpa [populateMisc_2] using h
-  have hNEI : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hNEI : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4)
       = (ltNotEqInvWitness input_is_real B C F)[0] := by
     have h := h_env_nei ⟨0, by decide⟩
     simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
       eNEI 0 (by omega), hFlags, Nat.add_zero] at h; exact h
-  have hBIT : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hBIT : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1)
       = (ltBitWitness input_is_real B C F)[0] := by
     have h := h_env_bit ⟨0, by decide⟩
     simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
       eBIT 0 (by omega), hFlags, Nat.add_zero] at h; exact h
-  have hBM : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hBM : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4)
       = bMsbCell B F := by
     have h := h_env_bmsb
     simp only [circuit_norm, Nat.add_zero, eBM, hFlags] at h; exact h
-  have hCM : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hCM : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1)
       = cMsbCell C F := by
     have h := h_env_cmsb
     simp only [circuit_norm, Nat.add_zero, eCM, hFlags] at h; exact h
-  have hRM : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hRM : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1)
       = remMsbCell B C F := by
     have h := h_env_remmsb
     simp only [circuit_norm, Nat.add_zero, eRM, hFlags] at h; exact h
-  have hQM : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+  have hQM : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1 + 1)
       = quotMsbCell B C F := by
     have h := h_env_quotmsb
     simp only [circuit_norm, Nat.add_zero, eQM, hFlags] at h; exact h
   -- vector pins: each witnessed operand vector (as it appears in the goal) = its populate word
   have hQCvec : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var { index := i₀ + 8 + i }) : Word (ZMod p))
+        (Vector.mapRange 4 fun i => var { index := i₀ + 1 + i }) : Word (ZMod p))
       = populateQuotComp B C F := by
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_qc ⟨i, hi⟩
     simp only [circuit_norm, eQC i hi, hFlags] at h; exact h
   have hCvec : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var { index := i₀ + 8 + 4 + 4 + 4 + i }) : Word (ZMod p))
+        (Vector.mapRange 4 fun i => var { index := i₀ + 1 + 4 + 4 + 4 + i }) : Word (ZMod p))
       = cComp C F := by
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
@@ -347,7 +338,7 @@ theorem completeness :
     simp only [circuit_norm, eCc i hi, hFlags] at h; exact h
   have hABSCvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
-          var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i })
+          var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i })
         : Word (ZMod p))
       = populateAbsC C F := by
     apply Vector.ext; intro i hi
@@ -356,7 +347,7 @@ theorem completeness :
     simp only [circuit_norm, Nat.add_zero, eABSC i hi, hFlags] at h; exact h
   have hABSRvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
-          var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i })
+          var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i })
         : Word (ZMod p))
       = populateAbsRem B C F := by
     apply Vector.ext; intro i hi
@@ -365,7 +356,7 @@ theorem completeness :
     simp only [circuit_norm, Nat.add_zero, eABSR i hi, hFlags] at h; exact h
   have hRCvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
-          var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
             + 4 + 4 + i }) : Word (ZMod p))
       = populateRemComp B C F := by
     apply Vector.ext; intro i hi
@@ -374,7 +365,7 @@ theorem completeness :
     simp only [circuit_norm, Nat.add_zero, eRC i hi, hFlags] at h; exact h
   have hMAXvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
-          var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
             + 4 + 4 + 4 + i }) : Word (ZMod p))
       = populateMaxAbsCOr1 C F := by
     apply Vector.ext; intro i hi
@@ -383,7 +374,7 @@ theorem completeness :
     simp only [circuit_norm, Nat.add_zero, eMAX i hi, hFlags] at h; exact h
   have hWCNEGvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
-          var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
             + 4 + 4 + 4 + 4 + i }) : Word (ZMod p))
       = wCnegWitness input_is_real C F := by
     apply Vector.ext; intro i hi
@@ -392,7 +383,7 @@ theorem completeness :
     simp only [circuit_norm, Nat.add_zero, eWCNEG i hi, hFlags] at h; exact h
   have hWRNEGvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
-          var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
             + 4 + 4 + 4 + 4 + 4 + i }) : Word (ZMod p))
       = wRnegWitness input_is_real B C F := by
     apply Vector.ext; intro i hi
@@ -402,7 +393,7 @@ theorem completeness :
       eWRNEG i hi, hFlags] at h; exact h
   have hLTCLvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 2 fun i =>
-          var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
             + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i }) : Vector (ZMod p) 2)
       = ltClWitness input_is_real B C F := by
     apply Vector.ext; intro i hi
@@ -412,7 +403,7 @@ theorem completeness :
       eCL i hi, hFlags] at h; exact h
   have hLTFvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
-          var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
             + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i }) : Vector (ZMod p) 4)
       = ltFlagsWitness input_is_real B C F := by
     apply Vector.ext; intro i hi
@@ -427,7 +418,7 @@ theorem completeness :
   -- definitional `have` ascribed at `h_env_mullo`'s own (unfolded) type, fold the operands via the cheap
   -- `rw`, then close through `getElem_toElements_eval_varFromOffset` (the CHEAP `env.get`-level identity)
   -- instead of the eager `exact`.
-  have hMULLO : ∀ i : Fin 45, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + ↑i)
+  have hMULLO : ∀ i : Fin 45, env.get (i₀ + 1 + 4 + 4 + 4 + 4 + ↑i)
       = (SubSpecs.mulWitnessElements (populateMulLower input_is_real B C F)).get i := by
     intro i
     have hsz : (↑i : ℕ) < size Circuits.Types.MulOperation := by
@@ -440,7 +431,7 @@ theorem completeness :
     exact (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz)
       (eMULLO.trans (by rw [hFlags]))).trans
       (SubSpecs.mulWitnessElements_get (populateMulLower input_is_real B C F) i).symm
-  have hMULHI : ∀ i : Fin 45, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + ↑i)
+  have hMULHI : ∀ i : Fin 45, env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + ↑i)
       = (SubSpecs.mulWitnessElements (populateMulUpper input_is_real B C F)).get i := by
     intro i
     have hsz : (↑i : ℕ) < size Circuits.Types.MulOperation := by
@@ -453,7 +444,7 @@ theorem completeness :
     exact (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz)
       (eMULHI.trans (by rw [hFlags]))).trans
       (SubSpecs.mulWitnessElements_get (populateMulUpper input_is_real B C F) i).symm
-  have hOVB : ∀ i : Fin 11, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + ↑i)
+  have hOVB : ∀ i : Fin 11, env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + ↑i)
       = (SubSpecs.eqWordWitnessElements (ovbWitness input_is_real B F)).get i := by
     intro i
     have hsz : (↑i : ℕ) < size Circuits.Types.IsEqualWordOperation := by
@@ -467,7 +458,7 @@ theorem completeness :
         ((Witgen.getElem_eval_toElements { env := env } _ ↑i hsz).trans
           (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz) (eOVB.trans (by rw [hFlags])))))).trans
       (SubSpecs.eqWordWitnessElements_get (ovbWitness input_is_real B F) i).symm
-  have hOVC : ∀ i : Fin 11, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + ↑i)
+  have hOVC : ∀ i : Fin 11, env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + ↑i)
       = (SubSpecs.eqWordWitnessElements (ovcWitness input_is_real C F)).get i := by
     intro i
     have hsz : (↑i : ℕ) < size Circuits.Types.IsEqualWordOperation := by
@@ -483,15 +474,15 @@ theorem completeness :
       (SubSpecs.eqWordWitnessElements_get (ovcWitness input_is_real C F) i).symm
   let isc0Witness : Circuits.Types.IsZeroWordOperation (ZMod p) := isC0Witness C F
   have hISC0 : ∀ i : Fin 11,
-      env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + ↑i) =
+      env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + ↑i) =
         (SubSpecs.isZeroWitnessElements (p := p) isc0Witness).get i := by
     intro i
     have h := h_env_isc0 i
     rw [Witgen.WitgenIR.getElem_eval_ofFExprs _ _ _ i.isLt, eISC0 ↑i i.isLt, hFlags] at h
     exact h.trans (SubSpecs.isZeroWitnessElements_get isc0Witness i).symm
   -- derived gate facts
-  have hirnwbin : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4) = 0
-      ∨ env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 4) = 1 := by
+  have hirnwbin : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) = 0
+      ∨ env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) = 1 := by
     rw [hSC4]
     rcases hbin with h | h
     · left; rw [h, zero_mul]
@@ -501,37 +492,37 @@ theorem completeness :
   -- folds for the own-asserts bundle (`CoreComplete.evaluatedPopulatedOwnAssertsComplete`): the five
   -- `scal` slots, the whole-vector operand/witness blocks, and the prev-value bridges that the cases
   -- above don't already build. All clone the `hSC4` / `hCvec` patterns.
-  have hOV : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45) = populateIsOverflow input_is_real B C F := by
+  have hOV : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45) = populateIsOverflow input_is_real B C F := by
     have h := h_env_scal ⟨0, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eSCAL 0 (by omega), hFlags] at h
     simpa [populateScal_0] using h
-  have hBN : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 1) = populateBNeg B F := by
+  have hBN : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 1) = populateBNeg B F := by
     have h := h_env_scal ⟨1, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eSCAL 1 (by omega), hFlags] at h
     simpa [populateScal_1] using h
-  have hBNNO : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 2)
+  have hBNNO : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 2)
       = populateBNeg B F * (1 - populateIsOverflow input_is_real B C F) := by
     have h := h_env_scal ⟨2, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eSCAL 2 (by omega), hFlags] at h
     simpa [populateScal_2] using h
-  have hBNNNO : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 3)
+  have hBNNNO : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 3)
       = (1 - populateBNeg B F) * (1 - populateIsOverflow input_is_real B C F) := by
     have h := h_env_scal ⟨3, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eSCAL 3 (by omega), hFlags] at h
     simpa [populateScal_3] using h
-  have hCN : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 6) = populateCNeg C F := by
+  have hCN : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 6) = populateCNeg C F := by
     have h := h_env_scal ⟨6, by omega⟩
     simp only [circuit_norm, Nat.add_zero, eSCAL 6 (by omega), hFlags] at h
     simpa [populateScal_6] using h
   have hBvec : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var { index := i₀ + 8 + 4 + 4 + i }) : Word (ZMod p))
+        (Vector.mapRange 4 fun i => var { index := i₀ + 1 + 4 + 4 + i }) : Word (ZMod p))
       = bComp B F := by
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_b ⟨i, hi⟩
     simp only [circuit_norm, eBc i hi, hFlags] at h; exact h
   have hAvec : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var { index := i₀ + 8 + 4 + i }) : Word (ZMod p))
+        (Vector.mapRange 4 fun i => var { index := i₀ + 1 + 4 + i }) : Word (ZMod p))
       = populateA B C F := by
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
@@ -539,7 +530,7 @@ theorem completeness :
     simp only [circuit_norm, eA i hi, hFlags] at h; exact h
   have hQvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i => var { index :=
-          i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2
+          i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2
             + 4 + 1 + 1 + 4 + i }) : Word (ZMod p))
       = populateQuotient B C F := by
     apply Vector.ext; intro i hi
@@ -548,7 +539,7 @@ theorem completeness :
     simp only [circuit_norm, Nat.add_zero, eQUOT i hi, hFlags] at h; exact h
   have hRvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i => var { index :=
-          i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2
+          i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2
             + 4 + 1 + 1 + i }) : Word (ZMod p))
       = populateRemainder B C F := by
     apply Vector.ext; intro i hi
@@ -556,7 +547,7 @@ theorem completeness :
     have h := h_env_rem ⟨i, hi⟩
     simp only [circuit_norm, Nat.add_zero, eREM i hi, hFlags] at h; exact h
   have hCTQvecW : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 8 fun i => var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i })
+        (Vector.mapRange 8 fun i => var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i })
         : Vector (ZMod p) 8)
       = populateCtq B C F := by
     apply Vector.ext; intro i hi
@@ -565,7 +556,7 @@ theorem completeness :
     simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
       eCTQ i hi, hFlags] at h; exact h
   have hCARRYvecW : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 8 fun i => var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i })
+        (Vector.mapRange 8 fun i => var { index := i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i })
         : Vector (ZMod p) 8)
       = populateCarry B C F := by
     apply Vector.ext; intro i hi
@@ -587,7 +578,7 @@ theorem completeness :
   -- This is definitional factoring only: the flat operation order remains the Rust row order.
   simp only [main, ConstraintsHold.Completeness, Circuit.bind_forAllNoOffset]
   refine ⟨by
-    simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Circuit.pure_def, Circuit.operations,
+    simp only [populateRow, Circuit.bind_forAllNoOffset, witnessField, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Circuit.pure_def, Circuit.operations,
       Operations.forAllNoOffset, and_true], ?_⟩
   -- Expose the five folded constraint boundaries after the witness-only prefix.
   rw [populateRow_output_eq]
@@ -641,7 +632,7 @@ theorem completeness :
         hBvec hCvec hQvec hQCvec hRvec hRCvec hAvec hABSCvec hABSRvec hMAXvec
         hCTQvecW hCARRYvecW hWCNEGvec hWRNEGvec hbpv hcpv
         hOVB hOVC (by simpa only [isc0Witness] using hISC0)
-        hBIT ((h_input.2.2.2.2.1).trans hop_a_0)
+        hBIT ((h_input.2.2.1.2.2.1).trans hop_a_0)
   case regwrite =>
     simp +instances only [Readers.RegisterWrite.circuit, Readers.RegisterWrite.Assumptions,
       Readers.RegisterWrite.Spec, populatedRowAt_a_eq, circuit_norm, h_input]
