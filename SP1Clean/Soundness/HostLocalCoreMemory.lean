@@ -19,6 +19,7 @@ local instance memoryLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+  {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
 
 private theorem boundary_components (index : Fin 6) :
     (tables (p := p) image source auxiliary)[index.val]'(by rw [tables_length]; omega) =
@@ -32,20 +33,6 @@ private theorem boundary_components (index : Fin 6) :
     List.getElem_set_ne (show 27 ≠ index.val by omega),
     List.getElem_set_ne (show 26 ≠ index.val by omega),
     List.getElem_set_ne (show 25 ≠ index.val by omega)]
-
-/-- The original component view retains each physical table and its prover data. -/
-theorem localWitness_table (witness : EnsembleWitness (ensemble image source auxiliary channels))
-    (index : Fin 59) :
-    (localWitness witness).tables[index.val]'(by
-      rw [← (localWitness witness).same_length]; change index.val < (LocalCore.tables image source).length
-      rw [LocalCore.tables_length]; exact index.isLt) =
-    (witness.tables[index.val]'(by
-      rw [← witness.same_length]; change index.val < (tables image source auxiliary).length
-      rw [tables_length]; omega)).withComponent
-      ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)) :=
-  witness.project_getElem _ ⟨index.val, by
-    change index.val < (LocalCore.tables image source).length
-    rw [LocalCore.tables_length]; exact index.isLt⟩
 
 /-- The typed wrapper ledger retains the original row plus the actual gated x12 pair. -/
 theorem wrapper_memory_interactions (env : Environment (ZMod p))
@@ -61,26 +48,27 @@ theorem wrapper_memory_interactions (env : Environment (ZMod p))
     TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw]
   exact HostCallProjection.memory_values env constraints
 
-/-- Both boundary inventories retain their components, physical arrays, and prover data. -/
-theorem boundary_tables (witness : EnsembleWitness (ensemble image source auxiliary channels)) :
+/-- Both boundary inventories retain their components and complete physical row arrays. -/
+theorem boundary_tables (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     (localWitness witness).tables.take 6 = witness.tables.take 6 := by
-  apply witness.project_take (target := LocalCore.ensemble image source) _ 6
+  unfold localWitness
+  apply witness.projectPrefix_take (target := LocalCore.ensemble image source) _ _ _ 6
     (by change 6 ≤ (LocalCore.tables image source).length; rw [LocalCore.tables_length]; decide)
   intro index
   exact (boundary_components index).symm
 
 /-- Every physical interior interaction, including zero multiplicities, is retained. -/
-noncomputable def memoryInterior (witness : EnsembleWitness (ensemble image source auxiliary channels)) :
+noncomputable def memoryInterior (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     List (TypedInteraction (memoryChannel (p := p))) :=
-  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · memoryChannel)
+  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · witness.data memoryChannel)
 
-theorem memoryInterior_raw (witness : EnsembleWitness (ensemble image source auxiliary channels)) :
+theorem memoryInterior_raw (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     (memoryInterior witness).map TypedInteraction.raw =
-      (witness.tables.drop 6).flatMap (·.interactionsWith memoryChannel.toRaw) := by
+      (witness.tables.drop 6).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) := by
   simp only [memoryInterior, List.map_flatMap, typedTableInteractionsWith_raw]
 
 /-- Exact full-ledger decomposition into the unchanged boundaries and the extended interior. -/
-theorem memory_interactions (witness : EnsembleWitness (ensemble image source auxiliary channels)) :
+theorem memory_interactions (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     typedEnsembleInteractionsWith witness memoryChannel =
       ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
         (LocalCore.sourceWitness (localWitness witness))).map
@@ -97,18 +85,20 @@ theorem memory_interactions (witness : EnsembleWitness (ensemble image source au
       (memoryChannel.emittedValue (-1)) ++ _
   rw [← LocalCore.source_memory_interactions, ← LocalCore.final_memory_interactions]
   change witness.interactionsWith memoryChannel.toRaw =
-    ((localWitness witness).tables.take 3).flatMap (·.interactionsWith memoryChannel.toRaw) ++
-    (((localWitness witness).tables.drop 3).take 3).flatMap (·.interactionsWith memoryChannel.toRaw) ++ _
+    ((localWitness witness).tables.take 3).flatMap (·.interactionsWith (localWitness witness).data memoryChannel.toRaw) ++
+    (((localWitness witness).tables.drop 3).take 3).flatMap (·.interactionsWith (localWitness witness).data memoryChannel.toRaw) ++ _
   rw [← List.flatMap_append, ← List.take_add, boundary_tables]
-  change witness.verifierTable.interactionsWith memoryChannel.toRaw ++
-    witness.tables.flatMap (·.interactionsWith memoryChannel.toRaw) = _
-  have silent : memoryChannel.toRaw ∉ (LocalCore.verifier (p := p) image source).channels := by
-    intro used
-    have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    change false = true at present
-    contradiction
-  rw [Table.interactionsWith_nil_of_channel_not_mem silent, List.nil_append,
-    ← List.flatMap_append, List.take_append_drop]
+  have retained : (witness.tables.take 6).flatMap (·.interactionsWith (localWitness witness).data memoryChannel.toRaw) =
+      (witness.tables.take 6).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) :=
+    List.flatMap_congr fun table _ => table.interactionsWith_setData _ _ _
+  rw [retained]
+  change witness.verifierInteractionsWith memoryChannel.toRaw ++
+    witness.tables.flatMap (·.interactionsWith witness.data memoryChannel.toRaw) = _
+  have silent : witness.verifierInteractionsWith memoryChannel.toRaw = [] := by
+    rw [← localWitness_verifier_interactions witness memoryChannel.toRaw (by
+      simp [LocalCore.baseEnsemble, sp1Ensemble_channels])]
+    exact LocalCore.verifier_memory_silent image source _
+  rw [silent, List.nil_append, ← List.flatMap_append, List.take_append_drop]
 
 private theorem wrapper_memorySigns (input : Var HostCallChip.Inputs (ZMod p))
     (offset : ℕ) (env : Environment (ZMod p))
@@ -185,7 +175,7 @@ private theorem interior_component_binary
   · by_cases last : 6 + index = 59
     · have equal : index = 53 := by omega
       subst index
-      change NativeCore.MemoryBinary (⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p))
+      change NativeCore.MemoryBinary ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p))
       apply NativeCore.memoryBinary_of_silent
       change memoryChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
       simp [memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
@@ -197,7 +187,7 @@ private theorem interior_component_binary
 
 /-- Constraints force unit signed Memory multiplicities in the retained core, including WRITE's
 x12 pair. Appended components supply only their static multiplicity property. -/
-theorem memoryInterior_signedBinary (witness : EnsembleWitness (ensemble image source auxiliary channels))
+theorem memoryInterior_signedBinary (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (constraints : witness.Constraints)
     (binary : ∀ component ∈ auxiliary, NativeCore.MemoryBinary component) :
     ∀ interaction ∈ memoryInterior witness,
@@ -209,14 +199,14 @@ theorem memoryInterior_signedBinary (witness : EnsembleWitness (ensemble image s
   obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp rowMem
   have componentMem := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) tableMem
   rw [List.map_drop, witness.tables_map_component] at componentMem
-  exact interior_component_binary binary table.component componentMem table.data physical
-    (constraints table (witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop tableMem))
+  exact interior_component_binary binary table.component componentMem witness.data physical
+    (constraints table (List.mem_of_mem_drop tableMem)
       physical physicalMem) interaction.raw emitted
 
 /-- Full Memory balance gives exact equality of the two record inventories, retaining every
 host access. No projected Memory balance, semantic truth, or instruction inactivity is assumed. -/
-theorem memory_records_perm (witness : EnsembleWitness (ensemble image source auxiliary channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+theorem memory_records_perm (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (constraints : witness.Constraints) (balanced : witness.BalancedChannel memoryChannel.toRaw)
     (binary : ∀ component ∈ auxiliary, NativeCore.MemoryBinary component) :
     ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
       (LocalCore.sourceWitness (localWitness witness)) ++ producedMessages (memoryInterior witness)).Perm
@@ -224,42 +214,46 @@ theorem memory_records_perm (witness : EnsembleWitness (ensemble image source au
       consumedMessages (memoryInterior witness)) := by
   apply NativeCore.memoryBoundary_records_perm _ _ _ (memoryInterior_signedBinary witness constraints binary)
   rw [← memory_interactions, typedEnsembleInteractionsWith_raw]
-  exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
+  exact balanced
 
 /-- Canonical, distinct final locations follow from Byte and private ordering balance; the
 extended Memory ledger need not project to the original ensemble. -/
-theorem final_records_canonical_nodup (witness : EnsembleWitness (ensemble image source auxiliary channels))
+theorem final_records_canonical_nodup (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (interface : AuxiliaryInterface auxiliary)
     (finalSilent : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (byteBalanced : witness.BalancedChannel byteChannel.toRaw)
+    (finalBalanced : witness.BalancedChannel (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) :
     (∀ record ∈ FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness)),
       MemoryBoundary.CanonicalSpec record) ∧
     ((FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness))).map MemoryMsg.locOf).Nodup := by
   have checked := localWitness_constraints witness constraints
-  have bytes := localWitness_byte witness interface constraints
-    (balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels]))
+  have bytes := localWitness_byte witness interface constraints byteBalanced
   have specs := LocalCore.finalTables_spec_of_byte _ checked bytes
   refine ⟨FinalMemoryEnsemble.inventory.records_valid_of_tables _ specs, ?_⟩
   apply FinalMemoryEnsemble.inventory.records_locations_nodup_of_tables
     (LocalCore.finalWitness (localWitness witness)) (NativeCore.afterFinalTables_silent image) specs
   change BalancedInteractions ((LocalCore.finalWitness (localWitness witness)).interactionsWith _)
   rw [LocalCore.finalWitness_interactions, localWitness_other witness _
+    (by simp [LocalCore.baseEnsemble])
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, byteChannel, Channel.toRaw])
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, memoryChannel, Channel.toRaw])
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, HostCallChip.channel, Channel.toRaw])
     (by simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, WritePermissionProvider.channel, Channel.toRaw]) finalSilent]
-  exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble])
+  exact finalBalanced
 
 /-- The complete host ledger has unique authentic source and canonical final frontiers.
 Only the unchanged private ordering channels are projected; every host Memory access is retained. -/
-theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image source auxiliary channels))
+theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (interface : AuxiliaryInterface auxiliary)
     (sourceSilent : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉ component.circuit.channels)
     (finalSilent : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (constraints : witness.Constraints) (byteBalanced : witness.BalancedChannel byteChannel.toRaw)
+    (memoryBalanced : witness.BalancedChannel memoryChannel.toRaw)
+    (sourceBalanced : witness.BalancedChannel (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw)
+    (finalBalanced : witness.BalancedChannel (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw)
     (binary : ∀ component ∈ auxiliary, NativeCore.MemoryBinary component) (loc : MemLoc) :
     TimedGrounding.optMS (LocalCore.memoryInitialFrontier (localWitness witness) loc) +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
@@ -268,20 +262,20 @@ theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image sourc
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑(consumedMessages (memoryInterior witness)) : Multiset _) := by
   have checked := localWitness_constraints witness constraints
-  have bytes := localWitness_byte witness interface constraints
-    (balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels]))
+  have bytes := localWitness_byte witness interface constraints byteBalanced
   apply NativeCore.memoryBoundary_frontier_balance _ _ _ _ ?_ ?_
-    (memory_records_perm witness constraints balanced binary) loc
+    (memory_records_perm witness constraints memoryBalanced binary) loc
   · apply (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_locations_nodup_of_tables
       (LocalCore.sourceWitness (localWitness witness)) (NativeCore.afterInitialTables_silent image)
       (LocalCore.sourceTables_spec_of_byte _ checked bytes)
     change BalancedInteractions ((LocalCore.sourceWitness (localWitness witness)).interactionsWith _)
     rw [LocalCore.sourceWitness_interactions, localWitness_other witness _
+      (by simp [LocalCore.baseEnsemble])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, byteChannel, Channel.toRaw])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, memoryChannel, Channel.toRaw])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, HostCallChip.channel, Channel.toRaw])
       (by simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, WritePermissionProvider.channel, Channel.toRaw]) sourceSilent]
-    exact balanced _ (by simp [ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble])
-  · exact (final_records_canonical_nodup witness interface finalSilent constraints balanced).2
+    exact sourceBalanced
+  · exact (final_records_canonical_nodup witness interface finalSilent constraints byteBalanced finalBalanced).2
 
 end SP1Clean.Soundness.HostLocalCore

@@ -14,21 +14,10 @@ open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
 
 open Fixture
 
-/-- The active ADD witness includes all target checks and actual lookup providers in one ledger. -/
-theorem activeAcceptance : check target header rows = true := by native_decide
-
-/-- No validator, unchanged final record or host terminal can disappear from the accepted witness. -/
-theorem mutations :
-    [check target header (rows.filter (fun row => row.1 != 88)),
-     check target header (rows ++ [ramCheck 0]),
-     check target header (rows.map fun row => if row.1 == 88 then ramCheck 1 else row),
-     check target header (coreRows ++ terminals ++ [registerCheck 1 13 123 1, ramCheck 0]),
-     check { target with registers := target.registers.set 31 1 } header rows,
-     check { target with memory := target.memory.write 65544 1 } header rows,
-     check target header (rows.filter (fun row => row.1 != 85))] = List.replicate 7 false := by
+/-- The shared nine-case battery accepts active ADD and empty identity, and rejects all seven
+missing/duplicate validator, forged target, wrong-clock and missing-terminal cases. Keeping the
+case definitions in the fixture also keeps large snapshot values out of theorem elaboration. -/
+theorem regressions : results.all (fun (_, expected, actual) => expected == actual) = true := by
   native_decide
-
-/-- An empty continuing segment needs no final inventory and still closes every physical channel. -/
-theorem identityAcceptance : check source.sail.memorySnapshot identityHeader identityRows = true := by native_decide
 
 end SP1CleanTest.Alignment.Core.HostFinalMemory

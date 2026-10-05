@@ -30,9 +30,10 @@ terminal reject. These cases exercise complete change coverage, not just locally
 an official Sail step to canonical projection, event compilation and raw acceptance of the
 actual HostFinalMemory assembly. BEQ x1,x2,+4092 has PC 65536→69628 and clock 1→9.
 
-The fixture retains 89 installed tables: 57 physical rows in 14 nonempty tables, plus the verifier.
-Its 257 channel registrations represent 22 distinct channels. Full RawChannel membership
-equivalence permits deduplicating that registry without changing physical occurrences.
+The fixture retains 89 installed tables with 57 physical rows in 14 nonempty tables. The separate
+public verifier contributes 46 interactions. Its 260 channel registrations represent 25 distinct
+channels, including the source, host and final-memory assertion checks. Full RawChannel membership
+equivalence permits deduplicating the registry while retaining every interaction occurrence.
 
 Original/empty witnesses accept. Wrong next PC, missing/duplicate authentication, a changed
 untouched target register and malformed seed indices/lengths reject. The runner computes the
@@ -45,7 +46,10 @@ noncomputable full Sail state. This closes one concrete construction, not genera
 paired U8Range request with two upstream fixed ByteTable lookups. Gating the lookup inputs
 preserves inactive-row freedom. Semantic assumptions, arithmetic assertions and generated witness
 cells agree with the original circuit. The proof retains arbitrary residual providers, including
-reader demand with the same key as the removed occurrence.
+reader demand with the same key as the removed occurrence. Generation and evaluation data are
+independent. The constraint transport fixes one evaluation environment; applying it after changing
+canonical inventory still requires residual-lookup agreement. The executable cases check both
+assemblies at their own derived data.
 
 The 69 cases cover LB/LBU, every byte offset, boundary byte values, inactive byte 300, repeated
 keys and three malformed rows. On the 64-active-plus-one-inactive workload:
@@ -67,13 +71,16 @@ own full balance premises.
 
 [Counter](../SP1Clean/Soundness/Examples/Counter.lean) proves both directions for an actual Clean
 ensemble over ZMod 97: natural endpoints in 0..15 and at most 15 increments. The transition
-checks its predecessor in 0..14 and successor = predecessor + 1; the verifier authenticates
-endpoints. Ranked ledger recovery orders all rows. Its data-only compiler is proved sound and
-complete without readiness premises.
+checks its predecessor in 0..14 and successor = predecessor + 1. The separate verifier enforces
+each endpoint's 0..15 range through polynomial assertions and supplies the State endpoints.
+Only transition rows enter the physical inventory and derived prover data. Ranked ledger recovery
+orders all rows. Its data-only compiler is proved sound and complete without readiness premises.
 
 [Counter tests](../SP1CleanTest/Alignment/Examples/Counter.lean) cover empty/maximal traces,
 shuffled rows, missing/duplicate rows, bad endpoints/event counts and field wraparound:
-(96,0) satisfies field addition but fails the actual fixed lookup.
+(96,0) satisfies field addition but fails the actual fixed lookup. State balance alone accepts
+an empty 16-to-16 trace; the verifier's public checks reject it. A trace of `n` increments has
+`2*n + 2` State occurrences and four additional public-check occurrences, including for `n = 0`.
 
 ```sh
 lake build --wfail --iofail SP1CleanTest.Alignment.Examples.Counter

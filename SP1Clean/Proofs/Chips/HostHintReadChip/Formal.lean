@@ -39,6 +39,7 @@ private theorem eval_endStep (env : Environment (ZMod p)) (input : Var Inputs (Z
   simp only [Inputs.endStep, circuit_norm]
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.hint_read"
   main
   elaborated
   Spec input _ _ := Spec input

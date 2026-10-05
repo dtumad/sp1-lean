@@ -1,3 +1,4 @@
+import ToClean.Gadgets.LookupProjection
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
 import ToClean.Circuit.InteractionRecovery
 import ToClean.Circuit.EmittedInteraction
@@ -68,6 +69,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
   channelsWithGuarantees := []
 
 def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
+  name := "sp1.native.memory.final.registers"
   main
   elaborated := elaborated
   Spec input output _ := MemoryBoundary.FinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
@@ -80,5 +82,10 @@ def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact h_assumptions
+
+/-- Register finalization adds no static lookup table. -/
+@[circuit_norm] theorem main_lookups (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 end SP1Clean.FinalRegisterProvider

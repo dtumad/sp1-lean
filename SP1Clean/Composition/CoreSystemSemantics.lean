@@ -36,7 +36,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 semantic input. -/
 theorem transportMemoryBumpRow_input
     (row : CoreAIR.Current.Row p .memoryBump) (data : ProverData (ZMod p)) :
-    (⟨MemoryBumpChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
+    ({ circuit := MemoryBumpChip.circuit (p := p) } : Component (ZMod p)).rowInput
         (Environment.fromArray (transportMemoryBumpRow row) data) =
       Faithful.memoryBumpDeconfigure row.main := by
   exact Faithful.memoryBumpEnvironment_rowInput row.main data
@@ -45,7 +45,7 @@ theorem transportMemoryBumpRow_input
 semantic input. -/
 theorem transportStateBumpRow_input
     (row : CoreAIR.Current.Row p .stateBump) (data : ProverData (ZMod p)) :
-    (⟨StateBumpChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
+    ({ circuit := StateBumpChip.circuit (p := p) } : Component (ZMod p)).rowInput
         (Environment.fromArray (transportStateBumpRow row) data) =
       Faithful.stateBumpDeconfigure row.main := by
   exact Faithful.stateBumpEnvironment_rowInput row.main data

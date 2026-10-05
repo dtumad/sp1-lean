@@ -137,10 +137,10 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   -- SP1's word rows and padding leave them all-zero). Their `MulOperation` product constraints
   -- (and the limb glue tying them to `c_times_quotient`) are asserted by `DivRemCore.circuit`
   -- over the assembled row below.
-  let mul_lower ← witness (var := Var Circuits.Types.MulOperation)
-    (mulLowerFE input.is_real bpv cpv)
-  let mul_upper ← witness (var := Var Circuits.Types.MulOperation)
-    (mulUpperFE input.is_real bpv cpv)
+  let mul_lower ← witnessProgram (var := Var Circuits.Types.MulOperation)
+    (mulProgram input.is_real bpv cpv false)
+  let mul_upper ← witnessProgram (var := Var Circuits.Types.MulOperation)
+    (mulProgram input.is_real bpv cpv true)
   -- Witnessed scalar sign/gate columns + the `c_times_quotient`/`carry` u16-limb vectors, all
   -- honestly populated (`populateScal`/`populateCtq`/`populateCarry`); the own-asserts
   -- `E13/E15/…` and the carry chain `E121…E151` pin them.
@@ -148,8 +148,8 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   let is_overflow := scal[0]; let b_neg := scal[1]; let b_neg_not_overflow := scal[2]
   let b_not_neg_not_overflow := scal[3]; let is_real_not_word := scal[4]
   let rem_neg := scal[5]; let c_neg := scal[6]
-  let c_times_quotient ← witnessVectorIR 8 (.ofFExprs (ctqFE bpv cpv))
-  let carry ← witnessVectorIR 8 (.ofFExprs (carryFE bpv cpv))
+  let c_times_quotient ← witnessProgram (var := Var (fields 8)) (ctqProgram bpv cpv)
+  let carry ← witnessProgram (var := Var (fields 8)) (carryProgram bpv cpv)
   -- The `IsEqualWordOperation`/`IsZeroWordOperation` nested cols, witnessed flat via
   -- `fromElements (F := …)`; their overflow/divide-by-zero assertions live in
   -- `DivRemCompare.circuit` below.
@@ -166,14 +166,14 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   let remainder_comp ← witnessVectorIR 4 (.ofFExprs (remCompFE bpv cpv))
   let max_abs_c_or_1 ← witnessVectorIR 4 (.ofFExprs (maxAbsFE cpv))
   let w_cneg ← witnessVectorIR 4 (.ofFExprs (wCnegFE input.is_real cpv))
-  let w_rneg ← witnessVectorIR 4 (.ofFExprs (wRnegFE input.is_real bpv cpv))
+  let w_rneg ← witnessProgram (var := Var (fields 4)) (wRnegProgram input.is_real bpv cpv)
   let misc ← witnessVectorIR 3 (.ofFExprs (miscFE input.is_real bpv cpv))
   let abs_c_alu_event := misc[0]; let abs_rem_alu_event := misc[1]
   let remainder_check_multiplicity := misc[2]
-  let cl ← witnessVectorIR 2 (.ofFExprs (clFE input.is_real bpv cpv))
-  let f ← witnessVectorIR 4 (.ofFExprs (ltfFE input.is_real bpv cpv))
-  let not_eq_inv ← witnessVectorIR 1 (.ofFExprs (neiFE input.is_real bpv cpv))
-  let bit ← witnessVectorIR 1 (.ofFExprs (bitFE input.is_real bpv cpv))
+  let cl ← witnessProgram (var := Var (fields 2)) (clProgram input.is_real bpv cpv)
+  let f ← witnessProgram (var := Var (fields 4)) (ltfProgram input.is_real bpv cpv)
+  let not_eq_inv ← witnessProgram (var := Var (fields 1)) (neiProgram input.is_real bpv cpv)
+  let bit ← witnessProgram (var := Var (fields 1)) (bitProgram input.is_real bpv cpv)
   let lt_out : Var Circuits.Types.LtOperationUnsigned (ZMod p) := ⟨⟨bit[0]⟩, f, not_eq_inv[0], cl⟩
   -- The remainder/quotient result words and the four `U16MSBOperation` sign-bit cells; the seven
   -- MSB assertions live in `DivRemCompare.circuit` below.

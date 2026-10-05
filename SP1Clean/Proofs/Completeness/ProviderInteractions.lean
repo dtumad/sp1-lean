@@ -102,7 +102,7 @@ theorem u8Range_interactionsWith_byte :
         (⟨3, 0, var ⟨0⟩, var ⟨1⟩⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
   rw [Component.interactionsWith_eq]
   show Operations.interactionsWith byteChannel.toRaw
-      (Air.Flat.Component.rowOperations (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))) = _
+      (Air.Flat.Component.rowOperations ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))) = _
   rw [Air.Flat.Component.rowOperations_mk]
   rw [show (ByteChip.U8Range.circuit (p := p)).main = ByteChip.U8Range.main from rfl]
   simp only [ByteChip.U8Range.main, Circuit.operations, Circuit.bind_def,
@@ -133,11 +133,11 @@ theorem u8Range_buildRow_cleanAccesses
       Ledger.onlyChannel_U8Range, u8Range_interactionsWith_byte]
   unfold ByteChip.U8Range.component
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
-  rw [eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)) input data hint 0
+  rw [eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p)) input data hint 0
         (by change 0 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)) input data hint 1
+    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p)) input data hint 1
         (by change 1 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)) input data hint 2
+    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p)) input data hint 2
         (by change 2 < 3; omega)]
   -- The goal's `input` is at `component.Input`, the lemmas' at `Inputs`: with the component
   -- unfolded the two agree syntactically, and the cells are read off the destructured input.
@@ -196,12 +196,12 @@ theorem msb_buildRow_result
     (bound : input.b.val < 2 ^ 8) :
     Expression.eval
       (Environment.fromArray
-        ((⟨ByteChip.MSB.circuit⟩ : Component (ZMod p)).buildRow input data hint) data)
+        (({ circuit := ByteChip.MSB.circuit } : Component (ZMod p)).buildRow input data hint) data)
       (var ⟨size ByteChip.MSB.Inputs +
         (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength
           (varFromOffset ByteChip.MSB.Inputs 0 : Var ByteChip.MSB.Inputs (ZMod p)).b⟩) =
       if 128 ≤ input.b.val then 1 else 0 := by
-  let component := (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.MSB.computableWitnesses bound (by trivial)).1
@@ -245,7 +245,7 @@ theorem msb_component_interactionsWith_byte :
           0⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
   rw [Component.interactionsWith_eq]
   show Operations.interactionsWith byteChannel.toRaw
-      (Air.Flat.Component.rowOperations (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p))) = _
+      (Air.Flat.Component.rowOperations ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p))) = _
   rw [Air.Flat.Component.rowOperations_mk,
     show (ByteChip.MSB.circuit (p := p)).main = ByteChip.MSB.main from rfl]
   exact msb_interactionsWith_byte _ _
@@ -268,8 +268,8 @@ theorem msb_buildRow_cleanAccesses
   unfold ByteChip.MSB.component
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   rw [msb_buildRow_result input data hint bound, msbVar_b, msbVar_multiplicity,
-    eval_var_buildRow_input_get (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 2; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 2; omega)]
+    eval_var_buildRow_input_get ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p)) input data hint 0 (by change 0 < 2; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p)) input data hint 1 (by change 1 < 2; omega)]
   cases input
   simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
     ProvableStruct.toComponents]
@@ -328,7 +328,7 @@ theorem and_buildRow_result_val
     (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
     (Expression.eval
       (Environment.fromArray
-        ((⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)).buildRow input data hint) data)
+        (({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p)).buildRow input data hint) data)
       (Gadgets.And.And8.circuit.output
         { x := (varFromOffset ByteChip.AndByte.Inputs 0 :
                   Var ByteChip.AndByte.Inputs (ZMod p)).b,
@@ -342,7 +342,7 @@ theorem and_buildRow_result_val
             (varFromOffset ByteChip.AndByte.Inputs 0 :
               Var ByteChip.AndByte.Inputs (ZMod p)).c))).val =
       input.b.val &&& input.c.val := by
-  let component := (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.AndByte.computableWitnesses bounds (by trivial)).1
@@ -387,7 +387,7 @@ theorem and_component_interactionsWith_byte :
   rw [Component.interactionsWith_eq]
   show Operations.interactionsWith byteChannel.toRaw
       (Air.Flat.Component.rowOperations
-        (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p))) = _
+        ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p))) = _
   rw [Air.Flat.Component.rowOperations_mk,
     show (ByteChip.AndByte.circuit (p := p)).main = ByteChip.AndByte.main from rfl]
 
@@ -408,9 +408,9 @@ theorem and_buildRow_cleanAccesses
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   unfold ByteChip.AndByte.component
   rw [and_buildRow_result_val input data hint bounds, andVar_b, andVar_c, andVar_multiplicity,
-    eval_var_buildRow_input_get (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
+    eval_var_buildRow_input_get ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
   cases input
   simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
     ProvableStruct.toComponents]
@@ -464,7 +464,7 @@ theorem or_buildRow_result_val
     (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
     (Expression.eval
       (Environment.fromArray
-        ((⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)).buildRow input data hint) data)
+        (({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p)).buildRow input data hint) data)
       (Gadgets.Or.Or8.circuit.output
         { x := (varFromOffset ByteChip.OrByte.Inputs 0 :
                   Var ByteChip.OrByte.Inputs (ZMod p)).b,
@@ -477,7 +477,7 @@ theorem or_buildRow_result_val
             (varFromOffset ByteChip.OrByte.Inputs 0 :
               Var ByteChip.OrByte.Inputs (ZMod p)).c))).val =
       input.b.val ||| input.c.val := by
-  let component := (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.OrByte.computableWitnesses bounds (by trivial)).1
@@ -522,7 +522,7 @@ theorem or_component_interactionsWith_byte :
   rw [Component.interactionsWith_eq]
   show Operations.interactionsWith byteChannel.toRaw
       (Air.Flat.Component.rowOperations
-        (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p))) = _
+        ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p))) = _
   rw [Air.Flat.Component.rowOperations_mk,
     show (ByteChip.OrByte.circuit (p := p)).main = ByteChip.OrByte.main from rfl]
 
@@ -543,9 +543,9 @@ theorem or_buildRow_cleanAccesses
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   unfold ByteChip.OrByte.component
   rw [or_buildRow_result_val input data hint bounds, orVar_b, orVar_c, orVar_multiplicity,
-    eval_var_buildRow_input_get (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
+    eval_var_buildRow_input_get ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
   cases input
   simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
     ProvableStruct.toComponents]
@@ -585,7 +585,7 @@ theorem xor_buildRow_result
     (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
     ((Expression.eval
       (Environment.fromArray
-        ((⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)).buildRow input data hint) data)
+        (({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p)).buildRow input data hint) data)
       (var ⟨size ByteChip.XorByte.Inputs +
         (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength
           (varFromOffset ByteChip.XorByte.Inputs 0 : Var ByteChip.XorByte.Inputs (ZMod p)).b +
@@ -593,7 +593,7 @@ theorem xor_buildRow_result
           (varFromOffset ByteChip.XorByte.Inputs 0 :
             Var ByteChip.XorByte.Inputs (ZMod p)).c⟩))).val =
       input.b.val ^^^ input.c.val := by
-  let component := (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.XorByte.computableWitnesses bounds (by trivial)).1
@@ -638,7 +638,7 @@ theorem xor_component_interactionsWith_byte :
   rw [Component.interactionsWith_eq]
   show Operations.interactionsWith byteChannel.toRaw
       (Air.Flat.Component.rowOperations
-        (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p))) = _
+        ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p))) = _
   rw [Air.Flat.Component.rowOperations_mk,
     show (ByteChip.XorByte.circuit (p := p)).main = ByteChip.XorByte.main from rfl]
 
@@ -659,9 +659,9 @@ theorem xor_buildRow_cleanAccesses
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   unfold ByteChip.XorByte.component
   rw [xor_buildRow_result input data hint bounds, xorVar_b, xorVar_c, xorVar_multiplicity,
-    eval_var_buildRow_input_get (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
+    eval_var_buildRow_input_get ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
   cases input
   simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
     ProvableStruct.toComponents]
@@ -701,7 +701,7 @@ theorem ltu_buildRow_result
     (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
     (Expression.eval
       (Environment.fromArray
-        ((⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)).buildRow input data hint) data)
+        (({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p)).buildRow input data hint) data)
       (var ⟨size ByteChip.Ltu.Inputs +
         (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength
           (varFromOffset ByteChip.Ltu.Inputs 0 : Var ByteChip.Ltu.Inputs (ZMod p)).b +
@@ -709,7 +709,7 @@ theorem ltu_buildRow_result
           (varFromOffset ByteChip.Ltu.Inputs 0 :
             Var ByteChip.Ltu.Inputs (ZMod p)).c⟩)) =
       if input.b.val < input.c.val then 1 else 0 := by
-  let component := (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.Ltu.computableWitnesses bounds (by trivial)).1
@@ -754,7 +754,7 @@ theorem ltu_component_interactionsWith_byte :
   rw [Component.interactionsWith_eq]
   show Operations.interactionsWith byteChannel.toRaw
       (Air.Flat.Component.rowOperations
-        (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p))) = _
+        ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p))) = _
   rw [Air.Flat.Component.rowOperations_mk,
     show (ByteChip.Ltu.circuit (p := p)).main = ByteChip.Ltu.main from rfl]
 
@@ -775,9 +775,9 @@ theorem ltu_buildRow_cleanAccesses
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   unfold ByteChip.Ltu.component
   rw [ltu_buildRow_result input data hint bounds, ltuVar_b, ltuVar_c, ltuVar_multiplicity,
-    eval_var_buildRow_input_get (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
+    eval_var_buildRow_input_get ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p)) input data hint 0 (by change 0 < 3; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p)) input data hint 1 (by change 1 < 3; omega),
+    eval_var_buildRow_input_get ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p)) input data hint 2 (by change 2 < 3; omega)]
   cases input
   simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
     ProvableStruct.toComponents]
@@ -831,7 +831,7 @@ theorem range_component_interactionsWith_byte (width : RangeChip.Width) :
   rw [Component.interactionsWith_eq]
   show Operations.interactionsWith byteChannel.toRaw
       (Air.Flat.Component.rowOperations
-        (⟨RangeChip.circuitFor width⟩ : Component (ZMod p))) = _
+        ({ circuit := RangeChip.circuitFor width } : Component (ZMod p))) = _
   rw [Air.Flat.Component.rowOperations_mk,
     show (RangeChip.circuitFor (p := p) width).main =
       RangeChip.main width.val
@@ -854,9 +854,9 @@ theorem range_buildRow_cleanAccesses (width : RangeChip.Width)
   unfold RangeChip.componentFor
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
   rw [rangeVar_a, rangeVar_multiplicity,
-    eval_var_buildRow_input_get (⟨RangeChip.circuitFor width⟩ : Component (ZMod p)) input data hint 0
+    eval_var_buildRow_input_get ({ circuit := RangeChip.circuitFor width } : Component (ZMod p)) input data hint 0
       (by change 0 < 2; omega),
-    eval_var_buildRow_input_get (⟨RangeChip.circuitFor width⟩ : Component (ZMod p)) input data hint 1
+    eval_var_buildRow_input_get ({ circuit := RangeChip.circuitFor width } : Component (ZMod p)) input data hint 1
       (by change 1 < 2; omega)]
   cases input
   simp only [Expression.eval, toElements, ProvableStruct.structToElements_eq,
@@ -916,7 +916,7 @@ theorem program_component_interactionsWith_program :
   rw [Component.interactionsWith_eq]
   show Operations.interactionsWith programChannel.toRaw
       (Air.Flat.Component.rowOperations
-        (⟨ProgramProviderChip.circuit⟩ : Component (ZMod p))) = _
+        ({ circuit := ProgramProviderChip.circuit } : Component (ZMod p))) = _
   rw [Air.Flat.Component.rowOperations_mk,
     show (ProgramProviderChip.circuit (p := p)).main = ProgramProviderChip.main from rfl]
   exact program_interactionsWith_program _ _

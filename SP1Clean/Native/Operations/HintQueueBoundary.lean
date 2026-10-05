@@ -56,7 +56,17 @@ theorem values (hints : List Bytes) (final : State (ZMod p)) (offset : ℕ) (env
 
 /-- Static raw-operation laws, including every channel, justify the singleton adapter. -/
 def closed (hints : List Bytes) (final : State (ZMod p)) : ClosedVerifier (ZMod p) where
+  name := "host-hint-queue"
   circuit := circuit hints final
+  assumptions := by intros; trivial
+  lookups := by simp only [circuit, main, circuit_norm]
+  public_interactions := by
+    intro interaction member env
+    simp only [circuit, main, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;>
+      simp [circuit_norm, ChannelInteraction.toRaw, AbstractInteraction.Guarantees,
+        AbstractInteraction.Requirements, Channel.toRaw, Expression.eval]
+
   length_zero := rfl
   constraints := by intros; simp only [circuit, main, circuit_norm]
   interactions := by

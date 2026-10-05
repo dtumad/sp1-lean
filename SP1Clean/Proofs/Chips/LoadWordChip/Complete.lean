@@ -243,7 +243,7 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormed) (halign 
 /-- The LoadWord chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := ⟨circuit⟩
+def component : Air.Flat.Component (ZMod p) := { circuit := circuit }
 
 /-- The event rows of a trace. The current memory-family ensemble API builds exactly this height;
 threading explicit zero padding through that API remains separate work. -/
@@ -265,16 +265,16 @@ comparison, the MSB gadget, the two readers, the register write, and the chip's 
 selector gates — evaluates to zero on every built row, and no static lookup is left unchecked. -/
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.Aligned 4) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ computableWitnesses
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint).Constraints data :=
+  Air.Flat.Table.build_constraints _ _ _ _ _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
 Memory, Program and Byte channels carries the payload its channel promises. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.Aligned 4) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ computableWitnesses
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint).Guarantees data :=
+  Air.Flat.Table.build_guarantees _ _ _ _ _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
@@ -282,10 +282,10 @@ concatenated in row order. -/
 theorem traceTable_interactionsWith (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events) data
-        hint).interactionsWith channel =
+        hint).interactionsWith data channel =
       (traceInputs (p := p) events).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ channel
+  Air.Flat.Table.build_interactions _ _ _ _ _ data channel
 
 end SP1Clean.LoadWordChip

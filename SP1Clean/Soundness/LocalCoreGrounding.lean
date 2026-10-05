@@ -45,20 +45,20 @@ theorem GroundingCarrier.finalClock {image : ProgramImage} {source : ExecutionSn
 /-- The derived timeline starts at the complete source's actual clock. -/
 theorem GroundingCarrier.timeline_source {image : ProgramImage} {source : ExecutionSnapshot}
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (balanced : witness.BalancedChannels) :
     carrier.timeline.start 0 = source.clock :=
-  carrier.timeline_start.trans (source_state_encoding witness constraints balanced).1
+  carrier.timeline_start.trans (source_state_encoding witness balanced).1
 
 /-- The local verifier supplies initial State truth on every trajectory beginning at the
 complete checked source. No boot initialization or semantic boundary premise is supplied. -/
 theorem GroundingCarrier.initialStateTruth {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     {witness : EnsembleWitness (ensemble (p := p) image source)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+    (balanced : witness.BalancedChannels)
     (trajectory : Trajectory) (initial : trajectory 0 = some source.sail.realize) :
     LocalStateTruthG (image.toGuestProgram valid) trajectory carrier.timeline
       (initialBoundaryStateMessage witness.publicInput) :=
-  LocalCore.initialStateTruth valid witness constraints balanced trajectory carrier.timeline initial
-    (carrier.timeline_source constraints balanced)
+  LocalCore.initialStateTruth valid witness balanced trajectory carrier.timeline initial
+    (carrier.timeline_source balanced)
 
 /-- The generic engine is fully wired to the local AIR. Its only semantic premises are the
 original mixed rows' step/frame facts on a trajectory starting at the checked local source. The final
@@ -81,6 +81,6 @@ theorem GroundingCarrier.ground_of_steps {image : ProgramImage} {source : Execut
   have genesis := memoryInitialFrontier_liveOK witness constraints balanced trajectory carrier.timeline initial
   rw [carrier.timeline_start] at genesis
   exact NativeCore.ExecutionCarrier.ground carrier (image.toGuestProgram valid) trajectory source.sail.realize
-    (carrier.initialStateTruth valid constraints balanced trajectory initial) genesis steps
+    (carrier.initialStateTruth valid balanced trajectory initial) genesis steps
 
 end SP1Clean.Soundness.LocalCore

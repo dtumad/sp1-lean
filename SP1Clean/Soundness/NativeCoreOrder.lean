@@ -38,26 +38,26 @@ private theorem instructionRows_advancing {image : ProgramImage}
 private theorem haltRows_advancing {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    {row : HaltChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 2) haltRow (·.is_real)) :
+    {row : HaltChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 2) (haltRow witness.data) (·.is_real)) :
     StateChronology.Advancing ((ExecutionRow.halt row).edge witness.data) ∧
       StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).2 =
         StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).1 + (ExecutionRow.halt row).duration := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
-  exact halt_advancing _ (haltRow_cpuState_bounds_of_component _ (systemTable_component witness 2)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 2)).1 physicalMem real)
+  exact halt_advancing _ (haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
+    ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 2)).1 physicalMem real)
 
 private theorem syscallRows_advancing {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    {row : SyscallInstrsChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
+    {row : SyscallInstrsChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
     StateChronology.Advancing ((ExecutionRow.syscall row).edge witness.data) ∧
       StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).2 =
         StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).1 + (ExecutionRow.syscall row).duration := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
-  exact syscall_advancing _ (syscallInstrsRow_cpuState_bounds_of_component _ (systemTable_component witness 3)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 3)).1 physicalMem real)
-    (syscall_halt_binary _ (systemTable_component witness 3) (systemTable_constraints witness constraints 3) physicalMem)
-    real (syscallInstrsRow_pcArm_spec_of_component _ (systemTable_component witness 3)
+  exact syscall_advancing _ (syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
+    ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 3)).1 physicalMem real)
+    (syscall_halt_binary _ witness.data (systemTable_component witness 3) (systemTable_constraints witness constraints 3) physicalMem)
+    real (syscallInstrsRow_pcArm_spec_of_component _ witness.data (systemTable_component witness 3)
       (systemTable_constraints witness constraints 3) physicalMem)
 
 /-- Clock progress and the PC preservation/range-check dichotomy come from each physical row. -/
@@ -80,9 +80,9 @@ private theorem stateBumps_spec {image : ProgramImage}
     {row : StateBumpChip.Inputs (ZMod p)} (member : row ∈ stateBumps witness) :
     StateBumpChip.Spec row ∧ row.is_real = 1 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
-  exact ⟨stateBumpTable_spec_of_component _ (systemTable_component witness 1)
+  exact ⟨stateBumpTable_spec_of_component _ witness.data (systemTable_component witness 1)
     (systemTable_constraints witness constraints 1)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 1)).1 _ physicalMem, real⟩
+    ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 1)).1 _ physicalMem, real⟩
 
 /-- Both endpoints of every active event have the bounds needed for semantic canonicalization. -/
 theorem executionRows_good {image : ProgramImage}

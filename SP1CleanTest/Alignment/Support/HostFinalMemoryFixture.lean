@@ -1,9 +1,11 @@
 import SP1Clean.Soundness.HostFinalMemory
 import SP1CleanTest.Alignment.Support.LocalCoreFixture
+import ToClean.Air.TableBuild
 
 /-! # Shared complete-memory fixture
 
 The walkthrough and regression theorems share the physical assembly, rows, and evaluator.
+The public verifier runs separately at the data derived from the actual physical tables.
 -/
 
 namespace SP1CleanTest.Alignment.Core.HostFinalMemory.Fixture
@@ -23,7 +25,7 @@ def target : MemorySnapshot :=
 def assembly (target : MemorySnapshot) :=
   Soundness.HostFinalMemory.ensemble (p := SP1Prime) image source target
     (SP1Clean.HostHintQueueBoundary.initial []) source.host HostCallReceivers.available
-    (HostHintReadLocal.sourceResources []) []
+    (HostHintReadLocal.sourceResources []) [] (Soundness.HostFinalMemory.source_unique_names image source target)
 
 def word (value : ℕ) : Word Fp := Target.bitVecToWord (BitVec.ofNat 64 value)
 def record (address clock value : ℕ) : Channels.MemoryMsg Fp :=
@@ -49,21 +51,47 @@ def fixed (target : MemorySnapshot) : List (FiniteLookup Fp) :=
   [{ registers with table := { registers.table with name := "sp1.native.target_registers" } },
     { memory with table := { memory.table with name := "sp1.native.target_memory" } }]
 
-def evaluated (target : MemorySnapshot) (row : Row) :=
-  match (assembly target).tables[row.1]? with
-  | none => (false, [])
-  | some component => SP1CleanTest.Core.LocalCore.Fixture.evaluate image source component row.2 (fixed target)
+private theorem noFixed (target : MemorySnapshot) (component : Component Fp)
+    (member : component ∈ (assembly target).tables) : component.fixedColumns = none := by
+  have all : (assembly target).tables.all (fun component => component.fixedColumns.isNone) = true := by rfl
+  exact Option.isNone_iff_eq_none.mp (List.all_eq_true.mp all component member)
+
+/-- Retain all 89 physical tables, including empty tables, in their declared order. -/
+def builtTables (target : MemorySnapshot) (rows : List Row) : List (Table Fp) :=
+  let components := (assembly target).tables
+  List.ofFn fun index : Fin components.length =>
+    let component := components[index]
+    Table.build component ((rows.filter (fun row => row.1 == index.val)).map fun row =>
+      fromElements (Vector.ofFn fun i => row.2[i.val]?.getD 0))
+      (fun _ _ => #[]) (ProverHint.empty Fp)
+      (by simp only [Component.fixedRowsMatch, noFixed target component (List.getElem_mem _)])
+
+/-- Only committed physical rows determine the verifier's data environment. -/
+def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :
+    EnsembleWitness (assembly target) :=
+  EnsembleWitness.ofTables _ (builtTables target rows) input (by
+    simp only [builtTables, List.map_ofFn]
+    exact List.ofFn_getElem)
 
 def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) : Bool :=
-  let head := SP1CleanTest.Core.LocalCore.Fixture.evaluate image source
-    (assembly target).verifierTable (toElements input).toList (fixed target)
-  let initial := head :: rows.map (evaluated target)
-  let providers := (initial.flatMap Prod.snd).filterMap SP1CleanTest.Core.LocalCore.Fixture.byteProvider
-  let all := initial ++ providers.map (evaluated target)
-  let ledger := all.flatMap Prod.snd
-  all.all Prod.fst && decide (ledger.length < SP1Prime) &&
+  let installed := assembly target
+  let registered := installed.channels.map RawChannel.name
+  let lookups := fixed target
+  let consumers := witness target input rows
+  let providers := consumers.interactions.filterMap fun interaction =>
+    SP1CleanTest.Core.LocalCore.Fixture.byteProvider
+      (interaction.channel.name, interaction.msg.toList, interaction.mult)
+  let completeRows := rows ++ providers
+  let built := witness target input completeRows
+  let ledger := built.interactions.map fun interaction =>
+    (interaction.channel.name, interaction.msg.toList, interaction.mult)
+  let valid := completeRows.all fun row =>
+    match installed.tables[row.1]? with
+    | none => false
+    | some component => (SP1CleanTest.Core.LocalCore.Fixture.evaluate image source component row.2 lookups).1
+  valid && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
-      ((assembly target).channels.map RawChannel.name).contains name &&
+      registered.contains name &&
         ((ledger.filter fun entry => entry.1 == name && entry.2.1 == message).map (·.2.2)).sum == 0
 
 def identityHeader : SP1PublicIO Fp :=

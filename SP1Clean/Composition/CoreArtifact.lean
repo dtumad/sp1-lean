@@ -1,39 +1,23 @@
 import SP1Clean.Composition.CoreEnsemble
 import SP1Clean.Soundness.AIR
+import SP1Clean.Soundness.EnsembleChannels
 
 /-! # Exact Core artifact at the native semantic boundary
 
-`CoreEnsemble.lean` constructs the complete fifty-three-table native witness and proves all of its local
-constraints.  This module names the remaining global translation endpoint that the exact-AIR /
-verifier integration must discharge before that witness can enter the native semantic soundness
-theorem.
+The exact integration supplies per-channel occurrence bounds, State/Memory/Exit integer balance
+and authenticated semantic boundary binding for `CoreEnsemble`'s canonical witness. Byte/Program
+balance follows from its consumer recount. These global obligations remain explicit; local AIR
+constraints and cryptographic knowledge extraction do not establish them by themselves.
 
-The endpoint is intentionally explicit.  For every channel of the native ensemble it requires the
-exact interaction count bound used by Clean.  Integer balance remains an explicit input only for
-State and Memory; Byte and Program are derived from the native-consumer recount.  It separately
-requires `SemanticBoundaryBinding`, an explicit contract connecting the committed program to the
-provider/boundary meaning.  None of these fields is claimed to follow merely from the two
-exact cluster relations, `ExactProviderTransportContract`, or `ExactNativeBoundaryContract`.
-The Type-valued preprocessing inventory remains a visible construction argument rather than data
-hidden behind any Prop-valued contract.
-
-Once the integration layer combines ArkLib/exact-AIR balance extraction with the explicit
-loader/platform/program/memory-boundary contracts to supply that global contract, the rest is
-kernel-checked plumbing:
-integer balance is converted to Clean's field-valued `BalancedChannels`, the already-proved local
-constraints and semantic binding assemble `SupportedCoreNativeRelation`, and
-`supported_core_native_sound` yields a normally-retiring official-Sail run between the committed
-public endpoints.  No boot reachability, shard composition, or cryptographic verifier theorem is
-asserted here.
+Combining those contracts yields the existing native relation and its ordinary shard-local Sail
+consequence. This does not prove boot reachability, shard composition, verifier soundness or
+completeness for mixed host execution.
 -/
 
 set_option autoImplicit false
 
 namespace SP1Clean.Composition
 
--- The faithfulness vocabulary (`ChipOracle`, `ChipFaithful`, `ChipRowCodec`,
--- `nativeAccesses`) is at the stratum below; this namespace no longer encloses it since the
--- 2026-08 move out of `Faithful/Transport/`.
 open SP1Clean.Faithful
 
 open Circuit
@@ -55,11 +39,11 @@ def exactNativeStatement {Digest : Type} (program : GuestProgram)
 
 /-- **The remaining integration-to-native global translation endpoint.**
 
-This contract is stated directly about the constructed fifty-three-table witness.  Its remaining
-integer-balance field is the native `ℤ` balance property for State and Memory, before conversion to
+This contract is stated directly about the constructed 55-table witness.  Its remaining
+integer-balance field is the native `ℤ` balance property for State, Memory and Exit, before conversion to
 Clean's field-valued balance; the separate
 count field is exactly Clean's no-wrap premise.  `semanticBoundary` binds the projected public
-boundary and the shared `ProverData` to the caller's program and a concrete initial Sail state.
+boundary and canonical physical-table data to the caller's program and a concrete initial Sail state.
 
 An integration must derive `interactionCount` and `remainingIntegerBalance` from its PCS-authenticated
 full-AIR witness and interaction argument.  It must derive `semanticBoundary` separately from
@@ -85,185 +69,13 @@ structure ExactNativeGlobalContract {Digest : Type}
     SP1Clean.LookupAccessList.isConsistentBalanced
       (((exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
         ).interactionsWith channel).map Interaction.toAccess)
-  /-- The shared prover data and providers describe the caller's program and the public initial
+  /-- The canonical prover data and providers describe the caller's program and the public initial
   boundary describes a concrete compatible Sail state. -/
   semanticBoundary : Soundness.SemanticBoundaryBinding
     (exactNativeStatement program statement)
     (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint)
 
 /-! ## Full-ledger to per-channel bridge -/
-
-/-- Every supported instruction component declares only the four native ensemble channels. -/
-private theorem instructionComponent_channels_subset
-    (component : Air.Flat.Component (ZMod p))
-    (componentMem : component ∈ Soundness.sp1Tables (p := p)) :
-    component.circuit.channels ⊆ (Soundness.sp1Ensemble (p := p)).channels := by
-  simp only [Soundness.sp1Tables, List.mem_map] at componentMem
-  obtain ⟨chip, chipMem, rfl⟩ := componentMem
-  refine List.Subset.trans (Soundness.supportedChip_usesSupportedBusChannels chip chipMem) ?_
-  rw [Soundness.sp1Ensemble_channels]
-  intro c hc
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at hc ⊢
-  tauto
-
-/-- Every native provider/boundary component uses only declared ensemble channels. -/
-private theorem providerComponent_channels_subset
-    (component : Air.Flat.Component (ZMod p))
-    (componentMem : component ∈ Soundness.sp1ProviderTables (p := p)) :
-    component.circuit.channels ⊆ (Soundness.sp1Ensemble (p := p)).channels := by
-  rw [Soundness.sp1Ensemble_channels]
-  rw [Soundness.sp1ProviderTables_explicit] at componentMem
-  simp only [List.mem_append] at componentMem
-  rcases componentMem with (componentMem | componentMem) | componentMem
-  · fin_cases componentMem <;>
-      simp [GeneralFormalCircuit.channels, ByteChip.U8Range.circuit, ByteChip.MSB.circuit,
-        ByteChip.AndByte.circuit, ByteChip.OrByte.circuit, ByteChip.XorByte.circuit,
-        ByteChip.Ltu.circuit, circuit_norm]
-  · simp only [Soundness.sp1RangeProviderTables, List.mem_map] at componentMem
-    obtain ⟨width, -, rfl⟩ := componentMem
-    simp [GeneralFormalCircuit.channels, RangeChip.circuitFor, RangeChip.circuit, circuit_norm]
-  · fin_cases componentMem <;>
-      simp [GeneralFormalCircuit.channels, ProgramProviderChip.circuit,
-        MemoryProviderChip.circuit, MemoryFinalizeChip.circuit, MemoryBumpChip.circuit,
-        StateBumpChip.circuit, HaltChip.circuit, SyscallInstrsChip.circuit, circuit_norm]
-
-/-- Every component of the concrete native ensemble uses only its declared channels. -/
-private theorem ensembleComponent_channels_subset
-    (component : Air.Flat.Component (ZMod p))
-    (componentMem : component ∈ (Soundness.sp1Ensemble (p := p)).allTables) :
-    component.circuit.channels ⊆ (Soundness.sp1Ensemble (p := p)).channels := by
-  simp only [Air.Flat.Ensemble.allTables, List.mem_cons] at componentMem
-  rcases componentMem with rfl | componentMem
-  · change (Soundness.sp1StateVerifier (p := p)).channels ⊆ _
-    rw [GeneralFormalCircuit.channels,
-      show (Soundness.sp1StateVerifier (p := p)).channelsWithGuarantees =
-        [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
-         Channels.exitChannel.toRaw] from rfl,
-      show (Soundness.sp1StateVerifier (p := p)).channelsWithRequirements = [] from rfl,
-      Soundness.sp1Ensemble_channels]
-    simp
-  · rw [Soundness.sp1Ensemble_tables] at componentMem
-    rcases List.mem_append.mp componentMem with instructionMem | providerMem
-    · exact instructionComponent_channels_subset _ instructionMem
-    · exact providerComponent_channels_subset _ providerMem
-
-omit [Fact (2 ^ 25 < p)] in
-/-- An evaluated table interaction uses a channel declared by its component. -/
-private theorem tableInteraction_channel_mem
-    (table : Air.Flat.Table (ZMod p))
-    {interaction : Interaction (ZMod p)} (interactionMem : interaction ∈ table.interactions) :
-    interaction.channel ∈ table.component.circuit.channels := by
-  have all := (Air.Flat.Table.forall_interactions_iff table
-    (fun i => i.channel ∈ table.component.circuit.channels)).2 (by
-      intro row rowMem abstractInteraction abstractMem
-      apply table.component.circuit.channels_subset table.component.rowInputVar
-        table.component.rowOffset
-      simp only [Operations.channels, List.mem_map]
-      refine ⟨abstractInteraction, ?_, rfl⟩
-      rw [Air.Flat.Component.interactions_eq] at abstractMem
-      simpa only [Air.Flat.Component.rowOperations, Air.Flat.Component.rowInputVar,
-        Air.Flat.Component.rowOffset] using abstractMem)
-  exact all interaction interactionMem
-
-/-- Every evaluated interaction of an `sp1Ensemble` witness uses one of its four registered
-channels.  This is a structural theorem, independent of constraints or balance. -/
-private theorem ensembleInteraction_channel_mem
-    (witness : EnsembleWitness (Soundness.sp1Ensemble (p := p)))
-    {interaction : Interaction (ZMod p)} (interactionMem : interaction ∈ witness.interactions) :
-    interaction.channel ∈ (Soundness.sp1Ensemble (p := p)).channels := by
-  simp only [EnsembleWitness.interactions, List.mem_flatMap] at interactionMem
-  obtain ⟨table, tableMem, interactionMem⟩ := interactionMem
-  apply ensembleComponent_channels_subset table.component
-    (Air.Flat.EnsembleWitness.mem_allTables_component_of_mem_allTables
-      (witness := witness) tableMem)
-  exact tableInteraction_channel_mem table interactionMem
-
-/-- Within the registered four-channel universe, `kindOf = Byte` identifies the Byte channel. -/
-private theorem channel_eq_byte_of_mem_of_kind
-    (channel : RawChannel (ZMod p))
-    (channelMem : channel ∈ (Soundness.sp1Ensemble (p := p)).channels)
-    (kindEq : kindOf channel.name = .Byte) :
-    channel = Channels.byteChannel.toRaw := by
-  rw [Soundness.sp1Ensemble_channels] at channelMem
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at channelMem
-  rcases channelMem with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · simp [kindOf, Channel.toRaw_name, Channels.stateChannel] at kindEq
-  · rfl
-  · simp [kindOf, Channel.toRaw_name, Channels.programChannel] at kindEq
-  · simp [kindOf, Channel.toRaw_name, Channels.memoryChannel] at kindEq
-  · simp [kindOf, Channel.toRaw_name, Channels.exitChannel] at kindEq
-  · simp [kindOf, Channel.toRaw_name, Channels.syscallChannel] at kindEq
-  · simp [kindOf, Channel.toRaw_name, Channels.publicValuesChannel] at kindEq
-
-/-- Within the registered four-channel universe, `kindOf = Program` identifies Program. -/
-private theorem channel_eq_program_of_mem_of_kind
-    (channel : RawChannel (ZMod p))
-    (channelMem : channel ∈ (Soundness.sp1Ensemble (p := p)).channels)
-    (kindEq : kindOf channel.name = .Program) :
-    channel = Channels.programChannel.toRaw := by
-  rw [Soundness.sp1Ensemble_channels] at channelMem
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at channelMem
-  rcases channelMem with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · simp [kindOf, Channel.toRaw_name, Channels.stateChannel] at kindEq
-  · simp [kindOf, Channel.toRaw_name, Channels.byteChannel] at kindEq
-  · rfl
-  · simp [kindOf, Channel.toRaw_name, Channels.memoryChannel] at kindEq
-  · simp [kindOf, Channel.toRaw_name, Channels.exitChannel] at kindEq
-  · simp [kindOf, Channel.toRaw_name, Channels.syscallChannel] at kindEq
-  · simp [kindOf, Channel.toRaw_name, Channels.publicValuesChannel] at kindEq
-
-/-- If a channel kind uniquely identifies `channel` in the evaluated full interaction list, then
-the channel's access ledger is exactly the corresponding kind-filter of the full access ledger. -/
-private theorem interactionsWith_map_toAccess_eq_filter_kind
-    (witness : EnsembleWitness (Soundness.sp1Ensemble (p := p)))
-    (channel : RawChannel (ZMod p)) (kind : InteractionKind)
-    (channelKind : kindOf channel.name = kind)
-    (unique : ∀ interaction ∈ witness.interactions,
-      kindOf interaction.channel.name = kind → interaction.channel = channel) :
-    (witness.interactionsWith channel).map Interaction.toAccess =
-      (witness.interactions.map Interaction.toAccess).filter
-        (fun access => decide (access.1 = kind)) := by
-  classical
-  have interactionsWithEq : witness.interactionsWith channel =
-      witness.interactions.filter (fun interaction => decide (interaction.channel = channel)) := by
-    simp only [EnsembleWitness.interactionsWith, EnsembleWitness.interactions,
-      List.filter_flatMap]
-    apply List.flatMap_congr
-    intro table tableMem
-    exact Air.Flat.Table.interactionsWith_eq_filter
-  rw [interactionsWithEq, List.filter_map]
-  apply congrArg (List.map Interaction.toAccess)
-  apply List.filter_congr
-  intro interaction interactionMem
-  simp only [Function.comp_apply, Interaction.toAccess]
-  apply decide_eq_decide.mpr
-  constructor
-  · rintro rfl
-    exact channelKind
-  · exact unique interaction interactionMem
-
-/-- Filtering a full ledger by interaction kind preserves its multiplicity sum at keys of that
-kind. -/
-private theorem multiplicitySum_filter_kind (accesses : LookupAccessList)
-    (kind : InteractionKind) (key : LookupKey) (keyKind : key.1 = kind) :
-    LookupAccessList.multiplicitySum
-        (accesses.filter (fun access => decide (access.1 = kind))) key =
-      LookupAccessList.multiplicitySum accesses key := by
-  induction accesses with
-  | nil => rfl
-  | cons head tail ih =>
-      by_cases headKind : head.1 = kind
-      · rw [List.filter_cons_of_pos (by simpa using headKind),
-          LookupAccessList.multiplicitySum_cons,
-          LookupAccessList.multiplicitySum_cons, ih]
-      · rw [List.filter_cons_of_neg (by simpa using headKind), ih,
-          LookupAccessList.multiplicitySum_cons]
-        have keyNe : LookupAccessList.keyOf head ≠ key := by
-          intro keyEq
-          apply headKind
-          change (LookupAccessList.keyOf head).1 = kind
-          rw [keyEq, keyKind]
-        rw [if_neg keyNe, zero_add]
 
 /-- Per-key full-ledger balance for one interaction kind implies balance of that kind-filter. -/
 private theorem isConsistentBalanced_filter_kind (accesses : LookupAccessList)
@@ -274,7 +86,7 @@ private theorem isConsistentBalanced_filter_kind (accesses : LookupAccessList)
       (accesses.filter (fun access => decide (access.1 = kind))) := by
   intro key
   by_cases keyKind : key.1 = kind
-  · rw [multiplicitySum_filter_kind accesses kind key keyKind]
+  · rw [LookupAccessList.multiplicitySum_filterKind accesses keyKind]
     exact balanced key keyKind
   · exact LookupAccessList.multiplicitySum_zero_of_kind
       (fun access accessMem => by
@@ -283,7 +95,7 @@ private theorem isConsistentBalanced_filter_kind (accesses : LookupAccessList)
       keyKind
 
 /-- The native-consumer recount discharges the Byte and Program integer-balance obligations of the
-constructed witness.  Only State and Memory remain for the global integration contract. -/
+constructed witness.  State, Memory and Exit remain for the global integration contract. -/
 theorem exactNativeEnsembleWitness_preprocessedIntegerBalance {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
     (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
@@ -300,21 +112,15 @@ theorem exactNativeEnsembleWitness_preprocessedIntegerBalance {Digest : Type}
   let witness := exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness
     inventory data hint
   rcases channelCase with rfl | rfl
-  · rw [interactionsWith_map_toAccess_eq_filter_kind witness Channels.byteChannel.toRaw .Byte
-      (by simp [kindOf, Channel.toRaw_name, Channels.byteChannel]) (by
-        intro interaction interactionMem kindEq
-        exact channel_eq_byte_of_mem_of_kind interaction.channel
-          (ensembleInteraction_channel_mem witness interactionMem) kindEq),
+  · rw [Soundness.witness_channelLedger_eq_filter_kind witness Channels.byteChannel.toRaw
+      (by simp [Soundness.sp1Ensemble_channels]) .Byte rfl,
       ← exactNativeAllCleanAccesses_eq_interactions statement executionWitness
         memoryBoundaryWitness inventory data hint]
     exact isConsistentBalanced_filter_kind _ .Byte fun key keyKind =>
       exactNativeAllCleanAccesses_preprocessedBalance statement executionWitness
         memoryBoundaryWitness inventory data hint recount key (Or.inl keyKind)
-  · rw [interactionsWith_map_toAccess_eq_filter_kind witness Channels.programChannel.toRaw .Program
-      (by simp [kindOf, Channel.toRaw_name, Channels.programChannel]) (by
-        intro interaction interactionMem kindEq
-        exact channel_eq_program_of_mem_of_kind interaction.channel
-          (ensembleInteraction_channel_mem witness interactionMem) kindEq),
+  · rw [Soundness.witness_channelLedger_eq_filter_kind witness Channels.programChannel.toRaw
+      (by simp [Soundness.sp1Ensemble_channels]) .Program rfl,
       ← exactNativeAllCleanAccesses_eq_interactions statement executionWitness
         memoryBoundaryWitness inventory data hint]
     exact isConsistentBalanced_filter_kind _ .Program fun key keyKind =>
@@ -370,7 +176,7 @@ private theorem exactNativeEnsembleWitness_syscallTableInactive {Digest : Type}
     simp only [extractedHaltTable, HaltChip.haltTraceInputs]
     exact List.cons_ne_nil _ _
 
-/-- The State/Memory endpoint plus the recount-derived Byte/Program balances and exact count bounds
+/-- The State/Memory/Exit endpoint plus the recount-derived Byte/Program balances and exact count bounds
 give Clean balance on every native channel.  The access-list permutation is reflexive because each
 integer-balance fact is stated on the canonical `Interaction.toAccess` projection; channel
 homogeneity follows from Clean's own `EnsembleWitness.interactionsWith` membership lemma. -/
@@ -410,8 +216,7 @@ theorem exactNativeEnsembleWitness_balancedChannels {Digest : Type}
       exact fun k => rfl
   change BalancedInteractions
     ((exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
-      ).allTablesWitness.interactionsWith channel)
-  rw [EnsembleWitness.interactionsWith_allTablesWitness]
+      ).interactionsWith channel)
   exact SP1Clean.LookupAccessList.balancedInteractions_of_isConsistentBalanced
     _ _ channel
     (fun _ interactionMem => EnsembleWitness.channel_eq_of_mem_interactionsWith interactionMem)
@@ -421,9 +226,8 @@ theorem exactNativeEnsembleWitness_balancedChannels {Digest : Type}
 
 /-- **The exact/native artifact satisfies the honest native machine relation.**
 
-The provider and public-boundary contracts remain explicit local-constraint inputs.  The distinct
-global contract supplies precisely channel balance and semantic binding; neither is inferred from
-those local inputs. -/
+The transport contract supplies physical constraints. The global contract supplies the remaining
+channel balance and authenticated semantic binding; neither follows from local constraints alone. -/
 theorem exactNativeArtifact_supportedCoreNativeRelation {Digest : Type}
     {binds : CoreAIR.Current.PreprocessedBinding p Digest}
     (program : GuestProgram) (statement : SP1ShardStatement (ZMod p) Digest)
@@ -433,7 +237,6 @@ theorem exactNativeArtifact_supportedCoreNativeRelation {Digest : Type}
     (transport : ExactProviderTransportContract binds statement
       executionWitness memoryBoundaryWitness inventory
       (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint))
-    (boundary : ExactNativeBoundaryContract statement.publicValues)
     (global : ExactNativeGlobalContract program statement executionWitness
       memoryBoundaryWitness inventory data hint) :
     Soundness.SupportedCoreNativeRelation
@@ -443,7 +246,7 @@ theorem exactNativeArtifact_supportedCoreNativeRelation {Digest : Type}
     exactNativeEnsembleWitness_syscallTableInactive statement executionWitness
       memoryBoundaryWitness inventory data hint⟩
   · exact exactNativeEnsembleWitness_constraints statement executionWitness
-      memoryBoundaryWitness inventory data hint transport boundary
+      memoryBoundaryWitness inventory data hint transport
   · exact exactNativeEnsembleWitness_balancedChannels program statement executionWitness
       memoryBoundaryWitness inventory data hint transport.preprocessing global
 
@@ -461,7 +264,6 @@ theorem exactNativeArtifact_sailExecution {Digest : Type}
     (transport : ExactProviderTransportContract binds statement
       executionWitness memoryBoundaryWitness inventory
       (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint))
-    (boundary : ExactNativeBoundaryContract statement.publicValues)
     (global : ExactNativeGlobalContract program statement executionWitness
       memoryBoundaryWitness inventory data hint) :
     ∃ execution, SupportedCoreSailRelation
@@ -470,6 +272,6 @@ theorem exactNativeArtifact_sailExecution {Digest : Type}
     (exactNativeStatement program statement)
     (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint)
     (exactNativeArtifact_supportedCoreNativeRelation program statement executionWitness
-      memoryBoundaryWitness inventory data hint transport boundary global)
+      memoryBoundaryWitness inventory data hint transport global)
 
 end SP1Clean.Composition

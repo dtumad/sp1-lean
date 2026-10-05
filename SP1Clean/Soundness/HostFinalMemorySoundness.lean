@@ -14,19 +14,20 @@ namespace SP1Clean.Soundness.HostFinalMemory
 open Circuit Air.Flat Channels Model.Core Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalSoundnessLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalSoundnessClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
+  {names : UniqueNames image source target others resources}
 
 /-- Complete comparison requires only inherited Byte guarantees and the three actual receipt balances. -/
 theorem checkFinal_of_channels
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface others resources) (checked : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     (balances : ∀ channel ∈ privateChannels (p := p), witness.BalancedChannel channel) :
     source.sail.memorySnapshot.checkFinal target
       ((finalRecords witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by
@@ -43,7 +44,7 @@ theorem checkFinal_of_channels
 /-- Complete raw host AIR acceptance implies the existing finite target Memory comparison.
 The two interfaces describe fixed installed circuits, never properties of the supplied witness. -/
 theorem checkFinal
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : HostHintReadLocal.ExtensionInterface others resources)
     (privacy : PrivateInterface others resources)
     (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
@@ -54,17 +55,17 @@ theorem checkFinal
     apply balanced
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl <;>
-      simp [ensemble, ClosedVerifier.install, withReceipts, withRegisters, FinalReceiptEnsemble.install,
+      simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
         FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit, circuit_norm]
-  · simp [ensemble, ClosedVerifier.install, withReceipts, withRegisters, FinalReceiptEnsemble.install,
-      base, HostHintQueueBoundary.ensemble, HaltPadding.install, HostHintReadLocal.ensemble,
-      HostLocalHandoff.ensemble, HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble,
+  · simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
+      base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent, HostHintReadLocal.ensemble,
+      HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble, LocalCore.baseEnsemble,
       sp1Ensemble_channels]
 
 /-- The concrete six-call registration needs only raw acceptance, with no caller interface proofs. -/
 theorem source_checkFinal
     (witness : EnsembleWitness (ensemble image source target final bankFinal HostCallReceivers.available
-      (HostHintReadLocal.sourceResources source.host.io.hints) channels))
+      (HostHintReadLocal.sourceResources source.host.io.hints) channels (source_unique_names image source target)))
     (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     source.sail.memorySnapshot.checkFinal target
       ((finalRecords witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true :=

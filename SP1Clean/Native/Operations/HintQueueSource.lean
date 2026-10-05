@@ -22,6 +22,7 @@ instance sourceElaborated (hints : List Bytes) : ElaboratedCircuit (ZMod p) Node
   elaborate_circuit
 
 def source (hints : List Bytes) : GeneralFormalCircuit (ZMod p) NodeRecord unit where
+  name := "sp1.native.hint_node.source"
   main := sourceMain hints
   elaborated := sourceElaborated hints
   Spec input _ _ := input.Binds (ofList hints).1

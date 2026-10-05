@@ -64,32 +64,37 @@ theorem SupportedCoreTraceWitness.stateBumpTable_witness
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateInstrLinks
     (trace : SupportedCoreTraceWitness p) :
     stateInstrLinks trace.canonicalClosure = stateInstrLinks trace := by
-  unfold stateInstrLinks
-  simp only [SupportedCoreTraceWitness.witness_data,
-    SupportedCoreTraceWitness.witness_tables,
-    SupportedCoreTraceWitness.canonicalClosure_data]
-  exact congrArg (fun rows =>
-    (rows.filter fun d => signedVal (d.toChipRow trace.data).is_real = 1).map fun d =>
-      (msgToken stateChannel (statePullMessage (d.toChipRow trace.data)),
-        msgToken stateChannel (statePushMessage (d.toChipRow trace.data))))
-    trace.canonicalClosure_decodedInstructionRows
+  simp only [stateInstrLinks, SupportedCoreTraceWitness.witness_data,
+    SupportedCoreTraceWitness.witness_tables, trace.canonicalClosure_decodedInstructionRows]
+  have decoded (row : DecodedInstructionRow p) :=
+    row.toChipRow_setData trace.canonicalClosure.data trace.data
+  simp only [decoded]
+  rfl
 
 /-- Canonical closure also preserves the StateBump half verbatim. -/
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateBumpLinks
     (trace : SupportedCoreTraceWitness p) :
     stateBumpLinks trace.canonicalClosure = stateBumpLinks trace := by
-  simp [stateBumpLinks]
+  have decoded (row : Array (ZMod p)) :
+      stateBumpRow trace.canonicalClosure.witness.data row =
+        stateBumpRow trace.witness.data row :=
+    ProvableType.valueFromOffset_congr StateBumpChip.Inputs 0
+      (env := Environment.fromArray row trace.canonicalClosure.witness.data)
+      (env' := Environment.fromArray row trace.witness.data) (fun _ _ => rfl)
+  simp only [stateBumpLinks, trace.canonicalClosure_stateBumpTable, decoded]
 
 /-- Both public State tokens survive canonical closure. -/
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateInitToken
     (trace : SupportedCoreTraceWitness p) :
     stateInitToken trace.canonicalClosure = stateInitToken trace := by
-  rfl
+  simp only [stateInitToken, SupportedCoreTraceWitness.witness_publicInput,
+    SupportedCoreTraceWitness.canonicalClosure_publicValues]
 
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateFinalToken
     (trace : SupportedCoreTraceWitness p) :
     stateFinalToken trace.canonicalClosure = stateFinalToken trace := by
-  rfl
+  simp only [stateFinalToken, SupportedCoreTraceWitness.witness_publicInput,
+    SupportedCoreTraceWitness.canonicalClosure_publicValues]
 
 /-- Any base-trace agreement transports through the closure operation without a new premise. -/
 theorem StateTraceAgreement.canonicalClosure
@@ -281,17 +286,12 @@ theorem SupportedCoreTraceWitness.stateInstrLinks_eq_flatMap
 
 /-! ## Generated StateBump rows -/
 
-/-- Reading the input prefix of an honestly built StateBump row returns the exact supplied row. -/
+/-- StateBump decoding reads the built input prefix at any evaluation data. -/
 @[simp] theorem stateBumpRow_buildRow
-    (inputs : List (StateBumpChip.Inputs (ZMod p)))
-    (input : StateBumpChip.Inputs (ZMod p)) (data : ProverData (ZMod p))
+    (input : StateBumpChip.Inputs (ZMod p)) (generationData evaluationData : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) :
-    stateBumpRow (Table.build StateBumpChip.component inputs data hint)
-        (StateBumpChip.component.buildRow input data hint) = input := by
-  unfold stateBumpRow
-  change StateBumpChip.component.rowInput
-      (Environment.fromArray (StateBumpChip.component.buildRow input data hint) data) = input
-  exact StateBumpChip.component.rowInput_buildRow input data data hint
+    stateBumpRow evaluationData (StateBumpChip.component.buildRow input generationData hint) = input :=
+  StateBumpChip.component.rowInput_buildRow input generationData evaluationData hint
 
 private theorem signedVal_one_nativeState : signedVal (1 : ZMod p) = 1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
@@ -354,65 +354,37 @@ constraints and hence does not need a well-formedness premise. -/
 theorem SupportedCoreTraceWitness.stateBumpSelectorBinary
     (trace : SupportedCoreTraceWitness p) :
     ∀ row ∈ (stateBumpTable trace.witness).table,
-      (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1 := by
+      (stateBumpRow trace.witness.data row).is_real = 0 ∨
+        (stateBumpRow trace.witness.data row).is_real = 1 := by
   intro row rowMem
-  rw [trace.stateBumpTable_witness] at rowMem ⊢
-  -- The component is unfolded so `build_table` sees the input list at its own `Input` type.
-  simp only [SupportedCoreTraceWitness.providerTableFor, StateBumpChip.component,
-    Table.build_table, List.mem_map] at rowMem
-  obtain ⟨input, inputMem, rfl⟩ := rowMem
+  rw [trace.stateBumpTable_witness] at rowMem
+  change row ∈ (stateBumpTraceInputs (trace.providerOccurrences .stateBump)).map
+    (fun input => StateBumpChip.component.buildRow input trace.generationData trace.hint) at rowMem
+  obtain ⟨input, inputMem, rfl⟩ := List.mem_map.mp rowMem
   right
   refine (congrArg StateBumpChip.Inputs.is_real
-    (stateBumpRow_buildRow _ input trace.data trace.hint)).trans ?_
+    (stateBumpRow_buildRow input trace.generationData trace.witness.data trace.hint)).trans ?_
   rw [stateBumpTraceInputs] at inputMem
   obtain ⟨event, -, rfl⟩ := List.mem_map.mp inputMem
   rfl
 
 private theorem stateBumpBuiltLinks_aux
-    (tableInputs inputs : List (StateBumpChip.Inputs (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (inputs : List (StateBumpChip.Inputs (ZMod p)))
+    (generationData evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (active : ∀ input ∈ inputs, signedVal input.is_real = 1) :
-    (((inputs.map fun input => StateBumpChip.component.buildRow input data hint).filter fun row =>
-        signedVal (stateBumpRow
-          (Table.build StateBumpChip.component tableInputs data hint)
-          row).is_real = 1).map fun row =>
-      (msgToken stateChannel (StateBumpChip.pulledMessage (stateBumpRow
-        (Table.build StateBumpChip.component tableInputs data hint) row)),
-       msgToken stateChannel (StateBumpChip.pushedMessage (stateBumpRow
-        (Table.build StateBumpChip.component tableInputs data hint) row)))) =
+    (((inputs.map fun input => StateBumpChip.component.buildRow input generationData hint).filter fun row =>
+        signedVal (stateBumpRow evaluationData row).is_real = 1).map fun row =>
+      (msgToken stateChannel (StateBumpChip.pulledMessage (stateBumpRow evaluationData row)),
+       msgToken stateChannel (StateBumpChip.pushedMessage (stateBumpRow evaluationData row)))) =
       inputs.map fun input =>
         (msgToken stateChannel (StateBumpChip.pulledMessage input),
           msgToken stateChannel (StateBumpChip.pushedMessage input)) := by
-  -- Worked at the unfolded component: at `StateBumpChip.component` the row lists are typed at
-  -- `component.Input` and the rewrites below are refused at implicit transparency.
-  unfold StateBumpChip.component
-  let table := Table.build (⟨StateBumpChip.circuit⟩ : Component (ZMod p)) tableInputs data hint
-  have decoded (input : StateBumpChip.Inputs (ZMod p)) :
-      stateBumpRow table ((⟨StateBumpChip.circuit⟩ : Component (ZMod p)).buildRow input data hint)
-        = input :=
-    stateBumpRow_buildRow tableInputs input data hint
-  have filtered :
-      (inputs.map fun input =>
-          (⟨StateBumpChip.circuit⟩ : Component (ZMod p)).buildRow input data hint).filter
-          (fun row => decide (signedVal (stateBumpRow table row).is_real = 1)) =
-        inputs.map fun input =>
-          (⟨StateBumpChip.circuit⟩ : Component (ZMod p)).buildRow input data hint := by
-    apply List.filter_eq_self.mpr
-    intro row rowMem
-    obtain ⟨input, inputMem, rfl⟩ := List.mem_map.mp rowMem
-    exact Bool.decide_true (by rw [decoded]; exact active input inputMem)
-  change
-    (((inputs.map fun input =>
-        (⟨StateBumpChip.circuit⟩ : Component (ZMod p)).buildRow input data hint).filter fun row =>
-      signedVal (stateBumpRow table row).is_real = 1).map fun row =>
-        (msgToken stateChannel (StateBumpChip.pulledMessage (stateBumpRow table row)),
-          msgToken stateChannel (StateBumpChip.pushedMessage (stateBumpRow table row)))) = _
-  rw [filtered, List.map_map]
-  exact List.map_congr_left fun input _ => by
-    cases input
-    simp only [Function.comp_apply]
-    rw [decoded]
+  have decoded (input : StateBumpChip.Inputs (ZMod p)) :=
+    stateBumpRow_buildRow input generationData evaluationData hint
+  unfold StateBumpChip.component at decoded ⊢
+  rw [List.filter_map, List.map_map]
+  simp only [Function.comp_def, decoded]
+  rw [List.filter_eq_self.mpr (fun input member => Bool.decide_true (active input member))]
 
 /-- Closed form of the built StateBump link list for an arbitrary generated trace. -/
 theorem SupportedCoreTraceWitness.stateBumpLinks_eq_occurrences
@@ -423,7 +395,7 @@ theorem SupportedCoreTraceWitness.stateBumpLinks_eq_occurrences
           msgToken stateChannel
             (StateBumpChip.pushedMessage (stateBumpCols (p := p) event))) := by
   rw [stateBumpLinks, trace.stateBumpTable_witness]
-  simp only [SupportedCoreTraceWitness.providerTableFor, StateBumpChip.component, Table.build_table]
+  simp only [SupportedCoreTraceWitness.providerTableFor, StateBumpChip.component]
   have active : ∀ input ∈ stateBumpTraceInputs (p := p)
       (trace.providerOccurrences .stateBump), signedVal input.is_real = 1 := by
     intro input inputMem
@@ -432,8 +404,7 @@ theorem SupportedCoreTraceWitness.stateBumpLinks_eq_occurrences
     exact signedVal_one_nativeState
   have result := stateBumpBuiltLinks_aux (p := p)
       (stateBumpTraceInputs (p := p) (trace.providerOccurrences .stateBump))
-      (stateBumpTraceInputs (p := p) (trace.providerOccurrences .stateBump))
-      trace.data trace.hint active
+      trace.generationData trace.witness.data trace.hint active
   have rhsEq :
       (stateBumpTraceInputs (p := p) (trace.providerOccurrences .stateBump)).map
           (fun input : StateBumpChip.Inputs (ZMod p) =>
@@ -510,8 +481,8 @@ theorem nativeTrace_stateAgreement
 theorem nativeTrace_stateBumpSelectorBinary
     (statement : SupportedCoreStatement p) (execution : Machine.EventExecutionTrace) :
     ∀ row ∈ (stateBumpTable (nativeTrace statement execution).witness).table,
-      (stateBumpRow (stateBumpTable (nativeTrace statement execution).witness) row).is_real = 0 ∨
-      (stateBumpRow (stateBumpTable (nativeTrace statement execution).witness) row).is_real = 1 :=
+      (stateBumpRow (nativeTrace statement execution).witness.data row).is_real = 0 ∨
+      (stateBumpRow (nativeTrace statement execution).witness.data row).is_real = 1 :=
   (nativeTrace statement execution).stateBumpSelectorBinary
 
 /-- The compiler's State chronology supplies the full active State ledger hand-off.  StateBump

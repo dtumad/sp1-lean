@@ -112,36 +112,39 @@ open HostHintReadLocal
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
+  {names : ((HostLocalCore.tables image source
+    ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
 
 private theorem pull_mem
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness) witness.data)
     (channel : RawChannel (ZMod p)) (interaction : Interaction (ZMod p))
     (present : interaction ∈ (view row.1).component.operations.interactionValuesWith channel row.2) :
     interaction ∈ witness.interactionsWith channel := by
-  have inside : interaction ∈ (queueTables witness).flatMap (·.interactionsWith channel) := by
+  have inside : interaction ∈ (queueTables witness).flatMap (·.interactionsWith witness.data channel) := by
     rw [TransitionView.readIndexedRows_interactions indices (fun index => (view index).component)
-      _ _ (queueTables_aligned witness)]
+      _ witness.data _ (queueTables_aligned witness)]
     exact List.mem_flatMap.mpr ⟨row, member, present⟩
   obtain ⟨table, tableMem, present⟩ := List.mem_flatMap.mp inside
-  exact EnsembleWitness.mem_interactionsWith.mpr ⟨table, queueTables_mem witness table tableMem, present⟩
+  exact EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, queueTables_mem witness table tableMem, present⟩)
 
 /-- Authentication follows the very node/word pulls made by each physical queue row. -/
 theorem records_of_witness
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels))
-    (store : Store) (authenticated : RecordAuthentication witness store) (balanced : witness.BalancedChannels)
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (store : Store) (authenticated : RecordAuthentication witness store) (balanced : RecordChannels witness)
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness) witness.data) :
     Records store row := by
   rcases row with ⟨index, env⟩
   cases index with
   | none =>
     constructor
-    · apply (node_authenticated witness store authenticated balanced _ ?_).2
+    · apply (node_authenticated witness store authenticated balanced.node _ ?_).2
       apply pull_mem witness (none, env) member
       change _ ∈ HostHintReadCoverage.handler.operations.interactionValuesWith nodeChannel.toRaw env
       rw [(handler_records env).1]
       exact List.mem_cons_self ..
-    · apply (word_authenticated witness store authenticated balanced _ ?_).2
+    · apply (word_authenticated witness store authenticated balanced.word _ ?_).2
       apply pull_mem witness (none, env) member
       change _ ∈ HostHintReadCoverage.handler.operations.interactionValuesWith wordChannel.toRaw env
       rw [(handler_records env).2]
@@ -149,7 +152,7 @@ theorem records_of_witness
   | some empty =>
     intro nonempty
     subst empty
-    apply (node_authenticated witness store authenticated balanced _ ?_).2
+    apply (node_authenticated witness store authenticated balanced.node _ ?_).2
     apply pull_mem witness (some false, env) member
     rw [show (view (some false)).component = (lengthView false).component from rfl, length_record]
     exact List.mem_cons_self ..

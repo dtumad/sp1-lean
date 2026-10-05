@@ -14,8 +14,8 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance bankAgreementLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance bankAgreementClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
@@ -42,12 +42,12 @@ theorem source_execution_with_banks (valid : image.Valid)
     ∃ events target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧
       events.Perm ((LocalCore.executionRows
-        (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).map ExecutionRow.event) ∧
+        (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event) ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
       target.sail.regs.get? LeanRV64D.Defs.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
       (∀ loc message, LocalCore.memoryFinalFrontier
-          (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc = some message →
+          (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = some message →
         locContent target.sail loc = some (Word.toBitVec64 message.value)) ∧
       target.host.committed = bankFinal.committed ∧ target.host.deferred = bankFinal.deferred := by
   obtain ⟨carrier⟩ := source_grounding_carrier valid witness constraints balanced

@@ -23,6 +23,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) HaltChip.Inputs unit main := by
   elaborate_circuit
 
 def circuit : GeneralFormalCircuit (ZMod p) HaltChip.Inputs unit where
+  name := (HaltChip.circuit (p := p)).name
   main
   elaborated
   Spec input _ _ := HaltChip.Spec input ∧ input.is_real = 0
@@ -31,8 +32,8 @@ def circuit : GeneralFormalCircuit (ZMod p) HaltChip.Inputs unit where
   soundness := by circuit_proof_all [main]
   completeness := by circuit_proof_all [main, HaltChip.circuit]
 
-def original : Component (ZMod p) := ⟨HaltChip.circuit⟩
-def component : Component (ZMod p) := ⟨circuit⟩
+def original : Component (ZMod p) := { circuit := HaltChip.circuit }
+def component : Component (ZMod p) := { circuit := circuit }
 
 private theorem main_interactions (input : Var HaltChip.Inputs (ZMod p)) (offset : ℕ)
     (selected : RawChannel (ZMod p)) :
@@ -51,8 +52,7 @@ private theorem main_constraints (input : Var HaltChip.Inputs (ZMod p)) (offset 
     ((main input).operations offset).ConstraintsHold env ↔
       ((HaltChip.main input).operations offset).ConstraintsHold env ∧
         Expression.eval env input.is_real = 0 := by
-  simp only [main, circuit_norm, GeneralFormalCircuit.toSubcircuit_constraints,
-    GeneralFormalCircuit.toSubcircuit_lookups, HaltChip.circuit,
+  simp only [main, circuit_norm, HaltChip.circuit,
     or_imp, forall_and, forall_eq]
   tauto
 

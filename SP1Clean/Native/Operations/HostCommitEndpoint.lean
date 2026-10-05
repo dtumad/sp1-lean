@@ -1,5 +1,6 @@
 import SP1Clean.Native.Operations.HostCommitBoundary
 import ToClean.Air.VerifierExtension
+import ToClean.Circuit.SubcircuitProjection
 
 /-! # Verifier-owned local commitment-bank endpoints
 
@@ -58,12 +59,21 @@ theorem values (deferred : Bool) (source target : Vector (Word (ZMod p)) 8)
 
 /-- The verifier extension cannot depend on witness-selected offsets or ambient row cells. -/
 def closed (deferred : Bool) (source target : Vector (Word (ZMod p)) 8) : ClosedVerifier (ZMod p) where
+  name := "host-commit"
   circuit := circuit deferred source target
+  assumptions := by intros; trivial
+  lookups := by simp only [circuit, main, circuit_norm, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain]
+  public_interactions := by
+    intro interaction member env
+    simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;>
+      simp [circuit_norm, ChannelInteraction.toRaw, AbstractInteraction.Guarantees,
+        AbstractInteraction.Requirements, Channel.toRaw, Expression.eval]
+
   length_zero := rfl
   constraints := by
     intros
-    simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_constraints,
-      GeneralFormalCircuit.toSubcircuit_lookups, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain]
+    simp only [circuit, main, circuit_norm, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain]
   interactions := by
     intro offset env channel
     exact (values deferred source target offset env channel).trans (values deferred source target 0 _ channel).symm

@@ -16,9 +16,12 @@ open Circuit Air.Flat HostCallChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
+/-- Match the field equality used by Clean's gated balance filters. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-def producer : Component (ZMod p) := ⟨HostCallChip.circuit⟩
+def producer : Component (ZMod p) := { circuit := HostCallChip.circuit }
 
 def input (env : Environment (ZMod p)) : HostCallChip.Inputs (ZMod p) :=
   valueFromOffset HostCallChip.Inputs 0 env
@@ -28,10 +31,17 @@ def call (env : Environment (ZMod p)) : Message (ZMod p) :=
 
 def clock (message : Message (ZMod p)) : ZMod p × ZMod p := (message.clk_high, message.clk_low)
 
-def activeRows (table : Table (ZMod p)) : List (Environment (ZMod p)) :=
-  (table.table.map table.environment).filter fun env => decide ((input env).instruction.is_real = 1)
+def activeRows (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Environment (ZMod p)) :=
+  (table.table.map (Environment.fromArray · data)).filter fun env => decide ((input env).instruction.is_real = 1)
 
-def calls (table : Table (ZMod p)) : List (Message (ZMod p)) := (activeRows table).map call
+omit [Fact (2 ^ 25 < p)] in
+/-- Membership exposes semantic activity without leaking the filter's field-equality instance. -/
+theorem activeRows_is_real (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (env : Environment (ZMod p)) (member : env ∈ activeRows table data) :
+    (input env).instruction.is_real = 1 :=
+  of_decide_eq_true (List.mem_filter.mp member).2
+
+def calls (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Message (ZMod p)) := (activeRows table data).map call
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem eval_instruction (row : Var HostCallChip.Inputs (ZMod p)) (env : Environment (ZMod p)) :
@@ -96,16 +106,16 @@ theorem row_values (env : Environment (ZMod p))
   simpa only [eval_varFromOffset_valueFromOffset, input, call] using projected
 
 /-- Every physical row remains in the ledger, including zero-multiplicity padding. -/
-theorem table_values (table : Table (ZMod p)) (component : table.component = producer)
-    (constraints : table.Constraints) :
-    table.interactionsWith channel.toRaw =
-      (table.table.map table.environment).map fun env =>
+theorem table_values (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = producer)
+    (constraints : table.Constraints data) :
+    table.interactionsWith data channel.toRaw =
+      (table.table.map (Environment.fromArray · data)).map fun env =>
         channel.pushedIfValue (input env).instruction.is_real (call env) := by
   simp only [Table.interactionsWith, List.map_map, Function.comp_def]
   rw [component]
   trans table.table.flatMap (fun physical =>
-    [channel.pushedIfValue (input (table.environment physical)).instruction.is_real
-      (call (table.environment physical))])
+    [channel.pushedIfValue (input (Environment.fromArray physical data)).instruction.is_real
+      (call (Environment.fromArray physical data))])
   · apply List.flatMap_congr
     intro physical member
     exact row_values _ (component ▸ constraints physical member)
@@ -113,24 +123,24 @@ theorem table_values (table : Table (ZMod p)) (component : table.component = pro
 
 /-- Complete handler messages are a permutation of actual active instruction calls.
 The characteristic bound comes from the original balanced physical ledger. -/
-theorem calls_perm (table : Table (ZMod p)) (component : table.component = producer)
-    (constraints : table.Constraints) (consumed : List (Message (ZMod p)))
+theorem calls_perm (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = producer)
+    (constraints : table.Constraints data) (consumed : List (Message (ZMod p)))
     (balanced : BalancedInteractions
-      (table.interactionsWith channel.toRaw ++ consumed.map channel.pulledValue)) :
-    (calls table).Perm consumed := by
-  rw [table_values table component constraints] at balanced
+      (table.interactionsWith data channel.toRaw ++ consumed.map channel.pulledValue)) :
+    (calls table data).Perm consumed := by
+  rw [table_values table data component constraints] at balanced
   apply channel.gated_unit_perm_of_balanced _ _ _ _ _ balanced
   intro env member
   obtain ⟨physical, present, rfl⟩ := List.mem_map.mp member
   exact binary_of_constraints _ (component ▸ constraints physical present)
 
 /-- A handler cannot duplicate an event clock when its complete calls balance unique producers. -/
-theorem clocks_nodup (table : Table (ZMod p)) (component : table.component = producer)
-    (constraints : table.Constraints) (consumed : List (Message (ZMod p)))
+theorem clocks_nodup (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = producer)
+    (constraints : table.Constraints data) (consumed : List (Message (ZMod p)))
     (balanced : BalancedInteractions
-      (table.interactionsWith channel.toRaw ++ consumed.map channel.pulledValue))
-    (unique : ((calls table).map clock).Nodup) :
+      (table.interactionsWith data channel.toRaw ++ consumed.map channel.pulledValue))
+    (unique : ((calls table data).map clock).Nodup) :
     (consumed.map clock).Nodup :=
-  ((calls_perm table component constraints consumed balanced).map clock).nodup_iff.mp unique
+  ((calls_perm table data component constraints consumed balanced).map clock).nodup_iff.mp unique
 
 end SP1Clean.Soundness.HostCallLedger

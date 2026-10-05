@@ -1,5 +1,5 @@
 import ToClean.Air.Realizes
-import ToClean.Air.UnitBalance
+import ToClean.Air.PublicVerifier
 import SP1Clean.Soundness.RankedGrounding
 import Clean.Utils.Tactics.CircuitProofStart
 import Mathlib.Data.ZMod.Basic
@@ -15,6 +15,7 @@ State balance and a strict rank recover every physical transition occurrence.
 namespace SP1Clean.Soundness.CounterExample
 
 open Air.Flat Circuit PFunctor PFunctor.DynSystem
+open scoped BigOperators
 
 /-- A small prime field with ample room for the complete interaction budget. -/
 abbrev F := ZMod 97
@@ -116,6 +117,7 @@ private def transitionMain (input : Var fieldPair F) : Circuit F Unit := do
 
 /-- A row proves an ordinary natural increment, including its enabling condition. -/
 def transition : GeneralFormalCircuit F fieldPair unit where
+  name := "CounterTransition"
   main := transitionMain
   Spec input _ _ := input.1.val < 15 ∧ input.2.val = input.1.val + 1
   ProverAssumptions input _ _ := input.1.val < 15 ∧ input.2.val = input.1.val + 1
@@ -128,39 +130,87 @@ def transition : GeneralFormalCircuit F fieldPair unit where
     simp_all only [Prod.ext_iff]
     exact ⟨trivial, sub_eq_zero.mpr (field_increment h_assumptions.2)⟩
 
-private def verifierMain (input : Var fieldPair F) : Circuit F Unit := do
-  lookup (rangeTable 16 (by decide)).toTable input.1
-  lookup (rangeTable 16 (by decide)).toTable input.2
-  state.push input.1
-  state.pull input.2
+private def rangeExpression (value : Expression F) : ℕ → Expression F
+  | 0 => 1
+  | count + 1 => rangeExpression value count * (value - (count : F))
 
-/-- The public verifier constrains both endpoints and supplies the opposite tokens. -/
+@[circuit_norm] private theorem rangeExpression_eval (env : Environment F)
+    (value : Expression F) (count : ℕ) :
+    env (rangeExpression value count) = ∏ index ∈ Finset.range count, (env value - (index : F)) := by
+  induction count with
+  | zero => simp [rangeExpression, circuit_norm]
+  | succ count ih => simp [rangeExpression, circuit_norm, ih, Finset.prod_range_succ]
+
+private theorem rangeProduct_zero (value : F) :
+    (∏ index ∈ Finset.range 16, (value - (index : F))) = 0 ↔ value.val ≤ 15 := by
+  rw [Finset.prod_eq_zero_iff]
+  constructor
+  · rintro ⟨index, member, zero⟩
+    have bound := Finset.mem_range.mp member
+    rw [sub_eq_zero] at zero
+    rw [zero, ZMod.val_natCast, Nat.mod_eq_of_lt (by omega)]
+    omega
+  · intro bound
+    refine ⟨value.val, Finset.mem_range.mpr (by omega), ?_⟩
+    rw [ZMod.natCast_zmod_val, sub_self]
+
+private def verifierMain (input : Var fieldPair F) : Circuit F Unit := do
+  assertZero (rangeExpression input.1 16)
+  assertZero (rangeExpression input.2 16)
+
+/-- The two public polynomial assertions mean exactly that both endpoints lie in 0..15. -/
 def verifier : GeneralFormalCircuit F fieldPair unit where
+  name := "CounterPublicBounds"
   main := verifierMain
   Spec input _ _ := input.1.val ≤ 15 ∧ input.2.val ≤ 15
   ProverAssumptions input _ _ := input.1.val ≤ 15 ∧ input.2.val ≤ 15
   soundness := by
-    circuit_proof_start [verifierMain, rangeTable, state]
-    simp_all only [Prod.ext_iff]
-    omega
+    circuit_proof_start [verifierMain, rangeProduct_zero]
+    simp_all only [Prod.ext_iff, and_self]
   completeness := by
-    circuit_proof_start [verifierMain, rangeTable, state]
-    simp_all only [Prod.ext_iff]
-    omega
+    circuit_proof_start [verifierMain, rangeProduct_zero]
+    simp_all only [Prod.ext_iff, and_self]
 
-/-- One transition table, one typed channel, and the checked boundary verifier. -/
-def ensemble : Ensemble F fieldPair where
-  tables := [⟨transition⟩]
+/-- Install the endpoint assertions through the shared, interaction-only verifier adapter. -/
+def boundaryChecks : PublicVerifier F fieldPair where
+  name := "CounterBounds"
+  circuit := verifier
+  assumptions := by intros; trivial
+  length_zero := by intro input; simp [verifier, circuit_norm]
+  lookups := by intros; simp [verifier, verifierMain, circuit_norm]
+  interactions := by intros; simp [verifier, verifierMain, circuit_norm]
+
+private def boundaryProgram : Verifier.Program F fieldPair where
+  main input := do
+    Verifier.push state input.1
+    Verifier.pull state input.2
+
+private def baseEnsemble : Ensemble F fieldPair where
+  tables := [{ circuit := transition }]
+  unique_names := List.nodup_singleton _
   channels := [state.toRaw]
-  verifier := verifier
-  verifier_length_zero := by intro input; simp [verifier, circuit_norm]
+  verifier := boundaryProgram
+
+/-- One physical transition table; the separate verifier enforces public bounds and state endpoints. -/
+abbrev ensemble : Ensemble F fieldPair := boundaryChecks.install baseEnsemble
+
+private theorem check_channel_ne_state : boundaryChecks.channel baseEnsemble ≠ state.toRaw := by
+  intro equal
+  have absent := boundaryChecks.channel_not_mem baseEnsemble
+  rw [equal] at absent
+  exact absent (List.mem_singleton_self _)
+
+private theorem boundary_count : boundaryChecks.CountBound := by
+  left
+  norm_num [PublicVerifier.assertions, boundaryChecks, verifier, verifierMain, circuit_norm,
+    ZMod.ringChar_zmod_n]
 
 /-- Decode the two physical cells (Clean supplies zero for absent cells). -/
 def decodeRow (row : Array F) : fieldPair F :=
   (row[0]?.getD 0, row[1]?.getD 0)
 
 private theorem transition_constraints (env : Environment F) :
-    (⟨transition⟩ : Component F).operations.ConstraintsHold env ↔
+    ({ circuit := transition } : Component F).operations.ConstraintsHold env ↔
       (env.get 0).val < 15 ∧ (env.get 1).val = (env.get 0).val + 1 := by
   rw [Component.constraintsHold_iff]
   simp only [Component.rowOperations, transition, transitionMain, circuit_norm,
@@ -178,101 +228,69 @@ private theorem transition_constraints (env : Environment F) :
   · rintro ⟨bound, equation⟩
     exact ⟨bound, sub_eq_zero.mpr (field_increment equation)⟩
 
-private theorem verifier_constraints (env : Environment F) :
-    (⟨verifier⟩ : Component F).operations.ConstraintsHold env ↔
-      (env.get 0).val ≤ 15 ∧ (env.get 1).val ≤ 15 := by
-  rw [Component.constraintsHold_iff]
-  simp only [Component.rowOperations, verifier, verifierMain, circuit_norm,
-    Lookup.Contains, Table.toRaw, StaticTable.toTable, or_imp, forall_and,
-    forall_eq, circuit_norm]
-  change ((∃ i : Fin 16, env.get 0 = (i.val : F)) ∧
-    (∃ i : Fin 16, env.get 1 = (i.val : F))) ↔ _
-  have range (value : F) : (∃ i : Fin 16, value = (i.val : F)) ↔ value.val < 16 :=
-    (rangeTable 16 (by decide)).contains_iff value
-  rw [range, range]
-  change ((env.get 0).val < 16 ∧ (env.get 1).val < 16) ↔ _
-  omega
+private theorem verifier_checks (input : fieldPair F) (data : ProverData F) :
+    boundaryChecks.Checks input data ↔ input.1.val ≤ 15 ∧ input.2.val ≤ 15 := by
+  simp [PublicVerifier.Checks, boundaryChecks, verifier, verifierMain, circuit_norm,
+    rangeProduct_zero, explicit_provable_type]
 
 private theorem transition_interactions (env : Environment F) :
-    (⟨transition⟩ : Component F).operations.interactionValuesWith state.toRaw env =
+    ({ circuit := transition } : Component F).operations.interactionValuesWith state.toRaw env =
       [state.pulledValue (env.get 0), state.pushedValue (env.get 1)] := by
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
     Component.rowOperations, transition, transitionMain, circuit_norm]
   simp only [AbstractInteraction.eval, ChannelInteraction.toRaw, circuit_norm, explicit_provable_type]
 
 private theorem verifier_interactions (env : Environment F) :
-    (⟨verifier⟩ : Component F).operations.interactionValuesWith state.toRaw env =
+    boundaryProgram.circuitOperations.interactionValuesWith state.toRaw env =
       [state.pushedValue (env.get 0), state.pulledValue (env.get 1)] := by
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
-    Component.rowOperations, verifier, verifierMain, circuit_norm]
-  simp only [AbstractInteraction.eval, ChannelInteraction.toRaw, circuit_norm, explicit_provable_type]
+  simp [boundaryProgram, Operations.interactionValuesWith, circuit_norm,
+    AbstractInteraction.eval, ChannelInteraction.toRaw, Channel.pushedValue, Channel.pulledValue,
+    Channel.emitted, Channel.pulled, explicit_provable_type]
 
 /-- A table witness from explicit transition pairs, useful also for adversarial regressions. -/
 def witnessOfRows (input : fieldPair F) (rows : List (fieldPair F)) : EnsembleWitness ensemble where
   tables := [{
-    component := ⟨transition⟩
-    width := 2
+    component := { circuit := transition }
     table := rows.map (fun row => #[row.1, row.2])
-    data := fun _ _ => #[]
     uniform_width := by
       intro row member
       obtain ⟨pair, _, rfl⟩ := List.mem_map.mp member
       rfl
   }]
-  data := fun _ _ => #[]
   publicInput := input
   same_length := rfl
   same_circuits := by intro i bound; have : i = 0 := by change i < 1 at bound; omega
                       subst i; rfl
-  same_data := by intro table member; obtain rfl := List.mem_singleton.mp member; rfl
 
 private theorem one_table (witness : EnsembleWitness ensemble) :
-    ∃ table, witness.tables = [table] ∧ table.component = ⟨transition⟩ := by
+    ∃ table, witness.tables = [table] ∧ table.component = { circuit := transition } := by
   have length : witness.tables.length = 1 := witness.same_length.symm
   obtain ⟨table, tables⟩ := List.length_eq_one_iff.mp length
   refine ⟨table, tables, ?_⟩
   have circuit := witness.same_circuits 0 (by decide)
-  simpa only [tables, ensemble, List.getElem_cons_zero] using circuit.symm
+  simpa only [tables, ensemble, PublicVerifier.install, baseEnsemble, List.getElem_cons_zero] using circuit.symm
 
 private theorem witness_constraints (witness : EnsembleWitness ensemble) (table : Table F)
-    (tables : witness.tables = [table]) (component : table.component = ⟨transition⟩) :
+    (tables : witness.tables = [table]) (component : table.component = { circuit := transition }) :
     witness.Constraints ↔
-      (witness.publicInput.1.val ≤ 15 ∧ witness.publicInput.2.val ≤ 15) ∧
       ∀ row ∈ table.table, (decodeRow row).1.val < 15 ∧
         (decodeRow row).2.val = (decodeRow row).1.val + 1 := by
-  conv_lhs => simp [EnsembleWitness.Constraints, EnsembleWitness.allTables, tables]
-  constructor
-  · rintro ⟨publicConstraints, rows⟩
-    constructor
-    · have h := publicConstraints _ (List.mem_singleton_self _)
-      change (⟨verifier⟩ : Component F).operations.ConstraintsHold _ at h
-      rw [verifier_constraints] at h
-      simpa [Table.environment, EnsembleWitness.verifierTable, Environment.fromArray,
-        explicit_provable_type, circuit_norm] using h
-    · intro row member
-      have h := rows row member
-      rw [component, transition_constraints] at h
-      exact h
-  · rintro ⟨publicConstraints, rows⟩
-    constructor
-    · intro row member
-      obtain rfl := List.mem_singleton.mp member
-      change (⟨verifier⟩ : Component F).operations.ConstraintsHold _
-      rw [verifier_constraints]
-      simpa [Table.environment, EnsembleWitness.verifierTable, Environment.fromArray,
-        explicit_provable_type, circuit_norm] using publicConstraints
-    · intro row member
-      rw [component, transition_constraints]
-      exact rows row member
+  change (∀ current ∈ witness.tables, current.Constraints witness.data) ↔ _
+  simp only [tables, List.mem_singleton, forall_eq, Table.Constraints, component,
+    transition_constraints]
+  rfl
 
 private theorem witness_ledger (witness : EnsembleWitness ensemble) (table : Table F)
-    (tables : witness.tables = [table]) (component : table.component = ⟨transition⟩) :
+    (tables : witness.tables = [table]) (component : table.component = { circuit := transition }) :
     witness.interactionsWith state.toRaw = state.transitionLedger
       witness.publicInput.1 witness.publicInput.2 table.table decodeRow := by
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.allTables, tables,
-    List.flatMap_cons, List.flatMap_nil, List.append_nil, Table.interactionsWith]
-  simp only [EnsembleWitness.verifierTable, ensemble, List.flatMap_cons, List.flatMap_nil,
-    List.append_nil, verifier_interactions, component, transition_interactions]
+  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
+    ensemble, boundaryChecks.install_verifier_interactions baseEnsemble _ _ check_channel_ne_state,
+    EnsembleWitness.tableContext, TableContext.interactionsWith, tables,
+    List.flatMap_cons, List.flatMap_nil, List.append_nil, Table.interactionsWith,
+    component, transition_interactions]
+  rw [show baseEnsemble.verifierOperations = boundaryProgram.circuitOperations from rfl,
+    verifier_interactions]
   rfl
 
 private theorem walk_length {rows : List (Array F)} {initial final : ℕ}
@@ -295,8 +313,10 @@ theorem soundness : ensemble.Soundness (fun _ => True)
     (fun input => ∃ events, Interpretation machine boundary admissible input events) := by
   rintro input _ ⟨witness, rfl, constraints, balanced⟩
   obtain ⟨table, tables, component⟩ := one_table witness
-  obtain ⟨endpoints, rows⟩ := (witness_constraints witness table tables component).mp constraints
-  have stateBalance := balanced state.toRaw (List.mem_singleton_self _)
+  have rows := (witness_constraints witness table tables component).mp constraints
+  have checks := (boundaryChecks.project_balanced_iff witness).mp balanced
+  have endpoints := (verifier_checks witness.publicInput witness.data).mp checks.2.2
+  have stateBalance := balanced state.toRaw (List.mem_append_left _ (List.mem_singleton_self _))
   change BalancedInteractions (witness.interactionsWith state.toRaw) at stateBalance
   rw [witness_ledger witness table tables component] at stateBalance
   have permutation := (state.transitionLedger_balanced_iff _ _ _ _).mp stateBalance |>.2
@@ -362,13 +382,10 @@ private theorem consecutiveRows_walk (initial count : ℕ) :
 /-- The compiler's concrete witness obeys exactly the semantic row contracts. -/
 theorem witnessOfRows_constraints (input : fieldPair F) (rows : List (fieldPair F)) :
     (witnessOfRows input rows).Constraints ↔
-      (input.1.val ≤ 15 ∧ input.2.val ≤ 15) ∧
       ∀ row ∈ rows, row.1.val < 15 ∧ row.2.val = row.1.val + 1 := by
   have contract := witness_constraints (witnessOfRows input rows)
     ((witnessOfRows input rows).tables[0]'(by change 0 < 1; decide)) rfl rfl
   rw [contract]
-  apply and_congr_right
-  intro _
   constructor
   · intro valid row member
     exact valid #[row.1, row.2] (List.mem_map.mpr ⟨row, member, rfl⟩)
@@ -402,10 +419,14 @@ private theorem consecutiveRows_valid (input : fieldPair F) (count : ℕ)
     (witnessOfRows input (consecutiveRows input.1.val count)).Valid input := by
   refine ⟨rfl, ?_, ?_⟩
   · rw [witnessOfRows_constraints]
-    exact ⟨⟨initialBound, finalBound⟩, consecutiveRows_spec _ _ (by omega)⟩
-  · intro channel member
+    exact consecutiveRows_spec _ _ (by omega)
+  · apply (boundaryChecks.project_balanced_iff _).mpr
+    refine ⟨?_, boundary_count, (verifier_checks input _).mpr ⟨initialBound, finalBound⟩⟩
+    intro channel member
     obtain rfl := List.mem_singleton.mp member
-    change BalancedInteractions ((witnessOfRows input _).interactionsWith state.toRaw)
+    change BalancedInteractions ((boundaryChecks.project (witnessOfRows input _)).interactionsWith state.toRaw)
+    rw [boundaryChecks.project_interactions (ens := baseEnsemble)
+      (witnessOfRows input (consecutiveRows input.1.val count)) state.toRaw check_channel_ne_state]
     rw [witnessOfRows_ledger, Channel.transitionLedger_balanced_iff]
     constructor
     · left

@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.LtChip.Defs
 import SP1Clean.Math.EvalVec
 import Clean.Air.Circuit
@@ -477,7 +479,7 @@ def exposedProgramInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
 composing the witnessed signed-compare gadget and the immediate-capable register reader; output is the
 native `Columns` row. Soundness/completeness are proven and axiom-clean. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.lt", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
@@ -605,5 +607,22 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
     ⟨programChannel.toRaw, (exposedProgramInteractions input offset).map
       ChannelInteraction.toRaw⟩
     (by simp [circuit, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := LtChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    LtChip.circuit_main_eq]
+  simp [LtChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
+    Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
+    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
+    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
+    LtOperationSigned.circuit, LtOperationSigned.main,
+    LtOperationUnsigned.circuit, LtOperationUnsigned.main,
+    U16MSBOperation.circuit, U16MSBOperation.main,
+    U16CompareOperation.circuit, U16CompareOperation.main,
+    Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.LtChip

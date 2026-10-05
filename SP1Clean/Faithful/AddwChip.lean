@@ -210,19 +210,6 @@ def addwChipRowCodec : ChipRowCodec AddwChip.Inputs AddwChip.Columns
       exact (eval_addwChipDirectOutput (p := p) (addwChipInput cols)
         (addwChipLocals cols) data).trans (addwChipColumnsOfInput_roundtrip cols) }
 
-theorem addwChip_lookups_empty :
-    (⟨AddwChip.circuit (p := p)⟩ :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    AddwChip.circuit_main_eq]
-  simp [AddwChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
-    AddwOperation.circuit, AddwOperation.main, U16MSBOperation.circuit,
-    U16MSBOperation.main, Gadgets.Equality.main, circuit_norm]
-
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel StateMsg)
 open InteractionRecovery
 
@@ -934,33 +921,33 @@ theorem addwChip_constraints_constructive
     let assignment := addwChipRowCodec.assignment
       (addwChipOracle.deconfigure rustCols) data
     List.Forall (· = 0) (addwChipOracle.assertZeros rustCols) ↔
-      (⟨AddwChip.circuit (p := p)⟩ :
+      ({ circuit := AddwChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
   let cols := addwChipOracle.deconfigure rustCols
   let assignment := addwChipRowCodec.assignment cols data
   have hbind : BindsChipOutput AddwChip.main assignment.environment
-      (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowOffset cols := by
+      ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInputVar
+      ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [AddwChip.circuit_main_eq] at h
     exact h
   have hlegacy := addwChip_constraints_faithful (p := p) assignment.environment
-    (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowOffset cols hbind
+    ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInputVar
+    ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (addwChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            (⟨AddwChip.circuit (p := p)⟩ :
+            ({ circuit := AddwChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols, ChipOracle.nativeAssertZeros_deconfigure,
       Air.Flat.Component.rowOperations_mk, Air.Flat.Component.rowInputVar_mk,
       Air.Flat.Component.rowOffset_mk, AddwChip.circuit_main_eq] using hlegacy
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros (AddwChip.circuit (p := p))
-      assignment.environment addwChip_lookups_empty).symm
+      assignment.environment AddwChip.lookups_empty).symm
 
 theorem addwChip_interactions_faithful
     (env : Environment (ZMod p)) (input : Var AddwChip.Inputs (ZMod p)) (offset : ℕ)
@@ -1002,21 +989,21 @@ theorem addwChip_interactions_constructive
       (addwChipOracle.deconfigure rustCols) data
     List.Perm
       (nativeAccesses assignment.environment
-        (⟨AddwChip.circuit (p := p)⟩ :
+        ({ circuit := AddwChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).operations)
       (addwChipOracle.rustAccesses rustCols) := by
   dsimp only
   let cols := addwChipOracle.deconfigure rustCols
   let assignment := addwChipRowCodec.assignment cols data
   have hbind : BindsChipOutput AddwChip.main assignment.environment
-      (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInputVar
-      (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowOffset cols := by
+      ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInputVar
+      ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [AddwChip.circuit_main_eq] at h
     exact h
   have hlegacy := addwChip_interactions_faithful (p := p) assignment.environment
-    (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨AddwChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowOffset cols hbind
+    ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInputVar
+    ({ circuit := AddwChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations (AddwChip.circuit (p := p))
     assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,

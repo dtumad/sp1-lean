@@ -1,3 +1,4 @@
+import ToClean.Gadgets.LookupProjection
 import SP1Clean.Model.Channels
 import SP1Clean.Math.Bitwise
 import Clean.Circuit.Basic
@@ -86,6 +87,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
 two byte bounds; soundness derives them from the `rangeCheck` subcircuits and discharges the push's
 `ByteRowSpec` requirement via `byteRowSpec_u8range_pair`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.byte.u8_range"
   main
   Spec input _ _ := input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8
   ProverAssumptions input _ _ := input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8
@@ -96,6 +98,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact h_assumptions
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 end U8Range
 
@@ -174,6 +181,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 `Spec` exposes that result even when the row multiplicity is zero; soundness also discharges the
 push's `ByteRowSpec` requirement via `byteRowSpec_msb`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.msb"
   main
   Spec input output _ :=
     input.b.val < 2 ^ 8 ∧ output = if 128 ≤ input.b.val then 1 else 0
@@ -201,6 +209,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     refine ⟨h_assumptions, ?_, ?_⟩
     · rw [h_env]; split <;> simp [IsBool]
     · rw [h_env]; exact byte_msb_range h_assumptions
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 end MSB
 
@@ -241,6 +254,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 /-- The `AND` provider returns and pushes `r = b AND c`; exposing `r` in `Spec` preserves the
 semantic result for zero-multiplicity rows as well. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.and"
   main
   Spec input output _ :=
     (input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) ∧
@@ -260,6 +274,12 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact ⟨h_assumptions.1, h_assumptions.2, h_assumptions⟩
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.And.And8.circuit, Gadgets.And.And8.main, circuit_norm]
+  rfl
 
 end AndByte
 
@@ -289,6 +309,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 /-- The `OR` provider returns and pushes `r = b OR c`; the result remains specified independently
 of the interaction multiplicity. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.or"
   main
   Spec input output _ :=
     (input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) ∧
@@ -309,6 +330,12 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact ⟨h_assumptions.1, h_assumptions.2, h_assumptions⟩
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.Or.Or8.circuit, Gadgets.Or.Or8.main, circuit_norm]
+  rfl
 
 end OrByte
 
@@ -339,6 +366,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 /-- The `XOR` provider returns and pushes `r = b XOR c`; the result is part of the semantic `Spec`
 even when no lookup demand is assigned to the row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.xor"
   main
   Spec input output _ :=
     (input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) ∧
@@ -359,6 +387,12 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     have hxlt : input_b.val ^^^ input_c.val < 256 := Nat.xor_lt_two_pow (n := 8) hb hc
     refine ⟨hb, hc, hb, hc, ?_⟩
     rw [h_env, ZMod.val_natCast_of_lt (by have := Fact.out (p := 2 ^ 17 < p); omega)]
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+  rfl
 
 end XorByte
 
@@ -445,6 +479,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) 
 /-- The `LTU` provider returns and pushes the in-circuit-derived comparison bit.  The output
 equation is part of `Spec`, so downstream faithful transports do not inspect witness internals. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
+  name := "sp1.native.byte.ltu"
   main
   Spec input output _ :=
     (input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) ∧
@@ -472,6 +507,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     refine ⟨h_assumptions.1, h_assumptions.2, ?_, ?_⟩
     · rw [h_env]; split <;> simp [IsBool]
     · rw [h_env]; exact byte_ltu_range h_assumptions.1 h_assumptions.2
+
+/-- The provider's static lookup keys, independent of the interaction multiplicity. -/
+@[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 end Ltu
 

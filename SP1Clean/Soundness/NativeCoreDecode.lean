@@ -29,14 +29,13 @@ theorem instructionTables_components {image : ProgramImage}
 
 theorem instructionTables_mem {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) {table : Table (ZMod p)}
-    (member : table ∈ instructionTables witness) : table ∈ witness.allTables :=
-  witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop (List.mem_of_mem_take member))
+    (member : table ∈ instructionTables witness) : table ∈ witness.tables :=
+  List.mem_of_mem_drop (List.mem_of_mem_take member)
 
 theorem instructionTables_aligned {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    InstructionTablesAligned witness.data supportedChips (instructionTables witness) :=
+    InstructionTablesAligned supportedChips (instructionTables witness) :=
   InstructionTablesAligned.of_components (instructionTables_components witness)
-    (fun _ member => witness.same_data _ (List.mem_of_mem_drop (List.mem_of_mem_take member)))
 
 /-- Decode ordinary rows without replacing their physical witness cells. -/
 noncomputable def instructionRows {image : ProgramImage}
@@ -67,7 +66,7 @@ theorem instructionRows_interaction_mem {image : ProgramImage}
     (instructionTables_aligned witness)] at batchMem
   obtain ⟨table, tableMem, typedMem⟩ := List.mem_flatMap.mp batchMem
   apply EnsembleWitness.mem_interactionsWith.mpr
-  refine ⟨table, instructionTables_mem witness tableMem, ?_⟩
+  refine Or.inr ⟨table, instructionTables_mem witness tableMem, ?_⟩
   rw [← typedTableInteractionsWith_raw]
   exact List.mem_map_of_mem typedMem
 
@@ -82,10 +81,10 @@ theorem instructionRows_finished_guarantees {image : ProgramImage}
   constructor
   · exact channelGuarantees_of_mem_decodeInstructionTables witness.data byteChannel.toRaw
       (instructionTables_aligned witness)
-      (fun table tableMem => (closed table (instructionTables_mem witness tableMem)).1) row member
+      (fun table tableMem => (closed.2 table (instructionTables_mem witness tableMem)).1) row member
   · exact channelGuarantees_of_mem_decodeInstructionTables witness.data programChannel.toRaw
       (instructionTables_aligned witness)
-      (fun table tableMem => (closed table (instructionTables_mem witness tableMem)).2) row member
+      (fun table tableMem => (closed.2 table (instructionTables_mem witness tableMem)).2) row member
 
 /-- An active decoded instruction fetch belongs to the checked image and official Sail decoder.
 The statement is independent of the instruction's chip and physical table position. -/

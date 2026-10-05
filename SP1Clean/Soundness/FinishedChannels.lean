@@ -73,7 +73,7 @@ private lemma providers_channels_eq :
 
 /-- Every provider circuit's `Assumptions` is the structure default `fun _ _ => True`. -/
 private lemma providers_assumptions :
-    ∀ c ∈ sp1ProviderTables (p := p), ∀ env : Environment (ZMod p), c.Assumptions env := by
+    ∀ c ∈ sp1ProviderTables (p := p), ∀ env : Environment (ZMod p), c.CircuitAssumptions env := by
   intro c hc env
   rw [sp1ProviderTables_explicit] at hc
   simp only [List.mem_append] at hc
@@ -86,7 +86,7 @@ private lemma providers_assumptions :
 /-- Every component proves Byte/Program requirements from its constraints. Only the closed
 lookup providers list these requirement channels; every other component omits them. -/
 theorem sp1_component_finished_requirements (component : Component (ZMod p))
-    (member : component ∈ (sp1Ensemble (p := p)).allTables)
+    (member : component ∈ (sp1Ensemble (p := p)).tables)
     (channel : RawChannel (ZMod p))
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw])
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
@@ -95,9 +95,8 @@ theorem sp1_component_finished_requirements (component : Component (ZMod p))
       component.operations.ChannelRequirements channel env :=
     Operations.requirements_of_not_mem _ _ _
       (component.inChannelsOrRequirements_of_constraints env constraints) channel notRequired
-  simp only [Ensemble.allTables, sp1Ensemble_tables, List.mem_cons, List.mem_append] at member
-  rcases member with rfl | member | member
-  · exact absent (by simp [Ensemble.verifierTable, sp1Ensemble, sp1StateVerifier])
+  simp only [sp1Ensemble_tables, List.mem_append] at member
+  rcases member with member | member
   · exact absent (fun required => outside (sp1Tables_cwr_subset _ member required))
   · have shape := List.mem_map_of_mem
       (f := fun c : Component (ZMod p) =>
@@ -119,20 +118,32 @@ theorem sp1_component_finished_requirements (component : Component (ZMod p))
         exact outside (List.mem_cons_of_mem _ required))
 
 /-- Byte and Program structural guarantees are grounded by their provider circuits and actual
-channel balance. No positional consumer/provider partition is part of this argument. -/
+channel balance, for both the separate public verifier and every physical table. -/
 theorem sp1_finishedChannel_guarantees (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (hC : witness.Constraints) (hB : witness.BalancedChannels) :
-    ∀ table ∈ witness.allTables,
-      table.ChannelGuarantees Channels.byteChannel.toRaw ∧
-      table.ChannelGuarantees Channels.programChannel.toRaw := by
+    ((sp1Ensemble (p := p)).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw ∧
+      (sp1Ensemble (p := p)).VerifierChannelGuarantees witness.publicInput witness.data programChannel.toRaw) ∧
+    ∀ table ∈ witness.tables,
+      table.ChannelGuarantees witness.data byteChannel.toRaw ∧
+      table.ChannelGuarantees witness.data programChannel.toRaw := by
   have closed (channel : RawChannel (ZMod p)) [channel.Consistent]
       (member : channel ∈ (sp1Ensemble (p := p)).channels)
-      (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw]) :=
-    witness.channelGuarantees_of_component_requirements channel hC (hB channel member)
+      (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw]) :
+      (sp1Ensemble (p := p)).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
+        ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
+    apply witness.channelGuarantees_of_component_requirements channel hC (hB channel member) ?_
       (fun component componentMem env constraints =>
         sp1_component_finished_requirements component componentMem channel outside env constraints)
+    intro input data
+    apply Ensemble.verifierChannelRequirements_of_not_mem
+    intro used
+    apply outside
+    apply List.mem_cons.mpr
+    left
+    simpa [sp1Ensemble, sp1StateVerifierProgram, Verifier.ofInteractions,
+      sp1StateVerifierMain, circuit_norm] using used
   have byte := closed byteChannel.toRaw (by simp [sp1Ensemble_channels]) (by simp [circuit_norm])
   have program := closed programChannel.toRaw (by simp [sp1Ensemble_channels]) (by simp [circuit_norm])
-  exact fun table member => ⟨byte table member, program table member⟩
+  exact ⟨⟨byte.1, program.1⟩, fun table member => ⟨byte.2 table member, program.2 table member⟩⟩
 
 end SP1Clean.Soundness

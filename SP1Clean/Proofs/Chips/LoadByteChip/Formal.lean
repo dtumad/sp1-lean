@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.LoadByteChip.Defs
 import Clean.Air.Circuit
 
@@ -389,7 +391,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   -- `byteChannel` dropped (W11 Phase 0c): the two off-gate byte pulls (`is_real`-gated U8 pair +
   -- `is_lb`-gated MSB) are discharged by the inline `is_real`/`is_lb` boolean gates in `main`; the
   -- residual buses are the readers'.
-  { main, elaborated,
+  { name := "sp1.native.load_byte", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     channelsWithRequirements :=
@@ -468,5 +470,21 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
   exact circuit.interactionsWith_eq_of_mem_exposedChannels input offset
     ⟨memoryChannel.toRaw, (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw⟩
     (by simp [circuit, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := LoadByteChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    LoadByteChip.circuit_main_eq]
+  simp [LoadByteChip.main, Readers.CPUState.circuit,
+    Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,
+    AddrAddOperation.circuit, AddrAddOperation.main,
+    Readers.MemoryAccess.circuit, Readers.MemoryAccess.main,
+    Readers.ITypeReader.circuit, Readers.ITypeReader.main,
+    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
+    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit,
+    Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.LoadByteChip

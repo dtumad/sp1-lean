@@ -37,16 +37,16 @@ theorem AddiChip.eval_inputOpA0_eq_zero_of_mainConstraints
 
 /-- Addi passes its independent state input through to the completed row. -/
 theorem AddiChip.inputOutputState (env : Environment (ZMod p)) :
-    ((⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).state =
-      ((⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).state := by
+    (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state =
+      (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state := by
   let input : Var AddiChip.Inputs (ZMod p) := varFromOffset AddiChip.Inputs 0
   let offset := size AddiChip.Inputs
   have inputEq : Eval.eval env input =
-      ((⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset AddiChip.Inputs 0 env
   have outputEq : Eval.eval env
       ((AddiChip.circuit (p := p)).output input offset) =
-      ((⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).state =
@@ -55,16 +55,16 @@ theorem AddiChip.inputOutputState (env : Environment (ZMod p)) :
 
 /-- Addi passes its independent I-type adapter input through to the completed row. -/
 theorem AddiChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    ((⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter =
-      ((⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter := by
   let input : Var AddiChip.Inputs (ZMod p) := varFromOffset AddiChip.Inputs 0
   let offset := size AddiChip.Inputs
   have inputEq : Eval.eval env input =
-      ((⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset AddiChip.Inputs 0 env
   have outputEq : Eval.eval env
       ((AddiChip.circuit (p := p)).output input offset) =
-      ((⟨AddiChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).adapter =

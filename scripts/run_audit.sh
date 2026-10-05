@@ -176,14 +176,12 @@ else
 fi
 
 echo
-echo "== A2 witgen export structural (gate) =="
-# The committed export/witgen tree (the wire-format artifact the Rust interpreter consumes)
-# must always be well-formed; byte-identity against a fresh regeneration is checked in the
-# CI `build-full` job (`check_witgen_export.sh --regen`), where the SP1CleanTest oleans are warm.
-if scripts/check_witgen_export.sh; then
+echo "== A2 independent SP1 witness inputs (gate) =="
+# The full CI phase separately generates native artifacts and runs their Rust comparison.
+if python3 scripts/check_witgen_export.py --source-only; then
   :
 else
-  echo "FAIL: the committed export/witgen tree is not structurally clean (see above)"; fail=1
+  echo "FAIL: independent SP1 witness inputs are invalid (see above)"; fail=1
 fi
 
 echo

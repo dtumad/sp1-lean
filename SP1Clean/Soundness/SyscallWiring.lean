@@ -46,13 +46,12 @@ theorem syscallInstrsRow_memoryGuarantees_of_pullCurrency
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table)
     (currency : ∀ mp ∈
-        (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+        (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
     (syscallInstrsTable witness).component.operations.ChannelGuarantees memoryChannel.toRaw
-      ((syscallInstrsTable witness).environment row) :=
-  syscallInstrsRow_memoryGuarantees_of_component _ (syscallInstrsTable_component witness)
-    (constraints _ (witness.mem_allTables_of_mem_tables
-      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))) rowMem currency
+      (Environment.fromArray row witness.data) :=
+  syscallInstrsRow_memoryGuarantees_of_component _ witness.data (syscallInstrsTable_component witness)
+    (constraints _ (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))) rowMem currency
 
 /-- **A syscall row's `Spec`, from the walk's currency rather than from grounding.** This is the
 statement `SyscallRowWiring` is built on: everything the row's meaning needs is either a finished
@@ -62,13 +61,12 @@ theorem syscallInstrsRow_spec_of_pullCurrency
     (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table)
     (currency : ∀ mp ∈
-        (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+        (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
-    SyscallInstrsChip.Spec (syscallInstrsRow (syscallInstrsTable witness) row) := by
-  have member := witness.mem_allTables_of_mem_tables
-    (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))
-  have finished := sp1_finishedChannel_guarantees witness constraints balanced _ member
-  exact (syscallInstrsRow_contract_of_component _ (syscallInstrsTable_component witness)
+    SyscallInstrsChip.Spec (syscallInstrsRow witness.data row) := by
+  have member := List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
+  have finished := (sp1_finishedChannel_guarantees witness constraints balanced).2 _ member
+  exact (syscallInstrsRow_contract_of_component _ witness.data (syscallInstrsTable_component witness)
     (constraints _ member) finished.1 finished.2 rowMem currency).1
 
 /-- **The row's committed `ECALL` fetch satisfies the Program bus's `RowSpec`.** The Program channel
@@ -78,12 +76,11 @@ theorem syscallInstrsRow_programRowSpec
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table)
-    (real : (syscallInstrsRow (syscallInstrsTable witness) row).is_real = 1) :
-    Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow (syscallInstrsTable witness) row)) :=
-  syscallInstrsRow_programRowSpec_of_component _ (syscallInstrsTable_component witness)
-    (sp1_finishedChannel_guarantees witness constraints balanced _
-      (witness.mem_allTables_of_mem_tables
-        (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)))).2 rowMem real
+    (real : (syscallInstrsRow witness.data row).is_real = 1) :
+    Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow witness.data row)) :=
+  syscallInstrsRow_programRowSpec_of_component _ witness.data (syscallInstrsTable_component witness)
+    ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
+      (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))).2 rowMem real
 
 /-- **The row's `PulledFacts`, assembled from the three buses.** Nothing here is row-local: the
 first five conjuncts are the Program bus's `RowSpec` at the committed `ECALL`, the next six are the
@@ -94,13 +91,12 @@ theorem syscallInstrsRow_pulledFacts
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels)
     {row : Array (ZMod p)} (rowMem : row ∈ (syscallInstrsTable witness).table)
-    (currency : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+    (currency : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
-    SyscallInstrsChip.PulledFacts (syscallInstrsRow (syscallInstrsTable witness) row) := by
-  have member := witness.mem_allTables_of_mem_tables
-    (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))
-  have finished := sp1_finishedChannel_guarantees witness constraints balanced _ member
-  exact (syscallInstrsRow_contract_of_component _ (syscallInstrsTable_component witness)
+    SyscallInstrsChip.PulledFacts (syscallInstrsRow witness.data row) := by
+  have member := List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
+  have finished := (sp1_finishedChannel_guarantees witness constraints balanced).2 _ member
+  exact (syscallInstrsRow_contract_of_component _ witness.data (syscallInstrsTable_component witness)
     (constraints _ member) finished.1 finished.2 rowMem currency).2
 
 /-- **The row's three operand columns are `x5`/`x10`/`x11`.** Nothing row-local says so — the chip
@@ -111,13 +107,13 @@ passes its own columns where `HaltChip` hardcodes the constants — so it is rea
 
 Stated in the `((n : ℕ) : ZMod p) = column` direction because that is the form
 `Semantics.MemoryMsg.locOf_register` consumes. -/
-theorem syscallInstrsRow_operands
+theorem syscallInstrsRow_operands {program : Target.GuestProgram}
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound witness)
+    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound program witness)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    ((5 : ℕ) : ZMod p) = (syscallInstrsRow (syscallInstrsTable witness) row).op_a ∧
-      ((10 : ℕ) : ZMod p) = (syscallInstrsRow (syscallInstrsTable witness) row).op_b ∧
-      ((11 : ℕ) : ZMod p) = (syscallInstrsRow (syscallInstrsTable witness) row).op_c := by
+    ((5 : ℕ) : ZMod p) = (syscallInstrsRow witness.data row).op_a ∧
+      ((10 : ℕ) : ZMod p) = (syscallInstrsRow witness.data row).op_b ∧
+      ((11 : ℕ) : ZMod p) = (syscallInstrsRow witness.data row).op_c := by
   have shape :=
     (witness_syscallRow_ecallTruth witness constraints balanced providerBound rowMem).2
   refine ⟨?_, ?_, ?_⟩
@@ -153,12 +149,12 @@ theorem syscall_pushesAt_eq
     (exhaustive : syscallRows.Perm (realSyscallInstrsRows witness))
     (loc : Semantics.MemLoc) :
     TimedGrounding.pushesAt
-        (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) loc
+        (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row)) loc
       = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
-  rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row))
-      = (syscallRows.map (syscallInstrsRow (syscallInstrsTable witness))).map syscallRowFacts from
+  rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row))
+      = (syscallRows.map (syscallInstrsRow witness.data)).map syscallRowFacts from
         by rw [List.map_map]; rfl,
     syscallRows_pushesAt, syscallInstrs_producedMessages_eq witness constraints,
     List.flatMap_map]
@@ -173,12 +169,12 @@ theorem syscall_pullsAt_eq
     (exhaustive : syscallRows.Perm (realSyscallInstrsRows witness))
     (loc : Semantics.MemLoc) :
     TimedGrounding.pullsAt
-        (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) loc
+        (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row)) loc
       = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
-  rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row))
-      = (syscallRows.map (syscallInstrsRow (syscallInstrsTable witness))).map syscallRowFacts from
+  rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row))
+      = (syscallRows.map (syscallInstrsRow witness.data)).map syscallRowFacts from
         by rw [List.map_map]; rfl,
     syscallRows_pullsAt, syscallInstrs_consumedMessages_eq witness constraints,
     List.flatMap_map]
@@ -202,9 +198,9 @@ theorem walkedMemoryBalance
     (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
         signedVal interaction.mult = 1)
-    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       memoryChannel) = [])
-    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
       memoryChannel) = [])
     (initUnique : MemoryInitProviderUnique witness)
     (finalizeUnique : MemoryFinalizeProviderUnique witness)
@@ -221,37 +217,37 @@ theorem walkedMemoryBalance
     (syscallExhaustive : syscallRows.Perm (realSyscallInstrsRows witness))
     (walkedRows : List (WalkedRow p))
     (splitPerm : (walkedRows.map (WalkedRow.facts g)).Perm
-      (orderedRows.map g ++ syscallRows.map fun row => syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)))
+      (orderedRows.map g ++ syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row)))
     (loc : Semantics.MemLoc) :
     TimedGrounding.optMS (memoryInitFrontier witness loc)
         + TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
       TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
         + TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
   have base := memoryBalance_of_alignsWith witness balanced memBinary initPure finPure
     initUnique finalizeUnique paddingEmpty orderedRows exhaustive g aligns loc
   have hpush : TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
       = TimedGrounding.pushesAt (orderedRows.map g) loc
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
     rw [pushesAt_perm splitPerm loc, TimedGrounding.pushesAt_append,
       syscall_pushesAt_eq witness constraints syscallRows syscallExhaustive loc]
   have hpull : TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
       = TimedGrounding.pullsAt (orderedRows.map g) loc
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
     rw [pullsAt_perm splitPerm loc, TimedGrounding.pullsAt_append,
       syscall_pullsAt_eq witness constraints syscallRows syscallExhaustive loc]
@@ -540,36 +536,36 @@ about the *same* state, and that is the content of the `+0`/`+3`/`+2` read times
 `ecall` then follows from `pcValue` and the committed `ECALL` fetch, which is where
 `witness_syscallRow_ecallTruth` is spent a second time — once for the operand indices, once for the
 fetch itself. -/
-theorem syscallRowContext_of_currency
+theorem syscallRowContext_of_currency {program : Target.GuestProgram}
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound witness)
+    (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound program witness)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
-    (pcCarry : ((syscallInstrsRow (syscallInstrsTable witness) row).state.pc[0]).val + 4 < 2 ^ 16)
+    (pcCarry : ((syscallInstrsRow witness.data row).state.pc[0]).val + 4 < 2 ^ 16)
     {traj : Semantics.Trajectory} {initial source : SailState} {tl : Semantics.Timeline}
     {n : ℕ}
     (htraj : traj n = some source)
     (hpc : source.regs.get? Register.PC
-      = some (Semantics.pcBits (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)).pc0
-          (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)).pc1
-          (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)).pc2))
-    (htime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (syscallInstrsRow (syscallInstrsTable witness) row)) = tl.start n)
-    (hcurr : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+      = some (Semantics.pcBits (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row)).pc0
+          (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row)).pc1
+          (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row)).pc2))
+    (htime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (syscallInstrsRow witness.data row)) = tl.start n)
+    (hcurr : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
       Semantics.LocalValueAtG traj initial tl
         (Semantics.MemoryMsg.locOf (mp : MemoryMsg (ZMod p) × ℕ).1) mp.2 mp.1.value) :
-    SyscallRowContext (syscallInstrsRow (syscallInstrsTable witness) row) (Commit.progOf witness.data) source := by
+    SyscallRowContext (syscallInstrsRow witness.data row) program source := by
   obtain ⟨opA, opB, opC⟩ :=
     syscallInstrsRow_operands witness constraints balanced providerBound rowMem
-  obtain ⟨locPullA, -⟩ := syscallRow_locOf_reg (syscallInstrsRow (syscallInstrsTable witness) row) (i := 5#5) opA
-    (syscallInstrsRow (syscallInstrsTable witness) row).op_a_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_a_value 4
-  obtain ⟨locPullB, -⟩ := syscallRow_locOf_reg (syscallInstrsRow (syscallInstrsTable witness) row) (i := 10#5) opB
-    (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_b_memory.prev_value 3
-  obtain ⟨locPullC, -⟩ := syscallRow_locOf_reg (syscallInstrsRow (syscallInstrsTable witness) row) (i := 11#5) opC
-    (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory (syscallInstrsRow (syscallInstrsTable witness) row).op_c_memory.prev_value 2
+  obtain ⟨locPullA, -⟩ := syscallRow_locOf_reg (syscallInstrsRow witness.data row) (i := 5#5) opA
+    (syscallInstrsRow witness.data row).op_a_memory (syscallInstrsRow witness.data row).op_a_value 4
+  obtain ⟨locPullB, -⟩ := syscallRow_locOf_reg (syscallInstrsRow witness.data row) (i := 10#5) opB
+    (syscallInstrsRow witness.data row).op_b_memory (syscallInstrsRow witness.data row).op_b_memory.prev_value 3
+  obtain ⟨locPullC, -⟩ := syscallRow_locOf_reg (syscallInstrsRow witness.data row) (i := 11#5) opC
+    (syscallInstrsRow witness.data row).op_c_memory (syscallInstrsRow witness.data row).op_c_memory.prev_value 2
   obtain ⟨curA, curB, curC⟩ := syscallRowFacts_currency_split_values _ hcurr
   rw [locPullA, htime] at curA
   rw [locPullB, htime] at curB
   rw [locPullC, htime] at curC
-  exact SyscallRowContext.of_pieces (syscallInstrsRow (syscallInstrsTable witness) row) _ source opA opB opC pcCarry
+  exact SyscallRowContext.of_pieces (syscallInstrsRow witness.data row) _ source opA opB opC pcCarry
     (witness_syscallRow_ecallTruth witness constraints balanced providerBound rowMem).1 hpc
     ((TimedGrounding.localValueAtG_stepStart_iff htraj).mp curA)
     (TimedGrounding.localValueAtG_regRead_of_traj (k := 3) htraj (by norm_num) curB)
@@ -591,7 +587,7 @@ condition is vacuous, and with them it is a genuine, disclosed obligation. -/
 `CoreProfile.CanonicalSyscallCodes`. -/
 noncomputable def syscallEventsOf (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     List Machine.CoreSyscallEvent :=
-  (realSyscallInstrsRows witness).map fun row => syscallEventOfRow (syscallInstrsRow (syscallInstrsTable witness) row)
+  (realSyscallInstrsRows witness).map fun row => syscallEventOfRow (syscallInstrsRow witness.data row)
 
 /-- Reading the profile condition back at one active row — the form
 `syscallStepFact_of_advance` consumes. -/
@@ -599,7 +595,7 @@ theorem isInlineCanonical_of_profile
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (canonical : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness) :
-    (syscallEventOfRow (syscallInstrsRow (syscallInstrsTable witness) row)).IsInlineCanonical :=
+    (syscallEventOfRow (syscallInstrsRow witness.data row)).IsInlineCanonical :=
   canonical _ (List.mem_map_of_mem rowMem)
 
 end SP1Clean.Soundness

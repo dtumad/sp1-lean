@@ -106,13 +106,13 @@ variable [Fact (2 ^ 17 < p)]
 /-- The completed LoadX0 columns at one physical component row. -/
 noncomputable def LoadX0Chip.physicalCols (env : Environment (ZMod p)) :
     LoadX0Chip.Columns (ZMod p) :=
-  (⟨LoadX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env
+  ({ circuit := LoadX0Chip.circuit (p := p) } : Component (ZMod p)).rowOutput env
 
 /-- The completed LoadX0 row view at one physical component row. -/
 noncomputable def LoadX0Chip.physicalView (env : Environment (ZMod p)) :
     Trace.RowView (ZMod p) :=
   LoadX0Chip.rowView
-    ((⟨LoadX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
+    (({ circuit := LoadX0Chip.circuit (p := p) } : Component (ZMod p)).rowInput env)
     (LoadX0Chip.physicalCols env)
 
 private theorem LoadX0Chip.isLbBinaryConstraint_mem
@@ -203,7 +203,7 @@ private theorem natCastSmall_inj {a b : ℕ} (ha : a < 2 ^ 17) (hb : b < 2 ^ 17)
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem LoadX0Chip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      (⟨LoadX0Chip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := LoadX0Chip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (LoadX0Chip.physicalView env).is_real = 1) :
     (LoadX0Chip.physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var LoadX0Chip.Inputs (ZMod p) := varFromOffset LoadX0Chip.Inputs 0
@@ -226,7 +226,7 @@ theorem LoadX0Chip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
   obtain ⟨f, hf, hef⟩ := flagNatValue (bool_of_mul_pred gLwu)
   obtain ⟨g, hg, heg⟩ := flagNatValue (bool_of_mul_pred gLd)
   have inputEq : Eval.eval env input =
-      (⟨LoadX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := LoadX0Chip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset LoadX0Chip.Inputs 0 env
   have projLb : (Eval.eval env input).is_lb = Expression.eval env input.is_lb := by
     simpa only [CircuitType.eval_expr] using

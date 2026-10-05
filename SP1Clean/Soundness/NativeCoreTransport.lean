@@ -23,7 +23,7 @@ private theorem syscallRows_readsInWindow {image : ProgramImage} (valid : image.
     (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : SyscallInstrsChip.Inputs (ZMod p)}
-    (member : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
+    (member : row ∈ activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
     ReadsInWindow (syscallRowFacts row) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped

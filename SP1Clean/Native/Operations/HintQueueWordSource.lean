@@ -23,6 +23,7 @@ instance sourceWordElaborated (hints : List Bytes) :
   elaborate_circuit
 
 def sourceWord (hints : List Bytes) : GeneralFormalCircuit (ZMod p) WordRecord unit where
+  name := "sp1.native.hint_word.source"
   main := sourceWordMain hints
   elaborated := sourceWordElaborated hints
   Spec input _ _ := input.Binds (ofList hints).1

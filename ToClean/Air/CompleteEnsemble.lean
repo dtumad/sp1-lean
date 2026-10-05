@@ -20,7 +20,7 @@ These interfaces do not claim that an arbitrary Lean compiler can be exported to
 
 namespace Air.Flat
 
-variable {F : Type} [FiniteField F] [DecidableEq F]
+variable {F : Type} [FiniteField F]
 variable {PublicIO : TypeMap} [ProvableType PublicIO]
 
 /-- The complete raw AIR obligation for one witness at a specified public input. -/
@@ -35,7 +35,7 @@ theorem EnsembleWitness.Valid.statement {ens : Ensemble F PublicIO}
   ⟨witness, valid⟩
 
 /-- A formal ensemble with both directions of its semantic contract. -/
-structure CompleteEnsemble (F : Type) [FiniteField F] [DecidableEq F]
+structure CompleteEnsemble (F : Type) [FiniteField F]
     (PublicIO : TypeMap) [ProvableType PublicIO] extends FormalEnsemble F PublicIO where
   completeness : ensemble.Completeness Assumptions Spec
 

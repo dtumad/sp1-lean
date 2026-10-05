@@ -75,6 +75,9 @@ section CleanTranslation
 
 variable {p : ℕ} [Fact p.Prime]
 
+/-- Match Clean's balance-ledger equality when rewriting filtered interaction lists. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+
 /-- Casting an ℤ-list sum into `ZMod p` distributes over the list. -/
 private lemma intCast_list_sum (l : List ℤ) :
     ((l.sum : ℤ) : ZMod p) = (l.map (fun x : ℤ => (x : ZMod p))).sum := by

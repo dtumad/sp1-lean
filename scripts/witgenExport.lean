@@ -17,19 +17,18 @@ Run from the repo root against built oleans:
     WITGEN_ARGS="[--out DIR] [--chip NAME] [--stdout] [--testdata]" \
       lake env lean scripts/witgenExport.lean
 
-Defaults: `--out export` (writing `export/witgen/`). `--chip NAME` restricts to one chip
+Defaults: `--out .lake/witgen-export/manual`. `--chip NAME` restricts to one chip
 and skips `index.json` (never a partial index); `--stdout` prints the payload instead of
-writing files. `--testdata` writes `export/testdata/<Chip>.trace.json` differential
-fixtures instead, anchored for **all 25 chips** to the committed SP1 trace dumps
+writing files. `--testdata` writes differential fixtures at `testdata/<Chip>.trace.json`
+under the output directory, anchored for **all 25 chips** to the committed SP1 trace dumps
 (`export/sp1dump/`, always read from the repo tree): one `"event"` row per dumped
 executor event with inputs recovered through the symbolic row map and hints from the
 event's opcode, **each recomputed and gated cell-for-cell against the dumped
 `generate_trace` row before anything is written**, plus an honest padding row and
 deterministic seeded synthetic rows. `expectedWitness` is always the Lean reference
 evaluation (`witgen` below: Clean's `FlatOperation.witgen` at the empty commitment) over the
-**shared** operation list — the same
-programs the wire carries, and `WitgenIR.eval_share` proves sharing changes no
-evaluation.
+authored operation list — the same programs the built-in serializer carries.
+Large shared expressions are authored using Clean's `Witgen.M`.
 
 This is deliberately an interpreted script, not a `lean_exe`: elaborating the file runs
 the trailing `#eval` against the already-built oleans (the same path as
@@ -40,7 +39,7 @@ because the generated Sail model (`LeanRV64D`) already owns the root `main`, hen
 `WITGEN_ARGS` environment variable instead of argv.
 
 ⚠ `lake env lean` exits 0 on a Lean stack overflow (repo-known trap), so callers must
-validate the outputs, not the exit code — `scripts/check_witgen_export.sh` does.
+validate the outputs, not the exit code — `scripts/check_witgen_export.py` does.
 
 The serializer is Clean's `Operations.witgenJson?`
 (`.lake/packages/Clean/Clean/Circuit/WitnessExport.lean`); this script only enumerates
@@ -53,9 +52,6 @@ namespace WitgenExportScript
 open Lean SP1Clean SP1Clean.ExportableTests
 
 abbrev Fp := ZMod SP1Prime
-
-/-- Hash field elements by canonical value (for `WitgenIR.share`'s memo tables). -/
-instance : Hashable Fp := ⟨fun x => hash x.val⟩
 
 /-- One chip's export entry: its SP1 name (= `ChipKind.name` = the file stem), the Lean
 declaration it came from (manifest documentation), the input-row width occupying var
@@ -254,21 +250,22 @@ def manifestFor (e : Entry) (payload : Json) : Json :=
 /-! ## Driver -/
 
 def writeJson (path : System.FilePath) (j : Json) : IO Unit :=
-  IO.FS.writeFile path (j.pretty ++ "\n")
+  IO.FS.writeFile path (j.compress ++ "\n")
 
 /-- Export one chip; returns its `index.json` row. -/
 def exportChip (out : Option System.FilePath) (e : Entry) : IO Json := do
   let t0 ← IO.monoMsNow
-  let payload ← match e.ops.witgenJsonShared? with
+  let payload ← match e.ops.witgenJson? with
     | .ok j => pure j
     | .error msg => throw (IO.userError s!"{e.name}: {msg}")
   let localLength := ((payload.getObjVal? "localLength").toOption.bind (·.getNat?.toOption)).getD 0
+  let serialized := payload.compress ++ "\n"
   match out with
-  | none => IO.print (payload.pretty ++ "\n")
+  | none => IO.print serialized
   | some dir =>
-    writeJson (dir / s!"{e.name}.witgen.json") payload
+    IO.FS.writeFile (dir / s!"{e.name}.witgen.json") serialized
     writeJson (dir / s!"{e.name}.manifest.json") (manifestFor e payload)
-  IO.eprintln s!"{e.name}: {(← IO.monoMsNow) - t0} ms, {(payload.pretty.utf8ByteSize + 1)} bytes"
+  IO.eprintln s!"{e.name}: {(← IO.monoMsNow) - t0} ms, {serialized.utf8ByteSize} bytes"
   return Json.mkObj [
     ("name", Json.str e.name),
     ("witgenFile", Json.str s!"{e.name}.witgen.json"),
@@ -288,7 +285,7 @@ chip:
   column of the Rust row, except `is_real` on the six flag-hinted chips, where it is
   `1` on event rows); hint tables come from the event's opcode discriminant. **The
   generation-time gate:** every event row is recomputed — `witgen` over
-  the shared operations, then the symbolic row map evaluated at the resulting cells —
+  the authored operations, then the symbolic row map evaluated at the resulting cells —
   and must equal the dumped SP1 row cell-for-cell, or the exporter throws with
   chip/row/column detail and writes nothing.
 - the padding row — inputs recovered from the dumped padding row (all-zero except
@@ -302,13 +299,12 @@ chip:
 A per-chip spot check pins the gate's Expression-level row evaluation to the
 value-level `circuitTraceRowMapped` path (the audited `ChipFaithful` reconfigure at
 field values) on event row 0. `expectedWitness` is always the Lean reference
-evaluation over the shared flat operations — the same programs the wire carries
-(`WitgenIR.eval_share` proves sharing preserves evaluation). -/
+evaluation over the authored flat operations — the same programs Clean serializes. -/
 
 section Testdata
 open SP1Clean.TraceGenTests
 
-/-- Deterministic value stream (a 64-bit LCG; committed fixtures must be byte-stable,
+/-- Deterministic value stream (a 64-bit LCG; generated fixtures must be byte-stable,
 so no runtime randomness). -/
 def lcgStream (seed : ℕ) : ℕ → ℕ
   | 0 => (seed * 6364136223846793005 + 1442695040888963407) % (2 ^ 64)
@@ -338,10 +334,10 @@ upstream (unwired, non-`module`), so the module-mode `ToClean` no longer reaches
 def witgen (hint : ProverHint Fp) (ops : List (FlatOperation Fp)) (init : Array Fp) : Array Fp :=
   FlatOperation.witgenWithData (fun _ _ => #[]) hint ops init
 
-/-- The Lean reference witness evaluation over the shared flat operations. -/
-def expectedWitnessOf (flatShared : List (FlatOperation Fp)) (hint : ProverHint Fp)
+/-- The Lean reference witness evaluation over the authored flat operations. -/
+def expectedWitnessOf (flat : List (FlatOperation Fp)) (hint : ProverHint Fp)
     (inputs : List Fp) : List ℕ :=
-  ((witgen hint flatShared inputs.toArray).toList.drop inputs.length).map ZMod.val
+  ((witgen hint flat inputs.toArray).toList.drop inputs.length).map ZMod.val
 
 def rowJson (kind : String) (anchored : Bool) (seed : Option ℕ) (inputs : List Fp)
     (hints : Json) (expectedWitness : List ℕ) (expectedRow : Option (List ℕ)) : Json :=
@@ -560,11 +556,11 @@ seeds even under `--chip` filtering). -/
 def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx : ℕ)
     (e : Entry) : IO Unit := do
   let t0 ← IO.monoMsNow
-  let payload ← match e.ops.witgenJsonShared? with
+  let payload ← match e.ops.witgenJson? with
     | .ok j => pure j
     | .error msg => throw (IO.userError s!"{e.name}: {msg}")
   let uses := aggregate ((collectGets payload).filter (·.isHint))
-  let flatShared := e.ops.toFlat.map .share
+  let flat := e.ops.toFlat
   let empty : ProverHint Fp := ProverHint.empty Fp
   -- The SP1 dump, the symbolic row map, and the input-recovery table.
   let dump ← match Json.parse (← IO.FS.readFile (dumpDir / s!"{e.name}.dump.json"))
@@ -586,7 +582,7 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
     let sp1Row := dump.rows.getD k []
     let inputs := invertInputs inv 1 sp1Row
     let hint := hintFor e.name ev
-    let cells := witgen hint flatShared inputs.toArray
+    let cells := witgen hint flat inputs.toArray
     if let some (j, l, s) := firstMismatch (rowValsOf rowMap cells) sp1Row then
       throw (IO.userError s!"{e.name}: GATE FAILED at event row {k} column {j}: \
         recomputed {l} != SP1 {s} (opcode {ev.opcode})")
@@ -608,9 +604,9 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
   unless (dump.rows.drop dump.events.length).all (· == padSp1) do
     throw (IO.userError s!"{e.name}: padding rows are not uniform in the dump")
   let padInputs := invertInputs inv 0 padSp1
-  let padWitness := expectedWitnessOf flatShared empty padInputs
+  let padWitness := expectedWitnessOf flat empty padInputs
   if derivedPadChips.contains e.name then
-    let padCells := witgen empty flatShared padInputs.toArray
+    let padCells := witgen empty flat padInputs.toArray
     if let some (j, l, s) := firstMismatch (rowValsOf rowMap padCells) padSp1 then
       throw (IO.userError s!"{e.name}: GATE FAILED at the padding row, column {j}: \
         recomputed {l} != SP1 {s}")
@@ -629,23 +625,22 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
     circuitTraceRowMapped spot check on event row 0")]
   let zero := List.replicate e.inputWidth (0 : Fp)
   rows := rows.push (rowJson "synthetic" false (some 0) zero (serializeHints uses empty)
-    (expectedWitnessOf flatShared empty zero) none)
+    (expectedWitnessOf flat empty zero) none)
   for s in [1, 2, 3, 4] do
     let seed := (idx + 1) * 1009 + s
     let inputs := synInputs e.inputWidth seed
     let hint := synHint uses (seed * 7919)
     rows := rows.push (rowJson "synthetic" false (some seed) inputs
-      (serializeHints uses hint) (expectedWitnessOf flatShared hint inputs) none)
+      (serializeHints uses hint) (expectedWitnessOf flat hint inputs) none)
   provenance := provenance ++ [("synthetic", Json.str
     "deterministic seeded inputs; expectedWitness is the Lean reference evaluation \
-    (FlatOperation.witgen) over the shared operations — WitgenIR.eval_share proves \
-    sharing preserves evaluation")]
+    (FlatOperation.witgen) over the authored operations serialized by Clean")]
   writeJson (dir / s!"{e.name}.trace.json") <| Json.mkObj [
     ("wireVersion", toJson (1 : Nat)),
     ("chip", Json.str e.name),
     ("field", fieldJson),
     ("inputWidth", toJson e.inputWidth),
-    ("localLength", toJson (FlatOperation.localLengthFold flatShared)),
+    ("localLength", toJson (FlatOperation.localLengthFold flat)),
     ("provenance", Json.mkObj provenance),
     ("rows", Json.arr rows)]
   IO.eprintln s!"{e.name}: testdata {(← IO.monoMsNow) - t0} ms, {rows.size} rows"
@@ -657,7 +652,8 @@ def run : IO Unit := do
   let chipFilter := (args.dropWhile (· != "--chip")).drop 1 |>.head?
   let toStdout := args.contains "--stdout"
   let testdata := args.contains "--testdata"
-  let outRoot := (args.dropWhile (· != "--out")).drop 1 |>.head?.getD "export"
+  let outRoot := (← IO.getEnv "WITGEN_EXPORT_OUT").getD
+    ((args.dropWhile (· != "--out")).drop 1 |>.head?.getD ".lake/witgen-export/manual")
   let regNames := (Soundness.supportedChips (p := SP1Prime)).map (·.kind.name)
   unless entries.map (·.name) == regNames do
     throw (IO.userError s!"chip list drifted from supportedChips:\n  \

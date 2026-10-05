@@ -27,6 +27,7 @@ private theorem eval_head (env : Environment (ZMod p)) (head : fields 3 (ZMod p)
   exact Vector.map_id _
 
 def circuit (empty : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := if empty then "sp1.native.hint_len.empty" else "sp1.native.hint_len.nonempty"
   main := main empty
   elaborated := elaborated empty
   Spec input _ _ := Spec empty input

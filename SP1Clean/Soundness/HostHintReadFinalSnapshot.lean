@@ -57,8 +57,8 @@ private theorem mapped_frontier {α : Type*} (records : List α) (location : α 
   simp only [List.filter_map, Function.comp_def, List.head?_map, Option.map_map]
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance snapshotClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance snapshotLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
@@ -68,7 +68,7 @@ noncomputable def finalMemoryValues
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels)) : List (MemLoc × BitVec 64) :=
   (FinalMemoryEnsemble.records
-    (LocalCore.finalWitness (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))).map
+    (LocalCore.finalWitness (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))).map
       (fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value))
 
 /-- A successful finite target check identifies all integer registers and the entire Sail RAM
@@ -89,11 +89,11 @@ theorem GroundingCarrier.memory_of_checkFinal (valid : image.Valid)
     have values := MemorySnapshot.read_of_checkFinal checked loc bound
     rw [finalMemoryValues, mapped_frontier] at values
     change ((LocalCore.memoryFinalFrontier
-      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc).map
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc).map
         (fun record => Word.toBitVec64 record.value)).getD (source.sail.memorySnapshot.read loc) =
       targetMemory.read loc at values
     rw [carrier.final_memory valid constraints balanced target replay loc bound, ← values]
-    cases LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc <;> rfl
+    cases LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc <;> rfl
   have realizes := realizes_of_observations targetMemory target.sail observed
   exact ⟨realizes, memory_eq_of_realizes targetMemory target.sail realizes
     (carrier.final_memory_domain valid constraints balanced replay)⟩
@@ -118,22 +118,23 @@ theorem GroundingCarrier.checkFinal_iff (valid : image.Valid)
   have realizes : targetMemory.Realizes target.sail := ⟨registers, by
     intro address bound
     rw [ram, ByteMemory.toSailMemory_get?, if_pos bound]⟩
-  have records := HostLocalCore.final_records_canonical_nodup (HostHintQueueBoundary.expanded witness)
-    (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints)))
-    (source_boundary_silent source final bankFinal _ (by simp))
-    (HostHintQueueBoundary.expanded_constraints witness constraints)
-    (HostHintQueueBoundary.expanded_balanced witness balanced)
+  have records := HostLocalCore.final_records_canonical_nodup (HostHintQueueBoundary.projected witness)
+    (auxiliaryInterface (source_interface source.host.io.hints))
+    (source_boundary_silent source _ (by simp))
+    (HostHintQueueBoundary.projected_constraints witness constraints)
+    (HostHintQueueBoundary.record_channels witness balanced).byte
+    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble]))
   apply (MemorySnapshot.checkFinal_iff_reads _ _ _ ?_ ?_).mpr
   · intro loc bound
     rw [finalMemoryValues, mapped_frontier]
     change ((LocalCore.memoryFinalFrontier
-      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc).map
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc).map
         (fun record => Word.toBitVec64 record.value)).getD (source.sail.memorySnapshot.read loc) =
       targetMemory.read loc
     have same := Option.some.inj ((carrier.final_memory valid constraints balanced target replay loc bound).symm.trans
       (realizes.locContent_of_address_lt loc bound))
     generalize LocalCore.memoryFinalFrontier
-      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc = selected at same ⊢
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = selected at same ⊢
     cases selected <;> exact same
   · simpa only [finalMemoryValues, List.map_map, Function.comp_def] using records.2
   · intro record member
@@ -154,13 +155,13 @@ theorem source_execution_with_memory (valid : image.Valid)
       ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events ∧
       events.Perm ((LocalCore.executionRows
-        (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))).map ExecutionRow.event) ∧
+        (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event) ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
       target.sail.regs.get? LeanRV64D.Defs.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
       (∀ loc, loc.busAddress < 2 ^ 48 → locContent target.sail loc = some
         (match LocalCore.memoryFinalFrontier
-            (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc with
+            (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc with
           | some message => Word.toBitVec64 message.value
           | none => source.sail.memorySnapshot.read loc)) ∧
       (∀ address, 2 ^ 48 ≤ address → target.sail.mem.get? address = none) ∧

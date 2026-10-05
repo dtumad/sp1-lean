@@ -7,8 +7,8 @@ public import ToClean.Circuit.InteractionRecovery
 /-! # Gated receipts from an existing circuit row
 
 Clean has no wrapper publishing an additional typed observation of a circuit's existing cells.
-This addition composes the original formal circuit and retains its contract, witness generation,
-assertions and lookups. The receipt channel has trivial local meaning: its global consumer must
+This addition composes the original formal circuit and retains its name, contract, witness
+generation, assertions and lookups. The receipt channel has trivial local meaning: its global consumer must
 authenticate the observation through the proved exact ledger. SP1's ordinary State receipts use
 this to retain the original instruction decoder and whole-chip proof boundary.
 -/
@@ -68,6 +68,7 @@ instance elaborated (provider : GeneralFormalCircuit F Input Output) (channel : 
 def circuit (provider : GeneralFormalCircuit F Input Output) (channel : Channel F Message)
     (trivial : ∀ message data, channel.Guarantees message data)
     (projection : Projection F Input Message) : GeneralFormalCircuit F Input Output where
+  name := provider.name
   main := main provider channel projection
   elaborated := elaborated provider channel projection
   Assumptions := provider.Assumptions
@@ -86,20 +87,18 @@ variable (provider : GeneralFormalCircuit F Input Output) (channel : Channel F M
   (trivial : ∀ message data, channel.Guarantees message data) (projection : Projection F Input Message)
 
 /-- Publishing a receipt does not widen the original row. -/
-theorem width : (⟨circuit provider channel trivial projection⟩ : Component F).width =
-    (⟨provider⟩ : Component F).width := rfl
+theorem width : ({ circuit := circuit provider channel trivial projection } : Component F).width =
+    ({ circuit := provider } : Component F).width := rfl
 
 /-- The complete original assertion list is retained literally. -/
-theorem constraints : (⟨circuit provider channel trivial projection⟩ : Component F).operations.constraints =
-    (⟨provider⟩ : Component F).operations.constraints := by
-  simp only [Component.constraints_eq, Component.rowOperations, circuit, main, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_constraints]
+theorem constraints : ({ circuit := circuit provider channel trivial projection } : Component F).operations.constraints =
+    ({ circuit := provider } : Component F).operations.constraints := by
+  simp only [Component.constraints_eq, Component.rowOperations, circuit, main, circuit_norm]
 
 /-- Every original lookup is retained literally. -/
-theorem lookups : (⟨circuit provider channel trivial projection⟩ : Component F).operations.lookups =
-    (⟨provider⟩ : Component F).operations.lookups := by
-  simp only [Component.lookups_eq, Component.rowOperations, circuit, main, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_lookups]
+theorem lookups : ({ circuit := circuit provider channel trivial projection } : Component F).operations.lookups =
+    ({ circuit := provider } : Component F).operations.lookups := by
+  simp only [Component.lookups_eq, Component.rowOperations, circuit, main, circuit_norm]
 
 /-- The only added interaction is the gated observation of the original cells. -/
 theorem receipt_interactions (input : Var Input F) (offset : ℕ) :
@@ -111,15 +110,15 @@ theorem receipt_interactions (input : Var Input F) (offset : ℕ) :
 
 /-- All occurrences on every other channel are unchanged, including disabled occurrences. -/
 theorem interactions (selected : RawChannel F) (different : selected ≠ channel.toRaw) :
-    (⟨circuit provider channel trivial projection⟩ : Component F).operations.interactionsWith selected =
-      (⟨provider⟩ : Component F).operations.interactionsWith selected := by
+    ({ circuit := circuit provider channel trivial projection } : Component F).operations.interactionsWith selected =
+      ({ circuit := provider } : Component F).operations.interactionsWith selected := by
   simp only [Component.interactionsWith_eq, Component.rowOperations, circuit, main, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, Ne.symm different, ↓reduceIte, List.append_nil]
   rfl
 
 /-- A fresh channel receives exactly the observation evaluated in the original physical row. -/
 theorem row_receipt (silent : channel.toRaw ∉ provider.channels) (env : Environment F) :
-    (⟨circuit provider channel trivial projection⟩ : Component F).operations.interactionValuesWith
+    ({ circuit := circuit provider channel trivial projection } : Component F).operations.interactionValuesWith
       channel.toRaw env =
         [channel.pushedIfValue (Eval.eval env (projection.gate (varFromOffset Input 0) (size Input)))
           (Eval.eval env (projection.message (varFromOffset Input 0) (size Input)))] := by

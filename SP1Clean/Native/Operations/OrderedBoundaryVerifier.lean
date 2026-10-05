@@ -1,4 +1,5 @@
 import SP1Clean.Native.Operations.OrderedBoundary
+import ToClean.Circuit.VerifierInteractions
 
 /-! # Fixed endpoints for an ordered inventory
 
@@ -43,5 +44,15 @@ theorem interactionValues (name : String) (initial final : Word (ZMod p))
       [(channel name).pushedValue initial, (channel name).pulledValue final] := by
   simp only [Operations.interactionValuesWith, main_interactions, List.map_cons, List.map_nil,
     Channel.eval_pushed, Channel.eval_pulled, ProvableType.eval_const]
+
+/-- The fixed endpoints are public verifier traffic, with no committed table. -/
+def verifierProgram (name : String) (initial final : Word (ZMod p)) :
+    Verifier.Program (ZMod p) unit where
+  main _ := Verifier.ofInteractions ((main name initial final ()).operations 0).interactions (by
+    intro interaction member env
+    simp only [main, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;>
+      simp [AbstractInteraction.Requirements, AbstractInteraction.Guarantees,
+        ChannelInteraction.toRaw, channel, Channel.toRaw, circuit_norm])
 
 end SP1Clean.OrderedBoundaryVerifier

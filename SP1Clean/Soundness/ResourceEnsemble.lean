@@ -19,17 +19,18 @@ open Circuit Air.Flat Model.Core Machine Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 
-/-- Add the concrete resource circuit without changing the original table/channel inventories. -/
+/-- Add resource assertions on a fresh channel while retaining the original tables and ledgers. -/
 def install (limits : ResourceLimits) (source target : ExecutionSnapshot)
     (base : Ensemble (ZMod p) SP1PublicIO) : Ensemble (ZMod p) SP1PublicIO :=
   (ResourceBoundary.checker limits source target).install base
 
 /-- Raw acceptance changes by exactly the necessary endpoint checks, in both directions. -/
-theorem statement_iff (limits : ResourceLimits) (source target : ExecutionSnapshot)
+theorem statement_iff [Fact (2 ^ 25 < p)] (limits : ResourceLimits) (source target : ExecutionSnapshot)
     (base : Ensemble (ZMod p) SP1PublicIO) (input : SP1PublicIO (ZMod p)) :
     (install limits source target base).Statement input ↔
       base.Statement input ∧ ResourceBoundary.Spec limits source target input :=
   (ResourceBoundary.checker limits source target).statement_iff base
+    (ResourceBoundary.count_bound limits source target)
     (ResourceBoundary.Spec limits source target) (ResourceBoundary.checks_iff limits source target) input
 
 /-- Completeness can add the resource circuit using only the semantic domain and header encoding. -/
@@ -41,14 +42,15 @@ theorem checks_of_admissible {limits : ResourceLimits} {image : ProgramImage}
   (ResourceBoundary.checks_iff ..).mpr ⟨execution.boundaryBounds, clock⟩
 
 variable [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance resourceClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- The current six-call assembly with actual endpoint-resource enforcement. -/
 def ensemble (limits : ResourceLimits) (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (channels : List (RawChannel (ZMod p))) :
     Ensemble (ZMod p) SP1PublicIO :=
   install limits source target (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) channels)
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels
+      (HostHintReadLocal.source_unique_names image source source.host.io.hints))
 
 /-- A derived proof view retains every table of the original installed assembly. -/
 def baseWitness {limits : ResourceLimits} {image : ProgramImage}
@@ -56,7 +58,8 @@ def baseWitness {limits : ResourceLimits} {image : ProgramImage}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels)) :
     EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (HostHintReadLocal.sourceResources source.host.io.hints) channels) :=
+      (HostHintReadLocal.sourceResources source.host.io.hints) channels
+      (HostHintReadLocal.source_unique_names image source source.host.io.hints)) :=
   (ResourceBoundary.checker limits source target).project witness
 
 /-- Original constraints remain available without unfolding the resource verifier at consumers. -/
@@ -65,7 +68,7 @@ theorem baseWitness_constraints {limits : ResourceLimits} {image : ProgramImage}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
     (constraints : witness.Constraints) : (baseWitness witness).Constraints :=
-  ((ResourceBoundary.checker limits source target).project_constraints witness).mp constraints |>.1
+  ((ResourceBoundary.checker limits source target).project_constraints witness).mp constraints
 
 /-- Original balances retain exactly their physical occurrence counts. -/
 theorem baseWitness_balanced {limits : ResourceLimits} {image : ProgramImage}
@@ -73,16 +76,16 @@ theorem baseWitness_balanced {limits : ResourceLimits} {image : ProgramImage}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
     (balanced : witness.BalancedChannels) : (baseWitness witness).BalancedChannels :=
-  ((ResourceBoundary.checker limits source target).project_balanced witness).mpr balanced
+  (((ResourceBoundary.checker limits source target).project_balanced_iff witness).mp balanced).1
 
 /-- The actual added raw assertions establish the endpoint resource contract. -/
 theorem resource_spec {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
-    (constraints : witness.Constraints) : ResourceBoundary.Spec limits source target witness.publicInput :=
+    (balanced : witness.BalancedChannels) : ResourceBoundary.Spec limits source target witness.publicInput :=
   (ResourceBoundary.checks_iff ..).mp
-    (((ResourceBoundary.checker limits source target).project_constraints witness).mp constraints).2
+    (((ResourceBoundary.checker limits source target).project_balanced_iff witness).mp balanced).2.2
 
 /-- The proof view leaves the public input unchanged. -/
 @[simp] theorem baseWitness_publicInput {limits : ResourceLimits} {image : ProgramImage}
@@ -108,14 +111,14 @@ theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
         source.realize events) .ticks ≤ limits.ticks ∧
       8 * events.length ≤ target.clock - source.clock ∧
       ResourceBoundary.Spec limits source target witness.publicInput ∧
-      events.Perm ((LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded
+      events.Perm ((LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected
         (baseWitness witness)))).map NativeCore.ExecutionRow.event) ∧
       actual.sail.regs.get? LeanRV64D.Defs.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
-      ∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded
+      ∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected
           (baseWitness witness))) loc = some message →
         locContent actual.sail loc = some (Word.toBitVec64 message.value) := by
-  have spec := resource_spec witness constraints
+  have spec := resource_spec witness balanced
   obtain ⟨events, actual, path, permitted, inventory, clock, pc, memory⟩ :=
     HostHintReadCPU.source_execution valid (baseWitness witness)
       (baseWitness_constraints witness constraints) (baseWitness_balanced witness balanced)

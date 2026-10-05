@@ -26,43 +26,43 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem source_ordering
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels))
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) :=
-  HostLocalCore.orderingChannels (HostHintQueueBoundary.expanded witness)
-    (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints)))
-    (HostHintQueueBoundary.expanded_constraints witness constraints)
-    (HostHintQueueBoundary.expanded_balanced witness balanced)
+    LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) :=
+  HostHintQueueBoundary.projected_orderingChannels witness (source_interface source.host.io.hints) constraints balanced
 
 private theorem halt_facts (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels))
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))) :
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     (Word.toBitVec64 row.x5_memory.prev_value = 0 ∧
       (row.x10_memory.prev_value[1] = 0 ∧ row.x10_memory.prev_value[2] = 0 ∧ row.x10_memory.prev_value[3] = 0) ∧
       (((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧ row.state.clk_16_24.val < 2 ^ 8)) ∧
       (image.toGuestProgram valid).fetchWord (StateMsg.pcBits (HaltChip.statePulledMessage row)) = some Target.ECALL_ENC := by
-  have checked := HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.expanded_constraints witness constraints)
+  have checked := HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.projected_constraints witness constraints)
   have ordering := source_ordering witness constraints balanced
   refine ⟨LocalCore.haltRows_staticFacts_of_byte _ checked ordering.byte member, ?_⟩
-  have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).BalancedChannel
+  have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel
       programChannel.toRaw := by
-    change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)).interactionsWith _)
-    rw [HostLocalCore.localWitness_program _ (source_program_silent source final bankFinal)]
-    exact HostHintQueueBoundary.expanded_balanced witness balanced _
-      (by simp [HostLocalCore.ensemble, ProtectedLocalCore.ensemble, LocalCore.ensemble, sp1Ensemble_channels])
+    change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith _)
+    rw [HostLocalCore.localWitness_program _ (source_program_silent source)]
+    exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
+      (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
   exact ((LocalCore.halt_program_committed_of_balance valid _ checked programBalance member).ecall_of_opcode rfl).1
 
 private theorem trajectory_halt (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)))
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (haltRowFacts row).statePull)
     (currency : ∀ mp ∈ (haltRowFacts row).memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
@@ -102,17 +102,18 @@ private theorem trajectory_halt (valid : image.Valid)
 16-bit exit restriction follows from its own assertions; no stronger HALT domain is claimed. -/
 theorem GroundingCarrier.halt_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈
-      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness))) :
+      LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.expanded witness))) (.halt row)) ∧
+          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.halt row)) ∧
       FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.expanded witness))) (.halt row)) := by
+          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.halt row)) := by
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced (.halt row) member
     (fun _ impossible => by cases impossible)
   simp only [eventFacts, noWords, List.map_nil, List.append_nil]
@@ -126,17 +127,18 @@ The result authenticates all operand values and the final State/Memory frontier 
 paired replay, including empty local segments. Complete outgoing snapshot binding is separate. -/
 theorem GroundingCarrier.ground (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    (∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)),
+    (∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
       LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline (event.facts witness.data).statePull ∧
       ∀ pull ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.expanded witness))) event).memPulls,
+          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
         MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
           LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) ∧
       LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
         (finalBoundaryStateMessage witness.publicInput) ∧
-      (∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc = some message →
+      (∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = some message →
         LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline loc
           (StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput)) message.value) := by
   apply carrier.ground_of_steps valid constraints balanced _ (carrier.trajectory_zero valid)

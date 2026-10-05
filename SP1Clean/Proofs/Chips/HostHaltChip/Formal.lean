@@ -33,6 +33,7 @@ theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod 
   simpa only [eval_zero] using And.intro code ⟨result, length, value, comparison⟩
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.host_halt"
   main
   elaborated
   Spec input _ _ := Spec input

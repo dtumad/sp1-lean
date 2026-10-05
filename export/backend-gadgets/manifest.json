@@ -43,6 +43,6 @@
    "inputCells": 4,
    "cases": 12}],
  "field": "BN254 scalar field",
- "cleanRevision": "fba2a29f5e36420d797c1de118ac9f11f23b819e",
+ "cleanRevision": "c4abcbb9728e8e2805ffc0a383eba96422602c27",
  "claim":
  "standalone backend conformance; not a verified backend or ensemble export"}

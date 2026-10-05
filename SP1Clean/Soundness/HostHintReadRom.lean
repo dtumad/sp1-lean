@@ -23,21 +23,19 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem source_valid
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels))
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ExecutionSourceValid image source := by
-  have checked := HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.expanded_constraints witness constraints)
-  have ordering := HostLocalCore.orderingChannels (HostHintQueueBoundary.expanded witness)
-    (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints)))
-    (HostHintQueueBoundary.expanded_constraints witness constraints)
-    (HostHintQueueBoundary.expanded_balanced witness balanced)
-  exact (LocalCore.public_contract_of_byte _ checked (ordering.byte _ (HostLocalCore.localWitness
-    (HostHintQueueBoundary.expanded witness)).mem_allTables_verifierTable)).2.1
+  have ordering := HostHintQueueBoundary.projected_orderingChannels witness
+    (source_interface source.host.io.hints) constraints balanced
+  exact (LocalCore.public_contract_of_byte _ ordering.sourceChecks ordering.verifierByte).2.1
 
 /-- Raw installed AIR premises discharge the independent path's source and permission hypotheses. -/
 theorem GroundingCarrier.frame_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target) :
@@ -52,7 +50,8 @@ theorem GroundingCarrier.frame_prefix (valid : image.Valid)
 /-- Every successful prefix of the installed replay preserves each protected byte exactly. -/
 theorem GroundingCarrier.readOnly_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target)
@@ -63,7 +62,8 @@ theorem GroundingCarrier.readOnly_prefix (valid : image.Valid)
 /-- The incoming boundary's authenticated ROM survives every prefix of the installed replay. -/
 theorem GroundingCarrier.romLoaded_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target) :
@@ -73,7 +73,8 @@ theorem GroundingCarrier.romLoaded_prefix (valid : image.Valid)
 /-- Every actual event of the installed tape fetches its committed word through official Sail. -/
 theorem GroundingCarrier.fetch_at (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels)} (carrier : GroundingCarrier witness)
+      (sourceResources source.host.io.hints) channels
+      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (cut : ℕ) (active : cut < carrier.events.length) :
     ∃ current pc word, carrier.pairedTrajectory valid cut = some current ∧

@@ -36,10 +36,10 @@ theorem source_no_push_of_final_none (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (loc : MemLoc)
     (absent : LocalCore.memoryFinalFrontier
-      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc = none) :
-    ∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)),
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = none) :
+    ∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
       ∀ message ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.expanded witness))) event).memPushes,
+        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPushes,
         MemoryMsg.locOf message ≠ loc := by
   obtain ⟨ordered, rows, _, _, _, chronology, projection⟩ :=
     source_ordered_memory_rows valid witness constraints balanced
@@ -53,7 +53,7 @@ theorem source_no_push_of_final_none (valid : image.Valid)
   have present := mem_pushesAt.mpr
     ⟨_, List.mem_map_of_mem (f := eventFacts witness.data
       (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.expanded witness)))) member, pushed, same⟩
+        (wordTables (HostHintQueueBoundary.projected witness)) witness.data)) member, pushed, same⟩
   change message ∈ pushesAt (sourceExecutionRows witness) loc at present
   rw [empty] at present
   exact Multiset.notMem_zero _ present
@@ -68,7 +68,7 @@ theorem GroundingCarrier.untouched_memory (valid : image.Valid)
       source.realize carrier.events = some target)
     (loc : MemLoc) (value : BitVec 64) (content : locContent source.sail.realize loc = some value)
     (absent : LocalCore.memoryFinalFrontier
-      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc = none) :
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = none) :
     locContent target.sail loc = some value := by
   have grounded := carrier.ground valid constraints balanced
   have current := grounded.1
@@ -102,11 +102,11 @@ theorem GroundingCarrier.final_memory (valid : image.Valid)
     (loc : MemLoc) (bound : loc.busAddress < 2 ^ 48) :
     locContent target.sail loc = some
       (match LocalCore.memoryFinalFrontier
-          (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc with
+          (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc with
         | some message => Word.toBitVec64 message.value
         | none => source.sail.memorySnapshot.read loc) := by
   cases present : LocalCore.memoryFinalFrontier
-      (HostLocalCore.localWitness (HostHintQueueBoundary.expanded witness)) loc with
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc with
   | some message =>
       have value := (carrier.ground valid constraints balanced).2.2 loc message present
       have atEnd : carrier.trajectory valid carrier.events.length = some target.sail := by
@@ -115,14 +115,9 @@ theorem GroundingCarrier.final_memory (valid : image.Valid)
       rw [← carrier.finalClock, ← carrier.events_length] at value
       exact (localValueAtG_stepStart_iff atEnd).mp value
   | none =>
-      have checks := HostHintQueueBoundary.expanded_constraints witness constraints
-      have balance := HostHintQueueBoundary.expanded_balanced witness balanced
-      have ordering := HostLocalCore.orderingChannels _
-        (auxiliaryInterface (HostHintQueueBoundary.expanded_interface (source_interface source.host.io.hints)))
-        checks balance
-      have sourceValid := (LocalCore.public_contract_of_byte _
-        (HostLocalCore.localWitness_constraints _ checks)
-        (ordering.byte _ (HostLocalCore.localWitness _).mem_allTables_verifierTable)).2.1
+      have ordering := HostHintQueueBoundary.projected_orderingChannels witness
+        (source_interface source.host.io.hints) constraints balanced
+      have sourceValid := (LocalCore.public_contract_of_byte _ ordering.sourceChecks ordering.verifierByte).2.1
       exact carrier.untouched_memory valid constraints balanced target replay loc _
         (sourceValid.memory.locContent_of_address_lt loc bound) present
 

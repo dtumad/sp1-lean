@@ -26,25 +26,25 @@ local instance syscallInputs_fact17 : Fact (2 ^ 17 < p) :=
 
 /-- Rebuild the row's Memory guarantee from its three incoming records. -/
 theorem syscallInstrsRow_memoryGuarantees_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (constraints : table.Constraints)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (constraints : table.Constraints data)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
     (currency : ∀ mp ∈
-        (syscallRowFacts (syscallInstrsRow table row)).memPulls,
+        (syscallRowFacts (syscallInstrsRow data row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
     table.component.operations.ChannelGuarantees memoryChannel.toRaw
-      (table.environment row) := by
+      (Environment.fromArray row data) := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  have hbool := syscallRow_binary table component constraints row rowMem
+  have hbool := syscallRow_binary table data component constraints row rowMem
   refine channelGuarantees_of_consumedMessages _ memoryChannel _ hp fun msg msgMem => ?_
-  rw [syscallInstrsRow_typedMemory_of_component table component, consumedMessages, List.mem_map] at msgMem
+  rw [syscallInstrsRow_typedMemory_of_component table data component, consumedMessages, List.mem_map] at msgMem
   obtain ⟨i, iMem, rfl⟩ := msgMem
   rw [List.mem_filter, decide_eq_true_eq] at iMem
   obtain ⟨iList, iPull⟩ := iMem
   -- A push can never be on the consumed side: its multiplicity is the boolean gate itself.
   have pushImpossible : ∀ {m : MemoryMsg (ZMod p)},
       signedVal (TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow table row).is_real m).mult = -1 → False := by
+        (syscallInstrsRow data row).is_real m).mult = -1 → False := by
     intro m h
     rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool] at h
     rcases hbool with h0 | h1
@@ -54,71 +54,71 @@ theorem syscallInstrsRow_memoryGuarantees_of_component
   rcases iList with rfl | rfl | rfl | rfl | rfl | rfl
   · rw [TypedInteraction.pulledIfValue_message]
     refine currency (SyscallInstrsChip.memPulledMessage
-      (syscallInstrsRow table row)
-      (syscallInstrsRow table row).op_a_memory
-      (syscallInstrsRow table row).op_a,
+      (syscallInstrsRow data row)
+      (syscallInstrsRow data row).op_a_memory
+      (syscallInstrsRow data row).op_a,
       StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-        (syscallInstrsRow table row))) ?_
+        (syscallInstrsRow data row))) ?_
     rw [syscallRowFacts_memPulls]
     exact List.mem_cons_self
   · exact absurd iPull pushImpossible
   · rw [TypedInteraction.pulledIfValue_message]
     refine currency (SyscallInstrsChip.memPulledMessage
-      (syscallInstrsRow table row)
-      (syscallInstrsRow table row).op_b_memory
-      (syscallInstrsRow table row).op_b,
+      (syscallInstrsRow data row)
+      (syscallInstrsRow data row).op_b_memory
+      (syscallInstrsRow data row).op_b,
       StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-        (syscallInstrsRow table row)) + 3) ?_
+        (syscallInstrsRow data row)) + 3) ?_
     rw [syscallRowFacts_memPulls]
     exact List.mem_cons_of_mem _ List.mem_cons_self
   · exact absurd iPull pushImpossible
   · rw [TypedInteraction.pulledIfValue_message]
     refine currency (SyscallInstrsChip.memPulledMessage
-      (syscallInstrsRow table row)
-      (syscallInstrsRow table row).op_c_memory
-      (syscallInstrsRow table row).op_c,
+      (syscallInstrsRow data row)
+      (syscallInstrsRow data row).op_c_memory
+      (syscallInstrsRow data row).op_c,
       StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-        (syscallInstrsRow table row)) + 2) ?_
+        (syscallInstrsRow data row)) + 2) ?_
     rw [syscallRowFacts_memPulls]
     exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
   · exact absurd iPull pushImpossible
 
 /-- Read the committed ECALL's local Program guarantee at one active physical row. -/
 theorem syscallInstrsRow_programRowSpec_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (program : table.ChannelGuarantees programChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (program : table.ChannelGuarantees data programChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
-    (real : (syscallInstrsRow table row).is_real = 1) :
-    Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow table row)) := by
+    (real : (syscallInstrsRow data row).is_real = 1) :
+    Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow data row)) := by
   have programGuarantees := program row rowMem
   have guarantee := TypedInteraction.guarantee_of_channelGuarantees
     table.component.operations programChannel
-    (table.environment row)
-    (TypedInteraction.pulledIfValue programChannel (syscallInstrsRow table row).is_real
-      (SyscallInstrsChip.programMessage (syscallInstrsRow table row)))
-    (by rw [syscallInstrsRow_typedProgram_of_component table component]; exact List.mem_cons_self)
+    (Environment.fromArray row data)
+    (TypedInteraction.pulledIfValue programChannel (syscallInstrsRow data row).is_real
+      (SyscallInstrsChip.programMessage (syscallInstrsRow data row)))
+    (by rw [syscallInstrsRow_typedProgram_of_component table data component]; exact List.mem_cons_self)
     programGuarantees (by rfl)
     (by rw [TypedInteraction.pulledIfValue_mult, real])
   simpa only [TypedInteraction.pulledIfValue_message, programChannel] using guarantee
 
 /-- The complete syscall contract and well-formed operand words, derived within incoming currency. -/
 theorem syscallInstrsRow_contract_of_component
-    (table : Table (ZMod p)) (component : table.component = ⟨SyscallInstrsChip.circuit⟩)
-    (constraints : table.Constraints)
-    (byte : table.ChannelGuarantees byteChannel.toRaw)
-    (program : table.ChannelGuarantees programChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
+    (constraints : table.Constraints data)
+    (byte : table.ChannelGuarantees data byteChannel.toRaw)
+    (program : table.ChannelGuarantees data programChannel.toRaw)
     {row : Array (ZMod p)} (member : row ∈ table.table)
-    (currency : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow table row)).memPulls,
+    (currency : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow data row)).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
-    SyscallInstrsChip.Spec (syscallInstrsRow table row) ∧
-      SyscallInstrsChip.PulledFacts (syscallInstrsRow table row) := by
-  refine ⟨syscallInstrsRow_spec_of_component table component constraints byte program
-    (syscallInstrsRow_memoryGuarantees_of_component table component constraints member currency) member, ?_⟩
+    SyscallInstrsChip.Spec (syscallInstrsRow data row) ∧
+      SyscallInstrsChip.PulledFacts (syscallInstrsRow data row) := by
+  refine ⟨syscallInstrsRow_spec_of_component table data component constraints byte program
+    (syscallInstrsRow_memoryGuarantees_of_component table data component constraints member currency) member, ?_⟩
   intro real
   obtain ⟨a, b, c⟩ := syscallRowFacts_currency_split _ currency
   exact SyscallInstrsChip.pulledFacts_of_buses _
-    (syscallInstrsRow_programRowSpec_of_component table component program member real) a b c
-    (syscallInstrsRow_opAValue_isU64_of_component table component byte member real) real
+    (syscallInstrsRow_programRowSpec_of_component table data component program member real) a b c
+    (syscallInstrsRow_opAValue_isU64_of_component table data component byte member real) real
 
 /-- The committed ECALL and the three incoming register values identify the semantic source.
 No assumption about the next PC's limb representation or the host's effects is needed. -/

@@ -26,17 +26,17 @@ theorem syscall_program_committed_of_balance {image : ProgramImage} {source : Ex
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     {physical : Array (ZMod p)} (member : physical ∈ (systemTable witness 3).table)
-    (real : (syscallInstrsRow (systemTable witness 3) physical).is_real = 1) :
+    (real : (syscallInstrsRow witness.data physical).is_real = 1) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg (SyscallInstrsChip.programMessage (syscallInstrsRow (systemTable witness 3) physical))) := by
-  let row := syscallInstrsRow (systemTable witness 3) physical
+      (rowOfMsg (SyscallInstrsChip.programMessage (syscallInstrsRow witness.data physical))) := by
+  let row := syscallInstrsRow witness.data physical
   let message := SyscallInstrsChip.programMessage row
   let interaction := programChannel.pulledIfValue row.is_real message
   have emitted : interaction ∈ witness.interactionsWith programChannel.toRaw := by
     apply EnsembleWitness.mem_interactionsWith.mpr
-    refine ⟨systemTable witness 3, systemTable_mem witness 3, List.mem_flatMap.mpr ⟨physical, member, ?_⟩⟩
+    refine Or.inr ⟨systemTable witness 3, systemTable_mem witness 3, List.mem_flatMap.mpr ⟨physical, member, ?_⟩⟩
     rw [← typedInteractionValuesWith_raw,
-      syscallInstrsRow_typedProgram_of_component _ (systemTable_component witness 3)]
+      syscallInstrsRow_typedProgram_of_component _ witness.data (systemTable_component witness 3)]
     exact List.mem_cons_self
   exact program_pull_committed_of_balance valid witness constraints balanced message interaction emitted
     (by change -row.is_real = -1; rw [real]) rfl
@@ -46,26 +46,26 @@ theorem syscall_program_committed {image : ProgramImage} {source : ExecutionSnap
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     {physical : Array (ZMod p)} (member : physical ∈ (systemTable witness 3).table)
-    (real : (syscallInstrsRow (systemTable witness 3) physical).is_real = 1) :
+    (real : (syscallInstrsRow witness.data physical).is_real = 1) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg (SyscallInstrsChip.programMessage (syscallInstrsRow (systemTable witness 3) physical))) :=
+      (rowOfMsg (SyscallInstrsChip.programMessage (syscallInstrsRow witness.data physical))) :=
   syscall_program_committed_of_balance valid witness constraints
-    (balanced _ (by simp [ensemble, sp1Ensemble_channels])) member real
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, sp1Ensemble_channels])) member real
 
 private theorem syscall_operands {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     {physical : Array (ZMod p)} (member : physical ∈ (systemTable witness 3).table)
-    (real : (syscallInstrsRow (systemTable witness 3) physical).is_real = 1) :
-    (syscallInstrsRow (systemTable witness 3) physical).op_a = 5 ∧
-      (syscallInstrsRow (systemTable witness 3) physical).op_b = 10 ∧
-      (syscallInstrsRow (systemTable witness 3) physical).op_c = 11 :=
+    (real : (syscallInstrsRow witness.data physical).is_real = 1) :
+    (syscallInstrsRow witness.data physical).op_a = 5 ∧
+      (syscallInstrsRow witness.data physical).op_b = 10 ∧
+      (syscallInstrsRow witness.data physical).op_c = 11 :=
   syscall_operands_of_committed _ _ (syscall_program_committed_of_balance valid witness constraints balanced member real)
 
 private theorem ordinaryRows_aligned {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     (balanced : witness.BalancedChannel programChannel.toRaw)
     {row : DecodedInstructionRow p} (member : row ∈ activeInstructionRows witness) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.instruction row).facts witness.data) := by
@@ -81,30 +81,30 @@ private theorem ordinaryRows_aligned {image : ProgramImage} {source : ExecutionS
 
 private theorem haltRows_aligned {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
-    {row : HaltChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 2) haltRow (·.is_real)) :
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    {row : HaltChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 2) (haltRow witness.data) (·.is_real)) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.halt row).facts witness.data) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   have byte := bytes _ (systemTable_mem witness 2)
-  exact halt_aligned _ (haltRow_cpuState_bounds_of_component _ (systemTable_component witness 2)
+  exact halt_aligned _ (haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
     byte physicalMem (of_decide_eq_true real))
-    (haltRow_accessTimestamp_bounds_of_component _ (systemTable_component witness 2)
+    (haltRow_accessTimestamp_bounds_of_component _ witness.data (systemTable_component witness 2)
       byte physicalMem (of_decide_eq_true real))
 
 private theorem syscallRows_aligned {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     (balanced : witness.BalancedChannel programChannel.toRaw)
-    {row : SyscallInstrsChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 3) syscallInstrsRow (·.is_real)) :
+    {row : SyscallInstrsChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.syscall row).facts witness.data) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   have byte := bytes _ (systemTable_mem witness 3)
-  exact syscall_aligned _ (syscallInstrsRow_cpuState_bounds_of_component _ (systemTable_component witness 3)
+  exact syscall_aligned _ (syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
     byte physicalMem (of_decide_eq_true real))
-    (syscallInstrsRow_accessTimestamp_bounds_of_component _ (systemTable_component witness 3)
+    (syscallInstrsRow_accessTimestamp_bounds_of_component _ witness.data (systemTable_component witness 3)
       byte physicalMem (of_decide_eq_true real))
     (syscall_operands valid witness constraints balanced physicalMem (of_decide_eq_true real))
 
@@ -113,7 +113,7 @@ may retain additional host accesses in its own Memory ledger. -/
 theorem executionRows_aligned_of_channels {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     (balanced : witness.BalancedChannel programChannel.toRaw)
     {row : ExecutionRow p} (member : row ∈ executionRows witness) :
     ∃ aligned, AlignedFacts aligned (row.facts witness.data) := by
@@ -130,15 +130,15 @@ theorem executionRows_aligned {image : ProgramImage} {source : ExecutionSnapshot
     {row : ExecutionRow p} (member : row ∈ executionRows witness) :
     ∃ aligned, AlignedFacts aligned (row.facts witness.data) :=
   executionRows_aligned_of_channels valid witness constraints
-    (fun table member => (finishedChannel_guarantees image source witness constraints balanced table member).1)
-    (balanced _ (by simp [ensemble, sp1Ensemble_channels])) member
+    (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, sp1Ensemble_channels])) member
 
 /-- Every original interior push has a bounded low clock before any Memory-balance or
 received-value premise. This includes active syscall writes and actual refresh records. -/
 theorem memoryInterior_push_bound {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     (balanced : witness.BalancedChannel programChannel.toRaw) :
     ∀ message ∈ producedMessages (memoryInterior witness), MemoryMsg.ClkBound message := by
   intro message member
@@ -156,7 +156,7 @@ theorem memoryInterior_push_bound {image : ProgramImage} {source : ExecutionSnap
     obtain rfl := List.mem_singleton.mp pairMem
     obtain ⟨mapped, real⟩ := List.mem_filter.mp rowMem
     obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-    exact (memoryBump_pushedMessage_clkFacts_of_component _ (systemTable_component witness 0)
+    exact (memoryBump_pushedMessage_clkFacts_of_component _ witness.data (systemTable_component witness 0)
       (systemTable_constraints witness constraints 0) (bytes _ (systemTable_mem witness 0))
       physicalMem (of_decide_eq_true real)).1
 

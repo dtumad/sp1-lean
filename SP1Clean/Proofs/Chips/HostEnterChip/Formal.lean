@@ -19,6 +19,7 @@ private theorem eval_zero (env : Environment (ZMod p)) :
   exact Vector.map_id _
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.enter"
   main
   elaborated
   Spec input _ _ := Spec input

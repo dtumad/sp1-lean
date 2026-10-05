@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.AddChip.Defs
 import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.Math.EvalVec
@@ -133,6 +135,7 @@ theorem opCPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (off
 /-- The Add chip row as a `GeneralFormalCircuit`: semantic contract, composing the
 witnessed gadget; output is the native `Columns` row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns where
+  name := "sp1.native.add"
   main
   elaborated
   Assumptions := Assumptions
@@ -232,5 +235,17 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
   exact circuit.interactionsWith_eq_of_mem_exposedChannels input offset
     ⟨memoryChannel.toRaw, (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw⟩
     (by simp [circuit, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := AddChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    AddChip.circuit_main_eq]
+  simp [AddChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
+    Readers.RTypeReader.circuit, Readers.RTypeReader.main,
+    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
+    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
+    AddOperation.circuit, AddOperation.main, Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.AddChip

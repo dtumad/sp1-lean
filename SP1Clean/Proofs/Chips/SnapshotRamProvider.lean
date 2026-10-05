@@ -143,6 +143,7 @@ theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Inputs
   rfl
 
 def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs MemoryMsg where
+  name := "sp1.native.memory.snapshot.ram"
   main := main snapshot
   elaborated := elaborated snapshot
   Spec input output _ := MemoryBoundary.SnapshotAtSpec snapshot (Word.toNat input.bytes[0].address) output
@@ -206,5 +207,13 @@ theorem populate?_isSome_iff (snapshot : MemorySnapshot) (address : ℕ) :
     simp only [Option.isSome_none, Bool.false_eq_true, false_iff]
     rintro ⟨lower, _, aligned⟩
     exact invalid ⟨lower, aligned⟩
+
+/-- RAM initialization authenticates each of its eight source bytes at the memory key. -/
+@[circuit_norm] theorem main_lookupNames (snapshot : MemorySnapshot)
+    (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main snapshot input).operations offset).lookups.map (·.table.name) =
+      List.replicate 8 "sp1.native.initial_memory" := by
+  simp [main, InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed,
+    AddressOperation.circuit, circuit_norm]
 
 end SP1Clean.SnapshotRamProvider

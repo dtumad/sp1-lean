@@ -12,8 +12,8 @@ namespace SP1Clean.Soundness.HostFinalMemory
 open Circuit Air.Flat Channels Model.Core
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalLedgerLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalLedgerClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- The only protocols introduced by complete outgoing Memory validation. -/
 def privateChannels : List (RawChannel (ZMod p)) :=
@@ -39,23 +39,24 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
+  {names : UniqueNames image source target others resources}
 
 private theorem private_not_local (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p)) :
-    channel ∉ (LocalCore.ensemble (p := p) image source).channels := by
+    channel ∉ (LocalCore.baseEnsemble (p := p) image source).channels := by
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
   rcases privateChannel with rfl | rfl | rfl <;>
     intro member <;>
     have names := List.mem_map_of_mem (f := RawChannel.name) member <;>
-    simp [LocalCore.ensemble, sp1Ensemble_channels, OrderedBoundary.channel,
+    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
       SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
       FinalMemoryValue.channel, FinalMemoryChange.channel,
       stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
       publicValuesChannel, Channel.toRaw] at names
 
 private def fixedAdditions (image : ProgramImage) : List (Component (ZMod p)) :=
-  [⟨ProtectedStore.byte⟩, ⟨ProtectedStore.half⟩, ⟨ProtectedStore.word⟩, ⟨ProtectedStore.double⟩,
-   ⟨WritePermissionProvider.circuit image⟩, HostCallLedger.producer,
+  [{ circuit := ProtectedStore.byte }, { circuit := ProtectedStore.half }, { circuit := ProtectedStore.word }, { circuit := ProtectedStore.double },
+   { circuit := WritePermissionProvider.circuit image }, HostCallLedger.producer,
    HostHintReadHandoff.receiver.component] ++ HostHintReadHandoff.wordResources
 
 private theorem additions_private (channel : RawChannel (ZMod p))
@@ -84,7 +85,7 @@ theorem beforeChecks_private (interface : PrivateInterface others resources)
             · rcases List.mem_or_eq_of_mem_set stores with old | rfl
               · exact fun used => private_not_local channel privateChannel
                   (LocalCore.component_channels_subset image source component
-                    (List.mem_cons_of_mem _ old) used)
+                    old used)
               · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
             · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
           · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
@@ -92,7 +93,7 @@ theorem beforeChecks_private (interface : PrivateInterface others resources)
       · obtain rfl := List.mem_singleton.mp permission
         exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
     · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
-  · change component ∈ (HostHintReadHandoff.receiver :: others).map (·.component) ++
+  · change component ∈ (HostHintReadHandoff.receiver :: others).map (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
         (HostHintReadHandoff.wordResources ++ resources) at auxiliary
     simp only [List.map_cons, List.cons_append, List.mem_cons, List.mem_append] at auxiliary
     rcases auxiliary with rfl | other | word | resource
@@ -122,12 +123,54 @@ theorem source_privacy (hints : List Bytes) :
     rcases privateChannel with rfl | rfl | rfl <;> rfl
   simpa using List.all_eq_true.mp quiet component member
 
-/-- Queue, bank and CPU verifier boundaries do not use the new Memory receipt protocols. -/
-theorem base_verifier_private (channel : RawChannel (ZMod p))
+/-- The target validators register all three private protocols before verifier installation. -/
+private theorem check_channels (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p)) :
-    channel ∉ (base image source target final bankFinal others resources channels).verifier.channels := by
-  apply silent_of_names (component := ⟨(base image source target final bankFinal others resources channels).verifier⟩)
+    channel ∈ (FinalMemoryChecks.checkTables (p := p) target).flatMap (·.circuit.channels) := by
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-  rcases privateChannel with rfl | rfl | rfl <;> rfl
+  rcases privateChannel with rfl | rfl | rfl <;>
+    simp [FinalMemoryChecks.checkTables, FinalRegisterCheck.circuit, FinalRamCheck.circuit, circuit_norm]
+
+/-- Queue, bank and CPU verifier boundaries emit nothing on the Memory receipt protocols.
+Fresh assertion channels are separated using the registered target-validator inventory. -/
+theorem base_verifier_private (channel : RawChannel (ZMod p))
+    (privateChannel : channel ∈ privateChannels (p := p)) (env : Environment (ZMod p)) :
+    (base image source target final bankFinal others resources channels names).verifierOperations.interactionValuesWith
+      channel env = [] := by
+  let original := HostHintReadLocal.ensemble image source others
+    (resources ++ FinalMemoryChecks.checkTables target) channels names
+  have declared : channel ∈ (HostLocalCore.baseEnsemble image source
+      ((HostHintReadHandoff.receiver :: others).map (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
+        (HostHintReadHandoff.wordResources ++ (resources ++ FinalMemoryChecks.checkTables target)))
+      ((HintReadWordChip.stateChannel.toRaw ::
+        ((HostHintReadHandoff.receiver :: others).map (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
+          (HostHintReadHandoff.wordResources ++ (resources ++ FinalMemoryChecks.checkTables target))).flatMap
+            (fun component : Component (ZMod p) => component.circuit.channels)) ++ channels) names).channels := by
+    have used := check_channels (target := target) channel privateChannel
+    apply List.mem_cons_of_mem
+    apply List.mem_cons_of_mem
+    apply List.mem_append_right
+    apply List.mem_append_left
+    apply List.mem_cons_of_mem
+    rw [List.flatMap_append, List.flatMap_append, List.flatMap_append]
+    exact List.mem_append_right _ (List.mem_append_right _ (List.mem_append_right _ used))
+  have registered : channel ∈ original.channels := List.mem_append_left _ declared
+  change ((HostHintQueueBoundary.boundary source final bankFinal).install original).verifierOperations.interactionValuesWith
+    channel env = []
+  rw [ClosedVerifier.install_verifier_interactions_of_mem _ original env channel registered]
+  have quiet : original.verifierOperations.interactionValuesWith channel env = [] := by
+    change ((LocalSourceBoundary.checker image source).install _).verifierOperations.interactionValuesWith channel env = []
+    rw [PublicVerifier.install_verifier_interactions_of_mem _ _ env channel declared]
+    exact LocalCore.boundaryVerifier_silent image source channel (private_not_local channel privateChannel) env
+  have boundaryQuiet : channel ∉ (HostHintQueueBoundary.boundary source final bankFinal).circuit.channels := by
+    simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
+    rcases privateChannel with rfl | rfl | rfl <;>
+      apply HostHintQueueBoundary.boundary_silent <;>
+      simp [FinalMemoryValue.channel, FinalMemoryChange.channel, HostHintQueue.stateChannel,
+        HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw]
+  have empty := (HostHintQueueBoundary.boundary source final bankFinal).singleton.interactionsWith_nil_of_channel_not_mem
+    (data := env.data) boundaryQuiet
+  rw [ClosedVerifier.singleton_interactions] at empty
+  rw [quiet, empty, List.append_nil]
 
 end SP1Clean.Soundness.HostFinalMemory

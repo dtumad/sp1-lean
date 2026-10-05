@@ -243,20 +243,6 @@ def uTypeChipRowCodec :
         (uTypeChipLocals cols) data).trans
           (uTypeChipColumnsOfInput_roundtrip cols) }
 
-theorem uTypeChip_lookups_empty :
-    (⟨UTypeChip.circuit (p := p)⟩ :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    UTypeChip.circuit_main_eq]
-  simp [UTypeChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
-    Readers.JTypeReader.circuit, Readers.JTypeReader.main,
-    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit,
-    Readers.RegisterAccessTimestamp.main,
-    AddOperation.circuit, AddOperation.main, Gadgets.Equality.main,
-    circuit_norm]
-
 private def uTypeChipAddend (offset : ℕ) :
     Word (Expression (ZMod p)) :=
   #v[var ⟨offset⟩, var ⟨offset + 1⟩, var ⟨offset + 2⟩, 0]
@@ -445,8 +431,8 @@ private theorem uTypeChipConstraintsDecompose
   simp only [Operations.constraints_append,
     Operations.constraints_witness,
     Operations.constraints_subcircuit,
-    constraints_toSubcircuit_generalFormalCircuit,
-    constraints_toSubcircuit_formalAssertion,
+    GeneralFormalCircuit.toSubcircuit_constraints,
+    FormalAssertion.toSubcircuit_constraints,
     GeneralFormalCircuit.toSubcircuit_localLength,
     FormalAssertion.toSubcircuit_localLength,
     cpuCircuitLocalLength,
@@ -962,7 +948,7 @@ theorem uTypeChipConstraintsConstructive
       (uTypeChipOracle.deconfigure rustCols) data
     List.Forall (· = 0)
         (uTypeChipOracle.assertZeros rustCols) ↔
-      (⟨UTypeChip.circuit (p := p)⟩ :
+      ({ circuit := UTypeChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
@@ -970,25 +956,25 @@ theorem uTypeChipConstraintsConstructive
   let assignment := uTypeChipRowCodec.assignment cols data
   have hbind :
       BindsChipOutput UTypeChip.main assignment.environment
-        (⟨UTypeChip.circuit (p := p)⟩ :
+        ({ circuit := UTypeChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowInputVar
-        (⟨UTypeChip.circuit (p := p)⟩ :
+        ({ circuit := UTypeChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [UTypeChip.circuit_main_eq] at h
     exact h
   have hfaithful := uTypeChipConstraintsFaithful
     (p := p) assignment.environment
-    (⟨UTypeChip.circuit (p := p)⟩ :
+    ({ circuit := UTypeChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨UTypeChip.circuit (p := p)⟩ :
+    ({ circuit := UTypeChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0)
           (uTypeChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            (⟨UTypeChip.circuit (p := p)⟩ :
+            ({ circuit := UTypeChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols,
       ChipOracle.nativeAssertZeros_deconfigure,
@@ -999,7 +985,7 @@ theorem uTypeChipConstraintsConstructive
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
       (UTypeChip.circuit (p := p))
-      assignment.environment uTypeChip_lookups_empty).symm
+      assignment.environment UTypeChip.lookups_empty).symm
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem uTypeColumnsInteractionsDecompose
@@ -1328,7 +1314,7 @@ theorem uTypeChipInteractionsConstructive
       (uTypeChipOracle.deconfigure rustCols) data
     List.Perm
       (nativeAccesses assignment.environment
-        (⟨UTypeChip.circuit (p := p)⟩ :
+        ({ circuit := UTypeChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).operations)
       (uTypeChipOracle.rustAccesses rustCols) := by
   dsimp only
@@ -1336,18 +1322,18 @@ theorem uTypeChipInteractionsConstructive
   let assignment := uTypeChipRowCodec.assignment cols data
   have hbind :
       BindsChipOutput UTypeChip.main assignment.environment
-        (⟨UTypeChip.circuit (p := p)⟩ :
+        ({ circuit := UTypeChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowInputVar
-        (⟨UTypeChip.circuit (p := p)⟩ :
+        ({ circuit := UTypeChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [UTypeChip.circuit_main_eq] at h
     exact h
   have hfaithful := uTypeChipInteractionsFaithful
     (p := p) assignment.environment
-    (⟨UTypeChip.circuit (p := p)⟩ :
+    ({ circuit := UTypeChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨UTypeChip.circuit (p := p)⟩ :
+    ({ circuit := UTypeChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations
     (UTypeChip.circuit (p := p))

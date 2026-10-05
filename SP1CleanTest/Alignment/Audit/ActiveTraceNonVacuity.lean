@@ -130,7 +130,7 @@ pc). `SupportedCoreTraceWitness.tables` turns these records into physical circui
 def activeTrace : SupportedCoreTraceWitness SP1Prime where
   instructionEvents := activeInstructionEvents
   providerOccurrences := activeProviderOccurrences
-  data := anchorData
+  generationData := anchorData
   hint := anchorHint
   boundary := boundaryInputs 1 65536 9 65536
 
@@ -184,14 +184,14 @@ private def activeDecodedJalRow : DecodedInstructionRow SP1Prime where
 private theorem active_decoded_instruction_rows_eq :
     decodedInstructionRows activeTrace.witness.tables = [activeDecodedJalRow] := by rfl
 
-private theorem activeDecodedJalRow_is_real :
-    (activeDecodedJalRow.toChipRow activeTrace.data).is_real = 1 := by
+private theorem activeDecodedJalRow_is_real (data : ProverData (ZMod SP1Prime)) :
+    (activeDecodedJalRow.toChipRow data).is_real = 1 := by
   unfold ChipRow.is_real
   rw [DecodedInstructionRow.toChipRow_view]
   change (JalChip.component.rowInput
     (Environment.fromArray
       (JalChip.component.buildRow (activeEvent.toJalInputs (p := SP1Prime)) anchorData anchorHint)
-      anchorData)).is_real = 1
+      data)).is_real = 1
   rw [Component.rowInput_buildRow JalChip.component (activeEvent.toJalInputs (p := SP1Prime))]
   rfl
 
@@ -379,22 +379,22 @@ private def activeGroupedTables : List (Table (ZMod SP1Prime)) :=
 private theorem activeTrace_tables_eq : activeTrace.tables = activeGroupedTables := rfl
 
 private theorem activeTableGroup0_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
-    activeTableGroup0.flatMap (·.interactionsWith ch) = [] := by
+    activeTableGroup0.flatMap (fun t => t.interactionsWith anchorData ch) = [] := by
   simp only [activeTableGroup0, List.flatMap_cons, List.flatMap_nil,
     TraceNonVacuity.nilTable, TraceNonVacuity.nilTableHinted, List.nil_append]
 
 private theorem activeTableGroup1_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
-    activeTableGroup1.flatMap (·.interactionsWith ch) = activeJalBuilt.interactionsWith ch := by
+    activeTableGroup1.flatMap (fun t => t.interactionsWith anchorData ch) = activeJalBuilt.interactionsWith anchorData ch := by
   simp only [activeTableGroup1, List.flatMap_cons, List.flatMap_nil,
     TraceNonVacuity.nilTable, TraceNonVacuity.nilTableHinted, List.append_nil]
 
 private theorem activeTableGroup2_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
-    activeTableGroup2.flatMap (·.interactionsWith ch) = [] := by
+    activeTableGroup2.flatMap (fun t => t.interactionsWith anchorData ch) = [] := by
   simp only [activeTableGroup2, List.flatMap_cons, List.flatMap_nil,
     TraceNonVacuity.nilTable, TraceNonVacuity.nilTableHinted, List.nil_append]
 
 private theorem activeTableGroup3_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
-    activeTableGroup3.flatMap (·.interactionsWith ch) = activeU8Built.interactionsWith ch := by
+    activeTableGroup3.flatMap (fun t => t.interactionsWith anchorData ch) = activeU8Built.interactionsWith anchorData ch := by
   simp only [activeTableGroup3, List.flatMap_cons, List.flatMap_nil,
     TraceNonVacuity.nilTable, List.append_nil]
 
@@ -412,14 +412,14 @@ private theorem rangeTable_interactionsWith_nil_of_entries_eq_nil
     (width : RangeChip.Width) (entries : List TraceGen.RangeEntry)
     (entriesNil : entries = []) (ch : RawChannel (ZMod SP1Prime)) :
     (Table.build (RangeChip.componentFor width) (RangeChip.traceInputs entries)
-      anchorData anchorHint).interactionsWith ch = [] := by
+      anchorData anchorHint).interactionsWith anchorData ch = [] := by
   subst entries
   rfl
 
 private theorem activeRangeTables_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
-    activeTrace.rangeTables.flatMap (·.interactionsWith ch) =
-      activeRange13Built.interactionsWith ch ++
-        (activeRange14Built.interactionsWith ch ++ activeRange16Built.interactionsWith ch) := by
+    activeTrace.rangeTables.flatMap (fun t => t.interactionsWith anchorData ch) =
+      activeRange13Built.interactionsWith anchorData ch ++
+        (activeRange14Built.interactionsWith anchorData ch ++ activeRange16Built.interactionsWith anchorData ch) := by
   have rangeTablesLength : activeTrace.rangeTables.length = 17 := by
     simp [SupportedCoreTraceWitness.rangeTables, RangeChip.allWidths]
   have entriesAtOtherIndex (i : ℕ) (bound : i < activeTrace.rangeTables.length)
@@ -433,7 +433,7 @@ private theorem activeRangeTables_interactionsWith (ch : RawChannel (ZMod SP1Pri
       | rfl
   have interactionsAtOtherIndex (i : ℕ) (bound : i < activeTrace.rangeTables.length)
       (not13 : i ≠ 13) (not14 : i ≠ 14) (not16 : i ≠ 16) :
-      activeTrace.rangeTables[i].interactionsWith ch = [] := by
+      activeTrace.rangeTables[i].interactionsWith anchorData ch = [] := by
     simp only [SupportedCoreTraceWitness.rangeTables, List.getElem_map]
     convert rangeTable_interactionsWith_nil_of_entries_eq_nil
       RangeChip.allWidths[i]
@@ -442,38 +442,38 @@ private theorem activeRangeTables_interactionsWith (ch : RawChannel (ZMod SP1Pri
     simp only [activeTrace]
     rfl
   calc
-    _ = activeTrace.rangeTables[13].interactionsWith ch ++
-          (activeTrace.rangeTables[14].interactionsWith ch ++
-            activeTrace.rangeTables[16].interactionsWith ch) :=
+    _ = activeTrace.rangeTables[13].interactionsWith anchorData ch ++
+          (activeTrace.rangeTables[14].interactionsWith anchorData ch ++
+            activeTrace.rangeTables[16].interactionsWith anchorData ch) :=
       flatMap_length17_eq_at13_at14_at16 activeTrace.rangeTables
-        (fun table : Table (ZMod SP1Prime) => table.interactionsWith ch)
+        (fun table : Table (ZMod SP1Prime) => table.interactionsWith anchorData ch)
           rangeTablesLength interactionsAtOtherIndex
     _ = _ := by rfl
 
 private theorem activeTableGroup4_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
-    activeTableGroup4.flatMap (·.interactionsWith ch) =
-      activeProgramBuilt.interactionsWith ch ++
-        (activeMemoryInitBuilt.interactionsWith ch ++
-          (activeMemoryFinalizeBuilt.interactionsWith ch ++
-            haltPaddingTable.interactionsWith ch)) := by
+    activeTableGroup4.flatMap (fun t => t.interactionsWith anchorData ch) =
+      activeProgramBuilt.interactionsWith anchorData ch ++
+        (activeMemoryInitBuilt.interactionsWith anchorData ch ++
+          (activeMemoryFinalizeBuilt.interactionsWith anchorData ch ++
+            haltPaddingTable.interactionsWith anchorData ch)) := by
   simp only [activeTableGroup4, List.flatMap_cons, List.flatMap_nil,
     TraceNonVacuity.nilTable, TraceNonVacuity.haltBuilt_eq, List.append_nil, List.nil_append]
 
 theorem activeTrace_interactionsWith_split (ch : RawChannel (ZMod SP1Prime)) :
     activeTrace.witness.interactionsWith ch =
-      activeTrace.witness.verifierTable.interactionsWith ch ++
-        (activeJalBuilt.interactionsWith ch ++
-          (activeU8Built.interactionsWith ch ++
-            (activeRange13Built.interactionsWith ch ++
-              (activeRange14Built.interactionsWith ch ++
-                (activeRange16Built.interactionsWith ch ++
-                  (activeProgramBuilt.interactionsWith ch ++
-                    (activeMemoryInitBuilt.interactionsWith ch ++
-                      (activeMemoryFinalizeBuilt.interactionsWith ch ++
-                        haltPaddingTable.interactionsWith ch)))))))) := by
-  show (activeTrace.witness.verifierTable :: activeTrace.tables).flatMap
-    (·.interactionsWith ch) = _
-  rw [List.flatMap_cons]
+      activeTrace.witness.verifierInteractionsWith ch ++
+        (activeJalBuilt.interactionsWith anchorData ch ++
+          (activeU8Built.interactionsWith anchorData ch ++
+            (activeRange13Built.interactionsWith anchorData ch ++
+              (activeRange14Built.interactionsWith anchorData ch ++
+                (activeRange16Built.interactionsWith anchorData ch ++
+                  (activeProgramBuilt.interactionsWith anchorData ch ++
+                    (activeMemoryInitBuilt.interactionsWith anchorData ch ++
+                      (activeMemoryFinalizeBuilt.interactionsWith anchorData ch ++
+                        haltPaddingTable.interactionsWith anchorData ch)))))))) := by
+  change _ ++ activeTrace.tables.flatMap
+    (fun t => t.interactionsWith activeTrace.witness.data ch) = _
+  simp_rw [Table.interactionsWith_setData _ activeTrace.witness.data anchorData]
   rw [activeTrace_tables_eq]
   unfold activeGroupedTables
   rw [List.flatMap_append, activeTableGroup0_interactionsWith, List.nil_append,
@@ -530,7 +530,7 @@ theorem activeRange16Built_channels :
 private theorem interactionsWith_nil_of_single_channel
     (table : Table (ZMod SP1Prime)) (only : RawChannel (ZMod SP1Prime))
     (channels : ∀ c ∈ table.component.circuit.channels, c = only)
-    {ch : RawChannel (ZMod SP1Prime)} (hne : ch ≠ only) : table.interactionsWith ch = [] := by
+    {ch : RawChannel (ZMod SP1Prime)} (hne : ch ≠ only) : table.interactionsWith anchorData ch = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   intro hmem
   exact hne (channels _ hmem)
@@ -538,7 +538,7 @@ private theorem interactionsWith_nil_of_single_channel
 /-! ### The verifier and JAL row -/
 
 theorem activeTrace_verifierState :
-    activeTrace.witness.verifierTable.interactionsWith stateChannel.toRaw =
+    activeTrace.witness.verifierInteractionsWith stateChannel.toRaw =
       [stateChannel.pulledIfValue 1
          ⟨activeTrace.publicValues.final_clk_high, activeTrace.publicValues.final_clk_low,
           activeTrace.publicValues.final_pc0, activeTrace.publicValues.final_pc1,
@@ -548,50 +548,59 @@ theorem activeTrace_verifierState :
           activeTrace.publicValues.init_pc0, activeTrace.publicValues.init_pc1,
           activeTrace.publicValues.init_pc2⟩] := by
   have h := congrArg (List.map TypedInteraction.raw)
-    (witness_verifierStateInteractions_eq (p := SP1Prime) activeTrace.witness)
-  rw [typedTableInteractionsWith_raw] at h
-  simpa using h
+    (stateVerifier_stateInteractions activeTrace.publicValues activeTrace.witness.data)
+  rw [typedInteractionValuesWith_raw] at h
+  simpa only [EnsembleWitness.verifierInteractionsWith, SupportedCoreTraceWitness.witness_publicInput,
+    List.map_cons, List.map_nil, Ensemble.verifierOperations, sp1Ensemble_verifier,
+    TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue] using h
 
 theorem activeTrace_verifierProgram_nil :
-    activeTrace.witness.verifierTable.interactionsWith programChannel.toRaw = [] := by
+    activeTrace.witness.verifierInteractionsWith programChannel.toRaw = [] := by
   have h := congrArg (List.map TypedInteraction.raw)
     (witness_verifierProgramInteractions_eq_nil (p := SP1Prime) activeTrace.witness)
-  rw [typedTableInteractionsWith_raw] at h
-  simpa using h
+  rw [typedInteractionValuesWith_raw] at h
+  simpa only [EnsembleWitness.verifierInteractionsWith, SupportedCoreTraceWitness.witness_publicInput,
+    List.map_cons, List.map_nil, Ensemble.verifierOperations, sp1Ensemble_verifier,
+    TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue] using h
 
 theorem activeTrace_verifierMemory_nil :
-    activeTrace.witness.verifierTable.interactionsWith memoryChannel.toRaw = [] := by
+    activeTrace.witness.verifierInteractionsWith memoryChannel.toRaw = [] := by
   have h := congrArg (List.map TypedInteraction.raw)
     (witness_verifierMemoryInteractions_eq_nil (p := SP1Prime) activeTrace.witness)
-  rw [typedTableInteractionsWith_raw] at h
-  simpa using h
+  rw [typedInteractionValuesWith_raw] at h
+  simpa only [EnsembleWitness.verifierInteractionsWith, SupportedCoreTraceWitness.witness_publicInput,
+    List.map_cons, List.map_nil, Ensemble.verifierOperations, sp1Ensemble_verifier,
+    TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue] using h
 
 /-- The verifier row's Exit view: the single ungated `⟨exit_code⟩` pull.  `boundaryInputs` commits
 `exit_code = 0`, so this is a `-1` pull of `⟨0⟩`. -/
 theorem activeTrace_verifierExit :
-    activeTrace.witness.verifierTable.interactionsWith exitChannel.toRaw =
+    activeTrace.witness.verifierInteractionsWith exitChannel.toRaw =
       [exitChannel.pulledIfValue 1
         (⟨activeTrace.publicValues.exit_code⟩ : Channels.ExitMsg (ZMod SP1Prime))] := by
   have h := congrArg (List.map TypedInteraction.raw)
-    (witness_verifierExitInteractions_eq (p := SP1Prime) activeTrace.witness)
-  rw [typedTableInteractionsWith_raw] at h
-  simpa using h
+    (stateVerifier_exitInteractions activeTrace.publicValues activeTrace.witness.data)
+  rw [typedInteractionValuesWith_raw] at h
+  simpa only [EnsembleWitness.verifierInteractionsWith, SupportedCoreTraceWitness.witness_publicInput,
+    List.map_cons, List.map_nil, Ensemble.verifierOperations, sp1Ensemble_verifier,
+    TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue] using h
 
 def activeVerifierByteInteractions : List (Interaction (ZMod SP1Prime)) :=
   (verifierBytePulls (varFromOffset SP1PublicIO 0)).map
     (AbstractInteraction.eval (Environment.fromInput activeTrace.publicValues anchorData))
 
 theorem activeTrace_verifierByte :
-    activeTrace.witness.verifierTable.interactionsWith byteChannel.toRaw =
+    activeTrace.witness.verifierInteractionsWith byteChannel.toRaw =
       activeVerifierByteInteractions := by
-  unfold Table.interactionsWith
-  rw [EnsembleWitness.verifierTable_flatMap]
-  rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
-  change List.map (AbstractInteraction.eval
-      (Environment.fromInput activeTrace.publicValues anchorData))
-    (((sp1StateVerifierMain (varFromOffset SP1PublicIO 0)).operations
-      (size SP1PublicIO)).interactionsWith byteChannel.toRaw) = _
-  rw [sp1StateVerifierMain_byteInteractions]
+  change (sp1StateVerifierProgram (p := SP1Prime)).circuitOperations.interactionValuesWith
+    byteChannel.toRaw (Environment.fromInput activeTrace.publicValues activeTrace.witness.data) = _
+  rw [Operations.interactionValuesWith_congr
+    (env := Environment.fromInput activeTrace.publicValues activeTrace.witness.data)
+    (env' := Environment.fromInput activeTrace.publicValues anchorData) rfl]
+  change ((sp1StateVerifierMain (varFromOffset SP1PublicIO 0)).operations
+    (size SP1PublicIO)).interactionValuesWith byteChannel.toRaw
+      (Environment.fromInput activeTrace.publicValues anchorData) = _
+  rw [Operations.interactionValuesWith_eq_map, sp1StateVerifierMain_byteInteractions]
   rfl
 
 def activeJalEnvironment : Environment (ZMod SP1Prime) :=
@@ -620,19 +629,19 @@ private theorem activeJalBuilt_interactionsWith
     (exposed : List (AbstractInteraction (ZMod SP1Prime)))
     (hexposed : ((JalChip.main (varFromOffset JalChip.Inputs 0)).operations
       (size JalChip.Inputs)).interactionsWith channel = exposed) :
-    activeJalBuilt.interactionsWith channel =
+    activeJalBuilt.interactionsWith anchorData channel =
       exposed.map (AbstractInteraction.eval activeJalEnvironment) := by
   unfold activeJalBuilt
   rw [JalChip.traceTable_interactionsWith]
   change (JalChip.traceInputs [activeEvent] 0).flatMap
     (fun input : JalChip.Inputs (ZMod SP1Prime) =>
-      (⟨JalChip.circuit⟩ : Component (ZMod SP1Prime)).operations.interactionValuesWith channel
+      ({ circuit := JalChip.circuit } : Component (ZMod SP1Prime)).operations.interactionValuesWith channel
         (Environment.fromArray
-          ((⟨JalChip.circuit⟩ : Component (ZMod SP1Prime)).buildRow input anchorData anchorHint)
+          (({ circuit := JalChip.circuit } : Component (ZMod SP1Prime)).buildRow input anchorData anchorHint)
           anchorData)) = _
   simp only [JalChip.traceInputs, List.map_cons, List.map_nil, List.replicate_zero,
     List.append_nil, List.flatMap_cons, List.flatMap_nil]
-  change (⟨JalChip.circuit⟩ : Component (ZMod SP1Prime)).operations.interactionValuesWith
+  change ({ circuit := JalChip.circuit } : Component (ZMod SP1Prime)).operations.interactionValuesWith
     channel activeJalEnvironment = _
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
   change List.map (AbstractInteraction.eval activeJalEnvironment)
@@ -641,27 +650,27 @@ private theorem activeJalBuilt_interactionsWith
   rw [hexposed]
 
 theorem activeJalBuilt_stateInteractions :
-    activeJalBuilt.interactionsWith stateChannel.toRaw = activeJalStateInteractions := by
+    activeJalBuilt.interactionsWith anchorData stateChannel.toRaw = activeJalStateInteractions := by
   apply activeJalBuilt_interactionsWith
   exact JalChip.interactionsWith_state_eq _ _
 
 theorem activeJalBuilt_byteInteractions :
-    activeJalBuilt.interactionsWith byteChannel.toRaw = activeJalByteInteractions := by
+    activeJalBuilt.interactionsWith anchorData byteChannel.toRaw = activeJalByteInteractions := by
   apply activeJalBuilt_interactionsWith
   exact JalChip.interactionsWith_byte_eq _ _
 
 theorem activeJalBuilt_programInteractions :
-    activeJalBuilt.interactionsWith programChannel.toRaw = activeJalProgramInteractions := by
+    activeJalBuilt.interactionsWith anchorData programChannel.toRaw = activeJalProgramInteractions := by
   apply activeJalBuilt_interactionsWith
   exact JalChip.interactionsWith_program_eq _ _
 
 theorem activeJalBuilt_memoryInteractions :
-    activeJalBuilt.interactionsWith memoryChannel.toRaw = activeJalMemoryInteractions := by
+    activeJalBuilt.interactionsWith anchorData memoryChannel.toRaw = activeJalMemoryInteractions := by
   apply activeJalBuilt_interactionsWith
   exact JalChip.interactionsWith_memory_eq _ _
 
 theorem activeJalBuilt_exitInteractions_nil :
-    activeJalBuilt.interactionsWith exitChannel.toRaw = [] := by
+    activeJalBuilt.interactionsWith anchorData exitChannel.toRaw = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   show exitChannel.toRaw ∉ (JalChip.circuit (p := SP1Prime)).channels
   simp [GeneralFormalCircuit.channels, JalChip.circuit, circuit_norm]
@@ -680,15 +689,15 @@ def activeStateLedger : List (Interaction (ZMod SP1Prime)) :=
 
 def activeByteLedger : List (Interaction (ZMod SP1Prime)) :=
   activeVerifierByteInteractions ++ activeJalByteInteractions ++
-    activeU8Built.interactions ++ activeRange13Built.interactions ++
-      activeRange14Built.interactions ++ activeRange16Built.interactions
+    (activeU8Built.interactions anchorData) ++ (activeRange13Built.interactions anchorData) ++
+      (activeRange14Built.interactions anchorData) ++ (activeRange16Built.interactions anchorData)
 
 def activeProgramLedger : List (Interaction (ZMod SP1Prime)) :=
-  activeJalProgramInteractions ++ activeProgramBuilt.interactions
+  activeJalProgramInteractions ++ (activeProgramBuilt.interactions anchorData)
 
 def activeMemoryLedger : List (Interaction (ZMod SP1Prime)) :=
-  activeJalMemoryInteractions ++ activeMemoryInitBuilt.interactions ++
-    activeMemoryFinalizeBuilt.interactions
+  activeJalMemoryInteractions ++ (activeMemoryInitBuilt.interactions anchorData) ++
+    (activeMemoryFinalizeBuilt.interactions anchorData)
 
 /-- The verifier's ungated Exit pull of the committed `exit_code = 0`, followed by the Halt padding
 row's two pushes (the reduced word at multiplicity `0`, the zero code at multiplicity `1`). -/
@@ -699,7 +708,7 @@ def activeExitLedger : List (Interaction (ZMod SP1Prime)) :=
 
 theorem activeTrace_stateInteractions :
     activeTrace.witness.interactionsWith stateChannel.toRaw =
-      activeStateLedger ++ haltPaddingTable.interactionsWith stateChannel.toRaw := by
+      activeStateLedger ++ haltPaddingTable.interactionsWith anchorData stateChannel.toRaw := by
   rw [activeTrace_interactionsWith_split, activeTrace_verifierState,
     activeJalBuilt_stateInteractions,
     interactionsWith_nil_of_single_channel activeU8Built byteChannel.toRaw activeU8Built_channels
@@ -720,7 +729,7 @@ theorem activeTrace_stateInteractions :
 
 theorem activeTrace_byteInteractions :
     activeTrace.witness.interactionsWith byteChannel.toRaw =
-      activeByteLedger ++ haltPaddingTable.interactionsWith byteChannel.toRaw := by
+      activeByteLedger ++ haltPaddingTable.interactionsWith anchorData byteChannel.toRaw := by
   rw [activeTrace_interactionsWith_split, activeTrace_verifierByte,
     activeJalBuilt_byteInteractions,
     table_interactionsWith_eq_interactions activeU8Built_channels,
@@ -737,7 +746,7 @@ theorem activeTrace_byteInteractions :
 
 theorem activeTrace_programInteractions :
     activeTrace.witness.interactionsWith programChannel.toRaw =
-      activeProgramLedger ++ haltPaddingTable.interactionsWith programChannel.toRaw := by
+      activeProgramLedger ++ haltPaddingTable.interactionsWith anchorData programChannel.toRaw := by
   rw [activeTrace_interactionsWith_split, activeTrace_verifierProgram_nil,
     activeJalBuilt_programInteractions,
     interactionsWith_nil_of_single_channel activeU8Built byteChannel.toRaw activeU8Built_channels
@@ -759,7 +768,7 @@ theorem activeTrace_programInteractions :
 
 theorem activeTrace_memoryInteractions :
     activeTrace.witness.interactionsWith memoryChannel.toRaw =
-      activeMemoryLedger ++ haltPaddingTable.interactionsWith memoryChannel.toRaw := by
+      activeMemoryLedger ++ haltPaddingTable.interactionsWith anchorData memoryChannel.toRaw := by
   rw [activeTrace_interactionsWith_split, activeTrace_verifierMemory_nil,
     activeJalBuilt_memoryInteractions,
     interactionsWith_nil_of_single_channel activeU8Built byteChannel.toRaw activeU8Built_channels
@@ -843,7 +852,7 @@ a non-Exit channel: its entries are multiplicity zero, hence signed bits absent 
 is `TraceNonVacuity.balancedOn_append_halt`.) -/
 private theorem activeBalancedOn_append_halt {ch : RawChannel (ZMod SP1Prime)}
     {l : List (Interaction (ZMod SP1Prime))}
-    (heq : activeTrace.witness.interactionsWith ch = l ++ haltPaddingTable.interactionsWith ch)
+    (heq : activeTrace.witness.interactionsWith ch = l ++ haltPaddingTable.interactionsWith anchorData ch)
     (hname : ch.name ≠ "SP1Exit") (hlen : l.length < 100) (hbin : SignedMults l)
     (hperm : (pushedMessages l).Perm (pulledMessages l)) :
     activeTrace.BalancedOn ch := by
@@ -1014,20 +1023,21 @@ private def InteractionProfile (interactions : List (Interaction (ZMod SP1Prime)
 /-- The provider rows' decidable data projections are evaluated in the test-only compiler-trust
 quarantine; raw channel identity remains a structural theorem because channels carry predicates. -/
 private theorem activeProviderProfiles :
-    InteractionProfile activeProgramBuilt.interactions
+    InteractionProfile (activeProgramBuilt.interactions anchorData)
       (programChannel.pushedIfValue 1 activeProgramMessage) ∧
-    InteractionProfile activeMemoryInitBuilt.interactions
+    InteractionProfile (activeMemoryInitBuilt.interactions anchorData)
       (memoryChannel.pushedIfValue 1 activeInitMessage) ∧
-    InteractionProfile activeMemoryFinalizeBuilt.interactions
+    InteractionProfile (activeMemoryFinalizeBuilt.interactions anchorData)
       (memoryChannel.pulledIfValue 1 activeFinalizeMessage) := by
   unfold InteractionProfile
   native_decide
 
 theorem activeTrace_programProviderInteractions :
-    (programProviderTable activeTrace.witness).interactionsWith programChannel.toRaw =
+    (programProviderTable activeTrace.witness).interactionsWith activeTrace.witness.data programChannel.toRaw =
       [programChannel.pushedIfValue 1 activeProgramMessage] := by
   rw [activeTrace_programProviderTable]
-  change activeProgramBuilt.interactionsWith programChannel.toRaw = _
+  rw [Table.interactionsWith_setData _ activeTrace.witness.data anchorData]
+  change activeProgramBuilt.interactionsWith anchorData programChannel.toRaw = _
   have profile := activeProviderProfiles.1
   unfold InteractionProfile at profile
   apply interactionList_eq_singleton_of_projections
@@ -1043,10 +1053,11 @@ theorem activeTrace_programProviderInteractions :
     exact profile.2.2.2
 
 theorem activeTrace_memoryInitProviderInteractions :
-    (memoryInitProviderTable activeTrace.witness).interactionsWith memoryChannel.toRaw =
+    (memoryInitProviderTable activeTrace.witness).interactionsWith activeTrace.witness.data memoryChannel.toRaw =
       [memoryChannel.pushedIfValue 1 activeInitMessage] := by
   rw [activeTrace_memoryInitProviderTable]
-  change activeMemoryInitBuilt.interactionsWith memoryChannel.toRaw = _
+  rw [Table.interactionsWith_setData _ activeTrace.witness.data anchorData]
+  change activeMemoryInitBuilt.interactionsWith anchorData memoryChannel.toRaw = _
   have profile := activeProviderProfiles.2.1
   unfold InteractionProfile at profile
   apply interactionList_eq_singleton_of_projections
@@ -1062,10 +1073,11 @@ theorem activeTrace_memoryInitProviderInteractions :
     exact profile.2.2.2
 
 theorem activeTrace_memoryFinalizeProviderInteractions :
-    (memoryFinalizeProviderTable activeTrace.witness).interactionsWith memoryChannel.toRaw =
+    (memoryFinalizeProviderTable activeTrace.witness).interactionsWith activeTrace.witness.data memoryChannel.toRaw =
       [memoryChannel.pulledIfValue 1 activeFinalizeMessage] := by
   rw [activeTrace_memoryFinalizeProviderTable]
-  change activeMemoryFinalizeBuilt.interactionsWith memoryChannel.toRaw = _
+  rw [Table.interactionsWith_setData _ activeTrace.witness.data anchorData]
+  change activeMemoryFinalizeBuilt.interactionsWith anchorData memoryChannel.toRaw = _
   have profile := activeProviderProfiles.2.2
   unfold InteractionProfile at profile
   apply interactionList_eq_singleton_of_projections
@@ -1084,7 +1096,7 @@ theorem activeProgramMessage_jalView :
     Semantics.rowOfMsg activeProgramMessage = (programAccess jalView).toRow := by
   rfl
 
-theorem activeTrace_programProviderBound : ProgramProviderBound activeTrace.witness := by
+theorem activeTrace_programProviderBound : ProgramProviderBound anchorProgram activeTrace.witness := by
   intro interaction member _
   have member' := member
   rw [activeTrace_programProviderInteractions, List.mem_singleton] at member'
@@ -1093,7 +1105,7 @@ theorem activeTrace_programProviderBound : ProgramProviderBound activeTrace.witn
     { raw := programChannel.pushedIfValue 1 activeProgramMessage
       channel_eq :=
         (programProviderTable activeTrace.witness).channel_eq_of_mem_interactionsWith member }
-  change Semantics.CommittedProgTruth typed.message anchorData
+  change Semantics.CommittedProgTruth typed.message anchorProgram
   have message_eq : typed.message = activeProgramMessage := by
     rw [TypedInteraction.message_eq_iff]
     rfl
@@ -1111,7 +1123,7 @@ theorem activeInitMessage_content :
   simp [SailState.get_reg?]
 
 theorem activeTrace_memoryInitProviderBound :
-    MemoryInitProviderBound activeTrace.witness anchorState (Commit.initClkNat anchorData) := by
+    MemoryInitProviderBound activeTrace.witness anchorState activeStatement.initClkNat := by
   intro interaction member _
   have member' := member
   rw [activeTrace_memoryInitProviderInteractions, List.mem_singleton] at member'
@@ -1120,7 +1132,7 @@ theorem activeTrace_memoryInitProviderBound :
     { raw := memoryChannel.pushedIfValue 1 activeInitMessage
       channel_eq :=
         (memoryInitProviderTable activeTrace.witness).channel_eq_of_mem_interactionsWith member }
-  change MemoryInitMessageBound anchorState (Commit.initClkNat anchorData) typed.message
+  change MemoryInitMessageBound anchorState activeStatement.initClkNat typed.message
   have message_eq : typed.message = activeInitMessage := by
     rw [TypedInteraction.message_eq_iff]
     rfl
@@ -1148,9 +1160,8 @@ theorem activeTrace_memoryFinalizeProviderUnique :
 theorem activeTrace_boundaryFacts :
     InitialBoundaryFacts activeStatement activeTrace.witness anchorState where
   programWellFormed := anchorProgram_wellFormed
-  programCommitted := ⟨anchorData_canonicalEncoding, rfl⟩
+  programEncodable := anchorBoundaryFacts.programEncodable
   initialPc := anchorBoundaryFacts.initialPc
-  initialClock := anchorBoundaryFacts.initialClock
   romLoaded := anchorState_romLoaded
   configured := anchorState_configured
   codeMemoryCompatible := anchor_codeMemoryCompatible

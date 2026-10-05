@@ -1,4 +1,7 @@
 import SP1CleanTest.Alignment.Audit.OneAddNativePremises
+import SP1Clean.Soundness.ProtectedLocalCore
+import SP1Clean.Model.Core.SyscallTable
+import ToClean.Air.FiniteLookup
 
 /-! # Shared ADD fixture and actual AIR evaluator
 

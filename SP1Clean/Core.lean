@@ -320,6 +320,7 @@ import SP1Clean.Circuits.Gadgets.IsZero
 import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Circuits.Gadgets.LtSigned
 import SP1Clean.Circuits.Gadgets.LtUnsigned
+import SP1Clean.Native.Operations.LocalSourceBoundary
 import SP1Clean.Native.Operations.MulOperation
 import SP1Clean.Native.Operations.MulOperation.Defs
 import SP1Clean.Native.Operations.MulOperation.Populate

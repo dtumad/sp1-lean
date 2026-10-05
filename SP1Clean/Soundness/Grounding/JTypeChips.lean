@@ -34,7 +34,7 @@ local macro "jtypeViewProjection " inputs:term ", " circuit:term ", " viewOf:ter
     let input : Var $inputs (ZMod p) := varFromOffset $inputs 0
     let offset := size $inputs
     have outputEq : Eval.eval $env (($circuit (p := p)).output input offset) =
-        (⟨$circuit (p := p)⟩ : Component (ZMod p)).rowOutput $env := by
+        ({ circuit := $circuit (p := p) } : Component (ZMod p)).rowOutput $env := by
       simp only [Component.rowOutput, input, offset, circuit_norm]
     simp only [$viewOf:term, $rowView:term]
     rw [← outputEq]
@@ -411,16 +411,16 @@ theorem jtypeTimestampBound_of_contract {Input Output : TypeMap}
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (contract : CircuitJTypeTimestampContract circuit view)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : (⟨circuit⟩ : Component (ZMod p)).operations.ChannelGuarantees
+    (guarantees : ({ circuit := circuit } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromArray physical data))
-    (real : (view ((⟨circuit⟩ : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) ((⟨circuit⟩ : Component (ZMod p)).rowOutput
+    (real : (view (({ circuit := circuit } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))).is_real = 1) :
-    JTypeTimestampBound (view ((⟨circuit⟩ : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) ((⟨circuit⟩ : Component (ZMod p)).rowOutput
+    JTypeTimestampBound (view (({ circuit := circuit } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))) := by
   obtain ⟨readerOffset, readerInput, readerMem, binding⟩ := contract
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   have rowGuarantees : component.rowOperations.ChannelGuarantees byteChannel.toRaw env :=
     (Component.channelGuarantees_iff env byteChannel.toRaw).mp guarantees
@@ -503,8 +503,8 @@ def jalChipDescriptor : SupportedChip p :=
 omit [Fact (2 ^ 25 < p)] in
 noncomputable def jalViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   JalChip.rowView
-    ((⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+    (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 theorem jalViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     ((jalChipDescriptor (p := p)).decodeRow data physical).view =
@@ -513,17 +513,17 @@ theorem jalViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod
 omit [Fact (2 ^ 25 < p)] in
 theorem jalChipDescriptor_table :
     (jalChipDescriptor (p := p)).table =
-      (⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Folded descriptor projection for JAL's circuit assumptions.  Consumers rewrite through this
 small theorem instead of asking unification to normalize the complete circuit-bearing descriptor. -/
 theorem jalChipDescriptor_assumptions_iff (data : ProverData (ZMod p))
     (physical : Array (ZMod p)) :
-    (jalChipDescriptor (p := p)).table.Assumptions
+    (jalChipDescriptor (p := p)).table.CircuitAssumptions
         (Environment.fromArray physical data) ↔
       JalChip.Assumptions
-        ((⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
+        (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput
           (Environment.fromArray physical data)) data := by
   rw [jalChipDescriptor_table]
   rfl
@@ -539,8 +539,8 @@ omit [Fact (2 ^ 25 < p)] in
 result to the three-limb architectural next-PC view. -/
 theorem JalChip.addValueHigh_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      (⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
-    ((⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput
+      ({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput
       env).add_operation.value[3] = 0 := by
   let input : Var JalChip.Inputs (ZMod p) := varFromOffset JalChip.Inputs 0
   let offset := size JalChip.Inputs
@@ -562,7 +562,7 @@ theorem JalChip.addValueHigh_eq_zero_of_constraints (env : Environment (ZMod p))
     simpa only [Expression.eval, sub_zero] using highConstraint
   have outputEq : Eval.eval env
       ((JalChip.circuit (p := p)).output input offset) =
-      (⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env := by
+      ({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← outputEq]
   simpa only [input, offset, addValue, JalChip.circuit, circuit_norm] using highEq
@@ -585,7 +585,7 @@ theorem jalViewOf_isReal (env : Environment (ZMod p)) :
     (jalViewOf env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) JalChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset JalChip.Inputs 0) =
-      (⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset JalChip.Inputs 0 env
   simpa only [jalViewOf, JalChip.rowView] using
     congrArg (fun input : JalChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -600,7 +600,7 @@ theorem jalViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- JAL's completed exposed Memory list evaluates to the canonical J-type pair. -/
 theorem jalChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨JalChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (jtypeMemoryInteractions (jalViewOf env)).map TypedInteraction.raw := by
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
@@ -705,8 +705,8 @@ def uTypeChipDescriptor : SupportedChip p :=
 omit [Fact (2 ^ 25 < p)] in
 noncomputable def uTypeViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   UTypeChip.rowView
-    ((⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+    (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 theorem uTypeViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     ((uTypeChipDescriptor (p := p)).decodeRow data physical).view =
@@ -715,16 +715,16 @@ theorem uTypeViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZM
 omit [Fact (2 ^ 25 < p)] in
 theorem uTypeChipDescriptor_table :
     (uTypeChipDescriptor (p := p)).table =
-      (⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Folded descriptor projection for U-type's circuit assumptions. -/
 theorem uTypeChipDescriptor_assumptions_iff (data : ProverData (ZMod p))
     (physical : Array (ZMod p)) :
-    (uTypeChipDescriptor (p := p)).table.Assumptions
+    (uTypeChipDescriptor (p := p)).table.CircuitAssumptions
         (Environment.fromArray physical data) ↔
       UTypeChip.Assumptions
-        ((⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput
+        (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput
           (Environment.fromArray physical data)) data := by
   rw [uTypeChipDescriptor_table]
   rfl
@@ -768,9 +768,9 @@ omit [Fact (2 ^ 25 < p)] in
 /-- The physical U-type selector gate makes the LUI/AUIPC discriminator binary. -/
 theorem UTypeChip.isAuipc_binary_of_constraints (env : Environment (ZMod p))
     (constraints :
-      (⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
-    ((⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).is_auipc = 0 ∨
-      ((⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).is_auipc = 1 := by
+      ({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_auipc = 0 ∨
+      (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_auipc = 1 := by
   let input : Var UTypeChip.Inputs (ZMod p) := varFromOffset UTypeChip.Inputs 0
   let offset := size UTypeChip.Inputs
   let gate := input.is_auipc * (input.is_auipc - 1)
@@ -795,7 +795,7 @@ theorem UTypeChip.isAuipc_binary_of_constraints (env : Environment (ZMod p))
     apply bool_of_mul_pred
     simpa only [gate, eval_sub, Expression.eval, sub_zero] using gateConstraint
   have inputEq : Eval.eval env input =
-      (⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset UTypeChip.Inputs 0 env
   rw [← inputEq]
   simpa only [input, circuit_norm] using binary
@@ -818,7 +818,7 @@ theorem uTypeViewOf_isReal (env : Environment (ZMod p)) :
     (uTypeViewOf env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) UTypeChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset UTypeChip.Inputs 0) =
-      (⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset UTypeChip.Inputs 0 env
   simpa only [uTypeViewOf, UTypeChip.rowView] using
     congrArg (fun input : UTypeChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -833,7 +833,7 @@ theorem uTypeViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- U-type's completed exposed Memory list evaluates to the canonical J-type pair. -/
 theorem uTypeChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨UTypeChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (jtypeMemoryInteractions (uTypeViewOf env)).map TypedInteraction.raw := by
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]

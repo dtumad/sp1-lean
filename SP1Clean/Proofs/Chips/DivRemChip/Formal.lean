@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Proofs.Chips.DivRemChip.Defs
 import SP1Clean.Proofs.Chips.DivRemChip.Cases
 import SP1Clean.Proofs.Chips.DivRemChip.Evidence
@@ -208,7 +210,7 @@ theorem evidenceSoundness :
       ((populateRow input_var >>= constrainRow input_var).operations i₀)
     simp only [Operations.Requirements, Circuit.bind_forAllNoOffset]
     refine ⟨?_, ?_⟩
-    · simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, Witnessable.witness_provable, witnessIR, Circuit.pure_def, Circuit.operations,
+    · simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Circuit.pure_def, Circuit.operations,
         Operations.forAllNoOffset, and_true]
     · simp only [constrainRow, Circuit.bind_forAllNoOffset, subcircuitWithAssertion,
         assertion, Circuit.pure_def, Circuit.operations, Operations.forAllNoOffset,
@@ -249,7 +251,7 @@ private theorem populateRow_interactionsWith_eq_nil (channel : RawChannel (ZMod 
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Operations.interactionsWith channel ((populateRow input).operations offset) = [] := by
   simp only [populateRow, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, Witnessable.witness_provable, witnessIR, Operations.localLength,
+    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Operations.localLength,
     Operations.interactionsWith_append, Operations.interactionsWith_witness,
     Operations.interactionsWith_nil, List.nil_append]
 
@@ -480,7 +482,7 @@ private theorem populateRow_subcircuitRequirements_eq_nil (input : Var Inputs (Z
     (offset : ℕ) :
     Operations.subcircuitChannelsWithRequirements ((populateRow input).operations offset) = [] := by
   simp only [populateRow, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, Witnessable.witness_provable, witnessIR, Operations.localLength,
+    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Operations.localLength,
     Operations.subcircuitChannelsWithRequirements_append,
     Operations.subcircuitChannelsWithRequirements_witness,
     Operations.subcircuitChannelsWithRequirements_nil, List.nil_append]
@@ -507,7 +509,7 @@ omit [Fact (2 ^ 24 < p)] in
 private theorem populateRow_shallowChannels_eq_nil (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Operations.shallowChannels ((populateRow input).operations offset) = [] := by
   simp only [populateRow, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, Witnessable.witness_provable, witnessIR, Operations.localLength,
+    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Operations.localLength,
     Operations.shallowChannels_append, Operations.shallowChannels_witness,
     Operations.shallowChannels_nil, List.nil_append]
 
@@ -522,7 +524,7 @@ omit [Fact (2 ^ 24 < p)] in
 private theorem populateRow_shallowInteractions_eq_nil (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Operations.shallowInteractions ((populateRow input).operations offset) = [] := by
   simp only [populateRow, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, Witnessable.witness_provable, witnessIR, Operations.localLength,
+    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Operations.localLength,
     Operations.shallowInteractions_append, Operations.shallowInteractions_witness,
     Operations.shallowInteractions_nil, List.nil_append]
 
@@ -568,7 +570,7 @@ theorem requirementsChannelsLawful (input : Var Inputs (ZMod p)) (offset : ℕ) 
 the public reader/selection/eight-case contract. The disclosed whole-chip seams are
 `evidenceSoundness`, `completeness`, and the requirements-channel law below. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.div_rem", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
@@ -618,5 +620,33 @@ theorem interactionsWith_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
           8, input.is_real⟩).map ChannelInteraction.toRaw := by
   simp only [main, Circuit.operations, Circuit.bind_def, Operations.interactionsWith_append,
     populateRow_interactionsWith_eq_nil, constrainRow_interactionsWith_state, List.nil_append]
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := DivRemChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq,
+    Air.Flat.Component.rowOperations_mk,
+    DivRemChip.circuit_main_eq]
+  simp [DivRemChip.main, DivRemChip.populateRow,
+    DivRemChip.constrainRow,
+    Readers.CPUState.circuit, Readers.CPUState.main,
+    Readers.RTypeReader.circuit, Readers.RTypeReader.main,
+    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
+    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit,
+    Readers.RegisterAccessTimestamp.main,
+    DivRemCompare.circuit, DivRemCompare.main,
+    DivRemCore.circuit, DivRemCore.main,
+    IsEqualWordOperation.circuit, IsEqualWordOperation.main,
+    IsZeroWordOperation.circuit, IsZeroWordOperation.main,
+    IsZeroOperation.circuit, IsZeroOperation.main,
+    AddOperation.circuit, AddOperation.main,
+    LtOperationUnsigned.circuit, LtOperationUnsigned.main,
+    U16CompareOperation.circuit, U16CompareOperation.main,
+    U16MSBOperation.circuit, U16MSBOperation.main,
+    MulOperation.circuit, MulOperation.main,
+    U16toU8OperationSafe.circuit, U16toU8OperationSafe.main,
+    DivRemChip.assertZeros, Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.DivRemChip

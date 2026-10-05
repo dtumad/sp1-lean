@@ -44,13 +44,13 @@ theorem LoadByteChip.eval_inputOpA0_eq_zero_of_mainConstraints
 /-- The completed LoadByte columns at one physical component row. -/
 noncomputable def LoadByteChip.physicalCols (env : Environment (ZMod p)) :
     LoadByteChip.Columns (ZMod p) :=
-  (⟨LoadByteChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env
+  ({ circuit := LoadByteChip.circuit (p := p) } : Component (ZMod p)).rowOutput env
 
 /-- The completed LoadByte row view at one physical component row. -/
 noncomputable def LoadByteChip.physicalView (env : Environment (ZMod p)) :
     Trace.RowView (ZMod p) :=
   LoadByteChip.rowView
-    ((⟨LoadByteChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
+    (({ circuit := LoadByteChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
     (LoadByteChip.physicalCols env)
 
 private theorem LoadByteChip.isLbBinaryConstraint_mem
@@ -89,7 +89,7 @@ private theorem natCastSmall_inj {a b : ℕ} (ha : a < 2 ^ 17) (hb : b < 2 ^ 17)
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem LoadByteChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      (⟨LoadByteChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := LoadByteChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (LoadByteChip.physicalView env).is_real = 1) :
     (LoadByteChip.physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var LoadByteChip.Inputs (ZMod p) := varFromOffset LoadByteChip.Inputs 0
@@ -102,7 +102,7 @@ theorem LoadByteChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
   obtain ⟨a, ha, hea⟩ := flagNatValue (bool_of_mul_pred gLb)
   obtain ⟨b, hb, heb⟩ := flagNatValue (bool_of_mul_pred gLbu)
   have inputEq : Eval.eval env input =
-      (⟨LoadByteChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := LoadByteChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset LoadByteChip.Inputs 0 env
   have projLb : (Eval.eval env input).is_lb = Expression.eval env input.is_lb := by
     simpa only [CircuitType.eval_expr] using

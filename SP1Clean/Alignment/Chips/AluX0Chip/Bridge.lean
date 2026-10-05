@@ -296,11 +296,11 @@ open Air.Flat Circuit
 
 /-- The completed AluX0 columns at one physical component row. -/
 noncomputable def physicalCols (env : Environment (ZMod p)) : Columns (ZMod p) :=
-  (⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env
+  ({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).rowOutput env
 
 /-- The completed AluX0 row view at one physical component row. -/
 noncomputable def physicalView (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
-  rowView ((⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) (physicalCols env)
+  rowView (({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).rowInput env) (physicalCols env)
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Evaluation of AluX0's input selector, exposed without decomposing the reader blocks. -/
@@ -369,16 +369,16 @@ re-base's per-chip strengthening fact). The Byte-channel guarantee premise is di
 `sp1_finishedChannel_guarantees` at the whole-ensemble level. -/
 theorem physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (_constraints :
-      (⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
     (guarantees :
-      (⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).operations.ChannelGuarantees
+      ({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).operations.ChannelGuarantees
         (Channels.byteChannel (p := p)).toRaw env)
     (real : (physicalView env).is_real = 1) :
     (physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var Inputs (ZMod p) := varFromOffset Inputs 0
   let offset := size Inputs
   have inputEq : Eval.eval env input =
-      (⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset Inputs 0 env
   have rowGuarantees : Operations.ChannelGuarantees (Channels.byteChannel (p := p)).toRaw env
       ((AluX0Chip.main input).operations offset) := by

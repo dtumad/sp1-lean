@@ -37,6 +37,23 @@ theorem operations (keys : List (Key (ZMod p))) (offset : ℕ) :
   simp only [main, forEach.operations_eq, circuit_norm]
   exact List.ofFn_getElem_eq_map keys (fun key => Operation.interact (channel.pulled (const key)).toRaw)
 
+/-- The fixed demand retains one literal interaction per supplied key. -/
+theorem raw_interactions (keys : List (Key (ZMod p))) (offset : ℕ) :
+    ((main keys ()).operations offset).interactions =
+      keys.map (fun key => (channel.pulled (const key)).toRaw) := by
+  rw [operations]
+  induction keys with
+  | nil => rfl
+  | cons key rest ih => simpa only [List.map_cons, Operations.interactions] using congrArg (List.cons _) ih
+
+/-- Fixed demand contains only interactions, so it adds no assertion-channel occurrences. -/
+theorem raw_constraints (keys : List (Key (ZMod p))) (offset : ℕ) :
+    ((main keys ()).operations offset).constraints = [] := by
+  rw [operations]
+  induction keys with
+  | nil => rfl
+  | cons key rest ih => simpa only [List.map_cons, Operations.constraints] using ih
+
 theorem values (keys : List (Key (ZMod p))) (offset : ℕ) (env : Environment (ZMod p))
     (selected : RawChannel (ZMod p)) :
     ((main keys ()).operations offset).interactionValuesWith selected env =
@@ -69,7 +86,20 @@ theorem constraints_hold (keys : List (Key (ZMod p))) (offset : ℕ) (env : Envi
 
 /-- Invoke the canonical source-to-target change inventory exactly once in a verifier. -/
 def closed (source target : MemorySnapshot) : ClosedVerifier (ZMod p) where
+  name := "final-memory-change"
   circuit := circuit ((source.changes target).map encode)
+  assumptions := by intros; trivial
+  lookups := by
+    simp only [circuit, operations]
+    induction (source.changes target).map (encode (p := p)) with
+    | nil => rfl
+    | cons _ _ ih => exact ih
+  public_interactions := by
+    intro interaction member env
+    simp only [circuit, raw_interactions] at member
+    obtain ⟨key, _, rfl⟩ := List.mem_map.mp member
+    simp [circuit_norm, AbstractInteraction.Requirements, ChannelInteraction.toRaw, Channel.toRaw,
+      Expression.eval]
   length_zero := by simp only [circuit, circuit_norm]
   constraints := by
     intro offset env
@@ -84,7 +114,7 @@ def closed (source target : MemorySnapshot) : ClosedVerifier (ZMod p) where
 
 /-- The exactly-once fixed demand contributes no additional assertion or lookup premise. -/
 theorem closed_constraints (source target : MemorySnapshot) (data : ProverData (ZMod p)) :
-    ((closed source target).singleton data).Constraints := by
+    (closed source target).singleton.Constraints data := by
   rw [ClosedVerifier.singleton_constraints]
   exact constraints_hold ((source.changes target).map encode) 0
     (Environment.fromInput (Input := unit) () data)

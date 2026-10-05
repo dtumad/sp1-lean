@@ -1,9 +1,10 @@
 # The witgen wire format (`version: 1`)
 
 This describes the transitional JSON export consumed by `rust/witgen-interp/`.
-The intended replacement is [Clean's direct Rust export](export.md). The committed
-artifacts under `export/witgen/` are instances of this format; `scripts/witgenExport.lean`
-is their only writer, and `scripts/check_witgen_export.sh` gates them.
+The intended replacement is [Clean's direct Rust export](export.md). Generated
+artifacts under `.lake/witgen-export/run.*/witgen/` are instances of this format;
+`scripts/witgenExport.lean` is their only writer. Paths below are relative to a fresh
+output directory, and `scripts/check_witgen_export.py` gates them.
 
 **Normative source.** This document is descriptive. The format is defined by the Clean
 pin's serializer — `Clean/Circuit/WitnessExport.lean` and `Clean/Circuit/Json.lean` at
@@ -14,7 +15,7 @@ code wins and this file gets fixed.
 
 ## The envelope
 
-One payload per chip, `export/witgen/<Chip>.witgen.json`:
+One payload per chip, `witgen/<Chip>.witgen.json`:
 
 ```json
 {"version": 1, "localLength": N, "operations": [ ... ]}
@@ -40,7 +41,7 @@ interactions included) for consumers that want them.
 ## What the payload does *not* carry — the manifest
 
 The wire format records neither the field, the input width, the chip name, nor the hint
-schema. `export/witgen/<Chip>.manifest.json` fills the gap:
+schema. `witgen/<Chip>.manifest.json` fills the gap:
 
 ```json
 {
@@ -59,7 +60,7 @@ schema. `export/witgen/<Chip>.manifest.json` fills the gap:
 ```
 
 The hint/data schemas are *derived* from the serialized payload (a walk for
-`hintGet`/`dataGet` nodes), never hand-maintained. `export/witgen/index.json` lists all
+`hintGet`/`dataGet` nodes), never hand-maintained. `witgen/index.json` lists all
 chips with their `inputWidth`/`localLength`, in the registry order of
 `SP1Clean/Soundness/SupportedMachine.lean` (a public witness-format matter).
 
@@ -159,33 +160,34 @@ their canonical value (`0 ≤ v < p`). The required operations: `+`, `·`, inver
 (for `ofU64`; on a prime field this is just `n mod p`). `p < 2³¹`, so products fit in
 `u64` — no Montgomery form is needed for a reference interpreter.
 
-## Sharing (`steps`) and the size guarantee
+## Sharing (`steps`)
 
-Authored witness programs are deeply shared terms, and the serializer would otherwise
-expand every shared subterm into a fresh copy — SP1's DivRem chip serializes to
-**1.22 GB** that way. The committed payloads are therefore produced through
-`Operations.witgenJsonShared?`, which rebuilds each witness program with every distinct
-non-trivial scalar subterm interned as a `let`-step (`WitgenIR.share`). The
-transformation is **proven evaluation-preserving** (`WitgenIR.eval_share`, axiom-clean),
-so consumers may treat shared and unshared payloads as the same program; the committed
-DivRem payload is 1.04 MB and the whole 25-chip export ~2.3 MB. An interpreter gets the
-same win at evaluation time: cost is proportional to distinct subterms, provided each
-step is evaluated once into the locals array (the loop above does exactly that).
+Author reused calculations with Clean's `witnessProgram` / `Witgen.M`: a monadic bind
+creates an IR step, while a plain Lean `let` can expand into repeated expression trees.
+DivRem's multiplication, product-limb, carry, remainder-negation and comparison programs
+share their computational operands this way, with kernel-checked evaluation preservation.
+The existing exportability test checks the serialized size of every DivRem witness payload.
+Interpreters evaluate each step once into the locals array.
+
+The exporter serializes the authored operations directly through Clean's
+`Operations.witgenJson?`. There is no downstream sharing transformation. The JSON
+interpreter remains migration evidence until Clean's Rust backend covers these chips.
 
 ## Determinism and byte stability
 
-JSON object key order is code-determined (descending by key name) and the exporter
-embeds no timestamps or revisions, so regeneration is byte-stable: the CI `test` job
-diffs a fresh export against the committed tree (`check_witgen_export.sh --regen`)
-on every run, which also catches wire-format drift on a Clean pin bump. To refresh
-deliberately after an intended change:
+The exporter embeds no timestamps or revisions. `python3 scripts/check_witgen_export.py`
+builds the full dependency closure, exports twice into a fresh ignored directory, checks
+both outputs against the independent SP1 dumps, and requires byte-identical native files.
+It then runs locked Rust tests on those files. A partial or zero-exit failed Lean run
+cannot pass: the driver checks complete per-chip output, inventory and fixture coverage.
 
-```
-lake build SP1CleanTest.Core.Exportable
-scripts/check_witgen_export.sh --regen --update   # inspect and commit the delta
-```
+Only `export/sp1dump/` stays committed as independent source evidence. Native outputs,
+logs and source/artifact fingerprints live under `.lake/witgen-export/run.*/`.
+Source fingerprints include uncommitted changes; a reused run must match the current
+sources and its recorded artifact hashes. Changing a pin requires fresh generation and
+comparison, not relabelling old files.
 
-## Row maps (`export/witgen/<Chip>.rowmap.json`)
+## Row maps (`witgen/<Chip>.rowmap.json`)
 
 The payload generates witness *cells*; a full trace **row** is the circuit's output
 struct pushed through the audited native→Rust layout map (`ChipFaithful`'s
@@ -205,7 +207,7 @@ and `interact` operations (bus multiplicities/messages, evaluable per row for
 dependency accounting), the three artifacts together contain everything needed to
 generate and self-check complete SP1 trace rows.
 
-## Differential fixtures (`export/testdata/<Chip>.trace.json`)
+## Differential fixtures (`testdata/<Chip>.trace.json`)
 
 The same writer's `--testdata` mode produces per-chip differential fixtures for external
 interpreters:
@@ -244,7 +246,7 @@ Row provenance is honest:
   from the operand values, mirroring SP1's own populate). `expectedRow` is the dumped
   SP1 `generate_trace` row verbatim. **The generation-time gate**: before anything is
   written, the exporter recomputes every event row — `FlatOperation.witgen` over the
-  shared operations, then the symbolic row map evaluated at the resulting cells — and
+  authored operations, then the symbolic row map evaluated at the resulting cells — and
   requires cell-for-cell equality with the dump, plus a value-level
   `circuitTraceRowMapped` spot check on event row 0. Present for **all 25 chips**.
 - `"padding"` — the empty-hint row, inputs recovered from the dumped padding row.
@@ -259,12 +261,11 @@ Row provenance is honest:
   declared tables. All 25 chips carry these.
 
 `expectedWitness` is always the Lean reference evaluation (`FlatOperation.witgen`) over
-the **shared** operation list — the same programs the wire carries
-(`WitgenIR.eval_share`).
+the authored operation list — the same programs Clean serializes.
 
 ## Whole-ensemble instances
 
-`ToClean/Air/EnsembleExport.lean` additionally emits a version-1 ensemble envelope. It has
+The retained legacy fixtures use a version-1 ensemble envelope. It has
 `version`, `modulus`, `components`, `verifier`, `channels`, and `fixedTables` fields. Each component
 has `name`, `inputWidth`, and `program` (the witness format above). A channel has `name` and `width`;
 a fixed table has `name`, `width`, and canonical field-element `rows`. The verifier is a component
@@ -290,10 +291,11 @@ inputs and then checks the complete ensemble. Event routing and provider constru
 separate compiler work. This executable AIR checker is not a cryptographic verifier; relying on
 its acceptance trusts the instance's provenance, serialization, and Rust implementation.
 
-`scripts/ensembleExportFixture.lean` is the sole writer of `export/ensemble/`.
-`bash scripts/check_ensemble_export.sh` regenerates into an ignored workspace directory and
-compares every fixture. Cargo tests accept its valid trace and reject a trace with balanced
-channels but forged fixed-lookup contents.
+The legacy ensemble serializer has been removed. The committed `export/ensemble/` files remain
+historical inputs to the JSON interpreter's parser and acceptance regressions.
+`scripts/ensembleExportFixture.lean` now uses Clean's built-in Rust emitter and writes only ignored
+build artifacts. `bash scripts/check_ensemble_export.sh` compiles that fresh Rust, compares its
+witnesses with Lean and exercises Clean's proof backend; see [export](export.md).
 
 ## SP1-specific facts a consumer may rely on
 

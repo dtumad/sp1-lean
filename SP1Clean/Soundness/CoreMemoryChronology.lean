@@ -38,14 +38,14 @@ theorem walk_rank_bound {α V : Type*} (edge : α → V × V) (rank : V → ℕ)
       · exact tailBound.2 row member
 
 -- Keep the decoded table row opaque while projecting the refresh theorem's time conclusion.
-theorem memoryBump_row_order (table : Table (ZMod p))
-    (component : table.component = ⟨MemoryBumpChip.circuit⟩)
-    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
+theorem memoryBump_row_order (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := MemoryBumpChip.circuit })
+    (constraints : table.Constraints data) (byte : table.ChannelGuarantees data byteChannel.toRaw)
     {physical : Array (ZMod p)} (member : physical ∈ table.table)
-    (real : (memoryBumpRow table physical).is_real = 1)
-    (bounds : MemoryClockBounds (MemoryBumpChip.pulledMessage (memoryBumpRow table physical))) :
-    MemoryMsg.timeNat (MemoryBumpChip.pulledMessage (memoryBumpRow table physical)) <
-      MemoryMsg.timeNat (MemoryBumpChip.pushedMessage (memoryBumpRow table physical)) :=
-  (memoryBump_isRefresh_of_component table component constraints byte member real bounds.1 bounds.2).2
+    (real : (memoryBumpRow data physical).is_real = 1)
+    (bounds : MemoryClockBounds (MemoryBumpChip.pulledMessage (memoryBumpRow data physical))) :
+    MemoryMsg.timeNat (MemoryBumpChip.pulledMessage (memoryBumpRow data physical)) <
+      MemoryMsg.timeNat (MemoryBumpChip.pushedMessage (memoryBumpRow data physical)) :=
+  (memoryBump_isRefresh_of_component table data component constraints byte member real bounds.1 bounds.2).2
 
 end SP1Clean.Soundness.NativeCore

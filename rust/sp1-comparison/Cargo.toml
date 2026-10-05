@@ -8,11 +8,40 @@ publish = false
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-slop-air = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824" }
-slop-algebra = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824" }
-sp1-core-machine = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824" }
-sp1-hypercube = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824" }
-sp1-primitives = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824" }
+slop-air = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824", optional = true }
+slop-algebra = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824", optional = true }
+sp1-core-machine = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824", optional = true }
+sp1-hypercube = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824", optional = true }
+sp1-primitives = { git = "https://github.com/succinctlabs/sp1", rev = "c84ada1ed5911f28c4d3c9d0ed2f9e6cd7edb824", optional = true }
+
+# The backend and emitter use the same published Clean revision as lake-manifest.json.
+clean_backend = { git = "https://github.com/dtumad/clean", rev = "c4abcbb9728e8e2805ffc0a383eba96422602c27", optional = true }
+p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-koala-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-commit = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-fri = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-merkle-tree = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+rand = { version = "0.10", optional = true }
 
 [features]
-mprotect = ["sp1-core-machine/mprotect"]
+default = ["inventory"]
+inventory = ["dep:slop-air", "dep:slop-algebra", "dep:sp1-core-machine",
+    "dep:sp1-hypercube", "dep:sp1-primitives"]
+mprotect = ["inventory", "sp1-core-machine/mprotect"]
+clean-export = ["dep:clean_backend", "dep:p3-air", "dep:p3-field", "dep:p3-matrix",
+    "dep:p3-koala-bear", "dep:p3-challenger", "dep:p3-commit", "dep:p3-dft", "dep:p3-fri",
+    "dep:p3-merkle-tree", "dep:p3-symmetric", "dep:rand"]
+
+[[bin]]
+name = "sp1-clean-comparison"
+path = "src/main.rs"
+required-features = ["inventory"]
+
+[[test]]
+name = "clean_export"
+required-features = ["clean-export"]

@@ -70,8 +70,9 @@ actual elapsed-work bounds from raw constraints and balance. Every event consume
 eight ticks; this proves the native preset's event ceiling, including 264-tick host calls.
 It does **not** enforce an arbitrarily tighter independent `events` ceiling.
 
-`ToClean/Air/PublicVerifier.lean` preserves the literal tables and all-channel interaction lists,
-including order, repetitions and zero-multiplicity occurrences. The installed statement is proved
+`ToClean/Air/PublicVerifier.lean` preserves the literal tables and every existing channel ledger,
+including order, repetitions and zero-multiplicity occurrences. Its fresh assertion channel
+accounts for the endpoint checks. The installed statement is proved
 equivalent to the original raw statement plus the exact endpoint checks. The semantic domain
 proves these checks for completeness; no conservative expansion estimate is imposed here.
 Stopped identities retain their original clock and need no active-event phase.
@@ -93,8 +94,8 @@ it prevents an endpoint-only check from being mistaken for complete resource enf
 
 ## Exact physical accounting
 
-`ToClean/Air/Footprint.lean` measures the actual Clean witness, with its singleton verifier and
-every physical table. For each raw channel, `channelOccurrences` is the sum of each table's
+`ToClean/Air/Footprint.lean` measures the public verifier's operations and every physical table.
+For each raw channel, `channelOccurrences` adds the verifier's occurrence count to each table's
 height times its circuit's syntactic interaction width. `channelOccurrences_eq_length` proves
 this is exactly the evaluated ledger length. Repeated keys, zero multiplicities, refreshes and
 inactive padding all spend capacity. No deduplication or multiplicity filter is involved.
@@ -105,7 +106,7 @@ The retained ordinary compiler consumes `ChannelCapacity` in `NativeTraceAdmissi
 functional completeness proof. `Proofs/Completeness/PhysicalFootprint.lean` proves its exact
 height and demand formulas from the existing event buckets and provider occurrence lists:
 one row per instruction event or provider occurrence, one mandatory Halt padding row, an empty
-ordinary SyscallInstrs table, and one verifier row. Provider closure and refresh occurrences are
+ordinary SyscallInstrs table, and the separate public verifier ledger. Provider closure and refresh occurrences are
 already in those lists. The resulting `physicalFits_iff` and `channelCapacity_iff` are exact
 arithmetic equivalences; they do not replace the accepted language with an upper estimate.
 
@@ -113,8 +114,10 @@ arithmetic equivalences; they do not replace the accepted language with an upper
 Raw balance gives the native `p-1` occurrence ceiling on **every registered channel**, including
 host/boundary channels. Any table with a positive syntactic interaction width on a registered
 channel inherits its native height bound. A silent table needs separate evidence. Installing
-the endpoint checker preserves both physical budgets exactly in both directions and adds no
-rows or interactions.
+the endpoint checker preserves every physical row and existing channel ledger. Its three
+assertions add exactly six occurrences on a fresh channel. Thus the installed witness fits
+exactly when the base witness fits and the channel ceiling is at least six. The lifting theorem
+keeps this equivalence explicit for arbitrary budgets; the native field bound covers this cost.
 
 This is not yet a proof that the fixed semantic limits imply full mixed construction capacity.
 Independent ceilings of `p-1` do not imply that the sum of provider, boundary, host and padding
@@ -150,7 +153,6 @@ actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by
 |---|---|
 | `EventExecutionTrace`, `CoreShardSemanticWitness` | Retain for ordinary/exact-Core consumers; migrate the mixed compiler to the complete path in A6. Delete only after retained exact/export consumers have adapters. |
 | `InstructionPlanReady`, `NativeCompilerReady`, `NativeTraceReady` | Prove their applicable fields from semantics for retained APIs; no occurrence in the new domain. Remove wrappers once all relevant consumers use the derived results. The legacy `syscallFree` field cannot describe mixed execution. |
-| `NativeTraceFootprint` | The active ordinary compiler now consumes shared `ChannelCapacity`. Retain the five-field record and old theorem signatures only as proved compatibility views; their equivalence uses this constructor's two silent host channels. Delete after external callers migrate. Never reuse that equivalence for mixed host traces. |
 | Explicit numeric range checks in older chip/Sail lemmas | Retain encoding-specific statements, derive their range facts from `NativeLayout`; factor more generally only with a migrated consumer. |
 
 `ExecutionMemory` proves presence and outside-domain framing along the existing Sail/host path,

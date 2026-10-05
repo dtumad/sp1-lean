@@ -22,7 +22,7 @@ private theorem initialView_spec (image : ProgramImage)
     (constraints : view.component.operations.ConstraintsHold env)
     (byte : view.component.operations.ChannelGuarantees byteChannel.toRaw env) :
     view.component.Spec env := by
-  have assumptions : view.component.Assumptions env := by
+  have assumptions : view.component.CircuitAssumptions env := by
     simp only [InitialMemoryEnsemble.views, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl <;> trivial
   have channels : view.component.circuit.channelsWithGuarantees ⊆
@@ -49,15 +49,16 @@ private theorem initialView_spec (image : ProgramImage)
 /-- A proof view of the actual combined table list, with just the initialization verifier.
 No row or prover data is synthesized or replaced. -/
 def initialWitness {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image)) :
-    EnsembleWitness (InitialMemoryEnsemble.ensemble (p := p) image (afterInitialTables (p := p) image) []) :=
-  EnsembleWitness.ofTables _ witness.tables witness.data () witness.tables_map_component witness.same_data
+    EnsembleWitness (InitialMemoryEnsemble.ensemble (p := p) image (afterInitialTables (p := p) image) []
+      (baseEnsemble image).unique_names) :=
+  EnsembleWitness.ofTables _ witness.tables () witness.tables_map_component
 
 /-- The Byte closure of the combined ensemble discharges every initial provider's local
 assumptions. Other instruction/finalizer specifications are not required at this stage. -/
 theorem initialTables_spec {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ table ∈ (initialWitness witness).tables.take (InitialMemoryEnsemble.views (p := p) image).length,
-      table.Spec := by
+      table.Spec witness.data := by
   intro table member row rowMem
   have componentMem : table.component ∈ (InitialMemoryEnsemble.views (p := p) image).map (·.component) := by
     have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -65,9 +66,8 @@ theorem initialTables_spec {image : ProgramImage} (witness : EnsembleWitness (en
     simpa only [InitialMemoryEnsemble.ensemble, OrderedBoundaryEnsemble.ensemble,
       List.take_left', List.length_map] using mapped
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
-  have tableMem : table ∈ witness.allTables :=
-    witness.mem_allTables_of_mem_tables (List.mem_of_mem_take member)
-  have byte := (finishedChannel_guarantees image witness constraints balanced table tableMem).1 row rowMem
+  have tableMem : table ∈ witness.tables := List.mem_of_mem_take member
+  have byte := ((finishedChannel_guarantees image witness constraints balanced).2 table tableMem).1 row rowMem
   have checked := constraints table tableMem row rowMem
   rw [← same] at byte checked ⊢
   exact initialView_spec image view viewMem _ checked byte
@@ -95,9 +95,9 @@ theorem afterInitialTables_silent (image : ProgramImage) :
     ∀ component ∈ afterInitialTables (p := p) image,
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ component.circuit.channels := by
   intro component member
-  have old (member : component ∈ (sp1Ensemble (p := p)).allTables) :
+  have old (member : component ∈ (sp1Ensemble (p := p)).tables) :
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ component.circuit.channels :=
-    fun used => initialChannel_not_old (sp1Ensemble_allTables_channels_subset component member used)
+    fun used => initialChannel_not_old (sp1Ensemble_tables_channels_subset component member used)
   simp only [afterInitialTables, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with ((member | rfl) | member) | member
   · simp only [OrderedMemoryEnsemble.Inventory.views, FinalMemoryEnsemble.inventory,
@@ -123,63 +123,51 @@ theorem afterInitialTables_silent (image : ProgramImage) :
         byteChannel, Channel.toRaw]
   · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ [programChannel.toRaw]
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel, Channel.toRaw]
-  · exact old (Ensemble.mem_allTables_of_mem_tables (by
-      rw [sp1Ensemble_tables]; exact List.mem_append_left _ member))
+  · exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_left _ member)
   · have providerMem : component ∈ sp1ProviderTables (p := p) := by
       rcases member with member | member
       · exact List.mem_of_mem_take member
       · exact List.mem_of_mem_drop member
-    exact old (Ensemble.mem_allTables_of_mem_tables (by
-      rw [sp1Ensemble_tables]; exact List.mem_append_right _ providerMem))
+    exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_right _ providerMem)
 
 private theorem verifier_initial_interactions (image : ProgramImage) (env : Environment (ZMod p)) :
-    (⟨verifier image⟩ : Component (ZMod p)).operations.interactionValuesWith
+    (verifierInteractions image).circuitOperations.interactionValuesWith
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw env =
       [(OrderedBoundary.channel OrderedInitialProvider.channelName).pushedValue OrderedMemoryEnsemble.startKey,
        (OrderedBoundary.channel OrderedInitialProvider.channelName).pulledValue OrderedMemoryEnsemble.endKey] := by
-  have stateEmpty (input : Var SP1PublicIO (ZMod p)) (offset : ℕ) :=
-    InteractionRecovery.interactionsWith_main_eq_nil sp1StateVerifier.base
-      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw input offset (by
-        exact fun used => initialChannel_not_old
-          (sp1Ensemble_allTables_channels_subset _ Ensemble.mem_allTables_verifierTable used))
-  have finalEmpty (offset : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
-    (OrderedBoundaryVerifier.circuit (p := p) OrderedFinalProvider.channelName
-      OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey).base
-    (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw () offset (by
-      change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
-        [(OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-      simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName, Channel.toRaw])
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
-    Component.rowOperations, verifier, verifierMain, circuit_norm]
-  simp only [Operations.interactionsWith, OrderedBoundaryVerifier.circuit] at finalEmpty
-  simp only [Operations.interactionsWith] at stateEmpty
-  simp only [GeneralFormalCircuit.toSubcircuit_interactions, stateEmpty, finalEmpty,
-    List.nil_append, List.append_nil, OrderedBoundaryVerifier.circuit]
-  have initial (offset : ℕ) := OrderedBoundaryVerifier.main_interactions (p := p) OrderedInitialProvider.channelName
-    OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey () offset
-  simp only [Operations.interactionsWith] at initial
-  rw [initial]
+  have original : ((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).interactionsWith
+      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw =
+      [((OrderedBoundary.channel OrderedInitialProvider.channelName).pushed (const (OrderedMemoryEnsemble.startKey (p := p)))).toRaw,
+       ((OrderedBoundary.channel OrderedInitialProvider.channelName).pulled (const (OrderedMemoryEnsemble.endKey (p := p)))).toRaw] := by
+    simp [Operations.interactionsWith, verifierMain, GeneralFormalCircuit.toSubcircuit_interactions,
+      sp1StateVerifier, sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
+      OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
+      stateChannel, byteChannel, exitChannel, circuit_norm]
+  simp only [Verifier.Program.circuitOperations, Verifier.Program.operations,
+    Operations.interactionValuesWith, Operations.interactionsWith, verifierInteractions_interactions]
+  change (((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).interactionsWith _).map _ = _
+  rw [original]
   simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Channel.eval_pulled, ProvableType.eval_const]
-  rfl
 
-/-- Restricting the verifier to initialization preserves the exact private-channel ledger. -/
+/-- Restricting the public verifier to initialization preserves the exact private-channel ledger. -/
 theorem initialWitness_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     (initialWitness witness).interactionsWith (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw =
       witness.interactionsWith (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw := by
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.allTables, List.flatMap_cons]
-  apply congrArg (fun front => front ++ witness.tables.flatMap
-    (·.interactionsWith (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw))
-  simp only [Table.interactionsWith, EnsembleWitness.verifierTable_flatMap,
-    EnsembleWitness.verifierTable_environment, EnsembleWitness.verifierTable_component]
-  change (InitialMemoryEnsemble.ensemble (p := p) image (afterInitialTables image) []).verifierTable.operations.interactionValuesWith
-      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw _ =
-    (⟨verifier image⟩ : Component (ZMod p)).operations.interactionValuesWith
-      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw _
-  rw [verifier_initial_interactions]
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-    Ensemble.verifierTable, InitialMemoryEnsemble.ensemble,
-    OrderedBoundaryEnsemble.ensemble, OrderedBoundaryVerifier.circuit]
+  have different : bootChannel (p := p) image ≠
+      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw := by
+    intro equal
+    exact (VerifierChannel.fresh "sp1.native.boot" (baseEnsemble (p := p) image)).unregistered
+      (show bootChannel image ∈ (baseEnsemble image).channels from equal.symm ▸ List.mem_cons_self ..)
+  change _ = (verifierProgram image _).circuitOperations.interactionValuesWith _
+    (Environment.fromInput witness.publicInput witness.data) ++ _
+  rw [verifierProgram_values, Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil,
+    verifier_initial_interactions]
+  apply congrArg (fun front => front ++ witness.tableContext.interactionsWith
+    (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw)
+  change (OrderedBoundaryVerifier.verifierProgram _ _ _).circuitOperations.interactionValuesWith _ _ = _
+  simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
+    Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
 
 /-- Raw constraints and actual balance force a unique initial record per decoded register/RAM
@@ -192,7 +180,7 @@ theorem initial_records_locations_nodup {image : ProgramImage}
     (initialWitness witness) (afterInitialTables_silent image) (initialTables_spec witness constraints balanced)
   change BalancedInteractions ((initialWitness witness).interactionsWith _)
   rw [initialWitness_interactions]
-  exact balanced _ (List.mem_cons_self ..)
+  exact balanced _ (List.mem_append_left _ (List.mem_cons_self ..))
 
 omit [Fact (2 ^ 24 < p)] in
 theorem component_spec_of_byte (component : Component (ZMod p))
@@ -200,7 +188,7 @@ theorem component_spec_of_byte (component : Component (ZMod p))
       [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw,
         (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
         (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw])
-    (env : Environment (ZMod p)) (assumptions : component.Assumptions env)
+    (env : Environment (ZMod p)) (assumptions : component.CircuitAssumptions env)
     (constraints : component.operations.ConstraintsHold env)
     (byte : component.operations.ChannelGuarantees byteChannel.toRaw env) : component.Spec env := by
   apply (Component.weakSoundness assumptions constraints ?_).1
@@ -219,13 +207,39 @@ and both public endpoints have canonical limbs. -/
 theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     witness.publicInput.LimbBounds ∧ witness.publicInput.BootFor image := by
-  have spec : witness.verifierTable.Spec := by
-    intro row member
-    exact component_spec_of_byte (⟨verifier image⟩ : Component (ZMod p)) (List.Subset.refl _) _ (by trivial)
-      (constraints _ witness.mem_allTables_verifierTable row member)
-      ((finishedChannel_guarantees image witness constraints balanced _
-        witness.mem_allTables_verifierTable).1 row member)
-  exact EnsembleWitness.verifierSpec_iff_verifierTable_spec.mpr spec
+  have boot := (boot_balanced_iff witness).mp
+    (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
+  have byte := (finishedChannel_guarantees image witness constraints balanced).1.1
+  have sourceByte : ({ circuit := verifier image } : Component (ZMod p)).operations.ChannelGuarantees
+      byteChannel.toRaw (Environment.fromInput witness.publicInput witness.data) := by
+    intro interaction member selected
+    apply byte interaction ?_ selected
+    simp only [ensemble, Ensemble.verifierOperations, verifierProgram,
+      Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.operations_bind,
+      Verifier.Operations.circuitOperations, Verifier.Operations.interactions, List.map_append,
+      Operations.interactions_append, List.mem_append]
+    left
+    change interaction ∈ ((verifierInteractions image).main (varFromOffset SP1PublicIO 0)).circuitOperations.interactions
+    rw [verifierInteractions_interactions]
+    simpa only [Component.interactions_eq, Component.rowOperations, verifier, verifierMain,
+      GeneralFormalCircuit.toSubcircuit_interactions, sp1StateVerifier,
+      sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
+      circuit_norm] using member
+  have checked : ({ circuit := verifier image } : Component (ZMod p)).operations.ConstraintsHold
+      (Environment.fromInput witness.publicInput witness.data) := by
+    rw [Operations.ConstraintsHold, Component.constraints_eq, Component.lookups_eq]
+    change (∀ expression ∈ ((verifierMain image (varFromOffset SP1PublicIO 0)).operations (size SP1PublicIO)).constraints,
+      Expression.eval (Environment.fromInput witness.publicInput witness.data) expression = 0) ∧ _
+    constructor
+    · have checks := (verifierChecks_iff image (Environment.fromInput witness.publicInput witness.data)).mpr
+        (by simpa only [ProvableType.eval_fromInput_varFromOffset_zero] using boot)
+      simpa only [verifierMain_constraints] using checks
+    · simp [Component.rowOperations, verifier, verifierMain, sp1StateVerifier, sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
+        circuit_norm]
+  have spec := component_spec_of_byte ({ circuit := verifier image } : Component (ZMod p))
+    (List.Subset.refl _) _ (by trivial) checked sourceByte
+  simpa only [Component.Spec, verifier, Component.rowInput, circuit_norm,
+    ProvableType.valueFromOffset_zero_fromInput_eq] using spec
 
 private theorem programIndex_bound {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) : 6 < witness.tables.length := by
@@ -240,7 +254,7 @@ def programTable {image : ProgramImage} (witness : EnsembleWitness (ensemble (p 
 
 theorem programTable_component {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    (programTable witness).component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) :=
+    (programTable witness).component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) :=
   (witness.same_circuits 6 (by change 6 < (tables image).length; rw [tables_length]; decide)).symm
 
 /-- Every physical Program row is authenticated against this image's ROM and official Sail,
@@ -249,10 +263,9 @@ theorem program_row_committed {image : ProgramImage} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints)
     (row : Array (ZMod p)) (member : row ∈ (programTable witness).table) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg ((⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)).rowInput
-        ((programTable witness).environment row)).toMessage) := by
-  have checked := constraints (programTable witness) (witness.mem_allTables_of_mem_tables
-    (List.getElem_mem (programIndex_bound witness))) row member
+      (rowOfMsg (({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)).rowInput
+        (Environment.fromArray row witness.data)).toMessage) := by
+  have checked := constraints (programTable witness) (List.getElem_mem (programIndex_bound witness)) row member
   rw [programTable_component witness] at checked
   exact DecodedProgramProvider.constraints_committed valid _ checked
 
@@ -260,7 +273,7 @@ theorem program_row_committed {image : ProgramImage} (valid : image.Valid)
 Together with authentication and uniqueness, this is the initialization interface for grounding. -/
 theorem initial_memory_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    (witness.tables.take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
+    (witness.tables.take 3).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
       (InitialMemoryEnsemble.records (initialWitness witness)).map memoryChannel.pushedValue :=
   InitialMemoryEnsemble.memory_interactions_eq (initialWitness witness)
 

@@ -19,7 +19,7 @@ decomposition threads them through verbatim — no per-chip `MemoryEmissionShape
 
 The chain mirrors, lemma for lemma:
 
-* `witness_verifierMemoryInteractions_eq_nil` ← `witness_verifierStateInteractions_eq` (here the
+* `witness_verifierMemoryInteractions_eq_nil` ← `stateVerifier_stateInteractions` (here the
   verifier is nil, not the boundary pair);
 * `witness_nonMemoryProviderTable_memoryInteractions_eq_nil` /
   `witness_providerMemoryInteractions_eq` ← `witness_providerStateInteractions_eq_nil` (here the
@@ -79,19 +79,16 @@ end Distribution
 
 /-! ## The boundary verifier contributes nothing to the Memory channel -/
 
-/-- The public State-boundary verifier does not participate in the Memory channel: it declares only
-the State channel.  Mirror of `witness_verifierStateInteractions_eq`, but here the verifier's Memory
-contribution is empty (State is where the verifier is active). -/
+/-- The public verifier contributes State, Byte and Exit traffic, with no Memory occurrence. -/
 theorem witness_verifierMemoryInteractions_eq_nil
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedTableInteractionsWith witness.verifierTable memoryChannel = [] := by
+    typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations memoryChannel
+      (Environment.fromInput witness.publicInput witness.data) = [] := by
   apply List.map_eq_nil_iff.mp
-  rw [typedTableInteractionsWith_raw]
-  apply Table.interactionsWith_nil_of_channel_not_mem
-  change memoryChannel.toRaw ∉
-    [stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.exitChannel.toRaw]
-  simp [Channels.memoryChannel_eq_stateChannel_false, Channels.memoryChannel_eq_byteChannel_false,
-    Channels.memoryChannel_eq_exitChannel_false]
+  rw [typedInteractionValuesWith_raw]
+  simp only [sp1Ensemble, Ensemble.verifierOperations, sp1StateVerifierProgram,
+    Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions_values]
+  simp [Operations.interactionValuesWith, sp1StateVerifierMain, circuit_norm]
 
 /-! ## The non-memory providers contribute nothing to the Memory channel -/
 
@@ -107,7 +104,7 @@ theorem witness_nonMemoryProviderTable_memoryInteractions_eq_nil
     (notInit : i ≠ memoryInitProviderIndex) (notFinalize : i ≠ memoryFinalizeProviderIndex)
     (notBump : i ≠ memoryBumpIndex) (notHalt : i ≠ haltIndex)
     (notSyscall : i ≠ syscallInstrsIndex) :
-    typedTableInteractionsWith witness.tables[i] memoryChannel = [] := by
+    typedTableInteractionsWith witness.tables[i] witness.data memoryChannel = [] := by
   change 25 ≤ i at lower
   change i < 55 at upper
   change i ≠ 53 at notHalt
@@ -151,18 +148,18 @@ from the ensemble table order and each component's declared channels; the three-
 `witness_providerProgramInteractions_eq`. -/
 theorem witness_providerMemoryInteractions_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (witness.tables.drop 25).flatMap (typedTableInteractionsWith · memoryChannel) =
-      typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel ++
-        (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel ++
-          (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel ++
-            (typedTableInteractionsWith (haltTable witness) memoryChannel ++
-              typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel))) := by
+    (witness.tables.drop 25).flatMap (typedTableInteractionsWith · witness.data memoryChannel) =
+      typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel ++
+        (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data memoryChannel ++
+          (typedTableInteractionsWith (memoryBumpTable witness) witness.data memoryChannel ++
+            (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel ++
+              typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel))) := by
   have tablesLength : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
   have interactionsAtOther (i : ℕ) (bound : i < witness.tables.length)
       (h : 25 ≤ i ∧ i < 55 ∧ i ≠ 49 ∧ i ≠ 50 ∧ i ≠ 51 ∧ i ≠ 53 ∧ i ≠ 54) :
-      typedTableInteractionsWith witness.tables[i] memoryChannel = [] :=
+      typedTableInteractionsWith witness.tables[i] witness.data memoryChannel = [] :=
     witness_nonMemoryProviderTable_memoryInteractions_eq_nil witness i h.1 h.2.1 bound
       h.2.2.1 h.2.2.2.1 h.2.2.2.2.1 h.2.2.2.2.2.1 h.2.2.2.2.2.2
   repeat rw [List.drop_eq_getElem_cons (by omega)]
@@ -195,11 +192,11 @@ theorem typedEnsembleMemoryInteractions_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     typedEnsembleInteractionsWith witness memoryChannel =
       decodedWitnessInstructionInteractionsWith witness.data witness.tables memoryChannel ++
-        (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel ++
-          (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel ++
-            (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel ++
-              (typedTableInteractionsWith (haltTable witness) memoryChannel ++
-                typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)))) := by
+        (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel ++
+          (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data memoryChannel ++
+            (typedTableInteractionsWith (memoryBumpTable witness) witness.data memoryChannel ++
+              (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel ++
+                typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel)))) := by
   rw [typedEnsembleInteractionsWith_partition, witness_verifierMemoryInteractions_eq_nil,
     witness_providerMemoryInteractions_eq, List.nil_append]
 
@@ -219,15 +216,15 @@ theorem producedMessages_typedEnsembleMemory_eq
     producedMessages (typedEnsembleInteractionsWith witness memoryChannel) =
       (decodedInstructionRows (p := p) witness.tables).flatMap
           (fun decoded => decoded.producedMemoryMessages witness.data) ++
-        (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+        (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
             memoryChannel) ++
-          (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+          (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
             memoryChannel) ++
-            (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               memoryChannel) ++
-              (producedMessages (typedTableInteractionsWith (haltTable witness)
+              (producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
                 memoryChannel) ++
-                producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
                   memoryChannel))))) := by
   rw [typedEnsembleMemoryInteractions_eq, producedMessages_append, producedMessages_append,
     producedMessages_append, producedMessages_append, producedMessages_append,
@@ -241,15 +238,15 @@ theorem consumedMessages_typedEnsembleMemory_eq
     consumedMessages (typedEnsembleInteractionsWith witness memoryChannel) =
       (decodedInstructionRows (p := p) witness.tables).flatMap
           (fun decoded => decoded.consumedMemoryMessages witness.data) ++
-        (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+        (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
             memoryChannel) ++
-          (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+          (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
             memoryChannel) ++
-            (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               memoryChannel) ++
-              (consumedMessages (typedTableInteractionsWith (haltTable witness)
+              (consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
                 memoryChannel) ++
-                consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
                   memoryChannel))))) := by
   rw [typedEnsembleMemoryInteractions_eq, consumedMessages_append, consumedMessages_append,
     consumedMessages_append, consumedMessages_append, consumedMessages_append,
@@ -274,25 +271,25 @@ theorem realDecodedMemory_perm
         signedVal interaction.mult = 1) :
     ((decodedInstructionRows (p := p) witness.tables).flatMap
         (fun decoded => decoded.producedMemoryMessages witness.data) ++
-      (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel) ++
-        (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+      (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel) ++
+        (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
           memoryChannel) ++
-          (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             memoryChannel) ++
-            (producedMessages (typedTableInteractionsWith (haltTable witness)
+            (producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
               memoryChannel) ++
-              producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+              producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
                 memoryChannel)))))).Perm
     ((decodedInstructionRows (p := p) witness.tables).flatMap
         (fun decoded => decoded.consumedMemoryMessages witness.data) ++
-      (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel) ++
-        (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+      (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel) ++
+        (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
           memoryChannel) ++
-          (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             memoryChannel) ++
-            (consumedMessages (typedTableInteractionsWith (haltTable witness)
+            (consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
               memoryChannel) ++
-              consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+              consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
                 memoryChannel)))))) := by
   classical
   have channelBalanced := typedInteractions_balanced witness balanced memoryChannel
@@ -320,28 +317,28 @@ theorem realDecodedMemory_perlocBalance
     (Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
       ((decodedInstructionRows (p := p) witness.tables).flatMap
           (fun decoded => decoded.producedMemoryMessages witness.data) ++
-        (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+        (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
             memoryChannel) ++
-          (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+          (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
             memoryChannel) ++
-            (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               memoryChannel) ++
-              (producedMessages (typedTableInteractionsWith (haltTable witness)
+              (producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
                 memoryChannel) ++
-                producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
                   memoryChannel)))))) : Multiset (MemoryMsg (ZMod p))) =
     Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
       ((decodedInstructionRows (p := p) witness.tables).flatMap
           (fun decoded => decoded.consumedMemoryMessages witness.data) ++
-        (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+        (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
             memoryChannel) ++
-          (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+          (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
             memoryChannel) ++
-            (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               memoryChannel) ++
-              (consumedMessages (typedTableInteractionsWith (haltTable witness)
+              (consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
                 memoryChannel) ++
-                consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
+                consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
                   memoryChannel)))))) := by
   classical
   rw [Multiset.coe_eq_coe.mpr (realDecodedMemory_perm witness balanced memBinary)]
@@ -400,10 +397,10 @@ theorem memoryInitProvider_memoryInteractions
 explicit multiplicity input. -/
 theorem memoryInitProvider_typedMult (env : Environment (ZMod p))
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedInteractionValuesWith (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations
+    (hi : i ∈ typedInteractionValuesWith ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations
       memoryChannel env) :
     i.mult = env.get (size MemoryMsg) := by
-  have hint : (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations.interactionsWith
+  have hint : ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations.interactionsWith
       memoryChannel.toRaw =
       [(pushedIf (channel := memoryChannel)
         (varFromOffset MemoryProviderChip.Inputs 0).multiplicity
@@ -412,7 +409,7 @@ theorem memoryInitProvider_typedMult (env : Environment (ZMod p))
     exact memoryInitProvider_memoryInteractions (varFromOffset MemoryProviderChip.Inputs 0)
       (size MemoryProviderChip.Inputs)
   have hraw : i.raw ∈ (typedInteractionValuesWith
-      (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations memoryChannel env).map
+      ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations memoryChannel env).map
       TypedInteraction.raw := List.mem_map_of_mem hi
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map, hint] at hraw
   simp only [List.map_cons, List.map_nil, List.mem_singleton] at hraw
@@ -423,9 +420,9 @@ theorem memoryInitProvider_typedMult (env : Environment (ZMod p))
 /-- Every active init-provider Memory interaction has signed multiplicity in `{0, 1}` (a push at a
 boolean gate), never `-1`. -/
 theorem memoryInitProvider_signedVal (env : Environment (ZMod p))
-    (constraints : (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+    (constraints : ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations.ConstraintsHold env)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedInteractionValuesWith (⟨MemoryProviderChip.circuit⟩ : Component (ZMod p)).operations
+    (hi : i ∈ typedInteractionValuesWith ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations
       memoryChannel env) :
     signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
@@ -455,14 +452,13 @@ init-provider *table* is a boolean-gated push, its per-row circuit constraints c
 private theorem memoryInitProviderTable_signedVal
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel) :
+    (hi : i ∈ typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel) :
     signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
   rw [typedTableInteractionsWith] at hi
   obtain ⟨row, rowMem, hi⟩ := List.mem_flatMap.mp hi
   rw [memoryInitProviderTable_component witness] at hi
-  have tableConstraints : (memoryInitProviderTable witness).Constraints :=
-    constraints (memoryInitProviderTable witness) (witness.mem_allTables_of_mem_tables
-      (List.getElem_mem (memoryInitProviderIndex_lt_tablesLength witness)))
+  have tableConstraints : (memoryInitProviderTable witness).Constraints witness.data :=
+    constraints (memoryInitProviderTable witness) (List.getElem_mem (memoryInitProviderIndex_lt_tablesLength witness))
   have rowConstraints := tableConstraints row rowMem
   rw [memoryInitProviderTable_component witness] at rowConstraints
   exact memoryInitProvider_signedVal _ rowConstraints i hi
@@ -471,9 +467,9 @@ private theorem memoryInitProviderTable_signedVal
 Memory channel's consumed side: `consumedMessages` (the `signedVal = -1` filter) is empty. -/
 theorem initPure (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
-    consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel)
+    consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel)
       = [] := by
-  have key : ∀ i ∈ typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel,
+  have key : ∀ i ∈ typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel,
       signedVal i.mult ≠ -1 := fun i hi => by
     rcases memoryInitProviderTable_signedVal witness constraints i hi with h | h <;> rw [h] <;>
       norm_num
@@ -508,10 +504,10 @@ omit [Fact (2 ^ 24 < p)] in
 negation of its explicit selector input. -/
 theorem memoryFinalizeProvider_typedMult (env : Environment (ZMod p))
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedInteractionValuesWith (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations
+    (hi : i ∈ typedInteractionValuesWith ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations
       memoryChannel env) :
     i.mult = -(env.get (size MemoryMsg)) := by
-  have hint : (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations.interactionsWith
+  have hint : ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations.interactionsWith
       memoryChannel.toRaw =
       [(pulledIf (channel := memoryChannel)
         (varFromOffset MemoryFinalizeChip.Inputs 0).multiplicity
@@ -520,7 +516,7 @@ theorem memoryFinalizeProvider_typedMult (env : Environment (ZMod p))
     exact memoryFinalizeProvider_memoryInteractions (varFromOffset MemoryFinalizeChip.Inputs 0)
       (size MemoryFinalizeChip.Inputs)
   have hraw : i.raw ∈ (typedInteractionValuesWith
-      (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations memoryChannel env).map
+      ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations memoryChannel env).map
       TypedInteraction.raw := List.mem_map_of_mem hi
   rw [typedInteractionValuesWith_raw, Operations.interactionValuesWith_eq_map, hint] at hraw
   simp only [List.map_cons, List.map_nil, List.mem_singleton] at hraw
@@ -531,9 +527,9 @@ theorem memoryFinalizeProvider_typedMult (env : Environment (ZMod p))
 /-- Every active finalize-provider Memory interaction has signed multiplicity in `{-1, 0}` (a pull at
 a boolean gate), never `1`. -/
 theorem memoryFinalizeProvider_signedVal (env : Environment (ZMod p))
-    (constraints : (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+    (constraints : ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations.ConstraintsHold env)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedInteractionValuesWith (⟨MemoryFinalizeChip.circuit⟩ : Component (ZMod p)).operations
+    (hi : i ∈ typedInteractionValuesWith ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations
       memoryChannel env) :
     signedVal i.mult = 0 ∨ signedVal i.mult = -1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
@@ -552,14 +548,13 @@ theorem memoryFinalizeProvider_signedVal (env : Environment (ZMod p))
 private theorem memoryFinalizeProviderTable_signedVal
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel) :
+    (hi : i ∈ typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data memoryChannel) :
     signedVal i.mult = 0 ∨ signedVal i.mult = -1 := by
   rw [typedTableInteractionsWith] at hi
   obtain ⟨row, rowMem, hi⟩ := List.mem_flatMap.mp hi
   rw [memoryFinalizeProviderTable_component witness] at hi
-  have tableConstraints : (memoryFinalizeProviderTable witness).Constraints :=
-    constraints (memoryFinalizeProviderTable witness) (witness.mem_allTables_of_mem_tables
-      (List.getElem_mem (memoryFinalizeProviderIndex_lt_tablesLength witness)))
+  have tableConstraints : (memoryFinalizeProviderTable witness).Constraints witness.data :=
+    constraints (memoryFinalizeProviderTable witness) (List.getElem_mem (memoryFinalizeProviderIndex_lt_tablesLength witness))
   have rowConstraints := tableConstraints row rowMem
   rw [memoryFinalizeProviderTable_component witness] at rowConstraints
   exact memoryFinalizeProvider_signedVal _ rowConstraints i hi
@@ -568,9 +563,9 @@ private theorem memoryFinalizeProviderTable_signedVal
 Memory channel's produced side: `producedMessages` (the `signedVal = 1` filter) is empty. -/
 theorem finPure (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
-    producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel)
+    producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data memoryChannel)
       = [] := by
-  have key : ∀ i ∈ typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel,
+  have key : ∀ i ∈ typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data memoryChannel,
       signedVal i.mult ≠ 1 := fun i hi => by
     rcases memoryFinalizeProviderTable_signedVal witness constraints i hi with h | h <;> rw [h] <;>
       norm_num
@@ -593,21 +588,20 @@ balance). -/
 private theorem memoryBumpTable_is_real_binary
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
     ∀ row ∈ (memoryBumpTable witness).table,
-      (memoryBumpRow (memoryBumpTable witness) row).is_real = 0 ∨
-        (memoryBumpRow (memoryBumpTable witness) row).is_real = 1 := by
+      (memoryBumpRow witness.data row).is_real = 0 ∨
+        (memoryBumpRow witness.data row).is_real = 1 := by
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   intro row rowMem
-  have tableConstraints : (memoryBumpTable witness).Constraints :=
-    constraints _ (witness.mem_allTables_of_mem_tables
-      (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness)))
+  have tableConstraints : (memoryBumpTable witness).Constraints witness.data :=
+    constraints _ (List.getElem_mem (memoryBumpIndex_lt_tablesLength witness))
   have rowConstraints := tableConstraints row rowMem
   rw [memoryBumpTable_component witness] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints MemoryBumpChip.circuit
-    ((memoryBumpTable witness).environment row) rowConstraints
+    (Environment.fromArray row witness.data) rowConstraints
   have hbool := memoryBump_gate_binary (varFromOffset MemoryBumpChip.Inputs 0)
-    (size MemoryBumpChip.Inputs) ((memoryBumpTable witness).environment row) shallow
-  rw [show (memoryBumpRow (memoryBumpTable witness) row).is_real =
-      (ProvableStruct.eval ((memoryBumpTable witness).environment row)
+    (size MemoryBumpChip.Inputs) (Environment.fromArray row witness.data) shallow
+  rw [show (memoryBumpRow witness.data row).is_real =
+      (ProvableStruct.eval (Environment.fromArray row witness.data)
         (varFromOffset MemoryBumpChip.Inputs 0 :
           Var MemoryBumpChip.Inputs (ZMod p))).is_real from by
     rw [memoryBumpRow_eq, ProvableStruct.eval_eq_eval]]
@@ -618,7 +612,7 @@ padding (`0`), or a push (`+is_real`). -/
 private theorem memoryBumpTable_signedVal
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedTableInteractionsWith (memoryBumpTable witness) memoryChannel) :
+    (hi : i ∈ typedTableInteractionsWith (memoryBumpTable witness) witness.data memoryChannel) :
     signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
   rw [memoryBumpTable_typedMemory] at hi
@@ -634,7 +628,7 @@ private theorem memoryBumpTable_signedVal
 private theorem haltTable_memory_signedVal
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedTableInteractionsWith (haltTable witness) memoryChannel) :
+    (hi : i ∈ typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) :
     signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
   rw [haltTable_typedMemory] at hi
@@ -642,14 +636,14 @@ private theorem haltTable_memory_signedVal
   have hbool := witness_haltRows_selectorBinary witness constraints row rowMem
   have pullCase : ∀ msg : MemoryMsg (ZMod p),
       i = TypedInteraction.pulledIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real msg →
+        (haltRow witness.data row).is_real msg →
       signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
     rintro msg rfl
     rw [TypedInteraction.pulledIfValue_mult, signedVal_neg_is_real hp hbool]
     rcases val_of_binary hp hbool with hv | hv <;> rw [hv] <;> norm_num
   have pushCase : ∀ msg : MemoryMsg (ZMod p),
       i = TypedInteraction.pushedIfValue memoryChannel
-        (haltRow (haltTable witness) row).is_real msg →
+        (haltRow witness.data row).is_real msg →
       signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
     rintro msg rfl
     rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool]
@@ -668,7 +662,7 @@ Halt table's, since both gate all six register interactions on the row's single 
 private theorem syscallInstrsTable_memory_signedVal
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel) :
+    (hi : i ∈ typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel) :
     signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
   rw [syscallInstrsTable_typedMemory] at hi
@@ -676,14 +670,14 @@ private theorem syscallInstrsTable_memory_signedVal
   have hbool := witness_syscallInstrsRows_selectorBinary witness constraints row rowMem
   have pullCase : ∀ msg : MemoryMsg (ZMod p),
       i = TypedInteraction.pulledIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real msg →
+        (syscallInstrsRow witness.data row).is_real msg →
       signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
     rintro msg rfl
     rw [TypedInteraction.pulledIfValue_mult, signedVal_neg_is_real hp hbool]
     rcases val_of_binary hp hbool with hv | hv <;> rw [hv] <;> norm_num
   have pushCase : ∀ msg : MemoryMsg (ZMod p),
       i = TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow (syscallInstrsTable witness) row).is_real msg →
+        (syscallInstrsRow witness.data row).is_real msg →
       signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 := by
     rintro msg rfl
     rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool]

@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Proofs.Chips.BranchChip.Core
 
 /-! # `SP1Clean.BranchChip` — circuit packaging and audited channel exposure
@@ -212,7 +214,7 @@ private theorem main_exposedChannelsLawful
 
 /-- The exact pinned-SP1 Branch `GeneralFormalCircuit`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.branch", main, elaborated,
     channelsWithRequirements := [memoryChannel.toRaw],
     Assumptions := Assumptions,
     Spec := Spec,
@@ -237,5 +239,27 @@ theorem interactionsWith_memory_eq
     ⟨memoryChannel.toRaw,
       (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw⟩
     (by simp [stateExposure, Readers.CPUState.exposedState, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := BranchChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq,
+    Air.Flat.Component.rowOperations_mk]
+  change ((BranchChip.main
+    (varFromOffset BranchChip.Inputs 0)).operations
+      (size BranchChip.Inputs)).lookups = []
+  simp [BranchChip.main, LtOperationSigned.circuit,
+    LtOperationSigned.main, U16MSBOperation.circuit,
+    U16MSBOperation.main, LtOperationUnsigned.circuit,
+    LtOperationUnsigned.main, U16CompareOperation.circuit,
+    U16CompareOperation.main, Readers.CPUState.circuit,
+    Readers.CPUState.main, Readers.ITypeReaderImmutable.circuit,
+    Readers.ITypeReaderImmutable.main,
+    Readers.RegisterAccessCols.circuit,
+    Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit,
+    Readers.RegisterAccessTimestamp.main,
+    Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.BranchChip

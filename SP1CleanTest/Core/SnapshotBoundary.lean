@@ -1,6 +1,7 @@
 import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Model.SP1Field
-import ToClean.Air.EnsembleExport
+import ToClean.Air.FiniteLookup
+import Clean.Circuit.WitnessExport
 
 /-! # Arbitrary source-snapshot AIR regressions
 

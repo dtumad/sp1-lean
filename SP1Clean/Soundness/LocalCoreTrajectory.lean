@@ -87,7 +87,7 @@ theorem GroundingCarrier.timeline_events {image : ProgramImage} {source : Execut
     (n : ℕ) (covered : n ≤ carrier.events.length) :
     carrier.timeline.start n = source.clock + ((carrier.events.take n).map Machine.ExecutionEvent.duration).sum := by
   have same := NativeCore.ExecutionCarrier.timeline_eq_events carrier source.clock
-    (source_state_encoding witness constraints balanced).1 (by
+    (source_state_encoding witness balanced).1 (by
       intro event member
       have duration := (executionRows_advancing witness constraints balanced member).2
       rwa [ExecutionRow.edge_eq_facts] at duration)

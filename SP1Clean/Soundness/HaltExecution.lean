@@ -41,9 +41,9 @@ private theorem locContent_of_pullMicro
     (hg : SupportedCoreHaltGrounding statement witness initial rows halt)
     (chain : Target.SailChain rows.length initial finalState)
     {loc : Semantics.MemLoc} {bv : BitVec 64}
-    (current : Semantics.microValue initial (Commit.initClkNat witness.data) loc
+    (current : Semantics.microValue initial statement.initClkNat loc
       (Semantics.StateMsg.timeNat
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))) = some bv) :
+        (HaltChip.statePulledMessage (haltRow witness.data halt))) = some bv) :
     Semantics.locContent finalState loc = some bv := by
   rw [hg.pullClock] at current
   rwa [Semantics.microValue_stepStart chain] at current
@@ -53,13 +53,13 @@ private theorem haltGrounding_specTail
     {statement : SupportedCoreStatement p} {witness : SupportedCoreNativeWitness p}
     {initial : SailState} {rows : List (DecodedInstructionRow p)} {halt : Array (ZMod p)}
     (hg : SupportedCoreHaltGrounding statement witness initial rows halt) :
-    ((haltRow (haltTable witness) halt).x5_memory.prev_value[0] = 0 ∧
-      (haltRow (haltTable witness) halt).x5_memory.prev_value[1] = 0 ∧
-      (haltRow (haltTable witness) halt).x5_memory.prev_value[2] = 0 ∧
-      (haltRow (haltTable witness) halt).x5_memory.prev_value[3] = 0) ∧
-    ((haltRow (haltTable witness) halt).x10_memory.prev_value[1] = 0 ∧
-      (haltRow (haltTable witness) halt).x10_memory.prev_value[2] = 0 ∧
-      (haltRow (haltTable witness) halt).x10_memory.prev_value[3] = 0) :=
+    ((haltRow witness.data halt).x5_memory.prev_value[0] = 0 ∧
+      (haltRow witness.data halt).x5_memory.prev_value[1] = 0 ∧
+      (haltRow witness.data halt).x5_memory.prev_value[2] = 0 ∧
+      (haltRow witness.data halt).x5_memory.prev_value[3] = 0) ∧
+    ((haltRow witness.data halt).x10_memory.prev_value[1] = 0 ∧
+      (haltRow witness.data halt).x10_memory.prev_value[2] = 0 ∧
+      (haltRow witness.data halt).x10_memory.prev_value[3] = 0) :=
   ⟨(hg.spec.2.2.2.2.2.2 hg.real).1, (hg.spec.2.2.2.2.2.2 hg.real).2.1⟩
 
 /-- The pulled `x5` word is the canonical `HALT` code `0`. -/
@@ -67,7 +67,7 @@ private theorem haltGrounding_x5_bits
     {statement : SupportedCoreStatement p} {witness : SupportedCoreNativeWitness p}
     {initial : SailState} {rows : List (DecodedInstructionRow p)} {halt : Array (ZMod p)}
     (hg : SupportedCoreHaltGrounding statement witness initial rows halt) :
-    Word.toBitVec64 (haltRow (haltTable witness) halt).x5_memory.prev_value =
+    Word.toBitVec64 (haltRow witness.data halt).x5_memory.prev_value =
       Target.HALT_SYSCALL := by
   obtain ⟨⟨z0, z1, z2, z3⟩, -⟩ := haltGrounding_specTail hg
   rw [Word.toBitVec64, Word.toNat, z0, z1, z2, z3]
@@ -79,11 +79,11 @@ private theorem haltGrounding_x10_bits
     {statement : SupportedCoreStatement p} {witness : SupportedCoreNativeWitness p}
     {initial : SailState} {rows : List (DecodedInstructionRow p)} {halt : Array (ZMod p)}
     (hg : SupportedCoreHaltGrounding statement witness initial rows halt) :
-    Word.toBitVec64 (haltRow (haltTable witness) halt).x10_memory.prev_value =
+    Word.toBitVec64 (haltRow witness.data halt).x10_memory.prev_value =
       statement.publicValues.exitCodeBits := by
   have hp := Fact.out (p := 2 ^ 25 < p)
   obtain ⟨-, z1, z2, z3⟩ := haltGrounding_specTail hg
-  have codeEq : (haltRow (haltTable witness) halt).x10_memory.prev_value[0] =
+  have codeEq : (haltRow witness.data halt).x10_memory.prev_value[0] =
       statement.publicValues.exit_code := by
     have := hg.exitBinding
     rw [HaltChip.exitMessage] at this
@@ -92,13 +92,13 @@ private theorem haltGrounding_x10_bits
     rw [z1, z2, z3] at valueEq
     linear_combination valueEq
   have codeVal : statement.publicValues.exit_code.val =
-      (haltRow (haltTable witness) halt).x10_memory.prev_value[0].val := by
+      (haltRow witness.data halt).x10_memory.prev_value[0].val := by
     rw [← codeEq]
-  have v1 : (haltRow (haltTable witness) halt).x10_memory.prev_value[1].val = 0 := by
+  have v1 : (haltRow witness.data halt).x10_memory.prev_value[1].val = 0 := by
     rw [z1, ZMod.val_zero]
-  have v2 : (haltRow (haltTable witness) halt).x10_memory.prev_value[2].val = 0 := by
+  have v2 : (haltRow witness.data halt).x10_memory.prev_value[2].val = 0 := by
     rw [z2, ZMod.val_zero]
-  have v3 : (haltRow (haltTable witness) halt).x10_memory.prev_value[3].val = 0 := by
+  have v3 : (haltRow witness.data halt).x10_memory.prev_value[3].val = 0 := by
     rw [z3, ZMod.val_zero]
   rw [Word.toBitVec64, Word.toNat, SP1StateBoundary.exitCodeBits, codeVal, v1, v2, v3]
   norm_num
@@ -114,7 +114,7 @@ private theorem haltContents
     Semantics.locContent s (Semantics.MemLoc.reg 10) =
       some statement.publicValues.exitCodeBits ∧
     Semantics.locContent s (Semantics.MemLoc.reg 11) =
-      some (Word.toBitVec64 (haltRow (haltTable witness) halt).x11_memory.prev_value) := by
+      some (Word.toBitVec64 (haltRow witness.data halt).x11_memory.prev_value) := by
   refine ⟨?_, ?_, ?_⟩
   · rw [locContent_of_pullMicro hg chain hg.x5Value, haltGrounding_x5_bits hg]
   · rw [locContent_of_pullMicro hg chain hg.x10Value, haltGrounding_x10_bits hg]
@@ -133,9 +133,9 @@ theorem haltedSail_of_haltGrounding
       Target.SailRetireChain rows.length initial preHalt ∧
       Target.SP1Halted statement.program statement.publicValues.exitCodeBits preHalt ∧
       (∀ (loc : Semantics.MemLoc) (bv : BitVec 64),
-        Semantics.microValue initial (Commit.initClkNat witness.data) loc
+        Semantics.microValue initial statement.initClkNat loc
           (Semantics.StateMsg.timeNat
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))) = some bv →
+            (HaltChip.statePulledMessage (haltRow witness.data halt))) = some bv →
         Semantics.locContent preHalt loc = some bv) := by
   obtain ⟨preHalt, retire, prePc⟩ :=
     sailRetireChain_of_groundedRows
@@ -179,9 +179,9 @@ theorem haltedExecution_of_haltGrounding
         SupportedSP1Transition statement.program located) ∧
       execution.transitions.dropLast.length = rows.length ∧
       (∀ (loc : Semantics.MemLoc) (bv : BitVec 64),
-        Semantics.microValue initial (Commit.initClkNat witness.data) loc
+        Semantics.microValue initial statement.initClkNat loc
           (Semantics.StateMsg.timeNat
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))) = some bv →
+            (HaltChip.statePulledMessage (haltRow witness.data halt))) = some bv →
         Semantics.locContent execution.finalState loc = some bv) := by
   classical
   -- compile the grounded instruction prefix
@@ -192,7 +192,7 @@ theorem haltedExecution_of_haltGrounding
       witness.data statement.program initial rows
       (supportedPcBits statement.publicValues.init_pc0 statement.publicValues.init_pc1
         statement.publicValues.init_pc2)
-      (Semantics.StateMsg.pcBits (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
+      (Semantics.StateMsg.pcBits (HaltChip.statePulledMessage (haltRow witness.data halt)))
       hg.walk hg.grounded boundary.codeMemoryCompatible boundary.initialPc
       boundary.romLoaded boundary.configured
       (Semantics.clkNat statement.publicValues.init_clk_high
@@ -210,11 +210,11 @@ theorem haltedExecution_of_haltGrounding
     { clock := Semantics.clkNat statement.publicValues.init_clk_high
         statement.publicValues.init_clk_low + 8 * rows.length
       pc := Semantics.StateMsg.pcBits
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))
+        (HaltChip.statePulledMessage (haltRow witness.data halt))
       nextPc := Machine.haltPc
       rawCode := 0
       arg1 := statement.publicValues.exitCodeBits
-      arg2 := Word.toBitVec64 (haltRow (haltTable witness) halt).x11_memory.prev_value
+      arg2 := Word.toBitVec64 (haltRow witness.data halt).x11_memory.prev_value
       result := 0 } with haltEventDef
   set target : SailState :=
     { execution₀.finalState with
@@ -312,10 +312,7 @@ theorem haltedExecution_of_haltGrounding
     rw [List.map_append, Machine.clockAfterEvents_append, prefixClock]
     simp only [List.map_cons, List.map_nil, Machine.clockAfterEvents, List.foldl_cons,
       List.foldl_nil, Machine.ExecutionEvent.duration_syscall]
-    have hfin := hg.finalClock
-    have hpull := hg.pullClock
-    have hinit := boundary.initialClock
-    omega
+    simpa only [hg.pullClock] using hg.finalClock.symm
   · -- final pc: the halt park at the committed final boundary
     rw [finalStateEq, targetPc, hg.finalPc]
   · -- the terminal halt condition

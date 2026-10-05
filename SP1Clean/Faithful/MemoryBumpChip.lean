@@ -136,14 +136,14 @@ theorem memoryBumpChip_size_eq :
 /-- The reconstructed row has exactly the flat component's width — 15 cells, no witness block. -/
 theorem memoryBumpPhysicalRow_size (cols : Extracted.MemoryBumpCols (ZMod p)) :
     (memoryBumpPhysicalRow (memoryBumpDeconfigure cols)).size =
-      (⟨MemoryBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).width := by
+      ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).width := by
   rw [memoryBumpPhysicalRow, inputFirstRow_size, Air.Flat.Component.width, memoryBumpChip_size_eq]
   simp
 
 /-- The reconstructed row decodes back to the native row the codec started from. -/
 theorem memoryBumpEnvironment_rowInput (cols : Extracted.MemoryBumpCols (ZMod p))
     (data : ProverData (ZMod p)) :
-    (⟨MemoryBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).rowInput
+    ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInput
         (memoryBumpEnvironment cols data) = memoryBumpDeconfigure cols :=
   rowInput_inputFirstRow _ _ _ _
 
@@ -429,20 +429,6 @@ theorem memoryBumpChipInteractionsFaithful
 
 /-! ## The constructive whole-chip boundary -/
 
-/-- The bundled circuit's `main` is the chip's `main`. -/
-theorem memoryBumpChip_main_eq :
-    (MemoryBumpChip.circuit (p := p)).main = MemoryBumpChip.main := rfl
-
-/-- The flat table emits no Clean `Lookup` operations — every SP1 byte check is a channel
-interaction, and is therefore compared by the interaction half. -/
-theorem memoryBumpChip_lookups_empty :
-    (⟨MemoryBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk, memoryBumpChip_main_eq]
-  change Operations.lookups
-    ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
-      .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p)) = _
-  simp [circuit_norm]
-
 /-- **Constructive assertion agreement.** For every Rust row and prover data, the extracted
 whole-table assertion list holds exactly when Clean's full constraint predicate holds on the
 reconstructed physical row. -/
@@ -451,12 +437,12 @@ theorem memoryBumpChipConstraintsConstructive
     (rustCols : Extracted.MemoryBumpCols (ZMod p)) (data : ProverData (ZMod p)) :
     List.Forall (· = 0)
         ((memoryBumpChipOracle preprocessed publicValues).assertZeros rustCols) ↔
-      (⟨MemoryBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+      ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
         (memoryBumpEnvironment rustCols data) := by
   refine Iff.trans ?_
     (constraintsHold_iff_nativeAssertZeros (MemoryBumpChip.circuit (p := p))
-      (memoryBumpEnvironment rustCols data) memoryBumpChip_lookups_empty).symm
-  rw [Air.Flat.Component.rowOperations_mk, memoryBumpChip_main_eq]
+      (memoryBumpEnvironment rustCols data) MemoryBumpChip.lookups_empty).symm
+  rw [Air.Flat.Component.rowOperations_mk, MemoryBumpChip.circuit_main_eq]
   exact memoryBumpChipConstraintsFaithful preprocessed publicValues
     (memoryBumpEnvironment rustCols data)
     (varFromOffset MemoryBumpChip.Inputs 0) (size MemoryBumpChip.Inputs) rustCols
@@ -468,10 +454,10 @@ theorem memoryBumpChipInteractionsConstructive
     (preprocessed : Vector (ZMod p) 0) (publicValues : Vector (ZMod p) 160)
     (rustCols : Extracted.MemoryBumpCols (ZMod p)) (data : ProverData (ZMod p)) :
     nativeAccesses (memoryBumpEnvironment rustCols data)
-        (⟨MemoryBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations =
+        ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations =
       (memoryBumpChipOracle preprocessed publicValues).rustAccesses rustCols := by
   rw [nativeAccesses_component_eq_rowOperations (MemoryBumpChip.circuit (p := p)),
-    Air.Flat.Component.rowOperations_mk, memoryBumpChip_main_eq]
+    Air.Flat.Component.rowOperations_mk, MemoryBumpChip.circuit_main_eq]
   exact memoryBumpChipInteractionsFaithful preprocessed publicValues
     (memoryBumpEnvironment rustCols data)
     (varFromOffset MemoryBumpChip.Inputs 0) (size MemoryBumpChip.Inputs) rustCols
@@ -488,7 +474,7 @@ theorem memoryBumpChip_faithful
     (∀ (rustCols : Extracted.MemoryBumpCols (ZMod p)) (data : ProverData (ZMod p)),
         List.Forall (· = 0)
             ((memoryBumpChipOracle preprocessed publicValues).assertZeros rustCols) ↔
-          (⟨MemoryBumpChip.circuit (p := p)⟩ :
+          ({ circuit := MemoryBumpChip.circuit (p := p) } :
             Air.Flat.Component (ZMod p)).operations.ConstraintsHold
               (memoryBumpEnvironment rustCols data)) ∧
       ∀ (rustCols : Extracted.MemoryBumpCols (ZMod p)) (data : ProverData (ZMod p)),
@@ -497,7 +483,7 @@ theorem memoryBumpChip_faithful
           List.Perm
             (LookupAccessList.active
               (nativeAccesses (memoryBumpEnvironment rustCols data)
-                (⟨MemoryBumpChip.circuit (p := p)⟩ : Air.Flat.Component (ZMod p)).operations))
+                ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations))
             (LookupAccessList.active
               ((memoryBumpChipOracle preprocessed publicValues).rustAccesses rustCols)) :=
   ⟨memoryBumpChipConstraintsConstructive preprocessed publicValues,

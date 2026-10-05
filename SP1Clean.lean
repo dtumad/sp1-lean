@@ -170,7 +170,6 @@ import SP1Clean.Proofs.Completeness.ConsumerClosure
 import SP1Clean.Proofs.Completeness.EventBuckets
 import SP1Clean.Proofs.Completeness.ExecutionCompiler
 import SP1Clean.Proofs.Completeness.FieldClosure
-import SP1Clean.Proofs.Completeness.Footprint
 import SP1Clean.Proofs.Completeness.InstructionEvent
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Completeness.PhysicalFootprint
@@ -217,6 +216,7 @@ import SP1Clean.Soundness.CoreTouches
 import SP1Clean.Soundness.Coverage
 import SP1Clean.Soundness.Decode
 import SP1Clean.Soundness.EnsembleChannels
+import SP1Clean.Soundness.EnsembleLookups
 import SP1Clean.Soundness.Examples.Counter
 import SP1Clean.Proofs.Completeness.LoadByteStatic
 import SP1Clean.Soundness.Examples.StateBalance
@@ -329,6 +329,7 @@ import SP1Clean.Soundness.LocalCoreBoundaries
 import SP1Clean.Soundness.LocalCoreChannels
 import SP1Clean.Soundness.LocalCoreDecode
 import SP1Clean.Soundness.LocalCoreEnsemble
+import SP1Clean.Soundness.LocalCoreLookups
 import SP1Clean.Soundness.LocalCoreEventUniqueness
 import SP1Clean.Soundness.LocalCoreExit
 import SP1Clean.Soundness.LocalCoreFinalBoundary
@@ -423,7 +424,6 @@ import SP1Clean.Soundness.WalkTimeline
 import SP1Clean.Soundness.WitnessDecode
 import SP1Clean.Soundness.WritePermissionBalance
 import ToClean.Air.CompleteEnsemble
-import ToClean.Air.EnsembleExport
 import ToClean.Air.ChannelRegistry
 import ToClean.Air.EnsembleCheck
 

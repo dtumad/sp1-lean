@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.StateBumpChip.Defs
 import Clean.Utils.Tactics
 
@@ -105,6 +107,7 @@ theorem completeness :
 `Assumptions := True` (everything is proved in-circuit or received from the byte bus);
 `ProverAssumptions := Spec` (an all-zero padding row satisfies it). -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.state_bump"
   main
   elaborated
   Assumptions := fun _ _ => True
@@ -152,5 +155,13 @@ set_option linter.unusedSectionVars false in
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithRequirements_eq :
     (circuit (p := p)).channelsWithRequirements = ([] : List (RawChannel (ZMod p))) := rfl
+
+@[circuit_norm] theorem circuit_main_eq : (StateBumpChip.circuit (p := p)).main = StateBumpChip.main := rfl
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk, StateBumpChip.circuit_main_eq]
+  simp [StateBumpChip.main, circuit_norm]
 
 end SP1Clean.StateBumpChip

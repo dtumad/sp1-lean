@@ -1,3 +1,4 @@
+import Clean.Circuit.WitnessExport
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Proofs.Chips.HostHintReadChip.Bridge

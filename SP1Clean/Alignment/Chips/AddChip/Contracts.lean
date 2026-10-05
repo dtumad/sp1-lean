@@ -92,30 +92,30 @@ theorem AddChip.eval_opCPrevValue (env : Environment (ZMod p))
 
 /-- The native Add circuit passes its independent state input through to the output row. -/
 theorem AddChip.inputOutputState (env : Environment (ZMod p)) :
-    ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).state =
-      ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).state := by
+    (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state =
+      (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state := by
   have inputEq : Eval.eval env (varFromOffset AddChip.Inputs 0) =
-      ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset AddChip.Inputs 0 env
   have outputEq : Eval.eval env
       ((AddChip.circuit (p := p)).output (varFromOffset AddChip.Inputs 0)
         (size AddChip.Inputs)) =
-      ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   simp only [AddChip.circuit, circuit_norm]
 
 /-- The native Add circuit passes its independent R-type adapter input through to the output row. -/
 theorem AddChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter =
-      ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter := by
   have inputEq : Eval.eval env (varFromOffset AddChip.Inputs 0) =
-      ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset AddChip.Inputs 0 env
   have outputEq : Eval.eval env
       ((AddChip.circuit (p := p)).output (varFromOffset AddChip.Inputs 0)
         (size AddChip.Inputs)) =
-      ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   simp only [AddChip.circuit, circuit_norm]
@@ -124,8 +124,8 @@ theorem AddChip.inputOutputAdapter (env : Environment (ZMod p)) :
 routing branch.  This is read from the complete flattened constraint list, independently of the
 chip's semantic `Spec` and of any Memory-channel guarantee. -/
 theorem AddChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
-    (constraints : (⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
-    ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter.op_a_0 = 0 := by
+    (constraints : ({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter.op_a_0 = 0 := by
   let input : Var AddChip.Inputs (ZMod p) := varFromOffset AddChip.Inputs 0
   let offset := size AddChip.Inputs
   have rowConstraints : Operations.ConstraintsHold env ((AddChip.main input).operations offset) :=
@@ -133,7 +133,7 @@ theorem AddChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
   have flagConstraint : Expression.eval env input.adapter.op_a_0 = 0 :=
     addInputOpA0_eq_zero_of_mainConstraints input offset env rowConstraints
   have inputEq : Eval.eval env input =
-      (⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset AddChip.Inputs 0 env
   rw [← inputEq, AddChip.eval_inputs, Readers.RTypeReader.eval_opA0]
   exact flagConstraint
@@ -141,11 +141,11 @@ theorem AddChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
 /-- Row-view form of Add's physical routing constraint.  The circuit passes the adapter block through
 unchanged, so the constraint on the input flag is the flag committed by the Program interaction. -/
 theorem AddChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
-    (constraints : (⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
+    (constraints : ({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
     (AddChip.rowView
-      ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-      ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
-  change ((⟨AddChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
+      (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+      (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
+  change (({ circuit := AddChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
   rw [← AddChip.inputOutputAdapter env]
   exact AddChip.inputOpA0_eq_zero_of_constraints env constraints
 

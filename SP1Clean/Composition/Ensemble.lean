@@ -8,8 +8,9 @@ its transported physical table. The table list matches the native instruction re
 The generic transport theorems are used directly; there is no separate per-chip wrapper layer.
 
 These are migration proofs for the instruction segment. Provider redistribution and full
-State/Memory balance remain separate obligations; these theorems make no assertion about the
-complete exact Core cluster's ledger.
+State/Memory balance remain separate obligations. Tables store no private data environment, and
+the facts below are evaluated at explicit data. A complete ensemble construction must justify its
+canonical derived data before using these facts.
 -/
 
 set_option autoImplicit false
@@ -179,19 +180,6 @@ theorem transported_map_component :
   simp only [transported, Soundness.sp1Tables, Soundness.supportedChips, List.map_map]
   exact List.map_congr_left fun id _ => rows.transportedFor_component data id
 
-/-- Pointwise shared-data law for one transported table. -/
-@[simp] theorem transportedFor_data (id : InstructionChipId) :
-    (rows.transportedFor data id).data = data := by
-  cases id <;> rfl
-
-/-- Each transported table carries the extracted AIR's own committed prover data — the
-`EnsembleWitness.same_data` obligation, discharged for the instruction segment. -/
-theorem transported_data : ∀ table ∈ transported rows data, table.data = data := by
-  intro table hmem
-  rw [transported] at hmem
-  obtain ⟨id, _, rfl⟩ := List.mem_map.mp hmem
-  exact rows.transportedFor_data data id
-
 /-- Every extracted row of every instruction table satisfies its own chip's complete Rust assertion
 list — what the extracted AIR asserts of a shard it accepts. -/
 structure Valid : Prop where
@@ -212,7 +200,7 @@ def extractedInstructionActiveAccesses : LookupAccessList :=
 
 /-- Native active accesses for one identity-indexed transported table. -/
 noncomputable def transportedActiveAccessesFor (id : InstructionChipId) : LookupAccessList :=
-  LookupAccessList.active (tableNativeAccesses (rows.transportedFor data id))
+  LookupAccessList.active (tableNativeAccesses (rows.transportedFor data id) data)
 
 /-- The native active interaction ledger of the twenty-five transported instruction tables. The
 outer `active` erases exactly multiplicity-zero padding; providers remain outside this ledger. -/
@@ -304,7 +292,7 @@ included, on every transported row. Each conjunct is one citation of that chip's
 proofs and nothing new.
 -/
 theorem transportedFor_constraints (valid : rows.Valid) (id : InstructionChipId) :
-    (rows.transportedFor data id).Constraints := by
+    (rows.transportedFor data id).Constraints data := by
   cases id with
   | add => exact transportTable_constraints addChip_faithful _ data (valid.forId .add)
   | addi => exact transportTable_constraints addiChip_faithful _ data (valid.forId .addi)
@@ -336,7 +324,7 @@ theorem transportedFor_constraints (valid : rows.Valid) (id : InstructionChipId)
   | aluX0 => exact transportTable_constraints aluX0Chip_faithful _ data (valid.forId .aluX0)
 
 theorem transported_constraints (valid : rows.Valid) :
-    ∀ table ∈ transported rows data, table.Constraints := by
+    ∀ table ∈ transported rows data, table.Constraints data := by
   intro table tableMem
   rw [transported] at tableMem
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp tableMem

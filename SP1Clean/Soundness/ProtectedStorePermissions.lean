@@ -109,9 +109,9 @@ theorem double_emission (input : Var StoreDoubleChip.Inputs (ZMod p)) (offset : 
     quiet, List.nil_append, Circuit.forEach.operations_eq, List.ofFn_succ, List.ofFn_zero,
     List.flatten_cons, List.flatten_nil, List.append_nil, Vector.getElem_range]
 
-theorem byte_pulls : Pulls (⟨ProtectedStore.byte (p := p)⟩ : Component (ZMod p)) := by
+theorem byte_pulls : Pulls ({ circuit := ProtectedStore.byte (p := p) } : Component (ZMod p)) := by
   intro data physical constraints interaction member
-  have checked : (⟨StoreByteChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := StoreByteChip.circuit } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data) := by
     simpa only [Operations.ConstraintsHold, ProtectedStore.byte_constraints,
       ProtectedStore.byte_lookups] using constraints
@@ -127,9 +127,9 @@ theorem byte_pulls : Pulls (⟨ProtectedStore.byte (p := p)⟩ : Component (ZMod
   simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
   simpa only [circuit_norm] using binary
 
-theorem half_pulls : Pulls (⟨ProtectedStore.half (p := p)⟩ : Component (ZMod p)) := by
+theorem half_pulls : Pulls ({ circuit := ProtectedStore.half (p := p) } : Component (ZMod p)) := by
   intro data physical constraints interaction member
-  have checked : (⟨StoreHalfChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := StoreHalfChip.circuit } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data) := by
     simpa only [Operations.ConstraintsHold, ProtectedStore.half_constraints,
       ProtectedStore.half_lookups] using constraints
@@ -146,9 +146,9 @@ theorem half_pulls : Pulls (⟨ProtectedStore.half (p := p)⟩ : Component (ZMod
   simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
   simpa only [circuit_norm] using binary
 
-theorem word_pulls : Pulls (⟨ProtectedStore.word (p := p)⟩ : Component (ZMod p)) := by
+theorem word_pulls : Pulls ({ circuit := ProtectedStore.word (p := p) } : Component (ZMod p)) := by
   intro data physical constraints interaction member
-  have checked : (⟨StoreWordChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := StoreWordChip.circuit } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data) := by
     simpa only [Operations.ConstraintsHold, ProtectedStore.word_constraints,
       ProtectedStore.word_lookups] using constraints
@@ -165,9 +165,9 @@ theorem word_pulls : Pulls (⟨ProtectedStore.word (p := p)⟩ : Component (ZMod
   simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
   simpa only [circuit_norm] using binary
 
-theorem double_pulls : Pulls (⟨ProtectedStore.double (p := p)⟩ : Component (ZMod p)) := by
+theorem double_pulls : Pulls ({ circuit := ProtectedStore.double (p := p) } : Component (ZMod p)) := by
   intro data physical constraints interaction member
-  have checked : (⟨StoreDoubleChip.circuit⟩ : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := StoreDoubleChip.circuit } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data) := by
     simpa only [Operations.ConstraintsHold, ProtectedStore.double_constraints,
       ProtectedStore.double_lookups] using constraints

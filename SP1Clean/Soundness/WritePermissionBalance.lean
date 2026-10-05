@@ -5,8 +5,8 @@ import ToClean.Circuit.InteractionRecovery
 /-! # Byte permission authentication from a structural ledger
 
 A fixed provider proves writability from its raw assertions and lookup. Count-bounded balance
-then authenticates every unit pull, provided every other component emits only zero or unit-negative
-permission interactions. This separates the generic matching argument from the concrete assembly's
+then authenticates every unit pull, provided the public verifier and every other component emit only
+zero or unit-negative permission interactions. This separates the generic matching argument from the concrete assembly's
 exhaustive source classification and from the store's byte-footprint proof.
 -/
 
@@ -33,10 +33,10 @@ theorem pulls_of_silent (component : Component (ZMod p))
   contradiction
 
 theorem provider_constraints (image : ProgramImage) (env : Environment (ZMod p))
-    (constraints : (⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
+    (constraints : ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).operations.ConstraintsHold env) :
     WritePermissionProvider.Permitted image
-      ((⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p)).rowInput env).address :=
-  ((⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p)).weakSoundness_of_no_guarantees
+      (({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).rowInput env).address :=
+  (({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).weakSoundness_of_no_guarantees
     rfl (by trivial) constraints).1
 
 theorem provider_emission (image : ProgramImage) (input : Var WritePermissionProvider.Inputs (ZMod p))
@@ -57,10 +57,10 @@ theorem provider_emission (image : ProgramImage) (input : Var WritePermissionPro
 
 theorem provider_payload (image : ProgramImage) (env : Environment (ZMod p))
     (interaction : Interaction (ZMod p))
-    (member : interaction ∈ (⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p)).operations.interactionValuesWith
+    (member : interaction ∈ ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).operations.interactionValuesWith
       WritePermissionProvider.channel.toRaw env) :
     interaction.msg = (toElements
-      ((⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p)).rowInput env).address).toArray := by
+      (({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).rowInput env).address).toArray := by
   rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
   change interaction ∈ (((WritePermissionProvider.circuit image).main
     (varFromOffset WritePermissionProvider.Inputs 0)).operations (size WritePermissionProvider.Inputs)
@@ -77,26 +77,31 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
     {assembly : Ensemble (ZMod p) Public} (image : ProgramImage)
     (witness : EnsembleWitness assembly) (constraints : witness.Constraints)
     (balance : BalancedInteractions (witness.interactionsWith WritePermissionProvider.channel.toRaw))
-    (sources : ∀ component ∈ assembly.allTables,
-      component = (⟨WritePermissionProvider.circuit image⟩ : Component (ZMod p)) ∨ Pulls component)
+    (verifier : ∀ (input : Public (ZMod p)) (data : ProverData (ZMod p)),
+      ∀ interaction ∈ assembly.verifierOperations.interactionValuesWith
+      WritePermissionProvider.channel.toRaw (Environment.fromInput input data),
+      interaction.mult = 0 ∨ interaction.mult = -1)
+    (sources : ∀ component ∈ assembly.tables,
+      component = ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)) ∨ Pulls component)
     (address : fields 3 (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith WritePermissionProvider.channel.toRaw)
     (active : interaction.mult = -1) (payload : interaction.msg = (toElements address).toArray) :
     WritePermissionProvider.Permitted image address := by
   obtain ⟨provider, providerMem, samePayload, nonzero, notPull⟩ :=
     exists_push_of_pull _ balance interaction member active
-  obtain ⟨table, tableMem, providerMem⟩ := EnsembleWitness.mem_interactionsWith.mp providerMem
-  obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp providerMem
-  have checked := constraints table tableMem physical physicalMem
-  rcases sources table.component
-    (witness.mem_allTables_component_of_mem_allTables tableMem) with fixed | pulls
-  · rw [fixed] at emitted checked
-    have permitted := provider_constraints image (table.environment physical) checked
-    have same := (provider_payload image _ provider emitted).symm.trans (samePayload.trans payload)
-    have addressEq := congrArg (fromElements (M := fields 3)) (Vector.toArray_inj.mp same)
-    simp only [ProvableType.fromElements_toElements] at addressEq
-    rw [addressEq] at permitted
-    exact permitted
-  · exact ((pulls table.data physical checked provider emitted).elim nonzero notPull).elim
+  rcases EnsembleWitness.mem_interactionsWith.mp providerMem with verifierMem | ⟨table, tableMem, providerMem⟩
+  · exact ((verifier witness.publicInput witness.data provider verifierMem).elim nonzero notPull).elim
+  · obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp providerMem
+    have checked := constraints table tableMem physical physicalMem
+    rcases sources table.component
+      (EnsembleWitness.mem_component_of_mem tableMem) with fixed | pulls
+    · rw [fixed] at emitted checked
+      have permitted := provider_constraints image (Environment.fromArray physical witness.data) checked
+      have same := (provider_payload image _ provider emitted).symm.trans (samePayload.trans payload)
+      have addressEq := congrArg (fromElements (M := fields 3)) (Vector.toArray_inj.mp same)
+      simp only [ProvableType.fromElements_toElements] at addressEq
+      rw [addressEq] at permitted
+      exact permitted
+    · exact ((pulls witness.data physical checked provider emitted).elim nonzero notPull).elim
 
 end SP1Clean.Soundness.WritePermission

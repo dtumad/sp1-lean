@@ -1,9 +1,10 @@
 import SP1Clean.Soundness.OrdinaryStateReceipt
 import SP1Clean.Soundness.HostOrdinaryReceipts
-import SP1CleanTest.Alignment.Core.LocalCore
+import SP1CleanTest.Alignment.Support.LocalCoreFixture
 import SP1CleanTest.Core.NonVacuityReal
 import SP1Clean.Native.Operations.OrdinaryObservation
 import SP1CleanTest.Core.HostChecks
+import Clean.Circuit.WitnessExport
 
 /-! # Actual ordinary receipt programs
 
@@ -18,11 +19,11 @@ namespace SP1CleanTest.Alignment.Core.InstructionReceipt
 open Circuit Air.Flat SP1Clean SP1Clean.Soundness SP1Clean.NonVacuityRealTests
 
 private abbrev Fp := ZMod SP1Prime
-private def image := SP1CleanTest.Core.LocalCore.addFixture.1
-private def source := SP1CleanTest.Core.LocalCore.addFixture.2.1
+private def image := SP1CleanTest.Core.LocalCore.Fixture.image
+private def source := SP1CleanTest.Core.LocalCore.Fixture.source
 
 private def evaluate (id : InstructionChipId) (inputs : List Fp) :=
-  SP1CleanTest.Core.LocalCore.evaluateComponent image source
+  SP1CleanTest.Core.LocalCore.Fixture.evaluate image source
     (OrdinaryStateReceipt.component id) inputs []
 
 private def receipts (id : InstructionChipId) (inputs : List Fp) :=
@@ -92,6 +93,7 @@ private def installed :=
     HostOrdinaryReceipts.ensemble (p := SP1Prime) image source source
       (HostHintQueueBoundary.initial []) HostCallReceivers.available
       (HostHintReadLocal.sourceResources []) []
+      (HostFinalMemory.source_unique_names image source source.sail.memorySnapshot)
 
 private def storeFixtures : List (ℕ × List Fp) :=
   [(25, (toElements storeByteInputs).toList), (26, (toElements storeHalfInputs).toList),
@@ -100,7 +102,7 @@ private def storeFixtures : List (ℕ × List Fp) :=
 private def installedStore (padding : Bool) (entry : ℕ × List Fp) :=
   match installed.tables[entry.1]? with
   | none => (false, [])
-  | some component => SP1CleanTest.Core.LocalCore.evaluateComponent image source component
+  | some component => SP1CleanTest.Core.LocalCore.Fixture.evaluate image source component
       (if padding then entry.2.set 0 0 else entry.2) []
 
 /-- All four physical mixed-store positions retain every byte-permission request and add

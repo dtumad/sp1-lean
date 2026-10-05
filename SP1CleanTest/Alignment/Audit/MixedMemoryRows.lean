@@ -1,4 +1,5 @@
-import SP1Clean
+import SP1Clean.Soundness.CoreRowBalance
+import SP1Clean.Model.SP1Field
 
 /-! # Mixed read-time regression
 

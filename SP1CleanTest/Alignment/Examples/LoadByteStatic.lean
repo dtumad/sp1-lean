@@ -15,7 +15,7 @@ open SP1Clean.Soundness.LoadByteStatic
 
 /-- Shared native field. -/
 abbrev F := ZMod SP1Prime
-/-- No prover-supplied lookup contents. -/
+/-- The row generators need no external data; checks derive data from physical tables. -/
 def data : ProverData F := fun _ _ => #[]
 /-- LoadByte's witness builder needs no external hint. -/
 def hint : ProverHint F := ProverHint.empty F
@@ -48,18 +48,23 @@ def inactive : LoadByteChip.Inputs F :=
     selected_byte := 300 }
 
 /-- Actual table assertions and authenticated upstream byte lookup enumeration. -/
-def tableCheck (table : Table F) : Bool :=
+def tableCheck (evaluationData : ProverData F) (table : Table F) : Bool :=
   table.table.all fun row =>
-    let env := table.environment row
-    table.component.rowOperations.constraints.all (fun expression => env expression == 0) &&
-      table.component.rowOperations.lookups.all (fun lookup =>
+    let env := Environment.fromArray row evaluationData
+    table.component.operations.constraints.all (fun expression => env expression == 0) &&
+      table.component.operations.lookups.all (fun lookup =>
         lookup.table.name == (LoadByteStaticChip.fixedByteLookup (p := SP1Prime)).table.name &&
         (LoadByteStaticChip.fixedByteLookup (p := SP1Prime)).rows.any (fun fixed =>
           fixed.toArray == (lookup.entry.map env).toArray))
 
+/-- Check each physical row at the data derived from the entire assembly. -/
+def tablesCheck (tables : List (Table F)) : Bool :=
+  tables.all (tableCheck (deriveProverData tables))
+
 /-- Read all physical Byte interactions, including disabled occurrences. -/
 def byteLedger (tables : List (Table F)) : List (Interaction F) :=
-  (tables.flatMap Table.interactions).filter (fun interaction => interaction.channel.name == "SP1Byte")
+  (tables.flatMap (fun table => table.interactions (deriveProverData tables))).filter
+    (fun interaction => interaction.channel.name == "SP1Byte")
 
 /-- Finite support check with the exact raw occurrence count, including zeros. -/
 def byteBalanced (tables : List (Table F)) : Bool :=
@@ -98,7 +103,7 @@ def caseCheck (rowInput : LoadByteChip.Inputs F) : Bool :=
   | some residual =>
     let old := originalAssembly [rowInput] data hint residual
     let new := replacementAssembly [rowInput] data hint residual
-    old.all tableCheck && new.all tableCheck && byteBalanced old && byteBalanced new &&
+    tablesCheck old && tablesCheck new && byteBalanced old && byteBalanced new &&
       (originalTable [rowInput] data hint).table == (replacementTable [rowInput] data hint).table &&
       (byteLedger old).length == (byteLedger new).length + 2
 
@@ -117,12 +122,12 @@ theorem inactive_passes : caseCheck inactive = true := by native_decide
 
 /-- Invalid active byte fields and nonbinary opcode selectors fail actual replacement constraints. -/
 def invalidCases : List (String × Bool) :=
-  [("wrong-low-byte", tableCheck (replacementTable
-      [{ input true 0 127 with selected_limb_low_byte := 126 }] data hint)),
-   ("wrong-selectors", tableCheck (replacementTable
-      [{ input true 0 127 with is_lbu := 1 }] data hint)),
-   ("active-out-of-range", tableCheck (replacementTable
-      [{ inactive with is_lb := 1 }] data hint))]
+  [("wrong-low-byte", tablesCheck [replacementTable
+      [{ input true 0 127 with selected_limb_low_byte := 126 }] data hint]),
+   ("wrong-selectors", tablesCheck [replacementTable
+      [{ input true 0 127 with is_lbu := 1 }] data hint]),
+   ("active-out-of-range", tablesCheck [replacementTable
+      [{ inactive with is_lb := 1 }] data hint])]
 
 /-- Every negative fixture is rejected. -/
 theorem invalid_rejected : invalidCases.all (fun sample => !sample.2) = true := by native_decide

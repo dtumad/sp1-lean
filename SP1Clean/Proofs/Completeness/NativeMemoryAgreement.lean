@@ -377,19 +377,19 @@ theorem MemoryHistoryAccess.locOf_toMemoryMsg_of_busAddress
         have baseLower : 32 ≤ base := by simpa only [base] using canonical.1
         omega
 
-/-- One honestly built Memory-init row emits its canonical boundary push. -/
+/-- A built Memory-init row emits its canonical boundary push at any evaluation data. -/
 theorem memoryInitBuildRowCleanAccesses
-    (entry : MemRecordEntry) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (entry : MemRecordEntry) (generationData evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (MemoryProviderChip.component (p := p)).operations.interactions.map
         (AbstractInteraction.toAccess
           (Environment.fromArray
             ((MemoryProviderChip.component (p := p)).buildRow
-              (MemoryProviderChip.ofEntry (p := p) entry) data hint) data)) =
+              (MemoryProviderChip.ofEntry (p := p) entry) generationData hint) evaluationData)) =
       [accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
         (signedVal (entry.multiplicityField (p := p)))] := by
   let component := MemoryProviderChip.component (p := p)
   let input := MemoryProviderChip.ofEntry (p := p) entry
-  let env := Environment.fromArray (component.buildRow input data hint) data
+  let env := Environment.fromArray (component.buildRow input generationData hint) evaluationData
   rw [interactions_eq_interactionsWith_of_onlyChannel _ memoryChannel.toRaw
       Ledger.onlyChannel_MemoryProvider]
   unfold MemoryProviderChip.component
@@ -401,7 +401,7 @@ theorem memoryInitBuildRowCleanAccesses
   change [memoryInitInputCleanAccess (Eval.eval env
     (varFromOffset MemoryProviderChip.Inputs 0 :
       Var MemoryProviderChip.Inputs (ZMod p)))] = _
-  have decoded := component.rowInput_buildRow input data data hint
+  have decoded := component.rowInput_buildRow input generationData evaluationData hint
   change valueFromOffset MemoryProviderChip.Inputs 0 env = input at decoded
   have evaluated : Eval.eval env
       (varFromOffset MemoryProviderChip.Inputs 0 :
@@ -410,19 +410,19 @@ theorem memoryInitBuildRowCleanAccesses
   rw [evaluated]
   rw [memoryInitInputCleanAccessOfEntry]
 
-/-- One honestly built Memory-finalize row emits its canonical boundary pull. -/
+/-- A built Memory-finalize row emits its canonical boundary pull at any evaluation data. -/
 theorem memoryFinalizeBuildRowCleanAccesses
-    (entry : MemRecordEntry) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (entry : MemRecordEntry) (generationData evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (MemoryFinalizeChip.component (p := p)).operations.interactions.map
         (AbstractInteraction.toAccess
           (Environment.fromArray
             ((MemoryFinalizeChip.component (p := p)).buildRow
-              (MemoryFinalizeChip.ofEntry (p := p) entry) data hint) data)) =
+              (MemoryFinalizeChip.ofEntry (p := p) entry) generationData hint) evaluationData)) =
       [accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
         (signedVal (-(entry.multiplicityField (p := p))))] := by
   let component := MemoryFinalizeChip.component (p := p)
   let input := MemoryFinalizeChip.ofEntry (p := p) entry
-  let env := Environment.fromArray (component.buildRow input data hint) data
+  let env := Environment.fromArray (component.buildRow input generationData hint) evaluationData
   rw [interactions_eq_interactionsWith_of_onlyChannel _ memoryChannel.toRaw
       Ledger.onlyChannel_MemoryFinalize]
   unfold MemoryFinalizeChip.component
@@ -434,7 +434,7 @@ theorem memoryFinalizeBuildRowCleanAccesses
   change [memoryFinalizeInputCleanAccess (Eval.eval env
     (varFromOffset MemoryFinalizeChip.Inputs 0 :
       Var MemoryFinalizeChip.Inputs (ZMod p)))] = _
-  have decoded := component.rowInput_buildRow input data data hint
+  have decoded := component.rowInput_buildRow input generationData evaluationData hint
   change valueFromOffset MemoryFinalizeChip.Inputs 0 env = input at decoded
   have evaluated : Eval.eval env
       (varFromOffset MemoryFinalizeChip.Inputs 0 :
@@ -470,7 +470,7 @@ theorem SupportedCoreTraceWitness.memoryFinalizeProviderTable_witness
 /-- The literal Clean ledger of a generated Memory-init table is its entry-key push list. -/
 theorem SupportedCoreTraceWitness.memoryInitTableCleanAccesses
     (trace : SupportedCoreTraceWitness p) :
-    tableCleanAccesses (memoryInitProviderTable trace.witness) =
+    tableCleanAccesses (memoryInitProviderTable trace.witness) trace.witness.data =
       (trace.providerOccurrences .memoryInit).map fun entry =>
         accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
           (signedVal (entry.multiplicityField (p := p))) := by
@@ -478,12 +478,12 @@ theorem SupportedCoreTraceWitness.memoryInitTableCleanAccesses
   unfold SupportedCoreTraceWitness.providerTableFor MemoryProviderChip.traceInputs
   apply tableCleanAccesses_build_map_singleton
   intro entry _
-  exact memoryInitBuildRowCleanAccesses entry trace.data trace.hint
+  exact memoryInitBuildRowCleanAccesses entry trace.generationData trace.witness.data trace.hint
 
 /-- The literal Clean ledger of a generated Memory-finalize table is its entry-key pull list. -/
 theorem SupportedCoreTraceWitness.memoryFinalizeTableCleanAccesses
     (trace : SupportedCoreTraceWitness p) :
-    tableCleanAccesses (memoryFinalizeProviderTable trace.witness) =
+    tableCleanAccesses (memoryFinalizeProviderTable trace.witness) trace.witness.data =
       (trace.providerOccurrences .memoryFinalize).map fun entry =>
         accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
           (signedVal (-(entry.multiplicityField (p := p)))) := by
@@ -491,19 +491,20 @@ theorem SupportedCoreTraceWitness.memoryFinalizeTableCleanAccesses
   unfold SupportedCoreTraceWitness.providerTableFor MemoryFinalizeChip.traceInputs
   apply tableCleanAccesses_build_map_singleton
   intro entry _
-  exact memoryFinalizeBuildRowCleanAccesses entry trace.data trace.hint
+  exact memoryFinalizeBuildRowCleanAccesses entry trace.generationData trace.witness.data trace.hint
 
 omit [Fact (2 ^ 25 < p)] in
 /-- On a single-channel table, the typed-channel access projection is the literal Clean ledger. -/
 theorem typedTableAccessLedgerEqClean
     {Message : TypeMap} [ProvableType Message]
-    (table : Table (ZMod p)) (channel : Channel (ZMod p) Message)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (channel : Channel (ZMod p) Message)
     (only : table.component.operations.interactions =
       table.component.operations.interactionsWith channel.toRaw) :
-    ((typedTableInteractionsWith table channel).map fun interaction =>
-        Interaction.toAccess interaction.raw) = tableCleanAccesses table := by
+    ((typedTableInteractionsWith table data channel).map fun interaction =>
+        Interaction.toAccess interaction.raw) = tableCleanAccesses table data := by
   have erased := congrArg (List.map Interaction.toAccess)
-    (typedTableInteractionsWith_raw table channel)
+    (typedTableInteractionsWith_raw table data channel)
   simp only [List.map_map, Function.comp_def] at erased
   rw [erased]
   unfold tableCleanAccesses Table.interactionsWith Table.interactions
@@ -514,13 +515,13 @@ theorem typedTableAccessLedgerEqClean
 theorem SupportedCoreTraceWitness.memoryInitTableAccessLedger
     (trace : SupportedCoreTraceWitness p) :
     (typedTableInteractionsWith (memoryInitProviderTable trace.witness)
-      memoryChannel).map (fun interaction => Interaction.toAccess interaction.raw) =
+      trace.witness.data memoryChannel).map (fun interaction => Interaction.toAccess interaction.raw) =
       (trace.providerOccurrences .memoryInit).map fun entry =>
         accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
           (signedVal (entry.multiplicityField (p := p))) := by
   rw [trace.memoryInitProviderTable_witness]
   calc
-    _ = tableCleanAccesses (trace.providerTableFor .memoryInit) := by
+    _ = tableCleanAccesses (trace.providerTableFor .memoryInit) trace.witness.data := by
       apply typedTableAccessLedgerEqClean
       exact interactions_eq_interactionsWith_of_onlyChannel _ memoryChannel.toRaw
         Ledger.onlyChannel_MemoryProvider
@@ -531,13 +532,13 @@ theorem SupportedCoreTraceWitness.memoryInitTableAccessLedger
 theorem SupportedCoreTraceWitness.memoryFinalizeTableAccessLedger
     (trace : SupportedCoreTraceWitness p) :
     (typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness)
-      memoryChannel).map (fun interaction => Interaction.toAccess interaction.raw) =
+      trace.witness.data memoryChannel).map (fun interaction => Interaction.toAccess interaction.raw) =
       (trace.providerOccurrences .memoryFinalize).map fun entry =>
         accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
           (signedVal (-(entry.multiplicityField (p := p)))) := by
   rw [trace.memoryFinalizeProviderTable_witness]
   calc
-    _ = tableCleanAccesses (trace.providerTableFor .memoryFinalize) := by
+    _ = tableCleanAccesses (trace.providerTableFor .memoryFinalize) trace.witness.data := by
       apply typedTableAccessLedgerEqClean
       exact interactions_eq_interactionsWith_of_onlyChannel _ memoryChannel.toRaw
         Ledger.onlyChannel_MemoryFinalize
@@ -548,7 +549,7 @@ theorem SupportedCoreTraceWitness.memoryFinalizeTableAccessLedger
 theorem SupportedCoreTraceWitness.memoryInitTableMessages
     (trace : SupportedCoreTraceWitness p) :
     (typedTableInteractionsWith (memoryInitProviderTable trace.witness)
-      memoryChannel).map TypedInteraction.message =
+      trace.witness.data memoryChannel).map TypedInteraction.message =
       (trace.providerOccurrences .memoryInit).map
         (MemRecordEntry.toMemoryMsg (p := p)) := by
   exact typedMemoryMessages_of_accessLedger _ _
@@ -559,7 +560,7 @@ theorem SupportedCoreTraceWitness.memoryInitTableMessages
 theorem SupportedCoreTraceWitness.memoryFinalizeTableMessages
     (trace : SupportedCoreTraceWitness p) :
     (typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness)
-      memoryChannel).map TypedInteraction.message =
+      trace.witness.data memoryChannel).map TypedInteraction.message =
       (trace.providerOccurrences .memoryFinalize).map
         (MemRecordEntry.toMemoryMsg (p := p)) := by
   exact typedMemoryMessages_of_accessLedger _ _
@@ -664,7 +665,7 @@ theorem nativeTrace_memoryInitProviderUnique
   have pairwiseMessages :
       ((typedTableInteractionsWith
         (memoryInitProviderTable (nativeTrace statement execution).witness)
-        memoryChannel).map TypedInteraction.message).Pairwise
+        (nativeTrace statement execution).witness.data memoryChannel).map TypedInteraction.message).Pairwise
           (fun left right => MemoryMsg.locOf left ≠ MemoryMsg.locOf right) := by
     rw [(nativeTrace statement execution).memoryInitTableMessages,
       nativeTrace_memoryInitOccurrences]
@@ -683,7 +684,7 @@ theorem nativeTrace_memoryFinalizeProviderUnique
   have pairwiseMessages :
       ((typedTableInteractionsWith
         (memoryFinalizeProviderTable (nativeTrace statement execution).witness)
-        memoryChannel).map TypedInteraction.message).Pairwise
+        (nativeTrace statement execution).witness.data memoryChannel).map TypedInteraction.message).Pairwise
           (fun left right => MemoryMsg.locOf left ≠ MemoryMsg.locOf right) := by
     rw [(nativeTrace statement execution).memoryFinalizeTableMessages,
       nativeTrace_memoryFinalizeOccurrences]
@@ -711,7 +712,7 @@ theorem nativeTrace_memoryInitProviderBound
   have rawMember : interaction ∈
       ((typedTableInteractionsWith
         (memoryInitProviderTable (nativeTrace statement execution).witness)
-        memoryChannel).map TypedInteraction.raw) := by
+        (nativeTrace statement execution).witness.data memoryChannel).map TypedInteraction.raw) := by
     rw [typedTableInteractionsWith_raw]
     exact member
   obtain ⟨typed, typedMem, rawEq⟩ := List.mem_map.mp rawMember
@@ -720,7 +721,7 @@ theorem nativeTrace_memoryInitProviderBound
   have messageMem : typed.message ∈
       ((typedTableInteractionsWith
         (memoryInitProviderTable (nativeTrace statement execution).witness)
-        memoryChannel).map TypedInteraction.message) := List.mem_map_of_mem typedMem
+        (nativeTrace statement execution).witness.data memoryChannel).map TypedInteraction.message) := List.mem_map_of_mem typedMem
   rw [(nativeTrace statement execution).memoryInitTableMessages,
     nativeTrace_memoryInitOccurrences] at messageMem
   obtain ⟨entry, entryMem, messageEq⟩ := List.mem_map.mp messageMem
@@ -757,7 +758,7 @@ theorem nativeTrace_activeMemoryInitLedger
     (statement : SupportedCoreStatement p) (execution : Machine.EventExecutionTrace) :
     active ((typedTableInteractionsWith
       (memoryInitProviderTable (nativeTrace statement execution).witness)
-      memoryChannel).map fun interaction => Interaction.toAccess interaction.raw) =
+      (nativeTrace statement execution).witness.data memoryChannel).map fun interaction => Interaction.toAccess interaction.raw) =
       (memoryInitialEntries
         (TraceGen.compileExecution statement.program execution
           (nativeInitialClock statement)).memoryHistory).map fun entry =>
@@ -792,7 +793,7 @@ theorem nativeTrace_activeMemoryFinalizeLedger
     (statement : SupportedCoreStatement p) (execution : Machine.EventExecutionTrace) :
     active ((typedTableInteractionsWith
       (memoryFinalizeProviderTable (nativeTrace statement execution).witness)
-      memoryChannel).map fun interaction => Interaction.toAccess interaction.raw) =
+      (nativeTrace statement execution).witness.data memoryChannel).map fun interaction => Interaction.toAccess interaction.raw) =
       (memoryFinalEntries
         (TraceGen.compileExecution statement.program execution
           (nativeInitialClock statement)).memoryHistory).map fun entry =>
@@ -843,7 +844,8 @@ theorem nativeTrace_memoryLedgerPermHandoffChains
   let bumpLedger := compiled.bumpMemoryHistory.flatMap
     (MemoryHistoryAccess.ledger (p := p))
   have haltInactive : active ((typedTableInteractionsWith
-      (haltTable (nativeTrace statement execution).witness) memoryChannel).map
+      (haltTable (nativeTrace statement execution).witness)
+      (nativeTrace statement execution).witness.data memoryChannel).map
         fun i => Interaction.toAccess i.raw) = [] := by
     obtain ⟨-, hpad⟩ := (nativeTrace statement execution).haltTablePadding
     rw [active, List.filter_eq_nil_iff]
@@ -860,7 +862,8 @@ theorem nativeTrace_memoryLedgerPermHandoffChains
         Nat.mul_zero, ne_eq, decide_not] <;>
       simp
   have syscallInactive : active ((typedTableInteractionsWith
-      (syscallInstrsTable (nativeTrace statement execution).witness) memoryChannel).map
+      (syscallInstrsTable (nativeTrace statement execution).witness)
+      (nativeTrace statement execution).witness.data memoryChannel).map
         fun i => Interaction.toAccess i.raw) = [] := by
     rw [typedTableInteractionsWith, syscallInstrsTable_nil (nativeTrace statement execution)]
     rfl

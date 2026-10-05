@@ -114,7 +114,7 @@ def CircuitRegisterOperandPullAt {Input Output : TypeMap}
     (priorValue : Trace.AdapterView (ZMod p) → Word (ZMod p)) :
     Prop :=
   ∀ data physical rowView program state,
-    let component : Component (ZMod p) := ⟨circuit⟩
+    let component : Component (ZMod p) := { circuit := circuit }
     let env := Environment.fromArray physical data
     rowView = view (component.rowInput env) (component.rowOutput env) →
       ready (component.rowInput env) (component.rowOutput env) program state →
@@ -205,7 +205,7 @@ theorem circuitRegisterOperandPullAt_of_exposure {Input Output : TypeMap}
   intro data physical rowView
   dsimp only
   intro program state viewEq _ready real
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input

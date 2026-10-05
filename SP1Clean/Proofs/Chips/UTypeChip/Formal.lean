@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.UTypeChip.Defs
 import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import ToClean.Circuit.InteractionRecovery
@@ -292,7 +294,7 @@ def exposedProgramInteractions (input : Var Inputs (ZMod p)) :
 /-- The U-type chip row as a `GeneralFormalCircuit`: the flag-gated `RV64.lui`/`RV64.auipc` semantics,
 composing the witnessed `AddOperation` gadget and the J-type reader; output is the native `Columns` row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { main, elaborated,
+  { name := "sp1.native.u_type", main, elaborated,
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
@@ -612,5 +614,20 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
     ⟨programChannel.toRaw,
       (exposedProgramInteractions input).map ChannelInteraction.toRaw⟩
     (by simp [circuit, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := UTypeChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    UTypeChip.circuit_main_eq]
+  simp [UTypeChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
+    Readers.JTypeReader.circuit, Readers.JTypeReader.main,
+    Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
+    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit,
+    Readers.RegisterAccessTimestamp.main,
+    AddOperation.circuit, AddOperation.main, Gadgets.Equality.main,
+    circuit_norm]
 
 end SP1Clean.UTypeChip

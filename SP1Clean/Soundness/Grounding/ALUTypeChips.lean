@@ -46,7 +46,7 @@ local macro "aluViewState " inputs:term ", " circuit:term ", " inputOutput:term 
   let env := Lean.mkIdent `env
   `(tactic| (
     have inputEq : Eval.eval $env (varFromOffset $inputs 0) =
-        (⟨$circuit (p := p)⟩ : Component (ZMod p)).rowInput $env :=
+        ({ circuit := $circuit (p := p) } : Component (ZMod p)).rowInput $env :=
       eval_varFromOffset_valueFromOffset $inputs 0 $env
     simp only [$unfolds,*]
     exact ($inputOutput $env).symm.trans
@@ -58,7 +58,7 @@ local macro "aluViewAdapter " inputs:term ", " circuit:term ", " inputOutput:ter
   let env := Lean.mkIdent `env
   `(tactic| (
     have inputEq : Eval.eval $env (varFromOffset $inputs 0) =
-        (⟨$circuit (p := p)⟩ : Component (ZMod p)).rowInput $env :=
+        ({ circuit := $circuit (p := p) } : Component (ZMod p)).rowInput $env :=
       eval_varFromOffset_valueFromOffset $inputs 0 $env
     simp only [$unfolds,*]
     exact congrArg Circuits.Types.ALUTypeReader.toAdapterView
@@ -595,7 +595,7 @@ inductive CircuitALUTypeTimestampContract {Input Output : TypeMap}
           ((circuit.main (varFromOffset (F := ZMod p) Input 0)).operations
             (size Input)).subcircuits)
       (binding : ∀ env : Environment (ZMod p),
-        (⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold env →
+        ({ circuit := circuit } : Component (ZMod p)).operations.ConstraintsHold env →
         ALUTypeTimestampBinding
           (Expression.eval env readerInput.is_real)
           (Expression.eval env readerInput.cols.imm_c)
@@ -620,18 +620,18 @@ theorem aluTypeTimestampBounds_of_contract {Input Output : TypeMap}
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (contract : CircuitALUTypeTimestampContract circuit view)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : (⟨circuit⟩ : Component (ZMod p)).operations.ConstraintsHold
+    (constraints : ({ circuit := circuit } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data))
-    (guarantees : (⟨circuit⟩ : Component (ZMod p)).operations.ChannelGuarantees
+    (guarantees : ({ circuit := circuit } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromArray physical data))
-    (real : (view ((⟨circuit⟩ : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) ((⟨circuit⟩ : Component (ZMod p)).rowOutput
+    (real : (view (({ circuit := circuit } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))).is_real = 1) :
-    ALUTypeTimestampBounds (view ((⟨circuit⟩ : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) ((⟨circuit⟩ : Component (ZMod p)).rowOutput
+    ALUTypeTimestampBounds (view (({ circuit := circuit } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))) := by
   obtain ⟨readerOffset, readerInput, readerMem, binding⟩ := contract
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   have rowGuarantees : component.rowOperations.ChannelGuarantees byteChannel.toRaw env :=
     (Component.channelGuarantees_iff env byteChannel.toRaw).mp guarantees
@@ -692,16 +692,16 @@ theorem immutableAluTypeTimestampBounds_of_contract {Input Output : TypeMap}
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (contract : CircuitImmutableALUTypeTimestampContract circuit view)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : (⟨circuit⟩ : Component (ZMod p)).operations.ChannelGuarantees
+    (guarantees : ({ circuit := circuit } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromArray physical data))
-    (real : (view ((⟨circuit⟩ : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) ((⟨circuit⟩ : Component (ZMod p)).rowOutput
+    (real : (view (({ circuit := circuit } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))).is_real = 1) :
-    ALUTypeTimestampBounds (view ((⟨circuit⟩ : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) ((⟨circuit⟩ : Component (ZMod p)).rowOutput
+    ALUTypeTimestampBounds (view (({ circuit := circuit } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))) := by
   obtain ⟨readerOffset, readerInput, readerMem, binding⟩ := contract
-  let component : Component (ZMod p) := ⟨circuit⟩
+  let component : Component (ZMod p) := { circuit := circuit }
   let env := Environment.fromArray physical data
   have rowGuarantees : component.rowOperations.ChannelGuarantees byteChannel.toRaw env :=
     (Component.channelGuarantees_iff env byteChannel.toRaw).mp guarantees
@@ -845,8 +845,8 @@ def addwChipDescriptor : SupportedChip p :=
 omit [Fact (2 ^ 25 < p)] in
 noncomputable def addwViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   AddwChip.rowView
-    ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+    (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 theorem addwViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     ((addwChipDescriptor (p := p)).decodeRow data physical).view =
@@ -855,7 +855,7 @@ theorem addwViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMo
 omit [Fact (2 ^ 25 < p)] in
 theorem addwChipDescriptor_table :
     (addwChipDescriptor (p := p)).table =
-      (⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem addwViewOf_state (env : Environment (ZMod p)) :
@@ -888,7 +888,7 @@ theorem addwViewOf_isReal (env : Environment (ZMod p)) :
     (addwViewOf env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) AddwChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset AddwChip.Inputs 0) =
-      (⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset AddwChip.Inputs 0 env
   simpa only [addwViewOf, AddwChip.rowView] using
     congrArg (fun input : AddwChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -905,7 +905,7 @@ theorem addwViewOf_rdWrite (env : Environment (ZMod p)) :
   let input : Var AddwChip.Inputs (ZMod p) := varFromOffset AddwChip.Inputs 0
   let offset := size AddwChip.Inputs
   have outputEq : Eval.eval env ((AddwChip.circuit (p := p)).output input offset) =
-      (⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env := by
+      ({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   simp only [addwViewOf, AddwChip.rowView, AddwChip.resultWord]
   rw [← outputEq]
@@ -919,7 +919,7 @@ theorem addwViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- Addw's completed exposed Memory list evaluates to the canonical conditional six-pack. -/
 theorem addwChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (aluViewMemoryInteractions (addwViewOf env)).map TypedInteraction.raw := by
   memoryValuesPreamble AddwChip.Inputs, AddwChip.main, AddwChip.interactionsWith_memory_eq
@@ -1032,7 +1032,7 @@ theorem bitwiseViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (
 omit [Fact (2 ^ 25 < p)] in
 theorem bitwiseChipDescriptor_table :
     (bitwiseChipDescriptor (p := p)).table =
-      (⟨BitwiseChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem bitwiseViewOf_state (env : Environment (ZMod p)) :
@@ -1085,7 +1085,7 @@ theorem bitwiseViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- Bitwise's completed exposed Memory list evaluates to the canonical conditional six-pack. -/
 theorem bitwiseChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨BitwiseChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (aluViewMemoryInteractions (bitwiseViewOf env)).map TypedInteraction.raw := by
   memoryValuesPreamble BitwiseChip.Inputs, BitwiseChip.main, BitwiseChip.interactionsWith_memory_eq
@@ -1198,7 +1198,7 @@ theorem ltViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod 
 omit [Fact (2 ^ 25 < p)] in
 theorem ltChipDescriptor_table :
     (ltChipDescriptor (p := p)).table =
-      (⟨LtChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem ltViewOf_state (env : Environment (ZMod p)) :
@@ -1242,7 +1242,7 @@ theorem ltViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- Lt's completed exposed Memory list evaluates to the canonical conditional six-pack. -/
 theorem ltChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨LtChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (aluViewMemoryInteractions (ltViewOf env)).map TypedInteraction.raw := by
   memoryValuesPreamble LtChip.Inputs, LtChip.main, LtChip.interactionsWith_memory_eq
@@ -1355,7 +1355,7 @@ theorem shiftLeftViewOf_decodeRow (data : ProverData (ZMod p))
 omit [Fact (2 ^ 25 < p)] in
 theorem shiftLeftChipDescriptor_table :
     (shiftLeftChipDescriptor (p := p)).table =
-      (⟨ShiftLeftChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem shiftLeftViewOf_state (env : Environment (ZMod p)) :
@@ -1408,7 +1408,7 @@ omit [Fact (2 ^ 25 < p)] in
 /-- On satisfying rows, ShiftLeft's witnessed flag-sum gate equals its public row selector. -/
 theorem shiftLeftGate_eval_eq_isReal (env : Environment (ZMod p))
     (constraints :
-      (⟨ShiftLeftChip.circuit (p := p)⟩ :
+      ({ circuit := ShiftLeftChip.circuit (p := p) } :
         Component (ZMod p)).operations.ConstraintsHold env) :
     Expression.eval env (ShiftLeftChip.exposedGate (p := p) (size ShiftLeftChip.Inputs)) =
       (shiftLeftViewOf env).is_real := by
@@ -1431,9 +1431,9 @@ omit [Fact (2 ^ 25 < p)] in
 /-- ShiftLeft's completed Memory list is canonical after its selector-link constraint fires. -/
 theorem shiftLeftChip_memoryInteractionValues_eq (env : Environment (ZMod p))
     (constraints :
-      (⟨ShiftLeftChip.circuit (p := p)⟩ :
+      ({ circuit := ShiftLeftChip.circuit (p := p) } :
         Component (ZMod p)).operations.ConstraintsHold env) :
-    (⟨ShiftLeftChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (aluViewMemoryInteractions (shiftLeftViewOf env)).map TypedInteraction.raw := by
   memoryValuesPreamble ShiftLeftChip.Inputs, ShiftLeftChip.main,
@@ -1481,11 +1481,11 @@ theorem ShiftLeftChip.aluTypeTimestampContract :
     (ShiftLeftChip.aluReader_mem_subcircuits input offset) ?_
   intro env constraints
   have inputEq : Eval.eval env input =
-      (⟨ShiftLeftChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset ShiftLeftChip.Inputs 0 env
   have outputEq : Eval.eval env
       ((ShiftLeftChip.circuit (p := p)).output input offset) =
-      (⟨ShiftLeftChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env := by
+      ({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   have viewEq :
       ShiftLeftChip.rowView (Eval.eval env input)
@@ -1577,7 +1577,7 @@ theorem shiftRightViewOf_decodeRow (data : ProverData (ZMod p))
 omit [Fact (2 ^ 25 < p)] in
 theorem shiftRightChipDescriptor_table :
     (shiftRightChipDescriptor (p := p)).table =
-      (⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem shiftRightViewOf_state (env : Environment (ZMod p)) :
@@ -1630,7 +1630,7 @@ omit [Fact (2 ^ 25 < p)] in
 /-- On satisfying rows, ShiftRight's witnessed write gate equals its public row selector. -/
 theorem shiftRightWriteGate_eval_eq_isReal (env : Environment (ZMod p))
     (constraints :
-      (⟨ShiftRightChip.circuit (p := p)⟩ :
+      ({ circuit := ShiftRightChip.circuit (p := p) } :
         Component (ZMod p)).operations.ConstraintsHold env) :
     Expression.eval env
         (ShiftRightChip.exposedWriteGate (p := p) (size ShiftRightChip.Inputs)) =
@@ -1656,9 +1656,9 @@ omit [Fact (2 ^ 25 < p)] in
 /-- ShiftRight's completed Memory list is canonical after its write-gate link fires. -/
 theorem shiftRightChip_memoryInteractionValues_eq (env : Environment (ZMod p))
     (constraints :
-      (⟨ShiftRightChip.circuit (p := p)⟩ :
+      ({ circuit := ShiftRightChip.circuit (p := p) } :
         Component (ZMod p)).operations.ConstraintsHold env) :
-    (⟨ShiftRightChip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (aluViewMemoryInteractions (shiftRightViewOf env)).map TypedInteraction.raw := by
   memoryValuesPreamble ShiftRightChip.Inputs, ShiftRightChip.main,
@@ -1777,8 +1777,8 @@ omit [Fact (2 ^ 25 < p)] in
 noncomputable def aluX0ViewOf (env : Environment (ZMod p)) :
     Trace.RowView (ZMod p) :=
   AluX0Chip.rowView
-    ((⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-    ((⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)
+    (({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).rowOutput env)
 
 theorem aluX0ViewOf_decodeRow (data : ProverData (ZMod p))
     (physical : Array (ZMod p)) :
@@ -1788,21 +1788,23 @@ theorem aluX0ViewOf_decodeRow (data : ProverData (ZMod p))
 omit [Fact (2 ^ 25 < p)] in
 theorem aluX0ChipDescriptor_table :
     (aluX0ChipDescriptor (p := p)).table =
-      (⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)) := rfl
+      ({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem aluX0ViewOf_state (env : Environment (ZMod p)) :
     (aluX0ViewOf env).state =
       (Eval.eval env
         (varFromOffset (F := ZMod p) AluX0Chip.Inputs 0)).state := by
-  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView, circuit_norm]
+  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView,
+    Component.rowInputVar, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 theorem aluX0ViewOf_adapter (env : Environment (ZMod p)) :
     (aluX0ViewOf env).adapter =
       (Eval.eval env
         (varFromOffset (F := ZMod p) AluX0Chip.Inputs 0)).adapter.toAdapterView := by
-  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView, circuit_norm]
+  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView,
+    Component.rowInputVar, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 /-- AluX0's view opcode is the threaded input opcode.  Naming this cheap projection keeps
@@ -1812,7 +1814,8 @@ theorem aluX0ViewOf_opcode (env : Environment (ZMod p)) :
     (aluX0ViewOf env).opcode =
       (Eval.eval env
         (varFromOffset (F := ZMod p) AluX0Chip.Inputs 0)).opcode := by
-  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView, circuit_norm]
+  simp only [aluX0ViewOf, AluX0Chip.circuit, AluX0Chip.rowView,
+    Component.rowInputVar, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 theorem aluX0ViewOf_isReal (env : Environment (ZMod p)) :
@@ -1820,7 +1823,7 @@ theorem aluX0ViewOf_isReal (env : Environment (ZMod p)) :
       (Eval.eval env
         (varFromOffset (F := ZMod p) AluX0Chip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset AluX0Chip.Inputs 0) =
-      (⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset AluX0Chip.Inputs 0 env
   simpa only [aluX0ViewOf, AluX0Chip.rowView] using
     congrArg (fun input : AluX0Chip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -1889,7 +1892,7 @@ theorem AluX0Chip.opA0_eq_one_of_constraints
 omit [Fact (2 ^ 25 < p)] in
 /-- AluX0's completed exposed Memory list evaluates to the immutable conditional six-pack. -/
 theorem aluX0Chip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    (⟨AluX0Chip.circuit (p := p)⟩ : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := AluX0Chip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (immutableAluViewMemoryInteractions (aluX0ViewOf env)).map
         TypedInteraction.raw := by

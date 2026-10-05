@@ -18,8 +18,8 @@ def degreeBound : Expression F → ℕ
 /-- Costs are evaluated on actual programs and built rows, including disabled interactions. -/
 def costs (tables : List (Table F)) : Json :=
   let rows := tables.flatMap fun table => table.table.map fun row => (table.component, row)
-  let constraints := rows.flatMap fun (component, _) => component.rowOperations.constraints
-  let lookups := rows.flatMap fun (component, _) => component.rowOperations.lookups
+  let constraints := rows.flatMap fun (component, _) => component.operations.constraints
+  let lookups := rows.flatMap fun (component, _) => component.operations.lookups
   Json.mkObj [
     ("physicalRows", toJson rows.length),
     ("cells", toJson ((rows.map fun entry => entry.2.size).sum)),
@@ -30,7 +30,7 @@ def costs (tables : List (Table F)) : Json :=
     ("fixedLookupOccurrences", toJson lookups.length),
     ("maxLookupEntryDegreeBound", toJson
       ((lookups.flatMap fun lookup => lookup.entry.toList.map degreeBound).foldl max 0)),
-    ("rawInteractions", toJson ((tables.flatMap Table.interactions).length)),
+    ("rawInteractions", toJson ((tables.flatMap (·.interactions (deriveProverData tables))).length)),
     ("rawByteInteractions", toJson (byteLedger tables).length),
     ("zeroByteInteractions", toJson ((byteLedger tables).countP fun interaction => interaction.mult == 0))]
 
@@ -69,7 +69,7 @@ def main : IO Unit := do
        ("passed", toJson (expected == actual))]))]
   IO.println report.pretty
   unless cases.all (fun sample => sample.2.1 == sample.2.2) &&
-      old.all tableCheck && new.all tableCheck && oldByteBalanced && newByteBalanced do
+      tablesCheck old && tablesCheck new && oldByteBalanced && newByteBalanced do
     throw (IO.userError "LoadByte static-lookup regression failed")
 
 end SP1Clean.LoadByteStaticRunner

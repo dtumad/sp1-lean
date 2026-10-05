@@ -234,7 +234,7 @@ theorem walkedRow_widthAt (witness : EnsembleWitness (sp1Ensemble (p := p)))
       row ∈ realDecodedInstructionRows witness.data witness.tables)
     (syscallSource : ∀ r : SyscallInstrsChip.Inputs (ZMod p), WalkedRow.syscall r ∈ rows →
       ∃ raw ∈ realSyscallInstrsRows witness,
-        r = syscallInstrsRow (syscallInstrsTable witness) raw) :
+        r = syscallInstrsRow witness.data raw) :
     ∀ (k : ℕ) (hk : k < rows.length),
       StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePush
         = StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
@@ -271,17 +271,17 @@ the `+264` step.
 The one that stays a hypothesis is `align8`, and it stays for a reason worth naming: it relates the
 row's pull to the **shard's** initial clock, which no single row can see.  Only the walk establishes
 it, inductively, which is why it cannot be discharged here however many witness facts are in hand. -/
-theorem syscallRowOKCore_of_witness (witness : EnsembleWitness (sp1Ensemble (p := p)))
+theorem syscallRowOKCore_of_witness {program : GuestProgram} (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness) (initialClock : ℕ)
+    (providerBound : ProgramProviderBound program witness) (initialClock : ℕ)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
     (currency : ∀ mp ∈
-        (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+        (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1)
     (align : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-        (syscallInstrsRow (syscallInstrsTable witness) row)) % 8 = initialClock % 8) :
+        (syscallInstrsRow witness.data row)) % 8 = initialClock % 8) :
     TimedGrounding.RowOKCore initialClock
-      (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+      (syscallRowFacts (syscallInstrsRow witness.data row)) := by
   obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
   obtain ⟨clk0B, clk1B⟩ := syscallInstrsRow_cpuState_bounds witness constraints balanced rowMem
   obtain ⟨opA, opB, opC⟩ :=
@@ -294,7 +294,7 @@ theorem syscallRowOKCore_of_witness (witness : EnsembleWitness (sp1Ensemble (p :
   -- `syscallRowOKCore`'s expectation of it differ enough that `whnf` starts normalizing the table's
   -- element construction (`[def_eq] sp1Ensemble` in the diagnostics).  With the row generalized to
   -- a bare `r` nothing can unfold it, and the proof elaborates in ~2s.
-  generalize syscallInstrsRow (syscallInstrsTable witness) row = r
+  generalize syscallInstrsRow witness.data row = r
     at real clk0B clk1B opA opB opC spec step align ⊢
   exact syscallRowOKCore initialClock r real spec clk0B clk1B opA opB opC align step
 
@@ -310,28 +310,28 @@ theorem syscallStepFact_of_witness (handler : ExecutableSyscallHandler) (prog : 
     (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness)
+    (providerBound : ProgramProviderBound prog witness)
     (canonicalCodes : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
     (payload : SyscallAdvancePayload (p := p) handler)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
     (currency : ∀ mp ∈
-        (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+        (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1)
     (positioned : ∀ n : ℕ,
       StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row))
+          (syscallInstrsRow witness.data row))
         = (eventTimeline events initialClock).start n →
       events[n]? = some (ExecutionEvent.syscall
-        (syscallEventOfRow (syscallInstrsRow (syscallInstrsTable witness) row))))
+        (syscallEventOfRow (syscallInstrsRow witness.data row))))
     (rowContext : ∀ (n : ℕ) (s : SailState),
       eventTrajectory handler prog events initial n = some s →
       StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row))
+          (syscallInstrsRow witness.data row))
         = (eventTimeline events initialClock).start n →
-      SyscallRowContext (syscallInstrsRow (syscallInstrsTable witness) row) prog s) :
+      SyscallRowContext (syscallInstrsRow witness.data row) prog s) :
     LocalStepFactG prog (eventTrajectory handler prog events initial) initial
       (eventTimeline events initialClock)
-      (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+      (syscallRowFacts (syscallInstrsRow witness.data row)) := by
   obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
   obtain ⟨clk0B, clk1B⟩ := syscallInstrsRow_cpuState_bounds witness constraints balanced rowMem
   obtain ⟨opA, -, -⟩ :=
@@ -342,7 +342,7 @@ theorem syscallStepFact_of_witness (handler : ExecutableSyscallHandler) (prog : 
   have u64A := syscallInstrsRow_opAValue_isU64 witness constraints balanced rowMem
   have step := witness_realSyscallInstrsRows_timeStep witness constraints balanced row rowMem
   have sel := SyscallInstrsChip.Spec.selectorsValid spec
-  generalize syscallInstrsRow (syscallInstrsTable witness) row = r
+  generalize syscallInstrsRow witness.data row = r
     at real clk0B clk1B opA spec pulled canonical u64A step sel positioned rowContext ⊢
   exact syscallStepFact_of_advance handler prog events initial initialClock r payload real spec sel
     pulled canonical clk0B clk1B u64A opA positioned rowContext step
@@ -355,28 +355,28 @@ theorem syscallFrameFact_of_witness (handler : ExecutableSyscallHandler) (prog :
     (events : List ExecutionEvent) (initial : SailState) (initialClock : ℕ)
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (providerBound : ProgramProviderBound witness)
+    (providerBound : ProgramProviderBound prog witness)
     (canonicalCodes : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
     (payload : SyscallAdvancePayload (p := p) handler)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
     (currency : ∀ mp ∈
-        (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)).memPulls,
+        (syscallRowFacts (syscallInstrsRow witness.data row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1)
     (positioned : ∀ n : ℕ,
       StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row))
+          (syscallInstrsRow witness.data row))
         = (eventTimeline events initialClock).start n →
       events[n]? = some (ExecutionEvent.syscall
-        (syscallEventOfRow (syscallInstrsRow (syscallInstrsTable witness) row))))
+        (syscallEventOfRow (syscallInstrsRow witness.data row))))
     (rowContext : ∀ (n : ℕ) (s : SailState),
       eventTrajectory handler prog events initial n = some s →
       StateMsg.timeNat (SyscallInstrsChip.statePulledMessage
-          (syscallInstrsRow (syscallInstrsTable witness) row))
+          (syscallInstrsRow witness.data row))
         = (eventTimeline events initialClock).start n →
-      SyscallRowContext (syscallInstrsRow (syscallInstrsTable witness) row) prog s) :
+      SyscallRowContext (syscallInstrsRow witness.data row) prog s) :
     FrameFactG prog (eventTrajectory handler prog events initial) initial
       (eventTimeline events initialClock)
-      (syscallRowFacts (syscallInstrsRow (syscallInstrsTable witness) row)) := by
+      (syscallRowFacts (syscallInstrsRow witness.data row)) := by
   obtain ⟨tableMem, real⟩ := mem_realSyscallInstrsRows witness rowMem
   obtain ⟨opA, -, -⟩ :=
     syscallInstrsRow_operands witness constraints balanced providerBound rowMem
@@ -385,7 +385,7 @@ theorem syscallFrameFact_of_witness (handler : ExecutableSyscallHandler) (prog :
   have canonical := isInlineCanonical_of_profile witness canonicalCodes rowMem
   have step := witness_realSyscallInstrsRows_timeStep witness constraints balanced row rowMem
   have sel := SyscallInstrsChip.Spec.selectorsValid spec
-  generalize syscallInstrsRow (syscallInstrsTable witness) row = r
+  generalize syscallInstrsRow witness.data row = r
     at real opA spec pulled canonical step sel positioned rowContext ⊢
   exact syscallFrameFact_of_advance handler prog events initial initialClock r payload real spec sel
     pulled canonical opA positioned rowContext step
@@ -417,7 +417,7 @@ theorem walkedTrail_of_haltFree (witness : EnsembleWitness (sp1Ensemble (p := p)
       List.Forall₂
         (fun t r => (∃ d : DecodedInstructionRow p, t = Sum.inl d ∧ r = WalkedRow.instruction d) ∨
           (∃ raw : Array (ZMod p), t = Sum.inr (Sum.inr raw) ∧
-            r = WalkedRow.syscall (syscallInstrsRow (syscallInstrsTable witness) raw)))
+            r = WalkedRow.syscall (syscallInstrsRow witness.data raw)))
         trailRows rows ∧
       (↑trailRows : Multiset (TrailRow p)) =
         ↑((realDecodedInstructionRows witness.data witness.tables).map
@@ -449,7 +449,7 @@ theorem walkedTrail_of_haltFree (witness : EnsembleWitness (sp1Ensemble (p := p)
     · obtain ⟨raw, -, rfl⟩ := List.mem_map.mp (Multiset.mem_coe.mp h)
       exact Or.inr ⟨raw, rfl⟩
   obtain ⟨rows, hforall₂⟩ :=
-    listAllWalked (syscallInstrsRow (syscallInstrsTable witness)) id trailRows allArms
+    listAllWalked (syscallInstrsRow witness.data) id trailRows allArms
   refine ⟨trailRows, rows, hforall₂, trailMultiset, ?_⟩
   refine Walk.isWalk_forall₂ (trailCanonEdge witness) (walkedCanonEdge witness) _ ?_ hforall₂
     trailWalk
@@ -466,7 +466,7 @@ theorem walkedCanonEdge_steps (witness : EnsembleWitness (sp1Ensemble (p := p)))
       row ∈ realDecodedInstructionRows witness.data witness.tables)
     (syscallSource : ∀ r : SyscallInstrsChip.Inputs (ZMod p), WalkedRow.syscall r ∈ rows →
       ∃ raw ∈ realSyscallInstrsRows witness,
-        r = syscallInstrsRow (syscallInstrsTable witness) raw) :
+        r = syscallInstrsRow witness.data raw) :
     ∀ r ∈ rows, StateMsg.timeNat (walkedCanonEdge witness r).2
       = StateMsg.timeNat (walkedCanonEdge witness r).1 + r.duration := by
   obtain ⟨instrGood, -, -, syscallGood⟩ := witness_stateEdges_goodness witness constraints balanced
@@ -502,7 +502,7 @@ theorem walkedCanonEdge_agrees (witness : EnsembleWitness (sp1Ensemble (p := p))
       row ∈ realDecodedInstructionRows witness.data witness.tables)
     (syscallSource : ∀ r : SyscallInstrsChip.Inputs (ZMod p), WalkedRow.syscall r ∈ rows →
       ∃ raw ∈ realSyscallInstrsRows witness,
-        r = syscallInstrsRow (syscallInstrsTable witness) raw) :
+        r = syscallInstrsRow witness.data raw) :
     ∀ r ∈ rows,
       StateMsg.timeNat (walkedCanonEdge witness r).1
           = StateMsg.timeNat (WalkedRow.facts g r).statePull ∧
@@ -568,7 +568,7 @@ theorem walkedTrail_pullAt (witness : EnsembleWitness (sp1Ensemble (p := p)))
       row ∈ realDecodedInstructionRows witness.data witness.tables)
     (syscallSource : ∀ r : SyscallInstrsChip.Inputs (ZMod p), WalkedRow.syscall r ∈ rows →
       ∃ raw ∈ realSyscallInstrsRows witness,
-        r = syscallInstrsRow (syscallInstrsTable witness) raw)
+        r = syscallInstrsRow witness.data raw)
     (headTime : StateMsg.timeNat initialMsg = initialClock)
     (k : ℕ) (hk : k < rows.length) :
     StateMsg.timeNat (WalkedRow.facts g (rows[k]'hk)).statePull
@@ -682,29 +682,29 @@ theorem walkedTouchBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
       TimedGrounding.optMS (memoryInitFrontier witness loc)
           + TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+            (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
         TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
           + TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+            (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))) :
     ∀ loc : Semantics.MemLoc,
       TimedGrounding.optMS (memoryInitFrontier witness loc)
           + (touchPairsAt (walkedRows.map (walkedTouches t)) loc).map Prod.snd
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
         TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
           + (touchPairsAt (walkedRows.map (walkedTouches t)) loc).map Prod.fst
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
   obtain ⟨pushProj, pullProj, locProj⟩ :=
     walkedTouches_projections initialClock g t walkedRows rowOK instrPush instrPull instrLoc

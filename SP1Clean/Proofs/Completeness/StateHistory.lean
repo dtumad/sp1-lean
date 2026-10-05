@@ -513,12 +513,12 @@ theorem StateTraceAgreement.ledger_perm_handoff
       (decoded.toChipRow trace.witness.data).is_real = 0 ∨
         (decoded.toChipRow trace.witness.data).is_real = 1)
     (hbump : ∀ row ∈ (stateBumpTable trace.witness).table,
-      (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
+      (stateBumpRow trace.witness.data row).is_real = 0 ∨
+        (stateBumpRow trace.witness.data row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0)
+      (haltRow trace.witness.data row).is_real = 0)
     (hsyscall : ∀ row ∈ (syscallInstrsTable trace.witness).table,
-      (syscallInstrsRow (syscallInstrsTable trace.witness) row).is_real = 0)
+      (syscallInstrsRow trace.witness.data row).is_real = 0)
     (chronology : StateChronology initial events final) :
     (active trace.stateLedger).Perm
       (handoff (chainTokens (stateInitToken trace,

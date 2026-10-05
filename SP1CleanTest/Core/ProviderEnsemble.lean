@@ -7,7 +7,7 @@ import Clean.Air.OrderedChannel
 
 The Program and Memory providers can finish their structural channels, and the Memory finalizer
 can consume the finished Memory channel. These small constructions exercise the upstream
-`SoundEnsemble` interface and retain the exact provider components. Whole-machine grounding is
+`SoundEnsemble` interface, including distinct canonical table names. Whole-machine grounding is
 proved by the library's complete ensemble; these examples supply no additional execution premise.
 -/
 
@@ -36,6 +36,7 @@ private def boundary (PublicIO : TypeMap) [ProvableType PublicIO] :
     |>.addTable { circuit := MemoryFinalizeChip.circuit }
         (by simp [circuit_norm, MemoryFinalizeChip.circuit, memory])
         (by simp [circuit_norm, MemoryFinalizeChip.circuit, memory])
+        (by simp [circuit_norm, MemoryFinalizeChip.circuit, MemoryProviderChip.circuit, memory])
 
 theorem programFinished (PublicIO : TypeMap) [ProvableType PublicIO] :
     (programChannel (p := p)).toRaw ∈ (program (p := p) PublicIO).finished := by
@@ -48,5 +49,9 @@ theorem memoryFinished (PublicIO : TypeMap) [ProvableType PublicIO] :
 theorem boundaryComponents (PublicIO : TypeMap) [ProvableType PublicIO] :
     (boundary (p := p) PublicIO).tables =
       [{ circuit := MemoryFinalizeChip.circuit }, { circuit := MemoryProviderChip.circuit }] := rfl
+
+theorem boundaryNames (PublicIO : TypeMap) [ProvableType PublicIO] :
+    ((boundary (p := p) PublicIO).tables.map (·.circuit.name)) =
+      ["sp1.native.memory_finalize", "sp1.native.memory_init"] := rfl
 
 end SP1CleanTest.ProviderEnsemble

@@ -1,7 +1,7 @@
 import SP1CleanTest.Alignment.Audit.BranchCompilerRoundTrip
 import SP1Clean.Soundness.HostFinalMemory
 import ToClean.Air.EnsembleBuild
-import ToClean.Air.EnsembleExport
+import ToClean.Air.FiniteLookup
 import ToClean.Air.ChannelRegistry
 
 /-! # Compiler-derived branch witness for the complete local host assembly
@@ -29,7 +29,7 @@ def target : MemorySnapshot := source.sail.memorySnapshot
 def assembly (target : MemorySnapshot) :=
   HostFinalMemory.ensemble (p := SP1Prime) image source target
     (HostHintQueueBoundary.initial []) source.host HostCallReceivers.available
-    (HostHintReadLocal.sourceResources []) []
+    (HostHintReadLocal.sourceResources []) [] (HostFinalMemory.source_unique_names image source target)
 /-- Public ordinary-step endpoints, not a HALT endpoint claim. -/
 def header : SP1PublicIO Fp where
   init_clk_0_16 := 1
@@ -49,7 +49,7 @@ def header : SP1PublicIO Fp where
   exit_code := 0
   is_execution_shard := 1
   committed_value_digest := Vector.replicate 32 0
-/-- Shared committed data is empty: all lookup meanings come from fixed snapshots. -/
+/-- Empty generation input; semantic data is derived from the committed physical rows. -/
 def data : ProverData Fp := BranchCompilerRoundTrip.data
 /-- An input seed retains the actual component position and witness hint. -/
 structure Seed where
@@ -151,35 +151,39 @@ def byteSeed? (entry : String × List Fp × Fp) : Option (Option Seed) :=
 def seeds? (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) :
     Option (List Seed) := do
   let ledgers ← consumers.mapM (seedLedger? target)
-  let verifier := rowLedger (assembly target).verifierTable (toElements input).toArray
+  let verifier := (assembly target).verifierOperations.interactionValues
+    (Environment.fromInput input data) |>.map fun interaction =>
+      (interaction.channel.name, interaction.msg.toList, interaction.mult)
   let providers ← (verifier ++ ledgers.flatten).mapM byteSeed?
   let generated := providers.filterMap id
   if generated.all (seedValid target) then some (consumers ++ generated) else none
+private theorem noFixed (target : MemorySnapshot) (component : Component Fp)
+    (member : component ∈ (assembly target).tables) : component.fixedColumns = none := by
+  have all : (assembly target).tables.all (fun component => component.fixedColumns.isNone) = true := by rfl
+  exact Option.isNone_iff_eq_none.mp (List.all_eq_true.mp all component member)
+
 /-- Every table remains installed; unused instruction and host tables have zero physical rows. -/
 def builtTables (target : MemorySnapshot) (seeds : List Seed) : List (Table Fp) :=
-  (assembly target).tables.zipIdx.map fun (component, index) =>
-    Table.buildHinted component ((seeds.filter fun seed => seed.table == index).map fun seed =>
+  let components := (assembly target).tables
+  List.ofFn fun index : Fin components.length =>
+    let component := components[index]
+    Table.buildHinted component ((seeds.filter fun seed => seed.table == index.val).map fun seed =>
       (seed.input component, seed.hint)) data
+      (by simp only [Component.fixedRowsMatch, noFixed target component (List.getElem_mem _)])
 /-- All built tables retain the assembly's original component identities and order. -/
 theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed) :
     (builtTables target seeds).map (·.component) = (assembly target).tables := by
-  simp [builtTables, List.map_map, Function.comp_def]
+  simp only [builtTables, List.map_ofFn]
+  exact List.ofFn_getElem
 /-- Building rows never changes the fixed 89-table host inventory. -/
 theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed) :
     (builtTables target seeds).length = 89 := by
-  simp only [builtTables, List.length_map, List.length_zipIdx]
-  rfl
-/-- Every physical table uses the same fixed-data environment. -/
-theorem builtTables_data (target : MemorySnapshot) (seeds : List Seed) :
-    ∀ table ∈ builtTables target seeds, table.data = data := by
-  intro table member
-  obtain ⟨entry, _, rfl⟩ := List.mem_map.mp member
+  simp only [builtTables, List.length_ofFn]
   rfl
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/
 def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed) :
     EnsembleWitness (assembly target) :=
-  EnsembleWitness.ofTables _ (builtTables target seeds) data input
-    (builtTables_components target seeds) (builtTables_data target seeds)
+  EnsembleWitness.ofTables _ (builtTables target seeds) input (builtTables_components target seeds)
 
 /-- The finite source is exactly the source of the official Sail/compiler regression. -/
 theorem source_realizes : source.realize = ⟨BranchCompilerRoundTrip.source, {}, 1⟩ := rfl

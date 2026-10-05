@@ -27,16 +27,16 @@ theorem buildRow_event_eq_original (event : MemoryEvent) (data : ProverData (ZMo
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (wellFormed : ∀ event ∈ events, event.WellFormed ∧ (event.opcode = 29 ∨ event.opcode = 32)) :
-    (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ computableWitnesses
+    (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint).Constraints data :=
+  Air.Flat.Table.build_constraints _ _ _ _ _ computableWitnesses
     (LoadByteChip.proverAssumptions_of_mem_traceInputs wellFormed data hint)
 
 /-- The alternative still supplies all of the existing channel guarantees. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (wellFormed : ∀ event ∈ events, event.WellFormed ∧ (event.opcode = 29 ∨ event.opcode = 32)) :
-    (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ computableWitnesses
+    (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint).Guarantees data :=
+  Air.Flat.Table.build_guarantees _ _ _ _ _ computableWitnesses
     (LoadByteChip.proverAssumptions_of_mem_traceInputs wellFormed data hint)
 
 end SP1Clean.LoadByteStaticChip

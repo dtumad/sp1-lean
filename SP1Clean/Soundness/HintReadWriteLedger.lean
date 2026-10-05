@@ -61,39 +61,39 @@ theorem row_permission_values (row : Row (p := p)) :
   rfl
 
 /-- Physical table projection introduces no extra Memory transfers and drops none. -/
-theorem memory_ledger (tables : List (Table (ZMod p)))
+theorem memory_ledger (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables) :
-    tables.flatMap (·.interactionsWith Channels.memoryChannel.toRaw) =
-      (TransitionView.readIndexedRows variants tables).flatMap (fun row =>
+    tables.flatMap (·.interactionsWith data Channels.memoryChannel.toRaw) =
+      (TransitionView.readIndexedRows variants tables data).flatMap (fun row =>
         [Channels.memoryChannel.pulledValue (rowInput row).ram.prior,
          Channels.memoryChannel.pushedValue (rowInput row).ram.pushed]) := by
   rw [TransitionView.readIndexedRows_interactions variants (fun last => (view last).component)
-    tables Channels.memoryChannel.toRaw aligned]
+    tables data Channels.memoryChannel.toRaw aligned]
   apply List.flatMap_congr
   intro row _
   exact row_memory_values row
 
 /-- Physical table projection identifies every permission requested by the complete word inventory. -/
-theorem permission_ledger (tables : List (Table (ZMod p)))
+theorem permission_ledger (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables) :
-    tables.flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw) =
-      (TransitionView.readIndexedRows variants tables).flatMap (fun row =>
+    tables.flatMap (·.interactionsWith data WritePermissionProvider.channel.toRaw) =
+      (TransitionView.readIndexedRows variants tables data).flatMap (fun row =>
         List.ofFn (fun index : Fin 8 => WritePermissionProvider.channel.pulledValue
           (Address.offset (rowInput row).address (index.val : ZMod p)))) := by
   rw [TransitionView.readIndexedRows_interactions variants (fun last => (view last).component)
-    tables WritePermissionProvider.channel.toRaw aligned]
+    tables data WritePermissionProvider.channel.toRaw aligned]
   apply List.flatMap_congr
   intro row _
   exact row_permission_values row
 
 /-- Authenticating the actual byte pulls permits the complete semantic write, including padding. -/
-theorem permitted_of_inventory (tables : List (Table (ZMod p)))
+theorem permitted_of_inventory (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables) (policy : HostMemoryPolicy) (address : ℕ) (bytes : Bytes)
-    (inventory : ((TransitionView.readIndexedRows variants tables).map HintReadWrites.produced).Perm
+    (valid : Steps tables data) (policy : HostMemoryPolicy) (address : ℕ) (bytes : Bytes)
+    (inventory : ((TransitionView.readIndexedRows variants tables data).map HintReadWrites.produced).Perm
       (wordWrites address bytes))
     (permissions : ∀ request, WritePermissionProvider.channel.pulledValue request ∈
-      tables.flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw) →
+      tables.flatMap (·.interactionsWith data WritePermissionProvider.channel.toRaw) →
       policy.permits (Address.toNat request) 1 = true) :
     policy.permits address (hintWriteBytes bytes).length = true := by
   apply permits_of_word_bytes
@@ -102,7 +102,7 @@ theorem permitted_of_inventory (tables : List (Table (ZMod p)))
     List.mem_map.mpr ⟨index, List.mem_range.mpr bound, rfl⟩
   obtain ⟨row, member, equal⟩ := List.mem_map.mp (inventory.mem_iff.mpr entry)
   have requested := permissions (Address.offset (rowInput row).address (slot.val : ZMod p)) (by
-    rw [permission_ledger tables aligned]
+    rw [permission_ledger tables data aligned]
     exact List.mem_flatMap.mpr ⟨row, member, List.mem_ofFn.mpr ⟨slot, rfl⟩⟩)
   have addressEqual := congrArg Prod.fst equal
   change Address.toNat (rowInput row).address = address + index * 8 at addressEqual
@@ -113,10 +113,10 @@ theorem permitted_of_inventory (tables : List (Table (ZMod p)))
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Each physically emitted new Memory value agrees with the byte-level host update. -/
-theorem memory_readback (tables : List (Table (ZMod p))) (address : ℕ) (bytes : Bytes)
-    (inventory : ((TransitionView.readIndexedRows variants tables).map HintReadWrites.produced).Perm
+theorem memory_readback (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (address : ℕ) (bytes : Bytes)
+    (inventory : ((TransitionView.readIndexedRows variants tables data).map HintReadWrites.produced).Perm
       (wordWrites address bytes)) (memory : ByteMemory)
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows variants tables) :
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows variants tables data) :
     (memory.writeBytes address (hintWriteBytes bytes)).readWord (Address.toNat (rowInput row).address) =
       Word.toBitVec64 (rowInput row).ram.pushed.value := by
   exact wordWrites_readback memory address bytes (HintReadWrites.produced row)

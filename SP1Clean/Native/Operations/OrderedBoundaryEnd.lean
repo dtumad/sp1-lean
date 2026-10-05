@@ -19,6 +19,7 @@ def main (name : String) (final : Word (ZMod p))
 
 def circuit (name : String) (final : Word (ZMod p)) :
     GeneralFormalCircuit (ZMod p) TerminalInputs unit where
+  name := s!"sp1.native.{name}.terminal"
   main := main name final
   Spec input _ _ := TerminalSpec final input
   ProverAssumptions input _ _ :=
@@ -65,5 +66,11 @@ theorem interactionValues (name : String) (distinct : name ≠ "SP1Byte") (final
       [(channel name).pulledValue (Eval.eval env input.previous), (channel name).pushedValue final] := by
   simp only [Operations.interactionValuesWith, main_interactions name distinct, List.map_cons,
     List.map_nil, Channel.eval_pulled, Channel.eval_pushed, ProvableType.eval_const]
+
+/-- Closing an ordered inventory adds no lookup operations. -/
+@[circuit_norm] theorem main_lookups (name : String) (final : Word (ZMod p))
+    (input : Var TerminalInputs (ZMod p)) (offset : ℕ) :
+    ((main name final input).operations offset).lookups = [] := by
+  simp [main, OrderedBoundary.circuit, circuit_norm]
 
 end SP1Clean.OrderedBoundaryEnd

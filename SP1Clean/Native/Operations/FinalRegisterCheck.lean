@@ -24,6 +24,7 @@ instance elaborated (target : MemorySnapshot) :
 
 /-- Validate every register receipt, independently of its coverage selector. -/
 def circuit (target : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.memory.check.registers.changes"
   main := main target
   elaborated := elaborated target
   Spec input _ _ := Spec target input

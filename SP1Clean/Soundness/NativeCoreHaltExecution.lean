@@ -22,8 +22,8 @@ private theorem halt_member {image : ProgramImage}
     {witness : EnsembleWitness (ensemble (p := p) image)} {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈ executionRows witness) :
     ∃ physical ∈ (systemTable witness 2).table,
-      haltRow (systemTable witness 2) physical = row ∧ row.is_real = 1 := by
-  have active : row ∈ activeSystemRows (systemTable witness 2) haltRow (·.is_real) := by
+      haltRow witness.data physical = row ∧ row.is_real = 1 := by
+  have active : row ∈ activeSystemRows (systemTable witness 2) (haltRow witness.data) (·.is_real) := by
     simpa [executionRows] using member
   obtain ⟨mapped, real⟩ := List.mem_filter.mp active
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
@@ -39,13 +39,13 @@ theorem haltRows_staticFacts {image : ProgramImage}
   obtain ⟨physical, physicalMem, rfl, real⟩ := halt_member member
   have checked := systemTable_constraints witness constraints 2 physical physicalMem
   rw [systemTable_component witness 2] at checked
-  have realEval : Expression.eval ((systemTable witness 2).environment physical)
+  have realEval : Expression.eval (Environment.fromArray physical witness.data)
       (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p)).is_real = 1 := by
     simpa only [haltRow_eq, circuit_norm] using real
   have zero := HaltChip.codeZero_of_shallow _ _ _
     (shallowConstraints_of_componentConstraints HaltChip.circuit _ checked) realEval
-  refine ⟨?_, haltRow_cpuState_bounds_of_component _ (systemTable_component witness 2)
-    (finishedChannel_guarantees image witness constraints balanced _ (systemTable_mem witness 2)).1
+  refine ⟨?_, haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
+    ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 2)).1
     physicalMem real⟩
   simpa only [haltEventOfRow, haltRow_eq] using zero
 

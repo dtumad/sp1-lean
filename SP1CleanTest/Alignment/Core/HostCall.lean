@@ -1,7 +1,8 @@
 import SP1Clean.Proofs.Chips.HostCallChip.Ledger
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Model.SP1Field
-import ToClean.Air.EnsembleExport
+import ToClean.Air.FiniteLookup
+import Clean.Circuit.WitnessExport
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
@@ -162,9 +163,11 @@ private def handlerTable (rows : List (HostHintReadChip.Inputs Fp)) : Table Fp :
   Table.build Soundness.HostHintReadCoverage.handler rows (fun _ _ => #[]) (ProverHint.empty Fp)
 
 private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHintReadChip.Inputs Fp)) : Bool :=
-  let ledger := [instructionTable instructions, handlerTable handlers].flatMap fun table =>
+  let tables := [instructionTable instructions, handlerTable handlers]
+  let data := deriveProverData tables
+  let ledger := tables.flatMap fun table =>
     table.table.flatMap fun physical =>
-      let env := table.environment physical
+      let env := Environment.fromArray physical data
       (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
         if interaction.channel.name == "sp1.native.host_call" then
           some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult) else none
@@ -178,7 +181,8 @@ theorem physicalHandoff :
     let padding := { (row 2) with instruction := { (row 2).instruction with is_real := 0 } }
     instructions.all (fun input => (evaluate input).1) = true ∧
       handoff (padding :: instructions ++ [padding]) handlers.reverse = true ∧
-      ((Soundness.HostCallLedger.calls (instructionTable (padding :: instructions ++ [padding]))).map
+      ((Soundness.HostCallLedger.calls (instructionTable (padding :: instructions ++ [padding]))
+        (deriveProverData [instructionTable (padding :: instructions ++ [padding])])).map
         Soundness.HostCallLedger.clock) = [(0, 1), (1, 1)] := by native_decide
 
 /-- An extra handler or a changed full return word cannot balance one instruction.
@@ -189,7 +193,8 @@ theorem duplicateAndForgedHandoff :
     handoff [instruction] [handler, handler] = false ∧
       handoff [instruction] [{ handler with call := { handler.call with result := #v[241, 0, 0, 1] } }] = false ∧
       handoff [instruction, instruction] [handler, handler] = true ∧
-      decide (((Soundness.HostCallLedger.calls (instructionTable [instruction, instruction])).map
+      decide (((Soundness.HostCallLedger.calls (instructionTable [instruction, instruction])
+        (deriveProverData [instructionTable [instruction, instruction]])).map
         Soundness.HostCallLedger.clock).Nodup) = false := by native_decide
 
 private def installed : Table Fp :=
@@ -200,11 +205,11 @@ private def installed : Table Fp :=
   let padding := { (row 2) with instruction := { (row 2).instruction with is_real := 0 } }
   (instructionTable [padding, row 2, padding]).withComponent
     ((Soundness.HostLocalCore.tables image source [Soundness.HostHintReadCoverage.handler])[58]'(by
-      rw [Soundness.HostLocalCore.tables_length]; decide))
+      rw [Soundness.HostLocalCore.tables_length]; decide)) rfl rfl
 
 private def physicalLedger (table : Table Fp) (name : String) : List (String × List Fp × Fp) :=
   table.table.flatMap fun physical =>
-    let env := table.environment physical
+    let env := Environment.fromArray physical (deriveProverData [table])
     (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
       if interaction.channel.name == name && env interaction.mult != 0 then
         some (name, (interaction.msg.map env).toList, env interaction.mult) else none
@@ -212,7 +217,7 @@ private def physicalLedger (table : Table Fp) (name : String) : List (String × 
 private def physicalChecks (table : Table Fp) : Bool :=
   let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
   table.table.all fun physical =>
-    let env := table.environment physical
+    let env := Environment.fromArray physical (deriveProverData [table])
     table.component.rowOperations.toFlat.all fun operation =>
       match operation with
       | .assert expression => env expression == 0
@@ -220,18 +225,18 @@ private def physicalChecks (table : Table Fp) : Bool :=
           fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
       | .witness .. | .interact .. => true
 
-/-- An installed WRITE row plus padding retains its physical data, original constraints, and State
+/-- An installed WRITE row plus padding retains its instruction prefix, original constraints, and State
 edge. Its extra x12 read makes full Memory projection invalid: the very same closing frontier
 balances the wrapper ledger and fails for the projected instruction ledger. -/
 theorem installedMemoryProjection :
-    let projected := installed.withComponent Soundness.HostCallProjection.original
+    let projected := installed.projectPrefix Soundness.HostCallProjection.original (by decide) rfl
     let originalMemory := physicalLedger projected "SP1Memory"
     let memory := physicalLedger installed "SP1Memory"
     let frontier := originalMemory.map (fun item => (item.1, item.2.1, - item.2.2)) ++
       [("SP1Memory", [0, 0, 12, 0, 0, 17, 2, 3, 4], 1),
        ("SP1Memory", [0, 2, 12, 0, 0, 17, 2, 3, 4], -1)]
     physicalChecks installed = true ∧ physicalChecks projected = true ∧
-      projected.table = installed.table ∧
+      projected.table = installed.table.map (·.extract 0 (Soundness.HostCallProjection.original (p := SP1Prime)).width) ∧
       physicalLedger projected "SP1State" = physicalLedger installed "SP1State" ∧
       (physicalLedger installed "SP1State").length = 2 ∧
       memory.length = 8 ∧ originalMemory.length = 6 ∧
@@ -250,14 +255,26 @@ private def enterMessage : HostCallChip.Message Fp :=
 
 /-- Physical tables in the real 21-handler registry order, with three different active kinds. -/
 private def registeredTables : List (Table Fp) :=
-  (Soundness.HostHintReadHandoff.registeredReceivers (p := SP1Prime)).zipIdx.map fun (view, index) =>
-    let physical := if index == 0 then handlerTable [hintHandler 1]
-      else if index == 2 then Table.build (Soundness.HostCallReceivers.enter (p := SP1Prime)).component
-        [enterMessage] (fun _ _ => #[]) (ProverHint.empty Fp)
-      else if index == 19 then Table.build (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
-        [lengthHandler] (fun _ _ => #[]) (ProverHint.empty Fp)
-      else Table.build view.component [] (fun _ _ => #[]) (ProverHint.empty Fp)
-    physical.withComponent view.component
+  let views := Soundness.HostHintReadHandoff.registeredReceivers (p := SP1Prime)
+  List.ofFn fun index : Fin views.length =>
+    if index.val = 0 then handlerTable [hintHandler 1]
+    else if index.val = 2 then Table.build (Soundness.HostCallReceivers.enter (p := SP1Prime)).component
+      [enterMessage] (fun _ _ => #[]) (ProverHint.empty Fp)
+    else if index.val = 19 then Table.build (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
+      [lengthHandler] (fun _ _ => #[]) (ProverHint.empty Fp)
+    else Table.build views[index].component [] (fun _ _ => #[]) (ProverHint.empty Fp) (by
+      have noFixed : views[index].component.fixedColumns = none := by fin_cases index <;> rfl
+      simp only [Component.fixedRowsMatch, noFixed])
+
+/-- The heterogeneous physical tables retain the exact registered components, without casts. -/
+private theorem registeredTables_components :
+    registeredTables.map (·.component) =
+      (Soundness.HostHintReadHandoff.registeredReceivers (p := SP1Prime)).map (·.component) := by
+  apply List.ext_getElem
+  · simp only [registeredTables, List.length_map, List.length_ofFn]
+  intro index bound otherBound
+  have small : index < 21 := otherBound
+  interval_cases index <;> rfl
 
 /-- The actual heterogeneous registry reads every full call and balances reversed instructions
 with padding. Removing or duplicating a handler fails the physical ledger. This is a handoff
@@ -269,7 +286,7 @@ theorem registeredReceiverHandoff :
     let instructions := instructionTable (padding :: (messages.map instructionOfCall).reverse ++ [padding])
     let ledger := registeredTables.flatMap fun table => physicalLedger table "sp1.native.host_call"
     views.length = 21 ∧ registeredTables.all physicalChecks = true ∧ physicalChecks instructions = true ∧
-      (ReceiverView.messages views registeredTables).map toElements = messages.map toElements ∧
+      (ReceiverView.messages views registeredTables (deriveProverData registeredTables)).map toElements = messages.map toElements ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger) = true ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger.drop 1) = false ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger ++ ledger.take 1) = false := by

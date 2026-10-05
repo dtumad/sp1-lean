@@ -1,43 +1,16 @@
 import SP1Clean.Soundness.AIRCompleteness
 import SP1CleanTest.Alignment.Audit.JointNonVacuity
 
-/-! # Non-vacuity of the machine-completeness hypothesis
+/-! # Generated boundary-only non-vacuity
 
-`supported_core_generated_trace_complete` (`Soundness/AIRCompleteness.lean`) says every well-formed,
-balanced, boundary-bound generated trace has a native ensemble witness satisfying
-`SupportedCoreNativeRelation`. A completeness theorem is worth exactly as much as its hypothesis is
-satisfiable, so this file exhibits a trace
-that satisfies `SupportedCoreGeneratedTraceRelation` in full — the same question
-`Audit/JointNonVacuity.lean` answers for the soundness side, asked of the converse relation.
+The trace generator builds a witness for the same equal-endpoint shard as `JointNonVacuity`.
+Its Byte providers use twelve repeated unit-count rows instead of three aggregated rows, so the
+physical data differs while the emitted multiplicities balance the same public verifier.
+The mandatory Halt padding row retains every zero-multiplicity occurrence.
 
-## The trace
-
-The **boundary-only shard**, generated: every instruction chip has zero events and zero padding,
-most of the 29 provider tables are empty, and the shard's public endpoints are equal
-(clk `(0, 1)`, pc `0x10000` at both ends), so the verifier's final-state pull and initial-state
-push are the same State message and cancel.
-
-Since W3's split-limb public values the verifier also pulls twelve Byte-bus range checks, so two
-provider tables carry occurrences: the width-16 entry list supplies four `⟨1⟩` and six `⟨0⟩`
-unit-count entries, and `providerOccurrences (.byte .u8Range)` supplies two `⟨0, 0⟩`
-unit-count entries. Provider counts are now
-explicit inputs, so this per-occurrence representation is a choice of this regression; the
-hand-built sibling in `JointNonVacuity.lean` exercises the equivalent aggregated representation.
-
-The Halt table is never empty: `ProviderTableId.Occurrence .halt = Empty`, so its occurrence list is
-`[]` and `HaltChip.haltTraceInputs [] = [paddingInputs]` — the mandatory one padding row, whose
-anti-gated `⟨0⟩` Exit push balances the verifier's ungated `⟨exit_code⟩` pull.  The generated table
-is literally the hand-built `JointNonVacuity.haltPaddingTable` (`haltBuilt_eq`).
-
-## What this witnesses, and what it does not
-
-It witnesses that the hypothesis bundle of `supported_core_generated_trace_complete` is jointly satisfiable
-— well-formedness, five-bus balance, the public-value match, and the semantic boundary binding, all
-at the concrete prime with the committed one-instruction program. It does **not** witness a
-non-empty generated shard itself. The sibling `ActiveTraceNonVacuity.lean` supplies one
-hand-assembled JAL event with circuit-built physical rows and a balanced ledger; deriving such rows
-from an arbitrary Sail execution, and a general trace generator that handles every event and bump
-crossing, remain future work (`docs/roadmap.md`).
+The complete generated-trace hypothesis bundle is satisfied, yielding a native witness and an
+honest zero-step local execution. `ActiveTraceNonVacuity` covers an active JAL event; arbitrary
+mixed-execution completeness remains a separate obligation.
 -/
 
 namespace SP1Clean.Audit.TraceNonVacuity
@@ -92,7 +65,7 @@ middle clock limbs, both zero).
 def anchorTrace : SupportedCoreTraceWitness SP1Prime where
   instructionEvents := anchorInstructionEvents
   providerOccurrences := anchorProviderOccurrences
-  data := anchorData
+  generationData := anchorData
   hint := anchorHint
   boundary := boundaryInputs 1 65536 1 65536
 
@@ -139,7 +112,7 @@ theorem anchorTrace_wellFormed : anchorTrace.WellFormed := by
 
 /-! ## The assembled tables
 
-Fifty-one of the 54 are built from an empty occurrence list, so their row lists — and hence
+Fifty-two of the 55 are built from an empty occurrence list, so their row lists — and hence
 their channel views — are literally `[]`. The two byte providers and the Halt table are named so
 the balance argument can speak about them. -/
 
@@ -164,7 +137,7 @@ def haltBuilt : Table (ZMod SP1Prime) :=
 component, same width, and the same single all-zero row.  Every Halt fact proved there therefore
 transfers verbatim. -/
 theorem haltBuilt_eq : haltBuilt = haltPaddingTable :=
-  Table.ext_iff.mpr ⟨rfl, rfl, by native_decide, rfl⟩
+  Table.ext_iff.mpr ⟨rfl, by native_decide⟩
 
 /-- One indexed range table is the named width-16 table or is physically empty. Keeping the
 dependent occurrence projection folded makes this a stable rewrite boundary for `rangeTables`. -/
@@ -172,8 +145,8 @@ theorem anchorRangeBuilt_interactionsWith (width : RangeChip.Width)
     (ch : RawChannel (ZMod SP1Prime)) :
     (Table.build (RangeChip.componentFor width)
       (RangeChip.traceInputs (anchorTrace.providerOccurrences (.range width)))
-      anchorTrace.data anchorTrace.hint).interactionsWith ch =
-        if width = width16 then range16Built.interactionsWith ch else [] := by
+      anchorTrace.generationData anchorTrace.hint).interactionsWith anchorData ch =
+        if width = width16 then range16Built.interactionsWith anchorData ch else [] := by
   by_cases hwidth : width = width16
   · subst width
     rfl
@@ -187,8 +160,8 @@ theorem anchorRangeBuilt_interactionsWith (width : RangeChip.Width)
 theorem anchorRangeEntriesBuilt_interactionsWith (width : RangeChip.Width)
     (ch : RawChannel (ZMod SP1Prime)) :
     (Table.build (RangeChip.componentFor width)
-      (RangeChip.traceInputs (anchorRangeEntries width)) anchorTrace.data anchorTrace.hint).interactionsWith
-        ch = if width = width16 then range16Built.interactionsWith ch else [] := by
+      (RangeChip.traceInputs (anchorRangeEntries width)) anchorTrace.generationData anchorTrace.hint).interactionsWith
+        anchorData ch = if width = width16 then range16Built.interactionsWith anchorData ch else [] := by
   by_cases hwidth : width = width16
   · subst width
     rfl
@@ -199,18 +172,20 @@ theorem anchorRangeEntriesBuilt_interactionsWith (width : RangeChip.Width)
     rfl
 
 /-- A table built from no occurrences contributes nothing to any channel. -/
-theorem nilTable (c : Component (ZMod SP1Prime)) (ch : RawChannel (ZMod SP1Prime)) :
-    (Table.build c [] anchorData anchorHint).interactionsWith ch = [] := rfl
+theorem nilTable (c : Component (ZMod SP1Prime)) (ch : RawChannel (ZMod SP1Prime))
+    {fixed : c.fixedRowsMatch []} :
+    (Table.build c [] anchorData anchorHint fixed).interactionsWith anchorData ch = [] := rfl
 
 /-- The dependent input type of an empty indexed Range table stays folded at the component
 boundary, avoiding an unnecessary transparency conversion through `componentFor`. -/
 theorem nilRangeTable (width : RangeChip.Width) (ch : RawChannel (ZMod SP1Prime)) :
     (Table.build (RangeChip.componentFor width) (RangeChip.traceInputs [])
-      anchorData anchorHint).interactionsWith ch = [] := rfl
+      anchorData anchorHint).interactionsWith anchorData ch = [] := rfl
 
 /-- The hinted sibling of `nilTable`. -/
-theorem nilTableHinted (c : Component (ZMod SP1Prime)) (ch : RawChannel (ZMod SP1Prime)) :
-    (Table.buildHinted c [] anchorData).interactionsWith ch = [] := rfl
+theorem nilTableHinted (c : Component (ZMod SP1Prime)) (ch : RawChannel (ZMod SP1Prime))
+    {fixed : c.fixedRowsMatch []} :
+    (Table.buildHinted c [] anchorData fixed).interactionsWith anchorData ch = [] := rfl
 
 /-- The assembled table list with every empty occurrence list already reduced to `[]` — one `rfl`,
 which is what lets the channel split below be a single `simp only`. -/
@@ -255,30 +230,37 @@ theorem anchorTrace_tables_eq :
        haltBuilt, Table.build SyscallInstrsChip.component [] anchorData anchorHint] := rfl
 
 /-- **The whole shard's channel view**: the verifier row followed by the two byte providers and the
-Halt padding table, the fifty-one empty tables contributing nothing. -/
+Halt padding table, the fifty-two empty tables contributing nothing. -/
 theorem anchorTrace_interactionsWith_split (ch : RawChannel (ZMod SP1Prime)) :
     anchorTrace.witness.interactionsWith ch =
-      anchorTrace.witness.verifierTable.interactionsWith ch ++
-        (u8RangeBuilt.interactionsWith ch ++
-          (range16Built.interactionsWith ch ++ haltPaddingTable.interactionsWith ch)) := by
-  show (anchorTrace.witness.verifierTable :: anchorTrace.tables).flatMap
-    (·.interactionsWith ch) = _
-  rw [List.flatMap_cons, anchorTrace_tables_eq]
+      anchorTrace.witness.verifierInteractionsWith ch ++
+        (u8RangeBuilt.interactionsWith anchorData ch ++
+          (range16Built.interactionsWith anchorData ch ++ haltPaddingTable.interactionsWith anchorData ch)) := by
+  change _ ++ anchorTrace.tables.flatMap
+    (fun t => t.interactionsWith anchorTrace.witness.data ch) = _
+  simp_rw [Table.interactionsWith_setData _ anchorTrace.witness.data anchorData]
+  rw [anchorTrace_tables_eq]
   simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, nilTable, nilTableHinted,
     haltBuilt_eq, List.nil_append, List.append_nil]
   simp [SupportedCoreTraceWitness.rangeTables, RangeChip.allWidths, List.finRange_succ,
     anchorRangeBuilt_interactionsWith, width16]
 
-/-! ## The verifier row
+/-! ## The public verifier
 
-The generated shard and the hand-built one of `JointNonVacuity.lean` commit the same public values
-at the same prover data, and an ensemble's verifier row is determined by exactly those two — so the
-two shards' verifier rows are the *same table*, and its four per-channel views transfer verbatim. -/
+Both fixtures share public values. Their physical data differs, but the verifier's literal
+interactions depend only on those public values.
+-/
 
-theorem anchorTrace_verifierTable : anchorTrace.witness.verifierTable = jointWitness.verifierTable :=
-  Ensemble.verifierTable_ext rfl anchorTrace_publicValues rfl
+theorem anchorTrace_verifierInteractions (ch : RawChannel (ZMod SP1Prime)) :
+    anchorTrace.witness.verifierInteractionsWith ch = jointWitness.verifierInteractionsWith ch := by
+  change (sp1Ensemble (p := SP1Prime)).verifierOperations.interactionValuesWith ch
+    (Environment.fromInput anchorTrace.publicValues anchorTrace.witness.data) =
+    (sp1Ensemble (p := SP1Prime)).verifierOperations.interactionValuesWith ch
+      (Environment.fromInput pv jointWitness.data)
+  rw [anchorTrace_publicValues]
+  exact Operations.interactionValuesWith_congr rfl
 
-/-! ## Five-bus balance -/
+/-! ## Seven-channel balance -/
 
 theorem u8RangeBuilt_channels :
     ∀ c ∈ u8RangeBuilt.component.circuit.channels, c = byteChannel.toRaw := by
@@ -292,13 +274,13 @@ theorem range16Built_channels :
   simp [GeneralFormalCircuit.channels, RangeChip.circuitFor, RangeChip.circuit, circuit_norm]
 
 theorem u8RangeBuilt_interactionsWith_nil {ch : RawChannel (ZMod SP1Prime)}
-    (hne : ch ≠ byteChannel.toRaw) : u8RangeBuilt.interactionsWith ch = [] := by
+    (hne : ch ≠ byteChannel.toRaw) : u8RangeBuilt.interactionsWith anchorData ch = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   intro hmem
   exact hne (u8RangeBuilt_channels _ hmem)
 
 theorem range16Built_interactionsWith_nil {ch : RawChannel (ZMod SP1Prime)}
-    (hne : ch ≠ byteChannel.toRaw) : range16Built.interactionsWith ch = [] := by
+    (hne : ch ≠ byteChannel.toRaw) : range16Built.interactionsWith anchorData ch = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   intro hmem
   exact hne (range16Built_channels _ hmem)
@@ -308,12 +290,12 @@ verifier row's twelve pulls, then the two providers' twelve unit-count pushes. -
 def byteInteractions : List (Interaction (ZMod SP1Prime)) :=
   (verifierBytePulls (varFromOffset SP1PublicIO 0)).map
       (AbstractInteraction.eval (Environment.fromInput pv anchorData)) ++
-    (u8RangeBuilt.interactions ++ range16Built.interactions)
+    (u8RangeBuilt.interactions anchorData ++ range16Built.interactions anchorData)
 
 theorem anchorTrace_byteInteractions :
     anchorTrace.witness.interactionsWith byteChannel.toRaw =
-      byteInteractions ++ haltPaddingTable.interactionsWith byteChannel.toRaw := by
-  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierTable, jointWitness_verifierByte,
+      byteInteractions ++ haltPaddingTable.interactionsWith anchorData byteChannel.toRaw := by
+  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions, jointWitness_verifierByte,
     table_interactionsWith_eq_interactions u8RangeBuilt_channels,
     table_interactionsWith_eq_interactions range16Built_channels]
   simp only [byteInteractions, List.append_assoc]
@@ -326,16 +308,16 @@ theorem anchorTrace_stateInteractions :
          ⟨pv.final_clk_high, pv.final_clk_low, pv.final_pc0, pv.final_pc1, pv.final_pc2⟩,
        stateChannel.pushedIfValue 1
          ⟨pv.init_clk_high, pv.init_clk_low, pv.init_pc0, pv.init_pc1, pv.init_pc2⟩] ++
-        haltPaddingTable.interactionsWith stateChannel.toRaw := by
-  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierTable, jointWitness_verifierState,
+        haltPaddingTable.interactionsWith anchorData stateChannel.toRaw := by
+  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions, jointWitness_verifierState,
     u8RangeBuilt_interactionsWith_nil (of_eq_false Channels.stateChannel_eq_byteChannel_false),
     range16Built_interactionsWith_nil (of_eq_false Channels.stateChannel_eq_byteChannel_false),
     List.nil_append, List.nil_append]
 
 theorem anchorTrace_programInteractions :
     anchorTrace.witness.interactionsWith programChannel.toRaw =
-      haltPaddingTable.interactionsWith programChannel.toRaw := by
-  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierTable,
+      haltPaddingTable.interactionsWith anchorData programChannel.toRaw := by
+  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions,
     jointWitness_verifierProgram_nil,
     u8RangeBuilt_interactionsWith_nil (of_eq_false Channels.programChannel_eq_byteChannel_false),
     range16Built_interactionsWith_nil (of_eq_false Channels.programChannel_eq_byteChannel_false),
@@ -343,8 +325,8 @@ theorem anchorTrace_programInteractions :
 
 theorem anchorTrace_memoryInteractions :
     anchorTrace.witness.interactionsWith memoryChannel.toRaw =
-      haltPaddingTable.interactionsWith memoryChannel.toRaw := by
-  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierTable,
+      haltPaddingTable.interactionsWith anchorData memoryChannel.toRaw := by
+  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions,
     jointWitness_verifierMemory_nil,
     u8RangeBuilt_interactionsWith_nil (of_eq_false Channels.memoryChannel_eq_byteChannel_false),
     range16Built_interactionsWith_nil (of_eq_false Channels.memoryChannel_eq_byteChannel_false),
@@ -354,7 +336,7 @@ theorem anchorTrace_memoryInteractions :
 pushes — the very list the hand-built anchor balances. -/
 theorem anchorTrace_exitInteractions :
     anchorTrace.witness.interactionsWith exitChannel.toRaw = exitInteractions := by
-  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierTable, jointWitness_verifierExit,
+  rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions, jointWitness_verifierExit,
     u8RangeBuilt_interactionsWith_nil (of_eq_false Channels.exitChannel_eq_byteChannel_false),
     range16Built_interactionsWith_nil (of_eq_false Channels.exitChannel_eq_byteChannel_false),
     haltPaddingTable_exit, List.nil_append, List.nil_append]
@@ -387,7 +369,7 @@ theorem pulledMessages_nil_of_mult_zero {l : List (Interaction (ZMod SP1Prime))}
 view. -/
 theorem balancedOn_append_halt {ch : RawChannel (ZMod SP1Prime)}
     {l : List (Interaction (ZMod SP1Prime))}
-    (heq : anchorTrace.witness.interactionsWith ch = l ++ haltPaddingTable.interactionsWith ch)
+    (heq : anchorTrace.witness.interactionsWith ch = l ++ haltPaddingTable.interactionsWith anchorData ch)
     (hname : ch.name ≠ "SP1Exit") (hlen : l.length < 100) (hbin : Ledger.SignedMults l)
     (hperm : (Ledger.pushedMessages l).Perm (Ledger.pulledMessages l)) :
     anchorTrace.BalancedOn ch := by
@@ -406,8 +388,8 @@ theorem balancedOn_append_halt {ch : RawChannel (ZMod SP1Prime)}
       List.append_nil, List.append_nil]
     exact hperm
 
-/-- **The generated shard's ledger balances on all five buses.**
-LEDGERMARKState cancels because the public
+/-- **The generated shard's ledger balances on all seven channels.**
+State cancels because the public
 endpoints are equal; Program and Memory carry only the Halt padding row's gated-off entries; Byte
 and Exit are checked message-for-message on the concrete evaluated lists. -/
 theorem anchorTrace_balanced : anchorTrace.Balanced := by
@@ -454,8 +436,8 @@ theorem anchorTrace_balanced : anchorTrace.Balanced := by
 
 The generated shard's Program-ROM and two memory-boundary tables are built from empty occurrence
 lists, so the three provider bindings hold vacuously exactly as they do for the hand-built shard;
-the remaining fields depend only on the committed prover data, the public values, and the concrete
-initial Sail state, all of which the two shards share. -/
+the remaining fields depend on the statement and the concrete initial Sail state, which the two
+shards share. -/
 
 theorem anchorTrace_programProviderTable_nil :
     (programProviderTable (p := SP1Prime) anchorTrace.witness).table = [] := rfl
@@ -467,7 +449,7 @@ theorem anchorTrace_memoryFinalizeProviderTable_nil :
     (memoryFinalizeProviderTable (p := SP1Prime) anchorTrace.witness).table = [] := rfl
 
 theorem anchorTrace_programProviderBound :
-    ProgramProviderBound (p := SP1Prime) anchorTrace.witness := by
+    ProgramProviderBound (p := SP1Prime) anchorProgram anchorTrace.witness := by
   intro interaction member _
   exfalso
   simp only [Table.interactionsWith, anchorTrace_programProviderTable_nil,
@@ -476,7 +458,7 @@ theorem anchorTrace_programProviderBound :
 
 theorem anchorTrace_memoryInitProviderBound :
     MemoryInitProviderBound (p := SP1Prime) anchorTrace.witness anchorState
-      (Commit.initClkNat anchorData) := by
+      stmt.initClkNat := by
   intro interaction member _
   exfalso
   simp only [Table.interactionsWith, anchorTrace_memoryInitProviderTable_nil,
@@ -485,14 +467,14 @@ theorem anchorTrace_memoryInitProviderBound :
 
 theorem anchorTrace_memoryInitProviderUnique :
     MemoryInitProviderUnique (p := SP1Prime) anchorTrace.witness := by
-  show (typedTableInteractionsWith (memoryInitProviderTable anchorTrace.witness)
+  show (typedTableInteractionsWith (memoryInitProviderTable anchorTrace.witness) anchorTrace.witness.data
     memoryChannel).Pairwise _
   rw [typedTableInteractionsWith, anchorTrace_memoryInitProviderTable_nil, List.flatMap_nil]
   exact List.Pairwise.nil
 
 theorem anchorTrace_memoryFinalizeProviderUnique :
     MemoryFinalizeProviderUnique (p := SP1Prime) anchorTrace.witness := by
-  show (typedTableInteractionsWith (memoryFinalizeProviderTable anchorTrace.witness)
+  show (typedTableInteractionsWith (memoryFinalizeProviderTable anchorTrace.witness) anchorTrace.witness.data
     memoryChannel).Pairwise _
   rw [typedTableInteractionsWith, anchorTrace_memoryFinalizeProviderTable_nil, List.flatMap_nil]
   exact List.Pairwise.nil
@@ -501,9 +483,8 @@ theorem anchorTrace_memoryFinalizeProviderUnique :
 soundness-side anchor. -/
 theorem anchorTrace_boundaryFacts : InitialBoundaryFacts stmt anchorTrace.witness anchorState where
   programWellFormed := anchorProgram_wellFormed
-  programCommitted := ⟨anchorData_canonicalEncoding, rfl⟩
+  programEncodable := anchorBoundaryFacts.programEncodable
   initialPc := anchorBoundaryFacts.initialPc
-  initialClock := anchorBoundaryFacts.initialClock
   romLoaded := anchorState_romLoaded
   configured := anchorState_configured
   codeMemoryCompatible := anchor_codeMemoryCompatible
@@ -516,8 +497,8 @@ theorem anchorTrace_boundaryFacts : InitialBoundaryFacts stmt anchorTrace.witnes
 
 /--
 **Non-vacuity of the machine-completeness hypothesis.** The boundary-only generated shard satisfies
-`SupportedCoreGeneratedTraceRelation` in full: every occurrence is well-formed, the five
-buses balance (State by equal public endpoints, Byte message-for-message against the two built
+`SupportedCoreGeneratedTraceRelation` in full: every occurrence is well-formed, the seven
+channels balance (State by equal public endpoints, Byte message-for-message against the two built
 providers, Exit against the mandatory Halt padding row, Program and Memory carrying only that row's
 gated-off entries), the public boundary row is the statement's, and the
 boundary tables bind to the committed one-instruction program and the concrete configured initial

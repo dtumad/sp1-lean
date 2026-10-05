@@ -36,15 +36,15 @@ theorem AddwChip.eval_inputOpA0_eq_zero_of_mainConstraints
 
 /-- Addw passes its independent state input through to the completed row. -/
 theorem AddwChip.inputOutputState (env : Environment (ZMod p)) :
-    ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).state =
-      ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).state := by
+    (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state =
+      (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state := by
   let input : Var AddwChip.Inputs (ZMod p) := varFromOffset AddwChip.Inputs 0
   let offset := size AddwChip.Inputs
   have inputEq : Eval.eval env input =
-      ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset AddwChip.Inputs 0 env
   have outputEq : Eval.eval env ((AddwChip.circuit (p := p)).output input offset) =
-      ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).state =
@@ -53,15 +53,15 @@ theorem AddwChip.inputOutputState (env : Environment (ZMod p)) :
 
 /-- Addw passes its independent ALU adapter input through to the completed row. -/
 theorem AddwChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env).adapter =
-      ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter := by
   let input : Var AddwChip.Inputs (ZMod p) := varFromOffset AddwChip.Inputs 0
   let offset := size AddwChip.Inputs
   have inputEq : Eval.eval env input =
-      ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env) :=
+      (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset AddwChip.Inputs 0 env
   have outputEq : Eval.eval env ((AddwChip.circuit (p := p)).output input offset) =
-      ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).adapter =
@@ -92,17 +92,17 @@ theorem AddwChip.aluTypeReader_mem (input : Var AddwChip.Inputs (ZMod p)) (offse
 form.  This is an `advanceReady` fact, independent of the chip arithmetic `Spec`. -/
 theorem AddwChip.rowViewOpCBinding_of_constraints (env : Environment (ZMod p))
     (constraints :
-      (⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
     (immediate :
       (AddwChip.rowView
-        ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-        ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)).adapter.imm_c = 1) :
+        (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+        (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)).adapter.imm_c = 1) :
     (AddwChip.rowView
-        ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-        ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)).adapter.op_c_memory.prev_value =
+        (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+        (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)).adapter.op_c_memory.prev_value =
       (AddwChip.rowView
-        ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env)
-        ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env)).adapter.op_c := by
+        (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+        (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)).adapter.op_c := by
   let input : Var AddwChip.Inputs (ZMod p) := varFromOffset AddwChip.Inputs 0
   let offset := size AddwChip.Inputs
   let readerInput := AddwChip.aluTypeReaderInput input offset
@@ -112,19 +112,19 @@ theorem AddwChip.rowViewOpCBinding_of_constraints (env : Environment (ZMod p))
     ((AddwChip.main input).operations offset) Readers.ALUTypeReader.circuit readerInput
     (offset + 3) (AddwChip.aluTypeReader_mem input offset) mainConstraints
   have inputEq : Eval.eval env input =
-      (⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowInput env :=
+      ({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset AddwChip.Inputs 0 env
   have immediateInput : Expression.eval env readerInput.cols.imm_c = 1 := by
     change Expression.eval env input.adapter.imm_c = 1
-    change ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter.imm_c = 1
+    change (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.imm_c = 1
       at immediate
     rw [← AddwChip.inputOutputAdapter env, ← inputEq, AddwChip.eval_inputs,
       Readers.ALUTypeReader.eval_immC] at immediate
     exact immediate
   have binding := Readers.ALUTypeReader.eval_opCPrev_eq_opC_of_mainConstraints
     readerInput (offset + 3) env readerConstraints immediateInput
-  change ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
-    ((⟨AddwChip.circuit (p := p)⟩ : Component (ZMod p)).rowOutput env).adapter.op_c
+  change (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
+    (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_c
   rw [← AddwChip.inputOutputAdapter env, ← inputEq, AddwChip.eval_inputs,
     Readers.ALUTypeReader.eval_opCPrev, Readers.ALUTypeReader.eval_opC]
   simpa only [readerInput, AddwChip.aluTypeReaderInput] using binding

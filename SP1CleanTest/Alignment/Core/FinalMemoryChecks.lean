@@ -1,7 +1,6 @@
 import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Model.SP1Field
-import ToClean.Air.EnsembleExport
 
 /-! # Complete outgoing Memory assembly regression
 
@@ -24,16 +23,21 @@ private def target : MemorySnapshot :=
   ⟨source.registers.set 1 123, ⟨[(65536, 9), (65543, 17)]⟩⟩
 
 private def auxiliary : List (Component Fp) :=
-  ⟨MemoryProviderChip.circuit⟩ :: (sp1ProviderTables (p := SP1Prime)).take 23
+  { circuit := MemoryProviderChip.circuit } :: (sp1ProviderTables (p := SP1Prime)).take 23
+
+private theorem names (target : MemorySnapshot) :
+    (((FinalMemoryEnsemble.inventory (p := SP1Prime)).views.map TransitionView.component ++
+      (Soundness.FinalMemoryChecks.checkTables target ++ auxiliary)).map
+        (fun component : Component Fp => component.circuit.name)).Nodup := by
+  exact of_decide_eq_true rfl
 
 private def assembly (target : MemorySnapshot) :=
-  Soundness.FinalMemoryChecks.ensemble source target auxiliary []
+  Soundness.FinalMemoryChecks.ensemble source target auxiliary [] (names target)
 
 /-- The real provider family satisfies the static interface used by the soundness theorem. -/
 theorem resourceInterface : Soundness.FinalMemoryChecks.Interface auxiliary := by
   have members (component : Component Fp) (member : component ∈ auxiliary) :
-      component ∈ (sp1Ensemble (p := SP1Prime)).allTables := by
-    apply List.mem_cons_of_mem
+      component ∈ (sp1Ensemble (p := SP1Prime)).tables := by
     apply List.mem_append_right
     rcases List.mem_cons.mp member with rfl | provider
     · rw [sp1ProviderTables_explicit]
@@ -96,15 +100,18 @@ private def evaluate (target : MemorySnapshot) (component : Component Fp) (input
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
-  let registers := FiniteLookup.ofStatic (target.registerTable (p := SP1Prime))
-  let memory := FiniteLookup.ofStatic (target.memory.fixedTable (p := SP1Prime) (2 ^ 48))
-  let fixed := [{ registers with table := { registers.table with name := "sp1.native.target_registers" } },
-    { memory with table := { memory.table with name := "sp1.native.target_memory" } }]
+  let registers := target.registerTable (p := SP1Prime)
+  let memory := target.memory.fixedTable (p := SP1Prime) (2 ^ 48)
+  let fixed : List (String × Array (Array Fp)) :=
+    [("sp1.native.target_registers", Array.ofFn fun i : Fin registers.length =>
+      (toElements (registers.row i)).toArray),
+     ("sp1.native.target_memory", Array.ofFn fun i : Fin memory.length =>
+      (toElements (memory.row i)).toArray)]
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => fixed.any fun table => lookup.table.name == table.table.name &&
-        table.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+    | .lookup lookup => fixed.any fun table => lookup.table.name == table.1 &&
+        table.2.any (fun row => row == (lookup.entry.map env).toArray)
     | .witness .. | .interact .. => true
   (valid, (FlatOperation.interactions operations).map fun interaction =>
     (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
@@ -125,8 +132,14 @@ private def byteProvider (entry : String × List Fp × Fp) : Option Row :=
     else some (29, [])
   | _ => some (29, [])
 
+private def verifierLedger (target : MemorySnapshot) : Ledger :=
+  let env : Environment Fp := Environment.fromInput (Input := unit) () (fun _ _ => #[])
+  (assembly target).verifierOperations.interactions.map fun interaction =>
+    let value := AbstractInteraction.eval env interaction
+    (value.channel.name, value.msg.toList, value.mult)
+
 private def check (target : MemorySnapshot) (rows : List Row) (supplyBytes : Bool := true) : Bool :=
-  let initial := evaluate target (assembly target).verifierTable [] :: rows.map (evaluateRow target)
+  let initial := (true, verifierLedger target) :: rows.map (evaluateRow target)
   let providers := if supplyBytes then (initial.flatMap Prod.snd).filterMap byteProvider else []
   let evaluated := initial ++ providers.map (evaluateRow target)
   let ledger := evaluated.flatMap Prod.snd
@@ -139,7 +152,7 @@ private def check (target : MemorySnapshot) (rows : List Row) (supplyBytes : Boo
 theorem completeAcceptance : check target rows = true := by native_decide
 
 private def projectedByteBalance : Bool :=
-  let head := evaluate target (assembly target).verifierTable []
+  let head := (true, verifierLedger target)
   let original := head :: rows.map (evaluateRow target)
   let providers := (original.flatMap Prod.snd).filterMap byteProvider
   let projected := head :: (rows.filter (fun row => row.1 != 4)).map (evaluateRow target)

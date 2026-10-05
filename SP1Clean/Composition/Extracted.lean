@@ -182,25 +182,16 @@ theorem extractedInstructionRows_valid
     obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hmem
     exact rowAsserts .aluX0 row hrow
 
-/--
-**The headline table-level transport: a valid extracted shard yields twenty-five valid native
-tables.**
-
-Every one of the twenty-five transported tables satisfies Clean's `Table.Constraints` for its
-native chip circuit, and by `transported_map_component` those tables are positionally the
-ensemble's instruction tables. This is the composition the external PR #110 report's Finding 1
-found missing, stated against the real extracted relation.
-
-What it is not yet: a whole `EnsembleWitness`. That needs the other twenty-eight tables, an explicit
-demand-oriented preprocessing inventory, and the four channel balances.
--/
+/-- A valid extracted shard yields all 25 native instruction tables with constraints checked at
+explicit data. Their ordered components match the native registry. Provider redistribution,
+channel balance and whole-ensemble construction remain separate obligations. -/
 theorem extracted_instructionTables_constraints
     {binds : SP1Clean.CoreAIR.Current.PreprocessedBinding p Digest}
     (statement : SP1ShardStatement (ZMod p) Digest)
     (witness : Witness (SP1Clean.CoreAIR.Current.Row p))
     (valid : SP1Clean.CoreAIR.Current.Relation binds .execution statement witness)
     (data : ProverData (ZMod p)) :
-    ∀ table ∈ (extractedInstructionRows witness).transported data, table.Constraints :=
+    ∀ table ∈ (extractedInstructionRows witness).transported data, table.Constraints data :=
   ExtractedInstructionRows.transported_constraints _ _
     (extractedInstructionRows_valid statement witness valid)
 

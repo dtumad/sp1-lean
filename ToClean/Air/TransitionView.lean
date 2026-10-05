@@ -31,23 +31,23 @@ namespace TransitionView
 variable {channel : Channel F Message}
 
 /-- Preserve a registry's finite component identity while reading physical environments. -/
-def readIndexedRows {Index : Type*} (indices : List Index) (tables : List (Table F)) :
+def readIndexedRows {Index : Type*} (indices : List Index) (tables : List (Table F)) (data : ProverData F) :
     List (Index × Environment F) :=
   (indices.zip tables).flatMap fun (index, table) =>
-    table.table.map fun row => (index, table.environment row)
+    table.table.map fun row => (index, Environment.fromArray row data)
 
 /-- Keep the component identity with each physical row; different row layouts stay separate. -/
-def readRows (views : List (TransitionView channel)) (tables : List (Table F)) :
+def readRows (views : List (TransitionView channel)) (tables : List (Table F)) (data : ProverData F) :
     List (TransitionView channel × Environment F) :=
   (views.zip tables).flatMap fun (view, table) =>
-    table.table.map fun row => (view, table.environment row)
+    table.table.map fun row => (view, Environment.fromArray row data)
 
 /-- Reading physical environments preserves every interaction, on any selected channel. -/
 theorem readIndexedRows_interactions {Index : Type*} (indices : List Index)
-    (component : Index → Component F) (tables : List (Table F)) (selected : RawChannel F)
+    (component : Index → Component F) (tables : List (Table F)) (data : ProverData F) (selected : RawChannel F)
     (aligned : List.Forall₂ (fun index table => component index = table.component) indices tables) :
-    tables.flatMap (·.interactionsWith selected) =
-      (readIndexedRows indices tables).flatMap (fun (index, env) =>
+    tables.flatMap (·.interactionsWith data selected) =
+      (readIndexedRows indices tables data).flatMap (fun (index, env) =>
         (component index).operations.interactionValuesWith selected env) := by
   induction aligned with
   | nil => rfl
@@ -60,9 +60,9 @@ theorem readIndexedRows_interactions {Index : Type*} (indices : List Index)
     rw [same]
 
 theorem readRows_eq_indexed {Index : Type*} (indices : List Index)
-    (view : Index → TransitionView channel) (tables : List (Table F)) :
-    readRows (indices.map view) tables =
-      (readIndexedRows indices tables).map (fun (index, env) => (view index, env)) := by
+    (view : Index → TransitionView channel) (tables : List (Table F)) (data : ProverData F) :
+    readRows (indices.map view) tables data =
+      (readIndexedRows indices tables data).map (fun (index, env) => (view index, env)) := by
   induction indices generalizing tables with
   | nil => simp [readRows, readIndexedRows]
   | cons index indices ih =>
@@ -73,8 +73,8 @@ theorem readRows_eq_indexed {Index : Type*} (indices : List Index)
         List.map_append, List.map_map, Function.comp_def] at ih ⊢
       rw [ih]
 
-theorem readRows_view_mem (views : List (TransitionView channel)) (tables : List (Table F))
-    (row : TransitionView channel × Environment F) (member : row ∈ readRows views tables) :
+theorem readRows_view_mem (views : List (TransitionView channel)) (tables : List (Table F)) (data : ProverData F)
+    (row : TransitionView channel × Environment F) (member : row ∈ readRows views tables data) :
     row.1 ∈ views := by
   obtain ⟨⟨view, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
   obtain ⟨physical, _, rfl⟩ := List.mem_map.mp mapped
@@ -89,10 +89,10 @@ theorem aligned_of_map_eq (views : List (TransitionView channel)) (tables : List
   simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using equal
 
 /-- The decoded transitions retain every physical row's actual interactions. -/
-theorem readRows_interactions (views : List (TransitionView channel)) (tables : List (Table F))
+theorem readRows_interactions (views : List (TransitionView channel)) (tables : List (Table F)) (data : ProverData F)
     (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables) :
-    tables.flatMap (·.interactionsWith channel.toRaw) =
-      (readRows views tables).flatMap (fun (view, env) =>
+    tables.flatMap (·.interactionsWith data channel.toRaw) =
+      (readRows views tables data).flatMap (fun (view, env) =>
         [channel.pulledValue (view.edge env).1, channel.pushedValue (view.edge env).2]) := by
   induction aligned with
   | nil => rfl
@@ -107,10 +107,10 @@ theorem readRows_interactions (views : List (TransitionView channel)) (tables : 
     rw [← same, view.interactions]
 
 /-- A table specification applies to the very environment used to read its transitions. -/
-theorem readRows_spec (views : List (TransitionView channel)) (tables : List (Table F))
+theorem readRows_spec (views : List (TransitionView channel)) (tables : List (Table F)) (data : ProverData F)
     (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables)
-    (valid : ∀ table ∈ tables, table.Spec) :
-    ∀ row ∈ readRows views tables, row.1.component.Spec row.2 := by
+    (valid : ∀ table ∈ tables, table.Spec data) :
+    ∀ row ∈ readRows views tables data, row.1.component.Spec row.2 := by
   induction aligned with
   | nil => simp [readRows]
   | @cons view table views tables same _ ih =>
@@ -122,20 +122,20 @@ theorem readRows_spec (views : List (TransitionView channel)) (tables : List (Ta
     · exact ih (fun table member => valid table (List.mem_cons_of_mem _ member)) row member
 
 theorem readIndexedRows_spec {Index : Type*} (indices : List Index)
-    (view : Index → TransitionView channel) (tables : List (Table F))
+    (view : Index → TransitionView channel) (tables : List (Table F)) (data : ProverData F)
     (aligned : List.Forall₂ (fun view table => view.component = table.component) (indices.map view) tables)
-    (valid : ∀ table ∈ tables, table.Spec) :
-    ∀ row ∈ readIndexedRows indices tables, (view row.1).component.Spec row.2 := by
+    (valid : ∀ table ∈ tables, table.Spec data) :
+    ∀ row ∈ readIndexedRows indices tables data, (view row.1).component.Spec row.2 := by
   intro row member
-  have specs := readRows_spec (indices.map view) tables aligned valid
+  have specs := readRows_spec (indices.map view) tables data aligned valid
   rw [readRows_eq_indexed] at specs
   exact specs (view row.1, row.2) (List.mem_map.mpr ⟨row, member, rfl⟩)
 
 theorem readIndexedRows_keys_nodup {Index Key : Type*} (indices : List Index)
-    (view : Index → TransitionView channel) (tables : List (Table F)) (key : Message F → Key)
+    (view : Index → TransitionView channel) (tables : List (Table F)) (data : ProverData F) (key : Message F → Key)
     (registered : List (TransitionView channel)) (same : registered = indices.map view)
-    (unique : ((readRows registered tables).map fun row => key (row.1.edge row.2).2).Nodup) :
-    ((readIndexedRows indices tables).map fun row => key ((view row.1).edge row.2).2).Nodup := by
+    (unique : ((readRows registered tables data).map fun row => key (row.1.edge row.2).2).Nodup) :
+    ((readIndexedRows indices tables data).map fun row => key ((view row.1).edge row.2).2).Nodup := by
   rw [same, readRows_eq_indexed] at unique
   simpa only [List.map_map, Function.comp_def] using unique
 

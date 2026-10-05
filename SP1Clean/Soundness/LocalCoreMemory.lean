@@ -23,22 +23,26 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 /-- The unchanged physical Memory ledger after the two three-table inventories. -/
 noncomputable def memoryInterior {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) : List (TypedInteraction (memoryChannel (p := p))) :=
-  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · memoryChannel)
+  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · witness.data memoryChannel)
 
 /-- The interior adapter preserves every raw interaction, including disabled interactions. -/
 theorem memoryInterior_raw {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     (memoryInterior witness).map TypedInteraction.raw =
-      (witness.tables.drop 6).flatMap (·.interactionsWith memoryChannel.toRaw) := by
+      (witness.tables.drop 6).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) := by
   simp only [memoryInterior, List.map_flatMap, typedTableInteractionsWith_raw]
 
-private theorem verifier_memory_silent (image : ProgramImage) (source : ExecutionSnapshot) :
-    memoryChannel.toRaw ∉ (verifier (p := p) image source).channels := by
-  change memoryChannel.toRaw ∉ [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw,
-    (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
-    (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-  simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-    stateChannel, memoryChannel, byteChannel, exitChannel, Channel.toRaw]
+/-- The actual public verifier emits no Memory traffic, including its source assertions. -/
+theorem verifier_memory_silent (image : ProgramImage) (source : ExecutionSnapshot)
+    (env : Environment (ZMod p)) :
+    (ensemble image source).verifierOperations.interactionValuesWith memoryChannel.toRaw env = [] := by
+  rw [ensemble, PublicVerifier.install_verifier_interactions_of_mem _ _ _ _
+    (by simp [baseEnsemble, sp1Ensemble_channels])]
+  simp [baseEnsemble, boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
+    Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions,
+    sp1StateVerifierMain, OrderedBoundaryVerifier.main, Operations.interactionValuesWith,
+    Operations.interactionsWith, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
+    OrderedFinalProvider.channelName, stateChannel, memoryChannel, byteChannel, exitChannel, circuit_norm]
 
 /-- Exact decomposition of the physical ledger into initial records, final records, and all
 remaining interactions. The typed `pushedIfValue (-1)` is the finalizer's negative emission with
@@ -58,13 +62,13 @@ theorem memory_interactions {image : ProgramImage} {source : ExecutionSnapshot}
     ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records (sourceWitness witness)).map memoryChannel.pushedValue ++
     (FinalMemoryEnsemble.records (finalWitness witness)).map (memoryChannel.emittedValue (-1)) ++ _
   rw [← source_memory_interactions witness, ← final_memory_interactions witness]
-  change witness.verifierTable.interactionsWith memoryChannel.toRaw ++
-    witness.tables.flatMap (·.interactionsWith memoryChannel.toRaw) = _
-  rw [witness.verifierTable.interactionsWith_nil_of_channel_not_mem (verifier_memory_silent image source),
-    List.nil_append]
-  have split := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith memoryChannel.toRaw))
+  change (ensemble image source).verifierOperations.interactionValuesWith memoryChannel.toRaw
+    (Environment.fromInput witness.publicInput witness.data) ++
+    witness.tables.flatMap (·.interactionsWith witness.data memoryChannel.toRaw) = _
+  rw [verifier_memory_silent, List.nil_append]
+  have split := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith witness.data memoryChannel.toRaw))
     (List.take_append_drop 3 witness.tables)
-  have splitTail := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith memoryChannel.toRaw))
+  have splitTail := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith witness.data memoryChannel.toRaw))
     (List.take_append_drop 3 (witness.tables.drop 3))
   simp only [List.flatMap_append, List.drop_drop] at split splitTail
   rw [← split, ← splitTail, List.append_assoc]
@@ -83,8 +87,8 @@ theorem memoryInterior_signedBinary {image : ProgramImage} {source : ExecutionSn
   have componentMem := List.mem_map_of_mem (f := fun t : Table (ZMod p) => t.component) tableMem
   rw [List.map_drop, witness.tables_map_component] at componentMem
   change table.component ∈ NativeCore.afterFinalTables image at componentMem
-  exact NativeCore.interior_memoryBinary image table.component componentMem table.data physical
-    (constraints table (witness.mem_allTables_of_mem_tables (List.mem_of_mem_drop tableMem))
+  exact NativeCore.interior_memoryBinary image table.component componentMem witness.data physical
+    (constraints table (List.mem_of_mem_drop tableMem)
       physical physicalMem) interaction.raw emitted
 
 /-- Raw constraints force signed-unit multiplicities throughout the combined Memory ledger.
@@ -105,7 +109,7 @@ theorem memory_records_perm {image : ProgramImage} {source : ExecutionSnapshot}
       (FinalMemoryEnsemble.records (finalWitness witness) ++ consumedMessages (memoryInterior witness)) := by
   apply NativeCore.memoryBoundary_records_perm _ _ _ (memoryInterior_signedBinary witness constraints)
   rw [← memory_interactions, typedEnsembleInteractionsWith_raw]
-  exact balanced _ (by simp [ensemble, sp1Ensemble_channels])
+  exact balanced _ (by simp [ensemble, baseEnsemble, PublicVerifier.install, sp1Ensemble_channels])
 
 /-- The unique final record at each finalized location, without assuming its value is current. -/
 noncomputable def memoryFinalFrontier {image : ProgramImage} {source : ExecutionSnapshot}

@@ -64,7 +64,7 @@ theorem locContent_final_of_microValue {initial final : SailState} {c0 n : ℕ}
 /-- The committed finalize pulls — the finite list behind `memoryFinalizeFrontier`. -/
 noncomputable def memoryFinalizeRecords (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     List (MemoryMsg (ZMod p)) :=
-  consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
+  consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
     memoryChannel)
 
 /-- Under per-location uniqueness, each committed finalize record is its location's frontier. -/
@@ -112,23 +112,23 @@ canonically-addressed, genesis-backed locations), a well-formed `CoreMemoryBound
 agree with the selected initial state and with the execution's `microValue` at the committed
 final clock.  The caller converts the final conjunct to final-state `locContent` through
 `locContent_final_of_localValueAt` once the constructed chain is in hand. -/
-theorem exists_populated_memoryBoundary
+theorem exists_populated_memoryBoundary {initialClock : ℕ}
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (initial : SailState)
     (finalTime : ℕ)
     (huniq : MemoryFinalizeProviderUnique witness)
-    (initBound : MemoryInitProviderBound witness initial (Commit.initClkNat witness.data))
+    (initBound : MemoryInitProviderBound witness initial initialClock)
     (finTruth : ∀ loc m, memoryFinalizeFrontier witness loc = some m →
       MemoryMsg.locOf m = loc ∧
-      LocalValueAt initial (Commit.initClkNat witness.data) loc finalTime m.value ∧
+      LocalValueAt initial initialClock loc finalTime m.value ∧
       ∃ m', MemoryMsg.locOf m' = loc ∧
         m'.value = m.value ∧ MemoryMsg.timeNat m' ≤ MemoryMsg.timeNat m ∧
         MemoryMsg.timeNat m' ≤ finalTime ∧
-        LocalMemTruth initial (Commit.initClkNat witness.data) m') :
+        LocalMemTruth initial initialClock m') :
     ∃ b : Machine.CoreMemoryBoundary,
       b.WellFormed finalTime ∧
       ∀ cell ∈ b.cells,
         locContent initial cell.loc = some cell.initialValue ∧
-        microValue initial (Commit.initClkNat witness.data) cell.loc finalTime =
+        microValue initial initialClock cell.loc finalTime =
           some cell.finalValue := by
   classical
   let selected : List (MemoryMsg (ZMod p)) :=
@@ -185,7 +185,7 @@ theorem exists_populated_memoryBoundary
       have hfront : memoryInitFrontier witness (MemoryMsg.locOf m) = some g :=
         (Option.some_get (selectedFacts m hm).2.2).symm
       set flt := (producedMessages (typedTableInteractionsWith
-          (memoryInitProviderTable witness) memoryChannel)).filter
+          (memoryInitProviderTable witness) witness.data memoryChannel)).filter
             (fun x => decide (MemoryMsg.locOf x = MemoryMsg.locOf m)) with hflt
       have hhead : flt.head? = some g := hfront
       have hginfo : g ∈ flt := by
@@ -199,7 +199,7 @@ theorem exists_populated_memoryBoundary
       rw [hflt] at hginfo
       obtain ⟨hgmem, hgloc⟩ := List.mem_filter.mp hginfo
       have hbound := memoryInitMessageBound_of_mem_produced witness initial
-        (Commit.initClkNat witness.data) initBound g hgmem
+        initialClock initBound g hgmem
       have hglocEq : MemoryMsg.locOf g = MemoryMsg.locOf m := by simpa using hgloc
       show locContent initial (MemoryMsg.locOf m) = some (Word.toBitVec64 g.value)
       rw [← hglocEq]
@@ -219,13 +219,13 @@ theorem BootBoundaryFacts.memoryInit_image_bound
     {statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p))}
     {witness : EnsembleWitness (sp1Ensemble (p := p))} {initial : SailState}
     (boot : BootBoundaryFacts statement witness initial) :
-    ∀ m ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
+    ∀ m ∈ producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
       memoryChannel), ∀ v,
       statement.program.imageContent? (MemoryMsg.locOf m) = some v →
       Word.toBitVec64 m.value = v := by
   intro m hm v hv
   have hbound := memoryInitMessageBound_of_mem_produced witness initial
-    (Commit.initClkNat witness.data) boot.base.memoryProvider m hm
+    statement.initClkNat boot.base.memoryProvider m hm
   have himg := GuestProgram.locContent_of_imageLoaded boot.isInitial.imageLoaded hv
   rw [hbound.1] at himg
   exact Option.some_injective _ himg

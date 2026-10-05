@@ -1,43 +1,30 @@
 import SP1Clean.Composition.Extracted
 import SP1Clean.Composition.ProviderSegment
 import ToClean.Air.EnsembleBuild
+import SP1Clean.Soundness.EnsembleLookups
 
-/-! # Exact Core rows assembled as the native fifty-three-table ensemble
+/-! # Exact Core rows assembled as a canonical native witness
 
-This module closes the structural and local-constraint half of the exact-AIR-to-native boundary.
-An exact execution-cluster witness supplies the twenty-five instruction tables through the
-whole-chip faithfulness transport; that execution witness together with the separate exact
-memory-boundary witness supplies the twenty-eight provider/system tables through
-`ExactProviderTransportContract` and a caller-supplied, demand-oriented
-`CanonicalPreprocessedInventory`.  Appending the two segments produces exactly the fifty-three
-components of `Soundness.sp1Ensemble`, all carrying one `ProverData` object.  The inventory is the
-explicit efficient-selection endpoint; this module does not run quadratic raw-row deduplication.
+Whole-chip faithfulness transports 25 instruction tables; the exact memory-boundary witness and
+preprocessing inventory supply 30 provider/system tables. The canonical Clean witness derives
+its data from those 55 physical tables and evaluates the public verifier separately. Generation
+data supplies row builders only. Provider demand is recounted from the actual verifier and
+physical consumer ledgers, preserving repeated and zero-multiplicity occurrences.
 
-The exact public-value timestamp is stored in upstream W3 order (most-significant 16-bit limb
-first), while `SP1StateBoundary` names its limbs in ascending order.  `exactNativeBoundary`
-performs that reversal explicitly and copies the three pc limbs without reordering.  The exact
-AIR exposes range interactions for these fourteen cells, but the derivation of their canonicity
-from global balance is not part of the local table transport.  The minimal missing fact is named
-by `ExactNativeBoundaryContract`; given it, the native verifier table also satisfies its complete
-constraint system. The native verifier emits its U8 pair as `(24..32, 16..24)`, matching the exact
-public-value interaction's operand order; the pair's range semantics remain symmetric. The
-remaining range seam is not an interaction permutation: for each low timestamp limb the exact
-public-value block looks up `(limb - 1) / 8` in Range13, whereas the native verifier looks up the
-limb itself in Range16.  A later balance bridge must account for that explicit redistribution.
+`exactNativeBoundary` reverses upstream W3 timestamp limbs into native low-to-high order and
+retains PC and terminal cells. `ExactNativeBoundaryContract` supplies the source range facts for
+the verifier's semantic specification. Native U8 operand order matches the source; native
+Range16 requests differ from the source's Range13 requests for `(limb - 1) / 8`.
 
-The resulting `exactNativeEnsembleWitness_constraints` theorem deliberately proves only
-`EnsembleWitness.Constraints`.  It does not claim `BalancedChannels`, a semantic boundary
-binding, `Ensemble.Statement`, or `SupportedCoreNativeRelation`; those are the remaining global
-transport/refinement seams.
+This module proves physical constraints and Byte/Program recount balance under the existing
+transport contracts. Full channel balance, authenticated program/boundary binding and exact
+source-to-native range redistribution remain separate integration obligations.
 -/
 
 set_option autoImplicit false
 
 namespace SP1Clean.Composition
 
--- The faithfulness vocabulary (`ChipOracle`, `ChipFaithful`, `ChipRowCodec`,
--- `nativeAccesses`) is at the stratum below; this namespace no longer encloses it since the
--- 2026-08 move out of `Faithful/Transport/`.
 open SP1Clean.Faithful
 
 open Circuit
@@ -182,28 +169,36 @@ theorem exactNativeBoundary_limbBounds (publicValues : SP1PublicValues (ZMod p))
 
 /-! ## Acyclic native-consumer skeleton -/
 
-/-- The verifier table used both by the native witness and by the recount skeleton. -/
-def exactNativeVerifierTable {Digest : Type}
-    (statement : SP1ShardStatement (ZMod p) Digest)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (Soundness.verifierComponent (p := p))
-    [exactNativeBoundary statement.publicValues] data hint
+/-- The actual public verifier's complete ordered access ledger at an explicit data environment. -/
+def exactNativeVerifierLedger {Digest : Type}
+    (statement : SP1ShardStatement (ZMod p) Digest) (data : ProverData (ZMod p)) : LookupAccessList :=
+  ((Soundness.sp1Ensemble (p := p)).verifierOperations.interactionValues
+    (Environment.fromInput (exactNativeBoundary statement.publicValues) data)).map Interaction.toAccess
 
-/-- Literal Clean ledger of every non-preprocessed native consumer: verifier, twenty-five
-transported instruction tables, memory init/finalize, and both bumps.  Preprocessed providers are
-absent, so their recounted multiplicities do not recursively depend on themselves. -/
+/-- Public verifier interactions depend on public cells, not row-generation metadata. -/
+theorem exactNativeVerifierLedger_setData {Digest : Type}
+    (statement : SP1ShardStatement (ZMod p) Digest) (data data' : ProverData (ZMod p)) :
+    exactNativeVerifierLedger statement data = exactNativeVerifierLedger statement data' := by
+  apply congrArg (List.map Interaction.toAccess)
+  exact Operations.interactionValues_congr
+    (env := Environment.fromInput (exactNativeBoundary statement.publicValues) data)
+    (env' := Environment.fromInput (exactNativeBoundary statement.publicValues) data') rfl
+
+/-- Public verifier and physical consumer demand, including the transported instructions,
+memory boundaries, both bumps, Halt padding and the empty syscall table. Preprocessed providers
+are absent, so their recounted multiplicities do not depend on themselves. -/
 def exactNativeSkeletonLedger {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
     (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : LookupAccessList :=
-  tableCleanAccesses (exactNativeVerifierTable statement data hint) ++
-    tablesCleanAccesses ((extractedInstructionRows executionWitness).transported data) ++
-    tablesCleanAccesses (extractedMemoryBoundaryTables memoryBoundaryWitness data hint) ++
-    tablesCleanAccesses (extractedBumpTables executionWitness data)
+  exactNativeVerifierLedger statement data ++
+    tablesCleanAccesses ((extractedInstructionRows executionWitness).transported data) data ++
+    tablesCleanAccesses (extractedMemoryBoundaryTables memoryBoundaryWitness data hint) data ++
+    tablesCleanAccesses (extractedBumpTables executionWitness data) data
 
-/-! ## Fifty-three-table assembly -/
+/-! ## 55-table assembly -/
 
-/-- The transported instruction segment followed by twenty-eight reconstructed provider/system
+/-- The transported instruction segment followed by thirty reconstructed provider/system
 tables whose preprocessing multiplicities recount the literal non-preprocessed skeleton. -/
 def exactNativeTables {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
@@ -216,7 +211,7 @@ def exactNativeTables {Digest : Type}
       data hint
 
 /-- The assembled exact/native tables align component-for-component with the complete native
-fifty-three-table ensemble. -/
+55-table ensemble. -/
 theorem exactNativeTables_components {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
     (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
@@ -229,46 +224,8 @@ theorem exactNativeTables_components {Digest : Type}
     ExtractedInstructionRows.transported_map_component,
     exactProviderTables_components, Soundness.sp1Ensemble_tables]
 
-/-- Every assembled table carries the one committed prover-data object. -/
-theorem exactNativeTables_data {Digest : Type}
-    (statement : SP1ShardStatement (ZMod p) Digest)
-    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory executionWitness)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ∀ table ∈ exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint,
-      table.data = data := by
-  intro table tableMem
-  simp only [exactNativeTables, List.mem_append] at tableMem
-  rcases tableMem with tableMem | tableMem
-  · exact ExtractedInstructionRows.transported_data
-      (extractedInstructionRows executionWitness) data table tableMem
-  · exact exactProviderTables_data executionWitness memoryBoundaryWitness
-      inventory
-      (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint)
-      data hint table tableMem
-
-/-- The full fifty-three-table list as Clean's shared-data `Tables` package. -/
-def exactNativeTableBundle {Digest : Type}
-    (statement : SP1ShardStatement (ZMod p) Digest)
-    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory executionWitness)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Air.Flat.Tables (ZMod p) where
-  tables := exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint
-  data := data
-  same_data := exactNativeTables_data statement executionWitness memoryBoundaryWitness inventory data hint
-
-/-- The shared-data bundle carries exactly the complete native ensemble component list. -/
-theorem exactNativeTableBundle_components {Digest : Type}
-    (statement : SP1ShardStatement (ZMod p) Digest)
-    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory executionWitness)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (exactNativeTableBundle statement executionWitness memoryBoundaryWitness inventory data hint).components =
-      (Soundness.sp1Ensemble (p := p)).tables :=
-  exactNativeTables_components statement executionWitness memoryBoundaryWitness inventory data hint
-
-/-- Exact relations and the explicit native transport contract yield all fifty-three
-constraint-satisfying native ensemble tables (excluding the separately built verifier row). -/
+/-- Exact relations and the explicit native transport contract yield all 55
+constraint-satisfying native ensemble tables (the public verifier is evaluated separately). -/
 theorem exactNativeTables_constraints {Digest : Type}
     {binds : CoreAIR.Current.PreprocessedBinding p Digest}
     (statement : SP1ShardStatement (ZMod p) Digest)
@@ -279,7 +236,7 @@ theorem exactNativeTables_constraints {Digest : Type}
       executionWitness memoryBoundaryWitness inventory
       (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint)) :
     ∀ table ∈ exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint,
-      table.Constraints := by
+      table.Constraints data := by
   intro table tableMem
   simp only [exactNativeTables, List.mem_append] at tableMem
   rcases tableMem with tableMem | tableMem
@@ -300,10 +257,9 @@ def exactNativeEnsembleWitness {Digest : Type}
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     EnsembleWitness (Soundness.sp1Ensemble (p := p)) :=
   EnsembleWitness.ofTables _
-    (exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint) data
+    (exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint)
     (exactNativeBoundary statement.publicValues)
     (exactNativeTables_components statement executionWitness memoryBoundaryWitness inventory data hint)
-    (exactNativeTables_data statement executionWitness memoryBoundaryWitness inventory data hint)
 
 @[simp] theorem exactNativeEnsembleWitness_tables {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
@@ -313,14 +269,6 @@ def exactNativeEnsembleWitness {Digest : Type}
     (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint).tables =
       exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint := rfl
 
-@[simp] theorem exactNativeEnsembleWitness_data {Digest : Type}
-    (statement : SP1ShardStatement (ZMod p) Digest)
-    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory executionWitness)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint).data =
-      data := rfl
-
 @[simp] theorem exactNativeEnsembleWitness_publicInput {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
     (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
@@ -329,19 +277,21 @@ def exactNativeEnsembleWitness {Digest : Type}
     (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint).publicInput =
       exactNativeBoundary statement.publicValues := rfl
 
-/-- The assembled witness's verifier row is exactly the table used in the skeleton recount. -/
-theorem exactNativeEnsembleWitness_verifierTable {Digest : Type}
+/-- The source endpoint range contract proves the public verifier's semantic specification. -/
+theorem exactNativeEnsembleWitness_verifierSpec {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
     (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory executionWitness)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
-      ).verifierTable = exactNativeVerifierTable statement data hint :=
-  Air.Flat.verifierTable_eq_build _ _
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (boundary : ExactNativeBoundaryContract statement.publicValues) :
+    (Soundness.sp1Ensemble (p := p)).VerifierSpec
+      (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint).publicInput
+      (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint).data :=
+  exactNativeBoundary_limbBounds statement.publicValues boundary
 
 /-- **Given the explicit transport contracts, the selected exact rows satisfy the native ensemble's
-complete local constraint system.**  This includes the twenty-five transported instructions, all
-twenty-eight providers, and the verifier row. -/
+physical constraints at canonical data.** The public verifier contributes channel obligations
+separately. -/
 theorem exactNativeEnsembleWitness_constraints {Digest : Type}
     {binds : CoreAIR.Current.PreprocessedBinding p Digest}
     (statement : SP1ShardStatement (ZMod p) Digest)
@@ -350,32 +300,27 @@ theorem exactNativeEnsembleWitness_constraints {Digest : Type}
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (transport : ExactProviderTransportContract binds statement
       executionWitness memoryBoundaryWitness inventory
-      (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint))
-    (boundary : ExactNativeBoundaryContract statement.publicValues) :
+      (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint)) :
     (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
       ).Constraints := by
-  rw [EnsembleWitness.Constraints]
-  intro table tableMem
-  simp only [EnsembleWitness.allTables, List.mem_cons] at tableMem
-  rcases tableMem with rfl | tableMem
-  · rw [exactNativeEnsembleWitness_verifierTable]
-    exact Soundness.verifierTable_constraints _ _ _ fun publicInput publicInputMem => by
-      rw [List.mem_singleton.mp publicInputMem]
-      exact exactNativeBoundary_limbBounds statement.publicValues boundary
-  · exact exactNativeTables_constraints statement executionWitness memoryBoundaryWitness
-      inventory data hint transport table tableMem
+  intro table member row rowMem
+  apply Soundness.sp1Table_constraints_setData table.component
+    (EnsembleWitness.mem_component_of_mem (witness :=
+      exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint) member)
+    (data := data)
+  exact exactNativeTables_constraints statement executionWitness memoryBoundaryWitness
+    inventory data hint transport table member row rowMem
 
 /-! ## Literal Clean ledger and recount payoff -/
 
-/-- Literal access ledger of every table in the constructed witness, verifier included. -/
+/-- The actual verifier and physical-table ledger of the constructed canonical witness. -/
 def exactNativeAllCleanAccesses {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
     (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory executionWitness)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : LookupAccessList :=
-  tableCleanAccesses (exactNativeVerifierTable statement data hint) ++
-    tablesCleanAccesses
-      (exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint)
+  (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
+    ).interactions.map Interaction.toAccess
 
 /-- The literal full access ledger is exactly the `Interaction.toAccess` image of the constructed
 ensemble witness's evaluated interactions.  This structural equation is the bridge used to turn
@@ -388,17 +333,7 @@ theorem exactNativeAllCleanAccesses_eq_interactions {Digest : Type}
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     exactNativeAllCleanAccesses statement executionWitness memoryBoundaryWitness inventory data hint =
       (exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
-        ).interactions.map Interaction.toAccess := by
-  simp only [exactNativeAllCleanAccesses, EnsembleWitness.interactions,
-    EnsembleWitness.allTables, List.flatMap_cons, List.map_append, List.map_flatMap,
-    tableCleanAccesses, tablesCleanAccesses,
-    exactNativeEnsembleWitness_tables]
-  rw [exactNativeEnsembleWitness_verifierTable]
-  apply congrArg (fun tail : LookupAccessList =>
-    (exactNativeVerifierTable statement data hint).interactions.map Interaction.toAccess ++ tail)
-  apply List.flatMap_congr
-  intro table tableMem
-  rfl
+        ).interactions.map Interaction.toAccess := rfl
 
 /-- The actual full native ledger permutes to the acyclic skeleton followed by its recounted
 preprocessed provider ledger. -/
@@ -414,19 +349,27 @@ theorem exactNativeAllCleanAccesses_perm {Digest : Type}
       (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint ++
         recountedPreprocessedProviderAccesses inventory
           (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint)) := by
-  rw [exactNativeAllCleanAccesses, exactNativeTables, tablesCleanAccesses_append,
+  let witness := exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint
+  rw [exactNativeAllCleanAccesses, EnsembleWitness.interactions, List.map_append,
+    List.map_flatMap]
+  change (exactNativeVerifierLedger statement witness.data ++
+    tablesCleanAccesses (exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint)
+      witness.data).Perm _
+  rw [exactNativeVerifierLedger_setData statement witness.data data,
+    tablesCleanAccesses_setData _ witness.data data]
+  rw [exactNativeTables, tablesCleanAccesses_append,
     exactProviderTables_cleanAccesses executionWitness memoryBoundaryWitness inventory
       (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint)
       data hint recount]
   simp only [tablesCleanAccesses]
   let consumerHead : LookupAccessList :=
-    tableCleanAccesses (exactNativeVerifierTable statement data hint) ++
-    ((extractedInstructionRows executionWitness).transported data).flatMap tableCleanAccesses
+    exactNativeVerifierLedger statement data ++
+    ((extractedInstructionRows executionWitness).transported data).flatMap (fun table => tableCleanAccesses table data)
   let providerLedger : LookupAccessList := recountedPreprocessedProviderAccesses inventory
     (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint)
   let systemTail : LookupAccessList :=
-    (extractedMemoryBoundaryTables memoryBoundaryWitness data hint).flatMap tableCleanAccesses ++
-      (extractedBumpTables executionWitness data).flatMap tableCleanAccesses
+    (extractedMemoryBoundaryTables memoryBoundaryWitness data hint).flatMap (fun table => tableCleanAccesses table data) ++
+      (extractedBumpTables executionWitness data).flatMap (fun table => tableCleanAccesses table data)
   refine List.Perm.trans (l₂ := consumerHead ++ (providerLedger ++ systemTail))
     (List.Perm.of_eq ?_) ?_
   · simp only [consumerHead, providerLedger, systemTail, List.append_assoc]

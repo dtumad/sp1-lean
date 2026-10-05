@@ -44,12 +44,13 @@ def validate_report(name, result, revision, dirty):
         values = [True, False, False, False, False, True, False, False]
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 89, "uniqueChannels": 22, "registeredChannelOccurrences": 257}
+                    "tableCount": 89, "uniqueChannels": 25, "registeredChannelOccurrences": 260,
+                    "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and
                 report["tableRows"] == sum(table["rows"] for table in report["tables"]) and
-                report["rowsIncludingVerifier"] == report["tableRows"] + 1,
-                "branch physical-row accounting mismatch")
+                report["interactions"] == report["physicalInteractions"] + report["verifierInteractions"],
+                "branch physical-row or ledger accounting mismatch")
     else:
         identifiers = [f"{op}/offset-{offset}/byte-{value}" for op in ["LB", "LBU"]
                        for offset in range(8) for value in [0, 127, 128, 255]]

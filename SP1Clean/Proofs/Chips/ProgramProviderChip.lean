@@ -117,6 +117,7 @@ theorem main_program_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
 in-circuit. `Spec` is `ProgramMsg.RowSpec` (the rich membership facts the consumers pull-and-derive);
 soundness discharges the push's `RowSpec` requirement from the range checks. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.program"
   main
   Spec input _ _ := ProgramMsg.RowSpec input.toMessage
   ProverAssumptions input _ _ := ProgramMsg.RowSpec input.toMessage

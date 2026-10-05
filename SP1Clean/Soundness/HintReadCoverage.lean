@@ -33,7 +33,7 @@ private theorem eval_next (env : Environment (ZMod p)) (input : Var Inputs (ZMod
   simp only [Inputs.next, HostRamAccessChip.Inputs.clockLow, circuit_norm]
 
 def view (last : Bool) : TransitionView (stateChannel (p := p)) where
-  component := ⟨HintReadWordChip.circuit last⟩
+  component := { circuit := HintReadWordChip.circuit last }
   edge env :=
     let input := valueFromOffset Inputs 0 env
     (input.previous, input.next)
@@ -56,49 +56,62 @@ def edge (row : Row (p := p)) : State (ZMod p) × State (ZMod p) :=
 
 def context (state : State (ZMod p)) := (state.clk_high, state.clk_low, state.pointer)
 
-theorem rows_spec (tables : List (Table (ZMod p)))
+theorem rows_spec (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec) :
-    ∀ row ∈ TransitionView.readIndexedRows variants tables, Spec row.1 (rowInput row) := by
+    (valid : ∀ table ∈ tables, table.Spec data) :
+    ∀ row ∈ TransitionView.readIndexedRows variants tables data, Spec row.1 (rowInput row) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
-  exact TransitionView.readIndexedRows_spec variants view tables alignment valid
+  exact TransitionView.readIndexedRows_spec variants view tables data alignment valid
 
 /-- Coverage uses authenticated words and exact index/address successors. The prior RAM values
 and timestamps are separate facts to be established by Memory grounding. -/
-def Steps (tables : List (Table (ZMod p))) : Prop :=
-  ∀ row ∈ TransitionView.readIndexedRows variants tables,
+def Steps (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) : Prop :=
+  ∀ row ∈ TransitionView.readIndexedRows variants tables data,
     HintReadStep.Spec row.1 ((rowInput row).step row.1)
 
-theorem steps_of_specs (tables : List (Table (ZMod p)))
+theorem steps_of_specs (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec) : Steps tables :=
-  fun row member => (rows_spec tables aligned valid row member).2
+    (valid : ∀ table ∈ tables, table.Spec data) : Steps tables data :=
+  fun row member => (rows_spec tables data aligned valid row member).2
+
+/-- Registered word components have no fixed columns, so selecting complete rows preserves
+all fixed-column obligations. This is derived from the component registry. -/
+theorem selection_fixed (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+    (keep : Bool → Environment (ZMod p) → Bool)
+    (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables) :
+    ∀ last table, (last, table) ∈ variants.zip tables → table.component.fixedRowsMatch
+      (table.table.filter fun row => keep last (Environment.fromArray row data)) := by
+  intro last table paired
+  rw [← List.forall₂_zip aligned paired]
+  trivial
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Selecting one call retains exactly the corresponding word-step facts. -/
-theorem Steps.select {tables : List (Table (ZMod p))} (valid : Steps tables)
-    (keep : Bool → Environment (ZMod p) → Bool) :
-    Steps (TransitionView.selectTables variants tables keep) := by
+theorem Steps.select {tables : List (Table (ZMod p))} {data : ProverData (ZMod p)}
+    (valid : Steps tables data) (keep : Bool → Environment (ZMod p) → Bool)
+    (fixed : ∀ last table, (last, table) ∈ variants.zip tables → table.component.fixedRowsMatch
+      (table.table.filter fun row => keep last (Environment.fromArray row data))) :
+    Steps (TransitionView.selectTables variants tables data keep fixed) data := by
   intro row member
   rw [TransitionView.readIndexedRows_selectTables] at member
   exact valid row (List.mem_filter.mp member).1
 
-theorem rows_balanced (tables : List (Table (ZMod p)))
+theorem rows_balanced (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component)
       variants tables)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
-    EndpointBalanced (↑(TransitionView.readIndexedRows variants tables)) edge initial final := by
-  let rows := TransitionView.readIndexedRows variants tables
+        tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
+    EndpointBalanced (↑(TransitionView.readIndexedRows variants tables data)) edge initial final := by
+  let rows := TransitionView.readIndexedRows variants tables data
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
   have projected := TransitionView.readRows_interactions
-    (variants.map view) tables alignment
+    (variants.map view) tables data alignment
   rw [TransitionView.readRows_eq_indexed] at projected
   simp only [List.flatMap_map] at projected
   rw [projected] at balanced
@@ -192,34 +205,34 @@ private theorem nil_of_closed {R V : Type*} (edge : R → V × V) (index : V →
     simp at empty
 
 /-- A balanced set of consumers without any handler endpoints must be empty. -/
-theorem rows_nil_of_balanced (tables : List (Table (ZMod p)))
+theorem rows_nil_of_balanced (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables)
-    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
-    TransitionView.readIndexedRows variants tables = [] := by
+    (valid : Steps tables data)
+    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
+    TransitionView.readIndexedRows variants tables data = [] := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
-  have projected := TransitionView.readRows_interactions (variants.map view) tables alignment
+  have projected := TransitionView.readRows_interactions (variants.map view) tables data alignment
   rw [TransitionView.readRows_eq_indexed] at projected
   simp only [List.flatMap_map] at projected
   rw [projected] at balanced
   have closed := (stateChannel.pairedLedger_balanced_iff
-    (TransitionView.readIndexedRows variants tables) edge).mp balanced
+    (TransitionView.readIndexedRows variants tables data) edge).mp balanced
   exact nil_of_closed edge (fun state : State (ZMod p) => Address.toNat state.index)
-    (TransitionView.readIndexedRows variants tables) closed.2
+    (TransitionView.readIndexedRows variants tables data) closed.2
     (fun row member => successor_of_spec row.1 (rowInput row) (valid row member))
 
 /-- Every physical word row occurs exactly once, with successive indices and a fixed call/node.
 Authenticated word-step contracts and ledger balance determine the order internally. -/
-theorem ordered_cover (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
+theorem ordered_cover (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables)
+    (valid : Steps tables data)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
+        tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows variants tables) ∧
+      path.Perm (TransitionView.readIndexedRows variants tables data) ∧
       Walk.IsWalk edge initial final path ∧
       Address.toNat final.index = Address.toNat initial.index + path.length ∧
       path.map (fun row => Address.toNat (rowInput row).index) =
@@ -227,8 +240,8 @@ theorem ordered_cover (tables : List (Table (ZMod p))) (initial final : State (Z
       context final = context initial ∧
       ∀ row ∈ path, context (rowInput row).previous = context initial := by
   apply ranked_cover edge (fun state : State (ZMod p) => Address.toNat state.index) context
-    (TransitionView.readIndexedRows variants tables) initial final
-    (rows_balanced tables initial final aligned balanced)
+    (TransitionView.readIndexedRows variants tables data) initial final
+    (rows_balanced tables data initial final aligned balanced)
   · intro row member
     exact successor_of_spec row.1 (rowInput row) (valid row member)
   · intro row _
@@ -251,15 +264,15 @@ private theorem lower_of_walk {R V : Type*} (edge : R → V × V) (address : V �
 
 /-- Every consumer address is at least the handler's start address. This needs only the
 authenticated successor constraints, independently of the prior RAM word or timestamp. -/
-theorem address_lower (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
+theorem address_lower (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables)
+    (valid : Steps tables data)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
-    ∀ row ∈ TransitionView.readIndexedRows variants tables,
+        tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
+    ∀ row ∈ TransitionView.readIndexedRows variants tables data,
       Address.toNat initial.address ≤ Address.toNat (rowInput row).address := by
-  obtain ⟨path, perm, walk, _⟩ := ordered_cover tables initial final aligned valid balanced
+  obtain ⟨path, perm, walk, _⟩ := ordered_cover tables data initial final aligned valid balanced
   have lower := lower_of_walk edge (fun state : State (ZMod p) => Address.toNat state.address)
     initial final path walk (by
       intro row member
@@ -270,38 +283,38 @@ theorem address_lower (tables : List (Table (ZMod p))) (initial final : State (Z
   exact fun row member => lower row (perm.mem_iff.mpr member)
 
 /-- Zero-based endpoints force exactly the full count, independently of physical row order. -/
-theorem complete_indices (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
+theorem complete_indices (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables)
+    (valid : Steps tables data)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith stateChannel.toRaw)))
+        tables.flatMap (·.interactionsWith data stateChannel.toRaw)))
     (zero : Address.toNat initial.index = 0) :
-    ((TransitionView.readIndexedRows variants tables).map fun row => Address.toNat (rowInput row).index).Perm
+    ((TransitionView.readIndexedRows variants tables data).map fun row => Address.toNat (rowInput row).index).Perm
       (List.range (Address.toNat final.index)) := by
-  obtain ⟨path, perm, _, count, indices, _⟩ := ordered_cover tables initial final aligned valid balanced
+  obtain ⟨path, perm, _, count, indices, _⟩ := ordered_cover tables data initial final aligned valid balanced
   rw [zero, Nat.zero_add] at count
   rw [zero, ← List.range_eq_range'] at indices
   rw [count, ← indices]
   exact (perm.map _).symm
 
 /-- A constructed complete cursor walk balances the physical tables under Clean's count guard. -/
-theorem balanced_of_walk (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
+theorem balanced_of_walk (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (path : List (Row (p := p))) (perm : path.Perm (TransitionView.readIndexedRows variants tables))
+    (path : List (Row (p := p))) (perm : path.Perm (TransitionView.readIndexedRows variants tables data))
     (walk : Walk.IsWalk edge initial final path) (bound : 2 * (path.length + 1) < p) :
     BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith stateChannel.toRaw)) := by
+        tables.flatMap (·.interactionsWith data stateChannel.toRaw)) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
-  have projected := TransitionView.readRows_interactions (variants.map view) tables alignment
+  have projected := TransitionView.readRows_interactions (variants.map view) tables data alignment
   rw [TransitionView.readRows_eq_indexed] at projected
   simp only [List.flatMap_map] at projected
   rw [projected]
   change BalancedInteractions (stateChannel.transitionLedger initial final
-    (TransitionView.readIndexedRows variants tables) edge)
+    (TransitionView.readIndexedRows variants tables data) edge)
   apply (stateChannel.transitionLedger_balanced_iff _ _ _ _).mpr
   refine ⟨Or.inl ?_, ?_⟩
   · simpa only [← perm.length_eq, ZMod.ringChar_zmod_n] using bound

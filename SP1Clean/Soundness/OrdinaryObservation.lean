@@ -19,17 +19,20 @@ open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
+/-- Match the field equality used by Clean's gated balance filters. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+
 /-- The actual circuit's pull/push pair supplies the common transition interface. -/
 def view (enabled : Bool) : TransitionView (stateChannel (p := p)) where
-  component := ⟨circuit enabled⟩
+  component := { circuit := circuit enabled }
   edge env :=
     let input := valueFromOffset Inputs 0 env
     (input.previous, input.next)
   interactions := state_values enabled
 
 /-- Read observation inputs directly from their physical arrays and shared data. -/
-def rows (table : Table (ZMod p)) : List (Inputs (ZMod p)) :=
-  table.table.map (fun physical => valueFromOffset Inputs 0 (table.environment physical))
+def rows (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Inputs (ZMod p)) :=
+  table.table.map (fun physical => valueFromOffset Inputs 0 (Environment.fromArray physical data))
 
 /-- A row links the previous observation to the exact receipt and computed counter. -/
 def edge (input : Inputs (ZMod p)) : State (ZMod p) × State (ZMod p) :=
@@ -39,61 +42,63 @@ def edge (input : Inputs (ZMod p)) : State (ZMod p) × State (ZMod p) :=
 def rank (state : State (ZMod p)) : ℕ := Semantics.clkNat state.clkHigh state.clkLow
 
 /-- No projected rows or synthetic receipt ledger is needed to read the unit consumers. -/
-theorem receipt_ledger (enabled : Bool) (table : Table (ZMod p))
+theorem receipt_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (registered : table.component = (view enabled).component) :
-    table.interactionsWith InstructionReceipt.channel.toRaw =
-      (rows table).map (fun input => InstructionReceipt.channel.pulledValue input.receipt) := by
+    table.interactionsWith data InstructionReceipt.channel.toRaw =
+      (rows table data).map (fun input => InstructionReceipt.channel.pulledValue input.receipt) := by
   simp only [Table.interactionsWith, registered, view, receipt_values, rows, List.map_map]
   exact List.map_eq_flatMap.symm
 
 /-- Observation transitions are the literal evaluated table ledger. -/
-theorem state_ledger (enabled : Bool) (table : Table (ZMod p))
+theorem state_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (registered : table.component = (view enabled).component) :
-    table.interactionsWith stateChannel.toRaw = (rows table).flatMap (fun input =>
+    table.interactionsWith data stateChannel.toRaw = (rows table data).flatMap (fun input =>
       [stateChannel.pulledValue input.previous, stateChannel.pushedValue input.next]) := by
   simp only [Table.interactionsWith, registered, view, state_values, rows, List.flatMap_map]
 
 /-- One receipt occurrence is consumed for each physical row, with no padding discount. -/
-theorem receipt_count (enabled : Bool) (table : Table (ZMod p))
+theorem receipt_count (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (registered : table.component = (view enabled).component) :
-    (table.interactionsWith InstructionReceipt.channel.toRaw).length = table.length := by
-  rw [receipt_ledger enabled table registered]
+    (table.interactionsWith data InstructionReceipt.channel.toRaw).length = table.length := by
+  rw [receipt_ledger enabled table data registered]
   simp only [rows, List.length_map]
 
 /-- Every consumer contributes two physical observation-channel occurrences. -/
-theorem state_count (enabled : Bool) (table : Table (ZMod p))
+theorem state_count (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (registered : table.component = (view enabled).component) :
-    (table.interactionsWith stateChannel.toRaw).length = 2 * table.length := by
-  rw [state_ledger enabled table registered, List.length_flatMap]
+    (table.interactionsWith data stateChannel.toRaw).length = 2 * table.length := by
+  rw [state_ledger enabled table data registered, List.length_flatMap]
   simp [rows, Function.comp_def, List.sum_replicate, Nat.mul_comm]
 
 /-- A balanced producer/consumer ledger matches complete successor messages, with padding
 removed only after applying the real physical count bound. The activity fact is supplied by
 the original chip contracts when the components are installed in the mixed ensemble. -/
 theorem receipts_exact (id : InstructionChipId) (original consumer : Table (ZMod p))
+    (data : ProverData (ZMod p))
+    (source : original.component = (supportedChipFor id).table)
     (enabled : Bool) (registered : consumer.component = (view enabled).component)
     (binary : ∀ physical ∈ original.table,
-      ((supportedChipFor (p := p) id).decodeRow original.data physical).is_real = 0 ∨
-        ((supportedChipFor (p := p) id).decodeRow original.data physical).is_real = 1)
+      ((supportedChipFor (p := p) id).decodeRow data physical).is_real = 0 ∨
+        ((supportedChipFor (p := p) id).decodeRow data physical).is_real = 1)
     (balanced : BalancedInteractions
-      ((OrdinaryStateReceipt.construct id original).interactionsWith InstructionReceipt.channel.toRaw ++
-        consumer.interactionsWith InstructionReceipt.channel.toRaw)) :
+      ((OrdinaryStateReceipt.construct id original source).interactionsWith data InstructionReceipt.channel.toRaw ++
+        consumer.interactionsWith data InstructionReceipt.channel.toRaw)) :
     ((original.table.filter (fun physical => decide
-      (((supportedChipFor (p := p) id).decodeRow original.data physical).is_real = 1))).map
-        (fun physical => statePushMessage ((supportedChipFor (p := p) id).decodeRow original.data physical))).Perm
-      ((rows consumer).map Inputs.receipt) := by
-  rw [OrdinaryStateReceipt.construct_receipts, receipt_ledger enabled consumer registered] at balanced
+      (((supportedChipFor (p := p) id).decodeRow data physical).is_real = 1))).map
+        (fun physical => statePushMessage ((supportedChipFor (p := p) id).decodeRow data physical))).Perm
+      ((rows consumer data).map Inputs.receipt) := by
+  rw [OrdinaryStateReceipt.construct_receipts, receipt_ledger enabled consumer data registered] at balanced
   apply InstructionReceipt.channel.gated_unit_perm_of_balanced original.table
-    (fun physical => ((supportedChipFor (p := p) id).decodeRow original.data physical).is_real)
-    (fun physical => statePushMessage ((supportedChipFor (p := p) id).decodeRow original.data physical))
-    ((rows consumer).map Inputs.receipt) binary
+    (fun physical => ((supportedChipFor (p := p) id).decodeRow data physical).is_real)
+    (fun physical => statePushMessage ((supportedChipFor (p := p) id).decodeRow data physical))
+    ((rows consumer data).map Inputs.receipt) binary
   simpa only [List.map_map, Function.comp_def] using balanced
 
-private theorem rows_spec (enabled : Bool) (table : Table (ZMod p))
-    (registered : table.component = (view enabled).component) (valid : table.Spec) :
-    ∀ input ∈ rows table, Spec enabled input := by
+private theorem rows_spec (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (registered : table.component = (view enabled).component) (valid : table.Spec data) :
+    ∀ input ∈ rows table data, Spec enabled input := by
   intro input member
-  change input ∈ table.table.map (fun physical => valueFromOffset Inputs 0 (table.environment physical)) at member
+  change input ∈ table.table.map (fun physical => valueFromOffset Inputs 0 (Environment.fromArray physical data)) at member
   obtain ⟨physical, inTable, equal⟩ := List.mem_map.mp member
   subst input
   have result := valid physical inTable
@@ -137,27 +142,27 @@ private theorem pc_of_walk (initial final : State (ZMod p)) (path : List (Inputs
 
 /-- Raw observation balance and local table meaning force one exhaustive ordered history.
 The endpoint parameters are an installation boundary, not capstone caller premises. -/
-theorem ordered_history (enabled : Bool) (table : Table (ZMod p))
-    (registered : table.component = (view enabled).component) (valid : table.Spec)
+theorem ordered_history (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (registered : table.component = (view enabled).component) (valid : table.Spec data)
     (initial final : State (ZMod p))
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        table.interactionsWith stateChannel.toRaw)) :
-    ∃ path : List (Inputs (ZMod p)), path.Perm (rows table) ∧
+        table.interactionsWith data stateChannel.toRaw)) :
+    ∃ path : List (Inputs (ZMod p)), path.Perm (rows table data) ∧
       Walk.IsWalk edge initial final path ∧
       (path.map (fun input => rank input.next)).Pairwise (· < ·) ∧
       Word.toBitVec64 final.counter = Word.toBitVec64 initial.counter +
         BitVec.ofNat 64 (if enabled then table.length else 0) ∧
       final.pc = path.foldl (fun _ input => input.next.pc) initial.pc := by
-  rw [state_ledger enabled table registered] at balanced
-  have endpoints := (stateChannel.transitionLedger_balanced_iff initial final (rows table) edge).mp balanced
-  have endpointBalance : EndpointBalanced (↑(rows table)) edge initial final := by
+  rw [state_ledger enabled table data registered] at balanced
+  have endpoints := (stateChannel.transitionLedger_balanced_iff initial final (rows table data) edge).mp balanced
+  have endpointBalance : EndpointBalanced (↑(rows table data)) edge initial final := by
     simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints.2
-  have specs := rows_spec enabled table registered valid
-  have strict : ∀ input ∈ rows table, rank input.previous < rank input.next :=
+  have specs := rows_spec enabled table data registered valid
+  have strict : ∀ input ∈ rows table data, rank input.previous < rank input.next :=
     fun input member => (specs input member).1.2.2.2.2
   obtain ⟨path, walk, exhaustive⟩ := exists_exhaustiveTrail_of_endpointBalanced
-    (↑(rows table)) edge rank initial final endpointBalance
+    (↑(rows table data)) edge rank initial final endpointBalance
     (fun input member => strict input (Multiset.mem_coe.mp member))
   have perm := Multiset.coe_eq_coe.mp exhaustive
   have pathSpecs := fun input member => specs input (perm.mem_iff.mp member)

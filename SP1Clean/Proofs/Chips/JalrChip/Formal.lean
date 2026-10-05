@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.JalrChip.Defs
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Math.EvalVec
@@ -544,7 +546,7 @@ two witnessed `AddOperation` gadgets and the I-type reader; output is the native
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   -- `byteChannel` dropped (W11 Phase 0c): the off-gate alignment byte-pull `Requirements` is discharged by
   -- the inline `is_real` boolean gate in `main`; the residual buses are the readers'/add-ops'.
-  { main, elaborated,
+  { name := "sp1.native.jalr", main, elaborated,
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
@@ -936,5 +938,20 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
     ⟨programChannel.toRaw,
       (exposedProgramInteractions input).map ChannelInteraction.toRaw⟩
     (by simp [circuit, expose])
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := JalrChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    JalrChip.circuit_main_eq]
+  simp [JalrChip.main, Readers.CPUState.circuit,
+    Readers.CPUState.main, Readers.ITypeReader.circuit,
+    Readers.ITypeReader.main, Readers.RegisterWrite.circuit,
+    Readers.RegisterWrite.main, Readers.RegisterAccessCols.circuit,
+    Readers.RegisterAccessCols.main,
+    Readers.RegisterAccessTimestamp.circuit,
+    Readers.RegisterAccessTimestamp.main, AddOperation.circuit,
+    AddOperation.main, Gadgets.Equality.main, circuit_norm]
 
 end SP1Clean.JalrChip

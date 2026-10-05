@@ -39,6 +39,7 @@ theorem main_memory_interactions (image : ProgramImage) (input : Var Inputs (ZMo
   SnapshotRamProvider.main_memory_interactions image.memorySnapshot input offset
 
 def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs MemoryMsg where
+  name := "sp1.native.memory.initial.ram"
   main := main image
   elaborated := elaborated image
   Spec input output _ := MemoryBoundary.InitialAtSpec image (Word.toNat input.bytes[0].address) output

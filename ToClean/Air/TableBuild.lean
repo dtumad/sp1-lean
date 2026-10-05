@@ -4,72 +4,21 @@ public import ToClean.Circuit.WitnessGenerationData
 public import Clean.Air.FlatComponent
 public import Clean.Circuit.Foundations
 
-/-!
-# Building a valid flat-AIR table from semantic inputs
+/-! # Semantic table construction and its completeness proof
 
-Clean's flat-AIR layer is complete in the *verifier* direction: `Air.Flat.Table` carries concrete
-rows, `Table.Constraints`/`Table.Guarantees` say what a valid table satisfies, and
-`Table.weakSoundness` turns those into the component's `Spec`. Nothing in that layer ever *builds* a
-table: there is no function taking a component and a list of semantic inputs to concrete rows, and
-no theorem saying the result satisfies `Table.Constraints`. Every completeness argument therefore
-has to re-derive, per component, the same chain — witness generation is honest, so the circuit's
-completeness field applies, so the row's constraints hold.
+Clean's built-in AIR witness generator supplies the runtime scheduler and Rust export. This
+addition supplies a semantic row/table construction theorem: honest circuit witnesses and the
+circuit's prover assumptions imply the resulting physical constraints and channel guarantees.
+It does not establish scheduler completeness or agreement with final derived data.
 
-This file is that chain, once and generically:
+Rows are built at explicit prover data, with either per-row or constant hints. A table stores
+only its component and physical rows; its constraints and ledger are evaluated at the enclosing
+ensemble's canonical data. The congruence lemmas identify which obligations survive a data change.
+Fixed-column tables require the same exact fixed-prefix invariant as Clean's `Table` constructor.
 
-* `Component.buildRow` — the physical row a component builds for one semantic input: the `size Input`
-  input cells, followed by the cells the circuit's own witness generators compute
-  (`Circuit.witgenWithData`, the committed-data interpreter from `ToClean.Circuit.WitnessGenerationData`).
-  `Component.size_buildRow` and `Component.rowInput_buildRow` are its layout facts.
-* `Component.buildRow_constraintsHold` — the keystone: for a component whose circuit has
-  `ComputableWitnessesWithData`, a semantic input satisfying the circuit's `ProverAssumptions` yields a row
-  satisfying `Component.operations.ConstraintsHold` and `FullGuarantees`.
-* `Operations.constraintsHold_congr` and friends — `ConstraintsHold` and the evaluated interaction
-  lists read the environment through `env.get` alone, *except* for lookups, which read `env.data`
-  (`Lookup.Contains` is a statement about `env.data lookup.table.name …`). So the committed
-  `ProverData` of the environment is a free choice up to the lookup tables the operations actually
-  use — in particular free outright for a lookup-free component. This is what lets an assembled
-  table's shared `data` be chosen independently of the rows.
-* `Table.buildHinted`, `Table.buildHinted_constraints`, `Table.buildHinted_guarantees`,
-  `Table.buildHinted_interactions` — assembly of a whole `Table F` from a list of semantic inputs
-  **each carrying its own `ProverHint`**, with its constraints, its guarantees, and a closed form
-  for its per-channel interaction list that downstream ledger/balance reasoning can use without
-  unfolding rows again.
-* `Table.build` and its three companions — the **constant-hint special case**, one hint for the
-  whole table. It is a separate `def` (so its layout lemmas stay `rfl`), tied to the general form by
-  `Table.build_eq_buildHinted`, and its three theorems are derived from the general ones: there is
-  one proof of each.
-
-## Why the hint is per row
-
-`Table` stores no hint field at all (`component`, `width`, `table`, `data`, `uniform_width`): the
-hint enters only through `buildRow` — where witness generation reads it to compute cells — and
-through discharging the circuit's `ProverAssumptions`. So making it per-row changes the *builder's*
-input type and nothing whatever about the built table, its constraints, or its interactions.
-
-A table-level hint is in fact the wrong object for a real AIR. A component whose `ProverAssumptions`
-pins hint-derived data against the row's own selector columns — SP1's multi-opcode chips do exactly
-this, e.g. `is_real = f[0] + f[1] + f[2]` for its three variant flags — cannot have a table-level
-hint at all: the padding rows would need `0 = 1`, and every real row of the table would have to
-carry the same variant. In the Rust prover these selectors are ordinary per-row trace columns, so
-per-row hint data is what models the real object; the table-level hint was the artefact.
-
-## Upstream
-
-Destined for `Clean/Air/FlatComponent.lean` (everything in `namespace Air.Flat`), with the three
-general-purpose helpers landing lower: `Expression.eval_congr` in `Clean/Circuit/Expression.lean`,
-`Operations.constraintsHold_congr` / `interactionValues_congr` in `Clean/Circuit/Operations.lean`,
-and `ProvableType.valueFromOffset_congr` / `ProvableType.onlyAccessedBelow_varFromOffset_zero` in
-`Clean/Circuit/Extensions.lean` beside `valueFromOffset` (Clean's `Clean/Air/Circuit.lean` already
-has the two sibling `Environment.fromInput` lemmas, which are the `init`-only special case of
-`rowInput_buildRow`). Nothing here changes an existing Clean declaration.
-
-Clean builds a `Table` in exactly one place today: `EnsembleWitness.verifierTable`
-(`Clean/Air/FlatEnsemble.lean`), the ensemble verifier's single row. That row is literally
-`toElements publicInput` — the verifier circuit is required to have `localLength 0`, so no witness
-generation is involved and no theorem says its constraints hold. It is the zero-witness one-row
-instance of `Table.build`. `Clean/Air/Vm.lean` adds no builder: it is a pure soundness development
-about VM channels.
+The missing upstream capabilities are the row-layout and completeness lemmas, plus environment
+congruence for circuit constraints and interactions. Remove these additions when Clean supplies
+equivalent proofs for its canonical witness generator.
 -/
 
 @[expose] public section
@@ -78,10 +27,9 @@ variable {F : Type} [FiniteField F]
 
 /-! ## Environment congruence
 
-`Expression.eval` reads only `env.get`. This is the granular fact behind "the committed `ProverData`
-is a free choice": every part of a component's per-row statement that is phrased in evaluated
-expressions transports across a change of `data`, and only the parts phrased in `env.data` — lookup
-containment and channel guarantees/requirements — do not. -/
+`Expression.eval` reads only `env.get`, so evaluated expressions transport across a change of
+evaluation data. Lookup containment and channel guarantees/requirements can read `env.data` and
+need separate transport proofs. The complete witness's canonical data still comes from its rows. -/
 
 theorem Expression.eval_congr {env env' : Environment F} (h : env.get = env'.get)
     (e : Expression F) : Expression.eval env e = Expression.eval env' e := by
@@ -104,9 +52,8 @@ theorem constraintsHold_congr {ops : Operations F} {env env' : Environment F}
   ⟨fun e he => (Expression.eval_congr h_get e).symm.trans (h.1 e he),
     fun l hl => h_lookups l hl (h.2 l hl)⟩
 
-/-- The usable form: `ConstraintsHold` transports across a change of committed `ProverData` that
-agrees on the tables the operations actually look up. This is the exact extent to which the data is
-a free choice — `Lookup.Contains` reads `env.data` at one key per lookup and nowhere else. -/
+/-- `ConstraintsHold` transports across a change of evaluation data that agrees on the tables
+the operations actually look up. `Lookup.Contains` reads one data key per lookup. -/
 theorem constraintsHold_congr_of_data_agree {ops : Operations F} {env env' : Environment F}
     (h_get : env.get = env'.get)
     (h_data : ∀ l ∈ ops.lookups,
@@ -119,8 +66,7 @@ theorem constraintsHold_congr_of_data_agree {ops : Operations F} {env env' : Env
     simp only [Vector.getElem_map, Expression.eval_congr h_get]
   simpa only [Lookup.Contains, ← h_data l hl, ← h_entry] using h_contains
 
-/-- A lookup-free operation list's constraints depend on the environment's cells alone: the
-committed `ProverData` is a free choice outright. -/
+/-- A lookup-free operation list's constraints depend on the environment's cells alone. -/
 theorem constraintsHold_congr_of_lookups_nil {ops : Operations F} {env env' : Environment F}
     (h_get : env.get = env'.get) (h_lookups : ops.lookups = [])
     (h : ops.ConstraintsHold env) : ops.ConstraintsHold env' :=
@@ -135,9 +81,8 @@ theorem AbstractInteraction.eval_congr {i : AbstractInteraction F} {env env' : E
 
 namespace Operations
 
-/-- The concrete interaction values a row emits depend on the environment's cells alone: the
-committed `ProverData` is a free choice. (The *predicates* `Interaction.Guarantees`/`Requirements`
-do take the data — but as an explicit argument, not through the environment.) -/
+/-- Concrete interaction values depend on the environment's cells alone. The predicates
+`Interaction.Guarantees`/`Requirements` still take data as an explicit argument. -/
 theorem interactionValues_congr {ops : Operations F} {env env' : Environment F}
     (h_get : env.get = env'.get) : ops.interactionValues env = ops.interactionValues env' := by
   simp only [interactionValues]
@@ -299,9 +244,8 @@ theorem buildRow_spec_requirements (c : Component F) (input : c.Input F)
   · exact built.1
   · exact built.2
 
-/-- Constraints of a built row survive a change of the environment's committed data, for a
-lookup-free component. Together with `buildRow_constraintsHold` this is what makes a table's shared
-`ProverData` a free choice: the rows do not have to be rebuilt for it. -/
+/-- A lookup-free component's constraints survive a change of evaluation data without
+rebuilding its rows. -/
 theorem constraintsHold_setData (c : Component F) {row : Array F} {data data' : ProverData F}
     (h_lookups : c.operations.lookups = [])
     (h : c.operations.ConstraintsHold (Environment.fromArray row data)) :
@@ -317,189 +261,175 @@ theorem interactionValuesWith_setData (c : Component F) {row : Array F}
   Operations.interactionValuesWith_congr (env := Environment.fromArray row data)
     (env' := Environment.fromArray row data') rfl
 
+/-- **A circuit that generates no witness cells builds exactly the row it was seeded with.** The
+generated array has the seed's size (`size_witgenWithData` at `localLength = 0`) and agrees with it
+at every index (`getElem?_witgenWithData_of_lt`), so it *is* the seed. -/
+theorem buildRow_of_localLength_zero (c : Component F) (input : c.Input F) (data : ProverData F)
+    (hint : ProverHint F) (hzero : c.circuit.localLength (varFromOffset c.Input 0) = 0) :
+    c.buildRow input data hint = (toElements input).toArray := by
+  have hlen : ((c.circuit.main (varFromOffset c.Input 0)).operations (size c.Input)).localLength
+      = 0 := by
+    rw [show ((c.circuit.main (varFromOffset c.Input 0)).operations (size c.Input)).localLength
+      = (c.circuit.main (varFromOffset c.Input 0)).localLength (size c.Input) from rfl,
+      c.circuit.localLength_eq, hzero]
+  have hsize : (c.buildRow input data hint).size = (toElements input).toArray.size := by
+    rw [buildRow, Circuit.size_witgenWithData, Vector.size_toArray, hlen, Nat.add_zero]
+  refine Array.ext hsize ?_
+  intro i hi hi'
+  have hbound : i < ((c.circuit.main (varFromOffset c.Input 0)).witgenWithData data hint
+      (toElements input).toArray).size := hi
+  have := Circuit.getElem?_witgenWithData_of_lt (c.circuit.main (varFromOffset c.Input 0)) data
+    hint (init := (toElements input).toArray) hi'
+  rw [Array.getElem?_eq_getElem hbound] at this
+  show ((c.circuit.main (varFromOffset c.Input 0)).witgenWithData data hint
+    (toElements input).toArray)[i]'hbound = _
+  simpa using this
+
+
+
 end Component
 
 /-! ## Assembling a whole table -/
 
 namespace Table
 
-/-- Assemble a flat-AIR table from a component, a list of semantic inputs **each paired with the
-prover hint its own row is witnessed at**, and the committed prover data: one
-`Component.buildRow` per input, at the component's width.
+/-- A physical table's literal ledger depends only on its committed cells. Semantic channel
+predicates and lookup constraints still require their own data-transport arguments. -/
+theorem interactionsWith_setData (table : Table F) (data data' : ProverData F)
+    (channel : RawChannel F) :
+    table.interactionsWith data channel = table.interactionsWith data' channel := by
+  apply congrArg List.flatten
+  exact List.map_congr_left fun _ _ => table.component.interactionValuesWith_setData channel
 
-The committed `data` stays table-level — it is the shared lookup-table content the whole AIR agrees
-on — while the hint is row-local, which is what it already was in `Component.buildRow`. -/
+/-- Build physical rows from semantic inputs and their row-local hints. Fixed columns retain
+Clean's exact row-indexed invariant. The data argument is used for generation, not stored. -/
 def buildHinted (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) : Table F where
+    (data : ProverData F)
+    (fixed : c.fixedRowsMatch (inputs.map fun input => c.buildRow input.1 data input.2) := by
+      preserve_tactic_target
+      trivial) : Table F where
   component := c
-  width := c.width
   table := inputs.map fun input => c.buildRow input.1 data input.2
-  data := data
   uniform_width := by
-    intro row h_row
-    simp only [List.mem_map] at h_row
-    obtain ⟨input, _, rfl⟩ := h_row
+    intro row member
+    obtain ⟨input, _, rfl⟩ := List.mem_map.mp member
     exact c.size_buildRow input.1 data input.2
+  fixed_rows_match := fixed
 
-@[simp] lemma buildHinted_component (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) : (buildHinted c inputs data).component = c := rfl
+section Hinted
+variable (c : Component F) (inputs : List (c.Input F × ProverHint F)) (data : ProverData F)
+  (fixed : c.fixedRowsMatch (inputs.map fun input => c.buildRow input.1 data input.2))
 
-@[simp] lemma buildHinted_data (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) : (buildHinted c inputs data).data = data := rfl
+@[simp] lemma buildHinted_component : (buildHinted c inputs data fixed).component = c := rfl
 
-@[simp] lemma buildHinted_table (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) :
-    (buildHinted c inputs data).table = inputs.map fun input => c.buildRow input.1 data input.2 :=
-  rfl
+@[simp] lemma buildHinted_table :
+    (buildHinted c inputs data fixed).table = inputs.map fun input => c.buildRow input.1 data input.2 := rfl
 
-@[simp] lemma buildHinted_length (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) : (buildHinted c inputs data).length = inputs.length :=
+@[simp] lemma buildHinted_length : (buildHinted c inputs data fixed).length = inputs.length :=
   List.length_map ..
 
-lemma buildHinted_environment (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) (row : Array F) :
-    (buildHinted c inputs data).environment row = Environment.fromArray row data := rfl
-
-/-- **A built table satisfies its constraints**, given the component's honest-prover side condition
-once and the circuit's `ProverAssumptions` per semantic input *at that input's own hint*. -/
-theorem buildHinted_constraints (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) (h_computable : c.circuit.base.ComputableWitnessesWithData)
+/-- Honest row-local witnesses satisfy the physical constraints at the generation data. -/
+theorem buildHinted_constraints (h_computable : c.circuit.base.ComputableWitnessesWithData)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input.1 data input.2) :
-    (buildHinted c inputs data).Constraints := by
-  intro row h_row
-  simp only [buildHinted_table, List.mem_map] at h_row
-  obtain ⟨input, h_input, rfl⟩ := h_row
+    (buildHinted c inputs data fixed).Constraints data := by
+  intro row member
+  obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
   exact (c.buildRow_constraintsHold input.1 data input.2 h_computable (h_prover input h_input)).1
 
-/-- **A built table satisfies its channel guarantees**, under the same hypotheses. -/
-theorem buildHinted_guarantees (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) (h_computable : c.circuit.base.ComputableWitnessesWithData)
+/-- Honest row-local witnesses satisfy the channel guarantees at the generation data. -/
+theorem buildHinted_guarantees (h_computable : c.circuit.base.ComputableWitnessesWithData)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input.1 data input.2) :
-    (buildHinted c inputs data).Guarantees := by
-  intro row h_row
-  simp only [buildHinted_table, List.mem_map] at h_row
-  obtain ⟨input, h_input, rfl⟩ := h_row
+    (buildHinted c inputs data fixed).Guarantees data := by
+  intro row member
+  obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
   exact (c.buildRow_constraintsHold input.1 data input.2 h_computable (h_prover input h_input)).2
 
-/-- The built table's interaction list on one channel, in closed form: the per-input evaluated
-interaction lists, concatenated in input order. -/
-theorem buildHinted_interactions (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) (channel : RawChannel F) :
-    (buildHinted c inputs data).interactionsWith channel =
-      inputs.flatMap fun input =>
-        c.operations.interactionValuesWith channel
-          (Environment.fromArray (c.buildRow input.1 data input.2) data) := by
-  simp only [interactionsWith, buildHinted_table, buildHinted_component, buildHinted_environment,
-    List.flatMap_map]
+/-- The literal per-channel ledger at any evaluation data, preserving input order and repeats. -/
+theorem buildHinted_interactions (evaluationData : ProverData F) (channel : RawChannel F) :
+    (buildHinted c inputs data fixed).interactionsWith evaluationData channel =
+      inputs.flatMap fun input => c.operations.interactionValuesWith channel
+        (Environment.fromArray (c.buildRow input.1 data input.2) evaluationData) := by
+  simp only [interactionsWith, buildHinted_table, buildHinted_component, List.flatMap_map]
 
-/-- The same, for all channels at once. -/
-theorem buildHinted_interactionValues (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F) :
-    (buildHinted c inputs data).interactions =
-      inputs.flatMap fun input =>
-        c.operations.interactionValues
-          (Environment.fromArray (c.buildRow input.1 data input.2) data) := by
-  simp only [interactions, buildHinted_table, buildHinted_component, buildHinted_environment,
-    List.flatMap_map]
+/-- All interaction occurrences at any evaluation data. -/
+theorem buildHinted_interactionValues (evaluationData : ProverData F) :
+    (buildHinted c inputs data fixed).interactions evaluationData =
+      inputs.flatMap fun input => c.operations.interactionValues
+        (Environment.fromArray (c.buildRow input.1 data input.2) evaluationData) := by
+  simp only [interactions, buildHinted_table, buildHinted_component, List.flatMap_map]
 
-/-! ### The constant-hint special case
+end Hinted
 
-One hint for the whole table. Kept as its own `def` so that its layout lemmas stay `rfl`, and tied
-to the general builder by `build_eq_buildHinted`, from which its three theorems are derived. -/
-
-/-- Assemble a flat-AIR table from a component, a list of semantic inputs, the committed prover
-data, and a **single** prover hint shared by every row: one `Component.buildRow` per input, at the
-component's width. The constant-hint case of `buildHinted`. -/
+/-- Build physical rows with one hint shared by all inputs. -/
 def build (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) : Table F where
+    (hint : ProverHint F)
+    (fixed : c.fixedRowsMatch (inputs.map (c.buildRow · data hint)) := by
+      preserve_tactic_target
+      trivial) : Table F where
   component := c
-  width := c.width
   table := inputs.map (c.buildRow · data hint)
-  data := data
   uniform_width := by
-    intro row h_row
-    simp only [List.mem_map] at h_row
-    obtain ⟨input, _, rfl⟩ := h_row
+    intro row member
+    obtain ⟨input, _, rfl⟩ := List.mem_map.mp member
     exact c.size_buildRow input data hint
+  fixed_rows_match := fixed
 
-@[simp] lemma build_component (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) : (build c inputs data hint).component = c := rfl
+section ConstantHint
+variable (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) (hint : ProverHint F)
+  (fixed : c.fixedRowsMatch (inputs.map (c.buildRow · data hint)))
 
-@[simp] lemma build_data (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) : (build c inputs data hint).data = data := rfl
+@[simp] lemma build_component : (build c inputs data hint fixed).component = c := rfl
 
-@[simp] lemma build_table (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) :
-    (build c inputs data hint).table = inputs.map (c.buildRow · data hint) := rfl
+@[simp] lemma build_table :
+    (build c inputs data hint fixed).table = inputs.map (c.buildRow · data hint) := rfl
 
-@[simp] lemma build_length (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) : (build c inputs data hint).length = inputs.length :=
-  List.length_map ..
+@[simp] lemma build_length : (build c inputs data hint fixed).length = inputs.length := List.length_map ..
 
-lemma build_environment (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) (row : Array F) :
-    (build c inputs data hint).environment row = Environment.fromArray row data := rfl
-
-/-- **The single-hint builder is the constant-hint case of the general one.** Pairing every input
-with the same hint builds the very same table — the three theorems below are this rewrite applied to
-their general forms. -/
-theorem build_eq_buildHinted (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) :
-    build c inputs data hint = buildHinted c (inputs.map (·, hint)) data := by
+/-- A constant hint is precisely a repeated row-local hint. -/
+theorem build_eq_buildHinted :
+    build c inputs data hint fixed = buildHinted c (inputs.map (·, hint)) data
+      (by simpa only [List.map_map, Function.comp_def] using fixed) := by
   rw [ext_iff]
-  refine ⟨rfl, rfl, ?_, rfl⟩
+  refine ⟨rfl, ?_⟩
   simp only [build_table, buildHinted_table, List.map_map, Function.comp_def]
 
-/-- **A built table satisfies its constraints**, given the component's honest-prover side condition
-once and the circuit's `ProverAssumptions` per semantic input. -/
-theorem build_constraints (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) (h_computable : c.circuit.base.ComputableWitnessesWithData)
+/-- Honest constant-hint witnesses satisfy the physical constraints at the generation data. -/
+theorem build_constraints (h_computable : c.circuit.base.ComputableWitnessesWithData)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
-    (build c inputs data hint).Constraints := by
+    (build c inputs data hint fixed).Constraints data := by
   rw [build_eq_buildHinted]
-  refine buildHinted_constraints c _ data h_computable fun ih h_ih => ?_
-  obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp h_ih
+  refine buildHinted_constraints c _ data _ h_computable fun ih member => ?_
+  obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
   exact h_prover input h_input
 
-/-- **A built table satisfies its channel guarantees**, under the same hypotheses. -/
-theorem build_guarantees (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) (h_computable : c.circuit.base.ComputableWitnessesWithData)
+/-- Honest constant-hint witnesses satisfy the channel guarantees at the generation data. -/
+theorem build_guarantees (h_computable : c.circuit.base.ComputableWitnessesWithData)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
-    (build c inputs data hint).Guarantees := by
+    (build c inputs data hint fixed).Guarantees data := by
   rw [build_eq_buildHinted]
-  refine buildHinted_guarantees c _ data h_computable fun ih h_ih => ?_
-  obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp h_ih
+  refine buildHinted_guarantees c _ data _ h_computable fun ih member => ?_
+  obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
   exact h_prover input h_input
 
-/-- The built table's interaction list on one channel, in closed form: the per-input evaluated
-interaction lists, concatenated in input order. Downstream ledger and balance reasoning reads this
-instead of unfolding the rows again. -/
-theorem build_interactions (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) (channel : RawChannel F) :
-    (build c inputs data hint).interactionsWith channel =
-      inputs.flatMap fun input =>
-        c.operations.interactionValuesWith channel
-          (Environment.fromArray (c.buildRow input data hint) data) := by
+/-- The literal per-channel ledger at any evaluation data. -/
+theorem build_interactions (evaluationData : ProverData F) (channel : RawChannel F) :
+    (build c inputs data hint fixed).interactionsWith evaluationData channel =
+      inputs.flatMap fun input => c.operations.interactionValuesWith channel
+        (Environment.fromArray (c.buildRow input data hint) evaluationData) := by
   rw [build_eq_buildHinted, buildHinted_interactions, List.flatMap_map]
 
-/-- The same, for all channels at once. -/
-theorem build_interactionValues (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F) :
-    (build c inputs data hint).interactions =
-      inputs.flatMap fun input =>
-        c.operations.interactionValues (Environment.fromArray (c.buildRow input data hint) data) := by
+/-- All interaction occurrences at any evaluation data. -/
+theorem build_interactionValues (evaluationData : ProverData F) :
+    (build c inputs data hint fixed).interactions evaluationData =
+      inputs.flatMap fun input => c.operations.interactionValues
+        (Environment.fromArray (c.buildRow input data hint) evaluationData) := by
   rw [build_eq_buildHinted, buildHinted_interactionValues, List.flatMap_map]
 
-/-- **Every interaction a table emits is on one of its component's declared channels.**
+end ConstantHint
 
-Clean has the contrapositive shape — `interactionsWith_eq_nil_of_not_mem_channels` — and derives it
-from `channels_subset` inline. The positive form is what a *whole-ledger* argument needs: given a
-key, decide which channel it came from. Splitting it out costs nothing and makes the fact citable.
-
-Gap against upstream: this is a two-line consequence of `channels_subset` that
-`Clean/Air/FlatComponent.lean` proves inside another lemma rather than stating. -/
-theorem channel_mem_channels_of_mem_interactions (table : Table F) :
-    ∀ i ∈ table.interactions, i.channel ∈ table.component.circuit.channels := by
+/-- Every emitted occurrence belongs to one of the component's declared channels. -/
+theorem channel_mem_channels_of_mem_interactions (table : Table F) (data : ProverData F) :
+    ∀ i ∈ table.interactions data, i.channel ∈ table.component.circuit.channels := by
   rw [Table.forall_interactions_iff]
   intro _ _ i interactionMem
   rw [AbstractInteraction.eval_channel]

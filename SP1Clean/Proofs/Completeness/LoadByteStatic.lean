@@ -9,6 +9,11 @@ All residual tables, including other U8Range/MSB providers and readers with iden
 are retained literally. This is a dedicated-provider assembly transport, not a transformation
 of an already aggregated canonical inventory. Removing rows decreases the raw interaction
 count; the reverse construction would require its own larger capacity bound.
+
+Generation data and evaluation data are explicit and independent. The constraint transport keeps
+one evaluation environment fixed, including for arbitrary residual tables. Applying it to a changed
+canonical inventory still requires transporting residual lookups to that inventory; this theorem
+does not establish that agreement.
 -/
 
 namespace SP1Clean.Soundness.LoadByteStatic
@@ -81,12 +86,15 @@ theorem selected_pair_balance (input : Inputs (ZMod p))
       h, zero_mul, one_mul, neg_zero] <;> split_ifs <;> simp
 
 /-- The existing U8Range circuit really emits the dedicated push from its built physical row. -/
-theorem providerRow_interactions (input : Inputs (ZMod p)) (data : ProverData (ZMod p))
+theorem providerRow_interactions (input : Inputs (ZMod p)) (data evaluationData : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) :
     ByteChip.U8Range.component.operations.interactionValues
       (Environment.fromArray
-        (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) data) =
+        (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) evaluationData) =
       [selectedPush input] := by
+  trans ByteChip.U8Range.component.operations.interactionValues (Environment.fromArray
+    (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) data)
+  · exact Operations.interactionValues_congr rfl
   rw [Operations.interactionValues,
     interactions_eq_interactionsWith_of_onlyChannel _ byteChannel.toRaw
       Ledger.onlyChannel_U8Range, u8Range_interactionsWith_byte]
@@ -99,11 +107,11 @@ theorem providerRow_interactions (input : Inputs (ZMod p)) (data : ProverData (Z
     simp only [circuit_norm]
   rw [roweval]
   simp only [ProvableType.eval_field]
-  rw [eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))
+  rw [eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))
       (selectedProviderInput input) data hint 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))
+    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))
       (selectedProviderInput input) data hint 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))
+    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))
       (selectedProviderInput input) data hint 2 (by change 2 < 3; omega)]
   simp only [selectedProviderInput, toElements, ProvableStruct.structToElements_eq,
     ProvableStruct.toComponents]
@@ -112,12 +120,12 @@ theorem providerRow_interactions (input : Inputs (ZMod p)) (data : ProverData (Z
 
 /-- The original physical consumer row is exactly the replacement row plus the named pull,
 up to ordering. Every other occurrence (including zero multiplicities) is preserved. -/
-theorem consumerRow_interactions_perm (input : Inputs (ZMod p)) (data : ProverData (ZMod p))
+theorem consumerRow_interactions_perm (input : Inputs (ZMod p)) (data evaluationData : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) :
     (LoadByteChip.component.operations.interactionValues
-      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) data)).Perm
+      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) evaluationData)).Perm
       (selectedPull input :: LoadByteStaticChip.component.operations.interactionValues
-        (Environment.fromArray (LoadByteStaticChip.component.buildRow input data hint) data)) := by
+        (Environment.fromArray (LoadByteStaticChip.component.buildRow input data hint) evaluationData)) := by
   have same := LoadByteStaticChip.buildRow_eq_original input data hint
   change LoadByteStaticChip.component.buildRow input data hint =
     LoadByteChip.component.buildRow input data hint at same
@@ -126,63 +134,64 @@ theorem consumerRow_interactions_perm (input : Inputs (ZMod p)) (data : ProverDa
   have h := (LoadByteStaticChip.interactions_perm
     (varFromOffset (F := ZMod p) Inputs 0) (size Inputs)).map
       (AbstractInteraction.eval (Environment.fromArray
-        (LoadByteChip.component.buildRow input data hint) data))
+        (LoadByteChip.component.buildRow input data hint) evaluationData))
   rw [List.map_cons, selectedRange_eval] at h
   have input_eq : Eval.eval
-      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) data)
+      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) evaluationData)
       (varFromOffset (F := ZMod p) Inputs 0) = input := by
     rw [eval_varFromOffset_valueFromOffset]
-    exact Component.rowInput_buildRow LoadByteChip.component input data data hint
+    exact Component.rowInput_buildRow LoadByteChip.component input data evaluationData hint
   rw [input_eq] at h
   exact h
 
 /-- The dedicated provider table emits exactly one named push for every input row. -/
 theorem providerTable_interactions (inputs : List (Inputs (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (selectedProviderTable inputs data hint).interactions = inputs.map selectedPush := by
-  have rows := providerRow_interactions (p := p)
-  dsimp only [ByteChip.U8Range.component] at rows
-  unfold selectedProviderTable ByteChip.U8Range.component
-  rw [Air.Flat.Table.build_interactionValues, List.flatMap_map]
-  simp only [rows]
-  exact List.map_eq_flatMap.symm
+    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (selectedProviderTable inputs data hint).interactions evaluationData = inputs.map selectedPush := by
+  calc
+    _ = (inputs.map selectedProviderInput).flatMap
+        (fun input : ByteChip.U8Range.Inputs (ZMod p) =>
+          ByteChip.U8Range.component.operations.interactionValues (Environment.fromArray
+            (ByteChip.U8Range.component.buildRow input data hint) evaluationData)) :=
+      Air.Flat.Table.build_interactionValues ByteChip.U8Range.component _ data hint _ evaluationData
+    _ = inputs.flatMap (fun input => ByteChip.U8Range.component.operations.interactionValues
+        (Environment.fromArray (ByteChip.U8Range.component.buildRow
+          (selectedProviderInput input) data hint) evaluationData)) := List.flatMap_map ..
+    _ = inputs.map selectedPush := by
+      simp only [providerRow_interactions]
+      exact List.map_eq_flatMap.symm
 
 /-- Table-wide occurrence preservation, without matching or erasing by key. -/
 theorem consumerTable_interactions_perm (inputs : List (Inputs (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (originalTable inputs data hint).interactions.Perm
-      (inputs.map selectedPull ++ (replacementTable inputs data hint).interactions) := by
-  unfold originalTable replacementTable LoadByteChip.component LoadByteStaticChip.component
-  rw [Air.Flat.Table.build_interactionValues, Air.Flat.Table.build_interactionValues]
+    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ((originalTable inputs data hint).interactions evaluationData).Perm
+      (inputs.map selectedPull ++ (replacementTable inputs data hint).interactions evaluationData) := by
+  have original : (originalTable inputs data hint).interactions evaluationData =
+      inputs.flatMap (fun input : Inputs (ZMod p) =>
+        LoadByteChip.component.operations.interactionValues
+          (Environment.fromArray (LoadByteChip.component.buildRow input data hint) evaluationData)) :=
+    Air.Flat.Table.build_interactionValues LoadByteChip.component inputs data hint _ evaluationData
+  have replacement : (replacementTable inputs data hint).interactions evaluationData =
+      inputs.flatMap (fun input : Inputs (ZMod p) =>
+        LoadByteStaticChip.component.operations.interactionValues (Environment.fromArray
+          (LoadByteStaticChip.component.buildRow input data hint) evaluationData)) :=
+    Air.Flat.Table.build_interactionValues LoadByteStaticChip.component inputs data hint _ evaluationData
+  rw [original, replacement]
   have rowPerm := List.Perm.flatMap_left inputs
-    (fun input _ => consumerRow_interactions_perm input data hint)
-  simpa only [LoadByteChip.component, LoadByteStaticChip.component] using
-    rowPerm.trans (List.map_append_flatMap_perm inputs selectedPull _).symm
-
-
-omit [Fact (2 ^ 24 < p)] in
-/-- Every physical row of a built table satisfies constraints exactly when its source input's
-built row does; this statement has no honest-prover hypothesis. -/
-private theorem built_constraints_iff (component : Component (ZMod p))
-    (inputs : List (component.Input (ZMod p))) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) :
-    (Air.Flat.Table.build component inputs data hint).Constraints ↔
-      ∀ input ∈ inputs, component.operations.ConstraintsHold
-        (Environment.fromArray (component.buildRow input data hint) data) := by
-  simp only [Air.Flat.Table.Constraints, Air.Flat.Table.build_table,
-    List.forall_mem_map, Air.Flat.Table.build_environment, Air.Flat.Table.build_component]
+    (fun input _ => consumerRow_interactions_perm input data evaluationData hint)
+  exact rowPerm.trans (List.map_append_flatMap_perm inputs selectedPull _).symm
 
 /-- Soundness of the actual selected-provider row authenticates both new lookup entries. -/
-theorem selectedProvider_bounds (input : Inputs (ZMod p)) (data : ProverData (ZMod p))
+theorem selectedProvider_bounds (input : Inputs (ZMod p)) (data evaluationData : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (holds : ByteChip.U8Range.component.operations.ConstraintsHold
       (Environment.fromArray
-        (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) data)) :
+        (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) evaluationData)) :
     (isReal input * input.selected_limb_low_byte).val < 256 ∧
       (isReal input * highByte input).val < 256 := by
   have guarantees : ByteChip.U8Range.component.operations.FullGuarantees
       (Environment.fromArray
-        (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) data) := by
+        (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) evaluationData) := by
     rw [Operations.FullGuarantees,
       interactions_eq_interactionsWith_of_onlyChannel _ byteChannel.toRaw
         Ledger.onlyChannel_U8Range, u8Range_interactionsWith_byte]
@@ -195,35 +204,35 @@ theorem selectedProvider_bounds (input : Inputs (ZMod p)) (data : ProverData (ZM
   exact spec
 
 /-- The activity gate is derived from the original physical consumer's assertions. -/
-theorem consumerRow_binary (input : Inputs (ZMod p)) (data : ProverData (ZMod p))
+theorem consumerRow_binary (input : Inputs (ZMod p)) (data evaluationData : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (holds : LoadByteChip.component.operations.ConstraintsHold
-      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) data)) :
+      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) evaluationData)) :
     isReal input = 0 ∨ isReal input = 1 := by
   rw [Component.constraintsHold_iff] at holds
   change ((LoadByteChip.main (varFromOffset (F := ZMod p) Inputs 0)).operations
     (size Inputs)).ConstraintsHold _ at holds
   have binary := LoadByteStaticChip.original_isReal_binary _ _ _ holds
   have evalInput : Eval.eval
-      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) data)
+      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) evaluationData)
       (varFromOffset (F := ZMod p) Inputs 0) = input := by
     rw [eval_varFromOffset_valueFromOffset]
-    exact Component.rowInput_buildRow LoadByteChip.component input data data hint
+    exact Component.rowInput_buildRow LoadByteChip.component input data evaluationData hint
   have gate := congrArg isReal evalInput
   simp only [isReal, circuit_norm] at gate
   simpa only [circuit_norm, gate, isReal] using binary
 
 /-- The replacement preserves raw acceptance of a built consumer when the corresponding actual
 provider row is constrained. Arbitrary inputs and inactive out-of-range values are allowed. -/
-theorem consumerRow_constraints (input : Inputs (ZMod p)) (data : ProverData (ZMod p))
+theorem consumerRow_constraints (input : Inputs (ZMod p)) (data evaluationData : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (consumer : LoadByteChip.component.operations.ConstraintsHold
-      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) data))
+      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) evaluationData))
     (provider : ByteChip.U8Range.component.operations.ConstraintsHold
       (Environment.fromArray
-        (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) data)) :
+        (ByteChip.U8Range.component.buildRow (selectedProviderInput input) data hint) evaluationData)) :
     LoadByteStaticChip.component.operations.ConstraintsHold
-      (Environment.fromArray (LoadByteStaticChip.component.buildRow input data hint) data) := by
+      (Environment.fromArray (LoadByteStaticChip.component.buildRow input data hint) evaluationData) := by
   have same := LoadByteStaticChip.buildRow_eq_original input data hint
   change LoadByteStaticChip.component.buildRow input data hint =
     LoadByteChip.component.buildRow input data hint at same
@@ -232,56 +241,61 @@ theorem consumerRow_constraints (input : Inputs (ZMod p)) (data : ProverData (ZM
     (size Inputs)).ConstraintsHold _
   rw [LoadByteStaticChip.constraints_iff]
   refine ⟨(Component.constraintsHold_iff _).mp consumer, ?_⟩
-  have bounds := selectedProvider_bounds input data hint provider
+  have bounds := selectedProvider_bounds input data evaluationData hint provider
   have evalInput : Eval.eval
-      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) data)
+      (Environment.fromArray (LoadByteChip.component.buildRow input data hint) evaluationData)
       (varFromOffset (F := ZMod p) Inputs 0) = input := by
     rw [eval_varFromOffset_valueFromOffset]
-    exact Component.rowInput_buildRow LoadByteChip.component input data data hint
+    exact Component.rowInput_buildRow LoadByteChip.component input data evaluationData hint
   have low := congrArg (fun i : Inputs (ZMod p) => isReal i * i.selected_limb_low_byte) evalInput
   have high := congrArg (fun i : Inputs (ZMod p) => isReal i * highByte i) evalInput
   simp only [isReal, highByte, circuit_norm] at low high ⊢
   rwa [low, high]
 
-/-- Actual table-level constraint preservation; no new semantic or honest-generator premise. -/
+/-- Table constraints at the chosen evaluation data are preserved without semantic or
+honest-generator premises. -/
 theorem replacementTable_constraints (inputs : List (Inputs (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (consumer : (originalTable inputs data hint).Constraints)
-    (provider : (selectedProviderTable inputs data hint).Constraints) :
-    (replacementTable inputs data hint).Constraints := by
-  unfold originalTable LoadByteChip.component at consumer
-  unfold selectedProviderTable ByteChip.U8Range.component at provider
-  unfold replacementTable LoadByteStaticChip.component
-  rw [built_constraints_iff] at consumer provider ⊢
-  intro input mem
-  exact consumerRow_constraints input data hint (consumer input mem)
-    (provider _ (List.mem_map.mpr ⟨input, mem, rfl⟩))
+    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (consumer : (originalTable inputs data hint).Constraints evaluationData)
+    (provider : (selectedProviderTable inputs data hint).Constraints evaluationData) :
+    (replacementTable inputs data hint).Constraints evaluationData := by
+  intro row member
+  obtain ⟨input, inputMem, rfl⟩ := List.mem_map.mp member
+  exact consumerRow_constraints input data evaluationData hint
+    (consumer _ (List.mem_map.mpr ⟨input, inputMem, rfl⟩))
+    (provider _ (List.mem_map.mpr
+      ⟨selectedProviderInput input, List.mem_map.mpr ⟨input, inputMem, rfl⟩, rfl⟩))
 
 /-- The actual all-channel ledger decomposes into exactly the removed occurrences plus the new
 ledger. Residual tables, including duplicate keys, are literal common suffixes. -/
 theorem assembly_interactions_perm (inputs : List (Inputs (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (residual : List (Air.Flat.Table (ZMod p))) :
-    ((originalAssembly inputs data hint residual).flatMap Air.Flat.Table.interactions).Perm
+    ((originalAssembly inputs data hint residual).flatMap
+      (fun table => table.interactions evaluationData)).Perm
       ((inputs.map selectedPull ++ inputs.map selectedPush) ++
-        (replacementAssembly inputs data hint residual).flatMap Air.Flat.Table.interactions) := by
+        (replacementAssembly inputs data hint residual).flatMap
+          (fun table => table.interactions evaluationData)) := by
   simp only [originalAssembly, replacementAssembly, List.flatMap_cons,
     providerTable_interactions]
-  apply ((consumerTable_interactions_perm inputs data hint).append_right _).trans
+  apply ((consumerTable_interactions_perm inputs data evaluationData hint).append_right _).trans
   simp only [List.append_assoc]
   simpa only [List.append_assoc] using
     List.Perm.append_left (inputs.map selectedPull)
-      ((List.perm_append_comm (l₁ := (replacementTable inputs data hint).interactions)
-        (l₂ := inputs.map selectedPush)).append_right (residual.flatMap Air.Flat.Table.interactions))
+      ((List.perm_append_comm (l₁ := (replacementTable inputs data hint).interactions evaluationData)
+        (l₂ := inputs.map selectedPush)).append_right
+          (residual.flatMap (fun table => table.interactions evaluationData)))
 
 /-- Exactly two physical interaction occurrences disappear per source row, including padding. -/
 theorem assembly_raw_count (inputs : List (Inputs (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (residual : List (Air.Flat.Table (ZMod p))) :
-    ((originalAssembly inputs data hint residual).flatMap Air.Flat.Table.interactions).length =
+    ((originalAssembly inputs data hint residual).flatMap
+      (fun table => table.interactions evaluationData)).length =
       2 * inputs.length +
-        ((replacementAssembly inputs data hint residual).flatMap Air.Flat.Table.interactions).length := by
-  have h := (assembly_interactions_perm inputs data hint residual).length_eq
+        ((replacementAssembly inputs data hint residual).flatMap
+          (fun table => table.interactions evaluationData)).length := by
+  have h := (assembly_interactions_perm inputs data evaluationData hint residual).length_eq
   simp only [List.length_append, List.length_map] at h
   omega
 
@@ -313,20 +327,22 @@ private theorem removed_balance (inputs : List (Inputs (ZMod p)))
 /-- Complete per-channel balance and its raw-count bound transport from old to new. The reverse
 construction is deliberately not claimed: it may need a larger admissible interaction budget. -/
 theorem assembly_balanced (inputs : List (Inputs (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (residual : List (Air.Flat.Table (ZMod p)))
-    (consumer : (originalTable inputs data hint).Constraints)
+    (consumer : (originalTable inputs data hint).Constraints evaluationData)
     (balanced : ∀ channel : RawChannel (ZMod p), BalancedInteractions
-      ((originalAssembly inputs data hint residual).flatMap (fun t => t.interactionsWith channel))) :
+      ((originalAssembly inputs data hint residual).flatMap
+        (fun t => t.interactionsWith evaluationData channel))) :
     ∀ channel : RawChannel (ZMod p), BalancedInteractions
-      ((replacementAssembly inputs data hint residual).flatMap (fun t => t.interactionsWith channel)) := by
+      ((replacementAssembly inputs data hint residual).flatMap
+        (fun t => t.interactionsWith evaluationData channel)) := by
   classical
   have binary : ∀ input ∈ inputs, isReal input = 0 ∨ isReal input = 1 := by
-    unfold originalTable LoadByteChip.component at consumer
-    rw [built_constraints_iff] at consumer
-    exact fun input mem => consumerRow_binary input data hint (consumer input mem)
+    intro input mem
+    exact consumerRow_binary input data evaluationData hint
+      (consumer _ (List.mem_map.mpr ⟨input, mem, rfl⟩))
   intro channel
-  have perm := (assembly_interactions_perm inputs data hint residual).filter
+  have perm := (assembly_interactions_perm inputs data evaluationData hint residual).filter
     (fun i => decide (i.channel = channel))
   simp only [List.filter_append, List.filter_flatMap,
     ← Air.Flat.Table.interactionsWith_eq_filter] at perm
@@ -343,23 +359,25 @@ theorem assembly_balanced (inputs : List (Inputs (ZMod p)))
       removed_balance inputs binary channel message, zero_add] at eq
     exact eq
 
-/-- A complete acceptance transport for the dedicated-provider assembly: every old table's raw
-constraints and every old channel's bounded balance suffice for the new assembly. -/
+/-- At fixed evaluation data, every old table's raw constraints and every old channel's bounded
+balance suffice for the replacement. Canonical-data agreement is a separate obligation. -/
 theorem assembly_acceptance (inputs : List (Inputs (ZMod p)))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (residual : List (Air.Flat.Table (ZMod p)))
-    (constraints : ∀ table ∈ originalAssembly inputs data hint residual, table.Constraints)
+    (constraints : ∀ table ∈ originalAssembly inputs data hint residual, table.Constraints evaluationData)
     (balanced : ∀ channel : RawChannel (ZMod p), BalancedInteractions
-      ((originalAssembly inputs data hint residual).flatMap (fun t => t.interactionsWith channel))) :
-    (∀ table ∈ replacementAssembly inputs data hint residual, table.Constraints) ∧
+      ((originalAssembly inputs data hint residual).flatMap
+        (fun t => t.interactionsWith evaluationData channel))) :
+    (∀ table ∈ replacementAssembly inputs data hint residual, table.Constraints evaluationData) ∧
       (∀ channel : RawChannel (ZMod p), BalancedInteractions
-        ((replacementAssembly inputs data hint residual).flatMap (fun t => t.interactionsWith channel))) := by
+        ((replacementAssembly inputs data hint residual).flatMap
+          (fun t => t.interactionsWith evaluationData channel))) := by
   have consumer := constraints _ (List.mem_cons_self)
   have provider := constraints _ (List.mem_cons_of_mem _ List.mem_cons_self)
-  refine ⟨?_, assembly_balanced inputs data hint residual consumer balanced⟩
+  refine ⟨?_, assembly_balanced inputs data evaluationData hint residual consumer balanced⟩
   intro table mem
   rcases List.mem_cons.mp mem with rfl | mem
-  · exact replacementTable_constraints inputs data hint consumer provider
+  · exact replacementTable_constraints inputs data evaluationData hint consumer provider
   · exact constraints table (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ mem))
 
 end SP1Clean.Soundness.LoadByteStatic

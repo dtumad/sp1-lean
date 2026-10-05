@@ -6,48 +6,20 @@ import SP1Clean.Proofs.Completeness.ChipLedger
 import SP1Clean.Model.BalanceBridge
 import SP1Clean.Soundness.AIR
 
-/-! # Machine-level completeness: a generated trace yields a valid AIR witness
+/-! # Generated-trace assembly completeness
 
-The construction-facing companion to `Soundness/AIR.lean`. Soundness starts from an arbitrary
-witness the native relation accepts and extracts a Sail execution; this file starts from a
-*well-formed, balanced, boundary-bound generated trace* and constructs a witness the native
-relation accepts. The qualification matters: this theorem validates the AIR assembly performed by
-a trace generator, but it does not construct that trace from an arbitrary Sail execution.
+A well-formed generated trace with balanced Clean interactions, matching public values and
+semantic boundary binding yields the same native relation consumed by `Soundness/AIR.lean`.
+The witness map is `trace.witness`: 55 physical tables with canonical derived data and a separate
+public verifier. Circuit completeness proves physical constraints; channel balance and boundary
+binding are explicit obligations of `SupportedCoreGeneratedTraceRelation`.
 
-## The claim, exactly
+Byte/Program providers close demand, State/Memory use token chains, and Exit uses the ordinary
+compiler's zero-exit Halt padding. Its Syscall and PublicValues channels are silent because this
+constructor's syscall table is empty. Every channel retains Clean's occurrence bound.
 
-`supported_core_generated_trace_functionalCompleteness` is
-`WitnessRelation.FunctionalCompleteness` for the pair
-
-* AIR side — `SupportedCoreNativeRelation`, the *same* relation soundness consumes: the public
-  input matches, all 54 tables satisfy their constraints, all four channels balance, and the
-  boundary binding holds;
-* execution side — `SupportedCoreGeneratedTraceRelation`, a well-formed generated trace whose
-  actual Clean interactions balance.
-
-Nothing is weakened on the AIR side to make the construction go through. Its proof-independent
-map is exactly `fun _ trace => trace.witness`: `Assembly.lean`'s 53 built tables plus the verifier's
-boundary row, with every witnessed cell computed by the circuits' own generators — never chosen to
-satisfy a constraint. `supported_core_generated_trace_complete` is the ordinary relational projection of
-that constructive certificate.
-
-## What the execution side asks for, and why each conjunct is there
-
-1. **`trace.WellFormed`** — every occurrence routed to a table belongs there. This is the
-   generator's routing obligation, and everything downstream of it (the whole assertion system of
-   54 tables, on every row) is *derived*, in `witness_constraints`.
-2. **`trace.witness.BalancedChannels`** — balance is stated directly on the field-valued Clean
-   interactions. Canonical provider closure may prove it without imposing a centered-integer
-   `2 * m ≤ p` restriction; the older integer ledger remains only a construction helper.
-3. **`SemanticBoundaryBinding`** — the program and memory-boundary tables really describe the
-   caller's committed program and one concrete initial Sail state. This is the same companion
-   predicate `SupportedCoreNativeRelation` carries, so it passes straight through.
-
-## The boundary this theorem does *not* cross
-
-It does **not** say every supported Sail execution produces such a trace. That is the separate,
-faithful execution compiler. This file intentionally exports no abstract language certificate: a
-map allowed to ignore its semantic witness is too weak to serve as completeness evidence.
+This is an assembly theorem, not a compiler from arbitrary Sail executions. The complete mixed
+execution domain and authenticated boundary obligations remain separate semantic work.
 -/
 
 namespace SP1Clean.Soundness
@@ -78,8 +50,8 @@ def BalancedOn (channel : RawChannel (ZMod p)) : Prop :=
     LookupAccessList.isConsistentBalanced
       ((trace.witness.interactionsWith channel).map Interaction.toAccess)
 
-/-- A channel nothing touches balances vacuously — the two `SyscallInstrs` buses, until their
-table joins the ensemble. -/
+/-- An empty channel ledger balances vacuously, including the two syscall channels of this
+ordinary trace constructor. -/
 theorem balancedOn_of_interactions_nil {channel : RawChannel (ZMod p)}
     (h : trace.witness.interactionsWith channel = []) : trace.BalancedOn channel := by
   refine ⟨?_, ?_⟩ <;> rw [h]
@@ -119,7 +91,7 @@ theorem balancedOn_of_signed_perm (channel : RawChannel (ZMod p))
       rw [h, signedVal_neg_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod,
         Nat.mod_eq_of_lt (by omega), Nat.cast_one]
 
-/-- The generated trace balances on all four buses of `sp1Ensemble`. -/
+/-- The generated trace balances on every registered channel of `sp1Ensemble`. -/
 def Balanced : Prop :=
   ∀ channel ∈ (sp1Ensemble (p := p)).channels, trace.BalancedOn channel
 
@@ -153,8 +125,7 @@ theorem balancedOn_of_closure
 
 The State and Memory buses carry tokens rather than aggregate demand, so their completeness
 obligation is not a recount but a permutation: the bus's own half of the trace's ledger is the
-concatenation of the complete lives of the tokens it carried, in whatever order fifty-three tables
-happened to emit them.
+concatenation of the complete lives of the tokens it carried, in their physical emission order.
 
 Stated over `stateLedger` / `memoryLedger` — `List.filter` on the computable `fullLedger` — rather
 than over Clean's per-channel `interactionsWith`, which is `noncomputable`. On a concrete shard both
@@ -205,7 +176,7 @@ the live push is the zero code, so the bus balances exactly when the committed `
 — which is precisely the ordinary sub-language the compiler targets. -/
 theorem balancedOn_exit
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0)
+      (haltRow trace.witness.data row).is_real = 0)
     (hhaltLen : (haltTable trace.witness).table.length = 1)
     (hexitZero : trace.witness.publicInput.exit_code = 0)
     (hlen : (trace.witness.interactionsWith Channels.exitChannel.toRaw).length < p) :
@@ -221,10 +192,10 @@ theorem balancedOn_exit
         (⟨trace.witness.publicInput.exit_code⟩ : Channels.ExitMsg (ZMod p))) ::
       (haltTable trace.witness).table.flatMap fun row =>
         [Channels.exitChannel.pushedIfValue
-           (haltRow (haltTable trace.witness) row).is_real
-           (HaltChip.exitMessage (haltRow (haltTable trace.witness) row)),
+           (haltRow trace.witness.data row).is_real
+           (HaltChip.exitMessage (haltRow trace.witness.data row)),
          Channels.exitChannel.pushedIfValue
-           (1 - (haltRow (haltTable trace.witness) row).is_real)
+           (1 - (haltRow trace.witness.data row).is_real)
            (⟨0⟩ : Channels.ExitMsg (ZMod p))] := by
     -- The syscall table is a second Exit contributor in general; for a *compiled* trace it has no
     -- rows, so its gated pushes collapse and the hand-off is the halt table's alone.
@@ -251,17 +222,17 @@ theorem balancedOn_exit
     exact absurd hval (by norm_num)
   have haltRowMsgs : ∀ row ∈ (haltTable trace.witness).table,
       pushedMessages [Channels.exitChannel.pushedIfValue
-           (haltRow (haltTable trace.witness) row).is_real
-           (HaltChip.exitMessage (haltRow (haltTable trace.witness) row)),
+           (haltRow trace.witness.data row).is_real
+           (HaltChip.exitMessage (haltRow trace.witness.data row)),
          Channels.exitChannel.pushedIfValue
-           (1 - (haltRow (haltTable trace.witness) row).is_real)
+           (1 - (haltRow trace.witness.data row).is_real)
            (⟨0⟩ : Channels.ExitMsg (ZMod p))] =
         [(ProvableType.toElements (⟨0⟩ : Channels.ExitMsg (ZMod p))).toArray] ∧
       pulledMessages [Channels.exitChannel.pushedIfValue
-           (haltRow (haltTable trace.witness) row).is_real
-           (HaltChip.exitMessage (haltRow (haltTable trace.witness) row)),
+           (haltRow trace.witness.data row).is_real
+           (HaltChip.exitMessage (haltRow trace.witness.data row)),
          Channels.exitChannel.pushedIfValue
-           (1 - (haltRow (haltTable trace.witness) row).is_real)
+           (1 - (haltRow trace.witness.data row).is_real)
            (⟨0⟩ : Channels.ExitMsg (ZMod p))] = [] := by
     intro row rowMem
     have hzero := hhalt row rowMem
@@ -321,16 +292,14 @@ theorem canonicalClosure_balancedChannels_of_handoff
     (hmemory : (LookupAccessList.active trace.canonicalClosure.memoryLedger).Perm
       (LookupAccessList.handoff memoryKeys))
     (hhaltClosure : ∀ row ∈ (haltTable trace.canonicalClosure.witness).table,
-      (haltRow (haltTable trace.canonicalClosure.witness) row).is_real = 0)
+      (haltRow trace.canonicalClosure.witness.data row).is_real = 0)
     (hhaltLenClosure : (haltTable trace.canonicalClosure.witness).table.length = 1)
     (hexitZero : trace.canonicalClosure.witness.publicInput.exit_code = 0)
     (hlen : ∀ channel ∈ (sp1Ensemble (p := p)).channels,
       (trace.canonicalClosure.witness.interactionsWith channel).length < p) :
     trace.canonicalClosure.witness.BalancedChannels := by
   intro channel hchannel
-  change BalancedInteractions
-    (trace.canonicalClosure.witness.allTablesWitness.interactionsWith channel)
-  rw [Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness]
+  change BalancedInteractions (trace.canonicalClosure.witness.interactionsWith channel)
   have channelCase := hchannel
   simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at channelCase
   rcases channelCase with rfl | rfl | rfl | rfl | rfl | rfl | rfl
@@ -351,26 +320,9 @@ theorem canonicalClosure_balancedChannels_of_handoff
   · rw [witness_publicValuesChannel_silent _ trace.canonicalClosure.witness_syscallTable_nil]
     exact balancedInteractions_nil
 
-/--
-**The whole ensemble's channels balance — for the two structural reasons, and nothing else.**
-
-The ensemble's completeness obligation, stated in the model's own terms rather than as four opaque
-assumptions. What it costs:
-
-* **Byte and Program** cost *nothing beyond the trace itself*. The providers supply the demand
-  (`hsupply`) and no consumer key is already net-supplied (`hnonpos`); the demand is recounted from
-  the consumers' own ledger, so there is no separate promise about what a provider row carries.
-* **State and Memory** cost one permutation each — `stateKeys` are the machine's successive
-  `(clock, pc)` tokens, `memoryKeys` the successive `(address, value, timestamp)` records, and the
-  obligation is that each bus's ledger is exactly those tokens' complete lives. Both are stated over
-  computable lists.
-* **All four** cost the field's no-wrap bound, a fact about shard size that belongs to whoever chose
-  the shard.
-
-What is *absent* is as informative. No per-chip hypothesis, no promise about what any individual row
-emits, and no appeal to the execution: four buses discharged by two constructions over
-`LookupAccess` lists plus a size bound.
--/
+/-- Integer balance on every registered channel: Byte/Program use provider closure,
+State/Memory use token hand-offs, Exit uses zero-exit Halt padding, and the two syscall channels
+are silent. The occurrence bound applies to every channel. -/
 theorem balanced_of_closure_and_handoff
     (hwf : trace.WellFormed) (hfit : trace.CountsFit) (hsupply : trace.SuppliesDemand)
     (hnonpos : ∀ key ∈ trace.closingKeyList,
@@ -381,7 +333,7 @@ theorem balanced_of_closure_and_handoff
     (hmemory : (LookupAccessList.active trace.memoryLedger).Perm
       (LookupAccessList.handoff memoryKeys))
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0)
+      (haltRow trace.witness.data row).is_real = 0)
     (hhaltLen : (haltTable trace.witness).table.length = 1)
     (hexitZero : trace.witness.publicInput.exit_code = 0)
     (hlen : ∀ channel ∈ (sp1Ensemble (p := p)).channels,
@@ -406,8 +358,7 @@ provided by the ensemble's own `interactionsWith` membership theorem. -/
 theorem witness_balancedChannels (hbal : trace.Balanced) : trace.witness.BalancedChannels := by
   intro channel hchannel
   obtain ⟨hlen, integerBalanced⟩ := hbal channel hchannel
-  change BalancedInteractions (trace.witness.allTablesWitness.interactionsWith channel)
-  rw [Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness]
+  change BalancedInteractions (trace.witness.interactionsWith channel)
   exact LookupAccessList.balancedInteractions_of_isConsistentBalanced
     _ _ channel
     (fun _ interactionMem =>
@@ -450,20 +401,9 @@ theorem SupportedCoreTraceWitness.syscallTableInactive (trace : SupportedCoreTra
     rw [hnil] at hlen
     simp at hlen
 
-/--
-**Machine-level completeness of the supported-core AIR.**
-
-Every well-formed, field-balanced, boundary-bound generated trace has a native ensemble
-witness satisfying `SupportedCoreNativeRelation`: the 53 tables of
-`SupportedCoreTraceWitness.tables` plus the public
-boundary row, with every witnessed cell produced by the circuits' own witness generators.
-
-The two substantive conjuncts are proved, not assumed. `Constraints` is
-`SupportedCoreTraceWitness.witness_constraints` — 54 tables' complete assertion systems,
-each a citation of that table's `traceTable_constraints`, so the arithmetic content is the chips'
-own completeness proofs. `BalancedChannels` is the ledger bridge applied per channel. The public
-input matches by construction, and the boundary binding is carried through unchanged.
--/
+/-- Assemble a native witness from a well-formed, balanced, boundary-bound generated trace.
+Circuit completeness derives physical-table constraints. Balance includes the public verifier;
+semantic boundary binding comes from the relation, and public input matches by construction. -/
 def supported_core_generated_trace_functionalCompleteness :
     WitnessRelation.FunctionalCompleteness (SupportedCoreNativeRelation (p := p))
       (SupportedCoreGeneratedTraceRelation (p := p)) where
@@ -473,8 +413,7 @@ def supported_core_generated_trace_functionalCompleteness :
     exact ⟨⟨publicEq, trace.witness_constraints wf, balanced⟩, boundary,
       trace.syscallTableInactive⟩
 
-/-- The relational form of `supported_core_generated_trace_functionalCompleteness`.
-existential completeness API. -/
+/-- The existential form of `supported_core_generated_trace_functionalCompleteness`. -/
 theorem supported_core_generated_trace_complete :
     WitnessRelation.Complete (SupportedCoreNativeRelation (p := p))
       (SupportedCoreGeneratedTraceRelation (p := p)) :=
@@ -491,30 +430,7 @@ theorem sp1Ensemble_statement_of_generated_trace
   exact ⟨trace.witness, publicEq, trace.witness_constraints wf, balanced⟩
 
 
-/-!
-## Whole-ensemble propositional completeness
-
-The composition, and the point of the framing. `Ensemble.Statement` is what the verifier layer
-consumes: *there exists a witness whose public input matches, whose fifty-four tables all satisfy
-their constraints, and whose four channels balance*. Every part of it is now discharged from
-properties of the **trace**, and each part by a named mechanism rather than an assumption:
-
-| Part | Mechanism | Costs |
-|---|---|---|
-| public input | construction | nothing |
-| 54 tables' constraints | each table's own completeness proof | `WellFormed` |
-| Byte + Program balance | closure — providers supply recounted demand | `CountsFit`, `SuppliesDemand`, nonpositivity |
-| State + Memory balance | hand-off — each token created once, consumed once | one permutation per bus |
-| all four | the field's no-wrap bound | shard size |
-
-The two balance mechanisms are the whole content of the bus model, and they are disjoint by
-structure rather than by convention: a hand-off bus cannot be closed (a recount would invent a
-supplier for a token nobody created) and a closed bus has no chain to telescope.
-
-The two permutation obligations are stated over `stateLedger` / `memoryLedger` — `List.filter` on
-the computable `fullLedger` — so on a concrete shard both sides are closed list terms and the
-obligation is decided rather than proved.
--/
+/-! ## Ensemble statements from structural balance -/
 
 /-- **A trace whose buses balance for the two structural reasons proves the ensemble's public
 statement.** -/
@@ -527,10 +443,10 @@ theorem sp1Ensemble_statement_of_structural_balance
       (d.toChipRow trace.witness.data).is_real = 0 ∨
         (d.toChipRow trace.witness.data).is_real = 1)
     (hbump : ∀ row ∈ (stateBumpTable trace.witness).table,
-      (stateBumpRow (stateBumpTable trace.witness) row).is_real = 0 ∨
-        (stateBumpRow (stateBumpTable trace.witness) row).is_real = 1)
+      (stateBumpRow trace.witness.data row).is_real = 0 ∨
+        (stateBumpRow trace.witness.data row).is_real = 1)
     (hhalt : ∀ row ∈ (haltTable trace.witness).table,
-      (haltRow (haltTable trace.witness) row).is_real = 0)
+      (haltRow trace.witness.data row).is_real = 0)
     (hhaltLen : (haltTable trace.witness).table.length = 1)
     (hexitZero : trace.witness.publicInput.exit_code = 0)
     (stateLinks : List (LookupAccessList.LookupKey × LookupAccessList.LookupKey))

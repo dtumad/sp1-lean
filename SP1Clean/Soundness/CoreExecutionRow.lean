@@ -32,6 +32,21 @@ noncomputable def ExecutionRow.facts (data : ProverData (ZMod p)) : ExecutionRow
   | .halt row => haltRowFacts row
   | .syscall row => syscallRowFacts row
 
+/-- A physical row fixes its semantic facts and exact Memory occurrences in every data view. -/
+theorem ExecutionRow.facts_setData (row : ExecutionRow p) (data data' : ProverData (ZMod p)) :
+    row.facts data = row.facts data' := by
+  cases row with
+  | instruction row =>
+      have interactions : row.interactionsWith data memoryChannel = row.interactionsWith data' memoryChannel := by
+        apply List.map_injective_iff.mpr TypedInteraction.raw_injective
+        simp only [DecodedInstructionRow.interactionsWith_raw]
+        exact Operations.interactionValuesWith_congr rfl
+      simp only [ExecutionRow.facts, DecodedInstructionRow.ordinaryRowFacts,
+        DecodedInstructionRow.toChipRow_setData row data data',
+        DecodedInstructionRow.consumedMemoryMessages, DecodedInstructionRow.producedMemoryMessages,
+        interactions]
+  | halt _ | syscall _ => rfl
+
 /-- The complete State edge, before canonical re-limbing. -/
 noncomputable def ExecutionRow.edge (data : ProverData (ZMod p)) :
     ExecutionRow p → StateMsg (ZMod p) × StateMsg (ZMod p)
@@ -52,22 +67,33 @@ def ExecutionRow.duration : ExecutionRow p → ℕ
 noncomputable def ExecutionRow.canonEdge (data : ProverData (ZMod p)) (row : ExecutionRow p) :=
   (canonState (row.edge data).1, canonState (row.edge data).2)
 
+/-- A decoded physical row fixes its State edge independently of the prover-data view. -/
+theorem ExecutionRow.edge_setData (row : ExecutionRow p) (data data' : ProverData (ZMod p)) :
+    row.edge data = row.edge data' := by
+  cases row <;> simp only [ExecutionRow.edge, decodedStateEdge,
+    DecodedInstructionRow.toChipRow_setData _ data data']
+
+/-- Canonical re-limbing preserves the same independence from prover data. -/
+theorem ExecutionRow.canonEdge_setData (row : ExecutionRow p) (data data' : ProverData (ZMod p)) :
+    row.canonEdge data = row.canonEdge data' := by
+  simp only [ExecutionRow.canonEdge, row.edge_setData data data']
+
 variable [Fact (2 ^ 25 < p)]
 
 omit [Fact (2 ^ 24 < p)] [Fact (2 ^ 25 < p)] in
 theorem activeSystemRows_member {α : Type} (table : Table (ZMod p))
-    (decode : Table (ZMod p) → Array (ZMod p) → α) (gate : α → ZMod p)
+    (decode : Array (ZMod p) → α) (gate : α → ZMod p)
     {row : α} (member : row ∈ activeSystemRows table decode gate) :
-    ∃ physical ∈ table.table, decode table physical = row ∧ gate row = 1 := by
+    ∃ physical ∈ table.table, decode physical = row ∧ gate row = 1 := by
   obtain ⟨mapped, active⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   exact ⟨physical, physicalMem, rfl, of_decide_eq_true active⟩
 
 omit [Fact (2 ^ 25 < p)] in
-theorem syscall_halt_binary (table : Table (ZMod p))
-    (component : table.component = ⟨SyscallInstrsChip.circuit⟩) (constraints : table.Constraints)
+theorem syscall_halt_binary (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (component : table.component = { circuit := SyscallInstrsChip.circuit }) (constraints : table.Constraints data)
     {physical : Array (ZMod p)} (member : physical ∈ table.table) :
-    (syscallInstrsRow table physical).is_halt = 0 ∨ (syscallInstrsRow table physical).is_halt = 1 := by
+    (syscallInstrsRow data physical).is_halt = 0 ∨ (syscallInstrsRow data physical).is_halt = 1 := by
   have checked := constraints physical member
   rw [component] at checked
   have binary := SyscallInstrsChip.haltSelectorBinary_of_shallow _ _ _

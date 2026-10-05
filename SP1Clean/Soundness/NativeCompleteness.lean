@@ -25,7 +25,7 @@ local instance nativeCompletenessFieldBound : Fact (2 ^ 24 < p) :=
 
 /-- All registered Clean channels balance for the deterministic trace.  Byte/Program use direct
 field-valued canonical closure; State/Memory use the two structural hand-offs. -/
-theorem NativeTraceReady.balancedChannels_of_capacity
+theorem NativeTraceReady.balancedChannels
     {statement : SupportedCoreStatement p} {execution : Machine.EventExecutionTrace}
     (ready : NativeTraceReady statement execution)
     (publicWellFormed : statement.publicValues.LimbBounds)
@@ -46,16 +46,6 @@ theorem NativeTraceReady.balancedChannels_of_capacity
     ((nativeBaseTrace statement execution).canonicalClosure.haltTablePadding).1
     ready.exitZero ((Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mp capacity)
 
-/-- Compatibility wrapper for callers holding the legacy five-channel footprint. -/
-theorem NativeTraceReady.balancedChannels
-    {statement : SupportedCoreStatement p} {execution : Machine.EventExecutionTrace}
-    (ready : NativeTraceReady statement execution)
-    (publicWellFormed : statement.publicValues.LimbBounds)
-    (fits : (NativeTraceFootprint.ofTrace (nativeTrace statement execution)).Fits p) :
-    (nativeTrace statement execution).witness.BalancedChannels :=
-  ready.balancedChannels_of_capacity publicWellFormed
-    ((NativeTraceFootprint.fits_iff_channelCapacity _).mp fits)
-
 /-- Functional completeness of the native ensemble on its exact deterministic compiler image.
 The witness map is independent of the proof of admissibility. -/
 noncomputable def supported_core_native_functionalCompleteness
@@ -71,7 +61,7 @@ noncomputable def supported_core_native_functionalCompleteness
     have publicWellFormed :=
       Execution.SupportedCoreShardExecutionValid.publicValuesWellFormed semantic
     have constraints := ready.constraints publicWellFormed
-    have balanced := ready.balancedChannels_of_capacity publicWellFormed fits
+    have balanced := ready.balancedChannels publicWellFormed fits
     exact ⟨⟨nativeTrace_witness_publicInput statement execution, constraints, balanced⟩,
       ready.semanticBoundary semantic, (nativeTrace statement execution).syscallTableInactive⟩
 
@@ -159,6 +149,6 @@ theorem sp1Ensemble_statement_of_supported_execution
   exact ⟨(nativeTrace statement execution).witness,
     nativeTrace_witness_publicInput statement execution,
     ready.constraints publicWellFormed,
-    ready.balancedChannels_of_capacity publicWellFormed fits⟩
+    ready.balancedChannels publicWellFormed fits⟩
 
 end SP1Clean.Soundness

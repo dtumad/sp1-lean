@@ -13,22 +13,23 @@ open Circuit Air.Flat Channels Model.Core
 open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalTransportLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+local instance finalTransportClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
+  {names : UniqueNames image source target others resources}
 
 private theorem checkSlot_position (index : Fin 2) :
     (checkSlot (image := image) (source := source) (target := target) (final := final)
-      (bankFinal := bankFinal) (others := others) (resources := resources) (channels := channels) index).index.val =
+      (bankFinal := bankFinal) (others := others) (resources := resources) (channels := channels) (names := names) index).index.val =
       (beforeChecks image source others resources).length + index.val := by
   simp only [checkSlot, TableSlot.cast_index, TableSlot.setOther, TableSlot.appendRight, TableSlot.ofIndex]
 
 private theorem physical_length
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
     witness.tables.length = (beforeChecks image source others resources).length + 2 := by
   rw [← witness.same_length, tables_eq]
   simp only [List.length_set, List.length_append, FinalMemoryChecks.checkTables,
@@ -36,7 +37,7 @@ private theorem physical_length
 
 /-- The existing final rows and appended checks are exactly the five-table proof view. -/
 theorem boundaryTables_eq
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
     boundaryTables witness = (witness.tables.drop 3).take 3 ++
       witness.tables.drop (beforeChecks image source others resources).length := by
   have length := physical_length witness
@@ -65,10 +66,10 @@ theorem boundaryTables_eq
   rfl
 
 private theorem initial_silent
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p)) :
-    (witness.tables.take 3).flatMap (·.interactionsWith channel) = [] := by
+    (witness.tables.take 3).flatMap (·.interactionsWith witness.data channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   have component := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -79,11 +80,11 @@ private theorem initial_silent
     (beforeChecks_private interface channel privateChannel _ (List.mem_of_mem_take component))
 
 private theorem middle_silent
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p)) :
     ((witness.tables.take (beforeChecks image source others resources).length).drop 6).flatMap
-      (·.interactionsWith channel) = [] := by
+      (·.interactionsWith witness.data channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   have component := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -99,11 +100,11 @@ private theorem middle_silent
 
 /-- Dropping unrelated physical rows changes none of the three private receipt ledgers. -/
 theorem boundaryTables_interactions
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p)) :
-    witness.tables.flatMap (·.interactionsWith channel) =
-      (boundaryTables witness).flatMap (·.interactionsWith channel) := by
+    witness.tables.flatMap (·.interactionsWith witness.data channel) =
+      (boundaryTables witness).flatMap (·.interactionsWith witness.data channel) := by
   let count := (beforeChecks image source others resources).length
   have lower : 6 ≤ count := by dsimp only [count]; rw [prefix_length]; omega
   have prefixSplit : witness.tables.take count =
@@ -115,9 +116,9 @@ theorem boundaryTables_interactions
         rw [List.take_take, Nat.min_eq_left lower]
       _ = _ := by rw [show 6 = 3 + 3 from rfl, List.take_add]
   calc
-    witness.tables.flatMap (·.interactionsWith channel) =
-        (witness.tables.take count ++ witness.tables.drop count).flatMap (·.interactionsWith channel) :=
-      congrArg (List.flatMap (·.interactionsWith channel)) (List.take_append_drop count witness.tables).symm
+    witness.tables.flatMap (·.interactionsWith witness.data channel) =
+        (witness.tables.take count ++ witness.tables.drop count).flatMap (·.interactionsWith witness.data channel) :=
+      congrArg (List.flatMap (·.interactionsWith witness.data channel)) (List.take_append_drop count witness.tables).symm
     _ = _ := by
       rw [List.flatMap_append, prefixSplit, List.flatMap_append, List.flatMap_append,
         initial_silent witness interface channel privateChannel,
@@ -125,33 +126,44 @@ theorem boundaryTables_interactions
         List.nil_append, List.append_nil, boundaryTables_eq, List.flatMap_append]
 
 private theorem verifier_values
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (channel : RawChannel (ZMod p)) (privateChannel : channel ∈ privateChannels (p := p)) :
-    witness.verifierTable.interactionsWith channel =
+    witness.verifierInteractionsWith channel =
       if channel = FinalMemoryChange.channel.toRaw then
         (source.sail.memorySnapshot.changes target).map
           (fun loc => FinalMemoryChange.channel.pulledValue (FinalMemoryChange.encode loc)) else [] := by
-  refine ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).installed_verifier_interactions
-    witness channel).trans ?_
-  have silent : (receiptWitness witness).verifierTable.interactionsWith channel = [] := by
-    apply Table.interactionsWith_nil_of_channel_not_mem
-    exact base_verifier_private (image := image) (source := source) (target := target)
-      (final := final) (bankFinal := bankFinal) (others := others) (resources := resources)
-      (channels := channels) channel privateChannel
-  change (receiptWitness witness).verifierTable.interactionsWith channel ++ _ = _
-  rw [silent, List.nil_append, ClosedVerifier.singleton_interactions]
-  simp only [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
+  change ((withReceipts image source target final bankFinal others resources channels names).verifier.andThen
+    ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).program
+      (withReceipts image source target final bankFinal others resources channels names))).circuitOperations.interactionValuesWith
+        channel (Environment.fromInput witness.publicInput witness.data) = _
+  rw [Verifier.Program.andThen_values]
+  have quiet : (withReceipts image source target final bankFinal others resources channels names).verifier.circuitOperations.interactionValuesWith
+      channel (Environment.fromInput witness.publicInput witness.data) = [] :=
+    base_verifier_private (names := names) channel privateChannel _
+  rw [quiet, List.nil_append]
+  have noAssertions : (FinalMemoryChangeBoundary.closed (p := p) source.sail.memorySnapshot target).operations.constraints = [] := by
+    simp only [ClosedVerifier.operations, FinalMemoryChangeBoundary.closed,
+      FinalMemoryChangeBoundary.circuit, FinalMemoryChangeBoundary.raw_constraints]
+  simp only [Verifier.Program.circuitOperations, Verifier.Program.operations, ClosedVerifier.program,
+    Verifier.operations_bind, noAssertions, Verifier.checkZeros_operations, List.flatMap_nil, List.append_nil]
+  rw [← Verifier.circuitOperations, ClosedVerifier.emit_values]
+  simp only [ClosedVerifier.operations, FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
     FinalMemoryChangeBoundary.values, List.map_map, Function.comp_def]
 
 /-- The boundary view has exactly the full assembly's receipt ledgers, including count bounds. -/
 theorem boundaryWitness_interactions
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p)) :
     (boundaryWitness witness).interactionsWith channel = witness.interactionsWith channel := by
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.allTables, List.flatMap_cons,
-    boundaryWitness_tables]
-  rw [boundaryTables_interactions witness interface channel privateChannel,
+  have dataChange : (boundaryTables witness).flatMap
+      (·.interactionsWith (boundaryWitness witness).data channel) =
+      (boundaryTables witness).flatMap (·.interactionsWith witness.data channel) :=
+    congrArg List.flatten (List.map_congr_left fun table _ =>
+      table.interactionsWith_setData (boundaryWitness witness).data witness.data channel)
+  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.tableContext,
+    TableContext.interactionsWith, boundaryWitness_tables]
+  rw [dataChange, boundaryTables_interactions witness interface channel privateChannel,
     verifier_values witness channel privateChannel, FinalMemoryChecks.verifier_values]
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
   rcases privateChannel with rfl | rfl | rfl <;>
@@ -160,7 +172,7 @@ theorem boundaryWitness_interactions
 
 /-- Receipt balance transfers independently of Byte and Memory balance in the smaller view. -/
 theorem boundaryWitness_balancedChannel
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p)) (balanced : witness.BalancedChannel channel) :
     (boundaryWitness witness).BalancedChannel channel := by

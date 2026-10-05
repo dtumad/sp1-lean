@@ -1,18 +1,16 @@
 import SP1Clean.Native.Operations.FinalMemoryReceipt
-import ToClean.Air.EnsembleProjection
-import ToClean.Air.TableSlot
+import ToClean.Air.ComponentReplacement
 import ToClean.Air.Footprint
 import ToClean.Circuit.InteractionRecovery
 
 /-! # Publishing the physical final inventory
 
-The selected finalizer keeps its complete physical rows and original circuit checks. The
-only new interaction is a unit receipt for its original output, including address, value,
-and clock. Projection preserves every old channel when the receipt channel is fresh.
+A typed slot identifies the original finalizer before installing its receipt. The wrapper retains
+its name, complete rows, input layout and constraints, and adds one unit receipt per physical row.
+Projection therefore preserves canonical data and every old channel when the receipt is fresh.
 
-This is an installation adapter, not an endpoint theorem. A final assembly must install
-consumers on the registered receipt channel; balance then accounts for every finalizer row.
-Target-check Byte demand must separately be included in that assembly's Byte closure.
+This is an installation adapter, not an endpoint theorem. The enclosing assembly must install
+receipt consumers and include their Byte demand in its channel-closure proof.
 -/
 
 namespace SP1Clean.Soundness.FinalReceiptEnsemble
@@ -22,229 +20,216 @@ open Circuit Air.Flat Channels
 variable {p : ℕ} [Fact p.Prime]
   {PublicIO Input : TypeMap} [ProvableType PublicIO] [ProvableType Input]
 
-/-- Publish one full record per row at the selected finalizer and register its receipt channel. -/
-def install (ens : Ensemble (ZMod p) PublicIO) (index : Fin ens.tables.length)
-    (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
-    Ensemble (ZMod p) PublicIO :=
-  { ens with
-    tables := ens.tables.set index.val ⟨FinalMemoryReceipt.circuit ram provider⟩
+/-- Publish one full record at an existing finalizer's registered physical position. -/
+def install (ens : Ensemble (ZMod p) PublicIO) (ram : Bool)
+    (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg)
+    (source : TableSlot ens.tables { circuit := provider }) : Ensemble (ZMod p) PublicIO :=
+  { ens.replaceComponent source { circuit := FinalMemoryReceipt.circuit ram provider } rfl with
     channels := ens.channels ++ [(FinalMemoryValue.channel ram).toRaw] }
 
-variable {ens : Ensemble (ZMod p) PublicIO} {index : Fin ens.tables.length}
-  {ram : Bool} {provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg}
+variable {ens : Ensemble (ZMod p) PublicIO} {ram : Bool}
+  {provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg}
+  {source : TableSlot ens.tables { circuit := provider }}
 
-/-- The replaced table exists in the physical witness. -/
-theorem bound (witness : EnsembleWitness (install ens index ram provider)) :
-    index.val < witness.tables.length := by
+/-- The receipt-bearing component occupies exactly the original slot. -/
+def slot : TableSlot (install ens ram provider source).tables
+    { circuit := FinalMemoryReceipt.circuit ram provider } where
+  index := ⟨source.index.val, by simpa only [install, Ensemble.replaceComponent, List.length_set] using source.index.isLt⟩
+  component_eq := List.getElem_set_self (by simpa only [install, Ensemble.replaceComponent, List.length_set] using source.index.isLt)
+
+variable (witness : EnsembleWitness (install ens ram provider source))
+
+theorem bound : source.index.val < witness.tables.length := by
   rw [← witness.same_length]
-  simpa only [install, List.length_set] using index.isLt
+  simpa only [install, Ensemble.replaceComponent, List.length_set] using source.index.isLt
 
-/-- Register the installed receipt-bearing finalizer at its original physical position. -/
-def slot : TableSlot (install ens index ram provider).tables
-    ⟨FinalMemoryReceipt.circuit ram provider⟩ where
-  index := ⟨index.val, by simpa only [install, List.length_set] using index.isLt⟩
-  component_eq := List.getElem_set_self (by simpa only [install, List.length_set] using index.isLt)
+/-- Read the receipt-producing physical table without rebuilding its rows. -/
+def table : Table (ZMod p) := slot.table witness
 
-/-- Read the original physical table through its registered receipt-producing component. -/
-def table (witness : EnsembleWitness (install ens index ram provider)) : Table (ZMod p) :=
-  slot.table witness
+theorem table_component : (table witness).component = { circuit := FinalMemoryReceipt.circuit ram provider } :=
+  slot.table_component witness
 
-theorem table_component (witness : EnsembleWitness (install ens index ram provider)) :
-    (table witness).component = ⟨FinalMemoryReceipt.circuit ram provider⟩ := by
-  exact slot.table_component witness
-
-/-- Forget the receipt while retaining the row arrays, shared data, and public input. -/
-def project (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) : EnsembleWitness ens :=
+/-- Forget the receipt while retaining every physical row and the public input. -/
+def project : EnsembleWitness ens :=
   EnsembleWitness.ofTables ens
-    (witness.tables.set index.val ((table witness).withComponent ⟨provider⟩))
-    witness.data witness.publicInput
-    (by
-      rw [List.map_set, witness.tables_map_component]
-      change (ens.tables.set index.val _).set index.val ⟨provider⟩ = ens.tables
-      rw [List.set_set, ← same, List.set_getElem_self])
-    (by
-      intro physical member
-      rcases List.mem_or_eq_of_mem_set member with old | rfl
-      · exact witness.same_data physical old
-      · change (table witness).data = witness.data
-        exact witness.same_data _ (List.getElem_mem _))
+    (witness.tables.set source.index.val ((table witness).withComponent { circuit := provider }
+      (by rw [table_component]; rfl) (by rw [table_component])))
+    witness.publicInput (by
+      rw [List.map_set, Table.withComponent_component, witness.tables_map_component]
+      change (ens.tables.set source.index.val _).set source.index.val { circuit := provider } = ens.tables
+      rw [List.set_set]
+      simpa only [source.component_eq] using List.set_getElem_self source.index.isLt)
 
-/-- Receipt projection keeps the shared prover data. -/
-@[simp] theorem project_data (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) :
-    (project same witness).data = witness.data := rfl
+/-- The wrapper's name and derived input entries agree at every arity. -/
+@[simp] theorem project_data : (project witness).data = witness.data := by
+  apply deriveProverData_set witness.tables ⟨source.index.val, bound witness⟩
+  · change provider.name = (table witness).component.circuit.name
+    rw [table_component]
+    rfl
+  · intro arity
+    change ({ circuit := provider } : Component (ZMod p)).proverRows (table witness).table arity =
+      (table witness).component.proverRows (table witness).table arity
+    rw [table_component]
+    rfl
 
-/-- Receipt projection keeps the original public input. -/
-@[simp] theorem project_publicInput (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) :
-    (project same witness).publicInput = witness.publicInput := rfl
+@[simp] theorem project_publicInput : (project witness).publicInput = witness.publicInput := rfl
 
-/-- Projection changes only the selected table's component. -/
-theorem project_tables (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) :
-    (project same witness).tables =
-      witness.tables.set index.val ((table witness).withComponent ⟨provider⟩) := rfl
+/-- Only the selected table's component changes. -/
+theorem project_tables : (project witness).tables =
+    witness.tables.set source.index.val ((table witness).withComponent { circuit := provider }
+      (by rw [table_component]; rfl) (by rw [table_component])) := rfl
 
-/-- Construct the receipt-bearing witness from the original arrays, without new witness data. -/
-def lift (witness : EnsembleWitness ens) : EnsembleWitness (install ens index ram provider) :=
-  EnsembleWitness.ofTables (install ens index ram provider)
-    (witness.tables.set index.val
-      ((witness.tables[index.val]'(by rw [← witness.same_length]; exact index.isLt)).withComponent
-        ⟨FinalMemoryReceipt.circuit ram provider⟩)) witness.data witness.publicInput
-    (by rw [List.map_set, witness.tables_map_component]; rfl)
-    (by
-      intro physical member
-      rcases List.mem_or_eq_of_mem_set member with old | rfl
-      · exact witness.same_data physical old
-      · change (witness.tables[index.val]'_).data = witness.data
-        exact witness.same_data _ (List.getElem_mem _))
+/-- Reuse the original rows when installing the receipt; the typed slot supplies the layout. -/
+def lift (witness : EnsembleWitness ens) : EnsembleWitness (install ens ram provider source) :=
+  EnsembleWitness.ofTables (install ens ram provider source)
+    (witness.tables.set source.index.val ((source.table witness).withComponent
+      { circuit := FinalMemoryReceipt.circuit ram provider }
+      (by rw [source.table_component]; rfl) (by rw [source.table_component])))
+    witness.publicInput (by rw [List.map_set, Table.withComponent_component, witness.tables_map_component]; rfl)
 
-/-- Constructing and then forgetting a receipt returns the original physical tables exactly. -/
-theorem project_lift_tables (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness ens) :
-    (project same (lift (ram := ram) witness)).tables = witness.tables := by
-  rw [project_tables]
-  simp only [lift, EnsembleWitness.ofTables_tables, table, TableSlot.table, slot, List.getElem_set_self]
-  have component : (witness.tables[index.val]'(by rw [← witness.same_length]; exact index.isLt)).component =
-      ⟨provider⟩ := by rw [← witness.same_circuits index.val index.isLt, same]
-  rw [show ((witness.tables[index.val]'_).withComponent
-        ⟨FinalMemoryReceipt.circuit ram provider⟩).withComponent ⟨provider⟩ =
-      witness.tables[index.val]'_ by rw [← component]; rfl,
-    List.set_set, List.set_getElem_self]
+@[simp] theorem lift_data (witness : EnsembleWitness ens) :
+    (lift (source := source) (ram := ram) witness).data = witness.data := by
+  apply deriveProverData_set witness.tables ⟨source.index.val, by rw [← witness.same_length]; exact source.index.isLt⟩
+  · change (FinalMemoryReceipt.circuit ram provider).name = (source.table witness).component.circuit.name
+    rw [source.table_component]
+    rfl
+  · intro arity
+    change ({ circuit := FinalMemoryReceipt.circuit ram provider } : Component (ZMod p)).proverRows
+      (source.table witness).table arity = (source.table witness).component.proverRows (source.table witness).table arity
+    rw [source.table_component]
+    rfl
 
-/-- Publishing receipts changes no row constraints, in either direction. -/
-theorem project_constraints (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) :
-    (project same witness).Constraints ↔ witness.Constraints := by
-  have selected : ((table witness).withComponent ⟨provider⟩).Constraints ↔
-      (table witness).Constraints :=
-    Table.withComponent_constraints _ _
-      (by rw [table_component, FinalMemoryReceipt.constraints])
-      (by rw [table_component, FinalMemoryReceipt.lookups])
-  simp only [EnsembleWitness.Constraints, EnsembleWitness.forall_mem_allTables_iff]
+/-- Constructing and forgetting a receipt returns the complete original physical inventory. -/
+theorem project_lift_tables (witness : EnsembleWitness ens) :
+    (project (lift (source := source) (ram := ram) witness)).tables = witness.tables := by
+  have undo : (table (lift (source := source) (ram := ram) witness)).withComponent
+      { circuit := provider } (by rw [table_component]; rfl) (by rw [table_component]) =
+      source.table witness := by
+    rw [Table.ext_iff]
+    constructor
+    · exact (source.table_component witness).symm
+    · have lifted : table (lift (source := source) (ram := ram) witness) =
+          (source.table witness).withComponent { circuit := FinalMemoryReceipt.circuit ram provider }
+            (by rw [source.table_component]; rfl) (by rw [source.table_component]) :=
+        List.getElem_set_self (by simpa only [List.length_set, ← witness.same_length] using source.index.isLt)
+      have rows := congrArg (fun physical : Table (ZMod p) => physical.table) lifted
+      simpa only [Table.withComponent_rows] using rows
+  change (witness.tables.set source.index.val _).set source.index.val _ = witness.tables
+  rw [List.set_set, undo]
+  exact List.set_getElem_self _
+
+/-- Receipt publication preserves both assertions and lookups on every row. -/
+theorem project_constraints : (project witness).Constraints ↔ witness.Constraints := by
+  have selected := Table.withComponent_constraints (table witness) { circuit := provider }
+    (by rw [table_component]; rfl) (by rw [table_component]) witness.data
+    (by rw [table_component, FinalMemoryReceipt.constraints])
+    (by rw [table_component, FinalMemoryReceipt.lookups])
+  simp only [EnsembleWitness.constraints_iff, project_data]
   constructor
-  · rintro ⟨verifier, tables⟩
-    refine ⟨verifier, ?_⟩
-    intro physical member
+  · intro tables physical member
     obtain ⟨j, hj, rfl⟩ := List.mem_iff_getElem.mp member
     rw [project_tables] at tables
-    by_cases equal : j = index.val
+    by_cases equal : j = source.index.val
     · subst j
       apply selected.mp
-      apply tables
-      exact List.mem_iff_getElem.mpr ⟨index.val, by simpa using bound witness,
-        List.getElem_set_self (by simpa using bound witness)⟩
-    · apply tables
-      exact List.mem_iff_getElem.mpr ⟨j, by simpa using hj,
-        List.getElem_set_ne (Ne.symm equal) _⟩
-  · rintro ⟨verifier, tables⟩
-    refine ⟨verifier, ?_⟩
-    intro physical member
+      exact tables _ (List.mem_iff_getElem.mpr ⟨source.index.val, by simpa using bound witness,
+        List.getElem_set_self (by simpa using bound witness)⟩)
+    · exact tables _ (List.mem_iff_getElem.mpr ⟨j, by simpa using hj,
+        List.getElem_set_ne (Ne.symm equal) _⟩)
+  · intro tables physical member
     rw [project_tables] at member
     rcases List.mem_or_eq_of_mem_set member with old | rfl
     · exact tables physical old
     · exact selected.mpr (tables _ (List.getElem_mem _))
 
-/-- Existing generated rows satisfy the installed constraints with no new constructor premise. -/
-theorem lift_constraints (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness ens) (checked : witness.Constraints) :
-    (lift (index := index) (ram := ram) (provider := provider) witness).Constraints := by
-  apply (project_constraints same (lift witness)).mp
-  rw [EnsembleWitness.Constraints, EnsembleWitness.forall_mem_allTables_iff]
-  refine ⟨checked witness.verifierTable witness.mem_allTables_verifierTable, ?_⟩
-  rw [project_lift_tables same witness]
-  exact fun physical member => checked physical (witness.mem_allTables_of_mem_tables member)
+/-- Existing generated rows need no additional semantic premise to publish receipts. -/
+theorem lift_constraints (witness : EnsembleWitness ens) (checked : witness.Constraints) :
+    (lift (source := source) (ram := ram) witness).Constraints := by
+  apply (project_constraints (lift witness)).mp
+  rw [EnsembleWitness.constraints_iff, project_data, lift_data, project_lift_tables]
+  exact checked
 
-/-- Forgetting a receipt retains every original physical row array. -/
-theorem project_rows (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) :
-    (project same witness).tables.map (·.table) = witness.tables.map (·.table) := by
+/-- All original arrays survive projection, including repeated rows. -/
+theorem project_rows : (project witness).tables.map (·.table) = witness.tables.map (·.table) := by
   rw [project_tables, List.map_set]
-  change (witness.tables.map (·.table)).set index.val
-    (witness.tables[index.val]'(bound witness)).table = _
-  rw [← List.getElem_map (l := witness.tables) (i := index.val) (f := fun physical => physical.table),
+  change (witness.tables.map (·.table)).set source.index.val
+    (witness.tables[source.index.val]'(bound witness)).table = _
+  rw [← List.getElem_map (l := witness.tables) (i := source.index.val) (f := fun physical => physical.table),
     List.set_getElem_self]
   simpa only [List.length_map] using bound witness
 
-/-- Projection preserves every table height, including the singleton verifier. -/
-theorem project_tableHeights (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) :
-    (project same witness).tableHeights = witness.tableHeights := by
-  change _ :: ((project same witness).tables.map Table.length) =
-    _ :: (witness.tables.map Table.length)
-  congr 1
+/-- Receipt publication changes no physical table height. -/
+theorem project_tableHeights : (project witness).tableHeights = witness.tableHeights := by
+  change ((project witness).tables.map Table.length) = witness.tables.map Table.length
   rw [project_tables, List.map_set]
-  change (witness.tables.map Table.length).set index.val
-    ((witness.tables[index.val]'(bound witness)).length) = _
-  rw [← List.getElem_map (l := witness.tables) (i := index.val) (f := Table.length),
+  change (witness.tables.map Table.length).set source.index.val
+    (witness.tables[source.index.val]'(bound witness)).length = _
+  rw [← List.getElem_map (l := witness.tables) (i := source.index.val) (f := Table.length),
     List.set_getElem_self]
   simpa only [List.length_map] using bound witness
 
-/-- Every occurrence on every other channel is unchanged, including disabled occurrences. -/
-theorem project_interactions (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) (channel : RawChannel (ZMod p))
+/-- Every occurrence on other channels survives, including zero-multiplicity occurrences. -/
+theorem project_interactions (channel : RawChannel (ZMod p))
     (different : channel ≠ (FinalMemoryValue.channel ram).toRaw) :
-    (project same witness).interactionsWith channel = witness.interactionsWith channel := by
-  have row := Table.withComponent_interactions (table witness) ⟨provider⟩ channel
+    (project witness).interactionsWith channel = witness.interactionsWith channel := by
+  have row := Table.withComponent_interactions (table witness) { circuit := provider }
+    (by rw [table_component]; rfl) (by rw [table_component]) witness.data channel
     (by rw [table_component, FinalMemoryReceipt.interactions ram provider channel different])
-  change witness.verifierTable.interactionsWith channel ++
-      (witness.tables.set index.val _).flatMap (·.interactionsWith channel) =
-    witness.verifierTable.interactionsWith channel ++ witness.tables.flatMap (·.interactionsWith channel)
+  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
+    EnsembleWitness.tableContext, TableContext.interactionsWith, project_data, project_publicInput]
+  change ens.verifierOperations.interactionValuesWith channel _ ++
+      (witness.tables.set source.index.val _).flatMap (·.interactionsWith witness.data channel) =
+    ens.verifierOperations.interactionValuesWith channel _ ++
+      witness.tables.flatMap (·.interactionsWith witness.data channel)
   congr 1
   rw [List.flatMap, List.map_set, row]
-  change ((witness.tables.map (fun physical => physical.interactionsWith channel)).set index.val
-    ((witness.tables[index.val]'(bound witness)).interactionsWith channel)).flatten = _
-  rw [← List.getElem_map (l := witness.tables) (i := index.val)
-    (f := fun physical : Table (ZMod p) => physical.interactionsWith channel), List.set_getElem_self]
+  change ((witness.tables.map (fun physical => physical.interactionsWith witness.data channel)).set source.index.val
+    ((witness.tables[source.index.val]'(bound witness)).interactionsWith witness.data channel)).flatten = _
+  rw [← List.getElem_map (l := witness.tables) (i := source.index.val)
+    (f := fun physical : Table (ZMod p) => physical.interactionsWith witness.data channel), List.set_getElem_self]
   · rfl
   · simpa only [List.length_map] using bound witness
 
-/-- Existing-channel guarantees survive forgetting a receipt without assuming projected balance. -/
-theorem project_channelGuarantees (same : ens.tables[index.val] = ⟨provider⟩)
-    (witness : EnsembleWitness (install ens index ram provider)) (channel : RawChannel (ZMod p))
+/-- Original guarantees survive projection at its identical canonical data. -/
+theorem project_channelGuarantees (channel : RawChannel (ZMod p))
     (different : channel ≠ (FinalMemoryValue.channel ram).toRaw)
-    (guarantees : ∀ physical ∈ witness.allTables, physical.ChannelGuarantees channel) :
-    ∀ physical ∈ (project same witness).allTables, physical.ChannelGuarantees channel := by
-  rw [EnsembleWitness.forall_mem_allTables_iff]
-  constructor
-  · exact guarantees witness.verifierTable witness.mem_allTables_verifierTable
-  · intro physical member
-    rw [project_tables] at member
-    rcases List.mem_or_eq_of_mem_set member with old | rfl
-    · exact guarantees physical (witness.mem_allTables_of_mem_tables old)
-    · apply Table.withComponent_channelGuarantees_of
-      · intro env valid
-        apply Operations.channelGuarantees_of_interactionsWith_subset _ _ _ ?_ env valid
-        rw [table_component, FinalMemoryReceipt.interactions ram provider channel different]
-        exact List.Subset.refl _
-      · exact guarantees _ (witness.mem_allTables_of_mem_tables (List.getElem_mem _))
+    (guarantees : ∀ physical ∈ witness.tables, physical.ChannelGuarantees witness.data channel) :
+    ∀ physical ∈ (project witness).tables, physical.ChannelGuarantees (project witness).data channel := by
+  simp only [project_data]
+  intro physical member
+  rw [project_tables] at member
+  rcases List.mem_or_eq_of_mem_set member with old | rfl
+  · exact guarantees physical old
+  · apply Table.withComponent_channelGuarantees_of
+    · intro env valid
+      apply Operations.channelGuarantees_of_interactionsWith_subset _ _ _ ?_ env valid
+      rw [table_component, FinalMemoryReceipt.interactions ram provider channel different]
+      exact List.Subset.refl _
+    · exact guarantees _ (List.getElem_mem _)
 
-/-- A fresh receipt channel permits reuse of the original ensemble balance proof. -/
-theorem project_balanced (same : ens.tables[index.val] = ⟨provider⟩)
-    (fresh : (FinalMemoryValue.channel ram).toRaw ∉ ens.channels)
-    (witness : EnsembleWitness (install ens index ram provider))
-    (balanced : witness.BalancedChannels) : (project same witness).BalancedChannels := by
+/-- A fresh receipt channel leaves all original channel balances unchanged. -/
+theorem project_balanced (fresh : (FinalMemoryValue.channel ram).toRaw ∉ ens.channels)
+    (balanced : witness.BalancedChannels) : (project witness).BalancedChannels := by
   intro channel member
-  change BalancedInteractions ((project same witness).interactionsWith channel)
-  rw [project_interactions same witness channel (by rintro rfl; exact fresh member)]
+  change BalancedInteractions ((project witness).interactionsWith channel)
+  rw [project_interactions witness channel (by rintro rfl; exact fresh member)]
   exact balanced channel (List.mem_append_left _ member)
 
 /-- The inventory is decoded from the original provider output on the literal physical rows. -/
-def records (witness : EnsembleWitness (install ens index ram provider)) : List (MemoryMsg (ZMod p)) :=
-  (table witness).table.map fun row => (⟨provider⟩ : Component (ZMod p)).rowOutput
-    ((table witness).environment row)
+def records  : List (MemoryMsg (ZMod p)) :=
+  (table witness).table.map fun row => ({ circuit := provider } : Component (ZMod p)).rowOutput
+    (Environment.fromArray row witness.data)
 
 /-- If the original provider is silent on the receipt channel, every finalizer row publishes
 exactly one of its complete original records. -/
-theorem table_receipts (witness : EnsembleWitness (install ens index ram provider))
+theorem table_receipts
     (silent : (FinalMemoryValue.channel ram).toRaw ∉ provider.channels) :
-    (table witness).interactionsWith (FinalMemoryValue.channel ram).toRaw =
+    (table witness).interactionsWith witness.data (FinalMemoryValue.channel ram).toRaw =
       (records witness).map (FinalMemoryValue.channel ram).pushedValue := by
   have row (env : Environment (ZMod p)) :
-      (⟨FinalMemoryReceipt.circuit ram provider⟩ : Component (ZMod p)).operations.interactionValuesWith
+      ({ circuit := FinalMemoryReceipt.circuit ram provider } : Component (ZMod p)).operations.interactionValuesWith
         (FinalMemoryValue.channel ram).toRaw env =
-      [(FinalMemoryValue.channel ram).pushedValue ((⟨provider⟩ : Component (ZMod p)).rowOutput env)] := by
+      [(FinalMemoryValue.channel ram).pushedValue (({ circuit := provider } : Component (ZMod p)).rowOutput env)] := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
     rw [FinalMemoryReceipt.receipt_interactions]
     rw [InteractionRecovery.interactionsWith_main_eq_nil provider.base _ _ _ silent]
@@ -254,9 +239,9 @@ theorem table_receipts (witness : EnsembleWitness (install ens index ram provide
   exact List.map_eq_flatMap.symm
 
 /-- The receipt channel costs exactly one physical occurrence per finalizer row. -/
-theorem table_receipts_length (witness : EnsembleWitness (install ens index ram provider))
+theorem table_receipts_length
     (silent : (FinalMemoryValue.channel ram).toRaw ∉ provider.channels) :
-    ((table witness).interactionsWith (FinalMemoryValue.channel ram).toRaw).length =
+    ((table witness).interactionsWith witness.data (FinalMemoryValue.channel ram).toRaw).length =
       (table witness).length := by
   rw [table_receipts witness silent, List.length_map]
   exact List.length_map _

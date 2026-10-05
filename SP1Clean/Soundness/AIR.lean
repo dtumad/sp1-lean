@@ -125,12 +125,7 @@ theorem supported_core_native_sound :
         (Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues))
         boundary.memoryFinalizeProviderUnique boundary.memoryProvider grounding.memoryFinalizeTruth
     have timeEq : Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues) =
-        Commit.initClkNat witness.data + 8 * rows.length := by
-      have h1 := grounding.clockCount
-      have h2 := boundary.initialClock
-      change Semantics.clkNat statement.publicValues.final_clk_high
-        statement.publicValues.final_clk_low = _
-      omega
+        statement.initClkNat + 8 * rows.length := grounding.clockCount.symm
     obtain ⟨w, sailValid, -⟩ := groundedRows_sailRelation statement witness.data initial
       (fun decoded : DecodedInstructionRow p => decoded.toChipRow witness.data) rows memBoundary
       boundary.programWellFormed boundary.initialPc boundary.romLoaded boundary.configured
@@ -149,20 +144,13 @@ theorem supported_core_native_sound :
     obtain ⟨memBoundary, memWF, memContent⟩ :=
       exists_populated_memoryBoundary witness initial
         (Semantics.StateMsg.timeNat
-          (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
+          (HaltChip.statePulledMessage (haltRow witness.data halt)))
         boundary.memoryFinalizeProviderUnique boundary.memoryProvider hg.memoryFinalizeTruth
     have clocks : statement.finalClkNat =
         statement.initClkNat + 8 * rows.length + 264 := by
-      have h1 := hg.finalClock
-      have h2 := hg.pullClock
-      have h3 := boundary.initialClock
-      show Semantics.clkNat statement.publicValues.final_clk_high
-          statement.publicValues.final_clk_low =
-        Semantics.clkNat statement.publicValues.init_clk_high
-          statement.publicValues.init_clk_low + 8 * rows.length + 264
-      omega
+      simpa only [hg.pullClock] using hg.finalClock
     have pullLe : Semantics.StateMsg.timeNat
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) ≤
+        (HaltChip.statePulledMessage (haltRow witness.data halt)) ≤
         Semantics.clkNat statement.publicValues.final_clk_high
           statement.publicValues.final_clk_low := by
       have h1 := hg.finalClock
@@ -202,12 +190,7 @@ theorem supported_core_native_sound_scheduled (model : Machine.SP1MachineModel)
       (Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues))
       boundary.memoryFinalizeProviderUnique boundary.memoryProvider grounding.memoryFinalizeTruth
   have timeEq : Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues) =
-      Commit.initClkNat witness.data + 8 * rows.length := by
-    have h1 := grounding.clockCount
-    have h2 := boundary.initialClock
-    change Semantics.clkNat statement.publicValues.final_clk_high
-      statement.publicValues.final_clk_low = _
-    omega
+      statement.initClkNat + 8 * rows.length := grounding.clockCount.symm
   obtain ⟨w, sailValid, run⟩ := groundedRows_sailRelation statement witness.data initial
     (fun decoded : DecodedInstructionRow p => decoded.toChipRow witness.data) rows memBoundary
     boundary.programWellFormed boundary.initialPc boundary.romLoaded boundary.configured
@@ -271,13 +254,9 @@ theorem supported_core_native_shard_execution
     (supportedCoreShardModel (p := p)) statement.program memBoundary execution executionValid
     ordinary
   have timeEq : Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues) =
-      Commit.initClkNat witness.data + 8 * execution.steps := by
-    have h1 := grounding.clockCount
-    have h2 := boundary.initialClock
+      statement.initClkNat + 8 * execution.steps := by
     rw [stepsEq]
-    change Semantics.clkNat statement.publicValues.final_clk_high
-      statement.publicValues.final_clk_low = _
-    omega
+    exact grounding.clockCount.symm
   have chain := Semantics.chainState_of_sailChain
     (execution.sailChain executionValid ordinary)
   rw [initialEq] at chain
@@ -285,7 +264,7 @@ theorem supported_core_native_shard_execution
     statementValid := publicValuesWellFormed
     programWellFormed := boundary.programWellFormed
     programBound := rfl
-    programValid := boundary.programCommitted.encodable
+    programValid := boundary.programEncodable
     contractValid := trivial
     romLoaded := ?_
     configured := ?_
@@ -357,7 +336,7 @@ theorem supported_core_native_shard_execution_halted
   obtain ⟨memBoundary, memWF, memContent⟩ :=
     exists_populated_memoryBoundary witness initial
       (Semantics.StateMsg.timeNat
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) halt')))
+        (HaltChip.statePulledMessage (haltRow witness.data halt')))
       boundary.memoryFinalizeProviderUnique boundary.memoryProvider hg.memoryFinalizeTruth
   let semanticWitness := Machine.CoreShardSemanticWitness.ofOrdinaryTrace
     statement.program memBoundary execution
@@ -367,7 +346,7 @@ theorem supported_core_native_shard_execution_halted
   have evaluated := Machine.CoreShardSemanticWitness.trace?_ofTrace
     (supportedCoreShardModel (p := p)) statement.program memBoundary execution execValid
   have clocksLe : Semantics.StateMsg.timeNat
-      (HaltChip.statePulledMessage (haltRow (haltTable witness) halt')) ≤
+      (HaltChip.statePulledMessage (haltRow witness.data halt')) ≤
       Semantics.clkNat statement.publicValues.final_clk_high
         statement.publicValues.final_clk_low := by
     have := hg.finalClock
@@ -376,7 +355,7 @@ theorem supported_core_native_shard_execution_halted
     statementValid := publicValuesWellFormed
     programWellFormed := boundary.programWellFormed
     programBound := rfl
-    programValid := boundary.programCommitted.encodable
+    programValid := boundary.programEncodable
     contractValid := trivial
     romLoaded := ?_
     configured := ?_

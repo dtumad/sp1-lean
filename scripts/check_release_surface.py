@@ -3,7 +3,8 @@
 
 This is a source/inventory gate, not a semantic proof.  Kernel-checked coverage, faithfulness,
 soundness, and real-row satisfiability remain in Lean; this script makes sure every physical chip
-still has every one of those audit entry points and every committed conformance artifact.
+still has every one of those audit entry points and its independently generated SP1 dump.
+Fresh native artifacts have a separate generation gate.
 """
 
 from pathlib import Path
@@ -44,78 +45,77 @@ CHIPS = [
 ]
 
 
-def fail(message: str) -> None:
-    print(f"FAIL: {message}")
-    failures.append(message)
+def main() -> None:
+    def fail(message: str) -> None:
+        print(f"FAIL: {message}")
+        failures.append(message)
 
+    def require(path: Path, role: str) -> None:
+        if not path.is_file():
+            fail(f"missing {role}: {path.relative_to(ROOT)}")
 
-def require(path: Path, role: str) -> None:
-    if not path.is_file():
-        fail(f"missing {role}: {path.relative_to(ROOT)}")
+    failures: list[str] = []
+    expected_ids = [chip_id for chip_id, _, _ in CHIPS]
+    expected_names = {name for _, name, _ in CHIPS}
 
-
-failures: list[str] = []
-expected_ids = [chip_id for chip_id, _, _ in CHIPS]
-expected_names = {name for _, name, _ in CHIPS}
-
-identity_source = (ROOT / "SP1Clean/Model/InstructionChipId.lean").read_text()
-enum_match = re.search(
-    r"inductive InstructionChipId where\n(?P<body>.*?)\nderiving", identity_source, re.S
-)
-if enum_match is None:
-    fail("could not parse InstructionChipId constructors")
-else:
-    actual_ids = re.findall(r"^\s*\|\s*([A-Za-z0-9_]+)\s*$", enum_match.group("body"), re.M)
-    if actual_ids != expected_ids:
-        fail(f"InstructionChipId order is {actual_ids}, expected {expected_ids}")
-
-oracle_dir = ROOT / "SP1Clean/Extracted/ChipOracle"
-actual_oracles = {path.stem for path in oracle_dir.glob("*.lean")}
-if actual_oracles != expected_names:
-    fail(
-        "whole-chip oracle inventory differs: "
-        f"missing={sorted(expected_names - actual_oracles)}, "
-        f"extra={sorted(actual_oracles - expected_names)}"
+    identity_source = (ROOT / "SP1Clean/Model/InstructionChipId.lean").read_text()
+    enum_match = re.search(
+        r"inductive InstructionChipId where\n(?P<body>.*?)\nderiving", identity_source, re.S
     )
+    if enum_match is None:
+        fail("could not parse InstructionChipId constructors")
+    else:
+        actual_ids = re.findall(r"^\s*\|\s*([A-Za-z0-9_]+)\s*$", enum_match.group("body"), re.M)
+        if actual_ids != expected_ids:
+            fail(f"InstructionChipId order is {actual_ids}, expected {expected_ids}")
 
-dump_names = {path.name.removesuffix(".dump.json") for path in
-              (ROOT / "export/sp1dump").glob("*.dump.json")}
-if dump_names != expected_names:
-    fail(
-        "SP1 dump inventory differs: "
-        f"missing={sorted(expected_names - dump_names)}, extra={sorted(dump_names - expected_names)}"
-    )
-
-for suffix in ("manifest.json", "rowmap.json", "witgen.json"):
-    actual = {path.name.removesuffix(f".{suffix}") for path in
-              (ROOT / "export/witgen").glob(f"*.{suffix}")}
-    if actual != expected_names:
+    oracle_dir = ROOT / "SP1Clean/Extracted/ChipOracle"
+    actual_oracles = {path.stem for path in oracle_dir.glob("*.lean")}
+    if actual_oracles != expected_names:
         fail(
-            f"witgen {suffix} inventory differs: "
-            f"missing={sorted(expected_names - actual)}, extra={sorted(actual - expected_names)}"
+            "whole-chip oracle inventory differs: "
+            f"missing={sorted(expected_names - actual_oracles)}, "
+            f"extra={sorted(actual_oracles - expected_names)}"
         )
 
-nonvacuity_source = (ROOT / "SP1CleanTest/Core/NonVacuityReal.lean").read_text()
-for _, name, anchor in CHIPS:
-    chip = f"{name}Chip"
-    require(ROOT / f"SP1Clean/Extracted/ChipOracle/{name}.lean", "whole-chip oracle")
-    require(ROOT / f"SP1Clean/Faithful/{chip}.lean", "whole-chip faithfulness anchor")
-    require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Formal.lean", "formal chip proof")
-    require(ROOT / f"SP1Clean/Alignment/Chips/{chip}/Bridge.lean", "Sail bridge")
-    require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Complete.lean", "trace compiler realization")
-    if name in {"ShiftLeft", "ShiftRight", "DivRem"}:
-        require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Defs.lean", "documented chip definition")
-    else:
-        require(ROOT / f"SP1Clean/Native/Chips/{chip}/Defs.lean", "native chip definition")
-    if re.search(rf"^theorem\s+{re.escape(anchor)}\b", nonvacuity_source, re.M) is None:
-        fail(f"missing real-row satisfiability anchor `{anchor}` for {chip}")
+    dump_names = {path.name.removesuffix(".dump.json") for path in
+                  (ROOT / "export/sp1dump").glob("*.dump.json")}
+    if dump_names != expected_names:
+        fail(
+            "SP1 dump inventory differs: "
+            f"missing={sorted(expected_names - dump_names)}, extra={sorted(dump_names - expected_names)}"
+        )
 
-if failures:
-    print(f"FAIL: release surface has {len(failures)} issue(s)")
-    sys.exit(1)
+    exporter = (ROOT / "scripts/witgenExport.lean").read_text()
+    export_names = re.findall(r'^  entry "([A-Za-z0-9]+)" ', exporter, re.M)
+    if export_names != [name for _, name, _ in CHIPS]:
+        fail(f"witness exporter registry differs: {export_names}")
 
-print(
-    "PASS: 25-chip release surface is complete "
-    "(identity/order, native definitions, formal/bridge/completeness proofs, whole-chip oracles, "
-    "faithfulness anchors, real-row models, dumps, and witgen artifacts)"
-)
+    nonvacuity_source = (ROOT / "SP1CleanTest/Core/NonVacuityReal.lean").read_text()
+    for _, name, anchor in CHIPS:
+        chip = f"{name}Chip"
+        require(ROOT / f"SP1Clean/Extracted/ChipOracle/{name}.lean", "whole-chip oracle")
+        require(ROOT / f"SP1Clean/Faithful/{chip}.lean", "whole-chip faithfulness anchor")
+        require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Formal.lean", "formal chip proof")
+        require(ROOT / f"SP1Clean/Alignment/Chips/{chip}/Bridge.lean", "Sail bridge")
+        require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Complete.lean", "trace compiler realization")
+        if name in {"ShiftLeft", "ShiftRight", "DivRem"}:
+            require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Defs.lean", "documented chip definition")
+        else:
+            require(ROOT / f"SP1Clean/Native/Chips/{chip}/Defs.lean", "native chip definition")
+        if re.search(rf"^theorem\s+{re.escape(anchor)}\b", nonvacuity_source, re.M) is None:
+            fail(f"missing real-row satisfiability anchor `{anchor}` for {chip}")
+
+    if failures:
+        print(f"FAIL: release surface has {len(failures)} issue(s)")
+        sys.exit(1)
+
+    print(
+        "PASS: 25-chip release surface is complete "
+        "(identity/order, native definitions, formal/bridge/completeness proofs, whole-chip oracles, "
+        "faithfulness anchors, real-row models, dumps, and witness exporter registry)"
+    )
+
+
+if __name__ == "__main__":
+    main()

@@ -56,7 +56,7 @@ private theorem programPulls_of_gated {Input Output : TypeMap}
       programChannel.toRaw = [(programChannel.pulledIf (gate input) (message input)).toRaw])
     (binary : ∀ input offset env,
       ConstraintsHold.Shallow env ((circuit.main input).operations offset) →
-        env (gate input) = 0 ∨ env (gate input) = 1) : ProgramPulls ⟨circuit⟩ := by
+        env (gate input) = 0 ∨ env (gate input) = 1) : ProgramPulls { circuit } := by
   intro data physical constraints interaction member
   have bound := binary (varFromOffset Input 0) (size Input) (Environment.fromArray physical data)
     (shallowConstraints_of_componentConstraints circuit _ constraints)
@@ -68,11 +68,11 @@ private theorem programPulls_of_gated {Input Output : TypeMap}
   simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
   simpa only [CircuitType.eval_expr] using bound
 
-private theorem halt_programPulls : ProgramPulls (⟨HaltChip.circuit⟩ : Component (ZMod p)) :=
+private theorem halt_programPulls : ProgramPulls ({ circuit := HaltChip.circuit } : Component (ZMod p)) :=
   programPulls_of_gated HaltChip.circuit (fun input => input.is_real) HaltChip.programMsg
     HaltChip.interactionsWith_program_eq HaltChip.selectorBinary_of_shallow
 
-private theorem syscall_programPulls : ProgramPulls (⟨SyscallInstrsChip.circuit⟩ : Component (ZMod p)) :=
+private theorem syscall_programPulls : ProgramPulls ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)) :=
   programPulls_of_gated SyscallInstrsChip.circuit (fun input => input.is_real) SyscallInstrsChip.programMsg
     Faithful.syscallInstrsInteractionsWith_program SyscallInstrsChip.selectorBinary_of_shallow
 
@@ -110,7 +110,7 @@ private theorem remainingProvider_programPulls (component : Component (ZMod p))
 /-- Only the computed ROM can produce Program messages in the shared execution suffix. -/
 theorem interior_program_source (image : ProgramImage) (component : Component (ZMod p))
     (member : component ∈ afterFinalTables image) :
-    component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) ∨ ProgramPulls component := by
+    component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ ProgramPulls component := by
   simp only [afterFinalTables, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with (rfl | instruction) | providers
   · exact Or.inl rfl
@@ -123,8 +123,11 @@ theorem program_pull_committed_of_sources {Public : TypeMap} [ProvableType Publi
     {assembly : Ensemble (ZMod p) Public} {image : ProgramImage} (valid : image.Valid)
     (witness : EnsembleWitness assembly) (constraints : witness.Constraints)
     (balance : BalancedInteractions (witness.interactionsWith programChannel.toRaw))
-    (sources : ∀ component ∈ assembly.allTables,
-      component = (⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)) ∨ ProgramPulls component)
+    (verifier : ∀ (input : Public (ZMod p)) (data : ProverData (ZMod p)),
+      ∀ interaction ∈ assembly.verifierOperations.interactionValuesWith programChannel.toRaw
+        (Environment.fromInput input data), interaction.mult = 0 ∨ interaction.mult = -1)
+    (sources : ∀ component ∈ assembly.tables,
+      component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ ProgramPulls component)
     (message : ProgramMsg (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
     (active : interaction.mult = -1)
@@ -132,22 +135,23 @@ theorem program_pull_committed_of_sources {Public : TypeMap} [ProvableType Publi
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) := by
   obtain ⟨source, sourceMem, samePayload, nonzero, notPull⟩ :=
     exists_push_of_pull _ balance interaction member active
-  obtain ⟨table, tableMem, sourceMem⟩ := EnsembleWitness.mem_interactionsWith.mp sourceMem
-  obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp sourceMem
-  have checked := constraints table tableMem physical physicalMem
-  rcases sources table.component
-    (witness.mem_allTables_component_of_mem_allTables tableMem) with fixed | pulls
-  · rw [fixed] at emitted checked
-    have committed := DecodedProgramProvider.constraints_committed valid (table.environment physical) checked
-    have same := (DecodedProgramProvider.program_interaction_payload image _ source emitted).symm.trans
-      (samePayload.trans payload)
-    have messageEq : ((⟨DecodedProgramProvider.circuit image⟩ : Component (ZMod p)).rowInput
-        (table.environment physical)).toMessage = message := by
-      have vectorEq := Vector.toArray_inj.mp same
-      have decoded := congrArg (fromElements (M := ProgramMsg)) vectorEq
-      simpa only [ProvableType.fromElements_toElements] using decoded
-    rw [messageEq] at committed
-    exact committed
-  · exact ((pulls table.data physical checked source emitted).elim nonzero notPull).elim
+  rcases EnsembleWitness.mem_interactionsWith.mp sourceMem with verifierMem | ⟨table, tableMem, sourceMem⟩
+  · exact ((verifier witness.publicInput witness.data source verifierMem).elim nonzero notPull).elim
+  · obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp sourceMem
+    have checked := constraints table tableMem physical physicalMem
+    rcases sources table.component
+      (EnsembleWitness.mem_component_of_mem tableMem) with fixed | pulls
+    · rw [fixed] at emitted checked
+      have committed := DecodedProgramProvider.constraints_committed valid (Environment.fromArray physical witness.data) checked
+      have same := (DecodedProgramProvider.program_interaction_payload image _ source emitted).symm.trans
+        (samePayload.trans payload)
+      have messageEq : (({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)).rowInput
+          (Environment.fromArray physical witness.data)).toMessage = message := by
+        have vectorEq := Vector.toArray_inj.mp same
+        have decoded := congrArg (fromElements (M := ProgramMsg)) vectorEq
+        simpa only [ProvableType.fromElements_toElements] using decoded
+      rw [messageEq] at committed
+      exact committed
+    · exact ((pulls witness.data physical checked source emitted).elim nonzero notPull).elim
 
 end SP1Clean.Soundness.NativeCore

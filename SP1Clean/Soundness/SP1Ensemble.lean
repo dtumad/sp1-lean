@@ -12,6 +12,7 @@ import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Formal
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
 import SP1Clean.FormalModel.Contracts.PublicValues
+import ToClean.Circuit.VerifierInteractions
 import Clean.Air.FlatEnsemble
 
 /-! # The supported native SP1 machine as a plain Clean `Ensemble`
@@ -241,6 +242,24 @@ theorem sp1StateVerifierMain_exitInteractions (pi : Var SP1PublicIO (ZMod p)) (o
         (⟨pi.exit_code⟩ : Channels.ExitMsg (Expression (ZMod p)))).toRaw] := by
   simp [sp1StateVerifierMain, circuit_norm]
 
+/-- The same boundary contract through Clean's separate, interaction-only public verifier. -/
+def sp1StateVerifierProgram : Verifier.Program (ZMod p) SP1PublicIO where
+  main input := Verifier.ofInteractions ((sp1StateVerifierMain input).operations 0).interactions (by
+    intro interaction member env
+    simp only [sp1StateVerifierMain, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      simp [AbstractInteraction.Requirements, AbstractInteraction.Guarantees, ChannelInteraction.toRaw,
+        Channels.stateChannel, Channels.byteChannel, Channels.exitChannel, Channel.toRaw, circuit_norm])
+  Spec input _ := input.LimbBounds
+  soundness := by
+    intro env guarantees
+    have original : ((sp1StateVerifierMain (varFromOffset SP1PublicIO 0)).operations 0).FullGuarantees env := by
+      simpa only [Operations.FullGuarantees, Verifier.ofInteractions_interactions] using guarantees
+    have checked : ((sp1StateVerifierMain (varFromOffset SP1PublicIO 0)).operations 0).ConstraintsHold env := by
+      simp [sp1StateVerifierMain, circuit_norm]
+    exact (sp1StateVerifier.original_full_soundness 0 env (varFromOffset SP1PublicIO 0)
+      trivial checked original).1
+
 /-! ## The SP1 machine as a plain Clean `Ensemble` -/
 
 /-- Stable cardinalities used by positional decoder and provider-partition proofs. The two complete
@@ -258,7 +277,7 @@ def ensembleTableCount : ℕ := NativeTableId.all.length
 /-- The complete fixed-width realization of SP1's preprocessed Range table, ordered by width
 `0, …, 16`. -/
 def sp1RangeProviderTables : List (Component (ZMod p)) :=
-  RangeChip.allWidths.map fun width => ⟨RangeChip.circuitFor width⟩
+  RangeChip.allWidths.map fun width => { circuit := RangeChip.circuitFor width }
 
 theorem sp1RangeProviderTables_length : (sp1RangeProviderTables (p := p)).length = 17 := by
   simp [sp1RangeProviderTables, RangeChip.allWidths]
@@ -267,20 +286,20 @@ theorem sp1RangeProviderTables_length : (sp1RangeProviderTables (p := p)).length
 Unlike the identity, this map deliberately imports circuits; it remains total and contains no
 instruction-routing cases. -/
 def providerTableFor : ProviderTableId → Component (ZMod p)
-  | .byte .u8Range => ⟨ByteChip.U8Range.circuit⟩
-  | .byte .msb => ⟨ByteChip.MSB.circuit⟩
-  | .byte .andByte => ⟨ByteChip.AndByte.circuit⟩
-  | .byte .orByte => ⟨ByteChip.OrByte.circuit⟩
-  | .byte .xorByte => ⟨ByteChip.XorByte.circuit⟩
-  | .byte .ltu => ⟨ByteChip.Ltu.circuit⟩
-  | .range width => ⟨RangeChip.circuitFor width⟩
-  | .program => ⟨ProgramProviderChip.circuit⟩
-  | .memoryInit => ⟨MemoryProviderChip.circuit⟩
-  | .memoryFinalize => ⟨MemoryFinalizeChip.circuit⟩
-  | .memoryBump => ⟨MemoryBumpChip.circuit⟩
-  | .stateBump => ⟨StateBumpChip.circuit⟩
-  | .halt => ⟨HaltChip.circuit⟩
-  | .syscallInstrs => ⟨SyscallInstrsChip.circuit⟩
+  | .byte .u8Range => { circuit := ByteChip.U8Range.circuit }
+  | .byte .msb => { circuit := ByteChip.MSB.circuit }
+  | .byte .andByte => { circuit := ByteChip.AndByte.circuit }
+  | .byte .orByte => { circuit := ByteChip.OrByte.circuit }
+  | .byte .xorByte => { circuit := ByteChip.XorByte.circuit }
+  | .byte .ltu => { circuit := ByteChip.Ltu.circuit }
+  | .range width => { circuit := RangeChip.circuitFor width }
+  | .program => { circuit := ProgramProviderChip.circuit }
+  | .memoryInit => { circuit := MemoryProviderChip.circuit }
+  | .memoryFinalize => { circuit := MemoryFinalizeChip.circuit }
+  | .memoryBump => { circuit := MemoryBumpChip.circuit }
+  | .stateBump => { circuit := StateBumpChip.circuit }
+  | .halt => { circuit := HaltChip.circuit }
+  | .syscallInstrs => { circuit := SyscallInstrsChip.circuit }
 
 /-- The 30 in-circuit boundary/provider tables: six `ByteChip` opcode tables, the complete
 17-member fixed-width Range family, the program-ROM provider, the two memory boundary tables
@@ -298,12 +317,12 @@ def sp1ProviderTables : List (Component (ZMod p)) :=
 keeps existing position-sensitive consumers auditable without maintaining a second registry. -/
 theorem sp1ProviderTables_explicit :
     sp1ProviderTables (p := p) =
-      [⟨ByteChip.U8Range.circuit⟩, ⟨ByteChip.MSB.circuit⟩, ⟨ByteChip.AndByte.circuit⟩,
-       ⟨ByteChip.OrByte.circuit⟩, ⟨ByteChip.XorByte.circuit⟩, ⟨ByteChip.Ltu.circuit⟩] ++
+      [{ circuit := ByteChip.U8Range.circuit }, { circuit := ByteChip.MSB.circuit }, { circuit := ByteChip.AndByte.circuit },
+       { circuit := ByteChip.OrByte.circuit }, { circuit := ByteChip.XorByte.circuit }, { circuit := ByteChip.Ltu.circuit }] ++
         sp1RangeProviderTables ++
-      [⟨ProgramProviderChip.circuit⟩, ⟨MemoryProviderChip.circuit⟩,
-       ⟨MemoryFinalizeChip.circuit⟩, ⟨MemoryBumpChip.circuit⟩,
-       ⟨StateBumpChip.circuit⟩, ⟨HaltChip.circuit⟩, ⟨SyscallInstrsChip.circuit⟩] := by
+      [{ circuit := ProgramProviderChip.circuit }, { circuit := MemoryProviderChip.circuit },
+       { circuit := MemoryFinalizeChip.circuit }, { circuit := MemoryBumpChip.circuit },
+       { circuit := StateBumpChip.circuit }, { circuit := HaltChip.circuit }, { circuit := SyscallInstrsChip.circuit }] := by
   rfl
 
 /-- Pointwise positional coverage, including out-of-bounds provider positions. -/
@@ -344,8 +363,8 @@ def sp1Ensemble : Ensemble (ZMod p) SP1PublicIO where
      Channels.programChannel.toRaw, Channels.memoryChannel.toRaw,
      Channels.exitChannel.toRaw, Channels.syscallChannel.toRaw,
      Channels.publicValuesChannel.toRaw]
-  verifier := sp1StateVerifier
-  verifier_length_zero := fun _ => rfl
+  unique_names := by exact of_decide_eq_true rfl
+  verifier := sp1StateVerifierProgram
 
 @[circuit_norm] lemma sp1Ensemble_tables :
     (sp1Ensemble (p := p)).tables = sp1Tables ++ sp1ProviderTables := rfl
@@ -356,7 +375,7 @@ def sp1Ensemble : Ensemble (ZMod p) SP1PublicIO where
        Channels.exitChannel.toRaw, Channels.syscallChannel.toRaw,
        Channels.publicValuesChannel.toRaw] := rfl
 @[circuit_norm] lemma sp1Ensemble_verifier :
-    (sp1Ensemble (p := p)).verifier = sp1StateVerifier := rfl
+    (sp1Ensemble (p := p)).verifier = sp1StateVerifierProgram := rfl
 
 /-! ## Physical instruction-table alignment -/
 
@@ -366,38 +385,12 @@ witness tables, and both evaluate with the witness's shared prover data.  This i
 interactions. -/
 theorem witness_instructionTables_aligned
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    InstructionTablesAligned witness.data (supportedChips (p := p))
-      (witness.tables.take 25) := by
-  unfold InstructionTablesAligned
-  rw [List.forall₂_iff_get]
-  have tablesLength : witness.tables.length = 55 := by
-    rw [← witness.same_length]
-    simp [sp1Ensemble_tables, sp1Tables_length,
-      sp1ProviderTables_length]
-  constructor
-  · simp [supportedChips_length, tablesLength]
-  · intro i chipBound tableBound
-    have iLt25 : i < 25 := by simpa only [supportedChips_length] using chipBound
-    have instructionBound : i < (sp1Tables (p := p)).length := by
-      simpa only [sp1Tables_length] using iLt25
-    have witnessBound : i < witness.tables.length := by omega
-    simp only [List.get_eq_getElem, List.getElem_take]
-    constructor
-    · have ensembleBound : i < (sp1Ensemble (p := p)).tables.length := by
-        rw [sp1Ensemble_tables]
-        simp only [List.length_append, sp1Tables_length, sp1ProviderTables_length]
-        omega
-      have circuitEq := witness.same_circuits i ensembleBound
-      change witness.tables[i].component = (supportedChips (p := p))[i].table
-      have descriptorEq : (sp1Ensemble (p := p)).tables[i] =
-          (supportedChips (p := p))[i].table := by
-        simp only [sp1Ensemble_tables]
-        rw [List.getElem_append_left instructionBound]
-        simp only [sp1Tables, List.getElem_map]
-        rfl
-      exact circuitEq.symm.trans descriptorEq
-    · change witness.tables[i].data = witness.data
-      exact witness.same_data witness.tables[i] (List.getElem_mem witnessBound)
+    InstructionTablesAligned (supportedChips (p := p)) (witness.tables.take 25) := by
+  apply InstructionTablesAligned.of_components
+  change (witness.tables.take 25).map (·.component) = sp1Tables
+  have aligned := congrArg (List.take 25) witness.tables_map_component
+  simpa only [← List.map_take, sp1Ensemble_tables,
+    ← sp1Tables_length (p := p), List.take_left'] using aligned
 
 /-- Every canonical decoded instruction row satisfies the constraints of its exact physical Clean
 table row.  This is the common starting point for row-local AIR facts; downstream proofs never need
@@ -412,7 +405,7 @@ theorem decodedInstructionRow_constraints
     (witness_instructionTables_aligned witness)
   · intro table tableMem
     exact constraints table
-      (witness.mem_allTables_of_mem_tables (List.mem_of_mem_take tableMem))
+      (List.mem_of_mem_take tableMem)
   · exact decodedMem
 
 /-- Every physical table after the stable 25-chip prefix is one of the 30 declared provider or
@@ -433,23 +426,23 @@ theorem decodedWitnessInstructionInteractionsWith_eq_tables
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (channel : Channel (ZMod p) Message) :
     decodedWitnessInstructionInteractionsWith witness.data witness.tables channel =
-      (witness.tables.take 25).flatMap (typedTableInteractionsWith · channel) :=
+      (witness.tables.take 25).flatMap (typedTableInteractionsWith · witness.data channel) :=
   decodedInstructionInteractionsWith_eq_tables witness.data channel
     (witness_instructionTables_aligned witness)
 
 /-- Exact typed partition of the ensemble interaction list into verifier boundary, decoded
-instruction rows, and the 28 provider/boundary tables. -/
+instruction rows, and the 30 provider/boundary tables. -/
 theorem typedEnsembleInteractionsWith_partition
     {Message : TypeMap} [ProvableType Message]
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (channel : Channel (ZMod p) Message) :
     typedEnsembleInteractionsWith witness channel =
-      typedTableInteractionsWith witness.verifierTable channel ++
+      typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations channel
+          (Environment.fromInput witness.publicInput witness.data) ++
         decodedWitnessInstructionInteractionsWith witness.data witness.tables channel ++
-          (witness.tables.drop 25).flatMap (typedTableInteractionsWith · channel) := by
+          (witness.tables.drop 25).flatMap (typedTableInteractionsWith · witness.data channel) := by
   rw [decodedWitnessInstructionInteractionsWith_eq_tables]
-  unfold typedEnsembleInteractionsWith EnsembleWitness.allTables
-  simp only [List.flatMap_cons]
+  unfold typedEnsembleInteractionsWith
   rw [List.append_assoc, ← List.flatMap_append, List.take_append_drop]
 
 /-- Clean balance transported to the proof-carrying typed interaction view. -/
@@ -460,7 +453,7 @@ theorem typedInteractions_balanced
     (channelMem : channel.toRaw ∈ (sp1Ensemble (p := p)).channels) :
     BalancedInteractions
       ((typedEnsembleInteractionsWith witness channel).map TypedInteraction.raw) := by
-  rw [typedEnsembleInteractionsWith_raw, ← EnsembleWitness.interactionsWith_allTablesWitness]
+  rw [typedEnsembleInteractionsWith_raw]
   exact balanced channel.toRaw channelMem
 
 end SP1Clean.Soundness

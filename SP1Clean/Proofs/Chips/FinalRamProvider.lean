@@ -82,6 +82,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
     simp only [main, circuit_norm, WordRangeCheck.circuit, AddressOperation.circuit]
 
 def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
+  name := "sp1.native.memory.final.ram"
   main
   elaborated := elaborated
   Spec input output _ := MemoryBoundary.RamFinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
@@ -135,5 +136,10 @@ theorem proverAssumptions_iff (record : MemoryMsg (ZMod p)) (data : ProverData (
     · exact valid.2.2.1
     · exact fun _ => valid.2.1
     · exact valid.2.2.2.symm
+
+/-- RAM finalization adds no static lookup table. -/
+@[circuit_norm] theorem main_lookups (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups = [] := by
+  simp [main, WordRangeCheck.circuit, AddressOperation.circuit, circuit_norm]
 
 end SP1Clean.FinalRamProvider

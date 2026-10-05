@@ -164,7 +164,7 @@ theorem proverAssumptions_padding (data : ProverData (ZMod p)) :
 /-- The ShiftRight chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := ⟨circuit⟩
+def component : Air.Flat.Component (ZMod p) := { circuit := circuit }
 
 /-- The rows a trace builds: one input row **paired with its own hint** per event, then `padding`
 zero rows at the empty hint. -/
@@ -189,16 +189,16 @@ theorem proverAssumptions_of_mem_traceInputs {events : List ALUTypeEvent} {paddi
 circuit evaluates to zero on every built row, and no static lookup is left unchecked. -/
 theorem traceTable_constraints (events : List ALUTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.IsShiftRight) :
-    (Air.Flat.Table.buildHinted (component (p := p)) (traceInputs events padding) data).Constraints :=
-  Air.Flat.Table.buildHinted_constraints _ _ _ computableWitnesses
+    (Air.Flat.Table.buildHinted (component (p := p)) (traceInputs events padding) data).Constraints data :=
+  Air.Flat.Table.buildHinted_constraints _ _ _ _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data)
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
 Memory, Program and Byte channels carries the payload its channel promises. -/
 theorem traceTable_guarantees (events : List ALUTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.IsShiftRight) :
-    (Air.Flat.Table.buildHinted (component (p := p)) (traceInputs events padding) data).Guarantees :=
-  Air.Flat.Table.buildHinted_guarantees _ _ _ computableWitnesses
+    (Air.Flat.Table.buildHinted (component (p := p)) (traceInputs events padding) data).Guarantees data :=
+  Air.Flat.Table.buildHinted_guarantees _ _ _ _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data)
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
@@ -206,10 +206,10 @@ concatenated in row order. -/
 theorem traceTable_interactionsWith (events : List ALUTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
     (Air.Flat.Table.buildHinted (component (p := p)) (traceInputs events padding)
-        data).interactionsWith channel =
+        data).interactionsWith data channel =
       (traceInputs (p := p) events padding).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input.1 data input.2) data) :=
-  Air.Flat.Table.buildHinted_interactions _ _ _ channel
+  Air.Flat.Table.buildHinted_interactions _ _ _ _ data channel
 
 end SP1Clean.ShiftRightChip

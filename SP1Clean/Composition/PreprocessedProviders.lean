@@ -820,7 +820,7 @@ def transportU8RangeTable (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))
+  Table.build ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))
     ((canonicalByteU8RangeRows inventory).map fun row =>
       byteU8RangeInput row (providerRecount skeleton (sourceByteU8RangeKey row))) data hint
 
@@ -829,7 +829,7 @@ def transportMsbTable (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p))
+  Table.build ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p))
     ((canonicalByteMsbRows inventory).map fun row =>
       byteMsbInput row (providerRecount skeleton (sourceByteMsbKey row))) data hint
 
@@ -838,7 +838,7 @@ def transportAndTable (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p))
+  Table.build ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p))
     ((canonicalByteAndRows inventory).map fun row =>
       byteAndInput row (providerRecount skeleton (sourceByteAndKey row))) data hint
 
@@ -847,7 +847,7 @@ def transportOrTable (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p))
+  Table.build ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p))
     ((canonicalByteOrRows inventory).map fun row =>
       byteOrInput row (providerRecount skeleton (sourceByteOrKey row))) data hint
 
@@ -856,7 +856,7 @@ def transportXorTable (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p))
+  Table.build ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p))
     ((canonicalByteXorRows inventory).map fun row =>
       byteXorInput row (providerRecount skeleton (sourceByteXorKey row))) data hint
 
@@ -865,7 +865,7 @@ def transportLtuTable (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p))
+  Table.build ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p))
     ((canonicalByteLtuRows inventory).map fun row =>
       byteLtuInput row (providerRecount skeleton (sourceByteLtuKey row))) data hint
 
@@ -875,7 +875,7 @@ def transportRangeTable (width : RangeChip.Width)
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (⟨RangeChip.circuitFor width⟩ : Component (ZMod p))
+  Table.build ({ circuit := RangeChip.circuitFor width } : Component (ZMod p))
     ((canonicalRangeRows width inventory).map fun row =>
       rangeProviderInput row (providerRecount skeleton (sourceRangeKey row))) data hint
 
@@ -884,7 +884,7 @@ def transportProgramTable (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Table (ZMod p) :=
-  Table.build (⟨ProgramProviderChip.circuit⟩ : Component (ZMod p))
+  Table.build ({ circuit := ProgramProviderChip.circuit } : Component (ZMod p))
     ((canonicalProgramRows inventory).map fun row =>
       programProviderInput row (providerRecount skeleton (sourceProgramKey row))) data hint
 
@@ -907,8 +907,8 @@ theorem transportU8RangeTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportU8RangeTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.U8Range.computableWitnesses
+    (transportU8RangeTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.U8Range.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteU8RangeRows inventory)
     (fun row => byteU8RangeInput row
@@ -921,8 +921,8 @@ theorem transportMsbTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportMsbTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.MSB.computableWitnesses
+    (transportMsbTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.MSB.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteMsbRows inventory)
     (fun row => byteMsbInput row
@@ -935,8 +935,8 @@ theorem transportAndTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportAndTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.AndByte.computableWitnesses
+    (transportAndTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.AndByte.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteAndRows inventory)
     (fun row => byteAndInput row
@@ -949,8 +949,8 @@ theorem transportOrTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportOrTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.OrByte.computableWitnesses
+    (transportOrTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.OrByte.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteOrRows inventory)
     (fun row => byteOrInput row
@@ -964,8 +964,8 @@ theorem transportXorTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportXorTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.XorByte.computableWitnesses
+    (transportXorTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.XorByte.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteXorRows inventory)
     (fun row => byteXorInput row
@@ -979,8 +979,8 @@ theorem transportLtuTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportLtuTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ByteChip.Ltu.computableWitnesses
+    (transportLtuTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ByteChip.Ltu.computableWitnesses
   exact byteInputs_assumptions
     (canonicalByteLtuRows inventory)
     (fun row => byteLtuInput row
@@ -994,8 +994,8 @@ theorem transportRangeTable_constraints (width : RangeChip.Width)
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportRangeTable width witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ (RangeChip.computableWitnessesFor width)
+    (transportRangeTable width witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) (RangeChip.computableWitnessesFor width)
   intro input hinput
   obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hinput
   exact contract.rangeAt (canonicalRangeRows_mem_source width witness inventory row hrow)
@@ -1005,8 +1005,8 @@ theorem transportProgramTable_constraints
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportProgramTable witness inventory skeleton data hint).Constraints := by
-  apply Table.build_constraints _ _ _ _ ProgramProviderChip.computableWitnesses
+    (transportProgramTable witness inventory skeleton data hint).Constraints data := by
+  apply Table.build_constraints _ _ _ _ (by trivial) ProgramProviderChip.computableWitnesses
   intro input hinput
   obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hinput
   change ProgramMsg.RowSpec
@@ -1047,32 +1047,6 @@ theorem extractedPreprocessedProviderTables_components
     List.map_map]
   rfl
 
-/-- Every constructed provider table uses the same committed data. -/
-theorem extractedPreprocessedProviderTables_data
-    (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory witness)
-    (skeleton : LookupAccessList)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ∀ table ∈ extractedPreprocessedProviderTables witness inventory skeleton data hint,
-      table.data = data := by
-  intro table hmem
-  simp only [extractedPreprocessedProviderTables, List.mem_append, List.mem_cons,
-    List.not_mem_nil, or_false, List.mem_map] at hmem
-  rcases hmem with preProgram | programMem
-  · rcases preProgram with byteMem | rangeMem
-    · rcases byteMem with h | h | h | h | h | h
-      · subst table; rfl
-      · subst table; rfl
-      · subst table; rfl
-      · subst table; rfl
-      · subst table; rfl
-      · subst table; rfl
-    · obtain ⟨width, -, h⟩ := rangeMem
-      subst table
-      rfl
-  · subst table
-    rfl
-
 /-- **Constructed provider-prefix validity.** Local source-row semantics discharges every
 native constraint.  Multiplicity recount obligations are irrelevant to these local polynomial
 constraints and are used only by the ledger theorem below. -/
@@ -1082,7 +1056,7 @@ theorem extractedPreprocessedProviderTables_constraints
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ∀ table ∈ extractedPreprocessedProviderTables witness inventory skeleton data hint,
-      table.Constraints := by
+      table.Constraints data := by
   intro table hmem
   simp only [extractedPreprocessedProviderTables, List.mem_append, List.mem_cons,
     List.not_mem_nil, or_false, List.mem_map] at hmem
@@ -1114,7 +1088,7 @@ private theorem unexpectedInteractions_rowOperations_eq_nil
       channel = Channels.programChannel.toRaw)
     (only : ∀ candidate ∈ circuit.channels, candidate = channel) :
     Faithful.unexpectedInteractions
-        (⟨circuit⟩ : Component (ZMod p)).rowOperations = [] := by
+        ({ circuit := circuit } : Component (ZMod p)).rowOperations = [] := by
   unfold Faithful.unexpectedInteractions
   apply List.filter_eq_nil_iff.mpr
   intro interaction interactionMem
@@ -1142,7 +1116,7 @@ private theorem interactionsWith_rowOperations_eq_nil_of_only
     (only : ∀ candidate ∈ circuit.channels, candidate = onlyChannel)
     (different : channel ≠ onlyChannel) :
     Operations.interactionsWith channel
-        (⟨circuit⟩ : Component (ZMod p)).rowOperations = [] := by
+        ({ circuit := circuit } : Component (ZMod p)).rowOperations = [] := by
   unfold Operations.interactionsWith
   apply List.filter_eq_nil_iff.mpr
   intro interaction interactionMem
@@ -1166,8 +1140,8 @@ private theorem interactionsWith_rowOperations_eq_self_of_only
     (channel : RawChannel (ZMod p))
     (only : ∀ candidate ∈ circuit.channels, candidate = channel) :
     Operations.interactionsWith channel
-        (⟨circuit⟩ : Component (ZMod p)).rowOperations =
-      (⟨circuit⟩ : Component (ZMod p)).rowOperations.interactions := by
+        ({ circuit := circuit } : Component (ZMod p)).rowOperations =
+      ({ circuit := circuit } : Component (ZMod p)).rowOperations.interactions := by
   unfold Operations.interactionsWith
   apply List.filter_eq_self.mpr
   intro interaction interactionMem
@@ -1186,8 +1160,8 @@ private theorem nativeAccesses_byteOnly
       candidate = Channels.byteChannel.toRaw)
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        (⟨circuit⟩ : Component (ZMod p)).rowOperations =
-      ((⟨circuit⟩ : Component (ZMod p)).rowOperations.interactionsWith
+        ({ circuit := circuit } : Component (ZMod p)).rowOperations =
+      (({ circuit := circuit } : Component (ZMod p)).rowOperations.interactionsWith
         Channels.byteChannel.toRaw).map (AbstractInteraction.toAccess env) := by
   have stateNil := interactionsWith_rowOperations_eq_nil_of_only circuit
     Channels.byteChannel.toRaw Channels.stateChannel.toRaw only
@@ -1212,8 +1186,8 @@ private theorem nativeAccesses_programOnly
       candidate = Channels.programChannel.toRaw)
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        (⟨circuit⟩ : Component (ZMod p)).rowOperations =
-      (((⟨circuit⟩ : Component (ZMod p)).rowOperations.interactionsWith
+        ({ circuit := circuit } : Component (ZMod p)).rowOperations =
+      ((({ circuit := circuit } : Component (ZMod p)).rowOperations.interactionsWith
         Channels.programChannel.toRaw).map (AbstractInteraction.toAccess env)).map
           LookupAccessList.negMult := by
   have stateNil := interactionsWith_rowOperations_eq_nil_of_only circuit
@@ -1238,10 +1212,10 @@ private theorem cleanAccesses_eq_nativeAccesses_byteOnly
     (only : ∀ candidate ∈ circuit.channels,
       candidate = Channels.byteChannel.toRaw)
     (env : Environment (ZMod p)) :
-    ((⟨circuit⟩ : Component (ZMod p)).operations.interactions.map
+    (({ circuit := circuit } : Component (ZMod p)).operations.interactions.map
         (AbstractInteraction.toAccess env)) =
       Faithful.nativeAccesses env
-        (⟨circuit⟩ : Component (ZMod p)).operations := by
+        ({ circuit := circuit } : Component (ZMod p)).operations := by
   rw [Faithful.nativeAccesses_component_eq_rowOperations circuit,
     Air.Flat.Component.interactions_eq,
     nativeAccesses_byteOnly circuit only,
@@ -1255,10 +1229,10 @@ private theorem cleanAccesses_eq_nativeAccesses_programOnly
     (only : ∀ candidate ∈ circuit.channels,
       candidate = Channels.programChannel.toRaw)
     (env : Environment (ZMod p)) :
-    ((⟨circuit⟩ : Component (ZMod p)).operations.interactions.map
+    (({ circuit := circuit } : Component (ZMod p)).operations.interactions.map
         (AbstractInteraction.toAccess env)) =
       (Faithful.nativeAccesses env
-        (⟨circuit⟩ : Component (ZMod p)).operations).map
+        ({ circuit := circuit } : Component (ZMod p)).operations).map
           LookupAccessList.negMult := by
   rw [Faithful.nativeAccesses_component_eq_rowOperations circuit,
     Air.Flat.Component.interactions_eq,
@@ -1430,7 +1404,7 @@ private theorem ltu_interactionsWith_byte
 
 private theorem u8Range_nativeAccesses_symbolic (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p)).operations =
       [AbstractInteraction.toAccess env
         (pushedIf (channel := Channels.byteChannel) (var ⟨2⟩)
           (⟨3, 0, var ⟨0⟩, var ⟨1⟩⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
@@ -1496,10 +1470,10 @@ private theorem u8RangeRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p)).buildRow
             (byteU8RangeInput row
               (providerRecount skeleton (sourceByteU8RangeKey row))) data hint) data)
-        (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p)).operations =
       [recountedProviderFieldAccess (p := p) skeleton
         (sourceByteU8RangeKey row)] := by
   rw [u8Range_nativeAccesses_symbolic]
@@ -1541,7 +1515,7 @@ private theorem msb_buildRow_result
     (input : ByteChip.MSB.Inputs (ZMod p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bound : input.b.val < 2 ^ 8) :
-    let component := (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p))
+    let component := ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p))
     let inputVar : Var ByteChip.MSB.Inputs (ZMod p) :=
       varFromOffset ByteChip.MSB.Inputs 0
     let result : Expression (ZMod p) := var ⟨size ByteChip.MSB.Inputs +
@@ -1550,7 +1524,7 @@ private theorem msb_buildRow_result
       (Environment.fromArray (component.buildRow input data hint) data) result =
       if 128 ≤ input.b.val then 1 else 0 := by
   dsimp only
-  let component := (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.MSB.computableWitnesses bound (by trivial)).1
@@ -1597,7 +1571,7 @@ private theorem and_buildRow_result_val
     (input : ByteChip.AndByte.Inputs (ZMod p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
-    let component := (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p))
+    let component := ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p))
     let inputVar : Var ByteChip.AndByte.Inputs (ZMod p) :=
       varFromOffset ByteChip.AndByte.Inputs 0
     let result := Gadgets.And.And8.circuit.output
@@ -1609,7 +1583,7 @@ private theorem and_buildRow_result_val
       (Environment.fromArray (component.buildRow input data hint) data) result).val =
       input.b.val &&& input.c.val := by
   dsimp only
-  let component := (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.AndByte.computableWitnesses bounds (by trivial)).1
@@ -1664,7 +1638,7 @@ private theorem or_buildRow_result_val
     (input : ByteChip.OrByte.Inputs (ZMod p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
-    let component := (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p))
+    let component := ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p))
     let inputVar : Var ByteChip.OrByte.Inputs (ZMod p) :=
       varFromOffset ByteChip.OrByte.Inputs 0
     let result := Gadgets.Or.Or8.circuit.output
@@ -1676,7 +1650,7 @@ private theorem or_buildRow_result_val
       (Environment.fromArray (component.buildRow input data hint) data) result).val =
       input.b.val ||| input.c.val := by
   dsimp only
-  let component := (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.OrByte.computableWitnesses bounds (by trivial)).1
@@ -1730,7 +1704,7 @@ private theorem xor_buildRow_result_val
     (input : ByteChip.XorByte.Inputs (ZMod p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
-    let component := (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p))
+    let component := ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p))
     let inputVar : Var ByteChip.XorByte.Inputs (ZMod p) :=
       varFromOffset ByteChip.XorByte.Inputs 0
     let result : Expression (ZMod p) := var ⟨size ByteChip.XorByte.Inputs +
@@ -1740,7 +1714,7 @@ private theorem xor_buildRow_result_val
       (Environment.fromArray (component.buildRow input data hint) data) result).val =
       input.b.val ^^^ input.c.val := by
   dsimp only
-  let component := (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.XorByte.computableWitnesses bounds (by trivial)).1
@@ -1794,7 +1768,7 @@ private theorem ltu_buildRow_result
     (input : ByteChip.Ltu.Inputs (ZMod p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
-    let component := (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p))
+    let component := ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p))
     let inputVar : Var ByteChip.Ltu.Inputs (ZMod p) :=
       varFromOffset ByteChip.Ltu.Inputs 0
     let result : Expression (ZMod p) := var ⟨size ByteChip.Ltu.Inputs +
@@ -1804,7 +1778,7 @@ private theorem ltu_buildRow_result
       (Environment.fromArray (component.buildRow input data hint) data) result =
       if input.b.val < input.c.val then 1 else 0 := by
   dsimp only
-  let component := (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have hspec := (component.buildRow_spec_requirements input data hint
     ByteChip.Ltu.computableWitnesses bounds (by trivial)).1
@@ -1870,10 +1844,10 @@ private theorem msbRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨ByteChip.MSB.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := ByteChip.MSB.circuit } : Component (ZMod p)).buildRow
             (byteMsbInput row
               (providerRecount skeleton (sourceByteMsbKey row))) data hint) data)
-        (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p)).operations =
       [recountedProviderFieldAccess (p := p) skeleton
         (sourceByteMsbKey row)] := by
   rw [Faithful.nativeAccesses_component_eq_rowOperations ByteChip.MSB.circuit]
@@ -1915,10 +1889,10 @@ private theorem andRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p)).buildRow
             (byteAndInput row
               (providerRecount skeleton (sourceByteAndKey row))) data hint) data)
-        (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p)).operations =
       [recountedProviderFieldAccess (p := p) skeleton
         (sourceByteAndKey row)] := by
   rw [Faithful.nativeAccesses_component_eq_rowOperations ByteChip.AndByte.circuit]
@@ -1965,10 +1939,10 @@ private theorem orRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p)).buildRow
             (byteOrInput row
               (providerRecount skeleton (sourceByteOrKey row))) data hint) data)
-        (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p)).operations =
       [recountedProviderFieldAccess (p := p) skeleton
         (sourceByteOrKey row)] := by
   rw [Faithful.nativeAccesses_component_eq_rowOperations ByteChip.OrByte.circuit]
@@ -2015,10 +1989,10 @@ private theorem xorRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p)).buildRow
             (byteXorInput row
               (providerRecount skeleton (sourceByteXorKey row))) data hint) data)
-        (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p)).operations =
       [recountedProviderFieldAccess (p := p) skeleton
         (sourceByteXorKey row)] := by
   rw [Faithful.nativeAccesses_component_eq_rowOperations ByteChip.XorByte.circuit]
@@ -2065,10 +2039,10 @@ private theorem ltuRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p)).buildRow
             (byteLtuInput row
               (providerRecount skeleton (sourceByteLtuKey row))) data hint) data)
-        (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p)).operations =
       [recountedProviderFieldAccess (p := p) skeleton
         (sourceByteLtuKey row)] := by
   rw [Faithful.nativeAccesses_component_eq_rowOperations ByteChip.Ltu.circuit]
@@ -2114,10 +2088,10 @@ private theorem rangeRow_nativeAccesses (width : RangeChip.Width)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨RangeChip.circuitFor width⟩ : Component (ZMod p)).buildRow
+          (({ circuit := RangeChip.circuitFor width } : Component (ZMod p)).buildRow
             (rangeProviderInput row
               (providerRecount skeleton (sourceRangeKey row))) data hint) data)
-        (⟨RangeChip.circuitFor width⟩ : Component (ZMod p)).operations =
+        ({ circuit := RangeChip.circuitFor width } : Component (ZMod p)).operations =
       [recountedProviderFieldAccess (p := p) skeleton
         (sourceRangeKey row)] := by
   rw [Faithful.nativeAccesses_component_eq_rowOperations (RangeChip.circuitFor width)]
@@ -2168,7 +2142,7 @@ private def programInputAccess
 private theorem program_nativeAccesses_symbolic
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        (⟨ProgramProviderChip.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ProgramProviderChip.circuit } : Component (ZMod p)).operations =
       [LookupAccessList.negMult
         (AbstractInteraction.toAccess env
           (pushedIf (channel := Channels.programChannel)
@@ -2207,13 +2181,13 @@ private theorem programInput_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨ProgramProviderChip.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := ProgramProviderChip.circuit } : Component (ZMod p)).buildRow
             input data hint) data)
-        (⟨ProgramProviderChip.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ProgramProviderChip.circuit } : Component (ZMod p)).operations =
       [LookupAccessList.negMult (programInputAccess input)] := by
   rw [program_nativeAccesses_symbolic]
   rw [program_toAccess_eq_inputAccess]
-  let component := (⟨ProgramProviderChip.circuit⟩ : Component (ZMod p))
+  let component := ({ circuit := ProgramProviderChip.circuit } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
   have inputEq : Eval.eval env
       (varFromOffset ProgramProviderChip.Inputs 0 :
@@ -2228,10 +2202,10 @@ private theorem programRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          ((⟨ProgramProviderChip.circuit⟩ : Component (ZMod p)).buildRow
+          (({ circuit := ProgramProviderChip.circuit } : Component (ZMod p)).buildRow
             (programProviderInput row
               (providerRecount skeleton (sourceProgramKey row))) data hint) data)
-        (⟨ProgramProviderChip.circuit⟩ : Component (ZMod p)).operations =
+        ({ circuit := ProgramProviderChip.circuit } : Component (ZMod p)).operations =
       [LookupAccessList.negMult
         (recountedProviderFieldAccess (p := p) skeleton
           (sourceProgramKey row))] := by
@@ -2247,17 +2221,17 @@ private theorem transportU8RangeTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportU8RangeTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportU8RangeTable witness inventory skeleton data hint) data =
       (canonicalByteU8RangeRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteU8RangeKey row) := by
   apply tableCleanAccesses_build_map_singleton
-    (⟨ByteChip.U8Range.circuit⟩ : Component (ZMod p))
+    ({ circuit := ByteChip.U8Range.circuit } : Component (ZMod p))
     (canonicalByteU8RangeRows inventory)
     (fun row => byteU8RangeInput row
       (providerRecount skeleton (sourceByteU8RangeKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteU8RangeKey row)) data hint
+      (sourceByteU8RangeKey row)) data hint (by trivial) data
   intro row _
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.U8Range.circuit]
   · exact u8RangeRow_nativeAccesses row skeleton data hint
@@ -2272,17 +2246,17 @@ private theorem transportMsbTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportMsbTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportMsbTable witness inventory skeleton data hint) data =
       (canonicalByteMsbRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteMsbKey row) := by
   apply tableCleanAccesses_build_map_singleton
-    (⟨ByteChip.MSB.circuit⟩ : Component (ZMod p))
+    ({ circuit := ByteChip.MSB.circuit } : Component (ZMod p))
     (canonicalByteMsbRows inventory)
     (fun row => byteMsbInput row
       (providerRecount skeleton (sourceByteMsbKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteMsbKey row)) data hint
+      (sourceByteMsbKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.MSB.circuit]
   · exact msbRow_nativeAccesses contract row
@@ -2299,17 +2273,17 @@ private theorem transportAndTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportAndTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportAndTable witness inventory skeleton data hint) data =
       (canonicalByteAndRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteAndKey row) := by
   apply tableCleanAccesses_build_map_singleton
-    (⟨ByteChip.AndByte.circuit⟩ : Component (ZMod p))
+    ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p))
     (canonicalByteAndRows inventory)
     (fun row => byteAndInput row
       (providerRecount skeleton (sourceByteAndKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteAndKey row)) data hint
+      (sourceByteAndKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.AndByte.circuit]
   · exact andRow_nativeAccesses contract row
@@ -2326,17 +2300,17 @@ private theorem transportOrTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportOrTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportOrTable witness inventory skeleton data hint) data =
       (canonicalByteOrRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteOrKey row) := by
   apply tableCleanAccesses_build_map_singleton
-    (⟨ByteChip.OrByte.circuit⟩ : Component (ZMod p))
+    ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p))
     (canonicalByteOrRows inventory)
     (fun row => byteOrInput row
       (providerRecount skeleton (sourceByteOrKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteOrKey row)) data hint
+      (sourceByteOrKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.OrByte.circuit]
   · exact orRow_nativeAccesses contract row
@@ -2354,17 +2328,17 @@ private theorem transportXorTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportXorTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportXorTable witness inventory skeleton data hint) data =
       (canonicalByteXorRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteXorKey row) := by
   apply tableCleanAccesses_build_map_singleton
-    (⟨ByteChip.XorByte.circuit⟩ : Component (ZMod p))
+    ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p))
     (canonicalByteXorRows inventory)
     (fun row => byteXorInput row
       (providerRecount skeleton (sourceByteXorKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteXorKey row)) data hint
+      (sourceByteXorKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.XorByte.circuit]
   · exact xorRow_nativeAccesses contract row
@@ -2382,17 +2356,17 @@ private theorem transportLtuTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportLtuTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportLtuTable witness inventory skeleton data hint) data =
       (canonicalByteLtuRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceByteLtuKey row) := by
   apply tableCleanAccesses_build_map_singleton
-    (⟨ByteChip.Ltu.circuit⟩ : Component (ZMod p))
+    ({ circuit := ByteChip.Ltu.circuit } : Component (ZMod p))
     (canonicalByteLtuRows inventory)
     (fun row => byteLtuInput row
       (providerRecount skeleton (sourceByteLtuKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceByteLtuKey row)) data hint
+      (sourceByteLtuKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly ByteChip.Ltu.circuit]
   · exact ltuRow_nativeAccesses contract row
@@ -2410,17 +2384,17 @@ private theorem transportRangeTable_cleanAccesses (width : RangeChip.Width)
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportRangeTable width witness inventory skeleton data hint) =
+    tableCleanAccesses (transportRangeTable width witness inventory skeleton data hint) data =
       (canonicalRangeRows width inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceRangeKey row) := by
   apply tableCleanAccesses_build_map_singleton
-    (⟨RangeChip.circuitFor width⟩ : Component (ZMod p))
+    ({ circuit := RangeChip.circuitFor width } : Component (ZMod p))
     (canonicalRangeRows width inventory)
     (fun row => rangeProviderInput row
       (providerRecount skeleton (sourceRangeKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceRangeKey row)) data hint
+      (sourceRangeKey row)) data hint (by trivial) data
   intro row hrow
   rw [cleanAccesses_eq_nativeAccesses_byteOnly (RangeChip.circuitFor width)]
   · exact rangeRow_nativeAccesses width row
@@ -2440,17 +2414,17 @@ private theorem transportProgramTable_cleanAccesses
     (inventory : CanonicalPreprocessedInventory witness)
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    tableCleanAccesses (transportProgramTable witness inventory skeleton data hint) =
+    tableCleanAccesses (transportProgramTable witness inventory skeleton data hint) data =
       (canonicalProgramRows inventory).map fun row =>
         recountedProviderFieldAccess (p := p) skeleton
           (sourceProgramKey row) := by
   apply tableCleanAccesses_build_map_singleton
-    (⟨ProgramProviderChip.circuit⟩ : Component (ZMod p))
+    ({ circuit := ProgramProviderChip.circuit } : Component (ZMod p))
     (canonicalProgramRows inventory)
     (fun row => programProviderInput row
       (providerRecount skeleton (sourceProgramKey row)))
     (fun row => recountedProviderFieldAccess (p := p) skeleton
-      (sourceProgramKey row)) data hint
+      (sourceProgramKey row)) data hint (by trivial) data
   intro row _
   rw [cleanAccesses_eq_nativeAccesses_programOnly ProgramProviderChip.circuit]
   · rw [programRow_nativeAccesses row skeleton data hint]
@@ -2470,13 +2444,13 @@ private theorem extractedPreprocessedProviderTables_fieldAccesses
     (skeleton : LookupAccessList)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     tablesCleanAccesses
-        (extractedPreprocessedProviderTables witness inventory skeleton data hint) =
+        (extractedPreprocessedProviderTables witness inventory skeleton data hint) data =
       (inventoryPreprocessedKeys inventory).map
         (recountedProviderFieldAccess (p := p) skeleton) := by
   have rangeTables :
       ((RangeChip.allWidths.map fun width =>
           transportRangeTable width witness inventory skeleton data hint).flatMap
-        tableCleanAccesses) =
+        (tableCleanAccesses · data)) =
       RangeChip.allWidths.flatMap fun width =>
         (canonicalRangeRows width inventory).map fun row =>
           recountedProviderFieldAccess (p := p) skeleton
@@ -2501,7 +2475,7 @@ theorem extractedPreprocessedProviderTables_cleanAccesses
     (contract : PreprocessedProviderRecountContract witness inventory skeleton)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     tablesCleanAccesses
-        (extractedPreprocessedProviderTables witness inventory skeleton data hint) =
+        (extractedPreprocessedProviderTables witness inventory skeleton data hint) data =
       recountedPreprocessedProviderAccesses inventory skeleton := by
   rw [extractedPreprocessedProviderTables_fieldAccesses contract.localSemantics inventory]
   unfold recountedPreprocessedProviderAccesses

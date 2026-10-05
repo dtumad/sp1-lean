@@ -2,67 +2,27 @@ import SP1Clean.Faithful.ChipOracle
 import SP1Clean.Model.CleanLedger
 import ToClean.Air.TableBuild
 
-/-! # Transporting an extracted Rust table to a native Clean table
+/-! # Transporting extracted Rust rows to native Clean tables
 
-The external PR #110 report's Finding 1: the Rust-faithfulness theorems and the Sail-soundness
-capstone are two families that share an endpoint but are never composed inside Lean — `Faithful/`
-is a leaf of the dependency graph, so nothing in the repository consumes a `ChipFaithful` proof.
-This file is the first half of the composition: it turns a per-row faithfulness statement into a
-per-**table** one, so a valid extracted table becomes a valid native `Air.Flat.Table` that the
-soundness side can then read.
+The retained Rust → Lean pipeline supplies migration evidence. `ChipFaithful` relates a complete
+Rust assertion list and active interaction multiset to one reconstructed native row. This module
+lifts that relation to physical tables and composes it with the native circuit's semantic proof.
 
-## What a `ChipFaithful` already gives, and what was missing
+A transported table stores rows only. Constraints, channel guarantees and ledgers take explicit
+evaluation data; integrating the table into an ensemble must justify agreement with that ensemble's
+canonical data. Construction data is not an independently committed table field.
 
-`ChipFaithful.constraints` says: for one Rust row, the Rust assertion list is all-zero **iff** the
-codec's reconstructed native physical row satisfies the whole native circuit's `ConstraintsHold`.
-`ChipFaithful.interactions` says the two active interaction multisets agree. Both are stated one
-row at a time, at `NativeRowAssignment.environment` — an environment built from a bare `Array`.
-
-What was missing is only plumbing, but it is the plumbing that makes the composition exist: Clean's
-flat-AIR layer consumes a `Table`, whose `Constraints` quantify over `table.environment row`. Since
-a transported table's `data` is the codec's `data` and its rows are the codec's rows, those two
-environments are *definitionally* the same, and the whole per-table statement falls out row by row.
-
-## Generic, deliberately
-
-Nothing here mentions a chip. `transportTable` and its three theorems are stated over an arbitrary
-`ChipRowCodec`/`ChipOracle`/`ChipFaithful` triple, so each of the twenty-five registered chips
-instantiates them by supplying its own anchor — no per-chip proof, and no opportunity for
-twenty-five copies to drift.
-
-## Why the codec's codimension-1 image needs no repair
-
-The external report's Finding 11 observes that for the six flag-hinted chips the faithfulness
-codec covers only a codimension-1 slice of the native row space: `deconfigure` sets `is_real` to
-the sum of the one-hot operation flags, so no native row whose `is_real` disagrees with its flag
-sum is in the codec's image.
-
-That is the right shape for every theorem stated here, and the reason is directional. Transport
-runs extracted → native: it *starts* from a Rust row and *constructs* the native row through
-`deconfigure`, so the constructed row satisfies the flag-sum relation by definition and the slice
-is not a restriction on anything — it is where the construction lands. An image-forcing lemma
-(every native solution equals `deconfigure` of some Rust row) would be needed only for a
-native → Rust direction quantified over arbitrary native solutions, and no theorem in this
-repository states that direction. `ChipFaithful.constraints` is an `↔` at a *given* row, not a
-surjectivity claim, so it does not need one either.
-
-## Scope
-
-This is the table-level half. The ensemble-level transport assembles twenty-five transported
-tables plus the provider and boundary segments into an `EnsembleWitness`. Its literal native
-consumer recount derives Byte/Program balance; State/Memory balance remains an explicit global
-translation obligation. The exact AIR's own ℕ-balance is useful evidence for that later
-translation, but it does not directly balance a differently shaped reduced native slice; see
-`docs/roadmap.md`.
+Transport runs Rust → native and asserts no surjectivity onto native rows. The Memory/Program
+orientation is a permutation followed by the declared polarity change. Multiplicity-zero entries
+are erased only in explicitly active ledgers. Provider redistribution and global State/Memory
+balance remain separate ensemble obligations. This evidence can be retired after Rust comparisons
+replace its live proof consumers and conformance coverage.
 -/
 
 set_option autoImplicit false
 
 namespace SP1Clean.Composition
 
--- The faithfulness vocabulary (`ChipOracle`, `ChipFaithful`, `ChipRowCodec`,
--- `nativeAccesses`) is at the stratum below; this namespace no longer encloses it since the
--- 2026-08 move out of `Faithful/Transport/`.
 open SP1Clean.Faithful
 
 open Circuit
@@ -71,12 +31,6 @@ open scoped SP1Clean.ConstraintCoe
 
 variable {p : ℕ} [Fact p.Prime]
 
-/-! The Clean access ledger (`tableCleanAccesses`, `tablesCleanAccesses` and their `Table.build`
-closed forms) moved to `Model/CleanLedger.lean` in 2026-08 — its vocabulary is Clean tables plus this
-repository's bus types, with no chip or oracle in it, so the Model stratum is where the placement law
-puts it. Exported here, not redefined, so this file's call sites and the completeness layer's share
-one definition. An `export` rather than an `abbrev`: `abbrev` is reducible and unfolds before the
-rewrites below can match on the name. -/
 export SP1Clean (tableCleanAccesses tablesCleanAccesses tablesCleanAccesses_append
   tableRustOrientedAccesses interactionToAccess_eval interactionToRustOrientedAccess_eval
   tableCleanAccesses_build tableCleanAccesses_build_map_singleton)
@@ -175,18 +129,16 @@ private theorem nativeAccesses_perm_map_toRustOrientedAccess
                 ((List.perm_middle (l₁ := ((state ++ byte) ++ memory) ++ program)).trans
                   (ih'.cons (AbstractInteraction.toAccess env interaction)))
 
-/-- Project all physical rows of a native table through the same complete access vocabulary used
-by the whole-chip faithfulness anchors.  This definition is shared by row-for-row chip transports
-and by the constructive provider redistributions. -/
-noncomputable def tableNativeAccesses (table : Table (ZMod p)) : LookupAccessList :=
+/-- Read a table through the whole-chip faithfulness vocabulary at explicit evaluation data. -/
+noncomputable def tableNativeAccesses (table : Table (ZMod p))
+    (data : ProverData (ZMod p)) : LookupAccessList :=
   table.table.flatMap fun row =>
-    nativeAccesses (table.environment row) table.component.operations
+    nativeAccesses (Environment.fromArray row data) table.component.operations
 
-/-- The faithfulness-facing table ledger is the literal evaluated Clean ledger with exactly the
-Memory/Program polarity convention applied. `nativeAccesses`' channel grouping changes only order;
-in particular, its unexpected tail neither drops nor invents an interaction. -/
-theorem tableNativeAccesses_perm_tableRustOrientedAccesses (table : Table (ZMod p)) :
-    (tableNativeAccesses table).Perm (tableRustOrientedAccesses table) := by
+/-- Faithfulness grouping changes only ledger order, including the unexpected-channel tail. -/
+theorem tableNativeAccesses_perm_tableRustOrientedAccesses (table : Table (ZMod p))
+    (data : ProverData (ZMod p)) :
+    (tableNativeAccesses table data).Perm (tableRustOrientedAccesses table data) := by
   classical
   unfold tableNativeAccesses tableRustOrientedAccesses Air.Flat.Table.interactions
   simp only [List.map_flatMap]
@@ -195,63 +147,60 @@ theorem tableNativeAccesses_perm_tableRustOrientedAccesses (table : Table (ZMod 
   simpa only [Operations.interactionValues, List.map_map, Function.comp_def,
     interactionToRustOrientedAccess_eval] using
     nativeAccesses_perm_map_toRustOrientedAccess
-      (table.environment row) table.component.operations
+      (Environment.fromArray row data) table.component.operations
 
-/-- Active filtering distributes over a list of whole-table ledgers while leaving each table's
-component and operation tree opaque. -/
-theorem active_flatMap_tableNativeAccesses (tables : List (Table (ZMod p))) :
-    LookupAccessList.active (tables.flatMap tableNativeAccesses) =
-      tables.flatMap fun table => LookupAccessList.active (tableNativeAccesses table) := by
+/-- Active filtering distributes without unfolding a component's operation tree. -/
+theorem active_flatMap_tableNativeAccesses (tables : List (Table (ZMod p)))
+    (data : ProverData (ZMod p)) :
+    LookupAccessList.active (tables.flatMap (tableNativeAccesses · data)) =
+      tables.flatMap fun table => LookupAccessList.active (tableNativeAccesses table data) := by
   simp only [LookupAccessList.active, List.filter_flatMap]
 
 /-- Row-wise form of one active whole-table ledger. -/
-theorem active_tableNativeAccesses (table : Table (ZMod p)) :
-    LookupAccessList.active (tableNativeAccesses table) =
+theorem active_tableNativeAccesses (table : Table (ZMod p)) (data : ProverData (ZMod p)) :
+    LookupAccessList.active (tableNativeAccesses table data) =
       table.table.flatMap fun row =>
         LookupAccessList.active
-          (nativeAccesses (table.environment row) table.component.operations) := by
+          (nativeAccesses (Environment.fromArray row data) table.component.operations) := by
   simp only [LookupAccessList.active, tableNativeAccesses, List.filter_flatMap]
 
-/-- Erasing zero-multiplicity accesses commutes with the table and row concatenations without
-unfolding any component's operation tree.  This folded bridge is the scalable form used by the
-twenty-five-table instruction transport: unfolding `tableNativeAccesses` there asks `whnf` to
-normalize every chip circuit at once. -/
-theorem active_tablesNativeAccesses (tables : List (Table (ZMod p))) :
-    LookupAccessList.active (tables.flatMap tableNativeAccesses) =
+/-- Zero-multiplicity filtering commutes with both table and row concatenation. -/
+theorem active_tablesNativeAccesses (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) :
+    LookupAccessList.active (tables.flatMap (tableNativeAccesses · data)) =
       tables.flatMap fun table =>
         table.table.flatMap fun row =>
           LookupAccessList.active
-            (nativeAccesses (table.environment row) table.component.operations) := by
+            (nativeAccesses (Environment.fromArray row data) table.component.operations) := by
   simp only [LookupAccessList.active, tableNativeAccesses, List.filter_flatMap]
 
-/-- Closed form for the native access list of an honestly built table.  Keeping this equation
-beside `Table.build_table` avoids unfolding the complete witness generator in every provider
-transport: only the per-input row projection remains. -/
+/-- Read constructed rows at evaluation data independent of their witness-generation data. -/
 theorem tableNativeAccesses_build (component : Component (ZMod p))
     (inputs : List (component.Input (ZMod p))) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) :
-    tableNativeAccesses (Table.build component inputs data hint) =
+    (hint : ProverHint (ZMod p))
+    (fixed : component.fixedRowsMatch (inputs.map (component.buildRow · data hint)))
+    (evaluationData : ProverData (ZMod p)) :
+    tableNativeAccesses (Table.build component inputs data hint fixed) evaluationData =
       inputs.flatMap fun input =>
         nativeAccesses
-          (Environment.fromArray (component.buildRow input data hint) data)
+          (Environment.fromArray (component.buildRow input data hint) evaluationData)
           component.operations := by
-  simp only [tableNativeAccesses, Table.build_table, List.flatMap_map,
-    Table.build_environment, Table.build_component]
+  simp only [tableNativeAccesses, Table.build_table, List.flatMap_map, Table.build_component]
 
-/-- Row-wise singleton specialization of `tableNativeAccesses_build`.  Provider components each
-emit one bus access, so their whole-table transports reduce to one local access equation per
-semantic source row. -/
+/-- Providers emitting one access per source row retain the complete row order and multiplicities. -/
 theorem tableNativeAccesses_build_map_singleton
     {Row : Type} (component : Component (ZMod p)) (rows : List Row)
     (decode : Row → component.Input (ZMod p)) (access : Row → LookupAccess)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (fixed : component.fixedRowsMatch ((rows.map decode).map (component.buildRow · data hint)))
+    (evaluationData : ProverData (ZMod p))
     (rowAccess : ∀ row ∈ rows,
       nativeAccesses
-          (Environment.fromArray (component.buildRow (decode row) data hint) data)
+          (Environment.fromArray (component.buildRow (decode row) data hint) evaluationData)
           component.operations = [access row]) :
-    tableNativeAccesses (Table.build component (rows.map decode) data hint) =
+    tableNativeAccesses (Table.build component (rows.map decode) data hint fixed) evaluationData =
       rows.map access := by
   rw [tableNativeAccesses_build]
+  clear fixed
   induction rows with
   | nil => rfl
   | cons row rest ih =>
@@ -259,10 +208,6 @@ theorem tableNativeAccesses_build_map_singleton
     rw [rowAccess row (by simp), ih (fun r hr => rowAccess r (by simp [hr]))]
     rfl
 
-/-! `buildRow_input_get` and `eval_var_buildRow_input_get` moved to `Model/CleanLedger.lean` in
-2026-08. Their vocabulary is Clean's `Component`/`ProvableType` and nothing else — no chip, no
-oracle, no extracted row — so the placement law (`docs/layering.md`) puts them at the Model stratum,
-where the completeness layer can also reach them. Exported, not redefined. -/
 export SP1Clean (buildRow_input_get eval_var_buildRow_input_get)
 
 /-! ## Single-channel access normalization -/
@@ -277,7 +222,7 @@ private theorem unexpectedInteractions_rowOperations_eq_nil_of_onlyChannel
       channel = Channels.programChannel.toRaw)
     (only : ∀ candidate ∈ circuit.channels, candidate = channel) :
     Faithful.unexpectedInteractions
-        (⟨circuit⟩ : Component (ZMod p)).rowOperations = [] := by
+        ({ circuit := circuit } : Component (ZMod p)).rowOperations = [] := by
   unfold Faithful.unexpectedInteractions
   apply List.filter_eq_nil_iff.mpr
   intro interaction interactionMem
@@ -304,7 +249,7 @@ private theorem interactionsWith_rowOperations_eq_nil_of_onlyChannel
     (only : ∀ candidate ∈ circuit.channels, candidate = onlyChannel)
     (different : channel ≠ onlyChannel) :
     Operations.interactionsWith channel
-        (⟨circuit⟩ : Component (ZMod p)).rowOperations = [] := by
+        ({ circuit := circuit } : Component (ZMod p)).rowOperations = [] := by
   unfold Operations.interactionsWith
   apply List.filter_eq_nil_iff.mpr
   intro interaction interactionMem
@@ -331,8 +276,8 @@ theorem nativeAccesses_memoryOnly
       candidate = Channels.memoryChannel.toRaw)
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        (⟨circuit⟩ : Component (ZMod p)).rowOperations =
-      (((⟨circuit⟩ : Component (ZMod p)).rowOperations.interactionsWith
+        ({ circuit := circuit } : Component (ZMod p)).rowOperations =
+      ((({ circuit := circuit } : Component (ZMod p)).rowOperations.interactionsWith
         Channels.memoryChannel.toRaw).map (AbstractInteraction.toAccess env)).map
           LookupAccessList.negMult := by
   have stateNil := interactionsWith_rowOperations_eq_nil_of_onlyChannel circuit
@@ -375,8 +320,7 @@ def transportRow (codec : ChipRowCodec Input NativeCols circuit)
   (codec.assignment (oracle.deconfigure rustCols) data).row
 
 /-- The environment a transported row is read in is the one the faithfulness statement speaks
-about. This is the whole bridge between `NativeRowAssignment.environment` and `Table.environment`:
-both are `Environment.fromArray` of the same array at the same committed data. -/
+about: `Environment.fromArray` reads the same physical cells at the same explicit data. -/
 theorem environment_transportRow (codec : ChipRowCodec Input NativeCols circuit)
     (oracle : ChipOracle (ZMod p) NativeCols RustCols) (rustCols : RustCols (ZMod p))
     (data : ProverData (ZMod p)) :
@@ -384,14 +328,12 @@ theorem environment_transportRow (codec : ChipRowCodec Input NativeCols circuit)
       (codec.assignment (oracle.deconfigure rustCols) data).environment := rfl
 
 /-- **The transported table**: one native physical row per extracted Rust row, at the extracted
-AIR's own committed prover data. -/
+codec's generation data; evaluation data is supplied separately. -/
 def transportTable (codec : ChipRowCodec Input NativeCols circuit)
     (oracle : ChipOracle (ZMod p) NativeCols RustCols)
     (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p)) : Table (ZMod p) where
-  component := ⟨circuit⟩
-  width := (⟨circuit⟩ : Component (ZMod p)).width
+  component := { circuit := circuit }
   table := rustRows.map (transportRow codec oracle · data)
-  data := data
   uniform_width := by
     intro row hrow
     obtain ⟨rustCols, -, rfl⟩ := List.mem_map.mp hrow
@@ -399,11 +341,7 @@ def transportTable (codec : ChipRowCodec Input NativeCols circuit)
 
 @[simp] theorem transportTable_component (rustRows : List (RustCols (ZMod p)))
     (data : ProverData (ZMod p)) :
-    (transportTable codec oracle rustRows data).component = ⟨circuit⟩ := rfl
-
-@[simp] theorem transportTable_data (rustRows : List (RustCols (ZMod p)))
-    (data : ProverData (ZMod p)) :
-    (transportTable codec oracle rustRows data).data = data := rfl
+    (transportTable codec oracle rustRows data).component = { circuit := circuit } := rfl
 
 @[simp] theorem transportTable_table (rustRows : List (RustCols (ZMod p)))
     (data : ProverData (ZMod p)) :
@@ -434,7 +372,7 @@ theorem transportTable_constraints
     (faithful : ChipFaithful Input NativeCols RustCols circuit codec oracle)
     (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p))
     (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols)) :
-    (transportTable codec oracle rustRows data).Constraints := by
+    (transportTable codec oracle rustRows data).Constraints data := by
   intro row hrow
   obtain ⟨rustCols, hmem, rfl⟩ := List.mem_map.mp hrow
   exact (faithful.constraints rustCols data).mp (valid rustCols hmem)
@@ -450,7 +388,7 @@ theorem transportRow_accesses_perm
     List.Perm
       (LookupAccessList.active
         (nativeAccesses (Environment.fromArray (transportRow codec oracle rustCols data) data)
-          (⟨circuit⟩ : Component (ZMod p)).operations))
+          ({ circuit := circuit } : Component (ZMod p)).operations))
       (LookupAccessList.active (oracle.rustAccesses rustCols)) :=
   faithful.interactions rustCols data valid
 
@@ -470,7 +408,7 @@ theorem transportTable_accesses_perm
       ((transportTable codec oracle rustRows data).table.flatMap fun row =>
         LookupAccessList.active
           (nativeAccesses (Environment.fromArray row data)
-            (⟨circuit⟩ : Component (ZMod p)).operations))
+            ({ circuit := circuit } : Component (ZMod p)).operations))
       (rustRows.flatMap fun rustCols => LookupAccessList.active (oracle.rustAccesses rustCols)) := by
   rw [transportTable_table, List.flatMap_map]
   induction rustRows with
@@ -489,38 +427,25 @@ theorem transportTable_activeAccesses_perm
     (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols)) :
     List.Perm
       (LookupAccessList.active
-        (tableNativeAccesses (transportTable codec oracle rustRows data)))
+        (tableNativeAccesses (transportTable codec oracle rustRows data) data))
       (rustRows.flatMap fun rustCols => LookupAccessList.active (oracle.rustAccesses rustCols)) := by
   rw [active_tableNativeAccesses]
-  simpa only [Table.environment, transportTable_component, transportTable_data] using
+  simpa only [transportTable_component] using
     transportTable_accesses_perm faithful rustRows data valid
 
-/-! ## Composing with the native soundness side
-
-This is the point of the file. Clean's `Table.weakSoundness` turns a table's constraints into its
-component's semantic `Spec` — for a chip, the `FormalModel/Contracts/Chips.lean` predicate saying
-what the row *means*. Feeding a transported table into it composes the two theorem families the
-external report found disconnected: extracted Rust validity on one side, the native chip's semantic
-contract on the other, in one kernel-checked implication. -/
-
-/--
-**A valid extracted table's rows satisfy the native chip's semantic contract.**
-
-The two extra premises are the ones Clean's soundness statement always carries and this file does
-not attempt to discharge: the chip's honest-prover `Assumptions` on each transported row, and the
-row's channel `Guarantees`. They are stated at the transported table rather than assumed of the
-extracted one deliberately — an ensemble-level transport gets both from the extracted AIR's own
-provider segment, which is where the facts actually live, and pushing them down to here would
-misplace the obligation.
--/
+/-- Valid Rust rows satisfy the native semantic contract under the original circuit assumptions
+and channel guarantees. These ordinary components use the circuit's assumptions directly, so
+row soundness needs no separate fixed-column or data-consistency premise. -/
 theorem transportTable_spec
     (faithful : ChipFaithful Input NativeCols RustCols circuit codec oracle)
     (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p))
     (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols))
-    (assumptions : (transportTable codec oracle rustRows data).Assumptions)
-    (guarantees : (transportTable codec oracle rustRows data).Guarantees) :
-    (transportTable codec oracle rustRows data).Spec :=
-  (Table.weakSoundness assumptions
-    (transportTable_constraints faithful rustRows data valid) guarantees).1
+    (assumptions : (transportTable codec oracle rustRows data).Assumptions data)
+    (guarantees : (transportTable codec oracle rustRows data).Guarantees data) :
+    (transportTable codec oracle rustRows data).Spec data :=
+by
+  intro row member
+  exact (Component.weakSoundness (assumptions row member)
+    (transportTable_constraints faithful rustRows data valid row member) (guarantees row member)).1
 
 end SP1Clean.Composition

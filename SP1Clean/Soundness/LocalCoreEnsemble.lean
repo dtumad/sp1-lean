@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.NativeCoreEnsemble
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
-import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
+import SP1Clean.Native.Operations.LocalSourceBoundary
 
 /-! # Native local-shard assembly with a checked complete source
 
@@ -29,15 +29,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 def verifierMain (image : ProgramImage) (source : ExecutionSnapshot)
     (input : Var SP1PublicIO (ZMod p)) : Circuit (ZMod p) Unit := do
   let _ ← sp1StateVerifier input
-  assertZero (.const (if checkExecutionSource image source then 0 else 1))
-  assertZero (input.init_clk_high - .const (source.clock / 2 ^ 24 : ℕ))
-  assertZero (input.init_clk_low - .const (source.clock % 2 ^ 24 : ℕ))
-  assertZero (input.init_pc0 - .const (Target.bitVecToWord source.pc)[0])
-  assertZero (input.init_pc1 - .const (Target.bitVecToWord source.pc)[1])
-  assertZero (input.init_pc2 - .const (Target.bitVecToWord source.pc)[2])
-  let stopped : Expression (ZMod p) := .const (if source.host.exitCode = none then 0 else 1)
-  assertZero (stopped * (input.final_clk_high - input.init_clk_high))
-  assertZero (stopped * (input.final_clk_low - input.init_clk_low))
+  let _ ← LocalSourceBoundary.circuit image source input
   let _ ← OrderedBoundaryVerifier.circuit SnapshotMemoryEnsemble.channelName
     OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey ()
   let _ ← OrderedBoundaryVerifier.circuit OrderedFinalProvider.channelName
@@ -52,43 +44,106 @@ def verifier (image : ProgramImage) (source : ExecutionSnapshot) : GeneralFormal
       input.SourceFor source ∧ input.PreservesStoppedClock source
   channelsWithRequirements := []
   soundness := by
-    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit,
-      SP1PublicIO.SourceFor, SP1PublicIO.PreservesStoppedClock]
-    obtain ⟨bounds, checked, hi, lo, pc0, pc1, pc2, stoppedHi, stoppedLo⟩ := h_holds
-    have valid : ExecutionSourceValid image source := by
-      by_cases valid : checkExecutionSource image source = true
-      · exact (checkExecutionSource_iff image source).mp valid
-      · simp [valid] at checked
-    refine ⟨bounds, valid, ?_, ?_⟩
-    · exact ⟨sub_eq_zero.mp hi, sub_eq_zero.mp lo, sub_eq_zero.mp pc0,
-        sub_eq_zero.mp pc1, sub_eq_zero.mp pc2⟩
-    · intro stopped
-      simpa [stopped, sub_eq_zero] using And.intro stoppedHi stoppedLo
+    circuit_proof_start [verifierMain, sp1StateVerifier, LocalSourceBoundary.circuit,
+      OrderedBoundaryVerifier.circuit]
+    exact h_holds
   completeness := by
-    circuit_proof_start [verifierMain, sp1StateVerifier, OrderedBoundaryVerifier.circuit,
-      SP1PublicIO.SourceFor, SP1PublicIO.PreservesStoppedClock]
-    obtain ⟨ordinary, valid, binding, stopped⟩ := h_assumptions
-    have fields := binding
-    refine ⟨ordinary, by simp [(checkExecutionSource_iff image source).mpr valid],
-      sub_eq_zero.mpr fields.1, sub_eq_zero.mpr fields.2.1,
-      sub_eq_zero.mpr fields.2.2.1, sub_eq_zero.mpr fields.2.2.2.1,
-      sub_eq_zero.mpr fields.2.2.2.2, ?_, ?_⟩
-    · by_cases running : source.host.exitCode = none
-      · simp [running]
-      · simp [running, (stopped running).1]
-    · by_cases running : source.host.exitCode = none
-      · simp [running]
-      · simp [running, (stopped running).2]
+    circuit_proof_start [verifierMain, sp1StateVerifier, LocalSourceBoundary.circuit,
+      OrderedBoundaryVerifier.circuit]
+    exact h_assumptions
+
+/-- State and fixed ordering traffic share the existing certified verifier programs. -/
+def boundaryVerifier : Verifier.Program (ZMod p) SP1PublicIO where
+  main input := do
+    sp1StateVerifierProgram.main input
+    (OrderedBoundaryVerifier.verifierProgram SnapshotMemoryEnsemble.channelName
+      OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey).main ()
+    (OrderedBoundaryVerifier.verifierProgram OrderedFinalProvider.channelName
+      OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey).main ()
+  Spec input _ := input.LimbBounds
+  soundness := by
+    intro env guarantees
+    simp only [Verifier.operations_bind, Verifier.Operations.circuitOperations,
+      Verifier.Operations.interactions, List.map_append, Operations.FullGuarantees,
+      Operations.interactions_append, List.forall_mem_append] at guarantees
+    exact sp1StateVerifierProgram.soundness env guarantees.1
+
+/-- Every outgoing boundary requirement holds without an execution premise. -/
+theorem boundaryVerifier_requirements (env : Environment (ZMod p)) :
+    (boundaryVerifier (p := p)).circuitOperations.FullRequirements env := by
+  simp [boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
+    Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions,
+    Verifier.Operations.circuitOperations, Verifier.Operations.interactions,
+    Operations.FullRequirements,
+    sp1StateVerifierMain, OrderedBoundaryVerifier.main, AbstractInteraction.Requirements,
+    ChannelInteraction.toRaw, stateChannel, byteChannel, exitChannel,
+    OrderedBoundary.channel, Channel.toRaw, circuit_norm]
 
 def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
   (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++ NativeCore.afterInitialTables image
 
-def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO where
+/-- Byte guarantees suffice for the State verifier's endpoint bounds; ordering traffic is structural. -/
+theorem boundaryVerifier_limbBounds (input : SP1PublicIO (ZMod p)) (data : ProverData (ZMod p))
+    (byte : (boundaryVerifier (p := p)).circuitOperations.ChannelGuarantees byteChannel.toRaw
+      (Environment.fromInput input data)) : input.LimbBounds := by
+  have channels : (boundaryVerifier (p := p)).channelsWithGuarantees ⊆
+      [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw,
+        (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
+        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw] := by
+    intro channel member
+    simpa [boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
+      OrderedBoundaryVerifier.main, Verifier.ofInteractions, circuit_norm] using member
+  have guarantees : (boundaryVerifier (p := p)).circuitOperations.FullGuarantees
+      (Environment.fromInput input data) := by
+    rw [Operations.guarantees_iff _ _ _ (boundaryVerifier.operations.inChannelsOrGuaranteesFull _)]
+    intro channel member
+    have member := channels member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
+    · exact byte
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [exitChannel, Channel.toRaw]) _ _
+    all_goals exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
+  simpa only [boundaryVerifier, ProvableType.eval_fromInput_varFromOffset_zero] using
+    boundaryVerifier.soundness (Environment.fromInput input data) guarantees
+
+/-- The physical inventory and existing boundary traffic, before installing source assertions. -/
+def baseEnsemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO where
   tables := tables image source
+  unique_names := by exact of_decide_eq_true rfl
   channels := (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ::
     (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw :: sp1Ensemble.channels
-  verifier := verifier image source
-  verifier_length_zero := by intros; rfl
+  verifier := boundaryVerifier
+
+/-- Install all eight source checks with the generic public-assertion adapter. -/
+def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO :=
+  (LocalSourceBoundary.checker image source).install (baseEnsemble image source)
+
+/-- The assertion channel is separated from registered names and all actual existing traffic. -/
+def sourceChannel (image : ProgramImage) (source : ExecutionSnapshot) : RawChannel (ZMod p) :=
+  (LocalSourceBoundary.checker image source).channel (baseEnsemble image source)
+
+/-- Source-channel balance enforces the complete original contract and its occurrence bound. -/
+theorem source_balanced_iff {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    witness.BalancedChannel (sourceChannel image source) ↔
+      LocalSourceBoundary.Spec image source witness.publicInput := by
+  apply Iff.trans ?_ ((LocalSourceBoundary.checker image source).program_balanced_iff
+    (baseEnsemble image source) witness.publicInput witness.data |>.trans ?_)
+  · exact (congrArg BalancedInteractions
+      ((LocalSourceBoundary.checker image source).installed_check_interactions
+        (ens := baseEnsemble image source) witness)).to_iff
+  · rw [LocalSourceBoundary.checks_iff]
+    exact and_iff_right (LocalSourceBoundary.count_bound image source)
+
+/-- The installed public verifier proves every outgoing requirement locally. -/
+theorem verifier_requirements (image : ProgramImage) (source : ExecutionSnapshot)
+    (env : Environment (ZMod p)) :
+    (ensemble (p := p) image source).verifierOperations.FullRequirements env := by
+  change (boundaryVerifier.andThen ((LocalSourceBoundary.checker image source).program
+    (baseEnsemble image source))).circuitOperations.FullRequirements env
+  rw [Verifier.Program.andThen_requirements]
+  exact ⟨boundaryVerifier_requirements env, Verifier.checkZeros_requirements _ _ _⟩
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) :
     (tables (p := p) image source).length = 59 := by
@@ -109,7 +164,7 @@ private theorem source_requirements (source : ExecutionSnapshot) (component : Co
       OrderedBoundaryEnd.circuit, SnapshotRegisterProvider.circuit, SnapshotRamProvider.circuit]
 
 private theorem component_finished_requirements (image : ProgramImage) (source : ExecutionSnapshot)
-    (component : Component (ZMod p)) (member : component ∈ (ensemble image source).allTables)
+    (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables)
     (channel : RawChannel (ZMod p))
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
@@ -120,9 +175,8 @@ private theorem component_finished_requirements (image : ProgramImage) (source :
       component.operations.ChannelRequirements channel env :=
     Operations.requirements_of_not_mem _ _ _
       (component.inChannelsOrRequirements_of_constraints env constraints) channel notRequired
-  simp only [Ensemble.allTables, ensemble, tables, List.mem_cons, List.mem_append] at member
-  rcases member with rfl | member | member
-  · exact absent (by simp [Ensemble.verifierTable, verifier])
+  simp only [ensemble, PublicVerifier.install, baseEnsemble, tables, List.mem_append] at member
+  rcases member with member | member
   · exact absent (fun required => outside (by
       have used := source_requirements source component member required
       simp only [List.mem_cons, List.not_mem_nil, or_false] at used ⊢
@@ -134,66 +188,85 @@ source providers. No provider validity or memory-content premise is accepted her
 theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSnapshot)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    ∀ table ∈ witness.allTables,
-      table.ChannelGuarantees byteChannel.toRaw ∧ table.ChannelGuarantees programChannel.toRaw := by
+    ((ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw ∧
+      (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data programChannel.toRaw) ∧
+    ∀ table ∈ witness.tables,
+      table.ChannelGuarantees witness.data byteChannel.toRaw ∧
+        table.ChannelGuarantees witness.data programChannel.toRaw := by
   have closed (channel : RawChannel (ZMod p)) [channel.Consistent]
-      (member : channel ∈ (ensemble (p := p) image source).channels)
+      (member : channel ∈ (baseEnsemble (p := p) image source).channels)
       (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
         (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
-        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]) :=
-    witness.channelGuarantees_of_component_requirements channel constraints (balanced channel member)
-      (fun component mem env holds => component_finished_requirements image source component mem channel outside env holds)
-  have byte := closed byteChannel.toRaw (by simp [ensemble, sp1Ensemble_channels]) (by
+        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]) :
+      (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
+        ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
+    apply witness.channelGuarantees_of_component_requirements channel constraints
+      (balanced channel (List.mem_append_left _ member))
+    · intro input data interaction emitted _
+      exact verifier_requirements image source _ interaction emitted
+    · exact fun component mem env holds =>
+        component_finished_requirements image source component mem channel outside env holds
+  have byte := closed byteChannel.toRaw (by simp [baseEnsemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
       OrderedFinalProvider.channelName, byteChannel])
-  have program := closed programChannel.toRaw (by simp [ensemble, sp1Ensemble_channels]) (by
+  have program := closed programChannel.toRaw (by simp [baseEnsemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
       OrderedFinalProvider.channelName, programChannel])
-  exact fun table member => ⟨byte table member, program table member⟩
+  exact ⟨⟨byte.1, program.1⟩, fun table member => ⟨(byte.2 table member), (program.2 table member)⟩⟩
 
 /-- Program guarantees use only this channel's balance, so host extensions can retain their
 complete Memory ledger while reusing the fixed program provider. -/
 theorem program_guarantees_of_balance (image : ProgramImage) (source : ExecutionSnapshot)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw) :
-    ∀ table ∈ witness.allTables, table.ChannelGuarantees programChannel.toRaw :=
-  witness.channelGuarantees_of_component_requirements programChannel.toRaw constraints balanced
-    (fun component mem env holds => component_finished_requirements image source component mem
+    (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data programChannel.toRaw ∧
+      ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data programChannel.toRaw := by
+  apply witness.channelGuarantees_of_component_requirements programChannel.toRaw constraints balanced
+  · intro input data interaction emitted _
+    exact verifier_requirements image source _ interaction emitted
+  · exact fun component mem env holds => component_finished_requirements image source component mem
       programChannel.toRaw (by simp [circuit_norm, OrderedBoundary.channel,
-        SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, programChannel]) env holds)
+        SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, programChannel]) env holds
 
-/-- Exactly the channel facts used by chronology. Byte guarantees may be transported from a
-larger ensemble without projecting its Byte multiplicities or its Memory effects. -/
+/-- Exactly the channel facts used by chronology, including the installed public source checks.
+Byte guarantees may be transported from a larger ensemble without projecting its Byte
+multiplicities or its Memory effects. -/
 structure OrderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) : Prop where
-  byte : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw
+  verifierByte : (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw
+  byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw
+  sourceChecks : witness.BalancedChannel (sourceChannel image source)
   state : witness.BalancedChannel stateChannel.toRaw
 
 /-- A static local-component interface for deriving Byte guarantees in a larger assembly. -/
 theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSnapshot)
-    (component : Component (ZMod p)) (member : component ∈ (ensemble image source).allTables)
+    (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables)
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
     component.operations.ChannelRequirements byteChannel.toRaw env := by
   apply component_finished_requirements image source component member byteChannel.toRaw ?_ env constraints
   simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
     OrderedFinalProvider.channelName, byteChannel]
 
-/-- The local assembly derives the ordering interface from its Byte and State ledgers alone. -/
+/-- The local assembly derives the ordering interface from its Byte, State, and source-check ledgers. -/
 theorem orderingChannels_of_constraints {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
-    (byte : witness.BalancedChannel byteChannel.toRaw) (state : witness.BalancedChannel stateChannel.toRaw) :
-    OrderingChannels witness := by
-  refine ⟨?_, state⟩
-  apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints byte
-  intro component member env checked
-  exact component_byte_requirements image source component member env checked
+    (byte : witness.BalancedChannel byteChannel.toRaw) (state : witness.BalancedChannel stateChannel.toRaw)
+    (sourceChecks : witness.BalancedChannel (sourceChannel image source)) : OrderingChannels witness := by
+  have closed : (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw ∧
+      ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw := by
+    apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints byte
+    · intro input data interaction emitted _
+      exact verifier_requirements image source _ interaction emitted
+    · exact fun component member env checked => component_byte_requirements image source component member env checked
+  exact ⟨closed.1, closed.2, sourceChecks, state⟩
 
 /-- Existing complete witnesses supply the smaller chronology interface. -/
 theorem orderingChannels_of_balanced {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) : OrderingChannels witness :=
   orderingChannels_of_constraints witness constraints
-    (balanced _ (by simp [ensemble, sp1Ensemble_channels]))
-    (balanced _ (by simp [ensemble, sp1Ensemble_channels]))
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, sp1Ensemble_channels]))
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, sp1Ensemble_channels]))
+    (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
 
 end SP1Clean.Soundness.LocalCore

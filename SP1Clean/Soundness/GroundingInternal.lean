@@ -184,7 +184,7 @@ structure SupportedCoreGrounding
   conclusion, previously proved and discarded (external report, Finding 4); the ROM/configuration
   persistence at the endpoint is what a cross-shard composition step consumes. -/
   finalStateTruth :
-    Semantics.LocalStateTruth statement.program initial (Commit.initClkNat witness.data)
+    Semantics.LocalStateTruth statement.program initial statement.initClkNat
       (finalBoundaryStateMessage statement.publicValues)
   /-- Every memory-finalize provider record is true of the constructed run.  The two direct
   conjuncts are the boundary-facing content: the record sits at its key, and its committed value is
@@ -199,13 +199,13 @@ structure SupportedCoreGrounding
   populated memory boundary stores the refresh-eliminated time instead. -/
   memoryFinalizeTruth : ∀ loc m, memoryFinalizeFrontier witness loc = some m →
     Semantics.MemoryMsg.locOf m = loc ∧
-    Semantics.LocalValueAt initial (Commit.initClkNat witness.data) loc
+    Semantics.LocalValueAt initial statement.initClkNat loc
       (Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues)) m.value ∧
     ∃ m', Semantics.MemoryMsg.locOf m' = loc ∧
       m'.value = m.value ∧ Semantics.MemoryMsg.timeNat m' ≤ Semantics.MemoryMsg.timeNat m ∧
       Semantics.MemoryMsg.timeNat m' ≤
         Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues) ∧
-      Semantics.LocalMemTruth initial (Commit.initClkNat witness.data) m'
+      Semantics.LocalMemTruth initial statement.initClkNat m'
 
 /-- The committed-decode field of every statically grounded ordered row is already discharged.
 This theorem deliberately sits beside the remaining grounding seam: Program truth comes entirely
@@ -231,7 +231,6 @@ theorem supportedCore_orderedRows_programDecoded
     (witness_realDecodedInstructionRows_opcodeNeEcall witness constraints balanced decoded
       sourceMem.1 sourceMem.2)
   have decodedTruth := truth.2
-  rw [boundary.programCommitted.2] at decodedTruth
   simpa only [rowOfMsg_programMessageOfView] using decodedTruth
 
 /-- Assemble every state-independent grounding field once per ordered row.  Activity and registry
@@ -398,10 +397,10 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       (initialBoundaryStateMessage statement.publicValues)
       fin orderedRows)
     (haltTouches : List (TimedGrounding.Touch p))
-    (haltProducedEq : producedMessages (typedTableInteractionsWith (haltTable witness)
+    (haltProducedEq : producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
       Channels.memoryChannel) =
         haltTouches.map (fun tc => (tc : TimedGrounding.Touch p).2))
-    (haltConsumedEq : consumedMessages (typedTableInteractionsWith (haltTable witness)
+    (haltConsumedEq : consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
       Channels.memoryChannel) =
         haltTouches.map (fun tc => (tc : TimedGrounding.Touch p).1.1))
     (haltLocEq : ∀ tc ∈ haltTouches,
@@ -426,22 +425,22 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       ∀ state, Target.SailChain done.length initial state →
         DynamicGroundedRow witness.data statement.program
           (decoded.toChipRow witness.data) state) ∧
-      Semantics.LocalStateTruth statement.program initial (Commit.initClkNat witness.data)
+      Semantics.LocalStateTruth statement.program initial statement.initClkNat
         fin ∧
       (∀ loc m, memoryFinalizeFrontier witness loc = some m →
         Semantics.MemoryMsg.locOf m = loc ∧
-        Semantics.LocalValueAt initial (Commit.initClkNat witness.data) loc
+        Semantics.LocalValueAt initial statement.initClkNat loc
           (Semantics.StateMsg.timeNat fin) m.value ∧
         ∃ m', Semantics.MemoryMsg.locOf m' = loc ∧
           m'.value = m.value ∧ Semantics.MemoryMsg.timeNat m' ≤ Semantics.MemoryMsg.timeNat m ∧
           Semantics.MemoryMsg.timeNat m' ≤
             Semantics.StateMsg.timeNat fin ∧
-          Semantics.LocalMemTruth initial (Commit.initClkNat witness.data) m') ∧
+          Semantics.LocalMemTruth initial statement.initClkNat m') ∧
       (∀ tc ∈ haltTouches,
         Channels.MemoryMsg.ClkBound (tc : TimedGrounding.Touch p).1.1 ∧
         ((tc : TimedGrounding.Touch p).1.1).clk_high.val < 2 ^ 24 ∧
         Word.isU64 ((tc : TimedGrounding.Touch p).1.1).value ∧
-        Semantics.LocalValueAt initial (Commit.initClkNat witness.data)
+        Semantics.LocalValueAt initial statement.initClkNat
           (Semantics.MemoryMsg.locOf (tc : TimedGrounding.Touch p).1.1)
           (Semantics.StateMsg.timeNat fin)
           ((tc : TimedGrounding.Touch p).1.1).value) := by
@@ -564,13 +563,12 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       rw [rowsEq, List.length_append, List.length_cons]
       omega
     omega
-  have liveAtHead : TimedGrounding.LiveOK initial (Commit.initClkNat witness.data)
+  have liveAtHead : TimedGrounding.LiveOK initial statement.initClkNat
       (Semantics.StateMsg.timeNat (initialBoundaryStateMessage statement.publicValues))
       (memoryInitFrontier witness) := by
     have headTime : Semantics.StateMsg.timeNat
-        (initialBoundaryStateMessage statement.publicValues) = Commit.initClkNat witness.data := by
-      simpa only [initialBoundaryStateMessage, Semantics.StateMsg.timeNat] using
-        boundary.initialClock.symm
+        (initialBoundaryStateMessage statement.publicValues) = statement.initClkNat := by
+      rfl
     rw [headTime]
     exact memoryInit_liveOK constraints boundary
   -- The widened per-location Memory balance: the aligned rows' touches against the two boundary
@@ -589,10 +587,10 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       TimedGrounding.optMS (memoryInitFrontier witness loc) +
           TimedGrounding.pushesAt (orderedRows.map alignedRow) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+          (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))),
       Channels.MemoryMsg.ClkBound m ∧ m.clk_high.val < 2 ^ 24 := by
     intro loc m memberM
@@ -627,10 +625,10 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       TimedGrounding.optMS (memoryFinalizeFrontier witness loc) +
           TimedGrounding.pullsAt (orderedRows.map alignedRow) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))),
       Channels.MemoryMsg.ClkBound m ∧ m.clk_high.val < 2 ^ 24 :=
     fun loc => forall_mem_of_balance (widened loc) (pushGood loc)
@@ -667,13 +665,13 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       RefreshElimination.IsRefresh
         (fun m : Channels.MemoryMsg (ZMod p) => (Semantics.MemoryMsg.locOf m, m.value))
         Semantics.MemoryMsg.timeNat
-        (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row),
-          MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row)) := by
+        (MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row),
+          MemoryBumpChip.pushedMessage (memoryBumpRow witness.data row)) := by
     intro row rowMem
-    have pulledMem : MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row) ∈
+    have pulledMem : MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row) ∈
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = Semantics.MemoryMsg.locOf
-            (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row)))
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row)))
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))) := by
       rw [Multiset.mem_filter, Multiset.mem_coe,
         memoryBump_consumedMessages_eq witness constraints]
@@ -684,15 +682,15 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
   -- The refresh pairs as one list, and its two projections against the bump table's messages.
   set bump : List (Channels.MemoryMsg (ZMod p) × Channels.MemoryMsg (ZMod p)) :=
     (realMemoryBumpRows witness).map (fun row =>
-      (MemoryBumpChip.pulledMessage (memoryBumpRow (memoryBumpTable witness) row),
-        MemoryBumpChip.pushedMessage (memoryBumpRow (memoryBumpTable witness) row))) with bumpDef
+      (MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row),
+        MemoryBumpChip.pushedMessage (memoryBumpRow witness.data row))) with bumpDef
   have bumpSnd : bump.map Prod.snd =
-      producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+      producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
         Channels.memoryChannel) := by
     rw [memoryBump_producedMessages_eq witness constraints, bumpDef, List.map_map]
     rfl
   have bumpFst : bump.map Prod.fst =
-      consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+      consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
         Channels.memoryChannel) := by
     rw [memoryBump_consumedMessages_eq witness constraints, bumpDef, List.map_map]
     rfl
@@ -794,35 +792,35 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
     calc TimedGrounding.optMS (memoryInitFrontier witness loc) +
           (TimedGrounding.pushesAt (orderedRows.map alignedRow) loc +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+              (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
                 Channels.memoryChannel)))) +
           Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               Channels.memoryChannel)))
         = TimedGrounding.optMS (memoryInitFrontier witness loc) +
             TimedGrounding.pushesAt (orderedRows.map alignedRow) loc +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+              (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
                 Channels.memoryChannel))) +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
+              (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
                 Channels.memoryChannel))) := by
           abel
       _ = TimedGrounding.optMS (memoryFinalizeFrontier witness loc) +
             TimedGrounding.pullsAt (orderedRows.map alignedRow) loc +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+              (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
                 Channels.memoryChannel))) +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+              (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
                 Channels.memoryChannel))) := widenedLoc
       _ = TimedGrounding.optMS (memoryFinalizeFrontier witness loc) +
           (TimedGrounding.pullsAt (orderedRows.map alignedRow) loc +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
+              (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
                 Channels.memoryChannel)))) +
           Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
+            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
               Channels.memoryChannel))) := by
           abel
   -- Eliminate the refresh pairs and realize the rewritten pulls row by row; then split the
@@ -889,36 +887,36 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       (canonTimePull q.1 rowMem) (canonPcPull q.1 rowMem) (canonTimePush q.1 rowMem)
       (canonPcPush q.1 rowMem)
   have engineFacts : ∀ decoded ∈ orderedRows,
-      Semantics.LocalStepFact statement.program initial (Commit.initClkNat witness.data)
+      Semantics.LocalStepFact statement.program initial statement.initClkNat
           (decoded.ordinaryRowFacts witness.data) ∧
-        TimedGrounding.FrameFact statement.program initial (Commit.initClkNat witness.data)
+        TimedGrounding.FrameFact statement.program initial statement.initClkNat
           (decoded.ordinaryRowFacts witness.data) := by
     intro decoded decodedMem
     exact (contractAt decoded decodedMem).engineFacts witness constraints balanced decoded rfl
       (sourceFacts decoded decodedMem).1 (sourceFacts decoded decodedMem).2 statement.program
-      (decodeAt decoded decodedMem) initial (Commit.initClkNat witness.data)
+      (decodeAt decoded decodedMem) initial statement.initClkNat
       boundary.codeMemoryCompatible
   have stepFacts : ∀ row ∈ pairs.map walkRow,
-      Semantics.LocalStepFact statement.program initial (Commit.initClkNat witness.data) row := by
+      Semantics.LocalStepFact statement.program initial statement.initClkNat row := by
     intro row rowMem
     obtain ⟨q, memberQ, rfl⟩ := List.mem_map.mp rowMem
     exact TimedGrounding.localStepFact_valueAligned_of_ordinary (valueAligned q memberQ)
       (engineFacts q.1 (pairFacts q memberQ).1).1
   have frameFacts : ∀ row ∈ pairs.map walkRow,
-      TimedGrounding.FrameFact statement.program initial (Commit.initClkNat witness.data) row := by
+      TimedGrounding.FrameFact statement.program initial statement.initClkNat row := by
     intro row rowMem
     obtain ⟨q, memberQ, rfl⟩ := List.mem_map.mp rowMem
     exact TimedGrounding.frameFact_valueAligned_of_ordinary (valueAligned q memberQ)
       (engineFacts q.1 (pairFacts q memberQ).1).2
   have rowOK : ∀ row ∈ pairs.map walkRow,
-      TimedGrounding.RowOK (Commit.initClkNat witness.data) row := by
+      TimedGrounding.RowOK statement.initClkNat row := by
     intro row rowMem
     obtain ⟨q, memberQ, rfl⟩ := List.mem_map.mp rowMem
     obtain ⟨decodedMem, rewrite⟩ := pairFacts q memberQ
     have evidence := touchesOf_spec q.1 decodedMem
     refine TimedGrounding.rowOK_stateRespell (canonTimePull q.1 decodedMem)
       (canonTimePush q.1 decodedMem) ?_
-    refine rowOK_alignedOf_pullRewrite (Commit.initClkNat witness.data)
+    refine rowOK_alignedOf_pullRewrite statement.initClkNat
       (q.1.ordinaryRowFacts witness.data) (touchesOf q.1) q.2 rewrite ?_ ?_ evidence.2.1
       evidence.2.2.1 evidence.2.2.2.1 ?_
     · simpa only [DecodedInstructionRow.ordinaryRowFacts_statePull,
@@ -926,7 +924,6 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
         timeStep q.1 decodedMem
     · have aligned := statePullAlign8_of_stateWalk _ stateWalk timeStepCanon q.1 decodedMem
       rw [canonTimePull q.1 decodedMem] at aligned
-      rw [boundary.initialClock]
       simpa only [DecodedInstructionRow.ordinaryRowFacts_statePull, decodedStateEdge,
         initialBoundaryStateMessage, Semantics.StateMsg.timeNat] using aligned
     · intro tc touchMem
@@ -1143,7 +1140,7 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
               (touchPairsAt ts' loc).map Prod.fst) +
               {(tc' : TimedGrounding.Touch p).2} from by abel] at this
         exact add_right_cancel this
-  have walked := TimedGrounding.walk statement.program initial (Commit.initClkNat witness.data)
+  have walked := TimedGrounding.walk statement.program initial statement.initClkNat
     fin finM'
     (pairs.map walkRow).length (pairs.map walkRow)
     (initialBoundaryStateMessage statement.publicValues) (memoryInitFrontier witness)
@@ -1165,13 +1162,12 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
     rw [canonTimePull q.1 decodedMem] at rowTimeRaw
     have rowTime : Semantics.StateMsg.timeNat
         (statePullMessage (q.1.toChipRow witness.data)) =
-          Commit.initClkNat witness.data + 8 * done.length := by
-      rw [boundary.initialClock]
+          statement.initClkNat + 8 * done.length := by
       simpa only [decodedStateEdge, initialBoundaryStateMessage, Semantics.StateMsg.timeNat] using
         rowTimeRaw
     exact q.1.dynamicGrounded_of_weakCurrency witness constraints balanced
       (sourceFacts q.1 decodedMem).1 (contractAt q.1 decodedMem) statement.program initial state
-      (Commit.initClkNat witness.data) done.length (decodeAt q.1 decodedMem) weak.2 chain
+      statement.initClkNat done.length (decodeAt q.1 decodedMem) weak.2 chain
       (sourceFacts q.1 decodedMem).2 rowTime
   · obtain ⟨m', frontierEq, valueEq, timeLe⟩ := finalRewrite loc m finEq
     have valueEq' : m'.value = m.value := congrArg Prod.snd valueEq
@@ -1266,17 +1262,17 @@ theorem supportedCore_orderedRows_dynamic
       ∀ state, Target.SailChain done.length initial state →
         DynamicGroundedRow witness.data statement.program
           (decoded.toChipRow witness.data) state) ∧
-      Semantics.LocalStateTruth statement.program initial (Commit.initClkNat witness.data)
+      Semantics.LocalStateTruth statement.program initial statement.initClkNat
         (finalBoundaryStateMessage statement.publicValues) ∧
       (∀ loc m, memoryFinalizeFrontier witness loc = some m →
         Semantics.MemoryMsg.locOf m = loc ∧
-        Semantics.LocalValueAt initial (Commit.initClkNat witness.data) loc
+        Semantics.LocalValueAt initial statement.initClkNat loc
           (Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues)) m.value ∧
         ∃ m', Semantics.MemoryMsg.locOf m' = loc ∧
           m'.value = m.value ∧ Semantics.MemoryMsg.timeNat m' ≤ Semantics.MemoryMsg.timeNat m ∧
           Semantics.MemoryMsg.timeNat m' ≤
             Semantics.StateMsg.timeNat (finalBoundaryStateMessage statement.publicValues) ∧
-          Semantics.LocalMemTruth initial (Commit.initClkNat witness.data) m') := by
+          Semantics.LocalMemTruth initial statement.initClkNat m') := by
   have limbBounds : SP1StateBoundary.LimbBounds statement.publicValues := by
     rw [← publicInputEq]
     exact witness_publicInput_limbBounds witness constraints balanced
@@ -1571,62 +1567,62 @@ structure SupportedCoreHaltGrounding
     (halt : Array (ZMod p)) : Prop where
   exhaustive : orderedRows.Perm (realDecodedInstructionRows witness.data witness.tables)
   haltReal : realHaltRows witness = [halt]
-  spec : HaltChip.Spec (haltRow (haltTable witness) halt)
-  real : (haltRow (haltTable witness) halt).is_real = 1
+  spec : HaltChip.Spec (haltRow witness.data halt)
+  real : (haltRow witness.data halt).is_real = 1
   walk : PcWalk (fun decoded : DecodedInstructionRow p => decoded.toChipRow witness.data)
     (supportedPcBits statement.publicValues.init_pc0 statement.publicValues.init_pc1
       statement.publicValues.init_pc2)
-    (Semantics.StateMsg.pcBits (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
+    (Semantics.StateMsg.pcBits (HaltChip.statePulledMessage (haltRow witness.data halt)))
     orderedRows
   grounded : RowsGrounded (fun decoded : DecodedInstructionRow p =>
       decoded.toChipRow witness.data) witness.data statement.program
     (Semantics.sailTrajectory initial) orderedRows
   pullClock : Semantics.StateMsg.timeNat
-      (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) =
-    Commit.initClkNat witness.data + 8 * orderedRows.length
+      (HaltChip.statePulledMessage (haltRow witness.data halt)) =
+    statement.initClkNat + 8 * orderedRows.length
   finalClock : Semantics.clkNat statement.publicValues.final_clk_high
       statement.publicValues.final_clk_low =
-    Semantics.StateMsg.timeNat (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))
+    Semantics.StateMsg.timeNat (HaltChip.statePulledMessage (haltRow witness.data halt))
       + 264
   finalPc : supportedPcBits statement.publicValues.final_pc0 statement.publicValues.final_pc1
       statement.publicValues.final_pc2 = Machine.haltPc
   pullTruth : Semantics.LocalStateTruth statement.program initial
-    (Commit.initClkNat witness.data)
-    (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))
+    statement.initClkNat
+    (HaltChip.statePulledMessage (haltRow witness.data halt))
   ecallFetch : statement.program.fetchWord
-      (Semantics.StateMsg.pcBits (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
+      (Semantics.StateMsg.pcBits (HaltChip.statePulledMessage (haltRow witness.data halt)))
       = some Target.ECALL_ENC
-  exitBinding : HaltChip.exitMessage (haltRow (haltTable witness) halt) =
+  exitBinding : HaltChip.exitMessage (haltRow witness.data halt) =
     (⟨statement.publicValues.exit_code⟩ : Channels.ExitMsg (ZMod p))
-  x5U64 : Word.isU64 (haltRow (haltTable witness) halt).x5_memory.prev_value
-  x10U64 : Word.isU64 (haltRow (haltTable witness) halt).x10_memory.prev_value
-  x11U64 : Word.isU64 (haltRow (haltTable witness) halt).x11_memory.prev_value
-  x5Value : Semantics.LocalValueAt initial (Commit.initClkNat witness.data)
+  x5U64 : Word.isU64 (haltRow witness.data halt).x5_memory.prev_value
+  x10U64 : Word.isU64 (haltRow witness.data halt).x10_memory.prev_value
+  x11U64 : Word.isU64 (haltRow witness.data halt).x11_memory.prev_value
+  x5Value : Semantics.LocalValueAt initial statement.initClkNat
     (Semantics.MemLoc.reg (5 : BitVec 5))
     (Semantics.StateMsg.timeNat
-      (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
-    (haltRow (haltTable witness) halt).x5_memory.prev_value
-  x10Value : Semantics.LocalValueAt initial (Commit.initClkNat witness.data)
+      (HaltChip.statePulledMessage (haltRow witness.data halt)))
+    (haltRow witness.data halt).x5_memory.prev_value
+  x10Value : Semantics.LocalValueAt initial statement.initClkNat
     (Semantics.MemLoc.reg (10 : BitVec 5))
     (Semantics.StateMsg.timeNat
-      (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
-    (haltRow (haltTable witness) halt).x10_memory.prev_value
-  x11Value : Semantics.LocalValueAt initial (Commit.initClkNat witness.data)
+      (HaltChip.statePulledMessage (haltRow witness.data halt)))
+    (haltRow witness.data halt).x10_memory.prev_value
+  x11Value : Semantics.LocalValueAt initial statement.initClkNat
     (Semantics.MemLoc.reg (11 : BitVec 5))
     (Semantics.StateMsg.timeNat
-      (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
-    (haltRow (haltTable witness) halt).x11_memory.prev_value
+      (HaltChip.statePulledMessage (haltRow witness.data halt)))
+    (haltRow witness.data halt).x11_memory.prev_value
   memoryFinalizeTruth : ∀ loc m, memoryFinalizeFrontier witness loc = some m →
     Semantics.MemoryMsg.locOf m = loc ∧
-    Semantics.LocalValueAt initial (Commit.initClkNat witness.data) loc
+    Semantics.LocalValueAt initial statement.initClkNat loc
       (Semantics.StateMsg.timeNat
-        (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))) m.value ∧
+        (HaltChip.statePulledMessage (haltRow witness.data halt))) m.value ∧
     ∃ m', Semantics.MemoryMsg.locOf m' = loc ∧
       m'.value = m.value ∧ Semantics.MemoryMsg.timeNat m' ≤ Semantics.MemoryMsg.timeNat m ∧
       Semantics.MemoryMsg.timeNat m' ≤
         Semantics.StateMsg.timeNat
-          (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) ∧
-      Semantics.LocalMemTruth initial (Commit.initClkNat witness.data) m'
+          (HaltChip.statePulledMessage (haltRow witness.data halt)) ∧
+      Semantics.LocalMemTruth initial statement.initClkNat m'
 
 /-- Every member of an all-left sum-typed list is an injection image, so the list is a map. -/
 private theorem listAllInl {α β : Type*} :
@@ -1726,7 +1722,6 @@ theorem supported_core_witness_grounding
             Semantics.clkNat statement.publicValues.final_clk_high
               statement.publicValues.final_clk_low
           at clockCount
-        have initClock := boundary.initialClock
         omega
   | cons halt rest =>
       right
@@ -1819,13 +1814,13 @@ theorem supported_core_witness_grounding
         rwa [show d' = d from Sum.inl_injective d'Eq] at d'Mem
       -- the halt push's canonical pc is the terminal `haltPc = 1`
       have pushPcVal : StateMsg.pcVal
-          (HaltChip.statePushedMessage (haltRow (haltTable witness) halt)) = 1 := by
+          (HaltChip.statePushedMessage (haltRow witness.data halt)) = 1 := by
         have h1 : ((1 : ZMod p)).val = 1 := ZMod.val_one p
         have h0 : ((0 : ZMod p)).val = 0 := ZMod.val_zero
         simp only [StateMsg.pcVal, HaltChip.statePushedMessage, h1, h0]
         norm_num
       have haltPushPc : Semantics.StateMsg.pcBits
-          (canonState (HaltChip.statePushedMessage (haltRow (haltTable witness) halt))) =
+          (canonState (HaltChip.statePushedMessage (haltRow witness.data halt))) =
           Machine.haltPc := by
         rw [pcBits_canonState (by simp [HaltChip.statePushedMessage, ZMod.val_zero])
           (by simp [HaltChip.statePushedMessage, ZMod.val_zero])]
@@ -1850,7 +1845,7 @@ theorem supported_core_witness_grounding
             rw [show (trailCanonEdge witness (Sum.inl d)).1 =
                 canonState (decodedStateEdge witness.data d).1 from rfl] at pcEq
             rw [show (trailCanonEdge witness (Sum.inr (Sum.inl halt))).2 =
-                canonState (HaltChip.statePushedMessage (haltRow (haltTable witness) halt))
+                canonState (HaltChip.statePushedMessage (haltRow witness.data halt))
               from rfl, haltPushPc] at pcEq
             rw [pcBits_canonState dGood.2.1.1 dGood.2.1.2] at pcEq
             -- the row's committed fetch sits at that same pc
@@ -1871,7 +1866,7 @@ theorem supported_core_witness_grounding
       subst postNil
       -- the trail's terminal edge is the public final boundary
       have finEq : canonState
-          (HaltChip.statePushedMessage (haltRow (haltTable witness) halt)) =
+          (HaltChip.statePushedMessage (haltRow witness.data halt)) =
           finalBoundaryStateMessage statement.publicValues := by
         have : Walk.IsWalk (trailCanonEdge witness)
             (trailCanonEdge witness (Sum.inr (Sum.inl halt))).2
@@ -1882,10 +1877,10 @@ theorem supported_core_witness_grounding
           (canonState (decodedStateEdge witness.data decoded).1,
            canonState (decodedStateEdge witness.data decoded).2))
           (initialBoundaryStateMessage statement.publicValues)
-          (canonState (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)))
+          (canonState (HaltChip.statePulledMessage (haltRow witness.data halt)))
           orderedRows := by
         have midIsPull : mid = canonState
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) := by
+            (HaltChip.statePulledMessage (haltRow witness.data halt)) := by
           exact midEq.symm
         rw [midIsPull] at walkPre
         exact (Walk.isWalk_map (trailCanonEdge witness)
@@ -1902,19 +1897,19 @@ theorem supported_core_witness_grounding
       obtain ⟨clk0B, clk1B⟩ :=
         witness_realHaltRows_clkBounds witness constraints balanced halt haltMem
       have clkFacts := TimeExtraction.clkVal_small_add_of_cpuState_bounds
-        (haltRow (haltTable witness) halt).state.clk_0_16
-        (haltRow (haltTable witness) halt).state.clk_16_24 0 (by omega) clk0B clk1B
-      have clkLowLt : ((haltRow (haltTable witness) halt).state.clk_0_16 +
-          (haltRow (haltTable witness) halt).state.clk_16_24 * 65536).val <
+        (haltRow witness.data halt).state.clk_0_16
+        (haltRow witness.data halt).state.clk_16_24 0 (by omega) clk0B clk1B
+      have clkLowLt : ((haltRow witness.data halt).state.clk_0_16 +
+          (haltRow witness.data halt).state.clk_16_24 * 65536).val <
           2 ^ 24 - 6 := clkFacts.1
       -- the canonical pull time is the pull time
       have pullTimeCanon : Semantics.StateMsg.timeNat
-          (canonState (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))) =
+          (canonState (HaltChip.statePulledMessage (haltRow witness.data halt))) =
           Semantics.StateMsg.timeNat
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) :=
+            (HaltChip.statePulledMessage (haltRow witness.data halt)) :=
         timeNat_canonState haltGood.1.1
       -- the walk's endpoint: the halt row's canonicalized pre-syscall pull
-      set c := canonState (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))
+      set c := canonState (HaltChip.statePulledMessage (haltRow witness.data halt))
         with cDef
       have limbBounds : SP1StateBoundary.LimbBounds statement.publicValues := by
         rw [← publicInputEq]
@@ -1934,11 +1929,11 @@ theorem supported_core_witness_grounding
       obtain ⟨tsx5, tsx10, tsx11⟩ :=
         haltRow_accessTimestamp_bounds witness constraints balanced haltMem
       obtain ⟨touchLoc, touchVal, touchNodup, touchPushGood, touchPushLate, touchSlot⟩ :=
-        haltTouchesOf_facts (haltRow (haltTable witness) halt) clk0B clk1B haltGood.1.1
+        haltTouchesOf_facts (haltRow witness.data halt) clk0B clk1B haltGood.1.1
           tsx5 tsx10 tsx11
       have finTime : Semantics.StateMsg.timeNat c =
           Semantics.StateMsg.timeNat
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) := by
+            (HaltChip.statePulledMessage (haltRow witness.data halt)) := by
         rw [cDef]
         exact pullTimeCanon
       -- feed the generalized ordered-row engine at the halt row's own pull as final boundary
@@ -1947,7 +1942,7 @@ theorem supported_core_witness_grounding
         c initTimeLt finalTimeLt constraints balanced boundary
         (supportedCore_groundingObligations_of_constraints witness constraints)
         orderedRows exhaustive stateWalk'
-        (haltTouchesOf (haltRow (haltTable witness) halt))
+        (haltTouchesOf (haltRow witness.data halt))
         (by
           rw [halt_producedMessages_eq witness constraints, haltRealEq,
             haltTouchesOf_pushes]
@@ -1970,7 +1965,7 @@ theorem supported_core_witness_grounding
       -- assemble the halt table's Memory guarantee from the balance-derived pull facts,
       -- and extract the full semantic `Spec`
       have tableEq := witness_haltTable_table_eq_of_mem witness constraints balanced haltMem
-      have memGuar : (haltTable witness).ChannelGuarantees Channels.memoryChannel.toRaw := by
+      have memGuar : (haltTable witness).ChannelGuarantees witness.data Channels.memoryChannel.toRaw := by
         intro row rowMem
         have rowIsHalt : row = halt := by
           rw [tableEq] at rowMem
@@ -1979,16 +1974,16 @@ theorem supported_core_witness_grounding
         refine channelGuarantees_of_consumedMessages _ Channels.memoryChannel _
           (by have := Fact.out (p := 2 ^ 25 < p); omega) ?_
         have rowConsumed : consumedMessages (typedInteractionValuesWith
-            (⟨HaltChip.circuit⟩ : Component (ZMod p)).operations Channels.memoryChannel
-            ((haltTable witness).environment halt)) =
-            [HaltChip.memPulledMessage (haltRow (haltTable witness) halt) (haltRow (haltTable witness) halt).x5_memory 5,
-             HaltChip.memPulledMessage (haltRow (haltTable witness) halt) (haltRow (haltTable witness) halt).x10_memory 10,
-             HaltChip.memPulledMessage (haltRow (haltTable witness) halt) (haltRow (haltTable witness) halt).x11_memory 11] := by
+            ({ circuit := HaltChip.circuit } : Component (ZMod p)).operations Channels.memoryChannel
+            (Environment.fromArray halt witness.data)) =
+            [HaltChip.memPulledMessage (haltRow witness.data halt) (haltRow witness.data halt).x5_memory 5,
+             HaltChip.memPulledMessage (haltRow witness.data halt) (haltRow witness.data halt).x10_memory 10,
+             HaltChip.memPulledMessage (haltRow witness.data halt) (haltRow witness.data halt).x11_memory 11] := by
           have tableConsumed := halt_consumedMessages_eq witness constraints
           rw [haltRealEq] at tableConsumed
           rw [typedTableInteractionsWith, tableEq] at tableConsumed
           simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil] at tableConsumed
-          rw [show (haltTable witness).component = (⟨HaltChip.circuit⟩ : Component (ZMod p))
+          rw [show (haltTable witness).component = ({ circuit := HaltChip.circuit } : Component (ZMod p))
             from haltTable_component witness] at tableConsumed
           exact tableConsumed
         rw [rowConsumed]
@@ -2000,19 +1995,18 @@ theorem supported_core_witness_grounding
         rcases List.mem_cons.mp msgMem with rfl | msgMem
         · exact ⟨touch11.2.2.1, touch11.1⟩
         · exact absurd msgMem List.not_mem_nil
-      have haltSpec : HaltChip.Spec (haltRow (haltTable witness) halt) :=
+      have haltSpec : HaltChip.Spec (haltRow witness.data halt) :=
         haltTable_spec witness constraints balanced memGuar halt
           (mem_realHaltRows witness haltMem).1
-      obtain ⟨loc5', loc10', loc11'⟩ := haltPull_locs (haltRow (haltTable witness) halt)
+      obtain ⟨loc5', loc10', loc11'⟩ := haltPull_locs (haltRow witness.data halt)
       -- the committed ECALL site
       have ecallTruth := witness_haltRow_ecallTruth witness constraints balanced
         boundary.programProvider haltMem
       have ecallFetch : statement.program.fetchWord
           (Semantics.StateMsg.pcBits
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) halt))) =
+            (HaltChip.statePulledMessage (haltRow witness.data halt))) =
           some Target.ECALL_ENC := by
         have := ecallTruth.1
-        rw [boundary.programCommitted.2] at this
         rw [halt_programPcBits] at this
         exact this
       -- clock accounting: the instruction prefix places the pull, the syscall window the boundary
@@ -2023,16 +2017,14 @@ theorem supported_core_witness_grounding
           exact witness_realDecodedInstructionRows_timeStep witness constraints balanced
             decoded (exhaustive.mem_iff.mp decodedMem))
       have pullClock : Semantics.StateMsg.timeNat
-          (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) =
-          Commit.initClkNat witness.data + 8 * orderedRows.length := by
+          (HaltChip.statePulledMessage (haltRow witness.data halt)) =
+          statement.initClkNat + 8 * orderedRows.length := by
         rw [← pullTimeCanon, ← clockCount]
-        have := boundary.initialClock
         simp only [Semantics.StateMsg.timeNat, initialBoundaryStateMessage]
-        omega
       have finalClock : Semantics.clkNat statement.publicValues.final_clk_high
           statement.publicValues.final_clk_low =
           Semantics.StateMsg.timeNat
-            (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) + 264 := by
+            (HaltChip.statePulledMessage (haltRow witness.data halt)) + 264 := by
         have timeEq := congrArg Semantics.StateMsg.timeNat finEq
         rw [timeNat_canonState haltGood.1.2] at timeEq
         rw [witness_realHaltRows_timeStep witness constraints balanced halt haltMem] at timeEq
@@ -2072,11 +2064,11 @@ theorem supported_core_witness_grounding
           · rw [← pullTimeCanon]
             exact timeEq
           · rw [show Semantics.pcBits
-                (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)).pc0
-                (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)).pc1
-                (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)).pc2 =
+                (HaltChip.statePulledMessage (haltRow witness.data halt)).pc0
+                (HaltChip.statePulledMessage (haltRow witness.data halt)).pc1
+                (HaltChip.statePulledMessage (haltRow witness.data halt)).pc2 =
               Semantics.StateMsg.pcBits
-                (HaltChip.statePulledMessage (haltRow (haltTable witness) halt)) from rfl,
+                (HaltChip.statePulledMessage (haltRow witness.data halt)) from rfl,
               ← pcBits_canonState haltGood.2.1 haltGood.2.2]
             exact pcEq
         ecallFetch := ecallFetch
@@ -2105,7 +2097,7 @@ theorem supported_core_witness_grounding
           · rw [← finTime]
             exact m'fin }⟩
       exact pcWalk_to_haltPull witness.data statement.publicValues
-        (haltRow (haltTable witness) halt) orderedRows stateWalk'
+        (haltRow witness.data halt) orderedRows stateWalk'
         (fun decoded decodedMem =>
           ⟨(instrGood decoded (exhaustive.mem_iff.mp decodedMem)).2.1,
             (instrGood decoded (exhaustive.mem_iff.mp decodedMem)).2.2⟩)

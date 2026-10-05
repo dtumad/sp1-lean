@@ -189,9 +189,9 @@ theorem completeness :
   have eSCAL := scalFE_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eCTQ := ctqFE_eval (env := env) (vB := B) (vC := C)
+  have eCTQ := ctqProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
-  have eCARRY := carryFE_eval (env := env) (vB := B) (vC := C)
+  have eCARRY := carryProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU) (hf := hfALL)
   have eOVB := ovbFE_eval (env := env) (vB := B) (hWB := hbpvE)
     (vir := input_is_real) (hir := hir)
@@ -206,22 +206,22 @@ theorem completeness :
   have eMAX := maxAbsFE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
   have eWCNEG := wCnegFE_eval (env := env) (vC := C) (hWC := hcpvE) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eWRNEG := wRnegFE_eval (env := env) (vB := B) (vC := C)
+  have eWRNEG := wRnegProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
   have eMISC := miscFE_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eCL := clFE_eval (env := env) (vB := B) (vC := C)
+  have eCL := clProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eLTF := ltfFE_eval (env := env) (vB := B) (vC := C)
+  have eLTF := ltfProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eNEI := neiFE_eval (env := env) (vB := B) (vC := C)
+  have eNEI := neiProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eBIT := bitFE_eval (env := env) (vB := B) (vC := C)
+  have eBIT := bitProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
   have eREM := remFE_eval (env := env) (vB := B) (vC := C)
@@ -238,10 +238,10 @@ theorem completeness :
       ∨ (hintFlags env.hint)[0] + (hintFlags env.hint)[2] = 1 := by
     rw [← hFdef]
     exact (flagSums_bool hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum).2.2.2.1
-  have eMULLO := mulLowerFE_eval (env := env) (vB := B) (vC := C)
+  have eMULLO := mulLowerProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir)
-  have eMULHI := mulUpperFE_eval (env := env) (vB := B) (vC := C)
+  have eMULHI := mulUpperProgram_eval (env := env) (vB := B) (vC := C)
     (hWB := hbpvE) (hWC := hcpvE) (hUB := hbU) (hUC := hcU)
     (vir := input_is_real) (hir := hir) (hf02 := hf02)
   -- flag pins
@@ -301,13 +301,15 @@ theorem completeness :
   have hNEI : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4)
       = (ltNotEqInvWitness input_is_real B C F)[0] := by
-    have h := h_env_nei ⟨0, by omega⟩
-    simp only [circuit_norm, Nat.add_zero, eNEI 0 (by omega), hFlags] at h; exact h
+    have h := h_env_nei ⟨0, by decide⟩
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eNEI 0 (by omega), hFlags, Nat.add_zero] at h; exact h
   have hBIT : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1)
       = (ltBitWitness input_is_real B C F)[0] := by
-    have h := h_env_bit ⟨0, by omega⟩
-    simp only [circuit_norm, Nat.add_zero, eBIT 0 (by omega), hFlags] at h; exact h
+    have h := h_env_bit ⟨0, by decide⟩
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eBIT 0 (by omega), hFlags, Nat.add_zero] at h; exact h
   have hBM : env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4)
       = bMsbCell B F := by
@@ -396,7 +398,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_wrneg ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eWRNEG i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eWRNEG i hi, hFlags] at h; exact h
   have hLTCLvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 2 fun i =>
           var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
@@ -405,7 +408,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_cl ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eCL i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eCL i hi, hFlags] at h; exact h
   have hLTFvec : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i =>
           var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
@@ -414,7 +418,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_f ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eLTF i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eLTF i hi, hFlags] at h; exact h
   -- the two Mul struct blocks, as quantified toElements pins + fromElements struct pins
   -- `hMULLO`/`hMULHI`: never simp the big hypothesis — dsimp the projections, then trans/exact
   -- — `exact h` after folding needs the *expensive* `combinedSize'`-based isDefEq against
@@ -431,9 +436,9 @@ theorem completeness :
     have h := h_env_mullo i
     dsimp only [] at h
     refine h.trans ?_
-    exact ((Witgen.WitgenIR.getElem_eval_ofFExprs _ env ↑i hsz).trans
-      ((Witgen.getElem_eval_toElements { env := env } _ ↑i hsz).trans
-        (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz) (eMULLO.trans (by rw [hFlags]))))).trans
+    rw [Witgen.M.eval_toIRLiteral]
+    exact (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz)
+      (eMULLO.trans (by rw [hFlags]))).trans
       (SubSpecs.mulWitnessElements_get (populateMulLower input_is_real B C F) i).symm
   have hMULHI : ∀ i : Fin 45, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + ↑i)
       = (SubSpecs.mulWitnessElements (populateMulUpper input_is_real B C F)).get i := by
@@ -444,9 +449,9 @@ theorem completeness :
     have h := h_env_mulhi i
     dsimp only [] at h
     refine h.trans ?_
-    exact ((Witgen.WitgenIR.getElem_eval_ofFExprs _ env ↑i hsz).trans
-      ((Witgen.getElem_eval_toElements { env := env } _ ↑i hsz).trans
-        (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz) (eMULHI.trans (by rw [hFlags]))))).trans
+    rw [Witgen.M.eval_toIRLiteral]
+    exact (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz)
+      (eMULHI.trans (by rw [hFlags]))).trans
       (SubSpecs.mulWitnessElements_get (populateMulUpper input_is_real B C F) i).symm
   have hOVB : ∀ i : Fin 11, env.get (i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + ↑i)
       = (SubSpecs.eqWordWitnessElements (ovbWitness input_is_real B F)).get i := by
@@ -557,7 +562,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_ctq ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eCTQ i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eCTQ i hi, hFlags] at h; exact h
   have hCARRYvecW : (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 8 fun i => var { index := i₀ + 8 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i })
         : Vector (ZMod p) 8)
@@ -565,7 +571,8 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     have h := h_env_carry ⟨i, hi⟩
-    simp only [circuit_norm, Nat.add_zero, eCARRY i hi, hFlags] at h; exact h
+    simp only [Witgen.M.eval_toIRLiteral, explicit_provable_type,
+      eCARRY i hi, hFlags] at h; exact h
   -- a signed-class row is real (the divu-padding template `F = #v[0,1,0,…]` has signed sum `0`)
   have hsr : F[0] + F[2] + F[4] + F[5] = 1 → input_is_real = 1 := by
     intro hsig'
@@ -580,7 +587,7 @@ theorem completeness :
   -- This is definitional factoring only: the flat operation order remains the Rust row order.
   simp only [main, ConstraintsHold.Completeness, Circuit.bind_forAllNoOffset]
   refine ⟨by
-    simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, Witnessable.witness_provable, witnessIR, Circuit.pure_def, Circuit.operations,
+    simp only [populateRow, Circuit.bind_forAllNoOffset, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR, Circuit.pure_def, Circuit.operations,
       Operations.forAllNoOffset, and_true], ?_⟩
   -- Expose the five folded constraint boundaries after the witness-only prefix.
   rw [populateRow_output_eq]

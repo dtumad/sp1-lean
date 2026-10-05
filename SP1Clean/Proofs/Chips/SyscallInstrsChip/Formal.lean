@@ -1,3 +1,5 @@
+import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
 import Clean.Utils.Tactics
 
@@ -421,6 +423,7 @@ private theorem requirementsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ
 whose guarantee the row *requires* rather than supplies: the three register accesses pull a prior
 value the memory argument owns. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.syscall_instrs"
   main
   elaborated
   Assumptions := fun _ _ => True
@@ -448,5 +451,74 @@ set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
     (circuit (p := p)).localLength x = 0 := rfl
 
+
+@[circuit_norm] theorem circuit_main_eq :
+    (SyscallInstrsChip.circuit (p := p)).main = SyscallInstrsChip.main := rfl
+
+private theorem u16toU8SafeLookups (input : Var SP1Clean.U16toU8OperationSafe.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((SP1Clean.U16toU8OperationSafe.circuit.main input).operations n) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem isZeroLookups (input : Var SP1Clean.IsZeroOperation.Inputs (ZMod p)) (n : ℕ) :
+    Operations.lookups ((SP1Clean.IsZeroOperation.circuit.main input).operations n) = [] := by
+  simp only [SP1Clean.IsZeroOperation.circuit, SP1Clean.IsZeroOperation.main, circuit_norm,
+    Gadgets.Equality.main]
+
+private theorem cpuStateLookups (input : Var Readers.CPUState.Inputs (ZMod p)) (n : ℕ) :
+    Operations.lookups ((Readers.CPUState.circuit.main input).operations n) = [] := rfl
+
+private theorem registerAccessColsLookups (input : Var Readers.RegisterAccessCols.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((Readers.RegisterAccessCols.circuit.main input).operations n) = [] := by
+  simp only [Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main, circuit_norm,
+    Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main]
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem pcArmLookups (input : Var SyscallInstrsChip.PcArm.Inputs (ZMod p)) (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.PcArm.circuit.main input).operations n) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem commitArmLookups (input : Var SyscallInstrsChip.CommitArm.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.CommitArm.circuit.main input).operations n) = [] := rfl
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem writeArmLookups (input : Var SyscallInstrsChip.WriteArm.Inputs (ZMod p)) (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.WriteArm.circuit.main input).operations n) = [] := rfl
+
+private theorem fieldBoundArmLookups (input : Var SyscallInstrsChip.FieldBoundArm.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.FieldBoundArm.circuit.main input).operations n) = [] := by
+  simp only [SyscallInstrsChip.FieldBoundArm.circuit, SyscallInstrsChip.FieldBoundArm.main,
+    circuit_norm, Gadgets.Equality.main, SP1Clean.U16CompareOperation.circuit,
+    SP1Clean.U16CompareOperation.main]
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem dispatchArmLookups (input : Var SyscallInstrsChip.DispatchArm.Inputs (ZMod p))
+    (n : ℕ) :
+    Operations.lookups ((SyscallInstrsChip.DispatchArm.circuit.main input).operations n) = [] := rfl
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ({ circuit := SyscallInstrsChip.circuit (p := p) } :
+      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    SyscallInstrsChip.circuit_main_eq]
+  simp only [SyscallInstrsChip.main, Circuit.operations, Circuit.bind_def, assertZero,
+    subcircuitWithAssertion, assertion, Channel.pullIf, Channel.pushIf,
+    Operations.lookups_append, Operations.lookups_assert, Operations.lookups_interact,
+    Operations.lookups_nil, Operations.lookups_subcircuit,
+    FormalAssertion.toSubcircuit_lookups, GeneralFormalCircuit.toSubcircuit_lookups,
+    FormalAssertion.toSubcircuit_localLength, GeneralFormalCircuit.toSubcircuit_localLength,
+    Readers.CPUState.circuit_localLength, Readers.RegisterAccessCols.circuit_localLength,
+    SP1Clean.IsZeroOperation.circuit_localLength,
+    SyscallInstrsChip.PcArm.circuit_localLength,
+    SyscallInstrsChip.WriteArm.circuit_localLength,
+    SyscallInstrsChip.FieldBoundArm.circuit_localLength,
+    SyscallInstrsChip.DispatchArm.circuit_localLength,
+    SP1Clean.U16toU8OperationSafe.circuit_localLength,
+    u16toU8SafeLookups, isZeroLookups, cpuStateLookups, registerAccessColsLookups, pcArmLookups, commitArmLookups, writeArmLookups, fieldBoundArmLookups, dispatchArmLookups,
+    Operations.localLength, Nat.add_zero, List.append_nil]
 
 end SP1Clean.SyscallInstrsChip

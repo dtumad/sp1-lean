@@ -1,6 +1,6 @@
 //! The differential battery as a cargo test: every fixture row under
-//! `export/testdata/` must reproduce its expected witness cells exactly.
-//! Override the export location with `WITGEN_EXPORT_DIR`.
+//! the freshly generated `testdata/` must reproduce its expected witness cells exactly.
+//! `scripts/check_witgen_export.py` supplies `WITGEN_EXPORT_DIR` after validating coverage.
 
 use std::path::PathBuf;
 
@@ -8,7 +8,7 @@ use std::path::PathBuf;
 fn all_fixture_rows_reproduce() {
     let dir = std::env::var("WITGEN_EXPORT_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("../../export"));
+        .expect("set WITGEN_EXPORT_DIR to a fresh scripts/check_witgen_export.py output directory");
     let (rows, failures) =
         witgen_interp::run_all(&dir, None, false).expect("export dir readable and well-formed");
     assert!(rows > 0, "no fixture rows found");

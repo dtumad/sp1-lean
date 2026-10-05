@@ -36,19 +36,19 @@ theorem spec_committed {image : ProgramImage} (valid : image.Valid)
 this image. Fixed lookups are part of `ConstraintsHold`; channel balance is not a premise. -/
 theorem constraints_committed {image : ProgramImage} (valid : image.Valid)
     (env : Environment (ZMod p))
-    (constraints : (⟨circuit image⟩ : Component (ZMod p)).operations.ConstraintsHold env) :
+    (constraints : ({ circuit := circuit image } : Component (ZMod p)).operations.ConstraintsHold env) :
     Soundness.Target.committedInROM (image.toGuestProgram valid)
-      (Semantics.rowOfMsg ((⟨circuit image⟩ : Component (ZMod p)).rowInput env).toMessage) := by
-  exact spec_committed valid ((⟨circuit image⟩ : Component (ZMod p)).weakSoundness_of_no_guarantees
+      (Semantics.rowOfMsg (({ circuit := circuit image } : Component (ZMod p)).rowInput env).toMessage) := by
+  exact spec_committed valid (({ circuit := circuit image } : Component (ZMod p)).weakSoundness_of_no_guarantees
     rfl (by trivial) constraints).1
 
 /-- The evaluated provider ledger has exactly the complete committed message as its payload. -/
 theorem program_interaction_payload (image : ProgramImage) (env : Environment (ZMod p))
     (interaction : Interaction (ZMod p))
-    (member : interaction ∈ (⟨circuit image⟩ : Component (ZMod p)).operations.interactionValuesWith
+    (member : interaction ∈ ({ circuit := circuit image } : Component (ZMod p)).operations.interactionValuesWith
       Channels.programChannel.toRaw env) :
     interaction.msg = (toElements
-      ((⟨circuit image⟩ : Component (ZMod p)).rowInput env).toMessage).toArray :=
+      (({ circuit := circuit image } : Component (ZMod p)).rowInput env).toMessage).toArray :=
   FixedProgramProvider.program_interaction_payload image.programTable env interaction member
 
 end SP1Clean.DecodedProgramProvider

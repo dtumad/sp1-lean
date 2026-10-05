@@ -1,4 +1,5 @@
 import SP1CleanTest.Core.HostChecks
+import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger

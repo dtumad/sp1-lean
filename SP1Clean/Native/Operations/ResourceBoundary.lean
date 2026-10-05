@@ -5,7 +5,8 @@ import ToClean.Air.PublicVerifier
 
 The fixed snapshots and numeric limits are public instance data, so their finite checks are
 constant assertions. Two additional equations bind the target clock to the real State ledger.
-This circuit adds no cells, rows or interactions and does not change any Rust chip anchor.
+The assertion circuit adds no cells or rows. Its verifier adapter enforces the three assertions
+with six interactions on a fresh channel, preserving every existing channel ledger.
 -/
 
 namespace SP1Clean.ResourceBoundary
@@ -39,12 +40,24 @@ def circuit (limits : ResourceLimits) (source target : ExecutionSnapshot) :
     exact ⟨by simp [(checkBounds_iff limits source target).mpr bounds],
       sub_eq_zero.mpr high, sub_eq_zero.mpr low⟩
 
-/-- Installable public check with literal raw silence. -/
+/-- Installable public assertions with no unverified precondition or private witness. -/
 def checker (limits : ResourceLimits) (source target : ExecutionSnapshot) :
     PublicVerifier (ZMod p) SP1PublicIO where
+  name := "resource_boundary"
   circuit := circuit limits source target
+  assumptions := by intros; trivial
   length_zero := by intros; rfl
+  lookups := by intros; rfl
   interactions := by intros; rfl
+
+/-- The existing SP1 field bound covers all six public-check occurrences. -/
+theorem count_bound [Fact (2 ^ 25 < p)] (limits : ResourceLimits) (source target : ExecutionSnapshot) :
+    (checker (p := p) limits source target).CountBound := by
+  change 2 * 3 < ringChar (ZMod p) ∨ ringChar (ZMod p) = 0
+  rw [ZMod.ringChar_zmod_n]
+  left
+  have := Fact.out (p := 2 ^ 25 < p)
+  omega
 
 /-- The raw assertions check exactly the contract in both directions. -/
 theorem checks_iff (limits : ResourceLimits) (source target : ExecutionSnapshot)

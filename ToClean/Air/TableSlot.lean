@@ -1,13 +1,13 @@
 module
 
-public import ToClean.Air.EnsembleProjection
+public import ToClean.Air.EnsembleBuild
 
 /-! # Typed positions in a physical ensemble
 
 Clean's witness stores a positional component equation, but has no typed reference to an
 installed component. `TableSlot` packages that equation with its bounded position. References
 compose through appended component blocks and select the original physical table, including
-its rows, environment and prover data. Constraints and individual channel guarantees are
+its rows and the canonical data derived by the whole witness. Constraints and channel guarantees are
 inherited independently; selecting a table makes no claim about projected channel balance.
 
 The intended upstream home is `Clean/Air/FlatEnsemble.lean`. The concrete consumers are
@@ -81,32 +81,29 @@ theorem table_component (slot : TableSlot ens.tables component) (witness : Ensem
 theorem table_mem (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens) :
     slot.table witness ∈ witness.tables := List.getElem_mem _
 
-/-- Selection includes no auxiliary or reconstructed verifier rows. -/
-theorem table_mem_allTables (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens) :
-    slot.table witness ∈ witness.allTables :=
-  witness.mem_allTables_of_mem_tables (slot.table_mem witness)
-
-/-- The selected table uses the witness's actual shared prover data. -/
-theorem table_data (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens) :
-    (slot.table witness).data = witness.data := witness.same_data _ (slot.table_mem witness)
+/-- The selected physical table determines its entry in the witness's canonical data. -/
+theorem table_data (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens) (arity : ℕ) :
+    witness.data component.circuit.name arity = component.proverRows (slot.table witness).table arity := by
+  have sameName := congrArg (fun component : Component F => component.circuit.name) (slot.table_component witness)
+  simpa only [sameName, slot.table_component witness] using witness.data_of_mem_table (slot.table_mem witness) arity
 
 /-- Whole-witness constraints restrict to the original selected physical table. -/
 theorem table_constraints (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens)
-    (checked : witness.Constraints) : (slot.table witness).Constraints :=
-  checked _ (slot.table_mem_allTables witness)
+    (checked : witness.Constraints) : (slot.table witness).Constraints witness.data :=
+  checked _ (slot.table_mem witness)
 
 /-- Individual channel guarantees restrict without claiming balance of any smaller inventory. -/
 theorem table_channelGuarantees (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens)
-    (channel : RawChannel F) (guarantees : ∀ table ∈ witness.allTables, table.ChannelGuarantees channel) :
-    (slot.table witness).ChannelGuarantees channel := guarantees _ (slot.table_mem_allTables witness)
+    (channel : RawChannel F) (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel) :
+    (slot.table witness).ChannelGuarantees witness.data channel := guarantees _ (slot.table_mem witness)
 
 /-- Every selected interaction remains an occurrence in the complete physical ledger. -/
 theorem table_interactions_subset (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens)
     (channel : RawChannel F) :
-    (slot.table witness).interactionsWith channel ⊆ witness.interactionsWith channel := by
+    (slot.table witness).interactionsWith witness.data channel ⊆ witness.interactionsWith channel := by
   intro interaction member
   exact EnsembleWitness.mem_interactionsWith.mpr
-    ⟨slot.table witness, slot.table_mem_allTables witness, member⟩
+    (Or.inr ⟨slot.table witness, slot.table_mem witness, member⟩)
 
 end TableSlot
 end Air.Flat

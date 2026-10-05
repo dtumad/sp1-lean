@@ -84,14 +84,14 @@ theorem executionRows_nil_of_stopped {image : ProgramImage} {source : ExecutionS
 theorem memoryRefreshes_push_bounds_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw) :
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw) :
     ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.2 := by
   intro pair member
   obtain ⟨row, rowMem, pairMem⟩ := List.mem_flatMap.mp member
   obtain rfl := List.mem_singleton.mp pairMem
   obtain ⟨mapped, real⟩ := List.mem_filter.mp rowMem
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  exact memoryBump_pushedMessage_clkFacts_of_component _ (systemTable_component witness 0)
+  exact memoryBump_pushedMessage_clkFacts_of_component _ witness.data (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
     (bytes _ (systemTable_mem witness 0))
     physicalMem (of_decide_eq_true real)
@@ -158,14 +158,14 @@ theorem memory_consumed_bounds {image : ProgramImage} {source : ExecutionSnapsho
 private theorem active_refresh_order {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     {row : MemoryBumpChip.Inputs (ZMod p)}
-    (member : row ∈ activeSystemRows (systemTable witness 0) memoryBumpRow (·.is_real)) :
+    (member : row ∈ activeSystemRows (systemTable witness 0) (memoryBumpRow witness.data) (·.is_real)) :
     MemoryClockBounds (MemoryBumpChip.pulledMessage row) →
       MemoryMsg.timeNat (MemoryBumpChip.pulledMessage row) < MemoryMsg.timeNat (MemoryBumpChip.pushedMessage row) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  exact memoryBump_row_order _ (systemTable_component witness 0)
+  exact memoryBump_row_order _ witness.data (systemTable_component witness 0)
     (systemTable_constraints witness constraints 0)
     (bytes _ (systemTable_mem witness 0))
     physicalMem (of_decide_eq_true real)
@@ -175,7 +175,7 @@ Memory ledger bounds their actual prior records. -/
 theorem memoryRefreshes_order_of_bounds {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.allTables, table.ChannelGuarantees byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     (prior : ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.1) :
     ∀ pair ∈ memoryRefreshes witness, MemoryMsg.timeNat pair.1 < MemoryMsg.timeNat pair.2 := by
   intro pair member

@@ -2,7 +2,7 @@
 //!
 //! Consumes the `version: 1` wire format documented in `docs/witgen-wire-format.md`
 //! (normative source: the Clean pin's `Clean/Circuit/WitnessExport.lean`), and runs
-//! the differential fixtures under `export/testdata/`. Deliberately self-contained:
+//! freshly generated differential fixtures from `WITGEN_EXPORT_DIR`. Self-contained:
 //! the crate depends only on the wire format — no prover types, no Lean toolchain.
 //!
 //! The row differential is a completeness-side conformance oracle. The separate

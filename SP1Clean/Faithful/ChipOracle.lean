@@ -20,6 +20,7 @@ import Clean.Circuit.Loops
 import Clean.Circuit.Provable
 import Clean.Gadgets.Equality
 import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 
 /-! # Chip-level Rust oracle boundary
 
@@ -180,104 +181,6 @@ proofs reuse the generated row types without reconstructing parallel reader stru
          clk_0_16 := Eval.eval env x.clk_0_16
          pc := Eval.eval env x.pc } : Circuits.Types.CPUState F) := by
   rw [ProvableStruct.eval_eq_eval]
-  rfl
-
-/- Clean currently exposes the corresponding interaction-normalization lemmas, but not the constraint
-variants. Keep these two tiny flattening facts at the chip-oracle boundary so faithfulness proofs can
-descend one true subcircuit at a time without unfolding `Subcircuit` soundness packages. They are good
-candidates to upstream to Clean alongside `FormalAssertion.toSubcircuit_interactions`. -/
-@[circuit_norm] theorem constraints_toSubcircuit_formalAssertion
-    {F : Type} [FiniteField F] {Input : TypeMap} [ProvableType Input]
-    (circuit : FormalAssertion F Input) (n : ℕ) (input : Var Input F) :
-    FlatOperation.constraints (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).constraints := by
-  simp only [FormalAssertion.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.constraints_toFlat]
-
-@[circuit_norm] theorem constraints_toSubcircuit_formalCircuit
-    {F : Type} [FiniteField F] {Input Output : TypeMap}
-    [ProvableType Input] [ProvableType Output]
-    (circuit : FormalCircuit F Input Output) (n : ℕ) (input : Var Input F) :
-    FlatOperation.constraints (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).constraints := by
-  simp only [FormalCircuit.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.constraints_toFlat]
-
-@[circuit_norm] theorem constraints_toSubcircuit_generalFormalCircuit
-    {F : Type} [FiniteField F] {Input Output : TypeMap}
-    [ProvableType Input] [ProvableType Output]
-    (circuit : GeneralFormalCircuit F Input Output) (n : ℕ) (input : Var Input F) :
-    FlatOperation.constraints (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).constraints := by
-  simp only [GeneralFormalCircuit.toSubcircuit, GeneralFormalCircuit.toWithHint,
-    GeneralFormalCircuit.WithHint.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.constraints_toFlat]
-
-@[circuit_norm] theorem lookups_toSubcircuit_formalAssertion
-    {F : Type} [FiniteField F] {Input : TypeMap} [ProvableType Input]
-    (circuit : FormalAssertion F Input) (n : ℕ) (input : Var Input F) :
-    FlatOperation.lookups (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).lookups := by
-  simp only [FormalAssertion.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.lookups_toFlat]
-
-@[circuit_norm] theorem lookups_toSubcircuit_formalCircuit
-    {F : Type} [FiniteField F] {Input Output : TypeMap}
-    [ProvableType Input] [ProvableType Output]
-    (circuit : FormalCircuit F Input Output) (n : ℕ) (input : Var Input F) :
-    FlatOperation.lookups (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).lookups := by
-  simp only [FormalCircuit.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.lookups_toFlat]
-
-@[circuit_norm] theorem lookups_toSubcircuit_generalFormalCircuit
-    {F : Type} [FiniteField F] {Input Output : TypeMap}
-    [ProvableType Input] [ProvableType Output]
-    (circuit : GeneralFormalCircuit F Input Output) (n : ℕ) (input : Var Input F) :
-    FlatOperation.lookups (circuit.toSubcircuit n input).ops.toFlat =
-      ((circuit.main input).operations n).lookups := by
-  simp only [GeneralFormalCircuit.toSubcircuit, GeneralFormalCircuit.toWithHint,
-    GeneralFormalCircuit.WithHint.toSubcircuit]
-  rw [Operations.toNested_toFlat, Operations.lookups_toFlat]
-
-@[circuit_norm] theorem constraints_flatten_operations
-    {F : Type} [FiniteField F] (opss : List (Operations F)) :
-    Operations.constraints opss.flatten = (opss.map Operations.constraints).flatten := by
-  induction opss with
-  | nil => rfl
-  | cons ops opss ih =>
-      simp only [List.flatten_cons, Operations.constraints_append, List.map_cons,
-        List.flatten_cons, ih]
-
-@[circuit_norm] theorem lookups_flatten_operations
-    {F : Type} [FiniteField F] (opss : List (Operations F)) :
-    Operations.lookups opss.flatten = (opss.map Operations.lookups).flatten := by
-  induction opss with
-  | nil => rfl
-  | cons ops opss ih =>
-      simp only [List.flatten_cons, Operations.lookups_append, List.map_cons,
-        List.flatten_cons, ih]
-
-@[circuit_norm] theorem constraints_forEach
-    {F : Type} [FiniteField F] {α : Type} {m : ℕ} [Inhabited α]
-    (xs : Vector α m) (body : α → Circuit F Unit) (constant : Circuit.ConstantLength body)
-    (offset : ℕ) :
-    ((Circuit.forEach xs body constant).operations offset).constraints =
-      (List.ofFn fun (i : Fin m) =>
-        ((body xs[i]).operations
-          (offset + i * (body default).localLength)).constraints).flatten := by
-  rw [Circuit.forEach.operations_eq, constraints_flatten_operations, List.map_ofFn]
-  rfl
-
-@[circuit_norm] theorem lookups_forEach
-    {F : Type} [FiniteField F] {α : Type} {m : ℕ} [Inhabited α]
-    (xs : Vector α m) (body : α → Circuit F Unit) (constant : Circuit.ConstantLength body)
-    (offset : ℕ) :
-    ((Circuit.forEach xs body constant).operations offset).lookups =
-      (List.ofFn fun (i : Fin m) =>
-        ((body xs[i]).operations
-          (offset + i * (body default).localLength)).lookups).flatten := by
-  rw [Circuit.forEach.operations_eq, lookups_flatten_operations, List.map_ofFn]
   rfl
 
 /- These are normalization facts for the two canonical generated reader fragments shared by Rust chip
@@ -823,13 +726,13 @@ structure NativeRowAssignment {F : Type} [FiniteField F] {Input Output : TypeMap
     (data : ProverData F) where
   row : Array F
   input : Input F
-  width_eq : row.size = (⟨circuit⟩ : Air.Flat.Component F).width
+  width_eq : row.size = ({ circuit := circuit } : Air.Flat.Component F).width
   rowInput_eq :
-    (⟨circuit⟩ : Air.Flat.Component F).rowInput (Environment.fromArray row data) = input
+    ({ circuit := circuit } : Air.Flat.Component F).rowInput (Environment.fromArray row data) = input
   rowOutput_eq :
     ProvableType.eval (Environment.fromArray row data)
-      ((circuit.main (⟨circuit⟩ : Air.Flat.Component F).rowInputVar).output
-        (⟨circuit⟩ : Air.Flat.Component F).rowOffset) = cols
+      ((circuit.main ({ circuit := circuit } : Air.Flat.Component F).rowInputVar).output
+        ({ circuit := circuit } : Air.Flat.Component F).rowOffset) = cols
 
 namespace NativeRowAssignment
 
@@ -882,7 +785,7 @@ theorem rowInput_inputFirstRow {F : Type} [FiniteField F]
     {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit F Input Output) (input : Input F)
     {n : ℕ} (locals : Vector F n) (data : ProverData F) :
-    (⟨circuit⟩ : Air.Flat.Component F).rowInput
+    ({ circuit := circuit } : Air.Flat.Component F).rowInput
         (Environment.fromArray (inputFirstRow input locals) data) = input := by
   simp only [Air.Flat.Component.rowInput, valueFromOffset]
   rw [ProvableType.fromElements_eq_iff]
@@ -966,8 +869,8 @@ variable {circuit : GeneralFormalCircuit F Input Output} {cols : Output F} {data
 /-- A reconstructed component row binds the circuit's canonical output to the decoded native row. -/
 theorem bindsOutput (assignment : NativeRowAssignment circuit cols data) :
     BindsChipOutput circuit.main assignment.environment
-      (⟨circuit⟩ : Air.Flat.Component F).rowInputVar
-      (⟨circuit⟩ : Air.Flat.Component F).rowOffset cols := by
+      ({ circuit := circuit } : Air.Flat.Component F).rowInputVar
+      ({ circuit := circuit } : Air.Flat.Component F).rowOffset cols := by
   unfold BindsChipOutput environment
   rw [← ProvableStruct.eval_eq_eval]
   rw [CircuitType.eval_expression]
@@ -981,10 +884,10 @@ remain covered by the interaction half of `ChipFaithful`. -/
 theorem constraintsHold_iff_nativeAssertZeros {F : Type} [FiniteField F]
     {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit F Input Output) (env : Environment F)
-    (lookupsEmpty : (⟨circuit⟩ : Air.Flat.Component F).operations.lookups = []) :
-    (⟨circuit⟩ : Air.Flat.Component F).operations.ConstraintsHold env ↔
+    (lookupsEmpty : ({ circuit := circuit } : Air.Flat.Component F).operations.lookups = []) :
+    ({ circuit := circuit } : Air.Flat.Component F).operations.ConstraintsHold env ↔
       List.Forall (· = 0)
-        (nativeAssertZeros env (⟨circuit⟩ : Air.Flat.Component F).rowOperations) := by
+        (nativeAssertZeros env ({ circuit := circuit } : Air.Flat.Component F).rowOperations) := by
   rw [Operations.ConstraintsHold, lookupsEmpty, Air.Flat.Component.constraints_eq]
   simp [nativeAssertZeros, List.forall_iff_forall_mem]
 
@@ -993,8 +896,8 @@ their evaluated whole-chip access multisets are identical. -/
 theorem nativeAccesses_component_eq_rowOperations {p : ℕ} [Fact p.Prime]
     {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output) (env : Environment (ZMod p)) :
-    nativeAccesses env (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations =
-      nativeAccesses env (⟨circuit⟩ : Air.Flat.Component (ZMod p)).rowOperations := by
+    nativeAccesses env ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations =
+      nativeAccesses env ({ circuit := circuit } : Air.Flat.Component (ZMod p)).rowOperations := by
   simp only [nativeAccesses, unexpectedInteractions, Operations.interactionsWith,
     Air.Flat.Component.interactions_eq]
 
@@ -1021,7 +924,7 @@ structure ChipFaithful {p : ℕ} [Fact p.Prime]
   constraints : ∀ rustCols data,
     let assignment := codec.assignment (oracle.deconfigure rustCols) data
     List.Forall (· = 0) (oracle.assertZeros rustCols) ↔
-      (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+      ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
         assignment.environment
   interactions : ∀ rustCols data,
     List.Forall (· = 0) (oracle.assertZeros rustCols) →
@@ -1029,7 +932,7 @@ structure ChipFaithful {p : ℕ} [Fact p.Prime]
     List.Perm
       (LookupAccessList.active
         (nativeAccesses assignment.environment
-          (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations))
+          ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations))
       (LookupAccessList.active (oracle.rustAccesses rustCols))
 
 namespace ChipFaithful
@@ -1047,13 +950,13 @@ theorem interactions_of_nativeConstraints
     (faithful : ChipFaithful Input NativeCols RustCols circuit codec oracle)
     (rustCols : RustCols (ZMod p)) (data : ProverData (ZMod p))
     (hNative :
-      (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+      ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
         (codec.assignment (oracle.deconfigure rustCols) data).environment) :
     List.Perm
       (LookupAccessList.active
         (nativeAccesses
           (codec.assignment (oracle.deconfigure rustCols) data).environment
-          (⟨circuit⟩ : Air.Flat.Component (ZMod p)).operations))
+          ({ circuit := circuit } : Air.Flat.Component (ZMod p)).operations))
       (LookupAccessList.active (oracle.rustAccesses rustCols)) := by
   apply faithful.interactions rustCols data
   exact (faithful.constraints rustCols data).mpr hNative

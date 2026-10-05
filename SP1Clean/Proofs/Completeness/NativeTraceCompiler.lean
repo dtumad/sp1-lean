@@ -132,7 +132,7 @@ noncomputable def nativeBaseTraceOfCompiled (statement : SupportedCoreStatement 
     (compiled : CompiledExecution) : SupportedCoreTraceWitness p where
   instructionEvents := compiled.instructionEvents
   providerOccurrences := nativeBaseProviderOccurrences compiled
-  data := Commit.dataOfAt statement.program (nativeInitialClock statement)
+  generationData := Commit.dataOfAt statement.program (nativeInitialClock statement)
   hint := ProverHint.empty (ZMod p)
   boundary := statement.publicValues
 
@@ -169,7 +169,7 @@ noncomputable def physicalInstructionMemoryLedger
 /-- The physical MemoryBump-table part of the native Memory ledger. -/
 noncomputable def physicalMemoryBumpLedger
     (trace : SupportedCoreTraceWitness p) : LookupAccessList :=
-  (typedTableInteractionsWith (memoryBumpTable trace.witness) Channels.memoryChannel).map
+  (typedTableInteractionsWith (memoryBumpTable trace.witness) trace.witness.data Channels.memoryChannel).map
     fun interaction => Interaction.toAccess interaction.raw
 
 /-- The residual representation seam for native Memory generation: active instruction and refresh
@@ -367,40 +367,6 @@ theorem NativeTraceReady.skeletonNonpositive
   apply hnonpos_of_consumersOnlyPull
   exact ready.consumers publicWellFormed
 
-/-- Convert the five-component compatibility footprint carrier into the channel-indexed length premise used by
-Clean's balance theorem. -/
-theorem NativeTraceFootprint.interactionLengths
-    {trace : SupportedCoreTraceWitness p}
-    (fits : (NativeTraceFootprint.ofTrace trace).Fits p) :
-    ∀ channel ∈ (sp1Ensemble (p := p)).channels,
-      (trace.witness.interactionsWith channel).length < p := by
-  intro channel channelMem
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at channelMem
-  rcases channelMem with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · simpa only [NativeTraceFootprint.ofTrace,
-      Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.1
-  · simpa only [NativeTraceFootprint.ofTrace,
-      Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.2.1
-  · simpa only [NativeTraceFootprint.ofTrace,
-      Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.2.2.1
-  · simpa only [NativeTraceFootprint.ofTrace,
-      Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.2.2.2.1
-  · simpa only [NativeTraceFootprint.ofTrace,
-      Air.Flat.EnsembleWitness.interactionsWith_allTablesWitness] using fits.2.2.2.2
-  · rw [witness_syscallChannel_silent _ trace.witness_syscallTable_nil]
-    simpa using (Fact.out (p := p.Prime)).pos
-  · rw [witness_publicValuesChannel_silent _ trace.witness_syscallTable_nil]
-    simpa using (Fact.out (p := p.Prime)).pos
-
-/-- The retained ordinary constructor has silent syscall/public-value tables, so the old
-five-channel projection is equivalent to the complete seven-channel capacity interface. -/
-theorem NativeTraceFootprint.fits_iff_channelCapacity (trace : SupportedCoreTraceWitness p) :
-    (NativeTraceFootprint.ofTrace trace).Fits p ↔ trace.witness.ChannelCapacity p := by
-  constructor
-  · intro fits
-    exact (Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mpr (interactionLengths fits)
-  · exact fits_of_channelCapacity trace
-
 /-- Public limb well-formedness makes the arbitrary-shard prover-data clock representable. -/
 theorem nativeInitialClock_encodable (statement : SupportedCoreStatement p)
     (publicWellFormed : statement.publicValues.LimbBounds) :
@@ -418,14 +384,6 @@ def NativeTraceAdmissible (statement : SupportedCoreStatement p)
     (execution : Machine.EventExecutionTrace) : Prop :=
   NativeTraceReady statement execution ∧
     (nativeTrace statement execution).witness.ChannelCapacity p
-
-/-- Source compatibility for the legacy five-channel admissibility view. Its omission of two
-channels is justified only by this ordinary constructor's proved silence. -/
-theorem nativeTraceAdmissible_iff_legacy (statement : SupportedCoreStatement p)
-    (execution : Machine.EventExecutionTrace) :
-    NativeTraceAdmissible statement execution ↔ NativeTraceReady statement execution ∧
-      (NativeTraceFootprint.ofTrace (nativeTrace statement execution)).Fits p := by
-  rw [NativeTraceAdmissible, NativeTraceFootprint.fits_iff_channelCapacity]
 
 /-! ## Canonical shard source
 

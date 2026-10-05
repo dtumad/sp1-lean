@@ -2,12 +2,12 @@ import SP1Clean.Composition.MemoryBoundary
 import SP1Clean.Composition.PreprocessedProviders
 import SP1Clean.Composition.SystemTables
 
-/-! # Exact Core rows as the native twenty-eight-table provider segment
+/-! # Exact Core rows as the native thirty-table provider segment
 
-The native Core ensemble has twenty-eight non-instruction tables: six Byte providers, all
-seventeen fixed-width Range providers, Program, memory init/finalize, and the Memory/State bump
-tables.  Caller-supplied exact Core execution and memory-boundary relations constrain the source
-rows under an explicit preprocessing-opening predicate, but
+The native Core ensemble has thirty non-instruction tables: six Byte providers, all
+seventeen fixed-width Range providers, Program, memory init/finalize, the Memory/State bump
+tables, HALT padding, and the empty syscall table. Exact Core execution and memory-boundary
+relations constrain the source rows under an explicit preprocessing-opening predicate, but
 the exact Byte/Range/Program main multiplicities are not the multiplicities of this reduced native
 ensemble: exact system consumers omitted from the native slice would otherwise leave it unbalanced.
 
@@ -23,7 +23,7 @@ columns.
 
 Memory boundary semantics remain a separate explicit lowering contract.  The execution and
 memory-boundary relations discharge the local constraints of the bump and boundary tables,
-respectively.  This module constructs and validates all twenty-eight provider tables, and states
+respectively.  This module constructs and validates all thirty provider tables, and states
 their literal Clean ledger as recounted preprocessing followed by the actual boundary/bump ledgers.
 -/
 
@@ -64,7 +64,7 @@ structure ExactProviderTransportContract {Digest : Type}
   /-- Cross-table word/timestamp facts for active MemoryGlobalInit/Finalize rows. -/
   boundarySemantics : MemoryBoundarySemanticContract memoryBoundaryWitness
 
-/-- All twenty-eight reconstructed provider/system tables in `sp1ProviderTables` order. -/
+/-- All thirty reconstructed provider/system tables in `sp1ProviderTables` order. -/
 def exactProviderTables
     (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (inventory : CanonicalPreprocessedInventory executionWitness)
@@ -88,42 +88,6 @@ theorem exactProviderTables_components
     extractedMemoryBoundaryTables_components, extractedBumpTables_components]
   rfl
 
-/-- Every reconstructed provider table carries the same committed prover data. -/
-theorem exactProviderTables_data
-    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory executionWitness)
-    (skeleton : LookupAccessList)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ∀ table ∈ exactProviderTables executionWitness memoryBoundaryWitness inventory skeleton data hint,
-      table.data = data := by
-  intro table tableMem
-  simp only [exactProviderTables, List.mem_append] at tableMem
-  rcases tableMem with (tableMem | tableMem) | tableMem
-  · exact extractedPreprocessedProviderTables_data executionWitness inventory skeleton data hint
-      table tableMem
-  · exact extractedMemoryBoundaryTables_data memoryBoundaryWitness data hint table tableMem
-  · exact extractedBumpTables_data executionWitness data table tableMem
-
-/-- Shared-data bundle for the native provider segment. -/
-def exactProviderTableBundle
-    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory executionWitness)
-    (skeleton : LookupAccessList)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : Air.Flat.Tables (ZMod p) where
-  tables := exactProviderTables executionWitness memoryBoundaryWitness inventory skeleton data hint
-  data := data
-  same_data := exactProviderTables_data executionWitness memoryBoundaryWitness inventory skeleton data hint
-
-/-- The shared-data bundle has exactly the native provider components. -/
-theorem exactProviderTableBundle_components
-    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory executionWitness)
-    (skeleton : LookupAccessList)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (exactProviderTableBundle executionWitness memoryBoundaryWitness inventory skeleton data hint).components =
-      Soundness.sp1ProviderTables :=
-  exactProviderTables_components executionWitness memoryBoundaryWitness inventory skeleton data hint
-
 /-- **Constructive exact-provider transport.**  The two exact relations plus the explicit native
 recount and memory-boundary contracts produce all constraint-satisfying provider/system tables. -/
 theorem exactProviderTables_constraints {Digest : Type}
@@ -136,7 +100,7 @@ theorem exactProviderTables_constraints {Digest : Type}
     (contract : ExactProviderTransportContract binds statement
       executionWitness memoryBoundaryWitness inventory skeleton) :
     ∀ table ∈ exactProviderTables executionWitness memoryBoundaryWitness inventory skeleton data hint,
-      table.Constraints := by
+      table.Constraints data := by
   intro table tableMem
   simp only [exactProviderTables, List.mem_append] at tableMem
   rcases tableMem with (tableMem | tableMem) | tableMem
@@ -148,21 +112,6 @@ theorem exactProviderTables_constraints {Digest : Type}
   · exact extractedBumpTables_constraints statement executionWitness data
       contract.executionRelation table tableMem
 
-/-- Bundle form of `exactProviderTables_constraints`. -/
-theorem exactProviderTableBundle_constraints {Digest : Type}
-    {binds : CoreAIR.Current.PreprocessedBinding p Digest}
-    (statement : SP1ShardStatement (ZMod p) Digest)
-    (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
-    (inventory : CanonicalPreprocessedInventory executionWitness)
-    (skeleton : LookupAccessList)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (contract : ExactProviderTransportContract binds statement
-      executionWitness memoryBoundaryWitness inventory skeleton) :
-    (exactProviderTableBundle executionWitness memoryBoundaryWitness inventory skeleton data hint
-      ).Constraints :=
-  exactProviderTables_constraints statement executionWitness memoryBoundaryWitness inventory skeleton
-    data hint contract
-
 /-- Literal Clean ledger decomposition of the complete provider segment.  The boundary and bump
 terms are deliberately left as their actual constructed-table ledgers, with no Rust-facing sign
 dualization. -/
@@ -173,10 +122,10 @@ theorem exactProviderTables_cleanAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (recount : PreprocessedProviderRecountContract executionWitness inventory skeleton) :
     tablesCleanAccesses
-        (exactProviderTables executionWitness memoryBoundaryWitness inventory skeleton data hint) =
+        (exactProviderTables executionWitness memoryBoundaryWitness inventory skeleton data hint) data =
       recountedPreprocessedProviderAccesses inventory skeleton ++
-        tablesCleanAccesses (extractedMemoryBoundaryTables memoryBoundaryWitness data hint) ++
-        tablesCleanAccesses (extractedBumpTables executionWitness data) := by
+        tablesCleanAccesses (extractedMemoryBoundaryTables memoryBoundaryWitness data hint) data ++
+        tablesCleanAccesses (extractedBumpTables executionWitness data) data := by
   simp only [exactProviderTables, tablesCleanAccesses, List.flatMap_append]
   have preprocessing :=
     extractedPreprocessedProviderTables_cleanAccesses recount data hint

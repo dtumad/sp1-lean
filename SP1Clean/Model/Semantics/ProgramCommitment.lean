@@ -1,31 +1,23 @@
 import SP1Clean.Model.Machine.Boot
 import Clean.Circuit.Expression
 
-/-! # The program commitment — `ProverData` as the committed guest program
+/-! # Legacy program-data encoding
 
-The machine-grounding design keys every global execution/decode claim to **the deterministic execution
-of the committed program**: the prover writes the guest program into `ProverData` (Clean's committed
-prover-data store, `String → (n : ℕ) → Array (Vector F n)`, shared across all tables of an ensemble
-witness via `same_data`), and `progOf` decodes it back to a `GuestProgram`. Binding the committed data
-to *the* program of interest is the `StatementFor` conjunct `progOf witness.data = prog` — the Lean
-shadow of SP1's verifying-key program commitment. Channel guarantees themselves remain row-local and
-structural; this binding is consumed by the global Program/State grounding theorems.
+This codec represents a semantic program and initial clock as generation inputs and test fixtures.
+It is separate from Clean's canonical prover data derived from physical ensemble tables. Semantic
+AIR grounding binds provider rows directly to the statement's program and uses its public initial
+clock; neither authentication nor table-data agreement follows from this codec's round-trip laws.
 
-Reserved keys (arities pinned by the decoders below):
-- `"sp1.rom"`, arity 5 — one instruction per row: `[pc0, pc1, pc2, w_lo, w_hi]` (pc as three 16-bit
-  limbs, the 32-bit encoding as two 16-bit halves);
-- `"sp1.pc_start"`, arity 3 — the entry point's three 16-bit limbs;
-- `"sp1.image"`, arity 4 — one byte per row: `[a0, a1, a2, byte]` (48-bit address limbs, one byte);
-- `"sp1.init_clk"`, arity 2 — the genesis clock `[clk_high, clk_low]`.
+The reserved keys are:
+- `"sp1.rom"`, arity 5: `[pc0, pc1, pc2, w_lo, w_hi]`;
+- `"sp1.pc_start"`, arity 3: the entry point's 16-bit limbs;
+- `"sp1.image"`, arity 4: `[a0, a1, a2, byte]`;
+- `"sp1.init_clk"`, arity 2: `[clk_high, clk_low]`.
 
-`progOf` is **total** via sanitization — duplicate ROM addresses are dropped (keep-first),
-misaligned addresses removed, out-of-window addresses removed, and compressed (non-full-width)
-entries removed, so all four `GuestProgram` guards
-(`rom_nodup`/`rom_aligned`/`rom_in_window`/`rom_full_width`) hold by construction and a
-malicious `data` still decodes to *some* well-formed program (the guarantees are then statements about
-that program). Headline AIR relations additionally require `StatementFor`: the raw representation must
-be canonical, so sanitization/truncation cannot hide malformed committed data, and `progOf data` equals
-the public program. -/
+`progOf` is total: sanitization removes duplicate, misaligned, out-of-window and compressed ROM
+entries. `StatementFor` additionally requires a canonical encoding and exact recovery of the
+source program. Keep the codec until generation inputs and fixtures use semantic objects directly;
+its representability predicate `Encodable` remains part of the semantic program domain. -/
 
 namespace SP1Clean.Commit
 
@@ -210,7 +202,7 @@ def CanonicalEncoding (data : ProverData (ZMod p)) : Prop :=
   (∃ row, pcStartRowsOf data = [row] ∧ RowValuesBelow (2 ^ 16) row) ∧
   ∃ row, initClockRowsOf data = [row] ∧ RowValuesBelow (2 ^ 24) row
 
-/-- Canonical prover data encodes exactly the public program. -/
+/-- A canonical codec input encodes exactly the selected semantic program. -/
 def StatementFor (data : ProverData (ZMod p)) (program : GuestProgram) : Prop :=
   CanonicalEncoding data ∧ progOf data = program
 
@@ -538,7 +530,7 @@ theorem progOf_dataOf [Fact p.Prime] [Fact (2 ^ 17 < p)]
     (encodable : Encodable program) : progOf (dataOf (p := p) program) = program := by
   simpa only [dataOf] using progOf_dataOfAt (p := p) program 1 wellFormed encodable
 
-/-- Canonical arbitrary-shard prover data satisfies the public statement binding for its source
+/-- Canonical arbitrary-shard prover data satisfies the codec round-trip relation for its source
 program. -/
 theorem dataOfAt_statementFor [Fact p.Prime] [Fact (2 ^ 17 < p)]
     (program : GuestProgram) (initialClock : ℕ) (wellFormed : program.WellFormed)
@@ -547,7 +539,7 @@ theorem dataOfAt_statementFor [Fact p.Prime] [Fact (2 ^ 17 < p)]
   ⟨dataOfAt_canonicalEncoding program initialClock wellFormed encodable clockEncodable,
     progOf_dataOfAt program initialClock wellFormed encodable⟩
 
-/-- Canonical honest-prover data satisfies the public statement binding for its source program. -/
+/-- Canonical honest-prover data satisfies the codec round-trip relation for its source program. -/
 theorem dataOf_statementFor [Fact p.Prime] [Fact (2 ^ 17 < p)]
     (program : GuestProgram) (wellFormed : program.WellFormed)
     (encodable : Encodable program) : StatementFor (dataOf (p := p) program) program :=

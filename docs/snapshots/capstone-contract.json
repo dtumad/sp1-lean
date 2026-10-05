@@ -8,32 +8,32 @@
       "typeFingerprint": "4034986826"
     },
     {
-      "bodyFingerprint": "3356287163",
+      "bodyFingerprint": "998294589",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
       "name": "Air.Flat.Ensemble.Soundness",
-      "typeFingerprint": "2268076673"
+      "typeFingerprint": "2411282545"
     },
     {
-      "bodyFingerprint": "3647476531",
+      "bodyFingerprint": "282737558",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
       "name": "Air.Flat.Ensemble.Statement",
-      "typeFingerprint": "3354313015"
+      "typeFingerprint": "2797736930"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "ToClean.Air.CompleteEnsemble",
       "name": "Air.Flat.EnsembleCompiler",
-      "typeFingerprint": "1485439246"
+      "typeFingerprint": "3417027461"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "ToClean.Air.CompleteEnsemble",
       "name": "Air.Flat.EnsembleCompiler.mk",
-      "typeFingerprint": "186077852"
+      "typeFingerprint": "1139130729"
     },
     {
       "bodyFingerprint": null,
@@ -43,28 +43,28 @@
       "typeFingerprint": "1955049066"
     },
     {
-      "bodyFingerprint": "1942846329",
+      "bodyFingerprint": "3141255629",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
       "name": "Air.Flat.EnsembleWitness.BalancedChannels",
-      "typeFingerprint": "3287213269"
+      "typeFingerprint": "3959575466"
     },
     {
-      "bodyFingerprint": "2398642652",
+      "bodyFingerprint": "12890052",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
       "name": "Air.Flat.EnsembleWitness.Constraints",
       "typeFingerprint": "3959575466"
     },
     {
-      "bodyFingerprint": "3335633531",
+      "bodyFingerprint": "1082125896",
       "local": true,
       "module": "ToClean.Air.CompleteEnsemble",
       "name": "Air.Flat.EnsembleWitness.Valid",
-      "typeFingerprint": "3395418943"
+      "typeFingerprint": "1822781687"
     },
     {
-      "bodyFingerprint": "2455748546",
+      "bodyFingerprint": "3235948893",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
       "name": "Air.Flat.EnsembleWitness.publicInput",
@@ -82,14 +82,14 @@
       "local": true,
       "module": "ToClean.Air.Realizes",
       "name": "Air.Flat.Realizes",
-      "typeFingerprint": "2619982413"
+      "typeFingerprint": "2896571333"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "ToClean.Air.Realizes",
       "name": "Air.Flat.Realizes.mk",
-      "typeFingerprint": "1012861493"
+      "typeFingerprint": "4040238969"
     },
     {
       "bodyFingerprint": null,
@@ -8870,7 +8870,7 @@
       "typeFingerprint": "160491160"
     },
     {
-      "bodyFingerprint": "3513159346",
+      "bodyFingerprint": "205875545",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.CompilerTarget",
@@ -8884,7 +8884,7 @@
       "typeFingerprint": "3661882632"
     },
     {
-      "bodyFingerprint": "1687881919",
+      "bodyFingerprint": "2191648340",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.SoundnessTarget",
@@ -8895,7 +8895,7 @@
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.statement_iff",
-      "typeFingerprint": "3889911916"
+      "typeFingerprint": "2630778153"
     },
     {
       "bodyFingerprint": "686291405",
@@ -9582,13 +9582,6 @@
       "module": "Init.Prelude",
       "name": "instDecidableEqBool",
       "typeFingerprint": "3162134388"
-    },
-    {
-      "bodyFingerprint": "2957153143",
-      "local": false,
-      "module": "Clean.Utils.Field",
-      "name": "instDecidableEqF",
-      "typeFingerprint": "3441008797"
     },
     {
       "bodyFingerprint": "3542980637",

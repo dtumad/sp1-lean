@@ -87,6 +87,7 @@ selector. The off-gate obligations (a pull at
 a multiplicity other than `-1`/`0` would act as a send) are vacuous under the boolean gate
 (`off_gate_vacuous`). -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.memory_finalize"
   main
   Spec _ _ _ := True
   ProverAssumptions input _ _ := MemoryMsg.isU64 input.toMessage ∧

@@ -6,33 +6,22 @@ import SP1Clean.Proofs.Chips.HaltChip.Witgen
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
 import ToClean.Air.TableBuild
 
-/-! # Exact Core system tables transported to native Clean tables
+/-! # Exact Core system rows transported to native tables
 
-The exact-v6.4 Core relation and the native supported-machine relation both contain the two
-canonicalization tables `MemoryBump` and `StateBump`.  Their whole-table faithfulness anchors were
-previously leaf theorems: they compared one reconstructed row at a time, but no definition assembled
-those rows into the actual `Air.Flat.Table`s consumed by `sp1Ensemble`.
+The retained v6.4 MemoryBump and StateBump faithfulness anchors supply native constraints and the
+complete interaction lists of the reconstructed physical rows. Their constructors are independent
+of prover data; every theorem states its evaluation data explicitly.
 
-This module supplies that missing constructive transport.  Given the exact heterogeneous rows, it
-builds the two native physical tables, proves every native constraint from the exact per-row
-assertion conjunct, and preserves the complete projected interaction list.  No semantic premise is
-introduced: both tables have width-zero preprocessing, and their existing whole-table anchors cover
-their complete assertion and interaction systems.
-
-The other exact system tables are deliberately not hidden here.  Program/Byte/Range redistribution
-needs per-row preprocessing semantics plus separate authentication/coverage, while MemoryLocal/Global
-and the separate memory-boundary cluster need a redistribution theorem rather than a row-for-row codec.  Those are
-distinct contracts; the two bump tables below are the exact row-for-row portion that can already be
-closed unconditionally from `CoreAIR.Current.Relation`.
+The conditional legacy transport also supplies one padding HALT row and an empty SyscallInstrs
+table. These are temporary limits of that transport, not the native library's host-call domain.
+The syscall cluster must be transported or its live comparison consumers replaced before this
+migration evidence can be retired. Provider redistribution and boundary authentication are separate.
 -/
 
 set_option autoImplicit false
 
 namespace SP1Clean.Composition
 
--- The faithfulness vocabulary (`ChipOracle`, `ChipFaithful`, `ChipRowCodec`,
--- `nativeAccesses`) is at the stratum below; this namespace no longer encloses it since the
--- 2026-08 move out of `Faithful/Transport/`.
 open SP1Clean.Faithful
 
 open Circuit
@@ -54,53 +43,39 @@ def transportStateBumpRow
   Faithful.stateBumpPhysicalRow (Faithful.stateBumpDeconfigure row.main)
 
 /-- The exact `MemoryBump` rows, installed as the native `MemoryBumpChip` table. -/
-def transportMemoryBumpTable (rows : List (CoreAIR.Current.Row p .memoryBump))
-    (data : ProverData (ZMod p)) : Table (ZMod p) where
-  component := ⟨MemoryBumpChip.circuit⟩
-  width := (⟨MemoryBumpChip.circuit⟩ : Component (ZMod p)).width
+def transportMemoryBumpTable (rows : List (CoreAIR.Current.Row p .memoryBump)) : Table (ZMod p) where
+  component := { circuit := MemoryBumpChip.circuit }
   table := rows.map transportMemoryBumpRow
-  data := data
   uniform_width := by
     intro nativeRow hrow
     obtain ⟨row, -, rfl⟩ := List.mem_map.mp hrow
     exact Faithful.memoryBumpPhysicalRow_size row.main
 
 /-- The exact `StateBump` rows, installed as the native `StateBumpChip` table. -/
-def transportStateBumpTable (rows : List (CoreAIR.Current.Row p .stateBump))
-    (data : ProverData (ZMod p)) : Table (ZMod p) where
-  component := ⟨StateBumpChip.circuit⟩
-  width := (⟨StateBumpChip.circuit⟩ : Component (ZMod p)).width
+def transportStateBumpTable (rows : List (CoreAIR.Current.Row p .stateBump)) : Table (ZMod p) where
+  component := { circuit := StateBumpChip.circuit }
   table := rows.map transportStateBumpRow
-  data := data
   uniform_width := by
     intro nativeRow hrow
     obtain ⟨row, -, rfl⟩ := List.mem_map.mp hrow
     exact Faithful.stateBumpPhysicalRow_size row.main
 
 @[simp] theorem transportMemoryBumpTable_component
-    (rows : List (CoreAIR.Current.Row p .memoryBump)) (data : ProverData (ZMod p)) :
-    (transportMemoryBumpTable rows data).component = ⟨MemoryBumpChip.circuit⟩ := rfl
+    (rows : List (CoreAIR.Current.Row p .memoryBump)) :
+    (transportMemoryBumpTable rows).component = { circuit := MemoryBumpChip.circuit } := rfl
 
 @[simp] theorem transportStateBumpTable_component
-    (rows : List (CoreAIR.Current.Row p .stateBump)) (data : ProverData (ZMod p)) :
-    (transportStateBumpTable rows data).component = ⟨StateBumpChip.circuit⟩ := rfl
-
-@[simp] theorem transportMemoryBumpTable_data
-    (rows : List (CoreAIR.Current.Row p .memoryBump)) (data : ProverData (ZMod p)) :
-    (transportMemoryBumpTable rows data).data = data := rfl
-
-@[simp] theorem transportStateBumpTable_data
-    (rows : List (CoreAIR.Current.Row p .stateBump)) (data : ProverData (ZMod p)) :
-    (transportStateBumpTable rows data).data = data := rfl
+    (rows : List (CoreAIR.Current.Row p .stateBump)) :
+    (transportStateBumpTable rows).component = { circuit := StateBumpChip.circuit } := rfl
 
 @[simp] theorem transportMemoryBumpTable_length
-    (rows : List (CoreAIR.Current.Row p .memoryBump)) (data : ProverData (ZMod p)) :
-    (transportMemoryBumpTable rows data).length = rows.length :=
+    (rows : List (CoreAIR.Current.Row p .memoryBump)) :
+    (transportMemoryBumpTable rows).length = rows.length :=
   List.length_map ..
 
 @[simp] theorem transportStateBumpTable_length
-    (rows : List (CoreAIR.Current.Row p .stateBump)) (data : ProverData (ZMod p)) :
-    (transportStateBumpTable rows data).length = rows.length :=
+    (rows : List (CoreAIR.Current.Row p .stateBump)) :
+    (transportStateBumpTable rows).length = rows.length :=
   List.length_map ..
 
 /-- Exact `MemoryBump` row assertions imply all constraints of the reconstructed native table. -/
@@ -109,10 +84,10 @@ theorem transportMemoryBumpTable_constraints
     (rows : List (CoreAIR.Current.Row p .memoryBump)) (data : ProverData (ZMod p))
     (valid : ∀ row ∈ rows,
       List.Forall (· = 0) (CoreAIR.Current.assertions publicValues .memoryBump row)) :
-    (transportMemoryBumpTable rows data).Constraints := by
+    (transportMemoryBumpTable rows).Constraints data := by
   intro nativeRow hrow
   obtain ⟨row, hmem, rfl⟩ := List.mem_map.mp hrow
-  change (⟨MemoryBumpChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold
+  change ({ circuit := MemoryBumpChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold
     (Faithful.memoryBumpEnvironment row.main data)
   apply (Faithful.memoryBumpChipConstraintsConstructive
     row.preprocessed publicValues.toBaseVector row.main data).mp
@@ -124,10 +99,10 @@ theorem transportStateBumpTable_constraints
     (rows : List (CoreAIR.Current.Row p .stateBump)) (data : ProverData (ZMod p))
     (valid : ∀ row ∈ rows,
       List.Forall (· = 0) (CoreAIR.Current.assertions publicValues .stateBump row)) :
-    (transportStateBumpTable rows data).Constraints := by
+    (transportStateBumpTable rows).Constraints data := by
   intro nativeRow hrow
   obtain ⟨row, hmem, rfl⟩ := List.mem_map.mp hrow
-  change (⟨StateBumpChip.circuit (p := p)⟩ : Component (ZMod p)).operations.ConstraintsHold
+  change ({ circuit := StateBumpChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold
     (Faithful.stateBumpEnvironment row.main data)
   apply (Faithful.stateBumpChipConstraintsConstructive
     row.preprocessed publicValues.toBaseVector row.main data).mp
@@ -139,7 +114,7 @@ theorem transportStateBumpTable_constraints
 theorem transportMemoryBumpTable_accesses
     (publicValues : SP1PublicValues (ZMod p))
     (rows : List (CoreAIR.Current.Row p .memoryBump)) (data : ProverData (ZMod p)) :
-    tableNativeAccesses (transportMemoryBumpTable rows data) =
+    tableNativeAccesses (transportMemoryBumpTable rows) data =
       rows.flatMap fun row =>
         (CoreAIR.Current.interactions publicValues .memoryBump row).map
           Extracted.Interaction.toAccess := by
@@ -149,8 +124,8 @@ theorem transportMemoryBumpTable_accesses
     simp only [tableNativeAccesses, transportMemoryBumpTable, List.map_cons, List.flatMap_cons]
     change
       Faithful.nativeAccesses (Faithful.memoryBumpEnvironment row.main data)
-          (⟨MemoryBumpChip.circuit (p := p)⟩ : Component (ZMod p)).operations ++
-        tableNativeAccesses (transportMemoryBumpTable rest data) =
+          ({ circuit := MemoryBumpChip.circuit (p := p) } : Component (ZMod p)).operations ++
+        tableNativeAccesses (transportMemoryBumpTable rest) data =
       (CoreAIR.Current.interactions publicValues .memoryBump row).map
           Extracted.Interaction.toAccess ++
         (rest.flatMap fun row =>
@@ -164,7 +139,7 @@ theorem transportMemoryBumpTable_accesses
 theorem transportStateBumpTable_accesses
     (publicValues : SP1PublicValues (ZMod p))
     (rows : List (CoreAIR.Current.Row p .stateBump)) (data : ProverData (ZMod p)) :
-    tableNativeAccesses (transportStateBumpTable rows data) =
+    tableNativeAccesses (transportStateBumpTable rows) data =
       rows.flatMap fun row =>
         (CoreAIR.Current.interactions publicValues .stateBump row).map
           Extracted.Interaction.toAccess := by
@@ -174,8 +149,8 @@ theorem transportStateBumpTable_accesses
     simp only [tableNativeAccesses, transportStateBumpTable, List.map_cons, List.flatMap_cons]
     change
       Faithful.nativeAccesses (Faithful.stateBumpEnvironment row.main data)
-          (⟨StateBumpChip.circuit (p := p)⟩ : Component (ZMod p)).operations ++
-        tableNativeAccesses (transportStateBumpTable rest data) =
+          ({ circuit := StateBumpChip.circuit (p := p) } : Component (ZMod p)).operations ++
+        tableNativeAccesses (transportStateBumpTable rest) data =
       (CoreAIR.Current.interactions publicValues .stateBump row).map
           Extracted.Interaction.toAccess ++
         (rest.flatMap fun row =>
@@ -208,8 +183,7 @@ def extractedSyscallInstrsTable (data : ProverData (ZMod p)) : Table (ZMod p) :=
 
 /-- The empty `SyscallInstrs` table contributes no accesses, so it disturbs no balance. -/
 @[simp] theorem extractedSyscallInstrsTable_accesses (data : ProverData (ZMod p)) :
-    tableNativeAccesses (extractedSyscallInstrsTable (p := p) data) = [] := by
-  rw [tableNativeAccesses, extractedSyscallInstrsTable, SyscallInstrsChip.traceTable_table]
+    tableNativeAccesses (extractedSyscallInstrsTable (p := p) data) data = [] := by
   rfl
 
 /-- The four exact-side system tables transported in their native ensemble order: MemoryBump
@@ -217,8 +191,8 @@ first, StateBump second, the manufactured padding Halt table third, and the empt
 table last (positions 51–54 of the fifty-five-table ensemble). -/
 def extractedBumpTables (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p)) : List (Table (ZMod p)) :=
-  [ transportMemoryBumpTable (witness.trace.rows .memoryBump) data,
-    transportStateBumpTable (witness.trace.rows .stateBump) data,
+  [ transportMemoryBumpTable (witness.trace.rows .memoryBump),
+    transportStateBumpTable (witness.trace.rows .stateBump),
     extractedHaltTable data,
     extractedSyscallInstrsTable data ]
 
@@ -226,16 +200,8 @@ def extractedBumpTables (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
 theorem extractedBumpTables_components
     (witness : CoreAIR.Witness (CoreAIR.Current.Row p)) (data : ProverData (ZMod p)) :
     (extractedBumpTables witness data).map (·.component) =
-      [⟨MemoryBumpChip.circuit⟩, ⟨StateBumpChip.circuit⟩, ⟨HaltChip.circuit⟩,
-       ⟨SyscallInstrsChip.circuit⟩] := rfl
-
-/-- All transported tables share the caller-selected committed prover data. -/
-theorem extractedBumpTables_data
-    (witness : CoreAIR.Witness (CoreAIR.Current.Row p)) (data : ProverData (ZMod p)) :
-    ∀ table ∈ extractedBumpTables witness data, table.data = data := by
-  intro table hmem
-  simp only [extractedBumpTables, List.mem_cons, List.not_mem_nil, or_false] at hmem
-  rcases hmem with rfl | rfl | rfl | rfl <;> rfl
+      [{ circuit := MemoryBumpChip.circuit }, { circuit := StateBumpChip.circuit },
+       { circuit := HaltChip.circuit }, { circuit := SyscallInstrsChip.circuit }] := rfl
 
 /-- **Closed exact-system transport.** A valid exact execution-cluster witness supplies all native
 constraints for both bump tables; there is no additional semantic or preprocessing premise. -/
@@ -245,7 +211,7 @@ theorem extractedBumpTables_constraints {Digest : Type}
     (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p))
     (valid : CoreAIR.Current.Relation binds .execution statement witness) :
-    ∀ table ∈ extractedBumpTables witness data, table.Constraints := by
+    ∀ table ∈ extractedBumpTables witness data, table.Constraints data := by
   have rowValid : ∀ table row, row ∈ witness.trace.rows table →
       List.Forall (· = 0) (CoreAIR.Current.assertions statement.publicValues table row) :=
     fun _ _ rowMem => (CoreAIR.Current.system binds).localValid_of_relationFor valid rowMem
@@ -267,14 +233,14 @@ theorem extractedBumpTables_accesses {Digest : Type}
     (statement : SP1ShardStatement (ZMod p) Digest)
     (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p)) :
-    (extractedBumpTables witness data).flatMap tableNativeAccesses =
+    (extractedBumpTables witness data).flatMap (tableNativeAccesses · data) =
       ((witness.trace.rows .memoryBump).flatMap fun row =>
           (CoreAIR.Current.interactions statement.publicValues .memoryBump row).map
             Extracted.Interaction.toAccess) ++
         (((witness.trace.rows .stateBump).flatMap fun row =>
           (CoreAIR.Current.interactions statement.publicValues .stateBump row).map
             Extracted.Interaction.toAccess) ++
-          tableNativeAccesses (extractedHaltTable data)) := by
+          tableNativeAccesses (extractedHaltTable data) data) := by
   simp only [extractedBumpTables, List.flatMap_cons, List.flatMap_nil,
     extractedSyscallInstrsTable_accesses, List.append_nil]
   rw [transportMemoryBumpTable_accesses, transportStateBumpTable_accesses]

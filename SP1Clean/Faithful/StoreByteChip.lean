@@ -337,20 +337,6 @@ def storeByteChipRowCodec :
         (storeByteChipInput cols) (storeByteChipLocals cols) data).trans
           (storeByteChipColumnsOfInput_roundtrip cols) }
 
-theorem storeByteChipLookupsEmpty :
-    (⟨StoreByteChip.circuit (p := p)⟩ :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
-    StoreByteChip.circuit_main_eq]
-  simp [StoreByteChip.main, Readers.CPUState.circuit,
-    Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,
-    AddrAddOperation.circuit, AddrAddOperation.main,
-    Readers.MemoryAccess.circuit, Readers.MemoryAccess.main,
-    Readers.ITypeReaderImmutable.circuit, Readers.ITypeReaderImmutable.main,
-    Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
-    Readers.RegisterAccessTimestamp.circuit,
-    Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
-
 private def storeByteAddressCols (offset : ℕ) :
     Circuits.Types.AddressOperation (Expression (ZMod p)) :=
   ⟨⟨Vector.mapRange 3 fun i => var { index := offset + i }⟩,
@@ -1146,7 +1132,7 @@ theorem storeByteChipConstraintsConstructive
       (storeByteChipOracle.deconfigure rustCols) data
     List.Forall (· = 0)
         (storeByteChipOracle.assertZeros rustCols) ↔
-      (⟨StoreByteChip.circuit (p := p)⟩ :
+      ({ circuit := StoreByteChip.circuit (p := p) } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
@@ -1154,25 +1140,25 @@ theorem storeByteChipConstraintsConstructive
   let assignment := storeByteChipRowCodec.assignment cols data
   have hbind :
       BindsChipOutput StoreByteChip.main assignment.environment
-        (⟨StoreByteChip.circuit (p := p)⟩ :
+        ({ circuit := StoreByteChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowInputVar
-        (⟨StoreByteChip.circuit (p := p)⟩ :
+        ({ circuit := StoreByteChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [StoreByteChip.circuit_main_eq] at h
     exact h
   have hfaithful := storeByteChipConstraintsFaithful
     (p := p) assignment.environment
-    (⟨StoreByteChip.circuit (p := p)⟩ :
+    ({ circuit := StoreByteChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨StoreByteChip.circuit (p := p)⟩ :
+    ({ circuit := StoreByteChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0)
           (storeByteChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            (⟨StoreByteChip.circuit (p := p)⟩ :
+            ({ circuit := StoreByteChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols,
       ChipOracle.nativeAssertZeros_deconfigure,
@@ -1183,7 +1169,7 @@ theorem storeByteChipConstraintsConstructive
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
       (StoreByteChip.circuit (p := p))
-      assignment.environment storeByteChipLookupsEmpty).symm
+      assignment.environment StoreByteChip.lookups_empty).symm
 
 open SP1Clean.Channels
   (stateChannel byteChannel memoryChannel programChannel)
@@ -1745,7 +1731,7 @@ theorem storeByteChipInteractionsConstructive
       (storeByteChipOracle.deconfigure rustCols) data
     List.Perm
       (nativeAccesses assignment.environment
-        (⟨StoreByteChip.circuit (p := p)⟩ :
+        ({ circuit := StoreByteChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).operations)
       (storeByteChipOracle.rustAccesses rustCols) := by
   dsimp only
@@ -1753,18 +1739,18 @@ theorem storeByteChipInteractionsConstructive
   let assignment := storeByteChipRowCodec.assignment cols data
   have hbind :
       BindsChipOutput StoreByteChip.main assignment.environment
-        (⟨StoreByteChip.circuit (p := p)⟩ :
+        ({ circuit := StoreByteChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowInputVar
-        (⟨StoreByteChip.circuit (p := p)⟩ :
+        ({ circuit := StoreByteChip.circuit (p := p) } :
           Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [StoreByteChip.circuit_main_eq] at h
     exact h
   have hfaithful := storeByteChipInteractionsFaithful
     (p := p) assignment.environment
-    (⟨StoreByteChip.circuit (p := p)⟩ :
+    ({ circuit := StoreByteChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    (⟨StoreByteChip.circuit (p := p)⟩ :
+    ({ circuit := StoreByteChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations
     (StoreByteChip.circuit (p := p))

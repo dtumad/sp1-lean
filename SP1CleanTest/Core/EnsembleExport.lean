@@ -1,88 +1,98 @@
-import ToClean.Air.EnsembleExport
-import SP1Clean.Model.SP1Field
-import Clean.Utils.Tactics
+import Clean.Air.Extraction.Rust
+import SP1CleanTest.Core.EnsembleCheck
 
-/-! # A complete exported ensemble fixture
+/-! # Built-in Rust export of fixed membership and a public boundary
 
-The fixture has a fixed lookup, a provider component, and a public verifier connected by a channel.
-It exercises the generic export boundary independently of SP1 row layouts and faithfulness maps.
+The legacy lookup fixture's allowed values become verifier-fixed columns. Clean owns lowering,
+Rust rendering and witness scheduling. The finite checker independently checks the generated
+physical rows and the separate public verifier; generation is not a completeness theorem.
 -/
 
 namespace SP1CleanTest.Core.EnsembleExport
 
 open Air.Flat Circuit
+open EnsembleCheck (Fp values verifier)
 
-abbrev Fp := ZMod SP1Clean.SP1Prime
-
-instance : Hashable Fp := ⟨fun value => hash value.val⟩
-
-def values : Channel Fp field where
-  name := "values"
-  Guarantees _ _ := True
-
-def allowed : StaticTable Fp field where
+/-- A fixed allowed value, its request count and a constrained generated square. -/
+def provider : GeneralFormalCircuit Fp fieldPair field where
   name := "allowed"
-  length := 2
-  row index := if index.val = 0 then 7 else 9
-  index value := if value = 7 then 0 else 1
-  Spec value := value = 7 ∨ value = 9
-  contains_iff := by
-    intro value
-    constructor
-    · rintro ⟨index, rfl⟩
-      split <;> simp
-    · rintro (rfl | rfl)
-      · exact ⟨0, rfl⟩
-      · exact ⟨1, rfl⟩
-
-def provider : GeneralFormalCircuit Fp field unit where
-  main value := do
-    lookup allowed.toTable value
-    values.push value
-  Spec value _ _ := value = 7 ∨ value = 9
-  ProverAssumptions value _ _ := value = 7 ∨ value = 9
+  main input := do
+    let square ← witness (.expr (input.1 * input.1) : Witgen.FExpr Fp)
+    assertZero (square - input.1 * input.1)
+    values.emit input.2 input.1
+    return square
+  Spec input output _ := output = input.1 * input.1
   channelsWithRequirements := [values.toRaw]
   soundness := by
-    circuit_proof_start [allowed, values]
-    simp_all
+    circuit_proof_start [EnsembleCheck.values]
+    rw [← h_input]
+    exact sub_eq_zero.mp h_holds
   completeness := by
-    circuit_proof_start [allowed, values]
+    circuit_proof_start [EnsembleCheck.values]
     simp_all
 
-def verifier : GeneralFormalCircuit Fp field unit where
-  main value := values.pull value
-  Spec _ _ _ := True
-  soundness := by circuit_proof_start [values]
-  completeness := by circuit_proof_start [values]
+/-- The original finite lookup meaning is supplied by the verifier, independently of prover data. -/
+def fixed : FixedColumns Fp where
+  height := 2
+  program := .ofFExprs #v[.listGetAtIndex [.const 7, .const 9]]
+  valid := by rfl
 
+/-- The multiplicity is prover-owned; the allowed value is the fixed prefix. -/
+def component : Component Fp where
+  circuit := provider
+  fixedColumns := some fixed
+  fixed_width_le_input := by decide
+
+/-- One physical provider with the original separate public pull. -/
 def ensemble : Ensemble Fp field where
-  tables := [⟨provider⟩]
+  tables := [component]
+  unique_names := by simp
   channels := [values.toRaw]
   verifier := verifier
-  verifier_length_zero := by intro value; rfl
 
-def description : Air.Flat.EnsembleExport ensemble where
-  componentNames := ["provider"]
-  names_length := rfl
-  verifierName := "public"
-  names_unique := by decide
-  names_nonempty := by simp
-  channels_unique := by simp [ensemble]
-  channels_nonempty := by simp [ensemble, values, Channel.toRaw]
-  lookups := [FiniteLookup.ofStatic allowed]
+/-- Built-in preallocation updates only the count, selected by the actual emitted message. -/
+def config : WitnessGeneration.Config Fp unit where
+  modes := [.preallocated {
+    rows := 2
+    input := .ofFExprs #v[.const 0]
+    input_valid := by rfl
+    handlers := [{ interaction := 0, column := 1 }]
+  }]
+  padding := [{ input := #[7, 0], minimumRows := 2 }]
+  fuel := 8
+
+/-- Independent raw acceptance includes all occurrences, including the unused fixed row. -/
+def description : Air.Flat.EnsembleCheck ensemble where
+  lookups := []
   lookups_unique := by simp
-  lookups_nonempty := by simp [FiniteLookup.ofStatic, allowed, StaticTable.toTable, Table.toRaw]
   lookups_complete := by
-    simp [ensemble, Ensemble.allTables, Ensemble.verifierTable, Component.rowOperations,
-      provider, verifier, circuit_norm]
-    rfl
+    simp [ensemble, component, Component.lookups_eq, Component.rowOperations, provider, circuit_norm]
+  channels_unique := by simp [ensemble]
   channels_complete := by
-    simp [ensemble, Ensemble.allTables, Ensemble.verifierTable, Component.rowOperations,
-      provider, verifier, circuit_norm]
+    simp [ensemble, component, Component.interactions_eq, Component.rowOperations, provider, circuit_norm]
+  verifier_channels_complete := by
+    simp [ensemble, Ensemble.verifierOperations, EnsembleCheck.verifier,
+      Verifier.Program.circuitOperations, circuit_norm]
 
-/-- Byte-stable instance consumed by the Rust whole-ensemble regression. -/
-def instanceJson : Except String Lean.Json := description.toJson? SP1Clean.SP1Prime
+/-- Use Clean's scheduler with no external prover input or custom witness evaluator. -/
+def generate (value : Fp) : Except String (EnsembleWitness ensemble) :=
+  WitnessGeneration.generate ensemble config value ()
 
-example : instanceJson.isOk = true := by native_decide
+/-- The entire output is rendered by Clean's built-in exporter. -/
+def rust : Except String String :=
+  Extraction.Rust.ensembleToRust "FixedMembership" ensemble config
+
+/-- Check generation against raw constraints and the full ledger. -/
+def accepts (value : Fp) : Bool :=
+  match generate value with
+  | .ok witness => description.checkWitness SP1Clean.SP1Prime witness
+  | .error _ => false
+
+/-- Both original allowed values pass, while the forged member has no fixed provider. -/
+theorem membership_cases : [accepts 7, accepts 9, accepts 8] = [true, true, false] := by
+  native_decide
+
+/-- Lowering and Rust rendering both succeed on the fixed-column representation. -/
+theorem export_succeeds : rust.isOk = true := by native_decide
 
 end SP1CleanTest.Core.EnsembleExport

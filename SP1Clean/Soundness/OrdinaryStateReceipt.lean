@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.TypedState
 import SP1Clean.Soundness.EnsembleChannels
 import SP1Clean.Native.Operations.InstructionReceipt
-import ToClean.Air.EnsembleProjection
+import ToClean.Air.ComponentReplacement
 
 /-! # Receipts reuse the registered ordinary State emissions
 
@@ -75,7 +75,7 @@ def component (id : InstructionChipId) : Component (ZMod p) :=
   let chip := supportedChipFor (p := p) id
   letI := chip.kind.provableInputs
   letI := chip.kind.provableCols
-  ⟨InstructionReceipt.circuit chip.circuit (projection id)⟩
+  { circuit := InstructionReceipt.circuit chip.circuit (projection id) }
 
 /-- Keep the descriptor's input representation available without unfolding the chip. -/
 local instance (id : InstructionChipId) : ProvableType (supportedChipFor (p := p) id).kind.Inputs :=
@@ -248,7 +248,7 @@ theorem row_meaning {Input Output : TypeMap} [ProvableType Input] [ProvableType 
     (observation : Receipt.Projection (ZMod p) Input StateMsg)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (agrees : AgreesWith provider observation view) (env : Environment (ZMod p)) :
-    let original : Component (ZMod p) := ⟨provider⟩
+    let original : Component (ZMod p) := { circuit := provider }
     Eval.eval env (observation.gate (varFromOffset Input 0) (size Input)) =
       (view (original.rowInput env) (original.rowOutput env)).is_real ∧
     Eval.eval env (observation.message (varFromOffset Input 0) (size Input)) =
@@ -296,34 +296,40 @@ theorem interactions (id : InstructionChipId) (selected : RawChannel (ZMod p))
       (supportedChipFor (p := p) id).table.operations.interactionsWith selected :=
   Receipt.interactions _ _ _ _ selected different
 
-/-- Publish receipts on existing physical rows; no new witness generation is needed. -/
-def construct (id : InstructionChipId) (original : Table (ZMod p)) : Table (ZMod p) :=
-  original.withComponent (component id)
+/-- Publish receipts on a registered component's existing rows, preserving their layout. -/
+def construct (id : InstructionChipId) (original : Table (ZMod p))
+    (registered : original.component = (supportedChipFor id).table) : Table (ZMod p) :=
+  original.withComponent (component id) (by rw [registered]; exact width id)
+    (by rw [registered]; rfl)
 
-/-- The constructor preserves raw row validity in both directions. -/
+/-- The constructor preserves raw row validity in both directions at the same ensemble data. -/
 theorem construct_constraints (id : InstructionChipId) (original : Table (ZMod p))
-    (registered : original.component = (supportedChipFor id).table) :
-    (construct id original).Constraints ↔ original.Constraints :=
-  Table.withComponent_constraints _ _ (by rw [registered, constraints])
-    (by rw [registered, lookups])
+    (registered : original.component = (supportedChipFor id).table) (data : ProverData (ZMod p)) :
+    (construct id original registered).Constraints data ↔ original.Constraints data := by
+  apply Table.withComponent_constraints
+  · rw [registered, constraints]
+  · rw [registered, lookups]
 
 /-- The constructed table has exactly the original physical height. -/
-theorem construct_length (id : InstructionChipId) (original : Table (ZMod p)) :
-    (construct id original).length = original.length := rfl
+theorem construct_length (id : InstructionChipId) (original : Table (ZMod p))
+    (registered : original.component = (supportedChipFor id).table) :
+    (construct id original registered).length = original.length := rfl
 
 /-- The full receipt ledger is decoded directly from the original arrays and shared data. -/
-theorem construct_receipts (id : InstructionChipId) (original : Table (ZMod p)) :
-    (construct id original).interactionsWith InstructionReceipt.channel.toRaw =
+theorem construct_receipts (id : InstructionChipId) (original : Table (ZMod p))
+    (registered : original.component = (supportedChipFor id).table) (data : ProverData (ZMod p)) :
+    (construct id original registered).interactionsWith data InstructionReceipt.channel.toRaw =
       original.table.map (fun physical =>
-        let row := (supportedChipFor (p := p) id).decodeRow original.data physical
+        let row := (supportedChipFor (p := p) id).decodeRow data physical
         InstructionReceipt.channel.pushedIfValue row.is_real (statePushMessage row)) := by
-  simp only [construct, Table.interactionsWith, Table.withComponent, Table.environment,
-    row_receipt]
+  simp only [construct, Table.interactionsWith, Table.withComponent, row_receipt]
   exact List.map_eq_flatMap.symm
 
 /-- Exact cost includes the inactive occurrence on every padding row. -/
-theorem construct_receipt_count (id : InstructionChipId) (original : Table (ZMod p)) :
-    ((construct id original).interactionsWith InstructionReceipt.channel.toRaw).length = original.length := by
+theorem construct_receipt_count (id : InstructionChipId) (original : Table (ZMod p))
+    (registered : original.component = (supportedChipFor id).table) (data : ProverData (ZMod p)) :
+    ((construct id original registered).interactionsWith data InstructionReceipt.channel.toRaw).length =
+      original.length := by
   rw [construct_receipts, List.length_map]
 
 end SP1Clean.Soundness.OrdinaryStateReceipt

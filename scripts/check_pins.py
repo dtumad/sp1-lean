@@ -57,6 +57,22 @@ def check(root: Path) -> list[str]:
         require(revision == package.get("rev" if commit else "inputRev"),
                 f"{name}: requested and resolved revisions disagree")
 
+    # The generated program and its runtime must come from the same Clean revision.
+    cargo = (root / "rust/sp1-comparison/Cargo.toml").read_text()
+    backend = re.search(r'^clean_backend\s*=\s*\{([^}\n]+)\}', cargo, re.M)
+    backend_pin = dict(re.findall(r'(\w+)\s*=\s*"([^"]+)"', backend[1])) if backend else {}
+    clean = manifest["Clean"]
+    require(backend_pin.get("rev") == clean["rev"] and
+            backend_pin.get("git", "").removesuffix(".git") == clean["url"].removesuffix(".git") and
+            "path" not in backend_pin,
+            "Clean Rust backend must match the pinned Lean emitter")
+    locked = (root / "rust/sp1-comparison/Cargo.lock").read_text()
+    sources = [re.search(r'^source = "([^"]+)"', block, re.M) for block in
+               locked.split("[[package]]") if re.search(r'^name = "clean_backend"$', block, re.M)]
+    expected_source = f'git+{backend_pin.get("git", "")}?rev={clean["rev"]}#{clean["rev"]}'
+    require(len(sources) == 1 and sources[0] is not None and sources[0][1] == expected_source,
+            "locked Clean Rust backend differs from the Lean emitter")
+
     toolchain = (root / "lean-toolchain").read_text().strip()
     require(bool(re.fullmatch(r"leanprover/lean4:v\d+\.\d+\.\d+(?:-rc\d+)?", toolchain)),
             "Lean toolchain must name an exact release")

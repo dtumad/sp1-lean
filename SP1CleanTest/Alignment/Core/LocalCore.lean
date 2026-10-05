@@ -6,13 +6,14 @@ import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.InstructionWrite
 import SP1CleanTest.Alignment.Support.LocalCoreFixture
-import ToClean.Air.EnsembleExport
+import ToClean.Air.FiniteLookup
+import Clean.Circuit.WitnessExport
 
 /-! # Complete local-assembly constraint and ledger regression
 
 The fixture starts at clock 9 with nonzero source registers and executes ADD. Rows are interpreted
 at their actual indices in the 59-table local assembly. All assertions, fixed lookups, public
-verifier constraints, channel membership, count bounds, and full-message balances are checked.
+verifier interactions, channel membership, count bounds, and full-message balances are checked.
 Byte/Range demands are closed by executing the actual provider circuits. An active HINT_LEN fixture
 checks the wide syscall edge and all three Memory pairs, and records the unclosed host-result
 binding with a concrete forged-return example. Same-register accesses and a real State clock carry
@@ -42,7 +43,9 @@ private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1P
     (guarded : Bool := false) : Bool :=
   let assembly := if guarded then Soundness.ProtectedLocalCore.ensemble (p := SP1Prime) image source
     else Soundness.LocalCore.ensemble image source
-  let head := evaluate image source ⟨Soundness.LocalCore.verifier image source⟩ (toElements pi).toList
+  let head := (true, assembly.verifierOperations.interactionValues
+    (Environment.fromInput pi (fun _ _ => #[])) |>.map fun interaction =>
+      (interaction.channel.name, interaction.msg.toList, interaction.mult))
   let initial := head :: rows.map (fun row => evaluateRow image source row guarded)
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map (fun row => evaluateRow image source row guarded)
@@ -318,10 +321,13 @@ private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp
   let assembly := HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage source
     (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) target HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) []
+    (HostHintReadLocal.source_unique_names syscallImage source source.host.io.hints)
   let evaluateAt (row : Row) := match assembly.tables[row.1]? with
     | none => (false, [])
     | some component => evaluate syscallImage source component row.2
-  let head := evaluate syscallImage source ⟨assembly.verifier⟩ (toElements input).toList
+  let head := (true, assembly.verifierOperations.interactionValues
+    (Environment.fromInput input (fun _ _ => #[])) |>.map fun interaction =>
+      (interaction.channel.name, interaction.msg.toList, interaction.mult))
   let initial := head :: rows.map evaluateAt
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map evaluateAt
@@ -364,11 +370,13 @@ theorem rejectsCommitBoundaries :
      checkCommit commitTarget (commitRows ++ commitRows.filter (fun row => row.1 == 85))] =
       [false, false, false, false, false] := by native_decide
 
-/-- info: exportable ✓ (0 witness cells) -/
-#guard_msgs in
-#assert_exportable (HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage commitSource
-  (SP1Clean.HostHintQueueBoundary.initial []) commitTarget HostCallReceivers.available
-  (HostHintReadLocal.sourceResources []) []).verifier
+/-- The installed interaction-only public verifier contains no native witness closure. -/
+theorem installedVerifier_exportable :
+    Witgen.unexportableWitnesses ((HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage commitSource
+      (SP1Clean.HostHintQueueBoundary.initial []) commitTarget HostCallReceivers.available
+      (HostHintReadLocal.sourceResources []) []
+      (HostHintReadLocal.source_unique_names syscallImage commitSource [])).verifierOperations.toFlat) = [] := by
+  native_decide
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
@@ -668,7 +676,7 @@ private def receiptPermission (source : ExecutionSnapshot) (input : StoreByteChi
     (permissions : List (List Fp)) : Bool :=
   let produced := receiptStore source input
   let providers := permissions.map fun row =>
-    evaluate storeRomImage source ⟨WritePermissionProvider.circuit storeRomImage⟩ row
+    evaluate storeRomImage source { circuit := WritePermissionProvider.circuit storeRomImage } row
   let ledger := ((produced :: providers).flatMap (·.2)).filter
     (fun entry => entry.1 == (WritePermissionProvider.channel (p := SP1Prime)).name)
   produced.1 && providers.all (·.1) && ledger.all (fun key =>

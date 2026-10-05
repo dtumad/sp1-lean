@@ -191,28 +191,29 @@ theorem nativeTrace_programProviderBound
     (compiler : NativeCompilerReady statement.program execution (nativeInitialClock statement))
     (servable : (nativeBaseTrace statement execution).DemandServable)
     (projection : NativeProgramRowProjection statement execution) :
-    ProgramProviderBound (nativeTrace statement execution).witness := by
-  subst execution
-  let execution := semanticWitness.evaluatedTrace (supportedCoreShardModel (p := p))
+    ProgramProviderBound statement.program (nativeTrace statement execution).witness := by
   intro raw member _
   let typed : TypedInteraction (programChannel (p := p)) :=
     { raw := raw
       channel_eq := (programProviderTable (nativeTrace statement execution).witness).channel_eq_of_mem_interactionsWith member }
   have rawMem : raw ∈
-      (programProviderTable (nativeTrace statement execution).witness).interactions := by
+      (programProviderTable (nativeTrace statement execution).witness).interactions
+        (nativeTrace statement execution).witness.data := by
     rw [Air.Flat.Table.interactionsWith_eq_filter] at member
     exact (List.mem_filter.mp member).1
   have accessMem : Interaction.toAccess raw ∈
       tableCleanAccesses
-        (programProviderTable (nativeTrace statement execution).witness) :=
+        (programProviderTable (nativeTrace statement execution).witness)
+        (nativeTrace statement execution).witness.data :=
     List.mem_map_of_mem rawMem
   rw [(nativeTrace statement execution).programProviderTable_witness] at accessMem
-  change Interaction.toAccess raw ∈ tableCleanAccesses
-    (Table.build (ProgramProviderChip.component (p := p))
-      (ProgramProviderChip.traceInputs
-        (nativeBaseTrace statement execution).closureRomEntries)
-      (nativeBaseTrace statement execution).data
-      (nativeBaseTrace statement execution).hint) at accessMem
+  rw [tableCleanAccesses_setData _ _
+    (nativeBaseTrace statement execution).generationData] at accessMem
+  simp only [nativeTrace, SupportedCoreTraceWitness.providerTableFor,
+    SupportedCoreTraceWitness.canonicalClosure_providerOccurrences,
+    SupportedCoreTraceWitness.canonicalProviderOccurrences,
+    SupportedCoreTraceWitness.canonicalClosure_generationData,
+    SupportedCoreTraceWitness.canonicalClosure_hint] at accessMem
   rw [program_traceTable_actualAccesses _ _ _
     ((nativeBaseTrace statement execution).closureRomEntries_romKeyFits servable)] at accessMem
   obtain ⟨entry, entryMem, accessEq⟩ := List.mem_map.mp accessMem
@@ -231,29 +232,15 @@ theorem nativeTrace_programProviderBound
     rw [program_round key _ selected keyServable]
     rfl
   obtain ⟨semanticRow, semanticKey, decoded⟩ :=
-    nativeProgramKey_decodedInROM semantic rfl ordinary compiler projection keyMem keyKind
+    nativeProgramKey_decodedInROM semantic executionEq ordinary compiler projection keyMem keyKind
   have typedKey :
       ProgramChip.programRowKey (rowOfMsg typed.message) = key :=
     (keyOf_toAccess_typedProgram typed).symm.trans rawKeyEq
   have rowEq : rowOfMsg typed.message = semanticRow :=
     ProgramChip.programRow_eq_of_key (typedKey.trans semanticKey)
-  have clockEncodable := nativeInitialClock_encodable statement
-    (Execution.SupportedCoreShardExecutionValid.publicValuesWellFormed semantic)
-  have committed := Commit.dataOfAt_statementFor (p := p) statement.program
-    (nativeInitialClock statement)
-    (by simpa only [Execution.SupportedCoreShardExecutionValid.program_eq semantic] using
-      semantic.programWellFormed)
-    (by simpa only [Execution.SupportedCoreShardExecutionValid.program_eq semantic] using
-      Execution.SupportedCoreShardExecutionValid.programEncodable semantic)
-    clockEncodable
-  change Semantics.CommittedProgTruth typed.message (nativeTrace statement execution).witness.data
+  change Semantics.CommittedProgTruth typed.message statement.program
   refine ⟨rowSpec_of_programServable keyServable typed rawKeyEq, Or.inl ?_⟩
-  have programEq :
-      Commit.progOf (nativeTrace statement execution).witness.data = statement.program := by
-    change Commit.progOf
-      (Commit.dataOfAt statement.program (nativeInitialClock statement)) = statement.program
-    exact committed.2
-  rw [programEq, rowEq]
+  rw [rowEq]
   exact decoded
 
 end SP1Clean.Soundness
