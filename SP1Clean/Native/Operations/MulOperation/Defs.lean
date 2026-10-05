@@ -16,14 +16,14 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 over the `populate`d `cols` (gated on `is_real` / `is_mulw`), `is_real`-gated `slice_range_check` byte pulls
 on the carries (u16) and products (u8 pairs), the two sign-extend definitions, and the 16 `is_real`-gated
 schoolbook carry-chain product equations. Witnesses nothing — the column struct is an input. The result
-word is reconstructed (`resultWord`) and placed at the chip level. -/
+word is supplied by the caller and checked against the selected product slice here. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   let cols := input.cols
   let is_real := input.is_real
   assertZero (is_real * (is_real - 1))
   assertion U16toU8OperationSafe.circuit ⟨input.b, cols.b_lower_byte, is_real⟩
   assertion U16toU8OperationSafe.circuit ⟨input.c, cols.c_lower_byte, is_real⟩
-  assertion U16MSBOperation.circuit ⟨cols.product[2] + cols.product[3] * 256, cols.product_msb, input.is_mulw⟩
+  assertion U16MSBOperation.circuit ⟨input.a[1], cols.product_msb, input.is_mulw⟩
   -- `b_msb`/`c_msb`: SP1 (`mul.rs`) asserts booleanity **unconditionally** (`assert_bool`) and pins the
   -- byte-MSB semantics via an `is_real`-gated `MSB`(opcode 5) byte send on the high decomposition byte
   -- `E7 = (b[3]-low[3])/256`. (The old `U16MSBOperation` gadget conflated both into one `Range` send.)
@@ -79,6 +79,25 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   is_real * (cols.product[13] - (((cols.b_lower_byte.low_bytes[0]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[0] - cols.b_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[1]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[1] - cols.b_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[2]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[2] - cols.b_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[3]) * ((input.c[3] - cols.c_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) + ((input.b[3] - cols.b_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) * (cols.c_lower_byte.low_bytes[3]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[2] - cols.c_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[2]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[1] - cols.c_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[1]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[0] - cols.c_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[0])) + cols.carry[12] - cols.carry[13] * 256)) === 0
   is_real * (cols.product[14] - (((cols.b_lower_byte.low_bytes[0]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[0] - cols.b_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[1]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[1] - cols.b_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[2]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[2] - cols.b_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[3]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[3] - cols.b_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) * ((input.c[3] - cols.c_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[3]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[2] - cols.c_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[2]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[1] - cols.c_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[1]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[0] - cols.c_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[0])) + cols.carry[13] - cols.carry[14] * 256)) === 0
   is_real * (cols.product[15] - (((cols.b_lower_byte.low_bytes[0]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[0] - cols.b_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[1]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[1] - cols.b_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[2]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[2] - cols.b_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_lower_byte.low_bytes[3]) * (cols.c_sign_extend * (255 : ZMod p)) + ((input.b[3] - cols.b_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) * (cols.c_sign_extend * (255 : ZMod p)) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[3] - cols.c_lower_byte.low_bytes[3]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[3]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[2] - cols.c_lower_byte.low_bytes[2]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[2]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[1] - cols.c_lower_byte.low_bytes[1]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[1]) + (cols.b_sign_extend * (255 : ZMod p)) * ((input.c[0] - cols.c_lower_byte.low_bytes[0]) * (256 : ZMod p)⁻¹) + (cols.b_sign_extend * (255 : ZMod p)) * (cols.c_lower_byte.low_bytes[0])) + cols.carry[14] - cols.carry[15] * 256)) === 0
+
+  -- SP1 checks the caller result separately for each product slice. These gates remain
+  -- meaningful on padding rows whose variant selectors are nonzero.
+  assertZero (input.is_mulw * (cols.product[0] + cols.product[1] * (256 : ZMod p) - input.a[0]))
+  assertZero (input.is_mul * (cols.product[0] + cols.product[1] * (256 : ZMod p) - input.a[0]))
+  assertZero ((input.is_mulh + input.is_mulhu + input.is_mulhsu)
+    * (cols.product[8] + cols.product[9] * (256 : ZMod p) - input.a[0]))
+  assertZero (input.is_mulw * (cols.product[2] + cols.product[3] * (256 : ZMod p) - input.a[1]))
+  assertZero (input.is_mul * (cols.product[2] + cols.product[3] * (256 : ZMod p) - input.a[1]))
+  assertZero ((input.is_mulh + input.is_mulhu + input.is_mulhsu)
+    * (cols.product[10] + cols.product[11] * (256 : ZMod p) - input.a[1]))
+  assertZero (input.is_mulw * (cols.product_msb.msb * (65535 : ZMod p) - input.a[2]))
+  assertZero (input.is_mul * (cols.product[4] + cols.product[5] * (256 : ZMod p) - input.a[2]))
+  assertZero ((input.is_mulh + input.is_mulhu + input.is_mulhsu)
+    * (cols.product[12] + cols.product[13] * (256 : ZMod p) - input.a[2]))
+  assertZero (input.is_mulw * (cols.product_msb.msb * (65535 : ZMod p) - input.a[3]))
+  assertZero (input.is_mul * (cols.product[6] + cols.product[7] * (256 : ZMod p) - input.a[3]))
+  assertZero ((input.is_mulh + input.is_mulhu + input.is_mulhsu)
+    * (cols.product[14] + cols.product[15] * (256 : ZMod p) - input.a[3]))
 
 -- Hand-written fields: on Clean `main` at Lean v4.33.1, `elaborate_circuit` (and the `rfl` default
 -- of `localLength_eq`) time out normalising this sixteen-constraint `main`, while the structural

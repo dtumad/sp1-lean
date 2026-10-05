@@ -300,27 +300,6 @@ private def mul_chip_operation (offset : ℕ) :
 private def mul_chip_a (offset : ℕ) : Word (Expression (ZMod p)) :=
   Vector.mapRange 4 fun i => var { index := offset + 50 + i }
 
-private def mul_chip_selector (offset : ℕ) : Word (Expression (ZMod p)) :=
-  let f0 := mul_chip_flag offset 0
-  let f1 := mul_chip_flag offset 1
-  let f2 := mul_chip_flag offset 2
-  let f3 := mul_chip_flag offset 3
-  let f4 := mul_chip_flag offset 4
-  let cols := mul_chip_operation offset
-  #v[
-    f0 * (cols.product[0] + cols.product[1] * (256 : Expression (ZMod p))) +
-      (f1 + f2 + f3) * (cols.product[8] + cols.product[9] * (256 : Expression (ZMod p))) +
-      f4 * (cols.product[0] + cols.product[1] * (256 : Expression (ZMod p))),
-    f0 * (cols.product[2] + cols.product[3] * (256 : Expression (ZMod p))) +
-      (f1 + f2 + f3) * (cols.product[10] + cols.product[11] * (256 : Expression (ZMod p))) +
-      f4 * (cols.product[2] + cols.product[3] * (256 : Expression (ZMod p))),
-    f0 * (cols.product[4] + cols.product[5] * (256 : Expression (ZMod p))) +
-      (f1 + f2 + f3) * (cols.product[12] + cols.product[13] * (256 : Expression (ZMod p))) +
-      f4 * (cols.product_msb.msb * (65535 : Expression (ZMod p))),
-    f0 * (cols.product[6] + cols.product[7] * (256 : Expression (ZMod p))) +
-      (f1 + f2 + f3) * (cols.product[14] + cols.product[15] * (256 : Expression (ZMod p))) +
-      f4 * (cols.product_msb.msb * (65535 : Expression (ZMod p)))]
-
 private theorem forall_nil_iff {α : Type} (pred : α → Prop) :
     List.Forall pred [] ↔ True := Iff.rfl
 
@@ -362,20 +341,8 @@ private theorem mul_chip_constraints_decompose
               ⟨input.op_b_val, input.op_c_val, mul_chip_operation offset,
                 mul_chip_is_real offset, mul_chip_flag offset 0,
                 mul_chip_flag offset 1, mul_chip_flag offset 2,
-                mul_chip_flag offset 3, mul_chip_flag offset 4⟩).operations
-                  (offset + 50))) ∧
-        Expression.eval env
-          (input.is_real * ((mul_chip_a offset)[0] -
-            (mul_chip_selector offset)[0])) = 0 ∧
-        Expression.eval env
-          (input.is_real * ((mul_chip_a offset)[1] -
-            (mul_chip_selector offset)[1])) = 0 ∧
-        Expression.eval env
-          (input.is_real * ((mul_chip_a offset)[2] -
-            (mul_chip_selector offset)[2])) = 0 ∧
-        Expression.eval env
-          (input.is_real * ((mul_chip_a offset)[3] -
-            (mul_chip_selector offset)[3])) = 0 ∧
+                mul_chip_flag offset 3, mul_chip_flag offset 4, mul_chip_a offset⟩).operations
+                  (offset + 54))) ∧
         Expression.eval env
           (mul_chip_flag offset 0 * (mul_chip_flag offset 0 - 1)) = 0 ∧
         Expression.eval env
@@ -432,13 +399,11 @@ private theorem mul_chip_constraints_decompose
     List.map_append, List.map_cons, List.map_nil,
     List.forall_append, List.forall_cons, forall_nil_iff]
   simp only [mul_chip_flag, mul_chip_is_real, mul_chip_operation,
-    mul_chip_a, mul_chip_selector, Readers.CPUState.circuit,
+    mul_chip_a, Readers.CPUState.circuit,
     MulOperation.circuit, Readers.RTypeReader.circuit,
     Readers.RegisterWrite.circuit, Nat.add_zero, Nat.add_assoc,
     Nat.reduceAdd, show size Circuits.Types.MulOperation = 45 by rfl,
     ProvableType.varFromOffset_fields, Vector.getElem_mapRange,
-    Vector.getElem_mk, List.getElem_toArray,
-    List.getElem_cons_zero, List.getElem_cons_succ,
     true_and, and_true]
 
 private theorem vec3_eta {F : Type} (value : Vector F 3) :
@@ -714,7 +679,8 @@ private theorem mulOracle_mulOperation_interactions_eq {F : Type} [Field F] [Coe
          is_mulh := Eval.eval env input.is_mulh
          is_mulhu := Eval.eval env input.is_mulhu
          is_mulhsu := Eval.eval env input.is_mulhsu
-         is_mulw := Eval.eval env input.is_mulw } :
+         is_mulw := Eval.eval env input.is_mulw
+         a := Eval.eval env input.a } :
         MulOperation.Inputs F) := by
   rw [ProvableStruct.eval_eq_eval]
   rfl
@@ -804,12 +770,6 @@ private theorem eval_word_getElem
     (word : Word (Expression F)) (i : ℕ) (hi : i < 4) :
     (Eval.eval env word)[i] = Expression.eval env word[i] :=
   (ProvableType.getElem_eval_fields env word i hi).symm
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem mulProductVal_of_lt
-    (cols : Circuits.Types.MulOperation (ZMod p)) (k : ℕ) (hk : k < 16) :
-    MulOperation.productVal cols k = cols.product[k] := by
-  simp [MulOperation.productVal, hk]
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem u16Value0 (w : Word (ZMod p))
@@ -915,46 +875,6 @@ private theorem mulCols_asserts_decompose
     cpuState_eta, rTypeReader_eta,
     vec4_eta, vec4_eta, vec4_eta, vec3_eta]
 
-/-- Rust's twelve selector-gated result-placement equations. -/
-private def RustMulOutputPlacement (a : Word (ZMod p))
-    (cols : Circuits.Types.MulOperation (ZMod p))
-    (isMul isMulh isMulhu isMulhsu isMulw : ZMod p) : Prop :=
-  let high := isMulh + isMulhu + isMulhsu
-  isMulw * (cols.product[0] + cols.product[1] * 256 - a[0]) = 0 ∧
-  isMul * (cols.product[0] + cols.product[1] * 256 - a[0]) = 0 ∧
-  high * (cols.product[8] + cols.product[9] * 256 - a[0]) = 0 ∧
-  isMulw * (cols.product[2] + cols.product[3] * 256 - a[1]) = 0 ∧
-  isMul * (cols.product[2] + cols.product[3] * 256 - a[1]) = 0 ∧
-  high * (cols.product[10] + cols.product[11] * 256 - a[1]) = 0 ∧
-  isMulw * (cols.product_msb.msb * 65535 - a[2]) = 0 ∧
-  isMul * (cols.product[4] + cols.product[5] * 256 - a[2]) = 0 ∧
-  high * (cols.product[12] + cols.product[13] * 256 - a[2]) = 0 ∧
-  isMulw * (cols.product_msb.msb * 65535 - a[3]) = 0 ∧
-  isMul * (cols.product[6] + cols.product[7] * 256 - a[3]) = 0 ∧
-  high * (cols.product[14] + cols.product[15] * 256 - a[3]) = 0
-
-/-- The native gadget's four combined result-placement equations.
-
-Rust emits the corresponding selector-specific equations inside `MulOperation.asserts`; native
-chips factor these four equations into their chip-local glue.  This named seam lets enclosing
-whole-chip faithfulness proofs transport between those two decompositions without treating the
-operation as a separate verified boundary. -/
-def MulOutputPlacement (a : Word (ZMod p))
-    (cols : Circuits.Types.MulOperation (ZMod p))
-    (isMul isMulh isMulhu isMulhsu isMulw : ZMod p) : Prop :=
-  let isReal := isMul + isMulh + isMulhu + isMulhsu + isMulw
-  let selected :=
-    MulOperation.aSelector cols isMul isMulh isMulhu isMulhsu isMulw
-  isReal * (a[0] - selected[0]) = 0 ∧
-  isReal * (a[1] - selected[1]) = 0 ∧
-  isReal * (a[2] - selected[2]) = 0 ∧
-  isReal * (a[3] - selected[3]) = 0
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem sub_eq_zero_comm (x y : ZMod p) :
-    x - y = 0 ↔ y - x = 0 := by
-  constructor <;> intro h <;> linear_combination -h
-
 private theorem mulFlags_all_zero
     {isMul isMulh isMulhu isMulhsu isMulw : ZMod p}
     (hm : isMul = 0 ∨ isMul = 1)
@@ -991,42 +911,6 @@ private theorem mulFlags_all_zero
     (ZMod.val_eq_zero isMulhu).mp (by omega),
     (ZMod.val_eq_zero isMulhsu).mp (by omega),
     (ZMod.val_eq_zero isMulw).mp (by omega)⟩
-
-private theorem mulOutputPlacement_iff
-    (a : Word (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p))
-    (isMul isMulh isMulhu isMulhsu isMulw : ZMod p)
-    (hm : isMul = 0 ∨ isMul = 1)
-    (hmh : isMulh = 0 ∨ isMulh = 1)
-    (hmu : isMulhu = 0 ∨ isMulhu = 1)
-    (hms : isMulhsu = 0 ∨ isMulhsu = 1)
-    (hmw : isMulw = 0 ∨ isMulw = 1)
-    (hsum :
-      isMul + isMulh + isMulhu + isMulhsu + isMulw = 0 ∨
-      isMul + isMulh + isMulhu + isMulhsu + isMulw = 1) :
-    RustMulOutputPlacement a cols isMul isMulh isMulhu isMulhsu isMulw ↔
-      MulOutputPlacement a cols isMul isMulh isMulhu isMulhsu isMulw := by
-  rcases hsum with hsum | hsum
-  · obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ :=
-      mulFlags_all_zero hm hmh hmu hms hmw hsum
-    simp [RustMulOutputPlacement, MulOutputPlacement,
-      MulOperation.aSelector, MulOperation.productVal]
-  · rcases MulOperation.oneHot_of_sum_one hm hmh hmu hms hmw hsum with
-      h | h | h | h | h
-    · obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
-      simp [RustMulOutputPlacement, MulOutputPlacement,
-        MulOperation.aSelector, MulOperation.productVal, sub_eq_zero_comm]
-    · obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
-      simp [RustMulOutputPlacement, MulOutputPlacement,
-        MulOperation.aSelector, MulOperation.productVal, sub_eq_zero_comm]
-    · obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
-      simp [RustMulOutputPlacement, MulOutputPlacement,
-        MulOperation.aSelector, MulOperation.productVal, sub_eq_zero_comm]
-    · obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
-      simp [RustMulOutputPlacement, MulOutputPlacement,
-        MulOperation.aSelector, MulOperation.productVal, sub_eq_zero_comm]
-    · obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
-      simp [RustMulOutputPlacement, MulOutputPlacement,
-        MulOperation.aSelector, MulOperation.productVal, sub_eq_zero_comm]
 
 private theorem mulSignExtend_bool
     {isMul isMulh isMulhu isMulhsu isMulw bMsb cMsb
@@ -1083,10 +967,9 @@ set_option linter.unusedSimpArgs false in
 theorem mulOperation_assertions_forward
     (env : Environment (ZMod p))
     (input : Var MulOperation.Inputs (ZMod p)) (offset : ℕ)
-    (a : Word (ZMod p))
     (hRust :
       List.Forall (· = 0)
-        (Extracted.MulOperation.asserts a
+        (Extracted.MulOperation.asserts (Eval.eval env input.a)
           (Eval.eval env input.b) (Eval.eval env input.c)
           (Eval.eval env input.cols)
           (Expression.eval env input.is_real)
@@ -1096,13 +979,7 @@ theorem mulOperation_assertions_forward
           (Expression.eval env input.is_mulhu)
           (Expression.eval env input.is_mulhsu))) :
     List.Forall (· = 0)
-        (nativeAssertZeros env ((MulOperation.main input).operations offset)) ∧
-      MulOutputPlacement a (Eval.eval env input.cols)
-        (Expression.eval env input.is_mul)
-        (Expression.eval env input.is_mulh)
-        (Expression.eval env input.is_mulhu)
-        (Expression.eval env input.is_mulhsu)
-        (Expression.eval env input.is_mulw) := by
+        (nativeAssertZeros env ((MulOperation.main input).operations offset)) := by
   rw [Extracted.MulOperation.asserts] at hRust
   simp only [Extracted.U16toU8OperationSafe.asserts,
     Extracted.U16MSBOperation.asserts, List.forall_append,
@@ -1113,78 +990,84 @@ theorem mulOperation_assertions_forward
     ho0, ho1, ho2, ho3, ho4, ho5, ho6, ho7, ho8, ho9, ho10, ho11,
     hbmsb, hcmsb, _hbsign, _hcsign,
     hm, hmh, hmu, hms, _hw1, hsum, hr, hbimp, hcimp⟩ := hRust
-  have hm' := bool_of_mul_pred hm
-  have hmh' := bool_of_mul_pred hmh
-  have hmu' := bool_of_mul_pred hmu
-  have hms' := bool_of_mul_pred hms
-  have hmw' := bool_of_mul_pred hw0
-  have hsum' := bool_of_mul_pred hsum
-  constructor
-  · simp only [nativeAssertZeros, MulOperation.main,
-      Circuit.operations, Circuit.bind_def, assertion, assertZero,
-      Operations.localLength]
-    simp only [Operations.constraints_append,
-      Operations.constraints_subcircuit,
-      FormalAssertion.toSubcircuit_constraints,
-      FormalAssertion.toSubcircuit_localLength,
-      Operations.constraints_assert, Operations.constraints_nil,
-      List.map_append, List.map_cons, List.map_nil]
-    simp only [U16toU8OperationSafe.circuit,
-      U16toU8OperationSafe.main, U16MSBOperation.circuit,
-      U16MSBOperation.main, Gadgets.Equality.circuit,
-      circuit_norm]
-    repeat' rw [CanonicalReader.equalityAssertionList]
-    refine ⟨?_, ?_, ?_, ?_⟩
-    · simpa only [circuit_norm] using hr
-    · simpa only [circuit_norm] using hr
-    · simpa only [circuit_norm] using hr
-    · constructor
-      · simpa only [circuit_norm] using hw0
+  simp only [nativeAssertZeros, MulOperation.main,
+    Circuit.operations, Circuit.bind_def, assertion, assertZero,
+    Operations.localLength]
+  simp only [Operations.constraints_append,
+    Operations.constraints_subcircuit,
+    FormalAssertion.toSubcircuit_constraints,
+    FormalAssertion.toSubcircuit_localLength,
+    Operations.constraints_assert, Operations.constraints_nil,
+    List.map_append, List.map_cons, List.map_nil]
+  simp only [U16toU8OperationSafe.circuit,
+    U16toU8OperationSafe.main, U16MSBOperation.circuit,
+    U16MSBOperation.main, Gadgets.Equality.circuit,
+    circuit_norm]
+  repeat' rw [CanonicalReader.equalityAssertionList]
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simpa only [circuit_norm] using hr
+  · simpa only [circuit_norm] using hr
+  · simpa only [circuit_norm] using hr
+  · constructor
+    · simpa only [circuit_norm] using hw0
+    · refine forall_singleton_append ?_ ?_
+      · simp only [eval_sub, eval_mul, Expression.eval, sub_zero]
+        rw [← eval_mulOperation_productMsb env input.cols]
+        exact hpmsb
       · refine forall_singleton_append ?_ ?_
         · simp only [eval_sub, eval_mul, Expression.eval, sub_zero]
-          rw [← eval_mulOperation_productMsb env input.cols]
-          exact hpmsb
+          rw [← eval_mulOperation_bMsb env input.cols]
+          exact hbmsb
         · refine forall_singleton_append ?_ ?_
           · simp only [eval_sub, eval_mul, Expression.eval, sub_zero]
-            rw [← eval_mulOperation_bMsb env input.cols]
-            exact hbmsb
+            rw [← eval_mulOperation_cMsb env input.cols]
+            exact hcmsb
           · refine forall_singleton_append ?_ ?_
-            · simp only [eval_sub, eval_mul, Expression.eval, sub_zero]
-              rw [← eval_mulOperation_cMsb env input.cols]
-              exact hcmsb
+            · simp only [eval_sub, eval_add, eval_mul, Expression.eval]
+              rw [← eval_mulOperation_bSign env input.cols,
+                ← eval_mulOperation_bMsb env input.cols]
+              exact hbdef
             · refine forall_singleton_append ?_ ?_
-              · simp only [eval_sub, eval_add, eval_mul, Expression.eval]
-                rw [← eval_mulOperation_bSign env input.cols,
-                  ← eval_mulOperation_bMsb env input.cols]
-                exact hbdef
+              · simp only [eval_sub, eval_mul, Expression.eval]
+                rw [← eval_mulOperation_cSign env input.cols,
+                  ← eval_mulOperation_cMsb env input.cols]
+                exact hcdef
               · refine forall_singleton_append ?_ ?_
-                · simp only [eval_sub, eval_mul, Expression.eval]
-                  rw [← eval_mulOperation_cSign env input.cols,
-                    ← eval_mulOperation_cMsb env input.cols]
-                  exact hcdef
+                · simp only [eval_sub, eval_mul, Expression.eval, sub_zero]
+                  rw [← eval_mulOperation_bSign env input.cols,
+                    ← eval_mulOperation_bMsb env input.cols]
+                  exact hbimp
                 · refine forall_singleton_append ?_ ?_
                   · simp only [eval_sub, eval_mul, Expression.eval, sub_zero]
-                    rw [← eval_mulOperation_bSign env input.cols,
-                      ← eval_mulOperation_bMsb env input.cols]
-                    exact hbimp
+                    rw [← eval_mulOperation_cSign env input.cols,
+                      ← eval_mulOperation_cMsb env input.cols]
+                    exact hcimp
                   · refine forall_singleton_append ?_ ?_
-                    · simp only [eval_sub, eval_mul, Expression.eval, sub_zero]
-                      rw [← eval_mulOperation_cSign env input.cols,
-                        ← eval_mulOperation_cMsb env input.cols]
-                      exact hcimp
+                    · have hp0' := hp0
+                      simp only [vec4_eta, u16toU8_eta, u16Value0,
+                        eval_mulOperation_product,
+                        eval_mulOperation_carry,
+                        eval_mulOperation_bLower,
+                        eval_mulOperation_cLower,
+                        eval_word_getElem, zero_add] at hp0'
+                      simp only [eval_sub, eval_mul, Expression.eval,
+                        sub_zero]
+                      exact hp0'
                     · refine forall_singleton_append ?_ ?_
-                      · have hp0' := hp0
-                        simp only [vec4_eta, u16toU8_eta, u16Value0,
+                      · have hp1' := hp1
+                        simp only [vec4_eta, u16toU8_eta,
+                          u16Value0, u16Value1, u16Value2, u16Value3,
+                          u16Value4, u16Value5, u16Value6, u16Value7,
                           eval_mulOperation_product,
                           eval_mulOperation_carry,
                           eval_mulOperation_bLower,
                           eval_mulOperation_cLower,
-                          eval_word_getElem, zero_add] at hp0'
-                        simp only [eval_sub, eval_mul, Expression.eval,
-                          sub_zero]
-                        exact hp0'
+                          eval_word_getElem, zero_add] at hp1'
+                        simp only [eval_sub, eval_mul, eval_add,
+                          Expression.eval, sub_zero]
+                        exact hp1'
                       · refine forall_singleton_append ?_ ?_
-                        · have hp1' := hp1
+                        · have hp2' := hp2
                           simp only [vec4_eta, u16toU8_eta,
                             u16Value0, u16Value1, u16Value2, u16Value3,
                             u16Value4, u16Value5, u16Value6, u16Value7,
@@ -1192,12 +1075,12 @@ theorem mulOperation_assertions_forward
                             eval_mulOperation_carry,
                             eval_mulOperation_bLower,
                             eval_mulOperation_cLower,
-                            eval_word_getElem, zero_add] at hp1'
+                            eval_word_getElem, zero_add] at hp2'
                           simp only [eval_sub, eval_mul, eval_add,
                             Expression.eval, sub_zero]
-                          exact hp1'
+                          exact hp2'
                         · refine forall_singleton_append ?_ ?_
-                          · have hp2' := hp2
+                          · have hp3' := hp3
                             simp only [vec4_eta, u16toU8_eta,
                               u16Value0, u16Value1, u16Value2, u16Value3,
                               u16Value4, u16Value5, u16Value6, u16Value7,
@@ -1205,25 +1088,26 @@ theorem mulOperation_assertions_forward
                               eval_mulOperation_carry,
                               eval_mulOperation_bLower,
                               eval_mulOperation_cLower,
-                              eval_word_getElem, zero_add] at hp2'
+                              eval_word_getElem, zero_add] at hp3'
                             simp only [eval_sub, eval_mul, eval_add,
                               Expression.eval, sub_zero]
-                            exact hp2'
+                            exact hp3'
                           · refine forall_singleton_append ?_ ?_
-                            · have hp3' := hp3
+                            · have hp4' := hp4
                               simp only [vec4_eta, u16toU8_eta,
-                                u16Value0, u16Value1, u16Value2, u16Value3,
-                                u16Value4, u16Value5, u16Value6, u16Value7,
+                                u16Value0, u16Value1, u16Value2,
+                                u16Value3, u16Value4, u16Value5,
+                                u16Value6, u16Value7,
                                 eval_mulOperation_product,
                                 eval_mulOperation_carry,
                                 eval_mulOperation_bLower,
                                 eval_mulOperation_cLower,
-                                eval_word_getElem, zero_add] at hp3'
+                                eval_word_getElem, zero_add] at hp4'
                               simp only [eval_sub, eval_mul, eval_add,
                                 Expression.eval, sub_zero]
-                              exact hp3'
+                              exact hp4'
                             · refine forall_singleton_append ?_ ?_
-                              · have hp4' := hp4
+                              · have hp5' := hp5
                                 simp only [vec4_eta, u16toU8_eta,
                                   u16Value0, u16Value1, u16Value2,
                                   u16Value3, u16Value4, u16Value5,
@@ -1232,12 +1116,12 @@ theorem mulOperation_assertions_forward
                                   eval_mulOperation_carry,
                                   eval_mulOperation_bLower,
                                   eval_mulOperation_cLower,
-                                  eval_word_getElem, zero_add] at hp4'
+                                  eval_word_getElem, zero_add] at hp5'
                                 simp only [eval_sub, eval_mul, eval_add,
                                   Expression.eval, sub_zero]
-                                exact hp4'
+                                exact hp5'
                               · refine forall_singleton_append ?_ ?_
-                                · have hp5' := hp5
+                                · have hp6' := hp6
                                   simp only [vec4_eta, u16toU8_eta,
                                     u16Value0, u16Value1, u16Value2,
                                     u16Value3, u16Value4, u16Value5,
@@ -1246,12 +1130,12 @@ theorem mulOperation_assertions_forward
                                     eval_mulOperation_carry,
                                     eval_mulOperation_bLower,
                                     eval_mulOperation_cLower,
-                                    eval_word_getElem, zero_add] at hp5'
+                                    eval_word_getElem, zero_add] at hp6'
                                   simp only [eval_sub, eval_mul, eval_add,
                                     Expression.eval, sub_zero]
-                                  exact hp5'
+                                  exact hp6'
                                 · refine forall_singleton_append ?_ ?_
-                                  · have hp6' := hp6
+                                  · have hp7' := hp7
                                     simp only [vec4_eta, u16toU8_eta,
                                       u16Value0, u16Value1, u16Value2,
                                       u16Value3, u16Value4, u16Value5,
@@ -1260,12 +1144,12 @@ theorem mulOperation_assertions_forward
                                       eval_mulOperation_carry,
                                       eval_mulOperation_bLower,
                                       eval_mulOperation_cLower,
-                                      eval_word_getElem, zero_add] at hp6'
+                                      eval_word_getElem, zero_add] at hp7'
                                     simp only [eval_sub, eval_mul, eval_add,
                                       Expression.eval, sub_zero]
-                                    exact hp6'
+                                    exact hp7'
                                   · refine forall_singleton_append ?_ ?_
-                                    · have hp7' := hp7
+                                    · have hp8' := hp8
                                       simp only [vec4_eta, u16toU8_eta,
                                         u16Value0, u16Value1, u16Value2,
                                         u16Value3, u16Value4, u16Value5,
@@ -1274,16 +1158,25 @@ theorem mulOperation_assertions_forward
                                         eval_mulOperation_carry,
                                         eval_mulOperation_bLower,
                                         eval_mulOperation_cLower,
-                                        eval_word_getElem, zero_add] at hp7'
-                                      simp only [eval_sub, eval_mul, eval_add,
-                                        Expression.eval, sub_zero]
-                                      exact hp7'
+                                        eval_mulOperation_bSign,
+                                        eval_mulOperation_cSign,
+                                        eval_word_getElem,
+                                        Vector.getElem_mk,
+                                        List.getElem_toArray,
+                                        List.getElem_cons_zero,
+                                        List.getElem_cons_succ,
+                                        zero_add] at hp8'
+                                      simp only [eval_sub, eval_mul,
+                                        eval_add, Expression.eval,
+                                        sub_zero]
+                                      exact hp8'
                                     · refine forall_singleton_append ?_ ?_
-                                      · have hp8' := hp8
-                                        simp only [vec4_eta, u16toU8_eta,
-                                          u16Value0, u16Value1, u16Value2,
-                                          u16Value3, u16Value4, u16Value5,
-                                          u16Value6, u16Value7,
+                                      · have hp9' := hp9
+                                        simp only [vec4_eta,
+                                          u16toU8_eta, u16Value0,
+                                          u16Value1, u16Value2, u16Value3,
+                                          u16Value4, u16Value5, u16Value6,
+                                          u16Value7,
                                           eval_mulOperation_product,
                                           eval_mulOperation_carry,
                                           eval_mulOperation_bLower,
@@ -1295,17 +1188,19 @@ theorem mulOperation_assertions_forward
                                           List.getElem_toArray,
                                           List.getElem_cons_zero,
                                           List.getElem_cons_succ,
-                                          zero_add] at hp8'
+                                          zero_add] at hp9'
                                         simp only [eval_sub, eval_mul,
                                           eval_add, Expression.eval,
                                           sub_zero]
-                                        exact hp8'
-                                      · refine forall_singleton_append ?_ ?_
-                                        · have hp9' := hp9
+                                        exact hp9'
+                                      · refine
+                                          forall_singleton_append ?_ ?_
+                                        · have hp10' := hp10
                                           simp only [vec4_eta,
                                             u16toU8_eta, u16Value0,
-                                            u16Value1, u16Value2, u16Value3,
-                                            u16Value4, u16Value5, u16Value6,
+                                            u16Value1, u16Value2,
+                                            u16Value3, u16Value4,
+                                            u16Value5, u16Value6,
                                             u16Value7,
                                             eval_mulOperation_product,
                                             eval_mulOperation_carry,
@@ -1318,14 +1213,14 @@ theorem mulOperation_assertions_forward
                                             List.getElem_toArray,
                                             List.getElem_cons_zero,
                                             List.getElem_cons_succ,
-                                            zero_add] at hp9'
+                                            zero_add] at hp10'
                                           simp only [eval_sub, eval_mul,
                                             eval_add, Expression.eval,
                                             sub_zero]
-                                          exact hp9'
+                                          exact hp10'
                                         · refine
                                             forall_singleton_append ?_ ?_
-                                          · have hp10' := hp10
+                                          · have hp11' := hp11
                                             simp only [vec4_eta,
                                               u16toU8_eta, u16Value0,
                                               u16Value1, u16Value2,
@@ -1343,14 +1238,15 @@ theorem mulOperation_assertions_forward
                                               List.getElem_toArray,
                                               List.getElem_cons_zero,
                                               List.getElem_cons_succ,
-                                              zero_add] at hp10'
+                                              zero_add] at hp11'
                                             simp only [eval_sub, eval_mul,
                                               eval_add, Expression.eval,
                                               sub_zero]
-                                            exact hp10'
+                                            exact hp11'
                                           · refine
-                                              forall_singleton_append ?_ ?_
-                                            · have hp11' := hp11
+                                              forall_singleton_append
+                                                ?_ ?_
+                                            · have hp12' := hp12
                                               simp only [vec4_eta,
                                                 u16toU8_eta, u16Value0,
                                                 u16Value1, u16Value2,
@@ -1368,15 +1264,16 @@ theorem mulOperation_assertions_forward
                                                 List.getElem_toArray,
                                                 List.getElem_cons_zero,
                                                 List.getElem_cons_succ,
-                                                zero_add] at hp11'
-                                              simp only [eval_sub, eval_mul,
-                                                eval_add, Expression.eval,
+                                                zero_add] at hp12'
+                                              simp only [eval_sub,
+                                                eval_mul, eval_add,
+                                                Expression.eval,
                                                 sub_zero]
-                                              exact hp11'
+                                              exact hp12'
                                             · refine
                                                 forall_singleton_append
                                                   ?_ ?_
-                                              · have hp12' := hp12
+                                              · have hp13' := hp13
                                                 simp only [vec4_eta,
                                                   u16toU8_eta, u16Value0,
                                                   u16Value1, u16Value2,
@@ -1394,16 +1291,16 @@ theorem mulOperation_assertions_forward
                                                   List.getElem_toArray,
                                                   List.getElem_cons_zero,
                                                   List.getElem_cons_succ,
-                                                  zero_add] at hp12'
+                                                  zero_add] at hp13'
                                                 simp only [eval_sub,
                                                   eval_mul, eval_add,
                                                   Expression.eval,
                                                   sub_zero]
-                                                exact hp12'
+                                                exact hp13'
                                               · refine
                                                   forall_singleton_append
                                                     ?_ ?_
-                                                · have hp13' := hp13
+                                                · have hp14' := hp14
                                                   simp only [vec4_eta,
                                                     u16toU8_eta, u16Value0,
                                                     u16Value1, u16Value2,
@@ -1421,22 +1318,22 @@ theorem mulOperation_assertions_forward
                                                     List.getElem_toArray,
                                                     List.getElem_cons_zero,
                                                     List.getElem_cons_succ,
-                                                    zero_add] at hp13'
+                                                    zero_add] at hp14'
                                                   simp only [eval_sub,
                                                     eval_mul, eval_add,
                                                     Expression.eval,
                                                     sub_zero]
-                                                  exact hp13'
+                                                  exact hp14'
                                                 · refine
                                                     forall_singleton_append
                                                       ?_ ?_
-                                                  · have hp14' := hp14
+                                                  · have hp15' := hp15
                                                     simp only [vec4_eta,
-                                                      u16toU8_eta, u16Value0,
-                                                      u16Value1, u16Value2,
-                                                      u16Value3, u16Value4,
-                                                      u16Value5, u16Value6,
-                                                      u16Value7,
+                                                      u16toU8_eta,
+                                                      u16Value0, u16Value1,
+                                                      u16Value2, u16Value3,
+                                                      u16Value4, u16Value5,
+                                                      u16Value6, u16Value7,
                                                       eval_mulOperation_product,
                                                       eval_mulOperation_carry,
                                                       eval_mulOperation_bLower,
@@ -1448,57 +1345,29 @@ theorem mulOperation_assertions_forward
                                                       List.getElem_toArray,
                                                       List.getElem_cons_zero,
                                                       List.getElem_cons_succ,
-                                                      zero_add] at hp14'
+                                                      zero_add] at hp15'
                                                     simp only [eval_sub,
                                                       eval_mul, eval_add,
                                                       Expression.eval,
                                                       sub_zero]
-                                                    exact hp14'
-                                                  · refine
-                                                      forall_singleton_append
-                                                        ?_ ?_
-                                                    · have hp15' := hp15
-                                                      simp only [vec4_eta,
-                                                        u16toU8_eta,
-                                                        u16Value0, u16Value1,
-                                                        u16Value2, u16Value3,
-                                                        u16Value4, u16Value5,
-                                                        u16Value6, u16Value7,
-                                                        eval_mulOperation_product,
-                                                        eval_mulOperation_carry,
-                                                        eval_mulOperation_bLower,
-                                                        eval_mulOperation_cLower,
-                                                        eval_mulOperation_bSign,
-                                                        eval_mulOperation_cSign,
-                                                        eval_word_getElem,
-                                                        Vector.getElem_mk,
-                                                        List.getElem_toArray,
-                                                        List.getElem_cons_zero,
-                                                        List.getElem_cons_succ,
-                                                        zero_add] at hp15'
-                                                      simp only [eval_sub,
-                                                        eval_mul, eval_add,
-                                                        Expression.eval,
-                                                        sub_zero]
-                                                      exact hp15'
-                                                    · simp only [List.Forall]
-  · apply (mulOutputPlacement_iff a (Eval.eval env input.cols)
-      (Expression.eval env input.is_mul)
-      (Expression.eval env input.is_mulh)
-      (Expression.eval env input.is_mulhu)
-      (Expression.eval env input.is_mulhsu)
-      (Expression.eval env input.is_mulw)
-      hm' hmh' hmu' hms' hmw' hsum').mp
-    exact ⟨ho0, ho1, ho2, ho3, ho4, ho5,
-      ho6, ho7, ho8, ho9, ho10, ho11⟩
+                                                    exact hp15'
+                                                  · simpa only [List.Forall, ← ProvableStruct.eval_eq_eval,
+                                                      eval_mulOperationInputs, eval_mulOperation_product,
+                                                      eval_mulOperation_productMsb, eval_word_getElem,
+                                                      eval_sub, eval_mul, eval_add, Expression.eval]
+                                                      using And.intro ho0 (And.intro ho1 (And.intro ho2
+                                                        (And.intro ho3 (And.intro ho4 (And.intro ho5
+                                                          (And.intro ho6 (And.intro ho7 (And.intro ho8
+                                                            (And.intro ho9 (And.intro ho10 ho11))))))))))
 
 local macro "close_mul_constraint" h:term : tactic =>
-  `(tactic| simpa only [vec4_eta, u16toU8_eta,
+  `(tactic| simpa only [← ProvableStruct.eval_eq_eval, eval_mulOperationInputs,
+      vec4_eta, u16toU8_eta,
       u16Value0, u16Value1, u16Value2, u16Value3,
       u16Value4, u16Value5, u16Value6, u16Value7,
       eval_mulOperation_product, eval_mulOperation_carry,
       eval_mulOperation_bLower, eval_mulOperation_cLower,
-      eval_mulOperation_bSign, eval_mulOperation_cSign,
+      eval_mulOperation_bSign, eval_mulOperation_cSign, eval_mulOperation_productMsb,
       eval_word_getElem, Vector.getElem_mk,
       List.getElem_toArray, List.getElem_cons_zero,
       List.getElem_cons_succ, eval_sub, eval_mul, eval_add,
@@ -1508,17 +1377,9 @@ set_option linter.unusedSimpArgs false in
 theorem mulOperation_assertions_backward
     (env : Environment (ZMod p))
     (input : Var MulOperation.Inputs (ZMod p)) (offset : ℕ)
-    (a : Word (ZMod p))
     (hNative :
       List.Forall (· = 0)
         (nativeAssertZeros env ((MulOperation.main input).operations offset)))
-    (hPlacement :
-      MulOutputPlacement a (Eval.eval env input.cols)
-        (Expression.eval env input.is_mul)
-        (Expression.eval env input.is_mulh)
-        (Expression.eval env input.is_mulhu)
-        (Expression.eval env input.is_mulhsu)
-        (Expression.eval env input.is_mulw))
     (hm : Expression.eval env input.is_mul *
         (Expression.eval env input.is_mul - 1) = 0)
     (hmh : Expression.eval env input.is_mulh *
@@ -1537,7 +1398,7 @@ theorem mulOperation_assertions_backward
         Expression.eval env input.is_mulw
       sum * (sum - 1) = 0) :
     List.Forall (· = 0)
-      (Extracted.MulOperation.asserts a
+      (Extracted.MulOperation.asserts (Eval.eval env input.a)
         (Eval.eval env input.b) (Eval.eval env input.c)
         (Eval.eval env input.cols)
         (Expression.eval env input.is_real)
@@ -1585,8 +1446,8 @@ theorem mulOperation_assertions_backward
   obtain ⟨hp13, hTail⟩ := forall_singleton_append_elim hTail
   obtain ⟨hp14, hTail⟩ := forall_singleton_append_elim hTail
   obtain ⟨hp15, hTail⟩ := forall_singleton_append_elim hTail
-  have _hEmpty : List.Forall (· = 0) ([] : List (ZMod p)) := by
-    simpa only using hTail
+  simp only [List.Forall] at hTail
+  obtain ⟨ho0, ho1, ho2, ho3, ho4, ho5, ho6, ho7, ho8, ho9, ho10, ho11⟩ := hTail
   have hm' := bool_of_mul_pred hm
   have hmh' := bool_of_mul_pred hmh
   have hmu' := bool_of_mul_pred hmu
@@ -1647,22 +1508,24 @@ theorem mulOperation_assertions_backward
   have hSignBool := mulSignExtend_bool hm' hmh' hmu' hms' hmw'
     hsum' (bool_of_mul_pred hbmsb') (bool_of_mul_pred hcmsb')
     (sub_eq_zero.mp hbdef') (sub_eq_zero.mp hcdef')
-  have hOutput := (mulOutputPlacement_iff a (Eval.eval env input.cols)
-    (Expression.eval env input.is_mul)
-    (Expression.eval env input.is_mulh)
-    (Expression.eval env input.is_mulhu)
-    (Expression.eval env input.is_mulhsu)
-    (Expression.eval env input.is_mulw)
-    hm' hmh' hmu' hms' hmw' hsum').mpr hPlacement
-  obtain ⟨ho0, ho1, ho2, ho3, ho4, ho5,
-    ho6, ho7, ho8, ho9, ho10, ho11⟩ := hOutput
   rw [Extracted.MulOperation.asserts]
   simp only [Extracted.U16toU8OperationSafe.asserts,
     Extracted.U16MSBOperation.asserts, List.forall_append,
     List.Forall, true_and]
   refine ⟨⟨hw0', hpmsb'⟩, hbdef', hcdef', ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ho0, ho1, ho2, ho3, ho4, ho5, ho6, ho7, ho8, ho9, ho10, ho11,
+    by close_mul_constraint ho0,
+    by close_mul_constraint ho1,
+    by close_mul_constraint ho2,
+    by close_mul_constraint ho3,
+    by close_mul_constraint ho4,
+    by close_mul_constraint ho5,
+    by close_mul_constraint ho6,
+    by close_mul_constraint ho7,
+    by close_mul_constraint ho8,
+    by close_mul_constraint ho9,
+    by close_mul_constraint ho10,
+    by close_mul_constraint ho11,
     hbmsb', hcmsb', mul_pred_of_bool hSignBool.1,
     mul_pred_of_bool hSignBool.2, hm, hmh, hmu, hms, hmw, hsum, hr',
     hbimp', hcimp'⟩
@@ -1739,7 +1602,7 @@ private theorem mulChip_constraints_faithful
     ⟨input.op_b_val, input.op_c_val, operation,
       mul_chip_is_real offset, mul_chip_flag offset 0,
       mul_chip_flag offset 1, mul_chip_flag offset 2,
-      mul_chip_flag offset 3, mul_chip_flag offset 4⟩
+      mul_chip_flag offset 3, mul_chip_flag offset 4, mul_chip_a offset⟩
   have hB : Eval.eval env opInput.b = rustB := by
     simp only [opInput, rustB, MulChip.Inputs.op_b_val]
     calc
@@ -1846,9 +1709,8 @@ private theorem mulChip_constraints_faithful
       simpa only [opInput, rustOperation, operation,
         rustIsReal, rustIsMul, rustIsMulh, rustIsMulw,
         rustIsMulhu, rustIsMulhsu] using hOpOracle
-    have hOpPair := mulOperation_assertions_forward
-      (p := p) env opInput (offset + 50) rustA hOpInputOracle
-    obtain ⟨hOpN, hPlacement⟩ := hOpPair
+    have hOpN := mulOperation_assertions_forward
+      (p := p) env opInput (offset + 54) hOpInputOracle
     have hCpuOracle :
         List.Forall (· = 0)
           (Extracted.CPUState.asserts rustState rustNextPc 8
@@ -1877,60 +1739,6 @@ private theorem mulChip_constraints_faithful
     have hWriteN :=
       (CanonicalReader.registerWriteAssertions env writeInput
         (offset + 54)).mpr trivial
-    simp only [MulOutputPlacement] at hPlacement
-    obtain ⟨hP0, hP1, hP2, hP3⟩ := hPlacement
-    have hP0N :
-        Expression.eval env
-          (input.is_real * ((mul_chip_a offset)[0] -
-            (mul_chip_selector offset)[0])) = 0 := by
-      simpa only [hinputReal, opInput, rustA, a, operation,
-        mul_chip_a, mul_chip_selector, mul_chip_operation,
-        mul_chip_is_real, mul_chip_flag, MulOperation.aSelector,
-        mulProductVal_of_lt, Nat.reduceLT, eval_add, eval_mul, eval_sub,
-        eval_mulOperation_product, eval_mulOperation_productMsb,
-        ProvableType.getElem_eval_fields, ProvableType.eval_field,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        Expression.eval, Nat.add_zero] using hP0
-    have hP1N :
-        Expression.eval env
-          (input.is_real * ((mul_chip_a offset)[1] -
-            (mul_chip_selector offset)[1])) = 0 := by
-      simpa only [hinputReal, opInput, rustA, a, operation,
-        mul_chip_a, mul_chip_selector, mul_chip_operation,
-        mul_chip_is_real, mul_chip_flag, MulOperation.aSelector,
-        mulProductVal_of_lt, Nat.reduceLT, eval_add, eval_mul, eval_sub,
-        eval_mulOperation_product, eval_mulOperation_productMsb,
-        ProvableType.getElem_eval_fields, ProvableType.eval_field,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        Expression.eval, Nat.add_zero] using hP1
-    have hP2N :
-        Expression.eval env
-          (input.is_real * ((mul_chip_a offset)[2] -
-            (mul_chip_selector offset)[2])) = 0 := by
-      simpa only [hinputReal, opInput, rustA, a, operation,
-        mul_chip_a, mul_chip_selector, mul_chip_operation,
-        mul_chip_is_real, mul_chip_flag, MulOperation.aSelector,
-        mulProductVal_of_lt, Nat.reduceLT, eval_add, eval_mul, eval_sub,
-        eval_mulOperation_product, eval_mulOperation_productMsb,
-        ProvableType.getElem_eval_fields, ProvableType.eval_field,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        Expression.eval, Nat.add_zero] using hP2
-    have hP3N :
-        Expression.eval env
-          (input.is_real * ((mul_chip_a offset)[3] -
-            (mul_chip_selector offset)[3])) = 0 := by
-      simpa only [hinputReal, opInput, rustA, a, operation,
-        mul_chip_a, mul_chip_selector, mul_chip_operation,
-        mul_chip_is_real, mul_chip_flag, MulOperation.aSelector,
-        mulProductVal_of_lt, Nat.reduceLT, eval_add, eval_mul, eval_sub,
-        eval_mulOperation_product, eval_mulOperation_productMsb,
-        ProvableType.getElem_eval_fields, ProvableType.eval_field,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        Expression.eval, Nat.add_zero] using hP3
     have hmN :
         Expression.eval env
           (mul_chip_flag offset 0 *
@@ -1983,11 +1791,10 @@ private theorem mulChip_constraints_faithful
         Nat.add_zero] using hsum
     exact ⟨by simpa only [cpuInput] using hCpuN,
       by simpa only [opInput] using hOpN,
-      hP0N, hP1N, hP2N, hP3N,
       hmN, hmhN, hmuN, hmsN, hmwN, hsumN, hopA0N,
       by simpa only [rtypeInput] using hRtypeN, hLink,
       by simpa only [writeInput] using hWriteN, hInputBool⟩
-  · rintro ⟨hCpuN, hOpN, hP0N, hP1N, hP2N, hP3N,
+  · rintro ⟨hCpuN, hOpN,
       hmN, hmhN, hmuN, hmsN, hmwN, hsumN, hopA0N,
       hRtypeN, _hLinkN, _hWriteN, _hInputBoolN⟩
     have hmOp :
@@ -2024,105 +1831,8 @@ private theorem mulChip_constraints_faithful
         sum * (sum - 1) = 0 := by
       simpa only [opInput, mul_chip_is_real, eval_mul,
         eval_sub, eval_add, Expression.eval] using hsumN
-    have hP0 :
-        (Expression.eval env opInput.is_mul +
-            Expression.eval env opInput.is_mulh +
-            Expression.eval env opInput.is_mulhu +
-            Expression.eval env opInput.is_mulhsu +
-            Expression.eval env opInput.is_mulw) *
-          (rustA[0] -
-            (MulOperation.aSelector (Eval.eval env opInput.cols)
-              (Expression.eval env opInput.is_mul)
-              (Expression.eval env opInput.is_mulh)
-              (Expression.eval env opInput.is_mulhu)
-              (Expression.eval env opInput.is_mulhsu)
-              (Expression.eval env opInput.is_mulw))[0]) = 0 := by
-      simpa only [hinputReal, opInput, rustA, a, operation,
-        mul_chip_a, mul_chip_selector, mul_chip_operation,
-        mul_chip_is_real, mul_chip_flag, MulOperation.aSelector,
-        mulProductVal_of_lt, Nat.reduceLT, eval_add, eval_mul, eval_sub,
-        eval_mulOperation_product, eval_mulOperation_productMsb,
-        ProvableType.getElem_eval_fields, ProvableType.eval_field,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        Expression.eval, Nat.add_zero] using hP0N
-    have hP1 :
-        (Expression.eval env opInput.is_mul +
-            Expression.eval env opInput.is_mulh +
-            Expression.eval env opInput.is_mulhu +
-            Expression.eval env opInput.is_mulhsu +
-            Expression.eval env opInput.is_mulw) *
-          (rustA[1] -
-            (MulOperation.aSelector (Eval.eval env opInput.cols)
-              (Expression.eval env opInput.is_mul)
-              (Expression.eval env opInput.is_mulh)
-              (Expression.eval env opInput.is_mulhu)
-              (Expression.eval env opInput.is_mulhsu)
-              (Expression.eval env opInput.is_mulw))[1]) = 0 := by
-      simpa only [hinputReal, opInput, rustA, a, operation,
-        mul_chip_a, mul_chip_selector, mul_chip_operation,
-        mul_chip_is_real, mul_chip_flag, MulOperation.aSelector,
-        mulProductVal_of_lt, Nat.reduceLT, eval_add, eval_mul, eval_sub,
-        eval_mulOperation_product, eval_mulOperation_productMsb,
-        ProvableType.getElem_eval_fields, ProvableType.eval_field,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        Expression.eval, Nat.add_zero] using hP1N
-    have hP2 :
-        (Expression.eval env opInput.is_mul +
-            Expression.eval env opInput.is_mulh +
-            Expression.eval env opInput.is_mulhu +
-            Expression.eval env opInput.is_mulhsu +
-            Expression.eval env opInput.is_mulw) *
-          (rustA[2] -
-            (MulOperation.aSelector (Eval.eval env opInput.cols)
-              (Expression.eval env opInput.is_mul)
-              (Expression.eval env opInput.is_mulh)
-              (Expression.eval env opInput.is_mulhu)
-              (Expression.eval env opInput.is_mulhsu)
-              (Expression.eval env opInput.is_mulw))[2]) = 0 := by
-      simpa only [hinputReal, opInput, rustA, a, operation,
-        mul_chip_a, mul_chip_selector, mul_chip_operation,
-        mul_chip_is_real, mul_chip_flag, MulOperation.aSelector,
-        mulProductVal_of_lt, Nat.reduceLT, eval_add, eval_mul, eval_sub,
-        eval_mulOperation_product, eval_mulOperation_productMsb,
-        ProvableType.getElem_eval_fields, ProvableType.eval_field,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        Expression.eval, Nat.add_zero] using hP2N
-    have hP3 :
-        (Expression.eval env opInput.is_mul +
-            Expression.eval env opInput.is_mulh +
-            Expression.eval env opInput.is_mulhu +
-            Expression.eval env opInput.is_mulhsu +
-            Expression.eval env opInput.is_mulw) *
-          (rustA[3] -
-            (MulOperation.aSelector (Eval.eval env opInput.cols)
-              (Expression.eval env opInput.is_mul)
-              (Expression.eval env opInput.is_mulh)
-              (Expression.eval env opInput.is_mulhu)
-              (Expression.eval env opInput.is_mulhsu)
-              (Expression.eval env opInput.is_mulw))[3]) = 0 := by
-      simpa only [hinputReal, opInput, rustA, a, operation,
-        mul_chip_a, mul_chip_selector, mul_chip_operation,
-        mul_chip_is_real, mul_chip_flag, MulOperation.aSelector,
-        mulProductVal_of_lt, Nat.reduceLT, eval_add, eval_mul, eval_sub,
-        eval_mulOperation_product, eval_mulOperation_productMsb,
-        ProvableType.getElem_eval_fields, ProvableType.eval_field,
-        Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_zero, List.getElem_cons_succ,
-        Expression.eval, Nat.add_zero] using hP3N
-    have hPlacement :
-        MulOutputPlacement rustA (Eval.eval env opInput.cols)
-          (Expression.eval env opInput.is_mul)
-          (Expression.eval env opInput.is_mulh)
-          (Expression.eval env opInput.is_mulhu)
-          (Expression.eval env opInput.is_mulhsu)
-          (Expression.eval env opInput.is_mulw) := by
-      simpa only [MulOutputPlacement] using
-        And.intro hP0 (And.intro hP1 (And.intro hP2 hP3))
     have hOpInputOracle := mulOperation_assertions_backward
-      (p := p) env opInput (offset + 50) rustA hOpN hPlacement
+      (p := p) env opInput (offset + 54) hOpN
         hmOp hmhOp hmuOp hmsOp hmwOp hsumOp
     have hOpOracle :
         List.Forall (· = 0)
@@ -2348,8 +2058,7 @@ theorem mulOperation_interactions_exact
     (h_c2 : Expression.eval env input.c[2] = c[2])
     (h_c3 : Expression.eval env input.c[3] = c[3])
     (h_a1 :
-      Expression.eval env
-        (input.cols.product[2] + input.cols.product[3] * 256) = a[1])
+      Expression.eval env input.a[1] = a[1])
     (h_blb0 :
       Expression.eval env input.cols.b_lower_byte.low_bytes[0] =
         cols.b_lower_byte.low_bytes[0])
@@ -2532,8 +2241,7 @@ theorem mulOperation_interactions_exact
       h_clb0 h_clb1 h_clb2 h_clb3
   congr 1
   · exact u16msb_interactions_faithful_syntactic env
-      ⟨input.cols.product[2] + input.cols.product[3] * 256,
-        input.cols.product_msb, input.is_mulw⟩ _
+      ⟨input.a[1], input.cols.product_msb, input.is_mulw⟩ _
       a[1] cols.product_msb.msb is_mulw h_mulw h_a1 h_pmsb
   · have eneg_s :
         signedVal (Expression.eval env (-input.is_real)) =
@@ -2560,106 +2268,77 @@ theorem mulOperation_interactions_exact
       h3, h5, h6, h16, ZMod.val_zero]
     rw [eob_v, eoc_v]
 
-private theorem mulOp_active_rust_a1_irrelevant
-    (a a' b c : Word (ZMod p))
-    (cols : Circuits.Types.MulOperation (ZMod p))
-    (is_real is_mul is_mulh is_mulhu is_mulhsu : ZMod p) :
-    LookupAccessList.active
-        ((Extracted.MulOperation.interactions a b c cols
-          is_real is_mul is_mulh 0 is_mulhu is_mulhsu).map
-          Extracted.Interaction.toAccess) =
-      LookupAccessList.active
-        ((Extracted.MulOperation.interactions a' b c cols
-          is_real is_mul is_mulh 0 is_mulhu is_mulhsu).map
-          Extracted.Interaction.toAccess) := by
-  rw [Extracted.MulOperation.interactions,
-    Extracted.MulOperation.interactions]
-  simp only [List.map_append, LookupAccessList.active,
-    List.filter_append]
-  congr 1
-  congr 1
-  simp [Extracted.U16MSBOperation.interactions,
-    Extracted.Interaction.toAccess_byte, LookupAccessList.multOf,
-    signedVal]
-
-theorem mulOperation_interactions_active
+/-- Every multiplication interaction agrees, including disabled occurrences. -/
+theorem mulOperation_interactions_evaluated
     (env : Environment (ZMod p))
-    (input : Var SP1Clean.MulOperation.Inputs (ZMod p)) (offset : ℕ)
-    (a b c : Word (ZMod p))
-    (cols : Circuits.Types.MulOperation (ZMod p))
-    (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : ZMod p)
-    (hmulw : is_mulw = 0 ∨ is_mulw = 1)
-    (hplacement :
-      is_mulw *
-        (cols.product[2] + cols.product[3] * 256 - a[1]) = 0)
-    (htarget :
-      Expression.eval env
-          (input.cols.product[2] + input.cols.product[3] * 256) =
-        cols.product[2] + cols.product[3] * 256)
-    (hexact :
-      ∀ a' : Word (ZMod p),
-        Expression.eval env
-            (input.cols.product[2] + input.cols.product[3] * 256) =
-          a'[1] →
-        (Extracted.MulOperation.interactions a' b c cols
-            is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu).map
-            Extracted.Interaction.toAccess =
-          (((SP1Clean.MulOperation.main input).operations offset).interactionsWith
-            byteChannel.toRaw).map (AbstractInteraction.toAccess env)) :
-    LookupAccessList.active
-        ((Extracted.MulOperation.interactions a b c cols
-          is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu).map
-          Extracted.Interaction.toAccess) =
-      LookupAccessList.active
-        ((((SP1Clean.MulOperation.main input).operations offset).interactionsWith
-          byteChannel.toRaw).map (AbstractInteraction.toAccess env)) := by
-  rcases hmulw with rfl | rfl
-  · let replacement : Word (ZMod p) :=
-      #v[a[0], cols.product[2] + cols.product[3] * 256, a[2], a[3]]
-    have hreplacement :
-        Expression.eval env
-            (input.cols.product[2] + input.cols.product[3] * 256) =
-          replacement[1] := by
-      simpa only [replacement, Vector.getElem_mk, List.getElem_toArray,
-        List.getElem_cons_succ, List.getElem_cons_zero] using htarget
-    calc
-      _ = LookupAccessList.active
-          ((Extracted.MulOperation.interactions replacement b c cols
-            is_real is_mul is_mulh 0 is_mulhu is_mulhsu).map
-            Extracted.Interaction.toAccess) :=
-        mulOp_active_rust_a1_irrelevant a replacement b c cols
-          is_real is_mul is_mulh is_mulhu is_mulhsu
-      _ = _ := congrArg LookupAccessList.active
-        (hexact replacement hreplacement)
-  · have heq :
-        cols.product[2] + cols.product[3] * 256 = a[1] := by
-      simpa only [one_mul, sub_eq_zero] using hplacement
-    exact congrArg LookupAccessList.active (hexact a (htarget.trans heq))
-
-omit [Fact (2 ^ 24 < p)] in
-theorem mulOperation_mulw_facts
-    (a b c : Word (ZMod p))
-    (cols : Circuits.Types.MulOperation (ZMod p))
-    (is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu : ZMod p)
-    (hRust :
-      List.Forall (· = 0)
-        (Extracted.MulOperation.asserts a b c cols
-          is_real is_mul is_mulh is_mulw is_mulhu is_mulhsu)) :
-    (is_mulw = 0 ∨ is_mulw = 1) ∧
-      is_mulw *
-        (cols.product[2] + cols.product[3] * 256 - a[1]) = 0 := by
-  rw [Extracted.MulOperation.asserts] at hRust
-  simp only [Extracted.U16toU8OperationSafe.asserts,
-    Extracted.U16MSBOperation.asserts, List.forall_append,
-    List.Forall, true_and] at hRust
-  obtain ⟨⟨hw0, _hpmsb⟩, _hbdef, _hcdef,
-    _hp0, _hp1, _hp2, _hp3, _hp4, _hp5, _hp6, _hp7,
-    _hp8, _hp9, _hp10, _hp11, _hp12, _hp13, _hp14, _hp15,
-    _ho0, _ho1, _ho2, ho3, _ho4, _ho5, _ho6, _ho7,
-    _ho8, _ho9, _ho10, _ho11, _hbmsb, _hcmsb,
-    _hbsign, _hcsign, _hm, _hmh, _hmu, _hms, _hw1,
-    _hsum, _hr, _hbimp, _hcimp⟩ := hRust
-  exact ⟨bool_of_mul_pred hw0, ho3⟩
+    (input : Var SP1Clean.MulOperation.Inputs (ZMod p)) (offset : ℕ) :
+    (Extracted.MulOperation.interactions
+        (Eval.eval env input.a) (Eval.eval env input.b) (Eval.eval env input.c)
+        (Eval.eval env input.cols)
+        (Expression.eval env input.is_real)
+        (Expression.eval env input.is_mul) (Expression.eval env input.is_mulh)
+        (Expression.eval env input.is_mulw) (Expression.eval env input.is_mulhu)
+        (Expression.eval env input.is_mulhsu)).map Extracted.Interaction.toAccess =
+      (((SP1Clean.MulOperation.main input).operations offset).interactionsWith
+        byteChannel.toRaw).map (AbstractInteraction.toAccess env) := by
+  have h := mulOperation_interactions_exact env input offset
+    (Eval.eval env input.a) (Eval.eval env input.b) (Eval.eval env input.c)
+    (Eval.eval env input.cols)
+    (Expression.eval env input.is_real) (Expression.eval env input.is_mulw)
+    rfl rfl
+    (eval_word_getElem env input.b 0 (by decide)).symm
+    (eval_word_getElem env input.b 1 (by decide)).symm
+    (eval_word_getElem env input.b 2 (by decide)).symm
+    (eval_word_getElem env input.b 3 (by decide)).symm
+    (eval_word_getElem env input.c 0 (by decide)).symm
+    (eval_word_getElem env input.c 1 (by decide)).symm
+    (eval_word_getElem env input.c 2 (by decide)).symm
+    (eval_word_getElem env input.c 3 (by decide)).symm
+    (eval_word_getElem env input.a 1 (by decide)).symm
+    (eval_mulOperation_bLower env input.cols 0 (by decide)).symm
+    (eval_mulOperation_bLower env input.cols 1 (by decide)).symm
+    (eval_mulOperation_bLower env input.cols 2 (by decide)).symm
+    (eval_mulOperation_bLower env input.cols 3 (by decide)).symm
+    (eval_mulOperation_cLower env input.cols 0 (by decide)).symm
+    (eval_mulOperation_cLower env input.cols 1 (by decide)).symm
+    (eval_mulOperation_cLower env input.cols 2 (by decide)).symm
+    (eval_mulOperation_cLower env input.cols 3 (by decide)).symm
+    (eval_mulOperation_bMsb env input.cols).symm
+    (eval_mulOperation_cMsb env input.cols).symm
+    (eval_mulOperation_productMsb env input.cols).symm
+    (eval_mulOperation_carry env input.cols 0 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 1 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 2 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 3 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 4 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 5 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 6 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 7 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 8 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 9 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 10 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 11 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 12 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 13 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 14 (by decide)).symm
+    (eval_mulOperation_carry env input.cols 15 (by decide)).symm
+    (eval_mulOperation_product env input.cols 0 (by decide)).symm
+    (eval_mulOperation_product env input.cols 1 (by decide)).symm
+    (eval_mulOperation_product env input.cols 2 (by decide)).symm
+    (eval_mulOperation_product env input.cols 3 (by decide)).symm
+    (eval_mulOperation_product env input.cols 4 (by decide)).symm
+    (eval_mulOperation_product env input.cols 5 (by decide)).symm
+    (eval_mulOperation_product env input.cols 6 (by decide)).symm
+    (eval_mulOperation_product env input.cols 7 (by decide)).symm
+    (eval_mulOperation_product env input.cols 8 (by decide)).symm
+    (eval_mulOperation_product env input.cols 9 (by decide)).symm
+    (eval_mulOperation_product env input.cols 10 (by decide)).symm
+    (eval_mulOperation_product env input.cols 11 (by decide)).symm
+    (eval_mulOperation_product env input.cols 12 (by decide)).symm
+    (eval_mulOperation_product env input.cols 13 (by decide)).symm
+    (eval_mulOperation_product env input.cols 14 (by decide)).symm
+    (eval_mulOperation_product env input.cols 15 (by decide)).symm
+  simpa only [Extracted.MulOperation.interactions] using h
 
 private theorem mulChip_state_interactions_faithful
     (env : Environment (ZMod p))
@@ -2952,8 +2631,8 @@ private theorem mulChip_byte_interactions_decompose
         ⟨input.op_b_val, input.op_c_val, mul_chip_operation offset,
           mul_chip_is_real offset, mul_chip_flag offset 0,
           mul_chip_flag offset 1, mul_chip_flag offset 2,
-          mul_chip_flag offset 3, mul_chip_flag offset 4⟩).operations
-            (offset + 50)).interactionsWith byteChannel.toRaw ++
+          mul_chip_flag offset 3, mul_chip_flag offset 4, mul_chip_a offset⟩).operations
+            (offset + 54)).interactionsWith byteChannel.toRaw ++
       ((Readers.RTypeReader.main
         ⟨input.adapter, input.is_real, input.is_real,
           input.state.clk_high,
@@ -2979,20 +2658,7 @@ private theorem mulChip_byte_interactions_decompose
 
 private theorem mulChip_operation_interactions_active
     (env : Environment (ZMod p))
-    (input : Var MulChip.Inputs (ZMod p)) (offset : ℕ)
-    (hRust :
-      List.Forall (· = 0)
-        (Extracted.MulOperation.asserts (F := ZMod p)
-          (Eval.eval env (mul_chip_a (p := p) offset))
-          (Eval.eval env input.op_b_val)
-          (Eval.eval env input.op_c_val)
-          (Eval.eval env (mul_chip_operation (p := p) offset))
-          (Expression.eval env (mul_chip_is_real (p := p) offset))
-          (Expression.eval env (mul_chip_flag (p := p) offset 0))
-          (Expression.eval env (mul_chip_flag (p := p) offset 1))
-          (Expression.eval env (mul_chip_flag (p := p) offset 4))
-          (Expression.eval env (mul_chip_flag (p := p) offset 2))
-          (Expression.eval env (mul_chip_flag (p := p) offset 3)))) :
+    (input : Var MulChip.Inputs (ZMod p)) (offset : ℕ) :
     LookupAccessList.active
         ((Extracted.MulOperation.interactions (F := ZMod p)
           (Eval.eval env (mul_chip_a (p := p) offset))
@@ -3016,8 +2682,8 @@ private theorem mulChip_operation_interactions_active
               mul_chip_flag (p := p) offset 1,
               mul_chip_flag (p := p) offset 2,
               mul_chip_flag (p := p) offset 3,
-              mul_chip_flag (p := p) offset 4⟩).operations
-                (offset + 50)).interactionsWith byteChannel.toRaw)) := by
+              mul_chip_flag (p := p) offset 4, mul_chip_a offset⟩).operations
+                (offset + 54)).interactionsWith byteChannel.toRaw)) := by
   let opInput : Var SP1Clean.MulOperation.Inputs (ZMod p) :=
     ⟨input.op_b_val, input.op_c_val,
       mul_chip_operation (p := p) offset,
@@ -3026,113 +2692,9 @@ private theorem mulChip_operation_interactions_active
       mul_chip_flag (p := p) offset 1,
       mul_chip_flag (p := p) offset 2,
       mul_chip_flag (p := p) offset 3,
-      mul_chip_flag (p := p) offset 4⟩
-  let a := Eval.eval env (mul_chip_a (p := p) offset)
-  let b := Eval.eval env input.op_b_val
-  let c := Eval.eval env input.op_c_val
-  let cols := Eval.eval env (mul_chip_operation (p := p) offset)
-  let isReal := Expression.eval env (mul_chip_is_real (p := p) offset)
-  let isMul := Expression.eval env (mul_chip_flag (p := p) offset 0)
-  let isMulh := Expression.eval env (mul_chip_flag (p := p) offset 1)
-  let isMulhu := Expression.eval env (mul_chip_flag (p := p) offset 2)
-  let isMulhsu := Expression.eval env (mul_chip_flag (p := p) offset 3)
-  let isMulw := Expression.eval env (mul_chip_flag (p := p) offset 4)
-  have hFacts := mulOperation_mulw_facts a b c cols
-    isReal isMul isMulh isMulw isMulhu isMulhsu (by
-      simpa only [a, b, c, cols, isReal, isMul, isMulh,
-        isMulw, isMulhu, isMulhsu] using hRust)
-  apply mulOperation_interactions_active env opInput
-    (offset + 50) a b c cols isReal isMul isMulh isMulw isMulhu isMulhsu
-    hFacts.1 hFacts.2
-  · dsimp only [opInput, cols]
-    rw [eval_mulOperation_product env
-        (mul_chip_operation (p := p) offset) 2 (by decide),
-      eval_mulOperation_product env
-        (mul_chip_operation (p := p) offset) 3 (by decide)]
-    simp only [Expression.eval]
-  · intro a' ha'
-    have hExact :
-        (Extracted.MulOperation.interactions a' b c cols
-            isReal isReal isReal isMulw isReal isReal).map
-            Extracted.Interaction.toAccess =
-          (((SP1Clean.MulOperation.main opInput).operations
-            (offset + 50)).interactionsWith byteChannel.toRaw).map
-              (AbstractInteraction.toAccess env) := by
-      have hb (i : ℕ) (hi : i < 4) :
-          Expression.eval env opInput.b[i] = b[i] := by
-        dsimp only [opInput, b]
-        exact (eval_word_getElem env input.op_b_val i hi).symm
-      have hc (i : ℕ) (hi : i < 4) :
-          Expression.eval env opInput.c[i] = c[i] := by
-        dsimp only [opInput, c]
-        exact (eval_word_getElem env input.op_c_val i hi).symm
-      have hbl (i : ℕ) (hi : i < 4) :
-          Expression.eval env opInput.cols.b_lower_byte.low_bytes[i] =
-            cols.b_lower_byte.low_bytes[i] := by
-        dsimp only [opInput, cols]
-        exact (eval_mulOperation_bLower env
-          (mul_chip_operation (p := p) offset) i hi).symm
-      have hcl (i : ℕ) (hi : i < 4) :
-          Expression.eval env opInput.cols.c_lower_byte.low_bytes[i] =
-            cols.c_lower_byte.low_bytes[i] := by
-        dsimp only [opInput, cols]
-        exact (eval_mulOperation_cLower env
-          (mul_chip_operation (p := p) offset) i hi).symm
-      have hcarry (i : ℕ) (hi : i < 16) :
-          Expression.eval env opInput.cols.carry[i] = cols.carry[i] := by
-        dsimp only [opInput, cols]
-        exact (eval_mulOperation_carry env
-          (mul_chip_operation (p := p) offset) i hi).symm
-      have hproduct (i : ℕ) (hi : i < 16) :
-          Expression.eval env opInput.cols.product[i] = cols.product[i] := by
-        dsimp only [opInput, cols]
-        exact (eval_mulOperation_product env
-          (mul_chip_operation (p := p) offset) i hi).symm
-      have hbmsb :
-          Expression.eval env opInput.cols.b_msb = cols.b_msb := by
-        dsimp only [opInput, cols]
-        exact (eval_mulOperation_bMsb env
-          (mul_chip_operation (p := p) offset)).symm
-      have hcmsb :
-          Expression.eval env opInput.cols.c_msb = cols.c_msb := by
-        dsimp only [opInput, cols]
-        exact (eval_mulOperation_cMsb env
-          (mul_chip_operation (p := p) offset)).symm
-      have hpmsb :
-          Expression.eval env opInput.cols.product_msb.msb =
-            cols.product_msb.msb := by
-        dsimp only [opInput, cols]
-        exact (eval_mulOperation_productMsb env
-          (mul_chip_operation (p := p) offset)).symm
-      exact mulOperation_interactions_exact
-        (p := p) env opInput (offset + 50) a' b c cols isReal isMulw
-        rfl rfl
-        (hb 0 (by decide)) (hb 1 (by decide))
-        (hb 2 (by decide)) (hb 3 (by decide))
-        (hc 0 (by decide)) (hc 1 (by decide))
-        (hc 2 (by decide)) (hc 3 (by decide)) ha'
-        (hbl 0 (by decide)) (hbl 1 (by decide))
-        (hbl 2 (by decide)) (hbl 3 (by decide))
-        (hcl 0 (by decide)) (hcl 1 (by decide))
-        (hcl 2 (by decide)) (hcl 3 (by decide))
-        hbmsb hcmsb hpmsb
-        (hcarry 0 (by decide)) (hcarry 1 (by decide))
-        (hcarry 2 (by decide)) (hcarry 3 (by decide))
-        (hcarry 4 (by decide)) (hcarry 5 (by decide))
-        (hcarry 6 (by decide)) (hcarry 7 (by decide))
-        (hcarry 8 (by decide)) (hcarry 9 (by decide))
-        (hcarry 10 (by decide)) (hcarry 11 (by decide))
-        (hcarry 12 (by decide)) (hcarry 13 (by decide))
-        (hcarry 14 (by decide)) (hcarry 15 (by decide))
-        (hproduct 0 (by decide)) (hproduct 1 (by decide))
-        (hproduct 2 (by decide)) (hproduct 3 (by decide))
-        (hproduct 4 (by decide)) (hproduct 5 (by decide))
-        (hproduct 6 (by decide)) (hproduct 7 (by decide))
-        (hproduct 8 (by decide)) (hproduct 9 (by decide))
-        (hproduct 10 (by decide)) (hproduct 11 (by decide))
-        (hproduct 12 (by decide)) (hproduct 13 (by decide))
-        (hproduct 14 (by decide)) (hproduct 15 (by decide))
-    simpa only [Extracted.MulOperation.interactions] using hExact
+      mul_chip_flag (p := p) offset 4, mul_chip_a offset⟩
+  exact congrArg LookupAccessList.active
+    (mulOperation_interactions_evaluated env opInput (offset + 54))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem mulOperation_accesses_filter_byte
@@ -3188,9 +2750,7 @@ private theorem mulChip_interactions_faithful
     (hbind : BindsChipOutput MulChip.main env input offset cols)
     (hinputReal :
       Expression.eval env input.is_real =
-        Expression.eval env (mul_chip_is_real (p := p) offset))
-    (hRust :
-      List.Forall (· = 0) (Extracted.MulOracle.MulCols.asserts (mulChipReconfigure cols))) :
+        Expression.eval env (mul_chip_is_real (p := p) offset)) :
     List.Perm
       (LookupAccessList.active
         (nativeAccesses env ((MulChip.main input).operations offset)))
@@ -3376,10 +2936,6 @@ private theorem mulChip_interactions_faithful
     (by
       simp only [rustCols, eval_rTypeReader, eval_registerAccessCols,
         ← ProvableType.getElem_eval_fields])
-  have hRustParts := hRust
-  rw [mulCols_asserts_decompose] at hRustParts
-  simp only [List.forall_append] at hRustParts
-  have hRustOperation := hRustParts.1.1.1
   have hEvalB :
       Eval.eval env input.op_b_val =
         rustCols.adapter.op_b_memory.prev_value := by
@@ -3418,24 +2974,7 @@ private theorem mulChip_interactions_faithful
             (fun value : Circuits.Types.RTypeReader (ZMod p) =>
               value.op_c_memory)
             (Readers.RTypeReader.eval_cols env input.adapter)).symm
-  have hRustOperation' :
-      List.Forall (· = 0)
-        (Extracted.MulOperation.asserts (F := ZMod p)
-          (Eval.eval env (mul_chip_a (p := p) offset))
-          (Eval.eval env input.op_b_val)
-          (Eval.eval env input.op_c_val)
-          (Eval.eval env (mul_chip_operation (p := p) offset))
-          (Expression.eval env (mul_chip_is_real (p := p) offset))
-          (Expression.eval env (mul_chip_flag (p := p) offset 0))
-          (Expression.eval env (mul_chip_flag (p := p) offset 1))
-          (Expression.eval env (mul_chip_flag (p := p) offset 4))
-          (Expression.eval env (mul_chip_flag (p := p) offset 2))
-          (Expression.eval env (mul_chip_flag (p := p) offset 3))) := by
-    rw [hEvalB, hEvalC]
-    simpa only [rustCols, mul_chip_is_real, mul_chip_flag,
-      eval_add, Expression.eval] using hRustOperation
   have hO := mulChip_operation_interactions_active env input offset
-    hRustOperation'
   let cpuInput : Var Readers.CPUState.Inputs (ZMod p) :=
     ⟨input.state,
       #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
@@ -3546,8 +3085,8 @@ private theorem mulChip_interactions_faithful
         mul_chip_flag (p := p) offset 1,
         mul_chip_flag (p := p) offset 2,
         mul_chip_flag (p := p) offset 3,
-        mul_chip_flag (p := p) offset 4⟩).operations
-          (offset + 50)).interactionsWith byteChannel.toRaw).map
+        mul_chip_flag (p := p) offset 4, mul_chip_a offset⟩).operations
+          (offset + 54)).interactionsWith byteChannel.toRaw).map
             (AbstractInteraction.toAccess env)
   let nativeRtypeAccesses : LookupAccessList :=
     (((Readers.RTypeReader.main rtypeInput).operations
@@ -3662,14 +3201,10 @@ private theorem mulChip_interactions_faithful
   exact ((hStateActive.append hByteActive).append hMemoryActive).append
     hProgramActive
 
-/-- Constructive interaction half of Mul faithfulness, restricted to Rust rows accepted by the
-local AIR because one inactive U16-MSB lookup key is normalized through its selector-gated output
-equation. -/
+/-- Constructive interaction half of Mul faithfulness, for arbitrary rows. -/
 theorem mulChip_interactions_constructive
     (rustCols : Extracted.MulOracle.MulCols (ZMod p))
-    (data : ProverData (ZMod p))
-    (hRust :
-      List.Forall (· = 0) (mulChipOracle.assertZeros rustCols)) :
+    (data : ProverData (ZMod p)) :
     let assignment := mulChipRowCodec.assignment
       (mulChipOracle.deconfigure rustCols) data
     List.Perm
@@ -3698,18 +3233,12 @@ theorem mulChip_interactions_constructive
             ({ circuit := MulChip.circuit (p := p) } :
               Air.Flat.Component (ZMod p)).rowOffset) :=
     mulChipRowCodec_inputReal cols data
-  have hRust' :
-      List.Forall (· = 0) (Extracted.MulOracle.MulCols.asserts (mulChipReconfigure cols)) := by
-    have hrd : mulChipReconfigure cols = rustCols :=
-      mulChipOracle.reconfigure_deconfigure rustCols
-    rw [hrd]
-    exact hRust
   have hfaithful := mulChip_interactions_faithful
     assignment.environment
     ({ circuit := MulChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := MulChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal hRust'
+      Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
   rw [nativeAccesses_component_eq_rowOperations
     (MulChip.circuit (p := p)) assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,
@@ -3723,6 +3252,6 @@ theorem mulChip_faithful :
     ChipFaithful (p := p) MulChip.Inputs MulChip.Columns
       Extracted.MulOracle.MulCols MulChip.circuit mulChipRowCodec mulChipOracle where
   constraints := mulChip_constraints_constructive (p := p)
-  interactions := mulChip_interactions_constructive (p := p)
+  interactions := fun cols data _ => mulChip_interactions_constructive (p := p) cols data
 
 end SP1Clean.Faithful

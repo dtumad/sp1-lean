@@ -285,12 +285,8 @@ theorem unsigned32Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {
     Word.isU64_of_cases (hctqRange 0 (by norm_num)) (hctqRange 1 (by norm_num))
       (hctqRange 2 (by norm_num)) (hctqRange 3 (by norm_num))
   unfold DivRemCore.ProductSpec at hproduct
-  obtain ⟨hmulLo, hproduct⟩ := hproduct
-  obtain ⟨_hmulHi, hproduct⟩ := hproduct
-  obtain ⟨hglueLo, _hglueHi⟩ := hproduct
-  rw [DivRemCore.LowerProductPlacement] at hglueLo
-  obtain ⟨hglue0, hglue1, hglue2, hglue3⟩ := hglueLo hir
-  have hlo := rwlo_product (fun _ => hmulLo) hir hglue0 hglue1 hglue2 hglue3
+  obtain ⟨hmulLo, hmulHi⟩ := hproduct
+  have hlo := mul_lo_spec hmulLo hir
   have hcarry0 := bool_of_mul_pred e309
   have hcarry1 := bool_of_mul_pred e311
   have hcarry2 := bool_of_mul_pred e313

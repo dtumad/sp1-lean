@@ -271,23 +271,6 @@ theorem mul_cols_eq_of_pins (env : Environment (ZMod p)) (off : ℕ)
   exact h
 
 set_option linter.unusedSectionVars false in
-/-- Discharge one `MulOperation` sub-circuit `Spec` obligation: rewrite the witnessed `cols` block
-to the `populate` value `wit` (via the two pins) and apply the supplied `spec_*` proof `hSpec`. -/
-theorem subSpec_mul (env : Environment (ZMod p)) (off : ℕ)
-    (b c : Word (ZMod p)) (is_real is_mul is_mulh is_mulhu is_mulhsu is_mulw : ZMod p)
-    (cols wit : Circuits.Types.MulOperation (ZMod p))
-    (hcell : ∀ i (hi : i < size (Circuits.Types.MulOperation)),
-      (ProvableType.toElements cols)[i] = env.get (off + i))
-    (hpop : ∀ i : Fin 45, env.get (off + ↑i) = (mulWitnessElements wit).get i)
-    (hSpec : MulOperation.Spec
-      (⟨b, c, wit, is_real, is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw⟩
-        : MulOperation.Inputs (ZMod p))) :
-    MulOperation.Spec
-      (⟨b, c, cols, is_real, is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw⟩
-        : MulOperation.Inputs (ZMod p)) := by
-  rw [mul_cols_eq_of_pins env off cols wit hcell hpop]
-  exact hSpec
-
 set_option linter.unusedSectionVars false in
 /-- Discharge one `IsEqualWordOperation` sub-circuit `Spec` obligation. Covers all four `is_overflow`
 cases (full-word `eqb`/`eqc` and low-half `eqb2`/`eqc2`); the gate/branch selection and choice of

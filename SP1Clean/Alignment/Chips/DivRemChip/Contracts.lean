@@ -55,8 +55,7 @@ private theorem DivRemChip.opA0_eq_zero_of_coreShallowConstraints
     (shallow : ConstraintsHold.Shallow env ((DivRemCore.main cols).operations offset)) :
     Expression.eval env cols.adapter.op_a_0 = 0 := by
   simp only [DivRemCore.main, Circuit.operations, Circuit.bind_def, assertion,
-    DivRemChip.assertZeros, Channel.pullIf, HasAssertEq.assert_eq,
-    Expression.assertEquals, Operations.localLength] at shallow
+    DivRemChip.assertZeros, Channel.pullIf, Operations.localLength] at shallow
   simp only [ConstraintsHold.Shallow, Operations.forAllNoOffset_append,
     Operations.forAllNoOffset, DivRemChip.forAllNoOffset_map_assert, true_and,
     and_true] at shallow
@@ -185,8 +184,7 @@ private theorem DivRemChip.selectionFacts_of_coreShallowConstraints
       (Expression.eval env cols.is_divuw = 0 ∨ Expression.eval env cols.is_divuw = 1) ∧
       (Expression.eval env cols.is_remuw = 0 ∨ Expression.eval env cols.is_remuw = 1) := by
   simp only [DivRemCore.main, Circuit.operations, Circuit.bind_def, assertion,
-    DivRemChip.assertZeros, Channel.pullIf, HasAssertEq.assert_eq,
-    Expression.assertEquals, Operations.localLength] at shallow
+    DivRemChip.assertZeros, Channel.pullIf, Operations.localLength] at shallow
   simp only [ConstraintsHold.Shallow, Operations.forAllNoOffset_append,
     Operations.forAllNoOffset, DivRemChip.forAllNoOffset_map_assert, true_and,
     and_true] at shallow

@@ -62,6 +62,9 @@ DivRem's public row contract lives in `Semantics/Specs/DivRem`, with the pure RV
 `Semantics/ISA/RV64` and its native row in `Circuits/Types/DivRem`. Comparison and product-cluster
 contracts live under `Circuits/Gadgets/DivRem`: they describe implementation evidence, including
 the intermediate raw assertions, and are not dependencies of the public semantic contract.
+The multiplication gadget takes the caller's result word and owns its selector-gated placement
+checks. Mul and DivRem consume that bundled contract directly; no separate placement equations
+are needed at the chip boundary. Disabled interactions retain the supplied result limbs.
 The comparison cluster uses pure feature specifications. The product gadget remains a dependency
 to migrate before the product cluster can use module mode.
 

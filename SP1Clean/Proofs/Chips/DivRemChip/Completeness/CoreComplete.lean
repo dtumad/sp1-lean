@@ -40,37 +40,36 @@ theorem evaluatedMulBlock_eq_of_pins (env : Environment (ZMod p)) (off : ℕ)
   · exact evaluatedMulBlock_cell env off
   · exact hpop
 
-/-- The honestly populated lower product satisfies the exact Mul semantic contract embedded in
-`DivRemCore.CoreSpec`. -/
-theorem mulLowerSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
+/-- The honestly populated lower product supplies the arithmetic evidence for the Mul contract. -/
+theorem mulLowerProductSpec (ir : ZMod p) (B C : Word (ZMod p)) {a : Word (ZMod p)} (f : Vector (ZMod p) 8)
     (hcU : C.isU64) (hbin : ir = 0 ∨ ir = 1) :
-    MulOperation.Spec
+    MulOperation.ProductSpec
       ⟨populateQuotComp B C f, cComp C f, populateMulLower ir B C f,
-        ir, ir, 0, 0, 0, 0⟩ := by
+        ir, ir, 0, 0, 0, 0, a⟩ := by
   have hsumArg : ir + 0 + 0 + 0 + 0 = 0 ∨ ir + 0 + 0 + 0 + 0 = 1 := by
     simpa only [add_zero] using hbin
   rcases hbin with h0 | h1
   · rw [populateMulLower, if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
-    exact MulOperation.spec_zero (populateQuotComp B C f) (cComp C f) ir 0 0 0 0 h0
+    exact MulOperation.productSpec_zero (populateQuotComp B C f) (cComp C f) a ir 0 0 0 0 h0
   · rw [populateMulLower, if_pos h1]
-    exact MulOperation.spec_populate (populateQuotComp_isU64 B C f) (cComp_isU64 hcU f)
+    exact MulOperation.productSpec_populate (populateQuotComp_isU64 B C f) (cComp_isU64 hcU f)
       ir 0 0 0 0 ir (Or.inr h1) (Or.inl rfl) (Or.inl rfl) (Or.inl rfl) (Or.inl rfl)
       hsumArg
 
-/-- The honestly populated upper product satisfies the high-half Mul contract.  The gate is one
+/-- The honestly populated upper product supplies the high-half arithmetic evidence. The gate is one
 exactly on real 64-bit variants and zero otherwise; the flag hypotheses are the chip's one-hot
 prover contract. -/
-theorem mulUpperSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
+theorem mulUpperProductSpec (ir : ZMod p) (B C : Word (ZMod p)) {a : Word (ZMod p)} (f : Vector (ZMod p) 8)
     (hcU : C.isU64) (hbin : ir = 0 ∨ ir = 1)
     (hf0 : f[0] = 0 ∨ f[0] = 1) (hf1 : f[1] = 0 ∨ f[1] = 1)
     (hf2 : f[2] = 0 ∨ f[2] = 1) (hf3 : f[3] = 0 ∨ f[3] = 1)
     (hf4 : f[4] = 0 ∨ f[4] = 1) (hf5 : f[5] = 0 ∨ f[5] = 1)
     (hf6 : f[6] = 0 ∨ f[6] = 1) (hf7 : f[7] = 0 ∨ f[7] = 1)
     (hsum : f[0] + f[1] + f[2] + f[3] + f[4] + f[5] + f[6] + f[7] = 1) :
-    MulOperation.Spec
+    MulOperation.ProductSpec
       ⟨populateQuotComp B C f, cComp C f, populateMulUpper ir B C f,
         ir * (1 - (f[4] + f[5] + f[6] + f[7])), 0,
-        f[0] + f[2], f[1] + f[3], 0, 0⟩ := by
+        f[0] + f[2], f[1] + f[3], 0, 0, a⟩ := by
   have hsums := flagSums_bool hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum
   have he2sum := hsums.1
   have hg64 := hsums.2.2.1
@@ -90,7 +89,7 @@ theorem mulUpperSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
       rw [hcond.1, he2zero]
       ring_nf
     rw [populateMulUpper, if_pos hcond]
-    exact MulOperation.spec_populate (populateQuotComp_isU64 B C f) (cComp_isU64 hcU f)
+    exact MulOperation.productSpec_populate (populateQuotComp_isU64 B C f) (cComp_isU64 hcU f)
       0 (f[0] + f[2]) (f[1] + f[3]) 0 0
       (ir * (1 - (f[4] + f[5] + f[6] + f[7]))) (Or.inl rfl) hd_r hdu_r
       (Or.inl rfl) (Or.inl rfl) hsumArg
@@ -102,7 +101,7 @@ theorem mulUpperSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
         · rw [h1, he21]
           ring_nf
     rw [populateMulUpper, if_neg hcond]
-    exact MulOperation.spec_zero (populateQuotComp B C f) (cComp C f)
+    exact MulOperation.productSpec_zero (populateQuotComp B C f) (cComp C f) a
       0 (f[0] + f[2]) (f[1] + f[3]) 0 0 hgate
 
 /-- The four low product limbs are glued to the honest `c_times_quotient` witness on both real and
@@ -223,18 +222,34 @@ theorem evaluatedProductSpec (env : ProverEnvironment (ZMod p)) (input : Var Inp
     (eval_populatedRowAt_isRem env input off).trans hF2
   have eF3 : (Eval.eval env (populatedRowAt input off)).is_remu = f[3] :=
     (eval_populatedRowAt_isRemu env input off).trans hF3
+  -- Keep the generated row and product vector opaque when rewriting their projections.
+  generalize hrow : Eval.eval env (populatedRowAt input off) = row at eQC eC eCtq eLo eUp eIR eIRNW eF0 eF1 eF2 eF3 ⊢
+  obtain ⟨ctq, hctq⟩ : ∃ ctq : Vector (ZMod p) 8, ctq = populateCtq B C f := ⟨_, rfl⟩
+  have eCtq' := eCtq.trans hctq.symm
   unfold DivRemCore.ProductSpec
-  rw [eQC, eC, eLo, eUp, eIR, eIRNW, eF0, eF1, eF2, eF3]
-  refine And.intro (mulLowerSpec ir B C f hcU hbin)
-    (And.intro
-      (mulUpperSpec ir B C f hcU hbin hf0 hf1 hf2 hf3
-        hf4 hf5 hf6 hf7 hsum)
-      (And.intro ?_ ?_))
-  · rw [DivRemCore.LowerProductPlacement]
-    rw [eIR, eCtq, eLo]; exact fun _ => lowerGlue ir B C f hcU hbin hpad
-  · rw [DivRemCore.UpperProductPlacement]
-    rw [eF0, eF1, eF2, eF3, eCtq, eUp]; exact upperGlue ir B C f hcU hbin hf0 hf1 hf2 hf3
-      hf4 hf5 hf6 hf7 hsum hpad
+  rw [eQC, eC, eLo, eUp, eIR, eIRNW, eF0, eF1, eF2, eF3, eCtq']
+  refine ⟨⟨mulLowerProductSpec ir B C f hcU hbin, ?_⟩,
+    ⟨mulUpperProductSpec ir B C f hcU hbin hf0 hf1 hf2 hf3
+      hf4 hf5 hf6 hf7 hsum, ?_⟩⟩
+  · intro _
+    have hglue := lowerGlue ir B C f hcU hbin hpad
+    rw [← hctq] at hglue
+    obtain ⟨h0, h1, h2, h3⟩ := hglue
+    simp only [MulOperation.resultWord, MulOperation.productVal, zero_ne_one, or_self,
+      if_false, Nat.reduceLT, dif_pos, h0, h1, h2, h3]
+  · intro hs
+    have h64 : f[0] + f[1] + f[2] + f[3] = 1 := by linear_combination hs
+    have hglue := upperGlue ir B C f hcU hbin hf0 hf1 hf2 hf3
+      hf4 hf5 hf6 hf7 hsum hpad h64
+    rw [← hctq] at hglue
+    obtain ⟨h0, h1, h2, h3⟩ := hglue
+    have hhigh : f[0] + f[2] = 1 ∨ f[1] + f[3] = 1 := by
+      have hd := (flagSums_bool hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum).2.2.2.1
+      rcases hd with h | h
+      · right; linear_combination h64 - h
+      · exact Or.inl h
+    simp only [MulOperation.resultWord, MulOperation.productVal, zero_ne_one, or_false,
+      if_false, if_pos hhigh, Nat.reduceLT, dif_pos, h0, h1, h2, h3]
 
 /-! ## Own-assert evaluator boundary
 

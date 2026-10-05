@@ -9,8 +9,8 @@ import SP1Clean.Proofs.CircuitProofStart
 The DivRem product/own-assert/byte-range assertion cluster as a Clean `FormalAssertion` over the
 whole committed row (`DivRemChip.Columns`). The circuit
 (`Native/Operations/DivRemOperation/Core.lean`) witnesses nothing, so both directions are
-input-level repackaging: soundness maps the two composed `MulOperation` implications, the eight
-product-glue equations, the own-assert tail (through the `ownAsserts_map_eval` var↔value
+input-level repackaging: soundness maps the two composed `MulOperation` contracts, including their committed result
+words, the own-assert tail (through the `ownAsserts_map_eval` var↔value
 transport), and the 32 gated byte-pull guarantees onto the matching `CoreSpec` conjuncts — deriving
 the selection block (`is_real`/flag binariness, one-hot, `SelectionSpec`) from the gate equations
 inside the own-assert tail via the `OwnAsserts.lean` membership lemmas — and completeness feeds
@@ -306,12 +306,12 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions CoreSpec
   circuit_proof_start [CoreSpec]
   clear h_assumptions
   obtain ⟨-, ⟨-, -, hopa0, -, ⟨hbpv, -, -⟩, -, ⟨hcpv, -, -⟩⟩, ha, hb, hc, hq, hqc, hrc, hr,
-    har, hac, hmax, hctq, ⟨-, hloProd, -, -, -, -, -, -, -⟩, ⟨-, hupProd, -, -, -, -, -, -, -⟩,
+    har, hac, hmax, hctq, ⟨-, -, -, -, -, -, -, -, -⟩, ⟨-, -, -, -, -, -, -, -, -⟩,
     hcnegv, hrnegv, ⟨hltbit, -, -, -⟩, hcarry, ⟨-, -, -, -, -, -, hisc0res⟩, hdiv, hdivu, hrem,
     hremu, hdivw, hremw, hdivuw, hremuw, hov, ⟨-, -, -, -, -, -, hovbres⟩,
     ⟨-, -, -, -, -, -, hovcres⟩, hbm, hrm, hcm, hqm, hbn, hbnno, hbnnno, hirnw, hrn, hcn, hace,
     hare, hir, hrcm⟩ := h_input
-  obtain ⟨hMulLo, hMulUp, hg0, hg1, hg2, hg3, hg4, hg5, hg6, hg7, hOwn,
+  obtain ⟨hMulLo, hMulUp, hOwn,
     hp0, hp1, hp2, hp3, hp4, hp5, hp6, hp7, hp8, hp9, hp10, hp11, hp12, hp13, hp14, hp15,
     hp16, hp17, hp18, hp19, hp20, hp21, hp22, hp23, hp24, hp25, hp26, hp27, hp28, hp29,
     hp30, hp31⟩ := h_holds
@@ -364,51 +364,9 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions CoreSpec
   have eAr := eval_getElem har
   have eQ := eval_getElem hq
   have eR := eval_getElem hr
-  have eLoP := eval_getElem hloProd
-  have eUpP := eval_getElem hupProd
-  simp only [eCtq, eLoP, eUpP] at hg0 hg1 hg2 hg3 hg4 hg5 hg6 hg7
+  simp only [eCtq] at hSpecLo hSpecUp
   refine ⟨⟨?_, ?_, ?_, ?_⟩, ?_⟩
-  · -- the two products and their u16-limb glue
-    unfold ProductSpec
-    refine And.intro hSpecLo (And.intro hSpecUp (And.intro ?_ ?_))
-    · rw [LowerProductPlacement]
-      intro hir1
-      change input_is_real = 1 at hir1
-      change
-        input_c_times_quotient[0] =
-            input_c_times_quotient_lower_product[0] +
-              input_c_times_quotient_lower_product[1] * 256 ∧
-          input_c_times_quotient[1] =
-            input_c_times_quotient_lower_product[2] +
-              input_c_times_quotient_lower_product[3] * 256 ∧
-          input_c_times_quotient[2] =
-            input_c_times_quotient_lower_product[4] +
-              input_c_times_quotient_lower_product[5] * 256 ∧
-          input_c_times_quotient[3] =
-            input_c_times_quotient_lower_product[6] +
-              input_c_times_quotient_lower_product[7] * 256
-      rw [hir1, one_mul] at hg0 hg1 hg2 hg3
-      exact ⟨by linear_combination hg0, by linear_combination hg1,
-        by linear_combination hg2, by linear_combination hg3⟩
-    · rw [UpperProductPlacement]
-      intro h64
-      change input_is_div + input_is_divu + input_is_rem + input_is_remu = 1 at h64
-      change
-        input_c_times_quotient[4] =
-            input_c_times_quotient_upper_product[8] +
-              input_c_times_quotient_upper_product[9] * 256 ∧
-          input_c_times_quotient[5] =
-            input_c_times_quotient_upper_product[10] +
-              input_c_times_quotient_upper_product[11] * 256 ∧
-          input_c_times_quotient[6] =
-            input_c_times_quotient_upper_product[12] +
-              input_c_times_quotient_upper_product[13] * 256 ∧
-          input_c_times_quotient[7] =
-            input_c_times_quotient_upper_product[14] +
-              input_c_times_quotient_upper_product[15] * 256
-      rw [h64, one_mul] at hg4 hg5 hg6 hg7
-      exact ⟨by linear_combination hg4, by linear_combination hg5, by linear_combination hg6,
-        by linear_combination hg7⟩
+  · exact ⟨hSpecLo, hSpecUp⟩
   · -- the raw own-assert bundle, transported to the evaluated row
     exact ownAssertsHold_of_forall env hOwn hdiv hdivu hrem hremu hdivw hremw hdivuw hremuw hir
       hirnw hov hbn hbnno hbnnno hrn hcn hace hare hrcm hbm hrm hcm hqm hovbres hovcres hisc0res
@@ -475,44 +433,14 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Co
   circuit_proof_start [CoreSpec]
   clear h_assumptions
   obtain ⟨-, ⟨-, -, hopa0, -, ⟨hbpv, -, -⟩, -, ⟨hcpv, -, -⟩⟩, ha, hb, hc, hq, hqc, hrc, hr,
-    har, hac, hmax, hctq, ⟨-, hloProd, -, -, -, -, -, -, -⟩, ⟨-, hupProd, -, -, -, -, -, -, -⟩,
+    har, hac, hmax, hctq, ⟨-, -, -, -, -, -, -, -, -⟩, ⟨-, -, -, -, -, -, -, -, -⟩,
     hcnegv, hrnegv, ⟨hltbit, -, -, -⟩, hcarry, ⟨-, -, -, -, -, -, hisc0res⟩, hdiv, hdivu, hrem,
     hremu, hdivw, hremw, hdivuw, hremuw, hov, ⟨-, -, -, -, -, -, hovbres⟩,
     ⟨-, -, -, -, -, -, hovcres⟩, hbm, hrm, hcm, hqm, hbn, hbnno, hbnnno, hirnw, hrn, hcn, hace,
     hare, hir, hrcm⟩ := h_input
   obtain ⟨hProduct, hOwnH, hSelection, hRange⟩ := h_spec
   unfold ProductSpec at hProduct
-  obtain ⟨hSpecLo, hSpecUp, hglLo, hglUp⟩ := hProduct
-  rw [LowerProductPlacement] at hglLo
-  rw [UpperProductPlacement] at hglUp
-  change
-    input_is_real = 1 →
-      input_c_times_quotient[0] =
-          input_c_times_quotient_lower_product[0] +
-            input_c_times_quotient_lower_product[1] * 256 ∧
-        input_c_times_quotient[1] =
-          input_c_times_quotient_lower_product[2] +
-            input_c_times_quotient_lower_product[3] * 256 ∧
-        input_c_times_quotient[2] =
-          input_c_times_quotient_lower_product[4] +
-            input_c_times_quotient_lower_product[5] * 256 ∧
-        input_c_times_quotient[3] =
-          input_c_times_quotient_lower_product[6] +
-            input_c_times_quotient_lower_product[7] * 256 at hglLo
-  change
-    input_is_div + input_is_divu + input_is_rem + input_is_remu = 1 →
-      input_c_times_quotient[4] =
-          input_c_times_quotient_upper_product[8] +
-            input_c_times_quotient_upper_product[9] * 256 ∧
-        input_c_times_quotient[5] =
-          input_c_times_quotient_upper_product[10] +
-            input_c_times_quotient_upper_product[11] * 256 ∧
-        input_c_times_quotient[6] =
-          input_c_times_quotient_upper_product[12] +
-            input_c_times_quotient_upper_product[13] * 256 ∧
-        input_c_times_quotient[7] =
-          input_c_times_quotient_upper_product[14] +
-            input_c_times_quotient_upper_product[15] * 256 at hglUp
+  obtain ⟨hSpecLo, hSpecUp⟩ := hProduct
   simp only [SelectionEvidenceSpec] at hSelection
   obtain ⟨bIr, bIrnw, bDiv, bDivu, bRem, bRemu, bDivw, bRemw, bDivuw, bRemuw,
     hsum1, hsel⟩ := hSelection
@@ -528,49 +456,15 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Co
   have eAr := eval_getElem har
   have eQ := eval_getElem hq
   have eR := eval_getElem hr
-  have eLoP := eval_getElem hloProd
-  have eUpP := eval_getElem hupProd
   refine ⟨⟨⟨bIr, fun h => absurd h zero_ne_one, bIr, Or.inl rfl, Or.inl rfl,
-      Or.inl rfl, Or.inl rfl, by simpa using bIr⟩, hSpecLo⟩,
+      Or.inl rfl, Or.inl rfl, by simpa using bIr⟩, by simpa only [eCtq] using hSpecLo⟩,
     ⟨⟨bIrnw, fun h => absurd h zero_ne_one, Or.inl rfl, bDR, bDRu, Or.inl rfl,
       Or.inl rfl, by
         rcases DivRemChip.group_binary4 bDiv bRem bDivu bRemu (by omega) with h | h
         · left; linear_combination h
-        · right; linear_combination h⟩, hSpecUp⟩, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+        · right; linear_combination h⟩, by simpa only [eCtq] using hSpecUp⟩, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · simp only [eCtq, eLoP]
-    rcases bIr with h | h
-    · rw [h, zero_mul]
-    · rw [h, one_mul, (hglLo h).1, sub_self]
-  · simp only [eCtq, eLoP]
-    rcases bIr with h | h
-    · rw [h, zero_mul]
-    · rw [h, one_mul, (hglLo h).2.1, sub_self]
-  · simp only [eCtq, eLoP]
-    rcases bIr with h | h
-    · rw [h, zero_mul]
-    · rw [h, one_mul, (hglLo h).2.2.1, sub_self]
-  · simp only [eCtq, eLoP]
-    rcases bIr with h | h
-    · rw [h, zero_mul]
-    · rw [h, one_mul, (hglLo h).2.2.2, sub_self]
-  · simp only [eCtq, eUpP]
-    rcases DivRemChip.group_binary4 bDiv bDivu bRem bRemu (by omega) with h | h
-    · rw [h, zero_mul]
-    · rw [h, one_mul, (hglUp h).1, sub_self]
-  · simp only [eCtq, eUpP]
-    rcases DivRemChip.group_binary4 bDiv bDivu bRem bRemu (by omega) with h | h
-    · rw [h, zero_mul]
-    · rw [h, one_mul, (hglUp h).2.1, sub_self]
-  · simp only [eCtq, eUpP]
-    rcases DivRemChip.group_binary4 bDiv bDivu bRem bRemu (by omega) with h | h
-    · rw [h, zero_mul]
-    · rw [h, one_mul, (hglUp h).2.2.1, sub_self]
-  · simp only [eCtq, eUpP]
-    rcases DivRemChip.group_binary4 bDiv bDivu bRem bRemu (by omega) with h | h
-    · rw [h, zero_mul]
-    · rw [h, one_mul, (hglUp h).2.2.2, sub_self]
   · simp only [DivRemChip.assertZeros, DivRemChip.forAllNoOffset_map_assert]
     exact forall_of_ownAssertsHold env.toEnvironment hOwnH hdiv hdivu hrem hremu hdivw hremw
       hdivuw hremuw hir hirnw hov hbn hbnno hbnnno hrn hcn hace hare hrcm hbm hrm hcm hqm hovbres
@@ -619,7 +513,7 @@ private theorem main_requirementsChannelsLawful (input_var : Var DivRemChip.Colu
   dsimp only [Operations.RequirementsChannelsLawful]
   refine ⟨?_, ?_, ?_⟩
   · simp only [main, Circuit.operations, Circuit.bind_def, assertion,
-      DivRemChip.assertZeros, Channel.pullIf, HasAssertEq.assert_eq, Expression.assertEquals,
+      DivRemChip.assertZeros, Channel.pullIf,
       Operations.localLength]
     simp only [Operations.subcircuitChannelsWithRequirements_append,
       Operations.subcircuitChannelsWithRequirements_subcircuit,
@@ -627,11 +521,10 @@ private theorem main_requirementsChannelsLawful (input_var : Var DivRemChip.Colu
       Operations.subcircuitChannelsWithRequirements_nil,
       DivRemChip.subChannelsR_map_assert,
       FormalAssertion.toSubcircuit_channelsWithRequirements,
-      Gadgets.Equality.channelsWithRequirements_eq,
       MulOperation.circuit, List.append_nil, List.nil_subset]
   · intro channel h_channel
     simp only [main, Circuit.operations, Circuit.bind_def, assertion,
-      DivRemChip.assertZeros, Channel.pullIf, HasAssertEq.assert_eq, Expression.assertEquals,
+      DivRemChip.assertZeros, Channel.pullIf,
       Operations.localLength] at h_channel
     simp only [Operations.shallowChannels_append, Operations.shallowChannels_subcircuit,
       Operations.shallowChannels_interact, Operations.shallowChannels_nil,
@@ -642,7 +535,7 @@ private theorem main_requirementsChannelsLawful (input_var : Var DivRemChip.Colu
     exact Or.inl h_byte
   · intro env h_constraints
     simp only [main, Circuit.operations, Circuit.bind_def, assertion,
-      DivRemChip.assertZeros, Channel.pullIf, HasAssertEq.assert_eq, Expression.assertEquals,
+      DivRemChip.assertZeros, Channel.pullIf,
       Operations.localLength] at h_constraints ⊢
     simp only [ConstraintsHold.Shallow, Operations.forAllNoOffset_append,
       Operations.forAllNoOffset, DivRemChip.forAllNoOffset_map_assert, true_and,

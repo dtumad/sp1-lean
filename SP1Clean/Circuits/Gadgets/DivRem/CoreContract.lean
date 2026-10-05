@@ -11,7 +11,6 @@ evidence; the independent public contract is `DivRemContract.RowSpec`.
 
 namespace SP1Clean.DivRemCore
 
-
 /-- The DivRem row's own assertZero tail, **as evaluated field equations**: every entry of the
 `DivRemChip.ownAsserts` chain (the `[E13…E367, adapter.op_a_0]` list, whose carrier-generic body is
 here instantiated at `R = ZMod p`) is zero on the committed row.
@@ -28,75 +27,22 @@ bundle into `CoreSpec`'s explicit conjuncts. -/
 def OwnAssertsHold {p : ℕ} (cols : DivRemChip.Columns (ZMod p)) : Prop :=
   ∀ x ∈ DivRemChip.ownAsserts cols, x = 0
 
-/- **Overview of `ProductSpec` and its evidence cluster** (the `ProductSpec` definition follows
-below, after its two `@[irreducible]` placement leaf contracts). The semantic evidence certified by
-the DivRem row's **product/own-assert/byte-range assertion
-cluster** (`Native/Operations/DivRemOperation/Core.lean`), `DivRemCompare.CompareSpec`'s structural
-twin:
-
-* the two composed `MulOperation` semantic `Spec`s at the committed instantiations — `lower`
-  (`is_mul = is_real`) and `upper` (`is_real_not_word` gate, `is_mulh = is_div + is_rem`,
-  `is_mulhu = is_divu + is_remu`) — exactly the `Assumptions → Spec` currency
-  `Proofs/Chips/DivRemChip/Extract.lean`'s `mul_lo_spec`/`mul_hi_spec_*` consume;
-* the product-glue limb links in the form `rwlo_product`/`rwhi_product_{unsigned,signed}` expect:
-  `c_times_quotient[i] = product[2i] + product[2i+1]·256` against `lower`'s bytes 0–7
-  on real rows, and against `upper`'s bytes 8–15 under the 64-bit gate
-  `g64 = is_div + is_divu + is_rem + is_remu`;
-* the raw `OwnAssertsHold` bundle (see its docstring);
-* the derived selection facts: `is_real`/`is_real_not_word`/all eight variant flags binary, the
-  ungated one-hot sum `E367`, and `DivRemContract.SelectionSpec` (a real row selects a case);
-* mirroring `MulOperation.Spec`'s convention of carrying its own byte pulls' facts (its `RawSpec`
-  ranges), the cluster's 32 u16 `Range` pulls as gated `.val < 2^16` facts — the 8 carry-chain
-  composites (`E123…E151`) and the `abs_c`/`abs_remainder`/`quotient`/`remainder`/
-  `c_times_quotient` limbs on `is_real`. The word-variant checks on
-  `remainder[1]`/`quotient[1]` are emitted once by their `U16MSBOperation` subcircuits in
-  `DivRemCompare`, exactly as in the Rust AIR. -/
-/-- The real-row lower-product bytes reassembled into the four committed u16 limbs.
-
-This leaf contract is irreducible on purpose. `circuit_proof_start` simplifies the surrounding
-`ProductSpec`; if this implication is exposed there, Lean distributes its conjunction into the
-parent proof state and destroys the small proof boundary. Consumers cross it explicitly with
-`rw [LowerProductPlacement]`. -/
-@[irreducible] def LowerProductPlacement {p : ℕ} (cols : DivRemChip.Columns (ZMod p)) : Prop :=
-  cols.is_real = 1 →
-    cols.c_times_quotient[0] =
-      cols.c_times_quotient_lower.product[0] + cols.c_times_quotient_lower.product[1] * 256 ∧
-    cols.c_times_quotient[1] =
-      cols.c_times_quotient_lower.product[2] + cols.c_times_quotient_lower.product[3] * 256 ∧
-    cols.c_times_quotient[2] =
-      cols.c_times_quotient_lower.product[4] + cols.c_times_quotient_lower.product[5] * 256 ∧
-    cols.c_times_quotient[3] =
-      cols.c_times_quotient_lower.product[6] + cols.c_times_quotient_lower.product[7] * 256
-
-/-- The 64-bit selector-gated upper-product bytes reassembled into the four high u16 limbs.
-
-Like `LowerProductPlacement`, this stays opaque to generic circuit-proof setup and is opened only by
-the product proof that owns the boundary. -/
-@[irreducible] def UpperProductPlacement {p : ℕ} (cols : DivRemChip.Columns (ZMod p)) : Prop :=
-  cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu = 1 →
-    cols.c_times_quotient[4] =
-      cols.c_times_quotient_upper.product[8] + cols.c_times_quotient_upper.product[9] * 256 ∧
-    cols.c_times_quotient[5] =
-      cols.c_times_quotient_upper.product[10] + cols.c_times_quotient_upper.product[11] * 256 ∧
-    cols.c_times_quotient[6] =
-      cols.c_times_quotient_upper.product[12] + cols.c_times_quotient_upper.product[13] * 256 ∧
-    cols.c_times_quotient[7] =
-      cols.c_times_quotient_upper.product[14] + cols.c_times_quotient_upper.product[15] * 256
-
-/-- The two Mul contracts and their folded product-to-u16-limb placement contracts. This named
-semantic cluster is kept folded at chip boundaries so proofs need not unfold the unrelated
-selection and range evidence merely to reason about a generated Mul witness block. -/
+/-- The two bundled Mul contracts, each carrying the actual committed result word. Product
+placement is proved inside MulOperation and is not duplicated in the DivRem contract. This cluster
+stays folded at chip boundaries so generated witness blocks remain opaque. -/
 def ProductSpec {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
     (cols : DivRemChip.Columns (ZMod p)) : Prop :=
   let lo := cols.c_times_quotient_lower
   let up := cols.c_times_quotient_upper
   MulOperation.Spec
-    ⟨cols.quotient_comp, cols.c, lo, cols.is_real, cols.is_real, 0, 0, 0, 0⟩ ∧
+    ⟨cols.quotient_comp, cols.c, lo, cols.is_real, cols.is_real, 0, 0, 0, 0,
+      #v[cols.c_times_quotient[0], cols.c_times_quotient[1],
+        cols.c_times_quotient[2], cols.c_times_quotient[3]]⟩ ∧
   MulOperation.Spec
     ⟨cols.quotient_comp, cols.c, up, cols.is_real_not_word, 0,
-     cols.is_div + cols.is_rem, cols.is_divu + cols.is_remu, 0, 0⟩ ∧
-  LowerProductPlacement cols ∧
-  UpperProductPlacement cols
+     cols.is_div + cols.is_rem, cols.is_divu + cols.is_remu, 0, 0,
+     #v[cols.c_times_quotient[4], cols.c_times_quotient[5],
+       cols.c_times_quotient[6], cols.c_times_quotient[7]]⟩
 
 /-- Binary gates, the ungated one-hot equation, and the resulting unique committed instruction
 selection. -/
@@ -134,7 +80,7 @@ def RangeSpec {p : ℕ} (cols : DivRemChip.Columns (ZMod p)) : Prop :=
     (∀ i (_ : i < 8), cols.c_times_quotient[i].val < 2 ^ 16)
 
 /-- The arithmetic core's auditable contract, split into four independently folded clusters:
-products/glue, the exact raw Rust assertion tail, selection, and byte ranges. -/
+products, the exact raw Rust assertion tail, selection, and byte ranges. -/
 def CoreSpec {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)] (cols : DivRemChip.Columns (ZMod p)) : Prop :=
   ProductSpec cols ∧ OwnAssertsHold cols ∧ SelectionEvidenceSpec cols ∧ RangeSpec cols
 

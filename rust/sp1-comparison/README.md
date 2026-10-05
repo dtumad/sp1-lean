@@ -35,11 +35,6 @@ that output and exercises two boundaries:
   | LoadByte | 258 / 30 | 987 | LB/LBU, all eight offsets, sign extension, address boundaries, negative immediates, cross-window memory timestamps |
   | DivRem | 968 / 24 | 24,354 | All eight variants, division by zero, signed overflow at both widths, word truncation, DIVU padding |
 
-  The ADD and LoadByte cases pass. DivRem currently fails complete interaction comparison:
-  native multiplication substitutes a low-product limb for SP1's supplied result limb in a
-  disabled range check. Its listed rows and mutations are the intended battery, not completed
-  coverage. Preserve the result input at the multiplication boundary to close this gap (#28/#29).
-
   Generated witnesses are checked against SP1's live trace generator. Direct field evaluation compares local
   constraint satisfaction and complete interaction multisets, including mutations. Repeated messages
   and zero multiplicities are retained. Both Cargo configurations, with and without `mprotect`, run

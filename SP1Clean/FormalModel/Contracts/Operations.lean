@@ -400,19 +400,30 @@ namespace SP1Clean.MulOperation
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-/-- The two operand words, the already-`populate`d column struct, the `is_real` gate, and the five
-variant selectors (the `eval` params verbatim, faithful to SP1's `MulOperation::eval`). The result
-word is **reconstructed** from the `product` columns (see `resultWord`), placed at the chip level. -/
+/-- Multiplication operands, arithmetic columns, activity/variant selectors and the caller's
+result word. The result remains explicit on disabled rows: SP1's product-MSB interaction reads
+its second limb even when that interaction has zero multiplicity. -/
 structure Inputs (F : Type) where
+  /-- First operand, interpreted according to the selected variant. -/
   b : fields 4 F
+  /-- Second operand, interpreted according to the selected variant. -/
   c : fields 4 F
+  /-- Supplied product, carry and byte-decomposition witnesses. -/
   cols : Circuits.Types.MulOperation F
+  /-- Enables arithmetic and byte-range checks. Variant selectors remain separate. -/
   is_real : F
+  /-- Selects the low 64-bit product. -/
   is_mul : F
+  /-- Selects the high 64 bits of the signed product. -/
   is_mulh : F
+  /-- Selects the high 64 bits of the unsigned product. -/
   is_mulhu : F
+  /-- Selects the high 64 bits with a signed first operand and unsigned second operand. -/
   is_mulhsu : F
+  /-- Selects the sign-extended low 32-bit product. -/
   is_mulw : F
+  /-- Caller result, retained in lookup messages even when their multiplicity is zero. -/
+  a : fields 4 F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
