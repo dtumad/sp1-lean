@@ -18,6 +18,7 @@ import SP1Clean.Circuits.Types.JTypeReader
 import SP1Clean.Circuits.Types.LtOperationSigned
 import SP1Clean.Circuits.Types.LtOperationUnsigned
 import SP1Clean.Circuits.Types.MemoryAccess
+import SP1Clean.Circuits.Types.Mul
 import SP1Clean.Circuits.Types.MulOperation
 import SP1Clean.Circuits.Types.RTypeReader
 import SP1Clean.Circuits.Types.RegisterAccess
@@ -33,6 +34,7 @@ import SP1Clean.FormalModel.Contracts.ClockOrder
 import SP1Clean.FormalModel.Contracts.OrdinaryObservation
 import SP1Clean.FormalModel.Contracts.CoreAIR
 import SP1Clean.FormalModel.Contracts.CoreSyscall
+import SP1Clean.Semantics.Specs.Chips.Mul
 import SP1Clean.Semantics.Specs.DivRem
 import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
 import SP1Clean.Circuits.Gadgets.DivRem.CoreContract

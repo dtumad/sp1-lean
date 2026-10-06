@@ -28,6 +28,7 @@
 
 # 4 — semantic contracts and the row view they are read through.
 4   FormalModel   SP1Clean/FormalModel/
+4   Semantics     SP1Clean/Semantics/Specs/Chips/
 4   Soundness     SP1Clean/Soundness/RowView.lean
 
 # 5 — operation gadgets, readers, and their soundness; plus the shared proof-start tactic.
