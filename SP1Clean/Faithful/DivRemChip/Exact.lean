@@ -61,31 +61,31 @@ private theorem divRemNativeDecompose
         ((DivRemChip.main input).operations offset) =
       nativeAssertZeros env
           ((Readers.CPUState.main (divRemCpuInput input)).operations
-            (offset + 217)) ++
+            (offset + 210)) ++
         nativeAssertZeros env
           ((Readers.RTypeReader.main
-            (divRemReaderInput input cols)).operations (offset + 217)) ++
+            (divRemReaderInput input cols)).operations (offset + 210)) ++
         nativeAssertZeros env
           ((DivRemCompare.main
             (DivRemCompare.Inputs.ofCols cols)).operations
-              (offset + 217)) ++
+              (offset + 210)) ++
         nativeAssertZeros env
-          ((DivRemCore.main cols).operations (offset + 217)) ++
+          ((DivRemCore.main cols).operations (offset + 210)) ++
         nativeAssertZeros env
           ((Readers.RegisterWrite.main
-            (divRemWriteInput input cols)).operations (offset + 217)) := by
+            (divRemWriteInput input cols)).operations (offset + 210)) := by
   dsimp only
   simp only [nativeAssertZeros, DivRemChip.main,
     Circuit.operations, Circuit.bind_def,
     Operations.constraints_append, List.map_append,
     DivRemChip.populateRow_output_eq]
   have hpopulateLength :
-      Operations.localLength (DivRemChip.populateRow input offset).2 = 217 :=
+      Operations.localLength (DivRemChip.populateRow input offset).2 = 210 :=
     DivRemChip.populateRow_localLength_eq input offset
   rw [hpopulateLength]
   simp only [DivRemChip.populateRow,
     Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR,
+    witnessField, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR,
     Operations.localLength, Operations.constraints_append,
     Operations.constraints_witness, Operations.constraints_nil,
     List.map_nil, List.nil_append]
@@ -1218,14 +1218,18 @@ private def divRemLowerMulInput
     (cols : Var DivRemChip.Columns (ZMod p)) :
     Var MulOperation.Inputs (ZMod p) :=
   ⟨cols.quotient_comp, cols.c, cols.c_times_quotient_lower,
-    cols.is_real, cols.is_real, 0, 0, 0, 0⟩
+    cols.is_real, cols.is_real, 0, 0, 0, 0,
+    #v[cols.c_times_quotient[0], cols.c_times_quotient[1],
+      cols.c_times_quotient[2], cols.c_times_quotient[3]]⟩
 
 private def divRemUpperMulInput
     (cols : Var DivRemChip.Columns (ZMod p)) :
     Var MulOperation.Inputs (ZMod p) :=
   ⟨cols.quotient_comp, cols.c, cols.c_times_quotient_upper,
     cols.is_real_not_word, 0, cols.is_div + cols.is_rem,
-    cols.is_divu + cols.is_remu, 0, 0⟩
+    cols.is_divu + cols.is_remu, 0, 0,
+    #v[cols.c_times_quotient[4], cols.c_times_quotient[5],
+      cols.c_times_quotient[6], cols.c_times_quotient[7]]⟩
 
 private theorem divRemConstraintsMapAssert
     {F : Type} [FiniteField F] (es : List (Expression F)) :
@@ -1246,46 +1250,9 @@ private theorem divRemCoreNativeDecompose
         nativeAssertZeros env
           ((MulOperation.main
             (divRemUpperMulInput cols)).operations offset) ++
-        [Expression.eval env
-            (cols.is_real * (cols.c_times_quotient[0] -
-              (cols.c_times_quotient_lower.product[0] +
-                cols.c_times_quotient_lower.product[1] * 256))),
-          Expression.eval env
-            (cols.is_real * (cols.c_times_quotient[1] -
-              (cols.c_times_quotient_lower.product[2] +
-                cols.c_times_quotient_lower.product[3] * 256))),
-          Expression.eval env
-            (cols.is_real * (cols.c_times_quotient[2] -
-              (cols.c_times_quotient_lower.product[4] +
-                cols.c_times_quotient_lower.product[5] * 256))),
-          Expression.eval env
-            (cols.is_real * (cols.c_times_quotient[3] -
-              (cols.c_times_quotient_lower.product[6] +
-                cols.c_times_quotient_lower.product[7] * 256))),
-          Expression.eval env
-            ((cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu) *
-              (cols.c_times_quotient[4] -
-                (cols.c_times_quotient_upper.product[8] +
-                  cols.c_times_quotient_upper.product[9] * 256))),
-          Expression.eval env
-            ((cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu) *
-              (cols.c_times_quotient[5] -
-                (cols.c_times_quotient_upper.product[10] +
-                  cols.c_times_quotient_upper.product[11] * 256))),
-          Expression.eval env
-            ((cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu) *
-              (cols.c_times_quotient[6] -
-                (cols.c_times_quotient_upper.product[12] +
-                  cols.c_times_quotient_upper.product[13] * 256))),
-          Expression.eval env
-            ((cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu) *
-              (cols.c_times_quotient[7] -
-                (cols.c_times_quotient_upper.product[14] +
-                  cols.c_times_quotient_upper.product[15] * 256)))] ++
         (DivRemChip.ownAsserts cols).map (Expression.eval env) := by
   simp only [nativeAssertZeros, DivRemCore.main,
     Circuit.operations, Circuit.bind_def, assertion,
-    HasAssertEq.assert_eq, Expression.assertEquals,
     Channel.pullIf,
     Operations.localLength, Operations.constraints_append,
     Operations.constraints_subcircuit,
@@ -1296,12 +1263,10 @@ private theorem divRemCoreNativeDecompose
     DivRemChip.assertZeros, divRemLowerMulInput,
     divRemUpperMulInput, Nat.add_zero]
   simp only [MulOperation.circuit_localLength,
-    Gadgets.Equality.localLength_eq, Nat.add_zero]
-  simp only [MulOperation.circuit, Gadgets.Equality.circuit]
-  repeat' rw [CanonicalReader.equalityAssertionList]
+    Nat.add_zero]
+  simp only [MulOperation.circuit]
   rw [divRemConstraintsMapAssert]
-  simp only [Expression.eval, sub_zero, List.append_nil,
-    List.nil_append, List.cons_append, List.append_assoc]
+  simp only [List.append_nil, List.append_assoc]
 
 private theorem divRemLowerForward
     (env : Environment (ZMod p))
@@ -1312,37 +1277,25 @@ private theorem divRemLowerForward
     List.Forall (· = 0)
         (nativeAssertZeros env
           ((MulOperation.main
-            (divRemLowerMulInput cols)).operations offset)) ∧
-      MulOutputPlacement
-        #v[(Eval.eval env cols).c_times_quotient[0],
-          (Eval.eval env cols).c_times_quotient[1],
-          (Eval.eval env cols).c_times_quotient[2],
-          (Eval.eval env cols).c_times_quotient[3]]
-        (Eval.eval env cols).c_times_quotient_lower
-        (Eval.eval env cols).is_real 0 0 0 0 := by
-  have h := mulOperation_assertions_forward env
+            (divRemLowerMulInput cols)).operations offset)) := by
+  exact mulOperation_assertions_forward env
     (divRemLowerMulInput cols) offset
-    #v[(Eval.eval env cols).c_times_quotient[0],
-        (Eval.eval env cols).c_times_quotient[1],
-      (Eval.eval env cols).c_times_quotient[2],
-      (Eval.eval env cols).c_times_quotient[3]]
     (by
       simp only [divRemLowerMulAssertions] at hRust
       rw [DivRemChip.eval_divRemCols_quotientComp_verifier,
         DivRemChip.eval_divRemCols_c_verifier,
         DivRemChip.eval_divRemCols_mulLower_verifier,
         DivRemChip.eval_divRemCols_isReal_verifier] at hRust
-      simpa only [divRemLowerMulInput,
+      simpa only [DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 0 (by decide),
+        DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 1 (by decide),
+        DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 2 (by decide),
+        DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 3 (by decide),
+        ← ProvableStruct.eval_eq_eval, divRemLowerMulInput,
         ProvableStruct.structEvalLiteralProc,
-        DivRemChip.eval_divRemCols_ctq_getElem_verifier,
-        ProvableType.eval_field, ProvableType.getElem_eval_fields,
+        ProvableType.eval_fields, Vector.map_mk, List.map_toArray,
+        List.map_cons, List.map_nil,
+        ProvableType.eval_field, Vector.getElem_map,
         Expression.eval] using hRust)
-  refine ⟨h.1, ?_⟩
-  have hp := h.2
-  simp only [divRemLowerMulInput, Expression.eval] at hp
-  rw [DivRemChip.eval_divRemCols_mulLower_verifier,
-    DivRemChip.eval_divRemCols_isReal_verifier]
-  simpa only [ProvableType.eval_field] using hp
 
 private theorem divRemUpperForward
     (env : Environment (ZMod p))
@@ -1353,24 +1306,9 @@ private theorem divRemUpperForward
     List.Forall (· = 0)
         (nativeAssertZeros env
           ((MulOperation.main
-            (divRemUpperMulInput cols)).operations offset)) ∧
-      MulOutputPlacement
-        #v[(Eval.eval env cols).c_times_quotient[4],
-          (Eval.eval env cols).c_times_quotient[5],
-          (Eval.eval env cols).c_times_quotient[6],
-          (Eval.eval env cols).c_times_quotient[7]]
-        (Eval.eval env cols).c_times_quotient_upper
-        0
-        ((Eval.eval env cols).is_div + (Eval.eval env cols).is_rem)
-        ((Eval.eval env cols).is_divu + (Eval.eval env cols).is_remu)
-        0
-        0 := by
-  have h := mulOperation_assertions_forward env
+            (divRemUpperMulInput cols)).operations offset)) := by
+  exact mulOperation_assertions_forward env
     (divRemUpperMulInput cols) offset
-    #v[(Eval.eval env cols).c_times_quotient[4],
-      (Eval.eval env cols).c_times_quotient[5],
-      (Eval.eval env cols).c_times_quotient[6],
-      (Eval.eval env cols).c_times_quotient[7]]
     (by
       simp only [divRemUpperMulAssertions] at hRust
       rw [DivRemChip.eval_divRemCols_quotientComp_verifier,
@@ -1381,111 +1319,16 @@ private theorem divRemUpperForward
         DivRemChip.eval_divRemCols_isDivu_verifier,
         DivRemChip.eval_divRemCols_isRem_verifier,
         DivRemChip.eval_divRemCols_isRemu_verifier] at hRust
-      simpa only [divRemUpperMulInput,
+      simpa only [DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 4 (by decide),
+        DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 5 (by decide),
+        DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 6 (by decide),
+        DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 7 (by decide),
+        ← ProvableStruct.eval_eq_eval, divRemUpperMulInput,
         ProvableStruct.structEvalLiteralProc,
-        DivRemChip.eval_divRemCols_ctq_getElem_verifier,
-        ProvableType.eval_field, ProvableType.getElem_eval_fields,
+        ProvableType.eval_fields, Vector.map_mk, List.map_toArray,
+        List.map_cons, List.map_nil,
+        ProvableType.eval_field, Vector.getElem_map,
         Expression.eval] using hRust)
-  refine ⟨h.1, ?_⟩
-  have hp := h.2
-  simp only [divRemUpperMulInput, Expression.eval] at hp
-  rw [DivRemChip.eval_divRemCols_mulUpper_verifier,
-    DivRemChip.eval_divRemCols_isDiv_verifier,
-    DivRemChip.eval_divRemCols_isDivu_verifier,
-    DivRemChip.eval_divRemCols_isRem_verifier,
-    DivRemChip.eval_divRemCols_isRemu_verifier]
-  simpa only [ProvableType.eval_field] using hp
-
-private def divRemLowerGlue (cols : DivRemChip.Columns (ZMod p)) :
-    List (ZMod p) :=
-  [cols.is_real * (cols.c_times_quotient[0] -
-      (cols.c_times_quotient_lower.product[0] +
-        cols.c_times_quotient_lower.product[1] * 256)),
-    cols.is_real * (cols.c_times_quotient[1] -
-      (cols.c_times_quotient_lower.product[2] +
-        cols.c_times_quotient_lower.product[3] * 256)),
-    cols.is_real * (cols.c_times_quotient[2] -
-      (cols.c_times_quotient_lower.product[4] +
-        cols.c_times_quotient_lower.product[5] * 256)),
-    cols.is_real * (cols.c_times_quotient[3] -
-      (cols.c_times_quotient_lower.product[6] +
-        cols.c_times_quotient_lower.product[7] * 256))]
-
-private def divRemUpperGlue (cols : DivRemChip.Columns (ZMod p)) :
-    List (ZMod p) :=
-  let gate := cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu
-  [gate * (cols.c_times_quotient[4] -
-      (cols.c_times_quotient_upper.product[8] +
-        cols.c_times_quotient_upper.product[9] * 256)),
-    gate * (cols.c_times_quotient[5] -
-      (cols.c_times_quotient_upper.product[10] +
-        cols.c_times_quotient_upper.product[11] * 256)),
-    gate * (cols.c_times_quotient[6] -
-      (cols.c_times_quotient_upper.product[12] +
-        cols.c_times_quotient_upper.product[13] * 256)),
-    gate * (cols.c_times_quotient[7] -
-      (cols.c_times_quotient_upper.product[14] +
-        cols.c_times_quotient_upper.product[15] * 256))]
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemGatedSelectorIff
-    {gate value selected : ZMod p}
-    (hgate : gate * (gate - 1) = 0) :
-    gate * (value - gate * selected) = 0 ↔
-      gate * (value - selected) = 0 := by
-  constructor
-  · intro h
-    linear_combination h + selected * hgate
-  · intro h
-    linear_combination h - selected * hgate
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemLowerPlacementGlue
-    (cols : DivRemChip.Columns (ZMod p))
-    (hgate : cols.is_real * (cols.is_real - 1) = 0) :
-    MulOutputPlacement
-        #v[cols.c_times_quotient[0], cols.c_times_quotient[1],
-          cols.c_times_quotient[2], cols.c_times_quotient[3]]
-        cols.c_times_quotient_lower cols.is_real 0 0 0 0 ↔
-      List.Forall (· = 0) (divRemLowerGlue cols) := by
-  simp only [MulOutputPlacement, MulOperation.aSelector,
-    MulOperation.productVal, divRemLowerGlue, List.Forall,
-    Vector.getElem_mk, List.getElem_toArray,
-    List.getElem_cons_zero, List.getElem_cons_succ,
-    add_zero, zero_mul]
-  repeat' rw [divRemGatedSelectorIff hgate]
-  norm_num
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemUpperPlacementGlue
-    (cols : DivRemChip.Columns (ZMod p))
-    (hgate :
-      let gate :=
-        cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu
-      gate * (gate - 1) = 0) :
-    MulOutputPlacement
-        #v[cols.c_times_quotient[4], cols.c_times_quotient[5],
-          cols.c_times_quotient[6], cols.c_times_quotient[7]]
-        cols.c_times_quotient_upper 0
-        (cols.is_div + cols.is_rem)
-        (cols.is_divu + cols.is_remu) 0 0 ↔
-      List.Forall (· = 0) (divRemUpperGlue cols) := by
-  let gate :=
-    cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu
-  have hgroup :
-      (cols.is_div + cols.is_rem) +
-          (cols.is_divu + cols.is_remu) = gate := by
-    dsimp only [gate]
-    ring_nf
-  change gate * (gate - 1) = 0 at hgate
-  simp only [MulOutputPlacement, MulOperation.aSelector,
-    MulOperation.productVal, divRemUpperGlue, List.Forall,
-    Vector.getElem_mk, List.getElem_toArray,
-    List.getElem_cons_zero, List.getElem_cons_succ,
-    zero_add, add_zero, zero_mul, hgroup]
-  repeat' rw [divRemGatedSelectorIff hgate]
-  norm_num
-  simp only [gate]
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemOwnConstraint
@@ -1643,102 +1486,6 @@ private theorem divRemGroupGateFacts
     divRemMulPredOfBool bSigned,
     divRemMulPredOfBool bUnsigned⟩
 
-private theorem divRemEvalMulOperation
-    {F : Type} [FiniteField F]
-    (env : Environment F)
-    (cols : Circuits.Types.MulOperation (Expression F)) :
-    Eval.eval env cols =
-      ({ carry := Eval.eval env cols.carry
-         product := Eval.eval env cols.product
-         b_lower_byte := Eval.eval env cols.b_lower_byte
-         c_lower_byte := Eval.eval env cols.c_lower_byte
-         b_msb := Eval.eval env cols.b_msb
-         c_msb := Eval.eval env cols.c_msb
-         product_msb := Eval.eval env cols.product_msb
-         b_sign_extend := Eval.eval env cols.b_sign_extend
-         c_sign_extend := Eval.eval env cols.c_sign_extend } :
-        Circuits.Types.MulOperation F) := by
-  rw [ProvableStruct.eval_eq_eval]
-  rfl
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulLowerProduct
-    (env : Environment (ZMod p))
-    (cols : Var DivRemChip.Columns (ZMod p))
-    (i : ℕ) (hi : i < 16) :
-    (Eval.eval env cols).c_times_quotient_lower.product[i] =
-      Expression.eval env cols.c_times_quotient_lower.product[i] := by
-  rw [DivRemChip.eval_divRemCols_mulLower_verifier,
-    divRemEvalMulOperation]
-  simpa only using
-    (ProvableType.getElem_eval_fields env
-      cols.c_times_quotient_lower.product i hi).symm
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulUpperProduct
-    (env : Environment (ZMod p))
-    (cols : Var DivRemChip.Columns (ZMod p))
-    (i : ℕ) (hi : i < 16) :
-    (Eval.eval env cols).c_times_quotient_upper.product[i] =
-      Expression.eval env cols.c_times_quotient_upper.product[i] := by
-  rw [DivRemChip.eval_divRemCols_mulUpper_verifier,
-    divRemEvalMulOperation]
-  simpa only using
-    (ProvableType.getElem_eval_fields env
-      cols.c_times_quotient_upper.product i hi).symm
-
-private def divRemGlueExpressions
-    (cols : Var DivRemChip.Columns (ZMod p)) :
-    List (Expression (ZMod p)) :=
-  [cols.is_real * (cols.c_times_quotient[0] -
-      (cols.c_times_quotient_lower.product[0] +
-        cols.c_times_quotient_lower.product[1] * 256)),
-    cols.is_real * (cols.c_times_quotient[1] -
-      (cols.c_times_quotient_lower.product[2] +
-        cols.c_times_quotient_lower.product[3] * 256)),
-    cols.is_real * (cols.c_times_quotient[2] -
-      (cols.c_times_quotient_lower.product[4] +
-        cols.c_times_quotient_lower.product[5] * 256)),
-    cols.is_real * (cols.c_times_quotient[3] -
-      (cols.c_times_quotient_lower.product[6] +
-        cols.c_times_quotient_lower.product[7] * 256)),
-    (cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu) *
-      (cols.c_times_quotient[4] -
-        (cols.c_times_quotient_upper.product[8] +
-          cols.c_times_quotient_upper.product[9] * 256)),
-    (cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu) *
-      (cols.c_times_quotient[5] -
-        (cols.c_times_quotient_upper.product[10] +
-          cols.c_times_quotient_upper.product[11] * 256)),
-    (cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu) *
-      (cols.c_times_quotient[6] -
-        (cols.c_times_quotient_upper.product[12] +
-          cols.c_times_quotient_upper.product[13] * 256)),
-    (cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu) *
-      (cols.c_times_quotient[7] -
-        (cols.c_times_quotient_upper.product[14] +
-          cols.c_times_quotient_upper.product[15] * 256))]
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemGlueExpressionsEval
-    (env : Environment (ZMod p))
-    (cols : Var DivRemChip.Columns (ZMod p)) :
-    (divRemGlueExpressions cols).map (Expression.eval env) =
-      divRemLowerGlue (Eval.eval env cols) ++
-        divRemUpperGlue (Eval.eval env cols) := by
-  simp only [divRemGlueExpressions, divRemLowerGlue,
-    divRemUpperGlue, List.map, eval_sub, Expression.eval]
-  rw [DivRemChip.eval_divRemCols_isReal_verifier,
-    DivRemChip.eval_divRemCols_isDiv_verifier,
-    DivRemChip.eval_divRemCols_isDivu_verifier,
-    DivRemChip.eval_divRemCols_isRem_verifier,
-    DivRemChip.eval_divRemCols_isRemu_verifier]
-  repeat' rw [DivRemChip.eval_divRemCols_ctq_getElem_verifier]
-  repeat' rw [divRemEvalMulLowerProduct]
-  repeat' rw [divRemEvalMulUpperProduct]
-  simp only [ProvableType.eval_field]
-  rfl
-
 private theorem divRemCoreForallDecompose
     (env : Environment (ZMod p))
     (cols : Var DivRemChip.Columns (ZMod p)) (offset : ℕ) :
@@ -1754,24 +1501,9 @@ private theorem divRemCoreForallDecompose
             ((MulOperation.main
               (divRemUpperMulInput cols)).operations offset)) ∧
         List.Forall (· = 0)
-          (divRemLowerGlue (Eval.eval env cols)) ∧
-        List.Forall (· = 0)
-          (divRemUpperGlue (Eval.eval env cols)) ∧
-        List.Forall (· = 0)
           (DivRemChip.ownAsserts (Eval.eval env cols)) := by
-  rw [divRemCoreNativeDecompose]
-  change List.Forall (· = 0)
-      (nativeAssertZeros env
-          ((MulOperation.main
-            (divRemLowerMulInput cols)).operations offset) ++
-        nativeAssertZeros env
-          ((MulOperation.main
-            (divRemUpperMulInput cols)).operations offset) ++
-        (divRemGlueExpressions cols).map (Expression.eval env) ++
-        (DivRemChip.ownAsserts cols).map (Expression.eval env)) ↔ _
-  rw [divRemGlueExpressionsEval, divRemOwnAsserts_eval]
-  simp only [List.forall_append]
-  tauto
+  rw [divRemCoreNativeDecompose, divRemOwnAsserts_eval]
+  simp only [List.forall_append, and_assoc]
 
 private theorem divRemLowerBackward
     (env : Environment (ZMod p))
@@ -1781,14 +1513,6 @@ private theorem divRemLowerBackward
         (nativeAssertZeros env
           ((MulOperation.main
             (divRemLowerMulInput cols)).operations offset)))
-    (hPlacement :
-      MulOutputPlacement
-        #v[(Eval.eval env cols).c_times_quotient[0],
-          (Eval.eval env cols).c_times_quotient[1],
-          (Eval.eval env cols).c_times_quotient[2],
-          (Eval.eval env cols).c_times_quotient[3]]
-        (Eval.eval env cols).c_times_quotient_lower
-        (Eval.eval env cols).is_real 0 0 0 0)
     (hReal :
       (Eval.eval env cols).is_real *
         ((Eval.eval env cols).is_real - 1) = 0) :
@@ -1799,21 +1523,6 @@ private theorem divRemLowerBackward
         (Eval.eval env cols).is_real := by
     simpa only [ProvableType.eval_field] using
       (DivRemChip.eval_divRemCols_isReal_verifier env cols).symm
-  have hPlacement' :
-      MulOutputPlacement
-        #v[(Eval.eval env cols).c_times_quotient[0],
-          (Eval.eval env cols).c_times_quotient[1],
-          (Eval.eval env cols).c_times_quotient[2],
-          (Eval.eval env cols).c_times_quotient[3]]
-        (Eval.eval env (divRemLowerMulInput cols).cols)
-        (Expression.eval env (divRemLowerMulInput cols).is_mul)
-        (Expression.eval env (divRemLowerMulInput cols).is_mulh)
-        (Expression.eval env (divRemLowerMulInput cols).is_mulhu)
-        (Expression.eval env (divRemLowerMulInput cols).is_mulhsu)
-        (Expression.eval env (divRemLowerMulInput cols).is_mulw) := by
-    simp only [divRemLowerMulInput]
-    rw [← DivRemChip.eval_divRemCols_mulLower_verifier, hEvalReal]
-    exact hPlacement
   have hReal' :
       Expression.eval env (divRemLowerMulInput cols).is_mul *
         (Expression.eval env (divRemLowerMulInput cols).is_mul - 1) = 0 := by
@@ -1822,26 +1531,28 @@ private theorem divRemLowerBackward
     exact hReal
   have hRust := mulOperation_assertions_backward env
     (divRemLowerMulInput cols) offset
-    #v[(Eval.eval env cols).c_times_quotient[0],
-      (Eval.eval env cols).c_times_quotient[1],
-      (Eval.eval env cols).c_times_quotient[2],
-      (Eval.eval env cols).c_times_quotient[3]]
-    hNative hPlacement' hReal'
+    hNative hReal'
     (by simp only [divRemLowerMulInput, Expression.eval, zero_mul])
     (by simp only [divRemLowerMulInput, Expression.eval, zero_mul])
     (by simp only [divRemLowerMulInput, Expression.eval, zero_mul])
     (by simp only [divRemLowerMulInput, Expression.eval, zero_mul])
     (by
-      simpa only [divRemLowerMulInput, Expression.eval, add_zero]
+      simpa only [← ProvableStruct.eval_eq_eval, divRemLowerMulInput, Expression.eval, add_zero]
         using hReal')
   simp only [divRemLowerMulAssertions] at *
   rw [DivRemChip.eval_divRemCols_quotientComp_verifier,
     DivRemChip.eval_divRemCols_c_verifier,
     DivRemChip.eval_divRemCols_mulLower_verifier,
     DivRemChip.eval_divRemCols_isReal_verifier]
-  simpa only [divRemLowerMulInput,
-    DivRemChip.eval_divRemCols_ctq_getElem_verifier,
-    ProvableType.eval_field, ProvableType.getElem_eval_fields,
+  simpa only [DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 0 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 1 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 2 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 3 (by decide),
+    ← ProvableStruct.eval_eq_eval, divRemLowerMulInput,
+
+    ProvableType.eval_fields, Vector.map_mk, List.map_toArray,
+    List.map_cons, List.map_nil,
+    ProvableType.eval_field, Vector.getElem_map,
     Expression.eval] using hRust
 
 private theorem divRemUpperBackward
@@ -1852,16 +1563,6 @@ private theorem divRemUpperBackward
         (nativeAssertZeros env
           ((MulOperation.main
             (divRemUpperMulInput cols)).operations offset)))
-    (hPlacement :
-      MulOutputPlacement
-        #v[(Eval.eval env cols).c_times_quotient[4],
-          (Eval.eval env cols).c_times_quotient[5],
-          (Eval.eval env cols).c_times_quotient[6],
-          (Eval.eval env cols).c_times_quotient[7]]
-        (Eval.eval env cols).c_times_quotient_upper 0
-        ((Eval.eval env cols).is_div + (Eval.eval env cols).is_rem)
-        ((Eval.eval env cols).is_divu + (Eval.eval env cols).is_remu)
-        0 0)
     (hGroups : DivRemGroupGateFacts (Eval.eval env cols)) :
     List.Forall (· = 0)
       (divRemUpperMulAssertions (Eval.eval env cols)) := by
@@ -1885,22 +1586,6 @@ private theorem divRemUpperBackward
         (Eval.eval env cols).is_remu := by
     simpa only [ProvableType.eval_field] using
       (DivRemChip.eval_divRemCols_isRemu_verifier env cols).symm
-  have hPlacement' :
-      MulOutputPlacement
-        #v[(Eval.eval env cols).c_times_quotient[4],
-          (Eval.eval env cols).c_times_quotient[5],
-          (Eval.eval env cols).c_times_quotient[6],
-          (Eval.eval env cols).c_times_quotient[7]]
-        (Eval.eval env (divRemUpperMulInput cols).cols)
-        (Expression.eval env (divRemUpperMulInput cols).is_mul)
-        (Expression.eval env (divRemUpperMulInput cols).is_mulh)
-        (Expression.eval env (divRemUpperMulInput cols).is_mulhu)
-        (Expression.eval env (divRemUpperMulInput cols).is_mulhsu)
-        (Expression.eval env (divRemUpperMulInput cols).is_mulw) := by
-    simp only [divRemUpperMulInput, Expression.eval]
-    rw [← DivRemChip.eval_divRemCols_mulUpper_verifier,
-      hEvalDiv, hEvalDivu, hEvalRem, hEvalRemu]
-    exact hPlacement
   have hSigned :
       Expression.eval env (divRemUpperMulInput cols).is_mulh *
         (Expression.eval env (divRemUpperMulInput cols).is_mulh - 1) = 0 := by
@@ -1926,11 +1611,7 @@ private theorem divRemUpperBackward
     simpa only [add_assoc, add_left_comm] using hGroups.upper
   have hRust := mulOperation_assertions_backward env
     (divRemUpperMulInput cols) offset
-    #v[(Eval.eval env cols).c_times_quotient[4],
-      (Eval.eval env cols).c_times_quotient[5],
-      (Eval.eval env cols).c_times_quotient[6],
-      (Eval.eval env cols).c_times_quotient[7]]
-    hNative hPlacement'
+    hNative
     (by simp only [divRemUpperMulInput, Expression.eval, zero_mul])
     hSigned hUnsigned
     (by simp only [divRemUpperMulInput, Expression.eval, zero_mul])
@@ -1945,9 +1626,15 @@ private theorem divRemUpperBackward
     DivRemChip.eval_divRemCols_isDivu_verifier,
     DivRemChip.eval_divRemCols_isRem_verifier,
     DivRemChip.eval_divRemCols_isRemu_verifier]
-  simpa only [divRemUpperMulInput,
-    DivRemChip.eval_divRemCols_ctq_getElem_verifier,
-    ProvableType.eval_field, ProvableType.getElem_eval_fields,
+  simpa only [DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 4 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 5 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 6 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 7 (by decide),
+    ← ProvableStruct.eval_eq_eval, divRemUpperMulInput,
+
+    ProvableType.eval_fields, Vector.map_mk, List.map_toArray,
+    List.map_cons, List.map_nil,
+    ProvableType.eval_field, Vector.getElem_map,
     Expression.eval] using hRust
 
 private theorem divRemCoreAssertionsExact
@@ -1971,33 +1658,19 @@ private theorem divRemCoreAssertionsExact
             (DivRemChip.ownAsserts (Eval.eval env cols)) := by
       simpa only [List.forall_append] using hRust
     obtain ⟨⟨hLowerRust, hUpperRust⟩, hown⟩ := hsplit
-    have hfacts := divRemMulFlagFacts env cols hown
-    have hgroups := divRemGroupGateFacts hfacts
     have hLower := divRemLowerForward env cols offset hLowerRust
     have hUpper := divRemUpperForward env cols offset hUpperRust
     apply (divRemCoreForallDecompose env cols offset).mpr
-    exact ⟨hLower.1, hUpper.1,
-      (divRemLowerPlacementGlue
-        (Eval.eval env cols) hfacts.real).mp hLower.2,
-      (divRemUpperPlacementGlue
-        (Eval.eval env cols) hgroups.upper).mp hUpper.2,
-      hown⟩
+    exact ⟨hLower, hUpper, hown⟩
   · intro hNative
-    obtain ⟨hLowerNative, hUpperNative, hLowerGlue,
-        hUpperGlue, hown⟩ :=
+    obtain ⟨hLowerNative, hUpperNative, hown⟩ :=
       (divRemCoreForallDecompose env cols offset).mp hNative
     have hfacts := divRemMulFlagFacts env cols hown
     have hgroups := divRemGroupGateFacts hfacts
-    have hLowerPlacement :=
-      (divRemLowerPlacementGlue
-        (Eval.eval env cols) hfacts.real).mpr hLowerGlue
-    have hUpperPlacement :=
-      (divRemUpperPlacementGlue
-        (Eval.eval env cols) hgroups.upper).mpr hUpperGlue
     have hLowerRust := divRemLowerBackward env cols offset
-      hLowerNative hLowerPlacement hfacts.real
+      hLowerNative hfacts.real
     have hUpperRust := divRemUpperBackward env cols offset
-      hUpperNative hUpperPlacement hgroups
+      hUpperNative hgroups
     simp only [List.forall_append]
     exact ⟨⟨hLowerRust, hUpperRust⟩, hown⟩
 
@@ -2073,13 +1746,13 @@ private theorem divRemCpuAssertionsExact
       List.Forall (· = 0)
         (nativeAssertZeros env
           ((Readers.CPUState.main
-            (divRemCpuInput input)).operations (offset + 217))) := by
+            (divRemCpuInput input)).operations (offset + 210))) := by
   let state := Eval.eval env input.state
   let nextPc : Vector (ZMod p) 3 :=
     #v[state.pc[0] + 4, state.pc[1], state.pc[2]]
   let isReal := Expression.eval env input.is_real
   have h := CanonicalReader.cpuStateAssertions (p := p) env
-    (divRemCpuInput input) (offset + 217) state nextPc 8 isReal (by
+    (divRemCpuInput input) (offset + 210) state nextPc 8 isReal (by
       simp only [divRemCpuInput, isReal,
         ProvableStruct.structEvalLiteralProc])
   rw [divRemEvalPopulatedState env input offset,
@@ -2119,7 +1792,7 @@ private theorem divRemReaderAssertionsExact
           (nativeAssertZeros env
             ((Readers.RTypeReader.main
               (divRemReaderInput input cols)).operations
-                (offset + 217))) ∧
+                (offset + 210))) ∧
         (Eval.eval env cols).adapter.op_a_0 = 0) := by
   dsimp only
   let cols := DivRemChip.populatedRowAt input offset
@@ -2133,7 +1806,7 @@ private theorem divRemReaderAssertionsExact
     simp only [adapter, eval_rTypeReader,
       eval_registerAccessCols, ProvableType.eval_field]
   have h := CanonicalReader.rTypeAssertions (p := p) env
-    (divRemReaderInput input cols) (offset + 217)
+    (divRemReaderInput input cols) (offset + 210)
     state.clk_high (state.clk_0_16 + state.clk_16_24 * 65536)
     opcode isReal isReal state.pc a adapter
     (by simp only [divRemReaderInput, isReal,
@@ -2213,11 +1886,11 @@ private theorem divRemWholeAssertionsExact
     obtain ⟨hLower, hUpper, hCompare, hCpu, hReader, hOwn⟩ := hsplit
     have hopA0 := divRemOpA0OfOwn env cols hOwn
     have hCore :=
-      (divRemCoreAssertionsExact env cols (offset + 217)).mp (by
+      (divRemCoreAssertionsExact env cols (offset + 210)).mp (by
         simpa only [List.forall_append, and_assoc] using And.intro hLower
           (And.intro hUpper hOwn))
     have hCompareNative :=
-      (divRemCompareAssertionsExact env cols (offset + 217)).mp hCompare
+      (divRemCompareAssertionsExact env cols (offset + 210)).mp hCompare
     have hCpuNative :=
       (divRemCpuAssertionsExact env input offset).mp hCpu
     have hReaderNative :=
@@ -2225,7 +1898,7 @@ private theorem divRemWholeAssertionsExact
         ⟨hReader, hopA0⟩).1
     have hWriteNative :=
       (CanonicalReader.registerWriteAssertions env
-        (divRemWriteInput input cols) (offset + 217)).mpr trivial
+        (divRemWriteInput input cols) (offset + 210)).mpr trivial
     simpa only [cols, List.forall_append, and_assoc] using And.intro hCpuNative
       (And.intro hReaderNative
         (And.intro hCompareNative
@@ -2235,29 +1908,29 @@ private theorem divRemWholeAssertionsExact
         List.Forall (· = 0)
             (nativeAssertZeros env
               ((Readers.CPUState.main
-                (divRemCpuInput input)).operations (offset + 217))) ∧
+                (divRemCpuInput input)).operations (offset + 210))) ∧
           List.Forall (· = 0)
             (nativeAssertZeros env
               ((Readers.RTypeReader.main
                 (divRemReaderInput input cols)).operations
-                  (offset + 217))) ∧
+                  (offset + 210))) ∧
           List.Forall (· = 0)
             (nativeAssertZeros env
               ((DivRemCompare.main
                 (DivRemCompare.Inputs.ofCols cols)).operations
-                  (offset + 217))) ∧
+                  (offset + 210))) ∧
           List.Forall (· = 0)
             (nativeAssertZeros env
-              ((DivRemCore.main cols).operations (offset + 217))) ∧
+              ((DivRemCore.main cols).operations (offset + 210))) ∧
           List.Forall (· = 0)
             (nativeAssertZeros env
               ((Readers.RegisterWrite.main
                 (divRemWriteInput input cols)).operations
-                  (offset + 217))) := by
+                  (offset + 210))) := by
       simpa only [cols, List.forall_append, and_assoc] using hNative
     obtain ⟨hCpu, hReader, hCompare, hCore, _hWrite⟩ := hsplit
     have hCoreRust :=
-      (divRemCoreAssertionsExact env cols (offset + 217)).mpr hCore
+      (divRemCoreAssertionsExact env cols (offset + 210)).mpr hCore
     have hCoreSplit :
         List.Forall (· = 0)
             (divRemLowerMulAssertions (Eval.eval env cols)) ∧
@@ -2272,7 +1945,7 @@ private theorem divRemWholeAssertionsExact
       ((divRemReaderAssertionsExact env input offset).mpr
         ⟨hReader, hopA0⟩).1
     have hCompareRust :=
-      (divRemCompareAssertionsExact env cols (offset + 217)).mpr hCompare
+      (divRemCompareAssertionsExact env cols (offset + 210)).mpr hCompare
     have hCpuRust :=
       (divRemCpuAssertionsExact env input offset).mpr hCpu
     simpa only [cols, List.forall_append, and_assoc] using And.intro hLower
@@ -2555,26 +2228,26 @@ private theorem divRemNativeByteDecompose
         byteChannel.toRaw =
       ((Readers.CPUState.main
         (divRemCpuInput input)).operations
-          (offset + 217)).interactionsWith byteChannel.toRaw ++
+          (offset + 210)).interactionsWith byteChannel.toRaw ++
         ((Readers.RTypeReader.main
           (divRemReaderInput input cols)).operations
-            (offset + 217)).interactionsWith byteChannel.toRaw ++
+            (offset + 210)).interactionsWith byteChannel.toRaw ++
         ((DivRemCompare.main
           (DivRemCompare.Inputs.ofCols cols)).operations
-            (offset + 217)).interactionsWith byteChannel.toRaw ++
+            (offset + 210)).interactionsWith byteChannel.toRaw ++
         ((DivRemCore.main cols).operations
-            (offset + 217)).interactionsWith byteChannel.toRaw := by
+            (offset + 210)).interactionsWith byteChannel.toRaw := by
   dsimp only
   simp only [DivRemChip.main, Circuit.operations, Circuit.bind_def,
     Operations.interactionsWith_append,
     DivRemChip.populateRow_output_eq]
   have hpopulateLength :
-      Operations.localLength (DivRemChip.populateRow input offset).2 = 217 :=
+      Operations.localLength (DivRemChip.populateRow input offset).2 = 210 :=
     DivRemChip.populateRow_localLength_eq input offset
   rw [hpopulateLength]
   simp only [DivRemChip.populateRow,
     Circuit.bind_def, Circuit.pure_def,
-    witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR,
+    witnessField, witnessVectorIR, witnessProgram, Witnessable.witnessIR_provable, Witnessable.witnessIR_fields, witnessIR,
     Operations.localLength, Operations.interactionsWith_append,
     Operations.interactionsWith_witness,
     Operations.interactionsWith_nil, List.nil_append]
@@ -2605,7 +2278,7 @@ private theorem divRemNativeByteDecompose
           op_a := input.adapter.op_a
           value := (DivRemChip.populatedRowAt input offset).a
           is_real := input.is_real }).operations
-            (offset + 217)).interactionsWith byteChannel.toRaw = [] := by
+            (offset + 210)).interactionsWith byteChannel.toRaw = [] := by
     simp [Readers.RegisterWrite.main, Operations.interactionsWith,
       circuit_norm]
   rw [hwrite]
@@ -2750,7 +2423,7 @@ private theorem divRemCpuByteInteractionsExact
     let cols := DivRemChip.populatedRowAt input offset
     (((Readers.CPUState.main
       (divRemCpuInput input)).operations
-        (offset + 217)).interactionsWith byteChannel.toRaw).map
+        (offset + 210)).interactionsWith byteChannel.toRaw).map
           (AbstractInteraction.toAccess env) =
       ((divRemCpuInteractions
         (Eval.eval env cols).state
@@ -2764,7 +2437,7 @@ private theorem divRemCpuByteInteractionsExact
     #v[state.pc[0] + 4, state.pc[1], state.pc[2]]
   let isReal := Expression.eval env input.is_real
   have h := cpustate_byte_interactions_faithful_syntactic env
-    (divRemCpuInput input) (offset + 217)
+    (divRemCpuInput input) (offset + 210)
     state nextPc 8 isReal
     (by simp only [divRemCpuInput, isReal])
     (by
@@ -2783,7 +2456,7 @@ private theorem divRemReaderByteInteractionsExact
     let cols := DivRemChip.populatedRowAt input offset
     (((Readers.RTypeReader.main
       (divRemReaderInput input cols)).operations
-        (offset + 217)).interactionsWith byteChannel.toRaw).map
+        (offset + 210)).interactionsWith byteChannel.toRaw).map
           (AbstractInteraction.toAccess env) =
       ((divRemReaderInteractions
         (Eval.eval env cols).state
@@ -2801,7 +2474,7 @@ private theorem divRemReaderByteInteractionsExact
   let opcode := Expression.eval env (divRemOpcode cols)
   let isReal := Expression.eval env input.is_real
   have h := rtypereader_byte_interactions_faithful_syntactic env
-    (divRemReaderInput input cols) (offset + 217)
+    (divRemReaderInput input cols) (offset + 210)
     state.clk_high (state.clk_0_16 + state.clk_16_24 * 65536)
     state.pc opcode a adapter isReal isReal
     (by simp only [divRemReaderInput, isReal])
@@ -2854,7 +2527,7 @@ private theorem divRemCoreByteDecompose
         (divRemDirectInteractions (Eval.eval env cols)).map
           Extracted.Interaction.toAccess := by
   simp only [DivRemCore.main, Circuit.operations, Circuit.bind_def,
-    assertion, HasAssertEq.assert_eq, Expression.assertEquals,
+    assertion,
     Channel.pullIf, Operations.localLength,
     Operations.interactionsWith_append,
     Operations.interactionsWith_subcircuit,
@@ -2864,19 +2537,11 @@ private theorem divRemCoreByteDecompose
     Operations.interactionsWith_nil,
     List.map_append, List.append_nil]
   simp only [MulOperation.circuit_localLength,
-    Gadgets.Equality.localLength_eq, Nat.add_zero]
+    Nat.add_zero]
   simp only [
-    MulOperation.circuit, Gadgets.Equality.circuit,
+    MulOperation.circuit,
     divRemLowerMulInput, divRemUpperMulInput]
   repeat' rw [divRemFilterByte]
-  have heq (n : ℕ)
-      (inp : Expression (ZMod p) × Expression (ZMod p)) :
-      ((@Gadgets.Equality.main (ZMod p) inferInstance field
-        inferInstance inp).operations n).interactionsWith
-          byteChannel.toRaw = [] := by
-    simp [Gadgets.Equality.main, Operations.interactionsWith,
-      circuit_norm]
-  repeat' rw [heq]
   have hown :
       ((DivRemChip.assertZeros
         (DivRemChip.ownAsserts cols)).operations offset).interactionsWith
@@ -2903,167 +2568,6 @@ private theorem divRemCoreByteDecompose
     Expression.eval, neg_one_mul]
   rfl
 
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalU16toU8
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Circuits.Types.U16toU8Operation (Expression F)) :
-    Eval.eval env cols =
-      ({ low_bytes := Eval.eval env cols.low_bytes } :
-        Circuits.Types.U16toU8Operation F) := by
-  rw [ProvableStruct.eval_eq_eval]
-  rfl
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulProduct
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Circuits.Types.MulOperation (Expression F))
-    (i : ℕ) (hi : i < 16) :
-    (Eval.eval env cols).product[i] =
-      Expression.eval env cols.product[i] := by
-  rw [divRemEvalMulOperation]
-  simpa only using
-    (ProvableType.getElem_eval_fields env cols.product i hi).symm
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulCarry
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Circuits.Types.MulOperation (Expression F))
-    (i : ℕ) (hi : i < 16) :
-    (Eval.eval env cols).carry[i] =
-      Expression.eval env cols.carry[i] := by
-  rw [divRemEvalMulOperation]
-  simpa only using
-    (ProvableType.getElem_eval_fields env cols.carry i hi).symm
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulBLower
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Circuits.Types.MulOperation (Expression F))
-    (i : ℕ) (hi : i < 4) :
-    (Eval.eval env cols).b_lower_byte.low_bytes[i] =
-      Expression.eval env cols.b_lower_byte.low_bytes[i] := by
-  rw [divRemEvalMulOperation,
-    divRemEvalU16toU8 env cols.b_lower_byte]
-  simpa only using
-    (ProvableType.getElem_eval_fields env
-      cols.b_lower_byte.low_bytes i hi).symm
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulCLower
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Circuits.Types.MulOperation (Expression F))
-    (i : ℕ) (hi : i < 4) :
-    (Eval.eval env cols).c_lower_byte.low_bytes[i] =
-      Expression.eval env cols.c_lower_byte.low_bytes[i] := by
-  rw [divRemEvalMulOperation,
-    divRemEvalU16toU8 env cols.c_lower_byte]
-  simpa only using
-    (ProvableType.getElem_eval_fields env
-      cols.c_lower_byte.low_bytes i hi).symm
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulBMsb
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Circuits.Types.MulOperation (Expression F)) :
-    (Eval.eval env cols).b_msb =
-      Expression.eval env cols.b_msb := by
-  rw [divRemEvalMulOperation]
-  simp only [ProvableType.eval_field]
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulCMsb
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Circuits.Types.MulOperation (Expression F)) :
-    (Eval.eval env cols).c_msb =
-      Expression.eval env cols.c_msb := by
-  rw [divRemEvalMulOperation]
-  simp only [ProvableType.eval_field]
-
-omit [Fact (2 ^ 24 < p)] in
-private theorem divRemEvalMulProductMsb
-    {F : Type} [FiniteField F] (env : Environment F)
-    (cols : Circuits.Types.MulOperation (Expression F)) :
-    (Eval.eval env cols).product_msb.msb =
-      Expression.eval env cols.product_msb.msb := by
-  rw [divRemEvalMulOperation, eval_u16MSBColumns]
-  simp only [ProvableType.eval_field]
-
-private theorem divRemMulInteractionsExact
-    (env : Environment (ZMod p))
-    (input : Var MulOperation.Inputs (ZMod p)) (offset : ℕ)
-    (a : Word (ZMod p))
-    (isMul isMulh isMulhu isMulhsu : ZMod p)
-    (ha :
-      Expression.eval env
-          (input.cols.product[2] + input.cols.product[3] * 256) =
-        a[1]) :
-    (Extracted.MulOperation.interactions a
-        (Eval.eval env input.b) (Eval.eval env input.c)
-        (Eval.eval env input.cols)
-        (Expression.eval env input.is_real)
-        isMul isMulh (Expression.eval env input.is_mulw)
-        isMulhu isMulhsu).map
-          Extracted.Interaction.toAccess =
-      (((MulOperation.main input).operations offset).interactionsWith
-        byteChannel.toRaw).map (AbstractInteraction.toAccess env) := by
-  have hb (i : ℕ) (hi : i < 4) :
-      Expression.eval env input.b[i] = (Eval.eval env input.b)[i] :=
-    (ProvableType.getElem_eval_fields env input.b i hi)
-  have hc (i : ℕ) (hi : i < 4) :
-      Expression.eval env input.c[i] = (Eval.eval env input.c)[i] :=
-    (ProvableType.getElem_eval_fields env input.c i hi)
-  have hbl (i : ℕ) (hi : i < 4) :
-      Expression.eval env input.cols.b_lower_byte.low_bytes[i] =
-        (Eval.eval env input.cols).b_lower_byte.low_bytes[i] :=
-    (divRemEvalMulBLower env input.cols i hi).symm
-  have hcl (i : ℕ) (hi : i < 4) :
-      Expression.eval env input.cols.c_lower_byte.low_bytes[i] =
-        (Eval.eval env input.cols).c_lower_byte.low_bytes[i] :=
-    (divRemEvalMulCLower env input.cols i hi).symm
-  have hcarry (i : ℕ) (hi : i < 16) :
-      Expression.eval env input.cols.carry[i] =
-        (Eval.eval env input.cols).carry[i] :=
-    (divRemEvalMulCarry env input.cols i hi).symm
-  have hproduct (i : ℕ) (hi : i < 16) :
-      Expression.eval env input.cols.product[i] =
-        (Eval.eval env input.cols).product[i] :=
-    (divRemEvalMulProduct env input.cols i hi).symm
-  have hExact := mulOperation_interactions_exact
-    (p := p) env input offset a
-    (Eval.eval env input.b) (Eval.eval env input.c)
-    (Eval.eval env input.cols)
-    (Expression.eval env input.is_real)
-    (Expression.eval env input.is_mulw)
-    rfl rfl
-    (hb 0 (by decide)) (hb 1 (by decide))
-    (hb 2 (by decide)) (hb 3 (by decide))
-    (hc 0 (by decide)) (hc 1 (by decide))
-    (hc 2 (by decide)) (hc 3 (by decide)) ha
-    (hbl 0 (by decide)) (hbl 1 (by decide))
-    (hbl 2 (by decide)) (hbl 3 (by decide))
-    (hcl 0 (by decide)) (hcl 1 (by decide))
-    (hcl 2 (by decide)) (hcl 3 (by decide))
-    (divRemEvalMulBMsb env input.cols).symm
-    (divRemEvalMulCMsb env input.cols).symm
-    (divRemEvalMulProductMsb env input.cols).symm
-    (hcarry 0 (by decide)) (hcarry 1 (by decide))
-    (hcarry 2 (by decide)) (hcarry 3 (by decide))
-    (hcarry 4 (by decide)) (hcarry 5 (by decide))
-    (hcarry 6 (by decide)) (hcarry 7 (by decide))
-    (hcarry 8 (by decide)) (hcarry 9 (by decide))
-    (hcarry 10 (by decide)) (hcarry 11 (by decide))
-    (hcarry 12 (by decide)) (hcarry 13 (by decide))
-    (hcarry 14 (by decide)) (hcarry 15 (by decide))
-    (hproduct 0 (by decide)) (hproduct 1 (by decide))
-    (hproduct 2 (by decide)) (hproduct 3 (by decide))
-    (hproduct 4 (by decide)) (hproduct 5 (by decide))
-    (hproduct 6 (by decide)) (hproduct 7 (by decide))
-    (hproduct 8 (by decide)) (hproduct 9 (by decide))
-    (hproduct 10 (by decide)) (hproduct 11 (by decide))
-    (hproduct 12 (by decide)) (hproduct 13 (by decide))
-    (hproduct 14 (by decide)) (hproduct 15 (by decide))
-  simpa only [Extracted.MulOperation.interactions] using hExact
-
 private theorem divRemLowerMulInteractionsActive
     (env : Environment (ZMod p))
     (cols : Var DivRemChip.Columns (ZMod p)) (offset : ℕ) :
@@ -3074,31 +2578,20 @@ private theorem divRemLowerMulInteractionsActive
         ((((MulOperation.main
           (divRemLowerMulInput cols)).operations offset).interactionsWith
             byteChannel.toRaw).map (AbstractInteraction.toAccess env)) := by
-  let row := Eval.eval env cols
-  let input := divRemLowerMulInput cols
-  let a : Word (ZMod p) :=
-    #v[row.c_times_quotient[0], row.c_times_quotient[1],
-      row.c_times_quotient[2], row.c_times_quotient[3]]
-  apply mulOperation_interactions_active env input offset
-    a row.quotient_comp row.c row.c_times_quotient_lower
-    row.is_real row.is_real 0 0 0 0
-  · exact Or.inl rfl
-  · simp
-  · dsimp only [input, divRemLowerMulInput]
-    simp only [Expression.eval]
-    rw [← divRemEvalMulLowerProduct env cols 2 (by decide),
-      ← divRemEvalMulLowerProduct env cols 3 (by decide)]
-  · intro a' ha'
-    have h := divRemMulInteractionsExact env input offset a'
-      row.is_real 0 0 0 ha'
-    simp only [input, divRemLowerMulInput, Expression.eval] at h
-    rw [← DivRemChip.eval_divRemCols_quotientComp_verifier env cols,
-      ← DivRemChip.eval_divRemCols_c_verifier env cols,
-      ← DivRemChip.eval_divRemCols_mulLower_verifier env cols,
-      ← ProvableType.eval_field env cols.is_real,
-      ← DivRemChip.eval_divRemCols_isReal_verifier env cols] at h
-    simpa only [divRemLowerMulInteractions, input,
-      divRemLowerMulInput, row, Expression.eval] using h
+  apply congrArg LookupAccessList.active
+  simp only [divRemLowerMulInteractions]
+  rw [DivRemChip.eval_divRemCols_quotientComp_verifier,
+    DivRemChip.eval_divRemCols_c_verifier,
+    DivRemChip.eval_divRemCols_mulLower_verifier,
+    DivRemChip.eval_divRemCols_isReal_verifier]
+  simpa only [DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 0 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 1 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 2 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 3 (by decide),
+    divRemLowerMulInput, ProvableType.eval_fields,
+    Vector.map_mk, List.map_toArray, List.map_cons, List.map_nil, Vector.getElem_map,
+    ProvableType.eval_field, Expression.eval] using
+    mulOperation_interactions_evaluated env (divRemLowerMulInput cols) offset
 
 private theorem divRemUpperMulInteractionsActive
     (env : Environment (ZMod p))
@@ -3110,33 +2603,24 @@ private theorem divRemUpperMulInteractionsActive
         ((((MulOperation.main
           (divRemUpperMulInput cols)).operations offset).interactionsWith
             byteChannel.toRaw).map (AbstractInteraction.toAccess env)) := by
-  let row := Eval.eval env cols
-  let input := divRemUpperMulInput cols
-  let a : Word (ZMod p) :=
-    #v[row.c_times_quotient[4], row.c_times_quotient[5],
-      row.c_times_quotient[6], row.c_times_quotient[7]]
-  apply mulOperation_interactions_active env input offset
-    a row.quotient_comp row.c row.c_times_quotient_upper
-    row.is_real_not_word 0 (row.is_div + row.is_rem) 0
-      (row.is_divu + row.is_remu) 0
-  · exact Or.inl rfl
-  · simp
-  · dsimp only [input, divRemUpperMulInput]
-    simp only [Expression.eval]
-    rw [← divRemEvalMulUpperProduct env cols 2 (by decide),
-      ← divRemEvalMulUpperProduct env cols 3 (by decide)]
-  · intro a' ha'
-    have h := divRemMulInteractionsExact env input offset a'
-      0 (row.is_div + row.is_rem)
-      (row.is_divu + row.is_remu) 0 ha'
-    simp only [input, divRemUpperMulInput, Expression.eval] at h
-    rw [← DivRemChip.eval_divRemCols_quotientComp_verifier env cols,
-      ← DivRemChip.eval_divRemCols_c_verifier env cols,
-      ← DivRemChip.eval_divRemCols_mulUpper_verifier env cols,
-      ← ProvableType.eval_field env cols.is_real_not_word,
-      ← DivRemChip.eval_divRemCols_isRealNotWord_verifier env cols] at h
-    simpa only [divRemUpperMulInteractions, input,
-      divRemUpperMulInput, row, Expression.eval] using h
+  apply congrArg LookupAccessList.active
+  simp only [divRemUpperMulInteractions]
+  rw [DivRemChip.eval_divRemCols_quotientComp_verifier,
+    DivRemChip.eval_divRemCols_c_verifier,
+    DivRemChip.eval_divRemCols_mulUpper_verifier,
+    DivRemChip.eval_divRemCols_isRealNotWord_verifier,
+    DivRemChip.eval_divRemCols_isDiv_verifier,
+    DivRemChip.eval_divRemCols_isDivu_verifier,
+    DivRemChip.eval_divRemCols_isRem_verifier,
+    DivRemChip.eval_divRemCols_isRemu_verifier]
+  simpa only [DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 4 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 5 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 6 (by decide),
+    DivRemChip.eval_divRemCols_ctq_getElem_verifier env cols 7 (by decide),
+    divRemUpperMulInput, ProvableType.eval_fields,
+    Vector.map_mk, List.map_toArray, List.map_cons, List.map_nil, Vector.getElem_map,
+    ProvableType.eval_field, Expression.eval] using
+    mulOperation_interactions_evaluated env (divRemUpperMulInput cols) offset
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem divRemMulAccessesAllByte
@@ -3231,14 +2715,14 @@ private theorem divRemByteInteractionsFaithful
     (List.map (AbstractInteraction.toAccess env))
     (divRemNativeByteDecompose input offset)
   simp only [List.map_append] at hNative
-  rw [divRemCoreByteDecompose env cols (offset + 217)] at hNative
+  rw [divRemCoreByteDecompose env cols (offset + 210)] at hNative
   have hCpu := divRemCpuByteInteractionsExact env input offset
   have hReader := divRemReaderByteInteractionsExact env input offset
   have hCompare := divRemCompareInteractionsExact env
-    (DivRemCompare.Inputs.ofCols cols) (offset + 217)
+    (DivRemCompare.Inputs.ofCols cols) (offset + 210)
   rw [divRemEvalCompareOfCols env cols] at hCompare
-  have hLower := divRemLowerMulInteractionsActive env cols (offset + 217)
-  have hUpper := divRemUpperMulInteractionsActive env cols (offset + 217)
+  have hLower := divRemLowerMulInteractionsActive env cols (offset + 210)
+  have hUpper := divRemUpperMulInteractionsActive env cols (offset + 210)
   rw [hNative, divRemRustByteDecompose]
   rw [hCpu, hReader, ← hCompare]
   simp only [LookupAccessList.active, List.filter_append] at hLower hUpper ⊢
@@ -3422,7 +2906,7 @@ private theorem divRemProgramInteractionsExact
   let opcode := Expression.eval env (divRemOpcode cols)
   let isReal := Expression.eval env input.is_real
   have hReader := rtypereader_program_interactions_faithful_syntactic
-    env (divRemReaderInput input cols) (offset + 217)
+    env (divRemReaderInput input cols) (offset + 210)
     state.clk_high (state.clk_0_16 + state.clk_16_24 * 65536)
     state.pc opcode a adapter isReal isReal
     (by simp only [divRemReaderInput, isReal])
@@ -3453,10 +2937,10 @@ private theorem divRemProgramInteractionsExact
           programChannel.toRaw =
         ((Readers.RTypeReader.main
           (divRemReaderInput input cols)).operations
-            (offset + 217)).interactionsWith programChannel.toRaw := by
+            (offset + 210)).interactionsWith programChannel.toRaw := by
     rw [DivRemChip.interactionsWith_program_eq]
     have h := Soundness.rTypeReader_programInteractions
-      (divRemReaderInput input cols) (offset + 217)
+      (divRemReaderInput input cols) (offset + 210)
     simp only [Readers.RTypeReader.circuit] at h
     rw [h]
     rfl
@@ -3611,10 +3095,10 @@ private theorem divRemNoRawInteractions (cols : Extracted.DivRemOracle.DivRemCol
     Extracted.DivRemOracle.U16CompareOperation.interactions,
     Extracted.DivRemOracle.U16MSBOperation.interactions,
     Extracted.DivRemOracle.U16toU8OperationSafe.interactions,
-    
-    
+
+
     Extracted.RTypeReader.interactions,
-    
+
     ]
 
 private theorem divRemInteractionsFaithful

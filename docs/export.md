@@ -20,10 +20,12 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- The ADD and LoadByte components export through the same built-in path. Rust compares generated witnesses,
+- ADD, LoadByte and DivRem export through the same built-in path. Rust compares generated witnesses,
   local constraint satisfaction and complete interaction multisets with SP1 v6.8.1's supervisor
-  AIR, including padding and column mutations. This runs with and without Cargo's `mprotect`
-  feature; it does not cover user-mode or mprotect semantics.
+  AIR, including padding and column mutations. DivRem supplies seven opcode selectors as inputs
+  and derives DIVU; the multiplication gadget retains the caller's result word in disabled
+  interactions. Both Cargo configurations, with and without `mprotect`, run these comparisons;
+  they do not cover user-mode or mprotect semantics. See the [coverage table](../rust/sp1-comparison/README.md).
 - Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They are
   transitional evidence until instruction coverage moves to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,

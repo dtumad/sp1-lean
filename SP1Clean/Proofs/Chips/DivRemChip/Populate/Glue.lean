@@ -126,7 +126,10 @@ lemma populateMulLower_product_pair (B C : Word (ZMod p)) (f : Vector (ZMod p) 8
       simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
         List.getElem_cons_succ] <;>
       exact populateCtq_val_lt B C f _ (by norm_num)
-  have hsem := MulOperation.semantic_populate (populateQuotComp_isU64 B C f)
+  obtain ⟨a, _ha⟩ : ∃ a : Word (ZMod p), a =
+      #v[(populateCtq B C f)[0], (populateCtq B C f)[1],
+        (populateCtq B C f)[2], (populateCtq B C f)[3]] := ⟨_, rfl⟩
+  have hsem := MulOperation.semantic_populate (a := a) (populateQuotComp_isU64 B C f)
     (cComp_isU64 hcU f) 1 0 0 0 0 (Or.inr rfl) (Or.inl rfl) (Or.inl rfl) (Or.inl rfl)
     (Or.inl rfl) (Or.inr (by norm_num))
   obtain ⟨hru, hmul, -, -, -, -⟩ := hsem
@@ -166,7 +169,10 @@ lemma populateMulUpper_product_pair (B C : Word (ZMod p)) (f : Vector (ZMod p) 8
               (f[0] + f[2]) 0 0).product[8 + 2 * k + 1]'(by omega) * 256 := by
     intro hs hsg
     rw [hs]
-    have hsem := MulOperation.semantic_populate (populateQuotComp_isU64 B C f)
+    obtain ⟨a, _ha⟩ : ∃ a : Word (ZMod p), a =
+        #v[(populateCtq B C f)[4], (populateCtq B C f)[5],
+          (populateCtq B C f)[6], (populateCtq B C f)[7]] := ⟨_, rfl⟩
+    have hsem := MulOperation.semantic_populate (a := a) (populateQuotComp_isU64 B C f)
       (cComp_isU64 hcU f) 0 1 0 0 0 (Or.inl rfl) (Or.inr rfl) (Or.inl rfl) (Or.inl rfl)
       (Or.inl rfl) (Or.inr (by norm_num))
     obtain ⟨hru, -, -, hmulh, -, -⟩ := hsem
@@ -185,7 +191,10 @@ lemma populateMulUpper_product_pair (B C : Word (ZMod p)) (f : Vector (ZMod p) 8
               (f[0] + f[2]) 0 0).product[8 + 2 * k + 1]'(by omega) * 256 := by
     intro hs hsg
     rw [hs]
-    have hsem := MulOperation.semantic_populate (populateQuotComp_isU64 B C f)
+    obtain ⟨a, _ha⟩ : ∃ a : Word (ZMod p), a =
+        #v[(populateCtq B C f)[4], (populateCtq B C f)[5],
+          (populateCtq B C f)[6], (populateCtq B C f)[7]] := ⟨_, rfl⟩
+    have hsem := MulOperation.semantic_populate (a := a) (populateQuotComp_isU64 B C f)
       (cComp_isU64 hcU f) 0 0 1 0 0 (Or.inl rfl) (Or.inl rfl) (Or.inr rfl) (Or.inl rfl)
       (Or.inl rfl) (Or.inr (by norm_num))
     obtain ⟨hru, -, hmulhu, -, -, -⟩ := hsem

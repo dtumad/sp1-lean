@@ -183,9 +183,9 @@ theorem instructionTableFor_length (id : InstructionChipId) :
       simp only [MulChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)
   | divRem =>
-    exact (Table.buildHinted_length DivRemChip.component
+    exact (Table.build_length DivRemChip.component
       (DivRemChip.traceInputs (trace.instructionEvents .divRem) 0)
-      trace.generationData (by trivial)).trans (by
+      trace.generationData (ProverHint.empty _) (by trivial)).trans (by
       change (DivRemChip.traceInputs (trace.instructionEvents .divRem) 0).length = _
       simp only [DivRemChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)

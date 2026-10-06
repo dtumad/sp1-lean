@@ -459,17 +459,11 @@ theorem signed64Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {ca
         Word.isU64_of_cases (hctqRange 4 (by norm_num)) (hctqRange 5 (by norm_num))
           (hctqRange 6 (by norm_num)) (hctqRange 7 (by norm_num))
       unfold DivRemCore.ProductSpec at hproduct
-      obtain ⟨hmulLo, hproduct⟩ := hproduct
-      obtain ⟨hmulHi, hproduct⟩ := hproduct
-      obtain ⟨hglueLo, hglueHi⟩ := hproduct
-      rw [DivRemCore.LowerProductPlacement] at hglueLo
-      rw [DivRemCore.UpperProductPlacement] at hglueHi
-      obtain ⟨hglue0, hglue1, hglue2, hglue3⟩ := hglueLo hir
-      obtain ⟨hglue4, hglue5, hglue6, hglue7⟩ := hglueHi hg64
-      have hlo := rwlo_product (fun _ => hmulLo) hir
-        hglue0 hglue1 hglue2 hglue3
-      have hhi := rwhi_product_signed (fun _ => hmulHi) hirnw
-        hsigned64 hunsigned64 hglue4 hglue5 hglue6 hglue7
+      obtain ⟨hmulLo, hmulHi⟩ := hproduct
+      have hlo := mul_lo_spec hmulLo hir
+
+      have hhi := mul_hi_spec_signed hmulHi hirnw
+        hsigned64 hunsigned64
       have hcarry0 := bool_of_mul_pred e309
       have hcarry1 := bool_of_mul_pred e311
       have hcarry2 := bool_of_mul_pred e313

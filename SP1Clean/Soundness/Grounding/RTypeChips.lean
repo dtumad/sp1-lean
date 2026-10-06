@@ -480,7 +480,7 @@ theorem divRemChip_rtypeMemoryInteractionShape :
 
 /-- The DivRem timestamp contract's per-slot projections. One fixed simp set: the output is
 rewritten to the explicit row layout pre-order (`↓ circuit_output_eq`) and the adapter/state
-blocks read off `populatedRowAt`, so no goal ever unfolds the 217-cell output. -/
+blocks read off `populatedRowAt`, so no goal ever unfolds the 210-cell output. -/
 local macro "divRemTimestampField" : tactic => do
   let input := Lean.mkIdent `input
   let offset := Lean.mkIdent `offset
@@ -497,7 +497,7 @@ theorem DivRemChip.rtypeTimestampContract :
   let offset := size DivRemChip.Inputs
   let readerInput : Var Readers.RTypeReader.Inputs (ZMod p) :=
     DivRemChip.rTypeReaderInput input offset
-  refine .intro (offset + 217) readerInput ?_ ?_
+  refine .intro (offset + 210) readerInput ?_ ?_
   · simpa only [DivRemChip.circuit_main_eq] using
       DivRemChip.rTypeReader_mem input offset
   · intro env

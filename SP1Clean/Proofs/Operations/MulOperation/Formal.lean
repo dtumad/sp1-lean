@@ -26,13 +26,11 @@ def Assumptions (input : Inputs (ZMod p)) : Prop :=
   (input.is_mul + input.is_mulh + input.is_mulhu + input.is_mulhsu + input.is_mulw = 0 ∨
     input.is_mul + input.is_mulh + input.is_mulhu + input.is_mulhsu + input.is_mulw = 1)
 
-/-- The **structural** `FormalAssertion` contract (`is_real`-gated): on a real row the columns are exactly
-the schoolbook form — the raw carry-chain (`RawSpec`), the two operand `U16toU8` byte decompositions, and
-the three MSB facts (`b_msb`/`c_msb` unconditional, `product_msb` gated on `is_mulw`). This pins **every**
-column (so completeness `Assumptions ∧ Spec → constraints` holds — the semantic `resultWord = b·c` slice
-alone would *not* pin the high product bytes). The semantic readout is recovered by `result_semantic`,
-which consumers use. A padding row owes nothing. -/
-def Spec (input : Inputs (ZMod p)) : Prop :=
+/-- Arithmetic evidence for the bundled multiplication assertion. Sign-extension definitions
+and MSB booleanity hold on every row. Real rows additionally satisfy the schoolbook product,
+carry bounds, operand decompositions and selected MSB meaning. `result_semantic` recovers the
+RV64 product interpretation; `Spec` adds the caller's result placement. -/
+def ProductSpec (input : Inputs (ZMod p)) : Prop :=
   -- **Ungated** facts (SP1's `eval` asserts these regardless of `is_real`, so they must hold on padding
   -- too): the two sign-extend column definitions (`mul.rs:224-225`) and the three MSB booleanities (the
   -- `U16MSBOperation` sub-`Spec`s carry the bool unconditionally). Completeness needs them on `is_real = 0`.
@@ -53,11 +51,18 @@ def Spec (input : Inputs (ZMod p)) : Prop :=
     (input.is_mulw = 1 → input.cols.product_msb.msb =
       if (input.cols.product[2] + input.cols.product[3] * 256).val ≥ 32768 then 1 else 0))
 
+/-- The arithmetic evidence and the caller's selected result. A zero-selector row leaves the
+result free; any selected variant places its complete result, independently of row activity. -/
+def Spec (input : Inputs (ZMod p)) : Prop :=
+  ProductSpec input ∧
+  (input.is_mul + input.is_mulh + input.is_mulhu + input.is_mulhsu + input.is_mulw = 1 →
+    input.a = resultWord input input.cols)
+
 /-- **Semantic readout** (the consumer-facing lemma, mirroring `LtOperationUnsigned.result_semantic`): the
-structural `Spec` + `Assumptions` give the BitVec-product slice for the active variant on a real row. This
+arithmetic `ProductSpec` + `Assumptions` give the BitVec-product slice for the active variant on a real row. This
 is what `MulChip`/`DivRemChip` consume to reach the RV64 semantics. -/
 theorem result_semantic {input : Inputs (ZMod p)} (h_assum : Assumptions input)
-    (h_spec : Spec input) (hr : input.is_real = 1) : SemanticSpec input input.cols := by
+    (h_spec : ProductSpec input) (hr : input.is_real = 1) : SemanticSpec input input.cols := by
   obtain ⟨_, _, _, _, _, hgated⟩ := h_spec
   obtain ⟨h_raw, hb_low, hc_low, hb_msb, hc_msb, hmsb_bool, hmsb⟩ := hgated hr
   obtain ⟨_, _, hmul_b, hmh_b, hmhu_b, hmhsu_b, hmw_b, hsum⟩ := h_assum
@@ -95,201 +100,225 @@ private lemma op5_iff_of_msb_eq {x lo msb : ZMod p}
 -- soundness normalizes all 45 witnessed columns' constraints in one `circuit_proof_start` pass.
 set_option linter.unusedSimpArgs false in
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
-  circuit_proof_start
+  circuit_proof_start [ProductSpec]
   obtain ⟨hir_bin, hmw_real, hmul_b, hmh_b, hmhu_b, hmhsu_b, hmw_b, hsum⟩ := h_assumptions
-  obtain ⟨hib, hic, _hicols, hir, _him_mul, _him_mulh, _him_mulhu, _him_mulhsu, _him_mulw⟩ := h_input
+  obtain ⟨hib, hic, _hicols, hir, _him_mul, _him_mulh, _him_mulhu, _him_mulhsu, _him_mulw, hia⟩ := h_input
   obtain ⟨_gate, hA, hB, hpm, hb_bool, hc_bool, hb5, hc5, hcF0, hcF1, hcF2, hcF3, hcF4, hcF5, hcF6, hcF7, hcF8, hcF9, hcF10,
     hcF11, hcF12, hcF13, hcF14, hcF15, hpG0, hpG1, hpG2, hpG3, hpG4, hpG5, hpG6, hpG7,
     hsdb, hsdc, himpb, himpc, hch0, hch1, hch2, hch3, hch4, hch5, hch6, hch7, hch8, hch9, hch10,
-    hch11, hch12, hch13, hch14, hch15⟩ := h_holds
+    hch11, hch12, hch13, hch14, hch15,
+    haw0, hal0, hah0, haw1, hal1, hah1, haw2, hal2, hah2, haw3, hal3, hah3⟩ := h_holds
+  have ea : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_a[i] = input_a[i] := by
+    intro i hi; rw [← hia, Vector.getElem_map]
+  have eproduct : ∀ (i : ℕ) (hi : i < 16),
+      Expression.eval env input_var_cols_product[i] = input_cols_product[i] := by
+    intro i hi; rw [← _hicols.2.1, Vector.getElem_map]
+  simp only [ea, eproduct] at haw0 hal0 hah0 haw1 hal1 hah1 haw2 hal2 hah2 haw3 hal3 hah3
+  have ha1 (hmw : input_is_mulw = 1) :
+      input_a[1] = input_cols_product[2] + input_cols_product[3] * 256 := by
+    have h := haw1
+    rw [hmw, one_mul] at h
+    linear_combination -h
   refine ⟨?_spec, ?_tail⟩
-  · -- structural `Spec`: 5 ungated facts (sign-extend defs + 3 MSB booleans) then the gated body.
-    -- `b_msb`/`c_msb` booleanity from the ungated `b_msb*(b_msb-1)=0` asserts (SP1 `assert_bool`).
-    refine ⟨hsdb, hsdc,
-      bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hb_bool),
-      bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hc_bool),
-      (hpm ⟨fun hmw => by
-        obtain ⟨_, eprod_eq, _, _, _, _, _, _, _⟩ := _hicols
-        have hr1 : input_is_real = 1 := hmw_real hmw
-        have ep2 : Expression.eval env input_var_cols_product[2] = input_cols_product[2] := by
-          rw [← eprod_eq, Vector.getElem_map]
-        have ep3 : Expression.eval env input_var_cols_product[3] = input_cols_product[3] := by
-          rw [← eprod_eq, Vector.getElem_map]
-        have pb2 : input_cols_product[2].val < 2 ^ 8 := by
-          rw [← ep2]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 (by rw [hr1]))).1
-        have pb3 : input_cols_product[3].val < 2 ^ 8 := by
-          rw [← ep3]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 (by rw [hr1]))).2
-        rw [ep2, ep3, byte_compose_val pb2 pb3 rfl]; omega, hmw_b⟩).1,
-      ?_⟩
-    intro hr
-    have hb_low := (hA hir_bin) hr
-    have hc_low := (hB hir_bin) hr
-    have hbU := U16toU8OperationSafe.isU64_of_decomp hb_low
-    have hcU := U16toU8OperationSafe.isU64_of_decomp hc_low
-    obtain ⟨hbU0, hbU1, hbU2, hbU3⟩ := Word.lt_cases_of_isU64 hbU
-    obtain ⟨hcU0, hcU1, hcU2, hcU3⟩ := Word.lt_cases_of_isU64 hcU
-    have hneg : - input_is_real = -1 := by rw [hr]
-    obtain ⟨ecar_eq, eprod_eq, ebl_eq, ecl_eq, ebm_eq, ecm_eq, _, _, _⟩ := _hicols
-    have eb : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
-      intro i hi; rw [← hib, Vector.getElem_map]
-    have ec : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_c[i] = input_c[i] := by
-      intro i hi; rw [← hic, Vector.getElem_map]
-    have ep : ∀ (i : ℕ) (hi : i < 16),
-        Expression.eval env input_var_cols_product[i] = input_cols_product[i] := by
-      intro i hi; rw [← eprod_eq, Vector.getElem_map]
-    have ecar : ∀ (i : ℕ) (hi : i < 16),
-        Expression.eval env input_var_cols_carry[i] = input_cols_carry[i] := by
-      intro i hi; rw [← ecar_eq, Vector.getElem_map]
-    have ebl : ∀ (i : ℕ) (hi : i < 4),
-        Expression.eval env input_var_cols_b_lower_byte_low_bytes[i]
-          = input_cols_b_lower_byte_low_bytes[i] := by
-      intro i hi; rw [← ebl_eq, Vector.getElem_map]
-    have ecl : ∀ (i : ℕ) (hi : i < 4),
-        Expression.eval env input_var_cols_c_lower_byte_low_bytes[i]
-          = input_cols_c_lower_byte_low_bytes[i] := by
-      intro i hi; rw [← ecl_eq, Vector.getElem_map]
-    have cb0 : input_cols_carry[0].val < 2 ^ 16 := by rw [← ecar 0 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF0 hneg)
-    have cb1 : input_cols_carry[1].val < 2 ^ 16 := by rw [← ecar 1 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF1 hneg)
-    have cb2 : input_cols_carry[2].val < 2 ^ 16 := by rw [← ecar 2 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF2 hneg)
-    have cb3 : input_cols_carry[3].val < 2 ^ 16 := by rw [← ecar 3 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF3 hneg)
-    have cb4 : input_cols_carry[4].val < 2 ^ 16 := by rw [← ecar 4 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF4 hneg)
-    have cb5 : input_cols_carry[5].val < 2 ^ 16 := by rw [← ecar 5 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF5 hneg)
-    have cb6 : input_cols_carry[6].val < 2 ^ 16 := by rw [← ecar 6 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF6 hneg)
-    have cb7 : input_cols_carry[7].val < 2 ^ 16 := by rw [← ecar 7 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF7 hneg)
-    have cb8 : input_cols_carry[8].val < 2 ^ 16 := by rw [← ecar 8 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF8 hneg)
-    have cb9 : input_cols_carry[9].val < 2 ^ 16 := by rw [← ecar 9 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF9 hneg)
-    have cb10 : input_cols_carry[10].val < 2 ^ 16 := by rw [← ecar 10 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF10 hneg)
-    have cb11 : input_cols_carry[11].val < 2 ^ 16 := by rw [← ecar 11 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF11 hneg)
-    have cb12 : input_cols_carry[12].val < 2 ^ 16 := by rw [← ecar 12 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF12 hneg)
-    have cb13 : input_cols_carry[13].val < 2 ^ 16 := by rw [← ecar 13 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF13 hneg)
-    have cb14 : input_cols_carry[14].val < 2 ^ 16 := by rw [← ecar 14 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF14 hneg)
-    have cb15 : input_cols_carry[15].val < 2 ^ 16 := by rw [← ecar 15 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF15 hneg)
-    have pb0 : input_cols_product[0].val < 2 ^ 8 := by rw [← ep 0 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG0 hneg)).1
-    have pb1 : input_cols_product[1].val < 2 ^ 8 := by rw [← ep 1 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG0 hneg)).2
-    have pb2 : input_cols_product[2].val < 2 ^ 8 := by rw [← ep 2 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 hneg)).1
-    have pb3 : input_cols_product[3].val < 2 ^ 8 := by rw [← ep 3 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 hneg)).2
-    have pb4 : input_cols_product[4].val < 2 ^ 8 := by rw [← ep 4 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG2 hneg)).1
-    have pb5 : input_cols_product[5].val < 2 ^ 8 := by rw [← ep 5 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG2 hneg)).2
-    have pb6 : input_cols_product[6].val < 2 ^ 8 := by rw [← ep 6 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG3 hneg)).1
-    have pb7 : input_cols_product[7].val < 2 ^ 8 := by rw [← ep 7 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG3 hneg)).2
-    have pb8 : input_cols_product[8].val < 2 ^ 8 := by rw [← ep 8 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG4 hneg)).1
-    have pb9 : input_cols_product[9].val < 2 ^ 8 := by rw [← ep 9 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG4 hneg)).2
-    have pb10 : input_cols_product[10].val < 2 ^ 8 := by rw [← ep 10 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG5 hneg)).1
-    have pb11 : input_cols_product[11].val < 2 ^ 8 := by rw [← ep 11 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG5 hneg)).2
-    have pb12 : input_cols_product[12].val < 2 ^ 8 := by rw [← ep 12 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG6 hneg)).1
-    have pb13 : input_cols_product[13].val < 2 ^ 8 := by rw [← ep 13 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG6 hneg)).2
-    have pb14 : input_cols_product[14].val < 2 ^ 8 := by rw [← ep 14 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG7 hneg)).1
-    have pb15 : input_cols_product[15].val < 2 ^ 8 := by rw [← ep 15 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG7 hneg)).2
-    simp only [hr, one_mul, id_eq, ep, ecar, ebl, ecl, eb, ec] at hch0 hch1 hch2 hch3 hch4 hch5 hch6 hch7 hch8 hch9 hch10 hch11 hch12 hch13 hch14 hch15
-    have hpmspec := hpm ⟨fun _ => by rw [ep 2 (by omega), ep 3 (by omega), byte_compose_val pb2 pb3 rfl]; omega, hmw_b⟩
-    have hmsb_bool : input_cols_product_msb_msb = 0 ∨ input_cols_product_msb_msb = 1 := hpmspec.1
-    have hmsb : input_is_mulw = 1 → input_cols_product_msb_msb =
-        if (input_cols_product[2] + input_cols_product[3] * 256).val ≥ 32768 then 1 else 0 := by
-      intro h; have := hpmspec.2 h; rwa [ep 2 (by omega), ep 3 (by omega)] at this
-    have hb_msb : input_cols_b_msb = if input_b[3].val ≥ 32768 then 1 else 0 := by
-      obtain ⟨hlo3, hhi3, hreass3⟩ := hb_low 3
-      dsimp only at hlo3 hhi3 hreass3
-      have hg := (byteRowSpec_msb _ _).mp (hb5 hneg)
-      simp only [circuit_norm, eb, ebl, ebm_eq, ← sub_eq_add_neg] at hg
-      exact msb_eq_of_op5 hlo3 hhi3 hreass3 hg.2.1 hg.2.2
-    have hc_msb : input_cols_c_msb = if input_c[3].val ≥ 32768 then 1 else 0 := by
-      obtain ⟨hlo3, hhi3, hreass3⟩ := hc_low 3
-      dsimp only at hlo3 hhi3 hreass3
-      have hg := (byteRowSpec_msb _ _).mp (hc5 hneg)
-      simp only [circuit_norm, ec, ecl, ecm_eq, ← sub_eq_add_neg] at hg
-      exact msb_eq_of_op5 hlo3 hhi3 hreass3 hg.2.1 hg.2.2
-    refine ⟨?_, hb_low, hc_low, hb_msb, hc_msb, hmsb_bool, hmsb⟩
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · intro k hk
-      interval_cases k
-      · rw [colSum_0]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch0
-      · rw [colSum_1]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch1
-      · rw [colSum_2]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch2
-      · rw [colSum_3]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch3
-      · rw [colSum_4]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch4
-      · rw [colSum_5]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch5
-      · rw [colSum_6]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch6
-      · rw [colSum_7]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch7
-      · rw [colSum_8]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch8
-      · rw [colSum_9]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch9
-      · rw [colSum_10]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch10
-      · rw [colSum_11]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch11
-      · rw [colSum_12]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch12
-      · rw [colSum_13]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch13
-      · rw [colSum_14]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch14
-      · rw [colSum_15]
-        simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
-          Vector.getElem_mapRange]
-        linear_combination hch15
-    · intro k hk
-      interval_cases k <;> simp only [productVal, Nat.reduceLT, dif_pos] <;> assumption
-    · intro k hk
-      interval_cases k <;> simp only [carryVal, Nat.reduceLT, dif_pos] <;> assumption
-    · exact hsdb
-    · exact hsdc
-    · exact bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hb_bool)
-    · exact bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hc_bool)
-    · show input_cols_b_sign_extend = 0 ∨ input_cols_b_sign_extend = 1
-      have hims : input_is_mulh + input_is_mulhsu = 0 ∨ input_is_mulh + input_is_mulhsu = 1 := by
-        rcases hmh_b with h | h
-        · rcases hmhsu_b with h2 | h2 <;> rw [h, h2] <;> simp
-        · have hs1 := sum_eq_one hmul_b (Or.inr h) hmhu_b hmhsu_b hmw_b hsum (Or.inr (Or.inl h))
-          have hs' : input_is_mulh + input_is_mul + input_is_mulhu + input_is_mulhsu + input_is_mulw = 1 := by
-            linear_combination hs1
-          obtain ⟨_, _, h2, _⟩ := rest_zero hmul_b hmhu_b hmhsu_b hmw_b h hs'
-          rw [h, h2]; simp
-      rw [hsdb]; rcases hims with h | h <;> rw [h]
-      · left; ring
-      · rw [one_mul, hb_msb]; split <;> simp
-    · show input_cols_c_sign_extend = 0 ∨ input_cols_c_sign_extend = 1
-      rw [hsdc]; rcases hmh_b with h | h <;> rw [h]
-      · left; ring
-      · rw [one_mul, hc_msb]; split <;> simp
+  · constructor
+    · -- structural `Spec`: 5 ungated facts (sign-extend defs + 3 MSB booleans) then the gated body.
+      -- `b_msb`/`c_msb` booleanity from the ungated `b_msb*(b_msb-1)=0` asserts (SP1 `assert_bool`).
+      refine ⟨hsdb, hsdc,
+        bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hb_bool),
+        bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hc_bool),
+        (hpm ⟨fun hmw => by
+          obtain ⟨_, eprod_eq, _, _, _, _, _, _, _⟩ := _hicols
+          have hr1 : input_is_real = 1 := hmw_real hmw
+          have ep2 : Expression.eval env input_var_cols_product[2] = input_cols_product[2] := by
+            rw [← eprod_eq, Vector.getElem_map]
+          have ep3 : Expression.eval env input_var_cols_product[3] = input_cols_product[3] := by
+            rw [← eprod_eq, Vector.getElem_map]
+          have pb2 : input_cols_product[2].val < 2 ^ 8 := by
+            rw [← ep2]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 (by rw [hr1]))).1
+          have pb3 : input_cols_product[3].val < 2 ^ 8 := by
+            rw [← ep3]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 (by rw [hr1]))).2
+          rw [ea 1 (by omega), ha1 hmw, byte_compose_val pb2 pb3 rfl]; omega, hmw_b⟩).1,
+        ?_⟩
+      intro hr
+      have hb_low := (hA hir_bin) hr
+      have hc_low := (hB hir_bin) hr
+      have hbU := U16toU8OperationSafe.isU64_of_decomp hb_low
+      have hcU := U16toU8OperationSafe.isU64_of_decomp hc_low
+      obtain ⟨hbU0, hbU1, hbU2, hbU3⟩ := Word.lt_cases_of_isU64 hbU
+      obtain ⟨hcU0, hcU1, hcU2, hcU3⟩ := Word.lt_cases_of_isU64 hcU
+      have hneg : - input_is_real = -1 := by rw [hr]
+      obtain ⟨ecar_eq, eprod_eq, ebl_eq, ecl_eq, ebm_eq, ecm_eq, _, _, _⟩ := _hicols
+      have eb : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
+        intro i hi; rw [← hib, Vector.getElem_map]
+      have ec : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_c[i] = input_c[i] := by
+        intro i hi; rw [← hic, Vector.getElem_map]
+      have ep : ∀ (i : ℕ) (hi : i < 16),
+          Expression.eval env input_var_cols_product[i] = input_cols_product[i] := by
+        intro i hi; rw [← eprod_eq, Vector.getElem_map]
+      have ecar : ∀ (i : ℕ) (hi : i < 16),
+          Expression.eval env input_var_cols_carry[i] = input_cols_carry[i] := by
+        intro i hi; rw [← ecar_eq, Vector.getElem_map]
+      have ebl : ∀ (i : ℕ) (hi : i < 4),
+          Expression.eval env input_var_cols_b_lower_byte_low_bytes[i]
+            = input_cols_b_lower_byte_low_bytes[i] := by
+        intro i hi; rw [← ebl_eq, Vector.getElem_map]
+      have ecl : ∀ (i : ℕ) (hi : i < 4),
+          Expression.eval env input_var_cols_c_lower_byte_low_bytes[i]
+            = input_cols_c_lower_byte_low_bytes[i] := by
+        intro i hi; rw [← ecl_eq, Vector.getElem_map]
+      have cb0 : input_cols_carry[0].val < 2 ^ 16 := by rw [← ecar 0 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF0 hneg)
+      have cb1 : input_cols_carry[1].val < 2 ^ 16 := by rw [← ecar 1 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF1 hneg)
+      have cb2 : input_cols_carry[2].val < 2 ^ 16 := by rw [← ecar 2 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF2 hneg)
+      have cb3 : input_cols_carry[3].val < 2 ^ 16 := by rw [← ecar 3 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF3 hneg)
+      have cb4 : input_cols_carry[4].val < 2 ^ 16 := by rw [← ecar 4 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF4 hneg)
+      have cb5 : input_cols_carry[5].val < 2 ^ 16 := by rw [← ecar 5 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF5 hneg)
+      have cb6 : input_cols_carry[6].val < 2 ^ 16 := by rw [← ecar 6 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF6 hneg)
+      have cb7 : input_cols_carry[7].val < 2 ^ 16 := by rw [← ecar 7 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF7 hneg)
+      have cb8 : input_cols_carry[8].val < 2 ^ 16 := by rw [← ecar 8 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF8 hneg)
+      have cb9 : input_cols_carry[9].val < 2 ^ 16 := by rw [← ecar 9 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF9 hneg)
+      have cb10 : input_cols_carry[10].val < 2 ^ 16 := by rw [← ecar 10 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF10 hneg)
+      have cb11 : input_cols_carry[11].val < 2 ^ 16 := by rw [← ecar 11 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF11 hneg)
+      have cb12 : input_cols_carry[12].val < 2 ^ 16 := by rw [← ecar 12 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF12 hneg)
+      have cb13 : input_cols_carry[13].val < 2 ^ 16 := by rw [← ecar 13 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF13 hneg)
+      have cb14 : input_cols_carry[14].val < 2 ^ 16 := by rw [← ecar 14 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF14 hneg)
+      have cb15 : input_cols_carry[15].val < 2 ^ 16 := by rw [← ecar 15 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF15 hneg)
+      have pb0 : input_cols_product[0].val < 2 ^ 8 := by rw [← ep 0 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG0 hneg)).1
+      have pb1 : input_cols_product[1].val < 2 ^ 8 := by rw [← ep 1 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG0 hneg)).2
+      have pb2 : input_cols_product[2].val < 2 ^ 8 := by rw [← ep 2 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 hneg)).1
+      have pb3 : input_cols_product[3].val < 2 ^ 8 := by rw [← ep 3 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 hneg)).2
+      have pb4 : input_cols_product[4].val < 2 ^ 8 := by rw [← ep 4 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG2 hneg)).1
+      have pb5 : input_cols_product[5].val < 2 ^ 8 := by rw [← ep 5 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG2 hneg)).2
+      have pb6 : input_cols_product[6].val < 2 ^ 8 := by rw [← ep 6 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG3 hneg)).1
+      have pb7 : input_cols_product[7].val < 2 ^ 8 := by rw [← ep 7 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG3 hneg)).2
+      have pb8 : input_cols_product[8].val < 2 ^ 8 := by rw [← ep 8 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG4 hneg)).1
+      have pb9 : input_cols_product[9].val < 2 ^ 8 := by rw [← ep 9 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG4 hneg)).2
+      have pb10 : input_cols_product[10].val < 2 ^ 8 := by rw [← ep 10 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG5 hneg)).1
+      have pb11 : input_cols_product[11].val < 2 ^ 8 := by rw [← ep 11 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG5 hneg)).2
+      have pb12 : input_cols_product[12].val < 2 ^ 8 := by rw [← ep 12 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG6 hneg)).1
+      have pb13 : input_cols_product[13].val < 2 ^ 8 := by rw [← ep 13 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG6 hneg)).2
+      have pb14 : input_cols_product[14].val < 2 ^ 8 := by rw [← ep 14 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG7 hneg)).1
+      have pb15 : input_cols_product[15].val < 2 ^ 8 := by rw [← ep 15 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG7 hneg)).2
+      simp only [hr, one_mul, id_eq, ep, ecar, ebl, ecl, eb, ec] at hch0 hch1 hch2 hch3 hch4 hch5 hch6 hch7 hch8 hch9 hch10 hch11 hch12 hch13 hch14 hch15
+      have hpmspec := hpm ⟨fun hmw => by rw [ea 1 (by omega), ha1 hmw, byte_compose_val pb2 pb3 rfl]; omega, hmw_b⟩
+      have hmsb_bool : input_cols_product_msb_msb = 0 ∨ input_cols_product_msb_msb = 1 := hpmspec.1
+      have hmsb : input_is_mulw = 1 → input_cols_product_msb_msb =
+          if (input_cols_product[2] + input_cols_product[3] * 256).val ≥ 32768 then 1 else 0 := by
+        intro h; have := hpmspec.2 h; rwa [ea 1 (by omega), ha1 h] at this
+      have hb_msb : input_cols_b_msb = if input_b[3].val ≥ 32768 then 1 else 0 := by
+        obtain ⟨hlo3, hhi3, hreass3⟩ := hb_low 3
+        dsimp only at hlo3 hhi3 hreass3
+        have hg := (byteRowSpec_msb _ _).mp (hb5 hneg)
+        simp only [circuit_norm, eb, ebl, ebm_eq, ← sub_eq_add_neg] at hg
+        exact msb_eq_of_op5 hlo3 hhi3 hreass3 hg.2.1 hg.2.2
+      have hc_msb : input_cols_c_msb = if input_c[3].val ≥ 32768 then 1 else 0 := by
+        obtain ⟨hlo3, hhi3, hreass3⟩ := hc_low 3
+        dsimp only at hlo3 hhi3 hreass3
+        have hg := (byteRowSpec_msb _ _).mp (hc5 hneg)
+        simp only [circuit_norm, ec, ecl, ecm_eq, ← sub_eq_add_neg] at hg
+        exact msb_eq_of_op5 hlo3 hhi3 hreass3 hg.2.1 hg.2.2
+      refine ⟨?_, hb_low, hc_low, hb_msb, hc_msb, hmsb_bool, hmsb⟩
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · intro k hk
+        interval_cases k
+        · rw [colSum_0]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch0
+        · rw [colSum_1]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch1
+        · rw [colSum_2]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch2
+        · rw [colSum_3]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch3
+        · rw [colSum_4]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch4
+        · rw [colSum_5]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch5
+        · rw [colSum_6]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch6
+        · rw [colSum_7]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch7
+        · rw [colSum_8]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch8
+        · rw [colSum_9]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch9
+        · rw [colSum_10]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch10
+        · rw [colSum_11]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch11
+        · rw [colSum_12]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch12
+        · rw [colSum_13]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch13
+        · rw [colSum_14]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch14
+        · rw [colSum_15]
+          simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map,
+            Vector.getElem_mapRange]
+          linear_combination hch15
+      · intro k hk
+        interval_cases k <;> simp only [productVal, Nat.reduceLT, dif_pos] <;> assumption
+      · intro k hk
+        interval_cases k <;> simp only [carryVal, Nat.reduceLT, dif_pos] <;> assumption
+      · exact hsdb
+      · exact hsdc
+      · exact bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hb_bool)
+      · exact bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hc_bool)
+      · show input_cols_b_sign_extend = 0 ∨ input_cols_b_sign_extend = 1
+        have hims : input_is_mulh + input_is_mulhsu = 0 ∨ input_is_mulh + input_is_mulhsu = 1 := by
+          rcases hmh_b with h | h
+          · rcases hmhsu_b with h2 | h2 <;> rw [h, h2] <;> simp
+          · have hs1 := sum_eq_one hmul_b (Or.inr h) hmhu_b hmhsu_b hmw_b hsum (Or.inr (Or.inl h))
+            have hs' : input_is_mulh + input_is_mul + input_is_mulhu + input_is_mulhsu + input_is_mulw = 1 := by
+              linear_combination hs1
+            obtain ⟨_, _, h2, _⟩ := rest_zero hmul_b hmhu_b hmhsu_b hmw_b h hs'
+            rw [h, h2]; simp
+        rw [hsdb]; rcases hims with h | h <;> rw [h]
+        · left; ring
+        · rw [one_mul, hb_msb]; split <;> simp
+      · show input_cols_c_sign_extend = 0 ∨ input_cols_c_sign_extend = 1
+        rw [hsdc]; rcases hmh_b with h | h <;> rw [h]
+        · left; ring
+        · rw [one_mul, hc_msb]; split <;> simp
+    · intro hs
+      rw [← aSelector_eq_resultWord _ _ hmul_b hmh_b hmhu_b hmhsu_b hmw_b hs]
+      apply Vector.ext
+      intro i hi
+      interval_cases i <;>
+        simp only [aSelector, productVal, Nat.reduceLT, dif_pos, Vector.getElem_mk,
+          List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ]
+      · linear_combination -haw0 - hal0 - hah0 - input_a[0] * hs
+      · linear_combination -haw1 - hal1 - hah1 - input_a[1] * hs
+      · linear_combination -haw2 - hal2 - hah2 - input_a[2] * hs
+      · linear_combination -haw3 - hal3 - hah3 - input_a[3] * hs
   · -- The 26 direct byte pulls' off-gate requirements (2 op5 MSB + 16 carry + 8 product range)
     -- are all vacuous under the binary `is_real` gate.  The three composed gadgets now expose their
     -- byte channel through canonical Clean metadata, so their interactions do not reappear here.
@@ -396,18 +425,18 @@ lemma extStream_eq_zero (l0 l1 l2 l3 sgn i : ℕ) (h : 16 ≤ i) :
     extStream l0 l1 l2 l3 sgn i = 0 := by
   unfold extStream; rw [List.getD_eq_default _ _ (by simp; omega)]
 
-/-- `populate b c is_mulh is_mulhsu is_mulw` satisfies the structural `Spec` for any `is_real` and any
+/-- `populate b c is_mulh is_mulhsu is_mulw` satisfies the structural `ProductSpec` for any `is_real` and any
 boolean variant flags with a `{0,1}`-bounded sum (mirroring `Assumptions`). The composing chip uses
-this to discharge its `MulOperation` assertion obligation in completeness. -/
-theorem spec_populate {b c : Word (ZMod p)} (hb : b.isU64) (hc : c.isU64)
+this arithmetic evidence together with its generated result in completeness. -/
+theorem productSpec_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU64)
     (is_mul is_mulh is_mulhu is_mulhsu is_mulw is_real : ZMod p)
     (hmul : is_mul = 0 ∨ is_mul = 1) (hmh : is_mulh = 0 ∨ is_mulh = 1)
     (hmhu : is_mulhu = 0 ∨ is_mulhu = 1) (hmhsu : is_mulhsu = 0 ∨ is_mulhsu = 1)
     (hmw : is_mulw = 0 ∨ is_mulw = 1)
     (hsum : is_mul + is_mulh + is_mulhu + is_mulhsu + is_mulw = 0 ∨
             is_mul + is_mulh + is_mulhu + is_mulhsu + is_mulw = 1) :
-    Spec (⟨b, c, populate b c is_mulh is_mulhsu is_mulw,
-      is_real, is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw⟩ : Inputs (ZMod p)) := by
+    ProductSpec (⟨b, c, populate b c is_mulh is_mulhsu is_mulw,
+      is_real, is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw, a⟩ : Inputs (ZMod p)) := by
   have hp : 2 ^ 24 < p := Fact.out
   have hp_lit : 16777216 < p := by
     have e : (2 : ℕ) ^ 24 = 16777216 := by norm_num
@@ -597,10 +626,10 @@ theorem spec_populate {b c : Word (ZMod p)} (hb : b.isU64) (hc : c.isU64)
 -- `populate` witness closure substituted cell-by-cell.
 set_option linter.unusedSimpArgs false in
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
-  circuit_proof_start
+  circuit_proof_start [ProductSpec]
   obtain ⟨hir_bin, hmw_real, hmul_b, hmh_b, hmhu_b, hmhsu_b, hmw_b, hsum⟩ := h_assumptions
-  obtain ⟨hib, hic, hicols, _hir, _him_mul, _him_mulh, _him_mulhu, _him_mulhsu, _him_mulw⟩ := h_input
-  obtain ⟨h_bsd, h_csd, h_bmb, h_cmb, h_pmb, h_gated⟩ := h_spec
+  obtain ⟨hib, hic, hicols, _hir, _him_mul, _him_mulh, _him_mulhu, _him_mulhsu, _him_mulw, hia⟩ := h_input
+  obtain ⟨⟨h_bsd, h_csd, h_bmb, h_cmb, h_pmb, h_gated⟩, h_output⟩ := h_spec
   obtain ⟨ecar_eq, eprod_eq, ebl_eq, ecl_eq, _ebm, _ecm, _epm, _ebse, _ecse⟩ := hicols
   have eb : ∀ (i : ℕ) (hi : i < 4),
       Expression.eval env.toEnvironment input_var_b[i] = input_b[i] := by
@@ -622,20 +651,60 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       Expression.eval env.toEnvironment input_var_cols_c_lower_byte_low_bytes[i]
         = input_cols_c_lower_byte_low_bytes[i] := by
     intro i hi; rw [← ecl_eq, Vector.getElem_map]
-  simp only [eb, ec, ep, ecar, ebl, ecl] at *
+  have ea : ∀ (i : ℕ) (hi : i < 4),
+      Expression.eval env.toEnvironment input_var_a[i] = input_a[i] := by
+    intro i hi; rw [← hia, Vector.getElem_map]
+  have h_word (hmw : input_is_mulw = 1) : input_a =
+      #v[input_cols_product[0] + input_cols_product[1] * 256,
+        input_cols_product[2] + input_cols_product[3] * 256,
+        input_cols_product_msb_msb * 65535, input_cols_product_msb_msb * 65535] := by
+    have hs := sum_eq_one hmul_b hmh_b hmhu_b hmhsu_b hmw_b hsum
+      (Or.inr (Or.inr (Or.inr (Or.inr hmw))))
+    simpa only [resultWord, hmw, if_pos, productVal, Nat.reduceLT, dif_pos] using h_output hs
+  have h_low (hmul : input_is_mul = 1) : input_a =
+      #v[input_cols_product[0] + input_cols_product[1] * 256,
+        input_cols_product[2] + input_cols_product[3] * 256,
+        input_cols_product[4] + input_cols_product[5] * 256,
+        input_cols_product[6] + input_cols_product[7] * 256] := by
+    have hs := sum_eq_one hmul_b hmh_b hmhu_b hmhsu_b hmw_b hsum (Or.inl hmul)
+    obtain ⟨hmh, hmhu, hmhsu, hmw⟩ := rest_zero hmh_b hmhu_b hmhsu_b hmw_b hmul hs
+    simpa only [resultWord, hmh, hmhu, hmhsu, hmw, zero_ne_one, or_self, if_false,
+      productVal, Nat.reduceLT, dif_pos] using h_output hs
+  have h_high (hh : input_is_mulh = 1 ∨ input_is_mulhu = 1 ∨ input_is_mulhsu = 1) : input_a =
+      #v[input_cols_product[8] + input_cols_product[9] * 256,
+        input_cols_product[10] + input_cols_product[11] * 256,
+        input_cols_product[12] + input_cols_product[13] * 256,
+        input_cols_product[14] + input_cols_product[15] * 256] := by
+    have hs := sum_eq_one hmul_b hmh_b hmhu_b hmhsu_b hmw_b hsum (Or.inr (by
+      rcases hh with h | h | h
+      · exact Or.inl h
+      · exact Or.inr (Or.inl h)
+      · exact Or.inr (Or.inr (Or.inl h))))
+    have hmw : input_is_mulw = 0 := by
+      rcases hh with h | h | h
+      · exact (rest_zero hmul_b hmhu_b hmhsu_b hmw_b h (by linear_combination hs)).2.2.2
+      · exact (rest_zero hmul_b hmh_b hmhsu_b hmw_b h (by linear_combination hs)).2.2.2
+      · exact (rest_zero hmul_b hmh_b hmhu_b hmw_b h (by linear_combination hs)).2.2.2
+    simpa only [resultWord, hmw, zero_ne_one, if_false, if_pos hh, productVal,
+      Nat.reduceLT, dif_pos] using h_output hs
+  simp only [eb, ec, ep, ecar, ebl, ecl, ea] at *
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   -- leading `is_real` binary gate (W11 cwr: byte sends are locally `is_real`-gated, shallow `assertZero`)
   · rcases hir_bin with h | h <;> simp [h]
   -- 3 subcircuit `⟨Assumptions, Spec⟩`: U16toU8(b), U16toU8(c), U16MSB(product)
   · exact ⟨hir_bin, fun h => (h_gated h).2.1⟩
   · exact ⟨hir_bin, fun h => (h_gated h).2.2.1⟩
-  · refine ⟨⟨fun hmw => ?_, hmw_b⟩, ⟨h_pmb, fun hmw => (h_gated (hmw_real hmw)).2.2.2.2.2.2 hmw⟩⟩
-    have hr1 : input_is_real = 1 := hmw_real hmw
-    have pb2 : input_cols_product[2].val < 2 ^ 8 := (h_gated hr1).1.2.1 2 (by norm_num)
-    have pb3 : input_cols_product[3].val < 2 ^ 8 := (h_gated hr1).1.2.1 3 (by norm_num)
-    rw [byte_compose_val pb2 pb3 rfl]; omega
+  · refine ⟨⟨fun hmw => ?_, hmw_b⟩, ⟨h_pmb, fun hmw => ?_⟩⟩
+    · have hr1 : input_is_real = 1 := hmw_real hmw
+      have pb2 : input_cols_product[2].val < 2 ^ 8 := (h_gated hr1).1.2.1 2 (by norm_num)
+      have pb3 : input_cols_product[3].val < 2 ^ 8 := (h_gated hr1).1.2.1 3 (by norm_num)
+      rw [h_word hmw]
+      change (input_cols_product[2] + input_cols_product[3] * 256).val < 2 ^ 16
+      rw [byte_compose_val pb2 pb3 rfl]; omega
+    · rw [h_word hmw]
+      exact (h_gated (hmw_real hmw)).2.2.2.2.2.2 hmw
   -- 2 ungated `b_msb`/`c_msb` booleanity asserts (from the Spec's ungated bool)
   · rcases h_bmb with h | h <;> rw [h] <;> ring
   · rcases h_cmb with h | h <;> rw [h] <;> ring
@@ -792,22 +861,70 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       rw [colSum_15] at hchain
       simp [productVal, carryVal, byteAt, extendedBytes, Vector.getElem_map, Vector.getElem_mapRange] at hchain
       rw [h, one_mul]; linear_combination hchain
+  · rcases hmw_b with h | h
+    · simp [h]
+    · simp [h, h_word h]
+  · rcases hmul_b with h | h
+    · simp [h]
+    · simp [h, h_low h]
+  · by_cases hh : input_is_mulh = 1 ∨ input_is_mulhu = 1 ∨ input_is_mulhsu = 1
+    · simp [h_high hh]
+    · have hm : input_is_mulh = 0 := hmh_b.resolve_right (fun h => hh (Or.inl h))
+      have hu : input_is_mulhu = 0 := hmhu_b.resolve_right (fun h => hh (Or.inr (Or.inl h)))
+      have hs : input_is_mulhsu = 0 := hmhsu_b.resolve_right (fun h => hh (Or.inr (Or.inr h)))
+      simp [hm, hu, hs]
+  · rcases hmw_b with h | h
+    · simp [h]
+    · simp [h, h_word h]
+  · rcases hmul_b with h | h
+    · simp [h]
+    · simp [h, h_low h]
+  · by_cases hh : input_is_mulh = 1 ∨ input_is_mulhu = 1 ∨ input_is_mulhsu = 1
+    · simp [h_high hh]
+    · have hm : input_is_mulh = 0 := hmh_b.resolve_right (fun h => hh (Or.inl h))
+      have hu : input_is_mulhu = 0 := hmhu_b.resolve_right (fun h => hh (Or.inr (Or.inl h)))
+      have hs : input_is_mulhsu = 0 := hmhsu_b.resolve_right (fun h => hh (Or.inr (Or.inr h)))
+      simp [hm, hu, hs]
+  · rcases hmw_b with h | h
+    · simp [h]
+    · simp [h, h_word h]
+  · rcases hmul_b with h | h
+    · simp [h]
+    · simp [h, h_low h]
+  · by_cases hh : input_is_mulh = 1 ∨ input_is_mulhu = 1 ∨ input_is_mulhsu = 1
+    · simp [h_high hh]
+    · have hm : input_is_mulh = 0 := hmh_b.resolve_right (fun h => hh (Or.inl h))
+      have hu : input_is_mulhu = 0 := hmhu_b.resolve_right (fun h => hh (Or.inr (Or.inl h)))
+      have hs : input_is_mulhsu = 0 := hmhsu_b.resolve_right (fun h => hh (Or.inr (Or.inr h)))
+      simp [hm, hu, hs]
+  · rcases hmw_b with h | h
+    · simp [h]
+    · simp [h, h_word h]
+  · rcases hmul_b with h | h
+    · simp [h]
+    · simp [h, h_low h]
+  · by_cases hh : input_is_mulh = 1 ∨ input_is_mulhu = 1 ∨ input_is_mulhsu = 1
+    · simp [h_high hh]
+    · have hm : input_is_mulh = 0 := hmh_b.resolve_right (fun h => hh (Or.inl h))
+      have hu : input_is_mulhu = 0 := hmhu_b.resolve_right (fun h => hh (Or.inr (Or.inl h)))
+      have hs : input_is_mulhsu = 0 := hmhsu_b.resolve_right (fun h => hh (Or.inr (Or.inr h)))
+      simp [hm, hu, hs]
 
 set_option linter.unusedSectionVars false in
-/-- `Spec` holds at the all-zero column struct whenever the gate is off (`is_real = 0`) — the
+/-- `ProductSpec` holds at the all-zero column struct whenever the gate is off (`is_real = 0`) — the
 inactive-row discharge for composing chips whose populate leaves the struct zero (`DivRemChip`'s
 `c_times_quotient_upper` on word rows and padding rows). The variant flags are arbitrary. -/
-theorem spec_zero (b c : Word (ZMod p)) (is_mul is_mulh is_mulhu is_mulhsu is_mulw : ZMod p)
+theorem productSpec_zero (b c a : Word (ZMod p)) (is_mul is_mulh is_mulhu is_mulhsu is_mulw : ZMod p)
     {is_real : ZMod p} (hr : is_real = 0) :
-    Spec (⟨b, c, zeroCols, is_real, is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw⟩
+    ProductSpec (⟨b, c, zeroCols, is_real, is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw, a⟩
       : Inputs (ZMod p)) :=
   ⟨(mul_zero _).symm, (mul_zero _).symm, Or.inl rfl, Or.inl rfl, Or.inl rfl,
     fun h1 => absurd (hr.symm.trans h1) zero_ne_one⟩
 
-/-- Semantic readout at the `populate`d columns on an active row: `spec_populate` +
+/-- Semantic readout at the `populate`d columns on an active row: `productSpec_populate` +
 `result_semantic` packaged for composing chips — the value-level bridge from the witnessed product
 struct to the `BitVec` product slices (`DivRemChip`'s `c_times_quotient` glue). -/
-theorem semantic_populate {b c : Word (ZMod p)} (hb : b.isU64) (hc : c.isU64)
+theorem semantic_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU64)
     (is_mul is_mulh is_mulhu is_mulhsu is_mulw : ZMod p)
     (hmul : is_mul = 0 ∨ is_mul = 1) (hmh : is_mulh = 0 ∨ is_mulh = 1)
     (hmhu : is_mulhu = 0 ∨ is_mulhu = 1) (hmhsu : is_mulhsu = 0 ∨ is_mulhsu = 1)
@@ -816,11 +933,11 @@ theorem semantic_populate {b c : Word (ZMod p)} (hb : b.isU64) (hc : c.isU64)
             is_mul + is_mulh + is_mulhu + is_mulhsu + is_mulw = 1) :
     SemanticSpec
       (⟨b, c, populate b c is_mulh is_mulhsu is_mulw, 1,
-        is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw⟩ : Inputs (ZMod p))
+        is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw, a⟩ : Inputs (ZMod p))
       (populate b c is_mulh is_mulhsu is_mulw) :=
   result_semantic
     ⟨Or.inr rfl, fun _ => rfl, hmul, hmh, hmhu, hmhsu, hmw, hsum⟩
-    (spec_populate hb hc is_mul is_mulh is_mulhu is_mulhsu is_mulw 1
+    (productSpec_populate hb hc is_mul is_mulh is_mulhu is_mulhsu is_mulw 1
       hmul hmh hmhu hmhsu hmw hsum) rfl
 
 private theorem main_requirementsChannelsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ) :
@@ -861,7 +978,7 @@ private theorem main_requirementsChannelsLawful (input_var : Var Inputs (ZMod p)
       Expression.eval] at h_constraints
     have h_bool : Expression.eval env input_var.is_real = 0 ∨
         Expression.eval env input_var.is_real = 1 :=
-      bool_of_mul_pred (by simpa only [sub_eq_add_neg] using h_constraints)
+      bool_of_mul_pred (by simpa only [sub_eq_add_neg] using h_constraints.1)
     have h_pull (msg : ByteRow (Expression (ZMod p))) :
         (byteChannel.pulledIf input_var.is_real msg).toRaw.Requirements env := by
       rw [ChannelInteraction.toRaw_requirements]

@@ -14,6 +14,7 @@ namespace SP1Clean.DivRemChip
 open Circuit
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
+variable (selectors : Vector (Expression (ZMod p)) 7)
 
 section IRCalculus
 
@@ -265,22 +266,22 @@ def wordU (b : Word (Expression (ZMod p))) : Witgen.U64Expr (ZMod p) :=
     + Witgen.U64Expr.val (.expr b[2]) * 4294967296
     + Witgen.U64Expr.val (.expr b[3]) * 281474976710656
 
-/-- The seven hinted flag leaves (`[div, rem, remu, divw, remw, divuw, remuw]`). -/
-def hintF (k : Fin 7) : Witgen.FExpr (ZMod p) := .hintGet "div_rem_flags" 7 0 k
+/-- The seven supplied selector leaves (`[div, rem, remu, divw, remw, divuw, remuw]`). -/
+def selectorF (k : Fin 7) : Witgen.FExpr (ZMod p) := .expr selectors[k]
 
-/-- The eight derived variant flags, mirroring `hintFlags`' encoding (`is_divu` is
+/-- The eight derived variant flags, mirroring `selectorFlags`' encoding (`is_divu` is
 `1 − Σ(the seven)`; the IR has no subtraction, so the complement is `1 + (−1)·Σ`). -/
 def flagF : ℕ → Witgen.FExpr (ZMod p)
-  | 0 => hintF 0
+  | 0 => selectorF selectors 0
   | 1 => .const (1 : ZMod p) + .const (-1 : ZMod p)
-      * ((hintF 0 : Witgen.FExpr (ZMod p)) + hintF 1 + hintF 2 + hintF 3 + hintF 4
-        + hintF 5 + hintF 6)
-  | 2 => hintF 1
-  | 3 => hintF 2
-  | 4 => hintF 3
-  | 5 => hintF 4
-  | 6 => hintF 5
-  | 7 => hintF 6
+      * ((selectorF selectors 0 : Witgen.FExpr (ZMod p)) + selectorF selectors 1 + selectorF selectors 2 + selectorF selectors 3 + selectorF selectors 4
+        + selectorF selectors 5 + selectorF selectors 6)
+  | 2 => selectorF selectors 1
+  | 3 => selectorF selectors 2
+  | 4 => selectorF selectors 3
+  | 5 => selectorF selectors 4
+  | 6 => selectorF selectors 5
+  | 7 => selectorF selectors 6
   | _ => 0
 
 end WordAndFlags
@@ -291,12 +292,11 @@ omit [Fact (2 ^ 24 < p)]
 
 variable (env : ProverEnvironment (ZMod p))
 
-/-- Evaluating a derived flag is the `hintFlags` accessor cell. -/
+/-- Evaluating a derived flag is the corresponding `selectorFlags` cell. -/
 theorem flagF_eval (k : ℕ) (hk : k < 8) :
-    Witgen.FExpr.eval { env := env } (flagF k) = (hintFlags env.hint)[k]'hk := by
-  have hdefault : (default : Vector (ZMod p) 7) = #v[0, 0, 0, 0, 0, 0, 0] := rfl
+    Witgen.FExpr.eval { env := env } (flagF selectors k) = (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k]'hk := by
   interval_cases k <;>
-    (simp only [flagF, hintF, hintFlags, circuit_norm, ← hdefault, Vector.getElem_mk,
+    (simp only [flagF, selectorF, selectorFlags, circuit_norm, Vector.getElem_map, Vector.getElem_mk,
       List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ]
      try ring)
 
@@ -331,24 +331,24 @@ def allOnesU : Witgen.U64Expr (ZMod p) := (18446744073709551615 : Witgen.U64Expr
 /-- The quotient bit pattern as IR (`quotBits`' dispatch verbatim: the W-classes divide the
 embedded low 32 bits and sign-extend, divisor-zero gives `allOnes`). -/
 def quotBitsU (b c : Witgen.U64Expr (ZMod p)) : Witgen.U64Expr (ZMod p) :=
-  .ite (((flagF 4 : Witgen.FExpr (ZMod p)) + flagF 5) =? (1 : ZMod p))
+  .ite (((flagF selectors 4 : Witgen.FExpr (ZMod p)) + flagF selectors 5) =? (1 : ZMod p))
     (.ite (low32U c =? (0 : ℕ)) allOnesU (sext32U (sdiv32U (low32U b) (low32U c))))
-    (.ite (((flagF 6 : Witgen.FExpr (ZMod p)) + flagF 7) =? (1 : ZMod p))
+    (.ite (((flagF selectors 6 : Witgen.FExpr (ZMod p)) + flagF selectors 7) =? (1 : ZMod p))
       (.ite (low32U c =? (0 : ℕ)) allOnesU (sext32U (low32U b / low32U c)))
-      (.ite (((flagF 0 : Witgen.FExpr (ZMod p)) + flagF 2) =? (1 : ZMod p))
+      (.ite (((flagF selectors 0 : Witgen.FExpr (ZMod p)) + flagF selectors 2) =? (1 : ZMod p))
         (.ite (c =? (0 : ℕ)) allOnesU (sdivU b c))
         (.ite (c =? (0 : ℕ)) allOnesU (b / c))))
 
 /-- The remainder bit pattern as IR (`remBits`' dispatch: divisor-zero gives the sign-extended
 low-32 dividend on the W-classes, the dividend itself on the 64-bit ones). -/
 def remBitsU (b c : Witgen.U64Expr (ZMod p)) : Witgen.U64Expr (ZMod p) :=
-  .ite (((flagF 4 : Witgen.FExpr (ZMod p)) + flagF 5) =? (1 : ZMod p))
+  .ite (((flagF selectors 4 : Witgen.FExpr (ZMod p)) + flagF selectors 5) =? (1 : ZMod p))
     (.ite (low32U c =? (0 : ℕ)) (sext32U (low32U b))
       (sext32U (srem32U (low32U b) (low32U c))))
-    (.ite (((flagF 6 : Witgen.FExpr (ZMod p)) + flagF 7) =? (1 : ZMod p))
+    (.ite (((flagF selectors 6 : Witgen.FExpr (ZMod p)) + flagF selectors 7) =? (1 : ZMod p))
       (.ite (low32U c =? (0 : ℕ)) (sext32U (low32U b))
         (sext32U (low32U b % low32U c)))
-      (.ite (((flagF 0 : Witgen.FExpr (ZMod p)) + flagF 2) =? (1 : ZMod p))
+      (.ite (((flagF selectors 0 : Witgen.FExpr (ZMod p)) + flagF selectors 2) =? (1 : ZMod p))
         (.ite (c =? (0 : ℕ)) b (sremU b c))
         (.ite (c =? (0 : ℕ)) b (b % c))))
 
@@ -358,23 +358,23 @@ section DispatchEval
 
 variable (env : ProverEnvironment (ZMod p))
 
-/-- Evaluating the quotient dispatch is `quotBits` (of the evaluated words and the hint flags). -/
+/-- Evaluating the quotient dispatch is `quotBits` (of the evaluated words and the selectors). -/
 theorem quotBitsU_toNat (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p))
     (hWB : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment B[i] = vB[i])
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUB : vB.isU64) (hUC : vC.isU64) :
-    ((quotBitsU (wordU B) (wordU C)).eval { env := env }).toNat
-      = (quotBits vB vC (hintFlags env.hint)).toNat := by
+    ((quotBitsU selectors (wordU B) (wordU C)).eval { env := env }).toNat
+      = (quotBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat := by
   have hb := wordU_toNat env B vB hWB hUB
   have hc := wordU_toNat env C vC hWC hUC
   have hlo32b := low32U_toNat env (wordU B) hb
   have hlo32c := low32U_toNat env (wordU C) hc
-  have hf4 := flagF_eval env 4 (by omega)
-  have hf5 := flagF_eval env 5 (by omega)
-  have hf6 := flagF_eval env 6 (by omega)
-  have hf7 := flagF_eval env 7 (by omega)
-  have hf0 := flagF_eval env 0 (by omega)
-  have hf2 := flagF_eval env 2 (by omega)
+  have hf4 := flagF_eval selectors env 4 (by omega)
+  have hf5 := flagF_eval selectors env 5 (by omega)
+  have hf6 := flagF_eval selectors env 6 (by omega)
+  have hf7 := flagF_eval selectors env 7 (by omega)
+  have hf0 := flagF_eval selectors env 0 (by omega)
+  have hf2 := flagF_eval selectors env 2 (by omega)
   have hzc32 : (BitVec.setWidth 32 vC.toBitVec64 = 0)
       ↔ ((BitVec.setWidth 32 vC.toBitVec64).toNat = 0) := by
     rw [← BitVec.toNat_inj]
@@ -400,18 +400,18 @@ theorem remBitsU_toNat (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p)
     (hWB : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment B[i] = vB[i])
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUB : vB.isU64) (hUC : vC.isU64) :
-    ((remBitsU (wordU B) (wordU C)).eval { env := env }).toNat
-      = (remBits vB vC (hintFlags env.hint)).toNat := by
+    ((remBitsU selectors (wordU B) (wordU C)).eval { env := env }).toNat
+      = (remBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat := by
   have hb := wordU_toNat env B vB hWB hUB
   have hc := wordU_toNat env C vC hWC hUC
   have hlo32b := low32U_toNat env (wordU B) hb
   have hlo32c := low32U_toNat env (wordU C) hc
-  have hf4 := flagF_eval env 4 (by omega)
-  have hf5 := flagF_eval env 5 (by omega)
-  have hf6 := flagF_eval env 6 (by omega)
-  have hf7 := flagF_eval env 7 (by omega)
-  have hf0 := flagF_eval env 0 (by omega)
-  have hf2 := flagF_eval env 2 (by omega)
+  have hf4 := flagF_eval selectors env 4 (by omega)
+  have hf5 := flagF_eval selectors env 5 (by omega)
+  have hf6 := flagF_eval selectors env 6 (by omega)
+  have hf7 := flagF_eval selectors env 7 (by omega)
+  have hf0 := flagF_eval selectors env 0 (by omega)
+  have hf2 := flagF_eval selectors env 2 (by omega)
   have hzc32 : (BitVec.setWidth 32 vC.toBitVec64 = 0)
       ↔ ((BitVec.setWidth 32 vC.toBitVec64).toNat = 0) := by
     rw [← BitVec.toNat_inj]

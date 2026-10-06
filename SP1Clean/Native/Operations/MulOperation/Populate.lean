@@ -1162,7 +1162,7 @@ end CongrLemmas
 
 /-- The all-zero column struct — the witness on rows where the gadget is inactive and SP1 leaves
 the struct unpopulated (`DivRemChip`'s `c_times_quotient_upper` on word rows; padding rows).
-`spec_zero` (in `Formal`) discharges the composed assertion's obligation at this value. -/
+`productSpec_zero` (in `Formal`) proves the arithmetic facts; callers establish result placement. -/
 def zeroCols : Circuits.Types.MulOperation (ZMod p) :=
   { carry := .replicate 16 0, product := .replicate 16 0,
     b_lower_byte := ⟨.replicate 4 0⟩, c_lower_byte := ⟨.replicate 4 0⟩,

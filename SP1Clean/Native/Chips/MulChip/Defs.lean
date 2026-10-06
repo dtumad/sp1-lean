@@ -82,10 +82,6 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   -- `assertion`. `populate` takes `(b, c, is_mulh, is_mulhsu, is_mulw)`.
   let cols ← witness (var := Var Circuits.Types.MulOperation)
     (MulOperation.populateFE input.op_b_val input.op_c_val is_mulh is_mulhsu is_mulw)
-  -- Gate `MulOperation` by the flag-sum (`alu/mul/mod.rs:234`): `is_mulw = 1 → sum = 1`.
-  assertion MulOperation.circuit
-    ⟨input.op_b_val, input.op_c_val, cols, is_mul + is_mulh + is_mulhu + is_mulhsu + is_mulw,
-      is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw⟩
   -- `a`↔`resultWord` linkage (`MulOperation.aSelector`): the register-write word is the flag-weighted
   -- product slice — `MUL`/`MULW` low bytes, `MULH*` bytes 8..15, `MULW` upper limbs sign-filled `* 65535`.
   -- Soundness uses `aSelector_eq_resultWord`; matches SP1's `MulOperation.asserts` product→`a` tie.
@@ -104,14 +100,10 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
     + (is_mulh + is_mulhu + is_mulhsu) * (cols.product[14] + cols.product[15] * c256)
     + is_mulw * (cols.product_msb.msb * c65535)
   let a ← witnessVectorIR 4 (.ofExprs #v[s0, s1, s2, s3])
-  -- Rust gates each result-placement equation by an opcode selector.  Since `is_real` is the
-  -- one-hot selector sum, gating the four combined equations by `is_real` is extensionally
-  -- equivalent on active rows and, critically, leaves `a` unconstrained on padding rows just as
-  -- the pinned AIR does.
-  assertZero (input.is_real * (a[0] - s0))
-  assertZero (input.is_real * (a[1] - s1))
-  assertZero (input.is_real * (a[2] - s2))
-  assertZero (input.is_real * (a[3] - s3))
+  -- Gate `MulOperation` by the flag-sum (`alu/mul/mod.rs:234`): `is_mulw = 1 → sum = 1`.
+  assertion MulOperation.circuit
+    ⟨input.op_b_val, input.op_c_val, cols, is_mul + is_mulh + is_mulhu + is_mulhsu + is_mulw,
+      is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw, a⟩
   assertZero (is_mul * (is_mul - 1))
   assertZero (is_mulh * (is_mulh - 1))
   assertZero (is_mulhu * (is_mulhu - 1))

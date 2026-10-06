@@ -54,37 +54,14 @@ def main (cols : Var DivRemChip.Columns (ZMod p)) : Circuit (ZMod p) Unit := do
   -- `is_mulh = is_div + is_rem`, `is_mulhu = is_divu + is_remu`. Both have `is_mulw = 0`.
   assertion MulOperation.circuit
     ⟨cols.quotient_comp, cols.c, cols.c_times_quotient_lower,
-     cols.is_real, cols.is_real, 0, 0, 0, 0⟩
+     cols.is_real, cols.is_real, 0, 0, 0, 0,
+     #v[cols.c_times_quotient[0], cols.c_times_quotient[1],
+        cols.c_times_quotient[2], cols.c_times_quotient[3]]⟩
   assertion MulOperation.circuit
     ⟨cols.quotient_comp, cols.c, cols.c_times_quotient_upper,
-     cols.is_real_not_word, 0, cols.is_div + cols.is_rem, cols.is_divu + cols.is_remu, 0, 0⟩
-  -- Link `c_times_quotient` to the two Mul gadgets' product bytes. SP1 gates the low result
-  -- placement by `is_mul = is_real`; retaining that gate is essential on adversarial padding
-  -- rows. The high 64 (limbs 4..7) is gated by the 64-bit flag sum (on word rows `upper` is
-  -- all-zero while `c_times_quotient[4..7]` carries the 128-bit product's sign-extension limbs,
-  -- so an unconditional tie would be unsatisfiable by the honest witness).
-  let c256 : Expression (ZMod p) := 256
-  let g64 := cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu
-  cols.is_real * (cols.c_times_quotient[0] -
-    (cols.c_times_quotient_lower.product[0] +
-      cols.c_times_quotient_lower.product[1] * c256)) === 0
-  cols.is_real * (cols.c_times_quotient[1] -
-    (cols.c_times_quotient_lower.product[2] +
-      cols.c_times_quotient_lower.product[3] * c256)) === 0
-  cols.is_real * (cols.c_times_quotient[2] -
-    (cols.c_times_quotient_lower.product[4] +
-      cols.c_times_quotient_lower.product[5] * c256)) === 0
-  cols.is_real * (cols.c_times_quotient[3] -
-    (cols.c_times_quotient_lower.product[6] +
-      cols.c_times_quotient_lower.product[7] * c256)) === 0
-  g64 * (cols.c_times_quotient[4] -
-    (cols.c_times_quotient_upper.product[8] + cols.c_times_quotient_upper.product[9] * c256)) === 0
-  g64 * (cols.c_times_quotient[5] -
-    (cols.c_times_quotient_upper.product[10] + cols.c_times_quotient_upper.product[11] * c256)) === 0
-  g64 * (cols.c_times_quotient[6] -
-    (cols.c_times_quotient_upper.product[12] + cols.c_times_quotient_upper.product[13] * c256)) === 0
-  g64 * (cols.c_times_quotient[7] -
-    (cols.c_times_quotient_upper.product[14] + cols.c_times_quotient_upper.product[15] * c256)) === 0
+     cols.is_real_not_word, 0, cols.is_div + cols.is_rem, cols.is_divu + cols.is_remu, 0, 0,
+     #v[cols.c_times_quotient[4], cols.c_times_quotient[5],
+        cols.c_times_quotient[6], cols.c_times_quotient[7]]⟩
   -- The chip's own assertZero constraints (`E13…E367`, `op_a_0`, incl. the binary gates like
   -- `is_real·(is_real-1)` = E355) via `ownAsserts`.
   assertZeros (ownAsserts cols)

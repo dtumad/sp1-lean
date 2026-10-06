@@ -309,19 +309,11 @@ theorem unsigned64Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {
     (hctqRange 4 (by norm_num)) (hctqRange 5 (by norm_num))
     (hctqRange 6 (by norm_num)) (hctqRange 7 (by norm_num))
   unfold DivRemCore.ProductSpec at hproduct
-  obtain ⟨hmulLo, hproduct⟩ := hproduct
-  obtain ⟨hmulHi, hproduct⟩ := hproduct
-  obtain ⟨hglueLo, hglueHi⟩ := hproduct
-  rw [DivRemCore.LowerProductPlacement] at hglueLo
-  rw [DivRemCore.UpperProductPlacement] at hglueHi
-  obtain ⟨hglue0, hglue1, hglue2, hglue3⟩ := hglueLo hir
-  have hg64 : cols.is_div + cols.is_divu + cols.is_rem + cols.is_remu = 1 := by
-    linear_combination h64
-  obtain ⟨hglue4, hglue5, hglue6, hglue7⟩ := hglueHi hg64
-  have hlo := rwlo_product (fun _ => hmulLo) hir hglue0 hglue1 hglue2 hglue3
+  obtain ⟨hmulLo, hmulHi⟩ := hproduct
+  have hlo := mul_lo_spec hmulLo hir
   have hsigned64 : cols.is_div + cols.is_rem = 0 := by linear_combination hfdiv + hfrem
-  have hhi := rwhi_product_unsigned (fun _ => hmulHi) hirnw hsigned64 hunsigned
-    hglue4 hglue5 hglue6 hglue7
+  have hhi := mul_hi_spec_unsigned hmulHi hirnw hsigned64 hunsigned
+
   have hcarry0 := bool_of_mul_pred e309
   have hcarry1 := bool_of_mul_pred e311
   have hcarry2 := bool_of_mul_pred e313

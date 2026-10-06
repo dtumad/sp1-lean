@@ -64,7 +64,7 @@ greps for the tokens; this evaluates the circuits.
 
 **Coverage is the converted set.** A chip is listed here exactly when its `main` is
 closure-free, so adding a line is the last step of converting a chip and the line fails
-loudly if a conversion regresses. With the DivRem port (the terminal wave: 30 sites, 217
+loudly if a conversion regresses. With the DivRem port (the terminal wave: 30 sites, 210
 cells) every registered chip is listed.
 
 The nine memory chips appear here without ever having been converted individually: their only
@@ -158,7 +158,7 @@ not own a second spelling of the production characteristic. -/
 /-- info: exportable ✓ (37 witness cells) -/
 #guard_msgs in
 #assert_exportable (ShiftRightChip.circuit (p := SP1Prime))
-/-- info: exportable ✓ (217 witness cells) -/
+/-- info: exportable ✓ (210 witness cells) -/
 #guard_msgs in
 #assert_exportable (DivRemChip.circuit (p := SP1Prime))
 

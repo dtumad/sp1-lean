@@ -60,10 +60,8 @@ def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
     input.adapter.op_c_memory.access_timestamp.prev_low.val < 2 ^ 24)
 
 omit [Fact (2 ^ 24 < p)] in
-/-- Four consecutive evaluated witness cells assemble the 4-limb word `#v[v0, v1, v2, v3]`. Applied
-symbolically at the six sites in `soundness` that must identify the witnessed register-write word `a`
-with `MulOperation.aSelector` — the flag-weighted product slice — one per RV64 variant plus the
-`RegisterWrite` `isU64` obligation. -/
+/-- Four consecutive evaluated witness cells assemble the word `#v[v0, v1, v2, v3]`.
+Used in completeness to identify the generated register-write word with its selected product slice. -/
 private lemma evalWord4_of_cells {env : Environment (ZMod p)} {o : ℕ} {v0 v1 v2 v3 : ZMod p}
     (h0 : env.get o = v0) (h1 : env.get (o + 1) = v1)
     (h2 : env.get (o + 2) = v2) (h3 : env.get (o + 3) = v3) :
@@ -77,16 +75,8 @@ private lemma evalWord4_of_cells {env : Environment (ZMod p)} {o : ℕ} {v0 v1 v
 
 theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
-  obtain ⟨h_cpu, h_mulop, ha0, ha1, ha2, ha3, gb_mul, gb_mulh, gb_mulhu, gb_mulhsu, gb_mulw,
+  obtain ⟨h_cpu, h_mulop, gb_mul, gb_mulh, gb_mulhu, gb_mulhsu, gb_mulw,
     gb_sum, hopa0, hadapter, h_eq_rs, _h_regwrite, h_gate⟩ := h_holds
-  have ha0_real (hr : input_is_real = 1) := sub_eq_zero.mp (by simpa only [hr, one_mul] using ha0)
-  have ha1_real (hr : input_is_real = 1) := sub_eq_zero.mp (by simpa only [hr, one_mul] using ha1)
-  have ha2_real (hr : input_is_real = 1) := sub_eq_zero.mp (by simpa only [hr, one_mul] using ha2)
-  have ha3_real (hr : input_is_real = 1) := sub_eq_zero.mp (by simpa only [hr, one_mul] using ha3)
-  -- On a real row the witnessed word `a` (cells `i₀+50..53`) *is* `MulOperation.aSelector` — the
-  -- flag-weighted product slice — spelled as the 4-limb literal. Shared by all six `resultWord` sites.
-  have hA (hr : input_is_real = 1) :=
-    evalWord4_of_cells (ha0_real hr) (ha1_real hr) (ha2_real hr) (ha3_real hr)
   have bmul := bool_of_mul_pred gb_mul
   have bmulh := bool_of_mul_pred gb_mulh
   have bmulhu := bool_of_mul_pred gb_mulhu
@@ -115,7 +105,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- The operation's semantic readout, awaiting only `sum = 1`. Its conjuncts, in order:
   -- `isU64 resultWord`, then the `MUL`, `MULHU`, `MULH`, `MULHSU`, `MULW` BitVec identities.
   have hsem := MulOperation.result_semantic
-    ⟨bsum, h_mw, bmul, bmulh, bmulhu, bmulhsu, bmulw, bsum⟩ h_spec
+    ⟨bsum, h_mw, bmul, bmulh, bmulhu, bmulhsu, bmulw, bsum⟩ h_spec.1
   -- RegisterWrite owes `is_real = 1 → isU64 a`; on a real row `sum = 1` (via `h_rs`), so `a = resultWord`
   -- (`aSelector` linkage) is `isU64` from `result_semantic`.
   have h_a_isU64 : input_is_real = 1 →
@@ -123,13 +113,9 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     intro hr
     have hsum1 : env.get i₀ + env.get (i₀ + 1) + env.get (i₀ + 2) + env.get (i₀ + 3) + env.get (i₀ + 4) = 1 :=
       h_rs ▸ hr
-    rw [show (Vector.map (Expression.eval env) (Vector.mapRange 4 fun i => var { index := i₀ + 50 + i }))
-        = MulOperation.resultWord _ _ from ?_]
-    · exact (hsem hsum1).1
-    · rw [← MulOperation.aSelector_eq_resultWord _ _ bmul bmulh bmulhu bmulhsu bmulw hsum1]
-      simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
-        Vector.getElem_mapRange, Nat.reduceLT, dif_pos]
-      exact hA hr
+    have h_bound := (hsem hsum1).1
+    rw [← h_spec.2 hsum1] at h_bound
+    simpa only [Nat.add_assoc, Nat.reduceAdd] using h_bound
   refine ⟨⟨h_rspec, h_bin, fun hr => ⟨?_, ?_, ?_, ?_, ?_⟩,
       -- F-A4-01: the exported selector one-hot — the five boolean gates + `is_real = Σ flags`.
       fun hr => by simpa only [SelectorOneHot, selectors] using
@@ -140,40 +126,25 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   · intro h1
     have hsum1 := MulOperation.sum_eq_one bmul bmulh bmulhu bmulhsu bmulw bsum (Or.inl h1)
     rw [rv64_mul_eq, ← (hsem hsum1).2.1 h1]; congr 1
-    rw [← MulOperation.aSelector_eq_resultWord _ _ bmul bmulh bmulhu bmulhsu bmulw hsum1]
-    simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
-      Vector.getElem_mapRange, Nat.reduceLT, dif_pos]
-    exact hA (h_rs.trans hsum1)
+    exact h_spec.2 hsum1
   · intro h1
     have hsum1 := MulOperation.sum_eq_one bmul bmulh bmulhu bmulhsu bmulw bsum (Or.inr (Or.inl h1))
     rw [rv64_mulh_eq, ← (hsem hsum1).2.2.2.1 h1]; congr 1
-    rw [← MulOperation.aSelector_eq_resultWord _ _ bmul bmulh bmulhu bmulhsu bmulw hsum1]
-    simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
-      Vector.getElem_mapRange, Nat.reduceLT, dif_pos]
-    exact hA (h_rs.trans hsum1)
+    exact h_spec.2 hsum1
   · intro h1
     have hsum1 := MulOperation.sum_eq_one bmul bmulh bmulhu bmulhsu bmulw bsum (Or.inr (Or.inr (Or.inl h1)))
     rw [rv64_mulhu_eq, ← (hsem hsum1).2.2.1 h1]; congr 1
-    rw [← MulOperation.aSelector_eq_resultWord _ _ bmul bmulh bmulhu bmulhsu bmulw hsum1]
-    simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
-      Vector.getElem_mapRange, Nat.reduceLT, dif_pos]
-    exact hA (h_rs.trans hsum1)
+    exact h_spec.2 hsum1
   · intro h1
     have hsum1 :=
       MulOperation.sum_eq_one bmul bmulh bmulhu bmulhsu bmulw bsum (Or.inr (Or.inr (Or.inr (Or.inl h1))))
     rw [rv64_mulhsu_eq, ← (hsem hsum1).2.2.2.2.1 h1]; congr 1
-    rw [← MulOperation.aSelector_eq_resultWord _ _ bmul bmulh bmulhu bmulhsu bmulw hsum1]
-    simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
-      Vector.getElem_mapRange, Nat.reduceLT, dif_pos]
-    exact hA (h_rs.trans hsum1)
+    exact h_spec.2 hsum1
   · intro h1
     have hsum1 :=
       MulOperation.sum_eq_one bmul bmulh bmulhu bmulhsu bmulw bsum (Or.inr (Or.inr (Or.inr (Or.inr h1))))
     rw [rv64_mulw_eq, ← (hsem hsum1).2.2.2.2.2 h1]; congr 1
-    rw [← MulOperation.aSelector_eq_resultWord _ _ bmul bmulh bmulhu bmulhsu bmulw hsum1]
-    simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
-      Vector.getElem_mapRange, Nat.reduceLT, dif_pos]
-    exact hA (h_rs.trans hsum1)
+    exact h_spec.2 hsum1
 
 -- Whole-chip completeness must normalize the 54-cell witness stream (5 flags + the 45-cell
 -- `MulOperation` populate + the 4-cell result) against every composed reader/operation obligation
@@ -284,10 +255,6 @@ theorem completeness :
       (getElem_toElements_eval_varFromOffset env.toEnvironment (i₀ + 5) i hi).trans (h_env_cols' i hi))
   refine ⟨⟨hbin, h_cpu⟩,
     ⟨⟨hsum01', hmw', hf0', hf1', hf2', hf3', hf4', hsum01'⟩, ?_⟩,
-    by rw [sub_eq_zero.mpr (by simpa [circuit_norm] using h_env_a 0), mul_zero],
-    by rw [sub_eq_zero.mpr (by simpa [circuit_norm] using h_env_a 1), mul_zero],
-    by rw [sub_eq_zero.mpr (by simpa [circuit_norm] using h_env_a 2), mul_zero],
-    by rw [sub_eq_zero.mpr (by simpa [circuit_norm] using h_env_a 3), mul_zero],
     hbool _ hf0', hbool _ hf1', hbool _ hf2', hbool _ hf3', hbool _ hf4', hbool _ hsum01',
     hop_a_0,
     ⟨⟨hbin, hbin, h_clk⟩,
@@ -296,23 +263,31 @@ theorem completeness :
     by linear_combination -hsumc,
     ⟨⟨hbin, ?_, h_clk.at_four⟩, trivial⟩,
     by rcases hbin with h | h <;> rw [h] <;> simp⟩
-  · -- `MulOperation.circuit.Spec` at the witnessed columns: the structural `spec_populate` once the
-    -- witnessed struct equals `populate …` (each cell is `env.get (i₀+5+k)`, pinned by `h_env_cols'`).
-    convert MulOperation.spec_populate (b := input_adapter_op_b_memory_prev_value)
-      (c := input_adapter_op_c_memory_prev_value) hbU hcU
-      (env.get i₀) (env.get (i₀ + 1)) (env.get (i₀ + 2)) (env.get (i₀ + 3)) (env.get (i₀ + 4))
-      (env.get i₀ + env.get (i₀ + 1) + env.get (i₀ + 2) + env.get (i₀ + 3) + env.get (i₀ + 4))
-      hf0' hf1' hf2' hf3' hf4' hsum01' using 2
-    -- 4.32: `convert … using 2` now leaves only the `cols` equality. The former `rfl` step closed a
-    -- separate `circuit.Spec = Spec` goal that the congruence no longer emits (Clean `088a9287`).
-    simpa only [circuit_norm] using hcols_eq
+  · -- The operation owns both the populated arithmetic evidence and the generated result.
+    constructor
+    · convert MulOperation.productSpec_populate (b := input_adapter_op_b_memory_prev_value)
+        (c := input_adapter_op_c_memory_prev_value) hbU hcU
+        (env.get i₀) (env.get (i₀ + 1)) (env.get (i₀ + 2)) (env.get (i₀ + 3)) (env.get (i₀ + 4))
+        (env.get i₀ + env.get (i₀ + 1) + env.get (i₀ + 2) + env.get (i₀ + 3) + env.get (i₀ + 4))
+        hf0' hf1' hf2' hf3' hf4' hsum01' using 2
+      -- 4.32: `convert … using 2` now leaves only the `cols` equality. The former `rfl` step closed a
+      -- separate `circuit.Spec = Spec` goal that the congruence no longer emits (Clean `088a9287`).
+      simpa only [circuit_norm] using hcols_eq
+    · intro hsum1
+      rw [← MulOperation.aSelector_eq_resultWord _ _ hf0' hf1' hf2' hf3' hf4' hsum1]
+      simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
+        Vector.getElem_mapRange, Nat.reduceLT, dif_pos]
+      exact evalWord4_of_cells (h_env_a 0) (h_env_a 1) (h_env_a 2) (h_env_a 3)
   · -- RegisterWrite's `isU64 value` (the op_a write push): on a real row the witnessed `a` equals the
-    -- selected product slice `resultWord (populate …)`, whose `isU64` is `spec_populate`'s
+    -- selected product slice `resultWord (populate …)`, whose `isU64` is `productSpec_populate`'s
     -- `result_semantic`.
     intro hr
     have hsum1 : env.get i₀ + env.get (i₀ + 1) + env.get (i₀ + 2) + env.get (i₀ + 3) + env.get (i₀ + 4) = 1 :=
       hsumc.trans hr
-    have h_mulspec := MulOperation.spec_populate (b := input_adapter_op_b_memory_prev_value)
+    have h_mulspec := MulOperation.productSpec_populate
+      (a := Vector.map (Expression.eval env.toEnvironment)
+        (Vector.mapRange 4 fun i => var { index := i₀ + 50 + i }))
+      (b := input_adapter_op_b_memory_prev_value)
       (c := input_adapter_op_c_memory_prev_value) hbU hcU
       (env.get i₀) (env.get (i₀ + 1)) (env.get (i₀ + 2)) (env.get (i₀ + 3)) (env.get (i₀ + 4))
       (env.get i₀ + env.get (i₀ + 1) + env.get (i₀ + 2) + env.get (i₀ + 3) + env.get (i₀ + 4))

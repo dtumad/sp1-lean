@@ -24,8 +24,8 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
     fun h_agree _ => ?_,
     fun h_agree h_input => ?_,
-    FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
     fun h_agree _ => ?_,
+    FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_⟩
   · simp [circuit_norm]
@@ -45,7 +45,6 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
       exact h_agree.get_eq (by omega)
     · simp only [circuit_norm]
       exact h_agree.get_eq (by omega)
-  · simp [circuit_norm]
   · -- The four result cells: flag selectors, product bytes, and the product MSB — all earlier
     -- cells of the same row.
     apply Vector.ext
@@ -70,6 +69,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
         h_agree.get_eq (by omega), h_agree.get_eq (by omega), h_agree.get_eq (by omega),
         h_agree.get_eq (by omega), h_agree.get_eq (by omega), h_agree.get_eq (by omega),
         h_agree.get_eq (by omega)]
+  · simp [circuit_norm]
   · simp [circuit_norm]
   · simp [circuit_norm]
 
