@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.Chips
+import SP1Clean.Semantics.Specs.Chips.Mul
 import SP1Clean.Native.Operations.MulOperation
 import ToClean.Circuit.WitnessCombinator
 import SP1Clean.Native.Readers.CPUState
@@ -8,7 +8,6 @@ import SP1Clean.Model.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `Mul` chip row as a `GeneralFormalCircuit`
 
@@ -170,40 +169,6 @@ def rTypeReaderInput (input : Var Inputs (ZMod p)) (offset : ℕ) :
   ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
     input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
     opcode, value[0], value[1], value[2], value[3]⟩
-
-/-- Component-wise evaluation of MUL's independent input row. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    Eval.eval env input =
-      ({ state := Eval.eval env input.state, adapter := Eval.eval env input.adapter,
-         isMul := Eval.eval env input.isMul, isMulh := Eval.eval env input.isMulh,
-         isMulhu := Eval.eval env input.isMulhu, isMulhsu := Eval.eval env input.isMulhsu,
-         isMulw := Eval.eval env input.isMulw } : Inputs F) := by
-  rw [ProvableStruct.eval_eq_eval]; rfl
-
-/-- Evaluation commutes with activity derived from the five input selectors. -/
-@[circuit_norm] theorem eval_isReal {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    (ProvableStruct.eval env input).is_real = Expression.eval env input.is_real := by
-  rw [← ProvableStruct.eval_eq_eval]
-  simpa only [Inputs.is_real, CircuitType.eval_expr, Expression.eval] using
-    congrArg (fun value : Inputs F => value.is_real) (eval_inputs env input)
-
-/-- Component-wise evaluation of a completed Mul row. -/
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Columns (Expression F)) :
-    Eval.eval env cols =
-      ({ state := Eval.eval env cols.state
-         adapter := Eval.eval env cols.adapter
-         a := Eval.eval env cols.a
-         mul_operation := Eval.eval env cols.mul_operation
-         is_mul := Eval.eval env cols.is_mul
-         is_mulh := Eval.eval env cols.is_mulh
-         is_mulhu := Eval.eval env cols.is_mulhu
-         is_mulhsu := Eval.eval env cols.is_mulhsu
-         is_mulw := Eval.eval env cols.is_mulw } :
-        Columns F) := by
-  rw [ProvableStruct.eval_eq_eval]; rfl
 
 /-! ### Operand words, in `circuit_norm`'s own orientation (the `AddChip/Defs.lean` pattern) —
 the `ComputableWitnesses` proof projects the struct-level input agreement onto these. -/

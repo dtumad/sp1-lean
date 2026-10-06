@@ -10,23 +10,16 @@ public import SP1Clean.Semantics.ISA.RV64
 public import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
 
-/-! # Consolidated specs — chip rows, stated against the RV64 ISA functions
+/-! # Shared chip contracts
 
-The `Inputs` structs and semantic `Spec`s for the chip rows (`GeneralFormalCircuit`s), composed
-from independent reader and operation contracts and the native column types.
+Row types and semantic specifications awaiting separation into feature modules. Each contract
+composes reader obligations with RV64 instruction semantics; multi-opcode chips select their
+meaning through row flags. Operand order follows `f rs2_val rs1_val`, with `rs1` supplied by
+`op_b_val` and `rs2` by `op_c_val`.
 
-Unlike the operation gadgets — whose `Spec`s are spelled out as `BitVec` equations — each **chip**
-states its headline meaning in terms of the corresponding **RV64 ISA functions** from
-`Semantics/ISA/RV64.lean` (`RV64.add`/`RV64.sub`/`RV64.addw`/`RV64.subw`, the `RV64.mul*` family,
-the shift family `RV64.sll*`/`RV64.srl*`/`RV64.sra*`, `RV64.and`/`RV64.or`/`RV64.xor`,
-`RV64.lui`/`RV64.auipc`, …). Where a chip serves several opcodes (Bitwise, Mul, DivRem, the
-shifts), its `Spec` selects the ISA function by the row's flag columns. The operand order matches
-the RV64 signature `f rs2_val rs1_val` with `rs1 ↦ op_b_val`, `rs2 ↦ op_c_val`.
-
-For ADD/SUB/AND/OR/XOR the RV64 function is *definitionally* the `BitVec` op (`add rs2 rs1 := rs1 +
-rs2`), so the chip soundness proofs carry over unchanged. For the W-instructions ADDW/SUBW the RV64
-function truncates-then-sign-extends, related to the gadget's `setWidth 32`/`signExtend` form by the
-`rv64_addw_eq` / `rv64_subw_eq` lemmas below. -/
+Multiplication has its own row types in `Circuits/Types/Mul` and contract in
+`Semantics/Specs/Chips/Mul`; consumers import those modules directly.
+-/
 
 
 @[expose] public section
@@ -590,185 +583,6 @@ def Spec (input : Inputs (ZMod p)) (cols : Columns (ZMod p)) (_ : ProverData (ZM
       Word.toBitVec64 cols.a = RV64.sraw (Word.toBitVec64 rs2) (Word.toBitVec64 rs1))
 
 end SP1Clean.ShiftRightChip
-
-namespace SP1Clean.MulChip
-
--- `Mul`'s column sums reach `~2^20`, so the `MulOperation` gadget it composes is gated on `2^24 < p`;
--- the whole `Mul` chain (this `Spec` included) carries the same bound (unlike the `2^17` of other chips).
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
-
-/-- Native MUL-chip row. The reader blocks reuse the project substrate and the arithmetic block is the
-shared `Circuits.Types.MulOperation` column type (also used by the `DivRem` gadget). The five variant selectors are committed columns. `Faithful.mulChipReconfigure` is
-the sole bridge to Rust's separately generated whole-chip row. -/
-structure Columns (F : Type) where
-  state : Circuits.Types.CPUState F
-  adapter : Circuits.Types.RTypeReader F
-  a : Word F
-  mul_operation : Circuits.Types.MulOperation F
-  is_mul : F
-  is_mulh : F
-  is_mulhu : F
-  is_mulhsu : F
-  is_mulw : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Columns
-
-/-- Register-reader inputs and the five committed multiplication selectors. Activity is their
-sum, so the physical row needs no separate activity cell or external selector hint. -/
-structure Inputs (F : Type) where
-  /-- Current execution clock and program counter. -/
-  state : Circuits.Types.CPUState F
-  /-- Register indices, prior values and access timestamps. -/
-  adapter : Circuits.Types.RTypeReader F
-  /-- Selects the low 64-bit product. -/
-  isMul : F
-  /-- Selects the high signed product. -/
-  isMulh : F
-  /-- Selects the high unsigned product. -/
-  isMulhu : F
-  /-- Selects the high product with a signed first operand. -/
-  isMulhsu : F
-  /-- Selects the sign-extended low 32-bit product. -/
-  isMulw : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-/-- Row activity is the sum of the committed opcode selectors, as in SP1's AIR. -/
-@[reducible] def Inputs.is_real {F : Type} [Add F] (input : Inputs F) : F :=
-  input.isMul + input.isMulh + input.isMulhu + input.isMulhsu + input.isMulw
-
-/-- The `rs1`/`rs2` source operands = the register reads on the adapter's `op_b`/`op_c` memory slots. -/
-@[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
-@[reducible] def Inputs.op_c_val {F} (i : Inputs F) : Word F := i.adapter.op_c_memory.prev_value
-
-/-- The five committed dispatch cells, projected away from MUL's large arithmetic witness.  Control
-proofs use this small view so neither Lean nor an auditor must normalize the 45-cell multiplication
-block merely to determine the selected instruction. -/
-structure SelectorValues (F : Type) where
-  is_mul : F
-  is_mulh : F
-  is_mulhu : F
-  is_mulhsu : F
-  is_mulw : F
-deriving ProvableStruct
-provable_struct_eval_lemmas SelectorValues
-
-/-- Project the dispatch cells from a complete MUL row. -/
-def selectors {F : Type} (cols : Columns F) : SelectorValues F :=
-  ⟨cols.is_mul, cols.is_mulh, cols.is_mulhu, cols.is_mulhsu, cols.is_mulw⟩
-
-/-- Auditable control-flow contract for an active MUL-family row: exactly one committed variant
-selector is set.  The native AIR derives this from the five selector boolean gates together with
-`is_real = Σ selectors`; the Sail dispatch consumes precisely this proposition. -/
-def SelectorOneHot (s : SelectorValues (ZMod p)) : Prop :=
-  (s.is_mul = 1 ∧ s.is_mulh = 0 ∧ s.is_mulhu = 0 ∧ s.is_mulhsu = 0 ∧ s.is_mulw = 0) ∨
-  (s.is_mulh = 1 ∧ s.is_mul = 0 ∧ s.is_mulhu = 0 ∧ s.is_mulhsu = 0 ∧ s.is_mulw = 0) ∨
-  (s.is_mulhu = 1 ∧ s.is_mul = 0 ∧ s.is_mulh = 0 ∧ s.is_mulhsu = 0 ∧ s.is_mulw = 0) ∨
-  (s.is_mulhsu = 1 ∧ s.is_mul = 0 ∧ s.is_mulh = 0 ∧ s.is_mulhu = 0 ∧ s.is_mulw = 0) ∨
-  (s.is_mulw = 1 ∧ s.is_mul = 0 ∧ s.is_mulh = 0 ∧ s.is_mulhu = 0 ∧ s.is_mulhsu = 0)
-
-/-- The chip-owned selector/routing part of the MUL AIR, separated from multiplication arithmetic
-and reader semantics.  This is the stable contract proved directly from physical assertions and
-used to justify active-row dispatch and the non-`x0` write route. -/
-def ControlSpec (input : Inputs (ZMod p)) (cols : Columns (ZMod p)) : Prop :=
-  let s := selectors cols
-  (s.is_mul = 0 ∨ s.is_mul = 1) ∧
-  (s.is_mulh = 0 ∨ s.is_mulh = 1) ∧
-  (s.is_mulhu = 0 ∨ s.is_mulhu = 1) ∧
-  (s.is_mulhsu = 0 ∨ s.is_mulhsu = 1) ∧
-  (s.is_mulw = 0 ∨ s.is_mulw = 1) ∧
-  input.is_real = s.is_mul + s.is_mulh + s.is_mulhu + s.is_mulhsu + s.is_mulw ∧
-  input.adapter.op_a_0 = 0
-
-/-- High-half kernel: extracting bits `64..127` of the *wide* (129-bit) product of two extensions
-equals `setWidth 64` of the *narrow* (128-bit) product shifted right by 64. The two products agree on
-their low 128 bits (`setWidth 128` of the wide product is the narrow product), so they agree on bits
-`64..127`. The `MULH`/`MULHSU` bridges instantiate this; `MULHU`'s product is already 128-bit. -/
-private lemma high64_mul (b' c' : BitVec 129) (b'' c'' : BitVec 128)
-    (hb : b'' = BitVec.setWidth 128 b') (hc : c'' = BitVec.setWidth 128 c') :
-    BitVec.extractLsb 127 64 (b' * c') = ((b'' * c'') >>> 64).setWidth 64 := by
-  have hmul : b'' * c'' = BitVec.setWidth 128 (b' * c') := by
-    rw [hb, hc]; exact (BitVec.setWidth_mul b' c' (by omega)).symm
-  rw [hmul, BitVec.setWidth_ushiftRight_eq_extractLsb,
-    BitVec.extractLsb'_setWidth_of_le (by decide)]
-  rfl
-
-/-- `RV64.mul rs2 rs1 = rs1 * rs2` (commuted into the gadget's `b * c` form). -/
-lemma rv64_mul_eq (x y : BitVec 64) : RV64.mul x y = y * x := by
-  rw [RV64.mul, BitVec.mul_comm]
-
-/-- `RV64.mulh`'s high-64-bit signed×signed product equals the gadget's `>>>64 |>.setWidth 64` form. -/
-lemma rv64_mulh_eq (x y : BitVec 64) :
-    RV64.mulh x y = ((y.signExtend 128 * x.signExtend 128) >>> 64).setWidth 64 := by
-  simp only [RV64.mulh]
-  apply high64_mul
-  all_goals
-    ext i hi
-    simp [BitVec.getElem_signExtend, show i < 129 by omega]
-
-/-- `RV64.mulhu`'s high-64-bit unsigned×unsigned product (its inner `extractLsb' 0 128` is the
-identity on the 128-bit product) equals the gadget's `setWidth 128`-product `>>>64 |>.setWidth 64` form. -/
-lemma rv64_mulhu_eq (x y : BitVec 64) :
-    RV64.mulhu x y = ((y.setWidth 128 * x.setWidth 128) >>> 64).setWidth 64 := by
-  simp only [RV64.mulhu, BitVec.extractLsb'_eq_self,
-    BitVec.setWidth_ushiftRight_eq_extractLsb]
-  rfl
-
-/-- `RV64.mulhsu`'s high-64-bit signed(rs1)×unsigned(rs2) product equals the gadget's
-`signExtend 128 (rs1) * setWidth 128 (rs2)` `>>>64 |>.setWidth 64` form. -/
-lemma rv64_mulhsu_eq (x y : BitVec 64) :
-    RV64.mulhsu x y = ((y.signExtend 128 * x.setWidth 128) >>> 64).setWidth 64 := by
-  simp only [RV64.mulhsu]
-  apply high64_mul
-  · ext i hi
-    simp [BitVec.getElem_signExtend, show i < 129 by omega]
-  · exact (BitVec.setWidth_setWidth_of_le x (by decide)).symm
-
-/-- `RV64.mulw`'s low-32 product sign-extended to 64 equals the gadget's
-`((rs1 * rs2).setWidth 32).signExtend 64` form. -/
-lemma rv64_mulw_eq (x y : BitVec 64) :
-    RV64.mulw x y = ((y * x).setWidth 32).signExtend 64 := by
-  simp only [RV64.mulw]
-  congr 1
-  exact (BitVec.setWidth_mul y x (by omega)).symm
-
-/-- Semantic contract, composed from the sub-circuits' own `Spec`s (as `AddChip`). Four conjuncts: the
-`RTypeReader` reader sub-`Spec` on the `state`/`adapter` blocks (the register reads/write, gated by the
-flag-weighted R-type opcode `is_mul·11 + is_mulh·12 + is_mulhu·13 + is_mulhsu·14 + is_mulw·24` and the
-result `cols.a` as the `op_a` write value), the *proven* `is_real`-binary fact, the `is_real`-gated,
-**flag-gated** arithmetic with five variant conjuncts: on real rows the result column `cols.a` is the RV64
-multiply selected by the committed flag (`cols.is_mul → RV64.mul`, the low-64 product; `cols.is_mulh →
-RV64.mulh`, signed×signed high 64; `cols.is_mulhu → RV64.mulhu`, unsigned×unsigned high 64; `cols.is_mulhsu
-→ RV64.mulhsu`, signed×unsigned high 64; `cols.is_mulw → RV64.mulw`, low-32 product sign-extended to 64) —
-and the *proven* selector **one-hot**: on real rows exactly one committed variant flag is set
-(`SelectorOneHot (selectors cols)`, from the five selector boolean gates plus the circuit's
-`is_real = Σ selectors` assert), so a real row cannot satisfy the five gated conjuncts vacuously.
-Operand order matches the RV64 signature `f rs2_val rs1_val` with `rs1 ↦ op_b_val`, `rs2 ↦ op_c_val`.
-Vacuous on padding. -/
-def Spec (input : Inputs (ZMod p)) (cols : Columns (ZMod p)) (_ : ProverData (ZMod p)) : Prop :=
-  Readers.RTypeReader.Spec
-    { cols := cols.adapter, is_real := input.is_real, is_trusted := input.is_real,
-      clk_high := cols.state.clk_high,
-      clk_low := cols.state.clk_0_16 + cols.state.clk_16_24 * 65536,
-      pc := cols.state.pc,
-      opcode := cols.is_mul * 11 + cols.is_mulh * 12 + cols.is_mulhu * 13 + cols.is_mulhsu * 14
-        + cols.is_mulw * 24,
-      wv0 := cols.a[0], wv1 := cols.a[1], wv2 := cols.a[2], wv3 := cols.a[3] } ∧
-  (input.is_real = 0 ∨ input.is_real = 1) ∧
-  (input.is_real = 1 →
-    (cols.is_mul = 1 →
-      Word.toBitVec64 cols.a = RV64.mul (Word.toBitVec64 input.op_c_val) (Word.toBitVec64 input.op_b_val)) ∧
-    (cols.is_mulh = 1 →
-      Word.toBitVec64 cols.a = RV64.mulh (Word.toBitVec64 input.op_c_val) (Word.toBitVec64 input.op_b_val)) ∧
-    (cols.is_mulhu = 1 →
-      Word.toBitVec64 cols.a = RV64.mulhu (Word.toBitVec64 input.op_c_val) (Word.toBitVec64 input.op_b_val)) ∧
-    (cols.is_mulhsu = 1 →
-      Word.toBitVec64 cols.a = RV64.mulhsu (Word.toBitVec64 input.op_c_val) (Word.toBitVec64 input.op_b_val)) ∧
-    (cols.is_mulw = 1 →
-      Word.toBitVec64 cols.a = RV64.mulw (Word.toBitVec64 input.op_c_val) (Word.toBitVec64 input.op_b_val))) ∧
-  (input.is_real = 1 → SelectorOneHot (selectors cols))
-
-end SP1Clean.MulChip
 
 namespace SP1Clean.DivRemChip
 

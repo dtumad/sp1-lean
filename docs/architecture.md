@@ -67,6 +67,9 @@ checks. Mul and DivRem consume that bundled contract directly; no separate place
 are needed at the chip boundary. Disabled interactions retain the supplied result limbs.
 Mul supplies its five opcode selectors as inputs and derives activity from their sum; it needs
 no external selector hints or separate activity cell.
+Its row types and basic evaluation lemmas live in `Circuits/Types/Mul`; the reader/ISA contract
+lives in `Semantics/Specs/Chips/Mul`. The native implementation imports this feature contract
+directly, independently of the shared chip-contract aggregate.
 The comparison cluster uses pure feature specifications. The product gadget remains a dependency
 to migrate before the product cluster can use module mode.
 
