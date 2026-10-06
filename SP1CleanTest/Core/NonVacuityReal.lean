@@ -603,21 +603,15 @@ def mulEvent : AluEventRec :=
   { clk := 9, pc := 4096, a := 42, b := 7, c := 6, opA := 7, opB := 5, opC := 6,
     tsA := 13, prevTsA := 0, prevA := 0, tsB := 12, prevTsB := 0, tsC := 11, prevTsC := 0 }
 
-/-- The honest `"mul_flags"` one-hot prover hint
-`[is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw]`. -/
-def mulFlagsHint (op : ℕ) : ProverHint (ZMod SP1Prime) := fun key n =>
-  match key, n with
-  | "mul_flags", 5 =>
-    #[#v[if op = 11 then 1 else 0, if op = 12 then 1 else 0, if op = 13 then 1 else 0,
-         if op = 14 then 1 else 0, if op = 24 then 1 else 0]]
-  | _, _ => #[]
+/-- Reader inputs followed by the five explicit selectors for MUL. -/
+def mulInputs : List (ZMod SP1Prime) :=
+  (rTypeEventInputs mulEvent).drop 1 ++ [1, 0, 0, 0, 0]
 
 /-- **`MulChip` is satisfiable on a real MUL row**: the full constraint system holds on
 `mul x7, x5, x6` with `x5 = 7`, `x6 = 6` (result `42`). -/
 theorem mul_real_row_satisfiable :
-    (chipOperations MulChip.Inputs MulChip.main (rTypeEventInputs mulEvent)).ConstraintsHold
-      (chipEnvironment MulChip.Inputs MulChip.main (rTypeEventInputs mulEvent)
-        (mulFlagsHint 11)) :=
+    (chipOperations MulChip.Inputs MulChip.main mulInputs).ConstraintsHold
+      (chipEnvironment MulChip.Inputs MulChip.main mulInputs) :=
   constraintsHold_of_check (by native_decide)
 
 /-! ## Branch / Jal -/
@@ -802,7 +796,7 @@ theorem constraint_systems_nonempty :
       chipOperations SubChip.Inputs SubChip.main (rTypeEventInputs subEvent),
       chipOperations AddwChip.Inputs AddwChip.main (aluTypeEventInputs addwEvent),
       chipOperations SubwChip.Inputs SubwChip.main (rTypeEventInputs subwEvent),
-      chipOperations MulChip.Inputs MulChip.main (rTypeEventInputs mulEvent),
+      chipOperations MulChip.Inputs MulChip.main mulInputs,
       chipOperations BranchChip.Inputs BranchChip.main (inputColumns branchBeqInputs),
       chipOperations JalChip.Inputs JalChip.main (inputColumns jalInputs),
       chipOperations StoreWordChip.Inputs StoreWordChip.main (inputColumns storeWordInputs),

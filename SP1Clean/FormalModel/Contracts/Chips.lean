@@ -613,16 +613,29 @@ structure Columns (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
-/-- The two operand words (as read for `rs1`/`rs2`), the `is_real` selector, and the **threaded reader
-column blocks** `state`/`adapter` (as `AddChip`; `Mul`/`Mulh`/… are R-type register-register ops, so the
-adapter is the register `RTypeReader`). The five variant selectors are *committed columns* of the row
-(gated on in the `Spec` via `cols.is_mul` etc.), not inputs. -/
+/-- Register-reader inputs and the five committed multiplication selectors. Activity is their
+sum, so the physical row needs no separate activity cell or external selector hint. -/
 structure Inputs (F : Type) where
-  is_real : F
+  /-- Current execution clock and program counter. -/
   state : Circuits.Types.CPUState F
+  /-- Register indices, prior values and access timestamps. -/
   adapter : Circuits.Types.RTypeReader F
+  /-- Selects the low 64-bit product. -/
+  isMul : F
+  /-- Selects the high signed product. -/
+  isMulh : F
+  /-- Selects the high unsigned product. -/
+  isMulhu : F
+  /-- Selects the high product with a signed first operand. -/
+  isMulhsu : F
+  /-- Selects the sign-extended low 32-bit product. -/
+  isMulw : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
+
+/-- Row activity is the sum of the committed opcode selectors, as in SP1's AIR. -/
+@[reducible] def Inputs.is_real {F : Type} [Add F] (input : Inputs F) : F :=
+  input.isMul + input.isMulh + input.isMulhu + input.isMulhsu + input.isMulw
 
 /-- The `rs1`/`rs2` source operands = the register reads on the adapter's `op_b`/`op_c` memory slots. -/
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value

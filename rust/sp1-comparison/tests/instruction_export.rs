@@ -21,6 +21,7 @@ use sp1_core_machine::{
     alu::{
         add_sub::add::AddChip,
         divrem::{DivRemChip, DivRemCols},
+        mul::{MulChip, MulCols},
     },
     memory::load::load_byte::{LoadByteChip, LoadByteColumns},
     SupervisorMode,
@@ -61,6 +62,15 @@ mod generated_div_rem {
     ));
 }
 use generated_div_rem::{DivRemInstruction, DivRemInstructionAirSpec};
+
+#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+mod generated_mul {
+    include!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/mul_instruction.rs"
+    ));
+}
+use generated_mul::{MulInstruction, MulInstructionAirSpec};
 
 type Ledger = Vec<(String, u64, Vec<u64>)>;
 
@@ -423,6 +433,7 @@ fn instruction_fixtures_do_not_claim_provider_balance() {
     check_open_buses::<AddInstruction>(&add_row(&add_trace().row_slice(0)));
     check_open_buses::<LoadByteInstruction>(&load_byte_row(&load_byte_trace().row_slice(0)));
     check_open_buses::<DivRemInstruction>(&div_rem_row(&div_rem_trace().row_slice(0)));
+    check_open_buses::<MulInstruction>(&mul_row(&mul_trace().row_slice(0)));
 }
 
 fn load_byte_event(
@@ -720,5 +731,105 @@ fn all_div_rem_columns_preserve_constraints_and_interactions_under_mutation() {
         &indices,
         div_rem_row,
         &DivRemChip::<SupervisorMode>::default(),
+    );
+}
+
+fn mul_trace() -> RowMajorMatrix<SP1Field> {
+    let values: [u64; 11] = [
+        0,
+        1,
+        7,
+        65535,
+        65536,
+        (1 << 31) - 1,
+        1 << 31,
+        u32::MAX as u64,
+        1 << 32,
+        1 << 63,
+        u64::MAX,
+    ];
+    let mut record = ExecutionRecord::default();
+    for opcode in [
+        Opcode::MUL,
+        Opcode::MULH,
+        Opcode::MULHU,
+        Opcode::MULHSU,
+        Opcode::MULW,
+    ] {
+        for b in values {
+            for c in values {
+                let a = match opcode {
+                    Opcode::MUL => b.wrapping_mul(c),
+                    Opcode::MULH => (((b as i64 as i128) * (c as i64 as i128)) >> 64) as u64,
+                    Opcode::MULHU => (((b as u128) * (c as u128)) >> 64) as u64,
+                    Opcode::MULHSU => (((b as i64 as i128) * (c as i128)) >> 64) as u64,
+                    Opcode::MULW => (b as i32).wrapping_mul(c as i32) as i64 as u64,
+                    _ => unreachable!(),
+                };
+                record
+                    .mul_events
+                    .push(r_type_event(record.mul_events.len(), opcode, a, b, c));
+            }
+        }
+    }
+    assert_eq!(record.mul_events.len(), 605);
+    let chip = MulChip::<SupervisorMode>::default();
+    let trace = chip.generate_trace(&record, &mut ExecutionRecord::default());
+    assert_eq!(
+        trace.width(),
+        <MulChip<SupervisorMode> as BaseAir<SP1Field>>::width(&chip)
+    );
+    assert_eq!(trace.height(), 608); // Includes three all-zero SP1 padding rows.
+    trace
+}
+
+fn mul_row(sp1: &[SP1Field]) -> Vec<NativeField> {
+    type Columns = MulCols<u8, SupervisorMode>;
+    // Native inputs: reader columns and selectors. Witnesses: multiplication block and result.
+    // Offsets come from the independently pinned Rust struct, never the generated row inventory.
+    let mut indices: Vec<usize> = (0..offset_of!(Columns, a)).collect();
+    indices.extend([
+        offset_of!(Columns, is_mul),
+        offset_of!(Columns, is_mulh),
+        offset_of!(Columns, is_mulhu),
+        offset_of!(Columns, is_mulhsu),
+        offset_of!(Columns, is_mulw),
+    ]);
+    let operation = offset_of!(Columns, mul_operation);
+    indices.extend(operation..operation + 45);
+    let result = offset_of!(Columns, a);
+    indices.extend(result..result + 4);
+    assert_eq!(sp1.len(), MulInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(<MulInstruction as Program<NativeField>>::PROVER_INPUTS, 33);
+    let mut sorted = indices.clone();
+    sorted.sort_unstable();
+    assert_eq!(sorted, (0..sp1.len()).collect::<Vec<_>>());
+    indices
+        .into_iter()
+        .map(|index| NativeField::from_u64(sp1[index].as_canonical_u64()))
+        .collect()
+}
+
+#[test]
+fn generated_mul_witness_and_air_match_released_sp1() {
+    check_trace::<MulInstruction, MulInstructionAirSpec>(
+        &mul_trace(),
+        mul_row,
+        &MulChip::<SupervisorMode>::default(),
+    );
+}
+
+#[test]
+fn all_mul_columns_preserve_constraints_and_interactions_under_mutation() {
+    // Zero, word-sign boundary, signed high product, maximal limbs, and inactive padding.
+    let indices: Vec<usize> = (0..5)
+        .flat_map(|opcode| [0, 76, 109, 120].map(|row| opcode * 121 + row))
+        .chain([605])
+        .collect();
+    check_mutations::<MulInstruction, MulInstructionAirSpec>(
+        &mul_trace(),
+        &indices,
+        mul_row,
+        &MulChip::<SupervisorMode>::default(),
     );
 }

@@ -243,15 +243,13 @@ theorem mulChipDescriptor_table :
       ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 17 < p)] in
-/-- MUL's explicit output row over its 54 local cells. -/
+/-- MUL's explicit output row over its 49 local cells. -/
 theorem mulChip_circuit_output_eq (input : Var MulChip.Inputs (ZMod p)) (offset : ℕ) :
     (MulChip.circuit (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        Vector.mapRange 4 fun i => var { index := offset + 50 + i },
-        varFromOffset Circuits.Types.MulOperation (offset + 5),
-        var { index := offset }, var { index := offset + 1 },
-        var { index := offset + 2 }, var { index := offset + 3 },
-        var { index := offset + 4 }⟩ : Var MulChip.Columns (ZMod p)) := rfl
+        Vector.mapRange 4 fun i => var { index := offset + 45 + i },
+        varFromOffset Circuits.Types.MulOperation offset,
+        input.isMul, input.isMulh, input.isMulhu, input.isMulhsu, input.isMulw⟩ : Var MulChip.Columns (ZMod p)) := rfl
 
 omit [Fact (2 ^ 17 < p)] in
 /-- MUL's completed output row is the evaluated symbolic output (definitional). -/
@@ -289,7 +287,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem mulViewOf_rdWrite (env : Environment (ZMod p)) :
     (mulViewOf env).rdWrite =
       Eval.eval env
-        (Vector.mapRange 4 fun i => (var { index := size MulChip.Inputs + 50 + i } : Expression (ZMod p))) := by
+        (Vector.mapRange 4 fun i => (var { index := size MulChip.Inputs + 45 + i } : Expression (ZMod p))) := by
   simp only [mulViewOf, MulChip.rowView, mulChip_rowOutput_eq, mulChip_circuit_output_eq,
     ProvableStruct.eval_eq_eval, MulChip.Columns.eval_a]
 
@@ -331,7 +329,7 @@ theorem MulChip.rtypeTimestampContract :
   let offset := size MulChip.Inputs
   let readerInput : Var Readers.RTypeReader.Inputs (ZMod p) :=
     MulChip.rTypeReaderInput input offset
-  refine ⟨offset + 54, readerInput, ?_, ?_⟩
+  refine ⟨offset + 49, readerInput, ?_, ?_⟩
   · exact MulChip.rTypeReader_mem input offset
   · intro env
     constructor <;>

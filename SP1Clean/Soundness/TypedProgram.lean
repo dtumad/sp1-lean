@@ -656,9 +656,9 @@ theorem ShiftRightChip.programEmissionShape :
 theorem MulChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (MulChip.circuit (p := p)) MulChip.rowView := by
   programExposureStart
-  refine ⟨fun input _ => input.is_real, fun input offset =>
+  refine ⟨fun input _ => input.is_real, fun input _ =>
     ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2],
-      MulChip.exposedOpcode offset,
+      MulChip.exposedOpcode input,
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0],
       #v[input.adapter.op_c, 0, 0, 0], input.adapter.op_a_0, 0, 0⟩,
     ?_, ?_, ?_⟩

@@ -57,11 +57,11 @@ theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (offset : 
       Operations.shallowInteractions_nil, List.nil_append] at hInteraction
     exact (List.not_mem_nil hInteraction).elim
 
-/-- The retained R-type reader occurs immediately after MUL's 54-cell witness prefix.  This folded
+/-- The retained R-type reader occurs immediately after MUL's 49-cell witness prefix.  This folded
 membership lemma prevents timestamp proofs from normalizing every multiplication assertion. -/
 theorem rTypeReader_mem (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ⟨offset + 54,
-      Readers.RTypeReader.circuit.toSubcircuit (offset + 54) (rTypeReaderInput input offset)⟩ ∈
+    ⟨offset + 49,
+      Readers.RTypeReader.circuit.toSubcircuit (offset + 49) (rTypeReaderInput input offset)⟩ ∈
       ((main input).operations offset).subcircuits := by
   simp only [main, rTypeReaderInput, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
     witnessVectorIR, Witnessable.witness, witnessIR,
