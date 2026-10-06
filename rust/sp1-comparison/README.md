@@ -21,6 +21,9 @@ pinned to the same revision as the Lean emitter and compared with SP1:
 bash scripts/check_ensemble_export.sh
 ```
 
+The comparison crate uses release optimization level 1 to bound generated-code compiler memory;
+dependency crates retain their normal release settings. CI logs the export step's time and peak memory.
+
 The runner checks two byte-identical generations under `.lake/ensemble-export/`. Cargo compiles
 that output and exercises two boundaries:
 

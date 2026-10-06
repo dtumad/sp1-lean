@@ -256,7 +256,7 @@ jobs:
             rust/witgen-interp
           key: clean-export
       - name: Built-in ensemble export and Rust backend comparison
-        run: bash scripts/check_ensemble_export.sh
+        run: /usr/bin/time -v bash scripts/check_ensemble_export.sh
       # Native witness artifacts are generated under .lake, checked against independent SP1
       # dumps and regenerated for determinism. Their Rust comparison uses the same runner.
       - name: Library examples and adversarial witnesses
