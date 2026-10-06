@@ -2,6 +2,7 @@ import Clean.Air.Extraction.Rust
 import SP1Clean.Proofs.Chips.AddChip.Formal
 import SP1Clean.Proofs.Chips.LoadByteChip.Formal
 import SP1Clean.Proofs.Chips.DivRemChip.Complete
+import SP1Clean.Proofs.Chips.MulChip.Complete
 import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
@@ -56,5 +57,10 @@ def divRemRust : Except String String :=
     ({ config DivRemChip.Inputs with
       padding := [{ input := (toElements (TraceGen.divRemPaddingInputs (p := SP1Prime))).toArray }] } :
       WitnessGeneration.Config Fp DivRemChip.Inputs)
+
+/-- Export all five multiply variants with explicit selectors and zero padding. -/
+def mulRust : Except String String :=
+  Extraction.Rust.ensembleToRust "MulInstruction"
+    (ensemble { circuit := MulChip.circuit }) (config MulChip.Inputs)
 
 end SP1CleanTest.Core.InstructionExport

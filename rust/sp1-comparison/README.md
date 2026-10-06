@@ -30,12 +30,13 @@ that output and exercises two boundaries:
 - The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
   match Lean; backend proofs accept both allowed values and reject forged membership, changed public
   values, rows and table shapes. Test FRI parameters are not deployment security parameters.
-- Production ADD, LoadByte and DivRem components use the same comparison harness:
+- Production ADD, LoadByte, Mul and DivRem components use the same comparison harness:
 
   | Component | SP1 event / padding rows | Column mutations | Cases |
   | --- | --- | --- | --- |
   | ADD | 81 / 15 | 396 | Carries, wraparound, operand boundaries |
   | LoadByte | 258 / 30 | 987 | LB/LBU, all eight offsets, sign extension, address boundaries, negative immediates, cross-window memory timestamps |
+  | Mul | 605 / 3 | 5,166 | All five variants, signed and unsigned high products, word sign extension, operand boundaries, zero padding |
   | DivRem | 968 / 24 | 24,354 | All eight variants, division by zero, signed overflow at both widths, word truncation, DIVU padding |
 
   Generated witnesses are checked against SP1's live trace generator. Direct field evaluation compares local
@@ -46,9 +47,9 @@ that output and exercises two boundaries:
 The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
 to construct the local row without scheduling those buses; the unadapted program is checked to
 reject an active row without providers. This is not a full-ensemble acceptance or completeness test.
-The layout adapters move selectors first and witnessed cells last; LoadByte and DivRem use offsets from
-SP1's actual column structures. DivRem also checks that its mapping is a complete permutation
-of the 246 cells, including malformed selectors. Channel adaptation
+The layout adapters move selectors first and witnessed cells last; LoadByte, Mul and DivRem use offsets from
+SP1's actual column structures. Mul and DivRem also check that their mappings are complete
+permutations of their 82 and 246 cells, including malformed selectors. Channel adaptation
 reverses Byte, Memory and Program signs to match Clean's provider-to-consumer guarantee direction.
 
 The default `inventory` feature retains the independent inventory checks. `clean-export` enables

@@ -240,7 +240,7 @@ Row provenance is honest:
   pinned extraction branch; the `provenance.events` string names the dump file and its
   `sp1Commit`). The inputs are recovered from the dumped row itself through the
   symbolic row map (every native input cell is a bare `var` column of the Rust row,
-  except `is_real` on the six flag-hinted chips — Bitwise, Branch, Lt, Mul, ShiftLeft,
+  except `is_real` on the five flag-hinted chips — Bitwise, Branch, Lt, ShiftLeft,
   ShiftRight — which is `1` on event rows); the hint tables are derived from the
   event's opcode discriminant (Branch additionally derives its `branch_branching` bit
   from the operand values, mirroring SP1's own populate). `expectedRow` is the dumped
@@ -252,7 +252,7 @@ Row provenance is honest:
 - `"padding"` — the empty-hint row, inputs recovered from the dumped padding row.
   `anchored: true` only where SP1 *derives* its padding rows by running populate
   (ShiftLeft, ShiftRight, and DivRem — whose `expectedRow` is SP1's non-zero
-  "0 divided by 1" template, reproduced from the absent hint key); these are gated
+  "0 divided by 1" template, reproduced from explicit selector inputs); these are gated
   like event rows. The remaining chips zero-fill their padding without running
   populate — the exporter asserts their dumped padding is all-zero and emits the row
   as a plain differential vector (`anchored: false`).
@@ -299,10 +299,11 @@ witnesses with Lean and exercises Clean's proof backend; see [export](export.md)
 
 ## SP1-specific facts a consumer may rely on
 
-- The 25 instruction chips have empty `data` schemas. Some use `hintGet`; DivRem
-  supplies its seven variant selectors in the input row and reads no external hints.
-- Every hint read is at constant row `0`. The seven remaining hint tables and widths are
+- The 25 instruction chips have empty `data` schemas. Some use `hintGet`; Mul and DivRem
+  supply their variant selectors as inputs and read no external hints. Mul derives activity
+  from its five selectors; DivRem supplies seven selectors and derives DIVU.
+- Every hint read is at constant row `0`. The six remaining hint tables and widths are
   in the manifests (`lt_flags` 2, `bitwise_flags` 3, `branch_flags` 6, `branch_branching` 1,
-  `mul_flags` 5, `shift_left_flags` 2, `shift_right_flags` 4).
+  `shift_left_flags` 2, `shift_right_flags` 4).
 - Missing hints read as zero vectors. DivRem's DIVU padding instead uses seven zero
   selector inputs and a divisor read of one; its derived DIVU witness is one.

@@ -89,46 +89,32 @@ def mulChipOracle {F : Type} [FiniteField F] [CoeHead F ℕ] :
   assertZeros := Extracted.MulOracle.MulCols.asserts
   interactions := Extracted.MulOracle.MulCols.interactions
 
-def mulChipInput {F : Type} [Add F]
-    (cols : MulChip.Columns F) : MulChip.Inputs F :=
-  { is_real := cols.is_mul + cols.is_mulh + cols.is_mulhu +
-      cols.is_mulhsu + cols.is_mulw
-    state := cols.state
-    adapter := cols.adapter }
+def mulChipInput {F : Type} (cols : MulChip.Columns F) : MulChip.Inputs F :=
+  { state := cols.state
+    adapter := cols.adapter
+    isMul := cols.is_mul
+    isMulh := cols.is_mulh
+    isMulhu := cols.is_mulhu
+    isMulhsu := cols.is_mulhsu
+    isMulw := cols.is_mulw }
 
-def mulChipLocals {F : Type} (cols : MulChip.Columns F) :
-    Vector F 54 :=
-  Vector.cast (by rfl)
-    (#v[cols.is_mul, cols.is_mulh, cols.is_mulhu,
-        cols.is_mulhsu, cols.is_mulw] ++
-      toElements cols.mul_operation ++ cols.a)
+def mulChipLocals {F : Type} (cols : MulChip.Columns F) : Vector F 49 :=
+  Vector.cast (by rfl) (toElements cols.mul_operation ++ cols.a)
 
-def mulChipPhysicalRow {F : Type} [Add F]
-    (cols : MulChip.Columns F) : Array F :=
+def mulChipPhysicalRow {F : Type} (cols : MulChip.Columns F) : Array F :=
   inputFirstRow (mulChipInput cols) (mulChipLocals cols)
 
-def mulChipOperationOfLocals {F : Type} (locals : Vector F 54) :
+def mulChipOperationOfLocals {F : Type} (locals : Vector F 49) :
     Circuits.Types.MulOperation F :=
-  fromElements (Vector.cast (by rfl) ((locals.drop 5).take 45))
+  fromElements (Vector.cast (by rfl) (locals.take 45))
 
-def mulChipAOfLocals {F : Type} (locals : Vector F 54) : Word F :=
-  Vector.cast (by rfl) (locals.drop 50)
+def mulChipAOfLocals {F : Type} (locals : Vector F 49) : Word F :=
+  Vector.cast (by rfl) (locals.drop 45)
 
 def mulChipColumnsOfInput {F : Type}
-    (input : MulChip.Inputs F) (locals : Vector F 54) :
-    MulChip.Columns F :=
-  ⟨input.state, input.adapter, mulChipAOfLocals locals,
-    mulChipOperationOfLocals locals, locals[0], locals[1],
-    locals[2], locals[3], locals[4]⟩
-
-private theorem mulChipLocals_flag {F : Type}
-    (cols : MulChip.Columns F) (i : ℕ) (hi : i < 5) :
-    (mulChipLocals cols)[i] =
-      #v[cols.is_mul, cols.is_mulh, cols.is_mulhu,
-        cols.is_mulhsu, cols.is_mulw][i] := by
-  unfold mulChipLocals
-  rw [Vector.getElem_cast, Vector.getElem_append_left (by omega),
-    Vector.getElem_append_left hi]
+    (input : MulChip.Inputs F) (locals : Vector F 49) : MulChip.Columns F :=
+  ⟨input.state, input.adapter, mulChipAOfLocals locals, mulChipOperationOfLocals locals,
+    input.isMul, input.isMulh, input.isMulhu, input.isMulhsu, input.isMulw⟩
 
 private theorem mulChipOperationOfLocals_roundtrip {F : Type}
     (cols : MulChip.Columns F) :
@@ -138,7 +124,7 @@ private theorem mulChipOperationOfLocals_roundtrip {F : Type}
     (fun i hi => ?_)
   unfold mulChipOperationOfLocals mulChipLocals
   rw [ProvableType.toElements_fromElements, Vector.getElem_cast,
-    Vector.getElem_take, Vector.getElem_drop, Vector.getElem_cast]
+    Vector.getElem_take, Vector.getElem_cast]
   have hsize : size Circuits.Types.MulOperation = 45 := rfl
   rw [hsize] at hi
   simp [hsize, hi]
@@ -156,31 +142,20 @@ private theorem mulChipAOfLocals_roundtrip {F : Type}
   have : size Circuits.Types.MulOperation = 45 := rfl
   omega
 
-theorem mulChipColumnsOfInput_roundtrip {F : Type} [Add F]
-    (cols : MulChip.Columns F) :
-    mulChipColumnsOfInput (mulChipInput cols) (mulChipLocals cols) =
-      cols := by
+theorem mulChipColumnsOfInput_roundtrip {F : Type} (cols : MulChip.Columns F) :
+    mulChipColumnsOfInput (mulChipInput cols) (mulChipLocals cols) = cols := by
   unfold mulChipColumnsOfInput mulChipInput
   rw [MulChip.Columns.mk.injEq]
-  refine ⟨rfl, rfl, mulChipAOfLocals_roundtrip cols,
-    mulChipOperationOfLocals_roundtrip cols, ?_⟩
-  constructor
-  · simpa using mulChipLocals_flag cols 0 (by decide)
-  constructor
-  · simpa using mulChipLocals_flag cols 1 (by decide)
-  constructor
-  · simpa using mulChipLocals_flag cols 2 (by decide)
-  constructor
-  · simpa using mulChipLocals_flag cols 3 (by decide)
-  · simpa using mulChipLocals_flag cols 4 (by decide)
+  exact ⟨rfl, rfl, mulChipAOfLocals_roundtrip cols,
+    mulChipOperationOfLocals_roundtrip cols, rfl, rfl, rfl, rfl, rfl⟩
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem eval_mulChipOperationOfLocals
     (input : MulChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 54) (data : ProverData (ZMod p)) :
+    (locals : Vector (ZMod p) 49) (data : ProverData (ZMod p)) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (varFromOffset Circuits.Types.MulOperation (F := ZMod p)
-          (size MulChip.Inputs + 5)) =
+          (size MulChip.Inputs)) =
       mulChipOperationOfLocals locals := by
   refine (ProvableType.ext_iff (α := Circuits.Types.MulOperation) _ _).mpr
     (fun i hi => ?_)
@@ -188,8 +163,8 @@ private theorem eval_mulChipOperationOfLocals
     ProvableType.toElements_fromElements, Vector.getElem_mapRange]
   unfold mulChipOperationOfLocals
   rw [ProvableType.toElements_fromElements, Vector.getElem_cast,
-    Vector.getElem_take, Vector.getElem_drop]
-  have hlocal := eval_local_inputFirstRow input locals data (5 + i) (by
+    Vector.getElem_take]
+  have hlocal := eval_local_inputFirstRow input locals data i (by
     have hsize : size Circuits.Types.MulOperation = 45 := rfl
     rw [hsize] at hi
     omega)
@@ -199,10 +174,10 @@ private theorem eval_mulChipOperationOfLocals
 omit [Fact (2 ^ 24 < p)] in
 private theorem eval_mulChipAOfLocals
     (input : MulChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 54) (data : ProverData (ZMod p)) :
+    (locals : Vector (ZMod p) 49) (data : ProverData (ZMod p)) :
     Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
         (Vector.mapRange 4 (fun i =>
-          (var { index := size MulChip.Inputs + 50 + i } :
+          (var { index := size MulChip.Inputs + 45 + i } :
             Expression (ZMod p))) : Word (Expression (ZMod p))) =
       mulChipAOfLocals locals := by
   apply Vector.ext
@@ -211,29 +186,29 @@ private theorem eval_mulChipAOfLocals
       (Eval.eval
         (Environment.fromArray (inputFirstRow input locals) data)
         (Vector.mapRange 4 (fun i =>
-          (var { index := size MulChip.Inputs + 50 + i } :
+          (var { index := size MulChip.Inputs + 45 + i } :
             Expression (ZMod p))) : Word (Expression (ZMod p))))[i] =
         Expression.eval
           (Environment.fromArray (inputFirstRow input locals) data)
           (Vector.mapRange 4 (fun i =>
-            (var { index := size MulChip.Inputs + 50 + i } :
+            (var { index := size MulChip.Inputs + 45 + i } :
               Expression (ZMod p))) : Word (Expression (ZMod p)))[i] from
       (ProvableType.getElem_eval_fields
         (Environment.fromArray (inputFirstRow input locals) data)
         (Vector.mapRange 4 (fun i =>
-          (var { index := size MulChip.Inputs + 50 + i } :
+          (var { index := size MulChip.Inputs + 45 + i } :
             Expression (ZMod p))) : Word (Expression (ZMod p)))
         i hi).symm]
   rw [Vector.getElem_mapRange]
   unfold mulChipAOfLocals
   rw [Vector.getElem_cast, Vector.getElem_drop]
-  have hlocal := eval_local_inputFirstRow input locals data (50 + i) (by
+  have hlocal := eval_local_inputFirstRow input locals data (45 + i) (by
     omega)
   simpa only [Nat.add_assoc] using hlocal
 
 theorem eval_mulChipDirectOutput
     (input : MulChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 54) (data : ProverData (ZMod p)) :
+    (locals : Vector (ZMod p) 49) (data : ProverData (ZMod p)) :
     ProvableType.eval
         (Environment.fromArray (inputFirstRow input locals) data)
         ((MulChip.elaborated (p := p)).output
@@ -246,23 +221,8 @@ theorem eval_mulChipDirectOutput
   dsimp only
   have hinputEval := eval_inputFirstRow input locals data
   rw [MulChip.eval_inputs, MulChip.Inputs.mk.injEq] at hinputEval
-  refine ⟨hinputEval.2.1, hinputEval.2.2, ?_, ?_, ?_⟩
-  · exact eval_mulChipAOfLocals input locals data
-  · exact eval_mulChipOperationOfLocals input locals data
-  constructor
-  · simpa only [ProvableType.eval_field, Nat.add_zero] using
-      (eval_local_inputFirstRow input locals data 0 (by decide))
-  constructor
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 1 (by decide))
-  constructor
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 2 (by decide))
-  constructor
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 3 (by decide))
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 4 (by decide))
+  exact ⟨hinputEval.1, hinputEval.2.1, eval_mulChipAOfLocals input locals data,
+    eval_mulChipOperationOfLocals input locals data, hinputEval.2.2⟩
 
 def mulChipRowCodec :
     ChipRowCodec MulChip.Inputs MulChip.Columns
@@ -285,20 +245,12 @@ def mulChipRowCodec :
         (mulChipLocals cols) data).trans
           (mulChipColumnsOfInput_roundtrip cols) }
 
-private def mul_chip_flag (offset i : ℕ) : Expression (ZMod p) :=
-  var { index := offset + i }
-
-private def mul_chip_is_real (offset : ℕ) : Expression (ZMod p) :=
-  mul_chip_flag offset 0 + mul_chip_flag offset 1 +
-    mul_chip_flag offset 2 + mul_chip_flag offset 3 +
-    mul_chip_flag offset 4
-
 private def mul_chip_operation (offset : ℕ) :
     Var Circuits.Types.MulOperation (ZMod p) :=
-  varFromOffset Circuits.Types.MulOperation (offset + 5)
+  varFromOffset Circuits.Types.MulOperation offset
 
 private def mul_chip_a (offset : ℕ) : Word (Expression (ZMod p)) :=
-  Vector.mapRange 4 fun i => var { index := offset + 50 + i }
+  Vector.mapRange 4 fun i => var { index := offset + 45 + i }
 
 private theorem forall_nil_iff {α : Type} (pred : α → Prop) :
     List.Forall pred [] ↔ True := Iff.rfl
@@ -339,22 +291,22 @@ private theorem mul_chip_constraints_decompose
           (nativeAssertZeros env
             ((MulOperation.main
               ⟨input.op_b_val, input.op_c_val, mul_chip_operation offset,
-                mul_chip_is_real offset, mul_chip_flag offset 0,
-                mul_chip_flag offset 1, mul_chip_flag offset 2,
-                mul_chip_flag offset 3, mul_chip_flag offset 4, mul_chip_a offset⟩).operations
-                  (offset + 54))) ∧
+                input.is_real, input.isMul,
+                input.isMulh, input.isMulhu,
+                input.isMulhsu, input.isMulw, mul_chip_a offset⟩).operations
+                  (offset + 49))) ∧
         Expression.eval env
-          (mul_chip_flag offset 0 * (mul_chip_flag offset 0 - 1)) = 0 ∧
+          (input.isMul * (input.isMul - 1)) = 0 ∧
         Expression.eval env
-          (mul_chip_flag offset 1 * (mul_chip_flag offset 1 - 1)) = 0 ∧
+          (input.isMulh * (input.isMulh - 1)) = 0 ∧
         Expression.eval env
-          (mul_chip_flag offset 2 * (mul_chip_flag offset 2 - 1)) = 0 ∧
+          (input.isMulhu * (input.isMulhu - 1)) = 0 ∧
         Expression.eval env
-          (mul_chip_flag offset 3 * (mul_chip_flag offset 3 - 1)) = 0 ∧
+          (input.isMulhsu * (input.isMulhsu - 1)) = 0 ∧
         Expression.eval env
-          (mul_chip_flag offset 4 * (mul_chip_flag offset 4 - 1)) = 0 ∧
+          (input.isMulw * (input.isMulw - 1)) = 0 ∧
         Expression.eval env
-          (mul_chip_is_real offset * (mul_chip_is_real offset - 1)) = 0 ∧
+          (input.is_real * (input.is_real - 1)) = 0 ∧
         Expression.eval env input.adapter.op_a_0 = 0 ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
@@ -363,23 +315,21 @@ private theorem mul_chip_constraints_decompose
                 input.state.clk_high,
                 input.state.clk_0_16 + input.state.clk_16_24 * 65536,
                 input.state.pc,
-                mul_chip_flag offset 0 * 11 +
-                  mul_chip_flag offset 1 * 12 +
-                  mul_chip_flag offset 2 * 13 +
-                  mul_chip_flag offset 3 * 14 +
-                  mul_chip_flag offset 4 * 24,
+                input.isMul * 11 +
+                  input.isMulh * 12 +
+                  input.isMulhu * 13 +
+                  input.isMulhsu * 14 +
+                  input.isMulw * 24,
                 (mul_chip_a offset)[0], (mul_chip_a offset)[1],
                 (mul_chip_a offset)[2], (mul_chip_a offset)[3]⟩).operations
-                  (offset + 54))) ∧
-        Expression.eval env (input.is_real - mul_chip_is_real offset) = 0 ∧
+                  (offset + 49))) ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Readers.RegisterWrite.main
               ⟨input.state.clk_high,
                 input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4,
                 input.adapter.op_a, mul_chip_a offset,
-                input.is_real⟩).operations (offset + 54))) ∧
-        Expression.eval env (input.is_real * (input.is_real - 1)) = 0) := by
+                input.is_real⟩).operations (offset + 49)))) := by
   simp only [nativeAssertZeros, MulChip.main,
     Circuit.operations, Circuit.bind_def, Circuit.pure_def,
     witnessVectorIR, Witnessable.witness, witnessIR,
@@ -398,7 +348,7 @@ private theorem mul_chip_constraints_decompose
     Operations.constraints_assert, Operations.constraints_nil,
     List.map_append, List.map_cons, List.map_nil,
     List.forall_append, List.forall_cons, forall_nil_iff]
-  simp only [mul_chip_flag, mul_chip_is_real, mul_chip_operation,
+  simp only [MulChip.Inputs.is_real, mul_chip_operation,
     mul_chip_a, Readers.CPUState.circuit,
     MulOperation.circuit, Readers.RTypeReader.circuit,
     Readers.RegisterWrite.circuit, Nat.add_zero, Nat.add_assoc,
@@ -1550,10 +1500,7 @@ private theorem mulChip_constraints_faithful
     (env : Environment (ZMod p))
     (input : Var MulChip.Inputs (ZMod p)) (offset : ℕ)
     (cols : MulChip.Columns (ZMod p))
-    (hbind : BindsChipOutput MulChip.main env input offset cols)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (mul_chip_is_real offset)) :
+    (hbind : BindsChipOutput MulChip.main env input offset cols) :
     List.Forall (· = 0) (mulChipOracle.nativeAssertZeros cols) ↔
       List.Forall (· = 0)
         (nativeAssertZeros env ((MulChip.main input).operations offset)) := by
@@ -1574,18 +1521,18 @@ private theorem mulChip_constraints_faithful
     (Eval.eval env input.adapter).op_b_memory.prev_value
   let rustC : Word (ZMod p) :=
     (Eval.eval env input.adapter).op_c_memory.prev_value
-  let rustIsMul := Expression.eval env (mul_chip_flag offset 0)
-  let rustIsMulh := Expression.eval env (mul_chip_flag offset 1)
-  let rustIsMulhu := Expression.eval env (mul_chip_flag offset 2)
-  let rustIsMulhsu := Expression.eval env (mul_chip_flag offset 3)
-  let rustIsMulw := Expression.eval env (mul_chip_flag offset 4)
-  let rustIsReal := Expression.eval env (mul_chip_is_real offset)
+  let rustIsMul := Expression.eval env (input.isMul)
+  let rustIsMulh := Expression.eval env (input.isMulh)
+  let rustIsMulhu := Expression.eval env (input.isMulhu)
+  let rustIsMulhsu := Expression.eval env (input.isMulhsu)
+  let rustIsMulw := Expression.eval env (input.isMulw)
+  let rustIsReal := Expression.eval env (input.is_real)
   let rustOpcode := Expression.eval env
-    (mul_chip_flag offset 0 * 11 +
-      mul_chip_flag offset 1 * 12 +
-      mul_chip_flag offset 2 * 13 +
-      mul_chip_flag offset 3 * 14 +
-      mul_chip_flag offset 4 * 24)
+    (input.isMul * 11 +
+      input.isMulh * 12 +
+      input.isMulhu * 13 +
+      input.isMulhsu * 14 +
+      input.isMulw * 24)
   let cpuInput : Var Readers.CPUState.Inputs (ZMod p) :=
     ⟨input.state,
       #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
@@ -1595,14 +1542,12 @@ private theorem mulChip_constraints_faithful
     #v[stateValue.pc[0] + 4, stateValue.pc[1], stateValue.pc[2]]
   have hCpu := CanonicalReader.cpuStateAssertions (p := p) env cpuInput
     offset rustState rustNextPc 8 rustIsReal (by
-      simp only [cpuInput, rustIsReal,
-        ProvableStruct.structEvalLiteralProc]
-      exact hinputReal)
+      simp only [cpuInput, rustIsReal, ProvableStruct.structEvalLiteralProc])
   let opInput : Var MulOperation.Inputs (ZMod p) :=
     ⟨input.op_b_val, input.op_c_val, operation,
-      mul_chip_is_real offset, mul_chip_flag offset 0,
-      mul_chip_flag offset 1, mul_chip_flag offset 2,
-      mul_chip_flag offset 3, mul_chip_flag offset 4, mul_chip_a offset⟩
+      input.is_real, input.isMul,
+      input.isMulh, input.isMulhu,
+      input.isMulhsu, input.isMulw, mul_chip_a offset⟩
   have hB : Eval.eval env opInput.b = rustB := by
     simp only [opInput, rustB, MulChip.Inputs.op_b_val]
     calc
@@ -1631,29 +1576,25 @@ private theorem mulChip_constraints_faithful
       input.state.clk_high,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536,
       input.state.pc,
-      mul_chip_flag offset 0 * 11 +
-        mul_chip_flag offset 1 * 12 +
-        mul_chip_flag offset 2 * 13 +
-        mul_chip_flag offset 3 * 14 +
-        mul_chip_flag offset 4 * 24,
+      input.isMul * 11 +
+        input.isMulh * 12 +
+        input.isMulhu * 13 +
+        input.isMulhsu * 14 +
+        input.isMulw * 24,
       a[0], a[1], a[2], a[3]⟩
   have hRtypeReal :
       (ProvableStruct.eval env rtypeInput).is_real = rustIsReal := by
-    simp only [rtypeInput, rustIsReal,
-      ProvableStruct.structEvalLiteralProc]
-    exact hinputReal
+    simp only [rtypeInput, rustIsReal, ProvableStruct.structEvalLiteralProc]
   have hRtypeTrusted :
       (ProvableStruct.eval env rtypeInput).is_trusted = rustIsReal := by
-    simp only [rtypeInput, rustIsReal,
-      ProvableStruct.structEvalLiteralProc]
-    exact hinputReal
+    simp only [rtypeInput, rustIsReal, ProvableStruct.structEvalLiteralProc]
   have hopA0 :
       Expression.eval env input.adapter.op_a_0 =
         rustAdapter.op_a_0 := by
     simpa only [rustAdapter, adapterValue] using
       (Readers.RTypeReader.eval_opA0 env input.adapter).symm
   have hRtype := CanonicalReader.rTypeAssertions (p := p) env
-    rtypeInput (offset + 54)
+    rtypeInput (offset + 49)
     stateValue.clk_high
     (stateValue.clk_0_16 + stateValue.clk_16_24 * 65536)
     rustOpcode rustIsReal rustIsReal
@@ -1691,8 +1632,8 @@ private theorem mulChip_constraints_faithful
       simpa only [rustA, rustB, rustC, rustOperation,
         rustIsReal, rustIsMul, rustIsMulh, rustIsMulw,
         rustIsMulhu, rustIsMulhsu, operation, a,
-        mul_chip_operation, mul_chip_a, mul_chip_is_real,
-        mul_chip_flag, eval_add, ProvableType.eval_field, Nat.add_zero,
+        mul_chip_operation, mul_chip_a, MulChip.Inputs.is_real,
+        eval_add, ProvableType.eval_field, Nat.add_zero,
         Expression.eval] using hOpG
     have hOpInputOracle :
         List.Forall (· = 0)
@@ -1710,13 +1651,13 @@ private theorem mulChip_constraints_faithful
         rustIsReal, rustIsMul, rustIsMulh, rustIsMulw,
         rustIsMulhu, rustIsMulhsu] using hOpOracle
     have hOpN := mulOperation_assertions_forward
-      (p := p) env opInput (offset + 54) hOpInputOracle
+      (p := p) env opInput (offset + 49) hOpInputOracle
     have hCpuOracle :
         List.Forall (· = 0)
           (Extracted.CPUState.asserts rustState rustNextPc 8
             rustIsReal) := by
       simpa only [rustState, rustNextPc, stateValue, rustIsReal,
-        mul_chip_is_real, mul_chip_flag, eval_add,
+        MulChip.Inputs.is_real, eval_add,
         ProvableType.eval_field, Expression.eval, Nat.add_zero] using
         hCpuG
     have hCpuN := hCpu.mp hCpuOracle
@@ -1728,8 +1669,8 @@ private theorem mulChip_constraints_faithful
             rustOpcode rustA rustAdapter rustIsReal rustIsReal) := by
       simpa only [stateValue, rustOpcode, rustA, rustAdapter,
         rustIsReal, operation, a, adapterValue,
-        mul_chip_operation, mul_chip_a, mul_chip_is_real,
-        mul_chip_flag, eval_add, eval_mul, vec3_eta,
+        mul_chip_operation, mul_chip_a, MulChip.Inputs.is_real,
+        eval_add, eval_mul, vec3_eta,
         ProvableType.eval_field, Expression.eval, Nat.add_zero] using
         hRtypeG
     have hRtypePairN := hRtype.mp
@@ -1738,65 +1679,55 @@ private theorem mulChip_constraints_faithful
     have hRtypeN := hRtypePairN.1
     have hWriteN :=
       (CanonicalReader.registerWriteAssertions env writeInput
-        (offset + 54)).mpr trivial
+        (offset + 49)).mpr trivial
     have hmN :
         Expression.eval env
-          (mul_chip_flag offset 0 *
-            (mul_chip_flag offset 0 - 1)) = 0 := by
-      simpa only [mul_chip_flag, eval_mul, eval_sub,
+          (input.isMul *
+            (input.isMul - 1)) = 0 := by
+      simpa only [eval_mul, eval_sub,
         ProvableType.eval_field, Expression.eval, Nat.add_zero] using hm
     have hmhN :
         Expression.eval env
-          (mul_chip_flag offset 1 *
-            (mul_chip_flag offset 1 - 1)) = 0 := by
-      simpa only [mul_chip_flag, eval_mul, eval_sub,
+          (input.isMulh *
+            (input.isMulh - 1)) = 0 := by
+      simpa only [eval_mul, eval_sub,
         ProvableType.eval_field, Expression.eval] using hmh
     have hmuN :
         Expression.eval env
-          (mul_chip_flag offset 2 *
-            (mul_chip_flag offset 2 - 1)) = 0 := by
-      simpa only [mul_chip_flag, eval_mul, eval_sub,
+          (input.isMulhu *
+            (input.isMulhu - 1)) = 0 := by
+      simpa only [eval_mul, eval_sub,
         ProvableType.eval_field, Expression.eval] using hmu
     have hmsN :
         Expression.eval env
-          (mul_chip_flag offset 3 *
-            (mul_chip_flag offset 3 - 1)) = 0 := by
-      simpa only [mul_chip_flag, eval_mul, eval_sub,
+          (input.isMulhsu *
+            (input.isMulhsu - 1)) = 0 := by
+      simpa only [eval_mul, eval_sub,
         ProvableType.eval_field, Expression.eval] using hms
     have hmwN :
         Expression.eval env
-          (mul_chip_flag offset 4 *
-            (mul_chip_flag offset 4 - 1)) = 0 := by
-      simpa only [mul_chip_flag, eval_mul, eval_sub,
+          (input.isMulw *
+            (input.isMulw - 1)) = 0 := by
+      simpa only [eval_mul, eval_sub,
         ProvableType.eval_field, Expression.eval] using hmw
     have hsumN :
         Expression.eval env
-          (mul_chip_is_real offset *
-            (mul_chip_is_real offset - 1)) = 0 := by
-      simpa only [mul_chip_is_real, mul_chip_flag,
+          (input.is_real *
+            (input.is_real - 1)) = 0 := by
+      simpa only [MulChip.Inputs.is_real,
         eval_mul, eval_sub, eval_add,
         ProvableType.eval_field, Expression.eval, Nat.add_zero] using hsum
     have hopA0N : Expression.eval env input.adapter.op_a_0 = 0 := by
       rw [hopA0]
       simpa only [rustAdapter, adapterValue] using hopA0G
-    have hLink :
-        Expression.eval env
-          (input.is_real - mul_chip_is_real offset) = 0 := by
-      rw [eval_sub, hinputReal, sub_self]
-    have hInputBool :
-        Expression.eval env
-          (input.is_real * (input.is_real - 1)) = 0 := by
-      simpa only [hinputReal, mul_chip_is_real, mul_chip_flag,
-        eval_add, eval_sub, ProvableType.eval_field, Expression.eval,
-        Nat.add_zero] using hsum
     exact ⟨by simpa only [cpuInput] using hCpuN,
       by simpa only [opInput] using hOpN,
       hmN, hmhN, hmuN, hmsN, hmwN, hsumN, hopA0N,
-      by simpa only [rtypeInput] using hRtypeN, hLink,
-      by simpa only [writeInput] using hWriteN, hInputBool⟩
+      by simpa only [rtypeInput] using hRtypeN,
+      by simpa only [writeInput] using hWriteN⟩
   · rintro ⟨hCpuN, hOpN,
       hmN, hmhN, hmuN, hmsN, hmwN, hsumN, hopA0N,
-      hRtypeN, _hLinkN, _hWriteN, _hInputBoolN⟩
+      hRtypeN, _hWriteN⟩
     have hmOp :
         Expression.eval env opInput.is_mul *
           (Expression.eval env opInput.is_mul - 1) = 0 := by
@@ -1829,10 +1760,10 @@ private theorem mulChip_constraints_faithful
           Expression.eval env opInput.is_mulhsu +
           Expression.eval env opInput.is_mulw
         sum * (sum - 1) = 0 := by
-      simpa only [opInput, mul_chip_is_real, eval_mul,
+      simpa only [opInput, MulChip.Inputs.is_real, eval_mul,
         eval_sub, eval_add, Expression.eval] using hsumN
     have hOpInputOracle := mulOperation_assertions_backward
-      (p := p) env opInput (offset + 54) hOpN
+      (p := p) env opInput (offset + 49) hOpN
         hmOp hmhOp hmuOp hmsOp hmwOp hsumOp
     have hOpOracle :
         List.Forall (· = 0)
@@ -1854,96 +1785,34 @@ private theorem mulChip_constraints_faithful
     · simpa only [rustA, rustB, rustC, rustOperation,
         rustIsReal, rustIsMul, rustIsMulh, rustIsMulw,
         rustIsMulhu, rustIsMulhsu, operation, a,
-        mul_chip_operation, mul_chip_a, mul_chip_is_real,
-        mul_chip_flag, eval_add, ProvableType.eval_field, Nat.add_zero,
+        mul_chip_operation, mul_chip_a, MulChip.Inputs.is_real,
+        eval_add, ProvableType.eval_field, Nat.add_zero,
         Expression.eval] using hOpOracle
     · simpa only [rustState, rustNextPc, stateValue, rustIsReal,
-        mul_chip_is_real, mul_chip_flag, eval_add,
+        MulChip.Inputs.is_real, eval_add,
         ProvableType.eval_field, Expression.eval, Nat.add_zero] using
         hCpuOracle
     · simpa only [stateValue, rustOpcode, rustA, rustAdapter,
         rustIsReal, operation, a, adapterValue,
-        mul_chip_operation, mul_chip_a, mul_chip_is_real,
-        mul_chip_flag, eval_add, eval_mul, vec3_eta,
+        mul_chip_operation, mul_chip_a, MulChip.Inputs.is_real,
+        eval_add, eval_mul, vec3_eta,
         ProvableType.eval_field, Expression.eval, Nat.add_zero] using
         hRtypeOracle
-    · simpa only [rustIsMul, mul_chip_flag, opInput,
+    · simpa only [rustIsMul, opInput,
         ProvableType.eval_field, Expression.eval, Nat.add_zero] using
         hmOp
-    · simpa only [rustIsMulh, mul_chip_flag, opInput,
+    · simpa only [rustIsMulh, opInput,
         ProvableType.eval_field, Expression.eval] using hmhOp
-    · simpa only [rustIsMulhu, mul_chip_flag, opInput,
+    · simpa only [rustIsMulhu, opInput,
         ProvableType.eval_field, Expression.eval] using hmuOp
-    · simpa only [rustIsMulw, mul_chip_flag, opInput,
+    · simpa only [rustIsMulw, opInput,
         ProvableType.eval_field, Expression.eval] using hmwOp
-    · simpa only [rustIsMulhsu, mul_chip_flag, opInput,
+    · simpa only [rustIsMulhsu, opInput,
         ProvableType.eval_field, Expression.eval] using hmsOp
-    · simpa only [rustIsReal, mul_chip_is_real, mul_chip_flag,
+    · simpa only [rustIsReal, MulChip.Inputs.is_real,
         opInput, eval_add, ProvableType.eval_field,
         Expression.eval, Nat.add_zero] using hsumOp
     · simpa only [rustAdapter, adapterValue] using hRustOpA0
-
-private theorem mulChipRowCodec_inputReal
-    (cols : MulChip.Columns (ZMod p))
-    (data : ProverData (ZMod p)) :
-    let assignment := mulChipRowCodec.assignment cols data
-    Expression.eval assignment.environment
-        ({ circuit := MulChip.circuit (p := p) } :
-          Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-      Expression.eval assignment.environment
-        (mul_chip_is_real
-          ({ circuit := MulChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowOffset) := by
-  dsimp only
-  let assignment := mulChipRowCodec.assignment cols data
-  rw [Air.Flat.Component.rowInputVar_mk,
-    Air.Flat.Component.rowOffset_mk]
-  have hInput :
-      Expression.eval
-          (Environment.fromArray
-            (inputFirstRow (mulChipInput cols)
-              (mulChipLocals cols)) data)
-          (varFromOffset MulChip.Inputs 0).is_real =
-        (mulChipInput cols).is_real := by
-    have h := congrArg (fun value => value.is_real)
-      (eval_inputFirstRow (mulChipInput cols)
-        (mulChipLocals cols) data)
-    rw [MulChip.eval_inputs] at h
-    simpa only [ProvableType.eval_field] using h
-  have h0 := eval_local_inputFirstRow (mulChipInput cols)
-    (mulChipLocals cols) data 0 (by decide)
-  have h1 := eval_local_inputFirstRow (mulChipInput cols)
-    (mulChipLocals cols) data 1 (by decide)
-  have h2 := eval_local_inputFirstRow (mulChipInput cols)
-    (mulChipLocals cols) data 2 (by decide)
-  have h3 := eval_local_inputFirstRow (mulChipInput cols)
-    (mulChipLocals cols) data 3 (by decide)
-  have h4 := eval_local_inputFirstRow (mulChipInput cols)
-    (mulChipLocals cols) data 4 (by decide)
-  change
-    Expression.eval assignment.environment
-        (varFromOffset MulChip.Inputs 0).is_real =
-      assignment.environment.get (size MulChip.Inputs) +
-          assignment.environment.get (size MulChip.Inputs + 1) +
-        assignment.environment.get (size MulChip.Inputs + 2) +
-        assignment.environment.get (size MulChip.Inputs + 3) +
-        assignment.environment.get (size MulChip.Inputs + 4)
-  rw [show assignment.environment =
-      Environment.fromArray
-        (inputFirstRow (mulChipInput cols)
-          (mulChipLocals cols)) data by rfl]
-  rw [hInput]
-  simp only [mulChipInput]
-  simp only [Expression.eval] at h0 h1 h2 h3 h4
-  rw [mulChipLocals_flag cols 0 (by decide)] at h0
-  rw [mulChipLocals_flag cols 1 (by decide)] at h1
-  rw [mulChipLocals_flag cols 2 (by decide)] at h2
-  rw [mulChipLocals_flag cols 3 (by decide)] at h3
-  rw [mulChipLocals_flag cols 4 (by decide)] at h4
-  simp only [mulChipInput, Nat.add_zero, Vector.getElem_mk,
-    List.getElem_toArray, List.getElem_cons_zero,
-    List.getElem_cons_succ] at h0 h1 h2 h3 h4
-  rw [h0, h1, h2, h3, h4]
 
 theorem mulChip_constraints_constructive
     (rustCols : Extracted.MulOracle.MulCols (ZMod p))
@@ -1965,21 +1834,12 @@ theorem mulChip_constraints_constructive
     have h := NativeRowAssignment.bindsOutput assignment
     rw [MulChip.circuit_main_eq] at h
     exact h
-  have hinputReal :
-      Expression.eval assignment.environment
-          ({ circuit := MulChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-        Expression.eval assignment.environment
-          (mul_chip_is_real
-            ({ circuit := MulChip.circuit (p := p) } :
-              Air.Flat.Component (ZMod p)).rowOffset) :=
-    mulChipRowCodec_inputReal cols data
   have hfaithful := mulChip_constraints_faithful
     assignment.environment
     ({ circuit := MulChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := MulChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
+      Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (mulChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
@@ -2405,22 +2265,20 @@ private theorem mulChip_state_interactions_faithful
     Extracted.Interaction.toAccess, Extracted.Dir.sign,
     hReal, hClkHigh, hPc1, hPc2]
   simp only [Expression.eval,
-    hReal, hClkLow, hClkHighLimb, hPc0, hPc0']
-  simp
+    hClkLow, hClkHighLimb, hPc0, hPc0']
+  simp only [true_and, and_true, neg_one_mul]
+  simpa only [MulChip.Inputs.is_real, Expression.eval, neg_add_rev] using
+    congrArg (fun value : ZMod p => signedVal (-value)) hReal
 
 private theorem mulChip_program_interactions_faithful
     (env : Environment (ZMod p))
     (input : Var MulChip.Inputs (ZMod p)) (offset : ℕ)
     (cols : MulChip.Columns (ZMod p))
-    (hReal :
-      Expression.eval env input.is_real =
-        cols.is_mul + cols.is_mulh + cols.is_mulhu +
-          cols.is_mulhsu + cols.is_mulw)
-    (hMul : env.get offset = cols.is_mul)
-    (hMulh : env.get (offset + 1) = cols.is_mulh)
-    (hMulhu : env.get (offset + 2) = cols.is_mulhu)
-    (hMulhsu : env.get (offset + 3) = cols.is_mulhsu)
-    (hMulw : env.get (offset + 4) = cols.is_mulw)
+    (hMul : Expression.eval env input.isMul = cols.is_mul)
+    (hMulh : Expression.eval env input.isMulh = cols.is_mulh)
+    (hMulhu : Expression.eval env input.isMulhu = cols.is_mulhu)
+    (hMulhsu : Expression.eval env input.isMulhsu = cols.is_mulhsu)
+    (hMulw : Expression.eval env input.isMulw = cols.is_mulw)
     (hPc0 : Expression.eval env input.state.pc[0] = cols.state.pc[0])
     (hPc1 : Expression.eval env input.state.pc[1] = cols.state.pc[1])
     (hPc2 : Expression.eval env input.state.pc[2] = cols.state.pc[2])
@@ -2473,7 +2331,7 @@ private theorem mulChip_program_interactions_faithful
     LookupAccessList.negMult, signedVal_neg hp2,
     Opcode.ofNat, ConstraintCoe.coe_eq_val,
     hPc0, hPc1, hPc2, hOpA, hOpB, hOpC, hOpA0]
-  simp only [Expression.eval, hReal, hMul, hMulh, hMulhu, hMulhsu, hMulw]
+  simp only [Expression.eval, hMul, hMulh, hMulhu, hMulhsu, hMulw]
   rw [neg_one_mul, signedVal_neg hp2]
   simp
 
@@ -2495,10 +2353,10 @@ private theorem mulChip_memory_interactions_faithful
     (hOpA : Expression.eval env input.adapter.op_a = cols.adapter.op_a)
     (hOpB : Expression.eval env input.adapter.op_b = cols.adapter.op_b)
     (hOpC : Expression.eval env input.adapter.op_c = cols.adapter.op_c)
-    (hA0 : env.get (offset + 50) = cols.a[0])
-    (hA1 : env.get (offset + 51) = cols.a[1])
-    (hA2 : env.get (offset + 52) = cols.a[2])
-    (hA3 : env.get (offset + 53) = cols.a[3])
+    (hA0 : env.get (offset + 45) = cols.a[0])
+    (hA1 : env.get (offset + 46) = cols.a[1])
+    (hA2 : env.get (offset + 47) = cols.a[2])
+    (hA3 : env.get (offset + 48) = cols.a[3])
     (hPrevLowA :
       Expression.eval env input.adapter.op_a_memory.access_timestamp.prev_low =
         cols.adapter.op_a_memory.access_timestamp.prev_low)
@@ -2615,6 +2473,11 @@ private theorem mulChip_memory_interactions_faithful
     neg_one_mul, ZMod.val_zero]
   rw [hNegFlags]
   simp only [signedVal_neg hp2, neg_neg]
+  have hRealSum := hReal
+  change Expression.eval env input.isMul + Expression.eval env input.isMulh +
+    Expression.eval env input.isMulhu + Expression.eval env input.isMulhsu +
+    Expression.eval env input.isMulw = _ at hRealSum
+  rw [hRealSum]
   exact (List.perm_append_comm
     (l₁ := [_, _, _, _]) (l₂ := [_])).append_left [_]
 
@@ -2629,25 +2492,25 @@ private theorem mulChip_byte_interactions_decompose
           byteChannel.toRaw ++
       ((SP1Clean.MulOperation.main
         ⟨input.op_b_val, input.op_c_val, mul_chip_operation offset,
-          mul_chip_is_real offset, mul_chip_flag offset 0,
-          mul_chip_flag offset 1, mul_chip_flag offset 2,
-          mul_chip_flag offset 3, mul_chip_flag offset 4, mul_chip_a offset⟩).operations
-            (offset + 54)).interactionsWith byteChannel.toRaw ++
+          input.is_real, input.isMul,
+          input.isMulh, input.isMulhu,
+          input.isMulhsu, input.isMulw, mul_chip_a offset⟩).operations
+            (offset + 49)).interactionsWith byteChannel.toRaw ++
       ((Readers.RTypeReader.main
         ⟨input.adapter, input.is_real, input.is_real,
           input.state.clk_high,
           input.state.clk_0_16 + input.state.clk_16_24 * 65536,
           input.state.pc,
-          mul_chip_flag offset 0 * 11 +
-            mul_chip_flag offset 1 * 12 +
-            mul_chip_flag offset 2 * 13 +
-            mul_chip_flag offset 3 * 14 +
-            mul_chip_flag offset 4 * 24,
+          input.isMul * 11 +
+            input.isMulh * 12 +
+            input.isMulhu * 13 +
+            input.isMulhsu * 14 +
+            input.isMulw * 24,
           (mul_chip_a offset)[0], (mul_chip_a offset)[1],
           (mul_chip_a offset)[2], (mul_chip_a offset)[3]⟩).operations
-            (offset + 54)).interactionsWith byteChannel.toRaw := by
-  simp [MulChip.main, mul_chip_operation, mul_chip_is_real,
-    mul_chip_flag, mul_chip_a,
+            (offset + 49)).interactionsWith byteChannel.toRaw := by
+  simp [MulChip.main, mul_chip_operation, MulChip.Inputs.is_real,
+    mul_chip_a,
     Readers.CPUState.circuit, Readers.RTypeReader.circuit,
     Readers.RegisterWrite.circuit,
     SP1Clean.MulOperation.circuit,
@@ -2665,36 +2528,36 @@ private theorem mulChip_operation_interactions_active
           (Eval.eval env input.op_b_val)
           (Eval.eval env input.op_c_val)
           (Eval.eval env (mul_chip_operation (p := p) offset))
-          (Expression.eval env (mul_chip_is_real (p := p) offset))
-          (Expression.eval env (mul_chip_flag (p := p) offset 0))
-          (Expression.eval env (mul_chip_flag (p := p) offset 1))
-          (Expression.eval env (mul_chip_flag (p := p) offset 4))
-          (Expression.eval env (mul_chip_flag (p := p) offset 2))
-          (Expression.eval env (mul_chip_flag (p := p) offset 3))).map
+          (Expression.eval env (input.is_real))
+          (Expression.eval env (input.isMul))
+          (Expression.eval env (input.isMulh))
+          (Expression.eval env (input.isMulw))
+          (Expression.eval env (input.isMulhu))
+          (Expression.eval env (input.isMulhsu))).map
           Extracted.Interaction.toAccess) =
       LookupAccessList.active
         (List.map (AbstractInteraction.toAccess env)
           (((SP1Clean.MulOperation.main
             ⟨input.op_b_val, input.op_c_val,
               mul_chip_operation (p := p) offset,
-              mul_chip_is_real (p := p) offset,
-              mul_chip_flag (p := p) offset 0,
-              mul_chip_flag (p := p) offset 1,
-              mul_chip_flag (p := p) offset 2,
-              mul_chip_flag (p := p) offset 3,
-              mul_chip_flag (p := p) offset 4, mul_chip_a offset⟩).operations
-                (offset + 54)).interactionsWith byteChannel.toRaw)) := by
+              input.is_real,
+              input.isMul,
+              input.isMulh,
+              input.isMulhu,
+              input.isMulhsu,
+              input.isMulw, mul_chip_a offset⟩).operations
+                (offset + 49)).interactionsWith byteChannel.toRaw)) := by
   let opInput : Var SP1Clean.MulOperation.Inputs (ZMod p) :=
     ⟨input.op_b_val, input.op_c_val,
       mul_chip_operation (p := p) offset,
-      mul_chip_is_real (p := p) offset,
-      mul_chip_flag (p := p) offset 0,
-      mul_chip_flag (p := p) offset 1,
-      mul_chip_flag (p := p) offset 2,
-      mul_chip_flag (p := p) offset 3,
-      mul_chip_flag (p := p) offset 4, mul_chip_a offset⟩
+      input.is_real,
+      input.isMul,
+      input.isMulh,
+      input.isMulhu,
+      input.isMulhsu,
+      input.isMulw, mul_chip_a offset⟩
   exact congrArg LookupAccessList.active
-    (mulOperation_interactions_evaluated env opInput (offset + 54))
+    (mulOperation_interactions_evaluated env opInput (offset + 49))
 
 omit [Fact (2 ^ 24 < p)] in
 private theorem mulOperation_accesses_filter_byte
@@ -2747,10 +2610,7 @@ private theorem mulChip_interactions_faithful
     (env : Environment (ZMod p))
     (input : Var MulChip.Inputs (ZMod p)) (offset : ℕ)
     (cols : MulChip.Columns (ZMod p))
-    (hbind : BindsChipOutput MulChip.main env input offset cols)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (mul_chip_is_real (p := p) offset)) :
+    (hbind : BindsChipOutput MulChip.main env input offset cols) :
     List.Perm
       (LookupAccessList.active
         (nativeAccesses env ((MulChip.main input).operations offset)))
@@ -2766,19 +2626,18 @@ private theorem mulChip_interactions_faithful
       adapter := Eval.eval env input.adapter
       a := Eval.eval env (mul_chip_a (p := p) offset)
       mul_operation := Eval.eval env (mul_chip_operation (p := p) offset)
-      is_mul := Expression.eval env (mul_chip_flag (p := p) offset 0)
-      is_mulh := Expression.eval env (mul_chip_flag (p := p) offset 1)
-      is_mulhu := Expression.eval env (mul_chip_flag (p := p) offset 2)
-      is_mulhsu := Expression.eval env (mul_chip_flag (p := p) offset 3)
-      is_mulw := Expression.eval env (mul_chip_flag (p := p) offset 4) }
+      is_mul := Expression.eval env (input.isMul)
+      is_mulh := Expression.eval env (input.isMulh)
+      is_mulhu := Expression.eval env (input.isMulhu)
+      is_mulhsu := Expression.eval env (input.isMulhsu)
+      is_mulw := Expression.eval env (input.isMulw) }
   change rustCols = cols at hbind
   subst cols
   have hReal :
       Expression.eval env input.is_real =
         rustCols.is_mul + rustCols.is_mulh + rustCols.is_mulhu +
           rustCols.is_mulhsu + rustCols.is_mulw := by
-    simpa only [rustCols, mul_chip_is_real, mul_chip_flag,
-      eval_add, Expression.eval] using hinputReal
+    rfl
   have hStateEval := eval_cpuState env input.state
   have hStatePc :=
     congrArg (fun state : Circuits.Types.CPUState (ZMod p) => state.pc)
@@ -2854,12 +2713,12 @@ private theorem mulChip_interactions_faithful
         (by decide)).trans
           (congrArg (fun pc => pc[2]) hStatePc.symm))
   have hP := mulChip_program_interactions_faithful env input offset
-    rustCols hReal
-    (by simp only [rustCols, mul_chip_flag, Expression.eval, Nat.add_zero])
-    (by simp only [rustCols, mul_chip_flag, Expression.eval])
-    (by simp only [rustCols, mul_chip_flag, Expression.eval])
-    (by simp only [rustCols, mul_chip_flag, Expression.eval])
-    (by simp only [rustCols, mul_chip_flag, Expression.eval])
+    rustCols
+    (by rfl)
+    (by rfl)
+    (by rfl)
+    (by rfl)
+    (by rfl)
     (by
       dsimp only [rustCols]
       exact (ProvableType.getElem_eval_fields env input.state.pc 0
@@ -2995,16 +2854,16 @@ private theorem mulChip_interactions_faithful
       input.state.clk_high,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536,
       input.state.pc,
-      mul_chip_flag offset 0 * 11 +
-        mul_chip_flag offset 1 * 12 +
-        mul_chip_flag offset 2 * 13 +
-        mul_chip_flag offset 3 * 14 +
-        mul_chip_flag offset 4 * 24,
+      input.isMul * 11 +
+        input.isMulh * 12 +
+        input.isMulhu * 13 +
+        input.isMulhsu * 14 +
+        input.isMulw * 24,
       (mul_chip_a offset)[0], (mul_chip_a offset)[1],
       (mul_chip_a offset)[2], (mul_chip_a offset)[3]⟩
   have hRtypeByte :=
     rtypereader_byte_interactions_faithful_syntactic env rtypeInput
-      (offset + 54)
+      (offset + 49)
       rustCols.state.clk_high
       (rustCols.state.clk_0_16 + rustCols.state.clk_16_24 * 65536)
       rustCols.state.pc
@@ -3080,17 +2939,17 @@ private theorem mulChip_interactions_faithful
     (((SP1Clean.MulOperation.main
       ⟨input.op_b_val, input.op_c_val,
         mul_chip_operation (p := p) offset,
-        mul_chip_is_real (p := p) offset,
-        mul_chip_flag (p := p) offset 0,
-        mul_chip_flag (p := p) offset 1,
-        mul_chip_flag (p := p) offset 2,
-        mul_chip_flag (p := p) offset 3,
-        mul_chip_flag (p := p) offset 4, mul_chip_a offset⟩).operations
-          (offset + 54)).interactionsWith byteChannel.toRaw).map
+        input.is_real,
+        input.isMul,
+        input.isMulh,
+        input.isMulhu,
+        input.isMulhsu,
+        input.isMulw, mul_chip_a offset⟩).operations
+          (offset + 49)).interactionsWith byteChannel.toRaw).map
             (AbstractInteraction.toAccess env)
   let nativeRtypeAccesses : LookupAccessList :=
     (((Readers.RTypeReader.main rtypeInput).operations
-      (offset + 54)).interactionsWith byteChannel.toRaw).map
+      (offset + 49)).interactionsWith byteChannel.toRaw).map
         (AbstractInteraction.toAccess env)
   have hRustByte :
       (mulChipOracle.accesses rustCols).filter
@@ -3129,7 +2988,7 @@ private theorem mulChip_interactions_faithful
         LookupAccessList.active nativeOperationAccesses := by
     rw [hEvalB, hEvalC] at hO
     simpa only [rustOperationAccesses, nativeOperationAccesses,
-      rustCols, mul_chip_is_real, mul_chip_flag, eval_add,
+      rustCols, MulChip.Inputs.is_real, eval_add,
       Expression.eval] using hO
   have hB :
       List.Perm
@@ -3224,21 +3083,12 @@ theorem mulChip_interactions_constructive
     have h := NativeRowAssignment.bindsOutput assignment
     rw [MulChip.circuit_main_eq] at h
     exact h
-  have hinputReal :
-      Expression.eval assignment.environment
-          ({ circuit := MulChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-        Expression.eval assignment.environment
-          (mul_chip_is_real
-            ({ circuit := MulChip.circuit (p := p) } :
-              Air.Flat.Component (ZMod p)).rowOffset) :=
-    mulChipRowCodec_inputReal cols data
   have hfaithful := mulChip_interactions_faithful
     assignment.environment
     ({ circuit := MulChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := MulChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
+      Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations
     (MulChip.circuit (p := p)) assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,

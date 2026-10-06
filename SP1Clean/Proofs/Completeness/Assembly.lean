@@ -263,8 +263,9 @@ def instructionTableFor : InstructionChipId → Table (ZMod p)
       (StoreWordChip.traceInputs (trace.instructionEvents .storeWord)) trace.generationData trace.hint
   | .storeDouble => Table.build StoreDoubleChip.component
       (StoreDoubleChip.traceInputs (trace.instructionEvents .storeDouble)) trace.generationData trace.hint
-  | .mul => Table.buildHinted MulChip.component
+  | .mul => Table.build MulChip.component
       (MulChip.traceInputs (trace.instructionEvents .mul) 0) trace.generationData
+      (ProverHint.empty _)
   | .divRem => Table.build DivRemChip.component
       (DivRemChip.traceInputs (trace.instructionEvents .divRem) 0) trace.generationData
       (ProverHint.empty _)

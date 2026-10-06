@@ -352,7 +352,7 @@ private def activeTableGroup2 : List (Table (ZMod SP1Prime)) :=
    Table.build StoreHalfChip.component [] anchorData anchorHint,
    Table.build StoreWordChip.component [] anchorData anchorHint,
    Table.build StoreDoubleChip.component [] anchorData anchorHint,
-   Table.buildHinted MulChip.component [] anchorData,
+   Table.build MulChip.component [] anchorData anchorHint,
    Table.buildHinted DivRemChip.component [] anchorData,
    Table.build AluX0Chip.component [] anchorData anchorHint]
 

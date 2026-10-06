@@ -20,10 +20,11 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- ADD, LoadByte and DivRem export through the same built-in path. Rust compares generated witnesses,
+- ADD, LoadByte, Mul and DivRem export through the same built-in path. Rust compares generated witnesses,
   local constraint satisfaction and complete interaction multisets with SP1 v6.8.1's supervisor
   AIR, including padding and column mutations. DivRem supplies seven opcode selectors as inputs
-  and derives DIVU; the multiplication gadget retains the caller's result word in disabled
+  and derives DIVU. Mul supplies five selectors and derives activity from their sum, matching
+  SP1's 82-cell layout. The multiplication gadget retains the caller's result word in disabled
   interactions. Both Cargo configurations, with and without `mprotect`, run these comparisons;
   they do not cover user-mode or mprotect semantics. See the [coverage table](../rust/sp1-comparison/README.md).
 - Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They are
@@ -68,7 +69,7 @@ not in the library source. Additive gaps belong in ToClean; canonical upstream r
 changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixture establishes the backend boundary. The instruction comparison keeps
-external buses open and checks that either instruction alone cannot claim balanced execution. The complete native
+external buses open and checks that each instruction alone cannot claim balanced execution. The complete native
 inventory still contains legacy lookups, which built-in lowering rejects. Migrate those providers
 and all instruction consumers before retiring chip JSON comparison. Rust tests do not establish
 cryptographic security or a formal lowering theorem.

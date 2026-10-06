@@ -3948,7 +3948,8 @@ theorem mulChip_rtypeGroundingData :
     rw [inputEq, outputEq] at adapter
     have realInput : Expression.eval env input.is_real = 1 := by
       change ((mulChipDescriptor (p := p)).decodeRow proverData physical).view.is_real = 1 at realView
-      rw [mulViewOf_decodeRow, mulViewOf_isReal, ← inputEq, MulChip.eval_isReal] at realView
+      rw [mulViewOf_decodeRow, mulViewOf_isReal, ← inputEq,
+        ProvableStruct.eval_eq_eval, MulChip.eval_isReal] at realView
       exact realView
     have oneHot := MulChip.selectorOneHot_of_shallowConstraints input offset env shallow realInput
     rw [MulChip.eval_selectors, outputEq] at oneHot

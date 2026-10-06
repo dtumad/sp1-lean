@@ -176,9 +176,9 @@ theorem instructionTableFor_length (id : InstructionChipId) :
       simp only [StoreDoubleChip.traceInputs]
       exact List.length_map ..)
   | mul =>
-    exact (Table.buildHinted_length MulChip.component
+    exact (Table.build_length MulChip.component
       (MulChip.traceInputs (trace.instructionEvents .mul) 0)
-      trace.generationData (by trivial)).trans (by
+      trace.generationData (ProverHint.empty _) (by trivial)).trans (by
       change (MulChip.traceInputs (trace.instructionEvents .mul) 0).length = _
       simp only [MulChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)

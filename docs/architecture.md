@@ -65,6 +65,8 @@ the intermediate raw assertions, and are not dependencies of the public semantic
 The multiplication gadget takes the caller's result word and owns its selector-gated placement
 checks. Mul and DivRem consume that bundled contract directly; no separate placement equations
 are needed at the chip boundary. Disabled interactions retain the supplied result limbs.
+Mul supplies its five opcode selectors as inputs and derives activity from their sum; it needs
+no external selector hints or separate activity cell.
 The comparison cluster uses pure feature specifications. The product gadget remains a dependency
 to migrate before the product cluster can use module mode.
 
