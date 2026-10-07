@@ -1,5 +1,5 @@
-import SP1Clean.Native.Operations.MulOperation
-import SP1Clean.Native.Operations.DivRemOperation.OwnAsserts
+import SP1Clean.Circuits.Gadgets.Mul
+import SP1Clean.Circuits.Gadgets.DivRem.Assertions
 import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
 import SP1Clean.Circuits.Types.DivRem
 import SP1Clean.Model.Channels
@@ -17,10 +17,8 @@ constrains is a field of the input `cols` — so its `localLength` is `0`. It ca
 
 * `MulOperation` ×2 — the two `c_times_quotient = quotient_comp · c` product structs: `lower`
   (low 64 bits, gate + `is_mul` = `is_real`) and `upper` (high 64 bits, gate = `is_real_not_word`,
-  `is_mulh = is_div + is_rem` signed / `is_mulhu = is_divu + is_remu` unsigned);
-* the 8 inline product-glue `assertZero`s tying the `c_times_quotient` u16 limbs to the Mul
-  gadgets' product bytes — limbs 0–3 to `lower`'s bytes 0–7 under `is_real`, limbs 4–7 to
-  `upper`'s bytes 8–15 gated by the 64-bit flag sum `g64 = is_div + is_divu + is_rem + is_remu`;
+  `is_mulh = is_div + is_rem` signed / `is_mulhu = is_divu + is_remu` unsigned).
+  Each call receives its committed `c_times_quotient` result slice and owns the placement checks;
 * the chip's own assertZero tail `assertZeros (ownAsserts cols)` (the `[E13…E367, op_a_0]` list);
 * the 32 `byteChannel` u16 `Range` pulls: the 8 carry-chain limbs (`E123…E151`, rebuilt over the
   committed columns with the `rn = rem_neg · 65535` sign-fill addend) and the
@@ -44,7 +42,7 @@ open SP1Clean.DivRemChip (ownAsserts assertZeros)
 -- lift), so it carries the `Fact (2 ^ 24 < p)` field bound — subsuming the project-wide `2 ^ 17`.
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-/-- Emit the DivRem row's product cluster (`MulOperation` ×2 + the 8 glue asserts), the chip's own
+/-- Emit the DivRem row's two bundled multiplication checks (including result placement), the chip's own
 assertZero tail (`ownAsserts`), and the 32 byte-range pulls, each applied to the committed `cols`
 fields. No witnesses — the only fresh state is the composed `MulOperation` assertions' channel
 activity plus the cluster's own byte pulls. -/

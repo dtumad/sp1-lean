@@ -1,30 +1,24 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import SP1Clean.Math.MulCarryChain
-import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Native.Operations.U16toU8OperationSafe
-import SP1Clean.Circuits.Types.MulOperation
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Bits
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Semantics.Specs.Mul
+public import SP1Clean.Semantics.Specs.U16toU8Safe
+public import SP1Clean.Math.Bitwise
 import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.IntervalCases
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.Algebra.BigOperators.Fin
 
-/-! # `MulOperation` — arithmetic core (`RawSpec` + `mulSemantics_of_raw`).
+/-! # Multiplication arithmetic evidence
 
-The byte/schoolbook helpers (`extendedBytes`/`byteAt`/`colSum`/`carryVal`, the `colSum_k`
-expansions, reassembly lemmas), the literal `RawSpec`, and the soundness core
-`mulSemantics_of_raw : RawSpec → SemanticSpec`. -/
+Schoolbook product/carry certificates and their semantic readout. This layer uses pure operand
+contracts; circuit constraints, byte-channel implementation and witness generation live above it.
+-/
+
+@[expose] public section
 
 namespace SP1Clean.MulOperation
 
 open Circuit
-open SP1Clean.Channels (byteChannel)
 
 -- The multiply column arithmetic needs a wider field than the rest of the project: a product
 -- column `colSum k` (≤ 16 byte×byte terms ≈ 2^20) plus the outgoing `carry k * 256` term reaches
@@ -42,25 +36,7 @@ instance : Fact (1 < p) :=
   ⟨by have h := Fact.out (p := 2 ^ 24 < p); have : (1 : ℕ) < 2 ^ 24 := by norm_num
       omega⟩
 
-omit [Fact p.Prime] in
-/-- `2 ^ 16 < p`, the side condition `Gadgets.ToBits.rangeCheck 16` needs. -/
-lemma hn16 : 2 ^ 16 < p := by
-  have h := Fact.out (p := 2 ^ 24 < p)
-  have : (2 : ℕ) ^ 16 < 2 ^ 24 := by norm_num
-  omega
-
-omit [Fact p.Prime] in
-/-- `2 ^ 8 < p`, the side condition `Gadgets.ToBits.rangeCheck 8` needs. -/
-lemma hn8 : 2 ^ 8 < p := by
-  have h := Fact.out (p := 2 ^ 24 < p)
-  have : (2 : ℕ) ^ 8 < 2 ^ 24 := by norm_num
-  omega
-
--- Ladder-measured 2026-08-01: floor (10000, 20000], so the plain default carries >=10x headroom and
--- this declaration needs no budget. It reached that only after the same two fixes applied to its
--- 16-column sibling `full_product` below — an opaque `obtain ⟨S, hS⟩` instead of `set … with hS`,
--- and clearing the spent column equations `e0..e7` before the closing `omega`. See the long note
--- above `full_product` for the measurements and for what is left. Do not reintroduce `set` here.
+-- Keep the convolution opaque with `obtain`, then clear spent column equations before `omega`.
 /-- **Low-half schoolbook reassembly** (the MUL keystone). Given the first eight columns of the
 schoolbook product/carry chain over the eight operand bytes `b0..b7`, `c0..c7` (each column equation
 `p_k + k_k·256 = ∑_{i+j=k} b_i·c_j + (incoming carry)`), the eight low product bytes reassemble — mod
@@ -109,40 +85,10 @@ lemma low_half
   clear hS e0 e1 e2 e3 e4 e5 e6 e7
   omega
 
--- Ceiling removed 2026-08-01, in two passes, and the note the first pass left here was wrong.
---
--- Pass 1 had cut the floor from (1000000, 1200000] to (300000, 400000] by replacing `set S := … with
--- hS` (a let-bound local the elaborator zeta-unfolds — Clean's performance doc rejects it for exactly
--- this) with Clean fix pattern 4, `obtain ⟨S, hS⟩ : ∃ S, S = … := ⟨_, rfl⟩`, a genuinely opaque local,
--- plus `clear hS`. It then declared the residue "term-intrinsic". It was not.
---
--- Pass 2: `clear hS` dropped the schoolbook sum but left the sixteen column equations `e0..e15` in
--- context, and they have done their whole job the moment `hLOW` is derived — the closing `omega`
--- needs only `hLOW`, `hHIGH` and the goal. Each `eᵢ` carries up to sixteen monomials plus a `k*256`
--- term, so that `omega` was re-ingesting ~200 surplus monomials and 16 surplus atoms on top of
--- `hHIGH`'s 256-monomial RHS. Extending the clear to `clear hS e0 … e15` drops the floor to
--- (120000, 150000] — under Lean's plain default, so this declaration now carries no budget at all.
--- Measured with `#count_heartbeats`, total work for the declaration fell 593455 → 214983 (2.8x);
--- the same treatment applied to the 8-column sibling `low_half` took it 50601 → 26990 (1.9x), floor
--- (20000, 40000] → (10000, 20000]. Whole-file elaboration went 20.7s → 9.1s.
---
--- Caveat for whoever measures this next: 214983 is above the plain default. It fits because Lean
--- elaborates the signature and the tactic body as separate tasks, each with its own budget; the
--- body is the (120000, 150000] half. So the headroom here is ~1.3x, not the >=5x the rest of this
--- file enjoys — thin, though heartbeats are deterministic, so this is a toolchain-bump risk, not a
--- flakiness risk. Re-ladder after any Lean/Mathlib bump.
---
--- What is left really is term-intrinsic at this proof shape: `hHIGH`'s `ring` normalises a
--- 256-monomial 16x16 convolution and `hLOW`'s `omega` telescopes sixteen column equations, and
--- moving the clear earlier (before `hHIGH`) was measured to change nothing. Two routes remain if
--- more margin is ever wanted. Cheap: lift `hLOW` and `hHIGH` to top-level `private` lemmas over
--- their free `ℕ` variables — `hHIGH` is already a fully abstract `ring` identity over 32 variables
--- with the proof accidentally wrapped around it — which does not reduce total work but gives each
--- piece its own budget and makes `low_half` an instance of the same pair at n=8. Real: prove a
--- general indexed mod-`2^(8n)` reassembly lemma in `Math/MulCarryChain.lean` (which today has
--- `chainM`/`carry`/`product`/`recurrence_*`/`cpNat` but no reassembly lemma) and instantiate it at
--- n=8 and n=16. Only the second would make "term-intrinsic" actually false; it is a development,
--- not a tweak.
+-- The full convolution needs the same opacity/clearing pattern as `low_half`. Its measured
+-- proof-body floor was (120000, 150000] on 2026-08-01; remeasure after toolchain changes.
+-- Clearing earlier did not help. A generic indexed reassembly theorem could replace both
+-- concrete convolutions, but requires a new mathematical proof rather than a larger budget.
 /-- **Full-product schoolbook reassembly** (the high-half keystone). The 16-column
 mod-`2^128` analogue of `low_half`: given the sixteen schoolbook column equations over the
 sixteen sign/zero-extended operand bytes, the sixteen product bytes reassemble — mod `2^128` —
@@ -1207,5 +1153,49 @@ theorem mulSemantics_of_raw {input : Inputs (ZMod p)} {cols : Circuits.Types.Mul
       have q15 := h_pbyte 15 (by norm_num)
       omega
 
+/-- Arithmetic evidence for the bundled multiplication assertion. Sign-extension definitions
+and MSB booleanity hold on every row. Real rows additionally satisfy the schoolbook product,
+carry bounds, operand decompositions and selected MSB meaning. `result_semantic` recovers the
+RV64 product interpretation; `Spec` adds the caller's result placement. -/
+def ProductSpec (input : Inputs (ZMod p)) : Prop :=
+  -- **Ungated** facts (SP1's `eval` asserts these regardless of `is_real`, so they must hold on padding
+  -- too): the two sign-extend column definitions (`mul.rs:224-225`) and the three MSB booleanities (the
+  -- `U16MSBOperation` sub-`Spec`s carry the bool unconditionally). Completeness needs them on `is_real = 0`.
+  (input.cols.b_sign_extend = (input.is_mulh + input.is_mulhsu) * input.cols.b_msb) ∧
+  (input.cols.c_sign_extend = input.is_mulh * input.cols.c_msb) ∧
+  (input.cols.b_msb = 0 ∨ input.cols.b_msb = 1) ∧
+  (input.cols.c_msb = 0 ∨ input.cols.c_msb = 1) ∧
+  (input.cols.product_msb.msb = 0 ∨ input.cols.product_msb.msb = 1) ∧
+  -- **`is_real`-gated** body: the schoolbook carry-chain + ranges (`RawSpec`), the byte decompositions,
+  -- and the MSB high-bit equations. Pins the product/carry columns on a real row.
+  (input.is_real = 1 →
+    RawSpec input input.cols ∧
+    U16toU8OperationSafe.DecompSpec input.b input.cols.b_lower_byte ∧
+    U16toU8OperationSafe.DecompSpec input.c input.cols.c_lower_byte ∧
+    (input.cols.b_msb = if input.b[3].val ≥ 32768 then 1 else 0) ∧
+    (input.cols.c_msb = if input.c[3].val ≥ 32768 then 1 else 0) ∧
+    (input.cols.product_msb.msb = 0 ∨ input.cols.product_msb.msb = 1) ∧
+    (input.is_mulw = 1 → input.cols.product_msb.msb =
+      if (input.cols.product[2] + input.cols.product[3] * 256).val ≥ 32768 then 1 else 0))
+
+/-- The arithmetic evidence and the caller's selected result. A zero-selector row leaves the
+result free; any selected variant places its complete result, independently of row activity. -/
+def Spec (input : Inputs (ZMod p)) : Prop :=
+  ProductSpec input ∧
+  (input.is_mul + input.is_mulh + input.is_mulhu + input.is_mulhsu + input.is_mulw = 1 →
+    input.a = resultWord input input.cols)
+
+/-- **Semantic readout** (the consumer-facing lemma, mirroring `LtOperationUnsigned.result_semantic`): the
+arithmetic `ProductSpec` + `Assumptions` give the BitVec-product slice for the active variant on a real row. This
+is what `MulChip`/`DivRemChip` consume to reach the RV64 semantics. -/
+theorem result_semantic {input : Inputs (ZMod p)} (h_assum : Assumptions input)
+    (h_spec : ProductSpec input) (hr : input.is_real = 1) : SemanticSpec input input.cols := by
+  obtain ⟨_, _, _, _, _, hgated⟩ := h_spec
+  obtain ⟨h_raw, hb_low, hc_low, hb_msb, hc_msb, hmsb_bool, hmsb⟩ := hgated hr
+  obtain ⟨_, _, hmul_b, hmh_b, hmhu_b, hmhsu_b, hmw_b, hsum⟩ := h_assum
+  have hbU := U16toU8OperationSafe.isU64_of_decomp hb_low
+  have hcU := U16toU8OperationSafe.isU64_of_decomp hc_low
+  exact mulSemantics_of_raw hbU hcU hmul_b hmh_b hmhu_b hmhsu_b hmw_b hsum hb_low hc_low
+    hmsb_bool hmsb hb_msb hc_msb h_raw
 
 end SP1Clean.MulOperation

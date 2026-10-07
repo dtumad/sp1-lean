@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
-import SP1Clean.Proofs.Operations.MulOperation.Formal
+import SP1Clean.Circuits.Gadgets.Mul
 import SP1Clean.Math.WordEquality
 
 /-! # `DivRemChip` populate value bundles — the `c_times_quotient` ↔ `MulOperation` glue

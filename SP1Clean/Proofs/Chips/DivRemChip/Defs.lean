@@ -1,8 +1,8 @@
 import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.MulOperation
+import SP1Clean.Circuits.Gadgets.Mul
 import SP1Clean.Proofs.Operations.DivRemOperation.Compare
 import SP1Clean.Proofs.Operations.DivRemOperation.Core
-import SP1Clean.Native.Operations.DivRemOperation.OwnAsserts
+import SP1Clean.Circuits.Gadgets.DivRem.Assertions
 import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
 import SP1Clean.Proofs.Chips.DivRemChip.Populate
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.FE

@@ -1,9 +1,19 @@
-import SP1Clean.Native.Operations.MulOperation.RawSpec
+module
 
-/-! # `MulOperation` native circuit
+public import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
+public import SP1Clean.Circuits.Gadgets.U16toU8Safe
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Subcircuit
 
-The proof-oriented Clean implementation. Its whole-chip faithfulness proof compares the assembled
-native assertion and interaction system with the independent Rust anchor lists. -/
+/-! # Multiplication constraints
+
+The assertion composes the byte-decomposition and high-bit gadgets, constrains the product/carry
+certificate and checks the caller result. Explicit elaborated metadata keeps this large circuit
+folded at proof boundaries; `Circuits/Gadgets/Mul` supplies its bundled correctness proofs.
+-/
+
+@[expose] public section
 
 namespace SP1Clean.MulOperation
 

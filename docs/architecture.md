@@ -70,8 +70,13 @@ no external selector hints or separate activity cell.
 Its row types and basic evaluation lemmas live in `Circuits/Types/Mul`; the reader/ISA contract
 lives in `Semantics/Specs/Chips/Mul`. The native implementation imports this feature contract
 directly, independently of the shared chip-contract aggregate.
-The comparison cluster uses pure feature specifications. The product gadget remains a dependency
-to migrate before the product cluster can use module mode.
+The multiplication gadget lives under `Circuits/Gadgets/Mul`, with arithmetic certificates, witness
+construction and constraints below its bundled proofs. Its operand/result interpretation and the
+safe byte-decomposition contract live under `Semantics/Specs`. Byte decomposition, the carry-chain
+helpers and DivRem's product-cluster evidence also use module mode. The complete product certificate
+and its semantic readout live in the arithmetic layer, so DivRem's product contract does not import
+multiplication constraints, witness construction or bundled proofs. The certificate retains intermediate
+witness and padding obligations; the semantic readout describes the selected product slice.
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,

@@ -35,6 +35,8 @@ import SP1Clean.FormalModel.Contracts.OrdinaryObservation
 import SP1Clean.FormalModel.Contracts.CoreAIR
 import SP1Clean.FormalModel.Contracts.CoreSyscall
 import SP1Clean.Semantics.Specs.Chips.Mul
+import SP1Clean.Semantics.Specs.Mul
+import SP1Clean.Semantics.Specs.U16toU8Safe
 import SP1Clean.Semantics.Specs.DivRem
 import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
 import SP1Clean.Circuits.Gadgets.DivRem.CoreContract
@@ -295,7 +297,7 @@ import SP1Clean.Native.Operations.ClockOrder
 import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
 import SP1Clean.Native.Operations.DivRemOperation.Compare
 import SP1Clean.Native.Operations.DivRemOperation.Core
-import SP1Clean.Native.Operations.DivRemOperation.OwnAsserts
+import SP1Clean.Circuits.Gadgets.DivRem.Assertions
 import SP1Clean.Native.Operations.FinalMemoryReceipt
 import SP1Clean.Native.Operations.FinalRamValue
 import SP1Clean.Native.Operations.FinalRamCheck
@@ -323,10 +325,10 @@ import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Circuits.Gadgets.LtSigned
 import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Native.Operations.LocalSourceBoundary
-import SP1Clean.Native.Operations.MulOperation
-import SP1Clean.Native.Operations.MulOperation.Defs
-import SP1Clean.Native.Operations.MulOperation.Populate
-import SP1Clean.Native.Operations.MulOperation.RawSpec
+import SP1Clean.Circuits.Gadgets.Mul
+import SP1Clean.Circuits.Gadgets.Mul.Constraints
+import SP1Clean.Circuits.Gadgets.Mul.Witness
+import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
 import SP1Clean.Native.Operations.OrderedBoundary
 import SP1Clean.Native.Operations.OrderedBoundaryEnd
 import SP1Clean.Native.Operations.OrderedBoundaryVerifier
@@ -346,7 +348,7 @@ import SP1Clean.Native.Operations.SubwOperation.RawSpec
 import SP1Clean.Native.Operations.SyscallCodeGuard
 import SP1Clean.Circuits.Gadgets.U16Compare
 import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Native.Operations.U16toU8OperationSafe
+import SP1Clean.Circuits.Gadgets.U16toU8Safe
 import SP1Clean.Native.Operations.U16toU8OperationUnsafe
 import SP1Clean.Native.Operations.WordRangeCheck
 import SP1Clean.Native.Operations.WritePermission
@@ -584,7 +586,6 @@ import SP1Clean.Proofs.Operations.HostBuffer32.Content
 import SP1Clean.Proofs.Operations.HostBuffer32.Ledger
 import SP1Clean.Proofs.Operations.HostBuffer32.Populate
 import SP1Clean.Proofs.Operations.HostRamBytes
-import SP1Clean.Proofs.Operations.MulOperation.Formal
 import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
 import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
 import SP1Clean.Proofs.Operations.SubOperation.Formal

@@ -1,7 +1,7 @@
 import SP1Clean.Math.Word
 import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Circuits.Gadgets.U16Compare
-import SP1Clean.Native.Operations.MulOperation.Populate
+import SP1Clean.Circuits.Gadgets.Mul.Witness
 import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Circuits.Gadgets.IsEqualWord
 import SP1Clean.Circuits.Gadgets.LtUnsigned

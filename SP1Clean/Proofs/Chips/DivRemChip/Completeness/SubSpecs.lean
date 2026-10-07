@@ -1,25 +1,18 @@
-import SP1Clean.Proofs.Operations.MulOperation.Formal
-import SP1Clean.Circuits.Gadgets.IsEqualWord
-import SP1Clean.Circuits.Gadgets.IsZeroWord
+module
+
+public import SP1Clean.Circuits.Types.MulOperation
+public import SP1Clean.Semantics.Specs.IsEqualWord
+public import SP1Clean.Semantics.Specs.IsZeroWord
 import Batteries.Data.Vector.Lemmas
 
-/-! # `DivRemChip` — sub-circuit `Spec` completeness helpers (factored for parallel compilation)
+/-! # DivRem witness-block readback
 
-The chip's `completeness` discharges, among its 62 constraint conjuncts, seven sub-circuit-`Spec`
-obligations: two `MulOperation` (`c_times_quotient_{lower,upper}`), four `IsEqualWordOperation`
-(`is_overflow_{b,c}` full-word + low-half), and one `IsZeroWordOperation` (`is_c_0`). In each the
-goal is `<SubOp>.Spec ⟨…, <witnessed cols block>, …⟩` where the `cols` field is the giant
-`Eval.eval env (ProvableStruct.varFromOffset <SubOpCols> off)` column block; the matching `spec_*`
-lemma proves the `Spec` at the *populate value* of those columns.
+Cellwise pins identify committed multiplication, zero-test and equality column blocks. The size and
+flattening helpers keep large reconstructed witness terms folded at completeness boundaries.
+Contract transport consumes pure specifications, independently of circuit and witness implementations.
+-/
 
-These helpers do exactly the cols-block → populate bridge, stated env-parametrically over an
-**abstract** `cols` struct (so the helper carries no giant term and type-checks in its own file off
-the `completeness` theorem, whose former 256M heartbeat ceiling was removed — zero heartbeat
-options remain in `Proofs/Chips`; mirroring `ownAsserts_complete`). The `completeness`
-glue supplies the two pins (`hcell` from `getElem_toElements_eval_varFromOffset`, `hpop` from the
-witness-hint `h_env_*`) and the chosen `spec_*` lemma (`hSpec`); the helper rewrites `cols` to the
-populate value and discharges by `hSpec`. This replaces the old slow `convert <SubOp>.spec_* using 2`
-(a large failed `isDefEq` over the witnessed cols block, ×17, gated behind `stop`/`sorry`). -/
+@[expose] public section
 
 namespace SP1Clean.DivRemChip.SubSpecs
 
@@ -29,6 +22,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 lemma eqWord_size_eq : size (Circuits.Types.IsEqualWordOperation) = 11 := rfl
 
+/-- The eleven flattened word-equality cells, with their size sealed for parent proofs. -/
 def eqWordWitnessElements (wit : Circuits.Types.IsEqualWordOperation (ZMod p)) :
     Vector (ZMod p) 11 :=
   Vector.cast eqWord_size_eq (ProvableType.toElements wit)
@@ -270,7 +264,6 @@ theorem mul_cols_eq_of_pins (env : Environment (ZMod p)) (off : ℕ)
   rw [mulWitnessElements_eq, Vector.get_cast] at h
   exact h
 
-set_option linter.unusedSectionVars false in
 set_option linter.unusedSectionVars false in
 /-- Discharge one `IsEqualWordOperation` sub-circuit `Spec` obligation. Covers all four `is_overflow`
 cases (full-word `eqb`/`eqc` and low-half `eqb2`/`eqc2`); the gate/branch selection and choice of

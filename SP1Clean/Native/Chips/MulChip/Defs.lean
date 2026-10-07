@@ -1,5 +1,5 @@
 import SP1Clean.Semantics.Specs.Chips.Mul
-import SP1Clean.Native.Operations.MulOperation
+import SP1Clean.Circuits.Gadgets.Mul
 import ToClean.Circuit.WitnessCombinator
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.RTypeReader

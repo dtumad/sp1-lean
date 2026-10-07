@@ -129,7 +129,7 @@ directive before committing — the guard rejects it.
   foldable · `isDefEq` = an abstraction/unification blowup (a `set` over a large term is the classic cause)
   · `«abstract nested proofs»` = post-elaboration, neither foldable nor term-intrinsic · `«LCNF compiler»` =
   genuinely code-generation-bound, where **none of the fold recipes apply**
-  (`Native/Operations/MulOperation/Defs.lean`'s `main` is the only known case: it elaborates fine at 40000
+  (`Circuits/Gadgets/Mul/Constraints.lean`'s `main` is the only known case: it elaborates fine at 40000
   and only codegen times out;
   `noncomputable def` is *rejected*, not deferred, because `SP1CleanTest/TraceGenTests` derives traces from
   `main`'s witness closures and would break `lake test`). **The phase moves with the rung** — measured at
@@ -786,7 +786,7 @@ The recipe that gets you there:
    So **also expose `circuit.localLength` as an `@[circuit_norm]` rfl-lemma**, named `circuit_localLength`,
    placed right after `def circuit` (it can't sit beside `localLength_eq`, because `circuit` is defined
    later — in `Formal.lean` for split ops). Every op/reader that is ever composed as a sub-circuit carries
-   one (example `Native/Operations/MulOperation.lean`):
+   one (example `Circuits/Gadgets/Mul.lean`):
    ```lean
    set_option linter.unusedSectionVars false in
    @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

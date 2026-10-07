@@ -4,7 +4,7 @@ import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Tauto
 import Mathlib.Tactic.Linarith
 import Mathlib.Data.ZMod.Basic
-import SP1Clean.Native.Operations.U16toU8OperationSafe
+import SP1Clean.Circuits.Gadgets.U16toU8Safe
 import SP1Clean.Model.SP1Constraint
 import SP1Clean.Model.InteractionProjection
 import ToClean.Circuit.InteractionRecovery
