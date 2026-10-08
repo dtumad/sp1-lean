@@ -120,7 +120,7 @@ private def ltUnsignedAssertionTail (b cc : Word (ZMod p))
   let comparison1 :=
     (0 : ZMod p) + cc[3] * cols.u16_flags[3] + cc[2] * cols.u16_flags[2] +
       cc[1] * cols.u16_flags[1] + cc[0] * cols.u16_flags[0]
-  [ isReal * (isReal - 1),
+  [isReal * (isReal - 1),
     cols.u16_flags[0] * (cols.u16_flags[0] - 1),
     cols.u16_flags[1] * (cols.u16_flags[1] - 1),
     cols.u16_flags[2] * (cols.u16_flags[2] - 1),
@@ -170,7 +170,7 @@ private def ltUnsignedConstraintTail
     (0 : Expression (ZMod p)) +
       cc[3] * cols.u16_flags[3] + cc[2] * cols.u16_flags[2] +
       cc[1] * cols.u16_flags[1] + cc[0] * cols.u16_flags[0]
-  [ isReal * (isReal - 1) - 0,
+  [isReal * (isReal - 1) - 0,
     cols.u16_flags[0] * (cols.u16_flags[0] - 1) - 0,
     cols.u16_flags[1] * (cols.u16_flags[1] - 1) - 0,
     cols.u16_flags[2] * (cols.u16_flags[2] - 1) - 0,
@@ -506,7 +506,7 @@ private theorem cpuState_eta {F : Type}
 
 private def ltSignedAssertionTail (cols : Circuits.Types.LtOperationSigned (ZMod p))
     (isSigned isReal : ZMod p) : List (ZMod p) :=
-  [ isSigned * (isSigned - 1),
+  [isSigned * (isSigned - 1),
     isReal * (isReal - 1),
     (isReal - 1) * isSigned,
     (isSigned - 1) * cols.b_msb.msb,
@@ -533,7 +533,7 @@ private theorem extracted_ltSigned_assertions_decompose
 private def ltSignedConstraintTail
     (input : Var LtOperationSigned.Inputs (ZMod p)) :
     List (Expression (ZMod p)) :=
-  [ input.is_signed * (input.is_signed - 1) - 0,
+  [input.is_signed * (input.is_signed - 1) - 0,
     input.is_real * (input.is_real - 1) - 0,
     (input.is_real - 1) * input.is_signed - 0,
     (input.is_signed - 1) * input.cols.b_msb.msb - 0,
@@ -776,90 +776,34 @@ private theorem ltOracle_ltSigned_interactions_eq {F : Type} [Field F] [CoeHead 
     Extracted.LtOperationSigned.interactions]
   simp only [ltOracle_u16msb_interactions_eq, ltOracle_ltUnsigned_interactions_eq]
 
-def ltChipInput {F : Type} [Add F]
-    (cols : LtChip.Columns F) : LtChip.Inputs F :=
-  { is_real := cols.is_slt + cols.is_sltu
-    state := cols.state
-    adapter := cols.adapter }
+/-- Reader columns and committed selectors recovered from a completed native row. -/
+def ltChipInput {F : Type} (cols : LtChip.Columns F) : LtChip.Inputs F :=
+  { state := cols.state, adapter := cols.adapter, isSlt := cols.is_slt, isSltu := cols.is_sltu }
 
-def ltChipLocals {F : Type} (cols : LtChip.Columns F) : Vector F 12 :=
-  Vector.cast (by rfl)
-    (#v[cols.is_slt, cols.is_sltu] ++ toElements cols.lt_operation)
+/-- The ten comparison cells in Clean's native flattening order. -/
+def ltChipLocals {F : Type} (cols : LtChip.Columns F) : Vector F 10 :=
+  toElements cols.lt_operation
 
-def ltChipPhysicalRow {F : Type} [Add F]
-    (cols : LtChip.Columns F) : Array F :=
+/-- A physical Clean row: reader/selector inputs followed by comparison witnesses. -/
+def ltChipPhysicalRow {F : Type} (cols : LtChip.Columns F) : Array F :=
   inputFirstRow (ltChipInput cols) (ltChipLocals cols)
 
-def ltChipOperationOfLocals {F : Type} (locals : Vector F 12) :
-    Circuits.Types.LtOperationSigned F :=
-  fromElements (Vector.cast (by rfl) (locals.drop 2))
+/-- Recover comparison columns from the complete witness suffix. -/
+def ltChipOperationOfLocals {F : Type} (locals : Vector F 10) :
+    Circuits.Types.LtOperationSigned F := fromElements locals
 
+/-- Reassemble completed columns from typed inputs and comparison witnesses. -/
 def ltChipColumnsOfInput {F : Type} (input : LtChip.Inputs F)
-    (locals : Vector F 12) : LtChip.Columns F :=
-  ⟨input.state, input.adapter, locals[0], locals[1],
-    ltChipOperationOfLocals locals⟩
+    (locals : Vector F 10) : LtChip.Columns F :=
+  ⟨input.state, input.adapter, input.isSlt, input.isSltu, ltChipOperationOfLocals locals⟩
 
-private theorem ltChipLocals_zero {F : Type} (cols : LtChip.Columns F) :
-    (ltChipLocals cols)[0] = cols.is_slt := by
-  simp [ltChipLocals]
-  rw [Vector.getElem_append_left (by decide)]
-  rfl
-
-private theorem ltChipLocals_one {F : Type} (cols : LtChip.Columns F) :
-    (ltChipLocals cols)[1] = cols.is_sltu := by
-  simp [ltChipLocals]
-  rw [Vector.getElem_append_left (by decide)]
-  rfl
-
-private theorem ltChipOperationOfLocals_roundtrip {F : Type}
-    (cols : LtChip.Columns F) :
-    ltChipOperationOfLocals (ltChipLocals cols) = cols.lt_operation := by
-  refine (ProvableType.ext_iff (α := Circuits.Types.LtOperationSigned) _ _).mpr
-    (fun i hi => ?_)
-  unfold ltChipOperationOfLocals ltChipLocals
-  rw [ProvableType.toElements_fromElements, Vector.getElem_cast,
-    Vector.getElem_drop, Vector.getElem_cast]
-  simp
-
-theorem ltChipColumnsOfInput_roundtrip {F : Type} [Add F]
-    (cols : LtChip.Columns F) :
+theorem ltChipColumnsOfInput_roundtrip {F : Type} (cols : LtChip.Columns F) :
     ltChipColumnsOfInput (ltChipInput cols) (ltChipLocals cols) = cols := by
-  unfold ltChipColumnsOfInput ltChipInput
-  rw [LtChip.Columns.mk.injEq]
-  constructor
-  · rfl
-  constructor
-  · rfl
-  constructor
-  · exact ltChipLocals_zero cols
-  constructor
-  · exact ltChipLocals_one cols
-  · exact ltChipOperationOfLocals_roundtrip cols
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem eval_ltChipOperationOfLocals
-    (input : LtChip.Inputs (ZMod p)) (locals : Vector (ZMod p) 12)
-    (data : ProverData (ZMod p)) :
-    Eval.eval (Environment.fromArray (inputFirstRow input locals) data)
-        (varFromOffset Circuits.Types.LtOperationSigned (F := ZMod p)
-          (size LtChip.Inputs + 2)) =
-      ltChipOperationOfLocals locals := by
-  refine (ProvableType.ext_iff (α := Circuits.Types.LtOperationSigned) _ _).mpr
-    (fun i hi => ?_)
-  rw [ProvableType.eval_varFromOffset, ProvableType.toElements_fromElements,
-    Vector.getElem_mapRange]
-  unfold ltChipOperationOfLocals
-  rw [ProvableType.toElements_fromElements, Vector.getElem_cast,
-    Vector.getElem_drop]
-  have hlocal := eval_local_inputFirstRow input locals data (2 + i) (by
-    have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
-    rw [hsize] at hi
-    omega)
-  simp only [Expression.eval] at hlocal
-  simpa only [Nat.add_assoc] using hlocal
+  simp only [ltChipColumnsOfInput, ltChipInput, ltChipOperationOfLocals, ltChipLocals,
+    ProvableType.fromElements_toElements]
 
 theorem eval_ltChipDirectOutput
-    (input : LtChip.Inputs (ZMod p)) (locals : Vector (ZMod p) 12)
+    (input : LtChip.Inputs (ZMod p)) (locals : Vector (ZMod p) 10)
     (data : ProverData (ZMod p)) :
     ProvableType.eval (Environment.fromArray (inputFirstRow input locals) data)
         ((LtChip.elaborated (p := p)).output
@@ -872,18 +816,14 @@ theorem eval_ltChipDirectOutput
   dsimp only
   have hinputEval := eval_inputFirstRow input locals data
   rw [LtChip.eval_inputs, LtChip.Inputs.mk.injEq] at hinputEval
-  constructor
-  · exact hinputEval.2.1
-  constructor
-  · exact hinputEval.2.2
-  constructor
-  · simpa only [ProvableType.eval_field, Nat.add_zero] using
-      (eval_local_inputFirstRow input locals data 0 (by decide))
-  constructor
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 1 (by decide))
-  · exact eval_ltChipOperationOfLocals input locals data
+  refine ⟨hinputEval.1, hinputEval.2.1, hinputEval.2.2.1, hinputEval.2.2.2, ?_⟩
+  refine (ProvableType.ext_iff (α := Circuits.Types.LtOperationSigned) _ _).mpr (fun i hi => ?_)
+  rw [ProvableType.eval_varFromOffset, ProvableType.toElements_fromElements,
+    Vector.getElem_mapRange]
+  simp only [ltChipOperationOfLocals, ProvableType.toElements_fromElements]
+  exact eval_local_inputFirstRow input locals data i hi
 
+/-- Typed row codec connecting arbitrary Rust columns to the native circuit. -/
 def ltChipRowCodec :
     ChipRowCodec LtChip.Inputs LtChip.Columns
       (LtChip.circuit (p := p)) where
@@ -900,28 +840,15 @@ def ltChipRowCodec :
       rw [LtChip.elaborated.output_eq]
       rw [Air.Flat.Component.rowInputVar_mk, Air.Flat.Component.rowOffset_mk]
       exact (eval_ltChipDirectOutput (p := p) (ltChipInput cols)
-        (ltChipLocals cols) data).trans
-          (ltChipColumnsOfInput_roundtrip cols) }
-
-private def lt_chip_is_slt (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset }
-
-private def lt_chip_is_sltu (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset + 1 }
-
-private def lt_chip_is_real (offset : ℕ) : Expression (ZMod p) :=
-  lt_chip_is_slt offset + lt_chip_is_sltu offset
+        (ltChipLocals cols) data).trans (ltChipColumnsOfInput_roundtrip cols) }
 
 private def lt_chip_operation (offset : ℕ) :
     Var Circuits.Types.LtOperationSigned (ZMod p) :=
-  varFromOffset Circuits.Types.LtOperationSigned (offset + 2)
+  varFromOffset Circuits.Types.LtOperationSigned (offset)
 
 private def lt_chip_write_value (offset : ℕ) :
     Word (Expression (ZMod p)) :=
   #v[(lt_chip_operation offset).result.u16_compare_operation.bit, 0, 0, 0]
-
-private def lt_chip_cpu_opcode (offset : ℕ) : Expression (ZMod p) :=
-  lt_chip_is_slt offset * 9 + lt_chip_is_sltu offset * 10
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_lt_chip_write_value
@@ -949,53 +876,44 @@ private theorem lt_chip_constraints_decompose
           (nativeAssertZeros env
             ((LtOperationSigned.main
               ⟨input.op_b_val, input.op_c_val, lt_chip_operation offset,
-                lt_chip_is_slt offset, input.is_real⟩).operations
-                  (offset + 12))) ∧
+                input.isSlt, input.is_real⟩).operations
+                  (offset + 10))) ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Readers.ALUTypeReader.main
               ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
                 input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-                lt_chip_cpu_opcode offset,
+                LtChip.exposedOpcode input,
                 (lt_chip_write_value offset)[0],
                 (lt_chip_write_value offset)[1],
                 (lt_chip_write_value offset)[2],
-                (lt_chip_write_value offset)[3]⟩).operations (offset + 12))) ∧
+                (lt_chip_write_value offset)[3]⟩).operations (offset + 10))) ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Readers.RegisterWrite.main
               ⟨input.state.clk_high,
                 input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4,
                 input.adapter.op_a, lt_chip_write_value offset,
-                input.is_real⟩).operations (offset + 12))) ∧
+                input.is_real⟩).operations (offset + 10))) ∧
         Expression.eval env (input.is_real * (input.is_real - 1)) = 0 ∧
-        Expression.eval env (input.is_real - lt_chip_is_real offset) = 0 ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Gadgets.Equality.main (M := field)
-              (lt_chip_is_slt offset * (lt_chip_is_slt offset - 1),
-                0)).operations (offset + 12))) ∧
+              (input.isSlt * (input.isSlt - 1),
+                0)).operations (offset + 10))) ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Gadgets.Equality.main (M := field)
-              (lt_chip_is_sltu offset * (lt_chip_is_sltu offset - 1),
-                0)).operations (offset + 12))) ∧
+              (input.isSltu * (input.isSltu - 1),
+                0)).operations (offset + 10))) ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Gadgets.Equality.main (M := field)
-              (lt_chip_is_real offset * (lt_chip_is_real offset - 1),
-                0)).operations (offset + 12))) ∧
-        List.Forall (· = 0)
-          (nativeAssertZeros env
-            ((Gadgets.Equality.main (M := field)
-              (input.adapter.op_a_0, 0)).operations (offset + 12)))) := by
-  simp only [nativeAssertZeros, LtChip.main, lt_chip_is_slt,
-    lt_chip_is_sltu, lt_chip_is_real, lt_chip_operation,
-    lt_chip_write_value, lt_chip_cpu_opcode,
-    Readers.CPUState.circuit, LtOperationSigned.circuit,
+              (input.adapter.op_a_0, 0)).operations (offset + 10)))) := by
+  simp only [nativeAssertZeros, LtChip.main, LtChip.Inputs.is_real,     lt_chip_operation, LtChip.Inputs.is_real, LtChip.exposedOpcode,
+    lt_chip_write_value,     Readers.CPUState.circuit, LtOperationSigned.circuit,
     Readers.ALUTypeReader.circuit, Readers.RegisterWrite.circuit,
     circuit_norm, List.map_append, List.forall_append]
-  rw [show offset + 2 + 10 = offset + 12 by omega]
   simp only [List.forall_cons, List.forall_append]
 
 private theorem forall_nil_iff {alpha : Type} (pred : alpha → Prop) :
@@ -1025,7 +943,7 @@ private theorem ltCols_asserts_decompose
         #v[cols.lt_operation.result.u16_compare_operation.bit, 0, 0, 0]
         cols.adapter (cols.is_slt + cols.is_sltu)
         (cols.is_slt + cols.is_sltu) ++
-      [ cols.is_slt * (cols.is_slt - 1),
+      [cols.is_slt * (cols.is_slt - 1),
         cols.is_sltu * (cols.is_sltu - 1),
         (cols.is_slt + cols.is_sltu) *
           (cols.is_slt + cols.is_sltu - 1),
@@ -1039,9 +957,7 @@ private theorem ltCols_asserts_decompose
 theorem ltChip_constraints_faithful
     (env : Environment (ZMod p)) (input : Var LtChip.Inputs (ZMod p))
     (offset : ℕ) (cols : LtChip.Columns (ZMod p))
-    (hbind : BindsChipOutput LtChip.main env input offset cols)
-    (hinputReal : Expression.eval env input.is_real =
-      Expression.eval env (lt_chip_is_real offset)) :
+    (hbind : BindsChipOutput LtChip.main env input offset cols) :
     List.Forall (· = 0) (ltChipOracle.nativeAssertZeros cols) ↔
       List.Forall (· = 0)
         (nativeAssertZeros env ((LtChip.main input).operations offset)) := by
@@ -1068,10 +984,10 @@ theorem ltChip_constraints_faithful
       adapterValue.op_c_memory.prev_value[1],
       adapterValue.op_c_memory.prev_value[2],
       adapterValue.op_c_memory.prev_value[3]]
-  let rustIsSlt := Expression.eval env (lt_chip_is_slt offset)
-  let rustIsSltu := Expression.eval env (lt_chip_is_sltu offset)
-  let rustIsReal := Expression.eval env (lt_chip_is_real offset)
-  let rustCpuOpcode := Expression.eval env (lt_chip_cpu_opcode offset)
+  let rustIsSlt := Expression.eval env (input.isSlt)
+  let rustIsSltu := Expression.eval env (input.isSltu)
+  let rustIsReal := Expression.eval env (input.is_real)
+  let rustCpuOpcode := Expression.eval env (LtChip.exposedOpcode input)
   let rustWriteValue : Word (ZMod p) := Eval.eval env writeValue
   let cpuInput : Var Readers.CPUState.Inputs (ZMod p) :=
     ⟨input.state,
@@ -1082,11 +998,10 @@ theorem ltChip_constraints_faithful
     #v[stateValue.pc[0] + 4, stateValue.pc[1], stateValue.pc[2]]
   have hCpu := CanonicalReader.cpuStateAssertions (p := p) env cpuInput offset
     rustState rustNextPc 8 rustIsReal (by
-      simp only [cpuInput, rustIsReal, ProvableStruct.structEvalLiteralProc]
-      exact hinputReal)
+      simp only [cpuInput, rustIsReal, ProvableStruct.structEvalLiteralProc])
   let opInput : Var LtOperationSigned.Inputs (ZMod p) :=
     ⟨input.op_b_val, input.op_c_val, operation,
-      lt_chip_is_slt offset, input.is_real⟩
+      input.isSlt, input.is_real⟩
   have hB : Eval.eval env opInput.b = rustB := by
     simp only [opInput, rustB, adapterValue, LtChip.Inputs.op_b_val]
     rw [← eval_aluOpBPrev]
@@ -1096,31 +1011,29 @@ theorem ltChip_constraints_faithful
     rw [← Readers.ALUTypeReader.eval_opCPrev]
     exact (vec4_eta _).symm
   have hOpExact := ltSigned_assertions_exact (p := p) env opInput
-    (offset + 12)
+    (offset + 10)
   have hOp :
       nativeAssertZeros env ((LtOperationSigned.main opInput).operations
-          (offset + 12)) =
+          (offset + 10)) =
         Extracted.LtOperationSigned.asserts rustB rustC rustOperation
           rustIsSlt rustIsReal := by
     rw [hOpExact, hB, hC]
-    simp only [opInput, rustOperation, rustIsSlt, rustIsReal]
-    rw [hinputReal]
   let rustAdapter : Circuits.Types.ALUTypeReader (ZMod p) := adapterValue
   let aluInput : Var Readers.ALUTypeReader.Inputs (ZMod p) :=
     ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-      lt_chip_cpu_opcode offset,
+      LtChip.exposedOpcode input,
       writeValue[0], writeValue[1], writeValue[2], writeValue[3]⟩
   have hAluReal :
       (ProvableStruct.eval env aluInput).is_real = rustIsReal := by
     rw [← ProvableStruct.eval_eq_eval, Readers.ALUTypeReader.eval_inputs]
-    simpa only [aluInput, rustIsReal, ProvableType.eval_field] using hinputReal
+    simp only [aluInput, rustIsReal, ProvableType.eval_field]
   have hAluTrusted :
       (ProvableStruct.eval env aluInput).is_trusted = rustIsReal := by
     rw [← ProvableStruct.eval_eq_eval, Readers.ALUTypeReader.eval_inputs]
-    simpa only [aluInput, rustIsReal, ProvableType.eval_field] using hinputReal
+    simp only [aluInput, rustIsReal, ProvableType.eval_field]
   have hAlu := CanonicalReader.aluTypeAssertions (p := p) env aluInput
-    (offset + 12) stateValue.clk_high
+    (offset + 10) stateValue.clk_high
     (stateValue.clk_0_16 + stateValue.clk_16_24 * 65536) rustCpuOpcode
     rustIsReal rustIsReal
     #v[stateValue.pc[0], stateValue.pc[1], stateValue.pc[2]]
@@ -1151,11 +1064,7 @@ theorem ltChip_constraints_faithful
   have hInputGate :
       Expression.eval env (input.is_real * (input.is_real - 1)) =
         rustIsReal * (rustIsReal - 1) := by
-    simpa only [eval_mul, eval_sub, Expression.eval] using
-      congrArg (fun value => value * (value - 1)) hinputReal
-  have hLink :
-      Expression.eval env (input.is_real - lt_chip_is_real offset) = 0 := by
-    simp only [eval_sub, hinputReal, sub_self]
+    simp only [rustIsReal, circuit_norm]
   rw [lt_chip_constraints_decompose]
   simp only [ChipOracle.nativeAssertZeros, ltChipOracle]
   rw [ltCols_asserts_decompose]
@@ -1167,17 +1076,16 @@ theorem ltChip_constraints_faithful
     have hOpN :
         List.Forall (· = 0)
           (nativeAssertZeros env
-            ((LtOperationSigned.main opInput).operations (offset + 12))) := by
+            ((LtOperationSigned.main opInput).operations (offset + 10))) := by
       rw [hOp]
       simpa only [rustB, rustC, rustOperation, rustIsSlt, rustIsReal,
-        operation, adapterValue, lt_chip_operation, lt_chip_is_slt,
-        lt_chip_is_sltu, lt_chip_is_real, eval_add,
+        operation, adapterValue, lt_chip_operation, LtChip.Inputs.is_real, LtChip.exposedOpcode,         eval_add,
         ProvableType.eval_field, Expression.eval] using hOpG
     have hCpuOracle :
         List.Forall (· = 0)
           (Extracted.CPUState.asserts rustState rustNextPc 8 rustIsReal) := by
       simpa only [rustState, rustNextPc, stateValue, rustIsReal,
-        lt_chip_is_real, lt_chip_is_slt, lt_chip_is_sltu, eval_add,
+        eval_add,
         ProvableType.eval_field, Expression.eval] using hCpuG
     have hCpuN := hCpu.mp hCpuOracle
     have hAluOracle :
@@ -1189,8 +1097,7 @@ theorem ltChip_constraints_faithful
       simpa only [stateValue, rustCpuOpcode, rustWriteValue, rustAdapter,
         rustIsReal,
         writeValue, operation, adapterValue, lt_chip_write_value,
-        lt_chip_operation, lt_chip_cpu_opcode, lt_chip_is_real,
-        lt_chip_is_slt, lt_chip_is_sltu, eval_vec4_literal,
+        lt_chip_operation, LtChip.Inputs.is_real, LtChip.exposedOpcode,         eval_vec4_literal,
         eval_ltSignedBit, vec3_eta, zero_add,
         eval_add, eval_mul, ProvableType.eval_field,
         Expression.eval] using hAluG
@@ -1200,35 +1107,28 @@ theorem ltChip_constraints_faithful
     have hAluN := hAluPairN.1
     have hWriteN :=
       (CanonicalReader.registerWriteAssertions env writeInput
-        (offset + 12)).mpr trivial
+        (offset + 10)).mpr trivial
     have hSN := (CanonicalReader.equalityAssertions env
-      (lt_chip_is_slt offset * (lt_chip_is_slt offset - 1))
-      0 (offset + 12)).mpr (by
-        simpa only [lt_chip_is_slt, eval_mul, eval_sub,
+      (input.isSlt * (input.isSlt - 1))
+      0 (offset + 10)).mpr (by
+        simpa only [eval_mul, eval_sub,
           ProvableType.eval_field, Expression.eval] using hS)
     have hUN := (CanonicalReader.equalityAssertions env
-      (lt_chip_is_sltu offset * (lt_chip_is_sltu offset - 1))
-      0 (offset + 12)).mpr (by
-        simpa only [lt_chip_is_sltu, eval_mul, eval_sub,
+      (input.isSltu * (input.isSltu - 1))
+      0 (offset + 10)).mpr (by
+        simpa only [eval_mul, eval_sub,
           ProvableType.eval_field, Expression.eval] using hU)
-    have hSumN := (CanonicalReader.equalityAssertions env
-      (lt_chip_is_real offset * (lt_chip_is_real offset - 1))
-      0 (offset + 12)).mpr (by
-        simpa only [lt_chip_is_real, lt_chip_is_slt, lt_chip_is_sltu,
-          eval_mul, eval_sub, eval_add, ProvableType.eval_field,
-          Expression.eval] using hSum)
     have hOpA0N := (CanonicalReader.equalityAssertions env
-      input.adapter.op_a_0 0 (offset + 12)).mpr (by
+      input.adapter.op_a_0 0 (offset + 10)).mpr (by
         rw [hopEval]
         exact hOpA0)
     have hSumValue : rustIsReal * (rustIsReal - 1) = 0 := by
-      simpa only [rustIsReal, lt_chip_is_real, lt_chip_is_slt,
-        lt_chip_is_sltu, eval_add, ProvableType.eval_field,
+      simpa only [rustIsReal,         eval_add, ProvableType.eval_field,
         Expression.eval] using hSum
     exact ⟨hCpuN, hOpN, hAluN, hWriteN,
-      hInputGate.trans hSumValue, hLink, hSN, hUN, hSumN, hOpA0N⟩
-  · rintro ⟨hCpuN, hOpN, hAluN, _hWriteN, _hInputGateN, _hLinkN,
-      hSN, hUN, hSumN, hOpA0N⟩
+      hInputGate.trans hSumValue, hSN, hUN, hOpA0N⟩
+  · rintro ⟨hCpuN, hOpN, hAluN, _hWriteN, hInputGateN,
+      hSN, hUN, hOpA0N⟩
     have hCpuFolded := hCpu.mpr hCpuN
     have hOpFolded :
         List.Forall (· = 0)
@@ -1237,7 +1137,7 @@ theorem ltChip_constraints_faithful
       rw [← hOp]
       exact hOpN
     have hOpA0 := (CanonicalReader.equalityAssertions env
-      input.adapter.op_a_0 0 (offset + 12)).mp hOpA0N
+      input.adapter.op_a_0 0 (offset + 10)).mp hOpA0N
     have hAluPairG := hAlu.mpr
       ⟨hAluN, by
         change (Eval.eval env input.adapter).op_a_0 = 0
@@ -1245,81 +1145,35 @@ theorem ltChip_constraints_faithful
         exact hOpA0⟩
     have hAluOracle := hAluPairG.1
     have hS := (CanonicalReader.equalityAssertions env
-      (lt_chip_is_slt offset * (lt_chip_is_slt offset - 1))
-      0 (offset + 12)).mp hSN
+      (input.isSlt * (input.isSlt - 1))
+      0 (offset + 10)).mp hSN
     have hU := (CanonicalReader.equalityAssertions env
-      (lt_chip_is_sltu offset * (lt_chip_is_sltu offset - 1))
-      0 (offset + 12)).mp hUN
-    have hSum := (CanonicalReader.equalityAssertions env
-      (lt_chip_is_real offset * (lt_chip_is_real offset - 1))
-      0 (offset + 12)).mp hSumN
+      (input.isSltu * (input.isSltu - 1))
+      0 (offset + 10)).mp hUN
+    have hSum : Expression.eval env input.is_real * (Expression.eval env input.is_real - 1) = 0 := by
+      simpa only [eval_mul, eval_sub, Expression.eval] using hInputGateN
     refine ⟨⟨⟨?_, ?_⟩, ?_⟩, ?_, ?_, ?_, ?_, trivial⟩
     · simpa only [rustB, rustC, rustOperation, rustIsSlt, rustIsReal,
-        operation, adapterValue, lt_chip_operation, lt_chip_is_slt,
-        lt_chip_is_sltu, lt_chip_is_real, eval_add,
+        operation, adapterValue, lt_chip_operation, LtChip.Inputs.is_real, LtChip.exposedOpcode,         eval_add,
         ProvableType.eval_field, Expression.eval] using hOpFolded
     · simpa only [rustState, rustNextPc, stateValue, rustIsReal,
-        lt_chip_is_real, lt_chip_is_slt, lt_chip_is_sltu, eval_add,
+        eval_add,
         ProvableType.eval_field, Expression.eval] using hCpuFolded
     · simpa only [stateValue, rustCpuOpcode, rustWriteValue, rustAdapter,
         rustIsReal,
         writeValue, operation, adapterValue, lt_chip_write_value,
-        lt_chip_operation, lt_chip_cpu_opcode, lt_chip_is_real,
-        lt_chip_is_slt, lt_chip_is_sltu, eval_vec4_literal,
+        lt_chip_operation, LtChip.Inputs.is_real, LtChip.exposedOpcode,         eval_vec4_literal,
         eval_ltSignedBit, vec3_eta, zero_add,
         eval_add, eval_mul, ProvableType.eval_field,
         Expression.eval] using hAluOracle
-    · simpa only [lt_chip_is_slt, eval_mul, eval_sub,
+    · simpa only [eval_mul, eval_sub,
         ProvableType.eval_field, Expression.eval] using hS
-    · simpa only [lt_chip_is_sltu, eval_mul, eval_sub,
+    · simpa only [eval_mul, eval_sub,
         ProvableType.eval_field, Expression.eval] using hU
-    · simpa only [lt_chip_is_real, lt_chip_is_slt, lt_chip_is_sltu,
-        eval_mul, eval_sub, eval_add, ProvableType.eval_field,
+    · simpa only [eval_mul, eval_sub, eval_add, ProvableType.eval_field,
         Expression.eval] using hSum
     · rw [← hopEval]
       exact hOpA0
-
-private theorem ltChipRowCodec_inputReal
-    (cols : LtChip.Columns (ZMod p)) (data : ProverData (ZMod p)) :
-    let assignment := ltChipRowCodec.assignment cols data
-    Expression.eval assignment.environment
-        ({ circuit := LtChip.circuit (p := p) } :
-          Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-      Expression.eval assignment.environment
-        (lt_chip_is_real
-          ({ circuit := LtChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowOffset) := by
-  dsimp only
-  let assignment := ltChipRowCodec.assignment cols data
-  rw [Air.Flat.Component.rowInputVar_mk, Air.Flat.Component.rowOffset_mk]
-  have hInput :
-      Expression.eval
-          (Environment.fromArray
-            (inputFirstRow (ltChipInput cols) (ltChipLocals cols)) data)
-          (varFromOffset LtChip.Inputs 0).is_real =
-        (ltChipInput cols).is_real := by
-    rw [← LtChip.eval_inputIsReal]
-    exact congrArg (fun value => value.is_real)
-      (eval_inputFirstRow (ltChipInput cols) (ltChipLocals cols) data)
-  have hS := eval_local_inputFirstRow (ltChipInput cols)
-    (ltChipLocals cols) data 0 (by decide)
-  have hU := eval_local_inputFirstRow (ltChipInput cols)
-    (ltChipLocals cols) data 1 (by decide)
-  change
-    Expression.eval assignment.environment
-        (varFromOffset LtChip.Inputs 0).is_real =
-      assignment.environment.get (size LtChip.Inputs) +
-        assignment.environment.get (size LtChip.Inputs + 1)
-  rw [show assignment.environment =
-      Environment.fromArray
-        (inputFirstRow (ltChipInput cols) (ltChipLocals cols)) data by rfl]
-  rw [hInput]
-  simp only [ltChipInput]
-  simp only [Expression.eval] at hS hU
-  rw [ltChipLocals_zero] at hS
-  rw [ltChipLocals_one] at hU
-  simp only [ltChipInput] at hS hU
-  simpa only [Nat.add_zero] using (congrArg₂ (· + ·) hS hU).symm
 
 theorem ltChip_constraints_constructive
     (rustCols : Extracted.LtOracle.LtCols (ZMod p)) (data : ProverData (ZMod p)) :
@@ -1340,21 +1194,12 @@ theorem ltChip_constraints_constructive
     have h := NativeRowAssignment.bindsOutput assignment
     rw [LtChip.circuit_main_eq] at h
     exact h
-  have hinputReal :
-      Expression.eval assignment.environment
-          ({ circuit := LtChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-        Expression.eval assignment.environment
-          (lt_chip_is_real
-            ({ circuit := LtChip.circuit (p := p) } :
-              Air.Flat.Component (ZMod p)).rowOffset) :=
-    ltChipRowCodec_inputReal (p := p) cols data
   have hlegacy := ltChip_constraints_faithful (p := p)
     assignment.environment
     ({ circuit := LtChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := LtChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
+      Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (ltChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
@@ -1402,7 +1247,7 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem eval_lt_chip_bit
     (env : Environment (ZMod p)) (offset : ℕ) :
     (Eval.eval env (lt_chip_operation (p := p) offset)).result.u16_compare_operation.bit =
-      env.get (offset + 2) := by
+      env.get (offset) := by
   simp [lt_chip_operation, explicit_provable_type, circuit_norm,
     Nat.add_assoc]
 
@@ -1410,7 +1255,7 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem eval_lt_chip_comparison_zero
     (env : Environment (ZMod p)) (offset : ℕ) :
     (Eval.eval env (lt_chip_operation (p := p) offset)).result.comparison_limbs[0] =
-      env.get (offset + 8) := by
+      env.get (offset + 6) := by
   simp [lt_chip_operation, explicit_provable_type, circuit_norm,
     Nat.add_assoc]
 
@@ -1418,7 +1263,7 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem eval_lt_chip_comparison_one
     (env : Environment (ZMod p)) (offset : ℕ) :
     (Eval.eval env (lt_chip_operation (p := p) offset)).result.comparison_limbs[1] =
-      env.get (offset + 9) := by
+      env.get (offset + 7) := by
   simp [lt_chip_operation, explicit_provable_type, circuit_norm,
     Nat.add_assoc]
 
@@ -1426,7 +1271,7 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem eval_lt_chip_b_msb
     (env : Environment (ZMod p)) (offset : ℕ) :
     (Eval.eval env (lt_chip_operation (p := p) offset)).b_msb.msb =
-      env.get (offset + 10) := by
+      env.get (offset + 8) := by
   simp [lt_chip_operation, explicit_provable_type, circuit_norm,
     Nat.add_assoc]
 
@@ -1434,7 +1279,7 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem eval_lt_chip_c_msb
     (env : Environment (ZMod p)) (offset : ℕ) :
     (Eval.eval env (lt_chip_operation (p := p) offset)).c_msb.msb =
-      env.get (offset + 11) := by
+      env.get (offset + 9) := by
   simp [lt_chip_operation, explicit_provable_type, circuit_norm,
     Nat.add_assoc]
 
@@ -1443,9 +1288,7 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 theorem ltChip_interactions_faithful
     (env : Environment (ZMod p)) (input : Var LtChip.Inputs (ZMod p))
     (offset : ℕ) (cols : LtChip.Columns (ZMod p))
-    (hbind : BindsChipOutput LtChip.main env input offset cols)
-    (hinputReal : Expression.eval env input.is_real =
-      Expression.eval env (lt_chip_is_real offset)) :
+    (hbind : BindsChipOutput LtChip.main env input offset cols) :
     List.Perm (nativeAccesses env ((LtChip.main input).operations offset))
       (ltChipOracle.accesses cols) := by
   have hp2 : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
@@ -1470,8 +1313,8 @@ theorem ltChip_interactions_faithful
   let rustCols : LtChip.Columns (ZMod p) :=
     { state := Eval.eval env input.state
       adapter := Eval.eval env input.adapter
-      is_slt := Expression.eval env (lt_chip_is_slt offset)
-      is_sltu := Expression.eval env (lt_chip_is_sltu offset)
+      is_slt := Expression.eval env (input.isSlt)
+      is_sltu := Expression.eval env (input.isSltu)
       lt_operation := Eval.eval env (lt_chip_operation (p := p) offset) }
   change rustCols = cols at hbind
   subst cols
@@ -1479,24 +1322,22 @@ theorem ltChip_interactions_faithful
     (Extracted.LtOracle.LtCols.interactions (ltChipReconfigure rustCols)).map
       Extracted.Interaction.toAccess
   have hReal : Expression.eval env input.is_real =
-      env.get offset + env.get (offset + 1) := by
-    simpa only [lt_chip_is_real, lt_chip_is_slt, lt_chip_is_sltu,
-      eval_add, Expression.eval] using hinputReal
+      (Expression.eval env input.isSlt) + (Expression.eval env input.isSltu) := rfl
   have hsignReal :
       -signedVal
-          (env.get offset + env.get (offset + 1) -
+          ((Expression.eval env input.isSlt) + (Expression.eval env input.isSltu) -
             Expression.eval env input.adapter.imm_c) =
         signedVal
           (Expression.eval env input.adapter.imm_c -
-            (env.get offset + env.get (offset + 1))) := by
+            ((Expression.eval env input.isSlt) + (Expression.eval env input.isSltu))) := by
     simpa only [hReal] using hsign
   have hNegFlags :
-      -env.get (offset + 1) + -env.get offset =
-        -(env.get offset + env.get (offset + 1)) := by
+      -(Expression.eval env input.isSltu) + -(Expression.eval env input.isSlt) =
+        -((Expression.eval env input.isSlt) + (Expression.eval env input.isSltu)) := by
     ring
   have hDoubleNeg :
-      -signedVal (-env.get (offset + 1) + -env.get offset) =
-        signedVal (env.get offset + env.get (offset + 1)) := by
+      -signedVal (-(Expression.eval env input.isSltu) + -(Expression.eval env input.isSlt)) =
+        signedVal ((Expression.eval env input.isSlt) + (Expression.eval env input.isSltu)) := by
     rw [hNegFlags, signedVal_neg hp2, neg_neg]
   simp only [nativeAccesses]
   have hunexpected :
@@ -1637,9 +1478,8 @@ theorem ltChip_interactions_faithful
       eval_registerAccessTimestamp, hReal]
     simp only [← ProvableStruct.eval_eq_eval, eval_cpuState,
       ← ProvableType.getElem_eval_fields, ProvableType.eval_field,
-      Expression.eval, hReal]
-    simp only [lt_chip_is_slt, lt_chip_is_sltu, Expression.eval,
-      hNegFlags, true_and, neg_one_mul]
+      Expression.eval]
+    simp only [hNegFlags, true_and, neg_one_mul]
   have hB :
       List.Perm
         (((LtChip.exposedByteInteractions input offset).map
@@ -1661,12 +1501,11 @@ theorem ltChip_interactions_faithful
       eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
       Opcode.ofNat, ConstraintCoe.coe_eq_val, signedVal_neg hp2, h6,
-      LtChip.Inputs.op_b_val, LtChip.Inputs.op_c_val, hReal]
+      LtChip.Inputs.op_b_val, LtChip.Inputs.op_c_val]
     simp only [← ProvableStruct.eval_eq_eval, eval_cpuState,
       eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
-      ProvableType.eval_field, lt_chip_is_slt, lt_chip_is_sltu,
-      Expression.eval, eval_sub, hReal, hNegFlags,
+      ProvableType.eval_field,       Expression.eval, eval_sub, hNegFlags,
       eval_lt_chip_bit, eval_lt_chip_comparison_zero,
       eval_lt_chip_comparison_one, eval_lt_chip_b_msb,
       eval_lt_chip_c_msb]
@@ -1697,19 +1536,18 @@ theorem ltChip_interactions_faithful
       Expression.eval, ProvableType.eval_field,
       eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
-      LookupAccessList.negMult, signedVal_neg hp2, hReal]
+      LookupAccessList.negMult, signedVal_neg hp2]
     simp only [← ProvableStruct.eval_eq_eval, eval_cpuState,
       eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
-      ProvableType.eval_field, lt_chip_is_slt, lt_chip_is_sltu,
-      Expression.eval, eval_sub, hReal, hNegFlags,
+      ProvableType.eval_field,       Expression.eval, eval_sub, hNegFlags,
       eval_lt_chip_bit]
     simp only [signedVal_neg hp2, neg_neg]
     rw [hsignReal]
     exact (List.perm_append_comm
       (l₁ := [_, _, _, _]) (l₂ := [_])).append_left [_]
   have hP :
-      (((((LtChip.exposedProgramInteractions input offset).map
+      (((((LtChip.exposedProgramInteractions input).map
           ChannelInteraction.toRaw).map
             (AbstractInteraction.toAccess env)).map
               LookupAccessList.negMult)) =
@@ -1731,10 +1569,8 @@ theorem ltChip_interactions_faithful
       eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
       Opcode.ofNat, ConstraintCoe.coe_eq_val,
-      LookupAccessList.negMult, hReal]
-    simp only [lt_chip_is_slt, lt_chip_is_sltu, Expression.eval,
-      hDoubleNeg]
-    simp
+      LookupAccessList.negMult]
+    simp only [hDoubleNeg]
   refine List.Perm.trans ?_
     (Extracted.perm_filter_by_kind_of_no_raw _
       (by simp [Extracted.Interaction.IsRaw,
@@ -1775,7 +1611,6 @@ theorem ltChip_interactions_constructive
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := LtChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
-    (ltChipRowCodec_inputReal (p := p) cols data)
   rw [nativeAccesses_component_eq_rowOperations (LtChip.circuit (p := p))
     assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,

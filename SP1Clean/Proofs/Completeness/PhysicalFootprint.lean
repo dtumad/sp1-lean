@@ -64,9 +64,9 @@ theorem instructionTableFor_length (id : InstructionChipId) :
       simp only [BitwiseChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)
   | lt =>
-    exact (Table.buildHinted_length LtChip.component
+    exact (Table.build_length LtChip.component
       (LtChip.traceInputs (trace.instructionEvents .lt) 0)
-      trace.generationData (by trivial)).trans (by
+      trace.generationData (ProverHint.empty _) (by trivial)).trans (by
       change (LtChip.traceInputs (trace.instructionEvents .lt) 0).length = _
       simp only [LtChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)

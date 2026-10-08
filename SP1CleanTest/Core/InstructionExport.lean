@@ -4,6 +4,7 @@ import SP1Clean.Proofs.Chips.LoadByteChip.Formal
 import SP1Clean.Proofs.Chips.DivRemChip.Complete
 import SP1Clean.Proofs.Chips.MulChip.Complete
 import SP1Clean.Proofs.Chips.BitwiseChip.Complete
+import SP1Clean.Proofs.Chips.LtChip.Complete
 import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
@@ -68,5 +69,10 @@ def mulRust : Except String String :=
 def bitwiseRust : Except String String :=
   Extraction.Rust.ensembleToRust "BitwiseInstruction"
     (ensemble { circuit := BitwiseChip.circuit }) (config BitwiseChip.Inputs)
+
+/-- Export SLT/SLTU with explicit selectors and zero padding, including immediate operands. -/
+def ltRust : Except String String :=
+  Extraction.Rust.ensembleToRust "LtInstruction"
+    (ensemble { circuit := LtChip.circuit }) (config LtChip.Inputs)
 
 end SP1CleanTest.Core.InstructionExport

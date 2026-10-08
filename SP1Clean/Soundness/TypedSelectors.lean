@@ -251,7 +251,15 @@ theorem BitwiseChip.mainSelectorBinary :
 
 theorem LtChip.mainSelectorBinary :
     MainSelectorBinary (p := p) LtChip.main (fun input => input.is_real) := by
-  simpleInputSelectorBinary LtChip.main
+  constructor
+  intro input offset env shallow
+  have binary : Expression.eval env input.is_real = 0 ∨
+      Expression.eval env input.is_real = 1 := by
+    apply bool_of_mul_pred
+    simpa only [LtChip.main, circuit_norm] using shallow
+  change (Eval.eval env input).is_real = 0 ∨ (Eval.eval env input).is_real = 1
+  rw [LtChip.eval_inputIsReal]
+  exact binary
 
 theorem ShiftLeftChip.mainSelectorBinary :
     MainSelectorBinary (p := p) ShiftLeftChip.main (fun input => input.is_real) := by

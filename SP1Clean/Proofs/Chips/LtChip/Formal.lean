@@ -19,23 +19,14 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 def Assumptions (input : Inputs (ZMod p)) (_ : ProverData (ZMod p)) : Prop :=
   Word.isU64 input.op_b_val ∧ Word.isU64 input.op_c_val
 
-/-- Prover-side row well-formedness: operand `isU64`s (`op_b_val`/`op_c_val`), the op_a read-prior
-`isU64` (op_a memory pull) and the op_c read-prior `isU64` (the `is_real - imm_c`-gated op_c memory pull —
-distinct from `op_c_val = adapter.op_c` since `Lt`'s adapter is immediate-capable), `is_real` binary, the
-honest `"lt_flags"` hint (each flag binary, the sum = `is_real`, `is_slt` only on real rows), `op_a_0 = 0`,
-and the exact ALU-row form invariant `imm_c = 0 ∨ (is_real = 1 ∧ imm_c = 1)`. The four immediate-copy
-gates constructively tie immediate rows' synthetic op_c block to the committed operand. The remainder is
-the CPUState clock bounds, three timestamp `Spec`s (op_c gated by `is_real - imm_c`), and access clocks. -/
+/-- Honest operand bounds, boolean selectors/activity, the register or immediate row form,
+CPU clock bounds and prior-access timestamps. No external selector hint is needed. -/
 def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) : Prop :=
-  let f := hintFlags hint
+    (_hint : ProverHint (ZMod p)) : Prop :=
   Word.isU64 input.op_b_val ∧ Word.isU64 input.op_c_val ∧
   (input.is_real = 1 → Word.isU64 input.adapter.op_a_memory.prev_value) ∧
-  (input.is_real - input.adapter.imm_c = 1 → Word.isU64 input.adapter.op_c_memory.prev_value) ∧
   (input.is_real = 0 ∨ input.is_real = 1) ∧
-  (f[0] = 0 ∨ f[0] = 1) ∧ (f[1] = 0 ∨ f[1] = 1) ∧
-  input.is_real = f[0] + f[1] ∧
-  (f[0] = 1 → input.is_real = 1) ∧
+  (input.isSlt = 0 ∨ input.isSlt = 1) ∧ (input.isSltu = 0 ∨ input.isSltu = 1) ∧
   input.adapter.op_a_0 = 0 ∧
   (input.adapter.imm_c = 0 ∨ (input.is_real = 1 ∧ input.adapter.imm_c = 1)) ∧
   (input.adapter.imm_c *
@@ -67,29 +58,6 @@ def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
     input.adapter.op_a_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
     input.adapter.op_b_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
     input.adapter.op_c_memory.access_timestamp.prev_low.val < 2 ^ 24)
-
-/-- Semantic contract, stated against the clean RV64 ISA functions (mirrors the R-type chip contract, here spelled
-inline for the **two-variant** ALU adapter): the `ALUTypeReader` sub-`Spec` on the `state`/`adapter`
-blocks (opcode `is_slt·9 + is_sltu·10`, `rd` write the result word), the proven `is_real`-binary fact, and
-the `is_real`/flag-gated meaning — on real rows the result word is the RV64 `SLT` (when `is_slt = 1`) or
-`SLTU` (when `is_sltu = 1`) of the operands (operand order matching the RV64 signature `f rs2_val rs1_val`
-with `rs1 ↦ op_b_val`). Vacuous on padding. -/
-def Spec (input : Inputs (ZMod p)) (cols : Columns (ZMod p)) (_ : ProverData (ZMod p)) : Prop :=
-  Readers.ALUTypeReader.Spec
-    { cols := cols.adapter, is_real := input.is_real, is_trusted := input.is_real,
-      clk_high := cols.state.clk_high,
-      clk_low := cols.state.clk_0_16 + cols.state.clk_16_24 * 65536,
-      pc := cols.state.pc, opcode := cols.is_slt * 9 + cols.is_sltu * 10,
-      wv0 := (resultWord cols)[0], wv1 := (resultWord cols)[1],
-      wv2 := (resultWord cols)[2], wv3 := (resultWord cols)[3] } ∧
-  (input.is_real = 0 ∨ input.is_real = 1) ∧
-  (input.is_real = 1 →
-    (cols.is_slt = 1 →
-      Word.toBitVec64 (resultWord cols)
-        = RV64.slt (Word.toBitVec64 input.op_c_val) (Word.toBitVec64 input.op_b_val)) ∧
-    (cols.is_sltu = 1 →
-      Word.toBitVec64 (resultWord cols)
-        = RV64.sltu (Word.toBitVec64 input.op_c_val) (Word.toBitVec64 input.op_b_val)))
 
 /-- The clean RV64 `slt` reduced to its `if`-form: `RV64.slt y x` is `1#64` iff `x <ₛ y`. -/
 private lemma rv64_slt_eq (x y : BitVec 64) :
@@ -139,7 +107,7 @@ omit [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)] in
 set_option linter.unusedSectionVars false in
 /-- Column 0 of a flattened `LtOperationSigned` column struct is its compare `bit` (peeling the
 `ProvableStruct` `toComponents`/`cast`/`append` tower). Used by completeness to read the witnessed bit
-out of the `populate`-pinned witness cell `env.get (i₀ + 2)`. -/
+out of the `populate`-pinned witness cell `env.get i₀`. -/
 private lemma toElements_col0 {x : Circuits.Types.LtOperationSigned (ZMod p)}
     (hi : (0:ℕ) < size Circuits.Types.LtOperationSigned) :
     (toElements x)[0]'hi = x.result.u16_compare_operation.bit := by
@@ -166,7 +134,7 @@ private lemma populate_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The witnessed `LtOperationSigned` block's flattened cell 0 (the compare `bit`) is binary on a real
-row — the form completeness uses after pinning the witness cell `env.get (i₀ + 2)` to `populate`. -/
+row — the form completeness uses after pinning the witness cell `env.get i₀` to `populate`. -/
 private lemma witness_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 1)
     (hi : (0:ℕ) < size Circuits.Types.LtOperationSigned) :
     (toElements (LtOperationSigned.populate b cc s r))[0]'hi = 0 ∨
@@ -174,13 +142,12 @@ private lemma witness_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 1
   rw [toElements_col0]; exact populate_bit_bool hr
 
 theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spec := by
-  circuit_proof_start [Spec]
+  circuit_proof_start [Inputs.is_real]
   obtain ⟨ha, hb⟩ := h_assumptions
-  obtain ⟨h_cpu, h_lt, h_adapter, _h_rw, h_gate, _h_selector_bind,
-    h_slt_bin, h_sltu_bin, h_sum, _h_op_a_0⟩ := h_holds
+  obtain ⟨h_cpu, h_lt, h_adapter, _h_rw, h_gate,
+    h_slt_bin, _h_sltu_bin, _h_op_a_0⟩ := h_holds
   have h_bin := bool_of_mul_pred h_gate
   have h_slt_bool := bool_of_mul_pred h_slt_bin
-  have h_sltu_bool := bool_of_mul_pred h_sltu_bin
   -- G1: the CPUState sub-`Spec`'s two clock byte bounds discharge the *push* side of the memory
   -- channel's new `MemoryMsg.ClkBound` guarantee — `ALUTypeReader`'s two read-back pushes
   -- (`clk_low + 3` / `+ 2`) and `RegisterWrite`'s op_a write push (`clk_low + 4`). The offset is left
@@ -196,13 +163,13 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     simp only [resultWord, rv64_slt_eq, toBitVec64_bitWord _ _ h_lt_spec]
   · -- `is_sltu = 1` with the sum-bound + booleans forces `is_slt = 0`
     have h_lt_spec := (LtOperationSigned.result_semantic (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩) hr).1
-    have h_slt0 : env.get i₀ = 0 := by
+    have h_slt0 : input_isSlt = 0 := by
       rcases h_slt_bool with h0 | h1
       · exact h0
       · exfalso
-        rw [h1, hsltu] at h_sum
+        rw [h1, hsltu] at h_gate
         exact (show (2 : ZMod p) ≠ 0 by simp [← ZMod.val_eq_zero, val_2_zmod_p])
-          (by linear_combination h_sum)
+          (by linear_combination h_gate)
     have h01 : (0 : ZMod p) ≠ 1 := zero_ne_one
     rw [h_slt0] at h_lt_spec
     simp only [if_neg h01] at h_lt_spec
@@ -219,45 +186,29 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
                   (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩) hr).1)),
                 h_clk.at_four⟩
 
--- Whole-chip completeness normalizes the flag-hinted witness stream (SLT/SLTU flags + the
--- signed/unsigned comparison gadget closures) against the composed reader obligations at once.
+-- Keep populated comparison columns folded when transporting witness pins.
 theorem completeness :
     GeneralFormalCircuit.Completeness (ZMod p) main ProverAssumptions (fun _ _ _ => True) := by
-  circuit_proof_start
-  obtain ⟨ha, hb, ha_prev, hc_prev, hbin, hf0, hf1, hsum, hslt_real, hop_a_0, himm,
+  circuit_proof_start [Inputs.is_real]
+  obtain ⟨ha, hb, ha_prev, hbin, hf0, hf1, hop_a_0, himm,
     himm_copy, h_cpu, hrac_a, hrac_b, hrac_c, hdec, hprevclk⟩ := h_assumptions
-  -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  -- `h_env` now bundles the CPUState GFC obligation (SC Phase 2c, prepended) + the chip's flag/`lt_cols`
-  -- witness-gen equations + the GFC `ALUTypeReader` subcircuit's completeness obligation — discard both ends.
-  obtain ⟨-, h_env_flags, h_env_cols, -⟩ := h_env
-  have hflag0 : env.get i₀ = (hintFlags env.hint)[0] := by
-    rw [← hintFlags_eval_ir env]; simpa using h_env_flags 0
-  have hflag1 : env.get (i₀ + 1) = (hintFlags env.hint)[1] := by
-    rw [← hintFlags_eval_ir env]; simpa using h_env_flags 1
-  have hf0' : env.get i₀ = 0 ∨ env.get i₀ = 1 := by rw [hflag0]; exact hf0
-  have hf1' : env.get (i₀ + 1) = 0 ∨ env.get (i₀ + 1) = 1 := by rw [hflag1]; exact hf1
-  have hsum01' : env.get i₀ + env.get (i₀ + 1) = 0 ∨ env.get i₀ + env.get (i₀ + 1) = 1 := by
-    rw [hflag0, hflag1, ← hsum]; exact hbin
+  obtain ⟨-, h_env_cols, -⟩ := h_env
+  have hflag0 : Expression.eval env.toEnvironment input_var_isSlt = input_isSlt := h_input.2.2.1
+  have hflag1 : Expression.eval env.toEnvironment input_var_isSltu = input_isSltu := h_input.2.2.2
   have hbool : ∀ x : ZMod p, x = 0 ∨ x = 1 → x * (x - 1) = 0 := by
     rintro x (h | h) <;> rw [h] <;> simp
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by rw [hop_a_0, zero_mul]
-  -- Hoisted above the goal-splitting `refine` (both the `spec_populate` branch and the register-write
-  -- `isU64` branch are *siblings* of that `refine`, not sub-goals of each other, so any `have` defined
-  -- after the split is only visible in the one branch it was stated under).
   have hpvb : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_b_memory_prev_value
-      = input_adapter_op_b_memory_prev_value := h_input.2.2.2.2.2.2.1.1
+      = input_adapter_op_b_memory_prev_value := h_input.2.1.2.2.2.2.1.1
   have hpvc : Vector.map (Expression.eval env.toEnvironment)
       input_var_adapter_op_c_memory_prev_value = input_adapter_op_c_memory_prev_value :=
-    h_input.2.2.2.2.2.2.2.2.1.1
-  -- The witness stream is the `populateFE` IR; `populateFE_eval_cell` evaluates each pinned cell
-  -- to the value-level `populate` (operands folded through `vec4_eval` + `h_input`, the `is_slt`
-  -- cell and `is_real` input evaluated to their value forms).
-  have hsig : Expression.eval env.toEnvironment (var { index := i₀ } : Expression (ZMod p))
-      = env.get i₀ := by simp [circuit_norm]
-  -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.
+    h_input.2.1.2.2.2.2.2.2.1.1
+  have hreal : Expression.eval env.toEnvironment (input_var_isSlt + input_var_isSltu)
+      = input_isSlt + input_isSltu := by
+    simp only [circuit_norm, hflag0, hflag1]
   replace h_env_cols := fun j : Fin 10 =>
-    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Circuits.Types.LtOperationSigned) env.toEnvironment (i₀ + 2) _
+    (ProvableStruct.get_of_eval_varFromOffset_eq (α := Circuits.Types.LtOperationSigned) env.toEnvironment i₀ _
       (by simpa only [circuit_norm] using h_env_cols) j (by
         have h : size Circuits.Types.LtOperationSigned = 10 := rfl
         have := j.isLt
@@ -265,9 +216,9 @@ theorem completeness :
       have h : size Circuits.Types.LtOperationSigned = 10 := rfl
       have := j.isLt
       omega)).symm
-  have hcolsPop : ∀ j : Fin 10, env.get (i₀ + 2 + (j : ℕ))
+  have hcolsPop : ∀ j : Fin 10, env.get (i₀ + (j : ℕ))
       = (toElements (LtOperationSigned.populate input_adapter_op_b_memory_prev_value
-          input_adapter_op_c_memory_prev_value (env.get i₀) input_is_real))[(j : ℕ)]'(by
+          input_adapter_op_c_memory_prev_value input_isSlt (input_isSlt + input_isSltu)))[(j : ℕ)]'(by
         have : size Circuits.Types.LtOperationSigned = 10 := rfl
         have := j.isLt
         omega) := by
@@ -275,73 +226,64 @@ theorem completeness :
     refine (h_env_cols j).trans ?_
     have hcell := LtOperationSigned.populateFE_eval_cell env
       input_var_adapter_op_b_memory_prev_value input_var_adapter_op_c_memory_prev_value
-      (var { index := i₀ }) input_var_is_real
+      input_var_isSlt (input_var_isSlt + input_var_isSltu)
       input_adapter_op_b_memory_prev_value input_adapter_op_c_memory_prev_value
       ((vec4_eval env.toEnvironment _).trans hpvb) ((vec4_eval env.toEnvironment _).trans hpvc)
       ha hb (j : ℕ) j.isLt
-    rw [hsig, h_input.1] at hcell
+    rw [hflag0, hreal] at hcell
     exact hcell
-  have himm_pad : (input_is_real - 1) * input_adapter_imm_c = 0 := by
+  have himm_pad : ((input_isSlt + input_isSltu) - 1) * input_adapter_imm_c = 0 := by
     rcases himm with h0 | ⟨hr, h1⟩
     · rw [h0, mul_zero]
     · rw [hr, h1]
       simp
-  have hcbin : input_is_real - input_adapter_imm_c = 0 ∨
-      input_is_real - input_adapter_imm_c = 1 := by
+  have hcbin : (input_isSlt + input_isSltu) - input_adapter_imm_c = 0 ∨
+      (input_isSlt + input_isSltu) - input_adapter_imm_c = 1 := by
     rcases himm with h0 | ⟨hr, h1⟩
     · rw [h0, sub_zero]
       exact hbin
     · rw [hr, h1]
       simp
-  have hreal_of_c (hc : input_is_real - input_adapter_imm_c = 1) : input_is_real = 1 := by
+  have hreal_of_c (hc : (input_isSlt + input_isSltu) - input_adapter_imm_c = 1) : (input_isSlt + input_isSltu) = 1 := by
     rcases himm with h0 | ⟨hr, h1⟩
     · rwa [h0, sub_zero] at hc
     · exact hr
   refine ⟨⟨hbin, h_cpu⟩,
-    ⟨⟨ha, hb, hbin, hf0'⟩, ?_⟩,
+    ⟨⟨ha, hb, hbin, hf0⟩, ?_⟩,
     ⟨⟨hbin, hbin, h_clk⟩,
       ⟨⟨hz _, hz _, hz _, hz _⟩, Or.inl hop_a_0,
       himm_pad, hcbin, himm_copy,
       hrac_a, hrac_b, hrac_c, hdec,
       (fun hr => ⟨ha_prev hr, ha, (hprevclk hr).1, (hprevclk hr).2.1⟩),
-      fun hc => ⟨hc_prev hc, (hprevclk (hreal_of_c hc)).2.2⟩⟩⟩,
+      fun hc => ⟨hb, (hprevclk (hreal_of_c hc)).2.2⟩⟩⟩,
     ⟨⟨hbin, ?_, h_clk.at_four⟩, trivial⟩,
-    by rcases hbin with h | h <;> rw [h] <;> simp,
-    by rw [hflag0, hflag1, ← hsum]; exact sub_self _,
-    hbool _ hf0',
-    hbool _ hf1',
-    hbool _ hsum01',
+    hbool _ hbin,
+    hbool _ hf0,
+    hbool _ hf1,
     hop_a_0⟩
-  -- The composed `LtOperationSigned` `FormalAssertion`'s `Spec` at the witnessed `populate`d columns:
-  -- `spec_populate` once the witnessed column struct equals `populate …` (each cell is `env.get (i₀+2+k)`,
-  -- pinned by the normalised witness hint to `(toElements (populate …))[k]`).
-  have hgate : (input_is_real - 1) * env.get i₀ = 0 := by
-    rw [hflag0]
-    rcases hf0 with h | h
-    · rw [h, mul_zero]
-    · rw [hslt_real h, h]
-      simp
+  have hgate : ((input_isSlt + input_isSltu) - 1) * input_isSlt = 0 := by
+    rcases hf0 with hs | hs
+    · rw [hs, mul_zero]
+    · rcases hf1 with hu | hu
+      · rw [hs, hu]; ring
+      · have impossible := hbool _ hbin
+        rw [hs, hu] at impossible
+        exact False.elim ((show (2 : ZMod p) ≠ 0 by
+          simp [← ZMod.val_eq_zero, val_2_zmod_p]) (by linear_combination impossible))
   convert LtOperationSigned.spec_populate (b := input_adapter_op_b_memory_prev_value)
-    (cc := input_adapter_op_c_memory_prev_value) (is_signed := env.get i₀)
-    (is_real := input_is_real)
-    ha hb hf0' hbin hgate using 2
-  -- 4.32: `convert … using 2` now leaves only the `cols` equality. The former `rfl` step closed a
-  -- separate `circuit.Spec = Spec` goal that the congruence no longer emits (Clean `088a9287`).
+    (cc := input_adapter_op_c_memory_prev_value) (is_signed := input_isSlt)
+    (is_real := (input_isSlt + input_isSltu))
+    ha hb hf0 hbin hgate using 2
   refine (ProvableType.ext_iff (α := Circuits.Types.LtOperationSigned) _ _).mpr (fun i hi => ?_)
-  -- Per cell: the varFromOffset read is the pinned witness cell (`hcolsPop`), already in the
-  -- value-level `populate` form.
   refine Eq.trans ?_
-    ((getElem_toElements_eval_varFromOffset env.toEnvironment (i₀ + 2) i hi).trans
+    ((getElem_toElements_eval_varFromOffset env.toEnvironment i₀ i hi).trans
       (hcolsPop ⟨i, hi⟩))
   simp only [circuit_norm]
-  -- RegisterWrite's `isU64 #v[bit, 0, 0, 0]` (the op_a write push): the upper three limbs are literal
-  -- `0`; the witnessed compare `bit` `env`-evaluates (via the same ascription trick, index `0`) to the
-  -- `populate`d column 0, i.e. `U16CompareOperation.populate_bit …`, which is binary by `populate_bit_bool`.
   simp [circuit_norm]
   intro hr
-  have hc0 : env.get (i₀ + 2)
+  have hc0 : env.get i₀
       = (toElements (LtOperationSigned.populate input_adapter_op_b_memory_prev_value
-          input_adapter_op_c_memory_prev_value (env.get i₀) input_is_real))[0]'(by
+          input_adapter_op_c_memory_prev_value input_isSlt (input_isSlt + input_isSltu)))[0]'(by
             have : size Circuits.Types.LtOperationSigned = 10 := rfl; omega) := hcolsPop 0
   refine isU64_bitWord ?_
   rw [hc0]
@@ -367,12 +309,12 @@ def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (byteChannel (p := p))) :=
   let clkLow := input.state.clk_0_16 + input.state.clk_16_24 * 65536
   let opCGate := input.is_real - input.adapter.imm_c
-  let isSlt := var ⟨offset⟩
-  let bit := var ⟨offset + 2⟩
-  let comparison0 := var ⟨offset + 8⟩
-  let comparison1 := var ⟨offset + 9⟩
-  let bMsb := var ⟨offset + 10⟩
-  let cMsb := var ⟨offset + 11⟩
+  let isSlt := input.isSlt
+  let bit := var ⟨offset⟩
+  let comparison0 := var ⟨offset + 6⟩
+  let comparison1 := var ⟨offset + 7⟩
+  let bMsb := var ⟨offset + 8⟩
+  let cMsb := var ⟨offset + 9⟩
   [ byteChannel.pulledIf input.is_real
       ⟨6, (input.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹,
        Expression.const ((13 : ℕ) : ZMod p), 0⟩,
@@ -417,7 +359,7 @@ def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
 /-- Lt's exact Memory-channel interaction list (ALU-type: the op_c register pull/read-back pair is
 gated by **`is_real - imm_c`** — an immediate does no register read — and addressed by the low limb
 `op_c[0]`).  The op_a write push carries the compare-bit word `[bit, 0, 0, 0]` (the witnessed
-`LtOperationSigned` block's cell 0, at `offset + 2` after the two variant flags).  Keeping this list
+`LtOperationSigned` block's cell 0, at `offset`).  Keeping this list
 beside `circuit` makes Clean's exposure interface the single structural source consumed by both
 faithfulness and semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -439,7 +381,7 @@ def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
        input.adapter.op_c[0], 0, 0, input.adapter.op_c_memory.prev_value⟩,
     memoryChannel.pushedIf input.is_real
       ⟨input.state.clk_high, input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4,
-       input.adapter.op_a, 0, 0, #v[var { index := offset + 2 }, 0, 0, 0]⟩ ]
+       input.adapter.op_a, 0, 0, #v[var { index := offset }, 0, 0, 0]⟩ ]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The exact source-B pull occupies its declared slot in Lt's exposed Memory list. -/
@@ -460,18 +402,16 @@ theorem opCPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (off
       exposedMemoryInteractions input offset := by
   simp [exposedMemoryInteractions]
 
-/-- The Program-fetch opcode committed by the witnessed one-hot variant flags (cells `offset+0..1`):
-`SLT·9 + SLTU·10`.  Named so the exposed pull and `Soundness/TypedProgram.lean` share one
-statement-level expression instead of raw witness indices. -/
-def exposedOpcode (offset : ℕ) : Expression (ZMod p) :=
-  var ⟨offset⟩ * 9 + var ⟨offset + 1⟩ * 10
+/-- The fetched opcode selected by the committed inputs: SLT = 9, SLTU = 10. -/
+def exposedOpcode (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
+  input.isSlt * 9 + input.isSltu * 10
 
 /-- Exact Program fetch emitted by the ALU adapter, with the instruction opcode reconstructed from
 the two chip-owned variant flags. -/
-def exposedProgramInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
+def exposedProgramInteractions (input : Var Inputs (ZMod p)) :
     List (ChannelInteraction (programChannel (p := p))) :=
   [ programChannel.pulledIf input.is_real
-      ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], exposedOpcode offset,
+      ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], exposedOpcode input,
        input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
        input.adapter.op_a_0, 0, input.adapter.imm_c⟩ ]
 
@@ -494,7 +434,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
       -- The Program-bus instruction fetch (descended from the composed `ALUTypeReader`, gate
       -- `is_trusted = is_real`, opcode = the committed one-hot flag encoding), consumed by
       -- `Soundness/TypedProgram.lean`.
-      expose programChannel (exposedProgramInteractions input offset),
+      expose programChannel (exposedProgramInteractions input),
     exposedChannels_eq := by
       preserve_tactic_target
       intro input offset
@@ -559,10 +499,10 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
 @[circuit_norm] theorem circuit_main_eq : (circuit (p := p)).main = main := rfl
 
 @[circuit_norm] theorem circuit_localLength_eq (input : Var Inputs (ZMod p)) :
-    (circuit (p := p)).localLength input = 12 := rfl
+    (circuit (p := p)).localLength input = 10 := rfl
 
 @[circuit_norm] theorem circuit_size_eq :
-    (circuit (p := p)).size = size Inputs + 12 := by
+    (circuit (p := p)).size = size Inputs + 10 := by
   rw [GeneralFormalCircuit.size_eq, circuit_localLength_eq]
 
 /-- The completed Lt circuit exposes exactly its State interaction pair. -/
@@ -602,9 +542,9 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 /-- The completed Lt circuit exposes exactly its Program fetch. -/
 theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith programChannel.toRaw =
-      (exposedProgramInteractions input offset).map ChannelInteraction.toRaw := by
+      (exposedProgramInteractions input).map ChannelInteraction.toRaw := by
   exact circuit.interactionsWith_eq_of_mem_exposedChannels input offset
-    ⟨programChannel.toRaw, (exposedProgramInteractions input offset).map
+    ⟨programChannel.toRaw, (exposedProgramInteractions input).map
       ChannelInteraction.toRaw⟩
     (by simp [circuit, expose])
 

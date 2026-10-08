@@ -766,22 +766,22 @@ private def LtChip.aluReaderInput (input : Var LtChip.Inputs (ZMod p)) (offset :
     Var Readers.ALUTypeReader.Inputs (ZMod p) :=
   ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
     input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-    var ⟨offset⟩ * 9 + var ⟨offset + 1⟩ * 10,
-    var ⟨offset + 2⟩, 0, 0, 0⟩
+    input.isSlt * 9 + input.isSltu * 10,
+    var ⟨offset⟩, 0, 0, 0⟩
 
 /-- Lt's full row constraints restrict to its composed ALU reader. -/
 private theorem LtChip.aluReaderConstraints
     (input : Var LtChip.Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
     (constraints : ((LtChip.main input).operations offset).ConstraintsHold env) :
     ((Readers.ALUTypeReader.main (LtChip.aluReaderInput input offset)).operations
-      (offset + 12)).ConstraintsHold env := by
-  have readerMem : ⟨offset + 12,
-      Readers.ALUTypeReader.circuit.toSubcircuit (offset + 12)
+      (offset + 10)).ConstraintsHold env := by
+  have readerMem : ⟨offset + 10,
+      Readers.ALUTypeReader.circuit.toSubcircuit (offset + 10)
         (LtChip.aluReaderInput input offset)⟩ ∈
       ((LtChip.main input).operations offset).subcircuits := by
     simp only [LtChip.main, LtChip.aluReaderInput, circuit_norm]
   exact generalSubcircuit_constraints_of_mem Readers.ALUTypeReader.circuit
-    (LtChip.aluReaderInput input offset) (offset + 12) env
+    (LtChip.aluReaderInput input offset) (offset + 10) env
       ((LtChip.main input).operations offset) readerMem constraints
 
 /-- Lt's immediate-aware source-C gate is zero or the physical row selector. -/
@@ -794,13 +794,15 @@ private theorem LtChip.subGate_eq_zero_or_isReal
     (Circuit.constraintsHold_toFlat_iff.mpr constraints)
   have selectorBinary := LtChip.mainSelectorBinary.binary input offset env shallow
   have selectorBinary' : env input.is_real = 0 ∨ env input.is_real = 1 := by
-    simpa only [circuit_norm] using selectorBinary
+    exact selectorBinary.imp
+      (fun h => (LtChip.eval_inputIsReal env input).symm.trans h)
+      (fun h => (LtChip.eval_inputIsReal env input).symm.trans h)
   have readerSelectorBinary : env (LtChip.aluReaderInput input offset).is_real = 0 ∨
       env (LtChip.aluReaderInput input offset).is_real = 1 := by
     simpa only [LtChip.aluReaderInput] using selectorBinary'
   have readerConstraints := LtChip.aluReaderConstraints input offset env constraints
   have subGate := aluTypeReader_subGate_eq_zero_or_isReal
-    (LtChip.aluReaderInput input offset) (offset + 12) env
+    (LtChip.aluReaderInput input offset) (offset + 10) env
       readerSelectorBinary readerConstraints
   simpa only [LtChip.aluReaderInput] using subGate
 
@@ -811,7 +813,7 @@ theorem LtChip.mainMemorySelectorGated :
 
 theorem LtChip.circuitMemorySelectorGated :
     CircuitMemorySelectorGated (p := p) LtChip.circuit LtChip.rowView := by
-  liftMemoryGating LtChip.circuit, LtChip.rowView,
+  liftMemoryGatingWith LtChip.circuit, LtChip.rowView, LtChip.eval_isReal,
     (fun input _ => input.is_real), LtChip.mainMemorySelectorGated
 
 /-! ## ShiftLeft's derived selector -/

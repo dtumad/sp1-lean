@@ -4,8 +4,7 @@ import Clean.Circuit.Basic
 
 Every hint-driven chip reads its variant flags the same way: row 0 of a string-keyed
 `ProverHint` table, an absent key meaning all-zero (SP1's padding rows carry no hint). The
-value-level accessors (`LtChip.hintFlags`,
-`BranchChip.hintFlags`, …) differ only in their key and width; this file is their common
+value-level accessors (`BranchChip.hintFlags`, `ShiftLeftChip.hintFlags`, …) differ only in their key and width; this file is their common
 witness-IR form — cell `i` is `FExpr.hintGet key n` at row 0, column `i`, whose zero default
 is exactly the accessors' `.getD #v[0, …]` fallback.
 

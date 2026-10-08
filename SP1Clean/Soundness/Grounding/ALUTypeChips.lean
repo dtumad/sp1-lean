@@ -1215,7 +1215,7 @@ omit [Fact (2 ^ 25 < p)] in
 theorem ltViewOf_rdWrite (env : Environment (ZMod p)) :
     (ltViewOf env).rdWrite =
       Eval.eval env
-        (#v[var { index := size LtChip.Inputs + 2 }, 0, 0, 0] :
+        (#v[var { index := size LtChip.Inputs }, 0, 0, 0] :
           Word (Expression (ZMod p))) := by
   let input : Var LtChip.Inputs (ZMod p) := varFromOffset LtChip.Inputs 0
   let offset := size LtChip.Inputs
@@ -1268,7 +1268,7 @@ theorem LtChip.aluTypeTimestampContract :
   let input : Var LtChip.Inputs (ZMod p) := varFromOffset LtChip.Inputs 0
   let offset := size LtChip.Inputs
   let readerInput := LtChip.aluTypeReaderInput input offset
-  refine .intro (offset + 12) readerInput (LtChip.aluTypeReader_mem input offset) ?_
+  refine .intro (offset + 10) readerInput (LtChip.aluTypeReader_mem input offset) ?_
   intro env _constraints
   constructor <;>
     simp only [input, offset, readerInput, LtChip.aluTypeReaderInput, LtChip.circuit,

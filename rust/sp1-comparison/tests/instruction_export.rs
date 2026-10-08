@@ -22,6 +22,7 @@ use sp1_core_machine::{
         add_sub::add::AddChip,
         bitwise::{BitwiseChip, BitwiseCols},
         divrem::{DivRemChip, DivRemCols},
+        lt::{LtChip, LtCols},
         mul::{MulChip, MulCols},
     },
     memory::load::load_byte::{LoadByteChip, LoadByteColumns},
@@ -81,6 +82,15 @@ mod generated_bitwise {
     ));
 }
 use generated_bitwise::{BitwiseInstruction, BitwiseInstructionAirSpec};
+
+#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+mod generated_lt {
+    include!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/lt_instruction.rs"
+    ));
+}
+use generated_lt::{LtInstruction, LtInstructionAirSpec};
 
 type Ledger = Vec<(String, u64, Vec<u64>)>;
 
@@ -258,6 +268,31 @@ fn r_type_event(index: usize, opcode: Opcode, a: u64, b: u64, c: u64) -> (AluEve
             }),
             b: read(b, 3),
             c: read(c, 2),
+        },
+    )
+}
+
+/// Register and immediate ALU instructions share SP1's reader record layout.
+fn alu_type_event(
+    index: usize,
+    opcode: Opcode,
+    a: u64,
+    b: u64,
+    c: u64,
+    immediate: bool,
+) -> (AluEvent, ALUTypeRecord) {
+    let (event, registers) = r_type_event(index, opcode, a, b, c);
+    (
+        event,
+        ALUTypeRecord {
+            op_a: registers.op_a,
+            a: registers.a,
+            op_b: registers.op_b as u64,
+            b: registers.b,
+            op_c: if immediate { c } else { registers.op_c as u64 },
+            c: if immediate { None } else { Some(registers.c) },
+            is_imm: immediate,
+            is_untrusted: false,
         },
     )
 }
@@ -445,6 +480,7 @@ fn instruction_fixtures_do_not_claim_provider_balance() {
     check_open_buses::<DivRemInstruction>(&div_rem_row(&div_rem_trace().row_slice(0)));
     check_open_buses::<MulInstruction>(&mul_row(&mul_trace().row_slice(0)));
     check_open_buses::<BitwiseInstruction>(&bitwise_row(&bitwise_trace().row_slice(0)));
+    check_open_buses::<LtInstruction>(&lt_row(&lt_trace().row_slice(0)));
 }
 
 fn load_byte_event(
@@ -879,19 +915,13 @@ fn bitwise_trace() -> RowMajorMatrix<SP1Field> {
                 Opcode::AND => b & c,
                 _ => unreachable!(),
             };
-            let (event, registers) = r_type_event(record.bitwise_events.len(), opcode, a, b, c);
-            record.bitwise_events.push((
-                event,
-                ALUTypeRecord {
-                    op_a: registers.op_a,
-                    a: registers.a,
-                    op_b: registers.op_b as u64,
-                    b: registers.b,
-                    op_c: if immediate { c } else { registers.op_c as u64 },
-                    c: if immediate { None } else { Some(registers.c) },
-                    is_imm: immediate,
-                    is_untrusted: false,
-                },
+            record.bitwise_events.push(alu_type_event(
+                record.bitwise_events.len(),
+                opcode,
+                a,
+                b,
+                c,
+                immediate,
             ));
         }
     }
@@ -956,5 +986,120 @@ fn all_bitwise_columns_preserve_constraints_and_interactions_under_mutation() {
         &indices,
         bitwise_row,
         &BitwiseChip::<SupervisorMode>::default(),
+    );
+}
+
+fn lt_trace() -> RowMajorMatrix<SP1Field> {
+    let values: [u64; 13] = [
+        0,
+        1,
+        255,
+        256,
+        65535,
+        65536,
+        u32::MAX as u64,
+        1 << 32,
+        (1 << 48) - 1,
+        1 << 48,
+        (1 << 63) - 1,
+        1 << 63,
+        u64::MAX,
+    ];
+    let mut record = ExecutionRecord::default();
+    for opcode in [Opcode::SLT, Opcode::SLTU] {
+        // Equal operands, each most-significant differing limb, and opposite signs.
+        // Immediate comparisons also exercise both signed twelve-bit boundaries.
+        let operands = values
+            .into_iter()
+            .flat_map(|b| values.into_iter().map(move |c| (b, c, false)))
+            .chain(values.into_iter().flat_map(|b| {
+                [0_i64, 1, 2047, -2048, -1]
+                    .into_iter()
+                    .map(move |c| (b, c as u64, true))
+            }));
+        for (b, c, immediate) in operands {
+            let a = match opcode {
+                Opcode::SLT => ((b as i64) < (c as i64)) as u64,
+                Opcode::SLTU => (b < c) as u64,
+                _ => unreachable!(),
+            };
+            record.lt_events.push(alu_type_event(
+                record.lt_events.len(),
+                opcode,
+                a,
+                b,
+                c,
+                immediate,
+            ));
+        }
+    }
+    assert_eq!(record.lt_events.len(), 468);
+    let chip = LtChip::<SupervisorMode>::default();
+    let trace = chip.generate_trace(&record, &mut ExecutionRecord::default());
+    assert_eq!(
+        trace.width(),
+        <LtChip<SupervisorMode> as BaseAir<SP1Field>>::width(&chip)
+    );
+    assert_eq!(trace.height(), 480); // Includes twelve all-zero SP1 padding rows.
+    trace
+}
+
+fn lt_row(sp1: &[SP1Field]) -> Vec<NativeField> {
+    type Columns = LtCols<u8, SupervisorMode>;
+    // The typed inputs precede the ten comparison witnesses. Authenticate every field
+    // against SP1's actual struct rather than deriving the adapter from generated output.
+    let mut indices: Vec<usize> = (0..offset_of!(Columns, is_slt)).collect();
+    indices.extend([
+        offset_of!(Columns, is_slt),
+        offset_of!(Columns, is_sltu),
+        offset_of!(Columns, lt_operation.result.u16_compare_operation.bit),
+    ]);
+    let flags = offset_of!(Columns, lt_operation.result.u16_flags);
+    indices.extend(flags..flags + 4);
+    indices.push(offset_of!(Columns, lt_operation.result.not_eq_inv));
+    let comparison = offset_of!(Columns, lt_operation.result.comparison_limbs);
+    indices.extend(comparison..comparison + 2);
+    indices.extend([
+        offset_of!(Columns, lt_operation.b_msb),
+        offset_of!(Columns, lt_operation.c_msb),
+    ]);
+    assert_eq!(sp1.len(), 44);
+    assert_eq!(sp1.len(), LtInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(<LtInstruction as Program<NativeField>>::PROVER_INPUTS, 34);
+    let mut sorted = indices.clone();
+    sorted.sort_unstable();
+    assert_eq!(sorted, (0..sp1.len()).collect::<Vec<_>>());
+    indices
+        .into_iter()
+        .map(|index| NativeField::from_u64(sp1[index].as_canonical_u64()))
+        .collect()
+}
+
+#[test]
+fn generated_lt_witness_and_air_match_released_sp1() {
+    check_trace::<LtInstruction, LtInstructionAirSpec>(
+        &lt_trace(),
+        lt_row,
+        &LtChip::<SupervisorMode>::default(),
+    );
+}
+
+#[test]
+fn all_lt_columns_preserve_constraints_and_interactions_under_mutation() {
+    // Both opcodes and operand forms, equal/unequal limbs, sign boundaries and padding.
+    let indices: Vec<usize> = (0..2)
+        .flat_map(|opcode| {
+            [
+                0, 1, 12, 66, 78, 91, 117, 129, 142, 155, 168, 169, 171, 172, 173, 231, 232, 233,
+            ]
+            .map(|row| opcode * 234 + row)
+        })
+        .chain([468])
+        .collect();
+    check_mutations::<LtInstruction, LtInstructionAirSpec>(
+        &lt_trace(),
+        &indices,
+        lt_row,
+        &LtChip::<SupervisorMode>::default(),
     );
 }
