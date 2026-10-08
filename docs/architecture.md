@@ -78,6 +78,13 @@ and its semantic readout live in the arithmetic layer, so DivRem's product contr
 multiplication constraints, witness construction or bundled proofs. The certificate retains intermediate
 witness and padding obligations; the semantic readout describes the selected product slice.
 
+Bitwise byte and word gadgets share native columns in `Circuits/Types/Bitwise` and pure contracts
+in `Semantics/Specs/BitwiseBytes` and `Semantics/Specs/Bitwise`. The word contract retains the complete
+byte certificate and derives operand/result ranges and whole-word semantics. Its bundled gadget
+requires a valid opcode and binary activity; byte lookups establish operand bounds on active rows.
+Honest witness construction retains its bounded-input requirements. Byte decomposition is a pure
+projection, with no separate empty assertion gadget. Generated Rust helpers remain migration evidence.
+
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,
 one complete finite state with projections, and one typed physical inventory. Retain distinctions

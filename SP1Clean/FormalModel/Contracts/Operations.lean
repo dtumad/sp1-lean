@@ -3,7 +3,6 @@ module
 public import SP1Clean.Math.Word
 public import SP1Clean.Circuits.Types.AddOperation
 public import SP1Clean.Circuits.Types.U16MSBOperation
-public import SP1Clean.Circuits.Types.U16toU8Operation
 public import SP1Clean.Circuits.Types.AddrAddOperation
 public import SP1Clean.Circuits.Types.AddressOperation
 import Mathlib.Data.Fin.VecNotation
@@ -11,35 +10,12 @@ import Mathlib.Data.Fin.VecNotation
 /-! # Shared operation contracts
 
 Input types, semantic relations and pure result helpers for operations awaiting feature separation.
-Reader contracts and feature specifications have independent owners. Multiplication and safe byte
-decomposition live in `Semantics/Specs/Mul` and `Semantics/Specs/U16toU8Safe`; consumers import them
-directly. Structural evidence stays with the operation implementations and proofs.
+Reader contracts and feature specifications have independent owners. Multiplication, safe byte
+decomposition and bitwise operations live under `Semantics/Specs`; consumers import them directly.
+Structural evidence stays with the operation implementations and proofs.
 -/
 
 @[expose] public section
-
-namespace SP1Clean.U16toU8OperationUnsafe
-
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
-
-/-- The four 16-bit input limbs to split, plus the low-byte column struct (a chip-owned input,
-faithful to SP1's `eval_u16_to_u8_unsafe(_, u16_values, cols)`, which witnesses nothing). -/
-structure Inputs (F : Type) where
-  u16_values : fields 4 F
-  cols : Circuits.Types.U16toU8Operation F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-/-- Semantic contract: the low/high split reassembles each limb (the unsafe op's only content —
-`256 * ((u - low) * 256⁻¹) = u - low`, so `low + 256 * high = u`). Holds unconditionally — the op
-emits no constraints. -/
-def Spec (input : Inputs (ZMod p)) : Prop :=
-  input.u16_values[0] = input.cols.low_bytes[0] + (input.u16_values[0] - input.cols.low_bytes[0]) * 256⁻¹ * 256 ∧
-  input.u16_values[1] = input.cols.low_bytes[1] + (input.u16_values[1] - input.cols.low_bytes[1]) * 256⁻¹ * 256 ∧
-  input.u16_values[2] = input.cols.low_bytes[2] + (input.u16_values[2] - input.cols.low_bytes[2]) * 256⁻¹ * 256 ∧
-  input.u16_values[3] = input.cols.low_bytes[3] + (input.u16_values[3] - input.cols.low_bytes[3]) * 256⁻¹ * 256
-
-end SP1Clean.U16toU8OperationUnsafe
 
 namespace SP1Clean.AddrAddOperation
 
@@ -324,44 +300,3 @@ def resultWord (cols : Columns (ZMod p)) : Word (ZMod p) :=
   #v[cols.value[0], cols.value[1], cols.msb.msb * 65535, cols.msb.msb * 65535]
 
 end SP1Clean.SubwOperation
-
-
-namespace SP1Clean.BitwiseOperation
-
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
-
-/-- Proof-oriented local columns for the bytewise bitwise gadget: the eight witnessed result bytes.
-The assembled chip faithfulness map is the only place that relates this shape to SP1 Rust's
-helper-operation columns. -/
-structure Columns (F : Type) where
-  result : Vector F 8
-deriving ProvableStruct
-provable_struct_eval_lemmas Columns
-
-/-- Inputs for the native bytewise bitwise gadget. -/
-structure Inputs (F : Type) where
-  a : Vector F 8
-  b : Vector F 8
-  cols : Columns F
-  opcode : F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-/-- Semantic, `is_real`- and opcode-gated contract: on a real row each result byte is the bitwise
-AND/OR/XOR of the operand bytes (as 8-bit values), **and the operand bytes are genuine bytes** — the
-byte table guarantees `a[i], b[i] < 256` for every fired send, so soundness exports those bounds and a
-composing operation (e.g. `BitwiseU16Operation`) can consume them without having to range-check the
-free byte columns itself. On padding (`is_real = 0`) it is vacuous — the gadget's gated byte-bus pulls
-impose nothing there. The native input contains the result bytes as `input.cols.result`,
-threaded in by the composing operation. -/
-def Spec (input : Inputs (ZMod p)) : Prop :=
-  input.is_real = 1 →
-    (∀ i : Fin 8, input.a[i].val < 256 ∧ input.b[i].val < 256) ∧
-    (input.opcode = 0 → ∀ i : Fin 8, input.cols.result[i].val = input.a[i].val &&& input.b[i].val) ∧
-    (input.opcode = 1 → ∀ i : Fin 8, input.cols.result[i].val = input.a[i].val ||| input.b[i].val) ∧
-    (input.opcode = 2 → ∀ i : Fin 8, input.cols.result[i].val = input.a[i].val ^^^ input.b[i].val)
-
-end SP1Clean.BitwiseOperation
-
--- The composed BitwiseU16 contract remains in `Native/Operations/BitwiseU16Operation.lean`.

@@ -1,3 +1,7 @@
+import SP1Clean.Circuits.Gadgets.Bitwise.Witness
+import SP1Clean.Semantics.Specs.Bitwise
+import SP1Clean.Semantics.Specs.BitwiseBytes
+import SP1Clean.Circuits.Types.Bitwise
 import SP1Clean.Semantics.Specs.IsEqualWord
 import SP1Clean.Semantics.Specs.IsZeroWord
 import SP1Clean.Semantics.Specs.IsZero
@@ -288,10 +292,8 @@ import SP1Clean.Native.Operations.AddressOrder
 import SP1Clean.Native.Operations.AddwOperation.Defs
 import SP1Clean.Native.Operations.AddwOperation.Populate
 import SP1Clean.Native.Operations.AddwOperation.RawSpec
-import SP1Clean.Native.Operations.BitwiseOperation.Defs
-import SP1Clean.Native.Operations.BitwiseOperation.Populate
-import SP1Clean.Native.Operations.BitwiseOperation.RawSpec
-import SP1Clean.Native.Operations.BitwiseU16Operation
+import SP1Clean.Circuits.Gadgets.BitwiseBytes
+import SP1Clean.Circuits.Gadgets.Bitwise
 import SP1Clean.Native.Operations.BoundedWord
 import SP1Clean.Native.Operations.ClockOrder
 import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
@@ -349,7 +351,6 @@ import SP1Clean.Native.Operations.SyscallCodeGuard
 import SP1Clean.Circuits.Gadgets.U16Compare
 import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Circuits.Gadgets.U16toU8Safe
-import SP1Clean.Native.Operations.U16toU8OperationUnsafe
 import SP1Clean.Native.Operations.WordRangeCheck
 import SP1Clean.Native.Operations.WritePermission
 import SP1Clean.Native.Readers.ALUTypeReader
@@ -563,7 +564,6 @@ import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
 import SP1Clean.Proofs.Operations.AddressDiv8
 import SP1Clean.Proofs.Operations.AddressOperation.Witgen
 import SP1Clean.Proofs.Operations.AddwOperation.Formal
-import SP1Clean.Proofs.Operations.BitwiseOperation.Formal
 import SP1Clean.Proofs.Operations.ClockOrderPopulate
 import SP1Clean.Proofs.Operations.DivRemOperation.Compare
 import SP1Clean.Proofs.Operations.DivRemOperation.Core

@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.BitwiseU16Operation
+import SP1Clean.Circuits.Gadgets.Bitwise
 import SP1Clean.Native.Witgen.HintFlags
 import ToClean.Circuit.WitnessCombinator
 import SP1Clean.Native.Readers.CPUState
