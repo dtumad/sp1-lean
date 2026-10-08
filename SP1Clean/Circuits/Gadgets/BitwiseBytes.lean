@@ -1,12 +1,20 @@
-import SP1Clean.Native.Operations.BitwiseOperation.RawSpec
-import SP1Clean.Native.Operations.BitwiseOperation.Populate
-import SP1Clean.Native.Operations.BitwiseOperation.Defs
+module
 
-/-! # `BitwiseOperation` — the `FormalAssertion` (soundness / completeness / contract)
+public import SP1Clean.Semantics.Specs.BitwiseBytes
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Subcircuit
+import SP1Clean.Math.Gate
+import Clean.Utils.Tactics.CircuitProofStart
+import Mathlib.Tactic.FinCases
 
-SP1's `BitwiseOperation::eval` as a Clean `FormalAssertion`. Emits one
-`send_byte(opcode, result[i], a[i], b[i])` per byte; witnesses nothing (result bytes threaded in).
-Soundness routes through `RawSpec.bitwise_of_byteOp`. -/
+/-! # Bundled bytewise bitwise gadget
+
+Eight byte-channel pulls certify AND/OR/XOR. Witness construction and the formal assertion
+share one contract; operand bounds are obtained from active lookups.
+-/
+
+@[expose] public section
 
 namespace SP1Clean.BitwiseOperation
 
@@ -15,13 +23,67 @@ open SP1Clean.Channels (byteChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Opcode is one of AND/OR/XOR; `is_real` is binary (the latter discharged by the composing
-operation's gate).
-The operand byte bounds are **not** preconditions: the byte table guarantees them on every fired send,
-so soundness exports them through `Spec` (and completeness reads them back from `Spec`), letting a
-composing operation feed free byte columns without range-checking them itself. -/
-def Assumptions (input : Inputs (ZMod p)) : Prop :=
-  input.opcode.val < 3 ∧ (input.is_real = 0 ∨ input.is_real = 1)
+/-- Native port of SP1's `BitwiseOperation` result column: each result byte is `byteOp opcode a b`. -/
+def populate (a b : Vector (ZMod p) 8) (opcode : ZMod p) : Columns (ZMod p) :=
+  ⟨#v[((byteOp opcode.val a[0].val b[0].val : ℕ) : ZMod p),
+      ((byteOp opcode.val a[1].val b[1].val : ℕ) : ZMod p),
+      ((byteOp opcode.val a[2].val b[2].val : ℕ) : ZMod p),
+      ((byteOp opcode.val a[3].val b[3].val : ℕ) : ZMod p),
+      ((byteOp opcode.val a[4].val b[4].val : ℕ) : ZMod p),
+      ((byteOp opcode.val a[5].val b[5].val : ℕ) : ZMod p),
+      ((byteOp opcode.val a[6].val b[6].val : ℕ) : ZMod p),
+      ((byteOp opcode.val a[7].val b[7].val : ℕ) : ZMod p)]⟩
+
+/-- The witnessed result bytes `populate a b opcode` satisfy the gadget `Spec` for any `is_real`, given
+the operand bytes are genuine bytes and the opcode is one of AND/OR/XOR. The composing
+`BitwiseU16Operation` uses this to discharge its `assertion BitwiseOperation.circuit` prover obligation. -/
+theorem spec_populate {a b : Vector (ZMod p) 8} {opcode : ZMod p}
+    (hbytes : ∀ i : Fin 8, a[(i : ℕ)].val < 256 ∧ b[(i : ℕ)].val < 256) (_hopcode : opcode.val < 3)
+    (is_real : ZMod p) :
+    Spec (⟨a, b, populate a b opcode, opcode, is_real⟩ : Inputs (ZMod p)) := by
+  have hp : 2 ^ 17 < p := Fact.out
+  have hb256 : (256 : ℕ) < p := by omega
+  intro _
+  have hres : ∀ i : Fin 8,
+      (populate a b opcode).result[(i : ℕ)].val
+        = byteOp opcode.val a[(i : ℕ)].val b[(i : ℕ)].val := by
+    intro i
+    have hi := hbytes i
+    fin_cases i <;>
+      simp only [populate, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
+        List.getElem_cons_succ] <;>
+      exact ZMod.val_natCast_of_lt (lt_trans (byteOp_lt256 _ _ _ hi.1 hi.2) hb256)
+  exact ⟨hbytes, bitwise_of_byteOp (a := a) (b := b) hres⟩
+
+/-- Eight gated byte lookups and the binary row gate. -/
+def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
+  let a := input.a
+  let b := input.b
+  let cols := input.cols
+  let opcode := input.opcode
+  let is_real := input.is_real
+  byteChannel.pullIf is_real (⟨opcode, cols.result[0], a[0], b[0]⟩ : ByteRow (Expression (ZMod p)))
+  byteChannel.pullIf is_real (⟨opcode, cols.result[1], a[1], b[1]⟩ : ByteRow (Expression (ZMod p)))
+  byteChannel.pullIf is_real (⟨opcode, cols.result[2], a[2], b[2]⟩ : ByteRow (Expression (ZMod p)))
+  byteChannel.pullIf is_real (⟨opcode, cols.result[3], a[3], b[3]⟩ : ByteRow (Expression (ZMod p)))
+  byteChannel.pullIf is_real (⟨opcode, cols.result[4], a[4], b[4]⟩ : ByteRow (Expression (ZMod p)))
+  byteChannel.pullIf is_real (⟨opcode, cols.result[5], a[5], b[5]⟩ : ByteRow (Expression (ZMod p)))
+  byteChannel.pullIf is_real (⟨opcode, cols.result[6], a[6], b[6]⟩ : ByteRow (Expression (ZMod p)))
+  byteChannel.pullIf is_real (⟨opcode, cols.result[7], a[7], b[7]⟩ : ByteRow (Expression (ZMod p)))
+  assertZero (is_real * (is_real - 1))
+
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [byteChannel.toRaw]
+  }
+
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma channelsWithGuarantees_eq :
+    ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
+      = [byteChannel.toRaw] := rfl
+set_option linter.unusedSectionVars false in
+@[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
+    (elaborated (p := p)).localLength x = 0 := rfl
 
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start

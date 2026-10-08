@@ -115,39 +115,12 @@ private lemma one_hot3 {x o a : ZMod p}
       | (exfalso; apply h6; linear_combination hsum)
 
 /-- The byte opcode `is_xor·2 + is_or·1 + is_and·0` lands in `{0,1,2}` (one-hot), so its `val < 3` —
-the operand-range part of the composed `BitwiseU16Operation.circuit`'s `Assumptions`. -/
+the opcode-range part of the composed `BitwiseU16Operation.circuit`'s `Assumptions`. -/
 private lemma val_lt_three {x : ZMod p} (h : x = 0 ∨ x = 1 ∨ x = 2) : x.val < 3 := by
   rcases h with rfl | rfl | rfl
   · simp
   · rw [ZMod.val_one]; omega
   · rw [val_2_zmod_p]; omega
-
-/-- On a real row, each of the eight bitwise-result bytes is a genuine byte (< 256) — from the structural
-`BitwiseU16Operation.Spec`'s per-opcode result-byte equality + `byteOp_lt256`, once the one-hot flags
-resolve the opcode to a literal — so the reassembled `BitwiseU16Operation.resultWord` is a valid `U64`.
-This discharges the new `RegisterWrite` op_a write push's `isU64` requirement (Option B memory flip). -/
-private lemma resultWord_isU64 {inp : BitwiseU16Operation.Inputs (ZMod p)}
-    (hir : inp.is_real = 1) (hs : BitwiseU16Operation.Spec inp)
-    (hop : inp.opcode = 0 ∨ inp.opcode = 1 ∨ inp.opcode = 2) :
-    Word.isU64 (BitwiseU16Operation.resultWord inp.cols.bitwise_operation.result) := by
-  obtain ⟨hbnd, harm0, harm1, harm2⟩ := hs hir
-  have hr_lt : ∀ i : Fin 8, inp.cols.bitwise_operation.result[(i : ℕ)].val < 256 := fun i => by
-    rcases hop with h | h | h
-    · rw [show inp.cols.bitwise_operation.result[(i : ℕ)].val = _ from harm0 h i]
-      exact byteOp_lt256 0 _ _ (hbnd i).1 (hbnd i).2
-    · rw [show inp.cols.bitwise_operation.result[(i : ℕ)].val = _ from harm1 h i]
-      exact byteOp_lt256 1 _ _ (hbnd i).1 (hbnd i).2
-    · rw [show inp.cols.bitwise_operation.result[(i : ℕ)].val = _ from harm2 h i]
-      exact byteOp_lt256 2 _ _ (hbnd i).1 (hbnd i).2
-  have b : ∀ (i : ℕ) (hi : i < 8), inp.cols.bitwise_operation.result[i].val < 256 :=
-    fun i hi => hr_lt ⟨i, hi⟩
-  refine Word.isU64_of_cases ?_ ?_ ?_ ?_ <;>
-    simp only [BitwiseU16Operation.resultWord, Vector.getElem_mk, List.getElem_toArray,
-      List.getElem_cons_zero, List.getElem_cons_succ]
-  · have h0 := b 0 (by omega); have h1 := b 1 (by omega); rw [val_lo_add_hi h0 h1]; omega
-  · have h0 := b 2 (by omega); have h1 := b 3 (by omega); rw [val_lo_add_hi h0 h1]; omega
-  · have h0 := b 4 (by omega); have h1 := b 5 (by omega); rw [val_lo_add_hi h0 h1]; omega
-  · have h0 := b 6 (by omega); have h1 := b 7 (by omega); rw [val_lo_add_hi h0 h1]; omega
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- Structural `toElements` projection: cell `8 + k` of a `BitwiseU16Operation` column struct (after the
@@ -189,7 +162,6 @@ private theorem result_byte_pin {env : ProverEnvironment (ZMod p)} {i₀ : ℕ}
 -- Runs at the plain default: the former 2000000 ceiling was ~50x over; measured floor <= 40000.
 theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start [Spec]
-  obtain ⟨ha, hb⟩ := h_assumptions
   obtain ⟨h_cpu, h_bw, _h_adapter, _h_regwrite, h_gate, _h_selector_bind,
     h_xor_bin, h_or_bin, h_and_bin, h_sum, _h_opa0⟩ := h_holds
   have h_bin := bool_of_mul_pred h_gate
@@ -220,25 +192,25 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have hopc : env.get i₀ * 2 + env.get (i₀ + 1) * 1 + env.get (i₀ + 2) * 0 = 0 := by
       rw [hx0, ho0]; ring
     exact (BitwiseU16Operation.result_semantic _ hr
-      (h_bw ⟨ha, hb, by rw [hopc, ZMod.val_zero]; omega, h_bin⟩)).1 hopc
+      (h_bw ⟨by rw [hopc, ZMod.val_zero]; omega, h_bin⟩)).1 hopc
   · obtain ⟨hx0, _ha0⟩ := hoh.2.1 hor
     have hopc : env.get i₀ * 2 + env.get (i₀ + 1) * 1 + env.get (i₀ + 2) * 0 = 1 := by
       rw [hx0, hor]; ring
     exact (BitwiseU16Operation.result_semantic _ hr
-      (h_bw ⟨ha, hb, by rw [hopc, ZMod.val_one]; omega, h_bin⟩)).2.1 hopc
+      (h_bw ⟨by rw [hopc, ZMod.val_one]; omega, h_bin⟩)).2.1 hopc
   · obtain ⟨ho0, _ha0⟩ := hoh.1 hxor
     have hopc : env.get i₀ * 2 + env.get (i₀ + 1) * 1 + env.get (i₀ + 2) * 0 = 2 := by
       rw [hxor, ho0]; ring
     exact (BitwiseU16Operation.result_semantic _ hr
-      (h_bw ⟨ha, hb, by rw [hopc]; exact val_lt_three (Or.inr (Or.inr rfl)), h_bin⟩)).2.2 hopc
+      (h_bw ⟨by rw [hopc]; exact val_lt_three (Or.inr (Or.inr rfl)), h_bin⟩)).2.2 hopc
   -- The per-emitter channel-requirement tail: the bare `CPUState` `Assumptions` (the binary gate), the
   -- composed `BitwiseU16Operation`/`ALUTypeReader` requirements (bare or `[] ∨ Assumptions` disjuncts).
   · and_intros <;>
-      first | exact h_bin | exact ⟨ha, hb, hop3, h_bin⟩ | exact Or.inl rfl
+      first | exact h_bin | exact ⟨hop3, h_bin⟩ | exact Or.inl rfl
             | exact Or.inr h_bin
             | exact Or.inr ⟨h_bin, h_bin, h_clk⟩
             | exact Or.inr ⟨h_bin, (fun hr => by
-                have hisu := resultWord_isU64 hr (h_bw ⟨ha, hb, hop3, h_bin⟩) hop_cases
+                have hisu := BitwiseU16Operation.resultWord_isU64 hr (h_bw ⟨hop3, h_bin⟩) hop_cases
                 simp only [BitwiseU16Operation.resultWord, Vector.getElem_map,
                   circuit_norm] at hisu ⊢
                 exact hisu), h_clk.at_four⟩
@@ -350,7 +322,7 @@ theorem completeness :
     · rwa [h0, sub_zero] at hc
     · exact hr
   refine ⟨⟨hbin, h_cpu⟩,
-    ⟨⟨ha, hb, hop3, hbin⟩,
+    ⟨⟨hop3, hbin⟩,
       ?_⟩,
     ⟨⟨hbin, hbin, h_clk⟩,
       ⟨⟨hz _, hz _, hz _, hz _⟩, Or.inl hop_a_0,
@@ -383,10 +355,10 @@ theorem completeness :
         (hcolsPop ⟨i, hi⟩))
     simp only [circuit_norm]
   · -- RegisterWrite's `isU64 value` (the op_a write push): the witnessed result word's `isU64` from
-    -- `resultWord_isU64` at the `populate`d columns (`spec_populate`), bridged to the chip's explicit
-    -- `#v[r[0]+r[1]*256, …]` (in `env.get` form) via the per-byte witness-hint pins.
+    -- the pure bitwise result-range lemma at the populated columns (`spec_populate`), transported
+    -- to the chip's explicit `#v[r[0]+r[1]*256, …]` through per-byte witness pins.
     intro hr
-    have hisu := resultWord_isU64 hr
+    have hisu := BitwiseU16Operation.resultWord_isU64 hr
       (BitwiseU16Operation.spec_populate ha hb hop3 input_is_real) hop_cases
     -- Transport the value-level pins (`hcolsPop`) to the per-byte projections through
     -- `result_byte_pin` — whose `s` stays abstract, so `populate` is never unfolded.

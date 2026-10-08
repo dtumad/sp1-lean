@@ -10,10 +10,11 @@
 > the mapping). Clean's `AGENTS.md` owns the subcircuit-boundary, helper-lemma, spec, and
 > `ElaboratedCircuit` disciplines.
 
-Concrete, build-verified patterns for the witnessed-`FormalCircuit` gadgets in `Native/Operations/`
-(+ their proofs in `Proofs/Operations/`).
-Reference templates: `AddOperation.lean` (carry chain), `IsZeroOperation.lean` (tiny witness
-gadget), `BitwiseU16Operation.lean` (byte/opcode), `IsZeroWordOperation.lean` (composed subcircuits).
+Concrete patterns for bundled gadgets in `Circuits/Gadgets/` and the remaining
+`Native/Operations/` implementations with proofs in `Proofs/Operations/`.
+Reference templates: `Native/Operations/AddOperation/` (carry chain), `Circuits/Gadgets/IsZero.lean`
+(small witness gadget), `Circuits/Gadgets/Bitwise.lean` and `Bitwise/Witness.lean` (byte/opcode),
+and `Circuits/Gadgets/IsZeroWord.lean` (composed subcircuits).
 
 ## Clean's unifying principle (and our instances)
 
@@ -1127,7 +1128,7 @@ in `Proofs/Chips/ShiftLeftChip/Core.lean`.
 >
 > **And do not judge `Fact`/`NeZero` locals by inspection or by their derivation source** — that heuristic
 > has now been wrong in *both* directions (all four `2 ^ 17`-derived `NeZero p` copies in
-> `Native/Operations/BitwiseU16Operation.lean` turned out dead, while the same shape is load-bearing
+> the bitwise witness proofs (now `Circuits/Gadgets/Bitwise/Witness.lean`) turned out dead, while the same shape is load-bearing
 > elsewhere). What decides it is whether `Fact p.Prime` is already in that declaration's **elaborated
 > signature**: the hazard is not that the proof breaks (a broken proof is loud and safe) but that deleting
 > the local can make `Fact p.Prime` newly *used*, which **adds a binder to the signature** — a quiet
