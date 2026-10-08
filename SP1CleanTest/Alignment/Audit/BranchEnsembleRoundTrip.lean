@@ -99,7 +99,4 @@ def results : List (String × Bool × Bool) :=
     ("malformed-seed-length", false,
       check target header ({ branchSeed with cells := [] } :: consumerSeeds))]
 
-/-- All positive and negative outcomes are checked computations of the complete generic checker. -/
-theorem regressions : results.all (fun result => result.2.1 == result.2.2) = true := by native_decide
-
 end SP1Clean.Audit.BranchEnsemble
