@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.HostCommit
 import SP1Clean.Native.Operations.ClockOrder
 import SP1Clean.Native.Operations.BoundedWord
-import SP1Clean.Native.Operations.U16toU8OperationSafe
+import SP1Clean.Circuits.Gadgets.U16toU8Safe
 import ToClean.Circuit.InteractionRecovery
 import Clean.Gadgets.Equality
 

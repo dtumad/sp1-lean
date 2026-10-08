@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.DivRemChip.Soundness
-import SP1Clean.Native.Operations.MulOperation
+import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
 import SP1Clean.Circuits.Gadgets.IsZeroWord
 import SP1Clean.Circuits.Gadgets.IsEqualWord
 import SP1Clean.Model.ByteTable

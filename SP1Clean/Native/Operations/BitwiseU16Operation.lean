@@ -2,7 +2,7 @@ import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.Bitwise
 import SP1Clean.Proofs.Operations.BitwiseOperation.Formal
 import SP1Clean.Native.Operations.BitwiseOperation.Populate
-import SP1Clean.Native.Operations.U16toU8OperationSafe
+import SP1Clean.Circuits.Gadgets.U16toU8Safe
 import SP1Clean.Circuits.Types.U16toU8Operation
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit

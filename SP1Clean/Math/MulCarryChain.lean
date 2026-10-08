@@ -1,5 +1,7 @@
-import Mathlib.Data.ZMod.Basic
-import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+module
+
+public import Mathlib.Data.ZMod.Basic
+public import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Tactic.LinearCombination
 
 /-! # Carry-chain witness construction (`ℕ`-level core)
@@ -16,6 +18,8 @@ witnessed `MulOperation` circuit instantiates `cp` with the concrete byte convol
 
 Everything here is `ℕ` arithmetic closed by `omega` after `Nat.div_add_mod` — no field, no `Clean`,
 no heavy imports (plus a couple of `ZMod` casts at the end). -/
+
+@[expose] public section
 
 namespace SP1Clean.MulCarryChain
 

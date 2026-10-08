@@ -1,5 +1,7 @@
-import SP1Clean.Circuits.Types.DivRem
-import Clean.Circuit.Basic
+module
+
+public import SP1Clean.Circuits.Types.DivRem
+public import Clean.Circuit.Basic
 
 /-! # `DivRemChip` — the chip's own assertZero constraints (the `[E13…E367, op_a_0]` list).
 
@@ -7,6 +9,8 @@ The `DivRemChip.Columns.asserts` own-constraint tail, as a pure `Var Columns →
 function. Kept pure (no `Circuit` monad) so the ~360-step `let E…` chain elaborates without the
 per-operation offset whnf of a `do`-block; `Defs.main` emits it with one `assertZeros`. Numerals are
 pinned to `Expression` by per-binding ascriptions. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

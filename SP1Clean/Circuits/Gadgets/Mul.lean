@@ -1,9 +1,19 @@
-import SP1Clean.Native.Operations.MulOperation.RawSpec
-import SP1Clean.Native.Operations.MulOperation.Populate
-import SP1Clean.Native.Operations.MulOperation.Defs
-import SP1Clean.Model.ByteTable
+module
 
-/-! # `MulOperation` contract — `Assumptions` / soundness / completeness / `circuit`. -/
+public import SP1Clean.Circuits.Gadgets.Mul.Constraints
+public import SP1Clean.Circuits.Gadgets.Mul.Witness
+public import SP1Clean.Model.ByteTable
+import Clean.Utils.Tactics.CircuitProofStart
+
+/-! # Bundled multiplication gadget
+
+Soundness, completeness and witness obligations share one feature boundary. The public operand
+interpretation is in `Semantics/Specs/Mul`; `Mul/Arithmetic` owns the complete product certificate
+and semantic readout, including the witness and padding obligations needed by arbitrary-row
+completeness and DivRem composition.
+-/
+
+@[expose] public section
 
 namespace SP1Clean.MulOperation
 
@@ -11,65 +21,6 @@ open Circuit
 open SP1Clean.Channels (byteChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
-
-/-- The five variant selectors are boolean and **at most one** is set (the `{0,1}` sum-bound — the
-chip discharges this unconditionally from the in-circuit sum gate, including on padding rows where
-the sum is `0`). Operand bounds are conclusions of the two safe byte decompositions, not
-composer-supplied preconditions. On an active row exactly one flag is set; `mulSemantics_of_raw`
-recovers `sum = 1` per active variant via `sum_eq_one`. -/
-def Assumptions (input : Inputs (ZMod p)) : Prop :=
-  (input.is_real = 0 ∨ input.is_real = 1) ∧
-  (input.is_mulw = 1 → input.is_real = 1) ∧
-  (input.is_mul = 0 ∨ input.is_mul = 1) ∧ (input.is_mulh = 0 ∨ input.is_mulh = 1) ∧
-  (input.is_mulhu = 0 ∨ input.is_mulhu = 1) ∧ (input.is_mulhsu = 0 ∨ input.is_mulhsu = 1) ∧
-  (input.is_mulw = 0 ∨ input.is_mulw = 1) ∧
-  (input.is_mul + input.is_mulh + input.is_mulhu + input.is_mulhsu + input.is_mulw = 0 ∨
-    input.is_mul + input.is_mulh + input.is_mulhu + input.is_mulhsu + input.is_mulw = 1)
-
-/-- Arithmetic evidence for the bundled multiplication assertion. Sign-extension definitions
-and MSB booleanity hold on every row. Real rows additionally satisfy the schoolbook product,
-carry bounds, operand decompositions and selected MSB meaning. `result_semantic` recovers the
-RV64 product interpretation; `Spec` adds the caller's result placement. -/
-def ProductSpec (input : Inputs (ZMod p)) : Prop :=
-  -- **Ungated** facts (SP1's `eval` asserts these regardless of `is_real`, so they must hold on padding
-  -- too): the two sign-extend column definitions (`mul.rs:224-225`) and the three MSB booleanities (the
-  -- `U16MSBOperation` sub-`Spec`s carry the bool unconditionally). Completeness needs them on `is_real = 0`.
-  (input.cols.b_sign_extend = (input.is_mulh + input.is_mulhsu) * input.cols.b_msb) ∧
-  (input.cols.c_sign_extend = input.is_mulh * input.cols.c_msb) ∧
-  (input.cols.b_msb = 0 ∨ input.cols.b_msb = 1) ∧
-  (input.cols.c_msb = 0 ∨ input.cols.c_msb = 1) ∧
-  (input.cols.product_msb.msb = 0 ∨ input.cols.product_msb.msb = 1) ∧
-  -- **`is_real`-gated** body: the schoolbook carry-chain + ranges (`RawSpec`), the byte decompositions,
-  -- and the MSB high-bit equations. Pins the product/carry columns on a real row.
-  (input.is_real = 1 →
-    RawSpec input input.cols ∧
-    U16toU8OperationSafe.DecompSpec input.b input.cols.b_lower_byte ∧
-    U16toU8OperationSafe.DecompSpec input.c input.cols.c_lower_byte ∧
-    (input.cols.b_msb = if input.b[3].val ≥ 32768 then 1 else 0) ∧
-    (input.cols.c_msb = if input.c[3].val ≥ 32768 then 1 else 0) ∧
-    (input.cols.product_msb.msb = 0 ∨ input.cols.product_msb.msb = 1) ∧
-    (input.is_mulw = 1 → input.cols.product_msb.msb =
-      if (input.cols.product[2] + input.cols.product[3] * 256).val ≥ 32768 then 1 else 0))
-
-/-- The arithmetic evidence and the caller's selected result. A zero-selector row leaves the
-result free; any selected variant places its complete result, independently of row activity. -/
-def Spec (input : Inputs (ZMod p)) : Prop :=
-  ProductSpec input ∧
-  (input.is_mul + input.is_mulh + input.is_mulhu + input.is_mulhsu + input.is_mulw = 1 →
-    input.a = resultWord input input.cols)
-
-/-- **Semantic readout** (the consumer-facing lemma, mirroring `LtOperationUnsigned.result_semantic`): the
-arithmetic `ProductSpec` + `Assumptions` give the BitVec-product slice for the active variant on a real row. This
-is what `MulChip`/`DivRemChip` consume to reach the RV64 semantics. -/
-theorem result_semantic {input : Inputs (ZMod p)} (h_assum : Assumptions input)
-    (h_spec : ProductSpec input) (hr : input.is_real = 1) : SemanticSpec input input.cols := by
-  obtain ⟨_, _, _, _, _, hgated⟩ := h_spec
-  obtain ⟨h_raw, hb_low, hc_low, hb_msb, hc_msb, hmsb_bool, hmsb⟩ := hgated hr
-  obtain ⟨_, _, hmul_b, hmh_b, hmhu_b, hmhsu_b, hmw_b, hsum⟩ := h_assum
-  have hbU := U16toU8OperationSafe.isU64_of_decomp hb_low
-  have hcU := U16toU8OperationSafe.isU64_of_decomp hc_low
-  exact mulSemantics_of_raw hbU hcU hmul_b hmh_b hmhu_b hmhsu_b hmw_b hsum hb_low hc_low
-    hmsb_bool hmsb hb_msb hc_msb h_raw
 
 /-- Bridge from the op5 `MSB` byte guarantee (`msb` is the byte-MSB of `hi = (x-lo)/256`) plus the
 `U16toU8` decomposition (`x = lo + hi·256`) to the limb-MSB form `msb = if x.val ≥ 32768 then 1 else 0`. -/
@@ -940,6 +891,8 @@ theorem semantic_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU64)
     (productSpec_populate hb hc is_mul is_mulh is_mulhu is_mulhsu is_mulw 1
       hmul hmh hmhu hmhsu hmw hsum) rfl
 
+-- The default metadata tactic times out at the standard budget on Lean 4.33.1;
+-- keep this factored proof instead of expanding the full circuit in the bundle default.
 private theorem main_requirementsChannelsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ) :
     ((main input_var).operations i₀).RequirementsChannelsLawful
       (elaborated (p := p)).channelsWithGuarantees [] := by
@@ -1000,7 +953,7 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     soundness := soundness,
     completeness := completeness,
     channelsWithRequirements := [],
-    requirementsChannelsLawful := main_requirementsChannelsLawful }
+    requirementsChannelsLawful := by exact main_requirementsChannelsLawful }
 
 set_option linter.unusedSectionVars false in
 /-- Since Lean 4.32, class projections through `ProvableType`-derived instances no longer whnf-reduce

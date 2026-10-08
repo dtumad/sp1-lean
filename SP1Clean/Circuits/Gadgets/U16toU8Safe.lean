@@ -1,20 +1,20 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Math.Word
-import SP1Clean.Math.Bitwise
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import SP1Clean.Circuits.Types.U16toU8Operation
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Gadgets.Bits
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
 
-/-! # `U16toU8OperationSafe` as a Clean-native gadget
+public import SP1Clean.Semantics.Specs.U16toU8Safe
+public import SP1Clean.Math.Bitwise
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Subcircuit
+import Clean.Utils.Tactics.CircuitProofStart
 
-The **safe** u16→u8 byte split: witness the four low bytes `low_bytes[i]`, read off the high bytes
-`high_i = (u16_values[i] - low_bytes[i]) * 256⁻¹`, and range-check every low and high byte to
-`< 256`. So the eight output bytes `[low₀, high₀, …, low₃, high₃]` are the genuine little-endian
-decomposition of the four limbs. `Faithful/U16toU8OperationSafe.lean` anchors `RawSpec`. -/
+/-! # Safe byte-decomposition gadget
+
+Four gated byte-channel pulls certify the low/high decomposition of four 16-bit limbs.
+The low-byte witness constructor and bundled assertion share the pure decomposition contract.
+`RawSpec` remains implementation evidence for transitional Rust faithfulness.
+-/
+
+@[expose] public section
 
 namespace SP1Clean.U16toU8OperationSafe
 
@@ -23,11 +23,6 @@ open SP1Clean.Channels (byteChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-omit [Fact p.Prime] in
-/-- `2 ^ 8 < p`, the side condition `Gadgets.ToBits.rangeCheck 8` needs. -/
-lemma hn8 : 2 ^ 8 < p := by
-  have := Fact.out (p := 2 ^ 17 < p); omega
-
 /-- The literal meaning of SP1's `U16toU8OperationSafe` constraint list at `is_real = 1`: each
 low byte and each derived high byte `(u16_values[i] - low_bytes[i]) * 256⁻¹` is a genuine byte. -/
 def RawSpec (u16_values : Vector (ZMod p) 4) (cols : Circuits.Types.U16toU8Operation (ZMod p)) : Prop :=
@@ -35,38 +30,6 @@ def RawSpec (u16_values : Vector (ZMod p) 4) (cols : Circuits.Types.U16toU8Opera
   (cols.low_bytes[1].val < 256 ∧ ((u16_values[1] - cols.low_bytes[1]) * 256⁻¹).val < 256) ∧
   (cols.low_bytes[2].val < 256 ∧ ((u16_values[2] - cols.low_bytes[2]) * 256⁻¹).val < 256) ∧
   (cols.low_bytes[3].val < 256 ∧ ((u16_values[3] - cols.low_bytes[3]) * 256⁻¹).val < 256)
-
-/-- The only composer-supplied fact is that the row gate is binary. The four limb bounds are
-conclusions of this gadget's own byte-table pulls, not preconditions supplied by its parent. -/
-def Assumptions (input : Inputs (ZMod p)) : Prop :=
-  input.is_real = 0 ∨ input.is_real = 1
-
-/-- The reassembly identity `low + (u - low) * 256⁻¹ * 256 = u`. -/
-lemma reassemble (u low : ZMod p) :
-    u = low + (u - low) * (256 : ZMod p)⁻¹ * 256 := by
-  have h256 : (256 : ZMod p)⁻¹ * 256 = 1 := inv_mul_cancel₀ val_256_ne_zero
-  rw [mul_assoc, h256, mul_one]; ring
-
-private lemma byteComposeVal {x lo hi : ZMod p} (hlo : lo.val < 256) (hhi : hi.val < 256)
-    (h : x = lo + hi * 256) : x.val = lo.val + hi.val * 256 := by
-  subst x
-  have hhi256 : (hi * 256 : ZMod p).val = hi.val * 256 := by
-    rw [ZMod.val_mul, val_256_zmod_p, Nat.mod_eq_of_lt]
-    have := Fact.out (p := 2 ^ 17 < p)
-    omega
-  rw [ZMod.val_add_of_lt, hhi256]
-  have := Fact.out (p := 2 ^ 17 < p)
-  omega
-
-/-- A successful byte decomposition proves that every input limb is genuinely 16-bit. This is the
-semantic range fact that composing arithmetic gadgets should consume instead of assuming it. -/
-theorem isU64_of_decomp {u16_values : Word (ZMod p)}
-    {cols : Circuits.Types.U16toU8Operation (ZMod p)} (h : DecompSpec u16_values cols) :
-    Word.isU64 u16_values := by
-  intro i
-  have hi := h i
-  rw [byteComposeVal hi.1 hi.2.1 hi.2.2]
-  omega
 
 /-- The high byte `(u - (u.val % 256)) * 256⁻¹` of a 16-bit value is itself a byte. -/
 lemma high_byte_lt (u : ZMod p) (hu : u.val < 2 ^ 16) :
@@ -144,12 +107,7 @@ theorem spec_populate {u16_values : Word (ZMod p)}
   · exact ⟨lowlt _, high_byte_lt _ h2, reassemble _ _⟩
   · exact ⟨lowlt _, high_byte_lt _ h3, reassemble _ _⟩
 
--- Heartbeat budget: measured 2026-07 by ladder after the eval-map factoring below (control run at
--- 1 heartbeat gave two real `elaborator` timeouts, one per theorem, both reported at the shared
--- `variable` line, so the two were laddered at different rungs to separate ownership). `soundness`
--- passes at 20000 and 10000 and fails at 5000 (`whnf` at its signature); `completeness` passes at
--- 5000. Both floors sit an order of magnitude under the plain default, whose 20x-plus headroom
--- retired the two former 1000000 ceilings here.
+-- Keep the input/column evaluation projections factored; both proofs fit the default budget.
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   have hbin := h_assumptions

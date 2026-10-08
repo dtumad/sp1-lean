@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
 import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.FormalModel.Contracts.Operations
+import SP1Clean.Semantics.Specs.U16toU8Safe
 import SP1Clean.Circuits.Types.IsZeroOperation
 import SP1Clean.Circuits.Types.U16CompareOperation
 import Clean.Utils.Tactics.ProvableStructDeriving

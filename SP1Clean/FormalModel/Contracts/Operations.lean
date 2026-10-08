@@ -2,51 +2,21 @@ module
 
 public import SP1Clean.Math.Word
 public import SP1Clean.Circuits.Types.AddOperation
-public import SP1Clean.Circuits.Types.MulOperation
 public import SP1Clean.Circuits.Types.U16MSBOperation
 public import SP1Clean.Circuits.Types.U16toU8Operation
 public import SP1Clean.Circuits.Types.AddrAddOperation
 public import SP1Clean.Circuits.Types.AddressOperation
 import Mathlib.Data.Fin.VecNotation
 
-/-! # Consolidated specs — operation gadgets
+/-! # Shared operation contracts
 
-The `Inputs` structs, semantic `Spec`s, and the pure result helpers a `Spec` directly needs
-(`resultWord`, and Mul's `productVal`) for the witnessed operation gadgets. These contracts depend
-only on word arithmetic and native column types. Reader contracts and feature specifications
-have separate owners; consumers import those modules directly. Structural `RawSpec`s stay with
-the operation implementations and proofs. -/
+Input types, semantic relations and pure result helpers for operations awaiting feature separation.
+Reader contracts and feature specifications have independent owners. Multiplication and safe byte
+decomposition live in `Semantics/Specs/Mul` and `Semantics/Specs/U16toU8Safe`; consumers import them
+directly. Structural evidence stays with the operation implementations and proofs.
+-/
 
 @[expose] public section
-
-namespace SP1Clean.U16toU8OperationSafe
-
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
-
-/-- The four 16-bit input limbs to split, the already-`populate`d low-byte column struct, and the
-`is_real` gate (the `eval` params verbatim, faithful to SP1's `U16toU8OperationSafeInput`). -/
-structure Inputs (F : Type) where
-  u16_values : fields 4 F
-  cols : Circuits.Types.U16toU8Operation F
-  is_real : F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-/-- The ungated byte-decomposition content (2-arg, over explicit operand limbs + columns): for each
-limb the low and high bytes are genuine bytes and reassemble the limb. Reused by composing operations
-(e.g. `MulOperation`) that need the decomposition fact directly. -/
-def DecompSpec (u16_values : Word (ZMod p)) (cols : Circuits.Types.U16toU8Operation (ZMod p)) : Prop :=
-  ∀ i : Fin 4,
-    cols.low_bytes[i].val < 256 ∧
-    ((u16_values[i] - cols.low_bytes[i]) * 256⁻¹).val < 256 ∧
-    u16_values[i] = cols.low_bytes[i] + (u16_values[i] - cols.low_bytes[i]) * 256⁻¹ * 256
-
-/-- Semantic contract (`is_real`-gated, `FormalAssertion`-style): on a real row, the eight output bytes
-are the little-endian decomposition of the four limbs. -/
-def Spec (input : Inputs (ZMod p)) : Prop :=
-  input.is_real = 1 → DecompSpec input.u16_values input.cols
-
-end SP1Clean.U16toU8OperationSafe
 
 namespace SP1Clean.U16toU8OperationUnsafe
 
@@ -395,79 +365,3 @@ def Spec (input : Inputs (ZMod p)) : Prop :=
 end SP1Clean.BitwiseOperation
 
 -- The composed BitwiseU16 contract remains in `Native/Operations/BitwiseU16Operation.lean`.
-
-namespace SP1Clean.MulOperation
-
-variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
-
-/-- Multiplication operands, arithmetic columns, activity/variant selectors and the caller's
-result word. The result remains explicit on disabled rows: SP1's product-MSB interaction reads
-its second limb even when that interaction has zero multiplicity. -/
-structure Inputs (F : Type) where
-  /-- First operand, interpreted according to the selected variant. -/
-  b : fields 4 F
-  /-- Second operand, interpreted according to the selected variant. -/
-  c : fields 4 F
-  /-- Supplied product, carry and byte-decomposition witnesses. -/
-  cols : Circuits.Types.MulOperation F
-  /-- Enables arithmetic and byte-range checks. Variant selectors remain separate. -/
-  is_real : F
-  /-- Selects the low 64-bit product. -/
-  is_mul : F
-  /-- Selects the high 64 bits of the signed product. -/
-  is_mulh : F
-  /-- Selects the high 64 bits of the unsigned product. -/
-  is_mulhu : F
-  /-- Selects the high 64 bits with a signed first operand and unsigned second operand. -/
-  is_mulhsu : F
-  /-- Selects the sign-extended low 32-bit product. -/
-  is_mulw : F
-  /-- Caller result, retained in lookup messages even when their multiplicity is zero. -/
-  a : fields 4 F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
-/-- Witnessed product byte `k`, `0` outside `0..15`. -/
-def productVal (cols : Circuits.Types.MulOperation (ZMod p)) (k : ℕ) : ZMod p :=
-  if h : k < 16 then cols.product[k]'h else 0
-
-/-- The 64-bit result word, read off the witnessed `product` per active variant: the low 64 bits
-(bytes `0..7`) for `MUL`; the high 64 bits (bytes `8..15`) for the `MULH*` family; the
-sign-extended low 32 bits for `MULW`. -/
-def resultWord (input : Inputs (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p)) : Word (ZMod p) :=
-  if input.is_mulw = 1 then
-    #v[productVal cols 0 + productVal cols 1 * 256, productVal cols 2 + productVal cols 3 * 256,
-       cols.product_msb.msb * 65535, cols.product_msb.msb * 65535]
-  else if input.is_mulh = 1 ∨ input.is_mulhu = 1 ∨ input.is_mulhsu = 1 then
-    #v[productVal cols 8 + productVal cols 9 * 256, productVal cols 10 + productVal cols 11 * 256,
-       productVal cols 12 + productVal cols 13 * 256, productVal cols 14 + productVal cols 15 * 256]
-  else
-    #v[productVal cols 0 + productVal cols 1 * 256, productVal cols 2 + productVal cols 3 * 256,
-       productVal cols 4 + productVal cols 5 * 256, productVal cols 6 + productVal cols 7 * 256]
-
-/-- The ungated semantic content (2-arg, over an explicit `cols`): the reconstructed result is the
-appropriate slice of the `BitVec` product for the active variant — low 64 for `MUL`, high 64 of the
-unsigned/signed 128-bit product for the `MULH*` family, sign-extended low 32 for `MULW`. The
-`FormalAssertion` `Spec` (below) gates this on `is_real`. -/
-def SemanticSpec (input : Inputs (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p)) : Prop :=
-  (resultWord input cols).isU64 ∧
-  (input.is_mul = 1 →
-    Word.toBitVec64 (resultWord input cols)
-      = Word.toBitVec64 input.b * Word.toBitVec64 input.c) ∧
-  (input.is_mulhu = 1 →
-    Word.toBitVec64 (resultWord input cols)
-      = (((Word.toBitVec64 input.b).setWidth 128 * (Word.toBitVec64 input.c).setWidth 128)
-          >>> 64).setWidth 64) ∧
-  (input.is_mulh = 1 →
-    Word.toBitVec64 (resultWord input cols)
-      = (((Word.toBitVec64 input.b).signExtend 128 * (Word.toBitVec64 input.c).signExtend 128)
-          >>> 64).setWidth 64) ∧
-  (input.is_mulhsu = 1 →
-    Word.toBitVec64 (resultWord input cols)
-      = (((Word.toBitVec64 input.b).signExtend 128 * (Word.toBitVec64 input.c).setWidth 128)
-          >>> 64).setWidth 64) ∧
-  (input.is_mulw = 1 →
-    Word.toBitVec64 (resultWord input cols)
-      = ((Word.toBitVec64 input.b * Word.toBitVec64 input.c).setWidth 32).signExtend 64)
-
-end SP1Clean.MulOperation

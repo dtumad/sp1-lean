@@ -1,17 +1,27 @@
-import SP1Clean.Native.Operations.MulOperation.RawSpec
+module
+
+public import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
+public import SP1Clean.Math.MulCarryChain
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Circuits.Gadgets.U16toU8Safe
 import ToClean.Circuit.IteDecide
 import ToClean.Circuit.WitgenEval
 
-/-! # `MulOperation.populate` — the witness (trace generation), mirroring SP1's
-`MulOperation::populate`. -/
+/-! # Multiplication witness construction
+
+The natural-number carry chain constructs the product certificate. Clean witness IR and its
+evaluation proofs implement the same assignment for circuit composition and export.
+-/
+
+@[expose] public section
 
 namespace SP1Clean.MulOperation
 
 open Circuit
-open SP1Clean.Channels (byteChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
+/-- Sixteen little-endian operand bytes, with the upper eight filled by the sign byte. -/
 def extStream (l0 l1 l2 l3 sgn : ℕ) : ℕ → ℕ := fun i =>
   [l0 % 256, l0 / 256, l1 % 256, l1 / 256, l2 % 256, l2 / 256, l3 % 256, l3 / 256,
    sgn * 255, sgn * 255, sgn * 255, sgn * 255, sgn * 255, sgn * 255, sgn * 255, sgn * 255].getD i 0

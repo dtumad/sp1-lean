@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Specs.DivRem
-import SP1Clean.Proofs.Operations.MulOperation.Formal
-import SP1Clean.Native.Operations.DivRemOperation.OwnAsserts
+module
+
+public import SP1Clean.Semantics.Specs.DivRem
+public import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
+public import SP1Clean.Circuits.Gadgets.DivRem.Assertions
 
 /-! # DivRem product-cluster evidence
 
@@ -8,6 +10,8 @@ Contracts for the bundled `DivRemCore.circuit`: product placement, selection, ra
 intermediate raw assertion evidence used by the case proofs. Raw assertions are implementation
 evidence; the independent public contract is `DivRemContract.RowSpec`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemCore
 
