@@ -97,9 +97,7 @@ example : AddwChip.Assumptions (p := SP1Prime) (zeroed AddwChip.Inputs) emptyDat
 
 /-! ## ALU / mul-div / shift / comparison chips (proof-file `Assumptions`) -/
 
-example : BitwiseChip.Assumptions (p := SP1Prime) (zeroed BitwiseChip.Inputs) emptyData := by
-  unfold BitwiseChip.Assumptions
-  native_decide
+example : BitwiseChip.Assumptions (p := SP1Prime) (zeroed BitwiseChip.Inputs) emptyData := trivial
 
 example : DivRemChip.Assumptions (p := SP1Prime) (zeroed DivRemChip.Inputs) emptyData := by
   unfold DivRemChip.Assumptions

@@ -1059,14 +1059,14 @@ omit [Fact (2 ^ 25 < p)] in
 theorem bitwiseViewOf_rdWrite (env : Environment (ZMod p)) :
     (bitwiseViewOf env).rdWrite =
       Eval.eval env
-        (#v[var { index := size BitwiseChip.Inputs + 11 } +
-              var { index := size BitwiseChip.Inputs + 12 } * 256,
-            var { index := size BitwiseChip.Inputs + 13 } +
-              var { index := size BitwiseChip.Inputs + 14 } * 256,
-            var { index := size BitwiseChip.Inputs + 15 } +
-              var { index := size BitwiseChip.Inputs + 16 } * 256,
-            var { index := size BitwiseChip.Inputs + 17 } +
-              var { index := size BitwiseChip.Inputs + 18 } * 256] :
+        (#v[var { index := size BitwiseChip.Inputs + 8 } +
+              var { index := size BitwiseChip.Inputs + 9 } * 256,
+            var { index := size BitwiseChip.Inputs + 10 } +
+              var { index := size BitwiseChip.Inputs + 11 } * 256,
+            var { index := size BitwiseChip.Inputs + 12 } +
+              var { index := size BitwiseChip.Inputs + 13 } * 256,
+            var { index := size BitwiseChip.Inputs + 14 } +
+              var { index := size BitwiseChip.Inputs + 15 } * 256] :
           Word (Expression (ZMod p))) := by
   let input : Var BitwiseChip.Inputs (ZMod p) := varFromOffset BitwiseChip.Inputs 0
   let offset := size BitwiseChip.Inputs
@@ -1121,7 +1121,7 @@ theorem BitwiseChip.aluTypeTimestampContract :
   let input : Var BitwiseChip.Inputs (ZMod p) := varFromOffset BitwiseChip.Inputs 0
   let offset := size BitwiseChip.Inputs
   let readerInput := BitwiseChip.aluTypeReaderInput input offset
-  refine .intro (offset + 19) readerInput (BitwiseChip.aluTypeReader_mem input offset) ?_
+  refine .intro (offset + 16) readerInput (BitwiseChip.aluTypeReader_mem input offset) ?_
   intro env _constraints
   constructor <;>
     simp only [input, offset, readerInput, BitwiseChip.aluTypeReaderInput, BitwiseChip.circuit,
@@ -1155,15 +1155,6 @@ theorem bitwiseChip_immBinary {program : GuestProgram}
     (decoded.toChipRow data).view.adapter.imm_c = 0 ∨
       (decoded.toChipRow data).view.adapter.imm_c = 1 := by
   simpa only [programAccess, ProgramAccess.toRow] using decode.immediate_flags_binary.2
-
-/-- On Bitwise's immediate form, the committed operand is a canonical 64-bit word. -/
-theorem bitwiseChip_immediate_isU64 {program : GuestProgram}
-    (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p))
-    (decode : decodedInROM program (programAccess (decoded.toChipRow data).view).toRow)
-    (immediate : (decoded.toChipRow data).view.adapter.imm_c = 1) :
-    Word.isU64 (decoded.toChipRow data).view.adapter.op_c :=
-  decode.immediate_words_isU64.2 (by
-    simpa only [programAccess, ProgramAccess.toRow] using immediate)
 
 /-- Descriptor-level form of Bitwise's physical immediate-consistency binding. -/
 theorem bitwiseChip_opCBinding_of_constraints (decoded : DecodedInstructionRow p)

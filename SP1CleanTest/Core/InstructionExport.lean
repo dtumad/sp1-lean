@@ -3,6 +3,7 @@ import SP1Clean.Proofs.Chips.AddChip.Formal
 import SP1Clean.Proofs.Chips.LoadByteChip.Formal
 import SP1Clean.Proofs.Chips.DivRemChip.Complete
 import SP1Clean.Proofs.Chips.MulChip.Complete
+import SP1Clean.Proofs.Chips.BitwiseChip.Complete
 import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
@@ -62,5 +63,10 @@ def divRemRust : Except String String :=
 def mulRust : Except String String :=
   Extraction.Rust.ensembleToRust "MulInstruction"
     (ensemble { circuit := MulChip.circuit }) (config MulChip.Inputs)
+
+/-- Export XOR/OR/AND with explicit selectors and zero padding, including immediate operands. -/
+def bitwiseRust : Except String String :=
+  Extraction.Rust.ensembleToRust "BitwiseInstruction"
+    (ensemble { circuit := BitwiseChip.circuit }) (config BitwiseChip.Inputs)
 
 end SP1CleanTest.Core.InstructionExport

@@ -5,34 +5,14 @@ import SP1Clean.Faithful.ALUTypeReader
 import SP1Clean.Proofs.Chips.BitwiseChip.Formal
 import ToClean.Circuit.InteractionRecovery
 
-/-! # Whole-chip faithfulness — native Bitwise row ↔ pinned SP1 Rust AIR
+/-! # Whole-chip Bitwise faithfulness
 
-`bitwiseChip_faithful` compares every native assertion and emitted bus interaction with the
-complete extracted Rust `BitwiseCols` oracle, including padding rows. The row codec is explicit:
-the Rust reader blocks form the native input prefix, followed by the three opcode flags and the
-sixteen `BitwiseU16Operation` cells in Rust column order.
+The native row and pinned Rust oracle agree on all assertions and interaction occurrences,
+including padding. Reader columns and selectors form the input prefix; the sixteen byte
+columns form the witness suffix. Activity is the selector sum on both sides.
 
-Rust keeps the byte opcode as a field expression. The extracted oracle and native byte channel do
-the same; validity of that opcode is a byte-table fact rather than a lossy extraction-time enum
-decode.
-
-Elaboration budget: all eleven ceilings this file once declared have been measured away; it now
-declares none, and runs entirely inside Lean's plain default. The two costliest declarations,
-`bitwise_chip_constraints_decompose` and `bitwiseChip_interactions_faithful`, have measured floors
-between 150000/100000 and that default, so they sit under it with only modest headroom.
-
-The last of those ceilings, a ~50×-over one on this file's `toElements` codec lemma, was caused by
-the *spelling* of `bitwiseChipOperationOfLocals`, not by anything intrinsic. Building the operation columns as a
-`ProvableStruct` **literal** forced every consumer to whnf `toElements` of that literal down to its
-flat 16-cell `Vector` normal form — a runaway through `componentsToElements`/`Vector.append` size
-arithmetic (`Eq.rec` casts, `dite` bounds checks) inside `Array.foldl`. The house pattern, already
-used by `ltChipOperationOfLocals` (`Faithful/LtChip.lean`) and `mulChipOperationOfLocals`
-(`Faithful/MulChip.lean`), is to build the struct with `fromElements` of a `Vector.drop` slice:
-`ProvableType.toElements_fromElements` is `@[circuit_norm]` and discharges the codec in one rewrite,
-so the append normal form is never computed. The one place that genuinely needs `toElements` of an
-abstract struct (`bitwiseChipOperationOfLocals_roundtrip`) goes through the *syntactic* component
-decomposition `toElements_bitwiseU16Columns` — `simp only [ProvableType.toElements,
-ProvableStruct.toComponents]` — rather than through reduction.
+The codec uses `toElements`/`fromElements` so its proofs preserve folded operation columns.
+Rust byte opcodes remain field expressions whose validity is established by the byte table.
 -/
 
 namespace SP1Clean.Faithful
@@ -82,96 +62,39 @@ def bitwiseChipOracle {F : Type} [FiniteField F] [CoeHead F ℕ] :
   assertZeros := Extracted.BitwiseOracle.BitwiseCols.asserts
   interactions := Extracted.BitwiseOracle.BitwiseCols.interactions
 
-def bitwiseChipInput {F : Type} [Add F]
+/-- Reader columns and committed selectors recovered from a completed native row. -/
+def bitwiseChipInput {F : Type}
     (cols : BitwiseChip.Columns F) : BitwiseChip.Inputs F :=
-  { is_real := cols.is_xor + cols.is_or + cols.is_and
-    state := cols.state
-    adapter := cols.adapter }
+  { state := cols.state
+    adapter := cols.adapter
+    isXor := cols.is_xor
+    isOr := cols.is_or
+    isAnd := cols.is_and }
 
-def bitwiseChipLocals {F : Type} (cols : BitwiseChip.Columns F) : Vector F 19 :=
-  #v[
-    cols.is_xor, cols.is_or, cols.is_and,
-    cols.bitwise_operation.b_low_bytes.low_bytes[0],
-    cols.bitwise_operation.b_low_bytes.low_bytes[1],
-    cols.bitwise_operation.b_low_bytes.low_bytes[2],
-    cols.bitwise_operation.b_low_bytes.low_bytes[3],
-    cols.bitwise_operation.c_low_bytes.low_bytes[0],
-    cols.bitwise_operation.c_low_bytes.low_bytes[1],
-    cols.bitwise_operation.c_low_bytes.low_bytes[2],
-    cols.bitwise_operation.c_low_bytes.low_bytes[3],
-    cols.bitwise_operation.bitwise_operation.result[0],
-    cols.bitwise_operation.bitwise_operation.result[1],
-    cols.bitwise_operation.bitwise_operation.result[2],
-    cols.bitwise_operation.bitwise_operation.result[3],
-    cols.bitwise_operation.bitwise_operation.result[4],
-    cols.bitwise_operation.bitwise_operation.result[5],
-    cols.bitwise_operation.bitwise_operation.result[6],
-    cols.bitwise_operation.bitwise_operation.result[7]]
+/-- The sixteen witnessed byte cells in Clean's native flattening order. -/
+def bitwiseChipLocals {F : Type} (cols : BitwiseChip.Columns F) : Vector F 16 :=
+  toElements cols.bitwise_operation
 
-private theorem bitwiseChipLocals_zero {F : Type} (cols : BitwiseChip.Columns F) :
-    (bitwiseChipLocals cols)[0] = cols.is_xor := by
-  rfl
-
-private theorem bitwiseChipLocals_one {F : Type} (cols : BitwiseChip.Columns F) :
-    (bitwiseChipLocals cols)[1] = cols.is_or := by
-  rfl
-
-private theorem bitwiseChipLocals_two {F : Type} (cols : BitwiseChip.Columns F) :
-    (bitwiseChipLocals cols)[2] = cols.is_and := by
-  rfl
-
-def bitwiseChipPhysicalRow {F : Type} [Add F]
+/-- A physical Clean row: typed inputs followed by its byte witnesses. -/
+def bitwiseChipPhysicalRow {F : Type}
     (cols : BitwiseChip.Columns F) : Array F :=
   inputFirstRow (bitwiseChipInput cols) (bitwiseChipLocals cols)
 
-/-- The sixteen operation cells of the local block, read back as `BitwiseU16Operation.Columns`.
-Spelled with `fromElements` of a `Vector.drop` slice (the `ltChipOperationOfLocals` /
-`mulChipOperationOfLocals` house pattern) so the codec lemmas below reduce by
-`ProvableType.toElements_fromElements`; a `ProvableStruct` literal here would instead force each
-consumer to whnf `toElements` into its `Vector.append` normal form. -/
-def bitwiseChipOperationOfLocals {F : Type} (locals : Vector F 19) :
+/-- The byte operation occupies the entire sixteen-cell witness suffix. -/
+def bitwiseChipOperationOfLocals {F : Type} (locals : Vector F 16) :
     BitwiseU16Operation.Columns F :=
-  fromElements (Vector.cast (by rfl) (locals.drop 3))
+  fromElements locals
 
+/-- Reassemble completed columns from reader inputs, selectors and byte witnesses. -/
 def bitwiseChipColumnsOfInput {F : Type} (input : BitwiseChip.Inputs F)
-    (locals : Vector F 19) : BitwiseChip.Columns F :=
+    (locals : Vector F 16) : BitwiseChip.Columns F :=
   ⟨input.state, input.adapter, bitwiseChipOperationOfLocals locals,
-    locals[0], locals[1], locals[2]⟩
-
-private theorem getElem_toElements_bitwiseChipOperationOfLocals {F : Type}
-    (locals : Vector F 19) (i : ℕ)
-    (hi : i < size BitwiseU16Operation.Columns) :
-    (toElements (bitwiseChipOperationOfLocals locals))[i] =
-      locals[3 + i]'(by
-        have hsize : size BitwiseU16Operation.Columns = 16 := rfl
-        rw [hsize] at hi
-        omega) := by
-  unfold bitwiseChipOperationOfLocals
-  rw [ProvableType.toElements_fromElements, Vector.getElem_cast, Vector.getElem_drop]
-
-/-- `toElements` of the three-component operation struct, decomposed *syntactically* into its
-component vectors. Proved by unfolding the `ProvableStruct` instance, never by reduction. -/
-private theorem toElements_bitwiseU16Columns {F : Type}
-    (x : BitwiseU16Operation.Columns F) :
-    toElements x = Vector.cast (by rfl)
-      (x.b_low_bytes.low_bytes ++ (x.c_low_bytes.low_bytes ++
-        (x.bitwise_operation.result ++ (#v[] : Vector F 0)))) := by
-  obtain ⟨⟨a⟩, ⟨b⟩, ⟨c⟩⟩ := x
-  simp only [ProvableType.toElements, ProvableStruct.structToElements_eq,
-    ProvableStruct.toComponents, components, ProvableStruct.componentsToElements]
-  rfl
+    input.isXor, input.isOr, input.isAnd⟩
 
 private theorem bitwiseChipOperationOfLocals_roundtrip {F : Type}
     (cols : BitwiseChip.Columns F) :
     bitwiseChipOperationOfLocals (bitwiseChipLocals cols) = cols.bitwise_operation := by
-  refine (ProvableType.ext_iff (α := BitwiseU16Operation.Columns) _ _).mpr (fun i hi => ?_)
-  have hsize : size BitwiseU16Operation.Columns = 16 := rfl
-  rw [hsize] at hi
-  unfold bitwiseChipOperationOfLocals
-  rw [ProvableType.toElements_fromElements, Vector.getElem_cast, Vector.getElem_drop,
-    toElements_bitwiseU16Columns, Vector.getElem_cast]
-  interval_cases i <;>
-    simp only [bitwiseChipLocals, Vector.getElem_append] <;> norm_num
+  simp only [bitwiseChipOperationOfLocals, bitwiseChipLocals, ProvableType.fromElements_toElements]
 
 private theorem vec4_eta {F : Type} (value : Vector F 4) :
     #v[value[0], value[1], value[2], value[3]] = value := by
@@ -194,13 +117,13 @@ private theorem extractedBitwiseU16Value_eq
             cols.bitwise_operation.result[7] * 256] := by
   rw [Extracted.BitwiseOracle.BitwiseU16Operation.value]
 
-theorem bitwiseChipColumnsOfInput_roundtrip {F : Type} [Add F]
+theorem bitwiseChipColumnsOfInput_roundtrip {F : Type}
     (cols : BitwiseChip.Columns F) :
     bitwiseChipColumnsOfInput (bitwiseChipInput cols) (bitwiseChipLocals cols) = cols := by
   unfold bitwiseChipColumnsOfInput bitwiseChipInput
   rw [BitwiseChip.Columns.mk.injEq]
   exact ⟨rfl, rfl, bitwiseChipOperationOfLocals_roundtrip cols,
-    bitwiseChipLocals_zero cols, bitwiseChipLocals_one cols, bitwiseChipLocals_two cols⟩
+    rfl, rfl, rfl⟩
 
 @[circuit_norm] theorem eval_extractedU16toU8Operation {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.U16toU8Operation (Expression F)) :
@@ -238,7 +161,7 @@ theorem bitwiseChipColumnsOfInput_roundtrip {F : Type} [Add F]
   rfl
 
 theorem eval_bitwiseChipDirectOutput
-    (input : BitwiseChip.Inputs (ZMod p)) (locals : Vector (ZMod p) 19)
+    (input : BitwiseChip.Inputs (ZMod p)) (locals : Vector (ZMod p) 16)
     (data : ProverData (ZMod p)) :
     ProvableType.eval (Environment.fromArray (inputFirstRow input locals) data)
         ((BitwiseChip.elaborated (p := p)).output
@@ -251,31 +174,17 @@ theorem eval_bitwiseChipDirectOutput
   dsimp only
   have hinputEval := eval_inputFirstRow input locals data
   rw [BitwiseChip.eval_inputs, BitwiseChip.Inputs.mk.injEq] at hinputEval
-  constructor
-  · exact hinputEval.2.1
-  constructor
-  · exact hinputEval.2.2
-  constructor
-  · refine (ProvableType.ext_iff (α := BitwiseU16Operation.Columns) _ _).mpr
-      (fun i hi => ?_)
-    rw [ProvableType.eval_varFromOffset, ProvableType.toElements_fromElements,
-      Vector.getElem_mapRange,
-      getElem_toElements_bitwiseChipOperationOfLocals locals i hi]
-    have hlocal := eval_local_inputFirstRow input locals data (3 + i) (by
-      have hsize : size BitwiseU16Operation.Columns = 16 := rfl
-      rw [hsize] at hi
-      omega)
-    simp only [Expression.eval] at hlocal
-    simpa only [Nat.add_assoc] using hlocal
-  constructor
-  · simpa only [ProvableType.eval_field, Nat.add_zero] using
-      (eval_local_inputFirstRow input locals data 0 (by decide))
-  constructor
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 1 (by decide))
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 2 (by decide))
+  refine ⟨hinputEval.1, hinputEval.2.1, ?_, hinputEval.2.2.1,
+    hinputEval.2.2.2.1, hinputEval.2.2.2.2⟩
+  refine (ProvableType.ext_iff (α := BitwiseU16Operation.Columns) _ _).mpr (fun i hi => ?_)
+  rw [ProvableType.eval_varFromOffset, ProvableType.toElements_fromElements,
+    Vector.getElem_mapRange]
+  simp only [bitwiseChipOperationOfLocals, ProvableType.toElements_fromElements]
+  have hlocal := eval_local_inputFirstRow input locals data i hi
+  simpa only [Expression.eval] using hlocal
 
+
+/-- Construct any native Bitwise row as a physical input/witness assignment. -/
 def bitwiseChipRowCodec :
     ChipRowCodec BitwiseChip.Inputs BitwiseChip.Columns
       (BitwiseChip.circuit (p := p)) where
@@ -295,29 +204,9 @@ def bitwiseChipRowCodec :
         (bitwiseChipLocals cols) data).trans
           (bitwiseChipColumnsOfInput_roundtrip cols) }
 
-private def bitwise_chip_is_xor (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset }
-
-private def bitwise_chip_is_or (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset + 1 }
-
-private def bitwise_chip_is_and (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset + 2 }
-
-private def bitwise_chip_is_real (offset : ℕ) : Expression (ZMod p) :=
-  bitwise_chip_is_xor offset + bitwise_chip_is_or offset + bitwise_chip_is_and offset
-
-private def bitwise_chip_byte_opcode (offset : ℕ) : Expression (ZMod p) :=
-  bitwise_chip_is_xor offset * 2 + bitwise_chip_is_or offset * 1 +
-    bitwise_chip_is_and offset * 0
-
-private def bitwise_chip_cpu_opcode (offset : ℕ) : Expression (ZMod p) :=
-  bitwise_chip_is_xor offset * 3 + bitwise_chip_is_or offset * 4 +
-    bitwise_chip_is_and offset * 5
-
 private def bitwise_chip_operation (offset : ℕ) :
     Var BitwiseU16Operation.Columns (ZMod p) :=
-  varFromOffset BitwiseU16Operation.Columns (offset + 3)
+  varFromOffset BitwiseU16Operation.Columns offset
 
 private def bitwise_chip_result (offset : ℕ) : Vector (Expression (ZMod p)) 8 :=
   (bitwise_chip_operation offset).bitwise_operation.result
@@ -379,61 +268,51 @@ private theorem bitwise_chip_constraints_decompose
           (nativeAssertZeros env
             ((BitwiseU16Operation.main
               ⟨input.op_b_val, input.op_c_val, bitwise_chip_operation offset,
-                bitwise_chip_byte_opcode offset, input.is_real⟩).operations
-                  (offset + 19))) ∧
+                BitwiseChip.exposedByteOpcode input, input.is_real⟩).operations
+                  (offset + 16))) ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Readers.ALUTypeReader.main
               ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
                 input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-                bitwise_chip_cpu_opcode offset,
+                BitwiseChip.exposedOpcode input,
                 (bitwise_chip_write_value offset)[0],
                 (bitwise_chip_write_value offset)[1],
                 (bitwise_chip_write_value offset)[2],
-                (bitwise_chip_write_value offset)[3]⟩).operations (offset + 19))) ∧
+                (bitwise_chip_write_value offset)[3]⟩).operations (offset + 16))) ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Readers.RegisterWrite.main
               ⟨input.state.clk_high,
                 input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4,
                 input.adapter.op_a, bitwise_chip_write_value offset,
-                input.is_real⟩).operations (offset + 19))) ∧
+                input.is_real⟩).operations (offset + 16))) ∧
+        List.Forall (· = 0)
+          (nativeAssertZeros env
+            ((Gadgets.Equality.main (M := field)
+              (input.isXor * (input.isXor - 1),
+                0)).operations (offset + 16))) ∧
+        List.Forall (· = 0)
+          (nativeAssertZeros env
+            ((Gadgets.Equality.main (M := field)
+              (input.isOr * (input.isOr - 1),
+                0)).operations (offset + 16))) ∧
+        List.Forall (· = 0)
+          (nativeAssertZeros env
+            ((Gadgets.Equality.main (M := field)
+              (input.isAnd * (input.isAnd - 1),
+                0)).operations (offset + 16))) ∧
         Expression.eval env (input.is_real * (input.is_real - 1)) = 0 ∧
-        Expression.eval env
-          (input.is_real - bitwise_chip_is_real offset) = 0 ∧
         List.Forall (· = 0)
           (nativeAssertZeros env
             ((Gadgets.Equality.main (M := field)
-              (bitwise_chip_is_xor offset * (bitwise_chip_is_xor offset - 1),
-                0)).operations (offset + 19))) ∧
-        List.Forall (· = 0)
-          (nativeAssertZeros env
-            ((Gadgets.Equality.main (M := field)
-              (bitwise_chip_is_or offset * (bitwise_chip_is_or offset - 1),
-                0)).operations (offset + 19))) ∧
-        List.Forall (· = 0)
-          (nativeAssertZeros env
-            ((Gadgets.Equality.main (M := field)
-              (bitwise_chip_is_and offset * (bitwise_chip_is_and offset - 1),
-                0)).operations (offset + 19))) ∧
-        List.Forall (· = 0)
-          (nativeAssertZeros env
-            ((Gadgets.Equality.main (M := field)
-              (bitwise_chip_is_real offset * (bitwise_chip_is_real offset - 1),
-                0)).operations (offset + 19))) ∧
-        List.Forall (· = 0)
-          (nativeAssertZeros env
-            ((Gadgets.Equality.main (M := field)
-              (input.adapter.op_a_0, 0)).operations (offset + 19)))) := by
-  simp only [nativeAssertZeros, BitwiseChip.main, bitwise_chip_is_xor,
-    bitwise_chip_is_or, bitwise_chip_is_and, bitwise_chip_is_real,
-    bitwise_chip_byte_opcode, bitwise_chip_cpu_opcode, bitwise_chip_operation,
+              (input.adapter.op_a_0, 0)).operations (offset + 16)))) := by
+  simp only [nativeAssertZeros, BitwiseChip.main, BitwiseChip.Inputs.is_real,
+    BitwiseChip.exposedByteOpcode, BitwiseChip.exposedOpcode, bitwise_chip_operation,
     bitwise_chip_result, bitwise_chip_write_value,
     Readers.CPUState.circuit, BitwiseU16Operation.circuit,
     Readers.ALUTypeReader.circuit, Readers.RegisterWrite.circuit,
-    circuit_norm, List.map_append, List.forall_append]
-  rw [show offset + 3 + 16 = offset + 19 by omega]
-  simp only [List.forall_cons, List.forall_append]
+    circuit_norm, List.map_append, List.forall_append, List.forall_cons]
 
 private theorem forall_nil_iff {alpha : Type} (pred : alpha → Prop) :
     List.Forall pred [] ↔ True := Iff.rfl
@@ -441,9 +320,7 @@ private theorem forall_nil_iff {alpha : Type} (pred : alpha → Prop) :
 theorem bitwiseChip_constraints_faithful
     (env : Environment (ZMod p)) (input : Var BitwiseChip.Inputs (ZMod p))
     (offset : ℕ) (cols : BitwiseChip.Columns (ZMod p))
-    (hbind : BindsChipOutput BitwiseChip.main env input offset cols)
-    (hinputReal : Expression.eval env input.is_real =
-      Expression.eval env (bitwise_chip_is_real offset)) :
+    (hbind : BindsChipOutput BitwiseChip.main env input offset cols) :
     List.Forall (· = 0) (bitwiseChipOracle.nativeAssertZeros cols) ↔
       List.Forall (· = 0)
         (nativeAssertZeros env ((BitwiseChip.main input).operations offset)) := by
@@ -489,9 +366,9 @@ theorem bitwiseChip_constraints_faithful
   let rustC : Word (ZMod p) :=
     #v[adapterValue.op_c_memory.prev_value[0], adapterValue.op_c_memory.prev_value[1],
       adapterValue.op_c_memory.prev_value[2], adapterValue.op_c_memory.prev_value[3]]
-  let rustIsReal := Expression.eval env (bitwise_chip_is_real offset)
-  let rustByteOpcode := Expression.eval env (bitwise_chip_byte_opcode offset)
-  let rustCpuOpcode := Expression.eval env (bitwise_chip_cpu_opcode offset)
+  let rustIsReal := Expression.eval env (input.is_real)
+  let rustByteOpcode := Expression.eval env (BitwiseChip.exposedByteOpcode input)
+  let rustCpuOpcode := Expression.eval env (BitwiseChip.exposedOpcode input)
   let rustWriteValue : Word (ZMod p) :=
     Extracted.BitwiseOracle.BitwiseU16Operation.value
       rustB rustC rustOperation rustByteOpcode rustIsReal
@@ -516,33 +393,29 @@ theorem bitwiseChip_constraints_faithful
     #v[stateValue.pc[0] + 4, stateValue.pc[1], stateValue.pc[2]]
   have hCpu := CanonicalReader.cpuStateAssertions (p := p) env cpuInput offset
     rustState rustNextPc 8 rustIsReal (by
-      simp only [cpuInput, rustIsReal, ProvableStruct.structEvalLiteralProc]
-      exact hinputReal)
+      simp only [cpuInput, rustIsReal, ProvableStruct.structEvalLiteralProc])
   let opInput : Var BitwiseU16Operation.Inputs (ZMod p) :=
     ⟨input.op_b_val, input.op_c_val, operation,
-      bitwise_chip_byte_opcode offset, input.is_real⟩
-  have hOp := bitwiseU16Assertions (p := p) env opInput (offset + 19)
+      BitwiseChip.exposedByteOpcode input, input.is_real⟩
+  have hOp := bitwiseU16Assertions (p := p) env opInput (offset + 16)
     rustB rustC rustOperation rustByteOpcode rustIsReal (by
-      simp only [opInput, rustIsReal]
-      exact hinputReal)
+      simp only [opInput, rustIsReal])
   let rustAdapter : Circuits.Types.ALUTypeReader (ZMod p) := adapterValue
   let aluInput : Var Readers.ALUTypeReader.Inputs (ZMod p) :=
     ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-      bitwise_chip_cpu_opcode offset,
+      BitwiseChip.exposedOpcode input,
       writeValue[0], writeValue[1], writeValue[2], writeValue[3]⟩
   have hAlu := CanonicalReader.aluTypeAssertions (p := p) env aluInput
-    (offset + 19) stateValue.clk_high
+    (offset + 16) stateValue.clk_high
     (stateValue.clk_0_16 + stateValue.clk_16_24 * 65536) rustCpuOpcode
     rustIsReal rustIsReal
     #v[stateValue.pc[0], stateValue.pc[1], stateValue.pc[2]]
     rustWriteValue rustAdapter
     (by
-      simp only [aluInput, rustIsReal, ProvableStruct.structEvalLiteralProc]
-      exact hinputReal)
+      simp only [aluInput, rustIsReal, ProvableStruct.structEvalLiteralProc])
     (by
-      simp only [aluInput, rustIsReal, ProvableStruct.structEvalLiteralProc]
-      exact hinputReal)
+      simp only [aluInput, rustIsReal, ProvableStruct.structEvalLiteralProc])
     (by simp only [aluInput, rustAdapter, adapterValue])
     (by
       simp only [aluInput]
@@ -567,14 +440,6 @@ theorem bitwiseChip_constraints_faithful
   have hopEval : Expression.eval env input.adapter.op_a_0 =
       (Eval.eval env input.adapter).op_a_0 :=
     (Readers.ALUTypeReader.eval_opA0 env input.adapter).symm
-  have hInputGate :
-      Expression.eval env (input.is_real * (input.is_real - 1)) =
-        rustIsReal * (rustIsReal - 1) := by
-    simpa only [eval_mul, eval_sub, Expression.eval] using
-      congrArg (fun value => value * (value - 1)) hinputReal
-  have hLink :
-      Expression.eval env (input.is_real - bitwise_chip_is_real offset) = 0 := by
-    simp only [eval_sub, hinputReal, sub_self]
   rw [bitwise_chip_constraints_decompose]
   simp only [ChipOracle.nativeAssertZeros, bitwiseChipOracle, bitwiseChipReconfigure]
   simp only [Extracted.BitwiseOracle.BitwiseCols.asserts, List.forall_append,
@@ -592,135 +457,74 @@ theorem bitwiseChip_constraints_faithful
   · rintro ⟨⟨⟨hOpG, hCpuG⟩, hAluG⟩,
       hX, hO, hA, hSum, hOpA0, _⟩
     have hOpN := hOp.mp (by
-      simpa only [bitwise_chip_byte_opcode,
-        bitwise_chip_is_real, bitwise_chip_is_xor, bitwise_chip_is_or,
-        bitwise_chip_is_and,
-        eval_add, eval_mul, Expression.eval] using hOpG)
+      simpa only [BitwiseChip.exposedByteOpcode,
+        BitwiseChip.Inputs.is_real, eval_add, eval_mul, Expression.eval] using hOpG)
     have hCpuN := hCpu.mp hCpuG
     have hAluN := (hAlu.mp
       ⟨(by
-        simpa only [vec4_eta, bitwise_chip_cpu_opcode,
-          bitwise_chip_byte_opcode, bitwise_chip_is_real,
-          bitwise_chip_is_xor, bitwise_chip_is_or, bitwise_chip_is_and,
+        simpa only [vec4_eta, BitwiseChip.exposedOpcode,
+          BitwiseChip.exposedByteOpcode, BitwiseChip.Inputs.is_real,
           eval_add, eval_mul, Expression.eval] using hAluG),
         hOpA0⟩).1
     have hWriteN :=
-      (CanonicalReader.registerWriteAssertions env writeInput (offset + 19)).mpr trivial
+      (CanonicalReader.registerWriteAssertions env writeInput (offset + 16)).mpr trivial
     have hXN := (CanonicalReader.equalityAssertions env
-      (bitwise_chip_is_xor offset * (bitwise_chip_is_xor offset - 1))
-      0 (offset + 19)).mpr (by
-        simpa only [bitwise_chip_is_xor, eval_mul, eval_sub,
+      (input.isXor * (input.isXor - 1))
+      0 (offset + 16)).mpr (by
+        simpa only [eval_mul, eval_sub,
           Expression.eval] using hX)
     have hON := (CanonicalReader.equalityAssertions env
-      (bitwise_chip_is_or offset * (bitwise_chip_is_or offset - 1))
-      0 (offset + 19)).mpr (by
-        simpa only [bitwise_chip_is_or, eval_mul, eval_sub,
+      (input.isOr * (input.isOr - 1))
+      0 (offset + 16)).mpr (by
+        simpa only [eval_mul, eval_sub,
           Expression.eval] using hO)
     have hAN := (CanonicalReader.equalityAssertions env
-      (bitwise_chip_is_and offset * (bitwise_chip_is_and offset - 1))
-      0 (offset + 19)).mpr (by
-        simpa only [bitwise_chip_is_and, eval_mul, eval_sub,
+      (input.isAnd * (input.isAnd - 1))
+      0 (offset + 16)).mpr (by
+        simpa only [eval_mul, eval_sub,
           Expression.eval] using hA)
-    have hSumN := (CanonicalReader.equalityAssertions env
-      (bitwise_chip_is_real offset * (bitwise_chip_is_real offset - 1))
-      0 (offset + 19)).mpr (by
-        simpa only [bitwise_chip_is_real, bitwise_chip_is_xor,
-          bitwise_chip_is_or, bitwise_chip_is_and, eval_mul, eval_sub,
-          eval_add, Expression.eval] using hSum)
+    have hSumN : Expression.eval env (input.is_real * (input.is_real - 1)) = 0 := by
+      simpa only [BitwiseChip.Inputs.is_real, eval_sub, Expression.eval] using hSum
     have hOpA0N := (CanonicalReader.equalityAssertions env
-      input.adapter.op_a_0 0 (offset + 19)).mpr (by
+      input.adapter.op_a_0 0 (offset + 16)).mpr (by
         rw [hopEval]
         exact hOpA0)
     exact ⟨hCpuN, hOpN, hAluN, hWriteN,
-      hInputGate.trans hSum, hLink, hXN, hON, hAN, hSumN, hOpA0N⟩
-  · rintro ⟨hCpuN, hOpN, hAluN, _hWriteN, _hInputGateN, _hLinkN,
       hXN, hON, hAN, hSumN, hOpA0N⟩
+  · rintro ⟨hCpuN, hOpN, hAluN, _hWriteN, hXN, hON, hAN, hSumN, hOpA0N⟩
     have hCpuG := hCpu.mpr hCpuN
     have hOpG' := hOp.mpr hOpN
     have hOpG := by
-      simpa only [bitwise_chip_byte_opcode,
-        bitwise_chip_is_real, bitwise_chip_is_xor, bitwise_chip_is_or,
-        bitwise_chip_is_and,
-        eval_add, eval_mul, Expression.eval] using hOpG'
+      simpa only [BitwiseChip.exposedByteOpcode,
+        BitwiseChip.Inputs.is_real, eval_add, eval_mul, Expression.eval] using hOpG'
     have hOpA0 := (CanonicalReader.equalityAssertions env
-      input.adapter.op_a_0 0 (offset + 19)).mp hOpA0N
+      input.adapter.op_a_0 0 (offset + 16)).mp hOpA0N
     have hAluG' := (hAlu.mpr
       ⟨hAluN, by rw [← hopEval]; exact hOpA0⟩).1
     have hX := (CanonicalReader.equalityAssertions env
-      (bitwise_chip_is_xor offset * (bitwise_chip_is_xor offset - 1))
-      0 (offset + 19)).mp hXN
+      (input.isXor * (input.isXor - 1))
+      0 (offset + 16)).mp hXN
     have hO := (CanonicalReader.equalityAssertions env
-      (bitwise_chip_is_or offset * (bitwise_chip_is_or offset - 1))
-      0 (offset + 19)).mp hON
+      (input.isOr * (input.isOr - 1))
+      0 (offset + 16)).mp hON
     have hA := (CanonicalReader.equalityAssertions env
-      (bitwise_chip_is_and offset * (bitwise_chip_is_and offset - 1))
-      0 (offset + 19)).mp hAN
-    have hSum := (CanonicalReader.equalityAssertions env
-      (bitwise_chip_is_real offset * (bitwise_chip_is_real offset - 1))
-      0 (offset + 19)).mp hSumN
+      (input.isAnd * (input.isAnd - 1))
+      0 (offset + 16)).mp hAN
+    have hSum := hSumN
     refine ⟨⟨⟨hOpG, hCpuG⟩, ?_⟩, ?_, ?_, ?_, ?_, ?_, trivial⟩
-    · simpa only [vec4_eta, bitwise_chip_cpu_opcode,
-        bitwise_chip_byte_opcode, bitwise_chip_is_real,
-        bitwise_chip_is_xor, bitwise_chip_is_or, bitwise_chip_is_and,
+    · simpa only [vec4_eta, BitwiseChip.exposedOpcode,
+        BitwiseChip.exposedByteOpcode, BitwiseChip.Inputs.is_real,
         eval_add, eval_mul, Expression.eval] using hAluG'
-    · simpa only [bitwise_chip_is_xor, eval_mul, eval_sub,
+    · simpa only [eval_mul, eval_sub,
         Expression.eval] using hX
-    · simpa only [bitwise_chip_is_or, eval_mul, eval_sub,
+    · simpa only [eval_mul, eval_sub,
         Expression.eval] using hO
-    · simpa only [bitwise_chip_is_and, eval_mul, eval_sub,
+    · simpa only [eval_mul, eval_sub,
         Expression.eval] using hA
-    · simpa only [bitwise_chip_is_real, bitwise_chip_is_xor,
-        bitwise_chip_is_or, bitwise_chip_is_and, eval_mul, eval_sub,
+    · simpa only [BitwiseChip.Inputs.is_real, eval_mul, eval_sub,
         eval_add, Expression.eval] using hSum
     · rw [← hopEval]
       exact hOpA0
-
-private theorem bitwiseChipRowCodec_inputReal
-    (cols : BitwiseChip.Columns (ZMod p)) (data : ProverData (ZMod p)) :
-    let assignment := bitwiseChipRowCodec.assignment cols data
-    Expression.eval assignment.environment
-        ({ circuit := BitwiseChip.circuit (p := p) } :
-          Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-      Expression.eval assignment.environment
-        (bitwise_chip_is_real
-          ({ circuit := BitwiseChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowOffset) := by
-  dsimp only
-  let assignment := bitwiseChipRowCodec.assignment cols data
-  rw [Air.Flat.Component.rowInputVar_mk, Air.Flat.Component.rowOffset_mk]
-  have hInput :
-      Expression.eval
-          (Environment.fromArray
-            (inputFirstRow (bitwiseChipInput cols) (bitwiseChipLocals cols)) data)
-          (varFromOffset BitwiseChip.Inputs 0).is_real =
-        (bitwiseChipInput cols).is_real := by
-    rw [← BitwiseChip.eval_inputIsReal]
-    exact congrArg (fun value => value.is_real)
-      (eval_inputFirstRow (bitwiseChipInput cols) (bitwiseChipLocals cols) data)
-  have hX := eval_local_inputFirstRow (bitwiseChipInput cols)
-    (bitwiseChipLocals cols) data 0 (by decide)
-  have hO := eval_local_inputFirstRow (bitwiseChipInput cols)
-    (bitwiseChipLocals cols) data 1 (by decide)
-  have hA := eval_local_inputFirstRow (bitwiseChipInput cols)
-    (bitwiseChipLocals cols) data 2 (by decide)
-  change
-    Expression.eval assignment.environment
-        (varFromOffset BitwiseChip.Inputs 0).is_real =
-      assignment.environment.get (size BitwiseChip.Inputs) +
-        assignment.environment.get (size BitwiseChip.Inputs + 1) +
-        assignment.environment.get (size BitwiseChip.Inputs + 2)
-  rw [show assignment.environment =
-      Environment.fromArray
-        (inputFirstRow (bitwiseChipInput cols) (bitwiseChipLocals cols)) data by rfl]
-  rw [hInput]
-  simp only [bitwiseChipInput]
-  simp only [Expression.eval] at hX hO hA
-  rw [bitwiseChipLocals_zero] at hX
-  rw [bitwiseChipLocals_one] at hO
-  rw [bitwiseChipLocals_two] at hA
-  simp only [bitwiseChipInput] at hX hO hA
-  simpa only [Nat.add_zero] using (congrArg₂ (· + ·)
-    (congrArg₂ (· + ·) hX hO) hA).symm
 
 theorem bitwiseChip_constraints_constructive
     (rustCols : Extracted.BitwiseOracle.BitwiseCols (ZMod p)) (data : ProverData (ZMod p)) :
@@ -741,21 +545,12 @@ theorem bitwiseChip_constraints_constructive
     have h := NativeRowAssignment.bindsOutput assignment
     rw [BitwiseChip.circuit_main_eq] at h
     exact h
-  have hinputReal :
-      Expression.eval assignment.environment
-          ({ circuit := BitwiseChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-        Expression.eval assignment.environment
-          (bitwise_chip_is_real
-            ({ circuit := BitwiseChip.circuit (p := p) } :
-              Air.Flat.Component (ZMod p)).rowOffset) :=
-    bitwiseChipRowCodec_inputReal (p := p) cols data
   have hlegacy := bitwiseChip_constraints_faithful (p := p)
     assignment.environment
     ({ circuit := BitwiseChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := BitwiseChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
+      Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (bitwiseChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
@@ -803,9 +598,7 @@ private theorem unexpectedInteractionsEmpty
 theorem bitwiseChip_interactions_faithful
     (env : Environment (ZMod p)) (input : Var BitwiseChip.Inputs (ZMod p))
     (offset : ℕ) (cols : BitwiseChip.Columns (ZMod p))
-    (hbind : BindsChipOutput BitwiseChip.main env input offset cols)
-    (hinputReal : Expression.eval env input.is_real =
-      Expression.eval env (bitwise_chip_is_real offset)) :
+    (hbind : BindsChipOutput BitwiseChip.main env input offset cols) :
     List.Perm (nativeAccesses env ((BitwiseChip.main input).operations offset))
       (bitwiseChipOracle.accesses cols) := by
   have hp2 : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
@@ -842,58 +635,56 @@ theorem bitwiseChip_interactions_faithful
             { result := Eval.eval env
                 (bitwise_chip_operation
                   (p := p) offset).bitwise_operation.result } }
-      is_xor := Expression.eval env (var ⟨offset⟩)
-      is_or := Expression.eval env (var ⟨offset + 1⟩)
-      is_and := Expression.eval env (var ⟨offset + 2⟩) }
+      is_xor := Expression.eval env input.isXor
+      is_or := Expression.eval env input.isOr
+      is_and := Expression.eval env input.isAnd }
   change rustCols = cols at hbind
   subst cols
   let rustAccesses :=
     (Extracted.BitwiseOracle.BitwiseCols.interactions (bitwiseChipReconfigure rustCols)).map
       Extracted.Interaction.toAccess
   have hReal : Expression.eval env input.is_real =
-      env.get offset + env.get (offset + 1) + env.get (offset + 2) := by
-    simpa only [bitwise_chip_is_real, bitwise_chip_is_xor,
-      bitwise_chip_is_or, bitwise_chip_is_and, eval_add,
-      Expression.eval] using hinputReal
+      Expression.eval env input.isXor + Expression.eval env input.isOr + Expression.eval env input.isAnd := by
+    simp only [Expression.eval]
   have hsignReal :
       -signedVal
-          (env.get offset + env.get (offset + 1) + env.get (offset + 2) -
+          (Expression.eval env input.isXor + Expression.eval env input.isOr + Expression.eval env input.isAnd -
             Expression.eval env input.adapter.imm_c) =
         signedVal
           (Expression.eval env input.adapter.imm_c -
-            (env.get offset + env.get (offset + 1) + env.get (offset + 2))) := by
+            (Expression.eval env input.isXor + Expression.eval env input.isOr + Expression.eval env input.isAnd)) := by
     simpa only [hReal] using hsign
   have hNegFlags :
-      -env.get (offset + 2) + (-env.get (offset + 1) + -env.get offset) =
-        -(env.get offset + env.get (offset + 1) + env.get (offset + 2)) := by
+      -Expression.eval env input.isAnd + (-Expression.eval env input.isOr + -Expression.eval env input.isXor) =
+        -(Expression.eval env input.isXor + Expression.eval env input.isOr + Expression.eval env input.isAnd) := by
     ring
   have hDoubleNeg :
       -signedVal
-          (-env.get (offset + 2) + (-env.get (offset + 1) + -env.get offset)) =
+          (-Expression.eval env input.isAnd + (-Expression.eval env input.isOr + -Expression.eval env input.isXor)) =
         signedVal
-          (env.get offset + env.get (offset + 1) + env.get (offset + 2)) := by
+          (Expression.eval env input.isXor + Expression.eval env input.isOr + Expression.eval env input.isAnd) := by
     rw [hNegFlags, signedVal_neg hp2, neg_neg]
   have hBLocals :
       Eval.eval env
           (bitwise_chip_operation (p := p) offset).b_low_bytes.low_bytes =
-        #v[env.get (offset + 3), env.get (offset + 4),
-          env.get (offset + 5), env.get (offset + 6)] := by
+        #v[env.get (offset), env.get (offset + 1),
+          env.get (offset + 2), env.get (offset + 3)] := by
     simp [bitwise_chip_operation, explicit_provable_type, circuit_norm,
       Nat.add_assoc]
   have hCLocals :
       Eval.eval env
           (bitwise_chip_operation (p := p) offset).c_low_bytes.low_bytes =
-        #v[env.get (offset + 7), env.get (offset + 8),
-          env.get (offset + 9), env.get (offset + 10)] := by
+        #v[env.get (offset + 4), env.get (offset + 5),
+          env.get (offset + 6), env.get (offset + 7)] := by
     simp [bitwise_chip_operation, explicit_provable_type, circuit_norm,
       Nat.add_assoc]
   have hResultLocals :
       Eval.eval env
           (bitwise_chip_operation (p := p) offset).bitwise_operation.result =
-        #v[env.get (offset + 11), env.get (offset + 12),
-          env.get (offset + 13), env.get (offset + 14),
-          env.get (offset + 15), env.get (offset + 16),
-          env.get (offset + 17), env.get (offset + 18)] := by
+        #v[env.get (offset + 8), env.get (offset + 9),
+          env.get (offset + 10), env.get (offset + 11),
+          env.get (offset + 12), env.get (offset + 13),
+          env.get (offset + 14), env.get (offset + 15)] := by
     simp [bitwise_chip_operation, explicit_provable_type, circuit_norm,
       Nat.add_assoc]
   simp only [nativeAccesses]
@@ -1014,7 +805,7 @@ theorem bitwiseChip_interactions_faithful
       eval_registerAccessTimestamp, hReal]
     simp only [← ProvableStruct.eval_eq_eval, eval_cpuState,
       ← ProvableType.getElem_eval_fields, ProvableType.eval_field,
-      Expression.eval, hReal, hNegFlags]
+      Expression.eval, hNegFlags]
     simp only [true_and, neg_one_mul]
   have hB :
       List.Perm
@@ -1039,14 +830,13 @@ theorem bitwiseChip_interactions_faithful
       eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
       Opcode.ofNat, ConstraintCoe.coe_eq_val, signedVal_neg hp2, h6,
-      BitwiseChip.Inputs.op_b_val, BitwiseChip.Inputs.op_c_val,
-      hReal]
+      BitwiseChip.Inputs.op_b_val, BitwiseChip.Inputs.op_c_val]
     simp only [← ProvableStruct.eval_eq_eval, eval_cpuState,
       eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, eval_extractedU16toU8Operation,
       eval_bitwiseOperationColumns, ← ProvableType.getElem_eval_fields,
       eval_sub, ProvableType.eval_field,
-      Expression.eval, hReal, hNegFlags, hBLocals, hCLocals,
+      Expression.eval, hNegFlags, hBLocals, hCLocals,
       hResultLocals]
     simp only [Vector.getElem_mk, List.getElem_toArray,
       List.getElem_cons_zero, List.getElem_cons_succ]
@@ -1077,8 +867,7 @@ theorem bitwiseChip_interactions_faithful
       Expression.eval, ProvableType.eval_field,
       eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
-      LookupAccessList.negMult, signedVal_neg hp2,
-      hReal]
+      LookupAccessList.negMult, signedVal_neg hp2]
     simp only [← ProvableStruct.eval_eq_eval, eval_cpuState,
       eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, eval_bitwiseOperationColumns,
@@ -1091,7 +880,7 @@ theorem bitwiseChip_interactions_faithful
     exact (List.perm_append_comm
       (l₁ := [_, _, _, _]) (l₂ := [_])).append_left [_]
   have hP :
-      (((((BitwiseChip.exposedProgramInteractions input offset).map
+      (((((BitwiseChip.exposedProgramInteractions input).map
           ChannelInteraction.toRaw).map
             (AbstractInteraction.toAccess env)).map
               LookupAccessList.negMult)) =
@@ -1112,7 +901,7 @@ theorem bitwiseChip_interactions_faithful
       eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
       eval_registerAccessTimestamp, ← ProvableType.getElem_eval_fields,
       Opcode.ofNat, ConstraintCoe.coe_eq_val,
-      LookupAccessList.negMult, hReal]
+      LookupAccessList.negMult]
     simp only [hDoubleNeg]
   refine List.Perm.trans ?_
     (Extracted.perm_filter_by_kind_of_no_raw _ (bitwiseNoRawInteractions _)).symm
@@ -1145,7 +934,6 @@ theorem bitwiseChip_interactions_constructive
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := BitwiseChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
-    (bitwiseChipRowCodec_inputReal (p := p) cols data)
   rw [nativeAccesses_component_eq_rowOperations (BitwiseChip.circuit (p := p))
     assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,

@@ -7,8 +7,7 @@ import SP1Clean.Proofs.Chips.AddwChip.Formal
 import SP1Clean.Proofs.Chips.AddwChip.Witgen
 import SP1Clean.Proofs.Chips.AluX0Chip.Formal
 import SP1Clean.Proofs.Chips.AluX0Chip.Witgen
-import SP1Clean.Proofs.Chips.BitwiseChip.Formal
-import SP1Clean.Proofs.Chips.BitwiseChip.Witgen
+import SP1Clean.Proofs.Chips.BitwiseChip.Complete
 import SP1Clean.Proofs.Chips.BranchChip.Formal
 import SP1Clean.Proofs.Chips.BranchChip.Witgen
 import SP1Clean.Proofs.Chips.DivRemChip.Formal
@@ -97,8 +96,7 @@ discharged by `native_decide` (sanctioned in this test library only), lifted to 
 `is_real = 1` is visible by construction: the event-built input lists start with the literal `1`
 (`rTypeEventInputs` / `aluTypeEventInputs`, see `rTypeEventInputs_is_real` /
 `aluTypeEventInputs_is_real` below), and struct-built inputs set `is_real := 1` explicitly
-(except the four load chips, which carry no `is_real` column — there the variant flag set to `1`
-is the realness gate).
+(Bitwise, Mul, and the four load chips derive activity from their committed variant selectors).
 Operand non-degeneracy is stated per theorem. Where cheap, a companion theorem also pins the
 Spec-level result computed by the row (e.g. the Lt compare bit on a true and a false comparison).
 -/
@@ -251,41 +249,29 @@ theorem lt_slt_false_bit :
 
 /-- AND row: `rs1 = 0x00FF`, `rs2 = 0x0F0F`, so `rd` receives `0x000F`. Register-variant, same
 state/timestamp discipline as the Lt seed. -/
-def bitwiseAndEvent : AluTypeEventRec :=
-  { clk := 9, pc := 4096, a := 0x000F, b := 0x00FF, c := 0x0F0F, opA := 7, opB := 5, opC := 6,
-    immC := 0, tsA := 13, prevTsA := 0, prevA := 0, tsB := 12, prevTsB := 0,
-    tsC := 11, prevTsC := 0 }
+def bitwiseAndEvent : TraceGen.ALUTypeEvent :=
+  { clk := 9, pc := 4096, opcode := 5, b := 0x00FF, c := 0x0F0F,
+    opA := 7, opB := 5, opC := 6, immC := 0,
+    prevTsA := 0, prevA := 0, prevTsB := 0, prevTsC := 0 }
 
 /-- XOR row: `rs1 = 0x00FF`, `rs2 = 0x0F0F`, so `rd` receives `0x0FF0`. -/
-def bitwiseXorEvent : AluTypeEventRec :=
-  { clk := 9, pc := 4096, a := 0x0FF0, b := 0x00FF, c := 0x0F0F, opA := 7, opB := 5, opC := 6,
-    immC := 0, tsA := 13, prevTsA := 0, prevA := 0, tsB := 12, prevTsB := 0,
-    tsC := 11, prevTsC := 0 }
-
-/-- The honest `"bitwise_flags"` one-hot prover hint `[is_xor, is_or, is_and]`, from the executor
-opcode discriminants (XOR = 3, OR = 4, AND = 5). -/
-def bitwiseFlagsHint (op : ℕ) : ProverHint (ZMod SP1Prime) := fun key n =>
-  match key, n with
-  | "bitwise_flags", 3 =>
-    #[#v[if op = 3 then 1 else 0, if op = 4 then 1 else 0, if op = 5 then 1 else 0]]
-  | _, _ => #[]
+def bitwiseXorEvent : TraceGen.ALUTypeEvent :=
+  { bitwiseAndEvent with opcode := 3 }
 
 /-- **`BitwiseChip` is satisfiable on a real AND row**: the full constraint system holds on the
 register-variant row `x7 := 0x00FF AND 0x0F0F` (result `0x000F`). -/
 theorem bitwise_and_real_row_satisfiable :
     (chipOperations BitwiseChip.Inputs BitwiseChip.main
-      (aluTypeEventInputs bitwiseAndEvent)).ConstraintsHold
-      (chipEnvironment BitwiseChip.Inputs BitwiseChip.main (aluTypeEventInputs bitwiseAndEvent)
-        (bitwiseFlagsHint 5)) :=
+      (inputColumns bitwiseAndEvent.toBitwiseInputs)).ConstraintsHold
+      (chipEnvironment BitwiseChip.Inputs BitwiseChip.main (inputColumns bitwiseAndEvent.toBitwiseInputs)) :=
   constraintsHold_of_check (by native_decide)
 
 /-- **`BitwiseChip` is satisfiable on a real XOR row**: the full constraint system holds on the
 register-variant row `x7 := 0x00FF XOR 0x0F0F` (result `0x0FF0`). -/
 theorem bitwise_xor_real_row_satisfiable :
     (chipOperations BitwiseChip.Inputs BitwiseChip.main
-      (aluTypeEventInputs bitwiseXorEvent)).ConstraintsHold
-      (chipEnvironment BitwiseChip.Inputs BitwiseChip.main (aluTypeEventInputs bitwiseXorEvent)
-        (bitwiseFlagsHint 3)) :=
+      (inputColumns bitwiseXorEvent.toBitwiseInputs)).ConstraintsHold
+      (chipEnvironment BitwiseChip.Inputs BitwiseChip.main (inputColumns bitwiseXorEvent.toBitwiseInputs)) :=
   constraintsHold_of_check (by native_decide)
 
 /-! ## UType (LUI / AUIPC — the predecessor audit's 'no theorem' precedent chip) -/
@@ -777,8 +763,8 @@ theorem in this battery is a vacuous evaluation over an empty assertion system. 
 theorem constraint_systems_nonempty :
     ([chipOperations LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltTrueEvent),
       chipOperations LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltFalseEvent),
-      chipOperations BitwiseChip.Inputs BitwiseChip.main (aluTypeEventInputs bitwiseAndEvent),
-      chipOperations BitwiseChip.Inputs BitwiseChip.main (aluTypeEventInputs bitwiseXorEvent),
+      chipOperations BitwiseChip.Inputs BitwiseChip.main (inputColumns bitwiseAndEvent.toBitwiseInputs),
+      chipOperations BitwiseChip.Inputs BitwiseChip.main (inputColumns bitwiseXorEvent.toBitwiseInputs),
       chipOperations UTypeChip.Inputs UTypeChip.main (inputColumns utypeLuiInputs),
       chipOperations UTypeChip.Inputs UTypeChip.main (inputColumns utypeAuipcInputs),
       chipOperations JalrChip.Inputs JalrChip.main (inputColumns jalrInputs),

@@ -83,7 +83,12 @@ in `Semantics/Specs/BitwiseBytes` and `Semantics/Specs/Bitwise`. The word contra
 byte certificate and derives operand/result ranges and whole-word semantics. Its bundled gadget
 requires a valid opcode and binary activity; byte lookups establish operand bounds on active rows.
 Honest witness construction retains its bounded-input requirements. Byte decomposition is a pure
-projection, with no separate empty assertion gadget. Generated Rust helpers remain migration evidence.
+projection, with no separate empty assertion gadget. The whole-chip input and output types live
+in `Circuits/Types/BitwiseChip`, with their public contract in `Semantics/Specs/Chips/Bitwise`.
+Three explicit opcode selectors determine activity; Clean witnesses only the sixteen byte cells.
+Ordinary table construction needs no per-row flag hints. The 51-cell physical row matches SP1's
+supervisor layout after permuting inputs and witnesses. Generated Rust-to-Lean oracles remain
+migration evidence until their remaining consumers are replaced.
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,

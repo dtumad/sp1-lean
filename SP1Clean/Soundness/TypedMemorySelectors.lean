@@ -707,25 +707,25 @@ private def BitwiseChip.aluReaderInput
     Var Readers.ALUTypeReader.Inputs (ZMod p) :=
   ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
     input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-    var ⟨offset⟩ * 3 + var ⟨offset + 1⟩ * 4 + var ⟨offset + 2⟩ * 5,
-    var ⟨offset + 11⟩ + var ⟨offset + 12⟩ * 256,
-    var ⟨offset + 13⟩ + var ⟨offset + 14⟩ * 256,
-    var ⟨offset + 15⟩ + var ⟨offset + 16⟩ * 256,
-    var ⟨offset + 17⟩ + var ⟨offset + 18⟩ * 256⟩
+    input.isXor * 3 + input.isOr * 4 + input.isAnd * 5,
+    var ⟨offset + 8⟩ + var ⟨offset + 9⟩ * 256,
+    var ⟨offset + 10⟩ + var ⟨offset + 11⟩ * 256,
+    var ⟨offset + 12⟩ + var ⟨offset + 13⟩ * 256,
+    var ⟨offset + 14⟩ + var ⟨offset + 15⟩ * 256⟩
 
 /-- Bitwise's full row constraints restrict to its composed ALU reader. -/
 private theorem BitwiseChip.aluReaderConstraints
     (input : Var BitwiseChip.Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
     (constraints : ((BitwiseChip.main input).operations offset).ConstraintsHold env) :
     ((Readers.ALUTypeReader.main (BitwiseChip.aluReaderInput input offset)).operations
-      (offset + 19)).ConstraintsHold env := by
-  have readerMem : ⟨offset + 19,
-      Readers.ALUTypeReader.circuit.toSubcircuit (offset + 19)
+      (offset + 16)).ConstraintsHold env := by
+  have readerMem : ⟨offset + 16,
+      Readers.ALUTypeReader.circuit.toSubcircuit (offset + 16)
         (BitwiseChip.aluReaderInput input offset)⟩ ∈
       ((BitwiseChip.main input).operations offset).subcircuits := by
     simp only [BitwiseChip.main, BitwiseChip.aluReaderInput, circuit_norm]
   exact generalSubcircuit_constraints_of_mem Readers.ALUTypeReader.circuit
-    (BitwiseChip.aluReaderInput input offset) (offset + 19) env
+    (BitwiseChip.aluReaderInput input offset) (offset + 16) env
       ((BitwiseChip.main input).operations offset) readerMem constraints
 
 /-- Bitwise's immediate-aware source-C gate is zero or the physical row selector. -/
@@ -738,14 +738,16 @@ private theorem BitwiseChip.subGate_eq_zero_or_isReal
     (Circuit.constraintsHold_toFlat_iff.mpr constraints)
   have selectorBinary := BitwiseChip.mainSelectorBinary.binary input offset env shallow
   have selectorBinary' : env input.is_real = 0 ∨ env input.is_real = 1 := by
-    simpa only [circuit_norm] using selectorBinary
+    exact selectorBinary.imp
+      (fun h => (BitwiseChip.eval_inputIsReal env input).symm.trans h)
+      (fun h => (BitwiseChip.eval_inputIsReal env input).symm.trans h)
   have readerSelectorBinary :
       env (BitwiseChip.aluReaderInput input offset).is_real = 0 ∨
         env (BitwiseChip.aluReaderInput input offset).is_real = 1 := by
     simpa only [BitwiseChip.aluReaderInput] using selectorBinary'
   have readerConstraints := BitwiseChip.aluReaderConstraints input offset env constraints
   have subGate := aluTypeReader_subGate_eq_zero_or_isReal
-    (BitwiseChip.aluReaderInput input offset) (offset + 19) env
+    (BitwiseChip.aluReaderInput input offset) (offset + 16) env
       readerSelectorBinary readerConstraints
   simpa only [BitwiseChip.aluReaderInput] using subGate
 
@@ -756,7 +758,7 @@ theorem BitwiseChip.mainMemorySelectorGated :
 
 theorem BitwiseChip.circuitMemorySelectorGated :
     CircuitMemorySelectorGated (p := p) BitwiseChip.circuit BitwiseChip.rowView := by
-  liftMemoryGating BitwiseChip.circuit, BitwiseChip.rowView,
+  liftMemoryGatingWith BitwiseChip.circuit, BitwiseChip.rowView, BitwiseChip.eval_isReal,
     (fun input _ => input.is_real), BitwiseChip.mainMemorySelectorGated
 
 /-- The exact ALU-reader input assembled by Lt's `main`. -/
