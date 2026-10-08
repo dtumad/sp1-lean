@@ -143,7 +143,7 @@ not own a second spelling of the production characteristic. -/
 /-- info: exportable ✓ (16 witness cells) -/
 #guard_msgs in
 #assert_exportable (BitwiseChip.circuit (p := SP1Prime))
-/-- info: exportable ✓ (12 witness cells) -/
+/-- info: exportable ✓ (10 witness cells) -/
 #guard_msgs in
 #assert_exportable (LtChip.circuit (p := SP1Prime))
 /-- info: exportable ✓ (20 witness cells) -/

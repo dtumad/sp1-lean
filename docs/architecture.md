@@ -90,6 +90,12 @@ Ordinary table construction needs no per-row flag hints. The 51-cell physical ro
 supervisor layout after permuting inputs and witnesses. Generated Rust-to-Lean oracles remain
 migration evidence until their remaining consumers are replaced.
 
+Lt likewise owns its row types in `Circuits/Types/LtChip` and its reader/ISA contract in
+`Semantics/Specs/Chips/Lt`. Two explicit SLT/SLTU selectors determine activity; Clean witnesses
+only the ten comparison cells. The resulting 44-cell row uses SP1's supervisor column layout.
+Soundness still requires bounded operand words, and honest construction retains reader, clock
+and timestamp obligations. Its table builder uses ordinary inputs with no selector hints.
+
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,
 one complete finite state with projections, and one typed physical inventory. Retain distinctions

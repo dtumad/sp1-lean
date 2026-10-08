@@ -205,10 +205,9 @@ def publicValues : SP1PublicIO (ZMod p) := trace.boundary
 **The 53 built tables**, in `sp1Ensemble.tables` order: the twenty-five instruction chips of
 `sp1Tables`, then the 28 entries of `sp1ProviderTables`.
 
-Seven of them go through `Table.buildHinted` rather than `Table.build` — the chips whose witness
-generation reads a per-row prover hint (the flag one-hots of Bitwise/Lt/the shifts/Mul, the
-comparison selector of Branch). Their builders pair each event with the hint that event's own row
-is witnessed at; everything else shares the trace's single `hint`.
+Branch and the two shifts use `Table.buildHinted`: their event builders supply the opcode and
+comparison hints still read by those circuits. Bitwise, Lt, Mul and DivRem take selectors as
+ordinary inputs and use an empty hint. The other builders share the trace's `hint`.
 -/
 def rangeTables : List (Table (ZMod p)) :=
   RangeChip.allWidths.map fun width =>
@@ -232,8 +231,9 @@ def instructionTableFor : InstructionChipId → Table (ZMod p)
   | .bitwise => Table.build BitwiseChip.component
       (BitwiseChip.traceInputs (trace.instructionEvents .bitwise) 0) trace.generationData
       (ProverHint.empty _)
-  | .lt => Table.buildHinted LtChip.component
+  | .lt => Table.build LtChip.component
       (LtChip.traceInputs (trace.instructionEvents .lt) 0) trace.generationData
+      (ProverHint.empty _)
   | .shiftLeft => Table.buildHinted ShiftLeftChip.component
       (ShiftLeftChip.traceInputs (trace.instructionEvents .shiftLeft) 0) trace.generationData
   | .shiftRight => Table.buildHinted ShiftRightChip.component

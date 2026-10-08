@@ -1,3 +1,5 @@
+import SP1Clean.Circuits.Types.LtChip
+import SP1Clean.Semantics.Specs.Chips.Lt
 import SP1Clean.Circuits.Types.BitwiseChip
 import SP1Clean.Semantics.Specs.Chips.Bitwise
 import SP1Clean.Circuits.Gadgets.Bitwise.Witness

@@ -26,8 +26,7 @@ import SP1Clean.Proofs.Chips.LoadWordChip.Formal
 import SP1Clean.Proofs.Chips.LoadWordChip.Witgen
 import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
 import SP1Clean.Proofs.Chips.LoadX0Chip.Witgen
-import SP1Clean.Proofs.Chips.LtChip.Formal
-import SP1Clean.Proofs.Chips.LtChip.Witgen
+import SP1Clean.Proofs.Chips.LtChip.Complete
 import SP1Clean.Proofs.Chips.MulChip.Formal
 import SP1Clean.Proofs.Chips.MulChip.Witgen
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
@@ -200,49 +199,41 @@ The gadget internals (u16 compare flags, sign-bit columns, the compare bit) are 
 chip's own `LtOperationSigned.populate` witness closure — not hand-coded. -/
 
 /-- SLT with a TRUE comparison: `rs1 = 5 < rs2 = 7` (signed), so `rd` receives `1`. -/
-def ltSltTrueEvent : AluTypeEventRec :=
-  { clk := 9, pc := 4096, a := 1, b := 5, c := 7, opA := 7, opB := 5, opC := 6, immC := 0,
-    tsA := 13, prevTsA := 0, prevA := 0, tsB := 12, prevTsB := 0, tsC := 11, prevTsC := 0 }
+def ltSltTrueEvent : TraceGen.ALUTypeEvent :=
+  { clk := 9, pc := 4096, opcode := 9, b := 5, c := 7,
+    opA := 7, opB := 5, opC := 6, immC := 0,
+    prevTsA := 0, prevA := 0, prevTsB := 0, prevTsC := 0 }
 
 /-- SLT with a FALSE comparison: `rs1 = 7 ≥ rs2 = 5` (signed), so `rd` receives `0`. -/
-def ltSltFalseEvent : AluTypeEventRec :=
-  { clk := 9, pc := 4096, a := 0, b := 7, c := 5, opA := 7, opB := 5, opC := 6, immC := 0,
-    tsA := 13, prevTsA := 0, prevA := 0, tsB := 12, prevTsB := 0, tsC := 11, prevTsC := 0 }
-
-/-- The honest `"lt_flags"` one-hot prover hint: `[is_slt, is_sltu]`. -/
-def ltFlagsHint (slt : Bool) : ProverHint (ZMod SP1Prime) := fun key n =>
-  match key, n with
-  | "lt_flags", 2 => #[#v[if slt then 1 else 0, if slt then 0 else 1]]
-  | _, _ => #[]
+def ltSltFalseEvent : TraceGen.ALUTypeEvent :=
+  { clk := 9, pc := 4096, opcode := 9, b := 7, c := 5,
+    opA := 7, opB := 5, opC := 6, immC := 0,
+    prevTsA := 0, prevA := 0, prevTsB := 0, prevTsC := 0 }
 
 /-- **`LtChip` is satisfiable on a real row with a TRUE comparison**: the full constraint system
 holds on the register-variant SLT row `x7 := (5 <ₛ 7) = 1`. -/
 theorem lt_slt_true_real_row_satisfiable :
-    (chipOperations LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltTrueEvent)).ConstraintsHold
-      (chipEnvironment LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltTrueEvent)
-        (ltFlagsHint true)) :=
+    (chipOperations LtChip.Inputs LtChip.main (inputColumns ltSltTrueEvent.toLtInputs)).ConstraintsHold
+      (chipEnvironment LtChip.Inputs LtChip.main (inputColumns ltSltTrueEvent.toLtInputs)) :=
   constraintsHold_of_check (by native_decide)
 
 /-- **`LtChip` is satisfiable on a real row with a FALSE comparison**: the full constraint system
 holds on the register-variant SLT row `x7 := (7 <ₛ 5) = 0`. -/
 theorem lt_slt_false_real_row_satisfiable :
-    (chipOperations LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltFalseEvent)).ConstraintsHold
-      (chipEnvironment LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltFalseEvent)
-        (ltFlagsHint true)) :=
+    (chipOperations LtChip.Inputs LtChip.main (inputColumns ltSltFalseEvent.toLtInputs)).ConstraintsHold
+      (chipEnvironment LtChip.Inputs LtChip.main (inputColumns ltSltFalseEvent.toLtInputs)) :=
   constraintsHold_of_check (by native_decide)
 
 /-- Spec-level companion: on the TRUE row the chip's own witness closures compute compare bit `1`
 (the value written to `rd`). -/
 theorem lt_slt_true_bit :
-    (chipOutput LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltTrueEvent)
-      (ltFlagsHint true)).lt_operation.result.u16_compare_operation.bit = 1 := by
+    (chipOutput LtChip.Inputs LtChip.main (inputColumns ltSltTrueEvent.toLtInputs)).lt_operation.result.u16_compare_operation.bit = 1 := by
   native_decide
 
 /-- Spec-level companion: on the FALSE row the chip's own witness closures compute compare bit
 `0`. Together with `lt_slt_true_bit` this shows the battery exercises both comparison outcomes. -/
 theorem lt_slt_false_bit :
-    (chipOutput LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltFalseEvent)
-      (ltFlagsHint true)).lt_operation.result.u16_compare_operation.bit = 0 := by
+    (chipOutput LtChip.Inputs LtChip.main (inputColumns ltSltFalseEvent.toLtInputs)).lt_operation.result.u16_compare_operation.bit = 0 := by
   native_decide
 
 /-! ## Bitwise (AND / XOR) -/
@@ -761,8 +752,8 @@ theorem alux0_real_row_satisfiable :
 flattened operation list carries a nonempty `assertZero` constraint list — so no satisfiability
 theorem in this battery is a vacuous evaluation over an empty assertion system. -/
 theorem constraint_systems_nonempty :
-    ([chipOperations LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltTrueEvent),
-      chipOperations LtChip.Inputs LtChip.main (aluTypeEventInputs ltSltFalseEvent),
+    ([chipOperations LtChip.Inputs LtChip.main (inputColumns ltSltTrueEvent.toLtInputs),
+      chipOperations LtChip.Inputs LtChip.main (inputColumns ltSltFalseEvent.toLtInputs),
       chipOperations BitwiseChip.Inputs BitwiseChip.main (inputColumns bitwiseAndEvent.toBitwiseInputs),
       chipOperations BitwiseChip.Inputs BitwiseChip.main (inputColumns bitwiseXorEvent.toBitwiseInputs),
       chipOperations UTypeChip.Inputs UTypeChip.main (inputColumns utypeLuiInputs),

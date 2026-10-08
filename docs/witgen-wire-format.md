@@ -240,8 +240,7 @@ Row provenance is honest:
   pinned extraction branch; the `provenance.events` string names the dump file and its
   `sp1Commit`). The inputs are recovered from the dumped row itself through the
   symbolic row map (every native input cell is a bare `var` column of the Rust row,
-  except `is_real` on the five flag-hinted chips — Bitwise, Branch, Lt, ShiftLeft,
-  ShiftRight — which is `1` on event rows); the hint tables are derived from the
+  except `is_real` on the three flag-hinted chips — Branch, ShiftLeft, ShiftRight — which is `1` on event rows); the hint tables are derived from the
   event's opcode discriminant (Branch additionally derives its `branch_branching` bit
   from the operand values, mirroring SP1's own populate). `expectedRow` is the dumped
   SP1 `generate_trace` row verbatim. **The generation-time gate**: before anything is
@@ -299,11 +298,11 @@ witnesses with Lean and exercises Clean's proof backend; see [export](export.md)
 
 ## SP1-specific facts a consumer may rely on
 
-- The 25 instruction chips have empty `data` schemas. Some use `hintGet`; Bitwise, Mul and DivRem
-  supply their variant selectors as inputs and read no external hints. Bitwise and Mul derive activity
-  from their three and five selectors; DivRem supplies seven selectors and derives DIVU.
-- Every hint read is at constant row `0`. The five remaining hint tables and widths are
-  in the manifests (`lt_flags` 2, `branch_flags` 6, `branch_branching` 1,
+- The 25 instruction chips have empty `data` schemas. Some use `hintGet`; Bitwise, Lt, Mul and DivRem
+  supply their variant selectors as inputs and read no external hints. Bitwise, Lt and Mul derive activity
+  from their three, two and five selectors; DivRem supplies seven selectors and derives DIVU.
+- Every hint read is at constant row `0`. The four remaining hint tables and widths are
+  in the manifests (`branch_flags` 6, `branch_branching` 1,
   `shift_left_flags` 2, `shift_right_flags` 4).
 - Missing hints read as zero vectors. DivRem's DIVU padding instead uses seven zero
   selector inputs and a divisor read of one; its derived DIVU witness is one.

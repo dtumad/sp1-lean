@@ -367,8 +367,8 @@ theorem BitwiseChip.programEmissionShape :
 theorem LtChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (LtChip.circuit (p := p)) LtChip.rowView := by
   programExposureStart
-  refine ⟨fun input _ => input.is_real, fun input offset =>
-    ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], LtChip.exposedOpcode offset,
+  refine ⟨fun input _ => input.is_real, fun input _ =>
+    ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], LtChip.exposedOpcode input,
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
       input.adapter.op_a_0, 0, input.adapter.imm_c⟩, ?_, ?_, ?_⟩
   · intro input offset

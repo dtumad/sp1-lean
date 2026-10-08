@@ -137,7 +137,8 @@ theorem projection_agrees (id : InstructionChipId) :
     change AgreesWith LtChip.circuit (projection .lt) LtChip.rowView
     intro input offset env
     dsimp only [projection]
-    simp only [LtChip.circuit, LtChip.rowView, statePushOfView, stateAccess, cpuStatePushMessage, circuit_norm]
+    simp only [LtChip.circuit, LtChip.rowView, statePushOfView, stateAccess,
+      cpuStatePushMessage, LtChip.eval_isReal, circuit_norm]
   | shiftLeft =>
     change AgreesWith ShiftLeftChip.circuit (projection .shiftLeft) ShiftLeftChip.rowView
     intro input offset env

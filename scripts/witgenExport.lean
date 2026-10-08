@@ -456,7 +456,6 @@ payloads' `hintGet`s declare; chips without hint tables read the empty hint. -/
 def hintFor (chip : String) (ev : DumpEvent) : ProverHint Fp := fun key n =>
   let op := ev.opcode
   match chip, key, n with
-  | "Lt", "lt_flags", 2 => #[#v[if op = 9 then 1 else 0, if op = 10 then 1 else 0]]
   | "ShiftLeft", "shift_left_flags", 2 =>
     #[#v[if op = 6 then 1 else 0, if op = 21 then 1 else 0]]
   | "ShiftRight", "shift_right_flags", 4 =>
