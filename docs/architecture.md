@@ -96,6 +96,11 @@ only the ten comparison cells. The resulting 44-cell row uses SP1's supervisor c
 Soundness still requires bounded operand words, and honest construction retains reader, clock
 and timestamp obligations. Its table builder uses ordinary inputs with no selector hints.
 
+ShiftLeft owns its row types in `Circuits/Types/ShiftLeftChip` and its RV64 SLL/SLLW contract in
+`Semantics/Specs/Chips/ShiftLeft`. Its two explicit selectors determine activity; Clean generates
+31 witnesses, giving SP1's 65-cell supervisor layout. Zero inputs generate the required nonzero
+padding powers. The table builder needs no hints; bounded operands and reader/clock obligations remain.
+
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,
 one complete finite state with projections, and one typed physical inventory. Retain distinctions

@@ -1,3 +1,5 @@
+import SP1Clean.Circuits.Types.ShiftLeftChip
+import SP1Clean.Semantics.Specs.Chips.ShiftLeft
 import SP1Clean.Circuits.Types.LtChip
 import SP1Clean.Semantics.Specs.Chips.Lt
 import SP1Clean.Circuits.Types.BitwiseChip

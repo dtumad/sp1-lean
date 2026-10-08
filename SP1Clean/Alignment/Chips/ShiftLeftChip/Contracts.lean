@@ -16,8 +16,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The grounding-relevant ShiftLeft controls, separated from the expensive arithmetic tail. -/
 structure ShiftLeftChip.ControlFacts
-    (isReal isSll isSllw opA0 : ZMod p) : Prop where
-  selectorLink : isReal = isSll + isSllw
+    (isSll isSllw opA0 : ZMod p) : Prop where
   sllBinary : isSll = 0 ∨ isSll = 1
   sllwBinary : isSllw = 0 ∨ isSllw = 1
   opA0Zero : opA0 = 0
@@ -36,38 +35,32 @@ private theorem ShiftLeftChip.opA0Zero_of_coreSpec
   tauto
 
 -- Runs at the plain default: the former 4000000 ceiling was ~100x over; measured floor <= 40000.
-/-- The physical ShiftLeft constraints identify `is_real` with the flag sum, make both flags
-binary, and enforce the non-`x0` destination route in the folded core. -/
+/-- The physical constraints make both input selectors binary and enforce the non-`x0` route. -/
 theorem ShiftLeftChip.controlFacts_of_mainConstraints
     (input : Var ShiftLeftChip.Inputs (ZMod p)) (offset : ℕ)
     (env : Environment (ZMod p))
     (constraints : ((ShiftLeftChip.main input).operations offset).ConstraintsHold env) :
     ShiftLeftChip.ControlFacts
-      (Expression.eval env input.is_real)
-      (Expression.eval env (var { index := offset + 30 }))
-      (Expression.eval env (var { index := offset + 31 }))
+      (Expression.eval env (input.isSll))
+      (Expression.eval env (input.isSllw))
       (Expression.eval env input.adapter.op_a_0) := by
   have allConstraints := constraints.1
-  have hlink := allConstraints
-    (input.is_real -
-      (var { index := offset + 30 } + var { index := offset + 31 }))
-    (ShiftLeftChip.selectorLink_mem_constraints input offset)
   have hsll := allConstraints
-    (var { index := offset + 30 } * (var { index := offset + 30 } - 1) - 0)
+    (input.isSll * (input.isSll - 1) - 0)
     (ShiftLeftChip.sllBool_mem_constraints input offset)
   have hsllw := allConstraints
-    (var { index := offset + 31 } * (var { index := offset + 31 } - 1) - 0)
+    (input.isSllw * (input.isSllw - 1) - 0)
     (ShiftLeftChip.sllwBool_mem_constraints input offset)
   let coreInput := ShiftLeftChip.coreInput input offset
   have coreConstraints := constraintsHold_assertionSubcircuit_of_mem env
     ((ShiftLeftChip.main input).operations offset) ShiftLeftCore.circuit coreInput
-    (offset + 33) (ShiftLeftChip.core_mem_subcircuits input offset) constraints
+    (offset + 31) (ShiftLeftChip.core_mem_subcircuits input offset) constraints
   have coreGuarantees :
       ((ShiftLeftCore.circuit.main coreInput).operations
-        (offset + 33)).FullGuarantees env := by
+        (offset + 31)).FullGuarantees env := by
     change
       (((FormalAssertion.isGeneralFormalCircuit ShiftLeftCore.circuit).main
-        coreInput).operations (offset + 33)).FullGuarantees env
+        coreInput).operations (offset + 31)).FullGuarantees env
     rw [GeneralFormalCircuit.guarantees_iff]
     have noChannels :
         (FormalAssertion.isGeneralFormalCircuit
@@ -77,17 +70,16 @@ theorem ShiftLeftChip.controlFacts_of_mainConstraints
     simp only [List.not_mem_nil, false_implies, implies_true]
   have coreSoundness :=
     Circuit.can_replace_soundness coreConstraints coreGuarantees
-  have core := (ShiftLeftCore.soundness (offset + 33) env coreInput
+  have core := (ShiftLeftCore.soundness (offset + 31) env coreInput
     (Eval.eval env coreInput) rfl trivial coreSoundness).1
   have hopa0 := ShiftLeftChip.opA0Zero_of_coreSpec (Eval.eval env coreInput) core
-  simp only [eval_sub, Expression.eval, sub_zero] at hlink hsll hsllw
+  simp only [eval_sub, Expression.eval, sub_zero] at hsll hsllw
   change (Eval.eval env coreInput).adapter.op_a_0 = 0 at hopa0
   dsimp only [coreInput] at hopa0
   rw [ShiftLeftChip.coreInput_eq, ShiftLeftChip.eval_columns,
     Readers.ALUTypeReader.eval_opA0] at hopa0
   exact
-    { selectorLink := sub_eq_zero.mp hlink
-      sllBinary := bool_of_mul_pred hsll
+    { sllBinary := bool_of_mul_pred hsll
       sllwBinary := bool_of_mul_pred hsllw
       opA0Zero := hopa0 }
 
@@ -97,15 +89,15 @@ theorem ShiftLeftChip.selectorActive_of_mainConstraints
     (env : Environment (ZMod p))
     (constraints : ((ShiftLeftChip.main input).operations offset).ConstraintsHold env)
     (real : Expression.eval env input.is_real = 1) :
-    (Expression.eval env (var { index := offset + 30 }) = 1 ∧
-        Expression.eval env (var { index := offset + 31 }) = 0) ∨
-      (Expression.eval env (var { index := offset + 31 }) = 1 ∧
-        Expression.eval env (var { index := offset + 30 }) = 0) := by
+    (Expression.eval env (input.isSll) = 1 ∧
+        Expression.eval env (input.isSllw) = 0) ∨
+      (Expression.eval env (input.isSllw) = 1 ∧
+        Expression.eval env (input.isSll) = 0) := by
   have control := ShiftLeftChip.controlFacts_of_mainConstraints input offset env constraints
   have sumOne :
-      Expression.eval env (var { index := offset + 30 }) +
-        Expression.eval env (var { index := offset + 31 }) = 1 :=
-    control.selectorLink.symm.trans real
+      Expression.eval env (input.isSll) +
+        Expression.eval env (input.isSllw) = 1 :=
+    real
   rcases control.sllBinary with sll0 | sll1
   · exact Or.inr ⟨by simpa only [sll0, zero_add] using sumOne, sll0⟩
   · refine Or.inl ⟨sll1, ?_⟩
@@ -245,7 +237,7 @@ theorem ShiftLeftChip.rowViewOpCBinding_of_constraints
     (Component.constraintsHold_iff env).mp constraints
   have readerConstraints := constraintsHold_generalSubcircuit_of_mem env
     ((ShiftLeftChip.main input).operations offset) Readers.ALUTypeReader.circuit
-    readerInput (offset + 33)
+    readerInput (offset + 31)
     (ShiftLeftChip.aluReader_mem_subcircuits input offset) mainConstraints
   have inputEq : Eval.eval env input =
       ({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
@@ -258,7 +250,7 @@ theorem ShiftLeftChip.rowViewOpCBinding_of_constraints
       ShiftLeftChip.eval_inputs, Readers.ALUTypeReader.eval_immC] at immediate
     exact immediate
   have binding := Readers.ALUTypeReader.eval_opCPrev_eq_opC_of_mainConstraints
-    readerInput (offset + 33) env readerConstraints immediateInput
+    readerInput (offset + 31) env readerConstraints immediateInput
   change (({ circuit := ShiftLeftChip.circuit (p := p) } :
     Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
       (({ circuit := ShiftLeftChip.circuit (p := p) } :

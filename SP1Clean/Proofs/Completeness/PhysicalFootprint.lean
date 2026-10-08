@@ -71,9 +71,9 @@ theorem instructionTableFor_length (id : InstructionChipId) :
       simp only [LtChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)
   | shiftLeft =>
-    exact (Table.buildHinted_length ShiftLeftChip.component
+    exact (Table.build_length ShiftLeftChip.component
       (ShiftLeftChip.traceInputs (trace.instructionEvents .shiftLeft) 0)
-      trace.generationData (by trivial)).trans (by
+      trace.generationData (ProverHint.empty _) (by trivial)).trans (by
       change (ShiftLeftChip.traceInputs (trace.instructionEvents .shiftLeft) 0).length = _
       simp only [ShiftLeftChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)

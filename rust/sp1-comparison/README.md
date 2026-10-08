@@ -30,7 +30,7 @@ that output and exercises two boundaries:
 - The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
   match Lean; backend proofs accept both allowed values and reject forged membership, changed public
   values, rows and table shapes. Test FRI parameters are not deployment security parameters.
-- Production ADD, LoadByte, Bitwise, Lt, Mul and DivRem components use the same comparison harness:
+- Production ADD, LoadByte, Bitwise, Lt, ShiftLeft, Mul and DivRem components use the same comparison harness:
 
   | Component | SP1 event / padding rows | Column mutations | Cases |
   | --- | --- | --- | --- |
@@ -38,6 +38,7 @@ that output and exercises two boundaries:
   | LoadByte | 258 / 30 | 987 | LB/LBU, all eight offsets, sign extension, address boundaries, negative immediates, cross-window memory timestamps |
   | Bitwise | 612 / 28 | 5,661 | XOR/OR/AND, register and immediate forms, signed immediate boundaries, byte/limb/word boundaries, zero padding |
   | Lt | 468 / 12 | 4,884 | SLT/SLTU, register and immediate forms, equal operands, each differing limb, sign boundaries, zero padding |
+  | ShiftLeft | 2,596 / 28 | 12,090 | SLL/SLLW, every shift amount, register and immediate forms, ignored upper shift bits, limb placement, word sign extension, nonzero padding powers |
   | Mul | 605 / 3 | 5,166 | All five variants, signed and unsigned high products, word sign extension, operand boundaries, zero padding |
   | DivRem | 968 / 24 | 24,354 | All eight variants, division by zero, signed overflow at both widths, word truncation, DIVU padding |
 
@@ -49,9 +50,9 @@ that output and exercises two boundaries:
 The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
 to construct the local row without scheduling those buses; the unadapted program is checked to
 reject an active row without providers. This is not a full-ensemble acceptance or completeness test.
-The layout adapters move selectors first and witnessed cells last; LoadByte, Bitwise, Lt, Mul and DivRem use offsets from
-SP1's actual column structures. Bitwise, Lt, Mul and DivRem also check that their mappings are complete
-permutations of their 51, 44, 82 and 246 cells, including malformed selectors. Channel adaptation
+The layout adapters move selectors first and witnessed cells last; LoadByte, Bitwise, Lt, ShiftLeft, Mul and DivRem use offsets from
+SP1's actual column structures. Bitwise, Lt, ShiftLeft, Mul and DivRem also check that their mappings are complete
+permutations of their 51, 44, 65, 82 and 246 cells, including malformed selectors. Channel adaptation
 reverses Byte, Memory and Program signs to match Clean's provider-to-consumer guarantee direction.
 
 The default `inventory` feature retains the independent inventory checks. `clean-export` enables

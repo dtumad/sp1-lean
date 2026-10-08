@@ -234,8 +234,9 @@ def instructionTableFor : InstructionChipId → Table (ZMod p)
   | .lt => Table.build LtChip.component
       (LtChip.traceInputs (trace.instructionEvents .lt) 0) trace.generationData
       (ProverHint.empty _)
-  | .shiftLeft => Table.buildHinted ShiftLeftChip.component
+  | .shiftLeft => Table.build ShiftLeftChip.component
       (ShiftLeftChip.traceInputs (trace.instructionEvents .shiftLeft) 0) trace.generationData
+      (ProverHint.empty _)
   | .shiftRight => Table.buildHinted ShiftRightChip.component
       (ShiftRightChip.traceInputs (trace.instructionEvents .shiftRight) 0) trace.generationData
   | .jal => Table.build JalChip.component

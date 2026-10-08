@@ -823,33 +823,31 @@ private theorem ShiftLeftChip.aluReaderConstraints
     (input : Var ShiftLeftChip.Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
     (constraints : ((ShiftLeftChip.main input).operations offset).ConstraintsHold env) :
     ((Readers.ALUTypeReader.main (ShiftLeftChip.aluReaderInput input offset)).operations
-      (offset + 33)).ConstraintsHold env := by
+      (offset + 31)).ConstraintsHold env := by
   exact generalSubcircuit_constraints_of_mem Readers.ALUTypeReader.circuit
-    (ShiftLeftChip.aluReaderInput input offset) (offset + 33) env
+    (ShiftLeftChip.aluReaderInput input offset) (offset + 31) env
       ((ShiftLeftChip.main input).operations offset)
       (ShiftLeftChip.aluReader_mem_subcircuits input offset) constraints
 
-/-- ShiftLeft's immediate-aware source-C gate is zero or its witnessed variant selector. -/
+/-- ShiftLeft's immediate-aware source-C gate is zero or its derived activity selector. -/
 private theorem ShiftLeftChip.subGate_eq_zero_or_exposedGate
     (input : Var ShiftLeftChip.Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
     (constraints : ((ShiftLeftChip.main input).operations offset).ConstraintsHold env) :
-    env (ShiftLeftChip.exposedGate offset - input.adapter.imm_c) = 0 ∨
-      env (ShiftLeftChip.exposedGate offset - input.adapter.imm_c) =
-        env (ShiftLeftChip.exposedGate offset) := by
+    env (ShiftLeftChip.exposedGate input - input.adapter.imm_c) = 0 ∨
+      env (ShiftLeftChip.exposedGate input - input.adapter.imm_c) =
+        env (ShiftLeftChip.exposedGate input) := by
   have shallow := FlatOperation.shallowConstraints_of_constraintsHoldFlat
     (Circuit.constraintsHold_toFlat_iff.mpr constraints)
   have selectorBinary := ShiftLeftChip.mainSelectorBinary.binary input offset env shallow
   have selectorBinary' : env input.is_real = 0 ∨ env input.is_real = 1 := by
     simpa only [circuit_norm] using selectorBinary
-  have gateEq := ShiftLeftChip.isReal_eq_exposedGate input offset env constraints
-  rw [gateEq] at selectorBinary'
   have readerSelectorBinary :
       env (ShiftLeftChip.aluReaderInput input offset).is_real = 0 ∨
         env (ShiftLeftChip.aluReaderInput input offset).is_real = 1 := by
     simpa only [ShiftLeftChip.aluReaderInput, ShiftLeftChip.exposedGate] using selectorBinary'
   have readerConstraints := ShiftLeftChip.aluReaderConstraints input offset env constraints
   have subGate := aluTypeReader_subGate_eq_zero_or_isReal
-    (ShiftLeftChip.aluReaderInput input offset) (offset + 33) env
+    (ShiftLeftChip.aluReaderInput input offset) (offset + 31) env
       readerSelectorBinary readerConstraints
   simpa only [ShiftLeftChip.aluReaderInput, ShiftLeftChip.exposedGate] using subGate
 
@@ -858,13 +856,13 @@ theorem ShiftLeftChip.mainMemorySelectorGated :
   apply mainMemorySelectorGated_of_exposed ShiftLeftChip.main (fun input _ => input.is_real)
     ShiftLeftChip.exposedMemoryInteractions ShiftLeftChip.interactionsWith_memory_eq
   intro input offset env constraints
-  have gateEq := ShiftLeftChip.isReal_eq_exposedGate input offset env constraints
   have subGate := ShiftLeftChip.subGate_eq_zero_or_exposedGate input offset env constraints
+  simp only [ShiftLeftChip.exposedGate] at subGate
   rcases subGate with subGate | subGate <;>
     simp only [ShiftLeftChip.exposedMemoryInteractions, List.forall_mem_cons,
       Channel.pulledIf, Channel.pushedIf, pulledIf_mult, pushedIf_mult,
       Expression.eval, neg_one_mul, List.not_mem_nil, false_implies, true_and,
-      gateEq, subGate, true_or, or_true]
+      ShiftLeftChip.exposedGate, subGate, true_or, or_true]
   all_goals simp
 
 theorem ShiftLeftChip.circuitMemorySelectorGated :

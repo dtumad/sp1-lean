@@ -405,12 +405,12 @@ def dumpOf (chip : String) (j : Json) : Except String Dump := do
   unless events.length < height do throw s!"{chip}.dump.json: no padding row"
   return ⟨events, rows, width, height⟩
 
-/-- The five chips whose `is_real` input (native input cell 0) is not a bare column of
+/-- The remaining chips whose `is_real` input (native input cell 0) is not a bare column of
 the Rust row — it gates flag-hinted populate paths instead. On their event rows
 `is_real = 1`, on padding rows `0`. Verified over all 25 committed row maps: these are
 exactly the chips with any non-bare-`var` input cell, and only cell 0 is affected. -/
 def isRealHintedChips : List String :=
-  ["Bitwise", "Branch", "Lt", "ShiftLeft", "ShiftRight"]
+  ["Branch", "ShiftRight"]
 
 /-- Input-recovery table from the symbolic row map: input `i` reads Rust column `j`
 iff `rowMap[j] = var i` (`none` = the `is_real` exception). Fails closed on any other
@@ -456,8 +456,6 @@ payloads' `hintGet`s declare; chips without hint tables read the empty hint. -/
 def hintFor (chip : String) (ev : DumpEvent) : ProverHint Fp := fun key n =>
   let op := ev.opcode
   match chip, key, n with
-  | "ShiftLeft", "shift_left_flags", 2 =>
-    #[#v[if op = 6 then 1 else 0, if op = 21 then 1 else 0]]
   | "ShiftRight", "shift_right_flags", 4 =>
     #[#v[if op = 7 then 1 else 0, if op = 8 then 1 else 0,
          if op = 22 then 1 else 0, if op = 23 then 1 else 0]]

@@ -37,10 +37,9 @@ def Spec (input : Inputs (ZMod p)) (cols : Columns (ZMod p)) (_ : ProverData (ZM
 theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start_early_struct
   -- `op_b_val`/`op_c_val` are reducible projections of the physical ALU read-backs.
-  simp only [Inputs.op_b_val, Inputs.op_c_val] at h_assumptions ⊢
+  simp only [Inputs.op_b_val, Inputs.op_c_val, Inputs.is_real] at h_assumptions ⊢
   obtain ⟨hb_u64, hc_u64⟩ := h_assumptions
-  obtain ⟨h_cpu, hmsb, _halu, _hregwrite, _hrealbin, hrealeq,
-    _hE2, _hE4, _hE6, h_core,
+  obtain ⟨h_cpu, hmsb, _halu, _hregwrite, _hE2, _hE4, _hE6, h_core,
     hbyte1, hbyte2, hbyte3, hbyte4, hbyte5, hbyte6, hbyte7, hbyte8, hbyte9⟩ := h_holds
   have h_core' := h_core trivial
   simp only [ShiftLeftCore.circuit, ShiftLeftChip.CoreSpec, Vector.getElem_map,
@@ -55,10 +54,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     hp20, hp21, hp22, hp23, hp30, hp31, hp32, hp33,
     hw00, hw01, hw10, hw11, hwmsb2, hwmsb3,
     _himm, _hopa0⟩ := h_core'
-  -- The variant flags are now **witnessed columns** (`flags[0..2]` at offsets `i₀+30..32`), not `Inputs`
-  -- fields; `set` them under their old names so the proof body is unchanged.
-  set input_is_sll := env.get (i₀ + 30) with hsll_def
-  set input_is_sllw := env.get (i₀ + 31) with hsllw_def
   -- The shared power encoding of the shift amount (`v0123 = 2 ^ S`, `S = cb0 + 2cb1 + 4cb2 + 8cb3`)
   -- together with the two width normalizations every byte-range bound below is stated at. Derived once
   -- here; `a1_bound_cond`, `a_isU64` and the SLLW branch each used to re-derive it verbatim.
@@ -81,15 +76,15 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- The SLLW result limb 1 (`a[1] = env.get (i₀+1)`) is 16-bit whenever `is_sllw = 1`. Proved once here
   -- (self-contained from the byte guarantees + placement), reused for the U16MSB sub-assertion's operand
   -- bound in both the SLLW branch and the channel-requirement tail.
-  have a1_bound_cond : input_is_sllw = 1 → (env.get (i₀+1)).val < 2 ^ 16 := by
+  have a1_bound_cond : input_isSllw = 1 → (env.get (i₀+1)).val < 2 ^ 16 := by
     intro hsllw1
     have h2ne : (2 : ZMod p) ≠ 0 := by
       intro h; have hv := val_2_zmod_p (p := p); rw [h, ZMod.val_zero] at hv; omega
-    have hsll0 : input_is_sll = 0 := by
+    have hsll0 : input_isSll = 0 := by
       have e2 := _hE2; rw [hsllw1] at e2
       exact ShiftLeftCore.eq_zero_of_mul_const h2ne (by linear_combination e2 - _hE4)
-    have hgate1 : (input_is_sll + input_is_sllw : ZMod p) = 1 := by rw [hsll0, hsllw1, zero_add]
-    have hneg : -(input_is_sll + input_is_sllw) = -1 := by rw [hgate1]
+    have hgate1 : (input_isSll + input_isSllw : ZMod p) = 1 := by rw [hsll0, hsllw1, zero_add]
+    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
@@ -122,11 +117,11 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- push's `isU64` requirement (W11 Option-B memory flip). Self-contained from the byte ranges (the
   -- `lower/higher_limb` pulls bound the `limb_result` entries) + the placement asserts (each `a_i` is `0`,
   -- a `limb_result` entry, or `msb·65535`); reused in the channel-requirement tail.
-  have a_isU64 : (input_is_sll + input_is_sllw : ZMod p) = 1 →
+  have a_isU64 : (input_isSll + input_isSllw : ZMod p) = 1 →
       (env.get i₀).val < 2 ^ 16 ∧ (env.get (i₀+1)).val < 2 ^ 16 ∧
       (env.get (i₀+2)).val < 2 ^ 16 ∧ (env.get (i₀+3)).val < 2 ^ 16 := by
     intro hgate1
-    have hneg : -(input_is_sll + input_is_sllw) = -1 := by rw [hgate1]
+    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
@@ -175,7 +170,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       rw [hgate1, one_mul] at hsusum; linear_combination hsusum
     rcases bool_of_mul_pred _hE4 with hsll0 | hsll1
     · -- is_sll = 0 ⇒ is_sllw = 1 (SLLW): low two limbs placed, high two `= msb·65535`.
-      have hsllw1 : input_is_sllw = 1 := by rw [hsll0, zero_add] at hgate1; exact hgate1
+      have hsllw1 : input_isSllw = 1 := by rw [hsll0, zero_add] at hgate1; exact hgate1
       have hs0sel : env.get (i₀+4+6+3) * (env.get (i₀+4+4) - 0) = 0 := by
         rw [hsll0] at hsu0sel; linear_combination hsu0sel
       have hs1sel : env.get (i₀+4+6+3+1) * (env.get (i₀+4+4) - 1) = 0 := by
@@ -202,27 +197,20 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       exact sll_a_isU64 (bool_of_mul_pred hsu0b) (bool_of_mul_pred hsu1b) (bool_of_mul_pred hsu2b)
         hssum hb0 hb1 hb2 hb3 hp00 hp01 hp02 hp03 hp10 hp11 hp12 hp13 hp20 hp21 hp22 hp23
         hp30 hp31 hp32 hp33
-  -- G1: the CPUState sub-`Spec`'s two clock byte bounds discharge the *push* side of the memory
-  -- channel's `MemoryMsg.ClkBound` guarantee — `ALUTypeReader`'s two read-back pushes (`clk_low + 3` /
-  -- `+ 2`) and `RegisterWrite`'s op_a write push (`clk_low + 4`). The offset is left to unification, so
-  -- this line never names the destructured state columns. ShiftLeft composes both children at the
-  -- *derived* gate `is_sll + is_sllw`, while `CPUState` runs at the public `is_real`; the binding
-  -- constraint `hrealeq` identifies the two, so the bound is stated at the gate.
+  -- CPU clock bounds discharge the read-back and write guarantees. All children use the
+  -- same activity expression, the sum of the explicit opcode selectors.
   have h_clk : Readers.ClkDiscipline (input_state_clk_0_16 + input_state_clk_16_24 * 65536)
-      (input_is_sll + input_is_sllw) :=
-    (Readers.ClkDiscipline.of_cpuState_spec (h_cpu (bool_of_mul_pred _hrealbin))).of_gate
-      fun hgate => by linear_combination hrealeq + hgate
+      (input_isSll + input_isSllw) :=
+    Readers.ClkDiscipline.of_cpuState_spec (h_cpu (bool_of_mul_pred _hE2))
   refine ⟨fun hreal => ?_, ?_⟩
   · intro hsllw
     -- branch over a 2-limb (32-bit) word with sign extension (limbs 2,3 = `msb·65535`).
-    have hgate1 : (input_is_sll + input_is_sllw : ZMod p) = 1 := by
-      have h : (input_is_real - (input_is_sll + input_is_sllw) : ZMod p) = 0 := hrealeq
-      rw [hreal] at h
-      exact (sub_eq_zero.mp h).symm
-    have hsll0 : input_is_sll = 0 := by
-      have h : input_is_sll + input_is_sllw = 0 + input_is_sllw := by rw [zero_add, hgate1, hsllw]
+    have hgate1 : (input_isSll + input_isSllw : ZMod p) = 1 := hreal
+    have hsll0 : input_isSll = 0 := by
+      have h : input_isSll + input_isSllw = 0 + input_isSllw := by rw [zero_add, hgate1, hsllw]
       exact add_right_cancel h
-    obtain ⟨_, _, _, _, _, _, ⟨hbmem, _, _⟩, _, ⟨hcmem, _, _⟩, _⟩ := h_input
+    have hbmem := h_input.2.1.2.2.2.2.1.1
+    have hcmem := h_input.2.1.2.2.2.2.2.2.1.1
     have heb0 : Expression.eval env input_var_adapter_op_b_memory_prev_value[0] = input_adapter_op_b_memory_prev_value[0] := by
       rw [← hbmem, Vector.getElem_map]
     have heb1 : Expression.eval env input_var_adapter_op_b_memory_prev_value[1] = input_adapter_op_b_memory_prev_value[1] := by
@@ -230,7 +218,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have heval_c0 : Expression.eval env input_var_adapter_op_c_memory_prev_value[0] =
         input_adapter_op_c_memory_prev_value[0] := by
       rw [← hcmem, Vector.getElem_map]
-    have hneg : -(input_is_sll + input_is_sllw) = -1 := by rw [hgate1]
+    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb

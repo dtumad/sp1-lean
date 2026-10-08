@@ -485,19 +485,17 @@ def shiftLeftEvent : AluTypeEventRec :=
     immC := 0, tsA := 13, prevTsA := 0, prevA := 0, tsB := 12, prevTsB := 0,
     tsC := 11, prevTsC := 0 }
 
-/-- The honest `"shift_left_flags"` one-hot prover hint `[is_sll, is_sllw]`. -/
-def shiftLeftFlagsHint (op : ℕ) : ProverHint (ZMod SP1Prime) := fun key n =>
-  match key, n with
-  | "shift_left_flags", 2 => #[#v[if op = 6 then 1 else 0, if op = 21 then 1 else 0]]
-  | _, _ => #[]
+/-- SLL inputs: state and adapter cells, followed by the two opcode selectors. -/
+def shiftLeftInputs : List (ZMod SP1Prime) :=
+  (aluTypeEventInputs shiftLeftEvent).drop 1 ++ [1, 0]
 
 /-- **`ShiftLeftChip` is satisfiable on a real SLL row**: the full constraint system holds on
 `sll x7, x5, x6` with `x5 = 0x1234`, `x6 = 8` (result `0x123400`). -/
 theorem shiftleft_sll_real_row_satisfiable :
     (chipOperations ShiftLeftChip.Inputs ShiftLeftChip.main
-      (aluTypeEventInputs shiftLeftEvent)).ConstraintsHold
+      shiftLeftInputs).ConstraintsHold
       (chipEnvironment ShiftLeftChip.Inputs ShiftLeftChip.main
-        (aluTypeEventInputs shiftLeftEvent) (shiftLeftFlagsHint 6)) :=
+        shiftLeftInputs) :=
   constraintsHold_of_check (by native_decide)
 
 /-- SRL row: `x7 := 0x1234 >>> 4 = 0x123` (register shift amount `x6 = 4`). -/
@@ -766,7 +764,7 @@ theorem constraint_systems_nonempty :
       chipOperations LoadX0Chip.Inputs LoadX0Chip.main (inputColumns loadX0Inputs),
       chipOperations AddiChip.Inputs AddiChip.main (inputColumns addiInputs),
       chipOperations DivRemChip.Inputs DivRemChip.main divRemDivuInputs,
-      chipOperations ShiftLeftChip.Inputs ShiftLeftChip.main (aluTypeEventInputs shiftLeftEvent),
+      chipOperations ShiftLeftChip.Inputs ShiftLeftChip.main shiftLeftInputs,
       chipOperations ShiftRightChip.Inputs ShiftRightChip.main
         (aluTypeEventInputs shiftRightEvent),
       chipOperations AddChip.Inputs AddChip.main (rTypeEventInputs addEvent),
