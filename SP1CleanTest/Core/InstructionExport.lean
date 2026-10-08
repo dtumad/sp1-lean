@@ -6,6 +6,7 @@ import SP1Clean.Proofs.Chips.MulChip.Complete
 import SP1Clean.Proofs.Chips.BitwiseChip.Complete
 import SP1Clean.Proofs.Chips.LtChip.Complete
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Complete
+import SP1Clean.Proofs.Chips.ShiftRightChip.Complete
 import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
@@ -80,5 +81,10 @@ def ltRust : Except String String :=
 def shiftLeftRust : Except String String :=
   Extraction.Rust.ensembleToRust "ShiftLeftInstruction"
     (ensemble { circuit := ShiftLeftChip.circuit }) (config ShiftLeftChip.Inputs)
+
+/-- Export SRL/SRA/SRLW/SRAW with explicit selectors and generated padding powers. -/
+def shiftRightRust : Except String String :=
+  Extraction.Rust.ensembleToRust "ShiftRightInstruction"
+    (ensemble { circuit := ShiftRightChip.circuit }) (config ShiftRightChip.Inputs)
 
 end SP1CleanTest.Core.InstructionExport

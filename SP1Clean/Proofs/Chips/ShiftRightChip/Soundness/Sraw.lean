@@ -39,8 +39,9 @@ set_option linter.unreachableTactic false in
 /-- Soundness of the `sraw` conjunct (verbatim slice of the monolithic proof + the shared tail). -/
 theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start_early_struct
-  obtain ⟨h_cpu, h_msb1, h_msb2, h_msb3, h_alu, h_regwrite, h_realgate, h_realeq,
-    h_srl_b, h_sra_b, h_srlw_b, h_sraw_b, h_sum_b, h_core,
+  simp only [Inputs.is_real] at h_assumptions ⊢
+  obtain ⟨h_cpu, h_msb1, h_msb2, h_msb3, h_alu, h_regwrite, h_sum_b,
+    h_srl_b, h_sra_b, h_srlw_b, h_sraw_b, h_core,
     h_byte0, h_byte1, h_byte2, h_byte3, h_byte4, h_byte5, h_byte6, h_byte7, h_byte8⟩ := h_holds
   have h_core' := h_core trivial
   simp only [ShiftRightCore.circuit, ShiftRightChip.CoreSpec, Vector.getElem_map,
@@ -60,7 +61,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- range-check `resultA_isU64` applied to this row's destructured constraints.
   have h_obmap : Vector.map (Expression.eval env) input_var_adapter_op_b_memory_prev_value =
       input_adapter_op_b_memory_prev_value := by
-    obtain ⟨-, -, -, -, -, -, ⟨h, -, -⟩, -, -, -⟩ := h_input; exact h
+    exact h_input.2.1.2.2.2.2.1.1
   -- `resultA_isU64` deliberately keeps its `x * (x + -1) = 0` parameter forms (shared by all four
   -- Soundness files); `h_holds`'s destructured hyps are now `x - y` form (4.30 circuit_norm), and the
   -- rest of this proof relies on that `-` form downstream, so convert local COPIES (never mutate the
@@ -105,18 +106,12 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   clear h_o0_2 h_o1_2 h_o2_2 h_o3_2 h_o4_2 h_o5_2 h_o6_2 h_o7_2
   clear h_o8_2 h_o9_2 h_o10_2 h_o11_2 h_o12_2 h_o13_2 h_o14_2 h_o15_2
   clear h_w0_2 h_w1_2 h_w2_2 h_w3_2 h_w4_2 h_w5_2 h_byte2_2 h_byte4_2 h_byte6_2 h_byte8_2
-  -- post-#398 the nine byte receives owe no padding requirement.
-  -- G1: the CPUState sub-`Spec`'s two clock byte bounds discharge the *push* side of the memory
-  -- channel's `MemoryMsg.ClkBound` guarantee for `ALUTypeReader`'s two read-back pushes
-  -- (`clk_low + 3` / `+ 2`), which `main` composes at the chip's own `is_real` selector. The offset is
-  -- left to unification, so this line never names the destructured state columns. `RegisterWrite`'s
-  -- op_a write push is composed at the *committed flag sum* instead; `main`'s bind `h_realeq`
-  -- (`is_real - (is_srl + is_sra + is_srlw + is_sraw) = 0`, mirroring `ShiftLeftChip.main`)
-  -- identifies the two, so that push's clock bound is derived here as well.
-  have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu (bool_of_mul_pred h_realgate))
+  -- CPU, reader and write interactions share the explicit selector sum.
+  -- CPUState's clock bounds therefore supply the reader and write guarantees.
+  have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu (bool_of_mul_pred h_sum_b))
   refine ⟨?spec, ?aluA,
     Or.inr ⟨bool_of_mul_pred h_sum_b, hregW,
-      fun hgate => h_clk.at_four (by linear_combination h_realeq + hgate)⟩,
+      h_clk.at_four⟩,
     fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
     fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
     fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
@@ -131,15 +126,13 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       -- Same discipline inside the conjunct: everything the `refine` above already consumed, the
       -- sixteen `o`-column constraints (SRA/SRL-only; SRAW reads the `w` columns), and the input
       -- binders reachable only through `h_input` -- hence its destructuring is hoisted up to here.
-      clear h_cpu h_msb1 h_alu h_regwrite h_realgate h_realeq hregW h_clk h_obmap
+      clear h_cpu h_msb1 h_alu h_regwrite hregW h_clk h_obmap
       clear h_wimm h_s0b h_s1b h_s2b h_s3b h_msbz h_srwz h_opa0
       clear h_o0 h_o1 h_o2 h_o3 h_o4 h_o5 h_o6 h_o7
       clear h_o8 h_o9 h_o10 h_o11 h_o12 h_o13 h_o14 h_o15
       clear h_split3 h_lr2 h_lr3
       clear hreal
-      obtain ⟨-, -, -, -, -, -, ⟨h_obmap, -, -⟩, -, ⟨h_ocmap, -, -⟩, -⟩ := h_input
-      clear input_is_real
-      clear input_var_is_real
+      obtain ⟨-, ⟨-, -, -, -, ⟨h_obmap, -, -⟩, -, ⟨h_ocmap, -, -⟩, -⟩, -⟩ := h_input
       clear input_adapter_op_a
       clear input_adapter_op_a_0
       clear input_adapter_op_b
@@ -201,20 +194,20 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       set hl1 := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 1)
       set hl2 := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2)
       set hl3 := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 3)
-      have hsum1 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4)
-          + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)
-          + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2)
-          + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3) = 1 := by
+      have hsum1 : input_isSrl
+          + input_isSra
+          + input_isSrlw
+          + input_isSraw = 1 := by
         rw [h_srl0, h_sra0, h_srlw0, hsraw]; ring
-      have hsumneg : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4)
-          + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)
-          + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2)
-          + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 := by rw [hsum1]
+      have hsumneg : -(input_isSrl
+          + input_isSra
+          + input_isSrlw
+          + input_isSraw) = -1 := by rw [hsum1]
       have hbyte_fact : ∀ {v w : ZMod p},
-          (-(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4)
-              + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)
-              + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2)
-              + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 →
+          (-(input_isSrl
+              + input_isSra
+              + input_isSrlw
+              + input_isSraw) = -1 →
             byteChannel.Guarantees (⟨6, v, w, 0⟩
               : ByteRow (ZMod p)) env.data) → v.val < 2 ^ w.val := by
         intro v w hb
@@ -527,7 +520,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
             exact ShiftRightMath.srlw_dispatch_1 b_cb0 b_cb1 b_cb2 b_cb3 hcb4 eq_v01 eq_v012 eq_v0123
               lt_ll0 lt_lh0 lt_ll1 lt_lh1 h_b0_dec h_b1_dec
   -- CPUState has no required channel; ALUTypeReader assumes `is_real` binary from the in-circuit gate.
-  case aluA => exact Or.inr ⟨bool_of_mul_pred h_realgate, bool_of_mul_pred h_realgate,
+  case aluA => exact Or.inr ⟨bool_of_mul_pred h_sum_b, bool_of_mul_pred h_sum_b,
     h_clk⟩
   -- The MSB gadgets expose empty requirement lists canonically; their local semantic
   -- assumptions no longer leak into the parent chip's channel-requirement tail.

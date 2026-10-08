@@ -24,7 +24,8 @@ private def exportEnsembleFixture : IO Unit := do
       ("mul_instruction.rs", SP1CleanTest.Core.InstructionExport.mulRust),
       ("bitwise_instruction.rs", SP1CleanTest.Core.InstructionExport.bitwiseRust),
       ("lt_instruction.rs", SP1CleanTest.Core.InstructionExport.ltRust),
-      ("shift_left_instruction.rs", SP1CleanTest.Core.InstructionExport.shiftLeftRust)] do
+      ("shift_left_instruction.rs", SP1CleanTest.Core.InstructionExport.shiftLeftRust),
+      ("shift_right_instruction.rs", SP1CleanTest.Core.InstructionExport.shiftRightRust)] do
     let instruction ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)

@@ -16,8 +16,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The grounding-relevant ShiftRight controls, separated from the expensive arithmetic tail. -/
 structure ShiftRightChip.ControlFacts
-    (isReal isSrl isSra isSrlw isSraw opA0 : ZMod p) : Prop where
-  selectorLink : isReal = isSrl + isSra + isSrlw + isSraw
+    (isSrl isSra isSrlw isSraw opA0 : ZMod p) : Prop where
   srlBinary : isSrl = 0 ∨ isSrl = 1
   sraBinary : isSra = 0 ∨ isSra = 1
   srlwBinary : isSrlw = 0 ∨ isSrlw = 1
@@ -40,47 +39,40 @@ private theorem ShiftRightChip.opA0Zero_of_coreSpec
   tauto
 
 -- Runs at the plain default: the former 4000000 ceiling was ~100x over; measured floor <= 40000.
-/-- The physical ShiftRight constraints identify `is_real` with the flag sum, make all four flags
-binary, and enforce the non-`x0` destination route in the folded core. -/
+/-- The physical ShiftRight constraints make all four selectors binary and enforce the non-`x0` destination route in the folded core. -/
 theorem ShiftRightChip.controlFacts_of_mainConstraints
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
     (env : Environment (ZMod p))
     (constraints : ((ShiftRightChip.main input).operations offset).ConstraintsHold env) :
     ShiftRightChip.ControlFacts
-      (Expression.eval env input.is_real)
-      (Expression.eval env (var { index := offset + 32 }))
-      (Expression.eval env (var { index := offset + 33 }))
-      (Expression.eval env (var { index := offset + 34 }))
-      (Expression.eval env (var { index := offset + 35 }))
+      (Expression.eval env (input.isSrl))
+      (Expression.eval env (input.isSra))
+      (Expression.eval env (input.isSrlw))
+      (Expression.eval env (input.isSraw))
       (Expression.eval env input.adapter.op_a_0) := by
   have allConstraints := constraints.1
-  have hlink := allConstraints
-    (input.is_real -
-      (var { index := offset + 32 } + var { index := offset + 33 } +
-        var { index := offset + 34 } + var { index := offset + 35 }))
-    (ShiftRightChip.selectorLink_mem_constraints input offset)
   have hsrl := allConstraints
-    (var { index := offset + 32 } * (var { index := offset + 32 } - 1) - 0)
+    (input.isSrl * (input.isSrl - 1) - 0)
     (ShiftRightChip.srlBool_mem_constraints input offset)
   have hsra := allConstraints
-    (var { index := offset + 33 } * (var { index := offset + 33 } - 1) - 0)
+    (input.isSra * (input.isSra - 1) - 0)
     (ShiftRightChip.sraBool_mem_constraints input offset)
   have hsrlw := allConstraints
-    (var { index := offset + 34 } * (var { index := offset + 34 } - 1) - 0)
+    (input.isSrlw * (input.isSrlw - 1) - 0)
     (ShiftRightChip.srlwBool_mem_constraints input offset)
   have hsraw := allConstraints
-    (var { index := offset + 35 } * (var { index := offset + 35 } - 1) - 0)
+    (input.isSraw * (input.isSraw - 1) - 0)
     (ShiftRightChip.srawBool_mem_constraints input offset)
   let coreInput := ShiftRightChip.coreInput input offset
   have coreConstraints := constraintsHold_assertionSubcircuit_of_mem env
     ((ShiftRightChip.main input).operations offset) ShiftRightCore.circuit coreInput
-    (offset + 37) (ShiftRightChip.core_mem_subcircuits input offset) constraints
+    (offset + 33) (ShiftRightChip.core_mem_subcircuits input offset) constraints
   have coreGuarantees :
       ((ShiftRightCore.circuit.main coreInput).operations
-        (offset + 37)).FullGuarantees env := by
+        (offset + 33)).FullGuarantees env := by
     change
       (((FormalAssertion.isGeneralFormalCircuit ShiftRightCore.circuit).main
-        coreInput).operations (offset + 37)).FullGuarantees env
+        coreInput).operations (offset + 33)).FullGuarantees env
     rw [GeneralFormalCircuit.guarantees_iff]
     have noChannels :
         (FormalAssertion.isGeneralFormalCircuit
@@ -90,17 +82,16 @@ theorem ShiftRightChip.controlFacts_of_mainConstraints
     simp only [List.not_mem_nil, false_implies, implies_true]
   have coreSoundness :=
     Circuit.can_replace_soundness coreConstraints coreGuarantees
-  have core := (ShiftRightCore.soundness (offset + 37) env coreInput
+  have core := (ShiftRightCore.soundness (offset + 33) env coreInput
     (Eval.eval env coreInput) rfl trivial coreSoundness).1
   have hopa0 := ShiftRightChip.opA0Zero_of_coreSpec (Eval.eval env coreInput) core
-  simp only [eval_sub, Expression.eval, sub_zero] at hlink hsrl hsra hsrlw hsraw
+  simp only [eval_sub, Expression.eval, sub_zero] at hsrl hsra hsrlw hsraw
   change (Eval.eval env coreInput).adapter.op_a_0 = 0 at hopa0
   dsimp only [coreInput] at hopa0
   rw [ShiftRightChip.coreInput_eq, ShiftRightChip.eval_columns,
     Readers.ALUTypeReader.eval_opA0] at hopa0
   exact
-    { selectorLink := sub_eq_zero.mp hlink
-      srlBinary := bool_of_mul_pred hsrl
+    { srlBinary := bool_of_mul_pred hsrl
       sraBinary := bool_of_mul_pred hsra
       srlwBinary := bool_of_mul_pred hsrlw
       srawBinary := bool_of_mul_pred hsraw
@@ -112,34 +103,34 @@ theorem ShiftRightChip.selectorActive_of_mainConstraints
     (env : Environment (ZMod p))
     (constraints : ((ShiftRightChip.main input).operations offset).ConstraintsHold env)
     (real : Expression.eval env input.is_real = 1) :
-    (Expression.eval env (var { index := offset + 32 }) = 1 ∧
-      Expression.eval env (var { index := offset + 33 }) = 0 ∧
-      Expression.eval env (var { index := offset + 34 }) = 0 ∧
-      Expression.eval env (var { index := offset + 35 }) = 0) ∨
-    (Expression.eval env (var { index := offset + 33 }) = 1 ∧
-      Expression.eval env (var { index := offset + 32 }) = 0 ∧
-      Expression.eval env (var { index := offset + 34 }) = 0 ∧
-      Expression.eval env (var { index := offset + 35 }) = 0) ∨
-    (Expression.eval env (var { index := offset + 34 }) = 1 ∧
-      Expression.eval env (var { index := offset + 32 }) = 0 ∧
-      Expression.eval env (var { index := offset + 33 }) = 0 ∧
-      Expression.eval env (var { index := offset + 35 }) = 0) ∨
-    (Expression.eval env (var { index := offset + 35 }) = 1 ∧
-      Expression.eval env (var { index := offset + 32 }) = 0 ∧
-      Expression.eval env (var { index := offset + 33 }) = 0 ∧
-      Expression.eval env (var { index := offset + 34 }) = 0) := by
+    (Expression.eval env (input.isSrl) = 1 ∧
+      Expression.eval env (input.isSra) = 0 ∧
+      Expression.eval env (input.isSrlw) = 0 ∧
+      Expression.eval env (input.isSraw) = 0) ∨
+    (Expression.eval env (input.isSra) = 1 ∧
+      Expression.eval env (input.isSrl) = 0 ∧
+      Expression.eval env (input.isSrlw) = 0 ∧
+      Expression.eval env (input.isSraw) = 0) ∨
+    (Expression.eval env (input.isSrlw) = 1 ∧
+      Expression.eval env (input.isSrl) = 0 ∧
+      Expression.eval env (input.isSra) = 0 ∧
+      Expression.eval env (input.isSraw) = 0) ∨
+    (Expression.eval env (input.isSraw) = 1 ∧
+      Expression.eval env (input.isSrl) = 0 ∧
+      Expression.eval env (input.isSra) = 0 ∧
+      Expression.eval env (input.isSrlw) = 0) := by
   have control := ShiftRightChip.controlFacts_of_mainConstraints input offset env constraints
   have sumOne :
-      Expression.eval env (var { index := offset + 32 }) +
-        Expression.eval env (var { index := offset + 33 }) +
-        Expression.eval env (var { index := offset + 34 }) +
-        Expression.eval env (var { index := offset + 35 }) = 1 :=
-    control.selectorLink.symm.trans real
+      Expression.eval env (input.isSrl) +
+        Expression.eval env (input.isSra) +
+        Expression.eval env (input.isSrlw) +
+        Expression.eval env (input.isSraw) = 1 := by
+    simpa only [ShiftRightChip.Inputs.is_real, Expression.eval] using real
   let flags : Vector (ZMod p) 4 :=
-    #v[Expression.eval env (var { index := offset + 32 }),
-       Expression.eval env (var { index := offset + 33 }),
-       Expression.eval env (var { index := offset + 34 }),
-       Expression.eval env (var { index := offset + 35 })]
+    #v[Expression.eval env (input.isSrl),
+       Expression.eval env (input.isSra),
+       Expression.eval env (input.isSrlw),
+       Expression.eval env (input.isSraw)]
   have oneHot := ShiftRightChip.one_hot_resolve flags
     control.srlBinary control.sraBinary control.srlwBinary control.srawBinary
     (Or.inr sumOne)
@@ -289,7 +280,7 @@ theorem ShiftRightChip.rowViewOpCBinding_of_constraints
     (Component.constraintsHold_iff env).mp constraints
   have readerConstraints := constraintsHold_generalSubcircuit_of_mem env
     ((ShiftRightChip.main input).operations offset) Readers.ALUTypeReader.circuit
-    readerInput (offset + 37)
+    readerInput (offset + 33)
     (ShiftRightChip.aluReader_mem_subcircuits input offset) mainConstraints
   have inputEq : Eval.eval env input =
       ({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
@@ -302,7 +293,7 @@ theorem ShiftRightChip.rowViewOpCBinding_of_constraints
       ShiftRightChip.eval_inputs, Readers.ALUTypeReader.eval_immC] at immediate
     exact immediate
   have binding := Readers.ALUTypeReader.eval_opCPrev_eq_opC_of_mainConstraints
-    readerInput (offset + 37) env readerConstraints immediateInput
+    readerInput (offset + 33) env readerConstraints immediateInput
   change (({ circuit := ShiftRightChip.circuit (p := p) } :
     Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
       (({ circuit := ShiftRightChip.circuit (p := p) } :

@@ -504,21 +504,17 @@ def shiftRightEvent : AluTypeEventRec :=
     immC := 0, tsA := 13, prevTsA := 0, prevA := 0, tsB := 12, prevTsB := 0,
     tsC := 11, prevTsC := 0 }
 
-/-- The honest `"shift_right_flags"` one-hot prover hint `[is_srl, is_sra, is_srlw, is_sraw]`. -/
-def shiftRightFlagsHint (op : ℕ) : ProverHint (ZMod SP1Prime) := fun key n =>
-  match key, n with
-  | "shift_right_flags", 4 =>
-    #[#v[if op = 7 then 1 else 0, if op = 8 then 1 else 0,
-         if op = 22 then 1 else 0, if op = 23 then 1 else 0]]
-  | _, _ => #[]
+/-- Physical SRL input row, with four explicit opcode selectors. -/
+def shiftRightInputs : List (ZMod SP1Prime) :=
+  (aluTypeEventInputs shiftRightEvent).drop 1 ++ [1, 0, 0, 0]
 
 /-- **`ShiftRightChip` is satisfiable on a real SRL row**: the full constraint system holds on
 `srl x7, x5, x6` with `x5 = 0x1234`, `x6 = 4` (result `0x123`). -/
 theorem shiftright_srl_real_row_satisfiable :
     (chipOperations ShiftRightChip.Inputs ShiftRightChip.main
-      (aluTypeEventInputs shiftRightEvent)).ConstraintsHold
+      shiftRightInputs).ConstraintsHold
       (chipEnvironment ShiftRightChip.Inputs ShiftRightChip.main
-        (aluTypeEventInputs shiftRightEvent) (shiftRightFlagsHint 7)) :=
+        shiftRightInputs) :=
   constraintsHold_of_check (by native_decide)
 
 /-! ## Add / Sub / Addw / Subw (fixed-witness R-type / ALU-type rows, no hint) -/
@@ -766,7 +762,7 @@ theorem constraint_systems_nonempty :
       chipOperations DivRemChip.Inputs DivRemChip.main divRemDivuInputs,
       chipOperations ShiftLeftChip.Inputs ShiftLeftChip.main shiftLeftInputs,
       chipOperations ShiftRightChip.Inputs ShiftRightChip.main
-        (aluTypeEventInputs shiftRightEvent),
+        shiftRightInputs,
       chipOperations AddChip.Inputs AddChip.main (rTypeEventInputs addEvent),
       chipOperations SubChip.Inputs SubChip.main (rTypeEventInputs subEvent),
       chipOperations AddwChip.Inputs AddwChip.main (aluTypeEventInputs addwEvent),

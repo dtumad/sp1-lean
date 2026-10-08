@@ -632,9 +632,9 @@ theorem ShiftRightChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (ShiftRightChip.circuit (p := p))
       ShiftRightChip.rowView := by
   programExposureStart
-  refine ⟨fun input _ => input.is_real, fun input offset =>
+  refine ⟨fun input _ => input.is_real, fun input _ =>
     ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2],
-      ShiftRightChip.exposedOpcode offset,
+      ShiftRightChip.exposedOpcode input,
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
       input.adapter.op_a_0, 0, input.adapter.imm_c⟩, ?_, ?_, ?_⟩
   · intro input offset

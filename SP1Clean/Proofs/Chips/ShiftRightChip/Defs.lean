@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.Chips
+import SP1Clean.Semantics.Specs.Chips.ShiftRight
 import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
 import SP1Clean.Proofs.Chips.ShiftRightChip.Core
@@ -23,7 +23,7 @@ the `limb_result` reassembly, and the four-variant output placement are inlined 
 the generated ShiftRight oracle (`Extracted/ChipOracle/ShiftRight.lean`).
 
 `AssertSpec` / `InteractSpec` capture the structural meaning of SP1's two extracted constraint lists;
-the semantic flag-gated RV64 `srl`/`sra`/`srlw`/`sraw` `Spec` is in `FormalModel/Contracts/Chips.lean`.
+the semantic flag-gated RV64 `srl`/`sra`/`srlw`/`sraw` `Spec` is in `Semantics/Specs/Chips/ShiftRight.lean`.
 `Faithful/ShiftRightChip.lean` anchors both structural specs.
 
 `main` composes the readers + three `U16MSBOperation` gadgets + the witnessed column block + the
@@ -37,6 +37,17 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 local instance : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
+
+/-- **Assertion half** — the literal meaning of the generated ShiftRight `asserts` *own* assertZero
+list. `E14 = is_srl + is_sra` (the 64-bit-shift indicator) and `E13 = is_srlw + is_sraw` (the
+word-shift indicator) gate the two output-placement blocks; the `v_*` powers are the **inverted**
+right-shift form `2^(16 - bitShift)`. In exact upstream order this is the four flag booleans, their
+combined boolean gate, then `CoreSpec`'s remaining 53 assertions. -/
+def AssertSpec (cols : Columns (ZMod p)) : Prop :=
+  let srl := cols.is_srl; let sra := cols.is_sra; let srlw := cols.is_srlw; let sraw := cols.is_sraw
+  let sum := srl + sra + srlw + sraw
+  srl * (srl - 1) = 0 ∧ sra * (sra - 1) = 0 ∧ srlw * (srlw - 1) = 0 ∧
+    sraw * (sraw - 1) = 0 ∧ sum * (sum - 1) = 0 ∧ CoreSpec cols
 
 /-- The register-read operands the chip decomposes are 64-bit values (received facts from the offline
 memory: the writer range-checked them). These are the `rs1`/`rs2` the `Spec` shifts. Lives here (not in
@@ -69,7 +80,7 @@ def InteractSpec (cols : Columns (ZMod p)) : Prop :=
 
 The eleven consecutive witness allocations are a dangerous value for definitional equality: a
 consumer that only wants the later reader or selector-binding constraints can otherwise make Lean
-normalize the complete 37-cell bind chain.  This plain `Circuit` helper is a pure repackaging (not a
+normalize the complete 33-cell bind chain.  This plain `Circuit` helper is a pure repackaging (not a
 new AIR subcircuit), so flattening it gives exactly the former witness operations and offsets.  The
 three explicit normalization lemmas keep the helper folded until a caller deliberately asks for its
 output, length, or operation list. -/
@@ -85,7 +96,7 @@ private structure WitnessVars (F : Type) where
   higher_limb : Word (Expression F)
   limb_result : Word (Expression F)
   shift_u16 : Word (Expression F)
-  flags : Vector (Expression F) 5
+  word_imm : Vector (Expression F) 1
 
 @[circuit_norm] private def witnessPrefix (input : Var Inputs (ZMod p)) :
     Circuit (ZMod p) (WitnessVars (ZMod p)) := fun offset =>
@@ -100,38 +111,38 @@ private structure WitnessVars (F : Type) where
   let limb_result := varFromOffset (Vector · 4) (offset + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4)
   let shift_u16 :=
     varFromOffset (Vector · 4) (offset + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4)
-  let flags :=
-    varFromOffset (Vector · 5) (offset + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4)
+  let word_imm :=
+    varFromOffset (Vector · 1) (offset + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4)
   (⟨a, b_msb, srw_msb, c_bits, sra_msb_v0123, v, lower_limb, higher_limb,
-      limb_result, shift_u16, flags⟩,
-    [ .witness 4 (populateAIR input.adapter.op_b_memory.prev_value
+      limb_result, shift_u16, word_imm⟩,
+    [ .witness 4 (populateAIR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.op_b_memory.prev_value
         input.adapter.op_c_memory.prev_value[0]),
-      .witness 1 (bMsbIR input.adapter.op_b_memory.prev_value),
-      .witness 1 (srwMsbIR input.adapter.op_b_memory.prev_value
+      .witness 1 (bMsbIR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.op_b_memory.prev_value),
+      .witness 1 (srwMsbIR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.op_b_memory.prev_value
         input.adapter.op_c_memory.prev_value[0]),
       .witness 6 (ShiftLeftChip.cBitsIR input.adapter.op_c_memory.prev_value[0]),
-      .witness 1 (sraMsbV0123IR input.adapter.op_b_memory.prev_value
+      .witness 1 (sraMsbV0123IR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.op_b_memory.prev_value
         input.adapter.op_c_memory.prev_value[0]),
       .witness 3 (vPowersInvIR input.adapter.op_c_memory.prev_value[0]),
-      .witness 4 (lowerLimbIR input.adapter.op_b_memory.prev_value
+      .witness 4 (lowerLimbIR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.op_b_memory.prev_value
         input.adapter.op_c_memory.prev_value[0]),
-      .witness 4 (higherLimbIR input.adapter.op_b_memory.prev_value
+      .witness 4 (higherLimbIR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.op_b_memory.prev_value
         input.adapter.op_c_memory.prev_value[0]),
-      .witness 4 (limbResultIR input.adapter.op_b_memory.prev_value
+      .witness 4 (limbResultIR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.op_b_memory.prev_value
         input.adapter.op_c_memory.prev_value[0]),
-      .witness 4 (shiftU16IR input.adapter.op_c_memory.prev_value[0]),
-      .witness 5 (flagsIR input.adapter.imm_c) ])
+      .witness 4 (shiftU16IR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.op_c_memory.prev_value[0]),
+      .witness 1 (wordImmIR #v[input.isSrl, input.isSra, input.isSrlw, input.isSraw] input.adapter.imm_c) ])
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem witnessListSubcircuitsConsistent
     (offset : ℕ) (c0 : WitgenIR (ZMod p) 4) (c1 c2 : WitgenIR (ZMod p) 1)
     (c3 : WitgenIR (ZMod p) 6) (c4 : WitgenIR (ZMod p) 1)
     (c5 : WitgenIR (ZMod p) 3) (c6 c7 c8 c9 : WitgenIR (ZMod p) 4)
-    (c10 : WitgenIR (ZMod p) 5) :
+    (c10 : WitgenIR (ZMod p) 1) :
     Operations.SubcircuitsConsistent offset
       [.witness 4 c0, .witness 1 c1, .witness 1 c2, .witness 6 c3,
        .witness 1 c4, .witness 3 c5, .witness 4 c6, .witness 4 c7,
-       .witness 4 c8, .witness 4 c9, .witness 5 c10] := by
+       .witness 4 c8, .witness 4 c9, .witness 1 c10] := by
   simp only [Operations.SubcircuitsConsistent, Operations.forAll, true_and]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -139,11 +150,11 @@ private theorem witnessListChannelsLawful
     (c0 : WitgenIR (ZMod p) 4) (c1 c2 : WitgenIR (ZMod p) 1)
     (c3 : WitgenIR (ZMod p) 6) (c4 : WitgenIR (ZMod p) 1)
     (c5 : WitgenIR (ZMod p) 3) (c6 c7 c8 c9 : WitgenIR (ZMod p) 4)
-    (c10 : WitgenIR (ZMod p) 5) :
+    (c10 : WitgenIR (ZMod p) 1) :
     Operations.ChannelsLawful
       [.witness 4 c0, .witness 1 c1, .witness 1 c2, .witness 6 c3,
        .witness 1 c4, .witness 3 c5, .witness 4 c6, .witness 4 c7,
-       .witness 4 c8, .witness 4 c9, .witness 5 c10] [] := by
+       .witness 4 c8, .witness 4 c9, .witness 1 c10] [] := by
   simp only [Operations.ChannelsLawful,
     Operations.subcircuitChannelsWithGuarantees_witness,
     Operations.subcircuitChannelsWithGuarantees_nil, List.nil_subset, true_and,
@@ -168,7 +179,7 @@ private theorem witnessPrefixChannelsLawful (input : Var Inputs (ZMod p)) (offse
 private instance witnessPrefixExplicit (input : Var Inputs (ZMod p)) :
     ExplicitCircuit (witnessPrefix input) where
   output offset := (witnessPrefix input offset).1
-  localLength _ := 37
+  localLength _ := 33
   operations offset := (witnessPrefix input offset).2
   output_eq _ := rfl
   localLength_eq _ := by rfl
@@ -182,10 +193,10 @@ private instance witnessPrefixExplicit (input : Var Inputs (ZMod p)) :
     (witnesses : WitnessVars (ZMod p)) : Var Readers.ALUTypeReader.Inputs (ZMod p) :=
   ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
     input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-    witnesses.flags[0] * (7 : Expression (ZMod p)) +
-      witnesses.flags[1] * (8 : Expression (ZMod p)) +
-      witnesses.flags[2] * (22 : Expression (ZMod p)) +
-      witnesses.flags[3] * (23 : Expression (ZMod p)),
+    input.isSrl * (7 : Expression (ZMod p)) +
+      input.isSra * (8 : Expression (ZMod p)) +
+      input.isSrlw * (22 : Expression (ZMod p)) +
+      input.isSraw * (23 : Expression (ZMod p)),
     witnesses.a[0], witnesses.a[1], witnesses.a[2], witnesses.a[3]⟩
 
 /-- The post-witness circuit body.  Naming this pure composition keeps the large assertion tail
@@ -202,9 +213,8 @@ folded while structural consumers select the early reader boundary. -/
   let higher_limb := witnesses.higher_limb
   let limb_result := witnesses.limb_result
   let shift_u16 := witnesses.shift_u16
-  let flags := witnesses.flags
-  let is_srl := flags[0]; let is_sra := flags[1]; let is_srlw := flags[2]
-  let is_sraw := flags[3]; let is_w_imm := flags[4]
+  let is_srl := input.isSrl; let is_sra := input.isSra; let is_srlw := input.isSrlw
+  let is_sraw := input.isSraw; let is_w_imm := witnesses.word_imm[0]
   assertion U16MSBOperation.circuit ⟨input.adapter.op_b_memory.prev_value[3], ⟨b_msb[0]⟩, is_sra⟩
   assertion U16MSBOperation.circuit ⟨input.adapter.op_b_memory.prev_value[1], ⟨b_msb[0]⟩, is_sraw⟩
   assertion U16MSBOperation.circuit ⟨a[1], ⟨srw_msb[0]⟩, is_srlw + is_sraw⟩
@@ -224,15 +234,6 @@ folded while structural consumers select the early reader boundary. -/
   -- selector is visible to `ConstraintsHold.Shallow` as a chip-owned constraint (the `VmTables`
   -- re-base that motivated this was investigated and deferred — roadmap W11).
   assertZero (input.is_real * (input.is_real - 1))
-  -- SP1 has **no** `is_real` column: `is_real` *is* the variant-flag sum (`sr/mod.rs:335`). Our encoding
-  -- carries `is_real` as an `Inputs` field, so this assert is the Lean-side glue identifying the two —
-  -- exactly `ShiftLeftChip.main`'s `is_real - (is_sll + is_sllw) === 0`. It lets the `RegisterWrite`
-  -- write push (composed at the flag sum) inherit the `is_real`-gated `CPUState` clock byte bounds, so
-  -- the memory channel's `MemoryMsg.ClkBound` guarantee is derived in-circuit rather than assumed.
-  -- This is parent glue rather than an independent proof boundary, so keep it as a shallow inline
-  -- assertion. It allocates no witness cell (`localLength` is unchanged at 37) and lives outside
-  -- `AssertSpec` (which mirrors only the extracted `Columns.asserts` list over committed columns).
-  assertZero (input.is_real - (is_srl + is_sra + is_srlw + is_sraw))
   -- The chip-local assertions retain the exact Rust order.  The four flag booleans and combined
   -- boolean gate stay at parent level: the latter must be visible to `ConstraintsHold.Shallow` to
   -- discharge the off-gate byte requirements.  The remaining 53 assertions form a genuine folded
@@ -246,7 +247,6 @@ folded while structural consumers select the early reader boundary. -/
   is_srlw * (is_srlw - 1) === 0
   is_sraw * (is_sraw - 1) === 0
   let gate := is_srl + is_sra + is_srlw + is_sraw
-  assertZero (gate * (gate - 1))
   assertion ShiftRightCore.circuit cols
   -- The byte-range pulls (`InteractSpec`), gated by `gate = is_srl+is_sra+is_srlw+is_sraw`.
   let b0 := c_bits[0]; let b1 := c_bits[1]; let b2 := c_bits[2]
@@ -367,19 +367,19 @@ private theorem aluReader_mem_postWitness (input : Var Inputs (ZMod p))
     Operations.subcircuits_subcircuit, Operations.subcircuits_nil, List.mem_singleton,
     circuit_norm, Nat.add_zero]
 
-/-- The exact ALU-reader input assembled after the folded 37-cell witness prefix.  This is a
+/-- The exact ALU-reader input assembled after the folded 33-cell witness prefix.  This is a
 structural chip interface used by grounding proofs; it does not duplicate the reader's semantics. -/
 def aluReaderInput (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Var Readers.ALUTypeReader.Inputs (ZMod p) :=
   ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
     input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-    var ⟨offset + 32⟩ * 7 + var ⟨offset + 33⟩ * 8 +
-      var ⟨offset + 34⟩ * 22 + var ⟨offset + 35⟩ * 23,
+    input.isSrl * 7 + input.isSra * 8 +
+      input.isSrlw * 22 + input.isSraw * 23,
     var ⟨offset⟩, var ⟨offset + 1⟩, var ⟨offset + 2⟩, var ⟨offset + 3⟩⟩
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem witnessPrefixLocalLength_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (witnessPrefix input).localLength offset = 37 := by
+    (witnessPrefix input).localLength offset = 33 := by
   rfl
 
 omit [Fact (2 ^ 17 < p)] in
@@ -423,19 +423,19 @@ private theorem postWitness_constraints_decompose
           (List.map (Expression.eval env)
             ((U16MSBOperation.main
               ⟨input.adapter.op_b_memory.prev_value[3],
-                ⟨witnesses.b_msb[0]⟩, witnesses.flags[1]⟩).operations
+                ⟨witnesses.b_msb[0]⟩, input.isSra⟩).operations
                   offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((U16MSBOperation.main
               ⟨input.adapter.op_b_memory.prev_value[1],
-                ⟨witnesses.b_msb[0]⟩, witnesses.flags[3]⟩).operations
+                ⟨witnesses.b_msb[0]⟩, input.isSraw⟩).operations
                   offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((U16MSBOperation.main
               ⟨witnesses.a[1], ⟨witnesses.srw_msb[0]⟩,
-                witnesses.flags[2] + witnesses.flags[3]⟩).operations
+                input.isSrlw + input.isSraw⟩).operations
                   offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
@@ -443,36 +443,26 @@ private theorem postWitness_constraints_decompose
               (postWitnessReaderInput input witnesses)).operations offset).constraints) ∧
        (ProvableStruct.eval env input).is_real *
           ((ProvableStruct.eval env input).is_real - 1) = 0 ∧
-       (ProvableStruct.eval env input).is_real -
-          (Expression.eval env witnesses.flags[0] +
-            Expression.eval env witnesses.flags[1] +
-            Expression.eval env witnesses.flags[2] +
-            Expression.eval env witnesses.flags[3]) = 0 ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (witnesses.flags[0] * (witnesses.flags[0] - 1),
+              (input.isSrl * (input.isSrl - 1),
                 0)).operations offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (witnesses.flags[1] * (witnesses.flags[1] - 1),
+              (input.isSra * (input.isSra - 1),
                 0)).operations offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (witnesses.flags[2] * (witnesses.flags[2] - 1),
+              (input.isSrlw * (input.isSrlw - 1),
                 0)).operations offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (witnesses.flags[3] * (witnesses.flags[3] - 1),
+              (input.isSraw * (input.isSraw - 1),
                 0)).operations offset).constraints) ∧
-       Expression.eval env
-          ((witnesses.flags[0] + witnesses.flags[1] +
-              witnesses.flags[2] + witnesses.flags[3]) *
-            (witnesses.flags[0] + witnesses.flags[1] +
-              witnesses.flags[2] + witnesses.flags[3] - 1)) = 0 ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((ShiftRightCore.main
@@ -485,30 +475,6 @@ private theorem postWitness_constraints_decompose
     Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
     ShiftRightCore.circuit]
 
-omit [Fact (2 ^ 17 < p)] in
-private theorem witnessPrefix_flag0 (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((witnessPrefix input).output offset).flags[0] =
-      var { index := offset + 32 } := by
-  rfl
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem witnessPrefix_flag1 (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((witnessPrefix input).output offset).flags[1] =
-      var { index := offset + 33 } := by
-  rfl
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem witnessPrefix_flag2 (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((witnessPrefix input).output offset).flags[2] =
-      var { index := offset + 34 } := by
-  rfl
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem witnessPrefix_flag3 (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((witnessPrefix input).output offset).flags[3] =
-      var { index := offset + 35 } := by
-  rfl
-
 private theorem cpuCircuitLocalLength_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (Readers.CPUState.circuit
       ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
@@ -517,7 +483,7 @@ private theorem cpuCircuitLocalLength_eq (input : Var Inputs (ZMod p)) (offset :
 
 /-- Channel projections of the whole chip can discard the witness-only prefix before inspecting
 the post-witness body.  This is the structural normalization boundary for consumers that must not
-force the 37-cell witness generator chain while merely classifying interactions. -/
+force the 33-cell witness generator chain while merely classifying interactions. -/
 theorem interactionsWith_main_decompose (input : Var Inputs (ZMod p)) (offset : ℕ)
     (channel : RawChannel (ZMod p)) :
     ((main input).operations offset).interactionsWith channel =
@@ -525,7 +491,7 @@ theorem interactionsWith_main_decompose (input : Var Inputs (ZMod p)) (offset : 
         ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
           8, input.is_real⟩).operations offset).interactionsWith channel ++
       ((postWitness input ((witnessPrefix input).output offset)).operations
-        (offset + 37)).interactionsWith channel := by
+        (offset + 33)).interactionsWith channel := by
   unfold main
   rw [Circuit.bind_operations_eq, Operations.interactionsWith_append]
   simp only [cpuCircuitLocalLength_eq, Nat.add_zero]
@@ -600,14 +566,10 @@ theorem interactionsWith_main_state_exposed_eq
     Vector.getElem_mk, List.getElem_toArray,
     List.getElem_cons_zero, List.getElem_cons_succ]
 
-/-- The Program-fetch opcode committed by the witnessed variant flags (cells `offset+32..35`). -/
-def exposedOpcode (offset : ℕ) : Expression (ZMod p) :=
-  var ⟨offset + 32⟩ * 7 + var ⟨offset + 33⟩ * 8 +
-    var ⟨offset + 34⟩ * 22 + var ⟨offset + 35⟩ * 23
-
-/-- The `RegisterWrite` gate committed by the witnessed variant flags (cells `offset+32..35`). -/
-def exposedWriteGate (offset : ℕ) : Expression (ZMod p) :=
-  var ⟨offset + 32⟩ + var ⟨offset + 33⟩ + var ⟨offset + 34⟩ + var ⟨offset + 35⟩
+/-- The Program-fetch opcode selected by the committed inputs. -/
+def exposedOpcode (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
+  input.isSrl * 7 + input.isSra * 8 +
+    input.isSrlw * 22 + input.isSraw * 23
 
 /-- Exact Byte-channel list emitted by ShiftRight's native composition. -/
 def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -622,10 +584,10 @@ def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Vector.mapRange 4 fun i => var { index := offset + 20 + i }
   let bMsb : Expression (ZMod p) := var { index := offset + 4 }
   let srwMsb : Expression (ZMod p) := var { index := offset + 5 }
-  let isSra : Expression (ZMod p) := var { index := offset + 33 }
-  let isSrlw : Expression (ZMod p) := var { index := offset + 34 }
-  let isSraw : Expression (ZMod p) := var { index := offset + 35 }
-  let gate : Expression (ZMod p) := exposedWriteGate offset
+  let isSra : Expression (ZMod p) := input.isSra
+  let isSrlw : Expression (ZMod p) := input.isSrlw
+  let isSraw : Expression (ZMod p) := input.isSraw
+  let gate : Expression (ZMod p) := input.is_real
   let clkLow : Expression (ZMod p) :=
     input.state.clk_0_16 + input.state.clk_16_24 * 65536
   let bitShift : Expression (ZMod p) :=
@@ -855,8 +817,8 @@ private def shiftRangeByteInteractionsRaw
     (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) :
     List (AbstractInteraction (ZMod p)) :=
   let gate : Expression (ZMod p) :=
-    witnesses.flags[0] + witnesses.flags[1] +
-      witnesses.flags[2] + witnesses.flags[3]
+    input.isSrl + input.isSra +
+      input.isSrlw + input.isSraw
   let bitShift : Expression (ZMod p) :=
     witnesses.c_bits[0] * (1 : Expression (ZMod p)) +
       witnesses.c_bits[1] * (2 : Expression (ZMod p)) +
@@ -894,13 +856,13 @@ private theorem postWitness_byteInteractions_eq
         byteChannel.toRaw =
       u16MsbByteInteractionsRaw
           ⟨input.adapter.op_b_memory.prev_value[3],
-            ⟨witnesses.b_msb[0]⟩, witnesses.flags[1]⟩ ++
+            ⟨witnesses.b_msb[0]⟩, input.isSra⟩ ++
         u16MsbByteInteractionsRaw
           ⟨input.adapter.op_b_memory.prev_value[1],
-            ⟨witnesses.b_msb[0]⟩, witnesses.flags[3]⟩ ++
+            ⟨witnesses.b_msb[0]⟩, input.isSraw⟩ ++
         u16MsbByteInteractionsRaw
           ⟨witnesses.a[1], ⟨witnesses.srw_msb[0]⟩,
-            witnesses.flags[2] + witnesses.flags[3]⟩ ++
+            input.isSrlw + input.isSraw⟩ ++
         aluTypeByteInteractionsRaw
           (postWitnessReaderInput input witnesses) ++
         shiftRangeByteInteractionsRaw input witnesses := by
@@ -939,7 +901,7 @@ theorem interactionsWith_main_byte_eq
   simp only [cpuByteInteractionsRaw, u16MsbByteInteractionsRaw,
     aluTypeByteInteractionsRaw, shiftRangeByteInteractionsRaw,
     exposedByteInteractions, postWitnessReaderInput, witnessPrefix,
-    Circuit.output, exposedWriteGate,
+    Circuit.output, Inputs.is_real,
     ProvableType.varFromOffset_fields, Vector.getElem_mapRange,
     List.map_cons, List.map_nil, List.cons_append,
     List.nil_append, Nat.reduceAdd, Nat.add_assoc]
@@ -963,13 +925,13 @@ def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     memoryChannel.pushedIf (input.is_real - input.adapter.imm_c)
       ⟨input.state.clk_high, input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 2,
        input.adapter.op_c[0], 0, 0, input.adapter.op_c_memory.prev_value⟩,
-    memoryChannel.pushedIf (exposedWriteGate offset)
+    memoryChannel.pushedIf (input.is_real)
       ⟨input.state.clk_high, input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4,
        input.adapter.op_a, 0, 0, Vector.mapRange 4 fun i => var { index := offset + i }⟩ ]
 
 private theorem postWitness_memoryInteractions_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((postWitness input ((witnessPrefix input).output offset)).operations
-        (offset + 37)).interactionsWith memoryChannel.toRaw =
+        (offset + 33)).interactionsWith memoryChannel.toRaw =
       (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw := by
   unfold postWitness
   simp only [Circuit.bind_operations_eq, Circuit.pure_operations_eq, Circuit.operations,
@@ -992,7 +954,7 @@ private theorem postWitness_memoryInteractions_eq (input : Var Inputs (ZMod p)) 
     Channels.byteChannel_eq_memoryChannel_false, if_false, List.append_nil,
     Soundness.aluTypeMemoryInteractions, Soundness.registerWriteMemoryInteractions,
     List.cons_append, List.nil_append]
-  simp only [exposedMemoryInteractions, exposedWriteGate, witnessPrefix, Circuit.output,
+  simp only [exposedMemoryInteractions, Inputs.is_real, witnessPrefix, Circuit.output,
     Vector.mapRange, List.map_cons, List.map_nil]
   rfl
 
@@ -1020,17 +982,17 @@ theorem interactionsWith_main_memory_eq (input : Var Inputs (ZMod p)) (offset : 
   rw [cpuNil, List.nil_append]
 
 /-- The exact Program fetch emitted by ShiftRight's ALU adapter. -/
-def exposedProgramInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
+def exposedProgramInteractions (input : Var Inputs (ZMod p)) :
     List (ChannelInteraction (programChannel (p := p))) :=
   [ programChannel.pulledIf input.is_real
-      ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], exposedOpcode offset,
+      ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], exposedOpcode input,
        input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
        input.adapter.op_a_0, 0, input.adapter.imm_c⟩ ]
 
 private theorem postWitness_programInteractions_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((postWitness input ((witnessPrefix input).output offset)).operations
-        (offset + 37)).interactionsWith programChannel.toRaw =
-      (exposedProgramInteractions input offset).map ChannelInteraction.toRaw := by
+        (offset + 33)).interactionsWith programChannel.toRaw =
+      (exposedProgramInteractions input).map ChannelInteraction.toRaw := by
   unfold postWitness
   simp only [Circuit.bind_operations_eq, Circuit.pure_operations_eq, Circuit.operations,
     subcircuitWithAssertion, assertion, assertZero, HasAssertEq.assert_eq,
@@ -1055,12 +1017,11 @@ private theorem postWitness_programInteractions_eq (input : Var Inputs (ZMod p))
     Soundness.aluTypeProgramMessage, List.nil_append]
   simp only [postWitnessReaderInput, exposedProgramInteractions, exposedOpcode,
     witnessPrefix, Circuit.output, List.map_cons, List.map_nil]
-  rfl
 
 /-- The exact Program interaction of the whole folded ShiftRight chip. -/
 theorem interactionsWith_main_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith programChannel.toRaw =
-      (exposedProgramInteractions input offset).map ChannelInteraction.toRaw := by
+      (exposedProgramInteractions input).map ChannelInteraction.toRaw := by
   rw [interactionsWith_main_decompose, postWitness_programInteractions_eq]
   have cpuNil :
       ((Readers.CPUState.circuit
@@ -1082,69 +1043,57 @@ theorem interactionsWith_main_program_eq (input : Var Inputs (ZMod p)) (offset :
 
 /-- The composed ALU reader occurs at the exact post-witness offset in the whole chip. -/
 theorem aluReader_mem_subcircuits (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ⟨offset + 37, Readers.ALUTypeReader.circuit.toSubcircuit (offset + 37)
+    ⟨offset + 33, Readers.ALUTypeReader.circuit.toSubcircuit (offset + 33)
       (aluReaderInput input offset)⟩ ∈ ((main input).operations offset).subcircuits := by
   unfold main
   apply subcircuitMem_bind_right
   apply subcircuitMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
     postWitnessReaderInput_witnessPrefixOutput, Nat.add_zero] using
-    aluReader_mem_postWitness input ((witnessPrefix input).output offset) (offset + 37)
+    aluReader_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
 
-private theorem selectorLink_mem_postWitness
+private theorem srlBool_mem_postWitness
     (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
-    input.is_real -
-        (witnesses.flags[0] + witnesses.flags[1] +
-          witnesses.flags[2] + witnesses.flags[3]) ∈
+    input.isSrl * (input.isSrl - 1) - 0 ∈
       ((postWitness input witnesses).operations offset).constraints := by
   unfold postWitness
   iterate 6 apply constraintMem_bind_right
   apply constraintMem_bind_left
-  simp only [assertZero, Circuit.operations, Operations.constraints_assert,
-    Operations.constraints_nil, List.mem_singleton]
+  exact equalityAssertionConstraint_mem
+    (input.isSrl * (input.isSrl - 1))
+    (0 : Expression (ZMod p)) _
 
-private theorem srlBool_mem_postWitness
+private theorem sraBool_mem_postWitness
     (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
-    witnesses.flags[0] * (witnesses.flags[0] - 1) - 0 ∈
+    input.isSra * (input.isSra - 1) - 0 ∈
       ((postWitness input witnesses).operations offset).constraints := by
   unfold postWitness
   iterate 7 apply constraintMem_bind_right
   apply constraintMem_bind_left
   exact equalityAssertionConstraint_mem
-    (witnesses.flags[0] * (witnesses.flags[0] - 1))
+    (input.isSra * (input.isSra - 1))
     (0 : Expression (ZMod p)) _
 
-private theorem sraBool_mem_postWitness
+private theorem srlwBool_mem_postWitness
     (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
-    witnesses.flags[1] * (witnesses.flags[1] - 1) - 0 ∈
+    input.isSrlw * (input.isSrlw - 1) - 0 ∈
       ((postWitness input witnesses).operations offset).constraints := by
   unfold postWitness
   iterate 8 apply constraintMem_bind_right
   apply constraintMem_bind_left
   exact equalityAssertionConstraint_mem
-    (witnesses.flags[1] * (witnesses.flags[1] - 1))
+    (input.isSrlw * (input.isSrlw - 1))
     (0 : Expression (ZMod p)) _
 
-private theorem srlwBool_mem_postWitness
+private theorem srawBool_mem_postWitness
     (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
-    witnesses.flags[2] * (witnesses.flags[2] - 1) - 0 ∈
+    input.isSraw * (input.isSraw - 1) - 0 ∈
       ((postWitness input witnesses).operations offset).constraints := by
   unfold postWitness
   iterate 9 apply constraintMem_bind_right
   apply constraintMem_bind_left
   exact equalityAssertionConstraint_mem
-    (witnesses.flags[2] * (witnesses.flags[2] - 1))
-    (0 : Expression (ZMod p)) _
-
-private theorem srawBool_mem_postWitness
-    (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
-    witnesses.flags[3] * (witnesses.flags[3] - 1) - 0 ∈
-      ((postWitness input witnesses).operations offset).constraints := by
-  unfold postWitness
-  iterate 10 apply constraintMem_bind_right
-  apply constraintMem_bind_left
-  exact equalityAssertionConstraint_mem
-    (witnesses.flags[3] * (witnesses.flags[3] - 1))
+    (input.isSraw * (input.isSraw - 1))
     (0 : Expression (ZMod p)) _
 
 private theorem core_mem_postWitness
@@ -1153,9 +1102,8 @@ private theorem core_mem_postWitness
       ((postWitness input witnesses).output offset)⟩ ∈
       ((postWitness input witnesses).operations offset).subcircuits := by
   unfold postWitness
-  iterate 7 apply subcircuitMem_bind_right
+  iterate 6 apply subcircuitMem_bind_right
   iterate 4 apply subcircuitMem_bind_right_zero (hlen := equalityAssertionLocalLength_eq _ _ _)
-  apply subcircuitMem_bind_right_zero (hlen := by rfl)
   apply subcircuitMem_bind_left
   simp only [assertion, Circuit.operations, Operations.subcircuits_subcircuit,
     Operations.subcircuits_nil, List.mem_singleton, circuit_norm, Nat.add_zero]
@@ -1163,7 +1111,7 @@ private theorem core_mem_postWitness
 /-- The exact row passed to the folded arithmetic core after the witness prefix. -/
 def coreInput (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Var Columns (ZMod p) :=
-  (postWitness input ((witnessPrefix input).output offset)).output (offset + 37)
+  (postWitness input ((witnessPrefix input).output offset)).output (offset + 33)
 
 @[circuit_norm] theorem coreInput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     coreInput input offset =
@@ -1178,9 +1126,9 @@ def coreInput (input : Var Inputs (ZMod p)) (offset : ℕ) :
         varFromOffset (Vector · 4) (offset + 20),
         varFromOffset (Vector · 4) (offset + 24),
         varFromOffset (Vector · 4) (offset + 28),
-        var { index := offset + 32 }, var { index := offset + 33 },
-        var { index := offset + 34 }, var { index := offset + 35 },
-        var { index := offset + 36 }⟩ : Var Columns (ZMod p)) := rfl
+        input.isSrl, input.isSra,
+        input.isSrlw, input.isSraw,
+        var { index := offset + 32 }⟩ : Var Columns (ZMod p)) := rfl
 
 private theorem constraints_main_bind_decompose
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -1190,7 +1138,7 @@ private theorem constraints_main_bind_decompose
           #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
           8, input.is_real⟩).operations offset).constraints ++
       ((postWitness input ((witnessPrefix input).output offset)).operations
-        (offset + 37)).constraints := by
+        (offset + 33)).constraints := by
   unfold main
   rw [Circuit.bind_operations_eq, Operations.constraints_append]
   simp only [cpuCircuitLocalLength_eq, Nat.add_zero]
@@ -1203,7 +1151,7 @@ private theorem constraints_main_bind_decompose
   rw [witnessConstraints, List.nil_append,
     witnessPrefixLocalLength_eq]
 
-/-- Exact folded decomposition of every native ShiftRight assertion. The 37-cell witness generator
+/-- Exact folded decomposition of every native ShiftRight assertion. The 33-cell witness generator
 stays opaque while the canonical readers, three MSB checks, selector gates, and folded 53-assert
 arithmetic tail remain visible as complete blocks. -/
 theorem constraints_decompose
@@ -1223,72 +1171,59 @@ theorem constraints_decompose
             ((U16MSBOperation.main
               ⟨input.adapter.op_b_memory.prev_value[3],
                 ⟨var { index := offset + 4 }⟩,
-                var { index := offset + 33 }⟩).operations
-                  (offset + 37)).constraints) ∧
+                input.isSra⟩).operations
+                  (offset + 33)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((U16MSBOperation.main
               ⟨input.adapter.op_b_memory.prev_value[1],
                 ⟨var { index := offset + 4 }⟩,
-                var { index := offset + 35 }⟩).operations
-                  (offset + 37)).constraints) ∧
+                input.isSraw⟩).operations
+                  (offset + 33)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((U16MSBOperation.main
               ⟨(varFromOffset (Vector · 4) offset)[1],
                 ⟨var { index := offset + 5 }⟩,
-                var { index := offset + 34 } +
-                  var { index := offset + 35 }⟩).operations
-                  (offset + 37)).constraints) ∧
+                input.isSrlw +
+                  input.isSraw⟩).operations
+                  (offset + 33)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Readers.ALUTypeReader.main
               (aluReaderInput input offset)).operations
-                (offset + 37)).constraints) ∧
+                (offset + 33)).constraints) ∧
        (ProvableStruct.eval env input).is_real *
           ((ProvableStruct.eval env input).is_real - 1) = 0 ∧
-       (ProvableStruct.eval env input).is_real -
-          (Expression.eval env (var { index := offset + 32 }) +
-            Expression.eval env (var { index := offset + 33 }) +
-            Expression.eval env (var { index := offset + 34 }) +
-            Expression.eval env (var { index := offset + 35 })) = 0 ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (var { index := offset + 32 } *
-                  (var { index := offset + 32 } - 1),
-                0)).operations (offset + 37)).constraints) ∧
+              (input.isSrl *
+                  (input.isSrl - 1),
+                0)).operations (offset + 33)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (var { index := offset + 33 } *
-                  (var { index := offset + 33 } - 1),
-                0)).operations (offset + 37)).constraints) ∧
+              (input.isSra *
+                  (input.isSra - 1),
+                0)).operations (offset + 33)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (var { index := offset + 34 } *
-                  (var { index := offset + 34 } - 1),
-                0)).operations (offset + 37)).constraints) ∧
+              (input.isSrlw *
+                  (input.isSrlw - 1),
+                0)).operations (offset + 33)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (var { index := offset + 35 } *
-                  (var { index := offset + 35 } - 1),
-                0)).operations (offset + 37)).constraints) ∧
-       (Expression.eval env (var { index := offset + 32 }) +
-          Expression.eval env (var { index := offset + 33 }) +
-          Expression.eval env (var { index := offset + 34 }) +
-          Expression.eval env (var { index := offset + 35 })) *
-            (Expression.eval env (var { index := offset + 32 }) +
-              Expression.eval env (var { index := offset + 33 }) +
-              Expression.eval env (var { index := offset + 34 }) +
-              Expression.eval env (var { index := offset + 35 }) - 1) = 0 ∧
+              (input.isSraw *
+                  (input.isSraw - 1),
+                0)).operations (offset + 33)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((ShiftRightCore.main
               (coreInput input offset)).operations
-                (offset + 37)).constraints)) := by
+                (offset + 33)).constraints)) := by
   rw [constraints_main_bind_decompose]
   simp only [List.map_append, List.forall_append,
     Circuit.operations, subcircuitWithAssertion,
@@ -1299,71 +1234,56 @@ theorem constraints_decompose
   simp only [witnessPrefix, Circuit.output, aluReaderInput,
     coreInput, Readers.CPUState.circuit,
     ProvableType.varFromOffset_fields, Vector.getElem_mapRange,
-    eval_sub, Expression.eval,
     Nat.add_assoc, Nat.reduceAdd]
-
-/-- The Lean-side `is_real`/variant-sum glue is retained in the whole chip. -/
-theorem selectorLink_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    input.is_real -
-        (var { index := offset + 32 } + var { index := offset + 33 } +
-          var { index := offset + 34 } + var { index := offset + 35 }) ∈
-      ((main input).operations offset).constraints := by
-  unfold main
-  apply constraintMem_bind_right
-  apply constraintMem_bind_right
-  simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
-    Nat.add_zero, witnessPrefix_flag0, witnessPrefix_flag1,
-    witnessPrefix_flag2, witnessPrefix_flag3] using
-    selectorLink_mem_postWitness input ((witnessPrefix input).output offset) (offset + 37)
 
 /-- The `is_srl` boolean assertion is retained at the post-witness offset. -/
 theorem srlBool_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 32 } * (var { index := offset + 32 } - 1) - 0 ∈
+    input.isSrl * (input.isSrl - 1) - 0 ∈
       ((main input).operations offset).constraints := by
   unfold main
   apply constraintMem_bind_right
   apply constraintMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
-    Nat.add_zero, witnessPrefix_flag0] using
-    srlBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 37)
+    Nat.add_zero] using
+    srlBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
 
 /-- The `is_sra` boolean assertion is retained at the post-witness offset. -/
 theorem sraBool_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 33 } * (var { index := offset + 33 } - 1) - 0 ∈
+    input.isSra * (input.isSra - 1) - 0 ∈
       ((main input).operations offset).constraints := by
   unfold main
   apply constraintMem_bind_right
   apply constraintMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
-    Nat.add_zero, witnessPrefix_flag1] using
-    sraBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 37)
+    Nat.add_zero] using
+    sraBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
 
 /-- The `is_srlw` boolean assertion is retained at the post-witness offset. -/
 theorem srlwBool_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 34 } * (var { index := offset + 34 } - 1) - 0 ∈
+    input.isSrlw * (input.isSrlw - 1) - 0 ∈
       ((main input).operations offset).constraints := by
   unfold main
   apply constraintMem_bind_right
   apply constraintMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
-    Nat.add_zero, witnessPrefix_flag2] using
-    srlwBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 37)
+    Nat.add_zero] using
+    srlwBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
 
 /-- The `is_sraw` boolean assertion is retained at the post-witness offset. -/
 theorem srawBool_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 35 } * (var { index := offset + 35 } - 1) - 0 ∈
+    input.isSraw * (input.isSraw - 1) - 0 ∈
       ((main input).operations offset).constraints := by
   unfold main
   apply constraintMem_bind_right
   apply constraintMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
-    Nat.add_zero, witnessPrefix_flag3] using
-    srawBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 37)
+    Nat.add_zero] using
+    srawBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
 
 /-- The folded arithmetic core is retained at the post-witness offset. -/
 theorem core_mem_subcircuits (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ⟨offset + 37,
-      ShiftRightCore.circuit.toSubcircuit (offset + 37)
+    ⟨offset + 33,
+      ShiftRightCore.circuit.toSubcircuit (offset + 33)
         (coreInput input offset)⟩ ∈
       ((main input).operations offset).subcircuits := by
   unfold main
@@ -1371,7 +1291,7 @@ theorem core_mem_subcircuits (input : Var Inputs (ZMod p)) (offset : ℕ) :
   apply subcircuitMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
     coreInput, Nat.add_zero] using
-    core_mem_postWitness input ((witnessPrefix input).output offset) (offset + 37)
+    core_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
 
 @[implicit_reducible] private def derivedElaborated :
     ElaboratedCircuit (ZMod p) Inputs Columns main := by
@@ -1401,11 +1321,11 @@ set_option linter.unusedSectionVars false in
 -- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
 -- post-order lemma can see it; a pre-order lemma fires on the public form first.
 @[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
-    (elaborated (p := p)).localLength x = 37 := rfl
+    (elaborated (p := p)).localLength x = 33 := rfl
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
-    (derivedElaborated (p := p)).localLength x = 37 := rfl
+    (derivedElaborated (p := p)).localLength x = 33 := rfl
 
 /-- The completed ShiftRight row, exposed without unfolding the folded witness circuit. -/
 @[circuit_norm ↓] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -1421,9 +1341,9 @@ set_option linter.unusedSectionVars false in
         varFromOffset (Vector · 4) (offset + 20),
         varFromOffset (Vector · 4) (offset + 24),
         varFromOffset (Vector · 4) (offset + 28),
-        var { index := offset + 32 }, var { index := offset + 33 },
-        var { index := offset + 34 }, var { index := offset + 35 },
-        var { index := offset + 36 }⟩ : Var Columns (ZMod p)) := rfl
+        input.isSrl, input.isSra,
+        input.isSrlw, input.isSraw,
+        var { index := offset + 32 }⟩ : Var Columns (ZMod p)) := rfl
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma derivedOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -1439,17 +1359,9 @@ set_option linter.unusedSectionVars false in
         varFromOffset (Vector · 4) (offset + 20),
         varFromOffset (Vector · 4) (offset + 24),
         varFromOffset (Vector · 4) (offset + 28),
-        var { index := offset + 32 }, var { index := offset + 33 },
-        var { index := offset + 34 }, var { index := offset + 35 },
-        var { index := offset + 36 }⟩ : Var Columns (ZMod p)) := rfl
-
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    Eval.eval env input =
-      ({ is_real := Eval.eval env input.is_real, state := Eval.eval env input.state,
-         adapter := Eval.eval env input.adapter } : Inputs F) := by
-  rw [ProvableStruct.eval_eq_eval]
-  rfl
+        input.isSrl, input.isSra,
+        input.isSrlw, input.isSraw,
+        var { index := offset + 32 }⟩ : Var Columns (ZMod p)) := rfl
 
 /-! ### Operand projections, in `circuit_norm`'s own orientation (the `AddChip/Defs.lean`
 pattern) — the `ComputableWitnesses` proof projects the struct-level input agreement onto these. -/
@@ -1477,35 +1389,10 @@ pattern) — the `ComputableWitnesses` proof projects the struct-level input agr
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.ALUTypeReader.eval_cols, CircuitType.eval_expr]
 
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Columns (Expression F)) :
-    Eval.eval env cols =
-      ({ state := Eval.eval env cols.state, adapter := Eval.eval env cols.adapter,
-         a := Eval.eval env cols.a, b_msb := Eval.eval env cols.b_msb,
-         srw_msb := Eval.eval env cols.srw_msb, c_bits := Eval.eval env cols.c_bits,
-         sra_msb_v0123 := Eval.eval env cols.sra_msb_v0123,
-         v_0123 := Eval.eval env cols.v_0123, v_012 := Eval.eval env cols.v_012,
-         v_01 := Eval.eval env cols.v_01,
-         lower_limb := Eval.eval env cols.lower_limb,
-         higher_limb := Eval.eval env cols.higher_limb,
-         limb_result := Eval.eval env cols.limb_result,
-         shift_u16 := Eval.eval env cols.shift_u16,
-         is_srl := Eval.eval env cols.is_srl, is_sra := Eval.eval env cols.is_sra,
-         is_srlw := Eval.eval env cols.is_srlw, is_sraw := Eval.eval env cols.is_sraw,
-         is_w_imm := Eval.eval env cols.is_w_imm } : Columns F) := by
-  rw [ProvableStruct.eval_eq_eval]
-  rfl
-
 @[circuit_norm] theorem eval_inputAdapter {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).adapter = Eval.eval env input.adapter := by
   rw [eval_inputs]
-
-@[circuit_norm] theorem eval_inputIsReal {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    (Eval.eval env input).is_real = Expression.eval env input.is_real := by
-  simpa only [CircuitType.eval_expr] using
-    congrArg (fun value : Inputs F => value.is_real) (eval_inputs env input)
 
 private theorem postWitness_requirementsChannelsLawful (input : Var Inputs (ZMod p))
     (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
@@ -1560,7 +1447,7 @@ private theorem postWitness_requirementsChannelsLawful (input : Var Inputs (ZMod
       Gadgets.Equality.localLength_eq, Nat.add_zero,
       ConstraintsHold.Shallow, Operations.forAllNoOffset_append,
       Operations.forAllNoOffset, true_and, and_true, eval_sub, Expression.eval] at h_constraints
-    have h_bool := bool_of_mul_pred h_constraints.2.2
+    have h_bool := bool_of_mul_pred h_constraints
     rw [Operations.inChannelsOrRequirements_iff_forall_mem]
     intro interaction h_interaction
     unfold postWitness at h_interaction
@@ -1589,7 +1476,7 @@ theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (offset : 
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
       [memoryChannel.toRaw] := by
   have postLaw := postWitness_requirementsChannelsLawful input
-    ((witnessPrefix input).output offset) (offset + 37)
+    ((witnessPrefix input).output offset) (offset + 33)
   dsimp only [Operations.RequirementsChannelsLawful] at postLaw ⊢
   obtain ⟨postSubcircuits, postChannels, postRequirements⟩ := postLaw
   refine ⟨?_, ?_, ?_⟩
@@ -1615,7 +1502,7 @@ theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (offset : 
   · intro env h_constraints
     have postConstraints :
         ConstraintsHold.Shallow env
-          ((postWitness input ((witnessPrefix input).output offset)).operations (offset + 37)) := by
+          ((postWitness input ((witnessPrefix input).output offset)).operations (offset + 33)) := by
       simpa only [main, Circuit.bind_operations_eq, Circuit.operations,
         Circuit.localLength, Operations.localLength, GeneralFormalCircuit.toSubcircuit_localLength,
         Readers.CPUState.circuit_localLength, Nat.add_zero, witnessPrefixLocalLength_eq,
@@ -1749,71 +1636,72 @@ lemma over the destructured `h_holds` hypotheses so each split per-variant `Soun
 discharge its `RegisterWrite` requirement by applying it, mirroring green `ShiftLeftChip`'s `sll_a_isU64`. -/
 lemma resultA_isU64
     (i₀ : ℕ) (env : Environment (ZMod p))
+    {input_isSrl input_isSra input_isSrlw input_isSraw : ZMod p}
     {input_var_adapter_op_b_memory_prev_value : Word (Expression (ZMod p))}
     {input_adapter_op_b_memory_prev_value : Word (ZMod p)}
     (h_obmap : Vector.map (Expression.eval env) input_var_adapter_op_b_memory_prev_value = input_adapter_op_b_memory_prev_value)
     (h_rs1U : input_adapter_op_b_memory_prev_value.isU64)
-    (h_msb1 : U16MSBOperation.circuit.Assumptions { a := Expression.eval env input_var_adapter_op_b_memory_prev_value[3], cols := { msb := env.get (i₀ + 4) }, is_real := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) } → U16MSBOperation.circuit.Spec { a := Expression.eval env input_var_adapter_op_b_memory_prev_value[3], cols := { msb := env.get (i₀ + 4) }, is_real := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) })
-    (h_msb3 : U16MSBOperation.circuit.Assumptions { a := env.get (i₀ + 1), cols := { msb := env.get (i₀ + 4 + 1) }, is_real := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3) } → U16MSBOperation.circuit.Spec { a := env.get (i₀ + 1), cols := { msb := env.get (i₀ + 4 + 1) }, is_real := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3) })
-    (h_srl_b : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + -1) = 0)
-    (h_sra_b : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + -1) = 0)
-    (h_srlw_b : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + -1) = 0)
-    (h_sraw_b : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3) + -1) = 0)
-    (h_sum_b : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3) + -1) = 0)
+    (h_msb1 : U16MSBOperation.circuit.Assumptions { a := Expression.eval env input_var_adapter_op_b_memory_prev_value[3], cols := { msb := env.get (i₀ + 4) }, is_real := input_isSra } → U16MSBOperation.circuit.Spec { a := Expression.eval env input_var_adapter_op_b_memory_prev_value[3], cols := { msb := env.get (i₀ + 4) }, is_real := input_isSra })
+    (h_msb3 : U16MSBOperation.circuit.Assumptions { a := env.get (i₀ + 1), cols := { msb := env.get (i₀ + 4 + 1) }, is_real := input_isSrlw + input_isSraw } → U16MSBOperation.circuit.Spec { a := env.get (i₀ + 1), cols := { msb := env.get (i₀ + 4 + 1) }, is_real := input_isSrlw + input_isSraw })
+    (h_srl_b : input_isSrl * (input_isSrl + -1) = 0)
+    (h_sra_b : input_isSra * (input_isSra + -1) = 0)
+    (h_srlw_b : input_isSrlw * (input_isSrlw + -1) = 0)
+    (h_sraw_b : input_isSraw * (input_isSraw + -1) = 0)
+    (h_sum_b : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) * (input_isSrl + input_isSra + input_isSrlw + input_isSraw + -1) = 0)
     (h_b0 : env.get (i₀ + 4 + 1 + 1) * (env.get (i₀ + 4 + 1 + 1) + -1) = 0)
     (h_b1 : env.get (i₀ + 4 + 1 + 1 + 1) * (env.get (i₀ + 4 + 1 + 1 + 1) + -1) = 0)
     (h_b2 : env.get (i₀ + 4 + 1 + 1 + 2) * (env.get (i₀ + 4 + 1 + 1 + 2) + -1) = 0)
     (h_b3 : env.get (i₀ + 4 + 1 + 1 + 3) * (env.get (i₀ + 4 + 1 + 1 + 3) + -1) = 0)
     (h_b4 : env.get (i₀ + 4 + 1 + 1 + 4) * (env.get (i₀ + 4 + 1 + 1 + 4) + -1) = 0)
-    (h_s0w : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 4 + 1 + 1 + 4) + env.get (i₀ + 4 + 1 + 1 + 5) * 2 * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1))) = 0)
+    (h_s0w : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 4 + 1 + 1 + 4) + env.get (i₀ + 4 + 1 + 1 + 5) * 2 * (input_isSrl + input_isSra)) = 0)
     (h_s0b : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) + -1) = 0)
-    (h_s1w : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 4 + 1 + 1 + 4) + env.get (i₀ + 4 + 1 + 1 + 5) * 2 * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) + -1) = 0)
+    (h_s1w : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 4 + 1 + 1 + 4) + env.get (i₀ + 4 + 1 + 1 + 5) * 2 * (input_isSrl + input_isSra) + -1) = 0)
     (h_s1b : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) + -1) = 0)
-    (h_s2w : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 4 + 1 + 1 + 4) + env.get (i₀ + 4 + 1 + 1 + 5) * 2 * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) + -2) = 0)
+    (h_s2w : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 4 + 1 + 1 + 4) + env.get (i₀ + 4 + 1 + 1 + 5) * 2 * (input_isSrl + input_isSra) + -2) = 0)
     (h_s2b : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) + -1) = 0)
-    (h_s3w : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get (i₀ + 4 + 1 + 1 + 4) + env.get (i₀ + 4 + 1 + 1 + 5) * 2 * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) + -3) = 0)
-    (h_onehot : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) + -1) = 0)
+    (h_s3w : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get (i₀ + 4 + 1 + 1 + 4) + env.get (i₀ + 4 + 1 + 1 + 5) * 2 * (input_isSrl + input_isSra) + -3) = 0)
+    (h_onehot : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) + -1) = 0)
     (h_v01 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 2) + -((1 + -env.get (i₀ + 4 + 1 + 1) + 1) * 2 * ((1 + -env.get (i₀ + 4 + 1 + 1 + 1)) * 3 + 1)) = 0)
     (h_v012 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 1) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 2) * ((1 + -env.get (i₀ + 4 + 1 + 1 + 2)) * 15 + 1)) = 0)
     (h_v0123 : env.get (i₀ + 4 + 1 + 1 + 6 + 1) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 1) * ((1 + -env.get (i₀ + 4 + 1 + 1 + 3)) * 255 + 1)) = 0)
-    (h_split2 : input_adapter_op_b_memory_prev_value[2] * env.get (i₀ + 4 + 1 + 1 + 6 + 1) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2) * 65536 + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 2) * env.get (i₀ + 4 + 1 + 1 + 6 + 1)) = 0)
+    (h_split2 : input_adapter_op_b_memory_prev_value[2] * env.get (i₀ + 4 + 1 + 1 + 6 + 1) * (input_isSrl + input_isSra) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2) * 65536 + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 2) * env.get (i₀ + 4 + 1 + 1 + 6 + 1)) = 0)
     (h_lr0 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 1) * env.get (i₀ + 4 + 1 + 1 + 6 + 1)) = 0)
     (h_lr1 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 2) * env.get (i₀ + 4 + 1 + 1 + 6 + 1)) = 0)
     (h_lr2 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 2) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 3) * env.get (i₀ + 4 + 1 + 1 + 6 + 1)) = 0)
     (h_lr3 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 3) = 0)
     (h_smv : env.get (i₀ + 4 + 1 + 1 + 6) + -(env.get (i₀ + 4) * env.get (i₀ + 4 + 1 + 1 + 6 + 1)) = 0)
-    (h_o0 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get i₀ + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4))) = 0)
-    (h_o1 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 1) + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1))) = 0)
-    (h_o2 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 2) + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 2))) = 0)
-    (h_o3 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 3) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
-    (h_o4 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get i₀ + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1))) = 0)
-    (h_o5 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 1) + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 2))) = 0)
-    (h_o6 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 2) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
-    (h_o7 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 3) + -(env.get (i₀ + 4) * 65535))) = 0)
-    (h_o8 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get i₀ + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 2))) = 0)
-    (h_o9 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 1) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
-    (h_o10 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 2) + -(env.get (i₀ + 4) * 65535))) = 0)
-    (h_o11 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 3) + -(env.get (i₀ + 4) * 65535))) = 0)
-    (h_o12 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get i₀ + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
-    (h_o13 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get (i₀ + 1) + -(env.get (i₀ + 4) * 65535))) = 0)
-    (h_o14 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get (i₀ + 2) + -(env.get (i₀ + 4) * 65535))) = 0)
-    (h_o15 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get (i₀ + 3) + -(env.get (i₀ + 4) * 65535))) = 0)
-    (h_w0 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get i₀ + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4))) = 0)
-    (h_w1 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 1) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
-    (h_w2 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get i₀ + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
-    (h_w3 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 1) + -(env.get (i₀ + 4) * 65535))) = 0)
-    (h_w4 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) * (env.get (i₀ + 2) + -(env.get (i₀ + 4 + 1) * 65535)) = 0)
-    (h_w5 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) * (env.get (i₀ + 3) + -(env.get (i₀ + 4 + 1) * 65535)) = 0)
-    (h_byte1 : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
-    (h_byte2 : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
-    (h_byte3 : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 1), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
-    (h_byte4 : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 1), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
-    (h_byte5 : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 2), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
-    (h_byte6 : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
-    (h_byte7 : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 3), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
-    (h_byte8 : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 3), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
+    (h_o0 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get i₀ + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4))) = 0)
+    (h_o1 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 1) + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1))) = 0)
+    (h_o2 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 2) + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 2))) = 0)
+    (h_o3 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 3) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
+    (h_o4 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get i₀ + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1))) = 0)
+    (h_o5 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 1) + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 2))) = 0)
+    (h_o6 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 2) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
+    (h_o7 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 3) + -(env.get (i₀ + 4) * 65535))) = 0)
+    (h_o8 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get i₀ + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 2))) = 0)
+    (h_o9 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 1) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
+    (h_o10 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 2) + -(env.get (i₀ + 4) * 65535))) = 0)
+    (h_o11 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 2) * (env.get (i₀ + 3) + -(env.get (i₀ + 4) * 65535))) = 0)
+    (h_o12 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get i₀ + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 3) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
+    (h_o13 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get (i₀ + 1) + -(env.get (i₀ + 4) * 65535))) = 0)
+    (h_o14 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get (i₀ + 2) + -(env.get (i₀ + 4) * 65535))) = 0)
+    (h_o15 : (input_isSrl + input_isSra) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) * (env.get (i₀ + 3) + -(env.get (i₀ + 4) * 65535))) = 0)
+    (h_w0 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get i₀ + -env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4))) = 0)
+    (h_w1 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4) * (env.get (i₀ + 1) + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
+    (h_w2 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get i₀ + -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 1) + (env.get (i₀ + 4) * 65536 + -env.get (i₀ + 4 + 1 + 1 + 6))))) = 0)
+    (h_w3 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 1) + -(env.get (i₀ + 4) * 65535))) = 0)
+    (h_w4 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 2) + -(env.get (i₀ + 4 + 1) * 65535)) = 0)
+    (h_w5 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 3) + -(env.get (i₀ + 4 + 1) * 65535)) = 0)
+    (h_byte1 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
+    (h_byte2 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
+    (h_byte3 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 1), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
+    (h_byte4 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 1), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
+    (h_byte5 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 2), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
+    (h_byte6 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
+    (h_byte7 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 3), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
+    (h_byte8 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 3), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
     :
-    env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3) = 1 →
+    input_isSrl + input_isSra + input_isSrlw + input_isSraw = 1 →
       Word.isU64 (Vector.map (Expression.eval env) (Vector.mapRange 4 fun i => var { index := i₀ + i }) : Word (ZMod p)) := by
   -- Reduce the committed result column `cols.a` to its four `env.get`s.
   have hcolsa : (Vector.map (Expression.eval env)
@@ -1825,10 +1713,10 @@ lemma resultA_isU64
   -- **The result range-check.** On a variant-active row the four output limbs are each `< 2^16`. Proved
   -- once here; `spec`/`regwriteA` lift it to `isU64 cols.a` and `msb3A` reads off the `a[1]` bound.
   have hbounds :
-      env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) +
-            env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) +
-            env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) +
-          env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3) = 1 →
+      input_isSrl +
+            input_isSra +
+            input_isSrlw +
+          input_isSraw = 1 →
         (env.get i₀).val < 2 ^ 16 ∧ (env.get (i₀ + 1)).val < 2 ^ 16 ∧
           (env.get (i₀ + 2)).val < 2 ^ 16 ∧ (env.get (i₀ + 3)).val < 2 ^ 16 := by
     intro hsum1
@@ -1837,15 +1725,15 @@ lemma resultA_isU64
     simp only [← sub_eq_add_neg] at h_srl_b h_sra_b h_srlw_b h_sraw_b h_sum_b h_b0 h_b1 h_b2 h_b3 h_b4 h_s0b h_s1b h_s2b
     have hp17 : 2 ^ 17 < p := Fact.out
     -- The variant flag-sum is 1, so the nine byte-pull guarantees fire (gated by `-(flag-sum) = -1`).
-    have hsumneg : -(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) +
-          env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) +
-          env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) +
-        env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 := by rw [hsum1]
+    have hsumneg : -(input_isSrl +
+          input_isSra +
+          input_isSrlw +
+        input_isSraw) = -1 := by rw [hsum1]
     have hbyte_fact : ∀ {v w : ZMod p},
-        (-(env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4) +
-            env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) +
-            env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 2) +
-            env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 3)) = -1 →
+        (-(input_isSrl +
+            input_isSra +
+            input_isSrlw +
+            input_isSraw) = -1 →
           byteChannel.Guarantees (⟨6, v, w, 0⟩ : ByteRow (ZMod p)) env.data) → v.val < 2 ^ w.val := by
       intro v w hb
       exact byteRowSpec_range_val (hb hsumneg)
@@ -1945,16 +1833,16 @@ lemma resultA_isU64
     rcases pair_flag (bool_of_mul_pred h_srl_b) (bool_of_mul_pred h_sra_b) (bool_of_mul_pred h_srlw_b)
       (bool_of_mul_pred h_sraw_b) (bool_of_mul_pred h_sum_b) with he13 | he13
     · -- `e13 = 0 ⇒ e14 = 1` (SRL/SRA): the 16 `e14`-gated placement asserts + atomic bounds.
-      have he14 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4)
-          + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) = 1 := by
+      have he14 : input_isSrl
+          + input_isSra = 1 := by
         linear_combination hsum1 - he13
       simp only [← sub_eq_add_neg] at h_o0 h_o1 h_o2 h_o3 h_o4 h_o5 h_o6 h_o7 h_o8 h_o9 h_o10 h_o11 h_o12 h_o13 h_o14 h_o15
       exact srl_sra_a_isU64 he14 (bool_of_mul_pred h_s0b) (bool_of_mul_pred h_s1b)
         (bool_of_mul_pred h_s2b) honehot1 B_lr0 B_lr1 B_lr2 B_lr3_fill B_bmsbFill
         h_o0 h_o1 h_o2 h_o3 h_o4 h_o5 h_o6 h_o7 h_o8 h_o9 h_o10 h_o11 h_o12 h_o13 h_o14 h_o15
     · -- `e13 = 1` (SRLW/SRAW): the low-two placement + the de-gated `a2 = a3 = srw_msb·65535`.
-      have he14_0 : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4)
-          + env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 4 + 1) = 0 := by
+      have he14_0 : input_isSrl
+          + input_isSra = 0 := by
         linear_combination hsum1 - he13
       -- On a word row the limb-2 split is de-gated (`e14 = 0`), forcing `ll2 = 0`.
       have h_split2_dec : env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2) * 65536

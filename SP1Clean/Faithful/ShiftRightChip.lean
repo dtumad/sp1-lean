@@ -200,14 +200,17 @@ private theorem shiftRightExtractedAssertionsDecompose
   simp only [vec3_eta, vec4_eta]
   tauto
 
-def shiftRightChipInput {F : Type} [Add F]
+def shiftRightChipInput {F : Type}
     (cols : ShiftRightChip.Columns F) : ShiftRightChip.Inputs F :=
-  { is_real := cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw
-    state := cols.state
-    adapter := cols.adapter }
+  { state := cols.state
+    adapter := cols.adapter
+    isSrl := cols.is_srl
+    isSra := cols.is_sra
+    isSrlw := cols.is_srlw
+    isSraw := cols.is_sraw }
 
 def shiftRightChipLocals {F : Type}
-    (cols : ShiftRightChip.Columns F) : Vector F 37 :=
+    (cols : ShiftRightChip.Columns F) : Vector F 33 :=
   #v[
     cols.a[0], cols.a[1], cols.a[2], cols.a[3],
     cols.b_msb.msb, cols.srw_msb.msb,
@@ -222,16 +225,15 @@ def shiftRightChipLocals {F : Type}
     cols.limb_result[2], cols.limb_result[3],
     cols.shift_u16[0], cols.shift_u16[1],
     cols.shift_u16[2], cols.shift_u16[3],
-    cols.is_srl, cols.is_sra, cols.is_srlw, cols.is_sraw,
     cols.is_w_imm]
 
-def shiftRightChipPhysicalRow {F : Type} [Add F]
+def shiftRightChipPhysicalRow {F : Type}
     (cols : ShiftRightChip.Columns F) : Array F :=
   inputFirstRow (shiftRightChipInput cols)
     (shiftRightChipLocals cols)
 
 def shiftRightChipColumnsOfInput {F : Type}
-    (input : ShiftRightChip.Inputs F) (locals : Vector F 37) :
+    (input : ShiftRightChip.Inputs F) (locals : Vector F 33) :
     ShiftRightChip.Columns F :=
   { state := input.state
     adapter := input.adapter
@@ -248,13 +250,13 @@ def shiftRightChipColumnsOfInput {F : Type}
     higher_limb := #v[locals[20], locals[21], locals[22], locals[23]]
     limb_result := #v[locals[24], locals[25], locals[26], locals[27]]
     shift_u16 := #v[locals[28], locals[29], locals[30], locals[31]]
-    is_srl := locals[32]
-    is_sra := locals[33]
-    is_srlw := locals[34]
-    is_sraw := locals[35]
-    is_w_imm := locals[36] }
+    is_srl := input.isSrl
+    is_sra := input.isSra
+    is_srlw := input.isSrlw
+    is_sraw := input.isSraw
+    is_w_imm := locals[32] }
 
-theorem shiftRightChipColumnsOfInput_roundtrip {F : Type} [Add F]
+theorem shiftRightChipColumnsOfInput_roundtrip {F : Type}
     (cols : ShiftRightChip.Columns F) :
     shiftRightChipColumnsOfInput (shiftRightChipInput cols)
         (shiftRightChipLocals cols) = cols := by
@@ -354,7 +356,7 @@ private theorem evalLocalVector
 
 theorem eval_shiftRightChipDirectOutput
     (input : ShiftRightChip.Inputs (ZMod p))
-    (locals : Vector (ZMod p) 37)
+    (locals : Vector (ZMod p) 33)
     (data : ProverData (ZMod p)) :
     ProvableType.eval
         (Environment.fromArray (inputFirstRow input locals) data)
@@ -370,9 +372,9 @@ theorem eval_shiftRightChipDirectOutput
   have hinput := eval_inputFirstRow input locals data
   rw [ShiftRightChip.eval_inputs, ShiftRightChip.Inputs.mk.injEq] at hinput
   constructor
-  · exact hinput.2.1
+  · exact hinput.1
   constructor
-  · exact hinput.2.2
+  · exact hinput.2.1
   constructor
   · have h := evalLocalVector input locals data 0 4 (by omega)
     simp only [Nat.add_zero] at h
@@ -426,19 +428,15 @@ theorem eval_shiftRightChipDirectOutput
     intro i hi
     interval_cases i <;> rfl
   constructor
+  · exact hinput.2.2.1
+  constructor
+  · exact hinput.2.2.2.1
+  constructor
+  · exact hinput.2.2.2.2.1
+  constructor
+  · exact hinput.2.2.2.2.2
   · simpa only [ProvableType.eval_field] using
       (eval_local_inputFirstRow input locals data 32 (by decide))
-  constructor
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 33 (by decide))
-  constructor
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 34 (by decide))
-  constructor
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 35 (by decide))
-  · simpa only [ProvableType.eval_field] using
-      (eval_local_inputFirstRow input locals data 36 (by decide))
 
 def shiftRightChipRowCodec :
     ChipRowCodec ShiftRightChip.Inputs ShiftRightChip.Columns
@@ -479,21 +477,6 @@ private def srLimbResult (offset : ℕ) : Word (Expression (ZMod p)) :=
 private def srShiftU16 (offset : ℕ) : Word (Expression (ZMod p)) :=
   Vector.mapRange 4 fun i => var { index := offset + 28 + i }
 
-private def srSrl (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset + 32 }
-
-private def srSra (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset + 33 }
-
-private def srSrlw (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset + 34 }
-
-private def srSraw (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset + 35 }
-
-private def srGate (offset : ℕ) : Expression (ZMod p) :=
-  srSrl offset + srSra offset + srSrlw offset + srSraw offset
-
 private def srCols
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     Var ShiftRightChip.Columns (ZMod p) :=
@@ -511,11 +494,11 @@ private def srCols
     higher_limb := srHigher offset
     limb_result := srLimbResult offset
     shift_u16 := srShiftU16 offset
-    is_srl := srSrl offset
-    is_sra := srSra offset
-    is_srlw := srSrlw offset
-    is_sraw := srSraw offset
-    is_w_imm := var { index := offset + 36 } }
+    is_srl := input.isSrl
+    is_sra := input.isSra
+    is_srlw := input.isSrlw
+    is_sraw := input.isSraw
+    is_w_imm := var { index := offset + 32 } }
 
 private def srAluInput
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
@@ -526,8 +509,8 @@ private def srAluInput
     clk_high := input.state.clk_high
     clk_low := input.state.clk_0_16 + input.state.clk_16_24 * 65536
     pc := input.state.pc
-    opcode := srSrl offset * 7 + srSra offset * 8 +
-      srSrlw offset * 22 + srSraw offset * 23
+    opcode := input.isSrl * 7 + input.isSra * 8 +
+      input.isSrlw * 22 + input.isSraw * 23
     wv0 := (srA offset)[0]
     wv1 := (srA offset)[1]
     wv2 := (srA offset)[2]
@@ -547,49 +530,47 @@ private def srNativeMeaning
         ((U16MSBOperation.main
           ⟨input.adapter.op_b_memory.prev_value[3],
             { msb := var { index := offset + 4 } },
-            srSra offset⟩).operations (offset + 37))) ∧
+            input.isSra⟩).operations (offset + 33))) ∧
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((U16MSBOperation.main
           ⟨input.adapter.op_b_memory.prev_value[1],
             { msb := var { index := offset + 4 } },
-            srSraw offset⟩).operations (offset + 37))) ∧
+            input.isSraw⟩).operations (offset + 33))) ∧
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((U16MSBOperation.main
           ⟨(srA offset)[1], { msb := var { index := offset + 5 } },
-            srSrlw offset + srSraw offset⟩).operations (offset + 37))) ∧
+            input.isSrlw + input.isSraw⟩).operations (offset + 33))) ∧
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((Readers.ALUTypeReader.main
-          (srAluInput input offset)).operations (offset + 37))) ∧
+          (srAluInput input offset)).operations (offset + 33))) ∧
   Expression.eval env (input.is_real * (input.is_real - 1)) = 0 ∧
-  Expression.eval env (input.is_real - srGate offset) = 0 ∧
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((Gadgets.Equality.main (M := field)
-          (srSrl offset * (srSrl offset - 1), 0)).operations
-            (offset + 37))) ∧
+          (input.isSrl * (input.isSrl - 1), 0)).operations
+            (offset + 33))) ∧
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((Gadgets.Equality.main (M := field)
-          (srSra offset * (srSra offset - 1), 0)).operations
-            (offset + 37))) ∧
+          (input.isSra * (input.isSra - 1), 0)).operations
+            (offset + 33))) ∧
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((Gadgets.Equality.main (M := field)
-          (srSrlw offset * (srSrlw offset - 1), 0)).operations
-            (offset + 37))) ∧
+          (input.isSrlw * (input.isSrlw - 1), 0)).operations
+            (offset + 33))) ∧
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((Gadgets.Equality.main (M := field)
-          (srSraw offset * (srSraw offset - 1), 0)).operations
-            (offset + 37))) ∧
-  Expression.eval env (srGate offset * (srGate offset - 1)) = 0 ∧
+          (input.isSraw * (input.isSraw - 1), 0)).operations
+            (offset + 33))) ∧
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((ShiftRightCore.main (srCols input offset)).operations
-          (offset + 37)))
+          (offset + 33)))
 
 private theorem shiftRightNativeAssertionsDecompose
     (env : Environment (ZMod p))
@@ -601,8 +582,7 @@ private theorem shiftRightNativeAssertionsDecompose
   unfold nativeAssertZeros
   rw [ShiftRightChip.constraints_decompose]
   simp only [srNativeMeaning, srA, srCBits, srLower, srHigher,
-    srLimbResult, srShiftU16, srSrl, srSra, srSrlw, srSraw,
-    srGate, srCols, srAluInput, ShiftRightChip.aluReaderInput,
+    srLimbResult, srShiftU16, ShiftRightChip.Inputs.is_real, srCols, srAluInput, ShiftRightChip.aluReaderInput,
     ShiftRightChip.coreInput_eq,
     ProvableType.varFromOffset_fields, Vector.getElem_mapRange,
     ← ProvableStruct.eval_eq_eval, ShiftRightChip.eval_inputs,
@@ -638,11 +618,11 @@ private theorem shiftRightRustColumns_eq
         higher_limb := Eval.eval env (srHigher (p := p) offset)
         limb_result := Eval.eval env (srLimbResult (p := p) offset)
         shift_u16 := Eval.eval env (srShiftU16 (p := p) offset)
-        is_srl := Expression.eval env (srSrl (p := p) offset)
-        is_sra := Expression.eval env (srSra (p := p) offset)
-        is_srlw := Expression.eval env (srSrlw (p := p) offset)
-        is_sraw := Expression.eval env (srSraw (p := p) offset)
-        is_w_imm := Expression.eval env (var { index := offset + 36 }) } := by
+        is_srl := Expression.eval env input.isSrl
+        is_sra := Expression.eval env input.isSra
+        is_srlw := Expression.eval env input.isSrlw
+        is_sraw := Expression.eval env input.isSraw
+        is_w_imm := Expression.eval env (var { index := offset + 32 }) } := by
   unfold shiftRightRustColumns srCols
   rw [ShiftRightChip.eval_columns]
   simp only [ProvableType.eval_field]
@@ -703,40 +683,40 @@ private theorem shiftRightRustColumns_isSrl
     (env : Environment (ZMod p))
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     (shiftRightRustColumns env input offset).is_srl =
-      Expression.eval env (srSrl offset) := by
+      Expression.eval env (input.isSrl) := by
   unfold shiftRightRustColumns
   rw [ShiftRightChip.eval_columns]
-  exact ProvableType.eval_field env (srSrl offset)
+  exact ProvableType.eval_field env (input.isSrl)
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem shiftRightRustColumns_isSra
     (env : Environment (ZMod p))
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     (shiftRightRustColumns env input offset).is_sra =
-      Expression.eval env (srSra offset) := by
+      Expression.eval env (input.isSra) := by
   unfold shiftRightRustColumns
   rw [ShiftRightChip.eval_columns]
-  exact ProvableType.eval_field env (srSra offset)
+  exact ProvableType.eval_field env (input.isSra)
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem shiftRightRustColumns_isSrlw
     (env : Environment (ZMod p))
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     (shiftRightRustColumns env input offset).is_srlw =
-      Expression.eval env (srSrlw offset) := by
+      Expression.eval env (input.isSrlw) := by
   unfold shiftRightRustColumns
   rw [ShiftRightChip.eval_columns]
-  exact ProvableType.eval_field env (srSrlw offset)
+  exact ProvableType.eval_field env (input.isSrlw)
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem shiftRightRustColumns_isSraw
     (env : Environment (ZMod p))
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     (shiftRightRustColumns env input offset).is_sraw =
-      Expression.eval env (srSraw offset) := by
+      Expression.eval env (input.isSraw) := by
   unfold shiftRightRustColumns
   rw [ShiftRightChip.eval_columns]
-  exact ProvableType.eval_field env (srSraw offset)
+  exact ProvableType.eval_field env (input.isSraw)
 
 private def srRustMeaning
     (env : Environment (ZMod p))
@@ -829,10 +809,10 @@ private theorem shiftRightCoreAssertions
     List.Forall (· = 0)
         (nativeAssertZeros env
           ((ShiftRightCore.main (srCols input offset)).operations
-            (offset + 37))) ↔
+            (offset + 33))) ↔
       ShiftRightChip.CoreSpec (Eval.eval env (srCols input offset)) := by
   let ops :=
-    (ShiftRightCore.main (srCols input offset)).operations (offset + 37)
+    (ShiftRightCore.main (srCols input offset)).operations (offset + 33)
   have hlookups : ops.lookups = [] := by
     simp only [ops, ShiftRightCore.main, Gadgets.Equality.main, circuit_norm]
   have hconstraints :
@@ -864,7 +844,7 @@ private theorem shiftRightCoreAssertions
         colsValue = Eval.eval env (srCols input offset) :=
       (ProvableStruct.eval_eq_eval env (srCols input offset)).symm
     have hs := (FormalAssertion.original_soundness
-      (ShiftRightCore.circuit (p := p)) (offset + 37) env
+      (ShiftRightCore.circuit (p := p)) (offset + 33) env
       (srCols input offset) colsValue
       (ProvableStruct.eval_eq_eval env (srCols input offset))
       trivial hfull hguarantees).1
@@ -874,7 +854,7 @@ private theorem shiftRightCoreAssertions
       { toEnvironment := env
         hint := ProverHint.empty (ZMod p) }
     have huses :
-        proverEnv.UsesLocalWitnesses (offset + 37) ops := by
+        proverEnv.UsesLocalWitnesses (offset + 33) ops := by
       have hlen : ops.localLength = 0 := by
         simp only [ops, ShiftRightCore.main, circuit_norm]
       rw [ProverEnvironment.usesLocalWitnesses_iff_flat,
@@ -892,7 +872,7 @@ private theorem shiftRightCoreAssertions
       rwa [hvalue] at hspec
     have hfull : ops.ConstraintsHold proverEnv :=
       (FormalAssertion.original_completeness
-        (ShiftRightCore.circuit (p := p)) (offset + 37) proverEnv
+        (ShiftRightCore.circuit (p := p)) (offset + 33) proverEnv
         (srCols input offset) colsValue
         (by
           calc
@@ -918,22 +898,19 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem shiftRightGateEval
     (env : Environment (ZMod p))
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
-    Expression.eval env (srGate offset) =
+    Expression.eval env (input.is_real) =
       (shiftRightRustColumns env input offset).is_srl +
         (shiftRightRustColumns env input offset).is_sra +
         (shiftRightRustColumns env input offset).is_srlw +
         (shiftRightRustColumns env input offset).is_sraw := by
-  simp only [srGate, Expression.eval]
+  simp only [Expression.eval]
   rw [shiftRightRustColumns_isSrl, shiftRightRustColumns_isSra,
     shiftRightRustColumns_isSrlw, shiftRightRustColumns_isSraw]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem shiftRightCpuAssertions
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     let cols := shiftRightRustColumns env input offset
     List.Forall (· = 0)
         (Extracted.CPUState.asserts cols.state
@@ -960,7 +937,6 @@ private theorem shiftRightCpuAssertions
       (ProvableStruct.eval env cpuInput).is_real =
           Expression.eval env input.is_real := by
         simp only [cpuInput, ProvableStruct.structEvalLiteralProc]
-      _ = Expression.eval env (srGate offset) := hinputReal
       _ = cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw := by
         exact shiftRightGateEval env input offset
   have hCpu := CanonicalReader.cpuStateAssertions
@@ -984,14 +960,14 @@ private theorem shiftRightU16B3Assertions
           ((U16MSBOperation.main
             ⟨input.adapter.op_b_memory.prev_value[3],
               { msb := var { index := offset + 4 } },
-              srSra offset⟩).operations (offset + 37))) := by
+              input.isSra⟩).operations (offset + 33))) := by
   dsimp only
   let cols := shiftRightRustColumns env input offset
   let u16Input : Var U16MSBOperation.Inputs (ZMod p) :=
     ⟨input.adapter.op_b_memory.prev_value[3],
       { msb := var { index := offset + 4 } },
-      srSra offset⟩
-  have hU16 := u16MSBAssertions env u16Input (offset + 37)
+      input.isSra⟩
+  have hU16 := u16MSBAssertions env u16Input (offset + 33)
     cols.adapter.op_b_memory.prev_value[3]
     cols.b_msb.msb cols.is_sra
     (shiftRightRustColumns_isSra env input offset).symm
@@ -1013,14 +989,14 @@ private theorem shiftRightU16B1Assertions
           ((U16MSBOperation.main
             ⟨input.adapter.op_b_memory.prev_value[1],
               { msb := var { index := offset + 4 } },
-              srSraw offset⟩).operations (offset + 37))) := by
+              input.isSraw⟩).operations (offset + 33))) := by
   dsimp only
   let cols := shiftRightRustColumns env input offset
   let u16Input : Var U16MSBOperation.Inputs (ZMod p) :=
     ⟨input.adapter.op_b_memory.prev_value[1],
       { msb := var { index := offset + 4 } },
-      srSraw offset⟩
-  have hU16 := u16MSBAssertions env u16Input (offset + 37)
+      input.isSraw⟩
+  have hU16 := u16MSBAssertions env u16Input (offset + 33)
     cols.adapter.op_b_memory.prev_value[1]
     cols.b_msb.msb cols.is_sraw
     (shiftRightRustColumns_isSraw env input offset).symm
@@ -1041,21 +1017,21 @@ private theorem shiftRightU16WordAssertions
           ((U16MSBOperation.main
             ⟨(srA offset)[1],
               { msb := var { index := offset + 5 } },
-              srSrlw offset + srSraw offset⟩).operations
-                (offset + 37))) := by
+              input.isSrlw + input.isSraw⟩).operations
+                (offset + 33))) := by
   dsimp only
   let cols := shiftRightRustColumns env input offset
   let u16Input : Var U16MSBOperation.Inputs (ZMod p) :=
     ⟨(srA offset)[1],
       { msb := var { index := offset + 5 } },
-      srSrlw offset + srSraw offset⟩
+      input.isSrlw + input.isSraw⟩
   have hreal :
-      Expression.eval env (srSrlw offset + srSraw offset) =
+      Expression.eval env (input.isSrlw + input.isSraw) =
         cols.is_srlw + cols.is_sraw := by
     simp only [Expression.eval]
     rw [shiftRightRustColumns_isSrlw,
       shiftRightRustColumns_isSraw]
-  have hU16 := u16MSBAssertions env u16Input (offset + 37)
+  have hU16 := u16MSBAssertions env u16Input (offset + 33)
     cols.a[1] cols.srw_msb.msb (cols.is_srlw + cols.is_sraw)
     hreal
     (shiftRightRustColumns_srwMsb env input offset).symm
@@ -1064,10 +1040,7 @@ private theorem shiftRightU16WordAssertions
 
 private theorem shiftRightAluAssertions
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     let cols := shiftRightRustColumns env input offset
     (List.Forall (· = 0)
         (Extracted.ALUTypeReader.asserts cols.state.clk_high
@@ -1082,7 +1055,7 @@ private theorem shiftRightAluAssertions
       (List.Forall (· = 0)
           (nativeAssertZeros env
             ((Readers.ALUTypeReader.main
-              (srAluInput input offset)).operations (offset + 37))) ∧
+              (srAluInput input offset)).operations (offset + 33))) ∧
         cols.adapter.op_a_0 = 0) := by
   dsimp only
   let cols := shiftRightRustColumns env input offset
@@ -1095,7 +1068,6 @@ private theorem shiftRightAluAssertions
           Expression.eval env input.is_real := by
         simp only [aluInput, srAluInput,
           ProvableStruct.structEvalLiteralProc]
-      _ = Expression.eval env (srGate offset) := hinputReal
       _ = cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw :=
         shiftRightGateEval env input offset
   have htrusted :
@@ -1106,7 +1078,6 @@ private theorem shiftRightAluAssertions
           Expression.eval env input.is_real := by
         simp only [aluInput, srAluInput,
           ProvableStruct.structEvalLiteralProc]
-      _ = Expression.eval env (srGate offset) := hinputReal
       _ = cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw :=
         shiftRightGateEval env input offset
   have hcols :
@@ -1132,7 +1103,7 @@ private theorem shiftRightAluAssertions
     exact (ProvableType.getElem_eval_fields env (srA offset) 3
       (by decide)).trans (congrArg (fun value => value[3]) ha.symm)
   have hAlu := CanonicalReader.aluTypeAssertions
-    (p := p) env aluInput (offset + 37)
+    (p := p) env aluInput (offset + 33)
     cols.state.clk_high
     (cols.state.clk_0_16 + cols.state.clk_16_24 * 65536)
     (cols.is_srl * 7 + cols.is_sra * 8 +
@@ -1159,8 +1130,8 @@ private theorem shiftRightSrlAssertions
     List.Forall (· = 0)
         (nativeAssertZeros env
           ((Gadgets.Equality.main (M := field)
-            (srSrl offset * (srSrl offset - 1), 0)).operations
-              (offset + 37))) ↔
+            (input.isSrl * (input.isSrl - 1), 0)).operations
+              (offset + 33))) ↔
       cols.is_srl * (cols.is_srl - 1) = 0 := by
   dsimp only
   rw [CanonicalReader.equalityAssertions]
@@ -1177,8 +1148,8 @@ private theorem shiftRightSraAssertions
     List.Forall (· = 0)
         (nativeAssertZeros env
           ((Gadgets.Equality.main (M := field)
-            (srSra offset * (srSra offset - 1), 0)).operations
-              (offset + 37))) ↔
+            (input.isSra * (input.isSra - 1), 0)).operations
+              (offset + 33))) ↔
       cols.is_sra * (cols.is_sra - 1) = 0 := by
   dsimp only
   rw [CanonicalReader.equalityAssertions]
@@ -1195,8 +1166,8 @@ private theorem shiftRightSrlwAssertions
     List.Forall (· = 0)
         (nativeAssertZeros env
           ((Gadgets.Equality.main (M := field)
-            (srSrlw offset * (srSrlw offset - 1), 0)).operations
-              (offset + 37))) ↔
+            (input.isSrlw * (input.isSrlw - 1), 0)).operations
+              (offset + 33))) ↔
       cols.is_srlw * (cols.is_srlw - 1) = 0 := by
   dsimp only
   rw [CanonicalReader.equalityAssertions]
@@ -1213,8 +1184,8 @@ private theorem shiftRightSrawAssertions
     List.Forall (· = 0)
         (nativeAssertZeros env
           ((Gadgets.Equality.main (M := field)
-            (srSraw offset * (srSraw offset - 1), 0)).operations
-              (offset + 37))) ↔
+            (input.isSraw * (input.isSraw - 1), 0)).operations
+              (offset + 33))) ↔
       cols.is_sraw * (cols.is_sraw - 1) = 0 := by
   dsimp only
   rw [CanonicalReader.equalityAssertions]
@@ -1230,7 +1201,7 @@ private theorem shiftRightCoreAssertionsRust
     List.Forall (· = 0)
         (nativeAssertZeros env
           ((ShiftRightCore.main (srCols input offset)).operations
-            (offset + 37))) ↔
+            (offset + 33))) ↔
       ShiftRightChip.CoreSpec
         (shiftRightRustColumns env input offset) := by
   exact shiftRightCoreAssertions env input offset
@@ -1238,64 +1209,31 @@ private theorem shiftRightCoreAssertionsRust
 omit [Fact (2 ^ 17 < p)] in
 private theorem shiftRightInputBoolean
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     Expression.eval env (input.is_real * (input.is_real - 1)) = 0 ↔
       let cols := shiftRightRustColumns env input offset
       (cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw) *
         (cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw - 1) = 0 := by
-  dsimp only
-  simp only [Expression.eval]
-  rw [eval_sub, hinputReal, shiftRightGateEval env input offset]
-  simp only [Expression.eval]
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem shiftRightGateBoolean
-    (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
-    Expression.eval env (srGate offset * (srGate offset - 1)) = 0 ↔
-      let cols := shiftRightRustColumns env input offset
-      (cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw) *
-        (cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw - 1) = 0 := by
-  dsimp only
-  simp only [Expression.eval]
-  rw [eval_sub, shiftRightGateEval env input offset]
-  simp only [Expression.eval]
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem shiftRightSelectorLink
-    (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
-    Expression.eval env (input.is_real - srGate offset) = 0 := by
-  rw [eval_sub, hinputReal, sub_self]
+  simp only [Expression.eval, eval_sub, shiftRightRustColumns_isSrl,
+    shiftRightRustColumns_isSra, shiftRightRustColumns_isSrlw, shiftRightRustColumns_isSraw]
 
 private theorem shiftRightMeaningFaithful
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     srRustMeaning env input offset ↔
       srNativeMeaning env input offset := by
   let cols := shiftRightRustColumns env input offset
-  have hCpu := shiftRightCpuAssertions env input offset hinputReal
+  have hCpu := shiftRightCpuAssertions env input offset
   have hU16B3 := shiftRightU16B3Assertions env input offset
   have hU16B1 := shiftRightU16B1Assertions env input offset
   have hU16Word := shiftRightU16WordAssertions env input offset
-  have hAlu := shiftRightAluAssertions env input offset hinputReal
+  have hAlu := shiftRightAluAssertions env input offset
   have hSrl := shiftRightSrlAssertions env input offset
   have hSra := shiftRightSraAssertions env input offset
   have hSrlw := shiftRightSrlwAssertions env input offset
   have hSraw := shiftRightSrawAssertions env input offset
   have hCore := shiftRightCoreAssertionsRust env input offset
-  have hInputBool := shiftRightInputBoolean env input offset hinputReal
-  have hGateBool := shiftRightGateBoolean env input offset
-  have hLink := shiftRightSelectorLink env input offset hinputReal
+  have hInputBool := shiftRightInputBoolean env input offset
   have hCoreOpA0 :
       ShiftRightChip.CoreSpec cols → cols.adapter.op_a_0 = 0 :=
     shiftRightCoreSpec_opA0 cols
@@ -1303,7 +1241,7 @@ private theorem shiftRightMeaningFaithful
       List.Forall (· = 0)
           (nativeAssertZeros env
             ((ShiftRightCore.main (srCols input offset)).operations
-              (offset + 37))) →
+              (offset + 33))) →
         cols.adapter.op_a_0 = 0 :=
     fun h => hCoreOpA0 (hCore.mp h)
   unfold srRustMeaning srNativeMeaning
@@ -1324,19 +1262,18 @@ private theorem shiftRightMeaningFaithful
     have hopA0 := hCoreOpA0 hCoreRust
     have hAluNative := (hAlu.mp ⟨hAluRust, hopA0⟩).1
     have hInputNative := hInputBool.mpr hGateRust
-    have hGateNative := hGateBool.mpr hGateRust
     have hSrlNative := hSrl.mpr hSrlRust
     have hSraNative := hSra.mpr hSraRust
     have hSrlwNative := hSrlw.mpr hSrlwRust
     have hSrawNative := hSraw.mpr hSrawRust
     exact ⟨hCpuNative, hU16B3Native, hU16B1Native,
-      hU16WordNative, hAluNative, hInputNative, hLink,
+      hU16WordNative, hAluNative, hInputNative,
       hSrlNative, hSraNative, hSrlwNative, hSrawNative,
-      hGateNative, hCoreNative⟩
+      hCoreNative⟩
   · rintro ⟨hCpuNative, hU16B3Native, hU16B1Native,
-      hU16WordNative, hAluNative, _hInputNative,
-      _hLinkNative, hSrlNative, hSraNative, hSrlwNative,
-      hSrawNative, hGateNative, hCoreNative⟩
+      hU16WordNative, hAluNative, hInputNative,
+      hSrlNative, hSraNative, hSrlwNative,
+      hSrawNative, hCoreNative⟩
     have hU16B3Rust := hU16B3.mpr hU16B3Native
     have hU16B1Rust := hU16B1.mpr hU16B1Native
     have hU16WordRust := hU16Word.mpr hU16WordNative
@@ -1344,7 +1281,7 @@ private theorem shiftRightMeaningFaithful
     have hCoreRust := hCore.mp hCoreNative
     have hopA0 := hNativeCoreOpA0 hCoreNative
     have hAluRust := (hAlu.mpr ⟨hAluNative, hopA0⟩).1
-    have hGateRust := hGateBool.mp hGateNative
+    have hGateRust := hInputBool.mp hInputNative
     have hSrlRust := hSrl.mp hSrlNative
     have hSraRust := hSra.mp hSraNative
     have hSrlwRust := hSrlw.mp hSrlwNative
@@ -1355,10 +1292,7 @@ private theorem shiftRightMeaningFaithful
 
 private theorem shiftRightConstraintsFaithfulOutput
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     List.Forall (· = 0)
         (shiftRightChipOracle.nativeAssertZeros
           (shiftRightRustColumns env input offset)) ↔
@@ -1367,7 +1301,7 @@ private theorem shiftRightConstraintsFaithfulOutput
           ((ShiftRightChip.main input).operations offset)) :=
   (shiftRightExtractedAssertionsDecompose
       (shiftRightRustColumns env input offset)).trans
-    ((shiftRightMeaningFaithful env input offset hinputReal).trans
+    ((shiftRightMeaningFaithful env input offset).trans
       (shiftRightNativeAssertionsDecompose env input offset).symm)
 
 private theorem shiftRightRustColumns_eq_output
@@ -1378,7 +1312,7 @@ private theorem shiftRightRustColumns_eq_output
         ((ShiftRightChip.elaborated (p := p)).output input offset) := by
   rw [ShiftRightChip.directOutput_eq]
   unfold shiftRightRustColumns srCols srA srCBits srShiftU16
-    srLower srHigher srLimbResult srSrl srSra srSrlw srSraw
+    srLower srHigher srLimbResult
   rw [ShiftRightChip.eval_columns, ShiftRightChip.eval_columns]
   simp only [ProvableType.varFromOffset_fields]
 
@@ -1386,10 +1320,7 @@ theorem shiftRightChip_constraints_faithful
     (env : Environment (ZMod p))
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
     (cols : ShiftRightChip.Columns (ZMod p))
-    (hbind : BindsChipOutput ShiftRightChip.main env input offset cols)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (hbind : BindsChipOutput ShiftRightChip.main env input offset cols) :
     List.Forall (· = 0)
         (shiftRightChipOracle.nativeAssertZeros cols) ↔
       List.Forall (· = 0)
@@ -1401,86 +1332,7 @@ theorem shiftRightChip_constraints_faithful
   have hcolumns : shiftRightRustColumns env input offset = cols :=
     (shiftRightRustColumns_eq_output env input offset).trans hbind
   rw [← hcolumns]
-  exact shiftRightConstraintsFaithfulOutput env input offset hinputReal
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem shiftRightChipLocals_thirtyTwo {F : Type}
-    (cols : ShiftRightChip.Columns F) :
-    (shiftRightChipLocals cols)[32] = cols.is_srl := by
-  rfl
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem shiftRightChipLocals_thirtyThree {F : Type}
-    (cols : ShiftRightChip.Columns F) :
-    (shiftRightChipLocals cols)[33] = cols.is_sra := by
-  rfl
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem shiftRightChipLocals_thirtyFour {F : Type}
-    (cols : ShiftRightChip.Columns F) :
-    (shiftRightChipLocals cols)[34] = cols.is_srlw := by
-  rfl
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem shiftRightChipLocals_thirtyFive {F : Type}
-    (cols : ShiftRightChip.Columns F) :
-    (shiftRightChipLocals cols)[35] = cols.is_sraw := by
-  rfl
-
-private theorem shiftRightChipRowCodec_inputReal
-    (cols : ShiftRightChip.Columns (ZMod p))
-    (data : ProverData (ZMod p)) :
-    let assignment := shiftRightChipRowCodec.assignment cols data
-    Expression.eval assignment.environment
-        ({ circuit := ShiftRightChip.circuit (p := p) } :
-          Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-      Expression.eval assignment.environment
-        (srGate
-          ({ circuit := ShiftRightChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowOffset) := by
-  dsimp only
-  let assignment := shiftRightChipRowCodec.assignment cols data
-  rw [Air.Flat.Component.rowInputVar_mk,
-    Air.Flat.Component.rowOffset_mk]
-  have hInput :
-      Expression.eval
-          (Environment.fromArray
-            (inputFirstRow (shiftRightChipInput cols)
-              (shiftRightChipLocals cols)) data)
-          (varFromOffset ShiftRightChip.Inputs 0).is_real =
-        (shiftRightChipInput cols).is_real := by
-    rw [← ShiftRightChip.eval_inputIsReal]
-    exact congrArg (fun value => value.is_real)
-      (eval_inputFirstRow (shiftRightChipInput cols)
-        (shiftRightChipLocals cols) data)
-  have hSrl := eval_local_inputFirstRow (shiftRightChipInput cols)
-    (shiftRightChipLocals cols) data 32 (by decide)
-  have hSra := eval_local_inputFirstRow (shiftRightChipInput cols)
-    (shiftRightChipLocals cols) data 33 (by decide)
-  have hSrlw := eval_local_inputFirstRow (shiftRightChipInput cols)
-    (shiftRightChipLocals cols) data 34 (by decide)
-  have hSraw := eval_local_inputFirstRow (shiftRightChipInput cols)
-    (shiftRightChipLocals cols) data 35 (by decide)
-  change
-    Expression.eval assignment.environment
-        (varFromOffset ShiftRightChip.Inputs 0).is_real =
-      assignment.environment.get (size ShiftRightChip.Inputs + 32) +
-        assignment.environment.get (size ShiftRightChip.Inputs + 33) +
-        assignment.environment.get (size ShiftRightChip.Inputs + 34) +
-        assignment.environment.get (size ShiftRightChip.Inputs + 35)
-  rw [show assignment.environment =
-      Environment.fromArray
-        (inputFirstRow (shiftRightChipInput cols)
-          (shiftRightChipLocals cols)) data by rfl]
-  rw [hInput]
-  simp only [shiftRightChipInput]
-  simp only [Expression.eval] at hSrl hSra hSrlw hSraw
-  rw [shiftRightChipLocals_thirtyTwo] at hSrl
-  rw [shiftRightChipLocals_thirtyThree] at hSra
-  rw [shiftRightChipLocals_thirtyFour] at hSrlw
-  rw [shiftRightChipLocals_thirtyFive] at hSraw
-  simp only [shiftRightChipInput] at hSrl hSra hSrlw hSraw
-  rw [hSrl, hSra, hSrlw, hSraw]
+  exact shiftRightConstraintsFaithfulOutput env input offset
 
 theorem shiftRightChip_constraints_constructive
     (rustCols : Extracted.ShiftRightOracle.ShiftRightCols (ZMod p))
@@ -1504,21 +1356,12 @@ theorem shiftRightChip_constraints_constructive
     have h := NativeRowAssignment.bindsOutput assignment
     rw [ShiftRightChip.circuit_main_eq] at h
     exact h
-  have hinputReal :
-      Expression.eval assignment.environment
-          ({ circuit := ShiftRightChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-        Expression.eval assignment.environment
-          (srGate
-            ({ circuit := ShiftRightChip.circuit (p := p) } :
-              Air.Flat.Component (ZMod p)).rowOffset) :=
-    shiftRightChipRowCodec_inputReal cols data
   have hfaithful := shiftRightChip_constraints_faithful
     assignment.environment
     ({ circuit := ShiftRightChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := ShiftRightChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
+      Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0)
           (shiftRightChipOracle.assertZeros rustCols) ↔
@@ -1540,26 +1383,9 @@ open SP1Clean.Channels
   (stateChannel byteChannel memoryChannel programChannel)
 open InteractionRecovery
 
-omit [Fact (2 ^ 17 < p)] in
-private theorem shiftRightRealEval
-    (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
-    Expression.eval env input.is_real =
-      (shiftRightRustColumns env input offset).is_srl +
-        (shiftRightRustColumns env input offset).is_sra +
-        (shiftRightRustColumns env input offset).is_srlw +
-        (shiftRightRustColumns env input offset).is_sraw :=
-  hinputReal.trans (shiftRightGateEval env input offset)
-
 private theorem shiftRightStateInteractionsFaithful
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     (((ShiftRightChip.exposedStateInteractions input).map
             ChannelInteraction.toRaw).map
               (AbstractInteraction.toAccess env)) =
@@ -1567,7 +1393,6 @@ private theorem shiftRightStateInteractionsFaithful
           (shiftRightChipReconfigure (shiftRightRustColumns env input offset))).map
             Extracted.Interaction.toAccess).filter
         (fun access => access.1 = InteractionKind.State)) := by
-  have hReal := shiftRightRealEval env input offset hinputReal
   have hStatePull :
       ∀ (gate : Expression (ZMod p))
         (msg : Channels.StateMsg (Expression (ZMod p))),
@@ -1604,14 +1429,12 @@ private theorem shiftRightStateInteractionsFaithful
     Extracted.Interaction.toAccess, Extracted.Dir.sign,
     shiftRightRustColumns_state,
     ← ProvableStruct.eval_eq_eval,
-    Expression.eval, hReal]
+    Expression.eval, shiftRightRustColumns_isSrl, shiftRightRustColumns_isSra,
+    shiftRightRustColumns_isSrlw, shiftRightRustColumns_isSraw]
 
 private theorem shiftRightByteInteractionsFaithful
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     List.Perm
       (((ShiftRightChip.exposedByteInteractions input offset).map
         ChannelInteraction.toRaw).map
@@ -1624,14 +1447,6 @@ private theorem shiftRightByteInteractionsFaithful
     ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
   have h6 : (6 : ZMod p).val = 6 := val_6_zmod_p
   have h3 : (3 : ZMod p).val = 3 := val_3_zmod_p
-  have hRealVars :
-      Expression.eval env input.is_real =
-        Expression.eval env (srSrl offset) +
-          Expression.eval env (srSra offset) +
-          Expression.eval env (srSrlw offset) +
-          Expression.eval env (srSraw offset) := by
-    rw [hinputReal]
-    simp only [srGate, Expression.eval]
   have hBytePull :
       ∀ (gate : Expression (ZMod p))
         (msg : ByteRow (Expression (ZMod p))),
@@ -1654,14 +1469,13 @@ private theorem shiftRightByteInteractionsFaithful
     Extracted.ALUTypeReader.interactions,
     Extracted.Interaction.toAccess, Extracted.Dir.sign,
     srA, srCBits,
-    srLower, srHigher, srSrl, srSra, srSrlw, srSraw,
-    ← ProvableType.getElem_eval_fields,
+    srLower, srHigher, ← ProvableType.getElem_eval_fields,
     Vector.getElem_mapRange,
     eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
     eval_registerAccessTimestamp, evalU16MSB,
     eval_sub, Expression.eval,
-    h6, h3, hRealVars,
-    ShiftRightChip.exposedWriteGate, Nat.add_assoc]
+    h6, h3,
+    ShiftRightChip.Inputs.is_real, Nat.add_assoc]
   simp only [← ProvableStruct.eval_eq_eval, eval_cpuState,
     eval_aluTypeReader, eval_registerAccessCols,
     eval_registerAccessTimestamp,
@@ -1674,10 +1488,7 @@ private theorem shiftRightByteInteractionsFaithful
 
 private theorem shiftRightMemoryInteractionsFaithful
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
     List.Perm
       (((((ShiftRightChip.exposedMemoryInteractions input offset).map
         ChannelInteraction.toRaw).map
@@ -1692,51 +1503,49 @@ private theorem shiftRightMemoryInteractionsFaithful
     omega
   have hRealVars :
       Expression.eval env input.is_real =
-        env.get (offset + 32) + env.get (offset + 33) +
-          env.get (offset + 34) + env.get (offset + 35) := by
-    rw [hinputReal]
-    simp only [srGate, srSrl, srSra, srSrlw, srSraw,
-      Expression.eval]
+        Expression.eval env input.isSrl + Expression.eval env input.isSra +
+          Expression.eval env input.isSrlw + Expression.eval env input.isSraw := by
+    simp only [Expression.eval]
   have hNegFlags :
-      -env.get (offset + 35) +
-          (-env.get (offset + 34) +
-            (-env.get (offset + 33) + -env.get (offset + 32))) =
-        -(env.get (offset + 32) + env.get (offset + 33) +
-          env.get (offset + 34) + env.get (offset + 35)) := by
+      -Expression.eval env input.isSraw +
+          (-Expression.eval env input.isSrlw +
+            (-Expression.eval env input.isSra + -Expression.eval env input.isSrl)) =
+        -(Expression.eval env input.isSrl + Expression.eval env input.isSra +
+          Expression.eval env input.isSrlw + Expression.eval env input.isSraw) := by
     ring
   have hDoubleNeg :
       -signedVal
-          (-env.get (offset + 35) +
-            (-env.get (offset + 34) +
-              (-env.get (offset + 33) + -env.get (offset + 32)))) =
+          (-Expression.eval env input.isSraw +
+            (-Expression.eval env input.isSrlw +
+              (-Expression.eval env input.isSra + -Expression.eval env input.isSrl))) =
         signedVal
-          (env.get (offset + 32) + env.get (offset + 33) +
-            env.get (offset + 34) + env.get (offset + 35)) := by
+          (Expression.eval env input.isSrl + Expression.eval env input.isSra +
+            Expression.eval env input.isSrlw + Expression.eval env input.isSraw) := by
     rw [hNegFlags, signedVal_neg hp2, neg_neg]
   have hNegReal :
       -signedVal
-          (env.get (offset + 32) + env.get (offset + 33) +
-            env.get (offset + 34) + env.get (offset + 35)) =
+          (Expression.eval env input.isSrl + Expression.eval env input.isSra +
+            Expression.eval env input.isSrlw + Expression.eval env input.isSraw) =
         signedVal
-          (-env.get (offset + 35) +
-            (-env.get (offset + 34) +
-              (-env.get (offset + 33) + -env.get (offset + 32)))) := by
+          (-Expression.eval env input.isSraw +
+            (-Expression.eval env input.isSrlw +
+              (-Expression.eval env input.isSra + -Expression.eval env input.isSrl))) := by
     rw [hNegFlags, signedVal_neg hp2]
   have hNegOpC :
       -signedVal
-          (env.get (offset + 32) + env.get (offset + 33) +
-            env.get (offset + 34) + env.get (offset + 35) -
+          (Expression.eval env input.isSrl + Expression.eval env input.isSra +
+            Expression.eval env input.isSrlw + Expression.eval env input.isSraw -
             Expression.eval env input.adapter.imm_c) =
         signedVal
           (Expression.eval env input.adapter.imm_c -
-            (env.get (offset + 32) + env.get (offset + 33) +
-              env.get (offset + 34) + env.get (offset + 35))) := by
+            (Expression.eval env input.isSrl + Expression.eval env input.isSra +
+              Expression.eval env input.isSrlw + Expression.eval env input.isSraw)) := by
     rw [(by ring :
       Expression.eval env input.adapter.imm_c -
-          (env.get (offset + 32) + env.get (offset + 33) +
-            env.get (offset + 34) + env.get (offset + 35)) =
-        -(env.get (offset + 32) + env.get (offset + 33) +
-          env.get (offset + 34) + env.get (offset + 35) -
+          (Expression.eval env input.isSrl + Expression.eval env input.isSra +
+            Expression.eval env input.isSrlw + Expression.eval env input.isSraw) =
+        -(Expression.eval env input.isSrl + Expression.eval env input.isSra +
+          Expression.eval env input.isSrlw + Expression.eval env input.isSraw -
           Expression.eval env input.adapter.imm_c)), signedVal_neg hp2]
   have hMemoryPull :
       ∀ (gate : Expression (ZMod p))
@@ -1781,14 +1590,13 @@ private theorem shiftRightMemoryInteractionsFaithful
     Extracted.CPUState.interactions,
     Extracted.ALUTypeReader.interactions,
     Extracted.Interaction.toAccess, Extracted.Dir.sign,
-    srA, srSrl, srSra, srSrlw, srSraw,
-    ShiftRightChip.exposedWriteGate,
+    srA, ShiftRightChip.Inputs.is_real,
     eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
     eval_registerAccessTimestamp,
     ← ProvableType.getElem_eval_fields,
     Vector.getElem_mapRange, ProvableType.eval_field,
     Expression.eval, LookupAccessList.negMult,
-    signedVal_neg hp2, hRealVars]
+    signedVal_neg hp2]
   simp only [← ProvableStruct.eval_eq_eval, eval_cpuState,
     eval_aluTypeReader, eval_registerAccessCols,
     eval_registerAccessTimestamp,
@@ -1801,11 +1609,8 @@ private theorem shiftRightMemoryInteractionsFaithful
 
 private theorem shiftRightProgramInteractionsFaithful
     (env : Environment (ZMod p))
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
-    (((((ShiftRightChip.exposedProgramInteractions input offset).map
+    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) :
+    (((((ShiftRightChip.exposedProgramInteractions input).map
         ChannelInteraction.toRaw).map
           (AbstractInteraction.toAccess env)).map
             LookupAccessList.negMult)) =
@@ -1816,28 +1621,21 @@ private theorem shiftRightProgramInteractionsFaithful
   have hp2 : 2 < p := by
     have := Fact.out (p := 2 ^ 17 < p)
     omega
-  have hRealVars :
-      Expression.eval env input.is_real =
-        env.get (offset + 32) + env.get (offset + 33) +
-          env.get (offset + 34) + env.get (offset + 35) := by
-    rw [hinputReal]
-    simp only [srGate, srSrl, srSra, srSrlw, srSraw,
-      Expression.eval]
   have hNegFlags :
-      -env.get (offset + 35) +
-          (-env.get (offset + 34) +
-            (-env.get (offset + 33) + -env.get (offset + 32))) =
-        -(env.get (offset + 32) + env.get (offset + 33) +
-          env.get (offset + 34) + env.get (offset + 35)) := by
+      -Expression.eval env input.isSraw +
+          (-Expression.eval env input.isSrlw +
+            (-Expression.eval env input.isSra + -Expression.eval env input.isSrl)) =
+        -(Expression.eval env input.isSrl + Expression.eval env input.isSra +
+          Expression.eval env input.isSrlw + Expression.eval env input.isSraw) := by
     ring
   have hDoubleNeg :
       -signedVal
-          (-env.get (offset + 35) +
-            (-env.get (offset + 34) +
-              (-env.get (offset + 33) + -env.get (offset + 32)))) =
+          (-Expression.eval env input.isSraw +
+            (-Expression.eval env input.isSrlw +
+              (-Expression.eval env input.isSra + -Expression.eval env input.isSrl))) =
         signedVal
-          (env.get (offset + 32) + env.get (offset + 33) +
-            env.get (offset + 34) + env.get (offset + 35)) := by
+          (Expression.eval env input.isSrl + Expression.eval env input.isSra +
+            Expression.eval env input.isSrlw + Expression.eval env input.isSraw) := by
     rw [hNegFlags, signedVal_neg hp2, neg_neg]
   have hProgramPull :
       ∀ (gate : Expression (ZMod p))
@@ -1872,14 +1670,13 @@ private theorem shiftRightProgramInteractionsFaithful
     Extracted.CPUState.interactions,
     Extracted.ALUTypeReader.interactions,
     Extracted.Interaction.toAccess, Extracted.Dir.sign,
-    srA, srSrl, srSra, srSrlw, srSraw,
-    ShiftRightChip.exposedOpcode,
+    srA, ShiftRightChip.exposedOpcode,
     eval_cpuState, eval_aluTypeReader, eval_registerAccessCols,
     eval_registerAccessTimestamp,
     ← ProvableType.getElem_eval_fields,
     Vector.getElem_mapRange, ProvableType.eval_field,
     Expression.eval, LookupAccessList.negMult,
-    signedVal_neg hp2, Opcode.ofNat, hRealVars]
+    signedVal_neg hp2, Opcode.ofNat]
   exact hDoubleNeg
 
 private theorem shiftRightUnexpectedInteractionsEmpty
@@ -1908,10 +1705,7 @@ theorem shiftRightChip_interactions_faithful
     (env : Environment (ZMod p))
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
     (cols : ShiftRightChip.Columns (ZMod p))
-    (hbind : BindsChipOutput ShiftRightChip.main env input offset cols)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (srGate offset)) :
+    (hbind : BindsChipOutput ShiftRightChip.main env input offset cols) :
     List.Perm
       (nativeAccesses env
         ((ShiftRightChip.main input).operations offset))
@@ -1937,16 +1731,16 @@ theorem shiftRightChip_interactions_faithful
     ShiftRightChip.interactionsWith_main_program_eq]
   have hState :=
     shiftRightStateInteractionsFaithful
-      (p := p) env input offset hinputReal
+      (p := p) env input offset
   have hByte :=
     shiftRightByteInteractionsFaithful
-      (p := p) env input offset hinputReal
+      (p := p) env input offset
   have hMemory :=
     shiftRightMemoryInteractionsFaithful
-      (p := p) env input offset hinputReal
+      (p := p) env input offset
   have hProgram :=
     shiftRightProgramInteractionsFaithful
-      (p := p) env input offset hinputReal
+      (p := p) env input offset
   refine List.Perm.trans ?_
     (Extracted.perm_filter_by_kind_of_no_raw
       (Extracted.ShiftRightOracle.ShiftRightCols.interactions
@@ -1988,7 +1782,6 @@ theorem shiftRightChip_interactions_constructive
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := ShiftRightChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
-    (shiftRightChipRowCodec_inputReal cols data)
   rw [nativeAccesses_component_eq_rowOperations
     (ShiftRightChip.circuit (p := p))
     assignment.environment]

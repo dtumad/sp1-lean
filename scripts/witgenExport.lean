@@ -410,7 +410,7 @@ the Rust row — it gates flag-hinted populate paths instead. On their event row
 `is_real = 1`, on padding rows `0`. Verified over all 25 committed row maps: these are
 exactly the chips with any non-bare-`var` input cell, and only cell 0 is affected. -/
 def isRealHintedChips : List String :=
-  ["Branch", "ShiftRight"]
+  ["Branch"]
 
 /-- Input-recovery table from the symbolic row map: input `i` reads Rust column `j`
 iff `rowMap[j] = var i` (`none` = the `is_real` exception). Fails closed on any other
@@ -456,9 +456,6 @@ payloads' `hintGet`s declare; chips without hint tables read the empty hint. -/
 def hintFor (chip : String) (ev : DumpEvent) : ProverHint Fp := fun key n =>
   let op := ev.opcode
   match chip, key, n with
-  | "ShiftRight", "shift_right_flags", 4 =>
-    #[#v[if op = 7 then 1 else 0, if op = 8 then 1 else 0,
-         if op = 22 then 1 else 0, if op = 23 then 1 else 0]]
   | "Branch", "branch_flags", 6 =>
     #[#v[if op = 40 then 1 else 0, if op = 41 then 1 else 0, if op = 42 then 1 else 0,
          if op = 43 then 1 else 0, if op = 44 then 1 else 0, if op = 45 then 1 else 0]]

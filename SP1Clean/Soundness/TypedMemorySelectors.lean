@@ -870,26 +870,6 @@ theorem ShiftLeftChip.circuitMemorySelectorGated :
   liftMemoryGating ShiftLeftChip.circuit, ShiftLeftChip.rowView,
     (fun input _ => input.is_real), ShiftLeftChip.mainMemorySelectorGated
 
-/-- The ShiftRight row's explicit binding assertion identifies its public selector with the
-variant-flag sum used by the factored register write. -/
-theorem ShiftRightChip.isReal_eq_exposedWriteGate
-    (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ)
-    (env : Environment (ZMod p))
-    (constraints : ((ShiftRightChip.main input).operations offset).ConstraintsHold env) :
-    env input.is_real = env (ShiftRightChip.exposedWriteGate offset) := by
-  have shallow := FlatOperation.shallowConstraints_of_constraintsHoldFlat
-    (Circuit.constraintsHold_toFlat_iff.mpr constraints)
-  have allConstraints := (constraintsHold_shallow_iff_forall_mem.mp shallow).1
-  have bindingMem : input.is_real - ShiftRightChip.exposedWriteGate offset ∈
-      ((ShiftRightChip.main input).operations offset).shallowConstraints := by
-    change input.is_real - ShiftRightChip.exposedWriteGate offset ∈
-      input.is_real * (input.is_real - 1) ::
-        (input.is_real - ShiftRightChip.exposedWriteGate offset) :: _
-    exact List.mem_cons_of_mem _ List.mem_cons_self
-  have binding := allConstraints _ bindingMem
-  rw [expression_eval_sub] at binding
-  exact sub_eq_zero.mp binding
-
 /-- ShiftRight's full row constraints restrict to its composed ALU reader. -/
 private theorem ShiftRightChip.aluReaderGateFacts
     (input : Var ShiftRightChip.Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
@@ -901,11 +881,11 @@ private theorem ShiftRightChip.aluReaderGateFacts
           ((ShiftRightChip.aluReaderInput input offset).is_real -
             (ShiftRightChip.aluReaderInput input offset).cols.imm_c - 1)) = 0 := by
   have readerConstraints := generalSubcircuit_constraints_of_mem
-    Readers.ALUTypeReader.circuit (ShiftRightChip.aluReaderInput input offset) (offset + 37) env
+    Readers.ALUTypeReader.circuit (ShiftRightChip.aluReaderInput input offset) (offset + 33) env
       ((ShiftRightChip.main input).operations offset)
       (ShiftRightChip.aluReader_mem_subcircuits input offset) constraints
   exact aluTypeReader_gateFacts_of_constraints
-    (ShiftRightChip.aluReaderInput input offset) (offset + 37) env readerConstraints
+    (ShiftRightChip.aluReaderInput input offset) (offset + 33) env readerConstraints
 
 /-- ShiftRight's immediate-aware source-C gate is zero or the physical row selector. -/
 private theorem ShiftRightChip.subGate_eq_zero_or_isReal
@@ -945,12 +925,11 @@ theorem ShiftRightChip.mainMemorySelectorGated :
     ShiftRightChip.exposedMemoryInteractions ShiftRightChip.interactionsWith_memory_eq
   intro input offset env constraints
   have subGate := ShiftRightChip.subGate_eq_zero_or_isReal input offset env constraints
-  have writeGate := (ShiftRightChip.isReal_eq_exposedWriteGate input offset env constraints).symm
   rcases subGate with subGate | subGate <;>
     simp only [ShiftRightChip.exposedMemoryInteractions, List.forall_mem_cons,
       Channel.pulledIf, Channel.pushedIf, pulledIf_mult, pushedIf_mult,
       Expression.eval, neg_one_mul, List.not_mem_nil, false_implies, true_and,
-      subGate, writeGate, true_or, or_true]
+      subGate, true_or, or_true]
   all_goals simp
 
 theorem ShiftRightChip.circuitMemorySelectorGated :

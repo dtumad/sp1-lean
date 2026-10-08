@@ -25,6 +25,7 @@ use sp1_core_machine::{
         lt::{LtChip, LtCols},
         mul::{MulChip, MulCols},
         sll::{ShiftLeftChip, ShiftLeftCols},
+        sr::{ShiftRightChip, ShiftRightCols},
     },
     memory::load::load_byte::{LoadByteChip, LoadByteColumns},
     SupervisorMode,
@@ -101,6 +102,15 @@ mod generated_shift_left {
     ));
 }
 use generated_shift_left::{ShiftLeftInstruction, ShiftLeftInstructionAirSpec};
+
+#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+mod generated_shift_right {
+    include!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/shift_right_instruction.rs"
+    ));
+}
+use generated_shift_right::{ShiftRightInstruction, ShiftRightInstructionAirSpec};
 
 type Ledger = Vec<(String, u64, Vec<u64>)>;
 
@@ -492,6 +502,7 @@ fn instruction_fixtures_do_not_claim_provider_balance() {
     check_open_buses::<BitwiseInstruction>(&bitwise_row(&bitwise_trace().row_slice(0)));
     check_open_buses::<LtInstruction>(&lt_row(&lt_trace().row_slice(0)));
     check_open_buses::<ShiftLeftInstruction>(&shift_left_row(&shift_left_trace().row_slice(0)));
+    check_open_buses::<ShiftRightInstruction>(&shift_right_row(&shift_right_trace().row_slice(0)));
 }
 
 fn load_byte_event(
@@ -1220,5 +1231,128 @@ fn all_shift_left_columns_preserve_constraints_and_interactions_under_mutation()
         &indices,
         shift_left_row,
         &ShiftLeftChip::<SupervisorMode>::default(),
+    );
+}
+
+fn shift_right_trace() -> RowMajorMatrix<SP1Field> {
+    let values: [u64; 13] = [
+        0,
+        1,
+        255,
+        256,
+        65535,
+        65536,
+        (1 << 31) - 1,
+        1 << 31,
+        u32::MAX as u64,
+        1 << 32,
+        (1 << 63) - 1,
+        1 << 63,
+        u64::MAX,
+    ];
+    let mut record = ExecutionRecord::default();
+    for opcode in [Opcode::SRL, Opcode::SRA, Opcode::SRLW, Opcode::SRAW] {
+        // Exercise every shift amount, word truncation and both sign boundaries.
+        // High register bits are ignored; immediates stay within their encoded range.
+        let immediate_limit = if matches!(opcode, Opcode::SRL | Opcode::SRA) {
+            64
+        } else {
+            32
+        };
+        for b in values {
+            let operands = (0_u64..64)
+                .chain([64, 65, 127, 65535, 1 << 32, u64::MAX])
+                .map(|c| (c, false))
+                .chain((0..immediate_limit).map(|c| (c, true)));
+            for (c, immediate) in operands {
+                let a = match opcode {
+                    Opcode::SRL => b.wrapping_shr(c as u32),
+                    Opcode::SRA => (b as i64).wrapping_shr(c as u32) as u64,
+                    Opcode::SRLW => (b as u32).wrapping_shr(c as u32) as i32 as i64 as u64,
+                    Opcode::SRAW => (b as i32).wrapping_shr(c as u32) as i64 as u64,
+                    _ => unreachable!(),
+                };
+                record.shift_right_events.push(alu_type_event(
+                    record.shift_right_events.len(),
+                    opcode,
+                    a,
+                    b,
+                    c,
+                    immediate,
+                ));
+            }
+        }
+    }
+    assert_eq!(record.shift_right_events.len(), 6136);
+    let chip = ShiftRightChip::<SupervisorMode>::default();
+    let trace = chip.generate_trace(&record, &mut ExecutionRecord::default());
+    assert_eq!(
+        trace.width(),
+        <ShiftRightChip<SupervisorMode> as BaseAir<SP1Field>>::width(&chip)
+    );
+    assert_eq!(trace.height(), 6144); // Eight padding rows with nonzero inverse powers.
+    trace
+}
+
+fn shift_right_row(sp1: &[SP1Field]) -> Vec<NativeField> {
+    type Columns = ShiftRightCols<u8, SupervisorMode>;
+    // Authenticate all 36 inputs and 33 witnesses against SP1's physical layout.
+    let mut indices: Vec<usize> = (0..offset_of!(Columns, a)).collect();
+    indices.extend([
+        offset_of!(Columns, is_srl),
+        offset_of!(Columns, is_sra),
+        offset_of!(Columns, is_srlw),
+        offset_of!(Columns, is_sraw),
+    ]);
+    indices.extend(offset_of!(Columns, a)..offset_of!(Columns, is_srl));
+    indices.push(offset_of!(Columns, is_w_imm));
+    assert_eq!(sp1.len(), 69);
+    assert_eq!(sp1.len(), ShiftRightInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(
+        <ShiftRightInstruction as Program<NativeField>>::PROVER_INPUTS,
+        36
+    );
+    let mut sorted = indices.clone();
+    sorted.sort_unstable();
+    assert_eq!(sorted, (0..sp1.len()).collect::<Vec<_>>());
+    indices
+        .into_iter()
+        .map(|index| NativeField::from_u64(sp1[index].as_canonical_u64()))
+        .collect()
+}
+
+#[test]
+fn generated_shift_right_witness_and_air_match_released_sp1() {
+    check_trace::<ShiftRightInstruction, ShiftRightInstructionAirSpec>(
+        &shift_right_trace(),
+        shift_right_row,
+        &ShiftRightChip::<SupervisorMode>::default(),
+    );
+}
+
+#[test]
+fn all_shift_right_columns_preserve_constraints_and_interactions_under_mutation() {
+    // All opcodes and forms, sign fill, limb boundaries, ignored shift bits and padding.
+    let mut indices = vec![6136];
+    for (base, stride) in [(0, 134), (1742, 134), (3484, 102), (4810, 102)] {
+        indices.push(base); // Zero operands.
+        for b in [7, 12] {
+            // The word sign bit and all ones.
+            indices.extend(
+                [
+                    0, 1, 15, 16, 31, 32, 47, 48, 63, 64, 69, 70, 85, 86, 101, 102, 133,
+                ]
+                .into_iter()
+                .filter(|row| *row < stride)
+                .map(|row| base + b * stride + row),
+            );
+        }
+    }
+    assert_eq!(indices.len(), 133); // 27,531 independent column/value mutations.
+    check_mutations::<ShiftRightInstruction, ShiftRightInstructionAirSpec>(
+        &shift_right_trace(),
+        &indices,
+        shift_right_row,
+        &ShiftRightChip::<SupervisorMode>::default(),
     );
 }

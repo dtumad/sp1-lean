@@ -20,16 +20,14 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- ADD, LoadByte, Bitwise, Lt, ShiftLeft, Mul and DivRem export through the same built-in path. Rust compares generated witnesses,
-  local constraint satisfaction and complete interaction multisets with SP1 v6.8.1's supervisor
-  AIR, including padding and column mutations. DivRem supplies seven opcode selectors as inputs
-  and derives DIVU. Mul supplies five selectors and derives activity from their sum, matching
-  SP1's 82-cell layout. Bitwise supplies three selectors and derives activity, matching SP1's
-  51-cell layout. Lt supplies two selectors and ten comparison witnesses, matching SP1's
-  44-cell layout. ShiftLeft supplies two selectors and 31 witnesses, matching the 65-cell layout,
-  including its nonzero padding powers. Bitwise, Lt and ShiftLeft cover register and immediate
-  operands. The multiplication gadget retains the caller's result word in disabled interactions. Both Cargo configurations, with and without `mprotect`, run these comparisons;
-  they do not cover user-mode or mprotect semantics. See the [coverage table](../rust/sp1-comparison/README.md).
+- ADD, LoadByte, Bitwise, Lt, ShiftLeft, ShiftRight, Mul and DivRem export through the same
+  built-in path. Rust compares generated witnesses, local constraint satisfaction and complete
+  interaction multisets with SP1 v6.8.1's supervisor AIR, including padding and column mutations.
+  Multi-opcode components use explicit selectors without hints. Comparisons retain repeated and
+  zero-multiplicity messages, including the multiplication gadget's caller-supplied result word.
+  Both Cargo configurations, with and without `mprotect`, run these tests; user-mode and
+  mprotect semantics remain outside their scope. Exact cases and counts live in the
+  [coverage table](../rust/sp1-comparison/README.md).
 - Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They are
   transitional evidence until instruction coverage moves to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,
