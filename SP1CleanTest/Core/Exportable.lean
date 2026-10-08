@@ -138,9 +138,9 @@ not own a second spelling of the production characteristic. -/
 #guard_msgs in
 #assert_exportable (StoreDoubleChip.circuit (p := SP1Prime))
 
-/-! ## Hint-driven ALU (wave W4) — flags through `FExpr.hintGet` -/
+/-! ## Multi-opcode ALU components -/
 
-/-- info: exportable ✓ (19 witness cells) -/
+/-- info: exportable ✓ (16 witness cells) -/
 #guard_msgs in
 #assert_exportable (BitwiseChip.circuit (p := SP1Prime))
 /-- info: exportable ✓ (12 witness cells) -/

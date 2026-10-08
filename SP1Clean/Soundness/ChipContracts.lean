@@ -3439,32 +3439,9 @@ theorem bitwiseChip_aluTypeGroundingData :
   commit_eq := by chip_field_rfl bitwiseChipDescriptor (p := p)
   imm_b_eq := by chip_field_rfl bitwiseChipDescriptor (p := p)
   assumptionsLocal := by
-    intro proverData decoded hchip staticInputs real program decode memory
-    have rowConstraints := staticInputs.constraints
-    have operands := aluTypeOperandWords_isU64_of_shape
-      bitwiseChip_aluTypeMemoryInteractionShape.constrained decoded proverData hchip
-        rowConstraints real memory
-    have opCU64 : Word.isU64
-        (decoded.toChipRow proverData).view.adapter.op_c_memory.prev_value := by
-      rcases bitwiseChip_immBinary decoded proverData decode with register | immediate
-      · exact operands.2 register
-      · have binding := bitwiseChip_opCBinding_of_constraints decoded proverData hchip
-          rowConstraints immediate
-        rw [binding]
-        exact bitwiseChip_immediate_isU64 decoded proverData decode immediate
+    intro proverData decoded hchip _staticInputs _real _program _decode _memory
     chip_subst bitwiseChipDescriptor (p := p)
-    let env := Environment.fromArray physical proverData
-    change Word.isU64
-        (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput
-          env).adapter.op_b_memory.prev_value ∧
-      Word.isU64
-        (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput
-          env).adapter.op_c_memory.prev_value
-    rw [BitwiseChip.inputOutputAdapter env]
-    simpa only [BitwiseChip.Inputs.op_b_val, BitwiseChip.Inputs.op_c_val,
-      DecodedInstructionRow.toChipRow, bitwiseViewOf_decodeRow, bitwiseViewOf,
-      BitwiseChip.physicalView, BitwiseChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, env]
-      using ⟨operands.1, opCU64⟩
+    exact trivial
   routingLocal := by
     chip_routing_rowViewOpA0 BitwiseChip.rowViewOpA0_eq_zero_of_constraints,
       bitwiseChipDescriptor (p := p)

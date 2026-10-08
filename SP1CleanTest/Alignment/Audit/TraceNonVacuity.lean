@@ -173,8 +173,8 @@ theorem anchorRangeEntriesBuilt_interactionsWith (width : RangeChip.Width)
 
 /-- A table built from no occurrences contributes nothing to any channel. -/
 theorem nilTable (c : Component (ZMod SP1Prime)) (ch : RawChannel (ZMod SP1Prime))
-    {fixed : c.fixedRowsMatch []} :
-    (Table.build c [] anchorData anchorHint fixed).interactionsWith anchorData ch = [] := rfl
+    {hint : ProverHint (ZMod SP1Prime)} {fixed : c.fixedRowsMatch []} :
+    (Table.build c [] anchorData hint fixed).interactionsWith anchorData ch = [] := rfl
 
 /-- The dependent input type of an empty indexed Range table stays folded at the component
 boundary, avoiding an unnecessary transparency conversion through `componentFor`. -/
@@ -196,7 +196,7 @@ theorem anchorTrace_tables_eq :
        Table.build AddwChip.component [] anchorData anchorHint,
        Table.build SubChip.component [] anchorData anchorHint,
        Table.build SubwChip.component [] anchorData anchorHint,
-       Table.buildHinted BitwiseChip.component [] anchorData,
+       Table.build BitwiseChip.component [] anchorData (ProverHint.empty _),
        Table.buildHinted LtChip.component [] anchorData,
        Table.buildHinted ShiftLeftChip.component [] anchorData,
        Table.buildHinted ShiftRightChip.component [] anchorData,

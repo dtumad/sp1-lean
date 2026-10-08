@@ -14,12 +14,13 @@ use slop_algebra::{AbstractField, PrimeField64 as Sp1PrimeField64};
 use slop_matrix::{dense::RowMajorMatrix, Matrix};
 use sp1_core_executor::{
     events::{AluEvent, MemInstrEvent, MemoryReadRecord, MemoryRecordEnum, MemoryWriteRecord},
-    get_quotient_and_remainder, ExecutionRecord, ITypeRecord, Opcode, RTypeRecord,
+    get_quotient_and_remainder, ALUTypeRecord, ExecutionRecord, ITypeRecord, Opcode, RTypeRecord,
 };
 use sp1_core_machine::{
     air::TrivialOperationBuilder,
     alu::{
         add_sub::add::AddChip,
+        bitwise::{BitwiseChip, BitwiseCols},
         divrem::{DivRemChip, DivRemCols},
         mul::{MulChip, MulCols},
     },
@@ -71,6 +72,15 @@ mod generated_mul {
     ));
 }
 use generated_mul::{MulInstruction, MulInstructionAirSpec};
+
+#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+mod generated_bitwise {
+    include!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/bitwise_instruction.rs"
+    ));
+}
+use generated_bitwise::{BitwiseInstruction, BitwiseInstructionAirSpec};
 
 type Ledger = Vec<(String, u64, Vec<u64>)>;
 
@@ -434,6 +444,7 @@ fn instruction_fixtures_do_not_claim_provider_balance() {
     check_open_buses::<LoadByteInstruction>(&load_byte_row(&load_byte_trace().row_slice(0)));
     check_open_buses::<DivRemInstruction>(&div_rem_row(&div_rem_trace().row_slice(0)));
     check_open_buses::<MulInstruction>(&mul_row(&mul_trace().row_slice(0)));
+    check_open_buses::<BitwiseInstruction>(&bitwise_row(&bitwise_trace().row_slice(0)));
 }
 
 fn load_byte_event(
@@ -831,5 +842,119 @@ fn all_mul_columns_preserve_constraints_and_interactions_under_mutation() {
         &indices,
         mul_row,
         &MulChip::<SupervisorMode>::default(),
+    );
+}
+
+fn bitwise_trace() -> RowMajorMatrix<SP1Field> {
+    let values: [u64; 12] = [
+        0,
+        1,
+        255,
+        256,
+        65535,
+        65536,
+        u32::MAX as u64,
+        1 << 32,
+        1 << 63,
+        0x5555_5555_5555_5555,
+        0xaaaa_aaaa_aaaa_aaaa,
+        u64::MAX,
+    ];
+    let mut record = ExecutionRecord::default();
+    for opcode in [Opcode::XOR, Opcode::OR, Opcode::AND] {
+        // Register operands exercise byte/limb/word boundaries and every bit in the result.
+        // Immediate operands include both signed twelve-bit boundaries and sign extension.
+        let operands = values
+            .into_iter()
+            .flat_map(|b| values.into_iter().map(move |c| (b, c, false)))
+            .chain(values.into_iter().flat_map(|b| {
+                [0_i64, 1, 2047, -2048, -1]
+                    .into_iter()
+                    .map(move |c| (b, c as u64, true))
+            }));
+        for (b, c, immediate) in operands {
+            let a = match opcode {
+                Opcode::XOR => b ^ c,
+                Opcode::OR => b | c,
+                Opcode::AND => b & c,
+                _ => unreachable!(),
+            };
+            let (event, registers) = r_type_event(record.bitwise_events.len(), opcode, a, b, c);
+            record.bitwise_events.push((
+                event,
+                ALUTypeRecord {
+                    op_a: registers.op_a,
+                    a: registers.a,
+                    op_b: registers.op_b as u64,
+                    b: registers.b,
+                    op_c: if immediate { c } else { registers.op_c as u64 },
+                    c: if immediate { None } else { Some(registers.c) },
+                    is_imm: immediate,
+                    is_untrusted: false,
+                },
+            ));
+        }
+    }
+    assert_eq!(record.bitwise_events.len(), 612);
+    let chip = BitwiseChip::<SupervisorMode>::default();
+    let trace = chip.generate_trace(&record, &mut ExecutionRecord::default());
+    assert_eq!(
+        trace.width(),
+        <BitwiseChip<SupervisorMode> as BaseAir<SP1Field>>::width(&chip)
+    );
+    assert_eq!(trace.height(), 640); // Includes 28 all-zero SP1 padding rows.
+    trace
+}
+
+fn bitwise_row(sp1: &[SP1Field]) -> Vec<NativeField> {
+    type Columns = BitwiseCols<u8, SupervisorMode>;
+    // Reader columns and selectors are inputs; sixteen byte columns are witnesses.
+    // Rust struct offsets authenticate this permutation independently of Clean's inventory.
+    let operation = offset_of!(Columns, bitwise_operation);
+    let mut indices: Vec<usize> = (0..operation).collect();
+    indices.extend([
+        offset_of!(Columns, is_xor),
+        offset_of!(Columns, is_or),
+        offset_of!(Columns, is_and),
+    ]);
+    indices.extend(operation..operation + 16);
+    assert_eq!(sp1.len(), 51);
+    assert_eq!(sp1.len(), BitwiseInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(
+        <BitwiseInstruction as Program<NativeField>>::PROVER_INPUTS,
+        35
+    );
+    let mut sorted = indices.clone();
+    sorted.sort_unstable();
+    assert_eq!(sorted, (0..sp1.len()).collect::<Vec<_>>());
+    indices
+        .into_iter()
+        .map(|index| NativeField::from_u64(sp1[index].as_canonical_u64()))
+        .collect()
+}
+
+#[test]
+fn generated_bitwise_witness_and_air_match_released_sp1() {
+    check_trace::<BitwiseInstruction, BitwiseInstructionAirSpec>(
+        &bitwise_trace(),
+        bitwise_row,
+        &BitwiseChip::<SupervisorMode>::default(),
+    );
+}
+
+#[test]
+fn all_bitwise_columns_preserve_constraints_and_interactions_under_mutation() {
+    // All three opcodes, register and immediate forms, signed boundaries, and inactive padding.
+    let indices: Vec<usize> = (0..3)
+        .flat_map(|opcode| {
+            [0, 26, 65, 118, 143, 144, 146, 147, 148, 201, 202, 203].map(|row| opcode * 204 + row)
+        })
+        .chain([612])
+        .collect();
+    check_mutations::<BitwiseInstruction, BitwiseInstructionAirSpec>(
+        &bitwise_trace(),
+        &indices,
+        bitwise_row,
+        &BitwiseChip::<SupervisorMode>::default(),
     );
 }

@@ -331,7 +331,7 @@ private def activeTableGroup0 : List (Table (ZMod SP1Prime)) :=
    Table.build AddwChip.component [] anchorData anchorHint,
    Table.build SubChip.component [] anchorData anchorHint,
    Table.build SubwChip.component [] anchorData anchorHint,
-   Table.buildHinted BitwiseChip.component [] anchorData,
+   Table.build BitwiseChip.component [] anchorData (ProverHint.empty _),
    Table.buildHinted LtChip.component [] anchorData,
    Table.buildHinted ShiftLeftChip.component [] anchorData,
    Table.buildHinted ShiftRightChip.component [] anchorData]
