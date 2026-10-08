@@ -612,25 +612,18 @@ theorem ShiftLeftChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (ShiftLeftChip.circuit (p := p))
       ShiftLeftChip.rowView := by
   programExposureStart
-  refine ⟨fun _ offset => ShiftLeftChip.exposedGate offset,
-    fun input offset =>
+  refine ⟨fun input _ => ShiftLeftChip.exposedGate input,
+    fun input _ =>
       ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2],
-        ShiftLeftChip.exposedOpcode offset,
+        ShiftLeftChip.exposedOpcode input,
         input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
         input.adapter.op_a_0, 0, input.adapter.imm_c⟩, ?_, ?_, ?_⟩
   · intro input offset
     simp [ShiftLeftChip.circuit, ShiftLeftChip.stateExposure, Readers.CPUState.exposedState,
       expose]
-  · -- The gate is the derived one-hot flag sum; the chip-local whole-`main` binding-constraint
-    -- extraction `isReal_eq_exposedGate` identifies it with the public `is_real`.
-    intro env constraints
-    let input : Var ShiftLeftChip.Inputs (ZMod p) := varFromOffset ShiftLeftChip.Inputs 0
-    let offset := size ShiftLeftChip.Inputs
-    have rowConstraints := (Component.constraintsHold_iff env).mp constraints
-    change ((ShiftLeftChip.main input).operations offset).ConstraintsHold env at rowConstraints
-    have gateEq := ShiftLeftChip.isReal_eq_exposedGate input offset env rowConstraints
-    simpa [input, offset, ShiftLeftChip.circuit, ShiftLeftChip.rowView,
-      circuit_norm] using gateEq.symm
+  · intro env _
+    simp [ShiftLeftChip.circuit, ShiftLeftChip.rowView, ShiftLeftChip.exposedGate,
+      circuit_norm]
   · intro env
     simp [ShiftLeftChip.circuit, ShiftLeftChip.rowView, ShiftLeftChip.exposedOpcode,
       Circuits.Types.ALUTypeReader.toAdapterView, programMessageOfView, circuit_norm]

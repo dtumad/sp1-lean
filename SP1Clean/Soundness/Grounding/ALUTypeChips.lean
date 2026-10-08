@@ -1396,34 +1396,16 @@ theorem shiftLeftViewOf_rdWrite (env : Environment (ZMod p)) :
   interval_cases i <;> simp only [offset, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
-/-- On satisfying rows, ShiftLeft's witnessed flag-sum gate equals its public row selector. -/
-theorem shiftLeftGate_eval_eq_isReal (env : Environment (ZMod p))
-    (constraints :
-      ({ circuit := ShiftLeftChip.circuit (p := p) } :
-        Component (ZMod p)).operations.ConstraintsHold env) :
-    Expression.eval env (ShiftLeftChip.exposedGate (p := p) (size ShiftLeftChip.Inputs)) =
-      (shiftLeftViewOf env).is_real := by
-  let input : Var ShiftLeftChip.Inputs (ZMod p) :=
-    varFromOffset ShiftLeftChip.Inputs 0
-  let offset := size ShiftLeftChip.Inputs
-  have mainConstraints : ((ShiftLeftChip.main input).operations offset).ConstraintsHold env :=
-    (Component.constraintsHold_iff env).mp constraints
-  have link :=
-    (ShiftLeftChip.controlFacts_of_mainConstraints input offset env mainConstraints).selectorLink
-  calc
-    _ = Expression.eval env (var { index := offset + 30 }) +
-        Expression.eval env (var { index := offset + 31 }) := by
-      simp only [ShiftLeftChip.exposedGate, offset, Expression.eval]
-    _ = Expression.eval env input.is_real := link.symm
-    _ = (Eval.eval env input).is_real := (ShiftLeftChip.eval_inputIsReal env input).symm
-    _ = (shiftLeftViewOf env).is_real := (shiftLeftViewOf_isReal env).symm
+/-- ShiftLeft's activity is the sum of its explicit opcode selectors. -/
+theorem shiftLeftGate_eval_eq_isReal (env : Environment (ZMod p)) :
+    Expression.eval env (ShiftLeftChip.exposedGate (p := p)
+      (varFromOffset ShiftLeftChip.Inputs 0)) = (shiftLeftViewOf env).is_real := by
+  rw [shiftLeftViewOf_isReal, ShiftLeftChip.eval_inputIsReal]
+  rfl
 
 omit [Fact (2 ^ 25 < p)] in
-/-- ShiftLeft's completed Memory list is canonical after its selector-link constraint fires. -/
-theorem shiftLeftChip_memoryInteractionValues_eq (env : Environment (ZMod p))
-    (constraints :
-      ({ circuit := ShiftLeftChip.circuit (p := p) } :
-        Component (ZMod p)).operations.ConstraintsHold env) :
+/-- ShiftLeft's completed Memory list has the canonical ALU shape. -/
+theorem shiftLeftChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     ({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (aluViewMemoryInteractions (shiftLeftViewOf env)).map TypedInteraction.raw := by
@@ -1433,17 +1415,16 @@ theorem shiftLeftChip_memoryInteractionValues_eq (env : Environment (ZMod p))
     List.map_nil, TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw,
     Channel.eval_pulledIf, Channel.eval_pushedIf, eval_registerMemoryMessage]
   simp only [CircuitType.eval_expr, eval_sub]
-  rw [shiftLeftGate_eval_eq_isReal env constraints]
+  rw [shiftLeftGate_eval_eq_isReal env]
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     shiftLeftViewOf_state, shiftLeftViewOf_adapter, shiftLeftViewOf_isReal,
     shiftLeftViewOf_rdWrite, Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
   simp only [← vec4_eval, Vector.getElem_mapRange, Expression.eval]
 
-/-- Lift ShiftLeft's constraint-normalized six-pack to the typed decoded-row boundary. -/
+/-- Lift ShiftLeft's six memory interactions to the typed decoded-row boundary. -/
 theorem shiftLeftChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))
-    (hchip : decoded.chip = shiftLeftChipDescriptor (p := p))
-    (constraints : decoded.chip.table.operations.ConstraintsHold (decoded.environment data)) :
+    (hchip : decoded.chip = shiftLeftChipDescriptor (p := p)) :
     decoded.interactionsWith data memoryChannel =
       aluViewMemoryInteractions (decoded.toChipRow data).view := by
   descriptorSubst shiftLeftChipDescriptor (p := p)
@@ -1451,16 +1432,15 @@ theorem shiftLeftChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRo
   rw [DecodedInstructionRow.interactionsWith_raw]
   simpa only [DecodedInstructionRow.environment, DecodedInstructionRow.toChipRow,
     shiftLeftViewOf_decodeRow, shiftLeftChipDescriptor_table] using
-    shiftLeftChip_memoryInteractionValues_eq (Environment.fromArray physical data) constraints
+    shiftLeftChip_memoryInteractionValues_eq (Environment.fromArray physical data)
 
-/-- ShiftLeft instantiates the constraint-normalized immediate-capable ALU Memory shape. -/
+/-- ShiftLeft instantiates the canonical immediate-capable ALU Memory shape. -/
 theorem shiftLeftChip_aluTypeMemoryInteractionShape :
-    ConstrainedALUTypeMemoryInteractionShape (shiftLeftChipDescriptor (p := p)) :=
+    ALUTypeMemoryInteractionShape (shiftLeftChipDescriptor (p := p)) :=
   shiftLeftChip_typedMemoryInteractions_eq
 
 omit [Fact (2 ^ 25 < p)] in
-/-- ShiftLeft's retained reader through the constraint-aware scalar timestamp contract.
-The former 4M ceiling measured ~100x over; floor is at or below 40000. -/
+/-- ShiftLeft's ALU reader supplies the scalar timestamp contract. -/
 theorem ShiftLeftChip.aluTypeTimestampContract :
     CircuitALUTypeTimestampContract (p := p) (ShiftLeftChip.circuit (p := p))
       ShiftLeftChip.rowView := by
@@ -1468,9 +1448,9 @@ theorem ShiftLeftChip.aluTypeTimestampContract :
     varFromOffset ShiftLeftChip.Inputs 0
   let offset := size ShiftLeftChip.Inputs
   let readerInput := ShiftLeftChip.aluReaderInput input offset
-  refine .intro (offset + 33) readerInput
+  refine .intro (offset + 31) readerInput
     (ShiftLeftChip.aluReader_mem_subcircuits input offset) ?_
-  intro env constraints
+  intro env _
   have inputEq : Eval.eval env input =
       ({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset ShiftLeftChip.Inputs 0 env
@@ -1490,7 +1470,7 @@ theorem ShiftLeftChip.aluTypeTimestampContract :
       shiftLeftViewOf_state, shiftLeftViewOf_adapter,
       Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
   simpa only [ShiftLeftChip.exposedGate, Expression.eval, circuit_norm] using
-    shiftLeftGate_eval_eq_isReal env constraints
+    shiftLeftGate_eval_eq_isReal env
 
 theorem shiftLeftChip_viewClockBounds (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))

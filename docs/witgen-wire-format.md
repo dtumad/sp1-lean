@@ -298,11 +298,11 @@ witnesses with Lean and exercises Clean's proof backend; see [export](export.md)
 
 ## SP1-specific facts a consumer may rely on
 
-- The 25 instruction chips have empty `data` schemas. Some use `hintGet`; Bitwise, Lt, Mul and DivRem
-  supply their variant selectors as inputs and read no external hints. Bitwise, Lt and Mul derive activity
-  from their three, two and five selectors; DivRem supplies seven selectors and derives DIVU.
-- Every hint read is at constant row `0`. The four remaining hint tables and widths are
+- The 25 instruction chips have empty `data` schemas. Some use `hintGet`; Bitwise, Lt, ShiftLeft, Mul and DivRem
+  supply their variant selectors as inputs and read no external hints. Bitwise, Lt, ShiftLeft and Mul derive activity
+  from their three, two, two and five selectors; DivRem supplies seven selectors and derives DIVU.
+- Every hint read is at constant row `0`. The three remaining hint tables and widths are
   in the manifests (`branch_flags` 6, `branch_branching` 1,
-  `shift_left_flags` 2, `shift_right_flags` 4).
+  `shift_right_flags` 4).
 - Missing hints read as zero vectors. DivRem's DIVU padding instead uses seven zero
   selector inputs and a divisor read of one; its derived DIVU witness is one.

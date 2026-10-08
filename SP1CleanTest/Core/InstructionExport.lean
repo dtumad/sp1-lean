@@ -5,6 +5,7 @@ import SP1Clean.Proofs.Chips.DivRemChip.Complete
 import SP1Clean.Proofs.Chips.MulChip.Complete
 import SP1Clean.Proofs.Chips.BitwiseChip.Complete
 import SP1Clean.Proofs.Chips.LtChip.Complete
+import SP1Clean.Proofs.Chips.ShiftLeftChip.Complete
 import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
@@ -74,5 +75,10 @@ def bitwiseRust : Except String String :=
 def ltRust : Except String String :=
   Extraction.Rust.ensembleToRust "LtInstruction"
     (ensemble { circuit := LtChip.circuit }) (config LtChip.Inputs)
+
+/-- Export SLL/SLLW with explicit selectors; Clean computes the nonzero padding powers. -/
+def shiftLeftRust : Except String String :=
+  Extraction.Rust.ensembleToRust "ShiftLeftInstruction"
+    (ensemble { circuit := ShiftLeftChip.circuit }) (config ShiftLeftChip.Inputs)
 
 end SP1CleanTest.Core.InstructionExport

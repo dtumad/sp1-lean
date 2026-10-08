@@ -6,26 +6,12 @@ import SP1Clean.Proofs.Chips.ShiftLeftChip.Soundness.Sllw
 import SP1Clean.Math.EvalVec
 import Clean.Air.Circuit
 
-/-! # `SP1Clean.ShiftLeftChip` — contract: soundness / completeness / `circuit`
+/-! # ShiftLeft soundness, completeness and bundled circuit
 
-Split from the monolithic chip file: `main` + the `ElaboratedCircuit` instance + the soundness
-`Assumptions` live in the sibling `Defs` module (`Assumptions` there, not here, so the per-op
-`Soundness/<Op>.lean` split files can import it without a cycle through `Formal`). This module holds the
-`ProverAssumptions`, the soundness/completeness proofs, and the bundled `circuit`.
-
-**Soundness** is assembled here from the two per-conjunct `Soundness/{Sll,Sllw}.lean` files — each its own
-`GeneralFormalCircuit.Soundness` over a single-conjunct `Spec`, split out so the heavy per-variant proofs
-compile in parallel — plus the shared channel-requirement tail (the same in both variants, reused here from
-`SoundSll`). `circuit_proof_start_core` only introduces the binders (no `simp`), so the sub-theorems' raw
-`h_holds`/`h_input`/`h_assumptions` binders match directly.
-
-**Completeness** is proven against `main`'s honest `Populate` witness closures (flags via the
-`"shift_left_flags"` `ProverHint`): every witnessed cell is pinned to its populate projection, the
-constraints close by the `Populate.lean` value-level bundles, and the nine byte-range pulls by the
-populate bound lemmas. The closures themselves are conformance-checked cell-for-cell against SP1's real
-`generate_trace` in `TraceGenTests/ShiftLeftChipTraceWitness.lean`.
-
-Perf: the former 4M budgets on `soundness` and `circuit` were ~100× over; both floor at ≤40000. -/
+Soundness composes the feature-local SLL and SLLW proofs with their shared channel guarantees.
+Completeness uses the explicit opcode selectors and the value-level witness lemmas in `Populate`.
+The semantic contract is independent of the generated Rust-to-Lean migration oracle.
+-/
 
 namespace SP1Clean.ShiftLeftChip
 
@@ -38,22 +24,16 @@ local instance : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 -- `Assumptions` (the operand `isU64`/register-readback contract) lives in `Defs` so the per-op
 -- `Soundness/<Op>.lean` split files can import it without a cycle through `Formal`.
 
-/-- Prover-side row well-formedness: the operand `isU64`s, the `is_real` binary selector, the honest
-`"shift_left_flags"` hint (each flag binary, the sum = `is_real` — required by the in-circuit
-`is_real - (is_sll + is_sllw)` bind), `op_a_0 = 0`, the immediate-`c` machinery (`imm_c` boolean facts
-+ the four `prev_value = op_c` pins, verbatim `ALUTypeReader.Spec` conjuncts), the CPUState clock
-bounds, and the three register-access timestamp `Spec`s (op_c gated `is_real - imm_c`). -/
+/-- Honest-row obligations: word ranges, binary opcode selectors and activity, immediate
+consistency, CPU clock bounds and register-access timestamps. Hints are unused. -/
 def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) : Prop :=
-  let f := hintFlags hint
+    (_hint : ProverHint (ZMod p)) : Prop :=
   Word.isU64 input.op_b_val ∧
   Word.isU64 input.adapter.op_c_memory.prev_value ∧
-  -- (W11 Option-B memory flip) the op_a register read-prior is `u64` on real rows — feeds the
-  -- `ALUTypeReader` op_a/op_b `isU64` reader-`Spec` conjunct (op_a's half).
+  -- The ALU reader requires a canonical prior destination value on active rows.
   (input.is_real = 1 → Word.isU64 input.adapter.op_a_memory.prev_value) ∧
   (input.is_real = 0 ∨ input.is_real = 1) ∧
-  (f[0] = 0 ∨ f[0] = 1) ∧ (f[1] = 0 ∨ f[1] = 1) ∧
-  input.is_real = f[0] + f[1] ∧
+  (input.isSll = 0 ∨ input.isSll = 1) ∧ (input.isSllw = 0 ∨ input.isSllw = 1) ∧
   input.adapter.op_a_0 = 0 ∧
   (input.is_real - 1) * input.adapter.imm_c = 0 ∧
   (input.is_real - input.adapter.imm_c = 0 ∨ input.is_real - input.adapter.imm_c = 1) ∧
@@ -98,31 +78,30 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   · exact (SoundSllw.soundness i₀ env input_var input h_input h_assumptions h_holds).1 hr
   · exact (SoundSll.soundness  i₀ env input_var input h_input h_assumptions h_holds).2
 
-/-- Completeness: `main`'s honest `Populate` witness closures (flags from the `"shift_left_flags"`
-hint) satisfy every constraint under `ProverAssumptions`. The chip-local assertion tail remains
-folded behind `ShiftLeftCore.circuit`, avoiding the Lean 4.31 kernel-size cliff. -/
+/-- Clean's witness generators satisfy every constraint under `ProverAssumptions`.
+The shift assertion tail stays folded behind its bundled `ShiftLeftCore` boundary. -/
 theorem completeness :
     GeneralFormalCircuit.Completeness (ZMod p) main ProverAssumptions (fun _ _ _ => True) := by
   circuit_proof_start_core
   simp +instances only [circuit_norm] at h_input
   provable_struct_simp
-  obtain ⟨hbU, hcU, ha_prev, hbin, hf0, hf1, hsum, hop_a_0, himmc, himmbin, hpins, h_cpu,
+  obtain ⟨hbU, hcU, ha_prev, hbin, hf0, hf1, hop_a_0, himmc, himmbin, hpins, h_cpu,
     hrac_a, hrac_b, hrac_c, hdec, hprev_ab, hprev_c⟩ := h_assumptions
-  simp only [circuit_norm] at hbU hcU ha_prev hbin hsum hop_a_0 himmc himmbin hpins h_cpu
-  simp only [circuit_norm] at hrac_a hrac_b hrac_c hdec hprev_ab hprev_c
+  simp only [circuit_norm, Inputs.is_real] at hbU hcU ha_prev hbin hf0 hf1 hop_a_0 himmc himmbin hpins h_cpu
+  simp only [circuit_norm, Inputs.is_real] at hrac_a hrac_b hrac_c hdec hprev_ab hprev_c
   obtain ⟨-, h_env_a, h_env_cb, h_env_v, h_env_s, h_env_lo, h_env_hi, h_env_lr,
     h_env_msb, h_env_fl, -⟩ := h_env
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  have hpc := h_input.2.1.2.2.2
-  have hbpv := h_input.2.2.2.2.2.2.1.1
-  have hcpv := h_input.2.2.2.2.2.2.2.2.1.1
-  have himm_eval := h_input.2.2.2.2.2.2.2.2.2
+  have hpc := h_input.1.2.2.2
+  have hbpv := h_input.2.1.2.2.2.2.1.1
+  have hcpv := h_input.2.1.2.2.2.2.2.2.1.1
+  have himm_eval := h_input.2.1.2.2.2.2.2.2.2
   have hbpv_map :
       Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_b_memory_prev_value =
         input_adapter_op_b_memory_prev_value := by
     rw [← CircuitType.eval_var_fields]; exact hbpv
-  have hapv := h_input.2.2.2.1.1
-  have hopc := h_input.2.2.2.2.2.2.2.1
+  have hapv := h_input.2.1.2.1.1
+  have hopc := h_input.2.1.2.2.2.2.2.1
   have hapv_map :
       Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_a_memory_prev_value =
         input_adapter_op_a_memory_prev_value := by
@@ -159,14 +138,17 @@ theorem completeness :
   simp only [circuit_norm] at h_env_msb h_env_fl
   -- The witness stream is the exportable IR; the family eval lemmas rewrite each pinned
   -- obligation to the value-level witness functions (the operands folded through `heb`/`ec0`).
+  let selectors := #v[input_var_isSll, input_var_isSllw]
+  have hselectors : selectors.map (Expression.eval env.toEnvironment) = #v[input_isSll, input_isSllw] := by
+    simp only [selectors, circuit_norm, h_input]
   have hAIRa := populateAIR_eval env input_var_adapter_op_b_memory_prev_value
-    input_var_adapter_op_c_memory_prev_value[0] input_adapter_op_b_memory_prev_value
+    input_var_adapter_op_c_memory_prev_value[0] selectors input_adapter_op_b_memory_prev_value
     input_adapter_op_c_memory_prev_value[0] heb ec0 hbU (hcU 0)
   have hIRcb := cBitsIR_eval env input_var_adapter_op_c_memory_prev_value[0]
     input_adapter_op_c_memory_prev_value[0] ec0 (hcU 0)
   have hIRv := vPowersIR_eval env input_var_adapter_op_c_memory_prev_value[0]
     input_adapter_op_c_memory_prev_value[0] ec0 (hcU 0)
-  have hIRs := shiftU16IR_eval env input_var_adapter_op_c_memory_prev_value[0]
+  have hIRs := shiftU16IR_eval env input_var_adapter_op_c_memory_prev_value[0] selectors
     input_adapter_op_c_memory_prev_value[0] ec0 (hcU 0)
   have hIRlo := lowerLimbIR_eval env input_var_adapter_op_b_memory_prev_value
     input_var_adapter_op_c_memory_prev_value[0] input_adapter_op_b_memory_prev_value
@@ -178,21 +160,23 @@ theorem completeness :
     input_var_adapter_op_c_memory_prev_value[0] input_adapter_op_b_memory_prev_value
     input_adapter_op_c_memory_prev_value[0] heb ec0 hbU (hcU 0)
   have hIRmsb := sllwMsbIR_eval env input_var_adapter_op_b_memory_prev_value
-    input_var_adapter_op_c_memory_prev_value[0] input_adapter_op_b_memory_prev_value
+    input_var_adapter_op_c_memory_prev_value[0] selectors input_adapter_op_b_memory_prev_value
     input_adapter_op_c_memory_prev_value[0] heb ec0 hbU (hcU 0)
-  have hIRfl := flagsIR_eval env input_var_adapter_imm_c
-  simp only [hAIRa] at h_env_a
+  have hIRfl := sllwImmIR_eval env input_var_isSllw input_var_adapter_imm_c
+  dsimp only [selectors] at hAIRa hIRs hIRmsb hselectors
+  simp only [hAIRa, hselectors] at h_env_a
   simp only [hIRcb] at h_env_cb
   simp only [hIRv] at h_env_v
-  simp only [hIRs] at h_env_s
+  simp only [hIRs, hselectors] at h_env_s
   simp only [hIRlo] at h_env_lo
   simp only [hIRhi] at h_env_hi
   simp only [hIRlr] at h_env_lr
-  simp only [hIRmsb] at h_env_msb
-  simp only [hIRfl, himm_eval] at h_env_fl
+  simp only [hIRmsb, hselectors] at h_env_msb
+  simp only [hIRfl, himm_eval, h_input] at h_env_fl
   set B := input_adapter_op_b_memory_prev_value with hB
   set c0 := input_adapter_op_c_memory_prev_value[0] with hc0
-  set F := hintFlags env.hint with hF
+  let F := #v[input_isSll, input_isSllw]
+  have hsum : input_isSll + input_isSllw = F[0] + F[1] := rfl
   have hA0 : env.get i₀ = (populateA B c0 F)[0] := by simpa using h_env_a 0
   have hA1 : env.get (i₀ + 1) = (populateA B c0 F)[1] := by simpa using h_env_a 1
   have hA2 : env.get (i₀ + 2) = (populateA B c0 F)[2] := by simpa using h_env_a 2
@@ -224,11 +208,8 @@ theorem completeness :
   have hlr3 : env.get (i₀ + 4 + 6 + 3 + 4 + 4 + 4 + 3) = (limbResult B c0)[3] := by simpa using h_env_lr 3
   have hmsbc : env.get (i₀ + 4 + 6 + 3 + 4 + 4 + 4 + 4) = sllwMsb B c0 F := by
     simpa using h_env_msb 0
-  have hfl0 : env.get (i₀ + 4 + 6 + 3 + 4 + 4 + 4 + 4 + 1) = F[0] := by simpa using h_env_fl 0
-  have hfl1 : env.get (i₀ + 4 + 6 + 3 + 4 + 4 + 4 + 4 + 1 + 1) = F[1] := by simpa using h_env_fl 1
-  have hfl2 : env.get (i₀ + 4 + 6 + 3 + 4 + 4 + 4 + 4 + 1 + 2)
-      = F[1] * input_adapter_imm_c := by
-    simpa only [circuit_norm, himm_eval] using h_env_fl 2
+  have hfl2 : env.get (i₀ + 4 + 6 + 3 + 4 + 4 + 4 + 4 + 1) = F[1] * input_adapter_imm_c := by
+    simpa only [circuit_norm, himm_eval, h_input, F] using h_env_fl 0
   have hsum01 : F[0] + F[1] = 0 ∨ F[0] + F[1] = 1 := by
     rw [← hsum]
     exact hbin
@@ -252,28 +233,26 @@ theorem completeness :
   simp only [← sub_eq_add_neg] at hp15 hp16 hp17 hp18 hp19 hp20 hp21 hp22
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by
     rw [hop_a_0, zero_mul]
-  simp +instances only [main, circuit_norm, h_input]
+  simp +instances only [main, circuit_norm, h_input, Inputs.is_real]
   simp only [hA0, hA1, hA2, hA3, hcb0, hcb1, hcb2, hcb3, hcb4, hcb5, hv0, hv1, hv2,
-    hlo0, hlo1, hlo2, hlo3, hhi0, hhi1, hhi2, hhi3, hmsbc, hfl0, hfl1, hfl2,
+    hlo0, hlo1, hlo2, hlo3, hhi0, hhi1, hhi2, hhi3, hmsbc, hfl2,
     hapv_map, hbpv_map, hopc_map, hcpv_map, hpc_map, ec0, epc0, epc1, epc2]
   refine ⟨⟨hbin, h_cpu⟩,
     ⟨⟨fun _ => populateA_val_lt B c0 F hbUw 1 (by norm_num), hf1⟩,
       sllwMsb_bool B c0 F hbUw, fun h1 => ?_⟩,
-    ⟨⟨hsum01, hsum01, by simpa only [hsum] using h_clk⟩,
+    ⟨⟨hsum01, hsum01, h_clk⟩,
       ⟨⟨hz _, hz _, hz _, hz _⟩, Or.inl hop_a_0,
-        by rw [← hsum]; exact himmc,
-        by rw [← hsum]; exact himmbin,
+        himmc,
+        himmbin,
         hpins,
-        by rw [← hsum]; exact hrac_a,
-        by rw [← hsum]; exact hrac_b,
-        by rw [← hsum]; exact hrac_c,
-        by rw [← hsum]; exact hdec,
-        by rw [← hsum]; exact fun hr => ⟨ha_prev hr, hbU, (hprev_ab hr).1, (hprev_ab hr).2⟩,
-        by rw [← hsum]; exact fun hc => ⟨hcU, hprev_c hc⟩⟩⟩,
-    ⟨⟨hsum01, fun _ => ?_, by simpa only [hsum] using h_clk.at_four⟩, trivial⟩,
+        hrac_a,
+        hrac_b,
+        hrac_c,
+        hdec,
+        fun hr => ⟨ha_prev hr, hbU, (hprev_ab hr).1, (hprev_ab hr).2⟩,
+        fun hc => ⟨hcU, hprev_c hc⟩⟩⟩,
+    ⟨⟨hsum01, fun _ => ?_, h_clk.at_four⟩, trivial⟩,
     by rcases hbin with h | h <;> rw [h] <;> simp,
-    by rw [hsum, sub_self],
-    by rcases hsum01 with h | h <;> rw [h] <;> simp,
     by rcases hf0 with h | h <;> rw [h] <;> simp,
     by rcases hf1 with h | h <;> rw [h] <;> simp,
     ⟨trivial, by
@@ -288,7 +267,7 @@ theorem completeness :
         hlra0, hlra1, hlra2, hlra3,
         hp1, hp2, hp3, hp4, hp5, hp6, hp7, hp8, hp9, hp10, hp11, hp12, hp13, hp14,
         hp15, hp16, hp17, hp18, hp19, hp20, hp21, hp22,
-        by simp, hop_a_0⟩⟩,
+        by simp [F], hop_a_0⟩⟩,
     fun _ => by
       change ByteRowSpec _; convert byteRow_e32 c0 hc0v using 2; rw [sub_eq_add_neg],
     fun _ => by
@@ -308,7 +287,7 @@ theorem completeness :
     fun _ => by
       change ByteRowSpec _; convert byteRow_higher B c0 hbUw 3 (by norm_num) using 2⟩
   · rw [show sllwMsb B c0 F = U16MSBOperation.populate_msb (populateA B c0 F)[1] by
-      rw [sllwMsb, if_pos h1]]
+      rw [sllwMsb, if_pos (show F[1] = 1 from h1)]]
     exact (U16MSBOperation.spec_populate (populateA_val_lt B c0 F hbUw 1 (by norm_num)) 1).2 rfl
   · refine Word.isU64_of_cases ?_ ?_ ?_ ?_ <;>
       simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm, hA0, hA1, hA2, hA3] <;>
@@ -318,40 +297,20 @@ theorem completeness :
         | exact populateA_val_lt B c0 F hbUw 2 (by norm_num)
         | exact populateA_val_lt B c0 F hbUw 3 (by norm_num)
 
-/-- Under the row's own constraints, the shallow parent glue
-`is_real - (is_sll + is_sllw) = 0` identifies the exposed derived Program gate with the public
-`is_real` selector without normalizing any nested arithmetic circuit. -/
-theorem isReal_eq_exposedGate (input : Var Inputs (ZMod p)) (offset : ℕ)
-    (env : Environment (ZMod p))
-    (rowConstraints : ((main input).operations offset).ConstraintsHold env) :
-    env input.is_real = env (exposedGate offset) := by
-  have shallow := FlatOperation.shallowConstraints_of_constraintsHoldFlat
-    (Circuit.constraintsHold_toFlat_iff.mpr rowConstraints)
-  have allConstraints := (constraintsHold_shallow_iff_forall_mem.mp shallow).1
-  have bindingMem : input.is_real - exposedGate offset ∈
-      ((main input).operations offset).shallowConstraints := by
-    change input.is_real - exposedGate offset ∈
-      input.is_real * (input.is_real - 1) :: (input.is_real - exposedGate offset) :: _
-    exact List.mem_cons_of_mem _ List.mem_cons_self
-  have binding := allConstraints _ bindingMem
-  have bindingZero : env input.is_real - env (exposedGate offset) = 0 := by
-    simpa only [eval_sub] using binding
-  exact sub_eq_zero.mp bindingZero
-
 omit [Fact (2 ^ 17 < p)] in
 /-- The exact source-B pull occupies its declared slot in ShiftLeft's exposed Memory list. -/
 theorem opBPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    memoryChannel.pulledIf (exposedGate offset)
+    memoryChannel.pulledIf (exposedGate input)
       ⟨input.state.clk_high, input.adapter.op_b_memory.access_timestamp.prev_low,
        input.adapter.op_b, 0, 0, input.adapter.op_b_memory.prev_value⟩ ∈
       exposedMemoryInteractions input offset := by
   simp [exposedMemoryInteractions]
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The exact (`exposedGate offset - imm_c`)-gated source-C pull occupies its declared slot in
+/-- The exact (`exposedGate input - imm_c`)-gated source-C pull occupies its declared slot in
 ShiftLeft's exposed Memory list. -/
 theorem opCPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    memoryChannel.pulledIf (exposedGate offset - input.adapter.imm_c)
+    memoryChannel.pulledIf (exposedGate input - input.adapter.imm_c)
       ⟨input.state.clk_high, input.adapter.op_c_memory.access_timestamp.prev_low,
        input.adapter.op_c[0], 0, 0, input.adapter.op_c_memory.prev_value⟩ ∈
       exposedMemoryInteractions input offset := by
@@ -368,8 +327,8 @@ def stateExposure (input : Var Inputs (ZMod p)) (offset : ℕ) :
       8, input.is_real⟩ ++
   expose memoryChannel (exposedMemoryInteractions input offset) ++
   expose programChannel
-    [ programChannel.pulledIf (exposedGate offset)
-        ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], exposedOpcode offset,
+    [ programChannel.pulledIf (exposedGate input)
+        ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], exposedOpcode input,
          input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
          input.adapter.op_a_0, 0, input.adapter.imm_c⟩ ]
 
@@ -410,10 +369,10 @@ proof-bearing `GeneralFormalCircuit` bundle. -/
 @[circuit_norm] theorem circuit_main_eq : (circuit (p := p)).main = main := rfl
 
 @[circuit_norm] theorem circuit_localLength_eq (input : Var Inputs (ZMod p)) :
-    (circuit (p := p)).localLength input = 33 := rfl
+    (circuit (p := p)).localLength input = 31 := rfl
 
 @[circuit_norm] theorem circuit_size_eq :
-    (circuit (p := p)).size = size Inputs + 33 := by
+    (circuit (p := p)).size = size Inputs + 31 := by
   rw [GeneralFormalCircuit.size_eq, circuit_localLength_eq]
 
 /-- The completed ShiftLeft circuit exposes exactly the Memory interaction list above.  Stated via

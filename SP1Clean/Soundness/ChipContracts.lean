@@ -3538,7 +3538,7 @@ variable [Fact (2 ^ 25 < p)]
 theorem shiftLeftChip_aluTypeGroundingData :
     ALUTypeChipGroundingData (shiftLeftChipDescriptor (p := p)) where
   migrated := rfl
-  memoryShape := shiftLeftChip_aluTypeMemoryInteractionShape
+  memoryShape := shiftLeftChip_aluTypeMemoryInteractionShape.constrained
   viewClockBounds := shiftLeftChip_viewClockBounds
   timestampBounds := shiftLeftChip_activeTimestampBounds
   commit_eq := by chip_field_rfl shiftLeftChipDescriptor (p := p)
@@ -3547,7 +3547,7 @@ theorem shiftLeftChip_aluTypeGroundingData :
     intro proverData decoded hchip staticInputs real program decode memory
     have rowConstraints := staticInputs.constraints
     have operands := aluTypeOperandWords_isU64_of_shape
-      shiftLeftChip_aluTypeMemoryInteractionShape decoded proverData hchip
+      shiftLeftChip_aluTypeMemoryInteractionShape.constrained decoded proverData hchip
         rowConstraints real memory
     have opCU64 : Word.isU64
         (decoded.toChipRow proverData).view.adapter.op_c_memory.prev_value := by

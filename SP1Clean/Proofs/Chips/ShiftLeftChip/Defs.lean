@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.Chips
+import SP1Clean.Semantics.Specs.Chips.ShiftLeft
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
 import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
@@ -20,12 +20,11 @@ encodings, the `shift_u16` byte-shift one-hot selector, the `lower_limb`/`higher
 the generated ShiftLeft oracle's `asserts`/`interactions` (`Extracted/ChipOracle/ShiftLeft.lean`) — no separate operation-level extraction.
 
 `AssertSpec` / `InteractSpec` capture the structural meaning of SP1's two extracted constraint lists;
-the semantic, flag-gated `Spec` (RV64 `sll`/`sllw` identity) is in `FormalModel/Contracts/Chips.lean`.
+the semantic, flag-gated `Spec` (RV64 `sll`/`sllw` identity) is in `Semantics/Specs/Chips/ShiftLeft.lean`.
 `Faithful/ShiftLeftChip.lean` anchors both structural specs to SP1's extracted lists.
 
-`main` composes `CPUState`/`ALUTypeReader`/`U16MSBOperation` sub-circuits, witnesses the shift column
-block honestly (the `Populate` closures, flags via the `"shift_left_flags"` `ProverHint`), and gates
-`is_real`. -/
+`main` composes the CPU, ALU reader, register write and shift assertions. Its opcode selectors
+are explicit inputs, activity is their sum, and Clean's witness IR generates the shift columns. -/
 
 namespace SP1Clean.ShiftLeftChip
 
@@ -82,7 +81,7 @@ private structure WitnessVars (F : Type) where
   higher_limb : Word (Expression F)
   limb_result : Word (Expression F)
   sllw_msb : Vector (Expression F) 1
-  flags : Vector (Expression F) 3
+  sllw_imm : Vector (Expression F) 1
 
 @[circuit_norm] private def witnessPrefix (input : Var Inputs (ZMod p)) :
     Circuit (ZMod p) (WitnessVars (ZMod p)) := fun offset =>
@@ -94,13 +93,13 @@ private structure WitnessVars (F : Type) where
   let higher_limb := varFromOffset (Vector · 4) (offset + 4 + 6 + 3 + 4 + 4)
   let limb_result := varFromOffset (Vector · 4) (offset + 4 + 6 + 3 + 4 + 4 + 4)
   let sllw_msb := varFromOffset (Vector · 1) (offset + 4 + 6 + 3 + 4 + 4 + 4 + 4)
-  let flags := varFromOffset (Vector · 3) (offset + 4 + 6 + 3 + 4 + 4 + 4 + 4 + 1)
-  (⟨a, c_bits, v, shift_u16, lower_limb, higher_limb, limb_result, sllw_msb, flags⟩,
+  let sllw_imm := varFromOffset (Vector · 1) (offset + 4 + 6 + 3 + 4 + 4 + 4 + 4 + 1)
+  (⟨a, c_bits, v, shift_u16, lower_limb, higher_limb, limb_result, sllw_msb, sllw_imm⟩,
     [ .witness 4 (populateAIR input.adapter.op_b_memory.prev_value
-        input.adapter.op_c_memory.prev_value[0]),
+        input.adapter.op_c_memory.prev_value[0] #v[input.isSll, input.isSllw]),
       .witness 6 (cBitsIR input.adapter.op_c_memory.prev_value[0]),
       .witness 3 (vPowersIR input.adapter.op_c_memory.prev_value[0]),
-      .witness 4 (shiftU16IR input.adapter.op_c_memory.prev_value[0]),
+      .witness 4 (shiftU16IR input.adapter.op_c_memory.prev_value[0] #v[input.isSll, input.isSllw]),
       .witness 4 (lowerLimbIR input.adapter.op_b_memory.prev_value
         input.adapter.op_c_memory.prev_value[0]),
       .witness 4 (higherLimbIR input.adapter.op_b_memory.prev_value
@@ -108,29 +107,29 @@ private structure WitnessVars (F : Type) where
       .witness 4 (limbResultIR input.adapter.op_b_memory.prev_value
         input.adapter.op_c_memory.prev_value[0]),
       .witness 1 (sllwMsbIR input.adapter.op_b_memory.prev_value
-        input.adapter.op_c_memory.prev_value[0]),
-      .witness 3 (flagsIR input.adapter.imm_c) ])
+        input.adapter.op_c_memory.prev_value[0] #v[input.isSll, input.isSllw]),
+      .witness 1 (sllwImmIR input.isSllw input.adapter.imm_c) ])
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem witnessListSubcircuitsConsistent
     (offset : ℕ) (c0 : WitgenIR (ZMod p) 4) (c1 : WitgenIR (ZMod p) 6)
     (c2 : WitgenIR (ZMod p) 3) (c3 c4 c5 c6 : WitgenIR (ZMod p) 4)
-    (c7 : WitgenIR (ZMod p) 1) (c8 : WitgenIR (ZMod p) 3) :
+    (c7 : WitgenIR (ZMod p) 1) (c8 : WitgenIR (ZMod p) 1) :
     Operations.SubcircuitsConsistent offset
       [.witness 4 c0, .witness 6 c1, .witness 3 c2, .witness 4 c3,
        .witness 4 c4, .witness 4 c5, .witness 4 c6, .witness 1 c7,
-       .witness 3 c8] := by
+       .witness 1 c8] := by
   simp only [Operations.SubcircuitsConsistent, Operations.forAll, true_and]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem witnessListChannelsLawful
     (c0 : WitgenIR (ZMod p) 4) (c1 : WitgenIR (ZMod p) 6)
     (c2 : WitgenIR (ZMod p) 3) (c3 c4 c5 c6 : WitgenIR (ZMod p) 4)
-    (c7 : WitgenIR (ZMod p) 1) (c8 : WitgenIR (ZMod p) 3) :
+    (c7 : WitgenIR (ZMod p) 1) (c8 : WitgenIR (ZMod p) 1) :
     Operations.ChannelsLawful
       [.witness 4 c0, .witness 6 c1, .witness 3 c2, .witness 4 c3,
        .witness 4 c4, .witness 4 c5, .witness 4 c6, .witness 1 c7,
-       .witness 3 c8] [] := by
+       .witness 1 c8] [] := by
   simp only [Operations.ChannelsLawful,
     Operations.subcircuitChannelsWithGuarantees_witness,
     Operations.subcircuitChannelsWithGuarantees_nil, List.nil_subset, true_and,
@@ -155,7 +154,7 @@ private theorem witnessPrefixChannelsLawful (input : Var Inputs (ZMod p)) (offse
 private instance witnessPrefixExplicit (input : Var Inputs (ZMod p)) :
     ExplicitCircuit (witnessPrefix input) where
   output offset := (witnessPrefix input offset).1
-  localLength _ := 33
+  localLength _ := 31
   operations offset := (witnessPrefix input offset).2
   output_eq _ := rfl
   localLength_eq _ := by rfl
@@ -167,11 +166,11 @@ private instance witnessPrefixExplicit (input : Var Inputs (ZMod p)) :
 /-- The ALU-reader input expressed over the opaque witness-prefix result. -/
 @[circuit_norm] private def postWitnessReaderInput (input : Var Inputs (ZMod p))
     (witnesses : WitnessVars (ZMod p)) : Var Readers.ALUTypeReader.Inputs (ZMod p) :=
-  let gate := witnesses.flags[0] + witnesses.flags[1]
+  let gate := input.isSll + input.isSllw
   ⟨input.adapter, gate, gate, input.state.clk_high,
     input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-    witnesses.flags[0] * (6 : Expression (ZMod p)) +
-      witnesses.flags[1] * (21 : Expression (ZMod p)),
+    input.isSll * (6 : Expression (ZMod p)) +
+      input.isSllw * (21 : Expression (ZMod p)),
     witnesses.a[0], witnesses.a[1], witnesses.a[2], witnesses.a[3]⟩
 
 /-- The post-witness circuit body. Naming this pure composition keeps the large assertion tail folded
@@ -186,38 +185,25 @@ while structural consumers select the early reader boundary. -/
   let higher_limb := witnesses.higher_limb
   let limb_result := witnesses.limb_result
   let sllw_msb := witnesses.sllw_msb
-  let flags := witnesses.flags
-  let is_sll := flags[0]; let is_sllw := flags[1]; let is_sllw_imm := flags[2]
+  let is_sll := input.isSll; let is_sllw := input.isSllw
+  let is_sllw_imm := witnesses.sllw_imm[0]
   let gate := is_sll + is_sllw
   assertion U16MSBOperation.circuit ⟨a[1], ⟨sllw_msb[0]⟩, is_sllw⟩
-  -- `ALUTypeReader` is now a `GeneralFormalCircuit` (SC Phase 2pre) — composed via the GFC `CoeFun`
-  -- (`subcircuitWithAssertion`), discarding its `unit` output. Its `Spec` (Contracts) is unchanged.
   let _ ← Readers.ALUTypeReader.circuit (postWitnessReaderInput input witnesses)
-  -- Option B: the op_a (`rd`) write Memory **push** is composed here (factored OUT of the reader), *after*
-  -- the shift placement, so `isU64 a` (the placed result word's per-limb range, derived from the
-  -- `lower/higher_limb` byte pulls) discharges its requirement — breaking the old reader-circularity. The
-  -- write access clock is the recombined low clock `+ 4`; `gate = is_sll + is_sllw` matches the reader.
+  -- The write follows shift placement so the result's derived limb bounds discharge its range
+  -- requirement. The access occurs four ticks after the row's base clock.
   assertion Readers.RegisterWrite.circuit
     ⟨input.state.clk_high, input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4,
      input.adapter.op_a, a, gate⟩
-  -- `is_real` boolean gate emitted **inline** (`assertZero`, not `=== 0`) so the `enabled = is_real`
-  -- selector is visible to `ConstraintsHold.Shallow` as a chip-owned constraint (the `VmTables`
-  -- re-base that motivated this was investigated and deferred — roadmap W11).
+  -- Keep the activity constraint shallow for Clean's channel-law proof.
   assertZero (input.is_real * (input.is_real - 1))
-  -- Lean-only glue identifying the public selector with SP1's variant sum. This is a parent-level
-  -- structural assertion, not an independent proof boundary, and is flat-identical to `=== 0`.
-  assertZero (input.is_real - (is_sll + is_sllw))
   -- shorthands for the committed column expressions (pure lets — no operations emitted)
   let b0 := c_bits[0]; let b1 := c_bits[1]; let b2 := c_bits[2]
   let b3 := c_bits[3]; let b4 := c_bits[4]; let b5 := c_bits[5]
   let bitShift := b0 * 1 + b1 * 2 + b2 * 4 + b3 * 8
   let shamt := bitShift + b4 * 16 + b5 * 32
   let e32 := (input.adapter.op_c_memory.prev_value[0] - shamt) * Expression.const ((64 : ZMod p)⁻¹)
-  -- ## The inline shift assertZero constraints (in the generated oracle `asserts` order)
-  -- variant flags. The combined selector `is_sll + is_sllw` (= the byte-pull gate) is boolean-gated
-  -- **inline** (`assertZero`, not `=== 0`) so it is visible to `ConstraintsHold.Shallow`, discharging the
-  -- off-gate byte-pull `Requirements` without keeping `byteChannel` in `channelsWithRequirements`.
-  assertZero ((is_sll + is_sllw) * ((is_sll + is_sllw) - 1))
+  -- The selector booleans complete the parent constraints; the shift tail is bundled below.
   is_sll * (is_sll - 1) === 0
   is_sllw * (is_sllw - 1) === 0
   let cols : Var Columns (ZMod p) :=
@@ -245,14 +231,8 @@ while structural consumers select the early reader boundary. -/
     (⟨6, higher_limb[3], bitShift, 0⟩ : ByteRow (Expression (ZMod p)))
   return cols
 
-/-- Compose the threaded `CPUState`/`ALUTypeReader` reader blocks and the `U16MSBOperation` (`sllw_msb`)
-gadget as Clean sub-assertions, **witness** the shift column block honestly (the result `a`, the
-`c_bits`, the `v_*` powers, the `shift_u16` selector, the `lower/higher_limb`/`limb_result` words, the
-`sllw_msb` — the `Populate` closures, ported from SP1's `event_to_row`; the variant flags come from the
-`"shift_left_flags"` `ProverHint`), gate `is_real` (`= is_sll + is_sllw`), emit the inline shift
-assertZero constraints (`AssertSpec`) and the nine `gate`-gated byte-range pulls (`InteractSpec`), and
-assemble the native `Columns` struct. (Soundness ranges over every satisfying assignment
-regardless of the generators; the generators carry completeness and the `TraceGenTests` conformance.) -/
+/-- Generate the shift columns, compose the reader and shift assertions, and emit the nine
+activity-gated byte-range pulls. Soundness covers arbitrary satisfying assignments. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p)) := do
   let _ ← Readers.CPUState.circuit
     ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]], 8, input.is_real⟩
@@ -341,19 +321,19 @@ private theorem aluReader_mem_postWitness (input : Var Inputs (ZMod p))
     Operations.subcircuits_subcircuit, Operations.subcircuits_nil, List.mem_singleton,
     circuit_norm, Nat.add_zero]
 
-/-- The exact ALU-reader input assembled after the folded 33-cell witness prefix. This is a
+/-- The exact ALU-reader input assembled after the folded 31-cell witness prefix. This is a
 structural chip interface used by grounding proofs; it does not duplicate the reader's semantics. -/
 def aluReaderInput (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Var Readers.ALUTypeReader.Inputs (ZMod p) :=
-  let gate := var ⟨offset + 30⟩ + var ⟨offset + 31⟩
+  let gate := input.isSll + input.isSllw
   ⟨input.adapter, gate, gate, input.state.clk_high,
     input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
-    var ⟨offset + 30⟩ * 6 + var ⟨offset + 31⟩ * 21,
+    input.isSll * 6 + input.isSllw * 21,
     var ⟨offset⟩, var ⟨offset + 1⟩, var ⟨offset + 2⟩, var ⟨offset + 3⟩⟩
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem witnessPrefixLocalLength_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (witnessPrefix input).localLength offset = 33 := by
+    (witnessPrefix input).localLength offset = 31 := by
   rfl
 
 omit [Fact (2 ^ 17 < p)] in
@@ -397,28 +377,22 @@ private theorem postWitness_constraints_decompose
           (List.map (Expression.eval env)
             ((U16MSBOperation.main
               ⟨witnesses.a[1], ⟨witnesses.sllw_msb[0]⟩,
-                witnesses.flags[1]⟩).operations offset).constraints) ∧
+                input.isSllw⟩).operations offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Readers.ALUTypeReader.main
               (postWitnessReaderInput input witnesses)).operations offset).constraints) ∧
        (ProvableStruct.eval env input).is_real *
           ((ProvableStruct.eval env input).is_real - 1) = 0 ∧
-       (ProvableStruct.eval env input).is_real -
-          (Expression.eval env witnesses.flags[0] +
-            Expression.eval env witnesses.flags[1]) = 0 ∧
-       Expression.eval env
-          ((witnesses.flags[0] + witnesses.flags[1]) *
-            (witnesses.flags[0] + witnesses.flags[1] - 1)) = 0 ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (witnesses.flags[0] * (witnesses.flags[0] - 1),
+              (input.isSll * (input.isSll - 1),
                 0)).operations offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (witnesses.flags[1] * (witnesses.flags[1] - 1),
+              (input.isSllw * (input.isSllw - 1),
                 0)).operations offset).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
@@ -432,18 +406,6 @@ private theorem postWitness_constraints_decompose
     Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
     ShiftLeftCore.circuit]
 
-omit [Fact (2 ^ 17 < p)] in
-private theorem witnessPrefix_flag0 (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((witnessPrefix input).output offset).flags[0] =
-      var { index := offset + 30 } := by
-  rfl
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem witnessPrefix_flag1 (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((witnessPrefix input).output offset).flags[1] =
-      var { index := offset + 31 } := by
-  rfl
-
 private theorem cpuCircuitLocalLength_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (Readers.CPUState.circuit
       ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
@@ -452,7 +414,7 @@ private theorem cpuCircuitLocalLength_eq (input : Var Inputs (ZMod p)) (offset :
 
 /-- Channel projections of the whole chip can discard the witness-only prefix before inspecting
 the post-witness body.  This is the structural normalization boundary for consumers that must not
-force the 33-cell witness generator chain while merely classifying interactions. -/
+force the 31-cell witness generator chain while merely classifying interactions. -/
 theorem interactionsWith_main_decompose (input : Var Inputs (ZMod p)) (offset : ℕ)
     (channel : RawChannel (ZMod p)) :
     ((main input).operations offset).interactionsWith channel =
@@ -460,7 +422,7 @@ theorem interactionsWith_main_decompose (input : Var Inputs (ZMod p)) (offset : 
         ⟨input.state, #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
           8, input.is_real⟩).operations offset).interactionsWith channel ++
       ((postWitness input ((witnessPrefix input).output offset)).operations
-        (offset + 33)).interactionsWith channel := by
+        (offset + 31)).interactionsWith channel := by
   unfold main
   rw [Circuit.bind_operations_eq, Operations.interactionsWith_append]
   simp only [cpuCircuitLocalLength_eq, Nat.add_zero]
@@ -534,13 +496,13 @@ theorem interactionsWith_main_state_exposed_eq
     Vector.getElem_mk, List.getElem_toArray,
     List.getElem_cons_zero, List.getElem_cons_succ]
 
-/-- The reader's literal witnessed selector `is_sll + is_sllw` (cells `offset+30..31`). -/
-def exposedGate (offset : ℕ) : Expression (ZMod p) :=
-  var ⟨offset + 30⟩ + var ⟨offset + 31⟩
+/-- The reader activity is the sum of the committed input selectors. -/
+def exposedGate (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
+  input.isSll + input.isSllw
 
-/-- The witnessed Program opcode `SLL·6 + SLLW·21`. -/
-def exposedOpcode (offset : ℕ) : Expression (ZMod p) :=
-  var ⟨offset + 30⟩ * 6 + var ⟨offset + 31⟩ * 21
+/-- The selected Program opcode `SLL·6 + SLLW·21`. -/
+def exposedOpcode (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
+  input.isSll * 6 + input.isSllw * 21
 
 /-- Exact Byte-channel list emitted by ShiftLeft's native composition: the CPU clock checks,
 the SLLW-MSB check, the three register timestamp pairs, and the nine shift-range checks. -/
@@ -555,8 +517,8 @@ def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
   let higherLimb : Word (Expression (ZMod p)) :=
     Vector.mapRange 4 fun i => var { index := offset + 21 + i }
   let sllwMsb : Expression (ZMod p) := var { index := offset + 29 }
-  let isSllw : Expression (ZMod p) := var { index := offset + 31 }
-  let gate : Expression (ZMod p) := exposedGate offset
+  let isSllw : Expression (ZMod p) := input.isSllw
+  let gate : Expression (ZMod p) := exposedGate input
   let clkLow : Expression (ZMod p) :=
     input.state.clk_0_16 + input.state.clk_16_24 * 65536
   let bitShift : Expression (ZMod p) :=
@@ -778,7 +740,7 @@ private def shiftRangeByteInteractionsRaw
     (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) :
     List (AbstractInteraction (ZMod p)) :=
   let gate : Expression (ZMod p) :=
-    witnesses.flags[0] + witnesses.flags[1]
+    input.isSll + input.isSllw
   let bitShift : Expression (ZMod p) :=
     witnesses.c_bits[0] * (1 : Expression (ZMod p)) +
       witnesses.c_bits[1] * (2 : Expression (ZMod p)) +
@@ -816,7 +778,7 @@ private theorem postWitness_byteInteractions_eq
         byteChannel.toRaw =
       u16MsbByteInteractionsRaw
           ⟨witnesses.a[1], ⟨witnesses.sllw_msb[0]⟩,
-            witnesses.flags[1]⟩ ++
+            input.isSllw⟩ ++
         aluTypeByteInteractionsRaw
           (postWitnessReaderInput input witnesses) ++
         shiftRangeByteInteractionsRaw input witnesses := by
@@ -864,28 +826,28 @@ theorem interactionsWith_main_byte_eq
 `main`; the semantic `circuit` bundle merely exposes it. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
-  [ memoryChannel.pulledIf (exposedGate offset)
+  [ memoryChannel.pulledIf (exposedGate input)
       ⟨input.state.clk_high, input.adapter.op_a_memory.access_timestamp.prev_low,
        input.adapter.op_a, 0, 0, input.adapter.op_a_memory.prev_value⟩,
-    memoryChannel.pulledIf (exposedGate offset)
+    memoryChannel.pulledIf (exposedGate input)
       ⟨input.state.clk_high, input.adapter.op_b_memory.access_timestamp.prev_low,
        input.adapter.op_b, 0, 0, input.adapter.op_b_memory.prev_value⟩,
-    memoryChannel.pushedIf (exposedGate offset)
+    memoryChannel.pushedIf (exposedGate input)
       ⟨input.state.clk_high, input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 3,
        input.adapter.op_b, 0, 0, input.adapter.op_b_memory.prev_value⟩,
-    memoryChannel.pulledIf (exposedGate offset - input.adapter.imm_c)
+    memoryChannel.pulledIf (exposedGate input - input.adapter.imm_c)
       ⟨input.state.clk_high, input.adapter.op_c_memory.access_timestamp.prev_low,
        input.adapter.op_c[0], 0, 0, input.adapter.op_c_memory.prev_value⟩,
-    memoryChannel.pushedIf (exposedGate offset - input.adapter.imm_c)
+    memoryChannel.pushedIf (exposedGate input - input.adapter.imm_c)
       ⟨input.state.clk_high, input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 2,
        input.adapter.op_c[0], 0, 0, input.adapter.op_c_memory.prev_value⟩,
-    memoryChannel.pushedIf (exposedGate offset)
+    memoryChannel.pushedIf (exposedGate input)
       ⟨input.state.clk_high, input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 4,
        input.adapter.op_a, 0, 0, Vector.mapRange 4 fun i => var { index := offset + i }⟩ ]
 
 private theorem postWitness_memoryInteractions_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((postWitness input ((witnessPrefix input).output offset)).operations
-        (offset + 33)).interactionsWith memoryChannel.toRaw =
+        (offset + 31)).interactionsWith memoryChannel.toRaw =
       (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw := by
   unfold postWitness
   simp only [Circuit.bind_operations_eq, Circuit.pure_operations_eq, Circuit.operations,
@@ -936,17 +898,17 @@ theorem interactionsWith_main_memory_eq (input : Var Inputs (ZMod p)) (offset : 
   rw [cpuNil, List.nil_append]
 
 /-- The exact Program fetch emitted by ShiftLeft's ALU adapter. -/
-def exposedProgramInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
+def exposedProgramInteractions (input : Var Inputs (ZMod p)) :
     List (ChannelInteraction (programChannel (p := p))) :=
-  [ programChannel.pulledIf (exposedGate offset)
-      ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], exposedOpcode offset,
+  [ programChannel.pulledIf (exposedGate input)
+      ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], exposedOpcode input,
        input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
        input.adapter.op_a_0, 0, input.adapter.imm_c⟩ ]
 
 private theorem postWitness_programInteractions_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((postWitness input ((witnessPrefix input).output offset)).operations
-        (offset + 33)).interactionsWith programChannel.toRaw =
-      (exposedProgramInteractions input offset).map ChannelInteraction.toRaw := by
+        (offset + 31)).interactionsWith programChannel.toRaw =
+      (exposedProgramInteractions input).map ChannelInteraction.toRaw := by
   unfold postWitness
   simp only [Circuit.bind_operations_eq, Circuit.pure_operations_eq, Circuit.operations,
     subcircuitWithAssertion, assertion, assertZero, HasAssertEq.assert_eq,
@@ -971,12 +933,11 @@ private theorem postWitness_programInteractions_eq (input : Var Inputs (ZMod p))
     Soundness.aluTypeProgramMessage, List.nil_append]
   simp only [postWitnessReaderInput, exposedProgramInteractions, exposedGate, exposedOpcode,
     witnessPrefix, Circuit.output, List.map_cons, List.map_nil]
-  rfl
 
 /-- The exact Program interaction of the whole folded ShiftLeft chip. -/
 theorem interactionsWith_main_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith programChannel.toRaw =
-      (exposedProgramInteractions input offset).map ChannelInteraction.toRaw := by
+      (exposedProgramInteractions input).map ChannelInteraction.toRaw := by
   rw [interactionsWith_main_decompose, postWitness_programInteractions_eq]
   have cpuNil :
       ((Readers.CPUState.circuit
@@ -998,46 +959,35 @@ theorem interactionsWith_main_program_eq (input : Var Inputs (ZMod p)) (offset :
 
 /-- The composed ALU reader occurs at the exact post-witness offset in the whole chip. -/
 theorem aluReader_mem_subcircuits (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ⟨offset + 33, Readers.ALUTypeReader.circuit.toSubcircuit (offset + 33)
+    ⟨offset + 31, Readers.ALUTypeReader.circuit.toSubcircuit (offset + 31)
       (aluReaderInput input offset)⟩ ∈ ((main input).operations offset).subcircuits := by
   unfold main
   apply subcircuitMem_bind_right
   apply subcircuitMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
     postWitnessReaderInput_witnessPrefixOutput, Nat.add_zero] using
-    aluReader_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
+    aluReader_mem_postWitness input ((witnessPrefix input).output offset) (offset + 31)
 
-private theorem selectorLink_mem_postWitness
+private theorem sllBool_mem_postWitness
     (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
-    input.is_real -
-        (witnesses.flags[0] + witnesses.flags[1]) ∈
+    input.isSll * (input.isSll - 1) - 0 ∈
       ((postWitness input witnesses).operations offset).constraints := by
   unfold postWitness
   iterate 4 apply constraintMem_bind_right
   apply constraintMem_bind_left
-  simp only [assertZero, Circuit.operations, Operations.constraints_assert,
-    Operations.constraints_nil, List.mem_singleton]
-
-private theorem sllBool_mem_postWitness
-    (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
-    witnesses.flags[0] * (witnesses.flags[0] - 1) - 0 ∈
-      ((postWitness input witnesses).operations offset).constraints := by
-  unfold postWitness
-  iterate 6 apply constraintMem_bind_right
-  apply constraintMem_bind_left
   exact equalityAssertionConstraint_mem
-    (witnesses.flags[0] * (witnesses.flags[0] - 1))
+    (input.isSll * (input.isSll - 1))
     (0 : Expression (ZMod p)) _
 
 private theorem sllwBool_mem_postWitness
     (input : Var Inputs (ZMod p)) (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
-    witnesses.flags[1] * (witnesses.flags[1] - 1) - 0 ∈
+    input.isSllw * (input.isSllw - 1) - 0 ∈
       ((postWitness input witnesses).operations offset).constraints := by
   unfold postWitness
-  iterate 7 apply constraintMem_bind_right
+  iterate 5 apply constraintMem_bind_right
   apply constraintMem_bind_left
   exact equalityAssertionConstraint_mem
-    (witnesses.flags[1] * (witnesses.flags[1] - 1))
+    (input.isSllw * (input.isSllw - 1))
     (0 : Expression (ZMod p)) _
 
 private theorem core_mem_postWitness
@@ -1046,7 +996,7 @@ private theorem core_mem_postWitness
       ((postWitness input witnesses).output offset)⟩ ∈
       ((postWitness input witnesses).operations offset).subcircuits := by
   unfold postWitness
-  iterate 6 apply subcircuitMem_bind_right
+  iterate 4 apply subcircuitMem_bind_right
   apply subcircuitMem_bind_right_zero (hlen := equalityAssertionLocalLength_eq _ _ _)
   apply subcircuitMem_bind_right_zero (hlen := equalityAssertionLocalLength_eq _ _ _)
   apply subcircuitMem_bind_left
@@ -1056,7 +1006,7 @@ private theorem core_mem_postWitness
 /-- The exact row passed to the folded arithmetic core after the witness prefix. -/
 def coreInput (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Var Columns (ZMod p) :=
-  (postWitness input ((witnessPrefix input).output offset)).output (offset + 33)
+  (postWitness input ((witnessPrefix input).output offset)).output (offset + 31)
 
 @[circuit_norm] theorem coreInput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     coreInput input offset =
@@ -1070,8 +1020,8 @@ def coreInput (input : Var Inputs (ZMod p)) (offset : ℕ) :
         varFromOffset (Vector · 4) (offset + 21),
         varFromOffset (Vector · 4) (offset + 25),
         ⟨var { index := offset + 29 }⟩,
-        var { index := offset + 30 }, var { index := offset + 31 },
-        var { index := offset + 32 }⟩ : Var Columns (ZMod p)) := rfl
+        input.isSll, input.isSllw,
+        var { index := offset + 30 }⟩ : Var Columns (ZMod p)) := rfl
 
 private theorem constraints_main_bind_decompose
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -1081,7 +1031,7 @@ private theorem constraints_main_bind_decompose
           #v[input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]],
           8, input.is_real⟩).operations offset).constraints ++
       ((postWitness input ((witnessPrefix input).output offset)).operations
-        (offset + 33)).constraints := by
+        (offset + 31)).constraints := by
   unfold main
   rw [Circuit.bind_operations_eq, Operations.constraints_append]
   simp only [cpuCircuitLocalLength_eq, Nat.add_zero]
@@ -1095,8 +1045,8 @@ private theorem constraints_main_bind_decompose
     witnessPrefixLocalLength_eq]
 
 /-- Exact folded decomposition of every native ShiftLeft assertion.  This is the structural
-normalization boundary used by the whole-chip Rust faithfulness proof: the expensive 33-cell
-witness generator stays opaque, while the genuine Clean subcircuits and the five parent selector
+normalization boundary used by the whole-chip Rust faithfulness proof: the expensive 31-cell
+witness generator stays opaque, while the genuine Clean subcircuits and the three parent selector
 constraints remain visible as complete blocks. -/
 theorem constraints_decompose
     (env : Environment (ZMod p)) (input : Var Inputs (ZMod p))
@@ -1115,39 +1065,32 @@ theorem constraints_decompose
             ((U16MSBOperation.main
               ⟨(varFromOffset (Vector · 4) offset)[1],
                 ⟨var { index := offset + 29 }⟩,
-                var { index := offset + 31 }⟩).operations
-                  (offset + 33)).constraints) ∧
+                input.isSllw⟩).operations
+                  (offset + 31)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Readers.ALUTypeReader.main
               (aluReaderInput input offset)).operations
-                (offset + 33)).constraints) ∧
+                (offset + 31)).constraints) ∧
        (ProvableStruct.eval env input).is_real *
           ((ProvableStruct.eval env input).is_real - 1) = 0 ∧
-       (ProvableStruct.eval env input).is_real -
-          (Expression.eval env (var { index := offset + 30 }) +
-            Expression.eval env (var { index := offset + 31 })) = 0 ∧
-       (Expression.eval env (var { index := offset + 30 }) +
-          Expression.eval env (var { index := offset + 31 })) *
-            (Expression.eval env (var { index := offset + 30 }) +
-              Expression.eval env (var { index := offset + 31 }) - 1) = 0 ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (var { index := offset + 30 } *
-                  (var { index := offset + 30 } - 1),
-                0)).operations (offset + 33)).constraints) ∧
+              (input.isSll *
+                  (input.isSll - 1),
+                0)).operations (offset + 31)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((Gadgets.Equality.main (M := field)
-              (var { index := offset + 31 } *
-                  (var { index := offset + 31 } - 1),
-                0)).operations (offset + 33)).constraints) ∧
+              (input.isSllw *
+                  (input.isSllw - 1),
+                0)).operations (offset + 31)).constraints) ∧
        List.Forall (· = 0)
           (List.map (Expression.eval env)
             ((ShiftLeftCore.main
               (coreInput input offset)).operations
-                (offset + 33)).constraints)) := by
+                (offset + 31)).constraints)) := by
   rw [constraints_main_bind_decompose]
   simp only [List.map_append, List.forall_append,
     Circuit.operations, subcircuitWithAssertion,
@@ -1158,47 +1101,35 @@ theorem constraints_decompose
   simp only [witnessPrefix, Circuit.output, aluReaderInput,
     coreInput, Readers.CPUState.circuit,
     ProvableType.varFromOffset_fields, Vector.getElem_mapRange,
-    eval_sub, Expression.eval,
+    Inputs.is_real,
     Nat.add_assoc, Nat.reduceAdd]
-
-/-- The Lean-side `is_real = is_sll + is_sllw` glue is retained in the whole chip. -/
-theorem selectorLink_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    input.is_real -
-        (var { index := offset + 30 } + var { index := offset + 31 }) ∈
-      ((main input).operations offset).constraints := by
-  unfold main
-  apply constraintMem_bind_right
-  apply constraintMem_bind_right
-  simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
-    Nat.add_zero, witnessPrefix_flag0, witnessPrefix_flag1] using
-    selectorLink_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
 
 /-- The `is_sll` boolean assertion is retained at the post-witness offset. -/
 theorem sllBool_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 30 } * (var { index := offset + 30 } - 1) - 0 ∈
+    input.isSll * (input.isSll - 1) - 0 ∈
       ((main input).operations offset).constraints := by
   unfold main
   apply constraintMem_bind_right
   apply constraintMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
-    Nat.add_zero, witnessPrefix_flag0] using
-    sllBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
+    Nat.add_zero] using
+    sllBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 31)
 
 /-- The `is_sllw` boolean assertion is retained at the post-witness offset. -/
 theorem sllwBool_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 31 } * (var { index := offset + 31 } - 1) - 0 ∈
+    input.isSllw * (input.isSllw - 1) - 0 ∈
       ((main input).operations offset).constraints := by
   unfold main
   apply constraintMem_bind_right
   apply constraintMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
-    Nat.add_zero, witnessPrefix_flag1] using
-    sllwBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
+    Nat.add_zero] using
+    sllwBool_mem_postWitness input ((witnessPrefix input).output offset) (offset + 31)
 
 /-- The folded arithmetic core is retained at the post-witness offset. -/
 theorem core_mem_subcircuits (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ⟨offset + 33,
-      ShiftLeftCore.circuit.toSubcircuit (offset + 33)
+    ⟨offset + 31,
+      ShiftLeftCore.circuit.toSubcircuit (offset + 31)
         (coreInput input offset)⟩ ∈
       ((main input).operations offset).subcircuits := by
   unfold main
@@ -1206,7 +1137,7 @@ theorem core_mem_subcircuits (input : Var Inputs (ZMod p)) (offset : ℕ) :
   apply subcircuitMem_bind_right
   simpa only [cpuCircuitLocalLength_eq, witnessPrefixLocalLength_eq,
     coreInput, Nat.add_zero] using
-    core_mem_postWitness input ((witnessPrefix input).output offset) (offset + 33)
+    core_mem_postWitness input ((witnessPrefix input).output offset) (offset + 31)
 
 @[implicit_reducible] private def derivedElaborated :
     ElaboratedCircuit (ZMod p) Inputs Columns main := by
@@ -1236,11 +1167,11 @@ set_option linter.unusedSectionVars false in
 -- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
 -- post-order lemma can see it; a pre-order lemma fires on the public form first.
 @[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
-    (elaborated (p := p)).localLength x = 33 := rfl
+    (elaborated (p := p)).localLength x = 31 := rfl
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
-    (derivedElaborated (p := p)).localLength x = 33 := rfl
+    (derivedElaborated (p := p)).localLength x = 31 := rfl
 
 /-- The completed ShiftLeft row, exposed without unfolding the folded witness circuit. -/
 @[circuit_norm ↓] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -1255,8 +1186,8 @@ set_option linter.unusedSectionVars false in
         varFromOffset (Vector · 4) (offset + 21),
         varFromOffset (Vector · 4) (offset + 25),
         ⟨var { index := offset + 29 }⟩,
-        var { index := offset + 30 }, var { index := offset + 31 },
-        var { index := offset + 32 }⟩ : Var Columns (ZMod p)) := rfl
+        input.isSll, input.isSllw,
+        var { index := offset + 30 }⟩ : Var Columns (ZMod p)) := rfl
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma derivedOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -1271,33 +1202,8 @@ set_option linter.unusedSectionVars false in
         varFromOffset (Vector · 4) (offset + 21),
         varFromOffset (Vector · 4) (offset + 25),
         ⟨var { index := offset + 29 }⟩,
-        var { index := offset + 30 }, var { index := offset + 31 },
-        var { index := offset + 32 }⟩ : Var Columns (ZMod p)) := rfl
-
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    Eval.eval env input =
-      ({ is_real := Eval.eval env input.is_real, state := Eval.eval env input.state,
-         adapter := Eval.eval env input.adapter } : Inputs F) := by
-  rw [ProvableStruct.eval_eq_eval]
-  rfl
-
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Columns (Expression F)) :
-    Eval.eval env cols =
-      ({ state := Eval.eval env cols.state, adapter := Eval.eval env cols.adapter,
-         a := Eval.eval env cols.a, c_bits := Eval.eval env cols.c_bits,
-         v_01 := Eval.eval env cols.v_01, v_012 := Eval.eval env cols.v_012,
-         v_0123 := Eval.eval env cols.v_0123,
-         shift_u16 := Eval.eval env cols.shift_u16,
-         lower_limb := Eval.eval env cols.lower_limb,
-         higher_limb := Eval.eval env cols.higher_limb,
-         limb_result := Eval.eval env cols.limb_result,
-         sllw_msb := Eval.eval env cols.sllw_msb,
-         is_sll := Eval.eval env cols.is_sll, is_sllw := Eval.eval env cols.is_sllw,
-         is_sllw_imm := Eval.eval env cols.is_sllw_imm } : Columns F) := by
-  rw [ProvableStruct.eval_eq_eval]
-  rfl
+        input.isSll, input.isSllw,
+        var { index := offset + 30 }⟩ : Var Columns (ZMod p)) := rfl
 
 /-! ### Operand projections, in `circuit_norm`'s own orientation (the `AddChip/Defs.lean`
 pattern) — the `ComputableWitnesses` proof projects the struct-level input agreement onto these. -/
@@ -1329,12 +1235,6 @@ pattern) — the `ComputableWitnesses` proof projects the struct-level input agr
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).adapter = Eval.eval env input.adapter := by
   rw [eval_inputs]
-
-@[circuit_norm] theorem eval_inputIsReal {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    (Eval.eval env input).is_real = Expression.eval env input.is_real := by
-  simpa only [CircuitType.eval_expr] using
-    congrArg (fun value : Inputs F => value.is_real) (eval_inputs env input)
 
 private theorem postWitness_requirementsChannelsLawful (input : Var Inputs (ZMod p))
     (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
@@ -1389,7 +1289,7 @@ private theorem postWitness_requirementsChannelsLawful (input : Var Inputs (ZMod
       Gadgets.Equality.localLength_eq, Nat.add_zero,
       ConstraintsHold.Shallow, Operations.forAllNoOffset_append,
       Operations.forAllNoOffset, true_and, and_true, eval_sub, Expression.eval] at h_constraints
-    have h_bool := bool_of_mul_pred h_constraints.2.2
+    have h_bool := bool_of_mul_pred h_constraints
     rw [Operations.inChannelsOrRequirements_iff_forall_mem]
     intro interaction h_interaction
     unfold postWitness at h_interaction
@@ -1418,7 +1318,7 @@ theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (offset : 
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
       [memoryChannel.toRaw] := by
   have postLaw := postWitness_requirementsChannelsLawful input
-    ((witnessPrefix input).output offset) (offset + 33)
+    ((witnessPrefix input).output offset) (offset + 31)
   dsimp only [Operations.RequirementsChannelsLawful] at postLaw ⊢
   obtain ⟨postSubcircuits, postChannels, postRequirements⟩ := postLaw
   refine ⟨?_, ?_, ?_⟩
@@ -1444,7 +1344,7 @@ theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (offset : 
   · intro env h_constraints
     have postConstraints :
         ConstraintsHold.Shallow env
-          ((postWitness input ((witnessPrefix input).output offset)).operations (offset + 33)) := by
+          ((postWitness input ((witnessPrefix input).output offset)).operations (offset + 31)) := by
       simpa only [main, Circuit.bind_operations_eq, Circuit.operations,
         Circuit.localLength, Operations.localLength, GeneralFormalCircuit.toSubcircuit_localLength,
         Readers.CPUState.circuit_localLength, Nat.add_zero, witnessPrefixLocalLength_eq,

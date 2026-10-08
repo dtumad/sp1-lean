@@ -198,7 +198,7 @@ theorem anchorTrace_tables_eq :
        Table.build SubwChip.component [] anchorData anchorHint,
        Table.build BitwiseChip.component [] anchorData (ProverHint.empty _),
        Table.build LtChip.component [] anchorData (ProverHint.empty _),
-       Table.buildHinted ShiftLeftChip.component [] anchorData,
+       Table.build ShiftLeftChip.component [] anchorData (ProverHint.empty _),
        Table.buildHinted ShiftRightChip.component [] anchorData,
        Table.build JalChip.component [] anchorData anchorHint,
        Table.build JalrChip.component [] anchorData anchorHint,

@@ -10,26 +10,16 @@ SP1's `ShiftLeftChip::event_to_row` (`alu/sll/mod.rs`) ported to Lean: the hones
 assignments for the shift column block — the six shift-amount bits `c_bits`, the `v_01/v_012/v_0123`
 power encodings, the `shift_u16` byte-shift one-hot selector, the `lower/higher_limb` bit-split, the
 `limb_result` reassembly, the SLLW MSB sign-fill, and the result word `a` (computed by the
-constraints' own placement formula, so the placement asserts are definitional at the witness). The
-variant flags are **not** computable from the row inputs — the prover supplies them via the
-`"shift_left_flags"` `ProverHint` key (one-hot on real rows, absent/all-zero on padding); the
-committed `is_sllw_imm` is derived as `is_sllw · imm_c`.
+constraints' placement formula). The variant flags are explicit inputs; the witness
+`is_sllw_imm` is their SLLW selector multiplied by `imm_c`.
 
-Everything is computable (ℕ arithmetic on `.val`, cast back): the `SP1CleanTest` trace-gen anchors
-derive whole trace rows from these closures and check them against SP1's real `generate_trace`. On
-all-zero inputs + empty hint they reproduce SP1's `padded_row_template`
-(`v_01 = v_012 = v_0123 = 1`, everything else zero) — the `v_*` encodings are computed ungated
-because their constraints are ungated. -/
+The value functions below specify the generators; the witness IR uses Clean's built-in
+representation and evaluation. All-zero inputs reproduce SP1's padding template:
+`v_01 = v_012 = v_0123 = 1`, with every other witness zero. -/
 
 namespace SP1Clean.ShiftLeftChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
-
-/-- The two honest variant flags (`is_sll`, `is_sllw`) the prover supplies via the
-`"shift_left_flags"` hint key (one-hot for the active variant, all-zero on padding). Falls back to
-all-zero when the key is absent. -/
-def hintFlags (h : ProverHint (ZMod p)) : Vector (ZMod p) 2 :=
-  ((h "shift_left_flags" 2)[0]?).getD #v[0, 0]
 
 /-- The six low bits of the shift-amount source limb `c0` (= `op_c_memory.prev_value[0]`). -/
 def cBits (c0 : ZMod p) : Vector (ZMod p) 6 :=
@@ -588,8 +578,8 @@ lemmas cross the boundary. -/
 
 section WitnessIR
 
-/-- The two hint-flag reads (`is_sll`, `is_sllw`), as exportable IR leaves. -/
-def hintF (k : Fin 2) : Witgen.FExpr (ZMod p) := .hintGet "shift_left_flags" 2 0 k
+-- Normalize equality conditions before reducing expression leaves in their Decidable instances.
+attribute [local circuit_norm ↓] Witgen.BExpr.eval_feq_iff
 
 /-- The six shift-amount bits, as IR. -/
 def cBitsIR (c0e : Expression (ZMod p)) : Witgen.WitgenIR (ZMod p) 6 :=
@@ -603,17 +593,17 @@ def vPowersIR (c0e : Expression (ZMod p)) : Witgen.WitgenIR (ZMod p) 3 :=
                ((1 : Witgen.U64Expr (ZMod p)) <<< (c0e.val % 8)).toField,
                ((1 : Witgen.U64Expr (ZMod p)) <<< (c0e.val % 16)).toField]
 
-/-- The byte-level shift amount, u64-sorted (bit 5 gated by the `is_sll` hint flag). -/
-def byteShiftU (c0e : Expression (ZMod p)) : Witgen.U64Expr (ZMod p) :=
+/-- The byte-level shift amount, u64-sorted (bit 5 gated by the `is_sll` selector). -/
+def byteShiftU (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) : Witgen.U64Expr (ZMod p) :=
   (c0e.val >>> 4) % 2
-    + 2 * ((c0e.val >>> 5) % 2) * (.ite ((hintF 0 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p)) 1 0)
+    + 2 * ((c0e.val >>> 5) % 2) * (.ite (((.expr f[0] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p)) 1 0)
 
 /-- The flag-gated one-hot byte-shift selector, as IR. -/
-def shiftU16IR (c0e : Expression (ZMod p)) : Witgen.WitgenIR (ZMod p) 4 :=
-  .ofFExprs #v[.ite (byteShiftU c0e =? (0 : ℕ)) (hintF 0 + hintF 1) 0,
-               .ite (byteShiftU c0e =? (1 : ℕ)) (hintF 0 + hintF 1) 0,
-               .ite (byteShiftU c0e =? (2 : ℕ)) (hintF 0 + hintF 1) 0,
-               .ite (byteShiftU c0e =? (3 : ℕ)) (hintF 0 + hintF 1) 0]
+def shiftU16IR (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) : Witgen.WitgenIR (ZMod p) 4 :=
+  .ofFExprs #v[.ite (byteShiftU c0e f =? (0 : ℕ)) ((.expr f[0] : Witgen.FExpr (ZMod p)) + (.expr f[1] : Witgen.FExpr (ZMod p))) 0,
+               .ite (byteShiftU c0e f =? (1 : ℕ)) ((.expr f[0] : Witgen.FExpr (ZMod p)) + (.expr f[1] : Witgen.FExpr (ZMod p))) 0,
+               .ite (byteShiftU c0e f =? (2 : ℕ)) ((.expr f[0] : Witgen.FExpr (ZMod p)) + (.expr f[1] : Witgen.FExpr (ZMod p))) 0,
+               .ite (byteShiftU c0e f =? (3 : ℕ)) ((.expr f[0] : Witgen.FExpr (ZMod p)) + (.expr f[1] : Witgen.FExpr (ZMod p))) 0]
 
 /-- The bit-split modulus `2^(16 − bitShift)`, u64-sorted (`65536 >>> (c & 0xF)`). -/
 def lowModU (c0e : Expression (ZMod p)) : Witgen.U64Expr (ZMod p) :=
@@ -649,53 +639,45 @@ def limbResultIR (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
 
 /-- The placed `a[1]` limb of the SLLW branch (`lo[1]`): `limb_result` cell `1` on byte-shift `0`,
 cell `0` otherwise. -/
-def loF1 (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) : Witgen.FExpr (ZMod p) :=
-  .ite (byteShiftU c0e =? (0 : ℕ)) (lrF b c0e 1) (lrF b c0e 0)
+def loF1 (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) : Witgen.FExpr (ZMod p) :=
+  .ite (byteShiftU c0e f =? (0 : ℕ)) (lrF b c0e 1) (lrF b c0e 0)
 
 /-- Result-word cell `j`, mirroring `populateA`'s variant dispatch: the SLL branch places
 `limb_result` by the byte shift (a `.listGet`); the SLLW branch places the low two limbs and
 sign-fills the upper two with `msb · 65535`. -/
-def aF (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) : ℕ → Witgen.FExpr (ZMod p)
-  | 0 => .ite ((hintF 0 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
-      (.listGet [lrF b c0e 0, 0, 0, 0] (byteShiftU c0e))
-      (.ite ((hintF 1 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p)) (.ite (byteShiftU c0e =? (0 : ℕ)) (lrF b c0e 0) 0) 0)
-  | 1 => .ite ((hintF 0 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
-      (.listGet [lrF b c0e 1, lrF b c0e 0, 0, 0] (byteShiftU c0e))
-      (.ite ((hintF 1 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p)) (loF1 b c0e) 0)
-  | 2 => .ite ((hintF 0 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
-      (.listGet [lrF b c0e 2, lrF b c0e 1, lrF b c0e 0, 0] (byteShiftU c0e))
-      (.ite ((hintF 1 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
-        (U16MSBOperation.populate_msbF (loF1 b c0e) * (65535 : ZMod p)) 0)
-  | 3 => .ite ((hintF 0 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
-      (.listGet [lrF b c0e 3, lrF b c0e 2, lrF b c0e 1, lrF b c0e 0] (byteShiftU c0e))
-      (.ite ((hintF 1 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
-        (U16MSBOperation.populate_msbF (loF1 b c0e) * (65535 : ZMod p)) 0)
+def aF (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) : ℕ → Witgen.FExpr (ZMod p)
+  | 0 => .ite (((.expr f[0] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
+      (.listGet [lrF b c0e 0, 0, 0, 0] (byteShiftU c0e f))
+      (.ite (((.expr f[1] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p)) (.ite (byteShiftU c0e f =? (0 : ℕ)) (lrF b c0e 0) 0) 0)
+  | 1 => .ite (((.expr f[0] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
+      (.listGet [lrF b c0e 1, lrF b c0e 0, 0, 0] (byteShiftU c0e f))
+      (.ite (((.expr f[1] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p)) (loF1 b c0e f) 0)
+  | 2 => .ite (((.expr f[0] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
+      (.listGet [lrF b c0e 2, lrF b c0e 1, lrF b c0e 0, 0] (byteShiftU c0e f))
+      (.ite (((.expr f[1] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
+        (U16MSBOperation.populate_msbF (loF1 b c0e f) * (65535 : ZMod p)) 0)
+  | 3 => .ite (((.expr f[0] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
+      (.listGet [lrF b c0e 3, lrF b c0e 2, lrF b c0e 1, lrF b c0e 0] (byteShiftU c0e f))
+      (.ite (((.expr f[1] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
+        (U16MSBOperation.populate_msbF (loF1 b c0e f) * (65535 : ZMod p)) 0)
   | _ => 0
 
 /-- The result word `a`, as IR. -/
-def populateAIR (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
+def populateAIR (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) :
     Witgen.WitgenIR (ZMod p) 4 :=
-  .ofFExprs #v[aF b c0e 0, aF b c0e 1, aF b c0e 2, aF b c0e 3]
+  .ofFExprs #v[aF b c0e f 0, aF b c0e f 1, aF b c0e f 2, aF b c0e f 3]
 
 /-- The SLLW sign bit, as IR. -/
-def sllwMsbIR (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
+def sllwMsbIR (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) :
     Witgen.WitgenIR (ZMod p) 1 :=
-  .ofFExprs #v[.ite ((hintF 1 : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
-    (U16MSBOperation.populate_msbF (aF b c0e 1)) 0]
+  .ofFExprs #v[.ite (((.expr f[1] : Witgen.FExpr (ZMod p)) : Witgen.FExpr (ZMod p)) =? (1 : ZMod p))
+    (U16MSBOperation.populate_msbF (aF b c0e f 1)) 0]
 
-/-- The three committed flag cells (`is_sll`, `is_sllw`, `is_sllw · imm_c`), as IR. -/
-def flagsIR (imm_c : Expression (ZMod p)) : Witgen.WitgenIR (ZMod p) 3 :=
-  .ofFExprs #v[hintF 0, hintF 1, hintF 1 * .expr imm_c]
+/-- The constrained product of the SLLW and immediate selectors. -/
+def sllwImmIR (isSllw imm_c : Expression (ZMod p)) : Witgen.WitgenIR (ZMod p) 1 :=
+  .ofFExprs #v[.expr (isSllw * imm_c)]
 
 /-! ### Eval lemmas (the boundary: IR evaluation = the value-level witness functions) -/
-
-omit [Fact (2 ^ 17 < p)] in
-/-- Evaluating a hint-flag leaf is the `hintFlags` accessor cell. -/
-theorem hintF_eval (env : ProverEnvironment (ZMod p)) (k : Fin 2) :
-    Witgen.FExpr.eval { env := env } (hintF k) = (hintFlags env.hint)[k] := by
-  have hdefault : (default : Vector (ZMod p) 2) = #v[0, 0] := rfl
-  rw [hintFlags, ← hdefault]
-  fin_cases k <;> simp only [hintF, circuit_norm]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Evaluating the shift-amount bits is `cBits` (the limb bound keeps the u64 sort from
@@ -726,25 +708,25 @@ theorem vPowersIR_eval (env : ProverEnvironment (ZMod p)) (c0e : Expression (ZMo
      rw [Nat.shiftLeft_eq, one_mul])
 
 omit [Fact (2 ^ 17 < p)] in
-/-- Evaluating the u64 byte-shift amount is `byteShiftNat` (of the evaluated limb and the hint
-flags). -/
-theorem byteShiftU_toNat (env : ProverEnvironment (ZMod p)) (c0e : Expression (ZMod p)) (c0 : ZMod p)
+/-- Evaluating the u64 byte-shift amount is `byteShiftNat` (of the evaluated limb and the explicit
+selectors). -/
+theorem byteShiftU_toNat (env : ProverEnvironment (ZMod p)) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) (c0 : ZMod p)
     (hc0 : Expression.eval env.toEnvironment c0e = c0) (hb : c0.val < 2 ^ 16) :
-    ((byteShiftU c0e).eval { env := env }).toNat = byteShiftNat c0 (hintFlags env.hint) := by
-  simp only [byteShiftU, byteShiftNat, circuit_norm, hc0, hintF_eval, apply_ite UInt64.toNat]
+    ((byteShiftU c0e f).eval { env := env }).toNat = byteShiftNat c0 (f.map (Expression.eval env.toEnvironment)) := by
+  simp only [byteShiftU, byteShiftNat, circuit_norm, hc0, Vector.getElem_map, apply_ite UInt64.toNat]
   split_ifs <;> omega
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Evaluating the byte-shift selector is `shiftU16`. -/
-theorem shiftU16IR_eval (env : ProverEnvironment (ZMod p)) (c0e : Expression (ZMod p)) (c0 : ZMod p)
+theorem shiftU16IR_eval (env : ProverEnvironment (ZMod p)) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) (c0 : ZMod p)
     (hc0 : Expression.eval env.toEnvironment c0e = c0) (hb : c0.val < 2 ^ 16) :
-    (shiftU16IR c0e).eval env = shiftU16 c0 (hintFlags env.hint) := by
-  have hbs := byteShiftU_toNat env c0e c0 hc0 hb
+    (shiftU16IR c0e f).eval env = shiftU16 c0 (f.map (Expression.eval env.toEnvironment)) := by
+  have hbs := byteShiftU_toNat env c0e f c0 hc0 hb
   apply Vector.ext
   intro i hi
   simp only [shiftU16IR]
   rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  interval_cases i <;> simp only [shiftU16, circuit_norm, hintF_eval, hbs]
+  interval_cases i <;> simp only [shiftU16, circuit_norm, Vector.getElem_map, hbs]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The u64 split modulus evaluates to `2^(16 − bitShift)` (`Nat.two_pow_shiftRight`). -/
@@ -867,117 +849,115 @@ theorem limbResultIR_eval (env : ProverEnvironment (ZMod p))
 /-- Evaluating a result-word cell is `populateA`'s cell (the variant dispatch resolves branch by
 branch; the SLL placement's `.listGet` lands in range by `byteShiftNat_lt`). -/
 theorem aF_eval (env : ProverEnvironment (ZMod p))
-    (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
+    (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2)
     (vb : Word (ZMod p)) (c0 : ZMod p)
     (hW : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment b[i] = vb[i])
     (hc0 : Expression.eval env.toEnvironment c0e = c0)
     (hbU : vb.isU64) (hb : c0.val < 2 ^ 16) (j : ℕ) (hj : j < 4) :
-    Witgen.FExpr.eval { env := env } (aF b c0e j)
-      = (populateA vb c0 (hintFlags env.hint))[j] := by
+    Witgen.FExpr.eval { env := env } (aF b c0e f j)
+      = (populateA vb c0 (f.map (Expression.eval env.toEnvironment)))[j] := by
   have hp17 : (2 : ℕ) ^ 17 < p := Fact.out
-  have hbs := byteShiftU_toNat env c0e c0 hc0 hb
+  have hbs := byteShiftU_toNat env c0e f c0 hc0 hb
   have hlr := lrF_eval env b c0e vb c0 hW hc0 hbU hb
   have hlrv : ∀ (i : ℕ) (hi : i < 4), ((limbResult vb c0)[i]).val < 2 ^ 16 := fun i hi => by
     simp only [limbResult, Vector.getElem_map]
     rw [ZMod.val_natCast_of_lt (lt_trans (limbResultNat_lt vb c0 hbU i hi) (by omega))]
     exact limbResultNat_lt vb c0 hbU i hi
-  have hk4 : byteShiftNat c0 (hintFlags env.hint) < 4 := byteShiftNat_lt c0 _
-  set k := byteShiftNat c0 (hintFlags env.hint) with hkeq
+  have hk4 : byteShiftNat c0 (f.map (Expression.eval env.toEnvironment)) < 4 := byteShiftNat_lt c0 _
+  set k := byteShiftNat c0 (f.map (Expression.eval env.toEnvironment)) with hkeq
   clear_value k
-  have hlo1 : Witgen.FExpr.eval { env := env } (loF1 b c0e)
+  have hlo1 : Witgen.FExpr.eval { env := env } (loF1 b c0e f)
       = if k = 0 then (limbResult vb c0)[1] else (limbResult vb c0)[0] := by
     simp only [loF1, circuit_norm, hbs, hlr 0 (by omega), hlr 1 (by omega)]
   have hlo1v : (if k = 0 then (limbResult vb c0)[1] else (limbResult vb c0)[0]).val < 2 ^ 16 := by
     split_ifs
     · exact hlrv 1 (by omega)
     · exact hlrv 0 (by omega)
-  have hmsb : Witgen.FExpr.eval { env := env } (U16MSBOperation.populate_msbF (loF1 b c0e))
+  have hmsb : Witgen.FExpr.eval { env := env } (U16MSBOperation.populate_msbF (loF1 b c0e f))
       = U16MSBOperation.populate_msb
           (if k = 0 then (limbResult vb c0)[1] else (limbResult vb c0)[0]) := by
     rw [U16MSBOperation.populate_msbF_eval _ _ (by rw [hlo1]; exact hlo1v), hlo1]
-  interval_cases j <;> by_cases hf0 : (hintFlags env.hint)[0] = 1
+  interval_cases j <;> by_cases hf0 : Expression.eval env.toEnvironment f[0] = 1
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hbs,
+      simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega)] <;>
       norm_num [← hkeq]
-  · by_cases hf1 : (hintFlags env.hint)[1] = 1
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, hbs]
+  · by_cases hf1 : Expression.eval env.toEnvironment f[1] = 1
+    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1, hbs]
       split_ifs <;> first | omega | norm_num [hlr 0 (by omega), hlr 1 (by omega)]
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
+    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hbs,
+      simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega)] <;>
       norm_num [← hkeq]
-  · by_cases hf1 : (hintFlags env.hint)[1] = 1
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
+  · by_cases hf1 : Expression.eval env.toEnvironment f[1] = 1
+    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
       rw [hlo1]
       split_ifs <;> first | omega | norm_num [hlr 0 (by omega), hlr 1 (by omega)]
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
+    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hbs,
+      simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega), hlr 2 (by omega)] <;>
       norm_num [← hkeq]
-  · by_cases hf1 : (hintFlags env.hint)[1] = 1
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, hmsb]
+  · by_cases hf1 : Expression.eval env.toEnvironment f[1] = 1
+    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1, hmsb]
       split_ifs <;> first | omega | norm_num
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
+    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hbs,
+      simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega), hlr 2 (by omega),
         hlr 3 (by omega)] <;>
       norm_num [← hkeq]
-  · by_cases hf1 : (hintFlags env.hint)[1] = 1
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1, hmsb]
+  · by_cases hf1 : Expression.eval env.toEnvironment f[1] = 1
+    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1, hmsb]
       split_ifs <;> first | omega | norm_num
-    · simp only [aF, populateA, circuit_norm, hintF_eval, hf0, hf1]
+    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
 
 /-- Evaluating the result word is `populateA`. -/
 theorem populateAIR_eval (env : ProverEnvironment (ZMod p))
-    (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
+    (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2)
     (vb : Word (ZMod p)) (c0 : ZMod p)
     (hW : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment b[i] = vb[i])
     (hc0 : Expression.eval env.toEnvironment c0e = c0)
     (hbU : vb.isU64) (hb : c0.val < 2 ^ 16) :
-    (populateAIR b c0e).eval env = populateA vb c0 (hintFlags env.hint) := by
+    (populateAIR b c0e f).eval env = populateA vb c0 (f.map (Expression.eval env.toEnvironment)) := by
   apply Vector.ext
   intro i hi
   simp only [populateAIR]
   rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
   interval_cases i <;>
-    simpa using aF_eval env b c0e vb c0 hW hc0 hbU hb _ (by omega)
+    simpa using aF_eval env b c0e f vb c0 hW hc0 hbU hb _ (by omega)
 
 /-- Evaluating the SLLW sign bit is `sllwMsb`. -/
 theorem sllwMsbIR_eval (env : ProverEnvironment (ZMod p))
-    (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
+    (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2)
     (vb : Word (ZMod p)) (c0 : ZMod p)
     (hW : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment b[i] = vb[i])
     (hc0 : Expression.eval env.toEnvironment c0e = c0)
     (hbU : vb.isU64) (hb : c0.val < 2 ^ 16) :
-    (sllwMsbIR b c0e).eval env = #v[sllwMsb vb c0 (hintFlags env.hint)] := by
-  have ha1 := aF_eval env b c0e vb c0 hW hc0 hbU hb 1 (by omega)
-  have ha1v := populateA_val_lt vb c0 (hintFlags env.hint) hbU 1 (by omega)
+    (sllwMsbIR b c0e f).eval env = #v[sllwMsb vb c0 (f.map (Expression.eval env.toEnvironment))] := by
+  have ha1 := aF_eval env b c0e f vb c0 hW hc0 hbU hb 1 (by omega)
+  have ha1v := populateA_val_lt vb c0 (f.map (Expression.eval env.toEnvironment)) hbU 1 (by omega)
   have hmsbA : Witgen.FExpr.eval { env := env }
-      (U16MSBOperation.populate_msbF (aF b c0e 1))
-      = U16MSBOperation.populate_msb (populateA vb c0 (hintFlags env.hint))[1] := by
+      (U16MSBOperation.populate_msbF (aF b c0e f 1))
+      = U16MSBOperation.populate_msb (populateA vb c0 (f.map (Expression.eval env.toEnvironment)))[1] := by
     rw [U16MSBOperation.populate_msbF_eval _ _ (by rw [ha1]; exact ha1v), ha1]
   apply Vector.ext
   intro i hi
   simp only [sllwMsbIR]
   rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
   interval_cases i
-  simp only [sllwMsb, circuit_norm, hintF_eval, hmsbA]
+  simp only [sllwMsb, circuit_norm, Vector.getElem_map, hmsbA]
 
 omit [Fact (2 ^ 17 < p)] in
-/-- Evaluating the committed flag cells is the flag/`is_sllw_imm` triple. -/
-theorem flagsIR_eval (env : ProverEnvironment (ZMod p)) (imm_c : Expression (ZMod p)) :
-    (flagsIR imm_c).eval env
-      = #v[(hintFlags env.hint)[0], (hintFlags env.hint)[1],
-           (hintFlags env.hint)[1] * Expression.eval env.toEnvironment imm_c] := by
-  apply Vector.ext
-  intro i hi
-  simp only [flagsIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  interval_cases i <;> simp only [circuit_norm, hintF_eval]
+/-- The immediate-selector witness evaluates to the product of its inputs. -/
+theorem sllwImmIR_eval (env : ProverEnvironment (ZMod p))
+    (isSllw imm_c : Expression (ZMod p)) :
+    (sllwImmIR isSllw imm_c).eval env =
+      #v[Expression.eval env.toEnvironment isSllw * Expression.eval env.toEnvironment imm_c] := by
+  ext i hi
+  interval_cases i
+  simp only [sllwImmIR, Witgen.WitgenIR.getElem_eval_ofFExprs, circuit_norm]
 
 /-! ### Congruence lemmas (environment-locality — the `ComputableWitnesses` counterparts; no
 bounds, `-Witgen.u64Wrap` per the fold rule) -/
@@ -1009,16 +989,17 @@ theorem vPowersIR_congr (c0e : Expression (ZMod p))
   interval_cases i <;> simp only [circuit_norm, -Witgen.u64Wrap, hc]
 
 /-- Congruence for the byte-shift selector. -/
-theorem shiftU16IR_congr (c0e : Expression (ZMod p))
+theorem shiftU16IR_congr (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2)
     (hc : Expression.eval env.toEnvironment c0e = Expression.eval env'.toEnvironment c0e)
-    (hh : env.hint = env'.hint) :
-    (shiftU16IR c0e).eval env = (shiftU16IR c0e).eval env' := by
+    (hf : ∀ (i : ℕ) (_ : i < 2),
+      Expression.eval env.toEnvironment f[i] = Expression.eval env'.toEnvironment f[i]) :
+    (shiftU16IR c0e f).eval env = (shiftU16IR c0e f).eval env' := by
   apply Vector.ext
   intro i hi
   simp only [shiftU16IR]
   rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
   interval_cases i <;>
-    simp only [byteShiftU, hintF, circuit_norm, -Witgen.u64Wrap, hc, hh]
+    simp only [byteShiftU, circuit_norm, -Witgen.u64Wrap, hc, hf 0 (by omega), hf 1 (by omega)]
 
 /-- Congruence for the low bit-split. -/
 theorem lowerLimbIR_congr (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
@@ -1086,13 +1067,14 @@ theorem limbResultIR_congr (b : Word (Expression (ZMod p))) (c0e : Expression (Z
   · exact lrF_congr env env' b c0e hB hc 3
 
 /-- Congruence for a result-word cell. -/
-theorem aF_congr (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
+theorem aF_congr (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2)
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
     (hc : Expression.eval env.toEnvironment c0e = Expression.eval env'.toEnvironment c0e)
-    (hh : env.hint = env'.hint) (j : ℕ) :
-    Witgen.FExpr.eval { env := env } (aF b c0e j)
-      = Witgen.FExpr.eval { env := env' } (aF b c0e j) := by
+    (hf : ∀ (i : ℕ) (_ : i < 2),
+      Expression.eval env.toEnvironment f[i] = Expression.eval env'.toEnvironment f[i]) (j : ℕ) :
+    Witgen.FExpr.eval { env := env } (aF b c0e f j)
+      = Witgen.FExpr.eval { env := env' } (aF b c0e f j) := by
   have hlr0 := lrF_congr env env' b c0e hB hc 0
   have hlr1 := lrF_congr env env' b c0e hB hc 1
   have hlr2 := lrF_congr env env' b c0e hB hc 2
@@ -1108,70 +1090,68 @@ theorem aF_congr (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
       cases n with
       | zero => exact h a (List.mem_cons_self ..)
       | succ m => exact ih m fun x hx => h x (List.mem_cons_of_mem _ hx)
-  have hloC : Witgen.FExpr.eval { env := env } (loF1 b c0e)
-      = Witgen.FExpr.eval { env := env' } (loF1 b c0e) := by
-    simp only [loF1, byteShiftU, hintF, circuit_norm, -Witgen.u64Wrap, hc, hh, hlr0, hlr1]
+  have hloC : Witgen.FExpr.eval { env := env } (loF1 b c0e f)
+      = Witgen.FExpr.eval { env := env' } (loF1 b c0e f) := by
+    simp only [loF1, byteShiftU, circuit_norm, -Witgen.u64Wrap, hc, hf 0 (by omega), hlr0, hlr1]
   have hmsbC := U16MSBOperation.populate_msbF_congr { env := env } { env := env' }
-    (loF1 b c0e) hloC
+    (loF1 b c0e f) hloC
   rcases Nat.lt_or_ge j 4 with hlt | hge
   · interval_cases j <;>
-      (simp only [aF, byteShiftU, hintF, circuit_norm, -Witgen.u64Wrap, hc, hh, hmsbC, hloC,
+      (simp only [aF, byteShiftU, circuit_norm, -Witgen.u64Wrap, hc, hf 0 (by omega), hf 1 (by omega), hmsbC, hloC,
         hlr0]
        rw [hEL _ _ (by
         intro x hx
         simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
         rcases hx with rfl | rfl | rfl | rfl <;>
           first | rfl | exact hlr0 | exact hlr1 | exact hlr2 | exact hlr3)])
-  · have hz : aF b c0e j = 0 := by
+  · have hz : aF b c0e f j = 0 := by
       unfold aF
       split <;> first | rfl | omega
     rw [hz]
     rfl
 
 /-- Congruence for the result word. -/
-theorem populateAIR_congr (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
+theorem populateAIR_congr (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2)
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
     (hc : Expression.eval env.toEnvironment c0e = Expression.eval env'.toEnvironment c0e)
-    (hh : env.hint = env'.hint) :
-    (populateAIR b c0e).eval env = (populateAIR b c0e).eval env' := by
+    (hf : ∀ (i : ℕ) (_ : i < 2),
+      Expression.eval env.toEnvironment f[i] = Expression.eval env'.toEnvironment f[i]) :
+    (populateAIR b c0e f).eval env = (populateAIR b c0e f).eval env' := by
   apply Vector.ext
   intro i hi
   simp only [populateAIR]
   rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
   interval_cases i
-  · exact aF_congr env env' b c0e hB hc hh 0
-  · exact aF_congr env env' b c0e hB hc hh 1
-  · exact aF_congr env env' b c0e hB hc hh 2
-  · exact aF_congr env env' b c0e hB hc hh 3
+  · exact aF_congr env env' b c0e f hB hc hf 0
+  · exact aF_congr env env' b c0e f hB hc hf 1
+  · exact aF_congr env env' b c0e f hB hc hf 2
+  · exact aF_congr env env' b c0e f hB hc hf 3
 
 /-- Congruence for the SLLW sign bit. -/
-theorem sllwMsbIR_congr (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
+theorem sllwMsbIR_congr (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2)
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
     (hc : Expression.eval env.toEnvironment c0e = Expression.eval env'.toEnvironment c0e)
-    (hh : env.hint = env'.hint) :
-    (sllwMsbIR b c0e).eval env = (sllwMsbIR b c0e).eval env' := by
-  have ha1 := aF_congr env env' b c0e hB hc hh 1
+    (hf : ∀ (i : ℕ) (_ : i < 2),
+      Expression.eval env.toEnvironment f[i] = Expression.eval env'.toEnvironment f[i]) :
+    (sllwMsbIR b c0e f).eval env = (sllwMsbIR b c0e f).eval env' := by
+  have ha1 := aF_congr env env' b c0e f hB hc hf 1
   have hmsbC := U16MSBOperation.populate_msbF_congr { env := env } { env := env' }
-    (aF b c0e 1) ha1
+    (aF b c0e f 1) ha1
   apply Vector.ext
   intro i hi
   simp only [sllwMsbIR]
   rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
   interval_cases i
-  simp only [hintF, circuit_norm, -Witgen.u64Wrap, hmsbC, hh]
+  simp only [circuit_norm, -Witgen.u64Wrap, hmsbC, hf 1 (by omega)]
 
-/-- Congruence for the committed flag cells. -/
-theorem flagsIR_congr (imm_c : Expression (ZMod p))
-    (himm : Expression.eval env.toEnvironment imm_c = Expression.eval env'.toEnvironment imm_c)
-    (hh : env.hint = env'.hint) :
-    (flagsIR imm_c).eval env = (flagsIR imm_c).eval env' := by
-  apply Vector.ext
-  intro i hi
-  simp only [flagsIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
-  interval_cases i <;> simp only [hintF, circuit_norm, -Witgen.u64Wrap, himm, hh]
+/-- The immediate-selector witness depends only on its two input expressions. -/
+theorem sllwImmIR_congr (isSllw imm_c : Expression (ZMod p))
+    (hs : Expression.eval env.toEnvironment isSllw = Expression.eval env'.toEnvironment isSllw)
+    (hi : Expression.eval env.toEnvironment imm_c = Expression.eval env'.toEnvironment imm_c) :
+    (sllwImmIR isSllw imm_c).eval env = (sllwImmIR isSllw imm_c).eval env' := by
+  rw [sllwImmIR_eval, sllwImmIR_eval, hs, hi]
 
 end Congr
 
